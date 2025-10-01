@@ -9,7 +9,9 @@ from typing import Any, Dict, List
 # Fix imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode
+from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode
+from runtime.execution_context import ExecutionContext, VariableNotFoundError
+from runtime.validators import QuantumValidators, ValidationError
 
 class ComponentExecutionError(Exception):
     """Error in component execution"""
@@ -17,8 +19,10 @@ class ComponentExecutionError(Exception):
 
 class ComponentRuntime:
     """Runtime for executing Quantum components"""
-    
+
     def __init__(self):
+        self.execution_context = ExecutionContext()
+        # Keep self.context for backward compatibility
         self.context: Dict[str, Any] = {}
     
     def execute_component(self, component: ComponentNode, params: Dict[str, Any] = None) -> Any:
@@ -31,24 +35,30 @@ class ComponentRuntime:
         if validation_errors:
             raise ComponentExecutionError(f"Validation errors: {validation_errors}")
         
-        # Setup context
+        # Setup context - add params to both contexts
         self.context.update(params)
-        
+        for key, value in params.items():
+            self.execution_context.set_variable(key, value, scope="component")
+
         # Execute component
         try:
             # Execute control flow statements first
             for statement in component.statements:
-                result = self._execute_statement(statement, self.context)
-                if result is not None:
+                result = self._execute_statement(statement, self.execution_context)
+                # Only return if the statement explicitly returns a value (not just executing)
+                # SetNode returns None, LoopNode returns a list but shouldn't cause early return
+                if result is not None and isinstance(statement, (IfNode,)):
+                    # Only IfNode with a return statement should cause early return
                     return result
-            
+
             # For now, simple execution based on q:return
             if component.returns:
                 first_return = component.returns[0]
-                return self._process_return_value(first_return.value, self.context)
-            
+                # Use get_all_variables() for backward compatibility
+                return self._process_return_value(first_return.value, self.execution_context.get_all_variables())
+
             return None
-            
+
         except Exception as e:
             raise ComponentExecutionError(f"Execution error: {e}")
     
@@ -89,13 +99,22 @@ class ComponentRuntime:
         
         return processed_value
     
-    def _execute_statement(self, statement, context: Dict[str, Any]):
+    def _execute_statement(self, statement, context):
         """Execute a control flow statement"""
+        # Accept both ExecutionContext and Dict for backward compatibility
+        if isinstance(context, ExecutionContext):
+            exec_context = context
+            dict_context = context.get_all_variables()
+        else:
+            exec_context = self.execution_context
+            dict_context = context
+
         if isinstance(statement, IfNode):
-            return self._execute_if(statement, context)
+            return self._execute_if(statement, dict_context)
         elif isinstance(statement, LoopNode):
-            return self._execute_loop(statement, context)
-        # TODO: Add other statement types (set, etc)
+            return self._execute_loop(statement, dict_context)
+        elif isinstance(statement, SetNode):
+            return self._execute_set(statement, exec_context)
         return None
     
     def _execute_if(self, if_node: IfNode, context: Dict[str, Any]):
@@ -178,7 +197,10 @@ class ComponentRuntime:
                 # Create loop context with loop variable
                 loop_context = context.copy()
                 loop_context[loop_node.var_name] = i
-                
+
+                # Also update execution context for q:set support
+                self.execution_context.set_variable(loop_node.var_name, i, scope="local")
+
                 # Execute loop body
                 for statement in loop_node.body:
                     result = self._execute_loop_body_statement(statement, loop_context)
@@ -256,7 +278,9 @@ class ComponentRuntime:
             return self._execute_if(statement, context)
         elif isinstance(statement, LoopNode):
             return self._execute_loop(statement, context)
-        # TODO: Handle other statement types
+        elif isinstance(statement, SetNode):
+            # Execute set using the execution context
+            return self._execute_set(statement, self.execution_context)
         return None
     
     def _evaluate_simple_expression(self, expr: str, context: Dict[str, Any]) -> Any:
@@ -366,9 +390,342 @@ class ComponentRuntime:
         for var_name, var_value in context.items():
             if var_name in expr and isinstance(var_value, (int, float)):
                 expr = expr.replace(var_name, str(var_value))
-        
+
         try:
             # Use eval for arithmetic (safe since we control the input)
             return eval(expr)
         except:
             raise ValueError(f"Cannot evaluate expression: {expr}")
+
+    def _execute_set(self, set_node: SetNode, exec_context: ExecutionContext):
+        """Execute q:set statement"""
+        try:
+            # Get dict context for evaluation
+            dict_context = exec_context.get_all_variables()
+
+            # Handle different operations
+            if set_node.operation == "assign":
+                value = self._execute_set_assign(set_node, dict_context)
+            elif set_node.operation == "increment":
+                value = self._execute_set_increment(set_node, exec_context, set_node.step)
+            elif set_node.operation == "decrement":
+                value = self._execute_set_decrement(set_node, exec_context, set_node.step)
+            elif set_node.operation in ["add", "multiply"]:
+                value = self._execute_set_arithmetic(set_node, exec_context, dict_context)
+            elif set_node.operation in ["append", "prepend", "remove", "removeAt", "clear", "sort", "reverse", "unique"]:
+                value = self._execute_set_array_operation(set_node, exec_context)
+            elif set_node.operation in ["merge", "setProperty", "deleteProperty", "clone"]:
+                value = self._execute_set_object_operation(set_node, exec_context, dict_context)
+            elif set_node.operation in ["uppercase", "lowercase", "trim", "format"]:
+                value = self._execute_set_transformation(set_node, exec_context)
+            else:
+                raise ComponentExecutionError(f"Unsupported operation: {set_node.operation}")
+
+            # Validate the value before setting
+            self._validate_set_value(set_node, value)
+
+            # Set the variable in the appropriate scope
+            # If variable already exists, update it where it is; otherwise use specified scope
+            if exec_context.has_variable(set_node.name) and set_node.scope == "local":
+                # Variable exists, update it in its current location
+                # Try to find where it is and update there
+                if set_node.name in exec_context.component_vars or (exec_context.parent and set_node.name in exec_context._get_root_context().component_vars):
+                    exec_context.set_variable(set_node.name, value, scope="component")
+                elif set_node.name in exec_context.function_vars:
+                    exec_context.set_variable(set_node.name, value, scope="function")
+                else:
+                    exec_context.set_variable(set_node.name, value, scope="local")
+            else:
+                exec_context.set_variable(set_node.name, value, scope=set_node.scope)
+
+            # Update self.context for backward compatibility
+            self.context[set_node.name] = value
+
+            return None  # q:set doesn't return a value
+
+        except ValidationError as e:
+            raise ComponentExecutionError(f"Validation error for '{set_node.name}': {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Set execution error for '{set_node.name}': {e}")
+
+    def _execute_set_assign(self, set_node: SetNode, context: Dict[str, Any]) -> Any:
+        """Execute assign operation"""
+        # Get value (or default)
+        value_expr = set_node.value if set_node.value is not None else set_node.default
+
+        if value_expr is None:
+            if not set_node.nullable:
+                raise ComponentExecutionError(f"Variable '{set_node.name}' cannot be null")
+            return None
+
+        # Process databinding in value
+        processed_value = self._apply_databinding(value_expr, context)
+
+        # Convert to appropriate type
+        return self._convert_to_type(processed_value, set_node.type)
+
+    def _execute_set_increment(self, set_node: SetNode, exec_context: ExecutionContext, step: int) -> Any:
+        """Execute increment operation"""
+        try:
+            current_value = exec_context.get_variable(set_node.name)
+            if not isinstance(current_value, (int, float)):
+                raise ComponentExecutionError(f"Cannot increment non-numeric value: {current_value}")
+            return current_value + step
+        except VariableNotFoundError:
+            # If variable doesn't exist, start from step
+            return step
+
+    def _execute_set_decrement(self, set_node: SetNode, exec_context: ExecutionContext, step: int) -> Any:
+        """Execute decrement operation"""
+        try:
+            current_value = exec_context.get_variable(set_node.name)
+            if not isinstance(current_value, (int, float)):
+                raise ComponentExecutionError(f"Cannot decrement non-numeric value: {current_value}")
+            return current_value - step
+        except VariableNotFoundError:
+            # If variable doesn't exist, start from -step
+            return -step
+
+    def _execute_set_arithmetic(self, set_node: SetNode, exec_context: ExecutionContext, context: Dict[str, Any]) -> Any:
+        """Execute arithmetic operations (add, multiply)"""
+        try:
+            current_value = exec_context.get_variable(set_node.name)
+        except VariableNotFoundError:
+            current_value = 0
+
+        if not isinstance(current_value, (int, float)):
+            raise ComponentExecutionError(f"Cannot perform arithmetic on non-numeric value: {current_value}")
+
+        # Get operand value
+        operand_expr = set_node.value
+        if not operand_expr:
+            raise ComponentExecutionError("Arithmetic operation requires a value")
+
+        # Get fresh context to include loop variables
+        fresh_context = exec_context.get_all_variables()
+        processed = self._apply_databinding(operand_expr, fresh_context)
+        operand = self._convert_to_type(processed, "number")
+
+        if set_node.operation == "add":
+            return current_value + operand
+        elif set_node.operation == "multiply":
+            return current_value * operand
+
+        return current_value
+
+    def _execute_set_array_operation(self, set_node: SetNode, exec_context: ExecutionContext) -> Any:
+        """Execute array operations"""
+        try:
+            current_value = exec_context.get_variable(set_node.name)
+        except VariableNotFoundError:
+            current_value = []
+
+        if not isinstance(current_value, list):
+            raise ComponentExecutionError(f"Cannot perform array operation on non-array: {type(current_value)}")
+
+        # Create a copy to avoid modifying original
+        result = current_value.copy()
+
+        if set_node.operation == "append":
+            if set_node.value:
+                result.append(set_node.value)
+        elif set_node.operation == "prepend":
+            if set_node.value:
+                result.insert(0, set_node.value)
+        elif set_node.operation == "remove":
+            if set_node.value and set_node.value in result:
+                result.remove(set_node.value)
+        elif set_node.operation == "removeAt":
+            if set_node.index is not None:
+                idx = int(set_node.index)
+                if 0 <= idx < len(result):
+                    result.pop(idx)
+        elif set_node.operation == "clear":
+            result = []
+        elif set_node.operation == "sort":
+            result.sort()
+        elif set_node.operation == "reverse":
+            result.reverse()
+        elif set_node.operation == "unique":
+            result = list(dict.fromkeys(result))  # Preserve order
+
+        return result
+
+    def _execute_set_object_operation(self, set_node: SetNode, exec_context: ExecutionContext, context: Dict[str, Any]) -> Any:
+        """Execute object operations"""
+        try:
+            current_value = exec_context.get_variable(set_node.name)
+        except VariableNotFoundError:
+            current_value = {}
+
+        if not isinstance(current_value, dict):
+            raise ComponentExecutionError(f"Cannot perform object operation on non-object: {type(current_value)}")
+
+        result = current_value.copy()
+
+        if set_node.operation == "merge":
+            if set_node.value:
+                import json
+                try:
+                    merge_data = json.loads(set_node.value)
+                    result.update(merge_data)
+                except json.JSONDecodeError:
+                    raise ComponentExecutionError(f"Invalid JSON for merge: {set_node.value}")
+        elif set_node.operation == "setProperty":
+            if set_node.key and set_node.value:
+                result[set_node.key] = set_node.value
+        elif set_node.operation == "deleteProperty":
+            if set_node.key and set_node.key in result:
+                del result[set_node.key]
+        elif set_node.operation == "clone":
+            if set_node.source:
+                try:
+                    source_obj = exec_context.get_variable(set_node.source)
+                    if isinstance(source_obj, dict):
+                        result = source_obj.copy()
+                except VariableNotFoundError:
+                    pass
+
+        return result
+
+    def _execute_set_transformation(self, set_node: SetNode, exec_context: ExecutionContext) -> Any:
+        """Execute string transformation operations"""
+        try:
+            current_value = exec_context.get_variable(set_node.name)
+        except VariableNotFoundError:
+            current_value = ""
+
+        value_str = str(current_value)
+
+        if set_node.operation == "uppercase":
+            return value_str.upper()
+        elif set_node.operation == "lowercase":
+            return value_str.lower()
+        elif set_node.operation == "trim":
+            return value_str.strip()
+        elif set_node.operation == "format":
+            # TODO: Implement format based on format attribute
+            return value_str
+
+        return value_str
+
+    def _convert_to_type(self, value: Any, target_type: str) -> Any:
+        """Convert value to target type"""
+        if value is None:
+            return None
+
+        try:
+            if target_type == "string":
+                return str(value)
+            elif target_type == "number":
+                # Try int first, then float
+                try:
+                    return int(value)
+                except (ValueError, TypeError):
+                    return float(value)
+            elif target_type == "decimal":
+                return float(value)
+            elif target_type == "boolean":
+                if isinstance(value, bool):
+                    return value
+                if isinstance(value, str):
+                    return value.lower() in ['true', '1', 'yes']
+                return bool(value)
+            elif target_type == "array":
+                if isinstance(value, list):
+                    return value
+                if isinstance(value, str):
+                    import json
+                    return json.loads(value)
+                return [value]
+            elif target_type == "object":
+                if isinstance(value, dict):
+                    return value
+                if isinstance(value, str):
+                    import json
+                    return json.loads(value)
+                return {}
+            else:
+                # Default: return as is
+                return value
+        except Exception as e:
+            raise ComponentExecutionError(f"Type conversion error to '{target_type}': {e}")
+
+    def _validate_set_value(self, set_node: SetNode, value: Any):
+        """
+        Validate a value against set_node validation rules
+
+        Args:
+            set_node: SetNode with validation rules
+            value: Value to validate
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        # Check required
+        if set_node.required:
+            is_valid, error = QuantumValidators.validate_required(value)
+            if not is_valid:
+                raise ValidationError(error)
+
+        # Check nullable
+        if not set_node.nullable and value is None:
+            raise ValidationError(f"Variable '{set_node.name}' cannot be null")
+
+        # If value is None and nullable=True, skip other validations
+        if value is None and set_node.nullable:
+            return
+
+        # Check validate_rule (regex or built-in validator)
+        if set_node.validate_rule:
+            # Special case: CPF and CNPJ have digit validation
+            if set_node.validate_rule == 'cpf':
+                is_valid, error = QuantumValidators.validate_cpf(str(value))
+            elif set_node.validate_rule == 'cnpj':
+                is_valid, error = QuantumValidators.validate_cnpj(str(value))
+            else:
+                is_valid, error = QuantumValidators.validate(value, set_node.validate_rule)
+
+            if not is_valid:
+                raise ValidationError(error)
+
+        # Check pattern (alias for validate_rule)
+        if set_node.pattern and not set_node.validate_rule:
+            is_valid, error = QuantumValidators.validate(value, set_node.pattern)
+            if not is_valid:
+                raise ValidationError(error)
+
+        # Check range
+        if set_node.range:
+            is_valid, error = QuantumValidators.validate_range(value, set_node.range)
+            if not is_valid:
+                raise ValidationError(error)
+
+        # Check enum
+        if set_node.enum:
+            is_valid, error = QuantumValidators.validate_enum(value, set_node.enum)
+            if not is_valid:
+                raise ValidationError(error)
+
+        # Check min/max
+        if set_node.min or set_node.max:
+            is_valid, error = QuantumValidators.validate_min_max(
+                value,
+                min_val=set_node.min,
+                max_val=set_node.max
+            )
+            if not is_valid:
+                raise ValidationError(error)
+
+        # Check minlength/maxlength
+        if set_node.type == "string" and (set_node.minlength or set_node.maxlength):
+            minlen = int(set_node.minlength) if set_node.minlength else None
+            maxlen = int(set_node.maxlength) if set_node.maxlength else None
+
+            is_valid, error = QuantumValidators.validate_length(
+                value,
+                minlength=minlen,
+                maxlength=maxlen
+            )
+            if not is_valid:
+                raise ValidationError(error)

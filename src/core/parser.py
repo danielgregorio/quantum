@@ -12,7 +12,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from core.ast_nodes import (
     QuantumNode, ComponentNode, ApplicationNode, JobNode,
-    QuantumParam, QuantumReturn, QuantumRoute, IfNode, LoopNode
+    QuantumParam, QuantumReturn, QuantumRoute, IfNode, LoopNode, SetNode
 )
 
 class QuantumParseError(Exception):
@@ -110,17 +110,21 @@ class QuantumParser:
         return component
     
     def _parse_control_flow_statements(self, parent: ET.Element, component: ComponentNode):
-        """Parse control flow statements like if, loop, set"""
-        
-        # Parse q:if elements
-        for if_el in self._find_all_elements(parent, 'if'):
-            if_node = self._parse_if_statement(if_el)
-            component.add_statement(if_node)
-        
-        # Parse q:loop elements
-        for loop_el in self._find_all_elements(parent, 'loop'):
-            loop_node = self._parse_loop_statement(loop_el)
-            component.add_statement(loop_node)
+        """Parse control flow statements like if, loop, set - ONLY direct children"""
+
+        # Parse only direct children to avoid duplicates (children of loops/ifs are parsed separately)
+        for child in parent:
+            child_type = self._get_element_name(child)
+
+            if child_type == 'if':
+                if_node = self._parse_if_statement(child)
+                component.add_statement(if_node)
+            elif child_type == 'loop':
+                loop_node = self._parse_loop_statement(child)
+                component.add_statement(loop_node)
+            elif child_type == 'set':
+                set_node = self._parse_set_statement(child)
+                component.add_statement(set_node)
     
     def _parse_if_statement(self, if_element: ET.Element) -> IfNode:
         """Parse q:if statement with elseif and else blocks"""
@@ -199,15 +203,66 @@ class QuantumParser:
                 loop_node.add_statement(statement)
         
         return loop_node
-    
+
+    def _parse_set_statement(self, set_element: ET.Element) -> SetNode:
+        """Parse q:set statement"""
+        name = set_element.get('name')
+
+        if not name:
+            raise QuantumParseError("Set requires 'name' attribute")
+
+        set_node = SetNode(name)
+
+        # Tipo e valor
+        set_node.type = set_element.get('type', 'string')
+        set_node.value = set_element.get('value')
+        set_node.default = set_element.get('default')
+
+        # Validação
+        set_node.required = set_element.get('required', 'false').lower() == 'true'
+        set_node.nullable = set_element.get('nullable', 'true').lower() == 'true'
+        set_node.validate_rule = set_element.get('validate')
+        set_node.pattern = set_element.get('pattern')
+        set_node.mask = set_element.get('mask')
+        set_node.range = set_element.get('range')
+        set_node.enum = set_element.get('enum')
+        set_node.unique = set_element.get('unique')
+        set_node.min = set_element.get('min')
+        set_node.max = set_element.get('max')
+        set_node.minlength = set_element.get('minlength')
+        set_node.maxlength = set_element.get('maxlength')
+
+        # Comportamento
+        set_node.scope = set_element.get('scope', 'local')
+        set_node.operation = set_element.get('operation', 'assign')
+
+        # Step para increment/decrement
+        step = set_element.get('step', '1')
+        try:
+            set_node.step = int(step)
+        except ValueError:
+            set_node.step = 1
+
+        # Para operações em collections
+        set_node.index = set_element.get('index')
+        set_node.key = set_element.get('key')
+        set_node.source = set_element.get('source')
+
+        return set_node
+
     def _parse_statement(self, element: ET.Element) -> Optional[QuantumNode]:
         """Parse individual statement (return, set, etc)"""
         element_type = self._get_element_name(element)
-        
+
         if element_type == 'return':
             return self._parse_return(element)
-        # TODO: Add more statement types (set, loop, etc)
-        
+        elif element_type == 'set':
+            return self._parse_set_statement(element)
+        elif element_type == 'loop':
+            return self._parse_loop_statement(element)
+        elif element_type == 'if':
+            return self._parse_if_statement(element)
+
         return None
     
     def _parse_application(self, root: ET.Element, path: Path) -> ApplicationNode:
