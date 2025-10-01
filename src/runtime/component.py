@@ -9,9 +9,11 @@ from typing import Any, Dict, List
 # Fix imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode
+from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode, FunctionNode, DispatchEventNode, OnEventNode
 from runtime.execution_context import ExecutionContext, VariableNotFoundError
 from runtime.validators import QuantumValidators, ValidationError
+from runtime.function_registry import FunctionRegistry
+import re
 
 class ComponentExecutionError(Exception):
     """Error in component execution"""
@@ -24,17 +26,27 @@ class ComponentRuntime:
         self.execution_context = ExecutionContext()
         # Keep self.context for backward compatibility
         self.context: Dict[str, Any] = {}
+        # Function registry
+        self.function_registry = FunctionRegistry()
+        # Current component (for function resolution)
+        self.current_component: ComponentNode = None
     
     def execute_component(self, component: ComponentNode, params: Dict[str, Any] = None) -> Any:
         """Execute a component and return the result"""
         if params is None:
             params = {}
-        
+
+        # Set current component
+        self.current_component = component
+
+        # Register component functions
+        self.function_registry.register_component(component)
+
         # Validate parameters
         validation_errors = self._validate_params(component, params)
         if validation_errors:
             raise ComponentExecutionError(f"Validation errors: {validation_errors}")
-        
+
         # Setup context - add params to both contexts
         self.context.update(params)
         for key, value in params.items():
@@ -340,9 +352,13 @@ class ComponentRuntime:
     def _apply_databinding(self, text: str, context: Dict[str, Any]) -> str:
         """Apply variable databinding to text using {variable} syntax"""
         import re
-        
-        if not text or not context:
+
+        if not text:
             return text
+
+        # Even if context is empty, we still need to process function calls
+        if context is None:
+            context = {}
         
         # Pattern to match {variable} or {variable.property}
         pattern = r'\{([^}]+)\}'
@@ -350,8 +366,9 @@ class ComponentRuntime:
         def replace_variable(match):
             var_expr = match.group(1).strip()
             try:
-                return str(self._evaluate_databinding_expression(var_expr, context))
-            except:
+                result = self._evaluate_databinding_expression(var_expr, context)
+                return str(result)
+            except Exception as e:
                 # If evaluation fails, return original placeholder
                 return match.group(0)
         
@@ -360,14 +377,18 @@ class ComponentRuntime:
         return result
     
     def _evaluate_databinding_expression(self, expr: str, context: Dict[str, Any]) -> Any:
-        """Evaluate a databinding expression like 'variable' or 'user.name' or 'count + 1'"""
-        
+        """Evaluate a databinding expression like 'variable' or 'user.name' or 'functionName(args)' or 'count + 1'"""
+
+        # Handle function calls first (e.g., add(5, 3))
+        if '(' in expr and ')' in expr:
+            return self._evaluate_function_call(expr, context)
+
         # Handle simple variable access
         if expr in context:
             return context[expr]
-        
+
         # Handle dot notation (user.name)
-        if '.' in expr:
+        if '.' in expr and '(' not in expr:
             parts = expr.split('.')
             value = context
             for part in parts:
@@ -376,11 +397,11 @@ class ComponentRuntime:
                 else:
                     raise ValueError(f"Property '{part}' not found")
             return value
-        
+
         # Handle simple arithmetic expressions (count + 1, i * 2, etc.)
         if any(op in expr for op in ['+', '-', '*', '/', '(', ')']):
             return self._evaluate_arithmetic_expression(expr, context)
-        
+
         # If not found, raise error
         raise ValueError(f"Variable '{expr}' not found in context")
     
@@ -729,3 +750,178 @@ class ComponentRuntime:
             )
             if not is_valid:
                 raise ValidationError(error)
+
+    def _evaluate_function_call(self, expr: str, context: Dict[str, Any]) -> Any:
+        """
+        Evaluate function call expression like 'add(5, 3)' or 'calculateTotal(items, 0.1)'
+        """
+        # Parse function name and arguments
+        match = re.match(r'(\w+)\((.*)\)', expr.strip())
+        if not match:
+            raise ComponentExecutionError(f"Invalid function call syntax: {expr}")
+
+        func_name = match.group(1)
+        args_str = match.group(2).strip()
+
+        # Resolve function
+        func_node = self.function_registry.resolve_function(func_name, self.current_component)
+        if not func_node:
+            raise ComponentExecutionError(f"Function '{func_name}' not found")
+
+        # Parse arguments
+        args = self._parse_function_arguments(args_str, context, func_node)
+
+        # Execute function
+        return self._execute_function(func_node, args)
+
+    def _parse_function_arguments(self, args_str: str, context: Dict[str, Any], func_node: FunctionNode) -> Dict[str, Any]:
+        """Parse function arguments from string like '5, 3' or 'items, 0.1'"""
+        if not args_str:
+            return {}
+
+        # Simple split by comma (TODO: handle nested expressions properly)
+        arg_values = []
+        for arg in args_str.split(','):
+            arg = arg.strip()
+
+            # Evaluate each argument as an expression
+            try:
+                # Try to evaluate as databinding expression
+                value = self._evaluate_databinding_expression(arg, context)
+                arg_values.append(value)
+            except:
+                # Fallback: try as literal
+                try:
+                    # Try to parse as number
+                    if '.' in arg:
+                        arg_values.append(float(arg))
+                    else:
+                        arg_values.append(int(arg))
+                except:
+                    # Use as string (remove quotes if present)
+                    if arg.startswith('\"') and arg.endswith('\"'):
+                        arg_values.append(arg[1:-1])
+                    elif arg.startswith("'") and arg.endswith("'"):
+                        arg_values.append(arg[1:-1])
+                    else:
+                        arg_values.append(arg)
+
+        # Match positional args to parameter names
+        return dict(zip([p.name for p in func_node.params], arg_values))
+
+    def _execute_function(self, func_node: FunctionNode, args: Dict[str, Any]) -> Any:
+        """Execute function with given arguments"""
+
+        # Validate function parameters if requested
+        if func_node.validate_params:
+            self._validate_function_args(func_node, args)
+
+        # Create function execution context (child of current context)
+        func_context = self.execution_context.create_child_context()
+
+        # Bind parameters to context
+        for param in func_node.params:
+            value = args.get(param.name)
+
+            # Use default if not provided
+            if value is None and param.default is not None:
+                value = param.default
+
+            # Check required
+            if param.required and value is None:
+                raise ComponentExecutionError(f"Required parameter '{param.name}' not provided")
+
+            # Set in function context
+            func_context.set_variable(param.name, value, scope="local")
+
+        # Execute function body
+        result = None
+        for statement in func_node.body:
+            if isinstance(statement, QuantumReturn):
+                # Evaluate return value
+                result = self._process_return_value(statement.value, func_context.get_all_variables())
+                break
+            elif isinstance(statement, SetNode):
+                self._execute_set(statement, func_context)
+            elif isinstance(statement, IfNode):
+                result = self._execute_if(statement, func_context.get_all_variables())
+                if result is not None:
+                    break
+            elif isinstance(statement, LoopNode):
+                self._execute_loop(statement, func_context.get_all_variables())
+            elif isinstance(statement, DispatchEventNode):
+                self._execute_dispatch_event(statement, func_context.get_all_variables())
+
+        return result
+
+    def _validate_function_args(self, func_node: FunctionNode, args: Dict[str, Any]):
+        """Validate function arguments against parameter definitions"""
+        for param in func_node.params:
+            value = args.get(param.name)
+
+            # Check required
+            if param.required and value is None:
+                raise ComponentExecutionError(f"Required parameter '{param.name}' is missing")
+
+            # Skip validation if no value provided
+            if value is None:
+                continue
+
+            # Validate using QuantumValidators
+            if param.validate_rule:
+                if param.validate_rule == 'email':
+                    is_valid, error = QuantumValidators.validate_email(str(value))
+                elif param.validate_rule == 'cpf':
+                    is_valid, error = QuantumValidators.validate_cpf(str(value))
+                elif param.validate_rule == 'cnpj':
+                    is_valid, error = QuantumValidators.validate_cnpj(str(value))
+                else:
+                    is_valid, error = QuantumValidators.validate(value, param.validate_rule)
+
+                if not is_valid:
+                    raise ValidationError(f"Parameter '{param.name}': {error}")
+
+            # Validate range
+            if param.range:
+                is_valid, error = QuantumValidators.validate_range(value, param.range)
+                if not is_valid:
+                    raise ValidationError(f"Parameter '{param.name}': {error}")
+
+            # Validate enum
+            if param.enum:
+                is_valid, error = QuantumValidators.validate_enum(value, param.enum)
+                if not is_valid:
+                    raise ValidationError(f"Parameter '{param.name}': {error}")
+
+    def _execute_dispatch_event(self, dispatch_node: DispatchEventNode, context: Dict[str, Any]):
+        """Execute q:dispatchEvent statement"""
+        # For now, just log the event (TODO: integrate with actual message queue)
+        event_data = {
+            'event': dispatch_node.event,
+            'data': self._apply_databinding(dispatch_node.data, context) if dispatch_node.data else None,
+            'queue': dispatch_node.queue,
+            'priority': dispatch_node.priority,
+        }
+
+        print(f"[EVENT DISPATCHED] {event_data}")
+        # TODO: Integrate with RabbitMQ/SQS/etc
+
+    def _execute_on_event(self, event_node: OnEventNode, event_data: Dict[str, Any]):
+        """Execute q:onEvent handler (called by event system)"""
+        # Create event context
+        event_context = self.execution_context.create_child_context(scope="local")
+
+        # Add event data to context
+        for key, value in event_data.items():
+            event_context.set_variable(key, value, scope="local")
+
+        # Execute event handler body
+        for statement in event_node.body:
+            if isinstance(statement, SetNode):
+                self._execute_set(statement, event_context)
+            elif isinstance(statement, IfNode):
+                self._execute_if(statement, event_context.get_all_variables())
+            elif isinstance(statement, LoopNode):
+                self._execute_loop(statement, event_context.get_all_variables())
+            elif isinstance(statement, DispatchEventNode):
+                self._execute_dispatch_event(statement, event_context.get_all_variables())
