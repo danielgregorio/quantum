@@ -5,7 +5,7 @@
     <q:param name="n" type="number" required="true" />
 
     <!-- Base case: factorial(0) = 1 -->
-    <q:if condition="{n <= 0}">
+    <q:if condition="{n &lt;= 0}">
       <q:return value="1" />
     </q:if>
 

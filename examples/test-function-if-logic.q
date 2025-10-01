@@ -8,7 +8,7 @@
       <q:return value="positive" />
     </q:if>
 
-    <q:if condition="{num < 0}">
+    <q:if condition="{num &lt; 0}">
       <q:return value="negative" />
     </q:if>
 

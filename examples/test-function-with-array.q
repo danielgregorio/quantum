@@ -27,7 +27,7 @@
   </q:function>
 
   <!-- Test with arrays -->
-  <q:set name="myArray" type="array" value="['apple', 'banana', 'cherry']" />
+  <q:set name="myArray" type="array" value='["apple", "banana", "cherry"]' />
   <q:set name="myNumbers" type="array" value="[10, 20, 30, 40]" />
 
   <q:set name="itemCount" value="{countElements(myArray)}" />

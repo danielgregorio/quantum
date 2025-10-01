@@ -88,13 +88,17 @@ class ComponentRuntime:
         """Process return value with databinding support"""
         if not value:
             return ""
-        
+
         if context is None:
             context = {}
-        
+
         # Apply databinding first
         processed_value = self._apply_databinding(value, context)
-        
+
+        # If databinding returned a non-string (e.g., int, float, dict), return it as-is
+        if not isinstance(processed_value, str):
+            return processed_value
+
         # Remove quotes if it's a string literal (after databinding)
         if processed_value.startswith('"') and processed_value.endswith('"'):
             return processed_value[1:-1]
@@ -349,7 +353,7 @@ class ComponentRuntime:
         # Handle direct string list
         return items_expr.split(delimiter)
     
-    def _apply_databinding(self, text: str, context: Dict[str, Any]) -> str:
+    def _apply_databinding(self, text: str, context: Dict[str, Any]) -> Any:
         """Apply variable databinding to text using {variable} syntax"""
         import re
 
@@ -359,10 +363,22 @@ class ComponentRuntime:
         # Even if context is empty, we still need to process function calls
         if context is None:
             context = {}
-        
+
         # Pattern to match {variable} or {variable.property}
         pattern = r'\{([^}]+)\}'
-        
+
+        # Check if the ENTIRE text is just a single databinding expression
+        full_match = re.fullmatch(pattern, text.strip())
+        if full_match:
+            # Pure expression - return the actual value (not converted to string)
+            var_expr = full_match.group(1).strip()
+            try:
+                return self._evaluate_databinding_expression(var_expr, context)
+            except Exception as e:
+                # If evaluation fails, return original placeholder
+                return text
+
+        # Mixed content (text + expressions) - need string interpolation
         def replace_variable(match):
             var_expr = match.group(1).strip()
             try:
@@ -371,7 +387,7 @@ class ComponentRuntime:
             except Exception as e:
                 # If evaluation fails, return original placeholder
                 return match.group(0)
-        
+
         # Replace all {variable} patterns
         result = re.sub(pattern, replace_variable, text)
         return result
@@ -380,7 +396,8 @@ class ComponentRuntime:
         """Evaluate a databinding expression like 'variable' or 'user.name' or 'functionName(args)' or 'count + 1'"""
 
         # Handle function calls first (e.g., add(5, 3))
-        if '(' in expr and ')' in expr:
+        # Check if it looks like a function call: word followed by (
+        if '(' in expr and ')' in expr and re.match(r'^\s*\w+\s*\(', expr):
             return self._evaluate_function_call(expr, context)
 
         # Handle simple variable access
@@ -775,18 +792,20 @@ class ComponentRuntime:
         return self._execute_function(func_node, args)
 
     def _parse_function_arguments(self, args_str: str, context: Dict[str, Any], func_node: FunctionNode) -> Dict[str, Any]:
-        """Parse function arguments from string like '5, 3' or 'items, 0.1'"""
+        """Parse function arguments from string like '5, 3' or 'items, 0.1' or 'add(2, 3), 4'"""
         if not args_str:
             return {}
 
-        # Simple split by comma (TODO: handle nested expressions properly)
+        # Smart split by comma - respect nested parentheses
+        args = self._smart_split_args(args_str)
+
         arg_values = []
-        for arg in args_str.split(','):
+        for arg in args:
             arg = arg.strip()
 
             # Evaluate each argument as an expression
             try:
-                # Try to evaluate as databinding expression
+                # Try to evaluate as databinding expression (handles nested function calls)
                 value = self._evaluate_databinding_expression(arg, context)
                 arg_values.append(value)
             except:
@@ -808,6 +827,32 @@ class ComponentRuntime:
 
         # Match positional args to parameter names
         return dict(zip([p.name for p in func_node.params], arg_values))
+
+    def _smart_split_args(self, args_str: str) -> List[str]:
+        """Split arguments by comma, respecting nested parentheses"""
+        args = []
+        current_arg = []
+        paren_depth = 0
+
+        for char in args_str:
+            if char == '(':
+                paren_depth += 1
+                current_arg.append(char)
+            elif char == ')':
+                paren_depth -= 1
+                current_arg.append(char)
+            elif char == ',' and paren_depth == 0:
+                # Top-level comma - split here
+                args.append(''.join(current_arg))
+                current_arg = []
+            else:
+                current_arg.append(char)
+
+        # Add last argument
+        if current_arg:
+            args.append(''.join(current_arg))
+
+        return args
 
     def _execute_function(self, func_node: FunctionNode, args: Dict[str, Any]) -> Any:
         """Execute function with given arguments"""
