@@ -112,8 +112,17 @@ class ComponentRuntime:
                 return json.loads(processed_value)
             except:
                 pass
-        
-        return processed_value
+
+        # Try to parse as number
+        try:
+            # Try int first
+            if '.' not in processed_value:
+                return int(processed_value)
+            else:
+                return float(processed_value)
+        except (ValueError, AttributeError):
+            # Not a number, return as string
+            return processed_value
     
     def _execute_statement(self, statement, context):
         """Execute a control flow statement"""
@@ -178,27 +187,31 @@ class ComponentRuntime:
             # Fallback - return False for safety
             return False
     
-    def _execute_loop(self, loop_node: LoopNode, context: Dict[str, Any]):
+    def _execute_loop(self, loop_node: LoopNode, context: Dict[str, Any], exec_context: ExecutionContext = None):
         """Execute q:loop statement with various types"""
+        # Use provided exec_context or fall back to component context
+        if exec_context is None:
+            exec_context = self.execution_context
+
         if loop_node.loop_type == 'range':
-            return self._execute_range_loop(loop_node, context)
+            return self._execute_range_loop(loop_node, context, exec_context)
         elif loop_node.loop_type == 'array':
-            return self._execute_array_loop(loop_node, context)
+            return self._execute_array_loop(loop_node, context, exec_context)
         elif loop_node.loop_type == 'list':
-            return self._execute_list_loop(loop_node, context)
+            return self._execute_list_loop(loop_node, context, exec_context)
         else:
             raise ComponentExecutionError(f"Unsupported loop type: {loop_node.loop_type}")
     
-    def _execute_range_loop(self, loop_node: LoopNode, context: Dict[str, Any]):
+    def _execute_range_loop(self, loop_node: LoopNode, context: Dict[str, Any], exec_context: ExecutionContext):
         """Execute range loop (from/to/step)"""
         results = []
-        
+
         try:
             # Evaluate from and to values
             start = int(self._evaluate_simple_expression(loop_node.from_value, context))
             end = int(self._evaluate_simple_expression(loop_node.to_value, context))
             step = loop_node.step_value
-            
+
             # Execute loop
             for i in range(start, end + 1, step):
                 # Create loop context with loop variable
@@ -206,88 +219,97 @@ class ComponentRuntime:
                 loop_context[loop_node.var_name] = i
 
                 # Also update execution context for q:set support
-                self.execution_context.set_variable(loop_node.var_name, i, scope="local")
+                exec_context.set_variable(loop_node.var_name, i, scope="local")
 
                 # Execute loop body
                 for statement in loop_node.body:
-                    result = self._execute_loop_body_statement(statement, loop_context)
+                    result = self._execute_loop_body_statement(statement, loop_context, exec_context)
                     if result is not None:
                         results.append(result)
-            
+
             return results
-            
+
         except (ValueError, TypeError) as e:
             raise ComponentExecutionError(f"Range loop error: {e}")
     
-    def _execute_array_loop(self, loop_node: LoopNode, context: Dict[str, Any]):
+    def _execute_array_loop(self, loop_node: LoopNode, context: Dict[str, Any], exec_context: ExecutionContext):
         """Execute array loop"""
         results = []
-        
+
         try:
             # Get array data (for now, parse simple array notation)
             array_data = self._parse_array_items(loop_node.items, context)
-            
+
             # Execute loop
             for index, item in enumerate(array_data):
-                # Create loop context with loop variable(s)
-                loop_context = context.copy()
-                loop_context[loop_node.var_name] = item
-                
+                # Set loop variable in execution context
+                exec_context.set_variable(loop_node.var_name, item, scope="local")
+
                 # Add index if specified
                 if loop_node.index_name:
-                    loop_context[loop_node.index_name] = index
-                
+                    exec_context.set_variable(loop_node.index_name, index, scope="local")
+
+                # Get fresh context dict from execution context (includes all updated variables)
+                loop_context = exec_context.get_all_variables()
+
                 # Execute loop body
                 for statement in loop_node.body:
-                    result = self._execute_loop_body_statement(statement, loop_context)
+                    result = self._execute_loop_body_statement(statement, loop_context, exec_context)
                     if result is not None:
                         results.append(result)
-            
+
+                    # Sync loop_context after each statement to see updates
+                    loop_context = exec_context.get_all_variables()
+
             return results
-            
+
         except Exception as e:
             raise ComponentExecutionError(f"Array loop error: {e}")
     
-    def _execute_list_loop(self, loop_node: LoopNode, context: Dict[str, Any]):
+    def _execute_list_loop(self, loop_node: LoopNode, context: Dict[str, Any], exec_context: ExecutionContext):
         """Execute list loop"""
         results = []
-        
+
         try:
             # Get list data and split by delimiter
             list_data = self._parse_list_items(loop_node.items, loop_node.delimiter, context)
-            
+
             # Execute loop
             for index, item in enumerate(list_data):
                 # Create loop context with loop variable(s)
                 loop_context = context.copy()
                 loop_context[loop_node.var_name] = item.strip()
-                
+
+                # Also update execution context for q:set support
+                exec_context.set_variable(loop_node.var_name, item.strip(), scope="local")
+
                 # Add index if specified
                 if loop_node.index_name:
                     loop_context[loop_node.index_name] = index
-                
+                    exec_context.set_variable(loop_node.index_name, index, scope="local")
+
                 # Execute loop body
                 for statement in loop_node.body:
-                    result = self._execute_loop_body_statement(statement, loop_context)
+                    result = self._execute_loop_body_statement(statement, loop_context, exec_context)
                     if result is not None:
                         results.append(result)
-            
+
             return results
-            
+
         except Exception as e:
             raise ComponentExecutionError(f"List loop error: {e}")
     
-    def _execute_loop_body_statement(self, statement, context: Dict[str, Any]):
+    def _execute_loop_body_statement(self, statement, context: Dict[str, Any], exec_context: ExecutionContext):
         """Execute a statement inside a loop body"""
         if isinstance(statement, QuantumReturn):
             return self._process_return_value(statement.value, context)
         elif isinstance(statement, IfNode):
             return self._execute_if(statement, context)
         elif isinstance(statement, LoopNode):
-            return self._execute_loop(statement, context)
+            return self._execute_loop(statement, context, exec_context)
         elif isinstance(statement, SetNode):
-            # Execute set using the execution context
-            return self._execute_set(statement, self.execution_context)
+            # Execute set using the provided execution context
+            return self._execute_set(statement, exec_context)
         return None
     
     def _evaluate_simple_expression(self, expr: str, context: Dict[str, Any]) -> Any:
@@ -310,7 +332,16 @@ class ComponentRuntime:
         """Parse array items from expression"""
         if not items_expr:
             return []
-        
+
+        # Apply databinding if expression contains {variable}
+        if '{' in items_expr and '}' in items_expr:
+            resolved = self._apply_databinding(items_expr, context)
+            # If databinding returned an array, use it
+            if isinstance(resolved, list):
+                return resolved
+            # Otherwise continue processing the resolved value
+            items_expr = str(resolved) if not isinstance(resolved, str) else resolved
+
         # Handle simple array notation: ["item1", "item2", "item3"]
         if items_expr.startswith('[') and items_expr.endswith(']'):
             try:
@@ -320,11 +351,11 @@ class ComponentRuntime:
                 # Fallback to simple parsing
                 items_str = items_expr[1:-1]  # Remove brackets
                 return [item.strip().strip('"\'') for item in items_str.split(',') if item.strip()]
-        
+
         # Handle variable reference from context
         if items_expr in context:
             return context[items_expr]
-        
+
         # Default: treat as single item
         return [items_expr]
     
@@ -454,18 +485,26 @@ class ComponentRuntime:
             self._validate_set_value(set_node, value)
 
             # Set the variable in the appropriate scope
-            # If variable already exists, update it where it is; otherwise use specified scope
-            if exec_context.has_variable(set_node.name) and set_node.scope == "local":
-                # Variable exists, update it in its current location
-                # Try to find where it is and update there
-                if set_node.name in exec_context.component_vars or (exec_context.parent and set_node.name in exec_context._get_root_context().component_vars):
-                    exec_context.set_variable(set_node.name, value, scope="component")
-                elif set_node.name in exec_context.function_vars:
-                    exec_context.set_variable(set_node.name, value, scope="function")
-                else:
-                    exec_context.set_variable(set_node.name, value, scope="local")
+            # For update operations (increment, decrement, etc.) or if variable already exists,
+            # update it where it is; otherwise create in specified scope
+            is_update_operation = set_node.operation in ["increment", "decrement", "add", "multiply",
+                                                          "append", "prepend", "remove", "removeAt",
+                                                          "clear", "sort", "reverse", "unique",
+                                                          "merge", "setProperty", "deleteProperty",
+                                                          "uppercase", "lowercase", "trim", "format"]
+
+            if is_update_operation or (exec_context.has_variable(set_node.name) and set_node.scope == "local"):
+                # Update variable in its existing scope
+                exec_context.update_variable(set_node.name, value)
             else:
-                exec_context.set_variable(set_node.name, value, scope=set_node.scope)
+                # Create new variable in specified scope
+                # Inside a function, if scope is "local" (default), use "function" scope instead
+                # This ensures function-level variables are accessible in nested loops
+                actual_scope = set_node.scope
+                if set_node.scope == "local" and exec_context.parent is not None:
+                    # We're in a nested context (e.g., function) - use function scope
+                    actual_scope = "function"
+                exec_context.set_variable(set_node.name, value, scope=actual_scope)
 
             # Update self.context for backward compatibility
             self.context[set_node.name] = value
@@ -905,7 +944,7 @@ class ComponentRuntime:
                 if result is not None:
                     break
             elif isinstance(statement, LoopNode):
-                self._execute_loop(statement, func_context.get_all_variables())
+                self._execute_loop(statement, func_context.get_all_variables(), func_context)
             elif isinstance(statement, DispatchEventNode):
                 self._execute_dispatch_event(statement, func_context.get_all_variables())
 
@@ -926,15 +965,8 @@ class ComponentRuntime:
 
             # Validate using QuantumValidators
             if param.validate_rule:
-                if param.validate_rule == 'email':
-                    is_valid, error = QuantumValidators.validate_email(str(value))
-                elif param.validate_rule == 'cpf':
-                    is_valid, error = QuantumValidators.validate_cpf(str(value))
-                elif param.validate_rule == 'cnpj':
-                    is_valid, error = QuantumValidators.validate_cnpj(str(value))
-                else:
-                    is_valid, error = QuantumValidators.validate(value, param.validate_rule)
-
+                # Use the generic validate method for all rules
+                is_valid, error = QuantumValidators.validate(value, param.validate_rule)
                 if not is_valid:
                     raise ValidationError(f"Parameter '{param.name}': {error}")
 

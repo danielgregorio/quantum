@@ -50,6 +50,40 @@ class ExecutionContext:
         else:
             raise ValueError(f"Invalid scope: {scope}")
 
+    def update_variable(self, name: str, value: Any):
+        """
+        Update a variable in whatever scope it already exists, or create in local scope if new
+
+        Args:
+            name: Variable name
+            value: New value
+        """
+        # Check local scope first
+        if name in self.local_vars:
+            self.local_vars[name] = value
+            return
+
+        # Check function scope
+        if name in self.function_vars:
+            self.function_vars[name] = value
+            return
+
+        # Check component scope (including parent contexts)
+        ctx = self
+        while ctx:
+            if name in ctx.component_vars:
+                ctx.component_vars[name] = value
+                return
+            ctx = ctx.parent
+
+        # Check session scope
+        if name in self.session_vars:
+            self.session_vars[name] = value
+            return
+
+        # Variable doesn't exist - create in local scope
+        self.local_vars[name] = value
+
     def get_variable(self, name: str) -> Any:
         """
         Get a variable value, searching through scopes in order:

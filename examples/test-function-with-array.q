@@ -20,7 +20,7 @@
     <q:set name="total" type="number" value="0" />
 
     <q:loop type="array" items="{numbers}" var="num">
-      <q:set name="total" type="number" value="{total}" operation="add" operand="{num}" />
+      <q:set name="total" operation="add" value="{num}" />
     </q:loop>
 
     <q:return value="{total}" />
@@ -30,8 +30,8 @@
   <q:set name="myArray" type="array" value='["apple", "banana", "cherry"]' />
   <q:set name="myNumbers" type="array" value="[10, 20, 30, 40]" />
 
-  <q:set name="itemCount" value="{countElements(myArray)}" />
-  <q:set name="sum" value="{sumNumbers(myNumbers)}" />
+  <q:set name="itemCount" type="number" value="{countElements(myArray)}" />
+  <q:set name="sum" type="number" value="{sumNumbers(myNumbers)}" />
 
   <q:return value="Count: {itemCount}, Sum: {sum}" />
 </q:component>

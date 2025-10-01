@@ -11,7 +11,7 @@
 
     <!-- Recursive case: n * factorial(n-1) -->
     <q:set name="nMinus1" type="number" value="{n}" operation="decrement" />
-    <q:set name="recursiveResult" value="{factorial(nMinus1)}" />
+    <q:set name="recursiveResult" type="number" value="{factorial(nMinus1)}" />
     <q:set name="result" type="number" value="{n * recursiveResult}" />
 
     <q:return value="{result}" />
