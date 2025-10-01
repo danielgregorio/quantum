@@ -160,31 +160,22 @@ class ComponentRuntime:
         return None
     
     def _evaluate_condition(self, condition: str, context: Dict[str, Any]) -> bool:
-        """Evaluate a condition string - BASIC implementation for now"""
+        """Evaluate a condition string using databinding"""
         if not condition:
             return False
-        
-        # Very basic evaluation - just check for simple comparisons
-        # TODO: Implement proper expression evaluation
-        
-        # For now, support simple cases like "user.age >= 18"
+
         try:
-            # Replace context variables (very basic)
-            evaluated_condition = condition
-            for key, value in context.items():
-                if isinstance(value, dict):
-                    for subkey, subvalue in value.items():
-                        placeholder = f"{key}.{subkey}"
-                        if placeholder in evaluated_condition:
-                            evaluated_condition = evaluated_condition.replace(placeholder, str(subvalue))
-                else:
-                    if key in evaluated_condition:
-                        evaluated_condition = evaluated_condition.replace(key, str(value))
-            
-            # Basic evaluation
-            return eval(evaluated_condition)
-        except:
-            # Fallback - just return False for now
+            # Apply databinding to resolve variables
+            evaluated_condition = self._apply_databinding(condition, context)
+
+            # If it's still a string, try to evaluate it as a boolean expression
+            if isinstance(evaluated_condition, str):
+                return bool(eval(evaluated_condition))
+
+            # If databinding returned a boolean, use it directly
+            return bool(evaluated_condition)
+        except Exception as e:
+            # Fallback - return False for safety
             return False
     
     def _execute_loop(self, loop_node: LoopNode, context: Dict[str, Any]):
@@ -415,8 +406,8 @@ class ComponentRuntime:
                     raise ValueError(f"Property '{part}' not found")
             return value
 
-        # Handle simple arithmetic expressions (count + 1, i * 2, etc.)
-        if any(op in expr for op in ['+', '-', '*', '/', '(', ')']):
+        # Handle arithmetic and comparison expressions (count + 1, num > 0, etc.)
+        if any(op in expr for op in ['+', '-', '*', '/', '>', '<', '=', '!', '(', ')']):
             return self._evaluate_arithmetic_expression(expr, context)
 
         # If not found, raise error
@@ -504,6 +495,14 @@ class ComponentRuntime:
 
     def _execute_set_increment(self, set_node: SetNode, exec_context: ExecutionContext, step: int) -> Any:
         """Execute increment operation"""
+        # If value is provided, increment that; otherwise increment existing variable
+        if set_node.value:
+            dict_context = exec_context.get_all_variables()
+            base_value = self._apply_databinding(set_node.value, dict_context)
+            if not isinstance(base_value, (int, float)):
+                raise ComponentExecutionError(f"Cannot increment non-numeric value: {base_value}")
+            return base_value + step
+
         try:
             current_value = exec_context.get_variable(set_node.name)
             if not isinstance(current_value, (int, float)):
@@ -515,6 +514,14 @@ class ComponentRuntime:
 
     def _execute_set_decrement(self, set_node: SetNode, exec_context: ExecutionContext, step: int) -> Any:
         """Execute decrement operation"""
+        # If value is provided, decrement that; otherwise decrement existing variable
+        if set_node.value:
+            dict_context = exec_context.get_all_variables()
+            base_value = self._apply_databinding(set_node.value, dict_context)
+            if not isinstance(base_value, (int, float)):
+                raise ComponentExecutionError(f"Cannot decrement non-numeric value: {base_value}")
+            return base_value - step
+
         try:
             current_value = exec_context.get_variable(set_node.name)
             if not isinstance(current_value, (int, float)):
@@ -628,12 +635,17 @@ class ComponentRuntime:
 
     def _execute_set_transformation(self, set_node: SetNode, exec_context: ExecutionContext) -> Any:
         """Execute string transformation operations"""
-        try:
-            current_value = exec_context.get_variable(set_node.name)
-        except VariableNotFoundError:
-            current_value = ""
-
-        value_str = str(current_value)
+        # If a value is provided, use that; otherwise use existing variable
+        if set_node.value:
+            dict_context = exec_context.get_all_variables()
+            processed_value = self._apply_databinding(set_node.value, dict_context)
+            value_str = str(processed_value)
+        else:
+            try:
+                current_value = exec_context.get_variable(set_node.name)
+                value_str = str(current_value)
+            except VariableNotFoundError:
+                value_str = ""
 
         if set_node.operation == "uppercase":
             return value_str.upper()
