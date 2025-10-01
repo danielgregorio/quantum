@@ -1,0 +1,31 @@
+{
+  "name": "quantum",
+  "version": "1.0.0",
+  "description": "> 🧠 **Codename:** FF / FireFusion   > ⚡ **Status:** Initial Runner implementation",
+  "main": "index.js",
+  "directories": {
+    "example": "examples",
+    "test": "tests"
+  },
+  "scripts": {
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danielgregorio/quantum.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/danielgregorio/quantum/issues"
+  },
+  "homepage": "https://github.com/danielgregorio/quantum#readme",
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}

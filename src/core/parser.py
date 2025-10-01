@@ -12,7 +12,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from core.ast_nodes import (
     QuantumNode, ComponentNode, ApplicationNode, JobNode,
-    QuantumParam, QuantumReturn, QuantumRoute, IfNode
+    QuantumParam, QuantumReturn, QuantumRoute, IfNode, LoopNode
 )
 
 class QuantumParseError(Exception):
@@ -116,6 +116,11 @@ class QuantumParser:
         for if_el in self._find_all_elements(parent, 'if'):
             if_node = self._parse_if_statement(if_el)
             component.add_statement(if_node)
+        
+        # Parse q:loop elements
+        for loop_el in self._find_all_elements(parent, 'loop'):
+            loop_node = self._parse_loop_statement(loop_el)
+            component.add_statement(loop_node)
     
     def _parse_if_statement(self, if_element: ET.Element) -> IfNode:
         """Parse q:if statement with elseif and else blocks"""
@@ -157,6 +162,43 @@ class QuantumParser:
                     if_node.add_if_statement(statement)
         
         return if_node
+    
+    def _parse_loop_statement(self, loop_element: ET.Element) -> LoopNode:
+        """Parse q:loop statement with various types"""
+        loop_type = loop_element.get('type', 'range')
+        var_name = loop_element.get('var')
+        
+        if not var_name:
+            raise QuantumParseError("Loop requires 'var' attribute")
+        
+        loop_node = LoopNode(loop_type, var_name)
+        
+        # Configure based on loop type
+        if loop_type == 'range':
+            loop_node.from_value = loop_element.get('from')
+            loop_node.to_value = loop_element.get('to')
+            step = loop_element.get('step', '1')
+            try:
+                loop_node.step_value = int(step)
+            except ValueError:
+                loop_node.step_value = 1
+        
+        elif loop_type == 'array':
+            loop_node.items = loop_element.get('items')
+            loop_node.index_name = loop_element.get('index')
+        
+        elif loop_type == 'list':
+            loop_node.items = loop_element.get('items')
+            loop_node.delimiter = loop_element.get('delimiter', ',')
+            loop_node.index_name = loop_element.get('index')
+        
+        # Parse loop body statements
+        for child in loop_element:
+            statement = self._parse_statement(child)
+            if statement:
+                loop_node.add_statement(statement)
+        
+        return loop_node
     
     def _parse_statement(self, element: ET.Element) -> Optional[QuantumNode]:
         """Parse individual statement (return, set, etc)"""

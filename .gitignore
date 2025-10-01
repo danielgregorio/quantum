@@ -126,3 +126,8 @@ Thumbs.db
 # Quantum specific
 # Add any Quantum-specific temp files or outputs here
 *.q.temp
+
+# Claude development files
+CLAUDE.MD
+claude_*.md
+debug_notes.md
