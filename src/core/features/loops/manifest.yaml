@@ -1,0 +1,27 @@
+feature:
+  name: "loops"
+  display_name: "Loops (q:loop)"
+  version: "1.0.0"
+  status: "stable"
+  migration_type: "option_c"
+
+description: |
+  Iteration support for ranges, arrays, lists, and objects.
+
+tags:
+  - "loops"
+  - "iteration"
+  - "control-flow"
+
+maintainers:
+  - "Daniel"
+  - "Claude"
+
+api:
+  ast_node: "LoopNode"
+  parser: "src/core/parser.py::_parse_loop"
+  runtime: "src/runtime/component.py::_execute_loop"
+
+testing:
+  integration_tests: 6
+  coverage: 100

@@ -1,0 +1,27 @@
+feature:
+  name: "functions"
+  display_name: "Functions (q:function)"
+  version: "1.0.0"
+  status: "stable"
+  migration_type: "option_c"
+
+description: |
+  Function declaration and execution with REST API support, caching, validation, and more.
+
+tags:
+  - "functions"
+  - "rest-api"
+  - "microservices"
+
+maintainers:
+  - "Daniel"
+  - "Claude"
+
+api:
+  ast_node: "FunctionNode"
+  parser: "src/core/parser.py::_parse_function"
+  runtime: "src/runtime/component.py::_execute_function_call"
+
+testing:
+  integration_tests: 13
+  coverage: 100
