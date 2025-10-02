@@ -1,0 +1,113 @@
+{
+  "dataset_type": "positive",
+  "feature": "functions",
+  "category": "validation_functions",
+  "description": "Functions with parameter validation, type checking, and business rule validation",
+  "examples": [
+    {
+      "id": "valid-001",
+      "intent": "Email validation",
+      "input": {
+        "natural_language": "Validate email format",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"validateEmail\">\n  <q:param name=\"email\" type=\"string\" required=\"true\" validator=\"email\" />\n  <q:return>true</q:return>\n</q:function>",
+        "runtime_behavior": "Throws validation error if email format is invalid"
+      },
+      "tags": ["validation", "email", "format"]
+    },
+    {
+      "id": "valid-002",
+      "intent": "Range validation",
+      "input": {
+        "natural_language": "Validate age is between 0 and 120",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"setUserAge\">\n  <q:param name=\"age\" type=\"number\" required=\"true\" validator=\"range(0,120)\" />\n  <q:return>\n    UPDATE users SET age = {age}\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Validates age is in valid range before updating"
+      },
+      "tags": ["validation", "range", "numeric"]
+    },
+    {
+      "id": "valid-003",
+      "intent": "CPF validation",
+      "input": {
+        "natural_language": "Validate Brazilian CPF number",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"registerUser\">\n  <q:param name=\"cpf\" type=\"string\" required=\"true\" validator=\"cpf\" />\n  <q:param name=\"name\" type=\"string\" required=\"true\" />\n  <q:return>\n    INSERT INTO users (cpf, name) VALUES ({cpf}, {name})\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Validates CPF format and checksum before insertion"
+      },
+      "tags": ["validation", "cpf", "brazil"]
+    },
+    {
+      "id": "valid-004",
+      "intent": "URL validation",
+      "input": {
+        "natural_language": "Validate URL format",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"addWebsite\">\n  <q:param name=\"url\" type=\"string\" required=\"true\" validator=\"url\" />\n  <q:return>\n    INSERT INTO websites (url) VALUES ({url})\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Validates URL format before saving"
+      },
+      "tags": ["validation", "url", "format"]
+    },
+    {
+      "id": "valid-005",
+      "intent": "Multiple validators",
+      "input": {
+        "natural_language": "Validate username with multiple rules",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"createAccount\">\n  <q:param name=\"username\" type=\"string\" required=\"true\" validator=\"minLength(3),maxLength(20),alphanumeric\" />\n  <q:param name=\"email\" type=\"string\" required=\"true\" validator=\"email\" />\n  <q:return>\n    INSERT INTO accounts (username, email) VALUES ({username}, {email})\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Applies multiple validation rules: length and format"
+      },
+      "tags": ["validation", "multiple", "complex"]
+    },
+    {
+      "id": "valid-006",
+      "intent": "Custom validation logic",
+      "input": {
+        "natural_language": "Validate password meets complexity requirements",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"setPassword\">\n  <q:param name=\"password\" type=\"string\" required=\"true\" validator=\"minLength(8),hasUppercase,hasLowercase,hasNumber,hasSpecial\" />\n  <q:return>\n    UPDATE users SET password_hash = HASH({password})\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Validates password complexity before hashing and storing"
+      },
+      "tags": ["validation", "password", "security", "complexity"]
+    },
+    {
+      "id": "valid-007",
+      "intent": "CNPJ validation",
+      "input": {
+        "natural_language": "Validate Brazilian company registration number",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"registerCompany\">\n  <q:param name=\"cnpj\" type=\"string\" required=\"true\" validator=\"cnpj\" />\n  <q:param name=\"companyName\" type=\"string\" required=\"true\" />\n  <q:return>\n    INSERT INTO companies (cnpj, name) VALUES ({cnpj}, {companyName})\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Validates CNPJ format and checksum"
+      },
+      "tags": ["validation", "cnpj", "brazil", "company"]
+    }
+  ]
+}

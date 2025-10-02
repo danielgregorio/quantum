@@ -1,47 +1,60 @@
 {
   "feature": "conditionals",
-  "version": "1.0.0",
-  "description": "Training dataset for conditional logic (q:if/q:else/q:elseif)",
+  "version": "2.0.0",
+  "description": "Comprehensive training dataset for conditional logic (q:if/q:else/q:elseif)",
   "created": "2025-01-02",
+  "updated": "2025-01-02",
   "maintainers": ["Daniel", "Claude"],
 
   "statistics": {
-    "total_examples": 14,
-    "positive_examples": 9,
+    "total_examples": 44,
+    "positive_examples": 39,
     "negative_examples": 5,
     "categories": {
       "simple_if": 3,
       "if_else": 3,
       "if_elseif_else": 3,
+      "nested_conditionals": 4,
+      "complex_expressions": 5,
+      "real_world_validation": 4,
+      "ui_conditional_rendering": 6,
+      "business_logic": 6,
+      "conditionals_with_loops": 5,
       "syntax_errors": 5
     }
   },
 
   "coverage": {
     "conditional_types": {
-      "simple_if": "✅ Covered (3 examples)",
-      "if_else": "✅ Covered (3 examples)",
-      "if_elseif_else": "✅ Covered (3 examples)",
-      "nested_conditionals": "⚠️ Mentioned in intent, not in dataset"
+      "simple_if": "✅ Fully covered (3 basic + usage in complex examples)",
+      "if_else": "✅ Fully covered (3 basic + nested + ui patterns)",
+      "if_elseif_else": "✅ Fully covered (3 basic + business logic + validation)",
+      "nested_conditionals": "✅ ADDED (4 examples: 2-level, 3-level, RBAC, tiered logic)"
     },
     "comparison_operators": {
-      "==": "✅ Covered",
-      "!=": "⚠️ Not covered",
-      ">": "✅ Covered",
-      "<": "✅ Covered",
-      ">=": "✅ Covered",
-      "<=": "⚠️ Not covered"
+      "==": "✅ Covered (multiple examples)",
+      "!=": "✅ ADDED (null checks, validation)",
+      ">": "✅ Covered (age, range checks)",
+      "<": "✅ Covered (comparison logic)",
+      ">=": "✅ Covered (threshold checks)",
+      "<=": "✅ ADDED (range validation, credit limits)"
     },
     "logical_operators": {
-      "AND": "⚠️ Not covered",
-      "OR": "⚠️ Not covered",
-      "NOT": "⚠️ Not covered"
+      "AND": "✅ ADDED (5 examples: multiple conditions, range checks, validation)",
+      "OR": "✅ ADDED (3 examples: role checks, fallback logic)",
+      "NOT": "✅ ADDED (2 examples: negation patterns)"
     },
     "data_types": {
-      "numeric": "✅ Covered",
-      "string": "✅ Covered",
-      "boolean": "✅ Covered",
-      "null_checks": "⚠️ Not covered"
+      "numeric": "✅ Covered (age, scores, quantities, prices)",
+      "string": "✅ Covered (role, status, country comparisons)",
+      "boolean": "✅ Covered (flags, state checks)",
+      "null_checks": "✅ ADDED (email validation, required fields)"
+    },
+    "integration_patterns": {
+      "conditional_loops": "✅ ADDED (5 examples: conditional loop execution, filtering, zebra striping)",
+      "ui_rendering": "✅ ADDED (6 examples: loading states, auth menus, empty states, alerts, feature flags, responsive)",
+      "business_logic": "✅ ADDED (6 examples: pricing, shipping, membership, RBAC, inventory, credit)",
+      "form_validation": "✅ ADDED (4 examples: email, password, age, required fields)"
     },
     "error_cases": {
       "missing_condition": "✅ Covered",
@@ -53,33 +66,44 @@
   },
 
   "training_readiness": {
-    "status": "ready_for_basic_training",
-    "confidence": "medium",
-    "notes": "Good coverage of basic conditional patterns. Need examples with logical operators (AND/OR/NOT) and nested conditionals.",
+    "status": "ready_for_production_training",
+    "confidence": "high",
+    "notes": "Comprehensive coverage of conditional patterns with 39 positive examples showing multiple implementation styles. Covers basic, intermediate, and advanced use cases including nested logic, complex boolean expressions, UI rendering patterns, and business logic scenarios.",
     "recommended_additions": [
-      "Nested conditional examples",
-      "Complex conditions with AND/OR operators",
-      "NOT operator examples",
-      "Null/undefined checks",
-      "!= and <= operator examples",
-      "Edge cases with empty strings and zero values"
+      "Switch/case pattern examples (if feature is implemented)",
+      "Ternary operator examples (if supported)",
+      "Guard clause patterns",
+      "Performance optimization patterns for complex conditionals"
     ]
   },
 
   "file_manifest": {
     "positive": [
-      "positive/simple_if.json (3 examples)",
-      "positive/if_else.json (3 examples)",
-      "positive/if_elseif_else.json (3 examples)"
+      "positive/simple_if.json (3 examples) - Basic if statements",
+      "positive/if_else.json (3 examples) - If-else patterns",
+      "positive/if_elseif_else.json (3 examples) - Multi-branch logic",
+      "positive/nested_conditionals.json (4 examples) - Nested if statements",
+      "positive/complex_expressions.json (5 examples) - AND/OR/NOT operators",
+      "positive/real_world_validation.json (4 examples) - Form validation patterns",
+      "positive/ui_conditional_rendering.json (6 examples) - UI state rendering",
+      "positive/business_logic.json (6 examples) - Business rules and pricing",
+      "positive/conditionals_with_loops.json (5 examples) - Loop integration"
     ],
     "negative": [
-      "negative/invalid_syntax.json (5 examples)"
+      "negative/invalid_syntax.json (5 examples) - Common errors and validation"
     ]
   },
 
   "usage_instructions": {
-    "for_llm_training": "Use positive examples for code generation, negative examples for validation and error prevention",
-    "for_developers": "Reference these examples when implementing conditional logic",
-    "for_testing": "Automated tests mirror these patterns to ensure correctness"
+    "for_llm_training": "Use positive examples for code generation training. Show LLM multiple ways to solve same problem (e.g., filtering can use nested if vs complex AND expression). Negative examples teach error detection and validation.",
+    "for_developers": "Reference these examples when learning q:if. See progression from basic to advanced. Real-world patterns show production usage.",
+    "for_testing": "Automated tests should mirror these examples. Each example represents a valid test case."
+  },
+
+  "example_diversity": {
+    "implementation_styles": "Shows 3-6 different approaches per pattern type",
+    "complexity_levels": "Basic (9) -> Intermediate (13) -> Advanced (17)",
+    "use_cases": "Form validation, UI rendering, business logic, RBAC, pricing, inventory, responsive design",
+    "multiple_solutions": "Same problem solved different ways (e.g., validation via nested if vs AND operators)"
   }
 }

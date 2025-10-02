@@ -1,0 +1,88 @@
+{
+  "dataset_type": "positive",
+  "feature": "conditionals",
+  "category": "conditionals_with_loops",
+  "description": "Integration of conditionals controlling loop behavior and vice versa",
+  "examples": [
+    {
+      "id": "cond-loop-001",
+      "intent": "Conditional loop execution",
+      "input": {
+        "natural_language": "Only loop if data exists",
+        "context": {
+          "available_vars": ["hasData", "items"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{hasData} == true\">\n  <q:loop type=\"array\" var=\"item\" items=\"{items}\">\n    <div>{item}</div>\n  </q:loop>\n<q:else/>\n  <p>No data available</p>\n</q:if>",
+        "runtime_behavior": "Loop executes only when data exists"
+      },
+      "tags": ["integration", "conditional_loop", "data_check"]
+    },
+    {
+      "id": "cond-loop-002",
+      "intent": "Filter loop items with nested if",
+      "input": {
+        "natural_language": "Show only active users in loop",
+        "context": {
+          "available_vars": ["users"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:loop type=\"array\" var=\"user\" items=\"{users}\">\n  <q:if condition=\"{user.status} == 'active'\">\n    <div class=\"user-card\">\n      {user.name}\n    </div>\n  </q:if>\n</q:loop>",
+        "runtime_behavior": "Filters array items during iteration"
+      },
+      "tags": ["integration", "filtering", "nested"]
+    },
+    {
+      "id": "cond-loop-003",
+      "intent": "Different loop types based on condition",
+      "input": {
+        "natural_language": "Choose iteration strategy based on data type",
+        "context": {
+          "available_vars": ["dataType", "arrayData", "csvData"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{dataType} == 'array'\">\n  <q:loop type=\"array\" var=\"item\" items=\"{arrayData}\">\n    {item}\n  </q:loop>\n<q:elseif condition=\"{dataType} == 'csv'\"/>\n  <q:loop type=\"list\" var=\"item\" items=\"{csvData}\" delimiter=\",\">\n    {item}\n  </q:loop>\n<q:else/>\n  <p>Unsupported data type</p>\n</q:if>",
+        "runtime_behavior": "Selects appropriate loop type based on data format"
+      },
+      "tags": ["integration", "dynamic_loop", "data_types"]
+    },
+    {
+      "id": "cond-loop-004",
+      "intent": "Alternating row styles in loop",
+      "input": {
+        "natural_language": "Apply zebra striping to table rows",
+        "context": {
+          "available_vars": ["items"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:loop type=\"array\" var=\"item\" index=\"i\" items=\"{items}\">\n  <q:if condition=\"{i} % 2 == 0\">\n    <div class=\"row-even\">{item}</div>\n  <q:else/>\n    <div class=\"row-odd\">{item}</div>\n  </q:if>\n</q:loop>",
+        "runtime_behavior": "Alternates CSS classes for zebra striping"
+      },
+      "tags": ["integration", "ui_pattern", "zebra_striping"]
+    },
+    {
+      "id": "cond-loop-005",
+      "intent": "Show first/last item differently",
+      "input": {
+        "natural_language": "Highlight first and last items in list",
+        "context": {
+          "available_vars": ["items", "itemCount"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:loop type=\"array\" var=\"item\" index=\"i\" items=\"{items}\">\n  <q:if condition=\"{i} == 0\">\n    <div class=\"first-item\">{item}</div>\n  <q:elseif condition=\"{i} == {itemCount} - 1\"/>\n    <div class=\"last-item\">{item}</div>\n  <q:else/>\n    <div class=\"item\">{item}</div>\n  </q:if>\n</q:loop>",
+        "runtime_behavior": "First and last items get special styling"
+      },
+      "tags": ["integration", "ui_pattern", "boundary_detection"]
+    }
+  ]
+}

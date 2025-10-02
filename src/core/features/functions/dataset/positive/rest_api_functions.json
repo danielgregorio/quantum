@@ -1,0 +1,113 @@
+{
+  "dataset_type": "positive",
+  "feature": "functions",
+  "category": "rest_api_functions",
+  "description": "REST API endpoint definitions with HTTP methods, parameters, and responses",
+  "examples": [
+    {
+      "id": "rest-001",
+      "intent": "Simple GET endpoint",
+      "input": {
+        "natural_language": "Define a GET endpoint to fetch user by ID",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"getUser\" rest=\"GET /api/users/{id}\">\n  <q:param name=\"id\" type=\"string\" required=\"true\" />\n  <q:return>\n    SELECT * FROM users WHERE id = {id}\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Creates GET /api/users/:id endpoint that fetches user from database"
+      },
+      "tags": ["rest_api", "GET", "database_query"]
+    },
+    {
+      "id": "rest-002",
+      "intent": "POST endpoint with body",
+      "input": {
+        "natural_language": "Create POST endpoint to add new user",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"createUser\" rest=\"POST /api/users\">\n  <q:param name=\"name\" type=\"string\" required=\"true\" />\n  <q:param name=\"email\" type=\"string\" required=\"true\" validator=\"email\" />\n  <q:param name=\"age\" type=\"number\" required=\"false\" />\n  <q:return>\n    INSERT INTO users (name, email, age) VALUES ({name}, {email}, {age})\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Creates POST /api/users endpoint that inserts new user into database"
+      },
+      "tags": ["rest_api", "POST", "database_insert", "validation"]
+    },
+    {
+      "id": "rest-003",
+      "intent": "PUT endpoint for update",
+      "input": {
+        "natural_language": "Update user information",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"updateUser\" rest=\"PUT /api/users/{id}\">\n  <q:param name=\"id\" type=\"string\" required=\"true\" />\n  <q:param name=\"name\" type=\"string\" required=\"false\" />\n  <q:param name=\"email\" type=\"string\" required=\"false\" validator=\"email\" />\n  <q:return>\n    UPDATE users SET name = {name}, email = {email} WHERE id = {id}\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Creates PUT /api/users/:id endpoint for user updates"
+      },
+      "tags": ["rest_api", "PUT", "database_update"]
+    },
+    {
+      "id": "rest-004",
+      "intent": "DELETE endpoint",
+      "input": {
+        "natural_language": "Delete user by ID",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"deleteUser\" rest=\"DELETE /api/users/{id}\">\n  <q:param name=\"id\" type=\"string\" required=\"true\" />\n  <q:return>\n    DELETE FROM users WHERE id = {id}\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Creates DELETE /api/users/:id endpoint"
+      },
+      "tags": ["rest_api", "DELETE", "database_delete"]
+    },
+    {
+      "id": "rest-005",
+      "intent": "Query parameters endpoint",
+      "input": {
+        "natural_language": "Search users with filters",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"searchUsers\" rest=\"GET /api/users/search\">\n  <q:param name=\"name\" type=\"string\" required=\"false\" />\n  <q:param name=\"minAge\" type=\"number\" required=\"false\" />\n  <q:param name=\"maxAge\" type=\"number\" required=\"false\" />\n  <q:return>\n    SELECT * FROM users\n    WHERE (name LIKE '%{name}%' OR {name} IS NULL)\n    AND (age >= {minAge} OR {minAge} IS NULL)\n    AND (age <= {maxAge} OR {maxAge} IS NULL)\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Creates GET /api/users/search?name=...&minAge=...&maxAge=... endpoint"
+      },
+      "tags": ["rest_api", "GET", "query_params", "search"]
+    },
+    {
+      "id": "rest-006",
+      "intent": "Paginated endpoint",
+      "input": {
+        "natural_language": "Get users with pagination",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"listUsers\" rest=\"GET /api/users\">\n  <q:param name=\"page\" type=\"number\" required=\"false\" default=\"1\" />\n  <q:param name=\"limit\" type=\"number\" required=\"false\" default=\"10\" validator=\"range(1,100)\" />\n  <q:return>\n    SELECT * FROM users\n    LIMIT {limit} OFFSET {(page - 1) * limit}\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Creates GET /api/users?page=1&limit=10 endpoint with pagination"
+      },
+      "tags": ["rest_api", "GET", "pagination", "query_params"]
+    },
+    {
+      "id": "rest-007",
+      "intent": "Nested resource endpoint",
+      "input": {
+        "natural_language": "Get posts for a specific user",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"getUserPosts\" rest=\"GET /api/users/{userId}/posts\">\n  <q:param name=\"userId\" type=\"string\" required=\"true\" />\n  <q:return>\n    SELECT * FROM posts WHERE user_id = {userId}\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Creates GET /api/users/:userId/posts endpoint for nested resources"
+      },
+      "tags": ["rest_api", "GET", "nested_resources"]
+    }
+  ]
+}

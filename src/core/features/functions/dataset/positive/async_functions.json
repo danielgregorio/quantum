@@ -1,0 +1,83 @@
+{
+  "dataset_type": "positive",
+  "feature": "functions",
+  "category": "async_functions",
+  "description": "Asynchronous functions with promises, callbacks, and async patterns",
+  "examples": [
+    {
+      "id": "async-001",
+      "intent": "Simple async function",
+      "input": {
+        "natural_language": "Fetch data asynchronously",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"fetchUserData\" async=\"true\">\n  <q:param name=\"userId\" type=\"string\" required=\"true\" />\n  <q:return>\n    FETCH https://api.example.com/users/{userId}\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Returns promise that resolves with user data"
+      },
+      "tags": ["async", "fetch", "promise"]
+    },
+    {
+      "id": "async-002",
+      "intent": "Multiple async operations",
+      "input": {
+        "natural_language": "Fetch user and their posts in parallel",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"getUserWithPosts\" async=\"true\">\n  <q:param name=\"userId\" type=\"string\" required=\"true\" />\n  <q:return>\n    PARALLEL {\n      user: FETCH https://api.example.com/users/{userId},\n      posts: FETCH https://api.example.com/users/{userId}/posts\n    }\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Executes both fetches in parallel, returns combined result"
+      },
+      "tags": ["async", "parallel", "multiple_requests"]
+    },
+    {
+      "id": "async-003",
+      "intent": "Sequential async operations",
+      "input": {
+        "natural_language": "Fetch user, then fetch their permissions",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"getUserPermissions\" async=\"true\">\n  <q:param name=\"userId\" type=\"string\" required=\"true\" />\n  <q:return>\n    AWAIT user = FETCH https://api.example.com/users/{userId}\n    AWAIT permissions = FETCH https://api.example.com/permissions/{user.roleId}\n    RETURN {user, permissions}\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Fetches user first, then uses result to fetch permissions"
+      },
+      "tags": ["async", "sequential", "await", "dependent"]
+    },
+    {
+      "id": "async-004",
+      "intent": "Async with error handling",
+      "input": {
+        "natural_language": "Fetch with fallback on error",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"fetchWithFallback\" async=\"true\">\n  <q:param name=\"id\" type=\"string\" required=\"true\" />\n  <q:return>\n    TRY {\n      FETCH https://api.example.com/data/{id}\n    } CATCH {\n      FETCH https://backup-api.example.com/data/{id}\n    }\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Tries primary API, falls back to backup on error"
+      },
+      "tags": ["async", "error_handling", "fallback"]
+    },
+    {
+      "id": "async-005",
+      "intent": "Async with timeout",
+      "input": {
+        "natural_language": "Fetch with 5 second timeout",
+        "context": {
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"fetchWithTimeout\" async=\"true\" timeout=\"5000\">\n  <q:param name=\"url\" type=\"string\" required=\"true\" />\n  <q:return>\n    FETCH {url}\n  </q:return>\n</q:function>",
+        "runtime_behavior": "Aborts request after 5 seconds if not completed"
+      },
+      "tags": ["async", "timeout", "performance"]
+    }
+  ]
+}

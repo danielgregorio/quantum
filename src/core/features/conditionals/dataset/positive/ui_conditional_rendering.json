@@ -1,0 +1,104 @@
+{
+  "dataset_type": "positive",
+  "feature": "conditionals",
+  "category": "ui_conditional_rendering",
+  "description": "Real-world UI rendering patterns based on state and user context",
+  "examples": [
+    {
+      "id": "ui-cond-001",
+      "intent": "Show/hide loading spinner",
+      "input": {
+        "natural_language": "Display loading spinner while data is being fetched",
+        "context": {
+          "available_vars": ["isLoading"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{isLoading} == true\">\n  <div class=\"spinner\">Loading...</div>\n<q:else/>\n  <div class=\"content\">{data}</div>\n</q:if>",
+        "runtime_behavior": "Shows spinner when loading, content when loaded"
+      },
+      "tags": ["ui_rendering", "loading_state"]
+    },
+    {
+      "id": "ui-cond-002",
+      "intent": "Authenticated user menu",
+      "input": {
+        "natural_language": "Show different menu options for logged in vs guest users",
+        "context": {
+          "available_vars": ["isAuthenticated", "username"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{isAuthenticated} == true\">\n  <div class=\"user-menu\">\n    Welcome, {username}!\n    <button>Logout</button>\n  </div>\n<q:else/>\n  <div class=\"guest-menu\">\n    <button>Login</button>\n    <button>Sign Up</button>\n  </div>\n</q:if>",
+        "runtime_behavior": "Shows personalized menu for authenticated users, login options for guests"
+      },
+      "tags": ["ui_rendering", "authentication", "rbac"]
+    },
+    {
+      "id": "ui-cond-003",
+      "intent": "Empty state vs content",
+      "input": {
+        "natural_language": "Show empty state message when no items, otherwise show list",
+        "context": {
+          "available_vars": ["items", "itemCount"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{itemCount} == 0\">\n  <div class=\"empty-state\">\n    <p>No items found</p>\n    <button>Add First Item</button>\n  </div>\n<q:else/>\n  <ul class=\"item-list\">\n    <!-- items rendered here -->\n  </ul>\n</q:if>",
+        "runtime_behavior": "Shows empty state when no items, list when items exist"
+      },
+      "tags": ["ui_rendering", "empty_state"]
+    },
+    {
+      "id": "ui-cond-004",
+      "intent": "Error vs success message",
+      "input": {
+        "natural_language": "Show error or success message based on form submission result",
+        "context": {
+          "available_vars": ["hasError", "errorMessage", "successMessage"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{hasError} == true\">\n  <div class=\"alert alert-error\">\n    {errorMessage}\n  </div>\n<q:else/>\n  <div class=\"alert alert-success\">\n    {successMessage}\n  </div>\n</q:if>",
+        "runtime_behavior": "Displays error or success alert based on state"
+      },
+      "tags": ["ui_rendering", "alerts", "form_feedback"]
+    },
+    {
+      "id": "ui-cond-005",
+      "intent": "Feature flag toggle",
+      "input": {
+        "natural_language": "Show beta feature only when feature flag is enabled",
+        "context": {
+          "available_vars": ["featureFlags"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{featureFlags.betaUI} == true\">\n  <div class=\"beta-feature\">\n    <span class=\"badge\">BETA</span>\n    <button>Try New Dashboard</button>\n  </div>\n</q:if>",
+        "runtime_behavior": "Conditionally renders beta features based on flags"
+      },
+      "tags": ["ui_rendering", "feature_flags", "a_b_testing"]
+    },
+    {
+      "id": "ui-cond-006",
+      "intent": "Mobile vs desktop layout",
+      "input": {
+        "natural_language": "Render different layouts for mobile and desktop",
+        "context": {
+          "available_vars": ["isMobile"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{isMobile} == true\">\n  <div class=\"mobile-layout\">\n    <hamburger-menu />\n    <content-stack />\n  </div>\n<q:else/>\n  <div class=\"desktop-layout\">\n    <sidebar />\n    <main-content />\n    <right-panel />\n  </div>\n</q:if>",
+        "runtime_behavior": "Responsive layout based on device type"
+      },
+      "tags": ["ui_rendering", "responsive", "mobile_first"]
+    }
+  ]
+}

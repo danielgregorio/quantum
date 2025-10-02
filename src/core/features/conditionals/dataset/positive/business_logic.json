@@ -1,0 +1,104 @@
+{
+  "dataset_type": "positive",
+  "feature": "conditionals",
+  "category": "business_logic",
+  "description": "Business rules, pricing logic, and permission systems",
+  "examples": [
+    {
+      "id": "biz-001",
+      "intent": "Tiered pricing",
+      "input": {
+        "natural_language": "Calculate discount based on purchase quantity",
+        "context": {
+          "available_vars": ["quantity", "price"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{quantity} >= 100\">\n  Discount: 30%\n<q:elseif condition=\"{quantity} >= 50\"/>\n  Discount: 20%\n<q:elseif condition=\"{quantity} >= 10\"/>\n  Discount: 10%\n<q:else/>\n  No discount\n</q:if>",
+        "runtime_behavior": "Tiered discount system based on quantity"
+      },
+      "tags": ["business_logic", "pricing", "discounts"]
+    },
+    {
+      "id": "biz-002",
+      "intent": "Shipping cost calculation",
+      "input": {
+        "natural_language": "Calculate shipping based on total and location",
+        "context": {
+          "available_vars": ["orderTotal", "country"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{orderTotal} >= 100\">\n  Free shipping!\n<q:else/>\n  <q:if condition=\"{country} == 'USA'\">\n    Shipping: $5.99\n  <q:elseif condition=\"{country} == 'Canada'\"/>\n    Shipping: $8.99\n  <q:else/>\n    Shipping: $15.99\n  </q:if>\n</q:if>",
+        "runtime_behavior": "Free shipping over $100, otherwise country-based rates"
+      },
+      "tags": ["business_logic", "shipping", "pricing"]
+    },
+    {
+      "id": "biz-003",
+      "intent": "Membership level benefits",
+      "input": {
+        "natural_language": "Show benefits based on membership tier",
+        "context": {
+          "available_vars": ["membershipLevel"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{membershipLevel} == 'platinum'\">\n  ✓ Free shipping\n  ✓ Priority support\n  ✓ Exclusive access\n  ✓ 25% off all items\n<q:elseif condition=\"{membershipLevel} == 'gold'\"/>\n  ✓ Free shipping\n  ✓ Priority support\n  ✓ 15% off all items\n<q:elseif condition=\"{membershipLevel} == 'silver'\"/>\n  ✓ Free shipping on orders $50+\n  ✓ 10% off all items\n<q:else/>\n  Standard benefits\n</q:if>",
+        "runtime_behavior": "Tiered membership benefits display"
+      },
+      "tags": ["business_logic", "membership", "benefits"]
+    },
+    {
+      "id": "biz-004",
+      "intent": "Access control by role",
+      "input": {
+        "natural_language": "Control access to features based on user role",
+        "context": {
+          "available_vars": ["userRole"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{userRole} == 'admin'\">\n  <admin-dashboard />\n<q:elseif condition=\"{userRole} == 'moderator'\"/>\n  <moderator-panel />\n<q:elseif condition=\"{userRole} == 'user'\"/>\n  <user-profile />\n<q:else/>\n  <guest-view />\n</q:if>",
+        "runtime_behavior": "Role-based access control for UI components"
+      },
+      "tags": ["business_logic", "rbac", "permissions"]
+    },
+    {
+      "id": "biz-005",
+      "intent": "Stock availability",
+      "input": {
+        "natural_language": "Show stock status and purchase options",
+        "context": {
+          "available_vars": ["stockCount", "reservedCount"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{stockCount} == 0\">\n  <span class=\"out-of-stock\">Out of Stock</span>\n  <button disabled>Notify Me</button>\n<q:elseif condition=\"{stockCount} <= 5\"/>\n  <span class=\"low-stock\">Only {stockCount} left!</span>\n  <button>Add to Cart</button>\n<q:else/>\n  <span class=\"in-stock\">In Stock</span>\n  <button>Add to Cart</button>\n</q:if>",
+        "runtime_behavior": "Stock-based purchase UI and messaging"
+      },
+      "tags": ["business_logic", "inventory", "ecommerce"]
+    },
+    {
+      "id": "biz-006",
+      "intent": "Credit limit check",
+      "input": {
+        "natural_language": "Allow purchase only if within credit limit",
+        "context": {
+          "available_vars": ["creditLimit", "currentBalance", "purchaseAmount"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{currentBalance} + {purchaseAmount} <= {creditLimit}\">\n  <button>Complete Purchase</button>\n  <p>Available credit: ${creditLimit - currentBalance - purchaseAmount}</p>\n<q:else/>\n  <span class=\"error\">Insufficient credit</span>\n  <button disabled>Complete Purchase</button>\n</q:if>",
+        "runtime_behavior": "Credit limit validation for purchases"
+      },
+      "tags": ["business_logic", "credit", "validation"]
+    }
+  ]
+}
