@@ -1,0 +1,28 @@
+{
+  "dataset_type": "negative",
+  "feature": "state_management",
+  "version": "1.0.0",
+  "examples": [
+    {
+      "id": "set-error-001",
+      "intent": "Invalid email validation",
+      "input": {
+        "natural_language": "I want to store an email with validation",
+        "attempted_code": "<q:set name=\"email\" value=\"not-an-email\" validate=\"email\" />"
+      },
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Invalid email format"
+      },
+      "correction": {
+        "quantum_code": "<q:set name=\"email\" value=\"user@example.com\" validate=\"email\" />",
+        "explanation": "Email must be in valid format: user@domain.com"
+      },
+      "metadata": {
+        "error_category": "validation_failure",
+        "severity": "high",
+        "source_test": "examples/test-set-validation-email-invalid.q"
+      }
+    }
+  ]
+}
