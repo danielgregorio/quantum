@@ -1,0 +1,138 @@
+intention:
+  name: "Loops and Iteration with q:loop"
+  version: "1.0.0"
+  category: "control-flow"
+  goal: |
+    Enable developers to iterate over ranges, arrays, lists, and objects
+    with support for index tracking, custom delimiters, and step values.
+
+  capabilities:
+    - "Iterate over numeric ranges (from-to with optional step)"
+    - "Iterate over arrays with index access"
+    - "Iterate over delimited lists (comma, semicolon, pipe, etc.)"
+    - "Iterate over object properties"
+    - "Support for nested loops"
+    - "Loop variable scoping within ExecutionContext"
+
+  syntax:
+    tag: "q:loop"
+    attributes:
+      - name: "type"
+        type: "string"
+        required: true
+        values: ["range", "array", "list", "object", "query", "while"]
+        description: "Type of iteration to perform"
+
+      - name: "var"
+        type: "string"
+        required: true
+        description: "Variable name for current item"
+
+      - name: "index"
+        type: "string"
+        required: false
+        description: "Variable name for current index (optional)"
+
+      # For type="range"
+      - name: "from"
+        type: "number"
+        required: false
+        description: "Starting value for range loops"
+
+      - name: "to"
+        type: "number"
+        required: false
+        description: "Ending value for range loops"
+
+      - name: "step"
+        type: "number"
+        required: false
+        default: 1
+        description: "Step increment for range loops"
+
+      # For type="array"
+      - name: "items"
+        type: "string"
+        required: false
+        description: "Array variable name or expression"
+
+      # For type="list"
+      - name: "delimiter"
+        type: "string"
+        required: false
+        default: ","
+        description: "Character to split list items (comma, semicolon, pipe, etc.)"
+
+      # For type="while"
+      - name: "condition"
+        type: "string"
+        required: false
+        description: "Boolean expression for while loops"
+
+  examples:
+    - title: "Range Loop"
+      quantum_code: |
+        <q:loop type="range" var="i" from="1" to="5">
+          Number: {i}
+        </q:loop>
+      output: "Number: 1\nNumber: 2\nNumber: 3\nNumber: 4\nNumber: 5"
+
+    - title: "Range with Step"
+      quantum_code: |
+        <q:loop type="range" var="i" from="0" to="10" step="2">
+          Even: {i}
+        </q:loop>
+      output: "Even: 0\nEven: 2\nEven: 4\nEven: 6\nEven: 8\nEven: 10"
+
+    - title: "Array Loop with Index"
+      quantum_code: |
+        <q:set name="fruits" type="array" value="['apple', 'banana', 'cherry']" />
+        <q:loop type="array" var="fruit" index="idx" items="{fruits}">
+          {idx}: {fruit}
+        </q:loop>
+      output: "0: apple\n1: banana\n2: cherry"
+
+    - title: "List Loop with Custom Delimiter"
+      quantum_code: |
+        <q:set name="colors" value="red;green;blue" />
+        <q:loop type="list" var="color" items="{colors}" delimiter=";">
+          Color: {color}
+        </q:loop>
+      output: "Color: red\nColor: green\nColor: blue"
+
+    - title: "Nested Loops"
+      quantum_code: |
+        <q:loop type="range" var="i" from="1" to="3">
+          <q:loop type="range" var="j" from="1" to="2">
+            {i}x{j}
+          </q:loop>
+        </q:loop>
+      output: "1x1\n1x2\n2x1\n2x2\n3x1\n3x2"
+
+  use_cases:
+    - "Rendering lists of items in UI"
+    - "Processing arrays of data"
+    - "Generating repeated HTML/markup structures"
+    - "Iterating over API response collections"
+    - "Building tables and grids"
+    - "Mathematical computations over ranges"
+
+  implementation_notes:
+    - "Loop variables are scoped to the loop body using ExecutionContext"
+    - "Index is 0-based for array/list loops"
+    - "Step can be negative for countdown loops"
+    - "Delimiter defaults to comma but supports any string"
+    - "Nested loops maintain separate variable scopes"
+
+  validation:
+    - "type must be one of: range, array, list, object, query, while"
+    - "var name is required and must be valid identifier"
+    - "from/to required for range loops"
+    - "items required for array/list loops"
+    - "condition required for while loops"
+    - "step must be non-zero for range loops"
+
+  related_features:
+    - "state_management" # Loop variables interact with q:set
+    - "conditionals" # Can use q:if inside loops
+    - "databinding" # Loop variables accessible via {var} syntax

@@ -1,0 +1,88 @@
+{
+  "dataset_type": "negative",
+  "feature": "conditionals",
+  "category": "syntax_errors",
+  "description": "Invalid conditional syntax that should be rejected",
+  "examples": [
+    {
+      "id": "if-invalid-001",
+      "intent": "Missing condition attribute",
+      "input": {
+        "natural_language": "If statement without condition",
+        "quantum_code": "<q:if>\n  Content\n</q:if>"
+      },
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "If condition is required",
+        "location": "IfNode validation"
+      },
+      "why_invalid": "q:if must have a condition attribute",
+      "correction": "Add condition=\"{variable} > 0\"",
+      "tags": ["missing_attribute", "condition"]
+    },
+    {
+      "id": "if-invalid-002",
+      "intent": "else with condition attribute",
+      "input": {
+        "natural_language": "q:else should not have condition",
+        "quantum_code": "<q:if condition=\"{age} > 18\">\n  Adult\n<q:else condition=\"{age} <= 18\"/>\n  Minor\n</q:if>"
+      },
+      "expected_error": {
+        "type": "SyntaxError",
+        "message": "q:else cannot have a condition attribute",
+        "location": "Parser"
+      },
+      "why_invalid": "q:else is unconditional fallback",
+      "correction": "Remove condition attribute from q:else",
+      "tags": ["invalid_attribute", "else"]
+    },
+    {
+      "id": "if-invalid-003",
+      "intent": "elseif without condition",
+      "input": {
+        "natural_language": "q:elseif requires condition",
+        "quantum_code": "<q:if condition=\"{score} >= 90\">\n  A\n<q:elseif/>\n  B\n</q:if>"
+      },
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Elseif condition is required",
+        "location": "IfNode validation"
+      },
+      "why_invalid": "q:elseif must have condition to evaluate",
+      "correction": "Add condition=\"{score} >= 80\"",
+      "tags": ["missing_attribute", "elseif"]
+    },
+    {
+      "id": "if-invalid-004",
+      "intent": "Multiple else blocks",
+      "input": {
+        "natural_language": "Only one else allowed per if",
+        "quantum_code": "<q:if condition=\"{x} > 0\">\n  Positive\n<q:else/>\n  Zero or Negative\n<q:else/>\n  Another else\n</q:if>"
+      },
+      "expected_error": {
+        "type": "SyntaxError",
+        "message": "Only one q:else block allowed per q:if",
+        "location": "Parser"
+      },
+      "why_invalid": "Multiple else blocks create ambiguity",
+      "correction": "Remove duplicate q:else",
+      "tags": ["duplicate_else", "structural_error"]
+    },
+    {
+      "id": "if-invalid-005",
+      "intent": "Invalid condition expression",
+      "input": {
+        "natural_language": "Malformed boolean expression",
+        "quantum_code": "<q:if condition=\"{age} >>= 18\">\n  Content\n</q:if>"
+      },
+      "expected_error": {
+        "type": "ExpressionError",
+        "message": "Invalid operator '>>=' in condition",
+        "location": "Runtime condition evaluation"
+      },
+      "why_invalid": ">>= is not a valid comparison operator",
+      "correction": "Use >= instead",
+      "tags": ["invalid_operator", "syntax_error"]
+    }
+  ]
+}

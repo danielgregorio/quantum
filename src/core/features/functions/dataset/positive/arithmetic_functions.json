@@ -1,0 +1,89 @@
+{
+  "dataset_type": "positive",
+  "feature": "functions",
+  "category": "arithmetic_functions",
+  "description": "Valid examples of functions performing mathematical operations",
+  "examples": [
+    {
+      "id": "func-math-001",
+      "intent": "Addition function",
+      "input": {
+        "natural_language": "Create function to add two numbers",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"add\" return-type=\"number\">\n  <q:param name=\"a\" type=\"number\" required=\"true\" />\n  <q:param name=\"b\" type=\"number\" required=\"true\" />\n  <q:return value=\"{a} + {b}\" />\n</q:function>\n\n<q:call function=\"add\" a=\"5\" b=\"3\" />",
+        "ast": {
+          "type": "FunctionNode",
+          "attributes": {
+            "name": "add",
+            "return_type": "number",
+            "params_count": 2
+          }
+        },
+        "runtime_behavior": "Returns 8"
+      },
+      "tags": ["math", "addition", "number_return"]
+    },
+    {
+      "id": "func-math-002",
+      "intent": "Multiply function with validation",
+      "input": {
+        "natural_language": "Multiply two numbers with type validation",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"multiply\" return-type=\"number\" validate-params=\"true\">\n  <q:param name=\"x\" type=\"number\" required=\"true\" />\n  <q:param name=\"y\" type=\"number\" required=\"true\" />\n  <q:return value=\"{x} * {y}\" />\n</q:function>\n\n<q:call function=\"multiply\" x=\"4\" y=\"7\" />",
+        "ast": {
+          "type": "FunctionNode",
+          "attributes": {
+            "name": "multiply",
+            "return_type": "number",
+            "validate_params": true
+          }
+        },
+        "runtime_behavior": "Returns 28, validates params are numbers"
+      },
+      "tags": ["math", "multiplication", "validation"]
+    },
+    {
+      "id": "func-math-003",
+      "intent": "Calculate area of rectangle",
+      "input": {
+        "natural_language": "Function to calculate area given width and height",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"calculateArea\" return-type=\"number\">\n  <q:param name=\"width\" type=\"number\" required=\"true\" min=\"0\" />\n  <q:param name=\"height\" type=\"number\" required=\"true\" min=\"0\" />\n  <q:return value=\"{width} * {height}\" />\n</q:function>\n\n<q:call function=\"calculateArea\" width=\"5\" height=\"10\" />",
+        "ast": {
+          "type": "FunctionNode",
+          "attributes": {
+            "name": "calculateArea",
+            "return_type": "number",
+            "params": [
+              {
+                "name": "width",
+                "min": 0
+              },
+              {
+                "name": "height",
+                "min": 0
+              }
+            ]
+          }
+        },
+        "runtime_behavior": "Returns 50"
+      },
+      "tags": ["math", "geometry", "param_constraints"]
+    }
+  ]
+}

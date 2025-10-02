@@ -1,0 +1,80 @@
+{
+  "dataset_type": "positive",
+  "feature": "conditionals",
+  "category": "if_else",
+  "description": "Valid examples of if-else statements (binary choices)",
+  "examples": [
+    {
+      "id": "if-else-001",
+      "intent": "Temperature check with two outcomes",
+      "input": {
+        "natural_language": "Show 'warm' if temperature > 20, otherwise show 'cold'",
+        "context": {
+          "available_vars": ["temperature"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{temperature} > 20\">\n  It's warm.\n<q:else/>\n  It's cold.\n</q:if>",
+        "ast": {
+          "type": "IfNode",
+          "attributes": {
+            "condition": "{temperature} > 20",
+            "has_elseif": false,
+            "has_else": true
+          }
+        },
+        "runtime_behavior": "Shows one of two messages based on temperature"
+      },
+      "tags": ["if_else", "binary_choice", "numeric"]
+    },
+    {
+      "id": "if-else-002",
+      "intent": "Access control",
+      "input": {
+        "natural_language": "Grant access if authenticated, otherwise show login",
+        "context": {
+          "available_vars": ["isAuthenticated"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{isAuthenticated} == true\">\n  <dashboard />\n<q:else/>\n  <login-form />\n</q:if>",
+        "ast": {
+          "type": "IfNode",
+          "attributes": {
+            "condition": "{isAuthenticated} == true",
+            "has_elseif": false,
+            "has_else": true
+          }
+        },
+        "runtime_behavior": "Shows dashboard or login based on auth status"
+      },
+      "tags": ["if_else", "authentication", "component_rendering"]
+    },
+    {
+      "id": "if-else-003",
+      "intent": "Pass/Fail grade",
+      "input": {
+        "natural_language": "Show 'Passed' if score >= 60, else 'Failed'",
+        "context": {
+          "available_vars": ["score"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{score} >= 60\">\n  Result: Passed\n<q:else/>\n  Result: Failed\n</q:if>",
+        "ast": {
+          "type": "IfNode",
+          "attributes": {
+            "condition": "{score} >= 60",
+            "has_elseif": false,
+            "has_else": true
+          }
+        },
+        "runtime_behavior": "Binary pass/fail based on score threshold"
+      },
+      "tags": ["if_else", "grading", "threshold"]
+    }
+  ]
+}

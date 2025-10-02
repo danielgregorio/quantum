@@ -1,0 +1,75 @@
+{
+  "feature": "loops",
+  "version": "1.0.0",
+  "description": "Training dataset for loop iteration (q:loop)",
+  "created": "2025-01-02",
+  "maintainers": ["Daniel", "Claude"],
+
+  "statistics": {
+    "total_examples": 14,
+    "positive_examples": 9,
+    "negative_examples": 5,
+    "categories": {
+      "range_iteration": 3,
+      "array_iteration": 3,
+      "list_iteration": 3,
+      "syntax_errors": 5
+    }
+  },
+
+  "coverage": {
+    "loop_types": {
+      "range": "✅ Covered (3 examples)",
+      "array": "✅ Covered (3 examples)",
+      "list": "✅ Covered (3 examples)",
+      "object": "⚠️ Not covered (add future examples)",
+      "query": "⚠️ Not covered (add future examples)",
+      "while": "⚠️ Not covered (add future examples)"
+    },
+    "features": {
+      "basic_iteration": "✅ Covered",
+      "index_tracking": "✅ Covered",
+      "custom_delimiters": "✅ Covered",
+      "step_values": "✅ Covered",
+      "negative_step": "✅ Covered",
+      "nested_loops": "⚠️ Mentioned in intent, not in dataset"
+    },
+    "error_cases": {
+      "missing_var": "✅ Covered",
+      "invalid_type": "✅ Covered",
+      "missing_bounds": "✅ Covered",
+      "missing_items": "✅ Covered",
+      "zero_step": "✅ Covered"
+    }
+  },
+
+  "training_readiness": {
+    "status": "ready_for_basic_training",
+    "confidence": "medium",
+    "notes": "Good coverage of range/array/list loops. Need examples for object/query/while loops for full coverage.",
+    "recommended_additions": [
+      "Object property iteration examples",
+      "Query-based loop examples (if supported)",
+      "While loop examples",
+      "Nested loop examples in dataset",
+      "More complex delimiter scenarios"
+    ]
+  },
+
+  "file_manifest": {
+    "positive": [
+      "positive/range_loops.json (3 examples)",
+      "positive/array_loops.json (3 examples)",
+      "positive/list_loops.json (3 examples)"
+    ],
+    "negative": [
+      "negative/invalid_syntax.json (5 examples)"
+    ]
+  },
+
+  "usage_instructions": {
+    "for_llm_training": "Use positive examples for code generation training, negative examples for validation and error detection",
+    "for_developers": "Reference these examples when learning q:loop syntax and capabilities",
+    "for_testing": "Automated tests should mirror these examples to ensure correctness"
+  }
+}

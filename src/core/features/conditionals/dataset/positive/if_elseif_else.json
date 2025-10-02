@@ -1,0 +1,80 @@
+{
+  "dataset_type": "positive",
+  "feature": "conditionals",
+  "category": "if_elseif_else",
+  "description": "Valid examples of multi-condition elseif chains",
+  "examples": [
+    {
+      "id": "if-elseif-001",
+      "intent": "Letter grade assignment",
+      "input": {
+        "natural_language": "Assign letter grade: A (>=90), B (>=80), C (>=70), F (else)",
+        "context": {
+          "available_vars": ["score"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{score} >= 90\">\n  Grade: A\n<q:elseif condition=\"{score} >= 80\"/>\n  Grade: B\n<q:elseif condition=\"{score} >= 70\"/>\n  Grade: C\n<q:else/>\n  Grade: F\n</q:if>",
+        "ast": {
+          "type": "IfNode",
+          "attributes": {
+            "condition": "{score} >= 90",
+            "elseif_count": 2,
+            "has_else": true
+          }
+        },
+        "runtime_behavior": "Evaluates conditions in order, stops at first match"
+      },
+      "tags": ["elseif", "grading", "multiple_conditions"]
+    },
+    {
+      "id": "if-elseif-002",
+      "intent": "Age category classification",
+      "input": {
+        "natural_language": "Classify age: child (<13), teen (13-17), adult (18-64), senior (65+)",
+        "context": {
+          "available_vars": ["age"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{age} < 13\">\n  Category: Child\n<q:elseif condition=\"{age} < 18\"/>\n  Category: Teen\n<q:elseif condition=\"{age} < 65\"/>\n  Category: Adult\n<q:else/>\n  Category: Senior\n</q:if>",
+        "ast": {
+          "type": "IfNode",
+          "attributes": {
+            "condition": "{age} < 13",
+            "elseif_count": 2,
+            "has_else": true
+          }
+        },
+        "runtime_behavior": "Classifies age into 4 categories"
+      },
+      "tags": ["elseif", "classification", "age_ranges"]
+    },
+    {
+      "id": "if-elseif-003",
+      "intent": "Priority level determination",
+      "input": {
+        "natural_language": "Set priority: critical (>90), high (>70), medium (>40), low (else)",
+        "context": {
+          "available_vars": ["urgency"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{urgency} > 90\">\n  Priority: Critical\n<q:elseif condition=\"{urgency} > 70\"/>\n  Priority: High\n<q:elseif condition=\"{urgency} > 40\"/>\n  Priority: Medium\n<q:else/>\n  Priority: Low\n</q:if>",
+        "ast": {
+          "type": "IfNode",
+          "attributes": {
+            "condition": "{urgency} > 90",
+            "elseif_count": 2,
+            "has_else": true
+          }
+        },
+        "runtime_behavior": "Determines priority level from urgency score"
+      },
+      "tags": ["elseif", "priority", "categorization"]
+    }
+  ]
+}

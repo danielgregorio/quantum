@@ -1,0 +1,82 @@
+{
+  "dataset_type": "positive",
+  "feature": "functions",
+  "category": "recursive_functions",
+  "description": "Valid examples of recursive function implementations",
+  "examples": [
+    {
+      "id": "func-recursive-001",
+      "intent": "Factorial calculation",
+      "input": {
+        "natural_language": "Calculate factorial using recursion",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"factorial\" return-type=\"number\">\n  <q:param name=\"n\" type=\"number\" required=\"true\" />\n  <q:if condition=\"{n} <= 1\">\n    <q:return value=\"1\" />\n  </q:if>\n  <q:set name=\"prev\" value=\"{factorial(n - 1)}\" />\n  <q:return value=\"{n} * {prev}\" />\n</q:function>\n\n<q:call function=\"factorial\" n=\"5\" />",
+        "ast": {
+          "type": "FunctionNode",
+          "attributes": {
+            "name": "factorial",
+            "return_type": "number",
+            "contains_recursion": true
+          }
+        },
+        "runtime_behavior": "Returns 120 (5! = 5*4*3*2*1)"
+      },
+      "tags": ["recursive", "factorial", "base_case"]
+    },
+    {
+      "id": "func-recursive-002",
+      "intent": "Fibonacci sequence",
+      "input": {
+        "natural_language": "Calculate nth Fibonacci number recursively",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"fibonacci\" return-type=\"number\">\n  <q:param name=\"n\" type=\"number\" required=\"true\" />\n  <q:if condition=\"{n} <= 1\">\n    <q:return value=\"{n}\" />\n  </q:if>\n  <q:set name=\"a\" value=\"{fibonacci(n - 1)}\" />\n  <q:set name=\"b\" value=\"{fibonacci(n - 2)}\" />\n  <q:return value=\"{a} + {b}\" />\n</q:function>\n\n<q:call function=\"fibonacci\" n=\"6\" />",
+        "ast": {
+          "type": "FunctionNode",
+          "attributes": {
+            "name": "fibonacci",
+            "return_type": "number",
+            "contains_recursion": true,
+            "multiple_recursive_calls": true
+          }
+        },
+        "runtime_behavior": "Returns 8 (fib(6) = 8)"
+      },
+      "tags": ["recursive", "fibonacci", "double_recursion"]
+    },
+    {
+      "id": "func-recursive-003",
+      "intent": "Sum of array elements",
+      "input": {
+        "natural_language": "Sum array elements recursively",
+        "context": {
+          "available_vars": ["numbers"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"sumArray\" return-type=\"number\">\n  <q:param name=\"arr\" type=\"array\" required=\"true\" />\n  <q:param name=\"index\" type=\"number\" default=\"0\" />\n  <q:if condition=\"{index} >= {len(arr)}\">\n    <q:return value=\"0\" />\n  </q:if>\n  <q:set name=\"current\" value=\"{arr[index]}\" />\n  <q:set name=\"rest\" value=\"{sumArray(arr, index + 1)}\" />\n  <q:return value=\"{current} + {rest}\" />\n</q:function>\n\n<q:call function=\"sumArray\" arr=\"[1, 2, 3, 4, 5]\" />",
+        "ast": {
+          "type": "FunctionNode",
+          "attributes": {
+            "name": "sumArray",
+            "return_type": "number",
+            "contains_recursion": true,
+            "array_processing": true
+          }
+        },
+        "runtime_behavior": "Returns 15 (sum of 1+2+3+4+5)"
+      },
+      "tags": ["recursive", "array", "accumulator"]
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "dataset_type": "positive",
+  "feature": "functions",
+  "category": "simple_functions",
+  "description": "Valid examples of basic function declarations and calls",
+  "examples": [
+    {
+      "id": "func-simple-001",
+      "intent": "Simple greeting function",
+      "input": {
+        "natural_language": "Create a function that greets a person by name",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"greet\">\n  <q:param name=\"name\" type=\"string\" />\n  <q:return value=\"Hello, {name}!\" />\n</q:function>\n\n<q:call function=\"greet\" name=\"Alice\" />",
+        "ast": {
+          "type": "FunctionNode",
+          "attributes": {
+            "name": "greet",
+            "return_type": "any",
+            "params_count": 1,
+            "scope": "component",
+            "access": "public"
+          }
+        },
+        "runtime_behavior": "Outputs 'Hello, Alice!'"
+      },
+      "tags": ["simple", "string_return", "single_param"]
+    },
+    {
+      "id": "func-simple-002",
+      "intent": "Function with no parameters",
+      "input": {
+        "natural_language": "Create a function that returns a constant message",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"getMessage\">\n  <q:return value=\"Welcome to Quantum!\" />\n</q:function>\n\n<q:call function=\"getMessage\" />",
+        "ast": {
+          "type": "FunctionNode",
+          "attributes": {
+            "name": "getMessage",
+            "return_type": "any",
+            "params_count": 0
+          }
+        },
+        "runtime_behavior": "Returns constant string"
+      },
+      "tags": ["simple", "no_params", "constant"]
+    },
+    {
+      "id": "func-simple-003",
+      "intent": "Function with default parameter",
+      "input": {
+        "natural_language": "Greet function with default name 'Guest'",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:function name=\"greet\">\n  <q:param name=\"name\" type=\"string\" default=\"Guest\" />\n  <q:return value=\"Hello, {name}!\" />\n</q:function>\n\n<q:call function=\"greet\" />",
+        "ast": {
+          "type": "FunctionNode",
+          "attributes": {
+            "name": "greet",
+            "params": [
+              {
+                "name": "name",
+                "type": "string",
+                "default": "Guest"
+              }
+            ]
+          }
+        },
+        "runtime_behavior": "Outputs 'Hello, Guest!' when called without args"
+      },
+      "tags": ["default_param", "optional_param"]
+    }
+  ]
+}

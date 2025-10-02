@@ -1,0 +1,85 @@
+{
+  "feature": "conditionals",
+  "version": "1.0.0",
+  "description": "Training dataset for conditional logic (q:if/q:else/q:elseif)",
+  "created": "2025-01-02",
+  "maintainers": ["Daniel", "Claude"],
+
+  "statistics": {
+    "total_examples": 14,
+    "positive_examples": 9,
+    "negative_examples": 5,
+    "categories": {
+      "simple_if": 3,
+      "if_else": 3,
+      "if_elseif_else": 3,
+      "syntax_errors": 5
+    }
+  },
+
+  "coverage": {
+    "conditional_types": {
+      "simple_if": "✅ Covered (3 examples)",
+      "if_else": "✅ Covered (3 examples)",
+      "if_elseif_else": "✅ Covered (3 examples)",
+      "nested_conditionals": "⚠️ Mentioned in intent, not in dataset"
+    },
+    "comparison_operators": {
+      "==": "✅ Covered",
+      "!=": "⚠️ Not covered",
+      ">": "✅ Covered",
+      "<": "✅ Covered",
+      ">=": "✅ Covered",
+      "<=": "⚠️ Not covered"
+    },
+    "logical_operators": {
+      "AND": "⚠️ Not covered",
+      "OR": "⚠️ Not covered",
+      "NOT": "⚠️ Not covered"
+    },
+    "data_types": {
+      "numeric": "✅ Covered",
+      "string": "✅ Covered",
+      "boolean": "✅ Covered",
+      "null_checks": "⚠️ Not covered"
+    },
+    "error_cases": {
+      "missing_condition": "✅ Covered",
+      "else_with_condition": "✅ Covered",
+      "elseif_without_condition": "✅ Covered",
+      "multiple_else": "✅ Covered",
+      "invalid_operator": "✅ Covered"
+    }
+  },
+
+  "training_readiness": {
+    "status": "ready_for_basic_training",
+    "confidence": "medium",
+    "notes": "Good coverage of basic conditional patterns. Need examples with logical operators (AND/OR/NOT) and nested conditionals.",
+    "recommended_additions": [
+      "Nested conditional examples",
+      "Complex conditions with AND/OR operators",
+      "NOT operator examples",
+      "Null/undefined checks",
+      "!= and <= operator examples",
+      "Edge cases with empty strings and zero values"
+    ]
+  },
+
+  "file_manifest": {
+    "positive": [
+      "positive/simple_if.json (3 examples)",
+      "positive/if_else.json (3 examples)",
+      "positive/if_elseif_else.json (3 examples)"
+    ],
+    "negative": [
+      "negative/invalid_syntax.json (5 examples)"
+    ]
+  },
+
+  "usage_instructions": {
+    "for_llm_training": "Use positive examples for code generation, negative examples for validation and error prevention",
+    "for_developers": "Reference these examples when implementing conditional logic",
+    "for_testing": "Automated tests mirror these patterns to ensure correctness"
+  }
+}

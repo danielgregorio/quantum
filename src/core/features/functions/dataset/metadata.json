@@ -1,0 +1,95 @@
+{
+  "feature": "functions",
+  "version": "1.0.0",
+  "description": "Training dataset for function declarations (q:function)",
+  "created": "2025-01-02",
+  "maintainers": ["Daniel", "Claude"],
+
+  "statistics": {
+    "total_examples": 15,
+    "positive_examples": 9,
+    "negative_examples": 6,
+    "categories": {
+      "simple_functions": 3,
+      "arithmetic_functions": 3,
+      "recursive_functions": 3,
+      "syntax_errors": 6
+    }
+  },
+
+  "coverage": {
+    "function_types": {
+      "simple_functions": "✅ Covered (3 examples)",
+      "arithmetic_functions": "✅ Covered (3 examples)",
+      "recursive_functions": "✅ Covered (3 examples)",
+      "rest_api_functions": "⚠️ Mentioned in intent, not in dataset",
+      "cached_functions": "⚠️ Mentioned in intent, not in dataset",
+      "async_functions": "⚠️ Not covered"
+    },
+    "parameter_features": {
+      "required_params": "✅ Covered",
+      "optional_params": "✅ Covered",
+      "default_values": "✅ Covered",
+      "typed_params": "✅ Covered",
+      "param_validation": "✅ Covered",
+      "param_constraints": "✅ Covered (min/max)"
+    },
+    "return_features": {
+      "simple_return": "✅ Covered",
+      "typed_return": "✅ Covered",
+      "expression_return": "✅ Covered",
+      "conditional_return": "✅ Covered (in recursion)"
+    },
+    "advanced_features": {
+      "recursion": "✅ Covered (3 examples)",
+      "nested_functions": "⚠️ Not covered",
+      "scope_management": "⚠️ Partially covered",
+      "caching": "⚠️ Not covered",
+      "memoization": "⚠️ Not covered",
+      "pure_functions": "⚠️ Not covered",
+      "rest_api": "⚠️ Not covered"
+    },
+    "error_cases": {
+      "missing_name": "✅ Covered",
+      "invalid_name": "✅ Covered",
+      "missing_return": "✅ Covered",
+      "duplicate_params": "✅ Covered",
+      "invalid_return_type": "✅ Covered",
+      "rest_missing_endpoint": "✅ Covered"
+    }
+  },
+
+  "training_readiness": {
+    "status": "ready_for_basic_training",
+    "confidence": "medium",
+    "notes": "Good coverage of basic functions and recursion. Missing REST API, caching, and advanced features.",
+    "recommended_additions": [
+      "REST API function examples with full configuration",
+      "Cached function examples with TTL",
+      "Memoized function examples",
+      "Pure function examples",
+      "Async function examples",
+      "Nested function examples",
+      "Higher-order function examples",
+      "Function scope edge cases",
+      "Complex validation scenarios"
+    ]
+  },
+
+  "file_manifest": {
+    "positive": [
+      "positive/simple_functions.json (3 examples)",
+      "positive/arithmetic_functions.json (3 examples)",
+      "positive/recursive_functions.json (3 examples)"
+    ],
+    "negative": [
+      "negative/invalid_syntax.json (6 examples)"
+    ]
+  },
+
+  "usage_instructions": {
+    "for_llm_training": "Use positive examples for function generation, negative examples for validation and error detection. Focus on parameter handling, return statements, and recursion patterns.",
+    "for_developers": "Reference these examples when creating reusable functions. See recursion examples for complex algorithms.",
+    "for_testing": "Automated tests should cover all parameter types, return scenarios, and error cases shown here."
+  }
+}
