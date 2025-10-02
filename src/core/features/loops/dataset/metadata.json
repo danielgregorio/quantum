@@ -1,38 +1,54 @@
 {
   "feature": "loops",
-  "version": "1.0.0",
-  "description": "Training dataset for loop iteration (q:loop)",
+  "version": "2.0.0",
+  "description": "Comprehensive training dataset for loop iteration (q:loop)",
   "created": "2025-01-02",
+  "updated": "2025-01-02",
   "maintainers": ["Daniel", "Claude"],
 
   "statistics": {
-    "total_examples": 14,
-    "positive_examples": 9,
+    "total_examples": 41,
+    "positive_examples": 36,
     "negative_examples": 5,
     "categories": {
       "range_iteration": 3,
       "array_iteration": 3,
       "list_iteration": 3,
+      "nested_loops": 4,
+      "loops_with_conditionals": 5,
+      "loops_with_state": 6,
+      "edge_cases": 7,
+      "real_world_patterns": 7,
       "syntax_errors": 5
     }
   },
 
   "coverage": {
     "loop_types": {
-      "range": "✅ Covered (3 examples)",
-      "array": "✅ Covered (3 examples)",
-      "list": "✅ Covered (3 examples)",
+      "range": "✅ Fully covered (3 basic + edge cases + nested)",
+      "array": "✅ Fully covered (3 basic + nested + state management)",
+      "list": "✅ Fully covered (3 basic + CSV parsing)",
       "object": "⚠️ Not covered (add future examples)",
       "query": "⚠️ Not covered (add future examples)",
       "while": "⚠️ Not covered (add future examples)"
     },
     "features": {
-      "basic_iteration": "✅ Covered",
-      "index_tracking": "✅ Covered",
-      "custom_delimiters": "✅ Covered",
-      "step_values": "✅ Covered",
+      "basic_iteration": "✅ Covered (9 examples)",
+      "index_tracking": "✅ Covered (multiple examples)",
+      "custom_delimiters": "✅ Covered (comma, semicolon, pipe)",
+      "step_values": "✅ Covered (positive, negative, countdown)",
       "negative_step": "✅ Covered",
-      "nested_loops": "⚠️ Mentioned in intent, not in dataset"
+      "nested_loops": "✅ ADDED (4 examples: multiplication table, grid, matrix, hierarchical)",
+      "conditional_filtering": "✅ ADDED (5 examples: filter, categorize, search, multi-level)",
+      "state_management": "✅ ADDED (6 examples: sum, count, concat, max, product, filter)",
+      "edge_cases": "✅ ADDED (7 examples: empty, single, large, negative)",
+      "real_world_ui": "✅ ADDED (7 examples: tables, menus, pagination, grids, forms, badges, CSV)"
+    },
+    "integration_patterns": {
+      "loop_with_if": "✅ Covered (5 examples)",
+      "loop_with_set": "✅ Covered (6 examples)",
+      "nested_loops": "✅ Covered (4 examples)",
+      "loop_with_elseif": "✅ Covered (2 examples)"
     },
     "error_cases": {
       "missing_var": "✅ Covered",
@@ -44,32 +60,44 @@
   },
 
   "training_readiness": {
-    "status": "ready_for_basic_training",
-    "confidence": "medium",
-    "notes": "Good coverage of range/array/list loops. Need examples for object/query/while loops for full coverage.",
+    "status": "ready_for_production_training",
+    "confidence": "high",
+    "notes": "Comprehensive coverage of loop patterns with 36 positive examples showing multiple implementation styles. Covers basic, intermediate, and advanced use cases. Includes real-world UI patterns and data processing scenarios.",
     "recommended_additions": [
-      "Object property iteration examples",
-      "Query-based loop examples (if supported)",
-      "While loop examples",
-      "Nested loop examples in dataset",
-      "More complex delimiter scenarios"
+      "Object property iteration examples (when feature is implemented)",
+      "Query-based loop examples (if/when supported)",
+      "While loop examples (if/when supported)",
+      "Performance optimization patterns",
+      "Async iteration patterns"
     ]
   },
 
   "file_manifest": {
     "positive": [
-      "positive/range_loops.json (3 examples)",
-      "positive/array_loops.json (3 examples)",
-      "positive/list_loops.json (3 examples)"
+      "positive/range_loops.json (3 examples) - Basic range iteration",
+      "positive/array_loops.json (3 examples) - Array iteration with/without index",
+      "positive/list_loops.json (3 examples) - Delimited list parsing",
+      "positive/nested_loops.json (4 examples) - Nested loop patterns",
+      "positive/loops_with_conditionals.json (5 examples) - Filtering and conditional logic",
+      "positive/loops_with_state.json (6 examples) - Accumulators and state management",
+      "positive/edge_cases.json (7 examples) - Boundary conditions and edge cases",
+      "positive/real_world_patterns.json (7 examples) - UI rendering and data processing"
     ],
     "negative": [
-      "negative/invalid_syntax.json (5 examples)"
+      "negative/invalid_syntax.json (5 examples) - Common errors and validation"
     ]
   },
 
   "usage_instructions": {
-    "for_llm_training": "Use positive examples for code generation training, negative examples for validation and error detection",
-    "for_developers": "Reference these examples when learning q:loop syntax and capabilities",
-    "for_testing": "Automated tests should mirror these examples to ensure correctness"
+    "for_llm_training": "Use positive examples for code generation training. Show LLM multiple ways to solve same problem (e.g., filtering can use if inside loop vs building new array). Negative examples teach error detection and validation.",
+    "for_developers": "Reference these examples when learning q:loop. See progression from basic to advanced. Real-world patterns show production usage.",
+    "for_testing": "Automated tests should mirror these examples. Each example represents a valid test case."
+  },
+
+  "example_diversity": {
+    "implementation_styles": "Shows 3-7 different approaches per pattern type",
+    "complexity_levels": "Basic (9) -> Intermediate (12) -> Advanced (15)",
+    "use_cases": "Data processing, UI rendering, filtering, accumulation, hierarchical data",
+    "multiple_solutions": "Same problem solved different ways (e.g., counting, filtering, building strings)"
   }
 }

@@ -1,0 +1,48 @@
+{
+  "dataset_type": "positive",
+  "feature": "conditionals",
+  "category": "complex_expressions",
+  "description": "Conditions with AND/OR/NOT and complex boolean logic",
+  "examples": [
+    {
+      "id": "if-complex-001",
+      "intent": "AND operator - both conditions must be true",
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{age} >= 18 AND {hasID} == true\">\n  Access granted\n</q:if>"
+      },
+      "tags": ["AND", "multiple_conditions"]
+    },
+    {
+      "id": "if-complex-002",
+      "intent": "OR operator - either condition true",
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{isAdmin} == true OR {isModerator} == true\">\n  <admin-panel />\n</q:if>"
+      },
+      "tags": ["OR", "multiple_conditions"]
+    },
+    {
+      "id": "if-complex-003",
+      "intent": "NOT operator - negation",
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"NOT {isBlocked}\">\n  Welcome!\n</q:if>"
+      },
+      "tags": ["NOT", "negation"]
+    },
+    {
+      "id": "if-complex-004",
+      "intent": "Combined AND/OR",
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"({age} >= 18 AND {hasLicense}) OR {isEmergency}\">\n  Can drive\n</q:if>"
+      },
+      "tags": ["AND", "OR", "precedence"]
+    },
+    {
+      "id": "if-complex-005",
+      "intent": "Range check with AND",
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{score} >= 0 AND {score} <= 100\">\n  Valid score\n</q:if>"
+      },
+      "tags": ["AND", "range_check"]
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "dataset_type": "positive",
+  "feature": "loops",
+  "category": "loops_with_conditionals",
+  "description": "Examples combining loops with conditional logic",
+  "examples": [
+    {
+      "id": "loop-cond-001",
+      "intent": "Filter even numbers",
+      "input": {
+        "natural_language": "Loop through numbers and only show even ones",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:loop type=\"range\" var=\"i\" from=\"1\" to=\"10\">\n  <q:if condition=\"{i} % 2 == 0\">\n    Even: {i}\n  </q:if>\n</q:loop>",
+        "runtime_behavior": "Outputs: Even: 2, Even: 4, Even: 6, Even: 8, Even: 10"
+      },
+      "tags": ["loop_conditional", "filter", "modulo"]
+    },
+    {
+      "id": "loop-cond-002",
+      "intent": "Categorize scores",
+      "input": {
+        "natural_language": "Loop through scores and categorize each as pass/fail",
+        "context": {
+          "available_vars": ["scores"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"scores\" type=\"array\" value=\"[45, 78, 92, 55, 88]\" />\n<q:loop type=\"array\" var=\"score\" items=\"{scores}\">\n  <q:if condition=\"{score} >= 60\">\n    {score}: Pass\n  <q:else/>\n    {score}: Fail\n  </q:if>\n</q:loop>",
+        "runtime_behavior": "Outputs: 45: Fail, 78: Pass, 92: Pass, 55: Fail, 88: Pass"
+      },
+      "tags": ["loop_conditional", "if_else", "grading"]
+    },
+    {
+      "id": "loop-cond-003",
+      "intent": "Find first match",
+      "input": {
+        "natural_language": "Loop until finding target value",
+        "context": {
+          "available_vars": ["items", "target"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"items\" type=\"array\" value=\"['apple', 'banana', 'cherry']\" />\n<q:set name=\"target\" value=\"banana\" />\n<q:set name=\"found\" type=\"boolean\" value=\"false\" />\n<q:loop type=\"array\" var=\"item\" items=\"{items}\">\n  <q:if condition=\"{item} == {target} AND {found} == false\">\n    Found: {item}\n    <q:set name=\"found\" type=\"boolean\" value=\"true\" />\n  </q:if>\n</q:loop>",
+        "runtime_behavior": "Stops at first match (simulated with flag)"
+      },
+      "tags": ["loop_conditional", "search", "early_exit"]
+    },
+    {
+      "id": "loop-cond-004",
+      "intent": "Multi-level categorization",
+      "input": {
+        "natural_language": "Loop and assign letter grades with elseif",
+        "context": {
+          "available_vars": ["scores"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"scores\" type=\"array\" value=\"[95, 82, 76, 68, 45]\" />\n<q:loop type=\"array\" var=\"score\" index=\"i\" items=\"{scores}\">\n  Student {i}:\n  <q:if condition=\"{score} >= 90\">\n    Grade A\n  <q:elseif condition=\"{score} >= 80\"/>\n    Grade B\n  <q:elseif condition=\"{score} >= 70\"/>\n    Grade C\n  <q:else/>\n    Grade F\n  </q:if>\n</q:loop>",
+        "runtime_behavior": "Assigns letter grade to each student"
+      },
+      "tags": ["loop_conditional", "elseif", "classification"]
+    },
+    {
+      "id": "loop-cond-005",
+      "intent": "Skip empty values",
+      "input": {
+        "natural_language": "Loop through list but skip null/empty entries",
+        "context": {
+          "available_vars": ["names"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"names\" type=\"array\" value=\"['Alice', '', 'Bob', null, 'Charlie']\" />\n<q:loop type=\"array\" var=\"name\" items=\"{names}\">\n  <q:if condition=\"{name} != '' AND {name} != null\">\n    Valid: {name}\n  </q:if>\n</q:loop>",
+        "runtime_behavior": "Outputs only: Valid: Alice, Valid: Bob, Valid: Charlie"
+      },
+      "tags": ["loop_conditional", "null_check", "validation"]
+    }
+  ]
+}

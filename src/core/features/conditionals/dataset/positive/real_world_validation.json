@@ -1,0 +1,12 @@
+{
+  "dataset_type": "positive",
+  "feature": "conditionals",
+  "category": "real_world_validation",
+  "description": "Form validation and user input checking patterns",
+  "examples": [
+    {"id": "val-001", "intent": "Email validation", "expected_output": {"quantum_code": "<q:if condition=\"{email} != '' AND {email} != null\">\n  <q:if condition=\"{validateEmail(email)} == true\">\n    Valid email\n  <q:else/>\n    Invalid email format\n  </q:if>\n<q:else/>\n  Email required\n</q:if>"}},
+    {"id": "val-002", "intent": "Password strength", "expected_output": {"quantum_code": "<q:if condition=\"{len(password)} >= 8\">\n  <q:if condition=\"{hasSpecialChar(password)}\">\n    Strong password\n  <q:else/>\n    Add special characters\n  </q:if>\n<q:else/>\n  Password too short\n</q:if>"}},
+    {"id": "val-003", "intent": "Age range", "expected_output": {"quantum_code": "<q:if condition=\"{age} >= 13 AND {age} <= 120\">\n  Valid age\n<q:else/>\n  Invalid age\n</q:if>"}},
+    {"id": "val-004", "intent": "Required fields", "expected_output": {"quantum_code": "<q:if condition=\"{name} != '' AND {email} != '' AND {phone} != ''\">\n  <button>Submit</button>\n<q:else/>\n  <span class=\"error\">Fill all fields</span>\n</q:if>"}}
+  ]
+}

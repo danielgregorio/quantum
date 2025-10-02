@@ -1,0 +1,72 @@
+{
+  "dataset_type": "positive",
+  "feature": "loops",
+  "category": "nested_loops",
+  "description": "Examples of nested loop patterns (loops within loops)",
+  "examples": [
+    {
+      "id": "loop-nested-001",
+      "intent": "Multiplication table",
+      "input": {
+        "natural_language": "Generate a 3x3 multiplication table",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:loop type=\"range\" var=\"i\" from=\"1\" to=\"3\">\n  <q:loop type=\"range\" var=\"j\" from=\"1\" to=\"3\">\n    {i} x {j} = {i * j}\n  </q:loop>\n</q:loop>",
+        "runtime_behavior": "Outputs: 1x1=1, 1x2=2, 1x3=3, 2x1=2, 2x2=4, etc."
+      },
+      "tags": ["nested", "range", "multiplication_table"]
+    },
+    {
+      "id": "loop-nested-002",
+      "intent": "Build 2D grid",
+      "input": {
+        "natural_language": "Create a grid of coordinates",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:loop type=\"range\" var=\"row\" from=\"0\" to=\"2\">\n  <q:loop type=\"range\" var=\"col\" from=\"0\" to=\"2\">\n    ({row}, {col})\n  </q:loop>\n</q:loop>",
+        "runtime_behavior": "Outputs coordinates: (0,0), (0,1), (0,2), (1,0), etc."
+      },
+      "tags": ["nested", "grid", "coordinates"]
+    },
+    {
+      "id": "loop-nested-003",
+      "intent": "Loop through array of arrays",
+      "input": {
+        "natural_language": "Iterate over nested array structure",
+        "context": {
+          "available_vars": ["matrix"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"matrix\" type=\"array\" value=\"[[1,2], [3,4], [5,6]]\" />\n<q:loop type=\"array\" var=\"row\" items=\"{matrix}\">\n  <q:loop type=\"array\" var=\"cell\" items=\"{row}\">\n    Cell: {cell}\n  </q:loop>\n</q:loop>",
+        "runtime_behavior": "Outputs: Cell: 1, Cell: 2, Cell: 3, Cell: 4, Cell: 5, Cell: 6"
+      },
+      "tags": ["nested", "array", "matrix"]
+    },
+    {
+      "id": "loop-nested-004",
+      "intent": "Teams and players structure",
+      "input": {
+        "natural_language": "Loop through teams, then their players",
+        "context": {
+          "available_vars": ["teams"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"teams\" type=\"array\" value=\"[{'name': 'Red', 'players': ['Alice', 'Bob']}, {'name': 'Blue', 'players': ['Charlie', 'Diana']}]\" />\n<q:loop type=\"array\" var=\"team\" items=\"{teams}\">\n  Team: {team.name}\n  <q:loop type=\"array\" var=\"player\" items=\"{team.players}\">\n    - {player}\n  </q:loop>\n</q:loop>",
+        "runtime_behavior": "Outputs hierarchical team/player list"
+      },
+      "tags": ["nested", "array", "objects", "hierarchical"]
+    }
+  ]
+}

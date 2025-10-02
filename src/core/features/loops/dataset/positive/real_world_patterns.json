@@ -1,0 +1,120 @@
+{
+  "dataset_type": "positive",
+  "feature": "loops",
+  "category": "real_world_patterns",
+  "description": "Real-world UI and data processing patterns using loops",
+  "examples": [
+    {
+      "id": "loop-real-001",
+      "intent": "Render table rows",
+      "input": {
+        "natural_language": "Build HTML table from user data",
+        "context": {
+          "available_vars": ["users"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"users\" type=\"array\" value=\"[{'name': 'Alice', 'age': 25}, {'name': 'Bob', 'age': 30}]\" />\n<table>\n  <q:loop type=\"array\" var=\"user\" items=\"{users}\">\n    <tr>\n      <td>{user.name}</td>\n      <td>{user.age}</td>\n    </tr>\n  </q:loop>\n</table>",
+        "runtime_behavior": "Generates table with 2 rows of user data"
+      },
+      "tags": ["real_world", "html_table", "ui_rendering"]
+    },
+    {
+      "id": "loop-real-002",
+      "intent": "Render navigation menu",
+      "input": {
+        "natural_language": "Build navigation from menu items",
+        "context": {
+          "available_vars": ["menuItems"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"menuItems\" type=\"array\" value=\"[{'label': 'Home', 'url': '/'}, {'label': 'About', 'url': '/about'}, {'label': 'Contact', 'url': '/contact'}]\" />\n<nav>\n  <q:loop type=\"array\" var=\"item\" items=\"{menuItems}\">\n    <a href=\"{item.url}\">{item.label}</a>\n  </q:loop>\n</nav>",
+        "runtime_behavior": "Generates navigation with 3 links"
+      },
+      "tags": ["real_world", "navigation", "menu"]
+    },
+    {
+      "id": "loop-real-003",
+      "intent": "Pagination controls",
+      "input": {
+        "natural_language": "Generate page numbers for pagination",
+        "context": {
+          "available_vars": ["totalPages", "currentPage"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"totalPages\" type=\"number\" value=\"5\" />\n<q:set name=\"currentPage\" type=\"number\" value=\"3\" />\n<div class=\"pagination\">\n  <q:loop type=\"range\" var=\"page\" from=\"1\" to=\"{totalPages}\">\n    <q:if condition=\"{page} == {currentPage}\">\n      <span class=\"active\">{page}</span>\n    <q:else/>\n      <a href=\"?page={page}\">{page}</a>\n    </q:if>\n  </q:loop>\n</div>",
+        "runtime_behavior": "Generates pagination: 1 2 [3] 4 5 (3 is active)"
+      },
+      "tags": ["real_world", "pagination", "ui_controls"]
+    },
+    {
+      "id": "loop-real-004",
+      "intent": "Product listing grid",
+      "input": {
+        "natural_language": "Display products in a grid",
+        "context": {
+          "available_vars": ["products"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"products\" type=\"array\" value=\"[{'name': 'Laptop', 'price': 999}, {'name': 'Mouse', 'price': 25}, {'name': 'Keyboard', 'price': 75}]\" />\n<div class=\"product-grid\">\n  <q:loop type=\"array\" var=\"product\" items=\"{products}\">\n    <div class=\"product-card\">\n      <h3>{product.name}</h3>\n      <p>${product.price}</p>\n      <button>Add to Cart</button>\n    </div>\n  </q:loop>\n</div>",
+        "runtime_behavior": "Generates 3 product cards with name, price, and button"
+      },
+      "tags": ["real_world", "ecommerce", "product_grid"]
+    },
+    {
+      "id": "loop-real-005",
+      "intent": "Build select dropdown",
+      "input": {
+        "natural_language": "Create dropdown from country list",
+        "context": {
+          "available_vars": ["countries"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"countries\" type=\"array\" value=\"['USA', 'Canada', 'Mexico', 'Brazil']\" />\n<select name=\"country\">\n  <option value=\"\">Select a country</option>\n  <q:loop type=\"array\" var=\"country\" items=\"{countries}\">\n    <option value=\"{country}\">{country}</option>\n  </q:loop>\n</select>",
+        "runtime_behavior": "Generates select with 5 options (1 default + 4 countries)"
+      },
+      "tags": ["real_world", "forms", "select_dropdown"]
+    },
+    {
+      "id": "loop-real-006",
+      "intent": "Status badge rendering",
+      "input": {
+        "natural_language": "Show colored badges based on status",
+        "context": {
+          "available_vars": ["orders"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"orders\" type=\"array\" value=\"[{'id': 1, 'status': 'pending'}, {'id': 2, 'status': 'shipped'}, {'id': 3, 'status': 'delivered'}]\" />\n<q:loop type=\"array\" var=\"order\" items=\"{orders}\">\n  Order #{order.id}:\n  <q:if condition=\"{order.status} == 'pending'\">\n    <span class=\"badge yellow\">Pending</span>\n  <q:elseif condition=\"{order.status} == 'shipped'\"/>\n    <span class=\"badge blue\">Shipped</span>\n  <q:elseif condition=\"{order.status} == 'delivered'\"/>\n    <span class=\"badge green\">Delivered</span>\n  </q:if>\n</q:loop>",
+        "runtime_behavior": "Shows 3 orders with color-coded status badges"
+      },
+      "tags": ["real_world", "status_display", "conditional_styling"]
+    },
+    {
+      "id": "loop-real-007",
+      "intent": "CSV data processing",
+      "input": {
+        "natural_language": "Parse CSV string into table",
+        "context": {
+          "available_vars": ["csvData"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"csvData\" value=\"Alice,25,Engineer;Bob,30,Designer;Charlie,28,Manager\" />\n<table>\n  <q:loop type=\"list\" var=\"row\" items=\"{csvData}\" delimiter=\";\">\n    <tr>\n      <q:loop type=\"list\" var=\"cell\" items=\"{row}\" delimiter=\",\">\n        <td>{cell}</td>\n      </q:loop>\n    </tr>\n  </q:loop>\n</table>",
+        "runtime_behavior": "Generates 3x3 table from CSV data"
+      },
+      "tags": ["real_world", "csv", "data_parsing"]
+    }
+  ]
+}

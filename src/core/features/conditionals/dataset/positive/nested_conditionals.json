@@ -1,0 +1,72 @@
+{
+  "dataset_type": "positive",
+  "feature": "conditionals",
+  "category": "nested_conditionals",
+  "description": "Examples of nested conditional logic (if within if)",
+  "examples": [
+    {
+      "id": "if-nested-001",
+      "intent": "Age and license check",
+      "input": {
+        "natural_language": "Check if person can drive (age >= 18 AND has license)",
+        "context": {
+          "available_vars": ["age", "hasLicense"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{age} >= 18\">\n  <q:if condition=\"{hasLicense} == true\">\n    You can drive!\n  <q:else/>\n    Please get a license first.\n  </q:if>\n<q:else/>\n  You're too young to drive.\n</q:if>",
+        "runtime_behavior": "Checks both age and license status with nested conditions"
+      },
+      "tags": ["nested", "two_level", "authorization"]
+    },
+    {
+      "id": "if-nested-002",
+      "intent": "User role and permissions",
+      "input": {
+        "natural_language": "Check admin role, then specific permissions",
+        "context": {
+          "available_vars": ["role", "canEdit", "canDelete"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{role} == 'admin'\">\n  <q:if condition=\"{canEdit} == true\">\n    <button>Edit</button>\n  </q:if>\n  <q:if condition=\"{canDelete} == true\">\n    <button>Delete</button>\n  </q:if>\n<q:else/>\n  <span>View Only</span>\n</q:if>",
+        "runtime_behavior": "Shows different UI based on role and permissions"
+      },
+      "tags": ["nested", "rbac", "ui_rendering"]
+    },
+    {
+      "id": "if-nested-003",
+      "intent": "Three-level nesting",
+      "input": {
+        "natural_language": "Check country, then state, then city for shipping",
+        "context": {
+          "available_vars": ["country", "state", "city"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{country} == 'USA'\">\n  <q:if condition=\"{state} == 'CA'\">\n    <q:if condition=\"{city} == 'San Francisco'\">\n      Free shipping!\n    <q:else/>\n      Standard CA shipping\n    </q:if>\n  <q:else/>\n    Standard USA shipping\n  </q:if>\n<q:else/>\n  International shipping\n</q:if>",
+        "runtime_behavior": "Three levels of geographic checks for shipping rules"
+      },
+      "tags": ["nested", "three_level", "shipping_logic"]
+    },
+    {
+      "id": "if-nested-004",
+      "intent": "Discount calculation with nested conditions",
+      "input": {
+        "natural_language": "Check if user is premium, then check order amount for discount",
+        "context": {
+          "available_vars": ["isPremium", "orderAmount"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{isPremium} == true\">\n  Premium member:\n  <q:if condition=\"{orderAmount} >= 100\">\n    20% discount applied\n  <q:elseif condition=\"{orderAmount} >= 50\"/>\n    10% discount applied\n  <q:else/>\n    5% discount applied\n  </q:if>\n<q:else/>\n  Regular pricing\n</q:if>",
+        "runtime_behavior": "Tiered discounts for premium members based on order amount"
+      },
+      "tags": ["nested", "elseif", "pricing"]
+    }
+  ]
+}
