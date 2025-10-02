@@ -1,0 +1,30 @@
+{
+  "feature": "state_management",
+  "version": "1.0.0",
+  "statistics": {
+    "total_examples": 4,
+    "positive_examples": 3,
+    "negative_examples": 1,
+    "difficulty_distribution": {
+      "easy": 4,
+      "medium": 0,
+      "hard": 0
+    }
+  },
+  "coverage": {
+    "operations": {
+      "assign": 1,
+      "increment": 1,
+      "add": 1
+    },
+    "types": {
+      "string": 2,
+      "number": 1
+    },
+    "validations": {
+      "email": 1
+    }
+  },
+  "last_updated": "2025-01-01",
+  "contributors": ["Claude", "Daniel"]
+}
