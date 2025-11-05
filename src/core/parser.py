@@ -16,7 +16,8 @@ from core.ast_nodes import (
     FunctionNode, DispatchEventNode, OnEventNode, RestConfig, QueryNode, QueryParamNode,
     InvokeNode, InvokeHeaderNode, DataNode, ColumnNode, FieldNode, TransformNode,
     FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode,
-    HTMLNode, TextNode, DocTypeNode, CommentNode, HTML_VOID_ELEMENTS
+    HTMLNode, TextNode, DocTypeNode, CommentNode, HTML_VOID_ELEMENTS,
+    ImportNode, SlotNode, ComponentCallNode
 )
 from core.features.logging.src import LogNode, parse_log
 from core.features.dump.src import DumpNode, parse_dump
@@ -381,6 +382,17 @@ class QuantumParser:
             return parse_log(element)
         elif element_type == 'dump':
             return parse_dump(element)
+
+        # Component Composition (Phase 2)
+        elif element_type == 'import':
+            return self._parse_import_statement(element)
+        elif element_type == 'slot':
+            return self._parse_slot_statement(element)
+
+        # Component calls (Phase 2) - Check BEFORE HTML elements
+        # Detect imported component usage by uppercase naming convention
+        elif element_type and element_type[0].isupper():
+            return self._parse_component_call(element)
 
         # HTML elements (Phase 1)
         elif self._is_html_element(element):
@@ -1134,3 +1146,97 @@ class QuantumParser:
         )
 
         return html_node
+
+    # ============================================
+    # COMPONENT COMPOSITION PARSING (Phase 2)
+    # ============================================
+
+    def _parse_import_statement(self, element: ET.Element) -> ImportNode:
+        """
+        Parse q:import statement.
+
+        Examples:
+          <q:import component="Header" />
+          <q:import component="Button" from="./ui" />
+          <q:import component="AdminLayout" as="Layout" />
+        """
+        component = element.get('component')
+        from_path = element.get('from')
+        alias = element.get('as')
+        
+        if not component:
+            raise QuantumParseError("q:import requires 'component' attribute")
+        
+        return ImportNode(
+            component=component,
+            from_path=from_path,
+            alias=alias
+        )
+
+    def _parse_slot_statement(self, element: ET.Element) -> SlotNode:
+        """
+        Parse q:slot statement.
+
+        Examples:
+          <q:slot />  <!-- Default slot -->
+          <q:slot name="header" />
+          <q:slot name="footer">
+            <p>Default footer content</p>
+          </q:slot>
+        """
+        name = element.get('name', 'default')
+        
+        # Parse default content (children of slot)
+        default_content = []
+        
+        if element.text and element.text.strip():
+            default_content.append(TextNode(element.text))
+        
+        for child in element:
+            child_node = self._parse_statement(child)
+            if child_node:
+                default_content.append(child_node)
+            
+            if child.tail and child.tail.strip():
+                default_content.append(TextNode(child.tail))
+        
+        return SlotNode(
+            name=name,
+            default_content=default_content
+        )
+
+    def _parse_component_call(self, element: ET.Element) -> ComponentCallNode:
+        """
+        Parse component call (imported component usage).
+
+        Examples:
+          <Header title="Products" />
+          <Button label="Save" color="green" />
+          <Card title="Info">
+            <p>Card content</p>
+          </Card>
+        """
+        component_name = element.tag
+        
+        # Parse props (all attributes)
+        props = dict(element.attrib)
+        
+        # Parse children (content for slots)
+        children = []
+        
+        if element.text and element.text.strip():
+            children.append(TextNode(element.text))
+        
+        for child in element:
+            child_node = self._parse_statement(child)
+            if child_node:
+                children.append(child_node)
+            
+            if child.tail and child.tail.strip():
+                children.append(TextNode(child.tail))
+        
+        return ComponentCallNode(
+            component_name=component_name,
+            props=props,
+            children=children
+        )

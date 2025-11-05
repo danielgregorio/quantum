@@ -16,7 +16,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from core.ast_nodes import (
     QuantumNode, ComponentNode, HTMLNode, TextNode, DocTypeNode,
-    CommentNode, LoopNode, IfNode, SetNode, QueryNode
+    CommentNode, LoopNode, IfNode, SetNode, QueryNode, ComponentCallNode, ImportNode
 )
 from runtime.execution_context import ExecutionContext
 
@@ -35,14 +35,20 @@ class HTMLRenderer:
     - XSS protection via HTML escaping
     """
 
-    def __init__(self, context: ExecutionContext):
+    def __init__(self, context: ExecutionContext, components_dir: str = "./components"):
         """
         Initialize renderer with execution context.
 
         Args:
             context: ExecutionContext with all variables and query results
+            components_dir: Directory where component files are located (Phase 2)
         """
         self.context = context
+        self.components_dir = components_dir
+
+        # Lazy-load composer (Phase 2)
+        self._composer = None
+        self._resolver = None
 
 
     def render(self, node: QuantumNode) -> str:
@@ -70,6 +76,14 @@ class HTMLRenderer:
 
         elif isinstance(node, ComponentNode):
             return self._render_component(node)
+
+        # Component Composition (Phase 2)
+        elif isinstance(node, ComponentCallNode):
+            return self._render_component_call(node)
+
+        elif isinstance(node, ImportNode):
+            # Imports are processed at component load time, not render time
+            return ''
 
         # These should NOT appear here - they're executed during runtime, not rendered
         elif isinstance(node, (LoopNode, IfNode, SetNode, QueryNode)):
@@ -440,3 +454,43 @@ class HTMLRenderer:
             return result
         except:
             raise Exception(f"Invalid arithmetic: {expression}")
+
+    # ============================================
+    # COMPONENT COMPOSITION RENDERING (Phase 2)
+    # ============================================
+
+    def _get_composer(self):
+        """Lazy-load component composer"""
+        if self._composer is None:
+            from runtime.component_resolver import ComponentResolver
+            from runtime.component_composer import ComponentComposer
+
+            self._resolver = ComponentResolver(self.components_dir)
+            self._composer = ComponentComposer(self._resolver)
+
+        return self._composer
+
+    def _render_component_call(self, node: ComponentCallNode) -> str:
+        """
+        Render component call (Phase 2).
+
+        Examples:
+          <Header title="Products" />
+          <Button label="Save" color="green" />
+          <Card title="Info">Content here</Card>
+
+        Args:
+            node: ComponentCallNode from AST
+
+        Returns:
+            Rendered HTML from child component
+        """
+
+        try:
+            composer = self._get_composer()
+            html = composer.compose(node, self.context)
+            return html
+
+        except Exception as e:
+            # Return error comment in development
+            return f'<!-- Component Error ({node.component_name}): {e} -->'

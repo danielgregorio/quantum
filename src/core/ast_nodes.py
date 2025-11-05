@@ -608,3 +608,135 @@ class CommentNode(QuantumNode):
 
     def __repr__(self):
         return f'<CommentNode>'
+
+
+# ============================================
+# COMPONENT COMPOSITION NODES (Phase 2)
+# ============================================
+
+class ImportNode(QuantumNode):
+    """
+    Represents component import declaration.
+    
+    Phase 2: Component Composition
+    
+    Examples:
+      <q:import component="Header" />
+      <q:import component="Button" from="./components/ui" />
+      <q:import component="AdminLayout" as="Layout" />
+    """
+    
+    def __init__(
+        self,
+        component: str,
+        from_path: Optional[str] = None,
+        alias: Optional[str] = None
+    ):
+        self.component = component
+        self.from_path = from_path
+        self.alias = alias or component
+        
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "import",
+            "component": self.component,
+            "from": self.from_path,
+            "alias": self.alias
+        }
+    
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.component:
+            errors.append("Component name is required for q:import")
+        return errors
+    
+    def __repr__(self):
+        return f'<ImportNode component={self.component}>'
+
+
+class SlotNode(QuantumNode):
+    """
+    Represents content projection slot.
+    
+    Phase 2: Component Composition
+    Allows parent components to inject content into child components.
+    
+    Examples:
+      <q:slot />  <!-- Default slot -->
+      <q:slot name="header" />  <!-- Named slot -->
+      <q:slot name="footer">Default content here</q:slot>
+    """
+    
+    def __init__(
+        self,
+        name: str = "default",
+        default_content: Optional[List[QuantumNode]] = None
+    ):
+        self.name = name
+        self.default_content = default_content or []
+        
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "slot",
+            "name": self.name,
+            "has_default": len(self.default_content) > 0
+        }
+    
+    def validate(self) -> List[str]:
+        errors = []
+        # Validate default content
+        for node in self.default_content:
+            if hasattr(node, 'validate'):
+                errors.extend(node.validate())
+        return errors
+    
+    def __repr__(self):
+        return f'<SlotNode name={self.name}>'
+
+
+class ComponentCallNode(QuantumNode):
+    """
+    Represents a call to another component (used internally during composition).
+    
+    Phase 2: Component Composition
+    
+    Examples:
+      <Header title="Products" />
+      <Button label="Save" color="green" />
+      <Card title="Info">
+        <p>Card content here</p>
+      </Card>
+    """
+    
+    def __init__(
+        self,
+        component_name: str,
+        props: Optional[Dict[str, str]] = None,
+        children: Optional[List[QuantumNode]] = None
+    ):
+        self.component_name = component_name
+        self.props = props or {}
+        self.children = children or []
+        
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "component_call",
+            "component": self.component_name,
+            "props": self.props,
+            "children_count": len(self.children)
+        }
+    
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.component_name:
+            errors.append("Component name is required")
+        
+        # Validate children
+        for child in self.children:
+            if hasattr(child, 'validate'):
+                errors.extend(child.validate())
+        
+        return errors
+    
+    def __repr__(self):
+        return f'<ComponentCallNode component={self.component_name} props={len(self.props)}>'
