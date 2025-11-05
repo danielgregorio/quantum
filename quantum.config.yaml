@@ -1,0 +1,117 @@
+# Quantum Configuration File
+# Simple, magical configuration - ColdFusion style! 🪄
+
+# ==========================================
+# SERVER CONFIGURATION
+# ==========================================
+server:
+  # Port to listen on
+  port: 8080
+
+  # Host to bind to (0.0.0.0 = all interfaces, 127.0.0.1 = localhost only)
+  host: 0.0.0.0
+
+  # Auto-reload when .q files change (development mode)
+  reload: true
+
+  # Debug mode (detailed errors, debug toolbar)
+  debug: true
+
+# ==========================================
+# PATHS CONFIGURATION
+# ==========================================
+paths:
+  # Where your .q component files are located
+  components: ./components
+
+  # Where static files (CSS, JS, images) are located
+  static: ./static
+
+  # Where logs should be written
+  logs: ./logs
+
+# ==========================================
+# DEFAULTS
+# ==========================================
+defaults:
+  # Default component type if not specified
+  component_type: pure
+
+  # Enable client-side interactivity by default (Phase 3 feature)
+  interactive: false
+
+  # Default charset for responses
+  charset: utf-8
+
+  # Default timeout for component execution (seconds)
+  timeout: 30
+
+# ==========================================
+# DATABASE (QUANTUM ADMIN INTEGRATION)
+# ==========================================
+database:
+  # Quantum Admin API endpoint
+  admin_api: http://localhost:8000/api
+
+# ==========================================
+# PERFORMANCE
+# ==========================================
+performance:
+  # Cache parsed templates (AST cache)
+  cache_templates: true
+
+  # Cache TTL in seconds (0 = cache forever, -1 = no cache)
+  cache_ttl: 300
+
+  # Maximum number of cached templates
+  cache_max_size: 100
+
+# ==========================================
+# SECURITY
+# ==========================================
+security:
+  # Enable CORS (Cross-Origin Resource Sharing)
+  cors_enabled: false
+
+  # Allowed origins for CORS (if enabled)
+  cors_origins:
+    - http://localhost:3000
+    - http://localhost:8080
+
+  # Enable XSS protection (HTML escaping)
+  xss_protection: true
+
+  # Maximum request body size (bytes)
+  max_content_length: 16777216  # 16 MB
+
+# ==========================================
+# LOGGING
+# ==========================================
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: INFO
+
+  # Log format
+  format: "[%(levelname)s] %(asctime)s - %(message)s"
+
+  # Log to console
+  console: true
+
+  # Log to file
+  file: true
+
+  # Log file name
+  filename: quantum.log
+
+# ==========================================
+# DEVELOPMENT
+# ==========================================
+development:
+  # Show detailed error pages
+  show_errors: true
+
+  # Enable profiler
+  profiler: false
+
+  # Enable debug toolbar (Flask debug toolbar)
+  debug_toolbar: false
