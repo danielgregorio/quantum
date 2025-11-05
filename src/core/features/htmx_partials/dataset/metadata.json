@@ -1,0 +1,7 @@
+{
+  "feature": "htmx_partials",
+  "version": "1.0.0",
+  "status": "planned",
+  "created": "2025-11-05",
+  "notes": "Phase B - To be implemented. Inspired by HTMX for progressive enhancement without JavaScript frameworks."
+}

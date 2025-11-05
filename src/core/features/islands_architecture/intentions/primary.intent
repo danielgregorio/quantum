@@ -1,0 +1,28 @@
+intention:
+  name: "Islands Architecture - Client-Side Reactivity"
+  version: "1.0.0"
+  category: "reactivity"
+  goal: |
+    Enable islands of client-side reactivity with q:state, event handlers,
+    two-way binding, and component hydration. Full SPA experience where
+    needed, static HTML where possible for optimal performance.
+
+  planned_features:
+    - "q:state name='...' value='...' - Reactive state"
+    - "q:click='handler' - Click event handler"
+    - "q:change='handler' - Change event handler"
+    - "q:input='handler' - Input event handler"
+    - "q:model='variable' - Two-way data binding"
+    - "q:show='{condition}' - Client-side conditional display"
+    - "interactive='true' - Mark component for hydration"
+    - "JavaScript bundling and code splitting"
+    - "Virtual DOM for efficient updates"
+
+  architecture:
+    - "Server-side render initial HTML"
+    - "Ship minimal JavaScript for interactive components"
+    - "Hydrate components on client"
+    - "Reactive state updates via Virtual DOM"
+    - "Progressive enhancement"
+
+  status: "Phase E - Future implementation (most complex phase)"
