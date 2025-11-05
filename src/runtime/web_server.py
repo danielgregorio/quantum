@@ -143,6 +143,20 @@ class QuantumWebServer:
             static_dir = self.config['paths']['static']
             return send_from_directory(static_dir, filepath)
 
+        @self.app.route('/_partial/<path:component_path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
+        def serve_partial(component_path):
+            """
+            Serve partial component for HTMX requests (Phase B)
+
+            Partials return only the component HTML without full page wrapper.
+            Used for HTMX-style progressive enhancement.
+            """
+            # Remove .q extension if provided
+            if component_path.endswith('.q'):
+                component_path = component_path[:-2]
+
+            return self._serve_component(component_path, partial=True)
+
         @self.app.errorhandler(404)
         def not_found(error):
             """404 handler with helpful message"""
@@ -164,12 +178,13 @@ class QuantumWebServer:
             ), 500
 
 
-    def _serve_component(self, component_path: str) -> Response:
+    def _serve_component(self, component_path: str, partial: bool = False) -> Response:
         """
         Load, parse, execute, and render a .q component.
 
         Args:
             component_path: Path to component (without .q extension)
+            partial: If True, return only component HTML for HTMX (Phase B)
 
         Returns:
             Flask Response with rendered HTML
@@ -303,7 +318,14 @@ class QuantumWebServer:
             renderer = HTMLRenderer(runtime.execution_context)
             html = renderer.render(ast)
 
-            return Response(html, mimetype='text/html')
+            # Phase B: For partial requests, return only component HTML
+            if partial:
+                return Response(html, mimetype='text/html')
+
+            # For full page requests, wrap with HTMX support
+            full_html = self._wrap_with_htmx(html, component_path)
+
+            return Response(full_html, mimetype='text/html')
 
         except QuantumParseError as e:
             # Enhanced parse error with context
@@ -355,6 +377,82 @@ class QuantumWebServer:
                     suggestion=""
                 ), 500
 
+    def _wrap_with_htmx(self, html: str, component_name: str) -> str:
+        """
+        Wrap component HTML with HTMX library support (Phase B).
+
+        Adds:
+        - HTMX library from CDN
+        - Minimal CSS reset
+        - HTMX configuration
+
+        Args:
+            html: Rendered component HTML
+            component_name: Component name for title
+
+        Returns:
+            Full HTML page with HTMX support
+        """
+        return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{component_name} - Quantum</title>
+
+    <!-- Phase B: HTMX for Progressive Enhancement -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <style>
+        /* Minimal CSS reset */
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+        }}
+
+        /* HTMX Loading indicators */
+        .htmx-indicator {{
+            display: none;
+        }}
+
+        .htmx-request .htmx-indicator {{
+            display: inline;
+        }}
+
+        .htmx-request.htmx-indicator {{
+            display: inline;
+        }}
+
+        /* Loading spinner */
+        .htmx-indicator:after {{
+            content: "⏳";
+            margin-left: 8px;
+        }}
+    </style>
+</head>
+<body>
+    {html}
+
+    <!-- HTMX Configuration -->
+    <script>
+        // Configure HTMX
+        htmx.config.defaultSwapStyle = "innerHTML";
+        htmx.config.defaultSwapDelay = 0;
+        htmx.config.historyCacheSize = 10;
+
+        // Log HTMX events in debug mode
+        if (window.location.hostname === 'localhost') {{
+            htmx.logAll();
+        }}
+    </script>
+</body>
+</html>"""
 
     def _render_welcome_page(self) -> Response:
         """

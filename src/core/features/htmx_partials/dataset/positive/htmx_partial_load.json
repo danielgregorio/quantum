@@ -1,0 +1,21 @@
+{
+  "example_id": "htmx_001",
+  "category": "htmx_partials",
+  "tags": ["htmx", "partial", "ajax"],
+  "input": {
+    "component": "<div hx-get=\"/_partial/live_stats\" hx-trigger=\"load\" hx-swap=\"innerHTML\">\n  Loading...\n</div>",
+    "context": {
+      "phase": "B",
+      "feature": "htmx_partials",
+      "trigger": "load",
+      "method": "GET"
+    }
+  },
+  "expected_behavior": "On page load, sends GET request to /_partial/live_stats and replaces div content with partial response",
+  "validation": {
+    "partial_loaded": true,
+    "ajax_request_sent": true,
+    "content_replaced": true,
+    "no_full_page_reload": true
+  }
+}

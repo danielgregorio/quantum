@@ -1,0 +1,24 @@
+{
+  "example_id": "htmx_error_002",
+  "category": "htmx_partials",
+  "tags": ["error", "target", "selector"],
+  "input": {
+    "component": "<button hx-post=\"/_partial/update\" hx-target=\"#nonexistent\" hx-swap=\"innerHTML\">\n  Click Me\n</button>",
+    "context": {
+      "phase": "B",
+      "feature": "htmx_partials",
+      "target": "#nonexistent"
+    }
+  },
+  "expected_behavior": "HTMX finds no target element with id 'nonexistent', request succeeds but no content updated",
+  "error": {
+    "type": "ClientError",
+    "message": "Target element not found"
+  },
+  "validation": {
+    "should_warn": true,
+    "request_succeeds": true,
+    "no_content_updated": true,
+    "console_warning": true
+  }
+}
