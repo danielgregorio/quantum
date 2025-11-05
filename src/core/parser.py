@@ -15,7 +15,8 @@ from core.ast_nodes import (
     QuantumParam, QuantumReturn, QuantumRoute, IfNode, LoopNode, SetNode,
     FunctionNode, DispatchEventNode, OnEventNode, RestConfig, QueryNode, QueryParamNode,
     InvokeNode, InvokeHeaderNode, DataNode, ColumnNode, FieldNode, TransformNode,
-    FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode
+    FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode,
+    HTMLNode, TextNode, DocTypeNode, CommentNode, HTML_VOID_ELEMENTS
 )
 from core.features.logging.src import LogNode, parse_log
 from core.features.dump.src import DumpNode, parse_dump
@@ -101,6 +102,10 @@ class QuantumParser:
         component.metrics_provider = root.get('metrics')
         component.trace_provider = root.get('trace')
 
+        # HTML rendering & interactivity (Phase 1 & future Phase 3)
+        interactive_attr = root.get('interactive', 'false').lower()
+        component.interactive = interactive_attr in ['true', '1', 'yes']
+
         # Parse q:param elements (component-level params)
         for param_el in self._find_all_elements(root, 'param'):
             param = self._parse_param(param_el)
@@ -138,6 +143,7 @@ class QuantumParser:
         for child in parent:
             child_type = self._get_element_name(child)
 
+            # Quantum tags (q:*)
             if child_type == 'if':
                 if_node = self._parse_if_statement(child)
                 component.add_statement(if_node)
@@ -165,6 +171,12 @@ class QuantumParser:
             elif child_type == 'dump':
                 dump_node = parse_dump(child)
                 component.add_statement(dump_node)
+
+            # HTML elements (Phase 1 - HTML rendering)
+            elif self._is_html_element(child):
+                html_node = self._parse_html_element(child)
+                component.add_statement(html_node)
+                component.has_html = True  # Mark component as having HTML output
     
     def _parse_if_statement(self, if_element: ET.Element) -> IfNode:
         """Parse q:if statement with elseif and else blocks"""
@@ -309,6 +321,7 @@ class QuantumParser:
         """Parse individual statement (return, set, dispatchEvent, etc)"""
         element_type = self._get_element_name(element)
 
+        # Quantum tags
         if element_type == 'return':
             return self._parse_return(element)
         elif element_type == 'set':
@@ -329,6 +342,10 @@ class QuantumParser:
             return parse_log(element)
         elif element_type == 'dump':
             return parse_dump(element)
+
+        # HTML elements (Phase 1)
+        elif self._is_html_element(element):
+            return self._parse_html_element(element)
 
         return None
     
@@ -996,3 +1013,85 @@ class QuantumParser:
             raise QuantumParseError(f"Data header '{name}' requires 'value' attribute")
 
         return HeaderNode(name, value)
+
+    # ============================================
+    # HTML PARSING (Phase 1 - HTML Rendering)
+    # ============================================
+
+    def _is_html_element(self, element: ET.Element) -> bool:
+        """
+        Check if element is HTML (not a Quantum tag).
+
+        Returns True for:
+        - Regular HTML tags (div, span, p, etc.)
+        - DOCTYPE declarations
+        - Comments
+
+        Returns False for:
+        - Quantum tags (q:* namespace)
+        - Special Quantum tags (param, return, function, etc.)
+        """
+        tag = element.tag
+
+        # Skip namespace declarations and special elements
+        if tag.startswith('{'):
+            # Has XML namespace - check if it's Quantum namespace
+            if '{https://quantum.lang/ns}' in tag:
+                return False
+            # Other namespaces might be HTML5 or SVG
+            return True
+
+        # Check for q: prefix (Quantum tags)
+        if tag.startswith('q:'):
+            return False
+
+        # Quantum tags without prefix (when xmlns:q is set)
+        quantum_tags = {
+            'component', 'application', 'job', 'param', 'return', 'route',
+            'if', 'elseif', 'else', 'loop', 'set', 'function', 'dispatchEvent',
+            'onEvent', 'script', 'query', 'invoke', 'data', 'log', 'dump'
+        }
+        if tag in quantum_tags:
+            return False
+
+        # Everything else is HTML
+        return True
+
+    def _parse_html_element(self, element: ET.Element) -> HTMLNode:
+        """
+        Parse HTML element into HTMLNode.
+
+        Recursively parses children (which can be HTML or Quantum tags).
+        Handles text content with TextNode.
+        """
+        tag = self._get_element_name(element)
+
+        # Parse attributes (will be applied databinding during rendering)
+        attributes = dict(element.attrib)
+
+        # Parse children
+        children = []
+
+        # Add text before first child
+        if element.text and element.text.strip():
+            children.append(TextNode(element.text))
+
+        # Parse child elements (recursively)
+        for child in element:
+            # Child could be HTML or Quantum tag
+            child_node = self._parse_statement(child)
+            if child_node:
+                children.append(child_node)
+
+            # Add text after child (tail)
+            if child.tail and child.tail.strip():
+                children.append(TextNode(child.tail))
+
+        # Create HTML node
+        html_node = HTMLNode(
+            tag=tag,
+            attributes=attributes,
+            children=children
+        )
+
+        return html_node
