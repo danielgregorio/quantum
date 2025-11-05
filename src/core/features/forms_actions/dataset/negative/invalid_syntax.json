@@ -1,0 +1,56 @@
+{
+  "dataset_type": "negative",
+  "feature": "forms_actions",
+  "category": "syntax_errors",
+  "description": "Invalid action syntax that should be rejected",
+  "examples": [
+    {
+      "id": "action-invalid-001",
+      "intent": "Missing action name",
+      "quantum_code": "<q:action method=\"POST\">\n  <q:redirect url=\"/\" />\n</q:action>",
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Action name is required"
+      },
+      "why_invalid": "q:action must have name attribute",
+      "correction": "Add name='actionName' attribute",
+      "tags": ["missing_attribute", "name"]
+    },
+    {
+      "id": "action-invalid-002",
+      "intent": "Invalid HTTP method",
+      "quantum_code": "<q:action name=\"test\" method=\"GET\">\n</q:action>",
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Invalid action method: GET. Must be POST, PUT, DELETE, or PATCH"
+      },
+      "why_invalid": "Actions only support POST, PUT, DELETE, PATCH",
+      "correction": "Change method to POST, PUT, DELETE, or PATCH",
+      "tags": ["invalid_method"]
+    },
+    {
+      "id": "redirect-invalid-001",
+      "intent": "Missing redirect URL",
+      "quantum_code": "<q:redirect flash=\"Done\" />",
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Redirect URL is required"
+      },
+      "why_invalid": "q:redirect must have url attribute",
+      "correction": "Add url='/path' attribute",
+      "tags": ["missing_attribute", "url"]
+    },
+    {
+      "id": "flash-invalid-001",
+      "intent": "Invalid flash type",
+      "quantum_code": "<q:flash type=\"invalid\" message=\"Test\" />",
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Invalid flash type: invalid. Must be info, success, warning, or error"
+      },
+      "why_invalid": "Flash type must be one of: info, success, warning, error",
+      "correction": "Change type to success, error, warning, or info",
+      "tags": ["invalid_type"]
+    }
+  ]
+}

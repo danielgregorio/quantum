@@ -740,3 +740,181 @@ class ComponentCallNode(QuantumNode):
     
     def __repr__(self):
         return f'<ComponentCallNode component={self.component_name} props={len(self.props)}>'
+
+
+# ============================================
+# FORMS & ACTIONS NODES (Phase A)
+# ============================================
+
+class ActionNode(QuantumNode):
+    """
+    Represents a server-side action handler for forms.
+
+    Phase A: Forms & Actions
+    Actions handle POST/PUT/DELETE requests with automatic form data binding,
+    validation, and redirect support.
+
+    Examples:
+      <q:action name="createUser" method="POST">
+        <q:param name="email" type="email" required="true" />
+        <q:param name="password" type="string" minlength="8" />
+        <q:query datasource="db">
+          INSERT INTO users (email, password) VALUES (:email, :password)
+        </q:query>
+        <q:redirect url="/users" />
+      </q:action>
+
+      <q:action name="deleteProduct" method="DELETE">
+        <q:param name="id" type="integer" required="true" />
+        <q:query datasource="db">
+          DELETE FROM products WHERE id = :id
+        </q:query>
+        <q:redirect url="/products" flash="Product deleted successfully" />
+      </q:action>
+    """
+
+    def __init__(
+        self,
+        name: str,
+        method: str = "POST"
+    ):
+        self.name = name
+        self.method = method.upper()
+        self.params: List[QuantumParam] = []
+        self.body: List[QuantumNode] = []
+
+        # Action configuration
+        self.validate_csrf = True  # Auto CSRF protection
+        self.rate_limit = None     # e.g., "10/minute"
+        self.require_auth = False  # Require authentication
+
+    def add_param(self, param: QuantumParam):
+        """Add parameter to action"""
+        self.params.append(param)
+
+    def add_statement(self, statement: QuantumNode):
+        """Add statement to action body"""
+        self.body.append(statement)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "action",
+            "name": self.name,
+            "method": self.method,
+            "params": [p.__dict__ for p in self.params],
+            "body_statements": len(self.body),
+            "validate_csrf": self.validate_csrf,
+            "rate_limit": self.rate_limit,
+            "require_auth": self.require_auth
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("Action name is required")
+
+        if self.method not in ['POST', 'PUT', 'DELETE', 'PATCH']:
+            errors.append(f"Invalid action method: {self.method}. Must be POST, PUT, DELETE, or PATCH")
+
+        # Validate params
+        for param in self.params:
+            errors.extend(param.validate())
+
+        # Validate body
+        for statement in self.body:
+            if hasattr(statement, 'validate'):
+                errors.extend(statement.validate())
+
+        return errors
+
+    def __repr__(self):
+        return f'<ActionNode name={self.name} method={self.method}>'
+
+
+class RedirectNode(QuantumNode):
+    """
+    Represents a redirect response.
+
+    Phase A: Forms & Actions
+    Used within actions to redirect after processing.
+
+    Examples:
+      <q:redirect url="/thank-you" />
+      <q:redirect url="/users/{userId}" />
+      <q:redirect url="/products" flash="Product created successfully" />
+      <q:redirect url="/error" status="500" flash="An error occurred" />
+    """
+
+    def __init__(
+        self,
+        url: str,
+        flash: Optional[str] = None,
+        status: int = 302
+    ):
+        self.url = url
+        self.flash = flash      # Flash message to show on next page
+        self.status = status    # HTTP status code (302 default)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "redirect",
+            "url": self.url,
+            "flash": self.flash,
+            "status": self.status
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.url:
+            errors.append("Redirect URL is required")
+
+        # Validate status code
+        if self.status not in [301, 302, 303, 307, 308]:
+            errors.append(f"Invalid redirect status: {self.status}. Must be 301, 302, 303, 307, or 308")
+
+        return errors
+
+    def __repr__(self):
+        return f'<RedirectNode url={self.url}>'
+
+
+class FlashNode(QuantumNode):
+    """
+    Represents a flash message (temporary message shown once).
+
+    Phase A: Forms & Actions
+    Flash messages persist across redirects and are shown once.
+
+    Examples:
+      <q:flash type="success" message="User created successfully" />
+      <q:flash type="error" message="{errorMessage}" />
+      <q:flash type="warning">Please verify your email</q:flash>
+    """
+
+    def __init__(
+        self,
+        message: str,
+        flash_type: str = "info"
+    ):
+        self.message = message
+        self.flash_type = flash_type  # info, success, warning, error
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "flash",
+            "message": self.message,
+            "flash_type": self.flash_type
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.message:
+            errors.append("Flash message is required")
+
+        if self.flash_type not in ['info', 'success', 'warning', 'error']:
+            errors.append(f"Invalid flash type: {self.flash_type}. Must be info, success, warning, or error")
+
+        return errors
+
+    def __repr__(self):
+        return f'<FlashNode type={self.flash_type}>'

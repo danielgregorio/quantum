@@ -17,7 +17,8 @@ from core.ast_nodes import (
     InvokeNode, InvokeHeaderNode, DataNode, ColumnNode, FieldNode, TransformNode,
     FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode,
     HTMLNode, TextNode, DocTypeNode, CommentNode, HTML_VOID_ELEMENTS,
-    ImportNode, SlotNode, ComponentCallNode
+    ImportNode, SlotNode, ComponentCallNode,
+    ActionNode, RedirectNode, FlashNode
 )
 from core.features.logging.src import LogNode, parse_log
 from core.features.dump.src import DumpNode, parse_dump
@@ -212,6 +213,17 @@ class QuantumParser:
                 dump_node = parse_dump(child)
                 component.add_statement(dump_node)
 
+            # Forms & Actions (Phase A)
+            elif child_type == 'action':
+                action_node = self._parse_action_statement(child)
+                component.add_statement(action_node)
+            elif child_type == 'redirect':
+                redirect_node = self._parse_redirect_statement(child)
+                component.add_statement(redirect_node)
+            elif child_type == 'flash':
+                flash_node = self._parse_flash_statement(child)
+                component.add_statement(flash_node)
+
             # Component Composition (Phase 2)
             elif child_type == 'import':
                 import_node = self._parse_import_statement(child)
@@ -396,6 +408,14 @@ class QuantumParser:
             return parse_log(element)
         elif element_type == 'dump':
             return parse_dump(element)
+
+        # Forms & Actions (Phase A)
+        elif element_type == 'action':
+            return self._parse_action_statement(element)
+        elif element_type == 'redirect':
+            return self._parse_redirect_statement(element)
+        elif element_type == 'flash':
+            return self._parse_flash_statement(element)
 
         # Component Composition (Phase 2)
         elif element_type == 'import':
@@ -1259,3 +1279,82 @@ class QuantumParser:
             props=props,
             children=children
         )
+
+    # ============================================
+    # FORMS & ACTIONS PARSING (Phase A)
+    # ============================================
+
+    def _parse_action_statement(self, element: ET.Element) -> ActionNode:
+        """
+        Parse q:action statement for form handling.
+
+        Examples:
+          <q:action name="createUser" method="POST">
+            <q:param name="email" type="email" required="true" />
+            <q:param name="password" type="string" minlength="8" />
+            <q:query datasource="db">
+              INSERT INTO users (email, password) VALUES (:email, :password)
+            </q:query>
+            <q:redirect url="/users" flash="User created!" />
+          </q:action>
+        """
+        name = element.get('name', '')
+        method = element.get('method', 'POST')
+        action_node = ActionNode(name, method)
+
+        # Parse optional attributes
+        if element.get('csrf') == 'false':
+            action_node.validate_csrf = False
+        if element.get('rate_limit'):
+            action_node.rate_limit = element.get('rate_limit')
+        if element.get('require_auth') == 'true':
+            action_node.require_auth = True
+
+        # Parse children (params, statements)
+        for child in element:
+            child_type = self._get_element_name(child)
+
+            if child_type == 'param':
+                param = self._parse_param(child)
+                action_node.add_param(param)
+            else:
+                # Parse other statements (query, set, redirect, etc.)
+                statement = self._parse_statement(child)
+                if statement:
+                    action_node.add_statement(statement)
+
+        return action_node
+
+    def _parse_redirect_statement(self, element: ET.Element) -> RedirectNode:
+        """
+        Parse q:redirect statement.
+
+        Examples:
+          <q:redirect url="/thank-you" />
+          <q:redirect url="/users/{userId}" />
+          <q:redirect url="/products" flash="Product created!" />
+          <q:redirect url="/error" status="500" flash="Error occurred" />
+        """
+        url = element.get('url', '')
+        flash = element.get('flash')
+        status = int(element.get('status', '302'))
+
+        return RedirectNode(url, flash, status)
+
+    def _parse_flash_statement(self, element: ET.Element) -> FlashNode:
+        """
+        Parse q:flash statement for flash messages.
+
+        Examples:
+          <q:flash type="success" message="User created!" />
+          <q:flash type="error" message="{errorMessage}" />
+          <q:flash type="warning">Please verify your email</q:flash>
+        """
+        flash_type = element.get('type', 'info')
+        message = element.get('message')
+
+        # If message not in attribute, check text content
+        if not message and element.text:
+            message = element.text.strip()
+
+        return FlashNode(message, flash_type)

@@ -1,0 +1,26 @@
+{
+  "dataset_type": "positive",
+  "feature": "forms_actions",
+  "category": "flash_messages",
+  "description": "Valid examples of flash messages",
+  "examples": [
+    {
+      "id": "flash-001",
+      "intent": "Success flash message",
+      "quantum_code": "<q:flash type=\"success\" message=\"User created successfully!\" />",
+      "tags": ["success", "message"]
+    },
+    {
+      "id": "flash-002",
+      "intent": "Error flash with databinding",
+      "quantum_code": "<q:flash type=\"error\" message=\"Failed to delete: {errorMessage}\" />",
+      "tags": ["error", "databinding"]
+    },
+    {
+      "id": "flash-003",
+      "intent": "Flash in redirect",
+      "quantum_code": "<q:redirect url=\"/users\" flash=\"User '{username}' created!\" />",
+      "tags": ["redirect", "flash", "databinding"]
+    }
+  ]
+}
