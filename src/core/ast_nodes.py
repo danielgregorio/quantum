@@ -108,13 +108,17 @@ class ComponentNode(QuantumNode):
         self.metrics_provider = None
         self.trace_provider = None
 
+        # HTML rendering & interactivity (Phase 1 & future Phase 3)
+        self.interactive = False  # Enable client-side hydration (future)
+        self.has_html = False     # Auto-detected if component contains HTML nodes
+
         # Component elements
         self.params: List[QuantumParam] = []
         self.returns: List[QuantumReturn] = []
         self.functions: List['FunctionNode'] = []
         self.event_handlers: List['OnEventNode'] = []
         self.script_blocks: List[str] = []
-        self.statements: List[QuantumNode] = []  # For control flow statements
+        self.statements: List[QuantumNode] = []  # For control flow statements (includes HTML nodes)
 
         # Resources (refs to Admin-configured resources)
         self.resources: Dict[str, str] = {}  # type -> ref_name (e.g., "database" -> "postgres-main")
@@ -154,6 +158,8 @@ class ComponentNode(QuantumNode):
             "component_type": self.component_type,
             "port": self.port,
             "base_path": self.base_path,
+            "interactive": self.interactive,
+            "has_html": self.has_html,
             "params": [p.__dict__ for p in self.params],
             "returns": [r.__dict__ for r in self.returns],
             "functions": [f.to_dict() for f in self.functions],
@@ -450,3 +456,155 @@ from .features.data_import.src.ast_node import (
     DataNode, ColumnNode, FieldNode, TransformNode,
     FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode
 )
+
+
+# ============================================
+# HTML RENDERING NODES (Phase 1)
+# ============================================
+
+# HTML void elements that are self-closing
+HTML_VOID_ELEMENTS = {
+    'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+    'link', 'meta', 'param', 'source', 'track', 'wbr'
+}
+
+
+class HTMLNode(QuantumNode):
+    """
+    Represents an HTML element that should be rendered to output.
+
+    Phase 1: Server-side rendering only
+    Phase 3: Can be marked for client-side hydration
+
+    Examples:
+      <div class="container">...</div>
+      <img src="/logo.png" />
+      <a href="/about">About</a>
+      <button q:click="handleClick">Click me</button> (future)
+    """
+
+    def __init__(
+        self,
+        tag: str,
+        attributes: Optional[Dict[str, str]] = None,
+        children: Optional[List[QuantumNode]] = None,
+        self_closing: bool = False
+    ):
+        self.tag = tag
+        self.attributes = attributes or {}
+        self.children = children or []
+        self.self_closing = self_closing or tag in HTML_VOID_ELEMENTS
+
+        # Future: client-side event handlers (Phase 3)
+        self.has_events = self._detect_event_handlers()
+
+    def _detect_event_handlers(self) -> bool:
+        """Detect if element has client-side event handlers (q:click, q:change, etc)"""
+        event_attributes = ['q:click', 'q:change', 'q:input', 'q:submit', 'q:keyup', 'q:keydown']
+        return any(attr in self.attributes for attr in event_attributes)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "html",
+            "tag": self.tag,
+            "attributes": self.attributes,
+            "children_count": len(self.children),
+            "self_closing": self.self_closing,
+            "has_events": self.has_events
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.tag:
+            errors.append("HTML tag name is required")
+
+        # Validate children
+        for child in self.children:
+            if hasattr(child, 'validate'):
+                errors.extend(child.validate())
+
+        return errors
+
+    def __repr__(self):
+        return f'<HTMLNode tag={self.tag} attrs={len(self.attributes)} children={len(self.children)}>'
+
+
+class TextNode(QuantumNode):
+    """
+    Represents raw text content, possibly with databinding expressions.
+
+    Examples:
+      "Hello World"
+      "User: {user.name}"
+      "Total: ${price * quantity}"
+      "Items: {items.length}"
+    """
+
+    def __init__(self, content: str):
+        self.content = content
+        self.has_databinding = '{' in content and '}' in content
+
+    def to_dict(self) -> Dict[str, Any]:
+        preview = self.content[:50] + '...' if len(self.content) > 50 else self.content
+        return {
+            "type": "text",
+            "content": preview,
+            "has_databinding": self.has_databinding,
+            "length": len(self.content)
+        }
+
+    def validate(self) -> List[str]:
+        # Text nodes are always valid
+        return []
+
+    def __repr__(self):
+        preview = self.content[:30] + '...' if len(self.content) > 30 else self.content
+        return f'<TextNode "{preview}">'
+
+
+class DocTypeNode(QuantumNode):
+    """
+    Represents HTML DOCTYPE declaration.
+
+    Example:
+      <!DOCTYPE html>
+    """
+
+    def __init__(self, value: str = "html"):
+        self.value = value
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "doctype",
+            "value": self.value
+        }
+
+    def validate(self) -> List[str]:
+        return []
+
+    def __repr__(self):
+        return f'<DocTypeNode {self.value}>'
+
+
+class CommentNode(QuantumNode):
+    """
+    Represents HTML/XML comments.
+
+    Example:
+      <!-- This is a comment -->
+    """
+
+    def __init__(self, content: str):
+        self.content = content
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "comment",
+            "content": self.content[:50] + '...' if len(self.content) > 50 else self.content
+        }
+
+    def validate(self) -> List[str]:
+        return []
+
+    def __repr__(self):
+        return f'<CommentNode>'
