@@ -923,3 +923,60 @@ class FlashNode(QuantumNode):
 
     def __repr__(self):
         return f'<FlashNode type={self.flash_type}>'
+
+
+class FileNode(QuantumNode):
+    """
+    Represents file upload handling (q:file).
+    
+    Phase H: File Uploads
+    Handles file uploads with validation and storage.
+    
+    Examples:
+      <q:file action="upload" file="{avatar}" destination="./uploads/" />
+      <q:file action="upload" file="{document}" destination="./files/" nameConflict="makeUnique" />
+    """
+    
+    def __init__(
+        self,
+        action: str,
+        file: str,
+        destination: str = "./uploads/",
+        name_conflict: str = "error",  # error, overwrite, skip, makeUnique
+        result: str = None
+    ):
+        self.action = action  # upload, delete, move, copy
+        self.file = file  # Variable name containing file data
+        self.destination = destination  # Where to save file
+        self.name_conflict = name_conflict  # What to do if file exists
+        self.result = result  # Optional variable name to store upload result
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "file",
+            "action": self.action,
+            "file": self.file,
+            "destination": self.destination,
+            "name_conflict": self.name_conflict,
+            "result": self.result
+        }
+    
+    def validate(self) -> List[str]:
+        errors = []
+        
+        if self.action not in ['upload', 'delete', 'move', 'copy']:
+            errors.append(f"Invalid file action: {self.action}")
+        
+        if not self.file:
+            errors.append("File variable is required")
+        
+        if self.action == 'upload' and not self.destination:
+            errors.append("Destination is required for upload action")
+        
+        if self.name_conflict not in ['error', 'overwrite', 'skip', 'makeUnique']:
+            errors.append(f"Invalid nameConflict: {self.name_conflict}")
+        
+        return errors
+    
+    def __repr__(self):
+        return f'<FileNode action={self.action} file={self.file}>'

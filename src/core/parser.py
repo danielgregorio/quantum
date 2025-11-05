@@ -18,7 +18,7 @@ from core.ast_nodes import (
     FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode,
     HTMLNode, TextNode, DocTypeNode, CommentNode, HTML_VOID_ELEMENTS,
     ImportNode, SlotNode, ComponentCallNode,
-    ActionNode, RedirectNode, FlashNode
+    ActionNode, RedirectNode, FlashNode, FileNode
 )
 from core.features.logging.src import LogNode, parse_log
 from core.features.dump.src import DumpNode, parse_dump

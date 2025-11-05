@@ -1,1 +1,17 @@
-{"feature": "file_uploads", "version": "1.0.0", "status": "planned", "created": "2025-11-05"}
+{
+  "feature": "file_uploads",
+  "version": "1.0.0",
+  "status": "in_progress",
+  "phase": "H",
+  "created": "2025-11-05",
+  "updated": "2025-11-05",
+  "progress": "Foundation implemented - FileNode AST, FileUploadService with validation, parser imports. Integration pending.",
+  "coverage": {
+    "file_node_ast": true,
+    "file_upload_service": true,
+    "file_validation": true,
+    "size_validation": true,
+    "type_validation": true,
+    "name_conflict_handling": true
+  }
+}
