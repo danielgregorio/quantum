@@ -1,0 +1,96 @@
+{
+  "dataset_type": "positive",
+  "feature": "component_composition",
+  "category": "named_slots",
+  "description": "Valid examples of named slots for multiple injection points",
+  "examples": [
+    {
+      "id": "named-slot-001",
+      "intent": "Use named slots in Layout",
+      "input": {
+        "natural_language": "Project content into header, main, and footer slots",
+        "context": {
+          "component": "Layout",
+          "slots": ["header", "default", "footer"]
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<Layout>\n  <template slot=\"header\">\n    <h1>My Site</h1>\n  </template>\n  <p>Main content here</p>\n  <template slot=\"footer\">\n    <p>© 2025</p>\n  </template>\n</Layout>",
+        "ast": {
+          "type": "ComponentCallNode",
+          "component_name": "Layout",
+          "children": [
+            {
+              "type": "HTMLNode",
+              "tag": "template",
+              "attributes": {
+                "slot": "header"
+              },
+              "children": [
+                {
+                  "type": "HTMLNode",
+                  "tag": "h1",
+                  "children": [
+                    {
+                      "type": "TextNode",
+                      "content": "My Site"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "HTMLNode",
+              "tag": "p",
+              "children": [
+                {
+                  "type": "TextNode",
+                  "content": "Main content here"
+                }
+              ]
+            },
+            {
+              "type": "HTMLNode",
+              "tag": "template",
+              "attributes": {
+                "slot": "footer"
+              }
+            }
+          ]
+        },
+        "runtime_behavior": "Distributes content to respective named <q:slot name='...' /> locations"
+      },
+      "tags": ["named_slots", "template_slot", "multiple_injection_points"]
+    },
+    {
+      "id": "named-slot-002",
+      "intent": "Named slot with default content",
+      "input": {
+        "natural_language": "Use named slot sidebar with fallback content",
+        "context": {
+          "component": "PageLayout",
+          "slots": {
+            "sidebar": {
+              "default": "<p>Default sidebar</p>"
+            }
+          }
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<PageLayout>\n  <p>Main content without sidebar specified</p>\n</PageLayout>",
+        "ast": {
+          "type": "ComponentCallNode",
+          "component_name": "PageLayout",
+          "children": [
+            {
+              "type": "HTMLNode",
+              "tag": "p"
+            }
+          ]
+        },
+        "runtime_behavior": "Uses default content defined in <q:slot name='sidebar'> since no content provided"
+      },
+      "tags": ["named_slots", "default_content", "fallback"]
+    }
+  ]
+}

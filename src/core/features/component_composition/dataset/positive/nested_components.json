@@ -1,0 +1,167 @@
+{
+  "dataset_type": "positive",
+  "feature": "component_composition",
+  "category": "nested_components",
+  "description": "Valid examples of complex nested component composition",
+  "examples": [
+    {
+      "id": "nested-001",
+      "intent": "Three-level component nesting",
+      "input": {
+        "natural_language": "Layout contains Card which contains Button",
+        "context": {
+          "available_components": ["Layout", "Card", "Button"]
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"Dashboard\">\n  <q:import component=\"Layout\" />\n  <q:import component=\"Card\" />\n  <q:import component=\"Button\" />\n\n  <Layout title=\"Dashboard\">\n    <Card title=\"Stats\">\n      <p>Users: 1000</p>\n      <Button label=\"View Details\" />\n    </Card>\n  </Layout>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "ImportNode",
+              "component": "Layout"
+            },
+            {
+              "type": "ImportNode",
+              "component": "Card"
+            },
+            {
+              "type": "ImportNode",
+              "component": "Button"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Layout",
+              "children": [
+                {
+                  "type": "ComponentCallNode",
+                  "component_name": "Card",
+                  "children": [
+                    {
+                      "type": "HTMLNode",
+                      "tag": "p"
+                    },
+                    {
+                      "type": "ComponentCallNode",
+                      "component_name": "Button"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "runtime_behavior": "Recursively composes Layout > Card > Button with proper context inheritance"
+      },
+      "tags": ["nested", "three_level", "complex_composition"]
+    },
+    {
+      "id": "nested-002",
+      "intent": "Multiple sibling components",
+      "input": {
+        "natural_language": "Render multiple Card components side by side",
+        "context": {
+          "available_components": ["Card", "Button"]
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"Page\">\n  <q:import component=\"Card\" />\n  <q:import component=\"Button\" />\n\n  <Card title=\"Feature 1\">\n    <p>Description 1</p>\n    <Button label=\"Learn More\" />\n  </Card>\n\n  <Card title=\"Feature 2\">\n    <p>Description 2</p>\n    <Button label=\"Get Started\" color=\"green\" />\n  </Card>\n\n  <Card title=\"Feature 3\">\n    <p>Description 3</p>\n    <Button label=\"Contact Us\" color=\"blue\" />\n  </Card>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Card"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Card"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Card"
+            }
+          ]
+        },
+        "runtime_behavior": "Renders three independent Card instances with unique content and props"
+      },
+      "tags": ["nested", "siblings", "multiple_instances"]
+    },
+    {
+      "id": "nested-003",
+      "intent": "Component composition with databinding flow",
+      "input": {
+        "natural_language": "Pass variable through multiple component levels",
+        "context": {
+          "available_vars": ["userName", "userRole"],
+          "available_components": ["Layout", "Card"]
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"Page\">\n  <q:set name=\"userName\" value=\"Daniel\" />\n  <q:set name=\"userRole\" value=\"Admin\" />\n\n  <Layout title=\"Welcome {userName}\">\n    <Card title=\"User Info\">\n      <p>Name: {userName}</p>\n      <p>Role: {userRole}</p>\n    </Card>\n  </Layout>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "SetNode",
+              "name": "userName",
+              "value": "Daniel"
+            },
+            {
+              "type": "SetNode",
+              "name": "userRole",
+              "value": "Admin"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Layout",
+              "props": {
+                "title": "Welcome {userName}"
+              },
+              "children": [
+                {
+                  "type": "ComponentCallNode",
+                  "component_name": "Card",
+                  "children": [
+                    {
+                      "type": "HTMLNode",
+                      "tag": "p",
+                      "children": [
+                        {
+                          "type": "TextNode",
+                          "content": "Name: {userName}",
+                          "has_databinding": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "runtime_behavior": "Variables flow from parent context through props and slot content to nested components"
+      },
+      "tags": ["nested", "databinding", "context_inheritance"]
+    },
+    {
+      "id": "nested-004",
+      "intent": "Real-world dashboard composition",
+      "input": {
+        "natural_language": "Build complete dashboard with multiple component types",
+        "context": {
+          "available_components": ["Layout", "Card", "Button", "StatCard"]
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"Dashboard\">\n  <q:import component=\"Layout\" />\n  <q:import component=\"Card\" />\n  <q:import component=\"StatCard\" />\n  <q:import component=\"Button\" />\n\n  <q:set name=\"totalUsers\" value=\"1000\" />\n  <q:set name=\"revenue\" value=\"$50,000\" />\n\n  <Layout title=\"Admin Dashboard\">\n    <div class=\"stats-row\">\n      <StatCard title=\"Total Users\" value=\"{totalUsers}\" />\n      <StatCard title=\"Revenue\" value=\"{revenue}\" />\n    </div>\n\n    <Card title=\"Recent Activity\">\n      <p>Last login: 2 minutes ago</p>\n      <Button label=\"View All\" color=\"blue\" />\n    </Card>\n\n    <Card title=\"Quick Actions\">\n      <Button label=\"Add User\" color=\"green\" />\n      <Button label=\"Generate Report\" color=\"blue\" />\n      <Button label=\"Settings\" color=\"gray\" />\n    </Card>\n  </Layout>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode"
+        },
+        "runtime_behavior": "Fully composed dashboard with multiple component types, props, slots, and databinding"
+      },
+      "tags": ["nested", "real_world", "dashboard", "complex"]
+    }
+  ]
+}

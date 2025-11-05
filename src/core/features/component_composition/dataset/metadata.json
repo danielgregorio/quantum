@@ -1,0 +1,106 @@
+{
+  "feature": "component_composition",
+  "version": "2.0.0",
+  "description": "Comprehensive training dataset for component composition (q:import, q:slot, component calls)",
+  "created": "2025-01-05",
+  "updated": "2025-01-05",
+  "maintainers": ["Daniel", "Claude"],
+
+  "statistics": {
+    "total_examples": 20,
+    "positive_examples": 13,
+    "negative_examples": 7,
+    "categories": {
+      "simple_import": 3,
+      "props_passing": 4,
+      "slot_projection": 3,
+      "named_slots": 2,
+      "nested_components": 4,
+      "syntax_errors": 7
+    }
+  },
+
+  "coverage": {
+    "import_patterns": {
+      "simple_import": "✅ Fully covered (3 examples: basic, from_path, alias)",
+      "component_resolution": "✅ Covered (PascalCase to snake_case conversion)",
+      "directory_resolution": "✅ Covered (from attribute)",
+      "aliasing": "✅ Covered (as attribute)"
+    },
+    "props_features": {
+      "static_props": "✅ Covered (string literals)",
+      "databinding_props": "✅ Covered ({variable} syntax)",
+      "multiple_props": "✅ Covered (required + optional)",
+      "default_values": "✅ Covered (q:param default attribute)",
+      "prop_validation": "✅ Covered (required prop checking)"
+    },
+    "slot_features": {
+      "default_slot": "✅ Covered (unnamed q:slot)",
+      "named_slots": "✅ Covered (slot='name' attribute)",
+      "parent_context_databinding": "✅ Covered (slot content uses parent vars)",
+      "nested_components_in_slots": "✅ Covered (component calls within slots)",
+      "default_slot_content": "✅ Covered (fallback content)"
+    },
+    "composition_patterns": {
+      "three_level_nesting": "✅ Covered (Layout > Card > Button)",
+      "sibling_components": "✅ Covered (multiple Card instances)",
+      "context_inheritance": "✅ Covered (databinding through levels)",
+      "real_world_dashboard": "✅ Covered (complex multi-component composition)"
+    },
+    "error_cases": {
+      "missing_component_attribute": "✅ Covered",
+      "component_not_found": "✅ Covered",
+      "missing_required_prop": "✅ Covered",
+      "component_not_imported": "✅ Covered",
+      "duplicate_slot_names": "✅ Covered",
+      "prop_type_mismatch": "✅ Covered",
+      "naming_convention_violation": "✅ Covered"
+    }
+  },
+
+  "training_readiness": {
+    "status": "ready_for_production_training",
+    "confidence": "high",
+    "notes": "Comprehensive coverage of component composition patterns with 13 positive examples showing progression from basic to advanced usage. Covers imports, props, slots, and complex nested composition. 7 negative examples teach proper error handling and validation.",
+    "recommended_additions": [
+      "Circular dependency detection examples",
+      "Performance optimization patterns (component caching)",
+      "Conditional component rendering patterns",
+      "Dynamic component resolution examples"
+    ]
+  },
+
+  "file_manifest": {
+    "positive": [
+      "positive/simple_import.json (3 examples) - Basic q:import patterns",
+      "positive/props_passing.json (4 examples) - Props with databinding",
+      "positive/slot_projection.json (3 examples) - Content projection patterns",
+      "positive/named_slots.json (2 examples) - Multiple injection points",
+      "positive/nested_components.json (4 examples) - Complex composition"
+    ],
+    "negative": [
+      "negative/invalid_syntax.json (7 examples) - Common errors and validation"
+    ]
+  },
+
+  "usage_instructions": {
+    "for_llm_training": "Use positive examples for component composition code generation. Show LLM how to build from simple imports to complex nested structures. Negative examples teach validation rules and error messages.",
+    "for_developers": "Reference these examples when learning component composition. See progression from basic imports (simple_import) to complex dashboards (nested_components).",
+    "for_testing": "Each positive example represents a valid test case for the component composition system. Negative examples define expected error behaviors."
+  },
+
+  "example_diversity": {
+    "implementation_styles": "Shows 2-4 different approaches per pattern type",
+    "complexity_levels": "Basic (7) -> Intermediate (5) -> Advanced (4)",
+    "use_cases": "UI components, layouts, dashboards, content projection, multi-level composition",
+    "multiple_solutions": "Same problem solved different ways (e.g., static vs databinding props, default vs named slots)"
+  },
+
+  "integration_with_other_features": {
+    "html_rendering": "Component output rendered as HTML",
+    "state_management": "Props flow from parent to child contexts",
+    "databinding": "Variables resolved in props and slot content",
+    "conditionals": "Components can be conditionally rendered with q:if",
+    "loops": "Components can be rendered in loops with q:loop"
+  }
+}
