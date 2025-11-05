@@ -177,9 +177,15 @@ class ComponentComposer:
             Modified component AST with slots filled
         """
 
+        # Pre-process slot content to apply databinding from parent context
+        processed_slot_content = self._apply_parent_databinding_to_nodes(
+            slot_content,
+            parent_context
+        )
+
         # Build slot content map: {slot_name: [nodes]}
         slot_content_map = {
-            'default': slot_content
+            'default': processed_slot_content
         }
 
         # TODO: Support named slots
@@ -237,6 +243,75 @@ class ComponentComposer:
                 # Keep node as-is
                 result.append(node)
 
+        return result
+
+    def _apply_parent_databinding_to_nodes(
+        self,
+        nodes: List[QuantumNode],
+        parent_context: ExecutionContext
+    ) -> List[QuantumNode]:
+        """
+        Apply databinding from parent context to nodes recursively.
+        
+        This ensures that slot content uses parent's variables, not child's.
+        
+        Args:
+            nodes: List of nodes (TextNode, HTMLNode, etc)
+            parent_context: Parent component's execution context
+            
+        Returns:
+            Nodes with databinding applied
+        """
+        from core.ast_nodes import TextNode, HTMLNode
+        
+        result = []
+        
+        for node in nodes:
+            if isinstance(node, TextNode):
+                # Apply databinding to text content
+                if node.has_databinding:
+                    processed_content = self._apply_databinding_from_context(
+                        node.content,
+                        parent_context
+                    )
+                    # Create new TextNode with resolved content
+                    new_node = TextNode(processed_content)
+                    new_node.has_databinding = False  # Already resolved
+                    result.append(new_node)
+                else:
+                    result.append(node)
+                    
+            elif isinstance(node, HTMLNode):
+                # Process children recursively
+                processed_children = self._apply_parent_databinding_to_nodes(
+                    node.children,
+                    parent_context
+                )
+                
+                # Process attributes (for databinding in attributes)
+                processed_attrs = {}
+                for key, value in node.attributes.items():
+                    if isinstance(value, str) and '{' in value:
+                        processed_attrs[key] = self._apply_databinding_from_context(
+                            value,
+                            parent_context
+                        )
+                    else:
+                        processed_attrs[key] = value
+                
+                # Create new HTMLNode with processed content
+                new_node = HTMLNode(
+                    tag=node.tag,
+                    attributes=processed_attrs,
+                    children=processed_children,
+                    self_closing=node.self_closing
+                )
+                result.append(new_node)
+                
+            else:
+                # Other node types - pass through
+                result.append(node)
+        
         return result
 
 
