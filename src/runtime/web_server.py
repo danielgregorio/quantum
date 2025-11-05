@@ -22,6 +22,7 @@ from runtime.renderer import HTMLRenderer
 from runtime.execution_context import ExecutionContext
 from runtime.action_handler import ActionHandler
 from runtime.auth_service import AuthService, AuthorizationError
+from runtime.error_handler import ErrorHandler, QuantumError
 
 
 class QuantumWebServer:
@@ -305,22 +306,45 @@ class QuantumWebServer:
             return Response(html, mimetype='text/html')
 
         except QuantumParseError as e:
+            # Enhanced parse error with context
+            enhanced_error = ErrorHandler.handle_parse_error(e, component_path)
+
+            if self.config['server']['debug']:
+                # Show enhanced error in debug mode
+                return self._render_error_page(
+                    title="Parse Error",
+                    message=f"Could not parse component: {component_name}",
+                    details=str(enhanced_error),
+                    suggestion="Check XML syntax and Quantum tag usage. Use 'quantum inspect {component_name}' for details."
+                ), 400
+            else:
+                return self._render_error_page(
+                    title="Parse Error",
+                    message="Could not parse component",
+                    details="Enable debug mode for details",
+                    suggestion=""
+                ), 400
+
+        except QuantumError as e:
+            # Already enhanced error
             return self._render_error_page(
-                title="Parse Error",
-                message="Could not parse component",
+                title="Quantum Error",
+                message=e.message,
                 details=str(e),
-                suggestion="Check XML syntax and Quantum tag usage."
-            ), 400
+                suggestion=e.suggestion or "Check the error details above"
+            ), 500
 
         except Exception as e:
             if self.config['server']['debug']:
-                # Show detailed error in debug mode
+                # Enhanced runtime error
+                enhanced_error = ErrorHandler.handle_runtime_error(e, component_name, component_path)
+
                 import traceback
                 return self._render_error_page(
                     title="Runtime Error",
-                    message="An error occurred during component execution",
-                    details=traceback.format_exc(),
-                    suggestion="Check component logic and data sources."
+                    message=f"Error in component: {component_name}",
+                    details=str(enhanced_error) + "\n\n" + traceback.format_exc(),
+                    suggestion="Use 'quantum inspect {component_name}' to debug. Check component logic and data sources."
                 ), 500
             else:
                 # Generic error in production
