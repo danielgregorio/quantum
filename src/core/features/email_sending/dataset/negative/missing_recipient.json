@@ -1,0 +1,21 @@
+{
+  "example_id": "email_error_001",
+  "category": "email_sending",
+  "tags": ["error", "validation", "recipient"],
+  "input": {
+    "component": "<q:component name=\"InvalidEmail\">\n  <q:action name=\"send\" method=\"POST\">\n    <q:mail subject=\"Test Email\">\n      <p>Email body</p>\n    </q:mail>\n  </q:action>\n</q:component>",
+    "context": {
+      "phase": "I",
+      "feature": "email_sending"
+    }
+  },
+  "expected_behavior": "Should fail - missing required 'to' attribute",
+  "error": {
+    "type": "ValidationError",
+    "message": "Email recipient (to) is required"
+  },
+  "validation": {
+    "should_fail": true,
+    "validation_error": true
+  }
+}

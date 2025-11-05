@@ -1,0 +1,102 @@
+{
+  "dataset_type": "positive",
+  "feature": "html_rendering",
+  "category": "mixed_content",
+  "description": "Valid examples of mixing HTML with Quantum control structures",
+  "examples": [
+    {
+      "id": "mixed-001",
+      "intent": "HTML with conditional rendering",
+      "input": {
+        "natural_language": "Show div only if condition is true",
+        "context": {
+          "available_vars": ["isLoggedIn"],
+          "features": ["conditionals"]
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"ConditionalDiv\">\n  <q:set name=\"isLoggedIn\" value=\"true\" />\n  <q:if condition=\"{isLoggedIn} == true\">\n    <div class=\"welcome\">\n      <p>Welcome back!</p>\n    </div>\n  </q:if>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "SetNode"
+            },
+            {
+              "type": "IfNode",
+              "body": [
+                {
+                  "type": "HTMLNode",
+                  "tag": "div"
+                }
+              ]
+            }
+          ]
+        },
+        "rendered_html": "<div class=\"welcome\">\n  <p>Welcome back!</p>\n</div>",
+        "runtime_behavior": "Conditionally renders HTML based on q:if"
+      },
+      "tags": ["mixed", "conditional", "q:if", "html"]
+    },
+    {
+      "id": "mixed-002",
+      "intent": "HTML with loop",
+      "input": {
+        "natural_language": "Generate list items with loop",
+        "context": {
+          "available_vars": ["items"],
+          "features": ["loops"]
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"List\">\n  <q:set name=\"items\" value=\"['Apple', 'Banana', 'Cherry']\" />\n  <ul>\n    <q:loop collection=\"{items}\" item=\"fruit\">\n      <li>{fruit}</li>\n    </q:loop>\n  </ul>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "SetNode"
+            },
+            {
+              "type": "HTMLNode",
+              "tag": "ul",
+              "children": [
+                {
+                  "type": "LoopNode",
+                  "body": [
+                    {
+                      "type": "HTMLNode",
+                      "tag": "li"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "rendered_html": "<ul>\n  <li>Apple</li>\n  <li>Banana</li>\n  <li>Cherry</li>\n</ul>",
+        "runtime_behavior": "Generates HTML list items via q:loop"
+      },
+      "tags": ["mixed", "loop", "q:loop", "list", "html"]
+    },
+    {
+      "id": "mixed-003",
+      "intent": "Complex mixing of HTML and control flow",
+      "input": {
+        "natural_language": "Build table with conditional rows",
+        "context": {
+          "available_vars": ["users"],
+          "features": ["loops", "conditionals"]
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"UserTable\">\n  <q:set name=\"users\" value=\"[{name: 'Alice', active: true}, {name: 'Bob', active: false}]\" />\n  <table>\n    <thead>\n      <tr>\n        <th>Name</th>\n        <th>Status</th>\n      </tr>\n    </thead>\n    <tbody>\n      <q:loop collection=\"{users}\" item=\"user\">\n        <tr>\n          <td>{user.name}</td>\n          <td>\n            <q:if condition=\"{user.active} == true\">\n              <span class=\"badge-active\">Active</span>\n            <q:else />\n              <span class=\"badge-inactive\">Inactive</span>\n            </q:if>\n          </td>\n        </tr>\n      </q:loop>\n    </tbody>\n  </table>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode"
+        },
+        "rendered_html": "<table>\n  <thead>\n    <tr>\n      <th>Name</th>\n      <th>Status</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td>Alice</td>\n      <td><span class=\"badge-active\">Active</span></td>\n    </tr>\n    <tr>\n      <td>Bob</td>\n      <td><span class=\"badge-inactive\">Inactive</span></td>\n    </tr>\n  </tbody>\n</table>",
+        "runtime_behavior": "Combines q:loop and q:if to generate conditional table rows"
+      },
+      "tags": ["mixed", "complex", "loop", "conditional", "table", "html"]
+    }
+  ]
+}

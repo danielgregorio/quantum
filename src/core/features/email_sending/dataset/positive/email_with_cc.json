@@ -1,0 +1,19 @@
+{
+  "example_id": "email_cc_001",
+  "category": "email_sending",
+  "tags": ["email", "cc", "bcc", "recipients"],
+  "input": {
+    "component": "<q:component name=\"NotifyTeam\">\n  <q:action name=\"notifyTeam\" method=\"POST\">\n    <q:param name=\"message\" type=\"string\" required=\"true\" />\n    \n    <q:mail to=\"team@company.com\"\n            cc=\"manager@company.com\"\n            bcc=\"admin@company.com\"\n            from=\"notifications@company.com\"\n            replyTo=\"support@company.com\"\n            subject=\"Team Notification\">\n      <h2>Team Update</h2>\n      <p>{message}</p>\n    </q:mail>\n    \n    <q:redirect url=\"/\" flash=\"Team notified!\" />\n  </q:action>\n</q:component>",
+    "context": {
+      "phase": "I",
+      "feature": "email_sending"
+    }
+  },
+  "expected_behavior": "Sends email with CC, BCC, and Reply-To",
+  "validation": {
+    "multi_recipients": true,
+    "cc_support": true,
+    "bcc_support": true,
+    "reply_to": true
+  }
+}

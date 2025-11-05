@@ -1,0 +1,44 @@
+feature:
+  name: "component_composition"
+  display_name: "Component Composition (q:import / q:slot / ComponentCall)"
+  version: "2.0.0"
+  status: "stable"
+  migration_type: "new_feature"
+
+description: |
+  Reusable component system with imports, props, and content projection (slots).
+  Enables component-based architecture similar to React/Vue but server-side rendered.
+
+tags:
+  - "components"
+  - "composition"
+  - "reusability"
+  - "props"
+  - "slots"
+
+maintainers:
+  - "Daniel"
+  - "Claude"
+
+api:
+  ast_nodes:
+    - "ImportNode"
+    - "SlotNode"
+    - "ComponentCallNode"
+  parser: "src/core/parser.py::_parse_import_statement"
+  runtime: "src/runtime/component_composer.py::ComponentComposer"
+  resolver: "src/runtime/component_resolver.py::ComponentResolver"
+
+dependencies:
+  - "html_rendering"
+  - "state_management"
+  - "databinding"
+
+testing:
+  unit_tests: 8
+  integration_tests: 2
+  coverage: 85
+
+phase: 2
+priority: "high"
+production_ready: true

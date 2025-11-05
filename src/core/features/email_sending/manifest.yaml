@@ -1,0 +1,27 @@
+feature:
+  name: "email_sending"
+  display_name: "Email Sending (q:mail)"
+  version: "1.0.0"
+  status: "planned"
+  phase: I
+  category: "communication"
+
+  description: "ColdFusion cfmail-inspired email sending"
+
+capabilities:
+  - "q:mail for sending emails"
+  - "HTML and plain text emails"
+  - "Template-based emails"
+  - "Attachments support"
+  - "SMTP configuration"
+
+examples:
+  send_email: |
+    <q:mail to="{email}"
+            from="noreply@myapp.com"
+            subject="Welcome!">
+      <h1>Welcome {name}!</h1>
+      <p>Thanks for joining.</p>
+    </q:mail>
+
+production_ready: false

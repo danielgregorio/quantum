@@ -15,7 +15,10 @@ from core.ast_nodes import (
     QuantumParam, QuantumReturn, QuantumRoute, IfNode, LoopNode, SetNode,
     FunctionNode, DispatchEventNode, OnEventNode, RestConfig, QueryNode, QueryParamNode,
     InvokeNode, InvokeHeaderNode, DataNode, ColumnNode, FieldNode, TransformNode,
-    FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode
+    FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode,
+    HTMLNode, TextNode, DocTypeNode, CommentNode, HTML_VOID_ELEMENTS,
+    ImportNode, SlotNode, ComponentCallNode,
+    ActionNode, RedirectNode, FlashNode, FileNode, MailNode, TransactionNode
 )
 from core.features.logging.src import LogNode, parse_log
 from core.features.dump.src import DumpNode, parse_dump
@@ -29,22 +32,61 @@ class QuantumParser:
     
     def __init__(self):
         self.quantum_ns = {'q': 'https://quantum.lang/ns'}
-    
+
+    def _inject_namespace(self, content: str) -> str:
+        """
+        MAGIC: Automatically inject XML namespace for q: prefix
+
+        This allows users to write clean Quantum code without ceremony:
+
+        Instead of:  <q:component name="Foo" xmlns:q="https://quantum.lang/ns">
+        Write:       <q:component name="Foo">
+
+        Pure ColdFusion-style pragmatism!
+        """
+        import re
+
+        # Check if namespace already present
+        if 'xmlns:q' in content:
+            return content
+
+        # Find first q:component, q:application, or q:job tag
+        pattern = r'<(q:component|q:application|q:job)(\s+[^>]*)?>'
+
+        def add_namespace(match):
+            tag = match.group(1)
+            attrs = match.group(2) or ''
+            # Add namespace declaration
+            return f'<{tag}{attrs} xmlns:q="https://quantum.lang/ns">'
+
+        # Replace first occurrence only
+        content = re.sub(pattern, add_namespace, content, count=1)
+
+        return content
+
     def parse_file(self, file_path: str) -> QuantumNode:
         """Parse .q file and return AST"""
         path = Path(file_path)
-        
+
         if not path.exists():
             raise QuantumParseError(f"File not found: {file_path}")
-        
+
         if not path.suffix == '.q':
             raise QuantumParseError(f"Invalid extension: {path.suffix}, expected .q")
-        
+
         try:
-            tree = ET.parse(path)
-            root = tree.getroot()
+            # Read file content
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # MAGIC: Auto-inject namespace if not present
+            # This makes Quantum "just work" without ceremony
+            content = self._inject_namespace(content)
+
+            # Parse XML
+            root = ET.fromstring(content)
             return self._parse_root_element(root, path)
-        
+
         except ET.ParseError as e:
             raise QuantumParseError(f"XML parse error: {e}")
         except Exception as e:
@@ -101,6 +143,16 @@ class QuantumParser:
         component.metrics_provider = root.get('metrics')
         component.trace_provider = root.get('trace')
 
+        # Phase G: Authentication & Security attributes
+        require_auth_attr = root.get('require_auth', 'false').lower()
+        component.require_auth = require_auth_attr in ['true', '1', 'yes']
+        component.require_role = root.get('require_role')
+        component.require_permission = root.get('require_permission')
+
+        # HTML rendering & interactivity (Phase 1 & future Phase 3)
+        interactive_attr = root.get('interactive', 'false').lower()
+        component.interactive = interactive_attr in ['true', '1', 'yes']
+
         # Parse q:param elements (component-level params)
         for param_el in self._find_all_elements(root, 'param'):
             param = self._parse_param(param_el)
@@ -138,6 +190,7 @@ class QuantumParser:
         for child in parent:
             child_type = self._get_element_name(child)
 
+            # Quantum tags (q:*)
             if child_type == 'if':
                 if_node = self._parse_if_statement(child)
                 component.add_statement(if_node)
@@ -165,6 +218,46 @@ class QuantumParser:
             elif child_type == 'dump':
                 dump_node = parse_dump(child)
                 component.add_statement(dump_node)
+
+            # Forms & Actions (Phase A)
+            elif child_type == 'action':
+                action_node = self._parse_action_statement(child)
+                component.add_statement(action_node)
+            elif child_type == 'redirect':
+                redirect_node = self._parse_redirect_statement(child)
+                component.add_statement(redirect_node)
+            elif child_type == 'flash':
+                flash_node = self._parse_flash_statement(child)
+                component.add_statement(flash_node)
+            elif child_type == 'file':
+                file_node = self._parse_file_statement(child)
+                component.add_statement(file_node)
+            elif child_type == 'mail':
+                mail_node = self._parse_mail_statement(child)
+                component.add_statement(mail_node)
+            elif child_type == 'transaction':
+                transaction_node = self._parse_transaction_statement(child)
+                component.add_statement(transaction_node)
+
+            # Component Composition (Phase 2)
+            elif child_type == 'import':
+                import_node = self._parse_import_statement(child)
+                component.add_statement(import_node)
+            elif child_type == 'slot':
+                slot_node = self._parse_slot_statement(child)
+                component.add_statement(slot_node)
+
+            # Component calls (Phase 2) - Uppercase tags
+            elif child_type and child_type[0].isupper():
+                component_call = self._parse_component_call(child)
+                component.add_statement(component_call)
+                component.has_html = True  # Component calls produce HTML
+
+            # HTML elements (Phase 1 - HTML rendering)
+            elif self._is_html_element(child):
+                html_node = self._parse_html_element(child)
+                component.add_statement(html_node)
+                component.has_html = True  # Mark component as having HTML output
     
     def _parse_if_statement(self, if_element: ET.Element) -> IfNode:
         """Parse q:if statement with elseif and else blocks"""
@@ -309,6 +402,7 @@ class QuantumParser:
         """Parse individual statement (return, set, dispatchEvent, etc)"""
         element_type = self._get_element_name(element)
 
+        # Quantum tags
         if element_type == 'return':
             return self._parse_return(element)
         elif element_type == 'set':
@@ -329,6 +423,35 @@ class QuantumParser:
             return parse_log(element)
         elif element_type == 'dump':
             return parse_dump(element)
+
+        # Forms & Actions (Phase A)
+        elif element_type == 'action':
+            return self._parse_action_statement(element)
+        elif element_type == 'redirect':
+            return self._parse_redirect_statement(element)
+        elif element_type == 'flash':
+            return self._parse_flash_statement(element)
+        elif element_type == 'file':
+            return self._parse_file_statement(element)
+        elif element_type == 'mail':
+            return self._parse_mail_statement(element)
+        elif element_type == 'transaction':
+            return self._parse_transaction_statement(element)
+
+        # Component Composition (Phase 2)
+        elif element_type == 'import':
+            return self._parse_import_statement(element)
+        elif element_type == 'slot':
+            return self._parse_slot_statement(element)
+
+        # Component calls (Phase 2) - Check BEFORE HTML elements
+        # Detect imported component usage by uppercase naming convention
+        elif element_type and element_type[0].isupper():
+            return self._parse_component_call(element)
+
+        # HTML elements (Phase 1)
+        elif self._is_html_element(element):
+            return self._parse_html_element(element)
 
         return None
     
@@ -996,3 +1119,367 @@ class QuantumParser:
             raise QuantumParseError(f"Data header '{name}' requires 'value' attribute")
 
         return HeaderNode(name, value)
+
+    # ============================================
+    # HTML PARSING (Phase 1 - HTML Rendering)
+    # ============================================
+
+    def _is_html_element(self, element: ET.Element) -> bool:
+        """
+        Check if element is HTML (not a Quantum tag).
+
+        Returns True for:
+        - Regular HTML tags (div, span, p, etc.)
+        - DOCTYPE declarations
+        - Comments
+
+        Returns False for:
+        - Quantum tags (q:* namespace)
+        - Special Quantum tags (param, return, function, etc.)
+        """
+        tag = element.tag
+
+        # Skip namespace declarations and special elements
+        if tag.startswith('{'):
+            # Has XML namespace - check if it's Quantum namespace
+            if '{https://quantum.lang/ns}' in tag:
+                return False
+            # Other namespaces might be HTML5 or SVG
+            return True
+
+        # Check for q: prefix (Quantum tags)
+        if tag.startswith('q:'):
+            return False
+
+        # Quantum tags without prefix (when xmlns:q is set)
+        quantum_tags = {
+            'component', 'application', 'job', 'param', 'return', 'route',
+            'if', 'elseif', 'else', 'loop', 'set', 'function', 'dispatchEvent',
+            'onEvent', 'script', 'query', 'invoke', 'data', 'log', 'dump',
+            'import', 'slot'  # Phase 2
+        }
+        if tag in quantum_tags:
+            return False
+
+        # Component calls (Phase 2) - Uppercase tags are components, not HTML
+        if tag and tag[0].isupper():
+            return False
+
+        # Everything else is HTML
+        return True
+
+    def _parse_html_element(self, element: ET.Element) -> HTMLNode:
+        """
+        Parse HTML element into HTMLNode.
+
+        Recursively parses children (which can be HTML or Quantum tags).
+        Handles text content with TextNode.
+        """
+        tag = self._get_element_name(element)
+
+        # Parse attributes (will be applied databinding during rendering)
+        attributes = dict(element.attrib)
+
+        # Parse children
+        children = []
+
+        # Add text before first child
+        if element.text and element.text.strip():
+            children.append(TextNode(element.text))
+
+        # Parse child elements (recursively)
+        for child in element:
+            # Child could be HTML or Quantum tag
+            child_node = self._parse_statement(child)
+            if child_node:
+                children.append(child_node)
+
+            # Add text after child (tail)
+            if child.tail and child.tail.strip():
+                children.append(TextNode(child.tail))
+
+        # Create HTML node
+        html_node = HTMLNode(
+            tag=tag,
+            attributes=attributes,
+            children=children
+        )
+
+        return html_node
+
+    # ============================================
+    # COMPONENT COMPOSITION PARSING (Phase 2)
+    # ============================================
+
+    def _parse_import_statement(self, element: ET.Element) -> ImportNode:
+        """
+        Parse q:import statement.
+
+        Examples:
+          <q:import component="Header" />
+          <q:import component="Button" from="./ui" />
+          <q:import component="AdminLayout" as="Layout" />
+        """
+        component = element.get('component')
+        from_path = element.get('from')
+        alias = element.get('as')
+        
+        if not component:
+            raise QuantumParseError("q:import requires 'component' attribute")
+        
+        return ImportNode(
+            component=component,
+            from_path=from_path,
+            alias=alias
+        )
+
+    def _parse_slot_statement(self, element: ET.Element) -> SlotNode:
+        """
+        Parse q:slot statement.
+
+        Examples:
+          <q:slot />  <!-- Default slot -->
+          <q:slot name="header" />
+          <q:slot name="footer">
+            <p>Default footer content</p>
+          </q:slot>
+        """
+        name = element.get('name', 'default')
+        
+        # Parse default content (children of slot)
+        default_content = []
+        
+        if element.text and element.text.strip():
+            default_content.append(TextNode(element.text))
+        
+        for child in element:
+            child_node = self._parse_statement(child)
+            if child_node:
+                default_content.append(child_node)
+            
+            if child.tail and child.tail.strip():
+                default_content.append(TextNode(child.tail))
+        
+        return SlotNode(
+            name=name,
+            default_content=default_content
+        )
+
+    def _parse_component_call(self, element: ET.Element) -> ComponentCallNode:
+        """
+        Parse component call (imported component usage).
+
+        Examples:
+          <Header title="Products" />
+          <Button label="Save" color="green" />
+          <Card title="Info">
+            <p>Card content</p>
+          </Card>
+        """
+        component_name = element.tag
+        
+        # Parse props (all attributes)
+        props = dict(element.attrib)
+        
+        # Parse children (content for slots)
+        children = []
+        
+        if element.text and element.text.strip():
+            children.append(TextNode(element.text))
+        
+        for child in element:
+            child_node = self._parse_statement(child)
+            if child_node:
+                children.append(child_node)
+            
+            if child.tail and child.tail.strip():
+                children.append(TextNode(child.tail))
+        
+        return ComponentCallNode(
+            component_name=component_name,
+            props=props,
+            children=children
+        )
+
+    # ============================================
+    # FORMS & ACTIONS PARSING (Phase A)
+    # ============================================
+
+    def _parse_action_statement(self, element: ET.Element) -> ActionNode:
+        """
+        Parse q:action statement for form handling.
+
+        Examples:
+          <q:action name="createUser" method="POST">
+            <q:param name="email" type="email" required="true" />
+            <q:param name="password" type="string" minlength="8" />
+            <q:query datasource="db">
+              INSERT INTO users (email, password) VALUES (:email, :password)
+            </q:query>
+            <q:redirect url="/users" flash="User created!" />
+          </q:action>
+        """
+        name = element.get('name', '')
+        method = element.get('method', 'POST')
+        action_node = ActionNode(name, method)
+
+        # Parse optional attributes
+        if element.get('csrf') == 'false':
+            action_node.validate_csrf = False
+        if element.get('rate_limit'):
+            action_node.rate_limit = element.get('rate_limit')
+        if element.get('require_auth') == 'true':
+            action_node.require_auth = True
+
+        # Parse children (params, statements)
+        for child in element:
+            child_type = self._get_element_name(child)
+
+            if child_type == 'param':
+                param = self._parse_param(child)
+                action_node.add_param(param)
+            else:
+                # Parse other statements (query, set, redirect, etc.)
+                statement = self._parse_statement(child)
+                if statement:
+                    action_node.add_statement(statement)
+
+        return action_node
+
+    def _parse_redirect_statement(self, element: ET.Element) -> RedirectNode:
+        """
+        Parse q:redirect statement.
+
+        Examples:
+          <q:redirect url="/thank-you" />
+          <q:redirect url="/users/{userId}" />
+          <q:redirect url="/products" flash="Product created!" />
+          <q:redirect url="/error" status="500" flash="Error occurred" />
+        """
+        url = element.get('url', '')
+        flash = element.get('flash')
+        status = int(element.get('status', '302'))
+
+        return RedirectNode(url, flash, status)
+
+    def _parse_flash_statement(self, element: ET.Element) -> FlashNode:
+        """
+        Parse q:flash statement for flash messages.
+
+        Examples:
+          <q:flash type="success" message="User created!" />
+          <q:flash type="error" message="{errorMessage}" />
+          <q:flash type="warning">Please verify your email</q:flash>
+        """
+        flash_type = element.get('type', 'info')
+        message = element.get('message')
+
+        # If message not in attribute, check text content
+        if not message and element.text:
+            message = element.text.strip()
+
+        return FlashNode(message, flash_type)
+
+    def _parse_file_statement(self, element: ET.Element) -> FileNode:
+        """
+        Parse q:file statement for file operations.
+        
+        Phase H: File Uploads
+        
+        Examples:
+          <q:file action="upload" file="{avatar}" destination="./uploads/" />
+          <q:file action="upload" file="{document}" destination="./files/" nameConflict="makeUnique" />
+        """
+        action = element.get('action', 'upload')
+        file = element.get('file', '')
+        destination = element.get('destination', './uploads/')
+        name_conflict = element.get('nameConflict', 'error')
+        result = element.get('result')
+        
+        return FileNode(
+            action=action,
+            file=file,
+            destination=destination,
+            name_conflict=name_conflict,
+            result=result
+        )
+
+    def _parse_mail_statement(self, element: ET.Element) -> MailNode:
+        """
+        Parse q:mail statement for sending emails.
+
+        Phase I: Email Sending
+
+        Examples:
+          <q:mail to="{email}" from="noreply@app.com" subject="Welcome!">
+            <h1>Welcome {name}!</h1>
+          </q:mail>
+        """
+        to = element.get('to', '')
+        subject = element.get('subject', '')
+        from_addr = element.get('from')
+        cc = element.get('cc')
+        bcc = element.get('bcc')
+        reply_to = element.get('replyTo')
+        mail_type = element.get('type', 'html')
+        charset = element.get('charset', 'UTF-8')
+
+        # Create mail node
+        mail_node = MailNode(
+            to=to,
+            subject=subject,
+            from_addr=from_addr,
+            cc=cc,
+            bcc=bcc,
+            reply_to=reply_to,
+            type=mail_type,
+            charset=charset
+        )
+
+        # Parse body content (can be text or HTML elements)
+        if element.text and element.text.strip():
+            mail_node.body = element.text.strip()
+        else:
+            # Parse child elements as HTML body
+            body_parts = []
+            for child in element:
+                if child.tag:
+                    # Reconstruct HTML from children
+                    body_parts.append(ET.tostring(child, encoding='unicode', method='html'))
+            if body_parts:
+                mail_node.body = ''.join(body_parts)
+
+        return mail_node
+
+    def _parse_transaction_statement(self, element: ET.Element) -> TransactionNode:
+        """
+        Parse q:transaction statement for database transactions.
+
+        Phase D: Database Backend
+
+        Examples:
+          <q:transaction>
+            <q:query datasource="db" name="debit">
+              UPDATE accounts SET balance = balance - :amount WHERE id = :from_id
+            </q:query>
+            <q:query datasource="db" name="credit">
+              UPDATE accounts SET balance = balance + :amount WHERE id = :to_id
+            </q:query>
+          </q:transaction>
+
+          <q:transaction isolationLevel="SERIALIZABLE">
+            <!-- Critical financial operations -->
+          </q:transaction>
+        """
+        isolation_level = element.get('isolationLevel', 'READ_COMMITTED')
+
+        # Create transaction node
+        transaction_node = TransactionNode(isolation_level=isolation_level)
+
+        # Parse child statements (queries, sets, etc.)
+        for child in element:
+            statement = self._parse_statement(child)
+            if statement:
+                transaction_node.add_statement(statement)
+
+        return transaction_node

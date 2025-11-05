@@ -1,0 +1,22 @@
+{
+  "example_id": "htmx_002",
+  "category": "htmx_partials",
+  "tags": ["htmx", "form", "post"],
+  "input": {
+    "component": "<form hx-post=\"/_partial/add_todo\" hx-target=\"#todo-list\" hx-swap=\"beforeend\">\n  <input type=\"text\" name=\"task\" required />\n  <button type=\"submit\">Add</button>\n</form>\n<div id=\"todo-list\"></div>",
+    "context": {
+      "phase": "B",
+      "feature": "htmx_partials",
+      "trigger": "submit",
+      "method": "POST"
+    }
+  },
+  "expected_behavior": "Form submission via POST to partial endpoint, new todo item added to list without page reload",
+  "validation": {
+    "form_submitted_via_ajax": true,
+    "partial_response_received": true,
+    "content_appended": true,
+    "swap_strategy": "beforeend",
+    "no_full_page_reload": true
+  }
+}

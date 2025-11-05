@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 # Fix imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode, FunctionNode, DispatchEventNode, OnEventNode, QueryNode, InvokeNode, DataNode
+from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode, FunctionNode, DispatchEventNode, OnEventNode, QueryNode, InvokeNode, DataNode, FileNode, MailNode, TransactionNode
 from core.features.logging.src import LogNode, LoggingService
 from core.features.dump.src import DumpNode, DumpService
 from runtime.database_service import DatabaseService, QueryResult
@@ -19,6 +19,8 @@ from runtime.validators import QuantumValidators, ValidationError
 from runtime.function_registry import FunctionRegistry
 from core.features.invocation.src.runtime import InvocationService
 from core.features.data_import.src.runtime import DataImportService
+from runtime.file_upload_service import FileUploadService, FileUploadError
+from runtime.email_service import EmailService, EmailError
 import re
 
 class ComponentExecutionError(Exception):
@@ -46,7 +48,11 @@ class ComponentRuntime:
         self.logging_service = LoggingService()
         # Dump service for q:dump
         self.dump_service = DumpService()
-    
+        # File upload service for q:file (Phase H)
+        self.file_upload_service = FileUploadService()
+        # Email service for q:mail (Phase I)
+        self.email_service = EmailService()
+
     def execute_component(self, component: ComponentNode, params: Dict[str, Any] = None) -> Any:
         """Execute a component and return the result"""
         if params is None:
@@ -57,6 +63,14 @@ class ComponentRuntime:
 
         # Register component functions
         self.function_registry.register_component(component)
+
+        # Phase F: Initialize scopes from special parameters before validation
+        if '_session_scope' in params:
+            self.execution_context.session_vars = params.pop('_session_scope')
+        if '_application_scope' in params:
+            self.execution_context.application_vars = params.pop('_application_scope')
+        if '_request_scope' in params:
+            self.execution_context.request_vars = params.pop('_request_scope')
 
         # Validate parameters
         validation_errors = self._validate_params(component, params)
@@ -166,8 +180,14 @@ class ComponentRuntime:
             return self._execute_log(statement, exec_context)
         elif isinstance(statement, DumpNode):
             return self._execute_dump(statement, exec_context)
+        elif isinstance(statement, FileNode):
+            return self._execute_file(statement, exec_context)
+        elif isinstance(statement, MailNode):
+            return self._execute_mail(statement, exec_context)
+        elif isinstance(statement, TransactionNode):
+            return self._execute_transaction(statement, exec_context)
         return None
-    
+
     def _execute_if(self, if_node: IfNode, context: Dict[str, Any]):
         """Execute q:if statement with elseif and else"""
         
@@ -1897,3 +1917,217 @@ class ComponentRuntime:
                     'type': type(e).__name__
                 }
             }
+
+    def _execute_file(self, file_node: FileNode, exec_context: ExecutionContext):
+        """
+        Execute file operation (upload, delete, etc.)
+        
+        Phase H: File Uploads
+        
+        Args:
+            file_node: FileNode with file operation configuration
+            exec_context: Execution context for variables
+            
+        Returns:
+            None (stores result in context if result variable specified)
+            
+        Raises:
+            ComponentExecutionError: If file operation fails
+        """
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+            
+            if file_node.action == 'upload':
+                # Resolve file variable (contains FileStorage from Flask)
+                file_var = file_node.file.strip('{}')  # Remove curly braces if present
+                file_obj = dict_context.get(file_var)
+                
+                if not file_obj:
+                    raise ComponentExecutionError(f"File variable '{file_var}' not found in context")
+                
+                # Resolve destination (apply databinding)
+                destination = self._apply_databinding(file_node.destination, dict_context)
+                
+                # Upload file using FileUploadService
+                result = self.file_upload_service.upload_file(
+                    file=file_obj,
+                    destination=destination,
+                    name_conflict=file_node.name_conflict
+                )
+                
+                # Store result in context if result variable specified
+                if file_node.result:
+                    exec_context.set_variable(file_node.result, result, scope="component")
+                    self.context[file_node.result] = result
+                
+                # Also store upload info in default variable based on original file var
+                exec_context.set_variable(f"{file_var}_upload", result, scope="component")
+                self.context[f"{file_var}_upload"] = result
+                
+                return result
+                
+            elif file_node.action == 'delete':
+                # Resolve filepath
+                filepath = self._apply_databinding(file_node.file, dict_context)
+                
+                # Delete file
+                result = self.file_upload_service.delete_file(filepath)
+                
+                # Store result if variable specified
+                if file_node.result:
+                    exec_context.set_variable(file_node.result, result, scope="component")
+                    self.context[file_node.result] = result
+                
+                return result
+            
+            else:
+                raise ComponentExecutionError(f"Unsupported file action: {file_node.action}")
+                
+        except FileUploadError as e:
+            raise ComponentExecutionError(f"File operation error: {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"File execution error: {e}")
+
+    def _execute_mail(self, mail_node: MailNode, exec_context: ExecutionContext):
+        """
+        Execute email sending (q:mail).
+        
+        Phase I: Email Sending
+        
+        Args:
+            mail_node: MailNode with email configuration
+            exec_context: Execution context for variables
+            
+        Returns:
+            Email send result dict
+            
+        Raises:
+            ComponentExecutionError: If email sending fails
+        """
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+            
+            # Resolve all email properties with databinding
+            to = self._apply_databinding(mail_node.to, dict_context)
+            subject = self._apply_databinding(mail_node.subject, dict_context)
+            body = self._apply_databinding(mail_node.body, dict_context)
+            
+            from_addr = None
+            if mail_node.from_addr:
+                from_addr = self._apply_databinding(mail_node.from_addr, dict_context)
+            
+            cc = None
+            if mail_node.cc:
+                cc = self._apply_databinding(mail_node.cc, dict_context)
+            
+            bcc = None
+            if mail_node.bcc:
+                bcc = self._apply_databinding(mail_node.bcc, dict_context)
+            
+            reply_to = None
+            if mail_node.reply_to:
+                reply_to = self._apply_databinding(mail_node.reply_to, dict_context)
+            
+            # Send email using EmailService
+            result = self.email_service.send_email(
+                to=to,
+                subject=subject,
+                body=body,
+                from_addr=from_addr,
+                cc=cc,
+                bcc=bcc,
+                reply_to=reply_to,
+                email_type=mail_node.type,
+                attachments=mail_node.attachments
+            )
+            
+            # Store result in context
+            exec_context.set_variable('_mail_result', result, scope="component")
+            self.context['_mail_result'] = result
+            
+            return result
+            
+        except EmailError as e:
+            raise ComponentExecutionError(f"Email sending error: {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Mail execution error: {e}")
+
+    def _execute_transaction(self, transaction_node: TransactionNode, exec_context: ExecutionContext):
+        """
+        Execute database transaction (q:transaction).
+
+        Phase D: Database Backend
+
+        Ensures atomic execution of database operations. All statements
+        within the transaction succeed together or fail together.
+
+        Args:
+            transaction_node: TransactionNode with statements to execute
+            exec_context: Execution context for variables
+
+        Returns:
+            Transaction result dict with success status
+
+        Raises:
+            ComponentExecutionError: If transaction fails
+        """
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+
+            # Determine datasource (use first query's datasource or default)
+            datasource_name = "default"
+            for stmt in transaction_node.statements:
+                if isinstance(stmt, QueryNode) and stmt.datasource:
+                    datasource_name = stmt.datasource
+                    break
+
+            # Begin transaction
+            transaction_context = self.database_service.begin_transaction(datasource_name)
+
+            results = []
+            try:
+                # Execute all statements in transaction
+                for statement in transaction_node.statements:
+                    # Execute statement (queries, sets, etc.)
+                    result = self.execute_statement(statement, exec_context)
+                    results.append(result)
+
+                # All succeeded - commit transaction
+                success = self.database_service.commit_transaction(transaction_context)
+
+                transaction_result = {
+                    'success': success,
+                    'committed': True,
+                    'isolation_level': transaction_node.isolation_level,
+                    'statement_count': len(transaction_node.statements),
+                    'results': results
+                }
+
+            except Exception as stmt_error:
+                # Any statement failed - rollback transaction
+                self.database_service.rollback_transaction(transaction_context)
+
+                transaction_result = {
+                    'success': False,
+                    'rolled_back': True,
+                    'error': str(stmt_error),
+                    'isolation_level': transaction_node.isolation_level
+                }
+
+                # Re-raise the error
+                raise ComponentExecutionError(f"Transaction failed and was rolled back: {stmt_error}")
+
+            # Store result in context
+            exec_context.set_variable('_transaction_result', transaction_result, scope="component")
+            self.context['_transaction_result'] = transaction_result
+
+            return transaction_result
+
+        except ComponentExecutionError:
+            # Re-raise component errors
+            raise
+        except Exception as e:
+            raise ComponentExecutionError(f"Transaction execution error: {e}")

@@ -1,0 +1,20 @@
+{
+  "example_id": "islands_002",
+  "category": "islands_architecture",
+  "tags": ["islands", "binding", "input"],
+  "input": {
+    "component": "<q:component name=\"LiveInput\" interactive=\"true\">\n  <input oninput=\"updateOutput(this.value)\" />\n  <p>You typed: <span id=\"output\"></span></p>\n  <script>\n    function updateOutput(value) {\n      document.getElementById('output').textContent = value;\n    }\n  </script>\n</q:component>",
+    "context": {
+      "phase": "E",
+      "feature": "islands_architecture",
+      "binding_type": "two-way"
+    }
+  },
+  "expected_behavior": "Input changes reflect immediately in output display without server communication",
+  "validation": {
+    "two_way_binding": true,
+    "instant_updates": true,
+    "no_server_communication": true,
+    "interactive_island": true
+  }
+}

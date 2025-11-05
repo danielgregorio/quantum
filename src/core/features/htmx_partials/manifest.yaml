@@ -1,0 +1,43 @@
+feature:
+  name: "htmx_partials"
+  display_name: "HTMX-Style Partials (Progressive Enhancement)"
+  version: "1.0.0"
+  status: "planned"
+  phase: B
+  category: "interactivity"
+
+  description: |
+    HTMX-inspired partial rendering for progressive enhancement.
+    Update parts of the page without full reload using simple attributes.
+    No JavaScript framework required!
+
+capabilities:
+  - "q:partial for partial rendering"
+  - "q:trigger for AJAX events (load, click, change)"
+  - "q:target for update targets"
+  - "q:swap for swap strategies (innerHTML, outerHTML, beforeend)"
+  - "q:post, q:get, q:put, q:delete for HTTP methods"
+  - "Progressive enhancement (works without JS)"
+  - "Loading indicators"
+  - "Error handling"
+
+examples:
+  partial_rendering: |
+    <div q:partial="todoList" q:trigger="load">
+      <q:loop items="{todos}" var="todo">
+        <div>{todo.title}</div>
+      </q:loop>
+    </div>
+
+  ajax_button: |
+    <button q:post="/api/add" q:target="#todoList" q:swap="innerHTML">
+      Add Todo
+    </button>
+
+  auto_update: |
+    <div q:partial="liveStats" q:trigger="every 5s" q:target="#stats">
+      Users online: {onlineCount}
+    </div>
+
+production_ready: false
+planned_for: "2026-01"

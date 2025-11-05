@@ -21,21 +21,45 @@ class ExecutionContext:
         self.local_vars: Dict[str, Any] = {}
         self.function_vars: Dict[str, Any] = {}
         self.component_vars: Dict[str, Any] = {}
-        # Session vars are shared globally (for future use)
+
+        # Phase F: Scope support (session/application/request)
+        # Session vars are shared globally (user-specific, persistent)
         if parent is None:
             self.session_vars: Dict[str, Any] = {}
+            self.application_vars: Dict[str, Any] = {}  # Global state
+            self.request_vars: Dict[str, Any] = {}  # Request-scoped
         else:
             self.session_vars = parent.session_vars
+            self.application_vars = parent.application_vars
+            self.request_vars = parent.request_vars
 
     def set_variable(self, name: str, value: Any, scope: str = "local"):
         """
         Set a variable in the specified scope
 
+        Phase F: Supports session.variable, application.variable, request.variable syntax
+
         Args:
-            name: Variable name
+            name: Variable name (can include scope prefix like "session.userId")
             value: Variable value
-            scope: 'local', 'function', 'component', or 'session'
+            scope: 'local', 'function', 'component', 'session', 'application', or 'request'
         """
+        # Phase F: Parse scope prefix from variable name
+        if '.' in name:
+            prefix, var_name = name.split('.', 1)
+            if prefix in ['session', 'application', 'request', 'cookie']:
+                if prefix == 'session':
+                    self.session_vars[var_name] = value
+                elif prefix == 'application':
+                    self.application_vars[var_name] = value
+                elif prefix == 'request':
+                    self.request_vars[var_name] = value
+                elif prefix == 'cookie':
+                    # Store in session with cookie prefix for now
+                    self.session_vars[f'__cookie_{var_name}'] = value
+                return
+
+        # Normal scope handling
         if scope == "local":
             self.local_vars[name] = value
         elif scope == "function":
@@ -47,6 +71,10 @@ class ExecutionContext:
         elif scope == "session":
             # Set in session (shared globally)
             self.session_vars[name] = value
+        elif scope == "application":
+            self.application_vars[name] = value
+        elif scope == "request":
+            self.request_vars[name] = value
         else:
             raise ValueError(f"Invalid scope: {scope}")
 
@@ -87,10 +115,12 @@ class ExecutionContext:
     def get_variable(self, name: str) -> Any:
         """
         Get a variable value, searching through scopes in order:
-        local -> function -> component -> session -> parent
+        local -> function -> component -> session -> application -> request -> parent
+
+        Phase F: Supports session.variable, application.variable, request.variable syntax
 
         Args:
-            name: Variable name
+            name: Variable name (can include scope prefix like "session.userId")
 
         Returns:
             Variable value
@@ -98,6 +128,19 @@ class ExecutionContext:
         Raises:
             VariableNotFoundError: If variable not found in any scope
         """
+        # Phase F: Parse scope prefix from variable name
+        if '.' in name:
+            prefix, var_name = name.split('.', 1)
+            if prefix in ['session', 'application', 'request', 'cookie']:
+                if prefix == 'session':
+                    return self.session_vars.get(var_name, '')
+                elif prefix == 'application':
+                    return self.application_vars.get(var_name, '')
+                elif prefix == 'request':
+                    return self.request_vars.get(var_name, '')
+                elif prefix == 'cookie':
+                    return self.session_vars.get(f'__cookie_{var_name}', '')
+
         # Search local scope first
         if name in self.local_vars:
             return self.local_vars[name]
@@ -114,6 +157,14 @@ class ExecutionContext:
         # Search session scope
         if name in self.session_vars:
             return self.session_vars[name]
+
+        # Search application scope
+        if name in self.application_vars:
+            return self.application_vars[name]
+
+        # Search request scope
+        if name in self.request_vars:
+            return self.request_vars[name]
 
         # Search parent context
         if self.parent:
@@ -171,6 +222,8 @@ class ExecutionContext:
         """
         Get all variables from all scopes as a flat dictionary
         (for backward compatibility with existing code)
+
+        Phase F: Also includes scoped variables with dot notation (session.variable, application.variable, request.variable)
         """
         all_vars = {}
 
@@ -178,8 +231,20 @@ class ExecutionContext:
         if self.parent:
             all_vars.update(self.parent.get_all_variables())
 
-        # Add session vars
+        # Phase F: Add session vars (both direct and with scope prefix)
         all_vars.update(self.session_vars)
+        for key, value in self.session_vars.items():
+            all_vars[f'session.{key}'] = value
+
+        # Phase F: Add application vars (both direct and with scope prefix)
+        all_vars.update(self.application_vars)
+        for key, value in self.application_vars.items():
+            all_vars[f'application.{key}'] = value
+
+        # Phase F: Add request vars (both direct and with scope prefix)
+        all_vars.update(self.request_vars)
+        for key, value in self.request_vars.items():
+            all_vars[f'request.{key}'] = value
 
         # Add component vars
         root_ctx = self._get_root_context()

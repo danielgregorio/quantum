@@ -1,0 +1,21 @@
+{
+  "example_id": "db_cache_001",
+  "category": "database_backend",
+  "tags": ["cache", "performance", "ttl"],
+  "input": {
+    "component": "<q:component name=\"ProductList\">\n  <!-- Cache query for 5 minutes -->\n  <q:query datasource=\"default\" name=\"products\" cache=\"5m\">\n    SELECT id, name, price, stock\n    FROM products\n    WHERE active = 1\n    ORDER BY name\n  </q:query>\n  \n  <h1>Products</h1>\n  <q:loop query=\"products\">\n    <div class=\"product\">\n      <h3>{products.name}</h3>\n      <p>Price: ${products.price}</p>\n      <p>Stock: {products.stock}</p>\n    </div>\n  </q:loop>\n  \n  <p>Query cached: {_query_result.cached}</p>\n  <p>Execution time: {_query_result.execution_time}ms</p>\n</q:component>",
+    "context": {
+      "phase": "D",
+      "feature": "database_backend",
+      "cache_enabled": true,
+      "cache_ttl": "5m"
+    }
+  },
+  "expected_behavior": "First request executes query and caches result for 5 minutes. Subsequent requests return cached data with faster execution time",
+  "validation": {
+    "query_executed": true,
+    "cache_key_generated": true,
+    "ttl_parsed": 300,
+    "subsequent_requests_cached": true
+  }
+}

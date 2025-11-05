@@ -1,0 +1,23 @@
+{
+  "example_id": "htmx_error_001",
+  "category": "htmx_partials",
+  "tags": ["error", "404", "partial"],
+  "input": {
+    "component": "<div hx-get=\"/_partial/nonexistent\" hx-trigger=\"load\">\n  Loading...\n</div>",
+    "context": {
+      "phase": "B",
+      "feature": "htmx_partials",
+      "partial_endpoint": "/_partial/nonexistent"
+    }
+  },
+  "expected_behavior": "HTMX request fails with 404, error message displayed",
+  "error": {
+    "type": "404",
+    "message": "Partial component not found"
+  },
+  "validation": {
+    "should_fail": true,
+    "status_code": 404,
+    "error_displayed": true
+  }
+}

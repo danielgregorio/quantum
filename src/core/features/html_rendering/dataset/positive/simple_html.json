@@ -1,0 +1,112 @@
+{
+  "dataset_type": "positive",
+  "feature": "html_rendering",
+  "category": "simple_html",
+  "description": "Valid examples of basic HTML rendering",
+  "examples": [
+    {
+      "id": "html-simple-001",
+      "intent": "Render simple div with text",
+      "input": {
+        "natural_language": "Create a div with hello message",
+        "context": {
+          "output_format": "HTML"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"Simple\">\n  <div>Hello, World!</div>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "HTMLNode",
+              "tag": "div",
+              "attributes": {},
+              "children": [
+                {
+                  "type": "TextNode",
+                  "content": "Hello, World!"
+                }
+              ]
+            }
+          ]
+        },
+        "rendered_html": "<div>Hello, World!</div>",
+        "runtime_behavior": "Renders div element with text content"
+      },
+      "tags": ["simple", "div", "text_content"]
+    },
+    {
+      "id": "html-simple-002",
+      "intent": "Render heading and paragraph",
+      "input": {
+        "natural_language": "Create page with h1 and p tags",
+        "context": {
+          "output_format": "HTML"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"Page\">\n  <h1>Welcome</h1>\n  <p>This is a paragraph.</p>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "HTMLNode",
+              "tag": "h1"
+            },
+            {
+              "type": "HTMLNode",
+              "tag": "p"
+            }
+          ]
+        },
+        "rendered_html": "<h1>Welcome</h1>\n<p>This is a paragraph.</p>",
+        "runtime_behavior": "Renders multiple HTML elements in sequence"
+      },
+      "tags": ["simple", "heading", "paragraph", "multiple_elements"]
+    },
+    {
+      "id": "html-simple-003",
+      "intent": "Render nested HTML structure",
+      "input": {
+        "natural_language": "Create nested div structure",
+        "context": {
+          "output_format": "HTML"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"Container\">\n  <div class=\"outer\">\n    <div class=\"inner\">\n      <p>Nested content</p>\n    </div>\n  </div>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "HTMLNode",
+              "tag": "div",
+              "attributes": {
+                "class": "outer"
+              },
+              "children": [
+                {
+                  "type": "HTMLNode",
+                  "tag": "div",
+                  "attributes": {
+                    "class": "inner"
+                  },
+                  "children": [
+                    {
+                      "type": "HTMLNode",
+                      "tag": "p"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "rendered_html": "<div class=\"outer\">\n  <div class=\"inner\">\n    <p>Nested content</p>\n  </div>\n</div>",
+        "runtime_behavior": "Renders nested HTML structure with proper hierarchy"
+      },
+      "tags": ["nested", "div", "structure", "classes"]
+    }
+  ]
+}

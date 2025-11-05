@@ -1,0 +1,142 @@
+{
+  "dataset_type": "positive",
+  "feature": "html_rendering",
+  "category": "databinding_in_html",
+  "description": "Valid examples of databinding in HTML content and attributes",
+  "examples": [
+    {
+      "id": "databind-001",
+      "intent": "Databinding in text content",
+      "input": {
+        "natural_language": "Display userName variable in paragraph",
+        "context": {
+          "available_vars": ["userName"]
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"Greeting\">\n  <q:set name=\"userName\" value=\"Daniel\" />\n  <p>Hello, {userName}!</p>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "SetNode",
+              "name": "userName",
+              "value": "Daniel"
+            },
+            {
+              "type": "HTMLNode",
+              "tag": "p",
+              "children": [
+                {
+                  "type": "TextNode",
+                  "content": "Hello, {userName}!",
+                  "has_databinding": true
+                }
+              ]
+            }
+          ]
+        },
+        "rendered_html": "<p>Hello, Daniel!</p>",
+        "runtime_behavior": "Resolves {userName} from context and renders in text"
+      },
+      "tags": ["databinding", "text_content", "variable"]
+    },
+    {
+      "id": "databind-002",
+      "intent": "Databinding in class attribute",
+      "input": {
+        "natural_language": "Use variable for CSS class",
+        "context": {
+          "available_vars": ["theme"]
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"ThemedBox\">\n  <q:set name=\"theme\" value=\"dark\" />\n  <div class=\"box box-{theme}\">\n    Content\n  </div>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "SetNode",
+              "name": "theme",
+              "value": "dark"
+            },
+            {
+              "type": "HTMLNode",
+              "tag": "div",
+              "attributes": {
+                "class": "box box-{theme}"
+              }
+            }
+          ]
+        },
+        "rendered_html": "<div class=\"box box-dark\">\n  Content\n</div>",
+        "runtime_behavior": "Resolves {theme} in class attribute"
+      },
+      "tags": ["databinding", "attributes", "class", "css"]
+    },
+    {
+      "id": "databind-003",
+      "intent": "Multiple databinding in same element",
+      "input": {
+        "natural_language": "Use multiple variables in one element",
+        "context": {
+          "available_vars": ["firstName", "lastName"]
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"UserCard\">\n  <q:set name=\"firstName\" value=\"John\" />\n  <q:set name=\"lastName\" value=\"Doe\" />\n  <div class=\"user\" data-name=\"{firstName}-{lastName}\">\n    {firstName} {lastName}\n  </div>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "HTMLNode",
+              "tag": "div",
+              "attributes": {
+                "class": "user",
+                "data-name": "{firstName}-{lastName}"
+              },
+              "children": [
+                {
+                  "type": "TextNode",
+                  "content": "{firstName} {lastName}",
+                  "has_databinding": true
+                }
+              ]
+            }
+          ]
+        },
+        "rendered_html": "<div class=\"user\" data-name=\"John-Doe\">\n  John Doe\n</div>",
+        "runtime_behavior": "Resolves multiple variables in attributes and content"
+      },
+      "tags": ["databinding", "multiple_vars", "attributes", "content"]
+    },
+    {
+      "id": "databind-004",
+      "intent": "Databinding in style attribute",
+      "input": {
+        "natural_language": "Set dynamic inline styles",
+        "context": {
+          "available_vars": ["bgColor", "textColor"]
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"StyledDiv\">\n  <q:set name=\"bgColor\" value=\"blue\" />\n  <q:set name=\"textColor\" value=\"white\" />\n  <div style=\"background: {bgColor}; color: {textColor};\">\n    Styled content\n  </div>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "HTMLNode",
+              "tag": "div",
+              "attributes": {
+                "style": "background: {bgColor}; color: {textColor};"
+              }
+            }
+          ]
+        },
+        "rendered_html": "<div style=\"background: blue; color: white;\">\n  Styled content\n</div>",
+        "runtime_behavior": "Resolves variables in inline CSS styles"
+      },
+      "tags": ["databinding", "style", "inline_css", "multiple_vars"]
+    }
+  ]
+}

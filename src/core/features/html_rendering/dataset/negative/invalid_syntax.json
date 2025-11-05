@@ -1,0 +1,88 @@
+{
+  "dataset_type": "negative",
+  "feature": "html_rendering",
+  "category": "syntax_errors",
+  "description": "Invalid HTML syntax that should be rejected",
+  "examples": [
+    {
+      "id": "html-invalid-001",
+      "intent": "Unclosed HTML tag",
+      "input": {
+        "natural_language": "HTML tag not properly closed",
+        "quantum_code": "<q:component name=\"Invalid\">\n  <div>\n    <p>Content\n  </div>\n</q:component>"
+      },
+      "expected_error": {
+        "type": "XMLParseError",
+        "message": "mismatched tag: line X, column Y",
+        "location": "Parser (lxml)"
+      },
+      "why_invalid": "Opening <p> tag has no closing </p>",
+      "correction": "Add </p> before </div>",
+      "tags": ["unclosed_tag", "xml_error"]
+    },
+    {
+      "id": "html-invalid-002",
+      "intent": "Unquoted attribute value",
+      "input": {
+        "natural_language": "Attribute without quotes",
+        "quantum_code": "<q:component name=\"Invalid\">\n  <div class=container>\n    Content\n  </div>\n</q:component>"
+      },
+      "expected_error": {
+        "type": "XMLParseError",
+        "message": "Unquoted attribute value",
+        "location": "Parser (lxml)"
+      },
+      "why_invalid": "XML requires quoted attribute values",
+      "correction": "Change class=container to class=\"container\"",
+      "tags": ["unquoted_attribute", "xml_requirement"]
+    },
+    {
+      "id": "html-invalid-003",
+      "intent": "DOCTYPE declaration",
+      "input": {
+        "natural_language": "Using DOCTYPE in component",
+        "quantum_code": "<!DOCTYPE html>\n<q:component name=\"Invalid\">\n  <html>\n    <body>Content</body>\n  </html>\n</q:component>"
+      },
+      "expected_error": {
+        "type": "XMLParseError",
+        "message": "DOCTYPE not supported",
+        "location": "Parser"
+      },
+      "why_invalid": "DOCTYPE incompatible with XML parser",
+      "correction": "Remove <!DOCTYPE html> and use <html> directly",
+      "tags": ["doctype", "xml_incompatible"]
+    },
+    {
+      "id": "html-invalid-004",
+      "intent": "Nested unclosed tags",
+      "input": {
+        "natural_language": "Multiple unclosed tags",
+        "quantum_code": "<q:component name=\"Invalid\">\n  <div>\n    <p>Para 1\n    <p>Para 2</p>\n  </div>\n</q:component>"
+      },
+      "expected_error": {
+        "type": "XMLParseError",
+        "message": "mismatched tag",
+        "location": "Parser"
+      },
+      "why_invalid": "First <p> never closed before second <p>",
+      "correction": "Close first <p> with </p> before opening second",
+      "tags": ["unclosed_tags", "nesting_error"]
+    },
+    {
+      "id": "html-invalid-005",
+      "intent": "Self-closing non-void element",
+      "input": {
+        "natural_language": "Self-closing div tag",
+        "quantum_code": "<q:component name=\"Invalid\">\n  <div class=\"container\" />\n</q:component>"
+      },
+      "expected_error": {
+        "type": "SemanticWarning",
+        "message": "Self-closing non-void element 'div' may not render correctly",
+        "location": "Parser validation"
+      },
+      "why_invalid": "Only void elements (br, img, input, etc.) should be self-closing",
+      "correction": "Use <div class=\"container\"></div> instead",
+      "tags": ["self_closing", "void_element_only", "semantic_error"]
+    }
+  ]
+}

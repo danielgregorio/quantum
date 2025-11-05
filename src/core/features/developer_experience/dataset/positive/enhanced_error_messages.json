@@ -1,0 +1,24 @@
+{
+  "example_id": "dx_error_001",
+  "category": "developer_experience",
+  "tags": ["error", "context", "suggestion"],
+  "input": {
+    "error_type": "ComponentNotFoundError",
+    "component_name": "Buton",
+    "available_components": ["Button", "Card", "Header"],
+    "file": "components/HomePage.q",
+    "line": 15,
+    "context": {
+      "phase": "C",
+      "feature": "developer_experience"
+    }
+  },
+  "expected_behavior": "Shows enhanced error with file location, code context, suggestion (Did you mean 'Button'?), and hint to add import",
+  "validation": {
+    "shows_file_path": true,
+    "shows_line_number": true,
+    "shows_code_context": true,
+    "provides_suggestion": "Did you mean 'Button'?",
+    "provides_hint": "Add: <q:import component=\"Button\" />"
+  }
+}

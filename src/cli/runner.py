@@ -158,46 +158,75 @@ class QuantumRunner:
 def main():
     """CLI entry point"""
     parser = argparse.ArgumentParser(
-        description='Quantum Runner - Execute .q files',
+        description='Quantum CLI - Execute .q files and start servers',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  quantum start                    # Start web server (magic!)
   quantum run hello.q              # Execute component
-  quantum run webapp.q             # Start web server  
+  quantum run webapp.q             # Start web server from .q file
   quantum run api.q                # Start API server
   quantum run backup-job.q         # Execute job
         """
     )
-    
+
     parser.add_argument(
-        'command', 
-        choices=['run'], 
+        'command',
+        choices=['run', 'start'],
         help='Command to execute'
     )
-    
+
     parser.add_argument(
-        'file', 
-        help='.q file to execute'
+        'file',
+        nargs='?',  # Optional for 'start' command
+        help='.q file to execute (required for run command)'
     )
-    
+
     parser.add_argument(
-        '--port', 
-        type=int, 
-        default=8080,
-        help='Port for web server (default: 8080)'
+        '--port',
+        type=int,
+        default=None,  # Will use config file default
+        help='Port for web server (overrides config)'
     )
-    
+
+    parser.add_argument(
+        '--config',
+        type=str,
+        default='quantum.config.yaml',
+        help='Path to configuration file (default: quantum.config.yaml)'
+    )
+
     parser.add_argument(
         '--debug',
         action='store_true',
         help='Debug mode with detailed information'
     )
-    
+
     args = parser.parse_args()
-    
-    runner = QuantumRunner()
-    exit_code = runner.run(args.file, args.debug)
-    sys.exit(exit_code)
+
+    # Handle 'start' command
+    if args.command == 'start':
+        from runtime.web_server import start_server
+        try:
+            start_server(args.config)
+            sys.exit(0)
+        except Exception as e:
+            print(f"[ERROR] Failed to start server: {e}")
+            if args.debug:
+                import traceback
+                traceback.print_exc()
+            sys.exit(1)
+
+    # Handle 'run' command
+    elif args.command == 'run':
+        if not args.file:
+            print("[ERROR] File argument is required for 'run' command")
+            print("Usage: quantum run <file.q>")
+            sys.exit(1)
+
+        runner = QuantumRunner()
+        exit_code = runner.run(args.file, args.debug)
+        sys.exit(exit_code)
 
 
 if __name__ == '__main__':

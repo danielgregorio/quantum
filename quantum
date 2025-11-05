@@ -1,0 +1,3 @@
+#!/bin/bash
+# Quantum CLI wrapper
+python3 quantum_cli.py "$@"

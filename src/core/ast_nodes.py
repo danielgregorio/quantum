@@ -108,13 +108,22 @@ class ComponentNode(QuantumNode):
         self.metrics_provider = None
         self.trace_provider = None
 
+        # Phase G: Authentication & Security
+        self.require_auth = False  # Require authentication to access component
+        self.require_role = None   # Required role(s) to access (comma-separated: "admin,editor")
+        self.require_permission = None  # Required permission(s)
+
+        # HTML rendering & interactivity (Phase 1 & future Phase 3)
+        self.interactive = False  # Enable client-side hydration (future)
+        self.has_html = False     # Auto-detected if component contains HTML nodes
+
         # Component elements
         self.params: List[QuantumParam] = []
         self.returns: List[QuantumReturn] = []
         self.functions: List['FunctionNode'] = []
         self.event_handlers: List['OnEventNode'] = []
         self.script_blocks: List[str] = []
-        self.statements: List[QuantumNode] = []  # For control flow statements
+        self.statements: List[QuantumNode] = []  # For control flow statements (includes HTML nodes)
 
         # Resources (refs to Admin-configured resources)
         self.resources: Dict[str, str] = {}  # type -> ref_name (e.g., "database" -> "postgres-main")
@@ -154,6 +163,8 @@ class ComponentNode(QuantumNode):
             "component_type": self.component_type,
             "port": self.port,
             "base_path": self.base_path,
+            "interactive": self.interactive,
+            "has_html": self.has_html,
             "params": [p.__dict__ for p in self.params],
             "returns": [r.__dict__ for r in self.returns],
             "functions": [f.to_dict() for f in self.functions],
@@ -450,3 +461,638 @@ from .features.data_import.src.ast_node import (
     DataNode, ColumnNode, FieldNode, TransformNode,
     FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode
 )
+
+
+# ============================================
+# HTML RENDERING NODES (Phase 1)
+# ============================================
+
+# HTML void elements that are self-closing
+HTML_VOID_ELEMENTS = {
+    'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+    'link', 'meta', 'param', 'source', 'track', 'wbr'
+}
+
+
+class HTMLNode(QuantumNode):
+    """
+    Represents an HTML element that should be rendered to output.
+
+    Phase 1: Server-side rendering only
+    Phase 3: Can be marked for client-side hydration
+
+    Examples:
+      <div class="container">...</div>
+      <img src="/logo.png" />
+      <a href="/about">About</a>
+      <button q:click="handleClick">Click me</button> (future)
+    """
+
+    def __init__(
+        self,
+        tag: str,
+        attributes: Optional[Dict[str, str]] = None,
+        children: Optional[List[QuantumNode]] = None,
+        self_closing: bool = False
+    ):
+        self.tag = tag
+        self.attributes = attributes or {}
+        self.children = children or []
+        self.self_closing = self_closing or tag in HTML_VOID_ELEMENTS
+
+        # Future: client-side event handlers (Phase 3)
+        self.has_events = self._detect_event_handlers()
+
+    def _detect_event_handlers(self) -> bool:
+        """Detect if element has client-side event handlers (q:click, q:change, etc)"""
+        event_attributes = ['q:click', 'q:change', 'q:input', 'q:submit', 'q:keyup', 'q:keydown']
+        return any(attr in self.attributes for attr in event_attributes)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "html",
+            "tag": self.tag,
+            "attributes": self.attributes,
+            "children_count": len(self.children),
+            "self_closing": self.self_closing,
+            "has_events": self.has_events
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.tag:
+            errors.append("HTML tag name is required")
+
+        # Validate children
+        for child in self.children:
+            if hasattr(child, 'validate'):
+                errors.extend(child.validate())
+
+        return errors
+
+    def __repr__(self):
+        return f'<HTMLNode tag={self.tag} attrs={len(self.attributes)} children={len(self.children)}>'
+
+
+class TextNode(QuantumNode):
+    """
+    Represents raw text content, possibly with databinding expressions.
+
+    Examples:
+      "Hello World"
+      "User: {user.name}"
+      "Total: ${price * quantity}"
+      "Items: {items.length}"
+    """
+
+    def __init__(self, content: str):
+        self.content = content
+        self.has_databinding = '{' in content and '}' in content
+
+    def to_dict(self) -> Dict[str, Any]:
+        preview = self.content[:50] + '...' if len(self.content) > 50 else self.content
+        return {
+            "type": "text",
+            "content": preview,
+            "has_databinding": self.has_databinding,
+            "length": len(self.content)
+        }
+
+    def validate(self) -> List[str]:
+        # Text nodes are always valid
+        return []
+
+    def __repr__(self):
+        preview = self.content[:30] + '...' if len(self.content) > 30 else self.content
+        return f'<TextNode "{preview}">'
+
+
+class DocTypeNode(QuantumNode):
+    """
+    Represents HTML DOCTYPE declaration.
+
+    Example:
+      <!DOCTYPE html>
+    """
+
+    def __init__(self, value: str = "html"):
+        self.value = value
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "doctype",
+            "value": self.value
+        }
+
+    def validate(self) -> List[str]:
+        return []
+
+    def __repr__(self):
+        return f'<DocTypeNode {self.value}>'
+
+
+class CommentNode(QuantumNode):
+    """
+    Represents HTML/XML comments.
+
+    Example:
+      <!-- This is a comment -->
+    """
+
+    def __init__(self, content: str):
+        self.content = content
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "comment",
+            "content": self.content[:50] + '...' if len(self.content) > 50 else self.content
+        }
+
+    def validate(self) -> List[str]:
+        return []
+
+    def __repr__(self):
+        return f'<CommentNode>'
+
+
+# ============================================
+# COMPONENT COMPOSITION NODES (Phase 2)
+# ============================================
+
+class ImportNode(QuantumNode):
+    """
+    Represents component import declaration.
+    
+    Phase 2: Component Composition
+    
+    Examples:
+      <q:import component="Header" />
+      <q:import component="Button" from="./components/ui" />
+      <q:import component="AdminLayout" as="Layout" />
+    """
+    
+    def __init__(
+        self,
+        component: str,
+        from_path: Optional[str] = None,
+        alias: Optional[str] = None
+    ):
+        self.component = component
+        self.from_path = from_path
+        self.alias = alias or component
+        
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "import",
+            "component": self.component,
+            "from": self.from_path,
+            "alias": self.alias
+        }
+    
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.component:
+            errors.append("Component name is required for q:import")
+        return errors
+    
+    def __repr__(self):
+        return f'<ImportNode component={self.component}>'
+
+
+class SlotNode(QuantumNode):
+    """
+    Represents content projection slot.
+    
+    Phase 2: Component Composition
+    Allows parent components to inject content into child components.
+    
+    Examples:
+      <q:slot />  <!-- Default slot -->
+      <q:slot name="header" />  <!-- Named slot -->
+      <q:slot name="footer">Default content here</q:slot>
+    """
+    
+    def __init__(
+        self,
+        name: str = "default",
+        default_content: Optional[List[QuantumNode]] = None
+    ):
+        self.name = name
+        self.default_content = default_content or []
+        
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "slot",
+            "name": self.name,
+            "has_default": len(self.default_content) > 0
+        }
+    
+    def validate(self) -> List[str]:
+        errors = []
+        # Validate default content
+        for node in self.default_content:
+            if hasattr(node, 'validate'):
+                errors.extend(node.validate())
+        return errors
+    
+    def __repr__(self):
+        return f'<SlotNode name={self.name}>'
+
+
+class ComponentCallNode(QuantumNode):
+    """
+    Represents a call to another component (used internally during composition).
+    
+    Phase 2: Component Composition
+    
+    Examples:
+      <Header title="Products" />
+      <Button label="Save" color="green" />
+      <Card title="Info">
+        <p>Card content here</p>
+      </Card>
+    """
+    
+    def __init__(
+        self,
+        component_name: str,
+        props: Optional[Dict[str, str]] = None,
+        children: Optional[List[QuantumNode]] = None
+    ):
+        self.component_name = component_name
+        self.props = props or {}
+        self.children = children or []
+        
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "component_call",
+            "component": self.component_name,
+            "props": self.props,
+            "children_count": len(self.children)
+        }
+    
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.component_name:
+            errors.append("Component name is required")
+        
+        # Validate children
+        for child in self.children:
+            if hasattr(child, 'validate'):
+                errors.extend(child.validate())
+        
+        return errors
+    
+    def __repr__(self):
+        return f'<ComponentCallNode component={self.component_name} props={len(self.props)}>'
+
+
+# ============================================
+# FORMS & ACTIONS NODES (Phase A)
+# ============================================
+
+class ActionNode(QuantumNode):
+    """
+    Represents a server-side action handler for forms.
+
+    Phase A: Forms & Actions
+    Actions handle POST/PUT/DELETE requests with automatic form data binding,
+    validation, and redirect support.
+
+    Examples:
+      <q:action name="createUser" method="POST">
+        <q:param name="email" type="email" required="true" />
+        <q:param name="password" type="string" minlength="8" />
+        <q:query datasource="db">
+          INSERT INTO users (email, password) VALUES (:email, :password)
+        </q:query>
+        <q:redirect url="/users" />
+      </q:action>
+
+      <q:action name="deleteProduct" method="DELETE">
+        <q:param name="id" type="integer" required="true" />
+        <q:query datasource="db">
+          DELETE FROM products WHERE id = :id
+        </q:query>
+        <q:redirect url="/products" flash="Product deleted successfully" />
+      </q:action>
+    """
+
+    def __init__(
+        self,
+        name: str,
+        method: str = "POST"
+    ):
+        self.name = name
+        self.method = method.upper()
+        self.params: List[QuantumParam] = []
+        self.body: List[QuantumNode] = []
+
+        # Action configuration
+        self.validate_csrf = True  # Auto CSRF protection
+        self.rate_limit = None     # e.g., "10/minute"
+        self.require_auth = False  # Require authentication
+
+    def add_param(self, param: QuantumParam):
+        """Add parameter to action"""
+        self.params.append(param)
+
+    def add_statement(self, statement: QuantumNode):
+        """Add statement to action body"""
+        self.body.append(statement)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "action",
+            "name": self.name,
+            "method": self.method,
+            "params": [p.__dict__ for p in self.params],
+            "body_statements": len(self.body),
+            "validate_csrf": self.validate_csrf,
+            "rate_limit": self.rate_limit,
+            "require_auth": self.require_auth
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("Action name is required")
+
+        if self.method not in ['POST', 'PUT', 'DELETE', 'PATCH']:
+            errors.append(f"Invalid action method: {self.method}. Must be POST, PUT, DELETE, or PATCH")
+
+        # Validate params
+        for param in self.params:
+            errors.extend(param.validate())
+
+        # Validate body
+        for statement in self.body:
+            if hasattr(statement, 'validate'):
+                errors.extend(statement.validate())
+
+        return errors
+
+    def __repr__(self):
+        return f'<ActionNode name={self.name} method={self.method}>'
+
+
+class RedirectNode(QuantumNode):
+    """
+    Represents a redirect response.
+
+    Phase A: Forms & Actions
+    Used within actions to redirect after processing.
+
+    Examples:
+      <q:redirect url="/thank-you" />
+      <q:redirect url="/users/{userId}" />
+      <q:redirect url="/products" flash="Product created successfully" />
+      <q:redirect url="/error" status="500" flash="An error occurred" />
+    """
+
+    def __init__(
+        self,
+        url: str,
+        flash: Optional[str] = None,
+        status: int = 302
+    ):
+        self.url = url
+        self.flash = flash      # Flash message to show on next page
+        self.status = status    # HTTP status code (302 default)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "redirect",
+            "url": self.url,
+            "flash": self.flash,
+            "status": self.status
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.url:
+            errors.append("Redirect URL is required")
+
+        # Validate status code
+        if self.status not in [301, 302, 303, 307, 308]:
+            errors.append(f"Invalid redirect status: {self.status}. Must be 301, 302, 303, 307, or 308")
+
+        return errors
+
+    def __repr__(self):
+        return f'<RedirectNode url={self.url}>'
+
+
+class FlashNode(QuantumNode):
+    """
+    Represents a flash message (temporary message shown once).
+
+    Phase A: Forms & Actions
+    Flash messages persist across redirects and are shown once.
+
+    Examples:
+      <q:flash type="success" message="User created successfully" />
+      <q:flash type="error" message="{errorMessage}" />
+      <q:flash type="warning">Please verify your email</q:flash>
+    """
+
+    def __init__(
+        self,
+        message: str,
+        flash_type: str = "info"
+    ):
+        self.message = message
+        self.flash_type = flash_type  # info, success, warning, error
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "flash",
+            "message": self.message,
+            "flash_type": self.flash_type
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.message:
+            errors.append("Flash message is required")
+
+        if self.flash_type not in ['info', 'success', 'warning', 'error']:
+            errors.append(f"Invalid flash type: {self.flash_type}. Must be info, success, warning, or error")
+
+        return errors
+
+    def __repr__(self):
+        return f'<FlashNode type={self.flash_type}>'
+
+
+class FileNode(QuantumNode):
+    """
+    Represents file upload handling (q:file).
+    
+    Phase H: File Uploads
+    Handles file uploads with validation and storage.
+    
+    Examples:
+      <q:file action="upload" file="{avatar}" destination="./uploads/" />
+      <q:file action="upload" file="{document}" destination="./files/" nameConflict="makeUnique" />
+    """
+    
+    def __init__(
+        self,
+        action: str,
+        file: str,
+        destination: str = "./uploads/",
+        name_conflict: str = "error",  # error, overwrite, skip, makeUnique
+        result: str = None
+    ):
+        self.action = action  # upload, delete, move, copy
+        self.file = file  # Variable name containing file data
+        self.destination = destination  # Where to save file
+        self.name_conflict = name_conflict  # What to do if file exists
+        self.result = result  # Optional variable name to store upload result
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "file",
+            "action": self.action,
+            "file": self.file,
+            "destination": self.destination,
+            "name_conflict": self.name_conflict,
+            "result": self.result
+        }
+    
+    def validate(self) -> List[str]:
+        errors = []
+        
+        if self.action not in ['upload', 'delete', 'move', 'copy']:
+            errors.append(f"Invalid file action: {self.action}")
+        
+        if not self.file:
+            errors.append("File variable is required")
+        
+        if self.action == 'upload' and not self.destination:
+            errors.append("Destination is required for upload action")
+        
+        if self.name_conflict not in ['error', 'overwrite', 'skip', 'makeUnique']:
+            errors.append(f"Invalid nameConflict: {self.name_conflict}")
+        
+        return errors
+    
+    def __repr__(self):
+        return f'<FileNode action={self.action} file={self.file}>'
+
+
+class MailNode(QuantumNode):
+    """
+    Represents email sending (q:mail).
+    
+    Phase I: Email Sending
+    ColdFusion cfmail-inspired email functionality.
+    
+    Examples:
+      <q:mail to="{email}" from="noreply@app.com" subject="Welcome!">
+        <h1>Welcome {name}!</h1>
+      </q:mail>
+    """
+    
+    def __init__(
+        self,
+        to: str,
+        subject: str,
+        from_addr: str = None,
+        cc: str = None,
+        bcc: str = None,
+        reply_to: str = None,
+        type: str = "html",  # html or text
+        charset: str = "UTF-8"
+    ):
+        self.to = to  # Recipient email(s)
+        self.subject = subject  # Email subject
+        self.from_addr = from_addr  # Sender email
+        self.cc = cc  # CC recipients
+        self.bcc = bcc  # BCC recipients
+        self.reply_to = reply_to  # Reply-To address
+        self.type = type  # html or text
+        self.charset = charset  # Character encoding
+        self.body = ""  # Email body (set from tag content)
+        self.attachments = []  # List of file attachments
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "mail",
+            "to": self.to,
+            "subject": self.subject,
+            "from": self.from_addr,
+            "cc": self.cc,
+            "bcc": self.bcc,
+            "reply_to": self.reply_to,
+            "mail_type": self.type,
+            "charset": self.charset,
+            "body": self.body,
+            "attachments": self.attachments
+        }
+    
+    def validate(self) -> List[str]:
+        errors = []
+        
+        if not self.to:
+            errors.append("Email recipient (to) is required")
+        
+        if not self.subject:
+            errors.append("Email subject is required")
+        
+        if self.type not in ['html', 'text']:
+            errors.append(f"Invalid email type: {self.type}. Must be 'html' or 'text'")
+        
+        return errors
+    
+    def __repr__(self):
+        return f'<MailNode to={self.to} subject={self.subject}>'
+
+
+class TransactionNode(QuantumNode):
+    """
+    Represents database transaction (q:transaction).
+    
+    Phase D: Database Backend
+    Ensures atomic operations - all queries succeed or all rollback.
+    
+    Examples:
+      <q:transaction>
+        <q:query>UPDATE accounts SET balance = balance - 100 WHERE id = 1</q:query>
+        <q:query>UPDATE accounts SET balance = balance + 100 WHERE id = 2</q:query>
+      </q:transaction>
+    """
+    
+    def __init__(
+        self,
+        isolation_level: str = "READ_COMMITTED"
+    ):
+        self.isolation_level = isolation_level  # READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE
+        self.statements: List[QuantumNode] = []  # Queries and other statements inside transaction
+    
+    def add_statement(self, statement: QuantumNode):
+        """Add statement to transaction"""
+        self.statements.append(statement)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "transaction",
+            "isolation_level": self.isolation_level,
+            "statements": [s.to_dict() if hasattr(s, 'to_dict') else str(s) for s in self.statements]
+        }
+    
+    def validate(self) -> List[str]:
+        errors = []
+        
+        if not self.statements:
+            errors.append("Transaction must contain at least one statement")
+        
+        valid_levels = ['READ_UNCOMMITTED', 'READ_COMMITTED', 'REPEATABLE_READ', 'SERIALIZABLE']
+        if self.isolation_level not in valid_levels:
+            errors.append(f"Invalid isolation level: {self.isolation_level}")
+        
+        return errors
+    
+    def __repr__(self):
+        return f'<TransactionNode isolation={self.isolation_level} statements={len(self.statements)}>'

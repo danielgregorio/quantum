@@ -1,0 +1,22 @@
+{
+  "example_id": "request_scope_mutation_001",
+  "category": "session_management",
+  "tags": ["error", "request_scope", "immutable"],
+  "input": {
+    "component": "<q:component name=\"RequestScopeMutation\">\n  <!-- WRONG: Cannot modify request scope (read-only) -->\n  <q:set name=\"request.customValue\" value=\"123\" />\n  <p>{request.customValue}</p>\n</q:component>",
+    "context": {
+      "phase": "F",
+      "feature": "session_management"
+    }
+  },
+  "expected_behavior": "Should fail or ignore - request scope should be read-only",
+  "error": {
+    "type": "ReadOnlyScopeError",
+    "message": "Request scope is read-only. Cannot set 'request.customValue'"
+  },
+  "validation": {
+    "should_fail": true,
+    "read_only_enforcement": true
+  },
+  "note": "Request scope contains HTTP metadata (method, path, url) and should not be modifiable by components"
+}

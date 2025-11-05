@@ -1,0 +1,122 @@
+{
+  "dataset_type": "positive",
+  "feature": "component_composition",
+  "category": "slot_projection",
+  "description": "Valid examples of content projection using q:slot",
+  "examples": [
+    {
+      "id": "slot-simple-001",
+      "intent": "Default slot projection",
+      "input": {
+        "natural_language": "Project content into Card component's default slot",
+        "context": {
+          "component": "Card",
+          "has_slot": true
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<Card title=\"User Info\">\n  <p>Name: John Doe</p>\n  <p>Email: john@example.com</p>\n</Card>",
+        "ast": {
+          "type": "ComponentCallNode",
+          "component_name": "Card",
+          "props": {
+            "title": "User Info"
+          },
+          "children": [
+            {
+              "type": "HTMLNode",
+              "tag": "p",
+              "children": [
+                {
+                  "type": "TextNode",
+                  "content": "Name: John Doe"
+                }
+              ]
+            },
+            {
+              "type": "HTMLNode",
+              "tag": "p",
+              "children": [
+                {
+                  "type": "TextNode",
+                  "content": "Email: john@example.com"
+                }
+              ]
+            }
+          ]
+        },
+        "runtime_behavior": "Replaces <q:slot /> in Card with provided content"
+      },
+      "tags": ["slot", "default_slot", "content_projection"]
+    },
+    {
+      "id": "slot-simple-002",
+      "intent": "Slot with parent context databinding",
+      "input": {
+        "natural_language": "Use parent variable in slot content",
+        "context": {
+          "available_vars": ["userName"],
+          "component": "Card",
+          "has_slot": true
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"userName\" value=\"Daniel\" />\n<Card title=\"Greeting\">\n  <p>Welcome, {userName}!</p>\n</Card>",
+        "ast": {
+          "type": "ComponentCallNode",
+          "component_name": "Card",
+          "children": [
+            {
+              "type": "HTMLNode",
+              "tag": "p",
+              "children": [
+                {
+                  "type": "TextNode",
+                  "content": "Welcome, {userName}!",
+                  "has_databinding": true
+                }
+              ]
+            }
+          ]
+        },
+        "runtime_behavior": "Resolves {userName} using parent context before passing to slot"
+      },
+      "tags": ["slot", "databinding", "parent_context"]
+    },
+    {
+      "id": "slot-simple-003",
+      "intent": "Nested components in slot",
+      "input": {
+        "natural_language": "Put Button component inside Card slot",
+        "context": {
+          "available_components": ["Card", "Button"],
+          "component": "Card",
+          "has_slot": true
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<Card title=\"Actions\">\n  <p>Choose an action:</p>\n  <Button label=\"Save\" color=\"green\" />\n  <Button label=\"Cancel\" color=\"red\" />\n</Card>",
+        "ast": {
+          "type": "ComponentCallNode",
+          "component_name": "Card",
+          "children": [
+            {
+              "type": "HTMLNode",
+              "tag": "p"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Button"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Button"
+            }
+          ]
+        },
+        "runtime_behavior": "Renders nested component calls within slot content"
+      },
+      "tags": ["slot", "nested_components", "composition"]
+    }
+  ]
+}
