@@ -2092,7 +2092,7 @@ class ComponentRuntime:
                 # Execute all statements in transaction
                 for statement in transaction_node.statements:
                     # Execute statement (queries, sets, etc.)
-                    result = self.execute_statement(statement, exec_context)
+                    result = self._execute_statement(statement, exec_context)
                     results.append(result)
 
                 # All succeeded - commit transaction

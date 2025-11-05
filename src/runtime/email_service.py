@@ -90,7 +90,7 @@ class EmailService:
             # Send email
             if os.getenv('EMAIL_MOCK', 'true').lower() == 'true':
                 # Mock mode for development (don't actually send)
-                print(f"📧 [MOCK] Email sent to {to}")
+                print(f"[MOCK] Email sent to {to}")
                 print(f"   Subject: {subject}")
                 print(f"   From: {msg['From']}")
                 print(f"   Type: {email_type}")

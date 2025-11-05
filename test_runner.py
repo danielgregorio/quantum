@@ -222,6 +222,56 @@ class RegressionTestRunner:
             'Test q:dump - variable inspection with different formats and depths'
         )
 
+        # ===== NEW PHASE TESTS =====
+
+        # Phase A: Forms & Actions
+        self.suites['actions'] = FeatureTestSuite(
+            'Forms & Actions (Phase A)',
+            'Test q:action, q:redirect, q:flash - server-side form handling'
+        )
+
+        # Phase D: Database Backend
+        self.suites['transactions'] = FeatureTestSuite(
+            'Database Transactions (Phase D)',
+            'Test q:transaction - ACID transactions, isolation levels, query caching'
+        )
+
+        # Phase F: Session Management
+        self.suites['sessions'] = FeatureTestSuite(
+            'Session Management (Phase F)',
+            'Test session/application/request scopes - stateful variables'
+        )
+
+        # Phase G: Authentication
+        self.suites['authentication'] = FeatureTestSuite(
+            'Authentication (Phase G)',
+            'Test authentication, RBAC, protected components'
+        )
+
+        # Phase H: File Uploads
+        self.suites['uploads'] = FeatureTestSuite(
+            'File Uploads (Phase H)',
+            'Test q:file - file upload, validation, naming strategies'
+        )
+
+        # Phase I: Email Sending
+        self.suites['emails'] = FeatureTestSuite(
+            'Email Sending (Phase I)',
+            'Test q:mail - SMTP email sending, HTML emails, recipients'
+        )
+
+        # Phase B: HTMX Partials
+        self.suites['htmx'] = FeatureTestSuite(
+            'HTMX Partials (Phase B)',
+            'Test HTMX integration - partials, triggers, swap strategies'
+        )
+
+        # Phase E: Islands Architecture
+        self.suites['islands'] = FeatureTestSuite(
+            'Islands Architecture (Phase E)',
+            'Test interactive components - client-side JS, event handlers'
+        )
+
     def discover_tests(self):
         """Discover all test files and categorize them by feature"""
         if not self.examples_dir.exists():
@@ -233,8 +283,36 @@ class RegressionTestRunner:
         for test_file in test_files:
             filename = test_file.name
 
-            # Categorize by filename pattern
-            if filename.startswith('test-if-') or filename.startswith('test-else') or \
+            # ===== NEW PHASE TESTS (check these FIRST to avoid conflicts) =====
+
+            if filename.startswith('test-action-'):
+                self.suites['actions'].add_test(filename)
+
+            elif filename.startswith('test-transaction-'):
+                self.suites['transactions'].add_test(filename)
+
+            elif filename.startswith('test-session-') or filename.startswith('test-application-') or \
+                 filename.startswith('test-request-'):
+                self.suites['sessions'].add_test(filename)
+
+            elif filename.startswith('test-auth-'):
+                self.suites['authentication'].add_test(filename)
+
+            elif filename.startswith('test-upload-'):
+                self.suites['uploads'].add_test(filename)
+
+            elif filename.startswith('test-email-'):
+                self.suites['emails'].add_test(filename)
+
+            elif filename.startswith('test-htmx-'):
+                self.suites['htmx'].add_test(filename)
+
+            elif filename.startswith('test-island-'):
+                self.suites['islands'].add_test(filename)
+
+            # ===== LEGACY TESTS =====
+
+            elif filename.startswith('test-if-') or filename.startswith('test-else') or \
                filename.startswith('test-conditionals'):
                 self.suites['conditionals'].add_test(filename)
 
@@ -244,16 +322,20 @@ class RegressionTestRunner:
             elif filename.startswith('test-databinding-'):
                 self.suites['databinding'].add_test(filename)
 
-            elif filename.startswith('test-set-') and 'validation' not in filename:
-                self.suites['state'].add_test(filename)
-
             elif filename.startswith('test-function-'):
                 self.suites['functions'].add_test(filename)
 
-            elif 'validation' in filename:
-                # Tests with "invalid" in name are expected to fail (negative tests)
+            elif filename.startswith('test-set-') and 'validation' not in filename:
+                self.suites['state'].add_test(filename)
+
+            elif filename.startswith('test-set-') and 'validation' in filename:
+                # set-validation tests go to validation suite
                 expected_failure = 'invalid' in filename
                 self.suites['validation'].add_test(filename, expected_failure=expected_failure)
+
+            elif 'validation' in filename and filename.startswith('test-set-'):
+                # Redundant but kept for clarity - already handled above
+                pass
 
             elif filename.startswith('test-query-'):
                 self.suites['query'].add_test(filename)
