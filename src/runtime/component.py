@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 # Fix imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode, FunctionNode, DispatchEventNode, OnEventNode, QueryNode, InvokeNode, DataNode, FileNode
+from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode, FunctionNode, DispatchEventNode, OnEventNode, QueryNode, InvokeNode, DataNode, FileNode, MailNode
 from core.features.logging.src import LogNode, LoggingService
 from core.features.dump.src import DumpNode, DumpService
 from runtime.database_service import DatabaseService, QueryResult
@@ -20,6 +20,7 @@ from runtime.function_registry import FunctionRegistry
 from core.features.invocation.src.runtime import InvocationService
 from core.features.data_import.src.runtime import DataImportService
 from runtime.file_upload_service import FileUploadService, FileUploadError
+from runtime.email_service import EmailService, EmailError
 import re
 
 class ComponentExecutionError(Exception):
@@ -49,7 +50,9 @@ class ComponentRuntime:
         self.dump_service = DumpService()
         # File upload service for q:file (Phase H)
         self.file_upload_service = FileUploadService()
-    
+        # Email service for q:mail (Phase I)
+        self.email_service = EmailService()
+
     def execute_component(self, component: ComponentNode, params: Dict[str, Any] = None) -> Any:
         """Execute a component and return the result"""
         if params is None:
@@ -179,6 +182,8 @@ class ComponentRuntime:
             return self._execute_dump(statement, exec_context)
         elif isinstance(statement, FileNode):
             return self._execute_file(statement, exec_context)
+        elif isinstance(statement, MailNode):
+            return self._execute_mail(statement, exec_context)
         return None
 
     def _execute_if(self, if_node: IfNode, context: Dict[str, Any]):
@@ -1981,3 +1986,68 @@ class ComponentRuntime:
             raise ComponentExecutionError(f"File operation error: {e}")
         except Exception as e:
             raise ComponentExecutionError(f"File execution error: {e}")
+
+    def _execute_mail(self, mail_node: MailNode, exec_context: ExecutionContext):
+        """
+        Execute email sending (q:mail).
+        
+        Phase I: Email Sending
+        
+        Args:
+            mail_node: MailNode with email configuration
+            exec_context: Execution context for variables
+            
+        Returns:
+            Email send result dict
+            
+        Raises:
+            ComponentExecutionError: If email sending fails
+        """
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+            
+            # Resolve all email properties with databinding
+            to = self._apply_databinding(mail_node.to, dict_context)
+            subject = self._apply_databinding(mail_node.subject, dict_context)
+            body = self._apply_databinding(mail_node.body, dict_context)
+            
+            from_addr = None
+            if mail_node.from_addr:
+                from_addr = self._apply_databinding(mail_node.from_addr, dict_context)
+            
+            cc = None
+            if mail_node.cc:
+                cc = self._apply_databinding(mail_node.cc, dict_context)
+            
+            bcc = None
+            if mail_node.bcc:
+                bcc = self._apply_databinding(mail_node.bcc, dict_context)
+            
+            reply_to = None
+            if mail_node.reply_to:
+                reply_to = self._apply_databinding(mail_node.reply_to, dict_context)
+            
+            # Send email using EmailService
+            result = self.email_service.send_email(
+                to=to,
+                subject=subject,
+                body=body,
+                from_addr=from_addr,
+                cc=cc,
+                bcc=bcc,
+                reply_to=reply_to,
+                email_type=mail_node.type,
+                attachments=mail_node.attachments
+            )
+            
+            # Store result in context
+            exec_context.set_variable('_mail_result', result, scope="component")
+            self.context['_mail_result'] = result
+            
+            return result
+            
+        except EmailError as e:
+            raise ComponentExecutionError(f"Email sending error: {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Mail execution error: {e}")

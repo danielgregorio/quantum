@@ -18,7 +18,7 @@ from core.ast_nodes import (
     FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode,
     HTMLNode, TextNode, DocTypeNode, CommentNode, HTML_VOID_ELEMENTS,
     ImportNode, SlotNode, ComponentCallNode,
-    ActionNode, RedirectNode, FlashNode, FileNode
+    ActionNode, RedirectNode, FlashNode, FileNode, MailNode
 )
 from core.features.logging.src import LogNode, parse_log
 from core.features.dump.src import DumpNode, parse_dump
@@ -232,6 +232,9 @@ class QuantumParser:
             elif child_type == 'file':
                 file_node = self._parse_file_statement(child)
                 component.add_statement(file_node)
+            elif child_type == 'mail':
+                mail_node = self._parse_mail_statement(child)
+                component.add_statement(mail_node)
 
             # Component Composition (Phase 2)
             elif child_type == 'import':
@@ -427,6 +430,8 @@ class QuantumParser:
             return self._parse_flash_statement(element)
         elif element_type == 'file':
             return self._parse_file_statement(element)
+        elif element_type == 'mail':
+            return self._parse_mail_statement(element)
 
         # Component Composition (Phase 2)
         elif element_type == 'import':
@@ -1393,3 +1398,50 @@ class QuantumParser:
             name_conflict=name_conflict,
             result=result
         )
+
+    def _parse_mail_statement(self, element: ET.Element) -> MailNode:
+        """
+        Parse q:mail statement for sending emails.
+        
+        Phase I: Email Sending
+        
+        Examples:
+          <q:mail to="{email}" from="noreply@app.com" subject="Welcome!">
+            <h1>Welcome {name}!</h1>
+          </q:mail>
+        """
+        to = element.get('to', '')
+        subject = element.get('subject', '')
+        from_addr = element.get('from')
+        cc = element.get('cc')
+        bcc = element.get('bcc')
+        reply_to = element.get('replyTo')
+        mail_type = element.get('type', 'html')
+        charset = element.get('charset', 'UTF-8')
+        
+        # Create mail node
+        mail_node = MailNode(
+            to=to,
+            subject=subject,
+            from_addr=from_addr,
+            cc=cc,
+            bcc=bcc,
+            reply_to=reply_to,
+            type=mail_type,
+            charset=charset
+        )
+        
+        # Parse body content (can be text or HTML elements)
+        if element.text and element.text.strip():
+            mail_node.body = element.text.strip()
+        else:
+            # Parse child elements as HTML body
+            body_parts = []
+            for child in element:
+                if child.tag:
+                    # Reconstruct HTML from children
+                    body_parts.append(ET.tostring(child, encoding='unicode', method='html'))
+            if body_parts:
+                mail_node.body = ''.join(body_parts)
+        
+        return mail_node
