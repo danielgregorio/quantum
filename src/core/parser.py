@@ -30,22 +30,61 @@ class QuantumParser:
     
     def __init__(self):
         self.quantum_ns = {'q': 'https://quantum.lang/ns'}
-    
+
+    def _inject_namespace(self, content: str) -> str:
+        """
+        MAGIC: Automatically inject XML namespace for q: prefix
+
+        This allows users to write clean Quantum code without ceremony:
+
+        Instead of:  <q:component name="Foo" xmlns:q="https://quantum.lang/ns">
+        Write:       <q:component name="Foo">
+
+        Pure ColdFusion-style pragmatism!
+        """
+        import re
+
+        # Check if namespace already present
+        if 'xmlns:q' in content:
+            return content
+
+        # Find first q:component, q:application, or q:job tag
+        pattern = r'<(q:component|q:application|q:job)(\s+[^>]*)?>'
+
+        def add_namespace(match):
+            tag = match.group(1)
+            attrs = match.group(2) or ''
+            # Add namespace declaration
+            return f'<{tag}{attrs} xmlns:q="https://quantum.lang/ns">'
+
+        # Replace first occurrence only
+        content = re.sub(pattern, add_namespace, content, count=1)
+
+        return content
+
     def parse_file(self, file_path: str) -> QuantumNode:
         """Parse .q file and return AST"""
         path = Path(file_path)
-        
+
         if not path.exists():
             raise QuantumParseError(f"File not found: {file_path}")
-        
+
         if not path.suffix == '.q':
             raise QuantumParseError(f"Invalid extension: {path.suffix}, expected .q")
-        
+
         try:
-            tree = ET.parse(path)
-            root = tree.getroot()
+            # Read file content
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # MAGIC: Auto-inject namespace if not present
+            # This makes Quantum "just work" without ceremony
+            content = self._inject_namespace(content)
+
+            # Parse XML
+            root = ET.fromstring(content)
             return self._parse_root_element(root, path)
-        
+
         except ET.ParseError as e:
             raise QuantumParseError(f"XML parse error: {e}")
         except Exception as e:

@@ -1,4 +1,4 @@
-<q:component name="HomePage" xmlns:q="https://quantum.lang/ns">
+<q:component name="HomePage">
   <q:set name="title" value="Welcome to Quantum!" />
   <q:set name="subtitle" value="HTML Rendering Phase 1 Complete" />
   <q:set name="version" value="1.0.0" />

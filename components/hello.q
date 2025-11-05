@@ -1,4 +1,4 @@
-<q:component name="HelloWorld" xmlns:q="https://quantum.lang/ns">
+<q:component name="HelloWorld">
   <q:set name="greeting" value="Hello" />
   <q:set name="name" value="World" />
   <q:set name="timestamp" value="2025-11-05" />

@@ -1,5 +1,5 @@
-<!-- Products List - Loop + Databinding Example -->
-<q:component name="ProductsList" xmlns:q="https://quantum.lang/ns">
+<q:component name="ProductsList">
+  <!-- Products List - Loop + Databinding Example -->
   <!-- Create sample product data using q:set -->
   <q:set name="storeName" value="Quantum Shop" />
   <q:set name="tagline" value="Buy amazing products powered by Quantum!" />
@@ -141,11 +141,12 @@
               ✅ In Stock ({product.stock} available)
             </div>
             <button class="btn btn-primary">Add to Cart</button>
-          <q:else>
-            <div class="product-stock out-of-stock">
-              ❌ Out of Stock
-            </div>
-            <button class="btn btn-disabled" disabled>Unavailable</button>
+            <q:else>
+              <div class="product-stock out-of-stock">
+                ❌ Out of Stock
+              </div>
+              <button class="btn btn-disabled" disabled>Unavailable</button>
+            </q:else>
           </q:if>
         </div>
       </q:loop>

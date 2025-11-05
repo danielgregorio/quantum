@@ -1,4 +1,4 @@
-<q:component name="Test" xmlns:q="https://quantum.lang/ns">
+<q:component name="Test">
   <q:set name="message" value="It works!" />
 
   <html>
