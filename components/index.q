@@ -9,36 +9,133 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
     <link rel="stylesheet" href="/static/css/style.css" />
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+      }
+      .container {
+        background: white;
+        border-radius: 15px;
+        padding: 40px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      }
+      h1 {
+        color: #667eea;
+        font-size: 3em;
+        margin: 0 0 10px 0;
+      }
+      .subtitle {
+        color: #666;
+        font-size: 1.3em;
+        margin-bottom: 30px;
+      }
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin: 30px 0;
+      }
+      .feature-card {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        border-left: 4px solid #667eea;
+      }
+      .feature-card h3 {
+        margin-top: 0;
+        color: #667eea;
+      }
+      .demo-box {
+        background: #e8f5e9;
+        border: 2px dashed #4caf50;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 20px 0;
+      }
+      .badge {
+        background: #4caf50;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.9em;
+        font-weight: bold;
+      }
+      .demo-links {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin: 20px 0;
+      }
+      .demo-link {
+        display: inline-block;
+        padding: 12px 24px;
+        background: #667eea;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        transition: all 0.3s;
+      }
+      .demo-link:hover {
+        background: #764ba2;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      }
+    </style>
   </head>
   <body>
-    <div>
-      <h1>{title}</h1>
-      <p>{subtitle}</p>
-      <p>Version: {version}</p>
+    <div class="container">
+      <h1>🚀 {title}</h1>
+      <p class="subtitle">{subtitle}</p>
+      <p><span class="badge">v{version}</span></p>
 
-      <h2>Features Implemented</h2>
-      <ul>
-        <li>HTML Rendering - Write HTML directly in .q components</li>
-        <li>Databinding - Use {variable} syntax for dynamic content</li>
-        <li>Server-Side Rendering - All rendering happens on the server</li>
-        <li>Flask Integration - Built-in web server with auto-reload</li>
-      </ul>
+      <div class="demo-box">
+        <h2>✨ This page was rendered by Quantum!</h2>
+        <p>This HTML was generated from a <code>.q</code> component with full databinding support.</p>
+      </div>
 
-      <h2>Example Components</h2>
-      <ul>
-        <li><a href="/hello">Hello World</a> - Simple component</li>
-        <li><a href="/test">Test Component</a> - Basic test</li>
-      </ul>
+      <h2>🎯 Features Implemented</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>✅ HTML Rendering</h3>
+          <p>Write HTML directly in .q components</p>
+        </div>
+        <div class="feature-card">
+          <h3>✅ Databinding</h3>
+          <p>Use {variable} syntax for dynamic content</p>
+        </div>
+        <div class="feature-card">
+          <h3>✅ Server-Side Rendering</h3>
+          <p>All rendering happens on the server</p>
+        </div>
+        <div class="feature-card">
+          <h3>✅ Flask Integration</h3>
+          <p>Built-in web server with auto-reload</p>
+        </div>
+      </div>
 
-      <h2>How It Works</h2>
+      <h2>📚 Example Components</h2>
+      <div class="demo-links">
+        <a href="/hello" class="demo-link">Hello World</a>
+        <a href="/test" class="demo-link">Test Component</a>
+        <a href="/products" class="demo-link">Products (Loops)</a>
+      </div>
+
+      <h2>🛠 How It Works</h2>
       <ol>
-        <li>Write: Create .q component with HTML + Quantum tags</li>
-        <li>Start: Run <code>quantum start</code></li>
-        <li>Visit: Open http://localhost:8080</li>
-        <li>Magic! HTML is rendered with databinding applied</li>
+        <li><strong>Write:</strong> Create .q component with HTML + Quantum tags</li>
+        <li><strong>Start:</strong> Run <code>quantum start</code></li>
+        <li><strong>Visit:</strong> Open http://localhost:8080</li>
+        <li><strong>Magic!</strong> HTML is rendered with databinding applied</li>
       </ol>
 
-      <p>Powered by Quantum Language</p>
+      <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #eee; text-align: center; color: #999;">
+        <p>Powered by <strong>Quantum Language</strong> - The ColdFusion Successor</p>
+      </div>
     </div>
   </body>
   </html>
