@@ -190,25 +190,25 @@ class QuantumWebServer:
                 if cache_enabled:
                     self.template_cache[cache_key] = ast
 
-            # Create execution context
-            context = ExecutionContext()
+            # Prepare request parameters for component execution
+            params = {}
 
-            # Add request parameters to context
+            # Add query parameters
             query_params = dict(request.args)
             if query_params:
-                context.set_variable('query', query_params, scope='component')
+                params['query'] = query_params
 
             # Add form data if POST request
             if request.method == 'POST':
                 form_data = dict(request.form)
-                context.set_variable('form', form_data, scope='component')
+                params['form'] = form_data
 
             # Execute component (runs queries, loops, functions, etc.)
-            runtime = ComponentRuntime(context)
-            runtime.execute(ast)
+            runtime = ComponentRuntime()
+            runtime.execute_component(ast, params)
 
-            # Render to HTML
-            renderer = HTMLRenderer(context)
+            # Render to HTML using runtime's execution context
+            renderer = HTMLRenderer(runtime.execution_context)
             html = renderer.render(ast)
 
             return Response(html, mimetype='text/html')

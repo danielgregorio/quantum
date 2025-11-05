@@ -1,5 +1,5 @@
 <!-- Products List - Loop + Databinding Example -->
-<q:component name="ProductsList">
+<q:component name="ProductsList" xmlns:q="https://quantum.lang/ns">
   <!-- Create sample product data using q:set -->
   <q:set name="storeName" value="Quantum Shop" />
   <q:set name="tagline" value="Buy amazing products powered by Quantum!" />
@@ -13,7 +13,6 @@
     {'id': 5, 'name': 'Developer Hoodie', 'price': 49.99, 'stock': 8, 'image': '🧥'}
   ]" />
 
-  <!DOCTYPE html>
   <html lang="en">
   <head>
     <meta charset="UTF-8">

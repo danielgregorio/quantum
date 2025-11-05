@@ -7,12 +7,18 @@ Handles databinding, loops, conditionals, and HTML passthrough.
 
 import html
 import re
+import sys
+from pathlib import Path
 from typing import Any, List
-from src.core.ast_nodes import (
+
+# Fix imports
+sys.path.append(str(Path(__file__).parent.parent))
+
+from core.ast_nodes import (
     QuantumNode, ComponentNode, HTMLNode, TextNode, DocTypeNode,
-    CommentNode, LoopNode, IfNode, SetNode, QueryNode, ReturnNode
+    CommentNode, LoopNode, IfNode, SetNode, QueryNode
 )
-from src.runtime.execution_context import ExecutionContext
+from runtime.execution_context import ExecutionContext
 
 
 class HTMLRenderer:
@@ -65,16 +71,12 @@ class HTMLRenderer:
         elif isinstance(node, ComponentNode):
             return self._render_component(node)
 
-        elif isinstance(node, ReturnNode):
-            # Simple string return (for non-HTML components)
-            return str(node.value) if node.value else ''
-
         # These should NOT appear here - they're executed during runtime, not rendered
         elif isinstance(node, (LoopNode, IfNode, SetNode, QueryNode)):
             return ''
 
         else:
-            # Unknown node type - skip
+            # Unknown node type - skip (includes QuantumReturn and others)
             return ''
 
 
@@ -265,19 +267,12 @@ class HTMLRenderer:
         """
 
         # Try to get from context directly (simple variable)
-        value = self.context.get_variable(expression, scope='local')
-        if value is not None:
+        # get_variable() searches all scopes: local -> function -> component -> session -> parent
+        try:
+            value = self.context.get_variable(expression)
             return value
-
-        # Try function scope
-        value = self.context.get_variable(expression, scope='function')
-        if value is not None:
-            return value
-
-        # Try component scope
-        value = self.context.get_variable(expression, scope='component')
-        if value is not None:
-            return value
+        except:
+            pass  # Variable not found, try other evaluation methods
 
         # Try to evaluate as nested property (user.name)
         if '.' in expression:
