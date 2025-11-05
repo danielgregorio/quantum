@@ -58,6 +58,14 @@ class ComponentRuntime:
         # Register component functions
         self.function_registry.register_component(component)
 
+        # Phase F: Initialize scopes from special parameters before validation
+        if '_session_scope' in params:
+            self.execution_context.session_vars = params.pop('_session_scope')
+        if '_application_scope' in params:
+            self.execution_context.application_vars = params.pop('_application_scope')
+        if '_request_scope' in params:
+            self.execution_context.request_vars = params.pop('_request_scope')
+
         # Validate parameters
         validation_errors = self._validate_params(component, params)
         if validation_errors:

@@ -48,6 +48,9 @@ class QuantumWebServer:
         self.template_cache: Dict[str, Any] = {}  # AST cache
         self.action_handler = ActionHandler()
 
+        # Phase F: Application scope (global state shared across all users)
+        self.application_scope: Dict[str, Any] = {}
+
         # Setup routes
         self._setup_routes()
 
@@ -230,9 +233,29 @@ class QuantumWebServer:
                 params['flash'] = flash_data['message']
                 params['flashType'] = flash_data['type']
 
+            # Phase F: Setup scopes for ExecutionContext
+            # Session scope - user-specific, persistent (from Flask session)
+            if 'quantum_session' not in session:
+                session['quantum_session'] = {}
+            params['_session_scope'] = session['quantum_session']
+
+            # Application scope - global, shared across all users
+            params['_application_scope'] = self.application_scope
+
+            # Request scope - request-specific, cleared after response
+            params['_request_scope'] = {
+                'method': request.method,
+                'path': request.path,
+                'url': request.url
+            }
+
             # Execute component (runs queries, loops, functions, etc.)
             runtime = ComponentRuntime()
             runtime.execute_component(ast, params)
+
+            # Phase F: Sync session back to Flask session
+            session['quantum_session'] = runtime.execution_context.session_vars
+            session.modified = True
 
             # Render to HTML using runtime's execution context
             renderer = HTMLRenderer(runtime.execution_context)
