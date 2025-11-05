@@ -1,5 +1,5 @@
 <q:component name="Button">
-  <q:param name="label" type="string" required />
+  <q:param name="label" type="string" required="true" />
   <q:param name="color" type="string" default="blue" />
   <q:param name="size" type="string" default="medium" />
 

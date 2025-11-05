@@ -1,5 +1,5 @@
 <q:component name="Layout">
-  <q:param name="title" type="string" required />
+  <q:param name="title" type="string" required="true" />
   <q:param name="description" type="string" default="Powered by Quantum" />
 
   <html lang="en">

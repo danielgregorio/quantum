@@ -1,5 +1,5 @@
 <q:component name="Card">
-  <q:param name="title" type="string" required />
+  <q:param name="title" type="string" required="true" />
   <q:param name="subtitle" type="string" default="" />
 
   <div class="card">

@@ -212,6 +212,20 @@ class QuantumParser:
                 dump_node = parse_dump(child)
                 component.add_statement(dump_node)
 
+            # Component Composition (Phase 2)
+            elif child_type == 'import':
+                import_node = self._parse_import_statement(child)
+                component.add_statement(import_node)
+            elif child_type == 'slot':
+                slot_node = self._parse_slot_statement(child)
+                component.add_statement(slot_node)
+
+            # Component calls (Phase 2) - Uppercase tags
+            elif child_type and child_type[0].isupper():
+                component_call = self._parse_component_call(child)
+                component.add_statement(component_call)
+                component.has_html = True  # Component calls produce HTML
+
             # HTML elements (Phase 1 - HTML rendering)
             elif self._is_html_element(child):
                 html_node = self._parse_html_element(child)
@@ -1100,9 +1114,14 @@ class QuantumParser:
         quantum_tags = {
             'component', 'application', 'job', 'param', 'return', 'route',
             'if', 'elseif', 'else', 'loop', 'set', 'function', 'dispatchEvent',
-            'onEvent', 'script', 'query', 'invoke', 'data', 'log', 'dump'
+            'onEvent', 'script', 'query', 'invoke', 'data', 'log', 'dump',
+            'import', 'slot'  # Phase 2
         }
         if tag in quantum_tags:
+            return False
+
+        # Component calls (Phase 2) - Uppercase tags are components, not HTML
+        if tag and tag[0].isupper():
             return False
 
         # Everything else is HTML
