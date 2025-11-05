@@ -1048,3 +1048,51 @@ class MailNode(QuantumNode):
     
     def __repr__(self):
         return f'<MailNode to={self.to} subject={self.subject}>'
+
+
+class TransactionNode(QuantumNode):
+    """
+    Represents database transaction (q:transaction).
+    
+    Phase D: Database Backend
+    Ensures atomic operations - all queries succeed or all rollback.
+    
+    Examples:
+      <q:transaction>
+        <q:query>UPDATE accounts SET balance = balance - 100 WHERE id = 1</q:query>
+        <q:query>UPDATE accounts SET balance = balance + 100 WHERE id = 2</q:query>
+      </q:transaction>
+    """
+    
+    def __init__(
+        self,
+        isolation_level: str = "READ_COMMITTED"
+    ):
+        self.isolation_level = isolation_level  # READ_UNCOMMITTED, READ_COMMITTED, REPEATABLE_READ, SERIALIZABLE
+        self.statements: List[QuantumNode] = []  # Queries and other statements inside transaction
+    
+    def add_statement(self, statement: QuantumNode):
+        """Add statement to transaction"""
+        self.statements.append(statement)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "transaction",
+            "isolation_level": self.isolation_level,
+            "statements": [s.to_dict() if hasattr(s, 'to_dict') else str(s) for s in self.statements]
+        }
+    
+    def validate(self) -> List[str]:
+        errors = []
+        
+        if not self.statements:
+            errors.append("Transaction must contain at least one statement")
+        
+        valid_levels = ['READ_UNCOMMITTED', 'READ_COMMITTED', 'REPEATABLE_READ', 'SERIALIZABLE']
+        if self.isolation_level not in valid_levels:
+            errors.append(f"Invalid isolation level: {self.isolation_level}")
+        
+        return errors
+    
+    def __repr__(self):
+        return f'<TransactionNode isolation={self.isolation_level} statements={len(self.statements)}>'

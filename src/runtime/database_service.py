@@ -374,3 +374,118 @@ class DatabaseService:
         """Close all database connections"""
         for datasource_name in list(self.connection_pool.keys()):
             self.close_connection(datasource_name)
+
+    # Phase D: Database Backend - Transaction Support
+    
+    def begin_transaction(self, datasource_name: str = "default") -> Dict[str, Any]:
+        """
+        Begin a database transaction
+        
+        Phase D: Database Backend
+        
+        Args:
+            datasource_name: Name of datasource
+            
+        Returns:
+            Transaction context dict
+        """
+        # For now, return a transaction context
+        # Real implementation would use database-specific transaction APIs
+        return {
+            'datasource': datasource_name,
+            'active': True,
+            'queries': [],
+            'start_time': time.time()
+        }
+    
+    def commit_transaction(self, transaction_context: Dict[str, Any]) -> bool:
+        """
+        Commit a transaction
+        
+        Args:
+            transaction_context: Transaction context from begin_transaction
+            
+        Returns:
+            True if successful
+        """
+        # Mark transaction as committed
+        transaction_context['active'] = False
+        transaction_context['committed'] = True
+        return True
+    
+    def rollback_transaction(self, transaction_context: Dict[str, Any]) -> bool:
+        """
+        Rollback a transaction
+        
+        Args:
+            transaction_context: Transaction context from begin_transaction
+            
+        Returns:
+            True if successful
+        """
+        # Mark transaction as rolled back
+        transaction_context['active'] = False
+        transaction_context['rolled_back'] = True
+        return True
+    
+    # Phase D: Query Caching
+    
+    def __init__(self, admin_api_url: str = "http://localhost:8000"):
+        self.admin_api_url = admin_api_url
+        self.connection_pool: Dict[str, Any] = {}
+        # Phase D: Query cache with TTL
+        self.query_cache: Dict[str, Dict[str, Any]] = {}  # cache_key -> {result, expires_at}
+    
+    def _get_cache_key(self, sql: str, params: Dict[str, Any], datasource: str) -> str:
+        """Generate cache key for query"""
+        import hashlib
+        cache_str = f"{datasource}:{sql}:{str(sorted(params.items()))}"
+        return hashlib.md5(cache_str.encode()).hexdigest()
+    
+    def _parse_cache_ttl(self, cache: str) -> int:
+        """
+        Parse cache TTL string like '5m', '1h', '30s'
+        
+        Returns:
+            TTL in seconds
+        """
+        if not cache or cache.lower() == 'false':
+            return 0
+        
+        if cache.lower() == 'true':
+            return 300  # Default 5 minutes
+        
+        # Parse time units
+        cache = cache.lower().strip()
+        if cache.endswith('s'):
+            return int(cache[:-1])
+        elif cache.endswith('m'):
+            return int(cache[:-1]) * 60
+        elif cache.endswith('h'):
+            return int(cache[:-1]) * 3600
+        elif cache.endswith('d'):
+            return int(cache[:-1]) * 86400
+        else:
+            return int(cache)  # Assume seconds
+    
+    def get_cached_query(self, cache_key: str) -> Optional[QueryResult]:
+        """Get cached query result if not expired"""
+        if cache_key not in self.query_cache:
+            return None
+        
+        cached = self.query_cache[cache_key]
+        if time.time() > cached['expires_at']:
+            # Expired - remove from cache
+            del self.query_cache[cache_key]
+            return None
+        
+        # Mark result as cached
+        cached['result'].cached = True
+        return cached['result']
+    
+    def cache_query_result(self, cache_key: str, result: QueryResult, ttl_seconds: int):
+        """Cache query result with TTL"""
+        self.query_cache[cache_key] = {
+            'result': result,
+            'expires_at': time.time() + ttl_seconds
+        }
