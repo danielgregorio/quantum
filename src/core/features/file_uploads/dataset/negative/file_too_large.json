@@ -1,0 +1,22 @@
+{
+  "example_id": "file_error_001",
+  "category": "file_uploads",
+  "tags": ["error", "validation", "size"],
+  "input": {
+    "component": "<q:component name=\"UploadLarge\">\n  <q:action name=\"upload\" method=\"POST\">\n    <q:param name=\"file\" type=\"file\" maxsize=\"1MB\" />\n    <q:file action=\"upload\" file=\"{file}\" destination=\"./uploads/\" />\n  </q:action>\n</q:component>",
+    "context": {
+      "phase": "H",
+      "feature": "file_uploads",
+      "file_size": "5MB"
+    }
+  },
+  "expected_behavior": "Should fail with size validation error when file exceeds 1MB",
+  "error": {
+    "type": "FileUploadError",
+    "message": "File size (5.00MB) exceeds maximum (1MB)"
+  },
+  "validation": {
+    "should_fail": true,
+    "error_handling": true
+  }
+}

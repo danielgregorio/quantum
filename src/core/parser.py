@@ -229,6 +229,9 @@ class QuantumParser:
             elif child_type == 'flash':
                 flash_node = self._parse_flash_statement(child)
                 component.add_statement(flash_node)
+            elif child_type == 'file':
+                file_node = self._parse_file_statement(child)
+                component.add_statement(file_node)
 
             # Component Composition (Phase 2)
             elif child_type == 'import':
@@ -422,6 +425,8 @@ class QuantumParser:
             return self._parse_redirect_statement(element)
         elif element_type == 'flash':
             return self._parse_flash_statement(element)
+        elif element_type == 'file':
+            return self._parse_file_statement(element)
 
         # Component Composition (Phase 2)
         elif element_type == 'import':
@@ -1364,3 +1369,27 @@ class QuantumParser:
             message = element.text.strip()
 
         return FlashNode(message, flash_type)
+
+    def _parse_file_statement(self, element: ET.Element) -> FileNode:
+        """
+        Parse q:file statement for file operations.
+        
+        Phase H: File Uploads
+        
+        Examples:
+          <q:file action="upload" file="{avatar}" destination="./uploads/" />
+          <q:file action="upload" file="{document}" destination="./files/" nameConflict="makeUnique" />
+        """
+        action = element.get('action', 'upload')
+        file = element.get('file', '')
+        destination = element.get('destination', './uploads/')
+        name_conflict = element.get('nameConflict', 'error')
+        result = element.get('result')
+        
+        return FileNode(
+            action=action,
+            file=file,
+            destination=destination,
+            name_conflict=name_conflict,
+            result=result
+        )

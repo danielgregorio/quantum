@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 # Fix imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode, FunctionNode, DispatchEventNode, OnEventNode, QueryNode, InvokeNode, DataNode
+from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode, FunctionNode, DispatchEventNode, OnEventNode, QueryNode, InvokeNode, DataNode, FileNode
 from core.features.logging.src import LogNode, LoggingService
 from core.features.dump.src import DumpNode, DumpService
 from runtime.database_service import DatabaseService, QueryResult
@@ -19,6 +19,7 @@ from runtime.validators import QuantumValidators, ValidationError
 from runtime.function_registry import FunctionRegistry
 from core.features.invocation.src.runtime import InvocationService
 from core.features.data_import.src.runtime import DataImportService
+from runtime.file_upload_service import FileUploadService, FileUploadError
 import re
 
 class ComponentExecutionError(Exception):
@@ -46,6 +47,8 @@ class ComponentRuntime:
         self.logging_service = LoggingService()
         # Dump service for q:dump
         self.dump_service = DumpService()
+        # File upload service for q:file (Phase H)
+        self.file_upload_service = FileUploadService()
     
     def execute_component(self, component: ComponentNode, params: Dict[str, Any] = None) -> Any:
         """Execute a component and return the result"""
@@ -174,8 +177,10 @@ class ComponentRuntime:
             return self._execute_log(statement, exec_context)
         elif isinstance(statement, DumpNode):
             return self._execute_dump(statement, exec_context)
+        elif isinstance(statement, FileNode):
+            return self._execute_file(statement, exec_context)
         return None
-    
+
     def _execute_if(self, if_node: IfNode, context: Dict[str, Any]):
         """Execute q:if statement with elseif and else"""
         
@@ -1905,3 +1910,74 @@ class ComponentRuntime:
                     'type': type(e).__name__
                 }
             }
+
+    def _execute_file(self, file_node: FileNode, exec_context: ExecutionContext):
+        """
+        Execute file operation (upload, delete, etc.)
+        
+        Phase H: File Uploads
+        
+        Args:
+            file_node: FileNode with file operation configuration
+            exec_context: Execution context for variables
+            
+        Returns:
+            None (stores result in context if result variable specified)
+            
+        Raises:
+            ComponentExecutionError: If file operation fails
+        """
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+            
+            if file_node.action == 'upload':
+                # Resolve file variable (contains FileStorage from Flask)
+                file_var = file_node.file.strip('{}')  # Remove curly braces if present
+                file_obj = dict_context.get(file_var)
+                
+                if not file_obj:
+                    raise ComponentExecutionError(f"File variable '{file_var}' not found in context")
+                
+                # Resolve destination (apply databinding)
+                destination = self._apply_databinding(file_node.destination, dict_context)
+                
+                # Upload file using FileUploadService
+                result = self.file_upload_service.upload_file(
+                    file=file_obj,
+                    destination=destination,
+                    name_conflict=file_node.name_conflict
+                )
+                
+                # Store result in context if result variable specified
+                if file_node.result:
+                    exec_context.set_variable(file_node.result, result, scope="component")
+                    self.context[file_node.result] = result
+                
+                # Also store upload info in default variable based on original file var
+                exec_context.set_variable(f"{file_var}_upload", result, scope="component")
+                self.context[f"{file_var}_upload"] = result
+                
+                return result
+                
+            elif file_node.action == 'delete':
+                # Resolve filepath
+                filepath = self._apply_databinding(file_node.file, dict_context)
+                
+                # Delete file
+                result = self.file_upload_service.delete_file(filepath)
+                
+                # Store result if variable specified
+                if file_node.result:
+                    exec_context.set_variable(file_node.result, result, scope="component")
+                    self.context[file_node.result] = result
+                
+                return result
+            
+            else:
+                raise ComponentExecutionError(f"Unsupported file action: {file_node.action}")
+                
+        except FileUploadError as e:
+            raise ComponentExecutionError(f"File operation error: {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"File execution error: {e}")

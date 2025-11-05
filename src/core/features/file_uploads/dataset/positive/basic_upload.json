@@ -1,0 +1,18 @@
+{
+  "example_id": "file_upload_001",
+  "category": "file_uploads",
+  "tags": ["upload", "file", "avatar"],
+  "input": {
+    "component": "<q:component name=\"UploadAvatar\">\n  <q:action name=\"uploadAvatar\" method=\"POST\">\n    <q:param name=\"avatar\" type=\"file\" required=\"true\" />\n    \n    <q:file action=\"upload\"\n            file=\"{avatar}\"\n            destination=\"./uploads/avatars/\"\n            nameConflict=\"makeUnique\" />\n    \n    <q:redirect url=\"/profile\" flash=\"Avatar uploaded!\" />\n  </q:action>\n</q:component>",
+    "context": {
+      "phase": "H",
+      "feature": "file_uploads"
+    }
+  },
+  "expected_behavior": "Uploads file with unique name to ./uploads/avatars/ directory",
+  "validation": {
+    "file_upload": true,
+    "unique_naming": true,
+    "flash_message": true
+  }
+}
