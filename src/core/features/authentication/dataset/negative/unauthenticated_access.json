@@ -1,0 +1,26 @@
+{
+  "example_id": "unauthenticated_access_001",
+  "category": "authentication",
+  "tags": ["error", "unauthenticated", "redirect"],
+  "input": {
+    "component": "<q:component name=\"Dashboard\" require_auth=\"true\">\n  <h1>Dashboard</h1>\n</q:component>",
+    "context": {
+      "phase": "G",
+      "feature": "authentication",
+      "session": {
+        "authenticated": false
+      }
+    }
+  },
+  "expected_behavior": "Should redirect to /login because user is not authenticated",
+  "error": {
+    "type": "UnauthenticatedAccess",
+    "action": "redirect",
+    "redirect_url": "/login"
+  },
+  "validation": {
+    "should_redirect": true,
+    "redirect_destination": "/login",
+    "error_handling": true
+  }
+}

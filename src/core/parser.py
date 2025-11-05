@@ -143,6 +143,12 @@ class QuantumParser:
         component.metrics_provider = root.get('metrics')
         component.trace_provider = root.get('trace')
 
+        # Phase G: Authentication & Security attributes
+        require_auth_attr = root.get('require_auth', 'false').lower()
+        component.require_auth = require_auth_attr in ['true', '1', 'yes']
+        component.require_role = root.get('require_role')
+        component.require_permission = root.get('require_permission')
+
         # HTML rendering & interactivity (Phase 1 & future Phase 3)
         interactive_attr = root.get('interactive', 'false').lower()
         component.interactive = interactive_attr in ['true', '1', 'yes']

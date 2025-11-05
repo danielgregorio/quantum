@@ -21,6 +21,7 @@ from runtime.component import ComponentRuntime
 from runtime.renderer import HTMLRenderer
 from runtime.execution_context import ExecutionContext
 from runtime.action_handler import ActionHandler
+from runtime.auth_service import AuthService, AuthorizationError
 
 
 class QuantumWebServer:
@@ -200,6 +201,46 @@ class QuantumWebServer:
                 # Cache if enabled
                 if cache_enabled:
                     self.template_cache[cache_key] = ast
+
+            # Phase G: Authentication & Security - Check authorization
+            if 'quantum_session' not in session:
+                session['quantum_session'] = {}
+
+            session_data = session['quantum_session']
+
+            # Check if component requires authentication
+            if ast.require_auth:
+                if not AuthService.is_authenticated(session_data):
+                    # Not authenticated - redirect to login
+                    session['redirect_after_login'] = request.path
+                    return redirect('/login')
+
+                # Check session expiry
+                if AuthService.is_session_expired(session_data):
+                    # Session expired - logout and redirect to login
+                    AuthService.logout(session_data)
+                    session.modified = True
+                    return redirect('/login?expired=true')
+
+                # Check role requirement
+                if ast.require_role:
+                    if not AuthService.has_role(session_data, ast.require_role):
+                        # Forbidden - user doesn't have required role
+                        return Response(
+                            f"<h1>403 Forbidden</h1><p>Required role: {ast.require_role}</p>",
+                            status=403,
+                            mimetype='text/html'
+                        )
+
+                # Check permission requirement
+                if ast.require_permission:
+                    if not AuthService.has_permission(session_data, ast.require_permission):
+                        # Forbidden - user doesn't have required permission
+                        return Response(
+                            f"<h1>403 Forbidden</h1><p>Required permission: {ast.require_permission}</p>",
+                            status=403,
+                            mimetype='text/html'
+                        )
 
             # Check if this is an action request (POST/PUT/DELETE)
             if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:

@@ -1,0 +1,29 @@
+{
+  "example_id": "insufficient_role_001",
+  "category": "authentication",
+  "tags": ["error", "rbac", "forbidden"],
+  "input": {
+    "component": "<q:component name=\"AdminPanel\" require_auth=\"true\" require_role=\"admin\">\n  <h1>Admin Panel</h1>\n</q:component>",
+    "context": {
+      "phase": "G",
+      "feature": "authentication",
+      "session": {
+        "authenticated": true,
+        "userId": 2,
+        "userName": "Regular User",
+        "userRole": "user"
+      }
+    }
+  },
+  "expected_behavior": "Should return 403 Forbidden because user role is 'user' but 'admin' is required",
+  "error": {
+    "type": "ForbiddenAccess",
+    "http_status": 403,
+    "message": "Required role: admin"
+  },
+  "validation": {
+    "should_fail": true,
+    "http_status": 403,
+    "error_handling": true
+  }
+}

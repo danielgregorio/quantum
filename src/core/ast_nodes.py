@@ -108,6 +108,11 @@ class ComponentNode(QuantumNode):
         self.metrics_provider = None
         self.trace_provider = None
 
+        # Phase G: Authentication & Security
+        self.require_auth = False  # Require authentication to access component
+        self.require_role = None   # Required role(s) to access (comma-separated: "admin,editor")
+        self.require_permission = None  # Required permission(s)
+
         # HTML rendering & interactivity (Phase 1 & future Phase 3)
         self.interactive = False  # Enable client-side hydration (future)
         self.has_html = False     # Auto-detected if component contains HTML nodes
