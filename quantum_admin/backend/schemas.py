@@ -77,6 +77,7 @@ class DatasourceResponse(DatasourceBase):
     username: Optional[str]
     status: str
     health_status: str
+    setup_status: str
     auto_start: bool
     created_at: datetime
     updated_at: datetime

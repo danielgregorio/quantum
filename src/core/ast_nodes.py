@@ -351,3 +351,102 @@ class OnEventNode(QuantumNode):
 # MIGRATED: SetNode moved to feature-based structure
 # Import from new location (Option C migration)
 from .features.state_management.src.ast_node import SetNode
+
+
+class QueryNode(QuantumNode):
+    """Represents a <q:query> - Database query component"""
+
+    def __init__(self, name: str, datasource: str, sql: str, params: List['QueryParamNode'] = None):
+        self.name = name
+        self.datasource = datasource
+        self.sql = sql
+        self.params = params or []
+
+        # Optional attributes
+        self.source = None  # For Query-of-Queries
+        self.cache = False
+        self.ttl = None
+        self.reactive = False
+        self.interval = None
+        self.paginate = False  # Enable automatic pagination
+        self.page = None
+        self.page_size = 20
+        self.timeout = None
+        self.maxrows = None
+        self.result = None  # Variable name for metadata
+
+    def add_param(self, param: 'QueryParamNode'):
+        """Add parameter to query"""
+        self.params.append(param)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "query",
+            "name": self.name,
+            "datasource": self.datasource,
+            "sql": self.sql[:50] + "..." if len(self.sql) > 50 else self.sql,
+            "params": [p.to_dict() for p in self.params],
+            "cache": self.cache,
+            "reactive": self.reactive
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("Query name is required")
+        if not self.datasource and not self.source:
+            errors.append("Query requires either 'datasource' or 'source' attribute")
+        if not self.sql:
+            errors.append("Query SQL is required")
+
+        # Validate params
+        for param in self.params:
+            errors.extend(param.validate())
+
+        return errors
+
+
+class QueryParamNode(QuantumNode):
+    """Represents a <q:param> within q:query"""
+
+    def __init__(self, name: str, value: Any, param_type: str):
+        self.name = name
+        self.value = value
+        self.param_type = param_type  # string, integer, decimal, boolean, datetime, date, time, array, json
+
+        # Optional attributes
+        self.null = False
+        self.max_length = None
+        self.scale = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "queryParam",
+            "name": self.name,
+            "value": str(self.value)[:20] + "..." if self.value and len(str(self.value)) > 20 else self.value,
+            "param_type": self.param_type,
+            "null": self.null
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("Query parameter name is required")
+        if self.value is None and not self.null:
+            errors.append(f"Query parameter '{self.name}' cannot be null")
+        if self.param_type not in ['string', 'integer', 'decimal', 'boolean', 'datetime', 'date', 'time', 'array', 'json']:
+            errors.append(f"Invalid parameter type: {self.param_type}")
+
+        return errors
+
+
+# MIGRATED: InvokeNode and InvokeHeaderNode moved to feature-based structure
+# Import from new location (Option C migration)
+from .features.invocation.src.ast_node import InvokeNode, InvokeHeaderNode
+
+# MIGRATED: DataNode and related nodes moved to feature-based structure
+# Import from new location (Option C migration)
+from .features.data_import.src.ast_node import (
+    DataNode, ColumnNode, FieldNode, TransformNode,
+    FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode
+)

@@ -1,11 +1,277 @@
 # Quantum Development Roadmap
 
-## 🎯 Current Priority Order
+## 🎯 Current Status
+- ✅ **Core Features Complete**: Loops, Databinding, State, Functions
+- ✅ **Database Queries (Phase 1-2) Complete**: q:query with pagination, Query of Queries, metadata
+- 🚀 **Next Phase**: Data Operations (q:invoke + q:data)
+- 📅 **Last Updated**: 2025-01-03
+
+---
+
+## 📋 REVISED PRIORITY ORDER (2025)
+
+### Current Focus
 1. ✅ **🔄 Loop Structures** (`q:loop`) - **COMPLETED**
 2. ✅ **🔗 Variable Databinding** (`{variable}`) - **COMPLETED**
 3. ✅ **📝 State Management** (`q:set`) - **COMPLETED**
 4. ✅ **⚙️ Function Definitions** (`q:function`) - **COMPLETED**
-5. **🗃️ Database Integration** - User has different plans
+5. ✅ **🗃️ Database Queries Phase 1-2** (`q:query`) - **COMPLETED**
+
+### Next Phase: Data Operations (Q1 2025)
+6. 📌 **🔗 Universal Invocation** (`q:invoke`) - **PLANNED**
+7. 📌 **📦 Data Import & Transform** (`q:data`) - **PLANNED**
+
+### Future Phases
+8. **🤖 LLM Integration** (`q:llm`) - Q2 2025
+9. **🧠 AI Agents** (`q:agent`) - Q3 2025
+10. **📧 Email** (`q:mail`) - Q3 2025
+11. **🗃️ Database Queries Phase 3** (Transactions, Caching) - Q2 2025
+
+---
+
+## 🚀 NEW FEATURES (Documented & Planned)
+
+### 📌 PHASE: Data Operations (Q1 2025)
+
+#### q:invoke - Universal Invocation Component
+**Status:** Planned | **Priority:** High | **Effort:** 2-3 weeks
+
+**Vision:** One tag to rule them all - invoke local functions, components, HTTP APIs, remote services, GraphQL, gRPC, etc.
+
+**Key Innovation:** Instead of separate tags (q:http, q:rpc, q:graphql), use intelligent protocol detection based on attributes.
+
+**Phase 1 Scope:**
+- Local function calls (`function="..."`)
+- Local component calls (`component="..."`)
+- HTTP REST (GET, POST, PUT, DELETE, PATCH)
+- Headers, query params, JSON body
+- Bearer & API Key authentication
+- Result objects with success/error
+- Basic caching
+
+**Phase 2 Scope:**
+- GraphQL queries (`type="graphql"`)
+- SOAP web services (`type="soap"`)
+- Remote Quantum services (`service="..."`)
+- OAuth 2.0 authentication
+
+**Phase 3 Scope:**
+- WebSockets (`type="websocket"`)
+- gRPC (`type="grpc"`)
+- Message queues (AMQP, Kafka)
+
+**Example:**
+```xml
+<!-- HTTP API -->
+<q:invoke name="weather" url="https://api.weather.com/forecast" method="GET">
+    <q:header name="API-Key" value="{apiKey}" />
+    <q:param name="city" value="{userCity}" />
+</q:invoke>
+
+<!-- Local function -->
+<q:invoke name="total" function="calculateTotal">
+    <q:arg name="items" value="{cart.items}" />
+</q:invoke>
+
+<!-- Remote service (same syntax!) -->
+<q:invoke name="order" service="order-service" component="OrderService.create">
+    <q:arg name="customerId" value="{customerId}" />
+</q:invoke>
+```
+
+**Documentation:** `src/core/features/invocation/docs/README.md`
+
+---
+
+#### q:data - Data Import & Transformation Component
+**Status:** Planned | **Priority:** High | **Effort:** 2-3 weeks
+
+**Vision:** Declarative ETL for Quantum - import CSV/JSON/XML and transform data for use in components.
+
+**Phase 1 Scope:**
+- CSV import (files and URLs)
+- JSON import (files and URLs)
+- XML import with XPath (files and URLs)
+- Basic transformations (filter, sort, limit)
+- Type conversion and validation
+- Result objects
+- Caching
+
+**Phase 2 Scope:**
+- Compute (derived fields)
+- Group and aggregate (sum, avg, count, min, max)
+- Rename fields
+- Map (extract fields)
+- Join operations
+
+**Phase 3 Scope:**
+- Streaming for large files
+- Chunked processing
+- Parallel transformations
+
+**Example:**
+```xml
+<!-- Import CSV -->
+<q:data name="products" source="data/products.csv" type="csv">
+    <q:column name="id" type="integer" />
+    <q:column name="name" type="string" />
+    <q:column name="price" type="decimal" />
+</q:data>
+
+<!-- Transform existing data -->
+<q:data name="available" source="{products}" type="transform">
+    <q:transform>
+        <q:filter condition="{stock > 0}" />
+        <q:sort by="price" order="asc" />
+        <q:limit value="10" />
+    </q:transform>
+</q:data>
+```
+
+**Documentation:** `src/core/features/data_import/docs/README.md`
+
+---
+
+### 🤖 PHASE: AI Features (Q2-Q3 2025)
+
+#### q:llm - LLM Integration Component
+**Status:** Planned | **Priority:** High | **Effort:** 2 weeks
+
+**Vision:** First template language with native LLM integration. Start with local models (LM Studio), optionally migrate to cloud.
+
+**Key Innovation:**
+- **Local first** - Use LM Studio (free, unlimited requests)
+- **Cloud optional** - Migrate to OpenAI/Anthropic/Cohere later (just change endpoint!)
+
+**Phase 1 Scope:**
+- LM Studio completions API
+- LM Studio chat API
+- Basic parameters (temperature, max_tokens)
+- JSON response format
+- Prompt databinding
+- Result objects
+- Response caching
+
+**Phase 2 Scope:**
+- OpenAI API support
+- Anthropic Claude API support
+- Cohere API support
+- Cost tracking
+
+**Phase 3 Scope:**
+- Streaming responses
+- Function calling (tool use)
+- Vision models
+- Embeddings generation
+
+**Use Cases:**
+1. Content generation (product descriptions, emails, copy)
+2. Text classification (sentiment, category, intent)
+3. Data extraction (structured data from unstructured text)
+4. Translation with context
+5. Summarization
+6. Content moderation
+
+**Example:**
+```xml
+<!-- Generate product description -->
+<q:llm name="description"
+       endpoint="http://localhost:1234/v1/completions"
+       model="local-model">
+    <q:prompt>
+        Write an engaging product description for: {product.name}
+        Features: {product.features}
+    </q:prompt>
+    <q:param name="temperature" value="0.8" />
+</q:llm>
+
+<!-- Extract structured data -->
+<q:llm name="extracted"
+       endpoint="http://localhost:1234/v1/completions"
+       response_format="json">
+    <q:prompt>
+        Extract contact info from: {text}
+        Return JSON: {"name": "", "email": "", "phone": ""}
+    </q:prompt>
+</q:llm>
+```
+
+**Documentation:** `src/core/features/llm_integration/docs/README.md`
+
+---
+
+#### q:agent - AI Agents with Tool Use
+**Status:** Planned | **Priority:** Medium | **Effort:** 3-4 weeks
+
+**Vision:** Autonomous AI agents that can use tools (functions, queries, APIs) to complete complex, multi-step tasks.
+
+**Key Innovation:** Similar to AutoGPT/LangChain, but native to Quantum templates with explicit tool permissions.
+
+**Phase 1 Scope:**
+- Agent reasoning loop (think → act → observe)
+- Tool definition
+- Function tools (q:function)
+- Query tools (q:query)
+- System instructions
+- Action logging
+- Safety limits (max_iterations, timeout)
+
+**Phase 2 Scope:**
+- Invoke tools (q:invoke)
+- LLM tools (q:llm)
+- Data tools (q:data)
+- Tool approval flow
+- Parallel tool execution
+
+**Phase 3 Scope:**
+- Multi-agent systems
+- Agent memory/context persistence
+- Agent chaining
+- Hierarchical agents
+
+**Example:**
+```xml
+<q:agent name="support"
+         model="local-model"
+         endpoint="http://localhost:1234/v1/chat/completions">
+
+    <q:instruction>
+        You are a customer support agent. Help users with their orders.
+        Use the available tools to look up information and take actions.
+    </q:instruction>
+
+    <q:tool name="getOrder" description="Get order details by ID">
+        <q:param name="orderId" type="integer" required="true" />
+        <q:function name="getOrderById">
+            <q:query name="order" datasource="db">
+                SELECT * FROM orders WHERE id = :orderId
+                <q:param name="orderId" value="{orderId}" type="integer" />
+            </q:query>
+            <q:return value="{order[0]}" />
+        </q:function>
+    </q:tool>
+
+    <q:tool name="updateStatus" description="Update order status">
+        <q:param name="orderId" type="integer" required="true" />
+        <q:param name="status" type="string" required="true" />
+        <q:function name="updateOrderStatus">
+            <q:query name="update" datasource="db">
+                UPDATE orders SET status = :status WHERE id = :orderId
+                <q:param name="orderId" value="{orderId}" type="integer" />
+                <q:param name="status" value="{status}" type="string" />
+            </q:query>
+            <q:return value="Order updated" />
+        </q:function>
+    </q:tool>
+
+    <q:execute task="Check status of order #1234 and mark as shipped" />
+</q:agent>
+
+<!-- Agent autonomously: calls getOrder(1234), then updateStatus(1234, "shipped") -->
+<p>{support.result}</p>
+```
+
+**Documentation:** `src/core/features/agents/docs/README.md`
 
 ---
 

@@ -4,20 +4,29 @@ Main application entry point
 """
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from typing import List
+import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 try:
     # Try relative imports (when running as module)
-    from . import crud, schemas
+    from . import crud, schemas, models
     from .database import get_db, init_db
     from .docker_service import DockerService
+    from .db_setup_service import DatabaseSetupService
 except ImportError:
     # Fall back to absolute imports (when running directly)
     import crud
     import schemas
+    import models
     from database import get_db, init_db
     from docker_service import DockerService
+    from db_setup_service import DatabaseSetupService
 
 # Create FastAPI app
 app = FastAPI(
@@ -37,6 +46,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files (frontend)
+frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
+if os.path.exists(frontend_path):
+    app.mount("/frontend", StaticFiles(directory=frontend_path), name="frontend")
 
 
 # ============================================================================
@@ -69,8 +83,14 @@ def shutdown_event():
 
 
 # ============================================================================
-# HEALTH CHECK
+# ROOT & HEALTH CHECK
 # ============================================================================
+
+@app.get("/", tags=["Root"])
+def root():
+    """Redirect to admin UI"""
+    return RedirectResponse(url="/frontend/index.html")
+
 
 @app.get("/health", tags=["Health"])
 def health_check():
@@ -187,6 +207,52 @@ def list_datasources(project_id: int, db: Session = Depends(get_db)):
     return datasources
 
 
+
+
+@app.get("/api/datasources/by-name/{name}", tags=["API"])
+def get_datasource_by_name(name: str, db: Session = Depends(get_db)):
+    """
+    Get datasource configuration by name for runtime use
+    
+    This endpoint is used by Quantum runtime to fetch datasource configuration
+    when executing q:query components.
+    """
+    # Find datasource by name across all projects
+    datasource = db.query(models.Datasource).filter(
+        models.Datasource.name == name
+    ).first()
+    
+    if not datasource:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Datasource '{name}' not found"
+        )
+    
+    # Only return if status is 'running' and setup is 'ready'
+    if datasource.status != 'running':
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Datasource '{name}' is not running (status: {datasource.status})"
+        )
+    
+    if datasource.setup_status != 'ready':
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Datasource '{name}' is not ready (setup status: {datasource.setup_status})"
+        )
+    
+    # Return datasource configuration for runtime use
+    return {
+        'name': datasource.name,
+        'type': datasource.type,
+        'host': datasource.host,
+        'port': datasource.port,
+        'database_name': datasource.database_name,
+        'username': datasource.username,
+        'password': datasource.password_encrypted,  # TODO: Implement decryption if passwords are encrypted
+        'connection_string': f"{datasource.type}://{datasource.username}@{datasource.host}:{datasource.port}/{datasource.database_name}"
+    }
+
 @app.post(
     "/projects/{project_id}/datasources",
     response_model=schemas.DatasourceResponse,
@@ -216,9 +282,16 @@ def create_datasource(
 
     try:
         container_id = None
+        resolved_port = datasource.port
 
         # Create Docker container if connection_type is "docker"
         if datasource.connection_type == "docker":
+            # Auto-resolve port conflicts
+            if resolved_port:
+                resolved_port = docker_service.find_available_port(datasource.port)
+                if resolved_port != datasource.port:
+                    logger.info(f"Port {datasource.port} was in use, auto-assigned port {resolved_port}")
+
             # Prepare environment variables for database
             env_vars = {}
             if datasource.type == "postgres":
@@ -246,7 +319,7 @@ def create_datasource(
             container_id = docker_service.create_container(
                 name=container_name,
                 image=datasource.image,
-                port=datasource.port,
+                port=resolved_port,
                 env_vars=env_vars,
                 auto_start=datasource.auto_start
             )
@@ -266,7 +339,7 @@ def create_datasource(
             connection_type=datasource.connection_type,
             container_id=container_id,
             image=datasource.image,
-            port=datasource.port,
+            port=resolved_port,  # Use the auto-resolved port
             host=datasource.host if datasource.connection_type == "direct" else "localhost",
             database_name=datasource.database_name,
             username=datasource.username,
@@ -279,6 +352,38 @@ def create_datasource(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+
+
+@app.delete("/datasources/{datasource_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Datasources"])
+def delete_datasource(datasource_id: int, db: Session = Depends(get_db)):
+    """Delete a datasource and optionally remove its container"""
+    # Get datasource
+    datasource = db.query(crud.models.Datasource).filter(
+        crud.models.Datasource.id == datasource_id
+    ).first()
+
+    if not datasource:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Datasource with id {datasource_id} not found"
+        )
+
+    # If it's a Docker container, stop and remove it
+    if datasource.connection_type == "docker" and datasource.container_id and docker_service:
+        try:
+            # Stop container if running
+            docker_service.stop_container(datasource.container_id)
+            # Remove container
+            docker_service.remove_container(datasource.container_id, force=True)
+        except Exception as e:
+            # Log error but continue with database deletion
+            print(f"Warning: Failed to remove container: {e}")
+
+    # Delete from database
+    db.delete(datasource)
+    db.commit()
+
+    return None
 
 
 # ============================================================================
@@ -347,6 +452,44 @@ def start_datasource_container(datasource_id: int, db: Session = Depends(get_db)
     # Update status
     datasource.status = "running"
     db.commit()
+
+    # Auto-run setup if this is the first time starting (setup_status is pending)
+    if datasource.setup_status == "pending":
+        logger.info(f"Auto-running database setup for datasource {datasource_id}")
+        datasource.setup_status = "configuring"
+        db.commit()
+
+        # Run setup in background (non-blocking)
+        import threading
+        from .database import SessionLocal
+
+        def run_setup():
+            # Create new database session for this thread
+            thread_db = SessionLocal()
+            try:
+                # Reload datasource in this thread's session
+                thread_datasource = thread_db.query(crud.models.Datasource).filter(
+                    crud.models.Datasource.id == datasource_id
+                ).first()
+
+                if thread_datasource:
+                    success, message = DatabaseSetupService.setup_database(thread_datasource)
+                    thread_datasource.setup_status = "ready" if success else "error"
+                    thread_db.commit()
+
+                    if success:
+                        logger.info(f"Database setup completed for datasource {datasource_id}")
+                    else:
+                        logger.error(f"Database setup failed for datasource {datasource_id}: {message}")
+            except Exception as e:
+                logger.error(f"Error in setup thread: {e}")
+                thread_db.rollback()
+            finally:
+                thread_db.close()
+
+        setup_thread = threading.Thread(target=run_setup)
+        setup_thread.daemon = True
+        setup_thread.start()
 
     return {"message": "Container started successfully", "container_id": datasource.container_id}
 
@@ -546,6 +689,70 @@ def list_all_containers(all: bool = False):
 
     containers = docker_service.list_containers(all=all)
     return {"containers": containers, "count": len(containers)}
+
+
+@app.post("/datasources/{datasource_id}/setup", tags=["Docker"])
+def setup_datasource(datasource_id: int, db: Session = Depends(get_db)):
+    """Initialize database in a running container"""
+    # Get datasource
+    datasource = db.query(crud.models.Datasource).filter(
+        crud.models.Datasource.id == datasource_id
+    ).first()
+
+    if not datasource:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Datasource with id {datasource_id} not found"
+        )
+
+    if datasource.connection_type != "docker":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Setup is only available for Docker datasources"
+        )
+
+    if datasource.status != "running":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Container must be running before setup. Please start the container first."
+        )
+
+    if datasource.setup_status == "ready":
+        return {
+            "message": "Database is already configured",
+            "setup_status": "ready"
+        }
+
+    # Update status to configuring
+    datasource.setup_status = "configuring"
+    db.commit()
+
+    try:
+        # Run database setup
+        success, message = DatabaseSetupService.setup_database(datasource)
+
+        if success:
+            datasource.setup_status = "ready"
+            db.commit()
+            return {
+                "message": message,
+                "setup_status": "ready"
+            }
+        else:
+            datasource.setup_status = "error"
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Database setup failed: {message}"
+            )
+
+    except Exception as e:
+        datasource.setup_status = "error"
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Setup error: {str(e)}"
+        )
 
 
 # ============================================================================

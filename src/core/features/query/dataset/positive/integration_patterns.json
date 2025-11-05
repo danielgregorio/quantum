@@ -1,0 +1,62 @@
+[
+  {
+    "description": "Query with q:loop to display all results",
+    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM users\" />\n<q:loop items=\"{$query_result}\" item=\"user\">\n  <div>Name: {user.name}, Email: {user.email}</div>\n</q:loop>",
+    "expected_behavior": "Executes query and loops through all users to display their information",
+    "use_case": "Rendering database records as UI elements"
+  },
+  {
+    "description": "Query with q:if for conditional execution",
+    "code": "<q:set name=\"user_id\" value=\"123\" />\n<q:if condition=\"{user_id} > 0\">\n  <q:query connection=\"db\" sql=\"SELECT * FROM users WHERE id = :id\" :id=\"{user_id}\" />\n</q:if>",
+    "expected_behavior": "Executes query only if user_id is greater than 0",
+    "use_case": "Conditional database queries based on runtime conditions"
+  },
+  {
+    "description": "Query with state variable for parameter binding",
+    "code": "<q:set name=\"search_term\" value=\"'laptop'\" />\n<q:query connection=\"db\" sql=\"SELECT * FROM products WHERE name LIKE :term\" :term=\"{search_term}\" />",
+    "expected_behavior": "Uses state variable search_term as query parameter to find matching products",
+    "use_case": "Dynamic queries based on application state"
+  },
+  {
+    "description": "Multiple queries with state accumulation",
+    "code": "<q:query connection=\"db\" sql=\"SELECT COUNT(*) as count FROM users\" />\n<q:set name=\"total_users\" value=\"{$query_result[0].count}\" />\n<q:query connection=\"db\" sql=\"SELECT COUNT(*) as count FROM products\" />\n<q:set name=\"total_products\" value=\"{$query_result[0].count}\" />\n<div>Users: {total_users}, Products: {total_products}</div>",
+    "expected_behavior": "Executes multiple queries and stores counts in state variables for display",
+    "use_case": "Dashboard statistics gathering from multiple tables"
+  },
+  {
+    "description": "Loop with nested query for related data",
+    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM categories\" />\n<q:loop items=\"{$query_result}\" item=\"category\">\n  <h3>{category.name}</h3>\n  <q:query connection=\"db\" sql=\"SELECT * FROM products WHERE category_id = :cat_id\" :cat_id=\"{category.id}\" />\n  <q:loop items=\"{$query_result}\" item=\"product\">\n    <div>{product.name} - ${product.price}</div>\n  </q:loop>\n</q:loop>",
+    "expected_behavior": "Displays categories with their associated products using nested queries and loops",
+    "use_case": "Hierarchical data display with master-detail relationships"
+  },
+  {
+    "description": "Query with conditional result display",
+    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM orders WHERE user_id = :uid\" :uid=\"100\" />\n<q:if condition=\"{$query_result.length} > 0\">\n  <q:loop items=\"{$query_result}\" item=\"order\">\n    <div>Order #{order.id}: {order.status}</div>\n  </q:loop>\n</q:if>\n<q:else>\n  <div>No orders found</div>\n</q:else>",
+    "expected_behavior": "Shows orders if found, otherwise displays 'No orders found' message",
+    "use_case": "Graceful handling of empty result sets with user feedback"
+  },
+  {
+    "description": "Insert with state variable and immediate query refresh",
+    "code": "<q:set name=\"new_email\" value=\"'test@example.com'\" />\n<q:query connection=\"db\" sql=\"INSERT INTO users (email) VALUES (:email) RETURNING id\" :email=\"{new_email}\" />\n<q:set name=\"new_user_id\" value=\"{$query_result[0].id}\" />\n<q:query connection=\"db\" sql=\"SELECT * FROM users WHERE id = :id\" :id=\"{new_user_id}\" />",
+    "expected_behavior": "Inserts user, captures the new ID, and immediately fetches the complete record",
+    "use_case": "Create-and-fetch pattern for immediate data display"
+  },
+  {
+    "description": "Update with loop for batch operations",
+    "code": "<q:set name=\"discount_rate\" value=\"0.9\" />\n<q:query connection=\"db\" sql=\"SELECT id FROM products WHERE category = :cat\" :cat=\"'electronics'\" />\n<q:loop items=\"{$query_result}\" item=\"product\">\n  <q:query connection=\"db\" sql=\"UPDATE products SET price = price * :rate WHERE id = :id\" :rate=\"{discount_rate}\" :id=\"{product.id}\" />\n</q:loop>",
+    "expected_behavior": "Applies 10% discount to all electronics products through batch updates",
+    "use_case": "Batch updates based on query results"
+  },
+  {
+    "description": "Query with computed parameter from state",
+    "code": "<q:set name=\"base_price\" value=\"100\" />\n<q:set name=\"tax_rate\" value=\"1.2\" />\n<q:set name=\"final_price\" value=\"{base_price} * {tax_rate}\" />\n<q:query connection=\"db\" sql=\"SELECT * FROM products WHERE price <= :max_price\" :max_price=\"{final_price}\" />",
+    "expected_behavior": "Calculates maximum price from state variables and uses it as query parameter",
+    "use_case": "Dynamic query parameters based on calculations"
+  },
+  {
+    "description": "Conditional INSERT based on query result",
+    "code": "<q:query connection=\"db\" sql=\"SELECT COUNT(*) as count FROM users WHERE email = :email\" :email=\"'test@example.com'\" />\n<q:if condition=\"{$query_result[0].count} == 0\">\n  <q:query connection=\"db\" sql=\"INSERT INTO users (email) VALUES (:email)\" :email=\"'test@example.com'\" />\n  <div>User created</div>\n</q:if>\n<q:else>\n  <div>User already exists</div>\n</q:else>",
+    "expected_behavior": "Checks if user exists before inserting, preventing duplicates",
+    "use_case": "Preventing duplicate records with existence checks"
+  }
+]

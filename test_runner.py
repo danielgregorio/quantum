@@ -91,6 +91,10 @@ class FeatureTestSuite:
             parser = QuantumParser()
             ast = parser.parse_file(str(test_path))
             runtime = ComponentRuntime()
+
+            # Mock datasource configuration for test-sqlite
+            self._mock_test_datasource(runtime)
+
             result = runtime.execute_component(ast)
             return TestResult(test_path.name, True, str(result))
         except Exception as e:
@@ -99,6 +103,26 @@ class FeatureTestSuite:
                 error_msg += f"\n{traceback.format_exc()}"
             return TestResult(test_path.name, False, error=error_msg)
 
+    def _mock_test_datasource(self, runtime: ComponentRuntime):
+        """Mock the datasource configuration for tests"""
+        from test_database import TestDatabase
+
+        # Get test database config
+        db = TestDatabase()
+        test_config = db.get_config()
+
+        # Monkey-patch the get_datasource_config method
+        original_get_datasource = runtime.database_service.get_datasource_config
+
+        def mock_get_datasource_config(datasource_name: str):
+            if datasource_name == 'test-sqlite':
+                return test_config
+            else:
+                # Fall back to original method for other datasources
+                return original_get_datasource(datasource_name)
+
+        runtime.database_service.get_datasource_config = mock_get_datasource_config
+
 
 class RegressionTestRunner:
     """Main test runner that organizes tests by feature"""
@@ -106,7 +130,24 @@ class RegressionTestRunner:
     def __init__(self, examples_dir: str = "examples"):
         self.examples_dir = Path(examples_dir)
         self.suites: Dict[str, FeatureTestSuite] = {}
+        self._test_db_setup = False
         self._initialize_suites()
+
+    def setup_test_database(self):
+        """Setup test database for query tests"""
+        if self._test_db_setup:
+            return
+
+        try:
+            from test_database import TestDatabase
+            db = TestDatabase()
+            db.setup()
+            db.close()
+            self._test_db_setup = True
+            print("[Test Database] SQLite test database ready\n")
+        except Exception as e:
+            print(f"[Warning] Could not setup test database: {e}")
+            print("         Query tests will use fallback (may fail)\n")
 
     def _initialize_suites(self):
         """Initialize test suites for each feature"""
@@ -147,6 +188,40 @@ class RegressionTestRunner:
             'Test validation rules - email, cpf, cnpj, range, enum, etc.'
         )
 
+        # Database Query (q:query)
+        # NOTE: Query tests require Quantum Admin + test database setup
+        # Tests will fail without 'test-postgres' datasource configured
+        self.suites['query'] = FeatureTestSuite(
+            'Database Query',
+            'Test q:query - SQL queries, parameter binding, result processing'
+        )
+
+        # Invocation (q:invoke)
+        # NOTE: HTTP tests require internet connection to public APIs
+        # Function invocation tests are self-contained
+        self.suites['invoke'] = FeatureTestSuite(
+            'Invocation',
+            'Test q:invoke - function calls, component calls, HTTP requests'
+        )
+
+        # Data Import (q:data)
+        self.suites['data'] = FeatureTestSuite(
+            'Data Import',
+            'Test q:data - CSV/JSON/XML import and transformations'
+        )
+
+        # Logging (q:log)
+        self.suites['logging'] = FeatureTestSuite(
+            'Logging',
+            'Test q:log - structured logging with levels, databinding, conditional logging'
+        )
+
+        # Dump (q:dump)
+        self.suites['dump'] = FeatureTestSuite(
+            'Dump',
+            'Test q:dump - variable inspection with different formats and depths'
+        )
+
     def discover_tests(self):
         """Discover all test files and categorize them by feature"""
         if not self.examples_dir.exists():
@@ -180,6 +255,21 @@ class RegressionTestRunner:
                 expected_failure = 'invalid' in filename
                 self.suites['validation'].add_test(filename, expected_failure=expected_failure)
 
+            elif filename.startswith('test-query-'):
+                self.suites['query'].add_test(filename)
+
+            elif filename.startswith('test-invoke-'):
+                self.suites['invoke'].add_test(filename)
+
+            elif filename.startswith('test-data-'):
+                self.suites['data'].add_test(filename)
+
+            elif filename.startswith('test-log-'):
+                self.suites['logging'].add_test(filename)
+
+            elif filename.startswith('test-dump-'):
+                self.suites['dump'].add_test(filename)
+
         # Mark other expected failures
         # test-conditionals.q requires parameters that aren't provided
         if 'test-conditionals.q' in [t for t in self.suites['conditionals'].tests]:
@@ -190,6 +280,9 @@ class RegressionTestRunner:
         print("\n" + "="*70)
         print("QUANTUM LANGUAGE - REGRESSION TEST SUITE")
         print("="*70)
+
+        # Setup test database before running query tests
+        self.setup_test_database()
 
         total_passed = 0
         total_tests = 0
@@ -209,6 +302,10 @@ class RegressionTestRunner:
             print(f"Available features: {', '.join(self.suites.keys())}")
             return 0, 0
 
+        # Setup test database if running query tests
+        if feature_name == 'query':
+            self.setup_test_database()
+
         suite = self.suites[feature_name]
         if not suite.tests:
             print(f"WARNING: No tests found for feature '{feature_name}'")
@@ -224,7 +321,10 @@ class RegressionTestRunner:
 
         for suite_name, suite in self.suites.items():
             if suite.results:
-                passed = sum(1 for r in suite.results if r.passed)
+                # Count tests correctly: expected failures that fail = pass, normal tests that pass = pass
+                passed = sum(1 for r in suite.results if
+                            (r.expected_failure and not r.passed) or  # Expected to fail and did fail
+                            (not r.expected_failure and r.passed))    # Expected to pass and did pass
                 total = len(suite.results)
                 status = "PASS" if passed == total else "FAIL"
                 print(f"  {status:4} {suite.name:20} {passed:3}/{total:3} tests passed")

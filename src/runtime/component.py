@@ -9,10 +9,16 @@ from typing import Any, Dict, List
 # Fix imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode, FunctionNode, DispatchEventNode, OnEventNode
+from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode, FunctionNode, DispatchEventNode, OnEventNode, QueryNode, InvokeNode, DataNode
+from core.features.logging.src import LogNode, LoggingService
+from core.features.dump.src import DumpNode, DumpService
+from runtime.database_service import DatabaseService, QueryResult
+from runtime.query_validators import QueryValidator, QueryValidationError
 from runtime.execution_context import ExecutionContext, VariableNotFoundError
 from runtime.validators import QuantumValidators, ValidationError
 from runtime.function_registry import FunctionRegistry
+from core.features.invocation.src.runtime import InvocationService
+from core.features.data_import.src.runtime import DataImportService
 import re
 
 class ComponentExecutionError(Exception):
@@ -30,6 +36,16 @@ class ComponentRuntime:
         self.function_registry = FunctionRegistry()
         # Current component (for function resolution)
         self.current_component: ComponentNode = None
+        # Database service for query execution
+        self.database_service = DatabaseService()
+        # Invocation service for q:invoke
+        self.invocation_service = InvocationService()
+        # Data import service for q:data
+        self.data_import_service = DataImportService()
+        # Logging service for q:log
+        self.logging_service = LoggingService()
+        # Dump service for q:dump
+        self.dump_service = DumpService()
     
     def execute_component(self, component: ComponentNode, params: Dict[str, Any] = None) -> Any:
         """Execute a component and return the result"""
@@ -140,6 +156,16 @@ class ComponentRuntime:
             return self._execute_loop(statement, dict_context)
         elif isinstance(statement, SetNode):
             return self._execute_set(statement, exec_context)
+        elif isinstance(statement, QueryNode):
+            return self._execute_query(statement, exec_context)
+        elif isinstance(statement, InvokeNode):
+            return self._execute_invoke(statement, exec_context)
+        elif isinstance(statement, DataNode):
+            return self._execute_data(statement, exec_context)
+        elif isinstance(statement, LogNode):
+            return self._execute_log(statement, exec_context)
+        elif isinstance(statement, DumpNode):
+            return self._execute_dump(statement, exec_context)
         return None
     
     def _execute_if(self, if_node: IfNode, context: Dict[str, Any]):
@@ -165,6 +191,10 @@ class ComponentRuntime:
         for statement in statements:
             if isinstance(statement, QuantumReturn):
                 return self._process_return_value(statement.value, context)
+            elif isinstance(statement, LogNode):
+                self._execute_log(statement, self.execution_context)
+            elif isinstance(statement, DumpNode):
+                self._execute_dump(statement, self.execution_context)
             # TODO: Handle other statement types
         return None
     
@@ -199,6 +229,8 @@ class ComponentRuntime:
             return self._execute_array_loop(loop_node, context, exec_context)
         elif loop_node.loop_type == 'list':
             return self._execute_list_loop(loop_node, context, exec_context)
+        elif loop_node.loop_type == 'query':
+            return self._execute_query_loop(loop_node, context, exec_context)
         else:
             raise ComponentExecutionError(f"Unsupported loop type: {loop_node.loop_type}")
     
@@ -298,7 +330,63 @@ class ComponentRuntime:
 
         except Exception as e:
             raise ComponentExecutionError(f"List loop error: {e}")
-    
+
+    def _execute_query_loop(self, loop_node: LoopNode, context: Dict[str, Any], exec_context: ExecutionContext):
+        """Execute query loop - iterate over query result rows"""
+        results = []
+
+        try:
+            # Get query data from context
+            query_name = loop_node.query_name if hasattr(loop_node, 'query_name') else loop_node.var_name
+            query_data = context.get(query_name)
+
+            if query_data is None:
+                # Try execution context
+                query_data = exec_context.get_variable(query_name)
+
+            if not query_data:
+                raise ComponentExecutionError(f"Query '{query_name}' not found in context")
+
+            if not isinstance(query_data, list):
+                raise ComponentExecutionError(f"Query '{query_name}' is not iterable (got {type(query_data).__name__})")
+
+            # Iterate over query rows
+            for index, row in enumerate(query_data):
+                # Create loop context with current row fields available as {queryName.fieldName}
+                loop_context = context.copy()
+
+                # Set current row index
+                current_row_index = index
+
+                # Make row fields accessible via dot notation
+                # Store row data under query name for {queryName.field} access
+                if isinstance(row, dict):
+                    for field_name, field_value in row.items():
+                        # Set {queryName.fieldName} in context
+                        dotted_key = f"{query_name}.{field_name}"
+                        loop_context[dotted_key] = field_value
+                        exec_context.set_variable(dotted_key, field_value, scope="local")
+
+                # Also provide currentRow variable for explicit access
+                loop_context['currentRow'] = row
+                exec_context.set_variable('currentRow', row, scope="local")
+
+                # Provide index if requested
+                if loop_node.index_name:
+                    loop_context[loop_node.index_name] = index
+                    exec_context.set_variable(loop_node.index_name, index, scope="local")
+
+                # Execute loop body
+                for statement in loop_node.body:
+                    result = self._execute_loop_body_statement(statement, loop_context, exec_context)
+                    if result is not None:
+                        results.append(result)
+
+            return results
+
+        except Exception as e:
+            raise ComponentExecutionError(f"Query loop error: {e}")
+
     def _execute_loop_body_statement(self, statement, context: Dict[str, Any], exec_context: ExecutionContext):
         """Execute a statement inside a loop body"""
         if isinstance(statement, QuantumReturn):
@@ -310,6 +398,10 @@ class ComponentRuntime:
         elif isinstance(statement, SetNode):
             # Execute set using the provided execution context
             return self._execute_set(statement, exec_context)
+        elif isinstance(statement, LogNode):
+            return self._execute_log(statement, exec_context)
+        elif isinstance(statement, DumpNode):
+            return self._execute_dump(statement, exec_context)
         return None
     
     def _evaluate_simple_expression(self, expr: str, context: Dict[str, Any]) -> Any:
@@ -415,12 +507,16 @@ class ComponentRuntime:
         return result
     
     def _evaluate_databinding_expression(self, expr: str, context: Dict[str, Any]) -> Any:
-        """Evaluate a databinding expression like 'variable' or 'user.name' or 'functionName(args)' or 'count + 1'"""
+        """Evaluate a databinding expression like 'variable' or 'user.name' or 'functionName(args)' or 'result[0].id'"""
 
         # Handle function calls first (e.g., add(5, 3))
         # Check if it looks like a function call: word followed by (
         if '(' in expr and ')' in expr and re.match(r'^\s*\w+\s*\(', expr):
             return self._evaluate_function_call(expr, context)
+
+        # Handle array indexing (e.g., result[0] or result[0].id)
+        if '[' in expr and ']' in expr:
+            return self._evaluate_array_index(expr, context)
 
         # Handle simple variable access
         if expr in context:
@@ -443,7 +539,56 @@ class ComponentRuntime:
 
         # If not found, raise error
         raise ValueError(f"Variable '{expr}' not found in context")
-    
+
+    def _evaluate_array_index(self, expr: str, context: Dict[str, Any]) -> Any:
+        """
+        Evaluate array indexing expressions like:
+        - result[0]
+        - result[0].id
+        - users[1].name
+        """
+        import re
+
+        # Match pattern: variable[index] or variable[index].property.chain
+        # Pattern: word[number](.property)*
+        match = re.match(r'^(\w+)\[(\d+)\](\.(.+))?$', expr.strip())
+
+        if not match:
+            raise ValueError(f"Invalid array index expression: {expr}")
+
+        var_name = match.group(1)
+        index = int(match.group(2))
+        property_chain = match.group(4)  # Everything after the ]., or None
+
+        # Get the array
+        array = context.get(var_name)
+        if array is None:
+            raise ValueError(f"Array '{var_name}' not found in context")
+
+        if not isinstance(array, list):
+            raise ValueError(f"Variable '{var_name}' is not an array (got {type(array).__name__})")
+
+        # Check bounds
+        if index < 0 or index >= len(array):
+            raise ValueError(f"Array index {index} out of bounds for '{var_name}' (length {len(array)})")
+
+        # Get the element
+        element = array[index]
+
+        # If no property chain, return the element
+        if not property_chain:
+            return element
+
+        # Navigate property chain
+        value = element
+        for prop in property_chain.split('.'):
+            if isinstance(value, dict) and prop in value:
+                value = value[prop]
+            else:
+                raise ValueError(f"Property '{prop}' not found in array element")
+
+        return value
+
     def _evaluate_arithmetic_expression(self, expr: str, context: Dict[str, Any]) -> Any:
         """Evaluate arithmetic expressions with variables"""
         # Replace variables in expression with their values
@@ -706,7 +851,7 @@ class ComponentRuntime:
         try:
             if target_type == "string":
                 return str(value)
-            elif target_type == "number":
+            elif target_type == "integer" or target_type == "number":
                 # Try int first, then float
                 try:
                     return int(value)
@@ -947,6 +1092,10 @@ class ComponentRuntime:
                 self._execute_loop(statement, func_context.get_all_variables(), func_context)
             elif isinstance(statement, DispatchEventNode):
                 self._execute_dispatch_event(statement, func_context.get_all_variables())
+            elif isinstance(statement, LogNode):
+                self._execute_log(statement, func_context)
+            elif isinstance(statement, DumpNode):
+                self._execute_dump(statement, func_context)
 
         return result
 
@@ -1014,3 +1163,737 @@ class ComponentRuntime:
                 self._execute_loop(statement, event_context.get_all_variables())
             elif isinstance(statement, DispatchEventNode):
                 self._execute_dispatch_event(statement, event_context.get_all_variables())
+
+    def _execute_query(self, query_node: QueryNode, exec_context: ExecutionContext) -> QueryResult:
+        """
+        Execute database query
+
+        Args:
+            query_node: QueryNode with query configuration
+            exec_context: Execution context for variables
+
+        Returns:
+            QueryResult with data and metadata
+
+        Raises:
+            ComponentExecutionError: If query execution fails
+        """
+        try:
+            # Get dict context for parameter resolution
+            dict_context = exec_context.get_all_variables()
+
+            # Resolve and validate parameters
+            resolved_params = {}
+            for param_node in query_node.params:
+                # Resolve parameter value (apply databinding)
+                param_value = self._apply_databinding(param_node.value, dict_context)
+
+                # Build attributes dict for validation
+                attributes = {
+                    'null': param_node.null,
+                    'max_length': param_node.max_length,
+                    'scale': param_node.scale
+                }
+
+                # Validate and convert parameter
+                try:
+                    validated_value = QueryValidator.validate_param(
+                        param_value,
+                        param_node.param_type,
+                        attributes
+                    )
+                    resolved_params[param_node.name] = validated_value
+                except QueryValidationError as e:
+                    raise ComponentExecutionError(
+                        f"Parameter '{param_node.name}' validation failed: {e}"
+                    )
+
+            # Sanitize SQL (basic check)
+            QueryValidator.sanitize_sql(query_node.sql)
+
+            # Check if this is a Query of Queries (in-memory SQL)
+            if query_node.source:
+                return self._execute_query_of_queries(query_node, dict_context, resolved_params, exec_context)
+
+            # Handle pagination if enabled
+            pagination_metadata = None
+            sql_to_execute = query_node.sql
+
+            if query_node.paginate:
+                # Execute COUNT(*) query to get total records
+                count_sql = self._generate_count_query(query_node.sql)
+                count_result = self.database_service.execute_query(
+                    query_node.datasource,
+                    count_sql,
+                    resolved_params
+                )
+
+                # Get total count from result
+                total_records = count_result.data[0]['count'] if count_result.data else 0
+
+                # Calculate pagination metadata
+                page = query_node.page if query_node.page is not None else 1
+                page_size = query_node.page_size
+                total_pages = (total_records + page_size - 1) // page_size  # Ceiling division
+
+                # Add LIMIT and OFFSET to SQL
+                offset = (page - 1) * page_size
+                sql_to_execute = f"{query_node.sql}\nLIMIT {page_size} OFFSET {offset}"
+
+                # Store pagination metadata
+                pagination_metadata = {
+                    'totalRecords': total_records,
+                    'totalPages': total_pages,
+                    'currentPage': page,
+                    'pageSize': page_size,
+                    'hasNextPage': page < total_pages,
+                    'hasPreviousPage': page > 1,
+                    'startRecord': offset + 1 if total_records > 0 else 0,
+                    'endRecord': min(offset + page_size, total_records)
+                }
+
+            # Execute query via DatabaseService
+            result = self.database_service.execute_query(
+                query_node.datasource,
+                sql_to_execute,
+                resolved_params
+            )
+
+            # Store result in context with query name
+            # Store both as QueryResult object and as plain dict for template access
+            result_dict = result.to_dict()
+
+            # Add pagination metadata if enabled
+            if pagination_metadata:
+                result_dict['pagination'] = pagination_metadata
+
+            # Make data accessible directly as array (for q:loop)
+            exec_context.set_variable(query_node.name, result.data, scope="component")
+
+            # Also store full result object with metadata
+            exec_context.set_variable(f"{query_node.name}_result", result_dict, scope="component")
+
+            # Store in self.context for backward compatibility
+            self.context[query_node.name] = result.data
+            self.context[f"{query_node.name}_result"] = result_dict
+
+            # For single-row results (INSERT RETURNING, etc.), expose fields directly
+            # Allows {insertResult.id} instead of {insertResult[0].id}
+            if result.data and len(result.data) == 1 and isinstance(result.data[0], dict):
+                for field_name, field_value in result.data[0].items():
+                    dotted_key = f"{query_node.name}.{field_name}"
+                    exec_context.set_variable(dotted_key, field_value, scope="component")
+                    self.context[dotted_key] = field_value
+
+            # If result variable name specified, store metadata separately
+            if query_node.result:
+                exec_context.set_variable(query_node.result, result_dict, scope="component")
+                self.context[query_node.result] = result_dict
+
+            return result
+
+        except QueryValidationError as e:
+            raise ComponentExecutionError(f"Query validation error in '{query_node.name}': {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Query execution error in '{query_node.name}': {e}")
+
+    def _generate_count_query(self, original_sql: str) -> str:
+        """
+        Generate a COUNT(*) query from the original SQL.
+        Wraps the original query in a subquery to handle complex cases.
+
+        Example:
+            Input:  SELECT id, name FROM users WHERE status = 'active' ORDER BY created_at DESC
+            Output: SELECT COUNT(*) as count FROM (SELECT id, name FROM users WHERE status = 'active') AS count_query
+
+        This approach works for:
+        - Simple queries
+        - Queries with JOINs
+        - Queries with GROUP BY
+        - Queries with complex WHERE clauses
+        """
+        import re
+
+        # Normalize SQL (remove extra whitespace, newlines)
+        sql = ' '.join(original_sql.split())
+
+        # Remove ORDER BY clause (not needed for COUNT and causes issues in subquery)
+        # Match ORDER BY ... up to end or until LIMIT/OFFSET/FOR UPDATE
+        sql = re.sub(r'\s+ORDER\s+BY\s+[^;]+?(?=\s+(?:LIMIT|OFFSET|FOR\s+UPDATE)|$)', '', sql, flags=re.IGNORECASE)
+
+        # Remove LIMIT and OFFSET clauses (pagination will be added separately)
+        sql = re.sub(r'\s+LIMIT\s+\d+', '', sql, flags=re.IGNORECASE)
+        sql = re.sub(r'\s+OFFSET\s+\d+', '', sql, flags=re.IGNORECASE)
+
+        # Wrap in COUNT subquery
+        # This handles all edge cases: JOINs, GROUP BY, complex WHERE, etc.
+        count_sql = f"SELECT COUNT(*) as count FROM ({sql}) AS count_query"
+
+        return count_sql
+
+    def _execute_query_of_queries(self, query_node: 'QueryNode', context: Dict[str, Any],
+                                   params: Dict[str, Any], exec_context: 'ExecutionContext') -> 'QueryResult':
+        """
+        Execute Query of Queries - SQL on in-memory result sets.
+
+        Uses SQLite in-memory database to execute SQL on previous query results.
+
+        Args:
+            query_node: QueryNode with source attribute set
+            context: Variable context
+            params: Resolved query parameters
+            exec_context: Execution context
+
+        Returns:
+            QueryResult with data and metadata
+
+        Raises:
+            ComponentExecutionError: If source query not found or execution fails
+        """
+        import sqlite3
+        import time
+        from .database_service import QueryResult
+
+        try:
+            # Get source query result from context
+            source_name = query_node.source
+            source_data = context.get(source_name) or exec_context.get_variable(source_name)
+
+            if source_data is None:
+                raise ComponentExecutionError(
+                    f"Source query '{source_name}' not found for Query of Queries"
+                )
+
+            if not isinstance(source_data, list):
+                raise ComponentExecutionError(
+                    f"Source '{source_name}' is not a query result (got {type(source_data).__name__})"
+                )
+
+            if not source_data:
+                # Empty source - return empty result
+                return QueryResult(
+                    success=True,
+                    data=[],
+                    record_count=0,
+                    column_list=[],
+                    execution_time=0,
+                    sql=query_node.sql
+                )
+
+            # Create in-memory SQLite database
+            conn = sqlite3.connect(':memory:')
+            conn.row_factory = sqlite3.Row  # Enable column access by name
+            cursor = conn.cursor()
+
+            # Infer table structure from first row
+            first_row = source_data[0]
+            if not isinstance(first_row, dict):
+                raise ComponentExecutionError(
+                    f"Source data must be list of dictionaries (got {type(first_row).__name__})"
+                )
+
+            # Create table schema
+            columns = list(first_row.keys())
+            column_defs = ', '.join([f'"{col}" TEXT' for col in columns])  # Use TEXT for simplicity
+            create_table_sql = f'CREATE TABLE source_table ({column_defs})'
+            cursor.execute(create_table_sql)
+
+            # Insert source data
+            placeholders = ', '.join(['?' for _ in columns])
+            insert_sql = f'INSERT INTO source_table VALUES ({placeholders})'
+            for row in source_data:
+                values = [row.get(col) for col in columns]
+                cursor.execute(insert_sql, values)
+
+            # Replace source name in SQL with actual table name
+            # Support both "FROM source" and "FROM {source}" syntax
+            sql = query_node.sql
+            sql = sql.replace(f'FROM {source_name}', 'FROM source_table')
+            sql = sql.replace(f'FROM {{{source_name}}}', 'FROM source_table')
+
+            # Apply parameter binding (convert :name to ?)
+            for param_name, param_value in params.items():
+                sql = sql.replace(f':{param_name}', '?')
+
+            # Execute query
+            start_time = time.time()
+            cursor.execute(sql, list(params.values()) if params else [])
+            result_rows = cursor.fetchall()
+            execution_time = (time.time() - start_time) * 1000  # Convert to ms
+
+            # Convert to list of dicts
+            result_data = []
+            if result_rows:
+                column_names = [description[0] for description in cursor.description]
+                for row in result_rows:
+                    result_data.append(dict(zip(column_names, row)))
+
+            # Close connection
+            conn.close()
+
+            # Return QueryResult
+            result = QueryResult(
+                success=True,
+                data=result_data,
+                record_count=len(result_data),
+                column_list=column_names if result_data else [],
+                execution_time=int(execution_time),
+                sql=query_node.sql
+            )
+
+            # Store result in context (same as regular query)
+            result_dict = result.to_dict()
+            exec_context.set_variable(query_node.name, result.data, scope="component")
+            exec_context.set_variable(f"{query_node.name}_result", result_dict, scope="component")
+            self.context[query_node.name] = result.data
+            self.context[f"{query_node.name}_result"] = result_dict
+
+            # Single-row field exposure
+            if result.data and len(result.data) == 1 and isinstance(result.data[0], dict):
+                for field_name, field_value in result.data[0].items():
+                    dotted_key = f"{query_node.name}.{field_name}"
+                    exec_context.set_variable(dotted_key, field_value, scope="component")
+                    self.context[dotted_key] = field_value
+
+            return result
+
+        except sqlite3.Error as e:
+            raise ComponentExecutionError(f"Query of Queries SQL error in '{query_node.name}': {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Query of Queries execution error in '{query_node.name}': {e}")
+
+    def _execute_invoke(self, invoke_node: InvokeNode, exec_context: ExecutionContext):
+        """
+        Execute invocation (function, component, HTTP, etc.)
+
+        Args:
+            invoke_node: InvokeNode with invocation configuration
+            exec_context: Execution context for variables
+
+        Returns:
+            None (stores result in context)
+
+        Raises:
+            ComponentExecutionError: If invocation fails
+        """
+        try:
+            # Get dict context for parameter resolution and databinding
+            dict_context = exec_context.get_all_variables()
+
+            # Get invocation type
+            invocation_type = invoke_node.get_invocation_type()
+
+            if invocation_type == "unknown":
+                raise ComponentExecutionError(
+                    f"Invoke '{invoke_node.name}' requires one of: function, component, url, endpoint, or service"
+                )
+
+            # Build invocation parameters based on type
+            if invocation_type == "function":
+                params = self._build_function_invoke_params(invoke_node, dict_context)
+            elif invocation_type == "component":
+                params = self._build_component_invoke_params(invoke_node, dict_context)
+            elif invocation_type == "http":
+                params = self._build_http_invoke_params(invoke_node, dict_context)
+            else:
+                raise ComponentExecutionError(f"Unsupported invocation type: {invocation_type}")
+
+            # Check cache if enabled
+            if invoke_node.cache:
+                cache_key = f"invoke_{invoke_node.name}_{hash(str(params))}"
+                cached_result = self.invocation_service.get_from_cache(cache_key)
+                if cached_result is not None:
+                    self._store_invoke_result(invoke_node, cached_result, exec_context)
+                    return
+
+            # Execute invocation
+            result = self.invocation_service.invoke(
+                invocation_type,
+                params,
+                context=self  # Pass runtime as context for function/component calls
+            )
+
+            # Cache result if enabled
+            if invoke_node.cache and result.success:
+                cache_key = f"invoke_{invoke_node.name}_{hash(str(params))}"
+                self.invocation_service.put_in_cache(cache_key, result, invoke_node.ttl)
+
+            # Store result in context
+            self._store_invoke_result(invoke_node, result, exec_context)
+
+        except Exception as e:
+            raise ComponentExecutionError(f"Invoke execution error in '{invoke_node.name}': {e}")
+
+    def _build_function_invoke_params(self, invoke_node: InvokeNode, dict_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Build parameters for function invocation"""
+        args = {}
+
+        # Resolve parameters
+        for param in invoke_node.params:
+            param_value = self._apply_databinding(param.default if param.default else "", dict_context)
+            args[param.name] = param_value
+
+        return {
+            'function': invoke_node.function,
+            'args': args
+        }
+
+    def _build_component_invoke_params(self, invoke_node: InvokeNode, dict_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Build parameters for component invocation"""
+        args = {}
+
+        # Resolve parameters
+        for param in invoke_node.params:
+            param_value = self._apply_databinding(param.default if param.default else "", dict_context)
+            args[param.name] = param_value
+
+        return {
+            'component': invoke_node.component,
+            'args': args
+        }
+
+    def _build_http_invoke_params(self, invoke_node: InvokeNode, dict_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Build parameters for HTTP invocation"""
+        # Resolve URL (may contain databinding)
+        url = self._apply_databinding(invoke_node.url, dict_context)
+
+        # Build headers
+        headers = {}
+        for header_node in invoke_node.headers:
+            header_value = self._apply_databinding(header_node.value, dict_context)
+            headers[header_node.name] = header_value
+
+        # Add content-type header if not present
+        if 'Content-Type' not in headers and 'content-type' not in headers:
+            headers['Content-Type'] = invoke_node.content_type
+
+        # Build query parameters
+        query_params = {}
+        for param in invoke_node.params:
+            param_value = self._apply_databinding(param.default if param.default else "", dict_context)
+            query_params[param.name] = param_value
+
+        # Resolve body (may contain databinding)
+        body = None
+        if invoke_node.body:
+            body = self._apply_databinding(invoke_node.body, dict_context)
+            # Try to parse as JSON if it's a string and content-type is JSON
+            if isinstance(body, str) and 'json' in invoke_node.content_type.lower():
+                try:
+                    import json
+                    body = json.loads(body)
+                except:
+                    pass  # Keep as string if not valid JSON
+
+        return {
+            'url': url,
+            'method': invoke_node.method,
+            'headers': headers,
+            'params': query_params,
+            'body': body,
+            'auth_type': invoke_node.auth_type,
+            'auth_token': self._apply_databinding(invoke_node.auth_token, dict_context) if invoke_node.auth_token else None,
+            'auth_header': invoke_node.auth_header,
+            'auth_username': self._apply_databinding(invoke_node.auth_username, dict_context) if invoke_node.auth_username else None,
+            'auth_password': self._apply_databinding(invoke_node.auth_password, dict_context) if invoke_node.auth_password else None,
+            'timeout': invoke_node.timeout,
+            'retry': invoke_node.retry,
+            'retry_delay': invoke_node.retry_delay,
+            'response_format': invoke_node.response_format
+        }
+
+    def _store_invoke_result(self, invoke_node: InvokeNode, result, exec_context: ExecutionContext):
+        """Store invocation result in context"""
+        # Store data directly (for easy access in templates)
+        exec_context.set_variable(invoke_node.name, result.data, scope="component")
+        self.context[invoke_node.name] = result.data
+
+        # Build result object
+        result_dict = {
+            'success': result.success,
+            'data': result.data,
+            'error': result.error,
+            'executionTime': result.execution_time,
+            'invocationType': result.invocation_type,
+            'metadata': result.metadata
+        }
+
+        # Store full result object
+        exec_context.set_variable(f"{invoke_node.name}_result", result_dict, scope="component")
+        self.context[f"{invoke_node.name}_result"] = result_dict
+
+        # If result variable name specified, store metadata separately
+        if invoke_node.result:
+            exec_context.set_variable(invoke_node.result, result_dict, scope="component")
+            self.context[invoke_node.result] = result_dict
+
+    def _execute_data(self, data_node: DataNode, exec_context: ExecutionContext):
+        """
+        Execute data import and transformation
+
+        Args:
+            data_node: DataNode with import configuration
+            exec_context: Execution context for variables
+
+        Returns:
+            None (stores result in context)
+
+        Raises:
+            ComponentExecutionError: If data import fails
+        """
+        try:
+            # Get dict context for parameter resolution and databinding
+            dict_context = exec_context.get_all_variables()
+
+            # Resolve source (may contain databinding)
+            source = self._apply_databinding(data_node.source, dict_context)
+
+            # Build parameters for data import
+            params = {
+                'cache': data_node.cache,
+                'ttl': data_node.ttl,
+                'delimiter': data_node.delimiter,
+                'quote': data_node.quote,
+                'header': data_node.header,
+                'encoding': data_node.encoding,
+                'skip_rows': data_node.skip_rows,
+                'xpath': data_node.xpath,
+                'namespace': data_node.namespace,
+                'columns': [],
+                'fields': [],
+                'transforms': [],
+                'headers': []
+            }
+
+            # Add column definitions (for CSV)
+            for col in data_node.columns:
+                params['columns'].append({
+                    'name': col.name,
+                    'type': col.col_type,
+                    'required': col.required,
+                    'default': col.default
+                })
+
+            # Add field definitions (for XML)
+            for field in data_node.fields:
+                params['fields'].append({
+                    'name': field.name,
+                    'xpath': field.xpath,
+                    'type': field.field_type
+                })
+
+            # Add HTTP headers
+            for header in data_node.headers:
+                resolved_value = self._apply_databinding(header.value, dict_context)
+                params['headers'].append({
+                    'name': header.name,
+                    'value': resolved_value
+                })
+
+            # Add transformations
+            for transform in data_node.transforms:
+                for operation in transform.operations:
+                    op_dict = {
+                        'type': operation.__class__.__name__.replace('Node', '').lower()
+                    }
+
+                    if hasattr(operation, 'condition'):
+                        # Filter operation
+                        op_dict['condition'] = operation.condition
+                    elif hasattr(operation, 'by'):
+                        # Sort operation
+                        op_dict['by'] = operation.by
+                        op_dict['order'] = operation.order
+                    elif hasattr(operation, 'value'):
+                        # Limit operation
+                        op_dict['value'] = operation.value
+                    elif hasattr(operation, 'field'):
+                        # Compute operation
+                        op_dict['field'] = operation.field
+                        op_dict['expression'] = operation.expression
+                        op_dict['type'] = operation.comp_type
+
+                    params['transforms'].append(op_dict)
+
+            # Execute data import
+            result = self.data_import_service.import_data(
+                data_node.data_type,
+                source,
+                params,
+                context=exec_context
+            )
+
+            # Store result in context
+            self._store_data_result(data_node, result, exec_context)
+
+        except Exception as e:
+            raise ComponentExecutionError(f"Data import error in '{data_node.name}': {e}")
+
+    def _store_data_result(self, data_node: DataNode, result, exec_context: ExecutionContext):
+        """Store data import result in context"""
+        # Store data directly (for easy access in templates and loops)
+        exec_context.set_variable(data_node.name, result.data, scope="component")
+        self.context[data_node.name] = result.data
+
+        # Build result object
+        result_dict = {
+            'success': result.success,
+            'data': result.data,
+            'error': result.error,
+            'recordCount': result.recordCount,
+            'loadTime': result.loadTime,
+            'cached': result.cached,
+            'source': result.source
+        }
+
+        # Store full result object
+        exec_context.set_variable(f"{data_node.name}_result", result_dict, scope="component")
+        self.context[f"{data_node.name}_result"] = result_dict
+
+        # If result variable name specified, store metadata separately
+        if data_node.result:
+            exec_context.set_variable(data_node.result, result_dict, scope="component")
+            self.context[data_node.result] = result_dict
+
+    def get_function(self, function_name: str) -> FunctionNode:
+        """Get function by name from current component"""
+        if not self.current_component:
+            return None
+
+        for func in self.current_component.functions:
+            if func.name == function_name:
+                return func
+
+        return None
+
+
+    def _execute_log(self, log_node: LogNode, exec_context: ExecutionContext):
+        """
+        Execute logging statement
+
+        Args:
+            log_node: LogNode with logging configuration
+            exec_context: Execution context for variables
+
+        Returns:
+            None (logs to configured output)
+
+        Raises:
+            ComponentExecutionError: If logging fails
+        """
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+
+            # Check conditional execution
+            if log_node.when:
+                condition_result = self._apply_databinding(log_node.when, dict_context)
+                if not self.logging_service.should_log(condition_result):
+                    return
+
+            # Resolve message (apply databinding)
+            message = self._apply_databinding(log_node.message, dict_context)
+
+            # Resolve context data if provided
+            context_data = None
+            if log_node.context:
+                # Parse context as JSON or variable reference
+                context_expr = self._apply_databinding(log_node.context, dict_context)
+                if isinstance(context_expr, dict):
+                    context_data = context_expr
+                elif isinstance(context_expr, str):
+                    try:
+                        import json
+                        context_data = json.loads(context_expr)
+                    except:
+                        # Not JSON - treat as single value
+                        context_data = {'value': context_expr}
+
+            # Resolve correlation_id if provided
+            correlation_id = None
+            if log_node.correlation_id:
+                correlation_id = self._apply_databinding(log_node.correlation_id, dict_context)
+
+            # Execute logging
+            result = self.logging_service.log(
+                level=log_node.level,
+                message=str(message),
+                context=context_data,
+                correlation_id=correlation_id
+            )
+
+            # Note: We don't store log result in context since logging is side-effect only
+            # However, we could expose {log_result.success} if needed in future
+
+        except Exception as e:
+            raise ComponentExecutionError(f"Logging error: {e}")
+
+    def _execute_dump(self, dump_node: DumpNode, exec_context: ExecutionContext):
+        """
+        Execute variable dump/inspection
+
+        Args:
+            dump_node: DumpNode with dump configuration
+            exec_context: Execution context for variables
+
+        Returns:
+            str: Formatted dump output (stored in context and printed)
+
+        Raises:
+            ComponentExecutionError: If dump fails
+        """
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+
+            # Check conditional execution
+            if dump_node.when:
+                condition_result = self._apply_databinding(dump_node.when, dict_context)
+                if not self.dump_service.should_dump(condition_result):
+                    return
+
+            # Resolve variable to dump
+            var_expr = dump_node.var
+            try:
+                var_value = self._apply_databinding(var_expr, dict_context)
+            except Exception as e:
+                # If variable not found, dump the error
+                var_value = f"<Variable '{var_expr}' not found: {e}>"
+
+            # Generate dump output
+            dump_output = self.dump_service.dump(
+                var=var_value,
+                label=dump_node.label,
+                format=dump_node.format,
+                depth=dump_node.depth
+            )
+
+            # Print dump output (for development/debugging)
+            print(dump_output)
+
+            # Also store in context for potential template rendering
+            dump_var_name = f"_dump_{dump_node.label.replace(' ', '_')}"
+            exec_context.set_variable(dump_var_name, dump_output, scope="component")
+            self.context[dump_var_name] = dump_output
+
+            return dump_output
+
+        except Exception as e:
+            raise ComponentExecutionError(f"Dump error: {e}")
+
+    def execute_function(self, function_name: str, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute function and return result"""
+        try:
+            result = self.function_registry.call_function(function_name, args, self)
+            return {
+                'success': True,
+                'data': result
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': {
+                    'message': str(e),
+                    'type': type(e).__name__
+                }
+            }

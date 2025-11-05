@@ -1,0 +1,162 @@
+intention:
+  name: "Database Query Variants"
+  version: "1.0.0"
+  category: "database"
+
+  description: |
+    Alternative ways to achieve common database operations with q:query.
+    Shows multiple valid approaches to the same problem.
+
+  variants:
+    - scenario: "Filtering data"
+      approaches:
+        - description: "Filter in SQL with WHERE clause"
+          code: |
+            <q:query name="activeUsers" datasource="db">
+                SELECT * FROM users WHERE status = :status
+                <q:param name="status" value="active" type="string" />
+            </q:query>
+
+        - description: "Fetch all and filter with q:if in loop"
+          code: |
+            <q:query name="allUsers" datasource="db">
+                SELECT * FROM users
+            </q:query>
+            <q:loop items="{allUsers}" var="user">
+                <q:if condition="{user.status} === 'active'">
+                    <p>{user.name}</p>
+                </q:if>
+            </q:loop>
+
+    - scenario: "Counting records"
+      approaches:
+        - description: "Use SQL COUNT(*)"
+          code: |
+            <q:query name="userCount" datasource="db">
+                SELECT COUNT(*) as total FROM users WHERE active = true
+            </q:query>
+            <p>Total: {userCount.total}</p>
+
+        - description: "Fetch all and use recordCount"
+          code: |
+            <q:query name="users" datasource="db">
+                SELECT * FROM users WHERE active = true
+            </q:query>
+            <p>Total: {users_result.recordCount}</p>
+
+        - description: "Fetch all and count in loop"
+          code: |
+            <q:query name="users" datasource="db">
+                SELECT * FROM users WHERE active = true
+            </q:query>
+            <q:set name="count" type="number" value="0" />
+            <q:loop items="{users}" var="user">
+                <q:set name="count" operation="increment" />
+            </q:loop>
+            <p>Total: {count}</p>
+
+    - scenario: "Getting latest records"
+      approaches:
+        - description: "ORDER BY with LIMIT in SQL"
+          code: |
+            <q:query name="recentUsers" datasource="db">
+                SELECT * FROM users
+                ORDER BY created_at DESC
+                LIMIT :limit
+                <q:param name="limit" value="10" type="integer" />
+            </q:query>
+
+        - description: "ORDER BY in SQL, limit in loop"
+          code: |
+            <q:query name="users" datasource="db">
+                SELECT * FROM users ORDER BY created_at DESC
+            </q:query>
+            <q:set name="shown" type="number" value="0" />
+            <q:loop items="{users}" var="user">
+                <q:if condition="{shown} < 10">
+                    <p>{user.name}</p>
+                    <q:set name="shown" operation="increment" />
+                </q:if>
+            </q:loop>
+
+    - scenario: "Searching with multiple conditions"
+      approaches:
+        - description: "Multiple parameters with AND"
+          code: |
+            <q:query name="users" datasource="db">
+                SELECT * FROM users
+                WHERE status = :status
+                AND role = :role
+                AND created_at > :since
+
+                <q:param name="status" value="active" type="string" />
+                <q:param name="role" value="admin" type="string" />
+                <q:param name="since" value="2024-01-01" type="date" />
+            </q:query>
+
+        - description: "Fetch all and filter with nested q:if"
+          code: |
+            <q:query name="allUsers" datasource="db">
+                SELECT * FROM users
+            </q:query>
+            <q:loop items="{allUsers}" var="user">
+                <q:if condition="{user.status} === 'active'">
+                    <q:if condition="{user.role} === 'admin'">
+                        <p>{user.name}</p>
+                    </q:if>
+                </q:if>
+            </q:loop>
+
+    - scenario: "Conditional query execution"
+      approaches:
+        - description: "SQL with dynamic parameter"
+          code: |
+            <q:query name="users" datasource="db">
+                SELECT * FROM users WHERE status = :status
+                <q:param name="status" value="{searchType}" type="string" />
+            </q:query>
+
+        - description: "Wrap query in q:if"
+          code: |
+            <q:if condition="{showActive}">
+                <q:query name="users" datasource="db">
+                    SELECT * FROM users WHERE status = 'active'
+                </q:query>
+            </q:if>
+
+    - scenario: "Accumulating values from database"
+      approaches:
+        - description: "Use SQL SUM()"
+          code: |
+            <q:query name="totals" datasource="db">
+                SELECT SUM(amount) as total FROM orders WHERE user_id = :userId
+                <q:param name="userId" value="{session.userId}" type="integer" />
+            </q:query>
+            <p>Total: ${totals.total}</p>
+
+        - description: "Fetch all and accumulate in loop"
+          code: |
+            <q:query name="orders" datasource="db">
+                SELECT amount FROM orders WHERE user_id = :userId
+                <q:param name="userId" value="{session.userId}" type="integer" />
+            </q:query>
+            <q:set name="total" type="number" value="0" />
+            <q:loop items="{orders}" var="order">
+                <q:set name="total" operation="add" value="{order.amount}" />
+            </q:loop>
+            <p>Total: ${total}</p>
+
+  performance_notes:
+    - "SQL filtering (WHERE) is faster than loop filtering"
+    - "SQL aggregation (COUNT, SUM) is faster than loop calculation"
+    - "SQL LIMIT is more efficient than loop breaking"
+    - "Multiple queries are slower than single query with JOIN"
+    - "But simpler code is sometimes worth the performance cost"
+
+  when_to_use:
+    - use_sql: "When database has millions of rows"
+    - use_loop: "When you need complex filtering logic not expressible in SQL"
+    - use_sql: "When you need aggregation (COUNT, SUM, AVG)"
+    - use_loop: "When you need to transform data for display"
+    - use_sql: "When you need sorting and pagination"
+    - use_loop: "When you're already looping for display"

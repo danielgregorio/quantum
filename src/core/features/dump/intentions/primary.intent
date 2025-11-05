@@ -1,0 +1,77 @@
+# Primary Intention: q:dump
+
+## What the user wants to accomplish
+The user wants to inspect variable contents during development - see the structure, values, and types of data in a beautiful, readable format.
+
+## User's mental model
+"I need to see what's in this variable - like ColdFusion's cfdump or PHP's var_dump but prettier and more useful."
+
+## Natural language expressions users might use
+- "Show me what's in this user object"
+- "Debug this API response structure"
+- "Inspect query results"
+- "See what data I'm getting from this loop"
+- "Check if this variable is what I expect"
+- "Display all session variables"
+- "Dump this complex nested object"
+- "What fields are in this result?"
+
+## Core user needs
+1. Inspect variable contents in readable format
+2. See nested object structures (deep inspection)
+3. View arrays, objects, primitives clearly
+4. Syntax highlighting for better readability
+5. Expandable/collapsible tree views for complex data
+6. Type information (string, integer, array, object)
+7. Conditional dumping (only show when error occurs)
+8. Multiple output formats (HTML, JSON, text)
+9. Depth control for deeply nested structures
+10. Labels to identify which dump is which
+
+## Expected outcomes
+- Variable contents displayed in HTTP response
+- Structure is easy to understand at a glance
+- Types are clearly indicated
+- Nested data is navigable
+- Performance is acceptable even for large objects
+- Output is beautiful and professional
+- Can dump multiple variables side-by-side
+
+## Emotional context
+- Users want **instant clarity** - see data structure immediately
+- Users feel **confident** when they can verify data is correct
+- Users feel **productive** when debugging is visual, not console.log
+- Users want **beauty** - well-formatted output, not ugly text dumps
+- Users feel **empowered** when complex nested data is navigable
+- Users want **speed** - quick dump during development, remove in production
+
+## Common patterns
+1. **API Response Inspection**: See what structure an API returns
+2. **Query Results**: Verify database query returned expected fields
+3. **Loop Debugging**: Check values inside loop iterations
+4. **Conditional Debugging**: Dump only when error occurs
+5. **State Inspection**: See all component state variables
+6. **Integration Testing**: Verify data transformations worked correctly
+7. **Type Verification**: Ensure types are correct after conversion
+8. **Complex Object Navigation**: Explore deeply nested structures
+
+## Success criteria
+- Single tag syntax: `<q:dump var="{variable}" />`
+- Output is beautiful HTML with syntax highlighting
+- Nested structures are expandable/collapsible
+- Types are clearly labeled
+- Works with all data types (primitives, arrays, objects, nulls)
+- Conditional dumping works: `when="{!result.success}"`
+- Multiple formats supported (HTML, JSON, text)
+- Depth limiting prevents infinite recursion
+- Labels help identify multiple dumps
+
+## Anti-patterns to avoid
+- Ugly plain text dumps
+- No type information
+- Can't handle circular references
+- No depth control (crashes on deep nesting)
+- Always outputs (no conditional dumping)
+- Hard to distinguish multiple dumps
+- Performance issues with large objects
+- Only works in development (should work but be disabled in production)

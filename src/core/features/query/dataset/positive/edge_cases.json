@@ -1,0 +1,62 @@
+[
+  {
+    "description": "Query with empty result set",
+    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM users WHERE id = :id\" :id=\"999999\" />\n<q:if condition=\"{$query_result.length} == 0\">\n  <div>No user found</div>\n</q:if>",
+    "expected_behavior": "Returns empty array, conditional displays 'No user found'",
+    "use_case": "Handling queries that return no results"
+  },
+  {
+    "description": "Query with NULL parameter value",
+    "code": "<q:set name=\"optional_filter\" value=\"null\" />\n<q:query connection=\"db\" sql=\"SELECT * FROM products WHERE category IS :cat\" :cat=\"{optional_filter}\" />",
+    "expected_behavior": "Handles NULL parameter correctly in WHERE clause",
+    "use_case": "Optional filters that may be NULL"
+  },
+  {
+    "description": "Query returning NULL values in columns",
+    "code": "<q:query connection=\"db\" sql=\"SELECT id, name, description FROM products\" />\n<q:loop items=\"{$query_result}\" item=\"product\">\n  <div>Name: {product.name}, Desc: {product.description || 'N/A'}</div>\n</q:loop>",
+    "expected_behavior": "Safely handles NULL description column with fallback display",
+    "use_case": "Displaying records with nullable columns"
+  },
+  {
+    "description": "Query with boolean parameter",
+    "code": "<q:set name=\"is_active\" value=\"true\" />\n<q:query connection=\"db\" sql=\"SELECT * FROM users WHERE active = :active\" :active=\"{is_active}\" />",
+    "expected_behavior": "Correctly binds boolean value for WHERE clause",
+    "use_case": "Filtering by boolean flags"
+  },
+  {
+    "description": "Query with datetime parameter",
+    "code": "<q:set name=\"cutoff_date\" value=\"'2024-01-01'\" />\n<q:query connection=\"db\" sql=\"SELECT * FROM orders WHERE created_at >= :date\" :date=\"{cutoff_date}\" />",
+    "expected_behavior": "Binds datetime string parameter correctly for date comparison",
+    "use_case": "Date-based filtering and reporting"
+  },
+  {
+    "description": "Query with decimal/float parameter",
+    "code": "<q:set name=\"min_price\" value=\"99.99\" />\n<q:query connection=\"db\" sql=\"SELECT * FROM products WHERE price >= :price\" :price=\"{min_price}\" />",
+    "expected_behavior": "Correctly handles decimal parameter binding for price comparison",
+    "use_case": "Numeric range filtering with decimals"
+  },
+  {
+    "description": "Query with array parameter for IN clause",
+    "code": "<q:set name=\"category_ids\" value=\"[1, 2, 3]\" />\n<q:query connection=\"db\" sql=\"SELECT * FROM products WHERE category_id IN :ids\" :ids=\"{category_ids}\" />",
+    "expected_behavior": "Expands array parameter for IN clause, returns products in specified categories",
+    "use_case": "Multiple value filtering with IN operator"
+  },
+  {
+    "description": "Query with zero as parameter value",
+    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM products WHERE price = :price\" :price=\"0\" />",
+    "expected_behavior": "Correctly treats 0 as valid parameter value, not as false/empty",
+    "use_case": "Handling edge case of zero values in parameters"
+  },
+  {
+    "description": "Query with very long string parameter",
+    "code": "<q:set name=\"long_text\" value=\"'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.'\" />\n<q:query connection=\"db\" sql=\"INSERT INTO articles (content) VALUES (:text)\" :text=\"{long_text}\" />",
+    "expected_behavior": "Handles long text parameter without truncation",
+    "use_case": "Storing long form content like articles or descriptions"
+  },
+  {
+    "description": "Query with special characters in parameter",
+    "code": "<q:set name=\"search_term\" value=\"'O\\'Brien & Sons'\" />\n<q:query connection=\"db\" sql=\"SELECT * FROM companies WHERE name = :name\" :name=\"{search_term}\" />",
+    "expected_behavior": "Properly escapes special characters (apostrophe, ampersand) in parameter",
+    "use_case": "Safe handling of user input with special characters"
+  }
+]

@@ -52,6 +52,7 @@ class Datasource(Base):
     # Status
     status = Column(String(50), default='stopped')  # running, stopped, error
     health_status = Column(String(50), default='unknown')  # healthy, unhealthy, unknown
+    setup_status = Column(String(50), default='pending')  # pending, configuring, ready, error
     auto_start = Column(Boolean, default=False)
 
     # Metadata

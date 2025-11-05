@@ -1,0 +1,6 @@
+id,name,age,email,active
+1,Alice Smith,28,alice@example.com,true
+2,Bob Johnson,35,bob@example.com,true
+3,Carol White,42,carol@example.com,false
+4,David Brown,25,david@example.com,true
+5,Emma Davis,31,emma@example.com,true

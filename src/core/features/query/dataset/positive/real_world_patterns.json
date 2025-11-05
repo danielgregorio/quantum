@@ -1,0 +1,62 @@
+[
+  {
+    "description": "User dashboard with stats",
+    "code": "<q:query connection=\"db\" sql=\"SELECT COUNT(*) as total, SUM(total_amount) as revenue FROM orders WHERE user_id = :uid\" :uid=\"{current_user_id}\" />\n<q:set name=\"stats\" value=\"{$query_result[0]}\" />\n<div class=\"dashboard\">\n  <h2>My Dashboard</h2>\n  <div>Total Orders: {stats.total}</div>\n  <div>Total Revenue: ${stats.revenue}</div>\n</div>",
+    "expected_behavior": "Displays user's order count and total revenue in a dashboard widget",
+    "use_case": "Real-time business intelligence dashboards"
+  },
+  {
+    "description": "Product catalog with pagination",
+    "code": "<q:set name=\"page\" value=\"1\" />\n<q:set name=\"per_page\" value=\"20\" />\n<q:set name=\"offset\" value=\"({page} - 1) * {per_page}\" />\n<q:query connection=\"db\" sql=\"SELECT * FROM products ORDER BY created_at DESC LIMIT :limit OFFSET :offset\" :limit=\"{per_page}\" :offset=\"{offset}\" />\n<div class=\"products\">\n  <q:loop items=\"{$query_result}\" item=\"product\">\n    <div class=\"product-card\">\n      <h3>{product.name}</h3>\n      <p>${product.price}</p>\n    </div>\n  </q:loop>\n</div>",
+    "expected_behavior": "Shows paginated product list with 20 items per page",
+    "use_case": "E-commerce product browsing with pagination"
+  },
+  {
+    "description": "Search functionality with filters",
+    "code": "<q:set name=\"search_query\" value=\"{user_input}\" />\n<q:set name=\"min_price\" value=\"{filter_min_price}\" />\n<q:set name=\"max_price\" value=\"{filter_max_price}\" />\n<q:query connection=\"db\" sql=\"SELECT * FROM products WHERE name LIKE :query AND price BETWEEN :min AND :max ORDER BY relevance DESC\" :query=\"'%' + {search_query} + '%'\" :min=\"{min_price}\" :max=\"{max_price}\" />\n<div class=\"search-results\">\n  <h3>Found {$query_result.length} products</h3>\n  <q:loop items=\"{$query_result}\" item=\"product\">\n    <div>{product.name} - ${product.price}</div>\n  </q:loop>\n</div>",
+    "expected_behavior": "Performs filtered search with price range and displays results with count",
+    "use_case": "Product search with multiple filters"
+  },
+  {
+    "description": "Shopping cart total calculation",
+    "code": "<q:query connection=\"db\" sql=\"SELECT p.name, p.price, c.quantity FROM cart c JOIN products p ON c.product_id = p.id WHERE c.user_id = :uid\" :uid=\"{current_user_id}\" />\n<q:set name=\"cart_total\" value=\"0\" />\n<div class=\"cart\">\n  <h2>Shopping Cart</h2>\n  <q:loop items=\"{$query_result}\" item=\"item\">\n    <div class=\"cart-item\">\n      <span>{item.name}</span>\n      <span>Qty: {item.quantity}</span>\n      <span>${item.price * item.quantity}</span>\n    </div>\n    <q:set name=\"cart_total\" value=\"{cart_total} + ({item.price} * {item.quantity})\" />\n  </q:loop>\n  <div class=\"cart-total\">Total: ${cart_total}</div>\n</div>",
+    "expected_behavior": "Displays cart items with individual totals and calculates grand total",
+    "use_case": "E-commerce shopping cart with JOIN query and total calculation"
+  },
+  {
+    "description": "User profile with recent activity",
+    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM users WHERE id = :id\" :id=\"{user_id}\" />\n<q:set name=\"user\" value=\"{$query_result[0]}\" />\n<q:query connection=\"db\" sql=\"SELECT * FROM activities WHERE user_id = :uid ORDER BY created_at DESC LIMIT 5\" :uid=\"{user_id}\" />\n<div class=\"profile\">\n  <h2>{user.name}</h2>\n  <p>Email: {user.email}</p>\n  <p>Member since: {user.created_at}</p>\n  <h3>Recent Activity</h3>\n  <q:loop items=\"{$query_result}\" item=\"activity\">\n    <div>{activity.type}: {activity.description} ({activity.created_at})</div>\n  </q:loop>\n</div>",
+    "expected_behavior": "Shows user profile with their 5 most recent activities",
+    "use_case": "User profile page with activity feed"
+  },
+  {
+    "description": "Dynamic report generation",
+    "code": "<q:set name=\"report_type\" value=\"'monthly'\" />\n<q:set name=\"start_date\" value=\"'2024-01-01'\" />\n<q:set name=\"end_date\" value=\"'2024-01-31'\" />\n<q:query connection=\"db\" sql=\"SELECT DATE(created_at) as date, COUNT(*) as orders, SUM(total_amount) as revenue FROM orders WHERE created_at BETWEEN :start AND :end GROUP BY DATE(created_at) ORDER BY date\" :start=\"{start_date}\" :end=\"{end_date}\" />\n<div class=\"report\">\n  <h2>Sales Report - {report_type}</h2>\n  <table>\n    <thead><tr><th>Date</th><th>Orders</th><th>Revenue</th></tr></thead>\n    <tbody>\n      <q:loop items=\"{$query_result}\" item=\"row\">\n        <tr>\n          <td>{row.date}</td>\n          <td>{row.orders}</td>\n          <td>${row.revenue}</td>\n        </tr>\n      </q:loop>\n    </tbody>\n  </table>\n</div>",
+    "expected_behavior": "Generates sales report grouped by date with aggregated metrics",
+    "use_case": "Business reporting with GROUP BY and aggregations"
+  },
+  {
+    "description": "Inventory alert system",
+    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM products WHERE stock_quantity < :threshold\" :threshold=\"10\" />\n<q:if condition=\"{$query_result.length} > 0\">\n  <div class=\"alert alert-warning\">\n    <h3>Low Stock Alert</h3>\n    <p>{$query_result.length} products need restocking</p>\n    <ul>\n      <q:loop items=\"{$query_result}\" item=\"product\">\n        <li>{product.name}: {product.stock_quantity} units remaining</li>\n      </q:loop>\n    </ul>\n  </div>\n</q:if>",
+    "expected_behavior": "Shows alert when products fall below stock threshold",
+    "use_case": "Inventory management and automated alerts"
+  },
+  {
+    "description": "Comment thread with nested replies",
+    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM comments WHERE post_id = :pid AND parent_id IS NULL ORDER BY created_at DESC\" :pid=\"{post_id}\" />\n<div class=\"comments\">\n  <q:loop items=\"{$query_result}\" item=\"comment\">\n    <div class=\"comment\">\n      <div class=\"author\">{comment.author_name}</div>\n      <div class=\"content\">{comment.content}</div>\n      <div class=\"timestamp\">{comment.created_at}</div>\n      <q:query connection=\"db\" sql=\"SELECT * FROM comments WHERE parent_id = :cid ORDER BY created_at\" :cid=\"{comment.id}\" />\n      <q:if condition=\"{$query_result.length} > 0\">\n        <div class=\"replies\">\n          <q:loop items=\"{$query_result}\" item=\"reply\">\n            <div class=\"reply\">{reply.author_name}: {reply.content}</div>\n          </q:loop>\n        </div>\n      </q:if>\n    </div>\n  </q:loop>\n</div>",
+    "expected_behavior": "Displays comment thread with nested replies using parent-child relationship",
+    "use_case": "Discussion forums and comment systems"
+  },
+  {
+    "description": "Customer order history with status",
+    "code": "<q:query connection=\"db\" sql=\"SELECT o.*, COUNT(oi.id) as item_count FROM orders o LEFT JOIN order_items oi ON o.id = oi.order_id WHERE o.user_id = :uid GROUP BY o.id ORDER BY o.created_at DESC\" :uid=\"{current_user_id}\" />\n<div class=\"order-history\">\n  <h2>My Orders</h2>\n  <q:loop items=\"{$query_result}\" item=\"order\">\n    <div class=\"order\">\n      <div>Order #{order.id} - {order.status}</div>\n      <div>{order.item_count} items - Total: ${order.total_amount}</div>\n      <div>Placed: {order.created_at}</div>\n    </div>\n  </q:loop>\n</div>",
+    "expected_behavior": "Shows user's order history with item count from JOIN and GROUP BY",
+    "use_case": "Customer account order history page"
+  },
+  {
+    "description": "Real-time analytics dashboard",
+    "code": "<q:query connection=\"db\" sql=\"SELECT (SELECT COUNT(*) FROM users WHERE created_at >= CURRENT_DATE) as new_users, (SELECT COUNT(*) FROM orders WHERE created_at >= CURRENT_DATE) as new_orders, (SELECT SUM(total_amount) FROM orders WHERE created_at >= CURRENT_DATE) as daily_revenue\" />\n<q:set name=\"metrics\" value=\"{$query_result[0]}\" />\n<div class=\"dashboard\">\n  <h2>Today's Metrics</h2>\n  <div class=\"metric-card\">\n    <h3>New Users</h3>\n    <div class=\"value\">{metrics.new_users}</div>\n  </div>\n  <div class=\"metric-card\">\n    <h3>New Orders</h3>\n    <div class=\"value\">{metrics.new_orders}</div>\n  </div>\n  <div class=\"metric-card\">\n    <h3>Revenue</h3>\n    <div class=\"value\">${metrics.daily_revenue}</div>\n  </div>\n</div>",
+    "expected_behavior": "Displays real-time daily metrics using subqueries for multiple aggregations",
+    "use_case": "Executive dashboard with multiple KPIs"
+  }
+]

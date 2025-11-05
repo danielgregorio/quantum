@@ -1,0 +1,66 @@
+# Primary Intention: q:invoke
+
+## What the user wants to accomplish
+The user wants to invoke/call something - whether it's a local function, a local component, an external API, or a remote service - using a single, consistent syntax.
+
+## User's mental model
+"I need to call something and get a result back."
+
+## Natural language expressions users might use
+- "Call the calculateTotal function with these arguments"
+- "Invoke the UserService.getUser component with userId 123"
+- "Fetch data from the weather API"
+- "Call the order-service to create an order"
+- "Get user data from the REST API"
+- "Execute this GraphQL query"
+- "Call this microservice"
+
+## Core user needs
+1. Call local functions defined with q:function
+2. Invoke local components
+3. Make HTTP REST API calls (GET, POST, PUT, DELETE, PATCH)
+4. Call remote Quantum services in distributed systems
+5. Execute GraphQL queries
+6. Invoke gRPC services
+7. Handle errors gracefully with result objects
+8. Cache responses to reduce redundant calls
+9. Set timeouts and retries for resilience
+10. Authenticate with various methods (Bearer, API Key, OAuth)
+
+## Expected outcomes
+- Function/component returns a value
+- API returns data (JSON, XML, etc.)
+- Result is accessible via {name} variable
+- Metadata is accessible via {name_result} object
+- Errors are captured in {name_result.error}
+- User can check {name_result.success} to handle failures
+
+## Emotional context
+- Users want **simplicity** - one tag, not many
+- Users want **consistency** - same error handling everywhere
+- Users want **flexibility** - start local, scale to distributed
+- Users feel **confident** when syntax is familiar and predictable
+- Users feel **empowered** when they can switch from local to remote easily
+
+## Common patterns
+1. **API Data Fetching**: Get data from external APIs to display in UI
+2. **Service Communication**: Call microservices in distributed architecture
+3. **Function Reuse**: Invoke functions to avoid code duplication
+4. **Component Composition**: Build complex components from simpler ones
+5. **Authentication Flows**: Login, refresh tokens, validate sessions
+6. **Data Synchronization**: Keep local state in sync with remote APIs
+
+## Success criteria
+- User can invoke something with minimal syntax
+- Invocation type is detected automatically based on attributes
+- Errors are easy to handle with if/else
+- Result data is immediately usable in templates
+- Transition from local to distributed requires minimal code changes
+- Documentation is clear about what attributes to use when
+
+## Anti-patterns to avoid
+- Forcing users to learn multiple tags (q:http, q:rpc, q:graphql, etc.)
+- Different error handling for different invocation types
+- Requiring rewrites when moving from local to distributed
+- Unclear attribute combinations
+- Exceptions instead of result objects

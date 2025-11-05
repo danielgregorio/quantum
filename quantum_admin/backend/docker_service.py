@@ -350,3 +350,46 @@ class DockerService:
             return 6379
         else:
             return 5432  # Default fallback
+
+    def get_used_ports(self) -> List[int]:
+        """
+        Get all ports currently in use by Docker containers
+
+        Returns:
+            list: List of host ports in use
+        """
+        used_ports = []
+        try:
+            containers = self.client.containers.list(all=True)
+            for container in containers:
+                if container.ports:
+                    for container_port, host_bindings in container.ports.items():
+                        if host_bindings:
+                            for binding in host_bindings:
+                                if 'HostPort' in binding:
+                                    used_ports.append(int(binding['HostPort']))
+            return used_ports
+        except APIError as e:
+            logger.error(f"Failed to get used ports: {e}")
+            return []
+
+    def find_available_port(self, preferred_port: int, max_attempts: int = 100) -> int:
+        """
+        Find an available port starting from preferred_port
+
+        Args:
+            preferred_port: The port to start searching from
+            max_attempts: Maximum number of ports to try
+
+        Returns:
+            int: Available port number
+        """
+        used_ports = self.get_used_ports()
+        port = preferred_port
+
+        for _ in range(max_attempts):
+            if port not in used_ports:
+                return port
+            port += 1
+
+        raise RuntimeError(f"Could not find available port after {max_attempts} attempts starting from {preferred_port}")
