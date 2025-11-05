@@ -980,3 +980,71 @@ class FileNode(QuantumNode):
     
     def __repr__(self):
         return f'<FileNode action={self.action} file={self.file}>'
+
+
+class MailNode(QuantumNode):
+    """
+    Represents email sending (q:mail).
+    
+    Phase I: Email Sending
+    ColdFusion cfmail-inspired email functionality.
+    
+    Examples:
+      <q:mail to="{email}" from="noreply@app.com" subject="Welcome!">
+        <h1>Welcome {name}!</h1>
+      </q:mail>
+    """
+    
+    def __init__(
+        self,
+        to: str,
+        subject: str,
+        from_addr: str = None,
+        cc: str = None,
+        bcc: str = None,
+        reply_to: str = None,
+        type: str = "html",  # html or text
+        charset: str = "UTF-8"
+    ):
+        self.to = to  # Recipient email(s)
+        self.subject = subject  # Email subject
+        self.from_addr = from_addr  # Sender email
+        self.cc = cc  # CC recipients
+        self.bcc = bcc  # BCC recipients
+        self.reply_to = reply_to  # Reply-To address
+        self.type = type  # html or text
+        self.charset = charset  # Character encoding
+        self.body = ""  # Email body (set from tag content)
+        self.attachments = []  # List of file attachments
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "mail",
+            "to": self.to,
+            "subject": self.subject,
+            "from": self.from_addr,
+            "cc": self.cc,
+            "bcc": self.bcc,
+            "reply_to": self.reply_to,
+            "mail_type": self.type,
+            "charset": self.charset,
+            "body": self.body,
+            "attachments": self.attachments
+        }
+    
+    def validate(self) -> List[str]:
+        errors = []
+        
+        if not self.to:
+            errors.append("Email recipient (to) is required")
+        
+        if not self.subject:
+            errors.append("Email subject is required")
+        
+        if self.type not in ['html', 'text']:
+            errors.append(f"Invalid email type: {self.type}. Must be 'html' or 'text'")
+        
+        return errors
+    
+    def __repr__(self):
+        return f'<MailNode to={self.to} subject={self.subject}>'
