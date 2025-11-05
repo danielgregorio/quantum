@@ -8,16 +8,19 @@ import sys
 import os
 import yaml
 from pathlib import Path
-from flask import Flask, Response, request, send_from_directory, render_template_string
+from flask import Flask, Response, request, send_from_directory, render_template_string, session, redirect
 from typing import Dict, Any, Optional
+import secrets
 
 # Fix imports
 sys.path.append(str(Path(__file__).parent.parent))
 
 from core.parser import QuantumParser, QuantumParseError
+from core.ast_nodes import ActionNode
 from runtime.component import ComponentRuntime
 from runtime.renderer import HTMLRenderer
 from runtime.execution_context import ExecutionContext
+from runtime.action_handler import ActionHandler
 
 
 class QuantumWebServer:
@@ -37,8 +40,13 @@ class QuantumWebServer:
         """
         self.config = self._load_config(config_path)
         self.app = Flask(__name__)
+
+        # Setup secret key for sessions (flash messages)
+        self.app.secret_key = secrets.token_hex(32)
+
         self.parser = QuantumParser()
         self.template_cache: Dict[str, Any] = {}  # AST cache
+        self.action_handler = ActionHandler()
 
         # Setup routes
         self._setup_routes()
@@ -110,12 +118,12 @@ class QuantumWebServer:
     def _setup_routes(self):
         """Setup Flask routes for serving .q components"""
 
-        @self.app.route('/')
+        @self.app.route('/', methods=['GET', 'POST', 'PUT', 'DELETE'])
         def index():
             """Serve index.q or show welcome page"""
             return self._serve_component('index')
 
-        @self.app.route('/<path:component_path>')
+        @self.app.route('/<path:component_path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
         def dynamic_route(component_path):
             """Dynamically serve any .q component"""
             # Remove .q extension if provided
@@ -190,6 +198,19 @@ class QuantumWebServer:
                 if cache_enabled:
                     self.template_cache[cache_key] = ast
 
+            # Check if this is an action request (POST/PUT/DELETE)
+            if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
+                # Look for q:action in component
+                action_node = self._find_action_in_component(ast)
+
+                if action_node:
+                    # Handle action
+                    redirect_url, status_code = self.action_handler.handle_action(action_node)
+
+                    if redirect_url:
+                        return redirect(redirect_url, code=status_code)
+                    # If no redirect, fall through to render component
+
             # Prepare request parameters for component execution
             params = {}
 
@@ -198,10 +219,16 @@ class QuantumWebServer:
             if query_params:
                 params['query'] = query_params
 
-            # Add form data if POST request
+            # Add form data if POST request (for non-action processing)
             if request.method == 'POST':
                 form_data = dict(request.form)
                 params['form'] = form_data
+
+            # Get flash message if present
+            flash_data = self.action_handler.get_flash_message()
+            if flash_data:
+                params['flash'] = flash_data['message']
+                params['flashType'] = flash_data['type']
 
             # Execute component (runs queries, loops, functions, etc.)
             runtime = ComponentRuntime()
@@ -416,6 +443,28 @@ class QuantumWebServer:
         """
 
         return html
+
+
+    def _find_action_in_component(self, ast) -> Optional[ActionNode]:
+        """
+        Find q:action statement in component AST.
+
+        Args:
+            ast: Component AST
+
+        Returns:
+            ActionNode if found, None otherwise
+        """
+        # Check if component has statements
+        if not hasattr(ast, 'statements'):
+            return None
+
+        # Look for ActionNode in statements
+        for statement in ast.statements:
+            if isinstance(statement, ActionNode):
+                return statement
+
+        return None
 
 
     def _print_banner(self):
