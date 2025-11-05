@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 # Fix imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode, FunctionNode, DispatchEventNode, OnEventNode, QueryNode, InvokeNode, DataNode, FileNode, MailNode
+from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode, FunctionNode, DispatchEventNode, OnEventNode, QueryNode, InvokeNode, DataNode, FileNode, MailNode, TransactionNode
 from core.features.logging.src import LogNode, LoggingService
 from core.features.dump.src import DumpNode, DumpService
 from runtime.database_service import DatabaseService, QueryResult
@@ -184,6 +184,8 @@ class ComponentRuntime:
             return self._execute_file(statement, exec_context)
         elif isinstance(statement, MailNode):
             return self._execute_mail(statement, exec_context)
+        elif isinstance(statement, TransactionNode):
+            return self._execute_transaction(statement, exec_context)
         return None
 
     def _execute_if(self, if_node: IfNode, context: Dict[str, Any]):
@@ -2051,3 +2053,81 @@ class ComponentRuntime:
             raise ComponentExecutionError(f"Email sending error: {e}")
         except Exception as e:
             raise ComponentExecutionError(f"Mail execution error: {e}")
+
+    def _execute_transaction(self, transaction_node: TransactionNode, exec_context: ExecutionContext):
+        """
+        Execute database transaction (q:transaction).
+
+        Phase D: Database Backend
+
+        Ensures atomic execution of database operations. All statements
+        within the transaction succeed together or fail together.
+
+        Args:
+            transaction_node: TransactionNode with statements to execute
+            exec_context: Execution context for variables
+
+        Returns:
+            Transaction result dict with success status
+
+        Raises:
+            ComponentExecutionError: If transaction fails
+        """
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+
+            # Determine datasource (use first query's datasource or default)
+            datasource_name = "default"
+            for stmt in transaction_node.statements:
+                if isinstance(stmt, QueryNode) and stmt.datasource:
+                    datasource_name = stmt.datasource
+                    break
+
+            # Begin transaction
+            transaction_context = self.database_service.begin_transaction(datasource_name)
+
+            results = []
+            try:
+                # Execute all statements in transaction
+                for statement in transaction_node.statements:
+                    # Execute statement (queries, sets, etc.)
+                    result = self.execute_statement(statement, exec_context)
+                    results.append(result)
+
+                # All succeeded - commit transaction
+                success = self.database_service.commit_transaction(transaction_context)
+
+                transaction_result = {
+                    'success': success,
+                    'committed': True,
+                    'isolation_level': transaction_node.isolation_level,
+                    'statement_count': len(transaction_node.statements),
+                    'results': results
+                }
+
+            except Exception as stmt_error:
+                # Any statement failed - rollback transaction
+                self.database_service.rollback_transaction(transaction_context)
+
+                transaction_result = {
+                    'success': False,
+                    'rolled_back': True,
+                    'error': str(stmt_error),
+                    'isolation_level': transaction_node.isolation_level
+                }
+
+                # Re-raise the error
+                raise ComponentExecutionError(f"Transaction failed and was rolled back: {stmt_error}")
+
+            # Store result in context
+            exec_context.set_variable('_transaction_result', transaction_result, scope="component")
+            self.context['_transaction_result'] = transaction_result
+
+            return transaction_result
+
+        except ComponentExecutionError:
+            # Re-raise component errors
+            raise
+        except Exception as e:
+            raise ComponentExecutionError(f"Transaction execution error: {e}")

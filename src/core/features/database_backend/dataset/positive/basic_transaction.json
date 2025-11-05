@@ -1,0 +1,21 @@
+{
+  "example_id": "db_transaction_001",
+  "category": "database_backend",
+  "tags": ["transaction", "atomicity", "banking"],
+  "input": {
+    "component": "<q:component name=\"BankTransfer\">\n  <q:action name=\"transfer\" method=\"POST\">\n    <q:param name=\"from_id\" type=\"integer\" required=\"true\" />\n    <q:param name=\"to_id\" type=\"integer\" required=\"true\" />\n    <q:param name=\"amount\" type=\"decimal\" required=\"true\" />\n    \n    <q:transaction isolationLevel=\"READ_COMMITTED\">\n      <q:query datasource=\"default\" name=\"debit\">\n        UPDATE accounts SET balance = balance - :amount WHERE id = :from_id\n        <q:param name=\"amount\" type=\"decimal\" value=\"{amount}\" />\n        <q:param name=\"from_id\" type=\"integer\" value=\"{from_id}\" />\n      </q:query>\n      \n      <q:query datasource=\"default\" name=\"credit\">\n        UPDATE accounts SET balance = balance + :amount WHERE id = :to_id\n        <q:param name=\"amount\" type=\"decimal\" value=\"{amount}\" />\n        <q:param name=\"to_id\" type=\"integer\" value=\"{to_id}\" />\n      </q:query>\n    </q:transaction>\n    \n    <q:redirect url=\"/success\" flash=\"Transfer completed!\" />\n  </q:action>\n</q:component>",
+    "context": {
+      "phase": "D",
+      "feature": "database_backend",
+      "isolation_level": "READ_COMMITTED",
+      "query_count": 2
+    }
+  },
+  "expected_behavior": "Execute both queries atomically - if either fails, both are rolled back",
+  "validation": {
+    "transaction_started": true,
+    "statements_executed": 2,
+    "atomic_execution": true,
+    "rollback_on_error": true
+  }
+}

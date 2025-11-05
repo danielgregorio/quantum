@@ -235,6 +235,9 @@ class QuantumParser:
             elif child_type == 'mail':
                 mail_node = self._parse_mail_statement(child)
                 component.add_statement(mail_node)
+            elif child_type == 'transaction':
+                transaction_node = self._parse_transaction_statement(child)
+                component.add_statement(transaction_node)
 
             # Component Composition (Phase 2)
             elif child_type == 'import':
@@ -432,6 +435,8 @@ class QuantumParser:
             return self._parse_file_statement(element)
         elif element_type == 'mail':
             return self._parse_mail_statement(element)
+        elif element_type == 'transaction':
+            return self._parse_transaction_statement(element)
 
         # Component Composition (Phase 2)
         elif element_type == 'import':
@@ -1402,9 +1407,9 @@ class QuantumParser:
     def _parse_mail_statement(self, element: ET.Element) -> MailNode:
         """
         Parse q:mail statement for sending emails.
-        
+
         Phase I: Email Sending
-        
+
         Examples:
           <q:mail to="{email}" from="noreply@app.com" subject="Welcome!">
             <h1>Welcome {name}!</h1>
@@ -1418,7 +1423,7 @@ class QuantumParser:
         reply_to = element.get('replyTo')
         mail_type = element.get('type', 'html')
         charset = element.get('charset', 'UTF-8')
-        
+
         # Create mail node
         mail_node = MailNode(
             to=to,
@@ -1430,7 +1435,7 @@ class QuantumParser:
             type=mail_type,
             charset=charset
         )
-        
+
         # Parse body content (can be text or HTML elements)
         if element.text and element.text.strip():
             mail_node.body = element.text.strip()
@@ -1443,5 +1448,38 @@ class QuantumParser:
                     body_parts.append(ET.tostring(child, encoding='unicode', method='html'))
             if body_parts:
                 mail_node.body = ''.join(body_parts)
-        
+
         return mail_node
+
+    def _parse_transaction_statement(self, element: ET.Element) -> TransactionNode:
+        """
+        Parse q:transaction statement for database transactions.
+
+        Phase D: Database Backend
+
+        Examples:
+          <q:transaction>
+            <q:query datasource="db" name="debit">
+              UPDATE accounts SET balance = balance - :amount WHERE id = :from_id
+            </q:query>
+            <q:query datasource="db" name="credit">
+              UPDATE accounts SET balance = balance + :amount WHERE id = :to_id
+            </q:query>
+          </q:transaction>
+
+          <q:transaction isolationLevel="SERIALIZABLE">
+            <!-- Critical financial operations -->
+          </q:transaction>
+        """
+        isolation_level = element.get('isolationLevel', 'READ_COMMITTED')
+
+        # Create transaction node
+        transaction_node = TransactionNode(isolation_level=isolation_level)
+
+        # Parse child statements (queries, sets, etc.)
+        for child in element:
+            statement = self._parse_statement(child)
+            if statement:
+                transaction_node.add_statement(statement)
+
+        return transaction_node
