@@ -1,0 +1,20 @@
+{
+  "example_id": "islands_001",
+  "category": "islands_architecture",
+  "tags": ["islands", "client-side", "state"],
+  "input": {
+    "component": "<q:component name=\"Counter\" interactive=\"true\">\n  <div id=\"counter\">0</div>\n  <button onclick=\"increment()\">+</button>\n  <script>\n    let count = 0;\n    function increment() {\n      count++;\n      document.getElementById('counter').textContent = count;\n    }\n  </script>\n</q:component>",
+    "context": {
+      "phase": "E",
+      "feature": "islands_architecture",
+      "interactive": true
+    }
+  },
+  "expected_behavior": "Interactive counter that updates on client without server requests",
+  "validation": {
+    "client_side_state": true,
+    "no_server_requests": true,
+    "event_handler_attached": true,
+    "interactive_island": true
+  }
+}
