@@ -1,0 +1,82 @@
+# Quantum AS4 Application Configuration
+# Example for hello.mxml
+
+application:
+  name: "Hello ActionScript 4"
+  version: "1.0.0"
+  description: "A demo application showing ActionScript 4 + MXML in action"
+  author: "Quantum Team"
+  license: "MIT"
+
+entry:
+  mxml: "hello.mxml"
+  assets: "assets/"
+
+targets:
+  # Web Platform
+  web:
+    enabled: true
+    output: "dist/web"
+    config:
+      title: "Hello ActionScript 4"
+      favicon: "assets/favicon.ico"
+      meta:
+        description: "Demo of ActionScript 4 with MXML"
+        keywords: ["as4", "mxml", "quantum"]
+      pwa:
+        enabled: false
+      optimize: false
+      source_maps: true
+
+  # Mobile Platform (disabled for now)
+  mobile:
+    enabled: false
+    output: "dist/mobile"
+    config:
+      type: "react-native"
+      bundle_id: "com.quantum.hello"
+      app_name: "Hello AS4"
+      platforms:
+        - android
+        - ios
+
+  # Desktop Platform (disabled for now)
+  desktop:
+    enabled: false
+    output: "dist/desktop"
+    config:
+      type: "tauri"
+      name: "Hello AS4"
+      identifier: "com.quantum.hello"
+      window:
+        width: 800
+        height: 600
+        resizable: true
+
+  # CLI Platform (disabled for now)
+  cli:
+    enabled: false
+    output: "dist/cli"
+    config:
+      type: "rich"
+      name: "hello"
+      executable: true
+
+build:
+  mode: "development"
+  source_maps: true
+  hot_reload: true
+  watch: false
+
+  optimize:
+    minify: false
+    tree_shake: false
+
+  type_checking:
+    enabled: false
+    strict: false
+
+assets:
+  images: []
+  fonts: []
+  data: []
