@@ -200,15 +200,39 @@ class WebCompiler:
 
             def replace_identifier(match):
                 ident = match.group(1)
+                full_match = match.group(0)
 
-                # Don't replace keywords or built-in functions
-                keywords = {'const', 'let', 'var', 'function', 'class', 'return',
-                           'if', 'else', 'for', 'while', 'switch', 'case',
-                           'await', 'async', 'try', 'catch', 'finally', 'throw',
-                           'new', 'this', 'trace', 'console'}
+                # Don't replace JavaScript keywords
+                keywords = {
+                    'const', 'let', 'var', 'function', 'class', 'return',
+                    'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue',
+                    'await', 'async', 'try', 'catch', 'finally', 'throw',
+                    'new', 'this', 'super', 'import', 'export', 'default',
+                    'typeof', 'instanceof', 'delete', 'void', 'in', 'of', 'with', 'debugger',
+                    'yield', 'trace', 'console'
+                }
 
+                # Don't replace JavaScript literals
+                literals = {'true', 'false', 'null', 'undefined', 'NaN', 'Infinity'}
+
+                # Don't replace global classes (used for static access like Alert.show)
+                global_classes = {
+                    'Alert', 'Math', 'Date', 'String', 'Number', 'Boolean', 'Array', 'Object',
+                    'JSON', 'console', 'window', 'document', 'navigator', 'location', 'Promise',
+                    'Set', 'Map', 'WeakMap', 'WeakSet', 'Symbol', 'Proxy', 'Reflect'
+                }
+
+                # Don't prefix keywords
                 if ident in keywords:
-                    return ident
+                    return full_match
+
+                # Don't prefix literals
+                if ident in literals:
+                    return full_match
+
+                # Don't prefix global classes
+                if ident in global_classes:
+                    return full_match
 
                 # Add 'this.' prefix for member access
                 return f'this.{ident}'
@@ -216,8 +240,10 @@ class WebCompiler:
             # Replace identifiers only in non-string parts
             for i in range(len(parts)):
                 if i % 2 == 0:  # Non-string parts
-                    # Replace variables with this.variable
-                    parts[i] = re.sub(r'\b([a-zA-Z_]\w*)(?!\s*\()', replace_identifier, parts[i])
+                    # Match complete identifiers
+                    # NOT preceded by . (property access) or word character
+                    # Capture the full identifier
+                    parts[i] = re.sub(r'(?<![.\w])([a-zA-Z_]\w*)\b', replace_identifier, parts[i])
 
             line = ''.join(parts)
 
@@ -226,6 +252,9 @@ class WebCompiler:
 
             # Remove type annotations: var x:int → var x
             line = re.sub(r':(\w+)(?=\s*[=;,)])', '', line)
+
+            # Fix variable declarations: var this.x → var x
+            line = re.sub(r'\b(var|let|const)\s+this\.', r'\1 ', line)
 
             lines.append(line)
 

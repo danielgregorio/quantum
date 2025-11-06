@@ -618,15 +618,15 @@ class App {
 
   submitForm() {
     // this.Validation
-    this.if (!this.username || this.username.this.length < 3) {
-    this.Alert.this.show("Username must be at least 3 characters", "Validation Error", this.Alert.this.OK, this.null, this.null, this.Alert.this.WARNING);
+    if (!this.username || this.username.length < 3) {
+    Alert.show("Username must be at least 3 characters", "Validation Error", Alert.OK, null, null, Alert.WARNING);
     return;
   }
 
   handleConfirm(event) {
-    this.if (this.event.this.detail === this.Alert.this.YES) {
-    // this.Simulate this.form this.submission this.with this.progress
-    this.isSubmitting = this.true;
+    if (this.event.detail === Alert.YES) {
+    // this.Simulate this.form this.submission with this.progress
+    this.isSubmitting = true;
     this.statusMessage = "Submitting...";
     this.uploadProgress = 0;
     this.simulateUpload();
@@ -634,19 +634,19 @@ class App {
 
   simulateUpload() {
     // this.Simulate this.progress
-    var this.interval = this.setInterval(this.function():this.void {
+    var interval = this.setInterval(function():void {
     this.uploadProgress += 10;
-    this.if (this.uploadProgress >= 100) {
+    if (this.uploadProgress >= 100) {
     this.clearInterval(this.interval);
-    this.isSubmitting = this.false;
+    this.isSubmitting = false;
     this.statusMessage = "Registration successful!";
-    this.Alert.this.show(
+    Alert.show(
     "Your account has been created successfully!\n\nWelcome, " + this.username + "!",
     "Success",
-    this.Alert.this.OK,
-    this.null,
+    Alert.OK,
+    null,
     this.handleSuccess,
-    this.Alert.this.INFO
+    Alert.INFO
     );
   }
 
@@ -656,38 +656,38 @@ class App {
     this.email = "";
     this.password = "";
     this.country = "";
-    this.acceptTerms = this.false;
+    this.acceptTerms = false;
     this.uploadProgress = 0;
     this.statusMessage = "Ready to submit";
   }
 
   loadUsers() {
     this.statusMessage = "Loading users from API...";
-    this.userAPI.this.send();
+    this.userAPI.send();
   }
 
   handleAPIResult(event) {
-    this.apiData = this.event.this.result;
-    this.statusMessage = "Loaded " + this.apiData.this.length + " users from API";
-    this.Alert.this.show(
-    "Successfully loaded " + this.apiData.this.length + " users from JSONPlaceholder API!",
+    this.apiData = this.event.result;
+    this.statusMessage = "Loaded " + this.apiData.length + " users from API";
+    Alert.show(
+    "Successfully loaded " + this.apiData.length + " users from JSONPlaceholder API!",
     "API Success",
-    this.Alert.this.OK,
-    this.null,
-    this.null,
-    this.Alert.this.INFO
+    Alert.OK,
+    null,
+    null,
+    Alert.INFO
     );
   }
 
   handleAPIError(event) {
-    this.statusMessage = "API Error: " + this.event.this.message;
-    this.Alert.this.show(
-    "Failed to load data from API:\n\n" + this.event.this.fault.this.faultString,
+    this.statusMessage = "API Error: " + this.event.message;
+    Alert.show(
+    "Failed to load data from API:\n\n" + this.event.fault.faultString,
     "API Error",
-    this.Alert.this.OK,
-    this.null,
-    this.null,
-    this.Alert.this.ERROR
+    Alert.OK,
+    null,
+    null,
+    Alert.ERROR
     );
   }
 
@@ -700,49 +700,49 @@ class App {
   }
 
   showInfoAlert() {
-    this.Alert.this.show(
+    Alert.show(
     "This is an informational message demonstrating the Alert component.",
     "Information",
-    this.Alert.this.OK,
-    this.null,
-    this.null,
-    this.Alert.this.INFO
+    Alert.OK,
+    null,
+    null,
+    Alert.INFO
     );
   }
 
   showWarningAlert() {
-    this.Alert.this.show(
+    Alert.show(
     "This is a warning message! Be careful.",
     "Warning",
-    this.Alert.this.OK,
-    this.null,
-    this.null,
-    this.Alert.this.WARNING
+    Alert.OK,
+    null,
+    null,
+    Alert.WARNING
     );
   }
 
   showErrorAlert() {
-    this.Alert.this.show(
+    Alert.show(
     "This is an error message! Something went wrong.",
     "Error",
-    this.Alert.this.OK,
-    this.null,
-    this.null,
-    this.Alert.this.ERROR
+    Alert.OK,
+    null,
+    null,
+    Alert.ERROR
     );
   }
 
   showYesNoAlert() {
-    this.Alert.this.show(
+    Alert.show(
     "Do you want to proceed with this action?",
     "Confirm Action",
-    this.Alert.this.YES | this.Alert.this.NO,
-    this.null,
-    this.function(this.e:this.Object):this.void {
-    this.Alert.this.show(
-    "You clicked: " + (this.e.this.detail === this.Alert.this.YES ? "YES" : "NO"),
+    Alert.YES | Alert.NO,
+    null,
+    function(this.e):void {
+    Alert.show(
+    "You clicked: " + (this.e.detail === Alert.YES ? "YES" : "NO"),
     "Result",
-    this.Alert.this.OK
+    Alert.OK
     );
   }
 
