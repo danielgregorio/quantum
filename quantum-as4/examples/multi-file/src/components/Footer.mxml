@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<Component
+    xmlns:fx="http://ns.adobe.com/mxml/2009"
+    xmlns:s="library://ns.adobe.com/flex/spark">
+
+    <fx:Style>
+        .footer {
+            background-color: #34495e;
+            color: #ecf0f1;
+            padding: 10px;
+            text-align: center;
+        }
+    </fx:Style>
+
+    <s:VBox width="100%" styleName="footer">
+        <s:Label text="© 2025 User Management App - Powered by Quantum AS4"/>
+    </s:VBox>
+
+</Component>

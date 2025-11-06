@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+"""
+Quantum MXML Compiler CLI
+
+Compiles MXML + ActionScript 4 to JavaScript
+"""
+
+import sys
+import argparse
+from pathlib import Path
+import shutil
+
+# Add compiler to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from compiler.mxml_parser import MXMLParser
+from compiler.ast_bridge import ASTBridge
+from compiler.compilers.web import WebCompiler
+
+
+def build(input_file: str, output_dir: str, verbose: bool = False):
+    """Build MXML file to JavaScript"""
+
+    input_path = Path(input_file)
+    output_path = Path(output_dir)
+
+    if not input_path.exists():
+        print(f"❌ Error: Input file not found: {input_file}")
+        sys.exit(1)
+
+    print(f"🔨 Building {input_file}...")
+
+    try:
+        # 1. Parse MXML
+        if verbose:
+            print("  → Parsing MXML...")
+        parser = MXMLParser()
+        legacy_app = parser.parse(str(input_path))
+
+        if verbose:
+            print(f"     Found {len(legacy_app.script.split('function'))-1} functions")
+            print(f"     Found {len(legacy_app.ui.children)} root components")
+
+        # 2. Convert to Universal AST
+        if verbose:
+            print("  → Converting to Universal AST...")
+        bridge = ASTBridge()
+        universal_ast = bridge.legacy_to_universal(legacy_app)
+
+        # 3. Compile to Web
+        if verbose:
+            print("  → Compiling to Web (HTML/CSS/JS)...")
+        web_compiler = WebCompiler(input_path.parent)
+        output = web_compiler.compile_single_file(universal_ast)
+
+        # 4. Write files
+        if verbose:
+            print(f"  → Writing files to {output_dir}/")
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        (output_path / 'app.js').write_text(output['app.js'])
+        (output_path / 'index.html').write_text(output['index.html'])
+        (output_path / 'styles.css').write_text(output['styles.css'])
+
+        # 5. Copy runtime files
+        runtime_dir = Path(__file__).parent / 'compiler' / 'runtime'
+
+        # Copy reactive runtime (primary)
+        reactive_runtime_src = runtime_dir / 'reactive-runtime.js'
+        if reactive_runtime_src.exists():
+            shutil.copy(reactive_runtime_src, output_path / 'reactive-runtime.js')
+        else:
+            print("  ⚠ Warning: reactive-runtime.js not found")
+
+        # Copy basic runtime (fallback/compatibility)
+        runtime_src = runtime_dir / 'runtime.js'
+        if runtime_src.exists():
+            shutil.copy(runtime_src, output_path / 'runtime.js')
+        else:
+            print("  ⚠ Warning: runtime.js not found")
+
+        print(f"✅ Build complete!")
+        print(f"")
+        print(f"   Files generated:")
+        print(f"     • {output_dir}/index.html")
+        print(f"     • {output_dir}/app.js")
+        print(f"     • {output_dir}/styles.css")
+        print(f"     • {output_dir}/runtime.js")
+        print(f"")
+        print(f"   To run:")
+        print(f"     cd {output_dir} && python3 -m http.server 8080")
+        print(f"     Then open: http://localhost:8080")
+
+    except Exception as e:
+        print(f"❌ Build failed: {e}")
+        if verbose:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def serve(directory: str, port: int = 8080):
+    """Serve built application"""
+    import http.server
+    import socketserver
+    import os
+
+    os.chdir(directory)
+
+    Handler = http.server.SimpleHTTPRequestHandler
+
+    with socketserver.TCPServer(("", port), Handler) as httpd:
+        print(f"🚀 Serving at http://localhost:{port}")
+        print(f"   Press Ctrl+C to stop")
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            print("\n👋 Server stopped")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Quantum MXML Compiler - Compile MXML + AS4 to JavaScript',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Build MXML file
+  quantum-mxml build hello.mxml
+
+  # Build with custom output directory
+  quantum-mxml build hello.mxml -o dist
+
+  # Build and serve
+  quantum-mxml build hello.mxml && quantum-mxml serve dist
+
+  # Serve existing build
+  quantum-mxml serve dist --port 3000
+        """
+    )
+
+    subparsers = parser.add_subparsers(dest='command', help='Command to run')
+
+    # Build command
+    build_parser = subparsers.add_parser('build', help='Build MXML file')
+    build_parser.add_argument('input', help='Input MXML file')
+    build_parser.add_argument('-o', '--output', default='dist', help='Output directory (default: dist)')
+    build_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
+
+    # Serve command
+    serve_parser = subparsers.add_parser('serve', help='Serve built application')
+    serve_parser.add_argument('directory', help='Directory to serve')
+    serve_parser.add_argument('-p', '--port', type=int, default=8080, help='Port (default: 8080)')
+
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+
+    if args.command == 'build':
+        build(args.input, args.output, args.verbose)
+    elif args.command == 'serve':
+        serve(args.directory, args.port)
+
+
+if __name__ == '__main__':
+    main()

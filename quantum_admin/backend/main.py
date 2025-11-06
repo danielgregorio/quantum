@@ -241,6 +241,14 @@ def get_datasource_by_name(name: str, db: Session = Depends(get_db)):
             detail=f"Datasource '{name}' is not ready (setup status: {datasource.setup_status})"
         )
     
+    # Decrypt password for runtime use
+    try:
+        from .secret_manager import decrypt_value
+    except ImportError:
+        from secret_manager import decrypt_value
+
+    decrypted_password = decrypt_value(datasource.password_encrypted) if datasource.password_encrypted else None
+
     # Return datasource configuration for runtime use
     return {
         'name': datasource.name,
@@ -249,8 +257,8 @@ def get_datasource_by_name(name: str, db: Session = Depends(get_db)):
         'port': datasource.port,
         'database_name': datasource.database_name,
         'username': datasource.username,
-        'password': datasource.password_encrypted,  # TODO: Implement decryption if passwords are encrypted
-        'connection_string': f"{datasource.type}://{datasource.username}@{datasource.host}:{datasource.port}/{datasource.database_name}"
+        'password': decrypted_password,  # ✅ Decrypted for runtime use
+        'connection_string': f"{datasource.type}://{datasource.username}:{decrypted_password}@{datasource.host}:{datasource.port}/{datasource.database_name}"
     }
 
 @app.post(
@@ -330,7 +338,14 @@ def create_datasource(
                     detail="Failed to create Docker container"
                 )
 
-        # TODO: Encrypt password before storing
+        # Encrypt password before storing
+        try:
+            from .secret_manager import encrypt_value
+        except ImportError:
+            from secret_manager import encrypt_value
+
+        encrypted_password = encrypt_value(datasource.password) if datasource.password else None
+
         new_datasource = crud.create_datasource(
             db,
             project_id=project_id,
@@ -343,7 +358,7 @@ def create_datasource(
             host=datasource.host if datasource.connection_type == "direct" else "localhost",
             database_name=datasource.database_name,
             username=datasource.username,
-            password_encrypted=datasource.password,  # TODO: Encrypt this
+            password_encrypted=encrypted_password,  # ✅ Encrypted!
             auto_start=datasource.auto_start
         )
         return new_datasource
@@ -772,6 +787,485 @@ def list_endpoints(project_id: int, db: Session = Depends(get_db)):
 
     endpoints = crud.get_endpoints(db, project_id)
     return endpoints
+
+
+# ============================================================================
+# TEST EXECUTION ENDPOINTS
+# ============================================================================
+
+@app.post(
+    "/projects/{project_id}/tests/run",
+    response_model=schemas.TestRunResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Tests"]
+)
+async def run_tests(
+    project_id: int,
+    test_config: schemas.TestRunCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    Execute tests for a project
+
+    This endpoint runs the test_runner.py script and tracks all results in the database.
+    The execution is asynchronous, so the endpoint returns immediately with a test_run_id.
+    Use the /tests/runs/{id}/status endpoint to check progress.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    # Import test execution service
+    try:
+        from .test_execution_service import TestExecutionService
+    except ImportError:
+        from test_execution_service import TestExecutionService
+
+    # Run tests asynchronously
+    try:
+        test_run_id = await TestExecutionService.run_tests(
+            db=db,
+            project_id=project_id,
+            suite_filter=test_config.suite_filter,
+            verbose=test_config.verbose,
+            stop_on_fail=test_config.stop_on_fail,
+            triggered_by=test_config.triggered_by
+        )
+
+        # Get test run
+        test_run = crud.get_test_run(db, test_run_id)
+        return test_run
+
+    except Exception as e:
+        logger.error(f"Failed to run tests: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to execute tests: {str(e)}"
+        )
+
+
+@app.get("/projects/{project_id}/tests/runs", response_model=List[schemas.TestRunResponse], tags=["Tests"])
+def list_test_runs(
+    project_id: int,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """
+    Get all test runs for a project
+
+    Returns a list of test runs ordered by start time (most recent first).
+    Use pagination parameters to limit results.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    test_runs = crud.get_test_runs(db, project_id, skip=skip, limit=limit)
+    return test_runs
+
+
+@app.get("/projects/{project_id}/tests/runs/{run_id}", response_model=schemas.TestRunDetailResponse, tags=["Tests"])
+def get_test_run(
+    project_id: int,
+    run_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get detailed test run results
+
+    Returns the test run with all individual test results.
+    Useful for displaying detailed test reports.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    # Get test run
+    test_run = crud.get_test_run(db, run_id)
+    if not test_run or test_run.project_id != project_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Test run with id {run_id} not found"
+        )
+
+    return test_run
+
+
+@app.get("/projects/{project_id}/tests/runs/{run_id}/status", response_model=schemas.TestRunStatusResponse, tags=["Tests"])
+def get_test_run_status(
+    project_id: int,
+    run_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get real-time status of a test run
+
+    Use this endpoint to poll for updates while tests are running.
+    Returns progress percentage, current suite, and estimated time remaining.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    # Import test execution service
+    try:
+        from .test_execution_service import TestExecutionService
+    except ImportError:
+        from test_execution_service import TestExecutionService
+
+    # Get status
+    status_info = TestExecutionService.get_test_run_status(db, run_id)
+    if not status_info:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Test run with id {run_id} not found"
+        )
+
+    return status_info
+
+
+@app.post("/projects/{project_id}/tests/runs/{run_id}/cancel", tags=["Tests"])
+async def cancel_test_run(
+    project_id: int,
+    run_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Cancel a running test execution
+
+    Terminates the test runner process and marks the test run as cancelled.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    # Import test execution service
+    try:
+        from .test_execution_service import TestExecutionService
+    except ImportError:
+        from test_execution_service import TestExecutionService
+
+    # Cancel test run
+    success = await TestExecutionService.cancel_test_run(db, run_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not cancel test run {run_id} (may not be running)"
+        )
+
+    return {"message": f"Test run {run_id} cancelled successfully"}
+
+
+@app.delete("/projects/{project_id}/tests/runs/{run_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Tests"])
+def delete_test_run(
+    project_id: int,
+    run_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a test run and all its results
+
+    Permanently removes a test run from the database.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    # Delete test run
+    success = crud.delete_test_run(db, run_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Test run with id {run_id} not found"
+        )
+
+    return None
+
+
+# ============================================================================
+# CONFIGURATION MANAGEMENT ENDPOINTS
+# ============================================================================
+
+@app.get("/projects/{project_id}/environment-variables", response_model=List[schemas.EnvironmentVariableResponse], tags=["Configuration"])
+def list_environment_variables(
+    project_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get all environment variables for a project
+
+    Values are returned masked for security. Use the individual endpoint to get the full value if needed.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    # Import secret manager
+    try:
+        from .secret_manager import mask_value
+    except ImportError:
+        from secret_manager import mask_value
+
+    env_vars = crud.get_environment_variables(db, project_id)
+
+    # Convert to response format with masked values
+    return [
+        schemas.EnvironmentVariableResponse(
+            id=env_var.id,
+            project_id=env_var.project_id,
+            key=env_var.key,
+            value_masked=mask_value(env_var.value_encrypted) if env_var.is_secret else env_var.value_encrypted[:20] + "...",
+            description=env_var.description,
+            is_secret=env_var.is_secret,
+            created_at=env_var.created_at,
+            updated_at=env_var.updated_at
+        )
+        for env_var in env_vars
+    ]
+
+
+@app.post("/projects/{project_id}/environment-variables", response_model=schemas.EnvironmentVariableResponse, status_code=status.HTTP_201_CREATED, tags=["Configuration"])
+def create_environment_variable(
+    project_id: int,
+    env_var: schemas.EnvironmentVariableCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new environment variable
+
+    The value is automatically encrypted before storage.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    # Import secret manager
+    try:
+        from .secret_manager import encrypt_value, mask_value
+    except ImportError:
+        from secret_manager import encrypt_value, mask_value
+
+    # Encrypt the value
+    try:
+        encrypted_value = encrypt_value(env_var.value)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to encrypt value: {str(e)}"
+        )
+
+    # Create environment variable
+    try:
+        new_env_var = crud.create_environment_variable(
+            db=db,
+            project_id=project_id,
+            key=env_var.key,
+            value_encrypted=encrypted_value,
+            description=env_var.description,
+            is_secret=env_var.is_secret
+        )
+
+        # Create configuration history entry
+        import json
+        changes = {"action": "create", "key": env_var.key, "is_secret": env_var.is_secret}
+        crud.create_configuration_history(
+            db=db,
+            project_id=project_id,
+            changes_json=json.dumps(changes),
+            snapshot_json="{}",
+            changed_by="api"
+        )
+
+        return schemas.EnvironmentVariableResponse(
+            id=new_env_var.id,
+            project_id=new_env_var.project_id,
+            key=new_env_var.key,
+            value_masked=mask_value(new_env_var.value_encrypted),
+            description=new_env_var.description,
+            is_secret=new_env_var.is_secret,
+            created_at=new_env_var.created_at,
+            updated_at=new_env_var.updated_at
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@app.put("/projects/{project_id}/environment-variables/{key}", response_model=schemas.EnvironmentVariableResponse, tags=["Configuration"])
+def update_environment_variable(
+    project_id: int,
+    key: str,
+    env_var_update: schemas.EnvironmentVariableUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    Update an environment variable
+
+    If value is provided, it will be encrypted before storage.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    # Import secret manager
+    try:
+        from .secret_manager import encrypt_value, mask_value
+    except ImportError:
+        from secret_manager import encrypt_value, mask_value
+
+    # Encrypt new value if provided
+    encrypted_value = None
+    if env_var_update.value is not None:
+        try:
+            encrypted_value = encrypt_value(env_var_update.value)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to encrypt value: {str(e)}"
+            )
+
+    # Update environment variable
+    updated_env_var = crud.update_environment_variable(
+        db=db,
+        project_id=project_id,
+        key=key,
+        value_encrypted=encrypted_value,
+        description=env_var_update.description,
+        is_secret=env_var_update.is_secret
+    )
+
+    if not updated_env_var:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Environment variable '{key}' not found"
+        )
+
+    # Create configuration history entry
+    import json
+    changes = {"action": "update", "key": key}
+    if env_var_update.value is not None:
+        changes["value_changed"] = True
+    if env_var_update.description is not None:
+        changes["description"] = env_var_update.description
+    crud.create_configuration_history(
+        db=db,
+        project_id=project_id,
+        changes_json=json.dumps(changes),
+        snapshot_json="{}",
+        changed_by="api"
+    )
+
+    return schemas.EnvironmentVariableResponse(
+        id=updated_env_var.id,
+        project_id=updated_env_var.project_id,
+        key=updated_env_var.key,
+        value_masked=mask_value(updated_env_var.value_encrypted),
+        description=updated_env_var.description,
+        is_secret=updated_env_var.is_secret,
+        created_at=updated_env_var.created_at,
+        updated_at=updated_env_var.updated_at
+    )
+
+
+@app.delete("/projects/{project_id}/environment-variables/{key}", status_code=status.HTTP_204_NO_CONTENT, tags=["Configuration"])
+def delete_environment_variable(
+    project_id: int,
+    key: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Delete an environment variable
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    # Delete environment variable
+    success = crud.delete_environment_variable(db, project_id, key)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Environment variable '{key}' not found"
+        )
+
+    # Create configuration history entry
+    import json
+    changes = {"action": "delete", "key": key}
+    crud.create_configuration_history(
+        db=db,
+        project_id=project_id,
+        changes_json=json.dumps(changes),
+        snapshot_json="{}",
+        changed_by="api"
+    )
+
+    return None
+
+
+@app.get("/projects/{project_id}/configuration/history", response_model=List[schemas.ConfigurationHistoryResponse], tags=["Configuration"])
+def get_configuration_history(
+    project_id: int,
+    limit: int = 50,
+    db: Session = Depends(get_db)
+):
+    """
+    Get configuration change history for a project
+
+    Returns the most recent configuration changes.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    history = crud.get_configuration_history(db, project_id, limit=limit)
+    return history
 
 
 # ============================================================================

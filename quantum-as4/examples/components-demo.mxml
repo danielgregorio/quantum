@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009"
+               xmlns:s="library://ns.adobe.com/flex/spark"
+               title="Component Library Demo">
+
+ <fx:Script>
+ <![CDATA[
+   [Bindable]
+   private var agreedToTerms:Boolean = false;
+
+   [Bindable]
+   private var selectedCountry:int = 0;
+
+   [Bindable]
+   private var countries:Array = ["USA", "Canada", "Mexico", "Brazil", "UK", "France"];
+
+   [Bindable]
+   private var selectedDate:Date = new Date();
+
+   [Bindable]
+   private var currentTab:int = 0;
+
+   private function handleCheckboxChange(checked:Boolean):void {
+     trace("Checkbox changed to: " + checked);
+   }
+
+   private function handleComboChange(item:Object, index:int):void {
+     trace("Selected country: " + item + " at index " + index);
+   }
+
+   private function handleDateChange(date:Date):void {
+     trace("Selected date: " + date.toDateString());
+   }
+
+   private function handleTabChange(index:int):void {
+     trace("Tab changed to: " + index);
+   }
+ ]]>
+ </fx:Script>
+
+ <s:VBox padding="30" gap="30" width="100%">
+
+   <!-- Header -->
+   <s:Label text="ActionScript 4 Component Library Demo" fontSize="24" fontWeight="bold"/>
+
+   <!-- CheckBox Demo -->
+   <s:Panel title="CheckBox Component" width="600">
+     <s:VBox padding="20" gap="15">
+       <s:Label text="Interactive checkbox with two-way binding:" fontWeight="bold"/>
+       <s:CheckBox label="I agree to the terms and conditions"
+                   selected="{agreedToTerms}"
+                   change="handleCheckboxChange"/>
+       <s:Label text="Agreed: {agreedToTerms}"/>
+
+       <s:CheckBox label="Disabled checkbox" selected="false" enabled="false"/>
+       <s:CheckBox label="Label on left" labelPlacement="left" selected="true"/>
+     </s:VBox>
+   </s:Panel>
+
+   <!-- ComboBox Demo -->
+   <s:Panel title="ComboBox Component" width="600">
+     <s:VBox padding="20" gap="15">
+       <s:Label text="Dropdown with data provider and binding:" fontWeight="bold"/>
+       <s:HBox gap="10">
+         <s:Label text="Select Country:"/>
+         <s:ComboBox dataProvider="{countries}"
+                     selectedIndex="{selectedCountry}"
+                     prompt="Choose a country..."
+                     change="handleComboChange"/>
+       </s:HBox>
+       <s:Label text="Selected Index: {selectedCountry}"/>
+       <s:Label text="Selected Country: {countries[selectedCountry]}"/>
+     </s:VBox>
+   </s:Panel>
+
+   <!-- DatePicker Demo -->
+   <s:Panel title="DatePicker Component" width="600">
+     <s:VBox padding="20" gap="15">
+       <s:Label text="Date selection with binding:" fontWeight="bold"/>
+       <s:HBox gap="10">
+         <s:Label text="Select Date:"/>
+         <s:DatePicker selectedDate="{selectedDate}"
+                       change="handleDateChange"/>
+       </s:HBox>
+       <s:Label text="Selected: {selectedDate}"/>
+     </s:VBox>
+   </s:Panel>
+
+   <!-- Tree Demo -->
+   <s:Panel title="Tree Component" width="600">
+     <s:VBox padding="20" gap="15">
+       <s:Label text="Hierarchical data display:" fontWeight="bold"/>
+       <s:Tree width="100%" height="200"/>
+       <s:Label text="Advanced tree implementation available in components/Tree.js" fontSize="12" color="#999"/>
+     </s:VBox>
+   </s:Panel>
+
+   <!-- TabNavigator Demo -->
+   <s:Panel title="TabNavigator Component" width="600">
+     <s:VBox padding="20" gap="15">
+       <s:Label text="Tabbed interface:" fontWeight="bold"/>
+       <s:TabNavigator width="100%" height="200" selectedIndex="{currentTab}" change="handleTabChange"/>
+       <s:Label text="Full tabbed navigation available in components/TabNavigator.js" fontSize="12" color="#999"/>
+     </s:VBox>
+   </s:Panel>
+
+ </s:VBox>
+
+</s:Application>

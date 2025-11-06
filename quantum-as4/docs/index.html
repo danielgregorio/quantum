@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ActionScript 4 / MXML Examples</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 20px;
+            opacity: 0.9;
+        }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .example-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .example-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .card-header {
+            padding: 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .card-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        .card-description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .features {
+            margin-bottom: 20px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .feature-icon {
+            color: #667eea;
+            margin-right: 8px;
+            font-weight: bold;
+        }
+
+        .card-link {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: opacity 0.3s;
+        }
+
+        .card-link:hover {
+            opacity: 0.9;
+        }
+
+        .section-title {
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            margin: 50px 0 30px 0;
+            text-align: center;
+        }
+
+        .info-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-top: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .info-section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .info-section p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .info-section code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            color: #333;
+        }
+
+        .github-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: #333;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .github-link:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ActionScript 4 / MXML</h1>
+            <p class="subtitle">Live Examples & Component Demos</p>
+        </header>
+
+        <div class="section-title">✨ Featured Examples</div>
+
+        <div class="examples-grid">
+            <!-- Component Library Demo -->
+            <div class="example-card">
+                <div class="card-header">
+                    <div class="card-title">Component Library</div>
+                    <div class="card-subtitle">Comprehensive Component Showcase</div>
+                </div>
+                <div class="card-body">
+                    <p class="card-description">
+                        Explore all available UI components with interactive examples and two-way data binding.
+                    </p>
+                    <div class="features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            CheckBox with two-way binding
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            ComboBox with data providers
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            DatePicker with Date objects
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            Event handlers & reactive updates
+                        </div>
+                    </div>
+                    <a href="components-demo/" class="card-link">View Demo →</a>
+                </div>
+            </div>
+
+            <!-- Hello World -->
+            <div class="example-card">
+                <div class="card-header">
+                    <div class="card-title">Hello World</div>
+                    <div class="card-subtitle">Basic MXML Application</div>
+                </div>
+                <div class="card-body">
+                    <p class="card-description">
+                        Simple "Hello World" demonstrating core MXML features, layouts, and event handlers.
+                    </p>
+                    <div class="features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            VBox & HBox layouts
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            Data binding with {curly} braces
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            Button click handlers
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            Panel containers & CSS styling
+                        </div>
+                    </div>
+                    <a href="hello/" class="card-link">View Demo →</a>
+                </div>
+            </div>
+
+            <!-- Data Binding Example -->
+            <div class="example-card">
+                <div class="card-header">
+                    <div class="card-title">Data Binding</div>
+                    <div class="card-subtitle">Reactive Data Example</div>
+                </div>
+                <div class="card-body">
+                    <p class="card-description">
+                        Demonstrates [Bindable] variables and reactive data binding with automatic UI updates.
+                    </p>
+                    <div class="features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            [Bindable] metadata
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            Reactive property updates
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            Click counter with binding
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            Real Adobe Flex example
+                        </div>
+                    </div>
+                    <a href="databinding/" class="card-link">View Demo →</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title">🎯 Adobe Flex Test Examples</div>
+
+        <div class="examples-grid">
+            <!-- StopWatch -->
+            <div class="example-card">
+                <div class="card-header">
+                    <div class="card-title">StopWatch</div>
+                    <div class="card-subtitle">PureMVC Demo (Complex)</div>
+                </div>
+                <div class="card-body">
+                    <p class="card-description">
+                        Production-ready stopwatch from PureMVC GitHub repository. Tests complex UI and state management.
+                    </p>
+                    <div class="features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            ApplicationControlBar
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            Multiple event handlers
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            State management constants
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            121 lines of production code
+                        </div>
+                    </div>
+                    <a href="stopwatch/" class="card-link">View Demo →</a>
+                </div>
+            </div>
+
+            <!-- Nested Containers -->
+            <div class="example-card">
+                <div class="card-header">
+                    <div class="card-title">Login Form</div>
+                    <div class="card-subtitle">Nested Containers</div>
+                </div>
+                <div class="card-body">
+                    <p class="card-description">
+                        Login form demonstrating nested VBox and HBox layouts with proper form structure.
+                    </p>
+                    <div class="features">
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            Panel component
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            Form layout patterns
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            TextInput with password mode
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">✓</span>
+                            Button groups with HBox
+                        </div>
+                    </div>
+                    <a href="nested-containers/" class="card-link">View Demo →</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h2>About ActionScript 4 / MXML</h2>
+            <p>
+                ActionScript 4 is a modern evolution of Adobe Flex's MXML markup language, compiled to clean HTML/CSS/JavaScript.
+                It features reactive data binding, a comprehensive component library, and compatibility with legacy Adobe Flex applications.
+            </p>
+            <p>
+                <strong>Key Features:</strong>
+            </p>
+            <ul style="margin-left: 20px; color: #666; line-height: 1.8;">
+                <li>✓ Declarative XML-based UI (MXML)</li>
+                <li>✓ Reactive two-way data binding with Proxy</li>
+                <li>✓ Adobe Flex-compatible component library</li>
+                <li>✓ ActionScript 4 for business logic</li>
+                <li>✓ Compiles to modern HTML/CSS/JavaScript</li>
+                <li>✓ 100% compatibility with Adobe Flex 3 examples</li>
+            </ul>
+            <p>
+                All examples on this page are built from real MXML files and demonstrate the compiler's capabilities.
+            </p>
+            <a href="https://github.com/danielgregorio/quantum" class="github-link">View on GitHub →</a>
+        </div>
+    </div>
+</body>
+</html>
