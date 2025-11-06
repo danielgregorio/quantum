@@ -1,6 +1,7 @@
 # Build output directories
 dist/
 dist-*/
+demo-dist/
 build/
 test-results/
 *.pyc
