@@ -248,3 +248,64 @@ class ConfigurationHistoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ============================================================================
+# DEPLOYMENT AUTOMATION SCHEMAS
+# ============================================================================
+
+class DeploymentTargetCreate(BaseModel):
+    """Schema for creating a deployment target"""
+    name: str = Field(..., min_length=1, max_length=255)
+    type: str = Field(..., pattern="^(local|docker|ssh|kubernetes)$")
+    config_json: Optional[str] = Field(None, description="JSON configuration for target")
+    is_active: bool = True
+
+
+class DeploymentTargetResponse(BaseModel):
+    """Schema for deployment target response"""
+    id: int
+    project_id: int
+    name: str
+    type: str
+    config_json: Optional[str]
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DeploymentCreate(BaseModel):
+    """Schema for creating a deployment"""
+    target_id: int
+    version: Optional[str] = Field(None, description="Git commit, tag, or version")
+    triggered_by: str = Field("manual", description="Who/what triggered deployment")
+
+
+class DeploymentResponse(BaseModel):
+    """Schema for deployment response"""
+    id: int
+    project_id: int
+    target_id: int
+    version: Optional[str]
+    status: str
+    started_at: datetime
+    completed_at: Optional[datetime]
+    duration_seconds: Optional[int]
+    triggered_by: Optional[str]
+    error_message: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+class DeploymentDetailResponse(DeploymentResponse):
+    """Schema for deployment response with logs"""
+    build_log: Optional[str]
+    deploy_log: Optional[str]
+    rollback_from: Optional[int]
+
+    class Config:
+        from_attributes = True

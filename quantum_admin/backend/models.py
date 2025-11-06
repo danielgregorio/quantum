@@ -209,3 +209,50 @@ class ConfigurationHistory(Base):
 
     def __repr__(self):
         return f"<ConfigurationHistory(id={self.id}, project_id={self.project_id}, version={self.version})>"
+
+
+class DeploymentTarget(Base):
+    """DeploymentTarget represents a deployment destination"""
+    __tablename__ = 'deployment_targets'
+
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    type = Column(String(50), nullable=False)  # local, docker, ssh, kubernetes
+    config_json = Column(Text)  # JSON configuration for target (host, port, paths, etc.)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    project = relationship("Project", backref="deployment_targets")
+    deployments = relationship("Deployment", back_populates="target", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<DeploymentTarget(id={self.id}, name='{self.name}', type='{self.type}')>"
+
+
+class Deployment(Base):
+    """Deployment represents a deployment execution"""
+    __tablename__ = 'deployments'
+
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
+    target_id = Column(Integer, ForeignKey('deployment_targets.id'), nullable=False, index=True)
+    version = Column(String(100))  # Git commit, tag, or version number
+    status = Column(String(50), default='pending')  # pending, building, deploying, completed, failed, rolled_back
+    started_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime)
+    duration_seconds = Column(Integer)
+    triggered_by = Column(String(255))  # user, ci/cd, schedule
+    build_log = Column(Text)
+    deploy_log = Column(Text)
+    error_message = Column(Text)
+    rollback_from = Column(Integer)  # ID of deployment being rolled back
+
+    # Relationships
+    project = relationship("Project", backref="deployments")
+    target = relationship("DeploymentTarget", back_populates="deployments")
+
+    def __repr__(self):
+        return f"<Deployment(id={self.id}, version='{self.version}', status='{self.status}')>"
