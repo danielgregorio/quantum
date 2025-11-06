@@ -16,13 +16,6 @@ import { renderTileList } from './components/TileList.js';
 import { renderAccordion, renderAccordionHeader } from './components/Accordion.js';
 import { renderMenu, renderMenuBar } from './components/Menu.js';
 
-// Import FASE 1 MVP components
-import { renderHTTPService } from './components/HTTPService.js';
-import { renderForm, renderFormItem, renderFormHeading } from './components/Form.js';
-import { renderProgressBar } from './components/ProgressBar.js';
-import { renderImage } from './components/Image.js';
-import { renderAlert, Alert } from './components/Alert.js';
-
 export class ReactiveRuntime {
     constructor() {
         this.app = null;
@@ -259,20 +252,7 @@ export class ReactiveRuntime {
             AccordionHeader: (node) => renderAccordionHeader(this, node),
             Menu: (node) => renderMenu(this, node),
             MenuBar: (node) => renderMenuBar(this, node),
-            // FASE 1 MVP Components
-            HTTPService: (node) => renderHTTPService(this, node),
-            Form: (node) => renderForm(this, node),
-            FormItem: (node) => renderFormItem(this, node),
-            FormHeading: (node) => renderFormHeading(this, node),
-            ProgressBar: (node) => renderProgressBar(this, node),
-            Image: (node) => renderImage(this, node),
-            Alert: (node) => renderAlert(this, node),
         };
-
-        // Make Alert class globally available
-        if (typeof window !== 'undefined') {
-            window.Alert = Alert;
-        }
     }
 
     // Component Renderers

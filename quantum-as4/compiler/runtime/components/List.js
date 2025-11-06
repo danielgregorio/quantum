@@ -8,11 +8,17 @@
  * - selectable: Enable item selection (default: false)
  * - virtualized: Enable virtualization for large lists (default: false)
  * - itemHeight: Height of each item for virtualization (default: 40)
+ * - dragEnabled: Enable drag to reorder items (default: false)
+ * - dropEnabled: Enable drop from external sources (default: false)
+ * - allowMultipleSelection: Allow selecting multiple items (default: false)
  *
  * Events:
  * - itemClick: Fired when item is clicked
  * - selectionChange: Fired when selection changes
+ * - itemsReordered: Fired when items are reordered via drag
  */
+
+import { DragManager } from '../DragManager.js';
 
 export function renderList(runtime, node) {
     const container = document.createElement('div');
@@ -31,12 +37,18 @@ export function renderList(runtime, node) {
     const selectable = node.props.selectable === 'true';
     const virtualized = node.props.virtualized === 'true';
     const itemHeight = node.props.itemHeight ? parseInt(node.props.itemHeight) : 40;
+    const dragEnabled = node.props.dragEnabled === 'true';
+    const dropEnabled = node.props.dropEnabled === 'true';
+    const allowMultipleSelection = node.props.allowMultipleSelection === 'true';
 
     // State
     const state = {
         selectedIndex: -1,
         selectedItem: null,
-        scrollTop: 0
+        selectedIndices: new Set(),
+        scrollTop: 0,
+        draggedItem: null,
+        dropIndex: -1
     };
 
     if (virtualized) {
@@ -174,7 +186,122 @@ export function renderList(runtime, node) {
             });
         }
 
+        // Add drag support
+        if (dragEnabled) {
+            li.draggable = true;
+            li.style.cursor = 'grab';
+
+            li.addEventListener('mousedown', (e) => {
+                if (e.button === 0) { // Left click only
+                    state.draggedItem = { item, index };
+                    li.style.cursor = 'grabbing';
+
+                    // Start drag on mouse move
+                    const startDrag = () => {
+                        const dragData = {
+                            format: 'list-items',
+                            source: container,
+                            data: [item],
+                            sourceIndex: index
+                        };
+
+                        DragManager.doDrag(li, dragData, null, ['move']);
+
+                        // Cleanup
+                        document.removeEventListener('mousemove', startDrag);
+                    };
+
+                    const cancelDrag = () => {
+                        li.style.cursor = 'grab';
+                        document.removeEventListener('mousemove', startDrag);
+                        document.removeEventListener('mouseup', cancelDrag);
+                    };
+
+                    document.addEventListener('mousemove', startDrag, { once: true });
+                    document.addEventListener('mouseup', cancelDrag, { once: true });
+                }
+            });
+
+            // Listen for drag complete
+            li.addEventListener('dragComplete', (e) => {
+                li.style.cursor = 'grab';
+                if (e.detail.accepted && e.detail.action === 'move') {
+                    // Item was moved, remove from original position if needed
+                }
+            });
+        }
+
         return li;
+    }
+
+    // Add drop support for reordering
+    if (dropEnabled || dragEnabled) {
+        DragManager.acceptDragDrop(
+            container,
+            (dragData, action, e) => {
+                // Handle drop
+                if (dragData.format === 'list-items' && dragData.source === container) {
+                    // Reordering within same list
+                    const sourceIndex = dragData.sourceIndex;
+                    const targetIndex = state.dropIndex;
+
+                    if (sourceIndex !== targetIndex && targetIndex >= 0) {
+                        // Reorder the data
+                        const itemToMove = data.splice(sourceIndex, 1)[0];
+                        const insertIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+                        data.splice(insertIndex, 0, itemToMove);
+
+                        // Update the bound data if it's reactive
+                        if (dataProviderExpr && dataProviderExpr.includes('{')) {
+                            const varMatch = dataProviderExpr.match(/\{([^}]+)\}/);
+                            if (varMatch) {
+                                const varName = varMatch[1].trim().split('.')[0];
+                                runtime.app[varName] = [...data]; // Trigger reactivity
+                            }
+                        }
+
+                        // Fire itemsReordered event
+                        if (node.events.itemsReordered) {
+                            const handlerName = node.events.itemsReordered.replace('()', '');
+                            if (runtime.app[handlerName]) {
+                                runtime.app[handlerName](data, sourceIndex, insertIndex);
+                            }
+                        }
+
+                        return true; // Accept drop
+                    }
+                }
+                return false;
+            },
+            null,
+            (dragData, e) => {
+                // Drag over - determine drop position
+                const listItems = container.querySelectorAll('.quantum-list-item');
+                let dropIndex = -1;
+                let closestItem = null;
+                let minDistance = Infinity;
+
+                listItems.forEach((item, idx) => {
+                    const rect = item.getBoundingClientRect();
+                    const itemCenter = rect.top + rect.height / 2;
+                    const distance = Math.abs(e.clientY - itemCenter);
+
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestItem = item;
+                        dropIndex = e.clientY < itemCenter ? idx : idx + 1;
+                    }
+                });
+
+                state.dropIndex = dropIndex;
+
+                // Show drop indicator
+                if (closestItem && dropIndex >= 0) {
+                    const position = e.clientY < closestItem.getBoundingClientRect().top + closestItem.getBoundingClientRect().height / 2 ? 'before' : 'after';
+                    DragManager.showDropIndicator(closestItem, position);
+                }
+            }
+        );
     }
 
     // Setup reactive binding for dataProvider

@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009"
+               xmlns:s="library://ns.adobe.com/flex/spark"
+               title="Advanced Components Demo">
+
+    <fx:Script>
+    <![CDATA[
+        [Bindable]
+        private var taskList:Array = [
+            "Design wireframes",
+            "Write specifications",
+            "Implement features",
+            "Write tests",
+            "Deploy to production"
+        ];
+
+        [Bindable]
+        private var employees:Array = [
+            {id: 1, name: "Alice Johnson", role: "Developer", salary: 85000, active: true},
+            {id: 2, name: "Bob Smith", role: "Designer", salary: 75000, active: true},
+            {id: 3, name: "Charlie Brown", role: "Manager", salary: 95000, active: true},
+            {id: 4, name: "Diana Prince", role: "Developer", salary: 90000, active: false},
+            {id: 5, name: "Eve Adams", role: "QA Engineer", salary: 70000, active: true}
+        ];
+
+        [Bindable]
+        private var employeeColumns:Array = [
+            {field: "id", header: "ID", width: 60, editable: false},
+            {field: "name", header: "Name", width: 150, editable: true},
+            {field: "role", header: "Role", width: 120, editable: true},
+            {field: "salary", header: "Salary", width: 100, editable: true, type: "number"},
+            {field: "active", header: "Active", width: 80, editable: true, type: "checkbox"}
+        ];
+
+        [Bindable]
+        private var galleryItems:Array = [
+            {id: 1, label: "Mountain View", image: "https://via.placeholder.com/200/4a90e2/ffffff?text=Mountain"},
+            {id: 2, label: "Ocean Sunset", image: "https://via.placeholder.com/200/e24a4a/ffffff?text=Ocean"},
+            {id: 3, label: "Forest Path", image: "https://via.placeholder.com/200/4ae252/ffffff?text=Forest"},
+            {id: 4, label: "City Lights", image: "https://via.placeholder.com/200/e2e24a/ffffff?text=City"},
+            {id: 5, label: "Desert Dunes", image: "https://via.placeholder.com/200/e2a84a/ffffff?text=Desert"},
+            {id: 6, label: "Arctic Ice", image: "https://via.placeholder.com/200/4ae2e2/ffffff?text=Arctic"}
+        ];
+
+        [Bindable]
+        private var menuData:Array = [
+            {
+                label: "File",
+                children: [
+                    {label: "New Project", icon: "📄"},
+                    {label: "Open...", icon: "📂"},
+                    {separator: true},
+                    {label: "Save", icon: "💾"},
+                    {label: "Save As...", icon: "💾"},
+                    {separator: true},
+                    {label: "Exit", icon: "❌"}
+                ]
+            },
+            {
+                label: "Edit",
+                children: [
+                    {label: "Undo", icon: "↶"},
+                    {label: "Redo", icon: "↷"},
+                    {separator: true},
+                    {label: "Cut", icon: "✂️"},
+                    {label: "Copy", icon: "📋"},
+                    {label: "Paste", icon: "📄"}
+                ]
+            },
+            {
+                label: "View",
+                children: [
+                    {label: "Zoom In", icon: "🔍"},
+                    {label: "Zoom Out", icon: "🔎"},
+                    {separator: true},
+                    {label: "Fullscreen", icon: "⛶"}
+                ]
+            },
+            {
+                label: "Help",
+                children: [
+                    {label: "Documentation", icon: "📚"},
+                    {label: "About", icon: "ℹ️"}
+                ]
+            }
+        ];
+
+        [Bindable]
+        private var selectedTask:String = "";
+
+        [Bindable]
+        private var selectedImage:String = "";
+
+        private function handleTasksReordered(newOrder:Array, sourceIndex:int, targetIndex:int):void {
+            trace("Tasks reordered from index " + sourceIndex + " to " + targetIndex);
+        }
+
+        private function handleTaskSelection(items:Array, index:int):void {
+            if (items.length > 0) {
+                selectedTask = "Selected: " + items[0];
+            }
+        }
+
+        private function handleCellEdit(event:Object):void {
+            trace("Cell edited: " + event.field + " changed from " + event.oldValue + " to " + event.newValue);
+        }
+
+        private function handleMenuClick(item:Object):void {
+            trace("Menu clicked: " + item.label);
+        }
+
+        private function handleAccordionChange(index:int, expanded:Boolean):void {
+            trace("Panel " + index + (expanded ? " expanded" : " collapsed"));
+        }
+
+        private function handleImageSelection(items:Array, index:int):void {
+            if (items.length > 0) {
+                selectedImage = "Selected: " + items[0].label;
+            }
+        }
+    ]]>
+    </fx:Script>
+
+    <s:VBox width="100%" height="100%" padding="0">
+        <!-- Menu Bar -->
+        <s:MenuBar dataProvider="{menuData}" itemClick="handleMenuClick(event)" />
+
+        <!-- Main Content with Tabs -->
+        <s:TabNavigator width="100%" height="100%">
+            <!-- Tab 1: Drag and Drop Lists -->
+            <s:VBox label="Drag and Drop" padding="20" gap="20">
+                <s:Label text="Drag and Drop Task List" styleName="title" />
+                <s:Label text="Drag tasks to reorder them" styleName="subtitle" />
+
+                <s:HBox gap="30" width="100%">
+                    <s:VBox width="400">
+                        <s:Panel title="Task List (Drag to Reorder)" width="100%">
+                            <s:List
+                                dataProvider="{taskList}"
+                                selectable="true"
+                                dragEnabled="true"
+                                dropEnabled="true"
+                                height="300"
+                                itemsReordered="handleTasksReordered(event)"
+                                selectionChange="handleTaskSelection(event)" />
+                        </s:Panel>
+                    </s:VBox>
+
+                    <s:VBox width="300">
+                        <s:Panel title="Selection Info" width="100%">
+                            <s:VBox padding="15" gap="10">
+                                <s:Label text="{selectedTask}" />
+                                <s:Label text="💡 Tip: Drag items to reorder" styleName="subtitle" />
+                            </s:VBox>
+                        </s:Panel>
+                    </s:VBox>
+                </s:HBox>
+            </s:VBox>
+
+            <!-- Tab 2: Advanced DataGrid -->
+            <s:VBox label="Advanced DataGrid" padding="20" gap="20">
+                <s:Label text="Employee Management" styleName="title" />
+                <s:Label text="Features: Column Resizing, Inline Editing, Sorting, Filtering" styleName="subtitle" />
+
+                <s:Panel title="Employees" width="100%">
+                    <s:AdvancedDataGrid
+                        dataProvider="{employees}"
+                        columns="{employeeColumns}"
+                        sortable="true"
+                        filterable="true"
+                        selectable="true"
+                        editable="true"
+                        resizableColumns="true"
+                        pageSize="10"
+                        cellEdit="handleCellEdit(event)"
+                        width="100%"
+                        height="400" />
+                </s:Panel>
+
+                <s:HBox gap="10">
+                    <s:Label text="💡 Double-click cells to edit" />
+                    <s:Label text="•" />
+                    <s:Label text="Drag column edges to resize" />
+                    <s:Label text="•" />
+                    <s:Label text="Click headers to sort" />
+                </s:HBox>
+            </s:VBox>
+
+            <!-- Tab 3: TileList Gallery -->
+            <s:VBox label="TileList" padding="20" gap="20">
+                <s:Label text="Image Gallery" styleName="title" />
+                <s:Label text="Grid layout with selectable tiles" styleName="subtitle" />
+
+                <s:Panel title="Photo Gallery" width="100%">
+                    <s:TileList
+                        dataProvider="{galleryItems}"
+                        columnCount="3"
+                        columnWidth="220"
+                        rowHeight="220"
+                        selectable="true"
+                        labelField="label"
+                        imageField="image"
+                        selectionChange="handleImageSelection(event)"
+                        width="100%"
+                        height="500" />
+                </s:Panel>
+
+                <s:Label text="{selectedImage}" />
+            </s:VBox>
+
+            <!-- Tab 4: Accordion -->
+            <s:VBox label="Accordion" padding="20" gap="20">
+                <s:Label text="Collapsible Panels" styleName="title" />
+                <s:Label text="Click headers to expand/collapse sections" styleName="subtitle" />
+
+                <s:Accordion width="600" change="handleAccordionChange(event)">
+                    <s:VBox label="Getting Started">
+                        <s:VBox padding="15" gap="10">
+                            <s:Label text="Welcome to the Advanced Components Demo!" styleName="subtitle" />
+                            <s:Label text="This demo showcases the latest features:" />
+                            <s:Label text="• Drag and drop support" />
+                            <s:Label text="• Advanced DataGrid with editing" />
+                            <s:Label text="• TileList for grid layouts" />
+                            <s:Label text="• Accordion for collapsible content" />
+                            <s:Label text="• MenuBar for application menus" />
+                        </s:VBox>
+                    </s:VBox>
+
+                    <s:VBox label="Features">
+                        <s:VBox padding="15" gap="10">
+                            <s:Label text="Drag &amp; Drop:" styleName="subtitle" />
+                            <s:Label text="• Reorder list items by dragging" />
+                            <s:Label text="• Visual feedback with drop indicators" />
+                            <s:Label text="• Automatic data updates" />
+                            <s:Spacer height="10" />
+                            <s:Label text="Advanced DataGrid:" styleName="subtitle" />
+                            <s:Label text="• Column resizing by dragging edges" />
+                            <s:Label text="• Inline editing with double-click" />
+                            <s:Label text="• Sorting, filtering, and pagination" />
+                        </s:VBox>
+                    </s:VBox>
+
+                    <s:VBox label="Documentation">
+                        <s:VBox padding="15" gap="10">
+                            <s:Label text="Component API:" styleName="subtitle" />
+                            <s:Label text="See examples/README.md for full API documentation" />
+                            <s:Spacer height="10" />
+                            <s:Label text="Component List:" styleName="subtitle" />
+                            <s:Label text="✓ List with drag reordering" />
+                            <s:Label text="✓ AdvancedDataGrid" />
+                            <s:Label text="✓ TileList" />
+                            <s:Label text="✓ Accordion" />
+                            <s:Label text="✓ Menu / MenuBar" />
+                            <s:Label text="✓ DragManager utility" />
+                        </s:VBox>
+                    </s:VBox>
+
+                    <s:VBox label="About">
+                        <s:VBox padding="15" gap="10">
+                            <s:Label text="ActionScript 4 / MXML Compiler" styleName="subtitle" />
+                            <s:Label text="A modern implementation of Adobe Flex for the web" />
+                            <s:Spacer height="10" />
+                            <s:Label text="Built with:" />
+                            <s:Label text="• Reactive data binding" />
+                            <s:Label text="• Modern JavaScript (ES6+)" />
+                            <s:Label text="• Flex-compatible MXML syntax" />
+                            <s:Label text="• HTML5/CSS3 rendering" />
+                        </s:VBox>
+                    </s:VBox>
+                </s:Accordion>
+            </s:VBox>
+        </s:TabNavigator>
+    </s:VBox>
+</s:Application>
