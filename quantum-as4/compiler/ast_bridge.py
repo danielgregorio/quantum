@@ -116,24 +116,16 @@ class ASTBridge:
 
         universal_funcs = []
         for func in functions:
-            # Parse parameters
+            # Convert parameters - func.params is already a list of Parameter objects
             params = []
             if func.params:
-                for param_str in func.params.split(','):
-                    param_str = param_str.strip()
-                    if ':' in param_str:
-                        param_name, param_type = param_str.split(':')
-                        params.append(Parameter(
-                            name=param_name.strip(),
-                            type=param_type.strip(),
-                            default_value=None
-                        ))
-                    else:
-                        params.append(Parameter(
-                            name=param_str,
-                            type='Object',
-                            default_value=None
-                        ))
+                for param in func.params:
+                    # Parameter from AS4Parser
+                    params.append(Parameter(
+                        name=param.name,
+                        type=param.type or 'Object',
+                        default_value=param.default_value
+                    ))
 
             universal_funcs.append(Function(
                 name=func.name,

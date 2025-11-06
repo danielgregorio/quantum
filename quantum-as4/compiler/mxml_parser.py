@@ -46,6 +46,11 @@ class MXMLParser:
         'q': 'http://quantum-lang.org/qml/2025'
     }
 
+    # Additional namespace variations (Flex 3 uses different URIs)
+    LEGACY_NAMESPACES = {
+        'mx': 'http://www.adobe.com/2006/mxml'
+    }
+
     # Events that should be extracted from props
     EVENT_ATTRIBUTES = [
         'click', 'change', 'input', 'focus', 'blur',
@@ -94,7 +99,7 @@ class MXMLParser:
 
     def _extract_script(self, root) -> str:
         """
-        Extract ActionScript code from <fx:Script> block
+        Extract ActionScript code from <fx:Script> or <mx:Script> block
 
         The script is usually wrapped in CDATA:
         <fx:Script>
@@ -103,7 +108,15 @@ class MXMLParser:
             ]]>
         </fx:Script>
         """
+        # Try fx:Script first (Flex 4)
         script_elem = root.find('.//fx:Script', self.NAMESPACES)
+        if script_elem is None:
+            # Try mx:Script with Flex 4 namespace
+            script_elem = root.find('.//mx:Script', self.NAMESPACES)
+        if script_elem is None:
+            # Try mx:Script with Flex 3 namespace (legacy)
+            script_elem = root.find('.//mx:Script', self.LEGACY_NAMESPACES)
+
         if script_elem is not None:
             # Get text content (CDATA is treated as text)
             return script_elem.text or ''
@@ -111,7 +124,7 @@ class MXMLParser:
 
     def _extract_style(self, root) -> str:
         """
-        Extract CSS from <fx:Style> block
+        Extract CSS from <fx:Style> or <mx:Style> block
 
         Can be inline or reference external file:
         <fx:Style>
@@ -120,7 +133,15 @@ class MXMLParser:
 
         <fx:Style source="styles.css"/>
         """
+        # Try fx:Style first (Flex 4)
         style_elem = root.find('.//fx:Style', self.NAMESPACES)
+        if style_elem is None:
+            # Try mx:Style with Flex 4 namespace
+            style_elem = root.find('.//mx:Style', self.NAMESPACES)
+        if style_elem is None:
+            # Try mx:Style with Flex 3 namespace (legacy)
+            style_elem = root.find('.//mx:Style', self.LEGACY_NAMESPACES)
+
         if style_elem is not None:
             # Check for source attribute (external CSS)
             if 'source' in style_elem.attrib:
@@ -164,6 +185,10 @@ class MXMLParser:
         # Parse children recursively
         children = []
         for child in elem:
+            # Skip non-element nodes (comments, processing instructions, etc.)
+            if not isinstance(child.tag, str):
+                continue
+
             child_tag = child.tag
             if '}' in child_tag:
                 child_tag = child_tag.split('}')[-1]
