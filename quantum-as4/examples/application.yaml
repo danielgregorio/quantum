@@ -12,6 +12,12 @@ entry:
   mxml: "hello.mxml"
   assets: "assets/"
 
+# Source configuration for multi-file apps
+source:
+  root: "."              # Source root directory
+  # Auto-discover files (no need to list them manually)
+  auto_discover: true
+
 targets:
   # Web Platform
   web:

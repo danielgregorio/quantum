@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<!--
+  Header Component
+
+  Reusable header with navigation
+-->
+<Component
+    xmlns:fx="http://ns.adobe.com/mxml/2009"
+    xmlns:s="library://ns.adobe.com/flex/spark">
+
+    <!-- Component Props -->
+    <fx:Metadata>
+        [Property(name="userName", type="String")]
+        [Event(name="onNavigate", type="Function")]
+    </fx:Metadata>
+
+    <fx:Script>
+        <![CDATA[
+            // Props (automatically available)
+            [Bindable]
+            public var userName:String = "User";
+
+            public var onNavigate:Function;
+
+            private function navigate(screen:String):void {
+                if (onNavigate != null) {
+                    onNavigate(screen);
+                }
+            }
+        ]]>
+    </fx:Script>
+
+    <fx:Style>
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px;
+        }
+
+        .nav-button {
+            background-color: transparent;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+
+        .nav-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+    </fx:Style>
+
+    <s:HBox width="100%" styleName="header" verticalAlign="middle">
+        <s:Label text="User Management" fontSize="20" fontWeight="bold"/>
+
+        <s:Spacer width="100%"/>
+
+        <!-- Navigation buttons -->
+        <s:HBox gap="10">
+            <s:Button
+                label="Dashboard"
+                styleName="nav-button"
+                click="navigate('dashboard')"/>
+
+            <s:Button
+                label="Settings"
+                styleName="nav-button"
+                click="navigate('settings')"/>
+        </s:HBox>
+
+        <!-- User info -->
+        <s:Label text="Welcome, {userName}" color="#ecf0f1"/>
+    </s:HBox>
+
+</Component>
