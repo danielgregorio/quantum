@@ -79,6 +79,13 @@ def build(input_file: str, output_dir: str, verbose: bool = False):
         else:
             print("  ⚠ Warning: runtime.js not found")
 
+        # Copy Flex theme CSS
+        flex_theme_src = runtime_dir / 'flex-theme.css'
+        if flex_theme_src.exists():
+            shutil.copy(flex_theme_src, output_path / 'flex-theme.css')
+        else:
+            print("  ⚠ Warning: flex-theme.css not found")
+
         print(f"✅ Build complete!")
         print(f"")
         print(f"   Files generated:")

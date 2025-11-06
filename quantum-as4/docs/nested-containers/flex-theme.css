@@ -1,0 +1,580 @@
+/**
+ * Adobe Flex-Inspired Theme
+ * Classic Flex Spark/Halo visual style with gradients, depth, and polish
+ */
+
+/* ============================================
+   GLOBAL STYLES
+   ============================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Lucida Grande', 'Lucida Sans Unicode', Verdana, Arial, sans-serif;
+    font-size: 11px;
+    color: #333333;
+    background: #e8e8e8;
+    line-height: 1.4;
+}
+
+/* ============================================
+   APPLICATION CONTAINER
+   ============================================ */
+
+.quantum-application {
+    width: 100%;
+    min-height: 100vh;
+    background: linear-gradient(to bottom, #f0f0f0 0%, #d8d8d8 100%);
+    padding: 20px;
+}
+
+/* ============================================
+   LAYOUT CONTAINERS
+   ============================================ */
+
+.quantum-vbox,
+.quantum-hbox {
+    display: flex;
+    background: transparent;
+}
+
+.quantum-vbox {
+    flex-direction: column;
+}
+
+.quantum-hbox {
+    flex-direction: row;
+    align-items: center;
+}
+
+/* ============================================
+   PANEL COMPONENT (Flex-style)
+   ============================================ */
+
+.quantum-panel {
+    background: #ffffff;
+    border: 1px solid #999999;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.quantum-panel-header {
+    background: linear-gradient(to bottom, #ffffff 0%, #e8e8e8 100%);
+    border-bottom: 1px solid #c0c0c0;
+    padding: 8px 12px;
+    font-weight: bold;
+    color: #333333;
+    font-size: 12px;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.quantum-panel-content {
+    padding: 15px;
+    background: #ffffff;
+}
+
+/* ============================================
+   LABELS
+   ============================================ */
+
+.quantum-label {
+    display: inline-block;
+    color: #333333;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.quantum-label.title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #1a1a1a;
+}
+
+.quantum-label.subtitle {
+    font-size: 13px;
+    color: #555555;
+}
+
+/* ============================================
+   BUTTONS (Flex-style with gradients)
+   ============================================ */
+
+.quantum-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 16px;
+    min-width: 60px;
+    height: 24px;
+
+    /* Flex button gradient */
+    background: linear-gradient(to bottom, #f8f8f8 0%, #d8d8d8 50%, #c8c8c8 51%, #b8b8b8 100%);
+
+    border: 1px solid #999999;
+    border-radius: 4px;
+
+    color: #333333;
+    font-size: 11px;
+    font-weight: bold;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+
+    cursor: pointer;
+    user-select: none;
+
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.8) inset,
+        0 1px 2px rgba(0, 0, 0, 0.15);
+
+    transition: all 0.1s ease;
+}
+
+.quantum-button:hover {
+    background: linear-gradient(to bottom, #ffffff 0%, #e0e0e0 50%, #d0d0d0 51%, #c0c0c0 100%);
+    border-color: #777777;
+}
+
+.quantum-button:active {
+    background: linear-gradient(to bottom, #b0b0b0 0%, #c8c8c8 50%, #d0d0d0 51%, #d8d8d8 100%);
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.2) inset,
+        0 1px 0 rgba(255, 255, 255, 0.3);
+    transform: translateY(1px);
+}
+
+.quantum-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Blue accent button */
+.quantum-button.primary {
+    background: linear-gradient(to bottom, #5a9fd4 0%, #306088 50%, #28517a 51%, #1e3f5f 100%);
+    border-color: #1e3f5f;
+    color: #ffffff;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5);
+}
+
+.quantum-button.primary:hover {
+    background: linear-gradient(to bottom, #6aafE4 0%, #407098 50%, #38618a 51%, #2e4f6f 100%);
+}
+
+/* ============================================
+   TEXT INPUT (Flex-style)
+   ============================================ */
+
+.quantum-textinput {
+    padding: 4px 6px;
+    height: 22px;
+
+    background: #ffffff;
+    border: 1px solid #999999;
+    border-radius: 3px;
+
+    font-family: inherit;
+    font-size: 11px;
+    color: #333333;
+
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.1) inset,
+        0 1px 0 rgba(255, 255, 255, 0.5);
+
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.quantum-textinput:focus {
+    outline: none;
+    border-color: #3399ff;
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.1) inset,
+        0 0 5px rgba(51, 153, 255, 0.5);
+}
+
+.quantum-textinput:disabled {
+    background: #f0f0f0;
+    color: #999999;
+    cursor: not-allowed;
+}
+
+/* ============================================
+   CHECKBOX (Flex-style)
+   ============================================ */
+
+.quantum-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.quantum-checkbox input[type="checkbox"] {
+    width: 13px;
+    height: 13px;
+    cursor: pointer;
+    accent-color: #3399ff;
+}
+
+.quantum-checkbox span {
+    font-size: 11px;
+    color: #333333;
+}
+
+.quantum-checkbox:hover span {
+    color: #000000;
+}
+
+/* ============================================
+   COMBOBOX / SELECT (Flex-style)
+   ============================================ */
+
+.quantum-combobox {
+    padding: 3px 6px;
+    height: 22px;
+    min-width: 120px;
+
+    background: linear-gradient(to bottom, #ffffff 0%, #f0f0f0 100%);
+    border: 1px solid #999999;
+    border-radius: 3px;
+
+    font-family: inherit;
+    font-size: 11px;
+    color: #333333;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.8) inset,
+        0 1px 2px rgba(0, 0, 0, 0.1);
+
+    transition: border-color 0.2s;
+}
+
+.quantum-combobox:hover {
+    border-color: #777777;
+}
+
+.quantum-combobox:focus {
+    outline: none;
+    border-color: #3399ff;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.8) inset,
+        0 0 5px rgba(51, 153, 255, 0.5);
+}
+
+/* ============================================
+   DATEPICKER (Flex-style)
+   ============================================ */
+
+.quantum-datepicker {
+    padding: 3px 6px;
+    height: 22px;
+    min-width: 120px;
+
+    background: linear-gradient(to bottom, #ffffff 0%, #f0f0f0 100%);
+    border: 1px solid #999999;
+    border-radius: 3px;
+
+    font-family: inherit;
+    font-size: 11px;
+    color: #333333;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.8) inset,
+        0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.quantum-datepicker:focus {
+    outline: none;
+    border-color: #3399ff;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.8) inset,
+        0 0 5px rgba(51, 153, 255, 0.5);
+}
+
+/* ============================================
+   DATAGRID (Flex-style)
+   ============================================ */
+
+.quantum-datagrid {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid #999999;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.quantum-datagrid thead {
+    background: linear-gradient(to bottom, #fafafa 0%, #e0e0e0 100%);
+    border-bottom: 1px solid #c0c0c0;
+}
+
+.quantum-datagrid th {
+    padding: 6px 8px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: bold;
+    color: #333333;
+    border-right: 1px solid #d0d0d0;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    user-select: none;
+}
+
+.quantum-datagrid th:last-child {
+    border-right: none;
+}
+
+.quantum-datagrid th:hover {
+    background: linear-gradient(to bottom, #ffffff 0%, #e8e8e8 100%);
+}
+
+.quantum-datagrid tbody tr {
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.quantum-datagrid tbody tr:hover {
+    background: #f8f8ff;
+}
+
+.quantum-datagrid tbody tr:nth-child(even) {
+    background: #fafafa;
+}
+
+.quantum-datagrid tbody tr:nth-child(even):hover {
+    background: #f8f8ff;
+}
+
+.quantum-datagrid td {
+    padding: 5px 8px;
+    font-size: 11px;
+    color: #333333;
+    border-right: 1px solid #e8e8e8;
+}
+
+.quantum-datagrid td:last-child {
+    border-right: none;
+}
+
+/* ============================================
+   LIST (Flex-style)
+   ============================================ */
+
+.quantum-list {
+    background: #ffffff;
+    border: 1px solid #999999;
+    border-radius: 4px;
+    overflow-y: auto;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) inset;
+}
+
+.quantum-list-item {
+    padding: 5px 10px;
+    font-size: 11px;
+    color: #333333;
+    border-bottom: 1px solid #e8e8e8;
+    cursor: pointer;
+    user-select: none;
+}
+
+.quantum-list-item:hover {
+    background: #e8f4ff;
+}
+
+.quantum-list-item:active,
+.quantum-list-item.selected {
+    background: linear-gradient(to bottom, #4a9fd8 0%, #3080c8 100%);
+    color: #ffffff;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   TREE (Flex-style)
+   ============================================ */
+
+.quantum-tree {
+    background: #ffffff;
+    border: 1px solid #999999;
+    border-radius: 4px;
+    padding: 8px;
+    overflow-y: auto;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) inset;
+}
+
+/* ============================================
+   TABNAVIGATOR (Flex-style)
+   ============================================ */
+
+.quantum-tabnavigator {
+    background: #ffffff;
+    border: 1px solid #999999;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.quantum-tabbar {
+    background: linear-gradient(to bottom, #f8f8f8 0%, #e0e0e0 100%);
+    border-bottom: 1px solid #c0c0c0;
+    display: flex;
+}
+
+.quantum-tab {
+    padding: 8px 20px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid #d0d0d0;
+    font-size: 11px;
+    font-weight: bold;
+    color: #666666;
+    cursor: pointer;
+    user-select: none;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+    transition: all 0.2s;
+}
+
+.quantum-tab:hover {
+    background: rgba(255, 255, 255, 0.5);
+    color: #333333;
+}
+
+.quantum-tab.active {
+    background: linear-gradient(to bottom, #ffffff 0%, #f8f8f8 100%);
+    color: #1a1a1a;
+    border-bottom: 2px solid #3399ff;
+}
+
+.quantum-tabcontent {
+    padding: 15px;
+    background: #ffffff;
+}
+
+/* ============================================
+   MODAL (Flex-style)
+   ============================================ */
+
+.quantum-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.quantum-modal {
+    background: #ffffff;
+    border: 1px solid #666666;
+    border-radius: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    min-width: 300px;
+    max-width: 90%;
+    max-height: 90%;
+    display: flex;
+    flex-direction: column;
+}
+
+.quantum-modal-header {
+    background: linear-gradient(to bottom, #ffffff 0%, #e8e8e8 100%);
+    border-bottom: 1px solid #c0c0c0;
+    padding: 10px 15px;
+    font-weight: bold;
+    font-size: 12px;
+    color: #333333;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.quantum-modal-body {
+    padding: 15px;
+    overflow: auto;
+    flex: 1;
+}
+
+/* ============================================
+   SPACER
+   ============================================ */
+
+.quantum-spacer {
+    flex: 1;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-bold {
+    font-weight: bold;
+}
+
+/* ============================================
+   FOCUS STYLES (Accessibility)
+   ============================================ */
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 2px solid #3399ff;
+    outline-offset: 2px;
+}
+
+/* ============================================
+   SCROLLBARS (Webkit - Flex-style)
+   ============================================ */
+
+::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border: 1px solid #d0d0d0;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #d8d8d8 0%, #b8b8b8 100%);
+    border: 1px solid #999999;
+    border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, #c8c8c8 0%, #a8a8a8 100%);
+}
+
+::-webkit-scrollbar-button {
+    background: linear-gradient(to bottom, #e8e8e8 0%, #d0d0d0 100%);
+    border: 1px solid #999999;
+    height: 16px;
+    width: 16px;
+}
+
+::-webkit-scrollbar-button:hover {
+    background: linear-gradient(to bottom, #f0f0f0 0%, #d8d8d8 100%);
+}
