@@ -775,6 +775,224 @@ def list_endpoints(project_id: int, db: Session = Depends(get_db)):
 
 
 # ============================================================================
+# TEST EXECUTION ENDPOINTS
+# ============================================================================
+
+@app.post(
+    "/projects/{project_id}/tests/run",
+    response_model=schemas.TestRunResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Tests"]
+)
+async def run_tests(
+    project_id: int,
+    test_config: schemas.TestRunCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    Execute tests for a project
+
+    This endpoint runs the test_runner.py script and tracks all results in the database.
+    The execution is asynchronous, so the endpoint returns immediately with a test_run_id.
+    Use the /tests/runs/{id}/status endpoint to check progress.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    # Import test execution service
+    try:
+        from .test_execution_service import TestExecutionService
+    except ImportError:
+        from test_execution_service import TestExecutionService
+
+    # Run tests asynchronously
+    try:
+        test_run_id = await TestExecutionService.run_tests(
+            db=db,
+            project_id=project_id,
+            suite_filter=test_config.suite_filter,
+            verbose=test_config.verbose,
+            stop_on_fail=test_config.stop_on_fail,
+            triggered_by=test_config.triggered_by
+        )
+
+        # Get test run
+        test_run = crud.get_test_run(db, test_run_id)
+        return test_run
+
+    except Exception as e:
+        logger.error(f"Failed to run tests: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to execute tests: {str(e)}"
+        )
+
+
+@app.get("/projects/{project_id}/tests/runs", response_model=List[schemas.TestRunResponse], tags=["Tests"])
+def list_test_runs(
+    project_id: int,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """
+    Get all test runs for a project
+
+    Returns a list of test runs ordered by start time (most recent first).
+    Use pagination parameters to limit results.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    test_runs = crud.get_test_runs(db, project_id, skip=skip, limit=limit)
+    return test_runs
+
+
+@app.get("/projects/{project_id}/tests/runs/{run_id}", response_model=schemas.TestRunDetailResponse, tags=["Tests"])
+def get_test_run(
+    project_id: int,
+    run_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get detailed test run results
+
+    Returns the test run with all individual test results.
+    Useful for displaying detailed test reports.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    # Get test run
+    test_run = crud.get_test_run(db, run_id)
+    if not test_run or test_run.project_id != project_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Test run with id {run_id} not found"
+        )
+
+    return test_run
+
+
+@app.get("/projects/{project_id}/tests/runs/{run_id}/status", response_model=schemas.TestRunStatusResponse, tags=["Tests"])
+def get_test_run_status(
+    project_id: int,
+    run_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get real-time status of a test run
+
+    Use this endpoint to poll for updates while tests are running.
+    Returns progress percentage, current suite, and estimated time remaining.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    # Import test execution service
+    try:
+        from .test_execution_service import TestExecutionService
+    except ImportError:
+        from test_execution_service import TestExecutionService
+
+    # Get status
+    status_info = TestExecutionService.get_test_run_status(db, run_id)
+    if not status_info:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Test run with id {run_id} not found"
+        )
+
+    return status_info
+
+
+@app.post("/projects/{project_id}/tests/runs/{run_id}/cancel", tags=["Tests"])
+async def cancel_test_run(
+    project_id: int,
+    run_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Cancel a running test execution
+
+    Terminates the test runner process and marks the test run as cancelled.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    # Import test execution service
+    try:
+        from .test_execution_service import TestExecutionService
+    except ImportError:
+        from test_execution_service import TestExecutionService
+
+    # Cancel test run
+    success = await TestExecutionService.cancel_test_run(db, run_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not cancel test run {run_id} (may not be running)"
+        )
+
+    return {"message": f"Test run {run_id} cancelled successfully"}
+
+
+@app.delete("/projects/{project_id}/tests/runs/{run_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Tests"])
+def delete_test_run(
+    project_id: int,
+    run_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a test run and all its results
+
+    Permanently removes a test run from the database.
+    """
+    # Verify project exists
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project with id {project_id} not found"
+        )
+
+    # Delete test run
+    success = crud.delete_test_run(db, run_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Test run with id {run_id} not found"
+        )
+
+    return None
+
+
+# ============================================================================
 # RUN SERVER (for development)
 # ============================================================================
 

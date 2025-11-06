@@ -254,3 +254,63 @@ def create_or_update_endpoint(
     db.commit()
     db.refresh(endpoint)
     return endpoint
+
+
+# ============================================================================
+# TEST RUN OPERATIONS
+# ============================================================================
+
+def get_test_runs(
+    db: Session,
+    project_id: int,
+    skip: int = 0,
+    limit: int = 100
+) -> List[models.TestRun]:
+    """Get all test runs for a project with pagination"""
+    return db.query(models.TestRun).filter(
+        models.TestRun.project_id == project_id
+    ).order_by(models.TestRun.started_at.desc()).offset(skip).limit(limit).all()
+
+
+def get_test_run(db: Session, test_run_id: int) -> Optional[models.TestRun]:
+    """Get a single test run by ID with all test results"""
+    return db.query(models.TestRun).filter(
+        models.TestRun.id == test_run_id
+    ).first()
+
+
+def get_latest_test_run(db: Session, project_id: int) -> Optional[models.TestRun]:
+    """Get the latest test run for a project"""
+    return db.query(models.TestRun).filter(
+        models.TestRun.project_id == project_id
+    ).order_by(models.TestRun.started_at.desc()).first()
+
+
+def delete_test_run(db: Session, test_run_id: int) -> bool:
+    """Delete a test run and all its results"""
+    test_run = get_test_run(db, test_run_id)
+    if not test_run:
+        return False
+
+    db.delete(test_run)
+    db.commit()
+    return True
+
+
+# ============================================================================
+# TEST RESULT OPERATIONS
+# ============================================================================
+
+def get_test_results(db: Session, test_run_id: int) -> List[models.TestResult]:
+    """Get all test results for a test run"""
+    return db.query(models.TestResult).filter(
+        models.TestResult.test_run_id == test_run_id
+    ).all()
+
+
+def get_failed_test_results(db: Session, test_run_id: int) -> List[models.TestResult]:
+    """Get only failed test results for a test run"""
+    return db.query(models.TestResult).filter(
+        models.TestResult.test_run_id == test_run_id,
+        models.TestResult.status == 'failed'
+    ).all()

@@ -125,3 +125,87 @@ class Endpoint(Base):
 
     def __repr__(self):
         return f"<Endpoint(id={self.id}, method='{self.method}', path='{self.path}')>"
+
+
+class TestRun(Base):
+    """TestRun represents a test execution session"""
+    __tablename__ = 'test_runs'
+
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
+    status = Column(String(50), default='running')  # running, completed, failed, cancelled
+    started_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    completed_at = Column(DateTime)
+    total_tests = Column(Integer, default=0)
+    passed_tests = Column(Integer, default=0)
+    failed_tests = Column(Integer, default=0)
+    duration_seconds = Column(Integer)
+    triggered_by = Column(String(255))  # user, ci/cd, schedule
+    suite_filter = Column(String(255))  # Optional suite name filter
+    error_message = Column(Text)
+
+    # Relationships
+    project = relationship("Project", backref="test_runs")
+    test_results = relationship("TestResult", back_populates="test_run", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<TestRun(id={self.id}, status='{self.status}', passed={self.passed_tests}/{self.total_tests})>"
+
+
+class TestResult(Base):
+    """TestResult represents individual test execution results"""
+    __tablename__ = 'test_results'
+
+    id = Column(Integer, primary_key=True)
+    test_run_id = Column(Integer, ForeignKey('test_runs.id'), nullable=False, index=True)
+    suite_name = Column(String(255), nullable=False)
+    test_file = Column(String(512), nullable=False)
+    status = Column(String(50), nullable=False)  # passed, failed, error, skipped
+    duration_seconds = Column(Integer)
+    error_message = Column(Text)
+    output = Column(Text)
+
+    # Relationships
+    test_run = relationship("TestRun", back_populates="test_results")
+
+    def __repr__(self):
+        return f"<TestResult(id={self.id}, suite='{self.suite_name}', status='{self.status}')>"
+
+
+class EnvironmentVariable(Base):
+    """EnvironmentVariable represents a project environment variable or secret"""
+    __tablename__ = 'environment_variables'
+
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
+    key = Column(String(255), nullable=False)
+    value_encrypted = Column(Text, nullable=False)  # Encrypted value
+    description = Column(Text)
+    is_secret = Column(Boolean, default=False)  # If true, value is masked in UI
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    project = relationship("Project", backref="environment_variables")
+
+    def __repr__(self):
+        return f"<EnvironmentVariable(id={self.id}, key='{self.key}', is_secret={self.is_secret})>"
+
+
+class ConfigurationHistory(Base):
+    """ConfigurationHistory tracks changes to project configuration"""
+    __tablename__ = 'configuration_history'
+
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
+    version = Column(Integer, nullable=False)
+    changed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    changed_by = Column(String(255))  # user, api, system
+    changes_json = Column(Text)  # JSON describing what changed
+    snapshot_json = Column(Text)  # Full configuration snapshot
+
+    # Relationships
+    project = relationship("Project", backref="configuration_history")
+
+    def __repr__(self):
+        return f"<ConfigurationHistory(id={self.id}, project_id={self.project_id}, version={self.version})>"
