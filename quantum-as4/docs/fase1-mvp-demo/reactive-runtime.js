@@ -23,6 +23,13 @@ import { renderProgressBar } from './components/ProgressBar.js';
 import { renderImage } from './components/Image.js';
 import { renderAlert, Alert } from './components/Alert.js';
 
+// Import FASE 2 components
+import { renderNumericStepper } from './components/NumericStepper.js';
+import { renderHSlider, renderVSlider } from './components/Slider.js';
+import { renderTextArea } from './components/TextArea.js';
+import { renderState, initializeStates, parseStates } from './components/States.js';
+import { renderStringValidator, renderNumberValidator, renderEmailValidator } from './components/Validators.js';
+
 export class ReactiveRuntime {
     constructor() {
         this.app = null;
@@ -267,6 +274,16 @@ export class ReactiveRuntime {
             ProgressBar: (node) => renderProgressBar(this, node),
             Image: (node) => renderImage(this, node),
             Alert: (node) => renderAlert(this, node),
+            // FASE 2 Components
+            NumericStepper: (node) => renderNumericStepper(this, node),
+            HSlider: (node) => renderHSlider(this, node),
+            VSlider: (node) => renderVSlider(this, node),
+            Slider: (node) => renderHSlider(this, node), // Default to horizontal
+            TextArea: (node) => renderTextArea(this, node),
+            State: (node) => renderState(this, node),
+            StringValidator: (node) => renderStringValidator(this, node),
+            NumberValidator: (node) => renderNumberValidator(this, node),
+            EmailValidator: (node) => renderEmailValidator(this, node),
         };
 
         // Make Alert class globally available

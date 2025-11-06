@@ -167,17 +167,44 @@ class JSCodeGen:
                     # - followed by (  (function calls)
                     # - numbers
 
-                    keywords = ['const', 'let', 'var', 'if', 'else', 'for', 'while', 'return', 'function', 'class', 'await', 'async', 'new']
+                    # JavaScript keywords that should NEVER have 'this.' prefix
+                    keywords = {
+                        'const', 'let', 'var', 'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'break', 'continue',
+                        'return', 'throw', 'try', 'catch', 'finally', 'function', 'class', 'extends', 'new', 'this', 'super',
+                        'import', 'export', 'default', 'async', 'await', 'yield', 'typeof', 'instanceof', 'delete',
+                        'void', 'in', 'of', 'with', 'debugger'
+                    }
+
+                    # JavaScript literals that should NEVER have 'this.' prefix
+                    literals = {'true', 'false', 'null', 'undefined', 'NaN', 'Infinity'}
+
+                    # Known global classes that are used as static members (don't prefix)
+                    global_classes = {
+                        'Alert', 'Math', 'Date', 'String', 'Number', 'Boolean', 'Array', 'Object',
+                        'JSON', 'console', 'window', 'document', 'navigator', 'location'
+                    }
 
                     # Match word boundaries for identifiers
                     def replace_identifier(match):
                         ident = match.group(1)
+
+                        # Don't prefix JavaScript keywords
                         if ident in keywords:
                             return match.group(0)
+
+                        # Don't prefix JavaScript literals
+                        if ident in literals:
+                            return match.group(0)
+
+                        # Don't prefix global classes (likely static member access like Alert.show)
+                        if ident in global_classes:
+                            return match.group(0)
+
                         # Check if already has this.
                         if match.group(0).startswith('this.'):
                             return match.group(0)
-                        # Check what comes after
+
+                        # Add this. prefix for instance members
                         return f'this.{ident}'
 
                     # Replace identifiers: look for word followed by not-(

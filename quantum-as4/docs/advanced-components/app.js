@@ -733,29 +733,29 @@ class App {
   }
 
   handleTasksReordered(newOrder, sourceIndex, targetIndex) {
-    this.console.log("Tasks reordered from index " + this.sourceIndex + " to " + this.targetIndex);
+    console.log("Tasks reordered from index " + this.sourceIndex + " to " + this.targetIndex);
   }
 
   handleTaskSelection(items, index) {
-    this.if (this.items.this.length > 0) {
+    if (this.items.length > 0) {
     this.selectedTask = "Selected: " + this.items[0];
   }
 
   handleCellEdit(event) {
-    this.console.log("Cell edited: " + this.event.this.field + " changed from " + this.event.this.oldValue + " to " + this.event.this.newValue);
+    console.log("Cell edited: " + this.event.field + " changed from " + this.event.oldValue + " to " + this.event.newValue);
   }
 
   handleMenuClick(item) {
-    this.console.log("Menu clicked: " + this.item.this.label);
+    console.log("Menu clicked: " + this.item.label);
   }
 
   handleAccordionChange(index, expanded) {
-    this.console.log("Panel " + this.index + (this.expanded ? " expanded" : " collapsed"));
+    console.log("Panel " + this.index + (this.expanded ? " expanded" : " collapsed"));
   }
 
   handleImageSelection(items, index) {
-    this.if (this.items.this.length > 0) {
-    this.selectedImage = "Selected: " + this.items[0].this.label;
+    if (this.items.length > 0) {
+    this.selectedImage = "Selected: " + this.items[0].label;
   }
 
 }
