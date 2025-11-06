@@ -20,8 +20,9 @@ class Platform(Enum):
 @dataclass
 class AppInfo:
     """Application metadata"""
-    name: str
-    version: str
+    title: str = "Quantum MXML Application"
+    name: str = ""
+    version: str = "1.0.0"
     description: Optional[str] = None
     author: Optional[str] = None
     license: Optional[str] = None
@@ -84,12 +85,20 @@ class Variable:
 
 
 @dataclass
+class Parameter:
+    """Function parameter"""
+    name: str
+    type: str
+    default_value: Optional[str] = None
+
+
+@dataclass
 class Function:
     """Function declaration"""
     name: str
-    parameters: List[tuple]          # [(name, type), ...]
-    return_type: Optional[str]
-    body: str                         # Function body code
+    parameters: List[Parameter] = field(default_factory=list)
+    return_type: Optional[str] = None
+    body: str = ""                    # Function body code
     is_async: bool = False
     is_public: bool = False
     decorators: List[str] = field(default_factory=list)

@@ -14,7 +14,8 @@ import shutil
 sys.path.insert(0, str(Path(__file__).parent))
 
 from compiler.mxml_parser import MXMLParser
-from compiler.codegen import JSCodeGen
+from compiler.ast_bridge import ASTBridge
+from compiler.compilers.web import WebCompiler
 
 
 def build(input_file: str, output_dir: str, verbose: bool = False):
@@ -34,19 +35,25 @@ def build(input_file: str, output_dir: str, verbose: bool = False):
         if verbose:
             print("  → Parsing MXML...")
         parser = MXMLParser()
-        app = parser.parse(str(input_path))
+        legacy_app = parser.parse(str(input_path))
 
         if verbose:
-            print(f"     Found {len(app.script.split('function'))-1} functions")
-            print(f"     Found {len(app.ui.children)} root components")
+            print(f"     Found {len(legacy_app.script.split('function'))-1} functions")
+            print(f"     Found {len(legacy_app.ui.children)} root components")
 
-        # 2. Generate code
+        # 2. Convert to Universal AST
         if verbose:
-            print("  → Generating JavaScript...")
-        codegen = JSCodeGen()
-        output = codegen.generate(app)
+            print("  → Converting to Universal AST...")
+        bridge = ASTBridge()
+        universal_ast = bridge.legacy_to_universal(legacy_app)
 
-        # 3. Write files
+        # 3. Compile to Web
+        if verbose:
+            print("  → Compiling to Web (HTML/CSS/JS)...")
+        web_compiler = WebCompiler(input_path.parent)
+        output = web_compiler.compile_single_file(universal_ast)
+
+        # 4. Write files
         if verbose:
             print(f"  → Writing files to {output_dir}/")
         output_path.mkdir(parents=True, exist_ok=True)
@@ -55,12 +62,22 @@ def build(input_file: str, output_dir: str, verbose: bool = False):
         (output_path / 'index.html').write_text(output['index.html'])
         (output_path / 'styles.css').write_text(output['styles.css'])
 
-        # 4. Copy runtime
-        runtime_src = Path(__file__).parent / 'compiler' / 'runtime' / 'runtime.js'
+        # 5. Copy runtime files
+        runtime_dir = Path(__file__).parent / 'compiler' / 'runtime'
+
+        # Copy reactive runtime (primary)
+        reactive_runtime_src = runtime_dir / 'reactive-runtime.js'
+        if reactive_runtime_src.exists():
+            shutil.copy(reactive_runtime_src, output_path / 'reactive-runtime.js')
+        else:
+            print("  ⚠ Warning: reactive-runtime.js not found")
+
+        # Copy basic runtime (fallback/compatibility)
+        runtime_src = runtime_dir / 'runtime.js'
         if runtime_src.exists():
             shutil.copy(runtime_src, output_path / 'runtime.js')
         else:
-            print("  ⚠ Warning: runtime.js not found, runtime may not work")
+            print("  ⚠ Warning: runtime.js not found")
 
         print(f"✅ Build complete!")
         print(f"")

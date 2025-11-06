@@ -33,8 +33,8 @@ class JSCodeGen:
         """Generate main JavaScript file"""
         lines = []
 
-        # 1. Import runtime
-        lines.append("import { QuantumRuntime } from './runtime.js';")
+        # 1. Import reactive runtime
+        lines.append("import { ReactiveRuntime } from './reactive-runtime.js';")
         lines.append("")
 
         # 2. Parse ActionScript
@@ -110,11 +110,11 @@ class JSCodeGen:
         lines.append("}")
         lines.append("")
 
-        # 6. Initialize application
+        # 6. Initialize application with reactive runtime
         lines.append("// Initialize and render")
-        lines.append("const runtime = new QuantumRuntime();")
+        lines.append("const runtime = new ReactiveRuntime();")
         lines.append("const app = new App(runtime);")
-        lines.append("runtime.setApp(app);")
+        lines.append("runtime.setApp(app);  // Makes app reactive with Proxy")
         lines.append("runtime.render(componentTree, document.getElementById('app'));")
 
         return '\n'.join(lines)
