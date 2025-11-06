@@ -30,6 +30,10 @@ import { renderTextArea } from './components/TextArea.js';
 import { renderState, initializeStates, parseStates } from './components/States.js';
 import { renderStringValidator, renderNumberValidator, renderEmailValidator } from './components/Validators.js';
 
+// Import FASE 3 components
+import { renderFade, renderMove, renderResize, renderGlow } from './components/Effects.js';
+import { renderDateFormatter, renderNumberFormatter, renderCurrencyFormatter, renderPhoneFormatter, renderZipCodeFormatter } from './components/Formatters.js';
+
 export class ReactiveRuntime {
     constructor() {
         this.app = null;
@@ -284,6 +288,16 @@ export class ReactiveRuntime {
             StringValidator: (node) => renderStringValidator(this, node),
             NumberValidator: (node) => renderNumberValidator(this, node),
             EmailValidator: (node) => renderEmailValidator(this, node),
+            // FASE 3 Components
+            Fade: (node) => renderFade(this, node),
+            Move: (node) => renderMove(this, node),
+            Resize: (node) => renderResize(this, node),
+            Glow: (node) => renderGlow(this, node),
+            DateFormatter: (node) => renderDateFormatter(this, node),
+            NumberFormatter: (node) => renderNumberFormatter(this, node),
+            CurrencyFormatter: (node) => renderCurrencyFormatter(this, node),
+            PhoneFormatter: (node) => renderPhoneFormatter(this, node),
+            ZipCodeFormatter: (node) => renderZipCodeFormatter(this, node),
         };
 
         // Make Alert class globally available

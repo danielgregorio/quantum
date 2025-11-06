@@ -1068,69 +1068,69 @@ class App {
   }
 
   handleQuantityChange(event) {
-    this.console.log("Quantity changed to: " + this.quantity);
+    console.log("Quantity changed to: " + this.quantity);
   }
 
   handleVolumeChange(event) {
-    this.console.log("Volume: " + this.volume + "%");
+    console.log("Volume: " + this.volume + "%");
   }
 
   handleBrightnessChange(event) {
-    this.console.log("Brightness: " + this.brightness + "%");
+    console.log("Brightness: " + this.brightness + "%");
   }
 
   handleCommentsChange(event) {
-    this.console.log("Comments length: " + this.comments.this.length);
+    console.log("Comments length: " + this.comments.length);
   }
 
   switchToForm() {
     this.currentState = "formView";
-    this.console.log("Switched to form view");
+    console.log("Switched to form view");
   }
 
   switchToSettings() {
     this.currentState = "settingsView";
-    this.console.log("Switched to settings view");
+    console.log("Switched to settings view");
   }
 
   switchToDefault() {
     this.currentState = "default";
-    this.console.log("Switched to default view");
+    console.log("Switched to default view");
   }
 
   validateUsername(event) {
-    this.if (this.event.this.valid) {
-    this.console.log("Username is valid!");
+    if (this.event.valid) {
+    console.log("Username is valid!");
   }
 
   validateEmail(event) {
-    this.if (this.event.this.valid) {
-    this.console.log("Email is valid!");
+    if (this.event.valid) {
+    console.log("Email is valid!");
   }
 
   validateAge(event) {
-    this.if (this.event.this.valid) {
-    this.console.log("Age is valid!");
+    if (this.event.valid) {
+    console.log("Age is valid!");
   }
 
   submitForm() {
-    this.console.log("=== Form Submission ===");
-    this.console.log("Username: " + this.username);
-    this.console.log("Email: " + this.email);
-    this.console.log("Age: " + this.age);
-    this.console.log("Comments: " + this.comments);
+    console.log("=== Form Submission ===");
+    console.log("Username: " + this.username);
+    console.log("Email: " + this.email);
+    console.log("Age: " + this.age);
+    console.log("Comments: " + this.comments);
     // this.Validate this.all this.fields
-    const this.usernameValid = this.usernameValidator.this.validate();
-    const this.emailValid = this.emailValidator.this.validate();
-    const this.ageValid = this.ageValidator.this.validate();
-    this.if (this.usernameValid.this.valid && this.emailValid.this.valid && this.ageValid.this.valid) {
-    this.Alert.this.show(
+    const usernameValid = this.usernameValidator.validate();
+    const emailValid = this.emailValidator.validate();
+    const ageValid = this.ageValidator.validate();
+    if (this.usernameValid.valid && this.emailValid.valid && this.ageValid.valid) {
+    Alert.show(
     "Form submitted successfully!\n\nUsername: " + this.username + "\nEmail: " + this.email + "\nAge: " + this.age,
     "Success",
-    this.Alert.this.OK,
-    this.null,
-    this.null,
-    this.Alert.this.INFO
+    Alert.OK,
+    null,
+    null,
+    Alert.INFO
     );
   }
 
@@ -1139,7 +1139,7 @@ class App {
     this.email = "";
     this.age = 18;
     this.comments = "";
-    this.console.log("Form reset");
+    console.log("Form reset");
   }
 
 }

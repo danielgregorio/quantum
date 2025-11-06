@@ -350,19 +350,19 @@ class App {
   }
 
   handleCheckboxChange(checked) {
-    this.console.log("Checkbox changed to: " + this.checked);
+    console.log("Checkbox changed to: " + this.checked);
   }
 
   handleComboChange(item, index) {
-    this.console.log("Selected country: " + this.item + " at index " + this.index);
+    console.log("Selected country: " + this.item + " at index " + this.index);
   }
 
   handleDateChange(date) {
-    this.console.log("Selected date: " + this.date.this.toDateString());
+    console.log("Selected date: " + this.date.toDateString());
   }
 
   handleTabChange(index) {
-    this.console.log("Tab changed to: " + this.index);
+    console.log("Tab changed to: " + this.index);
   }
 
 }

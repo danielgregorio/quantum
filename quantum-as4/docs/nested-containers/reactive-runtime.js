@@ -8,6 +8,32 @@
  * - Efficient re-rendering (only update changed elements)
  */
 
+// Import advanced components
+import { DragManager } from './DragManager.js';
+import { renderList } from './components/List.js';
+import { renderDataGridAdvanced } from './components/DataGridAdvanced.js';
+import { renderTileList } from './components/TileList.js';
+import { renderAccordion, renderAccordionHeader } from './components/Accordion.js';
+import { renderMenu, renderMenuBar } from './components/Menu.js';
+
+// Import FASE 1 MVP components
+import { renderHTTPService } from './components/HTTPService.js';
+import { renderForm, renderFormItem, renderFormHeading } from './components/Form.js';
+import { renderProgressBar } from './components/ProgressBar.js';
+import { renderImage } from './components/Image.js';
+import { renderAlert, Alert } from './components/Alert.js';
+
+// Import FASE 2 components
+import { renderNumericStepper } from './components/NumericStepper.js';
+import { renderHSlider, renderVSlider } from './components/Slider.js';
+import { renderTextArea } from './components/TextArea.js';
+import { renderState, initializeStates, parseStates } from './components/States.js';
+import { renderStringValidator, renderNumberValidator, renderEmailValidator } from './components/Validators.js';
+
+// Import FASE 3 components
+import { renderFade, renderMove, renderResize, renderGlow } from './components/Effects.js';
+import { renderDateFormatter, renderNumberFormatter, renderCurrencyFormatter, renderPhoneFormatter, renderZipCodeFormatter } from './components/Formatters.js';
+
 export class ReactiveRuntime {
     constructor() {
         this.app = null;
@@ -230,14 +256,54 @@ export class ReactiveRuntime {
             Panel: (node) => this.renderPanel(node),
             Spacer: (node) => this.renderSpacer(node),
             DataGrid: (node) => this.renderDataGrid(node),
-            List: (node) => this.renderList(node),
+            List: (node) => renderList(this, node), // Enhanced version with drag support
             Modal: (node) => this.renderModal(node),
             CheckBox: (node) => this.renderCheckBox(node),
             ComboBox: (node) => this.renderComboBox(node),
             DatePicker: (node) => this.renderDatePicker(node),
             Tree: (node) => this.renderTree(node),
             TabNavigator: (node) => this.renderTabNavigator(node),
+            // Advanced components
+            AdvancedDataGrid: (node) => renderDataGridAdvanced(this, node),
+            TileList: (node) => renderTileList(this, node),
+            Accordion: (node) => renderAccordion(this, node),
+            AccordionHeader: (node) => renderAccordionHeader(this, node),
+            Menu: (node) => renderMenu(this, node),
+            MenuBar: (node) => renderMenuBar(this, node),
+            // FASE 1 MVP Components
+            HTTPService: (node) => renderHTTPService(this, node),
+            Form: (node) => renderForm(this, node),
+            FormItem: (node) => renderFormItem(this, node),
+            FormHeading: (node) => renderFormHeading(this, node),
+            ProgressBar: (node) => renderProgressBar(this, node),
+            Image: (node) => renderImage(this, node),
+            Alert: (node) => renderAlert(this, node),
+            // FASE 2 Components
+            NumericStepper: (node) => renderNumericStepper(this, node),
+            HSlider: (node) => renderHSlider(this, node),
+            VSlider: (node) => renderVSlider(this, node),
+            Slider: (node) => renderHSlider(this, node), // Default to horizontal
+            TextArea: (node) => renderTextArea(this, node),
+            State: (node) => renderState(this, node),
+            StringValidator: (node) => renderStringValidator(this, node),
+            NumberValidator: (node) => renderNumberValidator(this, node),
+            EmailValidator: (node) => renderEmailValidator(this, node),
+            // FASE 3 Components
+            Fade: (node) => renderFade(this, node),
+            Move: (node) => renderMove(this, node),
+            Resize: (node) => renderResize(this, node),
+            Glow: (node) => renderGlow(this, node),
+            DateFormatter: (node) => renderDateFormatter(this, node),
+            NumberFormatter: (node) => renderNumberFormatter(this, node),
+            CurrencyFormatter: (node) => renderCurrencyFormatter(this, node),
+            PhoneFormatter: (node) => renderPhoneFormatter(this, node),
+            ZipCodeFormatter: (node) => renderZipCodeFormatter(this, node),
         };
+
+        // Make Alert class globally available
+        if (typeof window !== 'undefined') {
+            window.Alert = Alert;
+        }
     }
 
     // Component Renderers

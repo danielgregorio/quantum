@@ -261,7 +261,7 @@ class App {
   }
 
   sendEvent(eventName) {
-    this.this.dispatchEvent( new this.Event( this.eventName ) );
+    this.dispatchEvent( new this.Event( this.eventName ) );
   }
 
 }
