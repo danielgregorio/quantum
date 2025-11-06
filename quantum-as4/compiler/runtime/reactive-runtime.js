@@ -234,6 +234,9 @@ export class ReactiveRuntime {
             Modal: (node) => this.renderModal(node),
             CheckBox: (node) => this.renderCheckBox(node),
             ComboBox: (node) => this.renderComboBox(node),
+            DatePicker: (node) => this.renderDatePicker(node),
+            Tree: (node) => this.renderTree(node),
+            TabNavigator: (node) => this.renderTabNavigator(node),
         };
     }
 
@@ -502,39 +505,221 @@ export class ReactiveRuntime {
     }
 
     renderCheckBox(node) {
-        const label = document.createElement('label');
-        label.className = 'quantum-checkbox';
+        const container = document.createElement('label');
+        container.className = 'quantum-checkbox';
+        container.style.display = 'inline-flex';
+        container.style.alignItems = 'center';
+        container.style.cursor = 'pointer';
+        container.style.userSelect = 'none';
+        container.style.gap = '8px';
 
         const input = document.createElement('input');
         input.type = 'checkbox';
+        input.style.cursor = 'pointer';
+        input.style.width = '18px';
+        input.style.height = '18px';
 
-        if (node.props.checked === 'true' || node.props.checked === true) {
-            input.checked = true;
+        const labelText = document.createElement('span');
+        labelText.style.fontSize = '14px';
+
+        // Set label
+        if (node.props.label) {
+            this.createReactiveBinding(labelText, node.props.label, 'textContent');
         }
 
-        const text = document.createElement('span');
-        text.textContent = node.props.label || '';
+        // Set initial selected state
+        if (node.props.selected) {
+            const initialValue = this.evaluateBinding(node.props.selected);
+            input.checked = initialValue === true || initialValue === 'true';
+        }
 
-        label.appendChild(input);
-        label.appendChild(text);
+        // Handle enabled/disabled
+        const enabled = node.props.enabled !== 'false';
+        input.disabled = !enabled;
+        if (!enabled) {
+            container.style.cursor = 'not-allowed';
+            container.style.opacity = '0.5';
+        }
 
+        // Label placement
+        const labelPlacement = node.props.labelPlacement || 'right';
+        if (labelPlacement === 'left') {
+            container.appendChild(labelText);
+            container.appendChild(input);
+        } else {
+            container.appendChild(input);
+            container.appendChild(labelText);
+        }
+
+        // Two-way binding
+        if (node.props.selected && node.props.selected.includes('{')) {
+            const varMatch = node.props.selected.match(/\{([^}]+)\}/);
+            if (varMatch) {
+                const varName = varMatch[1].trim();
+
+                // Update app property when checkbox changes
+                input.addEventListener('change', (e) => {
+                    this.app[varName] = e.target.checked;
+                });
+
+                // Update checkbox when app property changes
+                this.trackDependency(varName, (newValue) => {
+                    input.checked = newValue === true || newValue === 'true';
+                });
+            }
+        }
+
+        // Fire change event
         if (node.events.change) {
             input.addEventListener('change', (e) => {
-                this.executeHandler(node.events.change, e);
+                const handlerName = node.events.change.replace('()', '');
+                if (this.app[handlerName]) {
+                    this.app[handlerName](e.target.checked);
+                }
             });
         }
 
-        return label;
+        this.applyCommonProps(container, node.props);
+        return container;
     }
 
     renderComboBox(node) {
         const select = document.createElement('select');
         select.className = 'quantum-combobox';
+        select.style.padding = '8px 12px';
+        select.style.fontSize = '14px';
+        select.style.border = '1px solid #ccc';
+        select.style.borderRadius = '4px';
+        select.style.backgroundColor = 'white';
+        select.style.cursor = 'pointer';
 
-        // TODO: Add options from props
+        // Get data provider
+        let data = [];
+        if (node.props.dataProvider) {
+            data = this.evaluateBinding(node.props.dataProvider);
+            if (!Array.isArray(data)) data = [];
+        }
+
+        const labelField = node.props.labelField || 'label';
+
+        // Add prompt option
+        if (node.props.prompt) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = node.props.prompt;
+            opt.disabled = true;
+            opt.selected = true;
+            select.appendChild(opt);
+        }
+
+        // Add data options
+        data.forEach((item, index) => {
+            const opt = document.createElement('option');
+            opt.value = index;
+            opt.textContent = typeof item === 'object' ? item[labelField] : item;
+            select.appendChild(opt);
+        });
+
+        // Two-way binding for selectedIndex
+        if (node.props.selectedIndex && node.props.selectedIndex.includes('{')) {
+            const varMatch = node.props.selectedIndex.match(/\{([^}]+)\}/);
+            if (varMatch) {
+                const varName = varMatch[1].trim();
+                select.addEventListener('change', (e) => {
+                    this.app[varName] = node.props.prompt ? e.target.selectedIndex - 1 : e.target.selectedIndex;
+                });
+                this.trackDependency(varName, (newValue) => {
+                    select.selectedIndex = node.props.prompt ? newValue + 1 : newValue;
+                });
+            }
+        }
+
+        // Change event
+        if (node.events.change) {
+            select.addEventListener('change', (e) => {
+                const idx = node.props.prompt ? e.target.selectedIndex - 1 : e.target.selectedIndex;
+                const handlerName = node.events.change.replace('()', '');
+                if (this.app[handlerName]) {
+                    this.app[handlerName](data[idx], idx);
+                }
+            });
+        }
 
         this.applyCommonProps(select, node.props);
         return select;
+    }
+
+    renderDatePicker(node) {
+        const input = document.createElement('input');
+        input.type = 'date';
+        input.className = 'quantum-datepicker';
+        input.style.padding = '8px 12px';
+        input.style.fontSize = '14px';
+        input.style.border = '1px solid #ccc';
+        input.style.borderRadius = '4px';
+
+        // Set initial value
+        if (node.props.selectedDate) {
+            const dateValue = this.evaluateBinding(node.props.selectedDate);
+            if (dateValue) {
+                const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+                input.value = date.toISOString().split('T')[0];
+            }
+        }
+
+        // Two-way binding
+        if (node.props.selectedDate && node.props.selectedDate.includes('{')) {
+            const varMatch = node.props.selectedDate.match(/\{([^}]+)\}/);
+            if (varMatch) {
+                const varName = varMatch[1].trim();
+                input.addEventListener('change', (e) => {
+                    this.app[varName] = new Date(e.target.value);
+                });
+                this.trackDependency(varName, (newValue) => {
+                    const date = newValue instanceof Date ? newValue : new Date(newValue);
+                    input.value = date.toISOString().split('T')[0];
+                });
+            }
+        }
+
+        // Change event
+        if (node.events.change) {
+            input.addEventListener('change', (e) => {
+                const handlerName = node.events.change.replace('()', '');
+                if (this.app[handlerName]) {
+                    this.app[handlerName](new Date(e.target.value));
+                }
+            });
+        }
+
+        this.applyCommonProps(input, node.props);
+        return input;
+    }
+
+    renderTree(node) {
+        const container = document.createElement('div');
+        container.className = 'quantum-tree';
+        container.style.fontFamily = 'sans-serif';
+        container.style.fontSize = '14px';
+        container.textContent = 'Tree Component (Advanced hierarchical view available in components/Tree.js)';
+        container.style.padding = '20px';
+        container.style.border = '2px dashed #ccc';
+        container.style.borderRadius = '4px';
+        container.style.color = '#666';
+        this.applyCommonProps(container, node.props);
+        return container;
+    }
+
+    renderTabNavigator(node) {
+        const container = document.createElement('div');
+        container.className = 'quantum-tabnavigator';
+        container.textContent = 'TabNavigator Component (Full tabbed interface available in components/TabNavigator.js)';
+        container.style.padding = '20px';
+        container.style.border = '2px dashed #ccc';
+        container.style.borderRadius = '4px';
+        container.style.color = '#666';
+        this.applyCommonProps(container, node.props);
+        return container;
     }
 
     renderUnknown(node) {
