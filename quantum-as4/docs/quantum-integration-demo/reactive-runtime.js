@@ -833,4 +833,68 @@ export class ReactiveRuntime {
             console.error(`Error executing handler: ${handlerCode}`, e);
         }
     }
+
+    /**
+     * Health check system for automated testing
+     */
+    registerHealthCheck() {
+        // Store health status on window for external access
+        window.__quantumHealth = {
+            status: 'initializing',
+            timestamp: Date.now(),
+            errors: [],
+            warnings: [],
+            app: this.app ? this.app.constructor.name : 'unknown'
+        };
+
+        // Capture console errors
+        const originalError = console.error;
+        console.error = (...args) => {
+            window.__quantumHealth.errors.push({
+                message: args.join(' '),
+                timestamp: Date.now()
+            });
+            originalError.apply(console, args);
+        };
+
+        // Capture console warnings
+        const originalWarn = console.warn;
+        console.warn = (...args) => {
+            window.__quantumHealth.warnings.push({
+                message: args.join(' '),
+                timestamp: Date.now()
+            });
+            originalWarn.apply(console, args);
+        };
+
+        // Mark as ready after a short delay (allow components to mount)
+        setTimeout(() => {
+            if (window.__quantumHealth.status === 'initializing') {
+                window.__quantumHealth.status = 'ready';
+                window.__quantumHealth.readyTimestamp = Date.now();
+                console.log('[QUANTUM-HEALTH] Application loaded successfully');
+            }
+        }, 100);
+
+        // Listen for global errors
+        window.addEventListener('error', (event) => {
+            window.__quantumHealth.status = 'error';
+            window.__quantumHealth.errors.push({
+                message: event.message,
+                filename: event.filename,
+                lineno: event.lineno,
+                colno: event.colno,
+                timestamp: Date.now()
+            });
+        });
+
+        // Listen for unhandled promise rejections
+        window.addEventListener('unhandledrejection', (event) => {
+            window.__quantumHealth.status = 'error';
+            window.__quantumHealth.errors.push({
+                message: `Unhandled promise rejection: ${event.reason}`,
+                timestamp: Date.now()
+            });
+        });
+    }
 }
