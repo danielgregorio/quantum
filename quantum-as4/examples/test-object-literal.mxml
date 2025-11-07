@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009"
+               xmlns:s="library://ns.adobe.com/flex/spark"
+               title="Test Object Literal">
+    <fx:Script>
+    <![CDATA[
+        private var products:Array = [];
+        private var productName:String = "Test";
+        private var productPrice:Number = 99.99;
+
+        private function addProduct():void {
+            var newProduct = {
+                id: 123,
+                name: productName,
+                price: productPrice
+            };
+            products.push(newProduct);
+        }
+    ]]>
+    </fx:Script>
+
+    <s:VBox padding="20">
+        <s:Button label="Add Product" click="addProduct()" />
+    </s:VBox>
+</s:Application>

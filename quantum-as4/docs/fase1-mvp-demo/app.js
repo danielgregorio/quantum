@@ -763,7 +763,7 @@ class App {
     "Confirm Action",
     Alert.YES | Alert.NO,
     null,
-    function(this.e):void {
+    function(e):void {
     Alert.show(
     "You clicked: " + (this.e.detail === Alert.YES ? "YES" : "NO"),
     "Result",

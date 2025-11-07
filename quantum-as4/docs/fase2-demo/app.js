@@ -1101,16 +1101,25 @@ class App {
   validateUsername(event) {
     if (this.event.valid) {
     console.log("Username is valid!");
+    } else {
+    console.log("Username error: " + this.event.message);
+    }
   }
 
   validateEmail(event) {
     if (this.event.valid) {
     console.log("Email is valid!");
+    } else {
+    console.log("Email error: " + this.event.message);
+    }
   }
 
   validateAge(event) {
     if (this.event.valid) {
     console.log("Age is valid!");
+    } else {
+    console.log("Age error: " + this.event.message);
+    }
   }
 
   submitForm() {
@@ -1119,7 +1128,7 @@ class App {
     console.log("Email: " + this.email);
     console.log("Age: " + this.age);
     console.log("Comments: " + this.comments);
-    // this.Validate this.all this.fields
+    // Validate all fields
     const usernameValid = this.usernameValidator.validate();
     const emailValid = this.emailValidator.validate();
     const ageValid = this.ageValidator.validate();
@@ -1132,6 +1141,16 @@ class App {
     null,
     Alert.INFO
     );
+    } else {
+    Alert.show(
+    "Please fix the validation errors before submitting.",
+    "Validation Error",
+    Alert.OK,
+    null,
+    null,
+    Alert.ERROR
+    );
+    }
   }
 
   resetForm() {

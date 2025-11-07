@@ -2582,12 +2582,12 @@ class App {
     // Add new product
     var newId = this.products.length + 1;
     var newProduct = {
-    this.id: this.newId,
-    this.name: this.formProductName,
-    this.category: this.formProductCategory,
-    this.price: this.formProductPrice,
-    this.stock: this.formProductStock,
-    this.status: this.formProductStock > 20 ? "Active" : "Low Stock"
+    id: this.newId,
+    name: this.formProductName,
+    category: this.formProductCategory,
+    price: this.formProductPrice,
+    stock: this.formProductStock,
+    status: this.formProductStock > 20 ? "Active" : "Low Stock"
     };
     this.products.push(this.newProduct);
     Alert.show("Product added successfully!", "Success", Alert.OK, null, null, Alert.INFO);

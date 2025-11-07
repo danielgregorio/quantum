@@ -207,28 +207,45 @@ class JSCodeGen:
                     # Match word boundaries for identifiers
                     def replace_identifier(match):
                         ident = match.group(1)
+                        full_match = match.group(0)
+                        start_pos = match.start()
+
+                        # Get text before the identifier for context
+                        before_text = parts[i][:start_pos]
+
+                        # Don't prefix if preceded by dot (property access like items.length)
+                        if before_text.rstrip().endswith('.'):
+                            return full_match
+
+                        # Don't prefix if after var/let/const declaration
+                        words_before = before_text.strip().split()
+                        if words_before and words_before[-1] in {'var', 'let', 'const'}:
+                            return full_match
 
                         # Don't prefix JavaScript keywords
                         if ident in keywords:
-                            return match.group(0)
+                            return full_match
 
                         # Don't prefix JavaScript literals
                         if ident in literals:
-                            return match.group(0)
+                            return full_match
 
                         # Don't prefix global classes (likely static member access like Alert.show)
                         if ident in global_classes:
-                            return match.group(0)
+                            return full_match
 
                         # Check if already has this.
-                        if match.group(0).startswith('this.'):
-                            return match.group(0)
+                        if full_match.startswith('this.'):
+                            return full_match
 
                         # Add this. prefix for instance members
                         return f'this.{ident}'
 
-                    # Replace identifiers: look for word followed by not-(
-                    parts[i] = re.sub(r'\b([a-zA-Z_]\w*)(?!\s*\()', replace_identifier, parts[i])
+                    # Replace identifiers: complete word + negative lookahead for : only
+                    # This avoids adding this. to object literal keys: { id: value }
+                    # But DOES add this. to function calls: myMethod() -> this.myMethod()
+                    # Using \b at both ends ensures we match complete words
+                    parts[i] = re.sub(r'\b([a-zA-Z_][\w]*)\b(?!\s*:)', replace_identifier, parts[i])
 
             line = ''.join(parts)
 

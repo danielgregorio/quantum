@@ -1250,18 +1250,18 @@ class App {
     console.log("Message from Quantum component: " + JSON.stringify(this.event.data));
     this.lastMessage = JSON.stringify(this.event.data);
     this.messageLog.push({
-    this.timestamp: new Date().toLocaleTimeString(),
-    this.data: this.event.data,
-    this.origin: this.event.origin
+    timestamp: new Date().toLocaleTimeString(),
+    data: this.event.data,
+    origin: this.event.origin
     });
   }
 
   sendMessageToComponent() {
     if (this.quantumComponent) {
     this.quantumComponent.postMessage({
-    this.type: 'this.greeting',
-    this.message: 'this.Hello this.from this.MXML!',
-    this.timestamp: Date.now()
+    type: 'this.greeting',
+    message: 'this.Hello this.from this.MXML!',
+    timestamp: Date.now()
     });
     this.statusMessage = "Message sent to Quantum component";
     }
@@ -1270,11 +1270,11 @@ class App {
   setupBridge() {
     if (this.quantumBridge) {
     // Register handler for messages from Quantum
-    this.quantumBridge.on('this.quantum:this.data', function(this.data) {
+    this.quantumBridge.on('quantum:this.data', function(this.data) {
     console.log("Bridge received data: " + JSON.stringify(this.data));
     this.lastMessage = "Bridge: " + JSON.stringify(this.data);
     });
-    this.quantumBridge.on('this.quantum:this.event', function(this.data) {
+    this.quantumBridge.on('quantum:this.event', function(this.data) {
     console.log("Bridge received event: " + JSON.stringify(this.data));
     this.lastMessage = "Event: " + this.data.eventType;
     });
@@ -1284,10 +1284,10 @@ class App {
 
   sendViaBridge() {
     if (this.quantumBridge) {
-    this.quantumBridge.send('this.mxml:this.message', {
-    this.from: 'this.MXML this.Application',
-    this.message: 'this.Testing this.bridge this.communication',
-    this.timestamp: Date.now()
+    this.quantumBridge.send('mxml:this.message', {
+    from: 'this.MXML this.Application',
+    message: 'this.Testing this.bridge this.communication',
+    timestamp: Date.now()
     });
     this.statusMessage = "Message sent via bridge";
     }

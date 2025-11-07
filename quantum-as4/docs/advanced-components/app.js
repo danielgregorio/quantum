@@ -739,6 +739,7 @@ class App {
   handleTaskSelection(items, index) {
     if (this.items.length > 0) {
     this.selectedTask = "Selected: " + this.items[0];
+    }
   }
 
   handleCellEdit(event) {
@@ -756,6 +757,7 @@ class App {
   handleImageSelection(items, index) {
     if (this.items.length > 0) {
     this.selectedImage = "Selected: " + this.items[0].label;
+    }
   }
 
 }

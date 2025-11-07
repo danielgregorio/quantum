@@ -220,6 +220,7 @@ class WebCompiler:
             def replace_identifier(match):
                 ident = match.group(1)
                 full_match = match.group(0)
+                start_pos = match.start()
 
                 # Don't replace JavaScript keywords
                 keywords = {
@@ -241,6 +242,18 @@ class WebCompiler:
                     'Set', 'Map', 'WeakMap', 'WeakSet', 'Symbol', 'Proxy', 'Reflect'
                 }
 
+                # Get context before the identifier
+                before_text = parts[i][:start_pos]
+
+                # Don't prefix if preceded by dot (property access like items.length)
+                if before_text.rstrip().endswith('.'):
+                    return full_match
+
+                # Don't prefix if after var/let/const declaration
+                words_before = before_text.strip().split()
+                if words_before and words_before[-1] in {'var', 'let', 'const'}:
+                    return full_match
+
                 # Don't prefix keywords
                 if ident in keywords:
                     return full_match
@@ -259,10 +272,9 @@ class WebCompiler:
             # Replace identifiers only in non-string parts
             for i in range(len(parts)):
                 if i % 2 == 0:  # Non-string parts
-                    # Match complete identifiers
-                    # NOT preceded by . (property access) or word character
-                    # Capture the full identifier
-                    parts[i] = re.sub(r'(?<![.\w])([a-zA-Z_]\w*)\b', replace_identifier, parts[i])
+                    # Match complete identifiers with negative lookahead for : (object literal keys)
+                    # This avoids adding this. to { id: value } but DOES add to myMethod()
+                    parts[i] = re.sub(r'\b([a-zA-Z_][\w]*)\b(?!\s*:)', replace_identifier, parts[i])
 
             line = ''.join(parts)
 
