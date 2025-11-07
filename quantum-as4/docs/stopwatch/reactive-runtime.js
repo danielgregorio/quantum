@@ -132,6 +132,13 @@ export class ReactiveRuntime {
     }
 
     /**
+     * Alias for notifyDependents - used by generated code from codegen.py
+     */
+    notifyChange(property, newValue) {
+        return this.notifyDependents(property, newValue);
+    }
+
+    /**
      * Evaluate binding expression and track dependency
      */
     evaluateBinding(expression, trackingElement = null) {
