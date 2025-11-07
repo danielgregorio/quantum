@@ -2549,7 +2549,7 @@ class App {
 
   searchProducts() {
     console.log("Searching products: " + this.productSearchQuery);
-    // this.In this.real this.app, this.would this.filter this.products this.array
+    // In real app, would filter products array
   }
 
   addProduct() {
@@ -2571,7 +2571,7 @@ class App {
 
   saveProduct() {
     if (this.selectedProduct != null) {
-    // this.Update this.existing this.product
+    // Update existing product
     this.selectedProduct.name = this.formProductName;
     this.selectedProduct.price = this.formProductPrice;
     this.selectedProduct.stock = this.formProductStock;
@@ -2587,13 +2587,13 @@ class App {
   deleteProduct() {
     if (this.selectedProduct != null) {
     Alert.show("Product deleted: " + this.selectedProduct.name, "Deleted", Alert.OK, null, null, Alert.WARNING);
-    // this.In this.real this.app, this.would this.remove this.from this.array
+    // In real app, would remove from array
     this.selectedProduct = null;
   }
 
   filterOrders() {
     console.log("Filtering orders by status: " + this.orderStatusFilter);
-    // this.In this.real this.app, this.would this.filter this.orders this.array
+    // In real app, would filter orders array
   }
 
   updateOrderStatus() {

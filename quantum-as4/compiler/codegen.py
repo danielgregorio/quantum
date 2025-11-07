@@ -148,15 +148,34 @@ class JSCodeGen:
             if not line:
                 continue
 
+            # Skip comment lines entirely
+            if line.startswith('//'):
+                lines.append(line)
+                continue
+
+            # Handle inline comments - split line into code and comment
+            comment_part = ""
+            code_part = line
+            if '//' in line:
+                # Find comment (but not in strings)
+                parts_temp = re.split(r'("(?:[^"\\]|\\.)*")', line)
+                for i, part in enumerate(parts_temp):
+                    if i % 2 == 0 and '//' in part:  # Non-string part with comment
+                        comment_idx = part.index('//')
+                        # Reconstruct: everything before comment
+                        code_part = ''.join(parts_temp[:i]) + part[:comment_idx]
+                        comment_part = part[comment_idx:]
+                        break
+
             # Simple transformations
             # trace() → console.log()
-            line = line.replace('trace(', 'console.log(')
+            code_part = code_part.replace('trace(', 'console.log(')
 
             # For now, use a simple regex approach that preserves strings
             # Replace bare identifiers with this.identifier (but not in strings)
 
             # Split by strings to avoid replacing inside them
-            parts = re.split(r'("(?:[^"\\]|\\.)*")', line)
+            parts = re.split(r'("(?:[^"\\]|\\.)*")', code_part)
 
             for i in range(len(parts)):
                 # Only process non-string parts (even indices)
@@ -211,6 +230,10 @@ class JSCodeGen:
                     parts[i] = re.sub(r'\b([a-zA-Z_]\w*)(?!\s*\()', replace_identifier, parts[i])
 
             line = ''.join(parts)
+
+            # Add comment back if it was present
+            if comment_part:
+                line = line + ' ' + comment_part
 
             lines.append(line)
 
