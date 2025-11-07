@@ -27,10 +27,10 @@ def build(input_file: str, output_dir: str, verbose: bool = False):
     output_path = Path(output_dir)
 
     if not input_path.exists():
-        print(f"❌ Error: Input file not found: {input_file}")
+        print(f"[ERROR] Input file not found: {input_file}")
         sys.exit(1)
 
-    print(f"🔨 Building {input_file}...")
+    print(f"Building {input_file}...")
 
     try:
         # 1. Parse MXML
@@ -88,7 +88,7 @@ def build(input_file: str, output_dir: str, verbose: bool = False):
         else:
             print("  ⚠ Warning: flex-theme.css not found")
 
-        print(f"✅ Build complete!")
+        print(f"[SUCCESS] Build complete!")
         print(f"")
         print(f"   Files generated:")
         print(f"     • {output_dir}/index.html")
@@ -101,7 +101,7 @@ def build(input_file: str, output_dir: str, verbose: bool = False):
         print(f"     Then open: http://localhost:8080")
 
     except Exception as e:
-        print(f"❌ Build failed: {e}")
+        print(f"[ERROR] Build failed: {e}")
         if verbose:
             import traceback
             traceback.print_exc()
@@ -114,7 +114,7 @@ def build_gtk(input_file: str, output_file: str = None, run: bool = False):
     input_path = Path(input_file)
 
     if not input_path.exists():
-        print(f"❌ Error: Input file not found: {input_file}")
+        print(f"[ERROR] Input file not found: {input_file}")
         sys.exit(1)
 
     try:
@@ -127,7 +127,7 @@ def build_gtk(input_file: str, output_file: str = None, run: bool = False):
             subprocess.run(['python3', output_path])
 
     except Exception as e:
-        print(f"❌ Build failed: {e}")
+        print(f"[ERROR] Build failed: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
@@ -139,7 +139,7 @@ def build_cli(input_file: str, output_file: str = None, run: bool = False):
     input_path = Path(input_file)
 
     if not input_path.exists():
-        print(f"❌ Error: Input file not found: {input_file}")
+        print(f"[ERROR] Input file not found: {input_file}")
         sys.exit(1)
 
     try:
@@ -152,7 +152,7 @@ def build_cli(input_file: str, output_file: str = None, run: bool = False):
             subprocess.run(['python3', output_path])
 
     except Exception as e:
-        print(f"❌ Build failed: {e}")
+        print(f"[ERROR] Build failed: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

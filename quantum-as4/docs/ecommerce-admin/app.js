@@ -2567,6 +2567,7 @@ class App {
     this.formProductPrice = this.selectedProduct.price;
     this.formProductStock = this.selectedProduct.stock;
     this.formProductCategory = this.selectedProduct.category;
+    }
   }
 
   saveProduct() {
@@ -2577,6 +2578,22 @@ class App {
     this.selectedProduct.stock = this.formProductStock;
     this.selectedProduct.category = this.formProductCategory;
     Alert.show("Product updated successfully!", "Success", Alert.OK, null, null, Alert.INFO);
+    } else {
+    // Add new product
+    var newId = this.products.length + 1;
+    var newProduct = {
+    this.id: this.newId,
+    this.name: this.formProductName,
+    this.category: this.formProductCategory,
+    this.price: this.formProductPrice,
+    this.stock: this.formProductStock,
+    this.status: this.formProductStock > 20 ? "Active" : "Low Stock"
+    };
+    this.products.push(this.newProduct);
+    Alert.show("Product added successfully!", "Success", Alert.OK, null, null, Alert.INFO);
+    }
+    this.editingProduct = false;
+    this.selectedProduct = null;
   }
 
   cancelEdit() {
@@ -2589,6 +2606,7 @@ class App {
     Alert.show("Product deleted: " + this.selectedProduct.name, "Deleted", Alert.OK, null, null, Alert.WARNING);
     // In real app, would remove from array
     this.selectedProduct = null;
+    }
   }
 
   filterOrders() {
@@ -2602,12 +2620,23 @@ class App {
     var newStatus = "";
     if (this.currentStatus == "Pending") {
     this.newStatus = "Processing";
+    } else if (this.currentStatus == "Processing") {
+    this.newStatus = "Shipped";
+    } else if (this.currentStatus == "Shipped") {
+    this.newStatus = "Delivered";
+    } else {
+    this.newStatus = this.currentStatus;
+    }
+    this.selectedOrder.status = this.newStatus;
+    Alert.show("Order status updated to: " + this.newStatus, "Updated", Alert.OK, null, null, Alert.INFO);
+    }
   }
 
   cancelOrder() {
     if (this.selectedOrder != null) {
     this.selectedOrder.status = "Cancelled";
     Alert.show("Order cancelled: " + this.selectedOrder.id, "Cancelled", Alert.OK, null, null, Alert.WARNING);
+    }
   }
 
   refreshDashboard() {

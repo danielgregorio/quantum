@@ -1177,11 +1177,23 @@ class App {
     this.productsData = this.event.result;
     this.statusMessage = "Products loaded successfully!";
     this.isLoading = false;
-    // this.Log this.the this.response
+    // Log the response
     console.log("Status Code: " + this.event.statusCode);
     console.log("URL: " + this.event.url);
     if (this.event.result.data) {
     console.log("Data: " + JSON.stringify(this.event.result.data));
+    }
+    if (this.event.result.html) {
+    console.log("HTML length: " + this.event.result.html.length);
+    }
+    Alert.show(
+    "Loaded data from Quantum server!",
+    "Success",
+    Alert.OK,
+    null,
+    null,
+    Alert.INFO
+    );
   }
 
   handleProductsFault(event) {
@@ -1216,6 +1228,7 @@ class App {
     this.statusMessage = "Hello component data loaded";
     if (this.event.result.title) {
     console.log("Title: " + this.event.result.title);
+    }
   }
 
   handleHelloFault(event) {
@@ -1240,6 +1253,7 @@ class App {
     this.timestamp: new Date().toLocaleTimeString(),
     this.data: this.event.data,
     this.origin: this.event.origin
+    });
   }
 
   sendMessageToComponent() {
@@ -1248,14 +1262,24 @@ class App {
     this.type: 'this.greeting',
     this.message: 'this.Hello this.from this.MXML!',
     this.timestamp: Date.now()
+    });
+    this.statusMessage = "Message sent to Quantum component";
+    }
   }
 
   setupBridge() {
     if (this.quantumBridge) {
-    // this.Register this.handler for this.messages this.from this.Quantum
+    // Register handler for messages from Quantum
     this.quantumBridge.on('this.quantum:this.data', function(this.data) {
     console.log("Bridge received data: " + JSON.stringify(this.data));
     this.lastMessage = "Bridge: " + JSON.stringify(this.data);
+    });
+    this.quantumBridge.on('this.quantum:this.event', function(this.data) {
+    console.log("Bridge received event: " + JSON.stringify(this.data));
+    this.lastMessage = "Event: " + this.data.eventType;
+    });
+    this.statusMessage = "Bridge initialized";
+    }
   }
 
   sendViaBridge() {
@@ -1264,12 +1288,40 @@ class App {
     this.from: 'this.MXML this.Application',
     this.message: 'this.Testing this.bridge this.communication',
     this.timestamp: Date.now()
+    });
+    this.statusMessage = "Message sent via bridge";
+    }
   }
 
   callQuantumMethod() {
     if (this.quantumBridge) {
     this.statusMessage = "Calling Quantum method...";
-    this.quantumBridge.call('this.getServerInfo', {
+    this.quantumBridge.call('this.getServerInfo', {})
+    .then(function(this.result) {
+    console.log("RPC result: " + JSON.stringify(this.result));
+    this.statusMessage = "RPC call succeeded";
+    Alert.show(
+    "Server responded: " + JSON.stringify(this.result),
+    "RPC Success",
+    Alert.OK,
+    null,
+    null,
+    Alert.INFO
+    );
+    })
+    .catch(function(this.error) {
+    console.log("RPC error: " + this.error.message);
+    this.statusMessage = "RPC call failed: " + this.error.message;
+    Alert.show(
+    "RPC call failed: " + this.error.message,
+    "RPC Error",
+    Alert.OK,
+    null,
+    null,
+    Alert.WARNING
+    );
+    });
+    }
   }
 
   refreshStatus() {

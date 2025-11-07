@@ -177,15 +177,42 @@ class AS4Parser:
         """
         functions = []
 
-        # Pattern to match function declarations
-        # Captures: async, visibility, name, params, return type, body
-        pattern = r'(?:async\s+)?(?:private|public)?\s*function\s+(\w+)\s*\((.*?)\)\s*(?::(\w+(?:<\w+>)?)?)?\s*\{(.*?)\}'
+        # Pattern to match function start (without body)
+        # We'll use brace counting to find the correct closing brace
+        func_start_pattern = r'(?:async\s+)?(?:private|public)?\s*function\s+(\w+)\s*\((.*?)\)\s*(?::(\w+(?:<\w+>)?)?)?\s*\{'
 
-        for match in re.finditer(pattern, code, re.DOTALL):
+        for match in re.finditer(func_start_pattern, code):
             name = match.group(1)
             params_str = match.group(2)
             return_type = match.group(3)
-            body = match.group(4)
+            start_pos = match.end()  # Position right after opening {
+
+            # Count braces to find matching closing brace
+            brace_count = 1
+            i = start_pos
+            in_string = False
+            escape_next = False
+
+            while i < len(code) and brace_count > 0:
+                char = code[i]
+
+                # Handle string literals (don't count braces inside strings)
+                if escape_next:
+                    escape_next = False
+                elif char == '\\':
+                    escape_next = True
+                elif char == '"' or char == "'":
+                    in_string = not in_string
+                elif not in_string:
+                    if char == '{':
+                        brace_count += 1
+                    elif char == '}':
+                        brace_count -= 1
+
+                i += 1
+
+            # Extract body between opening and closing braces
+            body = code[start_pos:i-1]
 
             # Check if async
             func_start = match.start()

@@ -115,6 +115,7 @@ class JSCodeGen:
         lines.append("const runtime = new ReactiveRuntime();")
         lines.append("const app = new App(runtime);")
         lines.append("runtime.setApp(app);  // Makes app reactive with Proxy")
+        lines.append("runtime.registerHealthCheck();  // Enable health monitoring")
         lines.append("runtime.render(componentTree, document.getElementById('app'));")
 
         return '\n'.join(lines)

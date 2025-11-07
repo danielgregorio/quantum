@@ -617,23 +617,46 @@ class App {
   }
 
   submitForm() {
-    // this.Validation
+    // Validation
     if (!this.username || this.username.length < 3) {
     Alert.show("Username must be at least 3 characters", "Validation Error", Alert.OK, null, null, Alert.WARNING);
     return;
+    }
+    if (!this.email || this.email.indexOf("@") === -1) {
+    Alert.show("Please enter a valid email address", "Validation Error", Alert.OK, null, null, Alert.WARNING);
+    return;
+    }
+    if (!this.password || this.password.length < 6) {
+    Alert.show("Password must be at least 6 characters", "Validation Error", Alert.OK, null, null, Alert.WARNING);
+    return;
+    }
+    if (!this.acceptTerms) {
+    Alert.show("You must accept the terms and conditions", "Terms Required", Alert.OK, null, null, Alert.ERROR);
+    return;
+    }
+    // Confirm submission
+    Alert.show(
+    "Are you sure you want to create this account?\n\nUsername: " + this.username + "\nEmail: " + this.email,
+    "Confirm Registration",
+    Alert.YES | Alert.NO,
+    null,
+    this.handleConfirm,
+    Alert.QUESTION
+    );
   }
 
   handleConfirm(event) {
     if (this.event.detail === Alert.YES) {
-    // this.Simulate this.form this.submission with this.progress
+    // Simulate form submission with progress
     this.isSubmitting = true;
     this.statusMessage = "Submitting...";
     this.uploadProgress = 0;
     this.simulateUpload();
+    }
   }
 
   simulateUpload() {
-    // this.Simulate this.progress
+    // Simulate progress
     var interval = this.setInterval(function():void {
     this.uploadProgress += 10;
     if (this.uploadProgress >= 100) {
@@ -648,10 +671,12 @@ class App {
     this.handleSuccess,
     Alert.INFO
     );
+    }
+    }, 200);
   }
 
   handleSuccess(event) {
-    // this.Reset this.form
+    // Reset form
     this.username = "";
     this.email = "";
     this.password = "";
@@ -743,6 +768,9 @@ class App {
     "You clicked: " + (this.e.detail === Alert.YES ? "YES" : "NO"),
     "Result",
     Alert.OK
+    );
+    },
+    Alert.QUESTION
     );
   }
 
