@@ -106,6 +106,13 @@ export class ReactiveRuntime {
     }
 
     /**
+     * Alias for trackDependency - used by some components
+     */
+    addBinding(property, updateFn) {
+        return this.trackDependency(property, updateFn);
+    }
+
+    /**
      * Notify all elements that depend on a property
      */
     notifyDependents(property, newValue) {
@@ -288,6 +295,7 @@ export class ReactiveRuntime {
             Slider: (node) => renderHSlider(this, node), // Default to horizontal
             TextArea: (node) => renderTextArea(this, node),
             State: (node) => renderState(this, node),
+            states: (node) => this.renderStates(node), // Container for multiple State elements
             StringValidator: (node) => renderStringValidator(this, node),
             NumberValidator: (node) => renderNumberValidator(this, node),
             EmailValidator: (node) => renderEmailValidator(this, node),
@@ -792,6 +800,24 @@ export class ReactiveRuntime {
         container.style.borderRadius = '4px';
         container.style.color = '#666';
         this.applyCommonProps(container, node.props);
+        return container;
+    }
+
+    renderStates(node) {
+        // States container is just a logical grouping - doesn't render anything visual
+        // Just process child State elements
+        const container = document.createElement('div');
+        container.style.display = 'none'; // Hidden container
+
+        if (node.children && node.children.length > 0) {
+            for (const child of node.children) {
+                const childElement = this.renderComponent(child);
+                if (childElement) {
+                    container.appendChild(childElement);
+                }
+            }
+        }
+
         return container;
     }
 
