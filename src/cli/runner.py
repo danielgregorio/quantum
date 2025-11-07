@@ -55,7 +55,11 @@ class QuantumRunner:
                 for error in validation_errors:
                     print(f"  - {error}")
                 return 1
-            
+
+            if debug:
+                print(f"[DEBUG] ✅ AST validated successfully")
+                print(f"[DEBUG] Executing AST node...")
+
             # Execute based on type
             return self._execute_ast(ast_node, debug)
             
