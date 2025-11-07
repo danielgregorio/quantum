@@ -195,8 +195,27 @@ class WebCompiler:
             if not line:
                 continue
 
+            # Skip comment lines entirely
+            if line.startswith('//'):
+                lines.append(line)
+                continue
+
+            # Handle inline comments - split line into code and comment
+            comment_part = ""
+            code_part = line
+            if '//' in line:
+                # Find comment (but not in strings)
+                parts_temp = re.split(r'("(?:[^"\\]|\\.)*")', line)
+                for i, part in enumerate(parts_temp):
+                    if i % 2 == 0 and '//' in part:  # Non-string part with comment
+                        comment_idx = part.index('//')
+                        # Reconstruct: everything before comment
+                        code_part = ''.join(parts_temp[:i]) + part[:comment_idx]
+                        comment_part = part[comment_idx:]
+                        break
+
             # Split by string literals to avoid replacing inside them
-            parts = re.split(r'("(?:[^"\\]|\\.)*")', line)
+            parts = re.split(r'("(?:[^"\\]|\\.)*")', code_part)
 
             def replace_identifier(match):
                 ident = match.group(1)
@@ -246,6 +265,10 @@ class WebCompiler:
                     parts[i] = re.sub(r'(?<![.\w])([a-zA-Z_]\w*)\b', replace_identifier, parts[i])
 
             line = ''.join(parts)
+
+            # Add comment back if it was present
+            if comment_part:
+                line = line + ' ' + comment_part
 
             # trace() → console.log()
             line = line.replace('trace(', 'console.log(')
