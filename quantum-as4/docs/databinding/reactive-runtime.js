@@ -841,7 +841,11 @@ export class ReactiveRuntime {
      * Apply common props to elements
      */
     applyCommonProps(element, props) {
-        if (props.styleName) element.classList.add(props.styleName);
+        if (props.styleName) {
+            // Split space-separated class names and add each one
+            const classNames = props.styleName.trim().split(/\s+/).filter(c => c.length > 0);
+            classNames.forEach(className => element.classList.add(className));
+        }
         if (props.id) element.id = props.id;
         if (props.visible === 'false') element.style.display = 'none';
         if (props.width) element.style.width = props.width;
