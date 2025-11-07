@@ -78,9 +78,18 @@ class AS4Parser:
         # Clean up code
         code = self._remove_comments(code)
 
+        # Parse functions FIRST
+        functions = self._parse_functions(code)
+
+        # Remove function bodies to avoid capturing local variables
+        code_without_functions = self._remove_function_bodies(code)
+
+        # NOW parse class-level variables (excluding function-local vars)
+        variables = self._parse_variables(code_without_functions)
+
         return AS4AST(
-            variables=self._parse_variables(code),
-            functions=self._parse_functions(code),
+            variables=variables,
+            functions=functions,
             imports=self._parse_imports(code),
             metadata=self._parse_metadata(code)
         )
@@ -142,19 +151,20 @@ class AS4Parser:
         """
         variables = []
 
-        # Pattern to match variable declarations
-        # Captures: bindable flag, visibility, name, type, value
-        pattern = r'(?:\[Bindable\])?\s*(?:private|public)?\s*var\s+(\w+)(?::(\w+(?:\.<\w+>)?)?)?\s*(?:=\s*(.+?))?;'
+        # Pattern to match variable declarations (MULTILINE support)
+        # Use DOTALL flag to match across newlines
+        # Captures: (1) bindable flag, (2) visibility, (3) name, (4) type, (5) value
+        pattern = r'(\[Bindable\])?\s*(private|public)?\s*var\s+(\w+)(?::(\w+(?:\.<\w+>)?)?)?\s*(?:=\s*(.+?))?;'
 
-        for match in re.finditer(pattern, code):
-            name = match.group(1)
-            type_ = match.group(2)
-            value = match.group(3)
+        for match in re.finditer(pattern, code, re.DOTALL):
+            bindable_flag = match.group(1)
+            visibility = match.group(2)
+            name = match.group(3)
+            type_ = match.group(4)
+            value = match.group(5)
 
-            # Check if [Bindable] appears before this var
-            var_start = match.start()
-            preceding_code = code[max(0, var_start - 50):var_start]
-            is_bindable = '[Bindable]' in preceding_code
+            # Bindable if [Bindable] was captured
+            is_bindable = bindable_flag is not None
 
             variables.append(Variable(
                 name=name,
@@ -164,6 +174,51 @@ class AS4Parser:
             ))
 
         return variables
+
+    def _remove_function_bodies(self, code: str) -> str:
+        """
+        Remove function bodies to prevent parsing local variables as class variables
+
+        Returns code with function bodies replaced by empty blocks: function name() {}
+        """
+        # Find all function matches first
+        func_start_pattern = r'(?:async\s+)?(?:private|public)?\s*function\s+(\w+)\s*\((.*?)\)\s*(?::(\w+(?:<\w+>)?)?)?\s*\{'
+
+        matches_and_ranges = []
+
+        for match in re.finditer(func_start_pattern, code):
+            start_pos = match.end()  # Position after opening {
+
+            # Count braces to find matching closing brace
+            brace_count = 1
+            i = start_pos
+            in_string = False
+            escape_next = False
+
+            while i < len(code) and brace_count > 0:
+                char = code[i]
+                if escape_next:
+                    escape_next = False
+                elif char == '\\':
+                    escape_next = True
+                elif char == '"' or char == "'":
+                    in_string = not in_string
+                elif not in_string:
+                    if char == '{':
+                        brace_count += 1
+                    elif char == '}':
+                        brace_count -= 1
+                i += 1
+
+            # Store the range to replace: from opening { to closing }
+            matches_and_ranges.append((start_pos - 1, i))
+
+        # Replace function bodies from END to START to avoid offset issues
+        result = code
+        for body_start, body_end in reversed(matches_and_ranges):
+            result = result[:body_start] + " { }" + result[body_end:]
+
+        return result
 
     def _parse_functions(self, code: str) -> List[Function]:
         """

@@ -614,6 +614,8 @@ class App {
     this.apiData = [];
     this.profileImage = "https://via.placeholder.com/150/3498db/ffffff?text=User";
     this.statusMessage = "Ready to submit";
+    this.interval = setInterval(function():void {
+                uploadProgress += 10;
   }
 
   submitForm() {

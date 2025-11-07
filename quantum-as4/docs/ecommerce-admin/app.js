@@ -2513,22 +2513,65 @@ class App {
     this.runtime = runtime;
 
     this.currentView = "dashboard";
+    this._bindable_currentView = true;
     this.totalRevenue = 45280.50;
+    this._bindable_totalRevenue = true;
     this.totalOrders = 1247;
+    this._bindable_totalOrders = true;
     this.totalCustomers = 892;
+    this._bindable_totalCustomers = true;
     this.totalProducts = 234;
+    this._bindable_totalProducts = true;
+    this.products = [
+                {id: 1, name: "Laptop Pro 15\"", category: "Electronics", price: 1299.99, stock: 45, status: "Active"},
+                {id: 2, name: "Wireless Mouse", category: "Electronics", price: 29.99, stock: 156, status: "Active"},
+                {id: 3, name: "USB-C Hub", category: "Electronics", price: 49.99, stock: 89, status: "Active"},
+                {id: 4, name: "Mechanical Keyboard", category: "Electronics", price: 159.99, stock: 23, status: "Active"},
+                {id: 5, name: "4K Monitor 27\"", category: "Electronics", price: 449.99, stock: 12, status: "Low Stock"},
+                {id: 6, name: "Webcam HD", category: "Electronics", price: 79.99, stock: 67, status: "Active"},
+                {id: 7, name: "Desk Lamp LED", category: "Office", price: 34.99, stock: 145, status: "Active"},
+                {id: 8, name: "Office Chair", category: "Furniture", price: 299.99, stock: 8, status: "Low Stock"},
+                {id: 9, name: "Standing Desk", category: "Furniture", price: 599.99, stock: 15, status: "Active"},
+                {id: 10, name: "Noise Cancelling Headphones", category: "Electronics", price: 249.99, stock: 0, status: "Out of Stock"}
+            ];
+    this._bindable_products = true;
     this.selectedProduct = null;
+    this._bindable_selectedProduct = true;
     this.productSearchQuery = "";
+    this._bindable_productSearchQuery = true;
+    this.orders = [
+                {id: "ORD-1001", customer: "John Smith", date: "2025-11-07", total: 1329.98, status: "Pending", items: 2},
+                {id: "ORD-1002", customer: "Sarah Johnson", date: "2025-11-07", total: 79.99, status: "Processing", items: 1},
+                {id: "ORD-1003", customer: "Mike Brown", date: "2025-11-06", total: 649.98, status: "Shipped", items: 3},
+                {id: "ORD-1004", customer: "Emily Davis", date: "2025-11-06", total: 249.99, status: "Delivered", items: 1},
+                {id: "ORD-1005", customer: "David Wilson", date: "2025-11-05", total: 1849.95, status: "Delivered", items: 5},
+                {id: "ORD-1006", customer: "Lisa Anderson", date: "2025-11-05", total: 299.99, status: "Cancelled", items: 1},
+                {id: "ORD-1007", customer: "Tom Martinez", date: "2025-11-04", total: 529.98, status: "Delivered", items: 2},
+                {id: "ORD-1008", customer: "Anna Lee", date: "2025-11-04", total: 159.99, status: "Delivered", items: 1}
+            ];
+    this._bindable_orders = true;
     this.selectedOrder = null;
+    this._bindable_selectedOrder = true;
     this.orderStatusFilter = "All";
+    this._bindable_orderStatusFilter = true;
+    this.customers = [
+                {id: 1, name: "John Smith", email: "john.smith@email.com", orders: 15, totalSpent: 4523.85, joined: "2024-03-15"},
+                {id: 2, name: "Sarah Johnson", email: "sarah.j@email.com", orders: 8, totalSpent: 2156.40, joined: "2024-05-22"},
+                {id: 3, name: "Mike Brown", email: "mike.brown@email.com", orders: 23, totalSpent: 8934.50, joined: "2023-11-10"},
+                {id: 4, name: "Emily Davis", email: "emily.d@email.com", orders: 12, totalSpent: 3421.75, joined: "2024-01-08"},
+                {id: 5, name: "David Wilson", email: "d.wilson@email.com", orders: 31, totalSpent: 12456.20, joined: "2023-08-20"}
+            ];
+    this._bindable_customers = true;
     this.editingProduct = false;
+    this._bindable_editingProduct = true;
     this.formProductName = "";
+    this._bindable_formProductName = true;
     this.formProductPrice = 0;
+    this._bindable_formProductPrice = true;
     this.formProductStock = 0;
+    this._bindable_formProductStock = true;
     this.formProductCategory = "Electronics";
-    this.newId = products.length + 1;
-    this.currentStatus = selectedOrder.status;
-    this.newStatus = "";
+    this._bindable_formProductCategory = true;
   }
 
   showDashboard() {
@@ -2549,7 +2592,6 @@ class App {
 
   searchProducts() {
     console.log("Searching products: " + this.productSearchQuery);
-    // In real app, would filter products array
   }
 
   addProduct() {
@@ -2572,14 +2614,12 @@ class App {
 
   saveProduct() {
     if (this.selectedProduct != null) {
-    // Update existing product
     this.selectedProduct.name = this.formProductName;
     this.selectedProduct.price = this.formProductPrice;
     this.selectedProduct.stock = this.formProductStock;
     this.selectedProduct.category = this.formProductCategory;
     Alert.show("Product updated successfully!", "Success", Alert.OK, null, null, Alert.INFO);
     } else {
-    // Add new product
     var newId = this.products.length + 1;
     var newProduct = {
     id: this.newId,
@@ -2604,14 +2644,12 @@ class App {
   deleteProduct() {
     if (this.selectedProduct != null) {
     Alert.show("Product deleted: " + this.selectedProduct.name, "Deleted", Alert.OK, null, null, Alert.WARNING);
-    // In real app, would remove from array
     this.selectedProduct = null;
     }
   }
 
   filterOrders() {
     console.log("Filtering orders by status: " + this.orderStatusFilter);
-    // In real app, would filter orders array
   }
 
   updateOrderStatus() {
@@ -2643,10 +2681,164 @@ class App {
     Alert.show("Dashboard data refreshed!", "Refreshed", Alert.OK, null, null, Alert.INFO);
   }
 
+  // Reactive getter/setter for currentView
+  get currentView() {
+    return this._currentView;
+  }
+  set currentView(value) {
+    this._currentView = value;
+    this.runtime.notifyChange('currentView', value);
+  }
+
+  // Reactive getter/setter for totalRevenue
+  get totalRevenue() {
+    return this._totalRevenue;
+  }
+  set totalRevenue(value) {
+    this._totalRevenue = value;
+    this.runtime.notifyChange('totalRevenue', value);
+  }
+
+  // Reactive getter/setter for totalOrders
+  get totalOrders() {
+    return this._totalOrders;
+  }
+  set totalOrders(value) {
+    this._totalOrders = value;
+    this.runtime.notifyChange('totalOrders', value);
+  }
+
+  // Reactive getter/setter for totalCustomers
+  get totalCustomers() {
+    return this._totalCustomers;
+  }
+  set totalCustomers(value) {
+    this._totalCustomers = value;
+    this.runtime.notifyChange('totalCustomers', value);
+  }
+
+  // Reactive getter/setter for totalProducts
+  get totalProducts() {
+    return this._totalProducts;
+  }
+  set totalProducts(value) {
+    this._totalProducts = value;
+    this.runtime.notifyChange('totalProducts', value);
+  }
+
+  // Reactive getter/setter for products
+  get products() {
+    return this._products;
+  }
+  set products(value) {
+    this._products = value;
+    this.runtime.notifyChange('products', value);
+  }
+
+  // Reactive getter/setter for selectedProduct
+  get selectedProduct() {
+    return this._selectedProduct;
+  }
+  set selectedProduct(value) {
+    this._selectedProduct = value;
+    this.runtime.notifyChange('selectedProduct', value);
+  }
+
+  // Reactive getter/setter for productSearchQuery
+  get productSearchQuery() {
+    return this._productSearchQuery;
+  }
+  set productSearchQuery(value) {
+    this._productSearchQuery = value;
+    this.runtime.notifyChange('productSearchQuery', value);
+  }
+
+  // Reactive getter/setter for orders
+  get orders() {
+    return this._orders;
+  }
+  set orders(value) {
+    this._orders = value;
+    this.runtime.notifyChange('orders', value);
+  }
+
+  // Reactive getter/setter for selectedOrder
+  get selectedOrder() {
+    return this._selectedOrder;
+  }
+  set selectedOrder(value) {
+    this._selectedOrder = value;
+    this.runtime.notifyChange('selectedOrder', value);
+  }
+
+  // Reactive getter/setter for orderStatusFilter
+  get orderStatusFilter() {
+    return this._orderStatusFilter;
+  }
+  set orderStatusFilter(value) {
+    this._orderStatusFilter = value;
+    this.runtime.notifyChange('orderStatusFilter', value);
+  }
+
+  // Reactive getter/setter for customers
+  get customers() {
+    return this._customers;
+  }
+  set customers(value) {
+    this._customers = value;
+    this.runtime.notifyChange('customers', value);
+  }
+
+  // Reactive getter/setter for editingProduct
+  get editingProduct() {
+    return this._editingProduct;
+  }
+  set editingProduct(value) {
+    this._editingProduct = value;
+    this.runtime.notifyChange('editingProduct', value);
+  }
+
+  // Reactive getter/setter for formProductName
+  get formProductName() {
+    return this._formProductName;
+  }
+  set formProductName(value) {
+    this._formProductName = value;
+    this.runtime.notifyChange('formProductName', value);
+  }
+
+  // Reactive getter/setter for formProductPrice
+  get formProductPrice() {
+    return this._formProductPrice;
+  }
+  set formProductPrice(value) {
+    this._formProductPrice = value;
+    this.runtime.notifyChange('formProductPrice', value);
+  }
+
+  // Reactive getter/setter for formProductStock
+  get formProductStock() {
+    return this._formProductStock;
+  }
+  set formProductStock(value) {
+    this._formProductStock = value;
+    this.runtime.notifyChange('formProductStock', value);
+  }
+
+  // Reactive getter/setter for formProductCategory
+  get formProductCategory() {
+    return this._formProductCategory;
+  }
+  set formProductCategory(value) {
+    this._formProductCategory = value;
+    this.runtime.notifyChange('formProductCategory', value);
+  }
+
 }
 
 // Initialize and render
 const runtime = new ReactiveRuntime();
 const app = new App(runtime);
 runtime.setApp(app);  // Makes app reactive with Proxy
+runtime.registerHealthCheck();  // Enable health monitoring
 runtime.render(componentTree, document.getElementById('app'));
