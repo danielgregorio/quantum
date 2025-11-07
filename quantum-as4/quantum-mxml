@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from compiler.mxml_parser import MXMLParser
 from compiler.ast_bridge import ASTBridge
 from compiler.compilers.web import WebCompiler
+from compiler.compilers.gtk import compile_mxml_to_gtk
 
 
 def build(input_file: str, output_dir: str, verbose: bool = False):
@@ -106,6 +107,31 @@ def build(input_file: str, output_dir: str, verbose: bool = False):
         sys.exit(1)
 
 
+def build_gtk(input_file: str, output_file: str = None, run: bool = False):
+    """Build MXML file to GTK Python desktop application"""
+
+    input_path = Path(input_file)
+
+    if not input_path.exists():
+        print(f"❌ Error: Input file not found: {input_file}")
+        sys.exit(1)
+
+    try:
+        # Compile MXML to GTK Python
+        output_path = compile_mxml_to_gtk(str(input_path), output_file)
+
+        if run:
+            print(f"\n🚀 Running GTK application...")
+            import subprocess
+            subprocess.run(['python3', output_path])
+
+    except Exception as e:
+        print(f"❌ Build failed: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
+
 def serve(directory: str, port: int = 8080):
     """Serve built application"""
     import http.server
@@ -127,12 +153,18 @@ def serve(directory: str, port: int = 8080):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Quantum MXML Compiler - Compile MXML + AS4 to JavaScript',
+        description='Quantum MXML Compiler - Compile MXML + AS4 to JavaScript or GTK Python',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Build MXML file
+  # Build MXML file to Web (JavaScript)
   quantum-mxml build hello.mxml
+
+  # Build MXML file to GTK Desktop (Python)
+  quantum-mxml build-gtk hello.mxml
+
+  # Build GTK and run immediately
+  quantum-mxml build-gtk hello.mxml --run
 
   # Build with custom output directory
   quantum-mxml build hello.mxml -o dist
@@ -147,14 +179,20 @@ Examples:
 
     subparsers = parser.add_subparsers(dest='command', help='Command to run')
 
-    # Build command
-    build_parser = subparsers.add_parser('build', help='Build MXML file')
+    # Build command (Web)
+    build_parser = subparsers.add_parser('build', help='Build MXML file to Web (HTML/JS)')
     build_parser.add_argument('input', help='Input MXML file')
     build_parser.add_argument('-o', '--output', default='dist', help='Output directory (default: dist)')
     build_parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
 
+    # Build GTK command (Desktop)
+    build_gtk_parser = subparsers.add_parser('build-gtk', help='Build MXML file to GTK Desktop (Python)')
+    build_gtk_parser.add_argument('input', help='Input MXML file')
+    build_gtk_parser.add_argument('-o', '--output', help='Output .py file (default: dist_gtk/app.py)')
+    build_gtk_parser.add_argument('-r', '--run', action='store_true', help='Run immediately after building')
+
     # Serve command
-    serve_parser = subparsers.add_parser('serve', help='Serve built application')
+    serve_parser = subparsers.add_parser('serve', help='Serve built web application')
     serve_parser.add_argument('directory', help='Directory to serve')
     serve_parser.add_argument('-p', '--port', type=int, default=8080, help='Port (default: 8080)')
 
@@ -166,6 +204,8 @@ Examples:
 
     if args.command == 'build':
         build(args.input, args.output, args.verbose)
+    elif args.command == 'build-gtk':
+        build_gtk(args.input, args.output, args.run)
     elif args.command == 'serve':
         serve(args.directory, args.port)
 
