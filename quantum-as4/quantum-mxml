@@ -17,6 +17,7 @@ from compiler.mxml_parser import MXMLParser
 from compiler.ast_bridge import ASTBridge
 from compiler.compilers.web import WebCompiler
 from compiler.compilers.gtk import compile_mxml_to_gtk
+from compiler.compilers.cli import compile_mxml_to_cli
 
 
 def build(input_file: str, output_dir: str, verbose: bool = False):
@@ -132,6 +133,31 @@ def build_gtk(input_file: str, output_file: str = None, run: bool = False):
         sys.exit(1)
 
 
+def build_cli(input_file: str, output_file: str = None, run: bool = False):
+    """Build MXML file to CLI Python application"""
+
+    input_path = Path(input_file)
+
+    if not input_path.exists():
+        print(f"❌ Error: Input file not found: {input_file}")
+        sys.exit(1)
+
+    try:
+        # Compile MXML to CLI Python
+        output_path = compile_mxml_to_cli(str(input_path), output_file)
+
+        if run:
+            print(f"\n🚀 Running CLI application...")
+            import subprocess
+            subprocess.run(['python3', output_path])
+
+    except Exception as e:
+        print(f"❌ Build failed: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
+
 def serve(directory: str, port: int = 8080):
     """Serve built application"""
     import http.server
@@ -153,7 +179,7 @@ def serve(directory: str, port: int = 8080):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Quantum MXML Compiler - Compile MXML + AS4 to JavaScript or GTK Python',
+        description='Quantum MXML Compiler - Compile MXML + AS4 to JavaScript, GTK Python, or CLI Python',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -163,8 +189,12 @@ Examples:
   # Build MXML file to GTK Desktop (Python)
   quantum-mxml build-gtk hello.mxml
 
-  # Build GTK and run immediately
+  # Build MXML file to CLI (Terminal/Console Python)
+  quantum-mxml build-cli hello.mxml
+
+  # Build and run immediately
   quantum-mxml build-gtk hello.mxml --run
+  quantum-mxml build-cli hello.mxml --run
 
   # Build with custom output directory
   quantum-mxml build hello.mxml -o dist
@@ -191,6 +221,12 @@ Examples:
     build_gtk_parser.add_argument('-o', '--output', help='Output .py file (default: dist_gtk/app.py)')
     build_gtk_parser.add_argument('-r', '--run', action='store_true', help='Run immediately after building')
 
+    # Build CLI command (Terminal)
+    build_cli_parser = subparsers.add_parser('build-cli', help='Build MXML file to CLI (Terminal/Console Python)')
+    build_cli_parser.add_argument('input', help='Input MXML file')
+    build_cli_parser.add_argument('-o', '--output', help='Output .py file (default: dist_cli/app.py)')
+    build_cli_parser.add_argument('-r', '--run', action='store_true', help='Run immediately after building')
+
     # Serve command
     serve_parser = subparsers.add_parser('serve', help='Serve built web application')
     serve_parser.add_argument('directory', help='Directory to serve')
@@ -206,6 +242,8 @@ Examples:
         build(args.input, args.output, args.verbose)
     elif args.command == 'build-gtk':
         build_gtk(args.input, args.output, args.run)
+    elif args.command == 'build-cli':
+        build_cli(args.input, args.output, args.run)
     elif args.command == 'serve':
         serve(args.directory, args.port)
 

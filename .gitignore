@@ -15,6 +15,7 @@ build/
 develop-eggs/
 dist/
 dist_gtk/
+dist_cli/
 downloads/
 eggs/
 .eggs/
