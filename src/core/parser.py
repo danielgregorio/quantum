@@ -28,6 +28,9 @@ from core.features.llm.src import LLMNode, LLMGenerateNode, LLMChatNode, parse_l
 from core.features.rag.src import KnowledgeNode, SearchNode, parse_knowledge, parse_search
 from core.features.agents.src import AgentNode, AgentAskNode, AgentChatNode, parse_agent, parse_agent_ask, parse_agent_chat
 
+# Functions Feature
+from core.features.functions.src import FunctionNode, parse_function, parse_function_param
+
 class QuantumParseError(Exception):
     """Quantum parsing error"""
     pass
@@ -251,6 +254,22 @@ class QuantumParser:
                 agent_chat_node = parse_agent_chat(child)
                 component.add_statement(agent_chat_node)
 
+            # Functions Feature
+            elif child_type == 'function':
+                function_node = parse_function(child)
+                # Parse function body (statements and params)
+                for func_child in child:
+                    func_child_type = self._get_element_name(func_child)
+                    if func_child_type == 'param':
+                        param = parse_function_param(func_child)
+                        function_node.add_param(param)
+                    else:
+                        # Parse statement inside function body
+                        stmt = self._parse_statement(func_child)
+                        if stmt:
+                            function_node.add_statement(stmt)
+                component.add_statement(function_node)
+
             # Forms & Actions (Phase A)
             elif child_type == 'action':
                 action_node = self._parse_action_statement(child)
@@ -473,6 +492,21 @@ class QuantumParser:
             return parse_agent_ask(element)
         elif element_type == 'agent-chat':
             return parse_agent_chat(element)
+
+        # Functions Feature
+        elif element_type == 'function':
+            function_node = parse_function(element)
+            # Parse function body
+            for func_child in element:
+                func_child_type = self._get_element_name(func_child)
+                if func_child_type == 'param':
+                    param = parse_function_param(func_child)
+                    function_node.add_param(param)
+                else:
+                    stmt = self._parse_statement(func_child)
+                    if stmt:
+                        function_node.add_statement(stmt)
+            return function_node
 
         # Forms & Actions (Phase A)
         elif element_type == 'action':
