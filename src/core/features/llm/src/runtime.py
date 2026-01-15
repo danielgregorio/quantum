@@ -209,7 +209,7 @@ class LLMRuntime:
     Manages LLM registry and providers.
     """
 
-    def __init__(self, execution_context):
+    def __init__(self, execution_context=None):
         self.context = execution_context
         self.registry = LLMRegistry()
         self.ollama_provider = OllamaProvider()

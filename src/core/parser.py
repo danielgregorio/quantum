@@ -23,6 +23,11 @@ from core.ast_nodes import (
 from core.features.logging.src import LogNode, parse_log
 from core.features.dump.src import DumpNode, parse_dump
 
+# AI Features (Phase K)
+from core.features.llm.src import LLMNode, LLMGenerateNode, LLMChatNode, parse_llm, parse_llm_generate, parse_llm_chat
+from core.features.rag.src import KnowledgeNode, SearchNode, parse_knowledge, parse_search
+from core.features.agents.src import AgentNode, AgentAskNode, AgentChatNode, parse_agent, parse_agent_ask, parse_agent_chat
+
 class QuantumParseError(Exception):
     """Quantum parsing error"""
     pass
@@ -218,6 +223,32 @@ class QuantumParser:
             elif child_type == 'dump':
                 dump_node = parse_dump(child)
                 component.add_statement(dump_node)
+
+            # AI Features (Phase K)
+            elif child_type == 'llm':
+                llm_node = parse_llm(child)
+                component.add_statement(llm_node)
+            elif child_type == 'llm-generate':
+                llm_gen_node = parse_llm_generate(child)
+                component.add_statement(llm_gen_node)
+            elif child_type == 'llm-chat':
+                llm_chat_node = parse_llm_chat(child)
+                component.add_statement(llm_chat_node)
+            elif child_type == 'knowledge':
+                knowledge_node = parse_knowledge(child)
+                component.add_statement(knowledge_node)
+            elif child_type == 'search':
+                search_node = parse_search(child)
+                component.add_statement(search_node)
+            elif child_type == 'agent':
+                agent_node = parse_agent(child)
+                component.add_statement(agent_node)
+            elif child_type == 'agent-ask':
+                agent_ask_node = parse_agent_ask(child)
+                component.add_statement(agent_ask_node)
+            elif child_type == 'agent-chat':
+                agent_chat_node = parse_agent_chat(child)
+                component.add_statement(agent_chat_node)
 
             # Forms & Actions (Phase A)
             elif child_type == 'action':
@@ -423,6 +454,24 @@ class QuantumParser:
             return parse_log(element)
         elif element_type == 'dump':
             return parse_dump(element)
+
+        # AI Features (Phase K)
+        elif element_type == 'llm':
+            return parse_llm(element)
+        elif element_type == 'llm-generate':
+            return parse_llm_generate(element)
+        elif element_type == 'llm-chat':
+            return parse_llm_chat(element)
+        elif element_type == 'knowledge':
+            return parse_knowledge(element)
+        elif element_type == 'search':
+            return parse_search(element)
+        elif element_type == 'agent':
+            return parse_agent(element)
+        elif element_type == 'agent-ask':
+            return parse_agent_ask(element)
+        elif element_type == 'agent-chat':
+            return parse_agent_chat(element)
 
         # Forms & Actions (Phase A)
         elif element_type == 'action':

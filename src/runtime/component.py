@@ -12,6 +12,11 @@ sys.path.append(str(Path(__file__).parent.parent))
 from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode, FunctionNode, DispatchEventNode, OnEventNode, QueryNode, InvokeNode, DataNode, FileNode, MailNode, TransactionNode
 from core.features.logging.src import LogNode, LoggingService
 from core.features.dump.src import DumpNode, DumpService
+
+# AI Features (Phase K)
+from core.features.llm.src import LLMNode, LLMGenerateNode, LLMChatNode, LLMRuntime
+from core.features.rag.src import KnowledgeNode, SearchNode, RAGRuntime
+from core.features.agents.src import AgentNode, AgentAskNode, AgentChatNode, AgentRuntime
 from runtime.database_service import DatabaseService, QueryResult
 from runtime.query_validators import QueryValidator, QueryValidationError
 from runtime.execution_context import ExecutionContext, VariableNotFoundError
@@ -52,6 +57,13 @@ class ComponentRuntime:
         self.file_upload_service = FileUploadService()
         # Email service for q:mail (Phase I)
         self.email_service = EmailService()
+        # AI services (Phase K)
+        self.llm_runtime = LLMRuntime()
+        self.rag_runtime = RAGRuntime()
+        self.agent_runtime = AgentRuntime(
+            llm_runtime=self.llm_runtime,
+            rag_runtime=self.rag_runtime
+        )
 
     def execute_component(self, component: ComponentNode, params: Dict[str, Any] = None) -> Any:
         """Execute a component and return the result"""
@@ -186,6 +198,23 @@ class ComponentRuntime:
             return self._execute_mail(statement, exec_context)
         elif isinstance(statement, TransactionNode):
             return self._execute_transaction(statement, exec_context)
+        # AI Features (Phase K)
+        elif isinstance(statement, LLMNode):
+            return self._execute_llm(statement, exec_context)
+        elif isinstance(statement, LLMGenerateNode):
+            return self._execute_llm_generate(statement, exec_context)
+        elif isinstance(statement, LLMChatNode):
+            return self._execute_llm_chat(statement, exec_context)
+        elif isinstance(statement, KnowledgeNode):
+            return self._execute_knowledge(statement, exec_context)
+        elif isinstance(statement, SearchNode):
+            return self._execute_search(statement, exec_context)
+        elif isinstance(statement, AgentNode):
+            return self._execute_agent(statement, exec_context)
+        elif isinstance(statement, AgentAskNode):
+            return self._execute_agent_ask(statement, exec_context)
+        elif isinstance(statement, AgentChatNode):
+            return self._execute_agent_chat(statement, exec_context)
         return None
 
     def _execute_if(self, if_node: IfNode, context: Dict[str, Any]):
@@ -2131,3 +2160,150 @@ class ComponentRuntime:
             raise
         except Exception as e:
             raise ComponentExecutionError(f"Transaction execution error: {e}")
+
+    # ============================================
+    # AI FEATURES EXECUTION (Phase K)
+    # ============================================
+
+    def _execute_llm(self, llm_node: LLMNode, exec_context: ExecutionContext):
+        """Execute q:llm - Define an LLM configuration"""
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+
+            # Apply databinding to system prompt if present
+            system_prompt = llm_node.system_prompt
+            if system_prompt:
+                system_prompt = self._apply_databinding(system_prompt, dict_context)
+
+            # Register the LLM with the runtime
+            self.llm_runtime.register_llm(llm_node, system_prompt)
+
+            return None
+
+        except Exception as e:
+            raise ComponentExecutionError(f"LLM registration error: {e}")
+
+    def _execute_llm_generate(self, llm_gen_node: LLMGenerateNode, exec_context: ExecutionContext):
+        """Execute q:llm-generate - Generate text using LLM"""
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+
+            # Generate text using LLM runtime
+            result = self.llm_runtime.generate(llm_gen_node, dict_context)
+
+            # Store result in context if result_var is specified
+            if llm_gen_node.result_var:
+                exec_context.set_variable(llm_gen_node.result_var, result, scope="component")
+                self.context[llm_gen_node.result_var] = result
+
+            return result
+
+        except Exception as e:
+            raise ComponentExecutionError(f"LLM generation error: {e}")
+
+    def _execute_llm_chat(self, llm_chat_node: LLMChatNode, exec_context: ExecutionContext):
+        """Execute q:llm-chat - Interactive chat interface"""
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+
+            # Execute chat using LLM runtime
+            result = self.llm_runtime.chat(llm_chat_node, dict_context)
+
+            return result
+
+        except Exception as e:
+            raise ComponentExecutionError(f"LLM chat error: {e}")
+
+    def _execute_knowledge(self, knowledge_node: KnowledgeNode, exec_context: ExecutionContext):
+        """Execute q:knowledge - Define a knowledge base (RAG)"""
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+
+            # Register the knowledge base with the RAG runtime
+            self.rag_runtime.register_knowledge_base(knowledge_node, dict_context)
+
+            return None
+
+        except Exception as e:
+            raise ComponentExecutionError(f"Knowledge base registration error: {e}")
+
+    def _execute_search(self, search_node: SearchNode, exec_context: ExecutionContext):
+        """Execute q:search - Semantic search in knowledge base"""
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+
+            # Perform search using RAG runtime
+            results = self.rag_runtime.search(search_node, dict_context)
+
+            # Store results in context if result_var is specified
+            if search_node.result_var:
+                exec_context.set_variable(search_node.result_var, results, scope="component")
+                self.context[search_node.result_var] = results
+
+            return results
+
+        except Exception as e:
+            raise ComponentExecutionError(f"Knowledge base search error: {e}")
+
+    def _execute_agent(self, agent_node: AgentNode, exec_context: ExecutionContext):
+        """Execute q:agent - Define an AI agent"""
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+
+            # Register the agent with the agent runtime
+            # Pass LLM and RAG runtimes for agent to use
+            self.agent_runtime.register_agent(
+                agent_node,
+                dict_context,
+                self.llm_runtime,
+                self.rag_runtime
+            )
+
+            return None
+
+        except Exception as e:
+            raise ComponentExecutionError(f"Agent registration error: {e}")
+
+    def _execute_agent_ask(self, agent_ask_node: AgentAskNode, exec_context: ExecutionContext):
+        """Execute q:agent-ask - Ask agent a question"""
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+
+            # Ask the agent using agent runtime
+            result = self.agent_runtime.ask(agent_ask_node, dict_context)
+
+            # Store result in context if result_var is specified
+            if agent_ask_node.result_var:
+                exec_context.set_variable(agent_ask_node.result_var, result, scope="component")
+                self.context[agent_ask_node.result_var] = result
+
+            # Store sources separately if specified
+            if agent_ask_node.sources_var and 'sources' in result:
+                exec_context.set_variable(agent_ask_node.sources_var, result['sources'], scope="component")
+                self.context[agent_ask_node.sources_var] = result['sources']
+
+            return result
+
+        except Exception as e:
+            raise ComponentExecutionError(f"Agent ask error: {e}")
+
+    def _execute_agent_chat(self, agent_chat_node: AgentChatNode, exec_context: ExecutionContext):
+        """Execute q:agent-chat - Interactive agent chat interface"""
+        try:
+            # Get dict context for databinding
+            dict_context = exec_context.get_all_variables()
+
+            # Execute chat using agent runtime
+            result = self.agent_runtime.chat(agent_chat_node, dict_context)
+
+            return result
+
+        except Exception as e:
+            raise ComponentExecutionError(f"Agent chat error: {e}")
