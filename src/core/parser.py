@@ -1035,16 +1035,14 @@ class QuantumParser:
 
         # Parse optional search-specific attributes
         top_k = int(query_element.get('top_k', '5'))
-        min_score = float(query_element.get('min_score', '0.0'))
-        include_metadata = query_element.get('include_metadata', 'false').lower() == 'true'
+        threshold = float(query_element.get('min_score', query_element.get('threshold', '0.0')))
 
         return SearchNode(
             knowledge_id=knowledge_id,
             query=query_text,
             result_var=result_var,
             top_k=top_k,
-            min_score=min_score,
-            include_metadata=include_metadata
+            threshold=threshold
         )
 
     def _parse_query_param(self, param_element: ET.Element) -> QueryParamNode:

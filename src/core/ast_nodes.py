@@ -257,6 +257,23 @@ class DatasourceNode(QuantumNode):
             errors.append("Datasource must have a 'type' attribute")
         return errors
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "datasource",
+            "datasource_id": self.datasource_id,
+            "datasource_type": self.datasource_type,
+            "host": self.host,
+            "port": self.port,
+            "database": self.database,
+            "provider": self.provider,
+            "model": self.model,
+            "temperature": self.temperature,
+            "source": self.source,
+            "embedding": self.embedding,
+            "chunk_size": self.chunk_size,
+            "options": self.options
+        }
+
 
 class ApplicationNode(QuantumNode):
     """Represents a <q:application>"""
