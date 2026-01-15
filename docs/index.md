@@ -95,8 +95,9 @@ Quantum is an experimental declarative language that allows you to write compone
 - ✅ **LLM Integration** - Ollama, OpenAI, Anthropic support
 - ✅ **RAG System** - Semantic search with ChromaDB + embeddings
 - ✅ **AI Agents** - Goal-based agents with tools
-- 🚧 **Functions** - Planned (`q:function`)
+- ✅ **Functions** - Reusable functions with params, caching, REST API (`q:function`)
 - 🚧 **Advanced Agent Tools** - Coming next
+- 🚧 **Event System** - Planned (`q:on`, `q:dispatch`)
 
 ---
 
