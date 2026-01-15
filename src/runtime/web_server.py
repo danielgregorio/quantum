@@ -215,7 +215,17 @@ class QuantumWebServer:
                 if index_path.exists():
                     file_path = index_path
                 else:
-                    return self._render_welcome_page()
+                    # Only show welcome page for index, return 404 for others
+                    if component_path in ['', 'index']:
+                        return self._render_welcome_page()
+                    else:
+                        # Return 404 error page directly
+                        return self._render_error_page(
+                            title="404 - Component Not Found",
+                            message=f"The component '{component_path}' doesn't exist.",
+                            details=f"Requested path: /{component_path}",
+                            suggestion="Check your components directory and try again."
+                        ), 404
 
             # Check cache
             cache_enabled = self.config['performance']['cache_templates']
@@ -365,9 +375,9 @@ class QuantumWebServer:
                 # Show enhanced error in debug mode
                 return self._render_error_page(
                     title="Parse Error",
-                    message=f"Could not parse component: {component_name}",
+                    message=f"Could not parse component: {component_path}",
                     details=str(enhanced_error),
-                    suggestion="Check XML syntax and Quantum tag usage. Use 'quantum inspect {component_name}' for details."
+                    suggestion="Check XML syntax and Quantum tag usage. Use 'quantum inspect {component_path}' for details."
                 ), 400
             else:
                 return self._render_error_page(
@@ -389,14 +399,14 @@ class QuantumWebServer:
         except Exception as e:
             if self.config['server']['debug']:
                 # Enhanced runtime error
-                enhanced_error = ErrorHandler.handle_runtime_error(e, component_name, component_path)
+                enhanced_error = ErrorHandler.handle_runtime_error(e, component_path, component_path)
 
                 import traceback
                 return self._render_error_page(
                     title="Runtime Error",
-                    message=f"Error in component: {component_name}",
+                    message=f"Error in component: {component_path}",
                     details=str(enhanced_error) + "\n\n" + traceback.format_exc(),
-                    suggestion="Use 'quantum inspect {component_name}' to debug. Check component logic and data sources."
+                    suggestion="Use 'quantum inspect {component_path}' to debug. Check component logic and data sources."
                 ), 500
             else:
                 # Generic error in production

@@ -330,11 +330,11 @@ class HTMLRenderer:
 
         # Try to get root variable from all scopes
         root = parts[0]
-        current = self.context.get_variable(root, scope='local')
-        if current is None:
-            current = self.context.get_variable(root, scope='function')
-        if current is None:
-            current = self.context.get_variable(root, scope='component')
+        try:
+            current = self.context.get_variable(root)
+        except:
+            # Variable not found in any scope
+            return None
 
         if current is None:
             return None
