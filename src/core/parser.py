@@ -11,7 +11,7 @@ from typing import Union, Optional, List
 sys.path.append(str(Path(__file__).parent.parent))
 
 from core.ast_nodes import (
-    QuantumNode, ComponentNode, ApplicationNode, JobNode,
+    QuantumNode, ComponentNode, ApplicationNode, JobNode, DatasourceNode,
     QuantumParam, QuantumReturn, QuantumRoute, IfNode, LoopNode, SetNode,
     FunctionNode, DispatchEventNode, OnEventNode, RestConfig, QueryNode, QueryParamNode,
     InvokeNode, InvokeHeaderNode, DataNode, ColumnNode, FieldNode, TransformNode,
@@ -37,6 +37,7 @@ class QuantumParser:
     
     def __init__(self):
         self.quantum_ns = {'q': 'https://quantum.lang/ns'}
+        self.current_application = None  # Store application for datasource lookup
 
     def _inject_namespace(self, content: str) -> str:
         """
@@ -508,23 +509,131 @@ class QuantumParser:
         """Parse q:application"""
         app_id = root.get('id', path.stem)
         app_type = root.get('type', 'html')
-        
+
         app = ApplicationNode(app_id, app_type)
-        
+
+        # Parse q:datasource elements (unified data sources)
+        for datasource_el in self._find_all_elements(root, 'datasource'):
+            datasource = self._parse_datasource(datasource_el)
+            app.add_datasource(datasource)
+
         # Parse q:route elements
         for route_el in self._find_all_elements(root, 'route'):
             route = self._parse_route(route_el)
             app.add_route(route)
-        
+
+        # Store application reference for query parsing
+        self.current_application = app
+
         return app
     
     def _parse_job(self, root: ET.Element, path: Path) -> JobNode:
         """Parse q:job"""
         job_id = root.get('id', path.stem)
         schedule = root.get('schedule')
-        
+
         return JobNode(job_id, schedule)
-    
+
+    def _parse_datasource(self, element: ET.Element) -> DatasourceNode:
+        """
+        Parse <datasource> tag - Unified data source configuration
+
+        Examples:
+          <!-- SQL Database -->
+          <datasource id="db" type="postgres" host="localhost" database="mydb" />
+
+          <!-- LLM -->
+          <datasource id="ai" type="llm" provider="ollama" model="llama3" temperature="0.7">
+            <system-prompt>You are a helpful assistant</system-prompt>
+          </datasource>
+
+          <!-- Knowledge/RAG -->
+          <datasource id="docs" type="knowledge" source="./docs/*.md"
+            embedding="ollama" chunk_size="500" />
+        """
+        datasource_id = element.get('id')
+        datasource_type = element.get('type')
+
+        if not datasource_id:
+            raise QuantumParseError("Datasource requires 'id' attribute")
+        if not datasource_type:
+            raise QuantumParseError("Datasource requires 'type' attribute")
+
+        # Parse common attributes
+        host = element.get('host')
+        port_str = element.get('port')
+        port = int(port_str) if port_str else None
+        database = element.get('database')
+        username = element.get('username')
+        password = element.get('password')
+
+        # Parse LLM-specific attributes
+        provider = element.get('provider')
+        model = element.get('model')
+        temperature = float(element.get('temperature', '0.7'))
+        max_tokens_str = element.get('max_tokens')
+        max_tokens = int(max_tokens_str) if max_tokens_str else None
+        api_key = element.get('api_key')
+
+        # Parse system prompt from child element
+        system_prompt = None
+        system_prompt_elem = element.find('.//system-prompt')
+        if system_prompt_elem is not None:
+            system_prompt = system_prompt_elem.text or ""
+
+        # Parse Knowledge/RAG-specific attributes
+        source = element.get('source')
+        embedding = element.get('embedding')
+        embedding_model = element.get('embedding_model')
+        chunk_size = int(element.get('chunk_size', '500'))
+        chunk_overlap = int(element.get('chunk_overlap', '100'))
+        vector_db = element.get('vector_db')
+        collection = element.get('collection')
+
+        # Parse REST API-specific attributes
+        base_url = element.get('base_url')
+        auth_type = element.get('auth_type')
+        auth_token = element.get('auth_token')
+
+        # Parse additional options
+        options = {}
+        known_attrs = {
+            'id', 'type', 'host', 'port', 'database', 'username', 'password',
+            'provider', 'model', 'temperature', 'max_tokens', 'api_key',
+            'source', 'embedding', 'embedding_model', 'chunk_size', 'chunk_overlap',
+            'vector_db', 'collection', 'base_url', 'auth_type', 'auth_token'
+        }
+        for key, value in element.attrib.items():
+            if key not in known_attrs:
+                options[key] = value
+
+        return DatasourceNode(
+            datasource_id=datasource_id,
+            datasource_type=datasource_type,
+            host=host,
+            port=port,
+            database=database,
+            username=username,
+            password=password,
+            provider=provider,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            system_prompt=system_prompt,
+            api_key=api_key,
+            source=source,
+            embedding=embedding,
+            embedding_model=embedding_model,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            vector_db=vector_db,
+            collection=collection,
+            base_url=base_url,
+            auth_type=auth_type,
+            auth_token=auth_token,
+            options=options
+        )
+
     def _parse_param(self, element: ET.Element) -> QuantumParam:
         """Parse q:param"""
         param = QuantumParam(
@@ -757,7 +866,15 @@ class QuantumParser:
         return event_node
 
     def _parse_query_statement(self, query_element: ET.Element) -> QueryNode:
-        """Parse q:query statement"""
+        """
+        Parse q:query statement
+
+        MAGIC: Auto-detects datasource type and converts to appropriate node!
+        - datasource type=llm       → converts to LLMGenerateNode
+        - datasource type=knowledge → converts to SearchNode
+        - datasource type=postgres  → QueryNode (SQL)
+        - datasource type=redis     → QueryNode (cache)
+        """
         name = query_element.get('name')
         datasource = query_element.get('datasource')
         source = query_element.get('source')
@@ -767,7 +884,20 @@ class QuantumParser:
         if not datasource and not source:
             raise QuantumParseError("Query requires either 'datasource' or 'source' attribute")
 
-        # Extract SQL content (text between tags, excluding q:param children)
+        # ✨ MAGIC: Check if datasource is LLM or Knowledge and convert!
+        if datasource and self.current_application:
+            ds_config = self.current_application.get_datasource(datasource)
+
+            if ds_config:
+                # Convert to LLMGenerateNode if datasource is LLM
+                if ds_config.datasource_type == 'llm':
+                    return self._convert_query_to_llm_generate(query_element, name, datasource)
+
+                # Convert to SearchNode if datasource is Knowledge/RAG
+                elif ds_config.datasource_type == 'knowledge':
+                    return self._convert_query_to_search(query_element, name, datasource)
+
+        # Extract SQL/query content (text between tags, excluding q:param children)
         sql_parts = []
         if query_element.text:
             sql_parts.append(query_element.text.strip())
@@ -842,6 +972,80 @@ class QuantumParser:
                 query_node.add_param(param_node)
 
         return query_node
+
+    def _convert_query_to_llm_generate(self, query_element: ET.Element, result_var: str, llm_id: str) -> LLMGenerateNode:
+        """
+        Convert <q:query datasource="ai"> to LLMGenerateNode
+
+        Example:
+          <q:query name="summary" datasource="ai">
+            Summarize: {text}
+          </q:query>
+
+        Converts to:
+          <q:llm-generate llm="ai" prompt="Summarize: {text}" result="summary" />
+        """
+        # Extract prompt from query content
+        prompt_parts = []
+        if query_element.text:
+            prompt_parts.append(query_element.text.strip())
+
+        for child in query_element:
+            if child.tail:
+                prompt_parts.append(child.tail.strip())
+
+        prompt = '\n'.join(part for part in prompt_parts if part)
+
+        # Parse optional LLM-specific attributes
+        cache = query_element.get('cache', 'false').lower() == 'true'
+        cache_key = query_element.get('cache_key')
+        stream = query_element.get('stream', 'false').lower() == 'true'
+
+        return LLMGenerateNode(
+            llm_id=llm_id,
+            prompt=prompt,
+            result_var=result_var,
+            cache=cache,
+            cache_key=cache_key,
+            stream=stream
+        )
+
+    def _convert_query_to_search(self, query_element: ET.Element, result_var: str, knowledge_id: str) -> SearchNode:
+        """
+        Convert <q:query datasource="docs"> to SearchNode
+
+        Example:
+          <q:query name="results" datasource="docs">
+            authentication
+          </q:query>
+
+        Converts to:
+          <q:search knowledge="docs" query="authentication" result="results" />
+        """
+        # Extract query from content
+        query_parts = []
+        if query_element.text:
+            query_parts.append(query_element.text.strip())
+
+        for child in query_element:
+            if child.tail:
+                query_parts.append(child.tail.strip())
+
+        query_text = '\n'.join(part for part in query_parts if part)
+
+        # Parse optional search-specific attributes
+        top_k = int(query_element.get('top_k', '5'))
+        min_score = float(query_element.get('min_score', '0.0'))
+        include_metadata = query_element.get('include_metadata', 'false').lower() == 'true'
+
+        return SearchNode(
+            knowledge_id=knowledge_id,
+            query=query_text,
+            result_var=result_var,
+            top_k=top_k,
+            min_score=min_score,
+            include_metadata=include_metadata
+        )
 
     def _parse_query_param(self, param_element: ET.Element) -> QueryParamNode:
         """Parse q:param within q:query"""

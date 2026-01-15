@@ -4,7 +4,7 @@ Quantum AST Nodes - Classes that represent elements of the Quantum language
 
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 class QuantumNode(ABC):
     """Base class for all Quantum AST nodes"""
@@ -202,20 +202,85 @@ class ComponentNode(QuantumNode):
         return errors
 
 
+@dataclass
+class DatasourceNode(QuantumNode):
+    """
+    Represents a <datasource> - Unified data source configuration
+
+    Types:
+    - postgres, mysql, sqlite (SQL databases)
+    - redis, memcached (Cache)
+    - llm (Language Models - Ollama, OpenAI, Anthropic)
+    - knowledge (RAG/Vector databases)
+    - rest, graphql (External APIs)
+    """
+    datasource_id: str
+    datasource_type: str  # postgres, mysql, llm, knowledge, redis, rest, etc
+
+    # Common attributes
+    host: Optional[str] = None
+    port: Optional[int] = None
+    database: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+
+    # LLM-specific attributes
+    provider: Optional[str] = None  # ollama, openai, anthropic
+    model: Optional[str] = None
+    temperature: float = 0.7
+    max_tokens: Optional[int] = None
+    system_prompt: Optional[str] = None
+    api_key: Optional[str] = None
+
+    # Knowledge/RAG-specific attributes
+    source: Optional[str] = None
+    embedding: Optional[str] = None
+    embedding_model: Optional[str] = None
+    chunk_size: int = 500
+    chunk_overlap: int = 100
+    vector_db: Optional[str] = None
+    collection: Optional[str] = None
+
+    # REST API-specific
+    base_url: Optional[str] = None
+    auth_type: Optional[str] = None
+    auth_token: Optional[str] = None
+
+    # Additional options
+    options: Dict[str, Any] = field(default_factory=dict)
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.datasource_id:
+            errors.append("Datasource must have an 'id' attribute")
+        if not self.datasource_type:
+            errors.append("Datasource must have a 'type' attribute")
+        return errors
+
+
 class ApplicationNode(QuantumNode):
     """Represents a <q:application>"""
-    
+
     def __init__(self, app_id: str, app_type: str):
         self.app_id = app_id
         self.app_type = app_type
         self.routes: List[QuantumRoute] = []
         self.components: List[ComponentNode] = []
-    
+        self.datasources: Dict[str, DatasourceNode] = {}  # id -> DatasourceNode
+
     def add_route(self, route: QuantumRoute):
         self.routes.append(route)
-    
+
     def add_component(self, component: ComponentNode):
         self.components.append(component)
+
+    def add_datasource(self, datasource: DatasourceNode):
+        """Add datasource configuration"""
+        self.datasources[datasource.datasource_id] = datasource
+
+    def get_datasource(self, datasource_id: str) -> Optional[DatasourceNode]:
+        """Get datasource by ID"""
+        return self.datasources.get(datasource_id)
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -223,7 +288,8 @@ class ApplicationNode(QuantumNode):
             "app_id": self.app_id,
             "app_type": self.app_type,
             "routes": [r.__dict__ for r in self.routes],
-            "components": [c.to_dict() for c in self.components]
+            "components": [c.to_dict() for c in self.components],
+            "datasources": {ds_id: ds.__dict__ for ds_id, ds in self.datasources.items()}
         }
     
     def validate(self) -> List[str]:
