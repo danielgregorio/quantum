@@ -20,16 +20,62 @@ Before running the installer, ensure you have:
 
 The **fastest** way to install Quantum Admin:
 
+### 🐧 Linux / macOS
+
 ```bash
 # Clone the repository (or download the source)
 git clone https://github.com/quantum/admin.git
 cd admin
 
-# Run the interactive installer
+# Run the native shell installer
+./install.sh
+```
+
+### 🪟 Windows
+
+**Option 1: PowerShell (Recommended)**
+```powershell
+# Clone the repository (or download the source)
+git clone https://github.com/quantum/admin.git
+cd admin
+
+# Run PowerShell installer
+.\setup.ps1
+```
+
+**Option 2: Batch Script**
+```cmd
+REM Double-click setup.bat in File Explorer
+REM Or run from Command Prompt:
+setup.bat
+```
+
+**Option 3: Executable (Coming Soon)**
+```
+Download quantum-admin-setup.exe
+Double-click to install
+```
+
+### 🐍 Universal Python Installer
+
+Works on all platforms:
+```bash
 python3 install.py
 ```
 
 That's it! The installer will guide you through everything else. ✨
+
+---
+
+## 🎨 Installation Methods Comparison
+
+| Method | Platform | Features | Best For |
+|--------|----------|----------|----------|
+| **install.sh** | Linux/Mac | Native shell, colored output, auto-detect OS | Linux/Mac users |
+| **setup.ps1** | Windows | Native PowerShell, admin check, Python auto-install | Windows users |
+| **setup.bat** | Windows | Simple batch launcher | Windows beginners |
+| **install.py** | All | Rich UI, most features, cross-platform | Power users |
+| **Makefile** | Linux/Mac | Quick commands (make install, make start) | Developers |
 
 ---
 
@@ -214,6 +260,74 @@ After installation, access these URLs:
 - Password: `admin123`
 
 ⚠️ **Remember to change the default password after first login!**
+
+---
+
+## 🛠️ Using Makefile (Linux/Mac)
+
+For developers, we provide a convenient Makefile with common commands:
+
+### Quick Commands
+
+```bash
+# Installation
+make install        # Run interactive installer
+make install-quick  # Quick install with defaults
+make install-dev    # Install with dev tools
+
+# Server management
+make start          # Start server
+make start-dev      # Start with hot-reload
+make stop           # Stop server
+make restart        # Restart server
+make status         # Show status
+make logs           # View logs
+make logs-follow    # Follow logs (tail -f)
+
+# Development
+make shell          # Open Python shell
+make test           # Run tests
+make test-cov       # Run tests with coverage
+make migrate        # Run migrations
+
+# Docker
+make docker-up      # Start Docker stack
+make docker-down    # Stop Docker stack
+make docker-logs    # View Docker logs
+make docker-ps      # Show containers
+
+# Build & Clean
+make build-exe      # Build Windows .exe
+make clean          # Clean build artifacts
+make clean-all      # Deep clean (DB, logs, .env)
+make info           # Show system info
+
+# Quick aliases
+make i              # Alias for 'install'
+make s              # Alias for 'start'
+make t              # Alias for 'test'
+make c              # Alias for 'clean'
+```
+
+### Example Workflow
+
+```bash
+# Install and start in one go
+make install-quick && make start
+
+# Development workflow
+make install-dev
+make start-dev
+
+# View logs
+make logs-follow
+
+# Run tests with coverage
+make test-cov
+
+# Clean everything
+make clean-all
+```
 
 ---
 
