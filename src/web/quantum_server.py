@@ -22,10 +22,13 @@ from runtime.simple_renderer import SimpleRenderer
 class QuantumServer:
     """Web server for Quantum components"""
 
-    def __init__(self, components_dir: str = "components"):
+    def __init__(self, components_dir: str = "components", enable_hot_reload: bool = True):
         self.app = Flask(__name__)
+        self.app.secret_key = 'quantum_dev_key_change_in_production'
         self.components_dir = Path(components_dir)
         self.renderer = SimpleRenderer()
+        self.enable_hot_reload = enable_hot_reload
+        self.hot_reload_watcher = None
 
         # Setup routes
         self._setup_routes()
@@ -66,6 +69,47 @@ class QuantumServer:
         def server_error(e):
             return self._render_error(500, f"Server error: {str(e)}"), 500
 
+        @self.app.route('/__hot_reload__')
+        def hot_reload_stream():
+            """Server-Sent Events endpoint for hot reload"""
+            if not self.enable_hot_reload:
+                return "Hot reload disabled", 404
+
+            from flask import stream_with_context, Response
+            import time
+
+            def event_stream():
+                """Generator for SSE events"""
+                try:
+                    from runtime.hot_reload import get_sse_manager
+
+                    messages = []
+
+                    def listener(message):
+                        messages.append(message)
+
+                    sse_manager = get_sse_manager()
+                    sse_manager.add_listener(listener)
+
+                    # Send initial connection
+                    yield f"data: {{'type': 'connected'}}\n\n"
+
+                    while True:
+                        if messages:
+                            yield messages.pop(0)
+                        else:
+                            yield f": keepalive\n\n"
+                            time.sleep(30)
+                except GeneratorExit:
+                    if 'sse_manager' in locals() and 'listener' in locals():
+                        sse_manager.remove_listener(listener)
+
+            return Response(
+                stream_with_context(event_stream()),
+                mimetype='text/event-stream',
+                headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'}
+            )
+
     def _render_component(self, component_path: str) -> str:
         """Render a .q component to HTML"""
         file_path = self.components_dir / component_path
@@ -102,6 +146,28 @@ class QuantumServer:
 
     def _wrap_html(self, body: str, title: str = "Quantum App") -> str:
         """Wrap rendered HTML in basic HTML structure"""
+        hot_reload_script = ""
+        if self.enable_hot_reload:
+            hot_reload_script = """
+    <script>
+    // Hot Reload Client
+    (function() {
+        const eventSource = new EventSource('/__hot_reload__');
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.type === 'reload') {
+                console.log('🔄 Hot reload: ' + data.file);
+                setTimeout(() => window.location.reload(), 300);
+            }
+        };
+        eventSource.onerror = function() {
+            console.log('❌ Hot reload connection lost');
+        };
+        console.log('🔥 Hot reload connected');
+    })();
+    </script>
+"""
+
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -124,6 +190,7 @@ class QuantumServer:
 </head>
 <body>
     {body}
+    {hot_reload_script}
 </body>
 </html>"""
 
@@ -166,12 +233,31 @@ class QuantumServer:
 ║  Server running at: http://localhost:{port}              ║
 ║  Components dir: {self.components_dir}                   ║
 ║  Debug mode: {'ON' if debug else 'OFF'}                  ║
+║  Hot reload: {'ON' if self.enable_hot_reload else 'OFF'} ║
 ╚══════════════════════════════════════════════════════════╝
 
 Press Ctrl+C to stop
         """)
 
-        self.app.run(host=host, port=port, debug=debug)
+        # Start hot reload watcher if enabled
+        if self.enable_hot_reload:
+            try:
+                from runtime.hot_reload import create_hot_reload_watcher
+
+                self.hot_reload_watcher = create_hot_reload_watcher(
+                    components_dir=str(self.components_dir),
+                    examples_dir="examples" if Path("examples").exists() else None
+                )
+                self.hot_reload_watcher.start()
+            except ImportError as e:
+                print(f"⚠️  Hot reload unavailable: {e}")
+                print("    Install watchdog: pip install watchdog")
+
+        try:
+            self.app.run(host=host, port=port, debug=debug, use_reloader=False)
+        finally:
+            if self.hot_reload_watcher:
+                self.hot_reload_watcher.stop()
 
 
 def main():

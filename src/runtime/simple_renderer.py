@@ -33,7 +33,8 @@ class SimpleRenderer:
                  db_service=None,
                  email_service=None,
                  file_service=None,
-                 action_handler=None):
+                 action_handler=None,
+                 auth_service=None):
         self.parser = QuantumParser()
         self.function_runtime = FunctionRuntime()
 
@@ -42,6 +43,7 @@ class SimpleRenderer:
         self._email_service = email_service
         self._file_service = file_service
         self._action_handler = action_handler
+        self._auth_service = auth_service
 
     @property
     def db_service(self):
@@ -75,6 +77,14 @@ class SimpleRenderer:
             self._action_handler = ActionHandler()
         return self._action_handler
 
+    @property
+    def auth_service(self):
+        """Lazy-load auth service"""
+        if self._auth_service is None:
+            from runtime.auth_service import AuthService
+            self._auth_service = AuthService()
+        return self._auth_service
+
     def render_file(self, file_path: str, context: Optional[Dict[str, Any]] = None) -> str:
         """
         Render component file to HTML
@@ -92,6 +102,37 @@ class SimpleRenderer:
         # Initialize context
         if context is None:
             context = {}
+
+        # Add session/auth to context if available
+        try:
+            from flask import session, request
+
+            # Add session variables
+            context['session'] = dict(session) if session else {}
+
+            # Add user info if logged in
+            if 'user_id' in session:
+                context['user'] = {
+                    'id': session['user_id'],
+                    'username': session.get('username', ''),
+                    'email': session.get('email', ''),
+                    'roles': session.get('roles', [])
+                }
+                context['isLoggedIn'] = True
+            else:
+                context['user'] = None
+                context['isLoggedIn'] = False
+
+            # Add request info
+            context['request'] = {
+                'method': request.method,
+                'path': request.path,
+                'args': dict(request.args),
+                'form': dict(request.form) if request.method == 'POST' else {}
+            }
+        except (RuntimeError, ImportError):
+            # No Flask context or session available
+            pass
 
         # Render component
         return self.render_component(ast, context)
