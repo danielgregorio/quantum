@@ -13,7 +13,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from core.ast_nodes import (
     QuantumNode, ComponentNode, ApplicationNode, JobNode, DatasourceNode,
     QuantumParam, QuantumReturn, QuantumRoute, IfNode, LoopNode, SetNode,
-    FunctionNode, DispatchEventNode, OnEventNode, RestConfig, QueryNode, QueryParamNode,
+    FunctionNode, FunctionCallNode, DispatchEventNode, OnEventNode, RestConfig, QueryNode, QueryParamNode,
     InvokeNode, InvokeHeaderNode, DataNode, ColumnNode, FieldNode, TransformNode,
     FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode,
     HTMLNode, TextNode, DocTypeNode, CommentNode, HTML_VOID_ELEMENTS,
@@ -30,6 +30,9 @@ from core.features.agents.src import AgentNode, AgentAskNode, AgentChatNode, par
 
 # Functions Feature
 from core.features.functions.src import FunctionNode, parse_function, parse_function_param
+
+# Event System
+from core.features.events.src import OnEventNode, DispatchEventNode, parse_on_event, parse_dispatch_event
 
 class QuantumParseError(Exception):
     """Quantum parsing error"""
@@ -209,8 +212,17 @@ class QuantumParser:
             elif child_type == 'set':
                 set_node = self._parse_set_statement(child)
                 component.add_statement(set_node)
+            elif child_type == 'call':
+                call_node = self._parse_function_call(child)
+                component.add_statement(call_node)
             elif child_type == 'dispatchEvent':
                 dispatch_node = self._parse_dispatch_event(child)
+                component.add_statement(dispatch_node)
+            elif child_type == 'on':
+                on_node = parse_on_event(child)
+                component.add_statement(on_node)
+            elif child_type == 'dispatch':
+                dispatch_node = parse_dispatch_event(child)
                 component.add_statement(dispatch_node)
             elif child_type == 'query':
                 query_node = self._parse_query_statement(child)
@@ -449,6 +461,33 @@ class QuantumParser:
 
         return set_node
 
+    def _parse_function_call(self, call_element: ET.Element) -> FunctionCallNode:
+        """
+        Parse q:call statement - Function invocation
+
+        Examples:
+          <q:call function="greet" name="Alice" />
+          <q:call function="calculateDiscount" price="100" percentage="20" result="finalPrice" />
+        """
+        function_name = call_element.get('function')
+        if not function_name:
+            raise QuantumParseError("Function call requires 'function' attribute")
+
+        # Extract result variable (if any)
+        result_var = call_element.get('result')
+
+        # Extract all other attributes as function arguments
+        args = {}
+        for key, value in call_element.attrib.items():
+            if key not in ('function', 'result'):
+                args[key] = value
+
+        return FunctionCallNode(
+            function_name=function_name,
+            args=args,
+            result_var=result_var
+        )
+
     def _parse_statement(self, element: ET.Element) -> Optional[QuantumNode]:
         """Parse individual statement (return, set, dispatchEvent, etc)"""
         element_type = self._get_element_name(element)
@@ -458,12 +497,18 @@ class QuantumParser:
             return self._parse_return(element)
         elif element_type == 'set':
             return self._parse_set_statement(element)
+        elif element_type == 'call':
+            return self._parse_function_call(element)
         elif element_type == 'loop':
             return self._parse_loop_statement(element)
         elif element_type == 'if':
             return self._parse_if_statement(element)
         elif element_type == 'dispatchEvent':
             return self._parse_dispatch_event(element)
+        elif element_type == 'on':
+            return parse_on_event(element)
+        elif element_type == 'dispatch':
+            return parse_dispatch_event(element)
         elif element_type == 'query':
             return self._parse_query_statement(element)
         elif element_type == 'invoke':

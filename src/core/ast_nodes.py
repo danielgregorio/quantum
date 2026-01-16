@@ -70,6 +70,34 @@ class QuantumReturn:
 
 
 @dataclass
+class FunctionCallNode:
+    """
+    Represents a <q:call> - Function invocation
+
+    Example:
+      <q:call function="calculateDiscount" price="100" percentage="20" />
+      <q:call function="greet" name="{user.name}" result="greeting" />
+    """
+    function_name: str
+    args: Dict[str, Any] = field(default_factory=dict)
+    result_var: Optional[str] = None  # Store result in variable
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.function_name:
+            errors.append("Function call requires 'function' attribute")
+        return errors
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "function_call",
+            "function": self.function_name,
+            "args": self.args,
+            "result_var": self.result_var
+        }
+
+
+@dataclass
 class QuantumRoute:
     """Represents a <q:route>"""
     path: str
