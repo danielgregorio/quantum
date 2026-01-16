@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Admin - Container Wizard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="quantum-enhancements.css">
+    <link rel="stylesheet" href="container-wizard.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            ⚛️ <span>Quantum</span>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Overview</div>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                Dashboard
+            </a>
+            <a href="monitoring.html" class="nav-item">
+                <span class="nav-icon">📈</span>
+                Monitoring
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Data Sources</div>
+            <a href="datasources.html" class="nav-item">
+                <span class="nav-icon">🗄️</span>
+                Datasources
+            </a>
+            <a href="containers.html" class="nav-item">
+                <span class="nav-icon">🐳</span>
+                Containers
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Development</div>
+            <a href="components.html" class="nav-item">
+                <span class="nav-icon">📦</span>
+                Components
+            </a>
+            <a href="playground.html" class="nav-item">
+                <span class="nav-icon">🎮</span>
+                Playground
+            </a>
+            <a href="templates.html" class="nav-item">
+                <span class="nav-icon">📋</span>
+                Templates
+            </a>
+            <a href="query-builder.html" class="nav-item">
+                <span class="nav-icon">🔍</span>
+                Query Builder
+            </a>
+            <a href="api-explorer.html" class="nav-item">
+                <span class="nav-icon">🔌</span>
+                API Explorer
+            </a>
+            <a href="logs.html" class="nav-item">
+                <span class="nav-icon">📝</span>
+                Logs
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">System</div>
+            <a href="settings.html" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                Settings
+            </a>
+            <a href="security.html" class="nav-item">
+                <span class="nav-icon">🔒</span>
+                Security
+            </a>
+            <a href="devops.html" class="nav-item">
+                <span class="nav-icon">🚀</span>
+                DevOps
+            </a>
+            <a href="container-wizard.html" class="nav-item active">
+                <span class="nav-icon">🧙</span>
+                Container Wizard
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <h1>🧙 Container Creation Wizard</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="resetWizard()">🔄 Reset</button>
+                <button class="btn btn-primary" onclick="saveAsDraft()">💾 Save Draft</button>
+            </div>
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="wizard-progress">
+            <div class="wizard-step active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Choose Template</div>
+            </div>
+            <div class="wizard-step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Configure</div>
+            </div>
+            <div class="wizard-step" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Visual Designer</div>
+            </div>
+            <div class="wizard-step" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">Network & Volumes</div>
+            </div>
+            <div class="wizard-step" data-step="5">
+                <div class="step-number">5</div>
+                <div class="step-label">Review & Deploy</div>
+            </div>
+        </div>
+
+        <!-- Wizard Content -->
+        <div class="wizard-container">
+
+            <!-- STEP 1: Template Selection -->
+            <div id="step-1" class="wizard-step-content active">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📋 Choose a Template or Start from Scratch</h2>
+                    </div>
+
+                    <div class="template-tabs">
+                        <button class="template-tab active" onclick="filterTemplates('all')">
+                            All Templates
+                        </button>
+                        <button class="template-tab" onclick="filterTemplates('database')">
+                            🗄️ Databases
+                        </button>
+                        <button class="template-tab" onclick="filterTemplates('cache')">
+                            🔴 Cache
+                        </button>
+                        <button class="template-tab" onclick="filterTemplates('web')">
+                            🌐 Web Servers
+                        </button>
+                        <button class="template-tab" onclick="filterTemplates('stack')">
+                            📚 Full Stacks
+                        </button>
+                        <button class="template-tab" onclick="filterTemplates('custom')">
+                            🔧 Custom
+                        </button>
+                    </div>
+
+                    <div id="template-grid" class="template-grid">
+                        <!-- Templates will be loaded here by JS -->
+                    </div>
+
+                    <div class="wizard-actions">
+                        <button class="btn btn-primary" onclick="nextStep()" id="step1-next" disabled>
+                            Next: Configure →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: Configuration -->
+            <div id="step-2" class="wizard-step-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">⚙️ Configure Container</h2>
+                        <div class="ai-suggestions">
+                            <button class="btn btn-sm" onclick="getAISuggestions()">
+                                ✨ AI Suggestions
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="config-layout">
+                        <!-- Left: Configuration Form -->
+                        <div class="config-form">
+                            <div class="form-section">
+                                <h3>Basic Information</h3>
+
+                                <div class="form-group">
+                                    <label>Container Name *</label>
+                                    <input type="text" id="container-name" class="form-control"
+                                           placeholder="my-postgres" onchange="validateConfig()">
+                                    <small class="form-hint">Must be lowercase, alphanumeric with hyphens</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Docker Image *</label>
+                                    <div class="input-group">
+                                        <input type="text" id="container-image" class="form-control"
+                                               placeholder="postgres:15" onchange="validateConfig()">
+                                        <button class="btn btn-sm" onclick="browseImages()">
+                                            🔍 Browse
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <h3>Port Mapping</h3>
+                                <div id="ports-list"></div>
+                                <button class="btn btn-sm" onclick="addPort()">➕ Add Port</button>
+                            </div>
+
+                            <div class="form-section">
+                                <h3>Environment Variables</h3>
+                                <div id="env-list"></div>
+                                <button class="btn btn-sm" onclick="addEnvVar()">➕ Add Variable</button>
+                            </div>
+
+                            <div class="form-section">
+                                <h3>Volumes</h3>
+                                <div id="volumes-list"></div>
+                                <button class="btn btn-sm" onclick="addVolume()">➕ Add Volume</button>
+                            </div>
+
+                            <div class="form-section">
+                                <h3>Resource Limits</h3>
+
+                                <div class="form-group">
+                                    <label>Memory Limit (GB)</label>
+                                    <input type="number" id="memory-limit" class="form-control"
+                                           value="1" min="0.5" step="0.5">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>CPU Limit (cores)</label>
+                                    <input type="number" id="cpu-limit" class="form-control"
+                                           value="1" min="0.5" step="0.5">
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <h3>Advanced Options</h3>
+
+                                <div class="form-group">
+                                    <label>Restart Policy</label>
+                                    <select id="restart-policy" class="form-control">
+                                        <option value="no">No</option>
+                                        <option value="always" selected>Always</option>
+                                        <option value="on-failure">On Failure</option>
+                                        <option value="unless-stopped">Unless Stopped</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="enable-healthcheck">
+                                        Enable Health Check
+                                    </label>
+                                </div>
+
+                                <div id="healthcheck-config" style="display: none;">
+                                    <div class="form-group">
+                                        <label>Health Check Command</label>
+                                        <input type="text" id="healthcheck-cmd" class="form-control"
+                                               placeholder="CMD-SHELL pg_isready">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Live Validation -->
+                        <div class="config-preview">
+                            <div class="validation-panel">
+                                <h3>🔍 Validation</h3>
+                                <div id="validation-results">
+                                    <div class="validation-item pending">
+                                        <span class="validation-icon">⏳</span>
+                                        <span>Configure container to validate</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="suggestions-panel">
+                                <h3>💡 AI Suggestions</h3>
+                                <div id="ai-suggestions">
+                                    <p style="color: #7f8c8d; padding: 10px;">
+                                        Click "AI Suggestions" for intelligent recommendations
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <button class="btn" onclick="prevStep()">← Back</button>
+                        <button class="btn btn-primary" onclick="nextStep()" id="step2-next">
+                            Next: Visual Designer →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: Visual Designer -->
+            <div id="step-3" class="wizard-step-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">🎨 Visual Container Designer</h2>
+                        <div class="designer-tools">
+                            <button class="btn btn-sm" onclick="addServiceToCanvas()">
+                                ➕ Add Service
+                            </button>
+                            <button class="btn btn-sm" onclick="autoLayoutCanvas()">
+                                🔄 Auto Layout
+                            </button>
+                            <button class="btn btn-sm" onclick="clearCanvas()">
+                                🗑️ Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="designer-layout">
+                        <!-- Service Palette -->
+                        <div class="service-palette">
+                            <h3>Services Palette</h3>
+                            <div class="palette-category">
+                                <h4>Databases</h4>
+                                <div class="palette-item" draggable="true" data-service="postgres">
+                                    🗄️ PostgreSQL
+                                </div>
+                                <div class="palette-item" draggable="true" data-service="mysql">
+                                    🐬 MySQL
+                                </div>
+                                <div class="palette-item" draggable="true" data-service="mongodb">
+                                    🍃 MongoDB
+                                </div>
+                            </div>
+                            <div class="palette-category">
+                                <h4>Cache</h4>
+                                <div class="palette-item" draggable="true" data-service="redis">
+                                    🔴 Redis
+                                </div>
+                                <div class="palette-item" draggable="true" data-service="memcached">
+                                    ⚡ Memcached
+                                </div>
+                            </div>
+                            <div class="palette-category">
+                                <h4>Web</h4>
+                                <div class="palette-item" draggable="true" data-service="nginx">
+                                    🌐 Nginx
+                                </div>
+                                <div class="palette-item" draggable="true" data-service="apache">
+                                    🪶 Apache
+                                </div>
+                            </div>
+                            <div class="palette-category">
+                                <h4>Application</h4>
+                                <div class="palette-item" draggable="true" data-service="nodejs">
+                                    💚 Node.js
+                                </div>
+                                <div class="palette-item" draggable="true" data-service="python">
+                                    🐍 Python
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Canvas -->
+                        <div class="designer-canvas-wrapper">
+                            <canvas id="designer-canvas" width="800" height="600"></canvas>
+                            <div id="canvas-services"></div>
+                        </div>
+
+                        <!-- Properties Panel -->
+                        <div class="properties-panel">
+                            <h3>Properties</h3>
+                            <div id="selected-service-props">
+                                <p style="color: #7f8c8d; padding: 10px;">
+                                    Click a service to edit properties
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <button class="btn" onclick="prevStep()">← Back</button>
+                        <button class="btn btn-primary" onclick="nextStep()">
+                            Next: Networks & Volumes →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4: Network & Volumes -->
+            <div id="step-4" class="wizard-step-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">🌐 Networks & Volumes</h2>
+                    </div>
+
+                    <div class="network-layout">
+                        <!-- Network Diagram -->
+                        <div class="network-section">
+                            <h3>Network Topology</h3>
+                            <div id="network-diagram" class="network-diagram">
+                                <svg id="network-svg" width="100%" height="400"></svg>
+                            </div>
+                            <button class="btn btn-sm" onclick="addNetwork()">➕ Add Network</button>
+                        </div>
+
+                        <!-- Volume Management -->
+                        <div class="volume-section">
+                            <h3>Volume Management</h3>
+                            <table id="volumes-table">
+                                <thead>
+                                    <tr>
+                                        <th>Volume Name</th>
+                                        <th>Type</th>
+                                        <th>Mount Point</th>
+                                        <th>Used By</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="volumes-tbody">
+                                    <!-- Volumes will be added here -->
+                                </tbody>
+                            </table>
+                            <button class="btn btn-sm" onclick="addNamedVolume()">➕ Add Named Volume</button>
+                        </div>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <button class="btn" onclick="prevStep()">← Back</button>
+                        <button class="btn btn-primary" onclick="nextStep()">
+                            Next: Review & Deploy →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 5: Review & Deploy -->
+            <div id="step-5" class="wizard-step-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📋 Review & Deploy</h2>
+                        <div class="review-actions">
+                            <button class="btn btn-sm" onclick="copyYAML()">📋 Copy YAML</button>
+                            <button class="btn btn-sm" onclick="downloadYAML()">💾 Download</button>
+                        </div>
+                    </div>
+
+                    <div class="review-layout">
+                        <!-- Generated YAML -->
+                        <div class="yaml-preview">
+                            <h3>Generated docker-compose.yml</h3>
+                            <pre><code id="generated-yaml" class="language-yaml">version: '3.8'
+services:
+  # Your services will appear here
+</code></pre>
+                        </div>
+
+                        <!-- Deployment Options -->
+                        <div class="deploy-options">
+                            <h3>Deployment Options</h3>
+
+                            <div class="form-group">
+                                <label>Project Name</label>
+                                <input type="text" id="project-name" class="form-control"
+                                       placeholder="my-project">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Environment</label>
+                                <select id="deploy-environment" class="form-control">
+                                    <option value="local">Local Machine</option>
+                                    <option value="development">Development Server</option>
+                                    <option value="staging">Staging Server</option>
+                                    <option value="production">Production Server</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="pull-images" checked>
+                                    Pull latest images before starting
+                                </label>
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="detached-mode" checked>
+                                    Run in detached mode
+                                </label>
+                            </div>
+
+                            <div class="deployment-summary">
+                                <h4>Summary</h4>
+                                <div class="summary-item">
+                                    <span class="summary-label">Services:</span>
+                                    <span class="summary-value" id="summary-services">1</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">Networks:</span>
+                                    <span class="summary-value" id="summary-networks">1</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">Volumes:</span>
+                                    <span class="summary-value" id="summary-volumes">0</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">Estimated Size:</span>
+                                    <span class="summary-value" id="summary-size">~500 MB</span>
+                                </div>
+                            </div>
+
+                            <div class="validation-final">
+                                <h4>Pre-deployment Checks</h4>
+                                <div id="final-validation">
+                                    <!-- Validation results -->
+                                </div>
+                            </div>
+
+                            <button class="btn btn-primary btn-lg btn-deploy" onclick="deployContainers()">
+                                🚀 Deploy Now
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <button class="btn" onclick="prevStep()">← Back</button>
+                        <button class="btn" onclick="saveAndExit()">💾 Save & Exit</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Deployment Progress Modal -->
+        <div id="deploy-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🚀 Deploying Containers</h2>
+                </div>
+                <div class="modal-body">
+                    <div id="deploy-progress">
+                        <div class="progress-step">
+                            <div class="progress-icon">⏳</div>
+                            <div class="progress-text">Initializing deployment...</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="deploy-progress-fill" class="progress-fill" style="width: 0%;"></div>
+                    </div>
+                    <div id="deploy-logs" class="deploy-logs"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" onclick="cancelDeployment()" id="cancel-deploy-btn">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="quantum-enhancements.js"></script>
+    <script src="i18n.js"></script>
+    <script src="websocket-client.js"></script>
+    <script src="container-wizard.js"></script>
+</body>
+</html>

@@ -1912,6 +1912,100 @@ def system_status():
 
 
 # ============================================================================
+# CONTAINER WIZARD ENDPOINTS
+# ============================================================================
+
+@app.get("/wizard/templates", tags=["Container Wizard"])
+def get_wizard_templates():
+    """Get available container templates for wizard"""
+    # Return simplified template list
+    return {
+        "templates": [
+            {"id": "postgres", "name": "PostgreSQL", "category": "database"},
+            {"id": "mysql", "name": "MySQL", "category": "database"},
+            {"id": "mongodb", "name": "MongoDB", "category": "database"},
+            {"id": "redis", "name": "Redis", "category": "cache"},
+            {"id": "nginx", "name": "Nginx", "category": "web"},
+            {"id": "custom", "name": "Custom", "category": "custom"}
+        ]
+    }
+
+
+@app.post("/wizard/validate", tags=["Container Wizard"])
+def validate_wizard_config(config: dict):
+    """Validate container configuration"""
+    errors = []
+    warnings = []
+
+    # Validate container name
+    name = config.get("name", "")
+    if not name:
+        errors.append("Container name is required")
+    elif not all(c.isalnum() or c in ['-', '_'] for c in name):
+        errors.append("Container name must be alphanumeric with hyphens/underscores")
+
+    # Validate image
+    if not config.get("image"):
+        errors.append("Docker image is required")
+
+    # Check port conflicts
+    ports = config.get("ports", [])
+    host_ports = [p.get("host") for p in ports]
+    if len(host_ports) != len(set(host_ports)):
+        errors.append("Duplicate host ports detected")
+
+    # Resource warnings
+    memory = config.get("memory", 0)
+    if memory > 8:
+        warnings.append("Memory limit over 8GB may impact host")
+
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "warnings": warnings
+    }
+
+
+@app.post("/wizard/generate-yaml", tags=["Container Wizard"])
+def generate_docker_compose(config: dict):
+    """Generate docker-compose.yml from config"""
+    # This would generate the actual YAML
+    # For now, return a simple response
+    return {
+        "yaml": "version: '3.8'\nservices:\n  " + config.get("name", "service") + ":\n    image: " + config.get("image", ""),
+        "filename": "docker-compose.yml"
+    }
+
+
+@app.post("/wizard/deploy", tags=["Container Wizard"])
+async def deploy_wizard_containers(config: dict):
+    """Deploy containers from wizard configuration"""
+    try:
+        # In production: actually deploy using Docker API
+        from celery_tasks import deploy_application
+
+        # Queue deployment task
+        task = deploy_application.delay(
+            environment="local",
+            branch="main",
+            run_migrations=False
+        )
+
+        return {
+            "status": "queued",
+            "task_id": task.id,
+            "message": "Deployment queued successfully"
+        }
+
+    except Exception as e:
+        logger.error(f"Wizard deployment failed: {e}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+
+# ============================================================================
 # RUN SERVER (for development)
 # ============================================================================
 

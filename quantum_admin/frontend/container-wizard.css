@@ -1,0 +1,849 @@
+/* =============================================================================
+   Container Wizard Styles
+   ============================================================================= */
+
+/* Wizard Progress */
+.wizard-progress {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 30px 0;
+    margin-bottom: 30px;
+    position: relative;
+}
+
+.wizard-progress::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #e0e0e0;
+    z-index: 0;
+    transform: translateY(-50%);
+}
+
+.wizard-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.wizard-step .step-number {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+    color: #95a5a6;
+    transition: all 0.3s ease;
+}
+
+.wizard-step .step-label {
+    font-size: 14px;
+    color: #7f8c8d;
+    font-weight: 500;
+    text-align: center;
+}
+
+.wizard-step.active .step-number {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.wizard-step.active .step-label {
+    color: #667eea;
+    font-weight: 600;
+}
+
+.wizard-step.completed .step-number {
+    background: #27ae60;
+    border-color: #27ae60;
+    color: white;
+}
+
+.wizard-step.completed .step-label {
+    color: #27ae60;
+}
+
+.wizard-step.completed .step-number::after {
+    content: '✓';
+    font-size: 24px;
+}
+
+/* Wizard Container */
+.wizard-container {
+    animation: fadeIn 0.4s ease;
+}
+
+.wizard-step-content {
+    display: none;
+    animation: slideIn 0.5s ease;
+}
+
+.wizard-step-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Wizard Actions */
+.wizard-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 20px;
+    border-top: 1px solid #e0e0e0;
+    margin-top: 30px;
+}
+
+/* =============================================================================
+   Step 1: Template Gallery
+   ============================================================================= */
+
+.template-tabs {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+
+.template-tab {
+    padding: 10px 20px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.template-tab:hover {
+    border-color: #667eea;
+    background: #f8f9ff;
+}
+
+.template-tab.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: #667eea;
+}
+
+.template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.template-card {
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.template-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.template-card:hover {
+    border-color: #667eea;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.template-card:hover::before {
+    transform: scaleX(1);
+}
+
+.template-card.selected {
+    border-color: #667eea;
+    background: #f8f9ff;
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+}
+
+.template-card.selected::before {
+    transform: scaleX(1);
+}
+
+.template-card .template-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+}
+
+.template-card .template-name {
+    font-size: 18px;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 8px;
+}
+
+.template-card .template-description {
+    font-size: 14px;
+    color: #7f8c8d;
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.template-card .template-tags {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.template-tag {
+    padding: 4px 10px;
+    background: #ecf0f1;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #7f8c8d;
+}
+
+.template-card.selected .template-tag {
+    background: #667eea;
+    color: white;
+}
+
+/* =============================================================================
+   Step 2: Configuration
+   ============================================================================= */
+
+.config-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px;
+}
+
+.config-form {
+    max-height: 600px;
+    overflow-y: auto;
+    padding-right: 20px;
+}
+
+.form-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.form-section h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-hint {
+    display: block;
+    font-size: 12px;
+    color: #95a5a6;
+    margin-top: 5px;
+}
+
+.input-group {
+    display: flex;
+    gap: 10px;
+}
+
+.input-group .form-control {
+    flex: 1;
+}
+
+.port-mapping, .env-var, .volume-mapping {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+.port-mapping input, .env-var input, .volume-mapping input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+.port-arrow, .volume-arrow {
+    color: #667eea;
+    font-weight: bold;
+}
+
+.btn-remove {
+    padding: 5px 10px;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-remove:hover {
+    background: #c0392b;
+}
+
+/* Validation & Suggestions Panels */
+.config-preview {
+    position: sticky;
+    top: 20px;
+}
+
+.validation-panel, .suggestions-panel {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.validation-panel h3, .suggestions-panel h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #2c3e50;
+}
+
+.validation-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.validation-item.success {
+    background: #d5f4e6;
+    color: #27ae60;
+}
+
+.validation-item.error {
+    background: #fadbd8;
+    color: #e74c3c;
+}
+
+.validation-item.warning {
+    background: #fff4e5;
+    color: #f39c12;
+}
+
+.validation-item.pending {
+    background: #e8f4f8;
+    color: #3498db;
+}
+
+.validation-icon {
+    font-size: 18px;
+}
+
+.suggestion-item {
+    padding: 10px;
+    background: #f8f9ff;
+    border-left: 3px solid #667eea;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+/* =============================================================================
+   Step 3: Visual Designer
+   ============================================================================= */
+
+.designer-layout {
+    display: grid;
+    grid-template-columns: 200px 1fr 250px;
+    gap: 20px;
+    min-height: 600px;
+}
+
+.service-palette {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+.service-palette h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.palette-category {
+    margin-bottom: 20px;
+}
+
+.palette-category h4 {
+    font-size: 14px;
+    color: #7f8c8d;
+    margin-bottom: 10px;
+}
+
+.palette-item {
+    padding: 10px;
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    cursor: grab;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.palette-item:hover {
+    border-color: #667eea;
+    transform: translateX(5px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.palette-item:active {
+    cursor: grabbing;
+}
+
+.designer-canvas-wrapper {
+    background: white;
+    border: 2px dashed #e0e0e0;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+#designer-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#canvas-services {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.canvas-service {
+    position: absolute;
+    background: white;
+    border: 3px solid #667eea;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    cursor: move;
+    pointer-events: all;
+    transition: all 0.2s ease;
+    min-width: 150px;
+}
+
+.canvas-service:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+}
+
+.canvas-service.selected {
+    border-color: #f39c12;
+    box-shadow: 0 6px 20px rgba(243, 156, 18, 0.3);
+}
+
+.canvas-service-icon {
+    font-size: 32px;
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+.canvas-service-name {
+    font-weight: bold;
+    text-align: center;
+    color: #2c3e50;
+}
+
+.canvas-service-ports {
+    font-size: 12px;
+    color: #7f8c8d;
+    text-align: center;
+    margin-top: 5px;
+}
+
+.properties-panel {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+.properties-panel h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+/* =============================================================================
+   Step 4: Network Diagram
+   ============================================================================= */
+
+.network-layout {
+    display: grid;
+    gap: 30px;
+}
+
+.network-section, .volume-section {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.network-section h3, .volume-section h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.network-diagram {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    min-height: 400px;
+}
+
+#network-svg {
+    display: block;
+}
+
+.network-node {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.network-node:hover {
+    filter: brightness(1.1);
+}
+
+.network-link {
+    stroke: #667eea;
+    stroke-width: 2;
+    fill: none;
+    marker-end: url(#arrowhead);
+}
+
+/* =============================================================================
+   Step 5: Review & Deploy
+   ============================================================================= */
+
+.review-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px;
+}
+
+.yaml-preview {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.yaml-preview h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.yaml-preview pre {
+    background: #2c3e50;
+    color: #ecf0f1;
+    padding: 20px;
+    border-radius: 8px;
+    overflow-x: auto;
+    max-height: 600px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.deploy-options {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    position: sticky;
+    top: 20px;
+}
+
+.deploy-options h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.deployment-summary {
+    background: #f8f9ff;
+    border: 2px solid #667eea;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.deployment-summary h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #667eea;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+}
+
+.summary-label {
+    font-weight: 500;
+    color: #7f8c8d;
+}
+
+.summary-value {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.validation-final {
+    margin: 20px 0;
+}
+
+.validation-final h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.btn-deploy {
+    width: 100%;
+    margin-top: 20px;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* =============================================================================
+   Deployment Modal
+   ============================================================================= */
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    padding: 20px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.modal-body {
+    padding: 20px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 20px;
+    border-top: 2px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.progress-step {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.progress-icon {
+    font-size: 32px;
+}
+
+.progress-text {
+    font-size: 16px;
+    color: #2c3e50;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 20px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    transition: width 0.3s ease;
+}
+
+.deploy-logs {
+    background: #2c3e50;
+    color: #ecf0f1;
+    padding: 15px;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 20px;
+}
+
+.deploy-log-entry {
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* =============================================================================
+   Responsive Design
+   ============================================================================= */
+
+@media (max-width: 1200px) {
+    .config-layout,
+    .review-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .designer-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .service-palette,
+    .properties-panel {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .wizard-progress {
+        overflow-x: auto;
+        justify-content: flex-start;
+        gap: 20px;
+    }
+
+    .wizard-step {
+        min-width: 80px;
+    }
+
+    .template-grid {
+        grid-template-columns: 1fr;
+    }
+}
