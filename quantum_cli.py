@@ -145,18 +145,14 @@ class QuantumCLI:
         print("Press Ctrl+C to stop")
         print("=" * 60)
 
-        # Set environment variables
-        env = os.environ.copy()
-        env['QUANTUM_DEV_MODE'] = 'true'
-        env['QUANTUM_PORT'] = str(port)
+        # Import and start web server directly
+        sys.path.insert(0, str(self.project_root / "src"))
 
-        # Start web server
         try:
-            subprocess.run(
-                [sys.executable, "src/runtime/web_server.py"],
-                cwd=self.project_root,
-                env=env
-            )
+            from web.quantum_server import QuantumServer
+
+            server = QuantumServer(components_dir=str(self.components_dir))
+            server.serve(host='0.0.0.0', port=port, debug=True)
         except KeyboardInterrupt:
             print("\n\n👋 Quantum dev server stopped")
 

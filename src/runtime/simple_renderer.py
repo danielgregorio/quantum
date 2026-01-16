@@ -153,8 +153,10 @@ class SimpleRenderer:
         if value:
             # Check if it's a databinding expression or literal
             if '{' in value and '}' in value:
-                # Has databinding, resolve it
-                resolved_value = evaluate(value, context)
+                # Has databinding, resolve it first (handles {expr} -> result)
+                resolved_str = resolve(value, context)
+                # Then parse the result as a literal
+                resolved_value = self._parse_literal(resolved_str)
             else:
                 # Literal value - try to parse as number or use as string
                 resolved_value = self._parse_literal(value)
