@@ -5,9 +5,13 @@ Supports:
 - HTML tags with databinding
 - q:set (variables)
 - q:if/q:else
-- q:loop
+- q:loop (range and array)
 - q:function definitions
 - q:call (function invocation)
+- q:query (database queries)
+- q:action (form handling)
+- q:mail (email sending)
+- q:file (file uploads)
 """
 
 from typing import Dict, Any, List, Optional
@@ -25,9 +29,51 @@ from core.features.functions.src import FunctionRuntime, register_function
 class SimpleRenderer:
     """Renders Quantum components to HTML"""
 
-    def __init__(self):
+    def __init__(self,
+                 db_service=None,
+                 email_service=None,
+                 file_service=None,
+                 action_handler=None):
         self.parser = QuantumParser()
         self.function_runtime = FunctionRuntime()
+
+        # Lazy-load services (imported when first used)
+        self._db_service = db_service
+        self._email_service = email_service
+        self._file_service = file_service
+        self._action_handler = action_handler
+
+    @property
+    def db_service(self):
+        """Lazy-load database service"""
+        if self._db_service is None:
+            from runtime.database_service import DatabaseService
+            self._db_service = DatabaseService()
+        return self._db_service
+
+    @property
+    def email_service(self):
+        """Lazy-load email service"""
+        if self._email_service is None:
+            from runtime.email_service import EmailService
+            self._email_service = EmailService()
+        return self._email_service
+
+    @property
+    def file_service(self):
+        """Lazy-load file upload service"""
+        if self._file_service is None:
+            from runtime.file_upload_service import FileUploadService
+            self._file_service = FileUploadService()
+        return self._file_service
+
+    @property
+    def action_handler(self):
+        """Lazy-load action handler"""
+        if self._action_handler is None:
+            from runtime.action_handler import ActionHandler
+            self._action_handler = ActionHandler()
+        return self._action_handler
 
     def render_file(self, file_path: str, context: Optional[Dict[str, Any]] = None) -> str:
         """
@@ -96,6 +142,25 @@ class SimpleRenderer:
         # q:call
         if isinstance(statement, FunctionCallNode):
             return self.execute_function_call(statement, context)
+
+        # q:query - NEW!
+        if isinstance(statement, QueryNode):
+            self.execute_query(statement, context)
+            return ""
+
+        # q:action - NEW!
+        if isinstance(statement, ActionNode):
+            return self.execute_action(statement, context)
+
+        # q:mail - NEW!
+        if isinstance(statement, MailNode):
+            self.execute_mail(statement, context)
+            return ""
+
+        # q:file - NEW!
+        if isinstance(statement, FileNode):
+            self.execute_file(statement, context)
+            return ""
 
         # q:function (definition, no output)
         if isinstance(statement, FunctionNode):
@@ -257,13 +322,34 @@ class SimpleRenderer:
                         html_parts.append(rendered)
 
         elif node.loop_type == 'array':
-            # Array loop
-            array = evaluate(node.items, context) if node.items else []
-            if isinstance(array, (list, tuple)):
-                for item in array:
+            # Array loop - iterate over actual data
+            # node.items can be:
+            # - Variable name: "users"
+            # - Expression: "{query.users.data}"
+
+            if node.items:
+                # Resolve the array expression
+                items_value = resolve(node.items, context) if '{' in str(node.items) else context.get(node.items, [])
+
+                # If it's still a string, try to get from context
+                if isinstance(items_value, str):
+                    items_value = context.get(items_value, [])
+
+                # Handle QueryResult objects (from q:query)
+                if hasattr(items_value, 'data'):
+                    items_value = items_value.data
+
+                # Ensure it's iterable
+                if not isinstance(items_value, (list, tuple)):
+                    items_value = []
+
+                # Iterate over items
+                for index, item in enumerate(items_value):
                     # Create loop context
                     loop_context = context.copy()
                     loop_context[node.var_name] = item
+                    loop_context[f'{node.var_name}_index'] = index
+                    loop_context[f'{node.var_name}_count'] = index + 1
 
                     # Render body
                     for statement in node.body:
@@ -295,6 +381,135 @@ class SimpleRenderer:
 
         except Exception as e:
             return f"<!-- Function call error: {e} -->"
+
+    def execute_query(self, node: QueryNode, context: Dict[str, Any]) -> None:
+        """Execute q:query - Database query execution"""
+        try:
+            # Resolve SQL with databinding
+            sql = resolve(node.sql, context) if node.sql else ""
+
+            # Execute query through database service
+            result = self.db_service.execute_query(
+                sql=sql,
+                datasource=node.datasource or "default",
+                params=context,
+                max_rows=node.max_rows,
+                timeout=node.timeout
+            )
+
+            # Store result in context
+            context[node.name] = result
+
+        except Exception as e:
+            # Store error in context for debugging
+            context[node.name] = {
+                'success': False,
+                'error': str(e),
+                'data': [],
+                'record_count': 0
+            }
+            print(f"Query error: {e}")
+
+    def execute_action(self, node: ActionNode, context: Dict[str, Any]) -> str:
+        """Execute q:action - Form/POST request handling"""
+        try:
+            # Check if this action should execute (based on HTTP method)
+            from flask import request
+
+            # Get action name from URL query param
+            action_name = request.args.get('action', '')
+
+            # Only execute if action name matches and method matches
+            if action_name == node.name and request.method == node.method:
+                # Handle action through action handler
+                redirect_url, status_code = self.action_handler.handle_action(node, context)
+
+                # If redirect, return special marker
+                if redirect_url:
+                    context['__redirect__'] = redirect_url
+                    context['__redirect_status__'] = status_code
+                    return f"<!-- Redirecting to {redirect_url} -->"
+
+            return ""
+
+        except Exception as e:
+            return f"<!-- Action error: {e} -->"
+
+    def execute_mail(self, node: MailNode, context: Dict[str, Any]) -> None:
+        """Execute q:mail - Send email"""
+        try:
+            # Resolve email fields with databinding
+            to = resolve(node.to, context) if node.to else ""
+            subject = resolve(node.subject, context) if node.subject else ""
+            from_addr = resolve(node.from_addr, context) if node.from_addr else None
+
+            # Get body content (render child nodes)
+            body_parts = []
+            for statement in node.body:
+                rendered = self.render_statement(statement, context)
+                if rendered:
+                    body_parts.append(rendered)
+            body = ''.join(body_parts)
+
+            # Send email
+            result = self.email_service.send_email(
+                to=to,
+                subject=subject,
+                body=body,
+                from_addr=from_addr,
+                cc=node.cc,
+                bcc=node.bcc,
+                reply_to=node.reply_to,
+                email_type=node.type or "html"
+            )
+
+            # Store result in context if name provided
+            if hasattr(node, 'result_var') and node.result_var:
+                context[node.result_var] = result
+
+        except Exception as e:
+            print(f"Mail error: {e}")
+            if hasattr(node, 'result_var') and node.result_var:
+                context[node.result_var] = {'success': False, 'error': str(e)}
+
+    def execute_file(self, node: FileNode, context: Dict[str, Any]) -> None:
+        """Execute q:file - Handle file upload"""
+        try:
+            from flask import request
+
+            # Get file from request
+            file_field = node.field or 'file'
+            uploaded_file = request.files.get(file_field)
+
+            if uploaded_file and uploaded_file.filename:
+                # Parse size limit
+                max_size = None
+                if node.max_size:
+                    max_size = self.file_service.parse_size(node.max_size)
+
+                # Handle upload
+                result = self.file_service.handle_upload(
+                    file=uploaded_file,
+                    destination=node.destination or "uploads",
+                    allowed_extensions=node.accept.split(',') if node.accept else None,
+                    max_file_size=max_size,
+                    name_conflict=node.name_conflict or "makeunique"
+                )
+
+                # Store result in context
+                context[node.result_var or 'uploadedFile'] = result
+            else:
+                context[node.result_var or 'uploadedFile'] = {
+                    'success': False,
+                    'error': 'No file uploaded'
+                }
+
+        except Exception as e:
+            print(f"File upload error: {e}")
+            context[node.result_var or 'uploadedFile'] = {
+                'success': False,
+                'error': str(e)
+            }
 
     def _to_number(self, value: Any) -> float:
         """Convert value to number"""
