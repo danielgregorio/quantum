@@ -96,8 +96,11 @@ Quantum is an experimental declarative language that allows you to write compone
 - ✅ **RAG System** - Semantic search with ChromaDB + embeddings
 - ✅ **AI Agents** - Goal-based agents with tools
 - ✅ **Functions** - Reusable functions with params, caching, REST API (`q:function`)
+- ✅ **Function Calls** - Invoke functions with `q:call`
+- ✅ **REST API Auto-Gen** - Auto-generate Flask/FastAPI + OpenAPI from functions
+- ✅ **Event System** - Event handlers and dispatch (`q:on`, `q:dispatch`)
 - 🚧 **Advanced Agent Tools** - Coming next
-- 🚧 **Event System** - Planned (`q:on`, `q:dispatch`)
+- 🚧 **Real-time Features** - WebSocket support planned
 
 ---
 
