@@ -26,6 +26,7 @@ try:
     from .auth_service import AuthService, UserCreate, UserLogin, UserResponse, TokenResponse, get_current_user, require_role, require_permission, UserRole, User, init_default_roles, create_default_admin
     from .websocket_server import manager, websocket_handler, EventType
     from .jenkins_pipeline import parse_qpipeline, generate_jenkinsfile, qpipeline_to_jenkinsfile, PIPELINE_TEMPLATES
+    from .error_handlers import register_error_handlers, raise_not_found, raise_validation_error, raise_auth_error, raise_permission_error
 except ImportError:
     # Fall back to absolute imports (when running directly)
     import crud
@@ -38,13 +39,20 @@ except ImportError:
     from auth_service import AuthService, UserCreate, UserLogin, UserResponse, TokenResponse, get_current_user, require_role, require_permission, UserRole, User, init_default_roles, create_default_admin
     from websocket_server import manager, websocket_handler, EventType
     from jenkins_pipeline import parse_qpipeline, generate_jenkinsfile, qpipeline_to_jenkinsfile, PIPELINE_TEMPLATES
+    from error_handlers import register_error_handlers, raise_not_found, raise_validation_error, raise_auth_error, raise_permission_error
 
 # Create FastAPI app
 app = FastAPI(
     title="Quantum Admin API",
     description="Administration interface for Quantum Language projects",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json"
 )
+
+# Register error handlers
+register_error_handlers(app)
 
 # Initialize Docker service (singleton)
 docker_service = None
