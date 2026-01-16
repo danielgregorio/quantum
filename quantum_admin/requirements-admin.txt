@@ -63,3 +63,10 @@ mypy>=1.7.0
 # Security Scanning (dev)
 safety>=2.3.0
 bandit>=1.7.5
+
+# Performance Testing (dev)
+locust>=2.17.0
+
+# Observability
+prometheus-client>=0.19.0
+python-json-logger>=2.0.7
