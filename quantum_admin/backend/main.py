@@ -2277,6 +2277,197 @@ def generate_pipeline_jenkinsfile(data: dict):
 
 
 # ============================================================================
+# DATABASE SCHEMA ENDPOINTS
+# ============================================================================
+
+@app.get("/schema/inspect", tags=["Schema"])
+def inspect_schema(db: Session = Depends(get_db)):
+    """Inspect current database schema"""
+    from schema_inspector import SchemaInspector
+
+    inspector = SchemaInspector(db.get_bind())
+    schema = inspector.get_complete_schema()
+    relationships = inspector.get_relationships()
+    mermaid = inspector.generate_mermaid_erd()
+
+    return {
+        **schema,
+        "relationships": relationships,
+        "mermaid": mermaid
+    }
+
+
+@app.get("/schema/export", tags=["Schema"])
+def export_schema(
+    format: str = "json",
+    db: Session = Depends(get_db)
+):
+    """Export schema in various formats (json, mermaid, dbml, dot, models)"""
+    from schema_inspector import SchemaInspector
+
+    inspector = SchemaInspector(db.get_bind())
+
+    formats = {
+        "json": inspector.generate_json_schema,
+        "mermaid": inspector.generate_mermaid_erd,
+        "dbml": inspector.generate_dbml,
+        "dot": inspector.generate_graphviz_dot,
+        "models": inspector.generate_sqlalchemy_models
+    }
+
+    if format not in formats:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown format: {format}. Available: {', '.join(formats.keys())}"
+        )
+
+    content = formats[format]()
+
+    return {
+        "format": format,
+        "content": content
+    }
+
+
+@app.get("/schema/models", tags=["Schema"])
+def get_sqlalchemy_models(db: Session = Depends(get_db)):
+    """Generate SQLAlchemy models from current database schema"""
+    from schema_inspector import SchemaInspector
+
+    inspector = SchemaInspector(db.get_bind())
+    models = inspector.generate_sqlalchemy_models()
+
+    return {
+        "models": models
+    }
+
+
+@app.get("/schema/migrations", tags=["Schema"])
+def list_migrations():
+    """List all database migrations"""
+    import subprocess
+    import os
+
+    try:
+        # Get migrations directory
+        alembic_dir = os.path.join(os.path.dirname(__file__), "alembic", "versions")
+
+        if not os.path.exists(alembic_dir):
+            return {"migrations": []}
+
+        # List migration files
+        migrations = []
+        for filename in os.listdir(alembic_dir):
+            if filename.endswith(".py") and not filename.startswith("__"):
+                migrations.append({
+                    "revision": filename.replace(".py", ""),
+                    "message": filename,
+                    "created_at": "Unknown"
+                })
+
+        return {"migrations": migrations}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list migrations: {str(e)}")
+
+
+@app.post("/schema/migrations/create", tags=["Schema"])
+def create_migration(data: dict):
+    """Create a new migration"""
+    import subprocess
+    import os
+
+    message = data.get("message", "auto migration")
+
+    try:
+        # Run alembic revision command
+        result = subprocess.run(
+            ["alembic", "revision", "--autogenerate", "-m", message],
+            cwd=os.path.dirname(__file__),
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode != 0:
+            raise Exception(result.stderr)
+
+        # Parse output to get revision ID
+        output = result.stdout
+        revision = "unknown"
+        if "Generating" in output:
+            # Extract revision ID from output
+            lines = output.split("\n")
+            for line in lines:
+                if "Generating" in line:
+                    parts = line.split()
+                    if len(parts) > 1:
+                        revision = parts[1]
+
+        return {
+            "status": "success",
+            "message": f"Migration created: {message}",
+            "revision": revision
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create migration: {str(e)}")
+
+
+@app.post("/schema/migrations/upgrade", tags=["Schema"])
+def run_migrations():
+    """Run all pending migrations"""
+    import subprocess
+    import os
+
+    try:
+        result = subprocess.run(
+            ["alembic", "upgrade", "head"],
+            cwd=os.path.dirname(__file__),
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode != 0:
+            raise Exception(result.stderr)
+
+        return {
+            "status": "success",
+            "message": "Migrations completed successfully",
+            "output": result.stdout
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to run migrations: {str(e)}")
+
+
+@app.post("/schema/migrations/downgrade", tags=["Schema"])
+def rollback_migration():
+    """Rollback last migration"""
+    import subprocess
+    import os
+
+    try:
+        result = subprocess.run(
+            ["alembic", "downgrade", "-1"],
+            cwd=os.path.dirname(__file__),
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode != 0:
+            raise Exception(result.stderr)
+
+        return {
+            "status": "success",
+            "message": "Migration rolled back successfully",
+            "output": result.stdout
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to rollback migration: {str(e)}")
+
+
+# ============================================================================
 # RUN SERVER (for development)
 # ============================================================================
 

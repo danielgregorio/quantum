@@ -141,11 +141,37 @@ info: ## Show system and project info
 	@pwd
 	@echo ""
 
+# Database & Schema
+schema: ## Inspect database schema
+	@echo "$(CYAN)→ Inspecting database schema...$(NC)"
+	@python3 quantum-cli.py schema
+
+schema-models: ## Generate SQLAlchemy models from database
+	@echo "$(CYAN)→ Generating models from database...$(NC)"
+	@cd quantum_admin/backend && python3 -c "from schema_inspector import inspect_database; inspector = inspect_database('sqlite:///../../quantum_admin.db'); print(inspector.generate_sqlalchemy_models())" > generated_models.py
+	@echo "$(GREEN)✓ Models generated at quantum_admin/backend/generated_models.py$(NC)"
+
+migration-create: ## Create new migration (usage: make migration-create MSG="your message")
+	@echo "$(CYAN)→ Creating migration...$(NC)"
+	@cd quantum_admin/backend && alembic revision --autogenerate -m "$(MSG)"
+
+migration-upgrade: ## Run all pending migrations
+	@echo "$(CYAN)→ Running migrations...$(NC)"
+	@cd quantum_admin/backend && alembic upgrade head
+
+migration-downgrade: ## Rollback last migration
+	@echo "$(CYAN)→ Rolling back migration...$(NC)"
+	@cd quantum_admin/backend && alembic downgrade -1
+
+migration-history: ## Show migration history
+	@cd quantum_admin/backend && alembic history
+
 # Quick aliases
 i: install ## Alias for 'install'
 s: start ## Alias for 'start'
 t: test ## Alias for 'test'
 c: clean ## Alias for 'clean'
+m: migrate ## Alias for 'migrate'
 
 # Default target
 .DEFAULT_GOAL := help
