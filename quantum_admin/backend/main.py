@@ -1382,6 +1382,276 @@ def test_email_connection(email_config: dict):
 
 
 # ============================================================================
+# AI ASSISTANT (SLM Integration)
+# ============================================================================
+
+class QuantumAI:
+    """
+    Quantum AI Assistant - Rule-based system with future SLM integration
+    Calibrated for Quantum framework syntax and best practices
+    """
+
+    def __init__(self):
+        self.knowledge_base = {
+            "databinding": {
+                "patterns": ["{variable}", "{object.property}", "{array[index]}"],
+                "examples": [
+                    "Use {user.name} to display user name",
+                    "Use {items[0].title} to access array elements",
+                    "Use {session.isLoggedIn} for conditionals"
+                ]
+            },
+            "components": {
+                "structure": "<?quantum version=\"1.0\"?>\n<component name=\"mycomp\">\n  <!-- content -->\n</component>",
+                "elements": ["loop", "if", "query", "form", "include"]
+            },
+            "best_practices": [
+                "Always validate user input",
+                "Use parameterized queries for database operations",
+                "Implement proper error handling",
+                "Keep components focused and reusable"
+            ]
+        }
+
+    def respond(self, message: str, context: str = "quantum") -> str:
+        """Generate response based on user message"""
+        message_lower = message.lower()
+
+        # Databinding questions
+        if any(word in message_lower for word in ["databinding", "binding", "variable", "{}", "expression"]):
+            return self._explain_databinding()
+
+        # Component creation
+        if any(word in message_lower for word in ["create component", "new component", "component structure"]):
+            return self._explain_component_structure()
+
+        # Loop questions
+        if "loop" in message_lower:
+            return self._explain_loop()
+
+        # Conditional questions
+        if any(word in message_lower for word in ["if", "conditional", "condition"]):
+            return self._explain_conditional()
+
+        # Database questions
+        if any(word in message_lower for word in ["database", "query", "sql"]):
+            return self._explain_database()
+
+        # Error help
+        if any(word in message_lower for word in ["error", "bug", "issue", "problem"]):
+            return self._help_with_errors()
+
+        # Best practices
+        if any(word in message_lower for word in ["best practice", "should i", "how to"]):
+            return self._suggest_best_practices()
+
+        # Default response
+        return self._default_response()
+
+    def _explain_databinding(self) -> str:
+        return """**Databinding in Quantum**
+
+Quantum uses curly braces `{}` for databinding. Here are the patterns:
+
+1. **Simple variables**: `{username}`, `{email}`
+2. **Object properties**: `{user.name}`, `{user.email}`
+3. **Array access**: `{items[0]}`, `{users[index]}`
+4. **Nested**: `{user.address.city}`
+
+**Example:**
+```xml
+<p>Hello, {user.name}!</p>
+<p>You have {notifications.length} new messages</p>
+```
+
+**Context variables automatically available:**
+- `{session}` - Session data
+- `{user}` - Logged in user
+- `{isLoggedIn}` - Authentication status
+- `{request}` - Request information
+"""
+
+    def _explain_component_structure(self) -> str:
+        return """**Creating a Quantum Component**
+
+Basic structure:
+```xml
+<?quantum version="1.0"?>
+<component name="hello">
+    <h1>Hello, {name}!</h1>
+    <p>This is a Quantum component</p>
+</component>
+```
+
+**Best practices:**
+- Use descriptive component names
+- Keep components focused (single responsibility)
+- Pass data via context variables
+- Reuse components with `<include>`
+"""
+
+    def _explain_loop(self) -> str:
+        return """**Loops in Quantum**
+
+Use `<loop>` to iterate over arrays:
+
+```xml
+<loop array="users">
+    <div class="user-card">
+        <h3>{item.name}</h3>
+        <p>{item.email}</p>
+    </div>
+</loop>
+```
+
+**Available variables inside loop:**
+- `{item}` - Current item
+- `{index}` - Current index (0-based)
+- `{isFirst}` - True for first item
+- `{isLast}` - True for last item
+"""
+
+    def _explain_conditional(self) -> str:
+        return """**Conditionals in Quantum**
+
+Use `<if>` for conditional rendering:
+
+```xml
+<if condition="{isLoggedIn}">
+    <p>Welcome back, {user.name}!</p>
+</if>
+
+<if condition="{user.role == 'admin'}">
+    <button>Admin Panel</button>
+</if>
+```
+
+**Operators:**
+- `==`, `!=` - Equality
+- `>`, `<`, `>=`, `<=` - Comparison
+- `and`, `or` - Logical operators
+"""
+
+    def _explain_database(self) -> str:
+        return """**Database Operations in Quantum**
+
+1. **Create a datasource** in Admin UI
+2. **Use query element:**
+
+```xml
+<query name="getUsers" datasource="mydb">
+    SELECT * FROM users WHERE active = true
+</query>
+
+<loop array="getUsers">
+    <p>{item.username}</p>
+</loop>
+```
+
+**Best practices:**
+- Always use parameterized queries
+- Limit results with LIMIT clause
+- Handle errors gracefully
+- Use connection pooling
+"""
+
+    def _help_with_errors(self) -> str:
+        return """**Common Quantum Errors**
+
+1. **Databinding not working:**
+   - Check variable is in context
+   - Verify correct syntax: `{var}` not `{{var}}`
+
+2. **Component not rendering:**
+   - Verify XML is well-formed
+   - Check component name matches file
+
+3. **Loop not showing data:**
+   - Ensure array exists in context
+   - Check array is not empty
+
+4. **Database errors:**
+   - Verify datasource is running
+   - Check connection settings
+   - Review query syntax
+
+Need more specific help? Share your error message!
+"""
+
+    def _suggest_best_practices(self) -> str:
+        return """**Quantum Best Practices**
+
+**Security:**
+- ✅ Always validate user input
+- ✅ Use parameterized queries
+- ✅ Implement authentication/authorization
+- ✅ Sanitize output to prevent XSS
+
+**Performance:**
+- ✅ Use query limits to avoid large result sets
+- ✅ Enable caching where appropriate
+- ✅ Optimize loops for large datasets
+
+**Code Quality:**
+- ✅ Keep components small and focused
+- ✅ Reuse components with `<include>`
+- ✅ Use meaningful variable names
+- ✅ Add comments for complex logic
+
+**Development:**
+- ✅ Enable hot reload for faster iteration
+- ✅ Use Admin UI for datasource management
+- ✅ Monitor logs for errors
+"""
+
+    def _default_response(self) -> str:
+        return """I'm here to help with Quantum! I can assist with:
+
+- **Databinding** - Using variables and expressions
+- **Components** - Creating and structuring components
+- **Loops & Conditionals** - Iterating and conditional rendering
+- **Database** - Queries and datasources
+- **Best Practices** - Security, performance, code quality
+- **Troubleshooting** - Common errors and solutions
+
+What would you like to know about?"""
+
+# Initialize AI assistant
+quantum_ai = QuantumAI()
+
+@app.post("/ai/chat", tags=["AI Assistant"])
+def ai_chat(request: dict):
+    """
+    AI Assistant endpoint
+
+    Accepts:
+    - message: User's question/message
+    - context: Context type (default: "quantum")
+
+    Returns AI-generated response calibrated for Quantum framework
+
+    Future: Will integrate with SLM (Small Language Model) for more advanced responses
+    """
+    message = request.get("message", "")
+    context = request.get("context", "quantum")
+
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Message is required"
+        )
+
+    # Generate response
+    response = quantum_ai.respond(message, context)
+
+    return {
+        "response": response,
+        "model": "quantum-slm-v1-rules",  # Will be updated to actual SLM
+        "context": context
+    }
+
+
+# ============================================================================
 # RUN SERVER (for development)
 # ============================================================================
 
