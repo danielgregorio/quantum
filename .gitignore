@@ -131,6 +131,9 @@ Thumbs.db
 test_data/*.db
 nul
 
+# Quantum Admin settings (may contain sensitive data)
+quantum_admin/backend/quantum_settings.json
+
 # Claude development files
 CLAUDE.MD
 claude_*.md

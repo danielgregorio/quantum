@@ -1274,6 +1274,114 @@ def get_configuration_history(
 
 
 # ============================================================================
+# SETTINGS MANAGEMENT
+# ============================================================================
+
+SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "quantum_settings.json")
+
+def load_settings_from_file():
+    """Load settings from JSON file"""
+    if os.path.exists(SETTINGS_FILE):
+        try:
+            with open(SETTINGS_FILE, 'r') as f:
+                import json
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading settings: {e}")
+    return {}
+
+def save_settings_to_file(settings: dict):
+    """Save settings to JSON file"""
+    try:
+        import json
+        with open(SETTINGS_FILE, 'w') as f:
+            json.dump(settings, f, indent=2)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving settings: {e}")
+        return False
+
+
+@app.get("/settings", tags=["Settings"])
+def get_settings():
+    """
+    Get all Quantum Admin settings
+    """
+    settings = load_settings_from_file()
+    return settings
+
+
+@app.post("/settings", tags=["Settings"])
+def save_settings(settings: dict):
+    """
+    Save Quantum Admin settings
+    """
+    success = save_settings_to_file(settings)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save settings"
+        )
+
+    return {"success": True, "message": "Settings saved successfully"}
+
+
+@app.post("/settings/test-email", tags=["Settings"])
+def test_email_connection(email_config: dict):
+    """
+    Test SMTP email connection
+    """
+    import smtplib
+    from email.mime.text import MIMEText
+
+    try:
+        smtp_host = email_config.get('smtp_host')
+        smtp_port = email_config.get('smtp_port', 587)
+        smtp_username = email_config.get('smtp_username')
+        smtp_password = email_config.get('smtp_password')
+        use_tls = email_config.get('smtp_use_tls', True)
+        use_ssl = email_config.get('smtp_use_ssl', False)
+
+        if not smtp_host or not smtp_username:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="SMTP host and username are required"
+            )
+
+        # Create SMTP connection
+        if use_ssl:
+            server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10)
+        else:
+            server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
+
+        if use_tls and not use_ssl:
+            server.starttls()
+
+        # Login
+        if smtp_password:
+            server.login(smtp_username, smtp_password)
+
+        # Send test email
+        msg = MIMEText("This is a test email from Quantum Admin.")
+        msg['Subject'] = 'Quantum Admin - Test Email'
+        msg['From'] = smtp_username
+        msg['To'] = smtp_username
+
+        server.send_message(msg)
+        server.quit()
+
+        return {"success": True, "message": "Email connection successful"}
+
+    except smtplib.SMTPAuthenticationError:
+        return {"success": False, "error": "Authentication failed. Check username and password."}
+    except smtplib.SMTPException as e:
+        return {"success": False, "error": f"SMTP error: {str(e)}"}
+    except Exception as e:
+        return {"success": False, "error": f"Connection error: {str(e)}"}
+
+
+# ============================================================================
 # RUN SERVER (for development)
 # ============================================================================
 
