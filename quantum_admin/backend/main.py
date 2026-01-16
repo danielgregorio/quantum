@@ -2,14 +2,16 @@
 Quantum Admin - FastAPI Backend
 Main application entry point
 """
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 import os
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -1659,6 +1661,253 @@ def ai_chat(request: dict):
         "model": "quantum-slm-v1-rag",  # RAG-enhanced model
         "context": context,
         "intents": intents  # Include detected intents in response
+    }
+
+
+# ============================================================================
+# PERFORMANCE & DEVOPS ENDPOINTS
+# ============================================================================
+
+# Cache Management
+@app.get("/cache/stats", tags=["Performance"])
+def get_cache_stats():
+    """Get cache statistics"""
+    from cache_service import get_cache
+    cache = get_cache()
+    return cache.get_stats()
+
+
+@app.post("/cache/clear", tags=["Performance"])
+def clear_cache(namespace: Optional[str] = None):
+    """Clear cache (optionally by namespace)"""
+    from cache_service import get_cache
+    cache = get_cache()
+
+    if namespace:
+        cleared = cache.clear_namespace(namespace)
+        return {"status": "success", "cleared": cleared, "namespace": namespace}
+    else:
+        cache.clear_all()
+        return {"status": "success", "message": "All cache cleared"}
+
+
+# Rate Limiting Stats
+@app.get("/rate-limit/status", tags=["Performance"])
+def get_rate_limit_status(request: Request):
+    """Get rate limit status for current client"""
+    from rate_limiter import get_rate_limiter
+    limiter = get_rate_limiter()
+
+    result = limiter.check_rate_limit(request, 1000, 3600)
+    return {
+        "enabled": limiter.enabled,
+        "remaining": result["remaining"],
+        "reset_time": result["reset_time"],
+        "limit": 1000,
+        "window": 3600
+    }
+
+
+# Celery Task Management
+@app.get("/tasks/active", tags=["DevOps"])
+def get_active_tasks():
+    """Get currently running background tasks"""
+    from celery_tasks import get_active_tasks
+    return {"tasks": get_active_tasks()}
+
+
+@app.get("/tasks/{task_id}", tags=["DevOps"])
+def get_task_status(task_id: str):
+    """Get status of a specific task"""
+    from celery_tasks import get_task_status
+    return get_task_status(task_id)
+
+
+@app.post("/tasks/{task_id}/cancel", tags=["DevOps"])
+def cancel_task(task_id: str):
+    """Cancel a running task"""
+    from celery_tasks import cancel_task
+    success = cancel_task(task_id)
+    return {"status": "cancelled" if success else "failed", "task_id": task_id}
+
+
+# Backup Tasks
+@app.post("/tasks/backup", tags=["DevOps"])
+def queue_backup(datasource_id: int, backup_type: str = "full"):
+    """Queue database backup task"""
+    from celery_tasks import backup_database
+    task = backup_database.delay(datasource_id, backup_type)
+    return {"status": "queued", "task_id": task.id}
+
+
+@app.post("/tasks/cleanup-backups", tags=["DevOps"])
+def queue_cleanup_backups(days: int = 30):
+    """Queue old backup cleanup task"""
+    from celery_tasks import cleanup_old_backups
+    task = cleanup_old_backups.delay(days)
+    return {"status": "queued", "task_id": task.id}
+
+
+# Deployment Tasks
+@app.post("/tasks/deploy", tags=["DevOps"])
+def queue_deployment(environment: str, branch: str = "main", run_migrations: bool = True):
+    """Queue deployment task"""
+    from celery_tasks import deploy_application
+    task = deploy_application.delay(environment, branch, run_migrations)
+    return {"status": "queued", "task_id": task.id, "environment": environment}
+
+
+@app.post("/tasks/rollback", tags=["DevOps"])
+def queue_rollback(environment: str, target_version: str):
+    """Queue rollback task"""
+    from celery_tasks import rollback_deployment
+    task = rollback_deployment.delay(environment, target_version)
+    return {"status": "queued", "task_id": task.id}
+
+
+# Git Webhooks
+@app.post("/webhooks/github", tags=["DevOps"])
+async def github_webhook(request: Request):
+    """Handle GitHub webhook events"""
+    from webhook_handler import get_webhook_handler
+    handler = get_webhook_handler()
+    return await handler.handle_github_webhook(request)
+
+
+@app.post("/webhooks/gitlab", tags=["DevOps"])
+async def gitlab_webhook(request: Request):
+    """Handle GitLab webhook events"""
+    from webhook_handler import get_webhook_handler
+    handler = get_webhook_handler()
+    return await handler.handle_gitlab_webhook(request)
+
+
+# Environment Management
+@app.get("/environments", tags=["DevOps"])
+def list_environments():
+    """List all environments"""
+    from env_manager import get_env_manager
+    manager = get_env_manager()
+    return {"environments": manager.list_environments()}
+
+
+@app.get("/environments/{name}", tags=["DevOps"])
+def get_environment(name: str):
+    """Get environment configuration"""
+    from env_manager import get_env_manager
+    manager = get_env_manager()
+    config = manager.get_environment(name)
+
+    if not config:
+        raise HTTPException(status_code=404, detail="Environment not found")
+
+    return {"environment": config}
+
+
+@app.get("/environments/{name}/validate", tags=["DevOps"])
+def validate_environment(name: str):
+    """Validate environment configuration"""
+    from env_manager import get_env_manager
+    manager = get_env_manager()
+    return manager.validate_environment(name)
+
+
+@app.get("/environments/{name}/export", tags=["DevOps"])
+def export_environment(name: str):
+    """Export environment as .env file"""
+    from env_manager import get_env_manager
+    manager = get_env_manager()
+    env_file = manager.export_env_file(name)
+
+    if not env_file:
+        raise HTTPException(status_code=404, detail="Environment not found")
+
+    return {"env_file": env_file}
+
+
+@app.post("/environments/{name}/activate", tags=["DevOps"])
+def activate_environment(name: str):
+    """Switch to specified environment"""
+    from env_manager import get_env_manager
+    manager = get_env_manager()
+    success = manager.set_current_environment(name)
+
+    if not success:
+        raise HTTPException(status_code=404, detail="Environment not found")
+
+    return {"status": "activated", "environment": name}
+
+
+# Query Optimization
+@app.post("/query/explain", tags=["Performance"])
+def explain_query(request: dict, db: Session = Depends(get_db)):
+    """Get query execution plan"""
+    from query_optimizer import QueryOptimizer
+    optimizer = QueryOptimizer(db)
+
+    query = request.get("query", "")
+    params = request.get("params", {})
+
+    return optimizer.explain_query(query, params)
+
+
+@app.post("/query/optimize", tags=["Performance"])
+def optimize_query(request: dict):
+    """Optimize SQL query"""
+    from query_optimizer import QueryOptimizer
+
+    query = request.get("query", "")
+    # Create dummy optimizer for analysis
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    engine = create_engine("sqlite:///:memory:")
+    Session = sessionmaker(bind=engine)
+    db = Session()
+
+    optimizer = QueryOptimizer(db)
+    return optimizer.optimize_query(query)
+
+
+@app.get("/query/slow", tags=["Performance"])
+def get_slow_queries():
+    """Get list of slow queries"""
+    from query_optimizer import get_performance_monitor
+    monitor = get_performance_monitor()
+    return {"slow_queries": monitor.get_slow_queries()}
+
+
+@app.get("/query/stats", tags=["Performance"])
+def get_query_stats():
+    """Get query performance statistics"""
+    from query_optimizer import get_performance_monitor
+    monitor = get_performance_monitor()
+    return {"stats": monitor.get_query_stats()}
+
+
+# System Health
+@app.get("/health", tags=["System"])
+def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "version": "1.0.0"
+    }
+
+
+@app.get("/status", tags=["System"])
+def system_status():
+    """Detailed system status"""
+    import psutil
+
+    return {
+        "status": "operational",
+        "timestamp": datetime.now().isoformat(),
+        "cpu_percent": psutil.cpu_percent(interval=1),
+        "memory_percent": psutil.virtual_memory().percent,
+        "disk_percent": psutil.disk_usage("/").percent,
+        "uptime_seconds": time.time() - psutil.boot_time()
     }
 
 
