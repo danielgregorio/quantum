@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Admin - AI Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="quantum-enhancements.css">
+    <style>
+        .ai-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            height: calc(100vh - 200px);
+        }
+
+        .ai-sidebar {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .ai-sidebar h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+
+        .function-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .function-item:hover {
+            border-color: #667eea;
+            transform: translateX(4px);
+        }
+
+        .function-name {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 4px;
+        }
+
+        .function-desc {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+
+        .ai-chat-container {
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .ai-chat-header {
+            padding: 20px;
+            border-bottom: 2px solid #e1e8ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ai-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .ai-status.online {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .ai-status.offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.online {
+            background: #28a745;
+        }
+
+        .status-indicator.offline {
+            background: #dc3545;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .ai-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 16px;
+            border-radius: 12px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+            background: #f8f9fa;
+            border: 1px solid #e1e8ed;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-content {
+            line-height: 1.6;
+        }
+
+        .message-content code {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .message-content pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+
+        .message-content pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+
+        .message-meta {
+            margin-top: 8px;
+            font-size: 12px;
+            opacity: 0.7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .function-call-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #ffc107;
+            color: #000;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .ai-input-container {
+            padding: 20px;
+            border-top: 2px solid #e1e8ed;
+        }
+
+        .ai-input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .ai-textarea {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            min-height: 50px;
+            max-height: 150px;
+            transition: border-color 0.2s;
+        }
+
+        .ai-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .ai-send-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .ai-send-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .ai-send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .ai-options {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .ai-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .ai-option input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 16px;
+            background: #f8f9fa;
+            border: 1px solid #e1e8ed;
+            border-radius: 12px;
+            max-width: 80px;
+            align-self: flex-start;
+        }
+
+        .typing-indicator.active {
+            display: block;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #667eea;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        .quick-prompts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .quick-prompt {
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea22 0%, #764ba222 100%);
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .quick-prompt:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #7f8c8d;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .empty-state-text {
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            ⚛️ <span>Quantum</span>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Overview</div>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                Dashboard
+            </a>
+            <a href="monitoring.html" class="nav-item">
+                <span class="nav-icon">📈</span>
+                Monitoring
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Data Sources</div>
+            <a href="datasources.html" class="nav-item">
+                <span class="nav-icon">🗄️</span>
+                Datasources
+            </a>
+            <a href="containers.html" class="nav-item">
+                <span class="nav-icon">🐳</span>
+                Containers
+            </a>
+            <a href="schema-viewer.html" class="nav-item">
+                <span class="nav-icon">🔍</span>
+                Schema Viewer
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Development</div>
+            <a href="components.html" class="nav-item">
+                <span class="nav-icon">📦</span>
+                Components
+            </a>
+            <a href="playground.html" class="nav-item">
+                <span class="nav-icon">🎮</span>
+                Playground
+            </a>
+            <a href="pipeline-editor.html" class="nav-item">
+                <span class="nav-icon">🔄</span>
+                Pipeline Editor
+            </a>
+            <a href="ai-assistant.html" class="nav-item active">
+                <span class="nav-icon">🤖</span>
+                AI Assistant
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">System</div>
+            <a href="settings.html" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                Settings
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <h1>🤖 AI Assistant</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="clearConversation()">🗑️ Clear</button>
+                <button class="btn" onclick="showFunctions()">⚙️ Functions</button>
+                <div id="ai-status" class="ai-status offline">
+                    <span class="status-indicator offline"></span>
+                    Checking...
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Container -->
+        <div class="ai-container">
+            <!-- Sidebar -->
+            <div class="ai-sidebar">
+                <h3>📚 Quick Prompts</h3>
+                <div class="function-item" onclick="usePrompt('Generate SQL to get all active users')">
+                    <div class="function-name">SQL Generation</div>
+                    <div class="function-desc">Generate SQL queries from natural language</div>
+                </div>
+                <div class="function-item" onclick="usePrompt('Create a SQLAlchemy model for products table')">
+                    <div class="function-name">Model Generation</div>
+                    <div class="function-desc">Generate SQLAlchemy model code</div>
+                </div>
+                <div class="function-item" onclick="usePrompt('How do I create a migration?')">
+                    <div class="function-name">Migrations</div>
+                    <div class="function-desc">Help with Alembic migrations</div>
+                </div>
+                <div class="function-item" onclick="usePrompt('Show me the database schema')">
+                    <div class="function-name">Schema Info</div>
+                    <div class="function-desc">Database structure information</div>
+                </div>
+                <div class="function-item" onclick="usePrompt('How do I optimize this query?')">
+                    <div class="function-name">Query Optimization</div>
+                    <div class="function-desc">SQL query optimization tips</div>
+                </div>
+                <div class="function-item" onclick="usePrompt('Explain WebSocket usage')">
+                    <div class="function-name">WebSocket</div>
+                    <div class="function-desc">Real-time communication help</div>
+                </div>
+
+                <h3 style="margin-top: 24px;">🔧 Available Functions</h3>
+                <div id="functions-list">Loading...</div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="ai-chat-container">
+                <div class="ai-chat-header">
+                    <div>
+                        <h2 style="margin: 0;">Chat with AI</h2>
+                        <p style="margin: 4px 0 0 0; color: #7f8c8d; font-size: 14px;">
+                            Powered by Ollama (Phi-3) with Enhanced RAG
+                        </p>
+                    </div>
+                </div>
+
+                <div class="ai-messages" id="ai-messages">
+                    <div class="empty-state" id="empty-state">
+                        <div class="empty-state-icon">🤖</div>
+                        <div class="empty-state-title">Quantum AI Assistant</div>
+                        <div class="empty-state-text">Ask me anything about databases, migrations, containers, and more!</div>
+                    </div>
+                    <div class="typing-indicator" id="typing-indicator">
+                        <div class="typing-dots">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ai-input-container">
+                    <div class="ai-options">
+                        <div class="ai-option">
+                            <input type="checkbox" id="use-slm" checked>
+                            <label for="use-slm">Use SLM (Ollama)</label>
+                        </div>
+                        <div class="ai-option">
+                            <input type="checkbox" id="include-schema" checked>
+                            <label for="include-schema">Include Schema Context</label>
+                        </div>
+                    </div>
+                    <div class="ai-input-wrapper">
+                        <textarea
+                            id="ai-input"
+                            class="ai-textarea"
+                            placeholder="Ask me anything... (Shift+Enter for new line)"
+                            rows="1"
+                        ></textarea>
+                        <button class="ai-send-btn" onclick="sendMessage()">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="quantum-enhancements.js"></script>
+    <script src="i18n.js"></script>
+    <script src="ai-assistant.js"></script>
+</body>
+</html>

@@ -1644,19 +1644,23 @@ What would you like to know about?"""
 quantum_ai = QuantumAI()
 
 @app.post("/ai/chat", tags=["AI Assistant"])
-def ai_chat(request: dict):
+def ai_chat(request: dict, db: Session = Depends(get_db)):
     """
-    AI Assistant endpoint with RAG (Retrieval-Augmented Generation)
+    Advanced AI Assistant with SLM integration, RAG, and function calling
 
     Accepts:
     - message: User's question/message
-    - context: Context type (default: "quantum")
+    - use_slm: Use local SLM if available (default: true)
 
-    Returns AI-generated response enhanced with relevant Quantum documentation
-    using RAG system for accurate, context-aware responses
+    Capabilities:
+    - Natural language to SQL generation
+    - SQLAlchemy model code generation
+    - Migration suggestions
+    - Query optimization advice
+    - Quantum Admin feature guidance
     """
     message = request.get("message", "")
-    context = request.get("context", "quantum")
+    use_slm = request.get("use_slm", True)
 
     if not message:
         raise HTTPException(
@@ -1664,24 +1668,65 @@ def ai_chat(request: dict):
             detail="Message is required"
         )
 
-    # Get RAG system instance
-    rag = get_rag_system()
+    # Get schema inspector for context
+    from schema_inspector import SchemaInspector
+    try:
+        inspector = SchemaInspector(db.get_bind())
+    except:
+        inspector = None
 
-    # Generate base response
-    base_response = quantum_ai.respond(message, context)
+    # Get AI agent with schema context
+    from ai_agent import get_ai_agent
+    agent = get_ai_agent(inspector)
 
-    # Enhance response with RAG context
-    enhanced_response = rag.enhance_response(message, base_response)
+    # Generate response
+    result = agent.chat(message, use_slm=use_slm)
 
-    # Get detected intents for debugging
-    intents = rag.detect_intent(message)
+    return result
+
+
+@app.post("/ai/clear", tags=["AI Assistant"])
+def clear_ai_memory():
+    """Clear AI conversation memory"""
+    from ai_agent import get_ai_agent
+    agent = get_ai_agent()
+    agent.clear_memory()
+
+    return {"status": "success", "message": "Conversation memory cleared"}
+
+
+@app.get("/ai/functions", tags=["AI Assistant"])
+def list_ai_functions():
+    """List available AI functions"""
+    from ai_agent import get_ai_agent
+    agent = get_ai_agent()
 
     return {
-        "response": enhanced_response,
-        "model": "quantum-slm-v1-rag",  # RAG-enhanced model
-        "context": context,
-        "intents": intents  # Include detected intents in response
+        "functions": agent.functions.get_schemas()
     }
+
+
+@app.post("/ai/function/call", tags=["AI Assistant"])
+def call_ai_function(request: dict):
+    """Directly call an AI function"""
+    function_name = request.get("function_name")
+    params = request.get("params", {})
+
+    if not function_name:
+        raise HTTPException(status_code=400, detail="function_name required")
+
+    from ai_agent import get_ai_agent
+    agent = get_ai_agent()
+
+    try:
+        result = agent.functions.call(function_name, **params)
+        return {
+            "status": "success",
+            "function": function_name,
+            "result": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================
