@@ -50,7 +50,12 @@ app.add_middleware(
 # Mount static files (frontend)
 frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 if os.path.exists(frontend_path):
-    app.mount("/frontend", StaticFiles(directory=frontend_path), name="frontend")
+    app.mount("/static", StaticFiles(directory=frontend_path, html=True), name="static")
+
+@app.get("/")
+def root():
+    """Redirect to frontend dashboard"""
+    return RedirectResponse(url="/static/index.html")
 
 
 # ============================================================================

@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Admin</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div x-data="quantumAdmin()" x-cloak class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Quantum Admin</h1>
+                        <p class="text-sm text-gray-500 mt-1">Manage your Quantum projects and datasources</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <span class="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                            API Connected
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Error Alert -->
+            <div x-show="error" class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-red-800" x-text="error"></p>
+                    </div>
+                    <div class="ml-auto pl-3">
+                        <button @click="error = null" class="text-red-400 hover:text-red-600">
+                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projects Section -->
+            <div class="bg-white rounded-lg shadow mb-8">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900">Projects</h2>
+                    <button @click="showCreateProject = true" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        + New Project
+                    </button>
+                </div>
+
+                <!-- Loading State -->
+                <div x-show="loading" class="px-6 py-12 text-center">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p class="mt-2 text-sm text-gray-500">Loading projects...</p>
+                </div>
+
+                <!-- Projects List -->
+                <div x-show="!loading" class="divide-y divide-gray-200">
+                    <template x-for="project in projects" :key="project.id">
+                        <div class="px-6 py-4 hover:bg-gray-50 transition cursor-pointer" @click="selectProject(project)">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-medium text-gray-900" x-text="project.name"></h3>
+                                    <p class="text-sm text-gray-500 mt-1" x-text="project.description || 'No description'"></p>
+                                    <div class="flex items-center mt-2 space-x-4 text-xs text-gray-400">
+                                        <span x-text="'Created: ' + new Date(project.created_at).toLocaleDateString()"></span>
+                                        <span x-show="project.id === selectedProject?.id" class="text-blue-600 font-medium">Selected</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800" x-text="project.status"></span>
+                                    <button @click.stop="deleteProject(project.id)" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Empty State -->
+                    <div x-show="!loading && projects.length === 0" class="px-6 py-12 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No projects</h3>
+                        <p class="mt-1 text-sm text-gray-500">Get started by creating a new project.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Datasources Section (Only shown when project selected) -->
+            <div x-show="selectedProject" class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Datasources</h2>
+                        <p class="text-sm text-gray-500" x-text="selectedProject ? 'for ' + selectedProject.name : ''"></p>
+                    </div>
+                    <button @click="showCreateDatasource = true" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        + New Datasource
+                    </button>
+                </div>
+
+                <!-- Datasources List -->
+                <div class="divide-y divide-gray-200">
+                    <template x-for="ds in datasources" :key="ds.id">
+                        <div class="px-6 py-4 hover:bg-gray-50 transition">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-3">
+                                        <h3 class="text-base font-medium text-gray-900" x-text="ds.name"></h3>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800" x-text="ds.type"></span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                                              :class="ds.connection_type === 'docker' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'"
+                                              x-text="ds.connection_type"></span>
+                                        <button @click.stop="deleteDatasource(ds.id)"
+                                                class="p-1 text-red-600 hover:bg-red-50 rounded transition"
+                                                title="Delete Datasource">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="mt-2 text-sm text-gray-600 space-y-1">
+                                        <p><span class="font-medium">Host:</span> <span x-text="ds.host + ':' + ds.port"></span></p>
+                                        <p><span class="font-medium">Database:</span> <span x-text="ds.database_name"></span></p>
+                                        <p x-show="ds.image"><span class="font-medium">Image:</span> <span x-text="ds.image"></span></p>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-end space-y-2">
+                                    <!-- Combined Status Badge -->
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                          :class="{
+                                              'bg-green-100 text-green-800': ds.status === 'running' && ds.setup_status === 'ready',
+                                              'bg-blue-100 text-blue-800': ds.status === 'running' && ds.setup_status === 'configuring',
+                                              'bg-yellow-100 text-yellow-800': ds.status === 'running' && ds.setup_status === 'pending',
+                                              'bg-red-100 text-red-800': ds.setup_status === 'error',
+                                              'bg-gray-100 text-gray-800': ds.status !== 'running'
+                                          }">
+                                        <span class="w-2 h-2 rounded-full mr-2"
+                                              :class="{
+                                                  'bg-green-400': ds.status === 'running' && ds.setup_status === 'ready',
+                                                  'bg-blue-400 animate-pulse': ds.status === 'running' && ds.setup_status === 'configuring',
+                                                  'bg-yellow-400': ds.status === 'running' && ds.setup_status === 'pending',
+                                                  'bg-red-400': ds.setup_status === 'error',
+                                                  'bg-gray-400': ds.status !== 'running'
+                                              }"></span>
+                                        <span x-text="ds.status === 'running' && ds.setup_status === 'ready' ? 'Ready' :
+                                                      ds.status === 'running' && ds.setup_status === 'configuring' ? 'Initializing...' :
+                                                      ds.status === 'running' && ds.setup_status === 'pending' ? 'Starting...' :
+                                                      ds.setup_status === 'error' ? 'Error' : ds.status"></span>
+                                    </span>
+
+                                    <div x-show="ds.connection_type === 'docker'" class="flex space-x-1">
+                                        <button @click="startContainer(ds.id)"
+                                                :disabled="ds.status === 'running'"
+                                                class="p-1.5 rounded hover:bg-green-50 text-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title="Start">
+                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </button>
+                                        <button @click="stopContainer(ds.id)"
+                                                :disabled="ds.status !== 'running'"
+                                                class="p-1.5 rounded hover:bg-red-50 text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title="Stop">
+                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </button>
+                                        <button @click="restartContainer(ds.id)"
+                                                class="p-1.5 rounded hover:bg-blue-50 text-blue-600"
+                                                title="Restart">
+                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </button>
+                                        <button @click="viewLogs(ds)"
+                                                class="p-1.5 rounded hover:bg-gray-100 text-gray-600"
+                                                title="View Logs">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Empty State -->
+                    <div x-show="datasources.length === 0" class="px-6 py-12 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No datasources</h3>
+                        <p class="mt-1 text-sm text-gray-500">Add a database connection to get started.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Create Project Modal -->
+        <div x-show="showCreateProject" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50" @click.self="showCreateProject = false">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Create New Project</h3>
+                </div>
+                <form @submit.prevent="createProject" class="px-6 py-4 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                        <input type="text" x-model="newProject.name" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="my-app">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea x-model="newProject.description" rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="Optional description"></textarea>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" @click="showCreateProject = false" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Create Project
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Create Datasource Modal -->
+        <div x-show="showCreateDatasource" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50" @click.self="showCreateDatasource = false">
+            <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Create New Datasource</h3>
+                </div>
+                <form @submit.prevent="createDatasource" class="px-6 py-4 space-y-4">
+                    <!-- Mode Toggle -->
+                    <div class="flex items-center justify-center space-x-1 p-1 bg-gray-100 rounded-lg">
+                        <button type="button" @click="datasourceMode = 'express'"
+                                :class="datasourceMode === 'express' ? 'bg-white shadow' : 'text-gray-600'"
+                                class="flex-1 px-4 py-2 rounded-md text-sm font-medium transition">
+                            Express Setup
+                        </button>
+                        <button type="button" @click="datasourceMode = 'advanced'"
+                                :class="datasourceMode === 'advanced' ? 'bg-white shadow' : 'text-gray-600'"
+                                class="flex-1 px-4 py-2 rounded-md text-sm font-medium transition">
+                            Advanced
+                        </button>
+                    </div>
+
+                    <!-- Express Mode (Only essentials) -->
+                    <template x-if="datasourceMode === 'express'">
+                        <div class="space-y-4">
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                                Express mode creates a database with smart defaults. Just pick a type and go - Quantum handles everything else!
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Database Type</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button type="button" @click="newDatasource.type = 'postgres'"
+                                            :class="newDatasource.type === 'postgres' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'"
+                                            class="p-4 border-2 rounded-lg text-center hover:border-blue-300 transition">
+                                        <div class="font-medium">PostgreSQL</div>
+                                        <div class="text-xs text-gray-500 mt-1">Recommended</div>
+                                    </button>
+                                    <button type="button" @click="newDatasource.type = 'mysql'"
+                                            :class="newDatasource.type === 'mysql' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'"
+                                            class="p-4 border-2 rounded-lg text-center hover:border-blue-300 transition">
+                                        <div class="font-medium">MySQL</div>
+                                        <div class="text-xs text-gray-500 mt-1">Popular</div>
+                                    </button>
+                                    <button type="button" @click="newDatasource.type = 'mariadb'"
+                                            :class="newDatasource.type === 'mariadb' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'"
+                                            class="p-4 border-2 rounded-lg text-center hover:border-blue-300 transition">
+                                        <div class="font-medium">MariaDB</div>
+                                        <div class="text-xs text-gray-500 mt-1">MySQL fork</div>
+                                    </button>
+                                    <button type="button" @click="newDatasource.type = 'mongodb'"
+                                            :class="newDatasource.type === 'mongodb' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'"
+                                            class="p-4 border-2 rounded-lg text-center hover:border-blue-300 transition">
+                                        <div class="font-medium">MongoDB</div>
+                                        <div class="text-xs text-gray-500 mt-1">NoSQL</div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Advanced Mode (Full control) -->
+                    <template x-if="datasourceMode === 'advanced'">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                <input type="text" x-model="newDatasource.name" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="main-db">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Database Type</label>
+                                <select x-model="newDatasource.type" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="postgres">PostgreSQL</option>
+                                    <option value="mysql">MySQL</option>
+                                    <option value="mariadb">MariaDB</option>
+                                    <option value="mongodb">MongoDB</option>
+                                    <option value="redis">Redis</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Connection Type</label>
+                                <select x-model="newDatasource.connection_type" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="docker">Docker Container</option>
+                                    <option value="direct">Direct Connection</option>
+                                </select>
+                            </div>
+                            <div x-show="newDatasource.connection_type === 'docker'">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Docker Image</label>
+                                <input type="text" x-model="newDatasource.image"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="postgres:16-alpine">
+                            </div>
+                            <div x-show="newDatasource.connection_type === 'direct'">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Host</label>
+                                <input type="text" x-model="newDatasource.host"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="localhost">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Port</label>
+                                <input type="number" x-model="newDatasource.port" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="5432">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Database Name</label>
+                                <input type="text" x-model="newDatasource.database_name" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="mydb">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                                <input type="text" x-model="newDatasource.username" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="admin">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                                <input type="password" x-model="newDatasource.password" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="********">
+                            </div>
+                            <div x-show="newDatasource.connection_type === 'docker'" class="flex items-center">
+                                <input type="checkbox" x-model="newDatasource.auto_start" id="auto_start"
+                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <label for="auto_start" class="ml-2 block text-sm text-gray-700">
+                                    Auto-start container
+                                </label>
+                            </div>
+                        </div>
+                    </template>
+
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" @click="showCreateDatasource = false" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Create Datasource
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Logs Modal -->
+        <div x-show="showLogs" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50" @click.self="showLogs = false">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] flex flex-col">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900" x-text="'Container Logs - ' + (currentDatasource?.name || '')"></h3>
+                    <button @click="showLogs = false" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto px-6 py-4">
+                    <pre class="text-xs font-mono text-gray-800 whitespace-pre-wrap" x-text="containerLogs || 'Loading logs...'"></pre>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex justify-end">
+                    <button @click="showLogs = false" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function quantumAdmin() {
+            return {
+                apiUrl: 'http://localhost:8000',
+                loading: true,
+                error: null,
+                projects: [],
+                selectedProject: null,
+                datasources: [],
+                showCreateProject: false,
+                showCreateDatasource: false,
+                showLogs: false,
+                containerLogs: '',
+                currentDatasource: null,
+                pollingInterval: null,
+                newProject: {
+                    name: '',
+                    description: ''
+                },
+                datasourceMode: 'express', // 'express' or 'advanced'
+                newDatasource: {
+                    name: '',
+                    type: 'postgres',
+                    connection_type: 'docker',
+                    image: 'postgres:16-alpine',
+                    port: 5432,
+                    host: 'localhost',
+                    database_name: '',
+                    username: '',
+                    password: '',
+                    auto_start: true
+                },
+
+                async init() {
+                    await this.loadProjects();
+                },
+
+                async loadProjects() {
+                    try {
+                        this.loading = true;
+                        this.error = null;
+                        const response = await fetch(`${this.apiUrl}/projects`);
+                        if (!response.ok) throw new Error('Failed to load projects');
+                        this.projects = await response.json();
+                    } catch (err) {
+                        this.error = err.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async createProject() {
+                    try {
+                        this.error = null;
+                        const response = await fetch(`${this.apiUrl}/projects`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.newProject)
+                        });
+                        if (!response.ok) throw new Error('Failed to create project');
+                        await this.loadProjects();
+                        this.showCreateProject = false;
+                        this.newProject = { name: '', description: '' };
+                    } catch (err) {
+                        this.error = err.message;
+                    }
+                },
+
+                async deleteProject(id) {
+                    if (!confirm('Are you sure you want to delete this project?')) return;
+                    try {
+                        this.error = null;
+                        const response = await fetch(`${this.apiUrl}/projects/${id}`, {
+                            method: 'DELETE'
+                        });
+                        if (!response.ok) throw new Error('Failed to delete project');
+                        if (this.selectedProject?.id === id) {
+                            this.selectedProject = null;
+                            this.datasources = [];
+                        }
+                        await this.loadProjects();
+                    } catch (err) {
+                        this.error = err.message;
+                    }
+                },
+
+                async selectProject(project) {
+                    this.selectedProject = project;
+                    await this.loadDatasources();
+                    this.startStatusPolling();
+                },
+
+                async loadDatasources() {
+                    if (!this.selectedProject) return;
+                    try {
+                        this.error = null;
+                        const response = await fetch(`${this.apiUrl}/projects/${this.selectedProject.id}/datasources`);
+                        if (!response.ok) throw new Error('Failed to load datasources');
+                        this.datasources = await response.json();
+                    } catch (err) {
+                        this.error = err.message;
+                    }
+                },
+
+                startStatusPolling() {
+                    // Clear any existing polling
+                    if (this.pollingInterval) {
+                        clearInterval(this.pollingInterval);
+                    }
+
+                    // Poll every 2 seconds to check for setup status changes
+                    this.pollingInterval = setInterval(async () => {
+                        if (this.selectedProject) {
+                            const hasConfiguring = this.datasources.some(ds =>
+                                ds.status === 'running' && ds.setup_status === 'configuring'
+                            );
+
+                            // Only reload if there are datasources being configured
+                            if (hasConfiguring) {
+                                await this.loadDatasources();
+                            }
+                        } else {
+                            // Stop polling if no project selected
+                            clearInterval(this.pollingInterval);
+                        }
+                    }, 2000);
+                },
+
+                async createDatasource() {
+                    if (!this.selectedProject) return;
+                    try {
+                        this.error = null;
+
+                        // Auto-fill fields in Express mode
+                        if (this.datasourceMode === 'express') {
+                            // Auto-configure based on database type
+                            const defaults = {
+                                postgres: { port: 5432, image: 'postgres:16-alpine', username: 'postgres', dbName: 'quantumdb' },
+                                mysql: { port: 3306, image: 'mysql:8.0', username: 'root', dbName: 'quantumdb' },
+                                mariadb: { port: 3306, image: 'mariadb:11.2', username: 'root', dbName: 'quantumdb' },
+                                mongodb: { port: 27017, image: 'mongo:7.0', username: 'admin', dbName: 'quantumdb' },
+                                redis: { port: 6379, image: 'redis:7.2-alpine', username: '', dbName: '' }
+                            };
+
+                            const config = defaults[this.newDatasource.type] || defaults.postgres;
+
+                            // Auto-generate friendly datasource name (e.g., "project-postgres-1")
+                            const dsCount = this.datasources.filter(ds => ds.type === this.newDatasource.type).length;
+                            const autoName = `${this.selectedProject.name}-${this.newDatasource.type}-${dsCount + 1}`.replace(/[^a-z0-9_-]/gi, '_').toLowerCase();
+
+                            // Find available port (increment if in use)
+                            let port = config.port;
+                            const usedPorts = this.datasources.map(ds => ds.port);
+                            while (usedPorts.includes(port)) {
+                                port++;
+                            }
+
+                            // Auto-generate secure password
+                            const password = 'quantum_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+                            // Set values
+                            this.newDatasource.name = autoName;
+                            this.newDatasource.connection_type = 'docker';
+                            this.newDatasource.image = config.image;
+                            this.newDatasource.port = port;
+                            this.newDatasource.host = 'localhost';
+                            this.newDatasource.database_name = config.dbName;
+                            this.newDatasource.username = config.username || 'admin';
+                            this.newDatasource.password = password;
+                            this.newDatasource.auto_start = true;
+                        }
+
+                        const response = await fetch(`${this.apiUrl}/projects/${this.selectedProject.id}/datasources`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.newDatasource)
+                        });
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.detail || 'Failed to create datasource');
+                        }
+
+                        const newDatasource = await response.json();
+
+                        // Auto-start container if in Express mode
+                        if (this.datasourceMode === 'express' && newDatasource.connection_type === 'docker') {
+                            try {
+                                await fetch(`${this.apiUrl}/datasources/${newDatasource.id}/start`, {
+                                    method: 'POST'
+                                });
+                            } catch (startErr) {
+                                console.error('Failed to auto-start container:', startErr);
+                                // Don't throw - datasource was created successfully
+                            }
+                        }
+
+                        await this.loadDatasources();
+                        this.showCreateDatasource = false;
+                        this.datasourceMode = 'express';
+                        this.newDatasource = {
+                            name: '',
+                            type: 'postgres',
+                            connection_type: 'docker',
+                            image: 'postgres:16-alpine',
+                            port: 5432,
+                            host: 'localhost',
+                            database_name: '',
+                            username: '',
+                            password: '',
+                            auto_start: true
+                        };
+                    } catch (err) {
+                        this.error = err.message;
+                    }
+                },
+
+                async startContainer(datasourceId) {
+                    try {
+                        this.error = null;
+                        const response = await fetch(`${this.apiUrl}/datasources/${datasourceId}/start`, {
+                            method: 'POST'
+                        });
+                        if (!response.ok) throw new Error('Failed to start container');
+                        await this.loadDatasources();
+                    } catch (err) {
+                        this.error = err.message;
+                    }
+                },
+
+                async stopContainer(datasourceId) {
+                    try {
+                        this.error = null;
+                        const response = await fetch(`${this.apiUrl}/datasources/${datasourceId}/stop`, {
+                            method: 'POST'
+                        });
+                        if (!response.ok) throw new Error('Failed to stop container');
+                        await this.loadDatasources();
+                    } catch (err) {
+                        this.error = err.message;
+                    }
+                },
+
+                async restartContainer(datasourceId) {
+                    try {
+                        this.error = null;
+                        const response = await fetch(`${this.apiUrl}/datasources/${datasourceId}/restart`, {
+                            method: 'POST'
+                        });
+                        if (!response.ok) throw new Error('Failed to restart container');
+                        await this.loadDatasources();
+                    } catch (err) {
+                        this.error = err.message;
+                    }
+                },
+
+                async viewLogs(datasource) {
+                    this.currentDatasource = datasource;
+                    this.showLogs = true;
+                    this.containerLogs = 'Loading logs...';
+                    try {
+                        this.error = null;
+                        const response = await fetch(`${this.apiUrl}/datasources/${datasource.id}/logs?lines=100`);
+                        if (!response.ok) throw new Error('Failed to load logs');
+                        const data = await response.json();
+                        this.containerLogs = data.logs || 'No logs available';
+                    } catch (err) {
+                        this.containerLogs = 'Error loading logs: ' + err.message;
+                        this.error = err.message;
+                    }
+                },
+
+                async setupDatabase(datasourceId) {
+                    try {
+                        this.error = null;
+                        const response = await fetch(`${this.apiUrl}/datasources/${datasourceId}/setup`, {
+                            method: 'POST'
+                        });
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.detail || 'Failed to setup database');
+                        }
+                        const data = await response.json();
+                        // Show success message
+                        alert(data.message || 'Database setup complete!');
+                        await this.loadDatasources();
+                    } catch (err) {
+                        this.error = err.message;
+                    }
+                },
+
+                async deleteDatasource(datasourceId) {
+                    if (!confirm('Are you sure you want to delete this datasource? This will also remove the Docker container if it exists.')) return;
+                    try {
+                        this.error = null;
+                        const response = await fetch(`${this.apiUrl}/datasources/${datasourceId}`, {
+                            method: 'DELETE'
+                        });
+                        if (!response.ok) throw new Error('Failed to delete datasource');
+                        await this.loadDatasources();
+                    } catch (err) {
+                        this.error = err.message;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
