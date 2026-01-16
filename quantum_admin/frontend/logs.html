@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Admin - Logs</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            ⚛️ <span>Quantum</span>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Overview</div>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                Dashboard
+            </a>
+            <a href="monitoring.html" class="nav-item">
+                <span class="nav-icon">📈</span>
+                Monitoring
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Data Sources</div>
+            <a href="datasources.html" class="nav-item">
+                <span class="nav-icon">🗄️</span>
+                Datasources
+            </a>
+            <a href="containers.html" class="nav-item">
+                <span class="nav-icon">🐳</span>
+                Containers
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Development</div>
+            <a href="components.html" class="nav-item">
+                <span class="nav-icon">📦</span>
+                Components
+            </a>
+            <a href="api-explorer.html" class="nav-item">
+                <span class="nav-icon">🔌</span>
+                API Explorer
+            </a>
+            <a href="logs.html" class="nav-item active">
+                <span class="nav-icon">📝</span>
+                Logs
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">System</div>
+            <a href="settings.html" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                Settings
+            </a>
+            <a href="security.html" class="nav-item">
+                <span class="nav-icon">🔒</span>
+                Security
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <h1>📝 System Logs</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="loadLogs()">🔄 Refresh</button>
+                <button class="btn" onclick="clearLogs()">🗑️ Clear Logs</button>
+                <button class="btn btn-primary" onclick="downloadLogs()">📥 Download</button>
+            </div>
+        </div>
+
+        <!-- Log Filters -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🔍 Filters</h2>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div class="form-group">
+                    <label for="log-source">Log Source</label>
+                    <select id="log-source" onchange="loadLogs()">
+                        <option value="all">All Sources</option>
+                        <option value="quantum">Quantum Server</option>
+                        <option value="admin">Admin API</option>
+                        <option value="database">Database</option>
+                        <option value="system">System</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="log-level">Log Level</label>
+                    <select id="log-level" onchange="loadLogs()">
+                        <option value="all">All Levels</option>
+                        <option value="DEBUG">DEBUG</option>
+                        <option value="INFO">INFO</option>
+                        <option value="WARNING">WARNING</option>
+                        <option value="ERROR">ERROR</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="time-range">Time Range</label>
+                    <select id="time-range" onchange="loadLogs()">
+                        <option value="1h">Last Hour</option>
+                        <option value="6h">Last 6 Hours</option>
+                        <option value="24h" selected>Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="search-logs">Search</label>
+                    <input type="text" id="search-logs" placeholder="Search logs..." oninput="filterLogs()">
+                </div>
+            </div>
+
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                <label>
+                    <input type="checkbox" id="auto-scroll" checked>
+                    Auto-scroll to bottom
+                </label>
+                <label>
+                    <input type="checkbox" id="word-wrap" checked onchange="toggleWordWrap()">
+                    Word wrap
+                </label>
+                <label>
+                    <input type="checkbox" id="show-timestamps" checked onchange="loadLogs()">
+                    Show timestamps
+                </label>
+            </div>
+        </div>
+
+        <!-- Log Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon blue">📋</div>
+                <div class="stat-content">
+                    <h3 id="total-logs">0</h3>
+                    <p>Total Logs</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon green">ℹ️</div>
+                <div class="stat-content">
+                    <h3 id="info-count">0</h3>
+                    <p>Info</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon orange">⚠️</div>
+                <div class="stat-content">
+                    <h3 id="warning-count">0</h3>
+                    <p>Warnings</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon purple">❌</div>
+                <div class="stat-content">
+                    <h3 id="error-count">0</h3>
+                    <p>Errors</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log Viewer -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📜 Log Entries</h2>
+                <div>
+                    <button class="btn btn-sm" onclick="fontSize('decrease')">A-</button>
+                    <button class="btn btn-sm" onclick="fontSize('increase')">A+</button>
+                </div>
+            </div>
+
+            <pre id="log-viewer" style="background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; max-height: 600px; overflow-y: auto; font-family: 'Monaco', 'Courier New', monospace; font-size: 13px; line-height: 1.6; margin: 0; white-space: pre-wrap;">Loading logs...</pre>
+        </div>
+
+        <!-- Recent Errors -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🚨 Recent Errors</h2>
+            </div>
+
+            <div id="recent-errors">
+                <p style="text-align: center; color: #7f8c8d; padding: 20px;">
+                    ✅ No errors in the selected time range
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="logs.js"></script>
+</body>
+</html>
