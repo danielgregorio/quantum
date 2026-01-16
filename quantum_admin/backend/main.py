@@ -19,6 +19,7 @@ try:
     from .database import get_db, init_db
     from .docker_service import DockerService
     from .db_setup_service import DatabaseSetupService
+    from .rag_system import get_rag_system
 except ImportError:
     # Fall back to absolute imports (when running directly)
     import crud
@@ -27,6 +28,7 @@ except ImportError:
     from database import get_db, init_db
     from docker_service import DockerService
     from db_setup_service import DatabaseSetupService
+    from rag_system import get_rag_system
 
 # Create FastAPI app
 app = FastAPI(
@@ -1622,15 +1624,14 @@ quantum_ai = QuantumAI()
 @app.post("/ai/chat", tags=["AI Assistant"])
 def ai_chat(request: dict):
     """
-    AI Assistant endpoint
+    AI Assistant endpoint with RAG (Retrieval-Augmented Generation)
 
     Accepts:
     - message: User's question/message
     - context: Context type (default: "quantum")
 
-    Returns AI-generated response calibrated for Quantum framework
-
-    Future: Will integrate with SLM (Small Language Model) for more advanced responses
+    Returns AI-generated response enhanced with relevant Quantum documentation
+    using RAG system for accurate, context-aware responses
     """
     message = request.get("message", "")
     context = request.get("context", "quantum")
@@ -1641,13 +1642,23 @@ def ai_chat(request: dict):
             detail="Message is required"
         )
 
-    # Generate response
-    response = quantum_ai.respond(message, context)
+    # Get RAG system instance
+    rag = get_rag_system()
+
+    # Generate base response
+    base_response = quantum_ai.respond(message, context)
+
+    # Enhance response with RAG context
+    enhanced_response = rag.enhance_response(message, base_response)
+
+    # Get detected intents for debugging
+    intents = rag.detect_intent(message)
 
     return {
-        "response": response,
-        "model": "quantum-slm-v1-rules",  # Will be updated to actual SLM
-        "context": context
+        "response": enhanced_response,
+        "model": "quantum-slm-v1-rag",  # RAG-enhanced model
+        "context": context,
+        "intents": intents  # Include detected intents in response
     }
 
 

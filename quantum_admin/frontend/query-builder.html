@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Admin - Query Builder</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="quantum-enhancements.css">
+    <style>
+        .query-builder-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .builder-panel, .sql-panel {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .query-step {
+            background: var(--bg-tertiary);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .query-step h3 {
+            margin: 0 0 15px 0;
+            color: var(--text-primary);
+            font-size: 16px;
+        }
+
+        .field-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .field-chip {
+            padding: 6px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .field-chip:hover {
+            background: #5568d3;
+        }
+
+        .field-chip.selected {
+            background: #11998e;
+        }
+
+        .condition-row {
+            display: grid;
+            grid-template-columns: 150px 100px 1fr 40px;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .sql-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            min-height: 200px;
+        }
+
+        .results-table {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 1024px) {
+            .query-builder-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            ⚛️ <span>Quantum</span>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Overview</div>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                Dashboard
+            </a>
+            <a href="monitoring.html" class="nav-item">
+                <span class="nav-icon">📈</span>
+                Monitoring
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Data Sources</div>
+            <a href="datasources.html" class="nav-item">
+                <span class="nav-icon">🗄️</span>
+                Datasources
+            </a>
+            <a href="containers.html" class="nav-item">
+                <span class="nav-icon">🐳</span>
+                Containers
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Development</div>
+            <a href="components.html" class="nav-item">
+                <span class="nav-icon">📦</span>
+                Components
+            </a>
+            <a href="playground.html" class="nav-item">
+                <span class="nav-icon">🎭</span>
+                Playground
+            </a>
+            <a href="templates.html" class="nav-item">
+                <span class="nav-icon">📚</span>
+                Templates
+            </a>
+            <a href="query-builder.html" class="nav-item active">
+                <span class="nav-icon">🔍</span>
+                Query Builder
+            </a>
+            <a href="api-explorer.html" class="nav-item">
+                <span class="nav-icon">🔌</span>
+                API Explorer
+            </a>
+            <a href="logs.html" class="nav-item">
+                <span class="nav-icon">📝</span>
+                Logs
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">System</div>
+            <a href="settings.html" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                Settings
+            </a>
+            <a href="security.html" class="nav-item">
+                <span class="nav-icon">🔒</span>
+                Security
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔍 Visual Query Builder</h1>
+            <div class="header-actions">
+                <select id="datasource-select" style="padding: 10px; border: 1px solid var(--border-color); border-radius: 6px;">
+                    <option value="">Select datasource...</option>
+                </select>
+                <button class="btn" onclick="resetQuery()">🔄 Reset</button>
+                <button class="btn btn-primary" onclick="executeQuery()">▶️ Run Query</button>
+            </div>
+        </div>
+
+        <!-- Query Builder Container -->
+        <div class="query-builder-container">
+            <!-- Builder Panel -->
+            <div class="builder-panel">
+                <h2 style="margin-top: 0;">📝 Build Your Query</h2>
+
+                <!-- Step 1: Select Table -->
+                <div class="query-step">
+                    <h3>1️⃣ Select Table</h3>
+                    <select id="table-select" onchange="loadTableFields()" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px;">
+                        <option value="">Choose a table...</option>
+                    </select>
+                </div>
+
+                <!-- Step 2: Select Fields -->
+                <div class="query-step">
+                    <h3>2️⃣ Select Fields</h3>
+                    <label>
+                        <input type="checkbox" id="select-all-fields" onchange="toggleAllFields()">
+                        Select All (*)
+                    </label>
+                    <div id="fields-container" class="field-selector">
+                        <p style="color: var(--text-secondary);">Select a table first</p>
+                    </div>
+                </div>
+
+                <!-- Step 3: Add Conditions (WHERE) -->
+                <div class="query-step">
+                    <h3>3️⃣ Add Conditions (WHERE)</h3>
+                    <div id="conditions-container"></div>
+                    <button class="btn btn-sm" onclick="addCondition()">+ Add Condition</button>
+                </div>
+
+                <!-- Step 4: Order & Limit -->
+                <div class="query-step">
+                    <h3>4️⃣ Order & Limit</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                        <div>
+                            <label>Order By</label>
+                            <select id="order-by" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px;">
+                                <option value="">None</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Direction</label>
+                            <select id="order-direction" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px;">
+                                <option value="ASC">ASC</option>
+                                <option value="DESC">DESC</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label>Limit</label>
+                        <input type="number" id="limit" value="100" min="1" max="10000" style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- SQL Panel -->
+            <div class="sql-panel">
+                <h2 style="margin-top: 0;">💻 Generated SQL</h2>
+
+                <div class="sql-output" id="sql-output">
+                    <span style="color: #999;">-- Your SQL query will appear here</span>
+                </div>
+
+                <div style="margin-top: 15px; display: flex; gap: 10px;">
+                    <button class="btn" onclick="copySQL()">📋 Copy SQL</button>
+                    <button class="btn" onclick="formatSQL()">✨ Format</button>
+                    <button class="btn btn-primary" onclick="executeQuery()">▶️ Execute</button>
+                </div>
+
+                <!-- Results -->
+                <div id="results-section" style="margin-top: 20px; display: none;">
+                    <h3>📊 Results (<span id="result-count">0</span> rows)</h3>
+                    <div class="results-table">
+                        <table id="results-table">
+                            <thead id="results-thead"></thead>
+                            <tbody id="results-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="quantum-enhancements.js"></script>
+    <script src="i18n.js"></script>
+    <script src="websocket-client.js"></script>
+    <script src="query-builder.js"></script>
+</body>
+</html>

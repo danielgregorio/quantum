@@ -249,6 +249,15 @@
     </div>
 
     <script src="quantum-enhancements.js"></script>
+    <script src="i18n.js"></script>
+    <script src="websocket-client.js"></script>
+    <script src="chart-integration.js"></script>
     <script src="monitoring.js"></script>
+    <script>
+        // Initialize Chart.js integration
+        document.addEventListener('DOMContentLoaded', async function() {
+            await ChartIntegration.init();
+        });
+    </script>
 </body>
 </html>
