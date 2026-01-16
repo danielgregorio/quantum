@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Admin - Datasources</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            ⚛️ <span>Quantum</span>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Overview</div>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                Dashboard
+            </a>
+            <a href="monitoring.html" class="nav-item">
+                <span class="nav-icon">📈</span>
+                Monitoring
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Data Sources</div>
+            <a href="datasources.html" class="nav-item active">
+                <span class="nav-icon">🗄️</span>
+                Datasources
+            </a>
+            <a href="containers.html" class="nav-item">
+                <span class="nav-icon">🐳</span>
+                Containers
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Development</div>
+            <a href="components.html" class="nav-item">
+                <span class="nav-icon">📦</span>
+                Components
+            </a>
+            <a href="api-explorer.html" class="nav-item">
+                <span class="nav-icon">🔌</span>
+                API Explorer
+            </a>
+            <a href="logs.html" class="nav-item">
+                <span class="nav-icon">📝</span>
+                Logs
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">System</div>
+            <a href="settings.html" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                Settings
+            </a>
+            <a href="security.html" class="nav-item">
+                <span class="nav-icon">🔒</span>
+                Security
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <h1>🗄️ Datasources</h1>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="showCreateModal()">+ New Datasource</button>
+                <button class="btn" onclick="loadDatasources()">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <!-- Datasources List -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📋 All Datasources</h2>
+            </div>
+
+            <table id="datasources-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Connection</th>
+                        <th>Status</th>
+                        <th>Host:Port</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="6" class="text-center">
+                            <div class="spinner" style="margin: 20px auto;"></div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Create Datasource Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>🗄️ Create New Datasource</h2>
+                <span class="close" onclick="closeCreateModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="createForm" onsubmit="createDatasource(event)">
+                    <!-- Project Selection -->
+                    <div class="form-group">
+                        <label for="project_id">Project *</label>
+                        <select id="project_id" required>
+                            <option value="">Select a project...</option>
+                        </select>
+                    </div>
+
+                    <!-- Basic Info -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="ds_name">Datasource Name *</label>
+                            <input type="text" id="ds_name" placeholder="e.g., blog_db" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="ds_type">Database Type *</label>
+                            <select id="ds_type" required onchange="updateDefaultPort()">
+                                <option value="">Select type...</option>
+                                <option value="postgres">PostgreSQL</option>
+                                <option value="mysql">MySQL</option>
+                                <option value="mongodb">MongoDB</option>
+                                <option value="redis">Redis</option>
+                                <option value="mariadb">MariaDB</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Connection Type -->
+                    <div class="form-group">
+                        <label for="connection_type">Connection Type *</label>
+                        <select id="connection_type" required onchange="toggleConnectionFields()">
+                            <option value="docker">Docker Container (Auto-managed)</option>
+                            <option value="external">External Connection</option>
+                        </select>
+                    </div>
+
+                    <!-- Docker Settings -->
+                    <div id="docker-settings">
+                        <h3 style="margin-top: 20px; color: #667eea;">🐳 Docker Settings</h3>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="image">Docker Image</label>
+                                <input type="text" id="image" placeholder="e.g., postgres:16-alpine">
+                                <small>Leave empty for default image</small>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="auto_start" checked>
+                                    Auto-start container
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- External Connection Settings -->
+                    <div id="external-settings" style="display: none;">
+                        <h3 style="margin-top: 20px; color: #667eea;">🌐 External Connection</h3>
+
+                        <div class="form-group">
+                            <label for="host">Host *</label>
+                            <input type="text" id="host" placeholder="e.g., localhost or db.example.com">
+                        </div>
+                    </div>
+
+                    <!-- Common Settings -->
+                    <h3 style="margin-top: 20px; color: #667eea;">⚙️ Database Settings</h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="port">Port *</label>
+                            <input type="number" id="port" placeholder="5432" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="database_name">Database Name *</label>
+                            <input type="text" id="database_name" placeholder="e.g., myapp_db" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="username">Username *</label>
+                            <input type="text" id="username" placeholder="e.g., quantum" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password *</label>
+                            <input type="password" id="password" placeholder="Enter password" required>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Settings -->
+                    <details style="margin-top: 20px;">
+                        <summary style="cursor: pointer; color: #667eea; font-weight: bold;">Advanced Settings</summary>
+                        <div style="margin-top: 15px;">
+                            <div class="form-group">
+                                <label for="environment">Environment Variables</label>
+                                <textarea id="environment" rows="4" placeholder='{"POSTGRES_INITDB_ARGS": "--encoding=UTF8"}'></textarea>
+                                <small>JSON object with environment variables</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="volumes">Volume Mounts</label>
+                                <textarea id="volumes" rows="3" placeholder='["/host/path:/container/path"]'></textarea>
+                                <small>JSON array of volume mounts</small>
+                            </div>
+                        </div>
+                    </details>
+
+                    <div class="form-actions" style="margin-top: 30px; display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" class="btn" onclick="closeCreateModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">🚀 Create Datasource</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container Logs Modal -->
+    <div id="logsModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>📋 Container Logs</h2>
+                <span class="close" onclick="closeLogsModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 15px;">
+                    <label>Lines to show:</label>
+                    <select id="log-lines" onchange="refreshLogs()">
+                        <option value="50">50</option>
+                        <option value="100" selected>100</option>
+                        <option value="200">200</option>
+                        <option value="500">500</option>
+                    </select>
+                    <button class="btn" onclick="refreshLogs()" style="margin-left: 10px;">🔄 Refresh</button>
+                </div>
+                <pre id="logs-content" style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 4px; max-height: 500px; overflow-y: auto; font-size: 12px; line-height: 1.5;">Loading logs...</pre>
+            </div>
+        </div>
+    </div>
+
+    <script src="datasources.js"></script>
+</body>
+</html>
