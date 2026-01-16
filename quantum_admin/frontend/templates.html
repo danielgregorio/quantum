@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Admin - Template Gallery</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="quantum-enhancements.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            ⚛️ <span>Quantum</span>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Overview</div>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                Dashboard
+            </a>
+            <a href="monitoring.html" class="nav-item">
+                <span class="nav-icon">📈</span>
+                Monitoring
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Data Sources</div>
+            <a href="datasources.html" class="nav-item">
+                <span class="nav-icon">🗄️</span>
+                Datasources
+            </a>
+            <a href="containers.html" class="nav-item">
+                <span class="nav-icon">🐳</span>
+                Containers
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Development</div>
+            <a href="components.html" class="nav-item">
+                <span class="nav-icon">📦</span>
+                Components
+            </a>
+            <a href="playground.html" class="nav-item">
+                <span class="nav-icon">🎭</span>
+                Playground
+            </a>
+            <a href="templates.html" class="nav-item active">
+                <span class="nav-icon">📚</span>
+                Templates
+            </a>
+            <a href="query-builder.html" class="nav-item">
+                <span class="nav-icon">🔍</span>
+                Query Builder
+            </a>
+            <a href="api-explorer.html" class="nav-item">
+                <span class="nav-icon">🔌</span>
+                API Explorer
+            </a>
+            <a href="logs.html" class="nav-item">
+                <span class="nav-icon">📝</span>
+                Logs
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">System</div>
+            <a href="settings.html" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                Settings
+            </a>
+            <a href="security.html" class="nav-item">
+                <span class="nav-icon">🔒</span>
+                Security
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <h1>📚 Template Gallery</h1>
+            <div class="header-actions">
+                <input type="text" id="search-templates" placeholder="🔍 Search templates..." style="padding: 10px; border: 1px solid #ddd; border-radius: 6px; width: 300px;">
+            </div>
+        </div>
+
+        <!-- Template Categories -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🏷️ Categories</h2>
+            </div>
+
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; padding: 10px 0;">
+                <button class="btn category-filter active" data-category="all" onclick="filterByCategory('all')">All</button>
+                <button class="btn category-filter" data-category="auth" onclick="filterByCategory('auth')">🔐 Authentication</button>
+                <button class="btn category-filter" data-category="crud" onclick="filterByCategory('crud')">📝 CRUD</button>
+                <button class="btn category-filter" data-category="dashboard" onclick="filterByCategory('dashboard')">📊 Dashboards</button>
+                <button class="btn category-filter" data-category="form" onclick="filterByCategory('form')">📋 Forms</button>
+                <button class="btn category-filter" data-category="ui" onclick="filterByCategory('ui')">🎨 UI Components</button>
+            </div>
+        </div>
+
+        <!-- Templates Grid -->
+        <div id="templates-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="template-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2 id="modal-title">Template Preview</h2>
+                <span class="close" onclick="closeTemplateModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 15px;">
+                    <strong>Description:</strong>
+                    <p id="modal-description" style="color: var(--text-secondary);"></p>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <strong>Code:</strong>
+                    <pre id="modal-code" style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; overflow-x: auto; max-height: 400px; font-size: 13px;"></pre>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="btn" onclick="copyTemplateCode()">📋 Copy Code</button>
+                    <button class="btn" onclick="openInPlayground()">🎭 Open in Playground</button>
+                    <button class="btn btn-primary" onclick="installTemplate()">💾 Install Template</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="quantum-enhancements.js"></script>
+    <script src="templates.js"></script>
+</body>
+</html>
