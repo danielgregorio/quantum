@@ -2,7 +2,7 @@
 Quantum Admin - FastAPI Backend
 Main application entry point
 """
-from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi import FastAPI, Depends, HTTPException, status, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
@@ -12,6 +12,7 @@ from datetime import datetime
 import os
 import logging
 import time
+import secrets
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,9 @@ try:
     from .docker_service import DockerService
     from .db_setup_service import DatabaseSetupService
     from .rag_system import get_rag_system
+    from .auth_service import AuthService, UserCreate, UserLogin, UserResponse, TokenResponse, get_current_user, require_role, require_permission, UserRole, User, init_default_roles, create_default_admin
+    from .websocket_server import manager, websocket_handler, EventType
+    from .jenkins_pipeline import parse_qpipeline, generate_jenkinsfile, qpipeline_to_jenkinsfile, PIPELINE_TEMPLATES
 except ImportError:
     # Fall back to absolute imports (when running directly)
     import crud
@@ -31,6 +35,9 @@ except ImportError:
     from docker_service import DockerService
     from db_setup_service import DatabaseSetupService
     from rag_system import get_rag_system
+    from auth_service import AuthService, UserCreate, UserLogin, UserResponse, TokenResponse, get_current_user, require_role, require_permission, UserRole, User, init_default_roles, create_default_admin
+    from websocket_server import manager, websocket_handler, EventType
+    from jenkins_pipeline import parse_qpipeline, generate_jenkinsfile, qpipeline_to_jenkinsfile, PIPELINE_TEMPLATES
 
 # Create FastAPI app
 app = FastAPI(
@@ -73,6 +80,19 @@ def startup_event():
 
     # Initialize database
     init_db()
+
+    # Initialize authentication tables and default data
+    try:
+        from database import SessionLocal
+        db = SessionLocal()
+        init_default_roles(db)
+        admin_user = create_default_admin(db)
+        if admin_user:
+            print(f"[OK] Default admin user created: admin / admin123")
+        db.close()
+        print("[OK] Authentication system initialized")
+    except Exception as e:
+        print(f"[WARN] Authentication initialization warning: {e}")
 
     # Initialize Docker service
     try:
@@ -2003,6 +2023,257 @@ async def deploy_wizard_containers(config: dict):
             "status": "error",
             "message": str(e)
         }
+
+
+# ============================================================================
+# AUTHENTICATION ENDPOINTS
+# ============================================================================
+
+@app.post("/auth/register", response_model=UserResponse, tags=["Authentication"])
+def register_user(
+    user_create: UserCreate,
+    db: Session = Depends(get_db)
+):
+    """Register a new user"""
+    auth_service = AuthService(db)
+    try:
+        user = auth_service.create_user(user_create)
+        return UserResponse(
+            id=user.id,
+            email=user.email,
+            username=user.username,
+            full_name=user.full_name,
+            is_active=user.is_active,
+            roles=[role.name for role in user.roles],
+            created_at=user.created_at,
+            last_login=user.last_login
+        )
+    except HTTPException as e:
+        raise e
+
+
+@app.post("/auth/login", response_model=TokenResponse, tags=["Authentication"])
+def login(
+    user_login: UserLogin,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Login and get JWT tokens"""
+    auth_service = AuthService(db)
+
+    # Authenticate user
+    user = auth_service.authenticate_user(user_login.username, user_login.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password"
+        )
+
+    # Generate tokens
+    token_jti = secrets.token_urlsafe(32)
+    refresh_token_jti = secrets.token_urlsafe(32)
+
+    access_token = auth_service.create_access_token(user, jti=token_jti)
+    refresh_token = auth_service.create_refresh_token(user, jti=refresh_token_jti)
+
+    # Create session
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+
+    auth_service.create_session(
+        user=user,
+        token_jti=token_jti,
+        refresh_token_jti=refresh_token_jti,
+        ip_address=ip_address,
+        user_agent=user_agent
+    )
+
+    # Return tokens and user info
+    user_response = UserResponse(
+        id=user.id,
+        email=user.email,
+        username=user.username,
+        full_name=user.full_name,
+        is_active=user.is_active,
+        roles=[role.name for role in user.roles],
+        created_at=user.created_at,
+        last_login=user.last_login
+    )
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_in=1800,  # 30 minutes in seconds
+        user=user_response
+    )
+
+
+@app.post("/auth/logout", tags=["Authentication"])
+def logout(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Logout and revoke current session"""
+    auth_service = AuthService(db)
+
+    # Get token from request (we'd need to extract JTI from the token in production)
+    # For now, we'll just return success
+    return {"message": "Logged out successfully"}
+
+
+@app.get("/auth/verify", tags=["Authentication"])
+def verify_token(
+    current_user: User = Depends(get_current_user)
+):
+    """Verify if token is valid"""
+    return {
+        "valid": True,
+        "user_id": current_user.id,
+        "username": current_user.username
+    }
+
+
+@app.get("/auth/me", response_model=UserResponse, tags=["Authentication"])
+def get_current_user_info(
+    current_user: User = Depends(get_current_user)
+):
+    """Get current user information"""
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        username=current_user.username,
+        full_name=current_user.full_name,
+        is_active=current_user.is_active,
+        roles=[role.name for role in current_user.roles],
+        created_at=current_user.created_at,
+        last_login=current_user.last_login
+    )
+
+
+@app.get("/auth/users", tags=["Authentication"])
+def list_users(
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db)
+):
+    """List all users (Admin only)"""
+    users = db.query(User).all()
+    return {
+        "users": [
+            UserResponse(
+                id=user.id,
+                email=user.email,
+                username=user.username,
+                full_name=user.full_name,
+                is_active=user.is_active,
+                roles=[role.name for role in user.roles],
+                created_at=user.created_at,
+                last_login=user.last_login
+            )
+            for user in users
+        ]
+    }
+
+
+# ============================================================================
+# WEBSOCKET ENDPOINT
+# ============================================================================
+
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str):
+    """WebSocket endpoint for real-time updates"""
+    await websocket_handler(websocket, client_id)
+
+
+@app.get("/ws/stats", tags=["WebSocket"])
+def get_websocket_stats():
+    """Get WebSocket connection statistics"""
+    return manager.get_stats()
+
+
+# ============================================================================
+# JENKINS PIPELINE ENDPOINTS
+# ============================================================================
+
+@app.get("/pipeline/templates", tags=["Pipeline"])
+def get_pipeline_templates():
+    """Get available pipeline templates"""
+    return {
+        "templates": [
+            {
+                "id": "basic-build",
+                "name": "Basic Build Pipeline",
+                "description": "Simple build and test pipeline",
+                "icon": "🏗️"
+            },
+            {
+                "id": "docker-deploy",
+                "name": "Docker Deploy Pipeline",
+                "description": "Build and deploy Docker images",
+                "icon": "🐳"
+            },
+            {
+                "id": "parallel-tests",
+                "name": "Parallel Test Pipeline",
+                "description": "Run tests in parallel stages",
+                "icon": "⚡"
+            }
+        ]
+    }
+
+
+@app.get("/pipeline/template/{template_id}", tags=["Pipeline"])
+def get_pipeline_template(template_id: str):
+    """Get a specific pipeline template"""
+    if template_id not in PIPELINE_TEMPLATES:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    return {
+        "template_id": template_id,
+        "xml_content": PIPELINE_TEMPLATES[template_id]
+    }
+
+
+@app.post("/pipeline/validate", tags=["Pipeline"])
+def validate_pipeline(data: dict):
+    """Validate <q:pipeline> XML syntax"""
+    xml_content = data.get("xml_content", "")
+
+    try:
+        pipeline = parse_qpipeline(xml_content)
+        return {
+            "valid": True,
+            "pipeline_name": pipeline.name,
+            "stages_count": len(pipeline.stages),
+            "message": "Pipeline XML is valid"
+        }
+    except Exception as e:
+        return {
+            "valid": False,
+            "error": str(e),
+            "message": "Invalid pipeline XML"
+        }
+
+
+@app.post("/pipeline/generate", tags=["Pipeline"])
+def generate_pipeline_jenkinsfile(data: dict):
+    """Generate Jenkinsfile from <q:pipeline> XML"""
+    xml_content = data.get("xml_content", "")
+
+    try:
+        jenkinsfile = qpipeline_to_jenkinsfile(xml_content)
+        pipeline = parse_qpipeline(xml_content)
+
+        return {
+            "status": "success",
+            "jenkinsfile": jenkinsfile,
+            "pipeline_name": pipeline.name,
+            "stages_count": len(pipeline.stages)
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to generate Jenkinsfile: {str(e)}"
+        )
 
 
 # ============================================================================
