@@ -13,6 +13,7 @@ import os
 import logging
 import time
 import secrets
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,9 @@ try:
     from .websocket_server import manager, websocket_handler, EventType
     from .jenkins_pipeline import parse_qpipeline, generate_jenkinsfile, qpipeline_to_jenkinsfile, PIPELINE_TEMPLATES
     from .error_handlers import register_error_handlers, raise_not_found, raise_validation_error, raise_auth_error, raise_permission_error
+    from .config import settings
+    from .security import SecurityHeadersMiddleware, RateLimitMiddleware, CSRFMiddleware
+    from .observability import MetricsMiddleware, get_logger
 except ImportError:
     # Fall back to absolute imports (when running directly)
     import crud
@@ -40,6 +44,9 @@ except ImportError:
     from websocket_server import manager, websocket_handler, EventType
     from jenkins_pipeline import parse_qpipeline, generate_jenkinsfile, qpipeline_to_jenkinsfile, PIPELINE_TEMPLATES
     from error_handlers import register_error_handlers, raise_not_found, raise_validation_error, raise_auth_error, raise_permission_error
+    from config import settings
+    from security import SecurityHeadersMiddleware, RateLimitMiddleware, CSRFMiddleware
+    from observability import MetricsMiddleware, get_logger
 
 # Create FastAPI app
 app = FastAPI(
@@ -57,14 +64,53 @@ register_error_handlers(app)
 # Initialize Docker service (singleton)
 docker_service = None
 
-# Configure CORS for frontend
+# ============================================================================
+# MIDDLEWARE CONFIGURATION
+# ============================================================================
+# Order matters! Middlewares execute in reverse order of addition.
+# Last added = first executed
+
+# 1. CORS - Allow cross-origin requests from frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend URL
+    allow_origins=settings.CORS_ORIGINS if settings.CORS_ORIGINS != ["*"] else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 2. Security Headers - Add HSTS, CSP, X-Frame-Options, etc.
+app.add_middleware(
+    SecurityHeadersMiddleware,
+    hsts_max_age=settings.HSTS_MAX_AGE,
+    hsts_include_subdomains=settings.HSTS_INCLUDE_SUBDOMAINS,
+    hsts_preload=settings.HSTS_PRELOAD,
+    frame_options="SAMEORIGIN",  # Allow framing from same origin
+    enable_cors=True,
+    allowed_origins=settings.CORS_ORIGINS if settings.CORS_ORIGINS != ["*"] else [],
+)
+
+# 3. Rate Limiting - Prevent abuse
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=settings.RATE_LIMIT_PER_MINUTE,
+    burst_size=settings.RATE_LIMIT_BURST,
+    exclude_paths={"/health", "/metrics", "/api/docs", "/api/redoc", "/api/openapi.json"},
+)
+
+# 4. CSRF Protection - Prevent cross-site request forgery
+if settings.CSRF_ENABLED:
+    app.add_middleware(
+        CSRFMiddleware,
+        secret_key=settings.SECRET_KEY,
+        cookie_name=settings.CSRF_COOKIE_NAME,
+        header_name=settings.CSRF_HEADER_NAME,
+        exclude_paths={"/health", "/metrics", "/api/docs", "/api/redoc", "/api/openapi.json"},
+    )
+
+# 5. Metrics & Observability - Track performance
+if settings.PROMETHEUS_ENABLED:
+    app.add_middleware(MetricsMiddleware)
 
 # Mount static files (frontend)
 frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
@@ -135,8 +181,24 @@ def health_check():
     return {
         "status": "healthy",
         "service": "Quantum Admin API",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "environment": settings.ENVIRONMENT
     }
+
+
+@app.get("/metrics", tags=["Monitoring"])
+def metrics():
+    """
+    Prometheus metrics endpoint.
+
+    Returns metrics in Prometheus exposition format for scraping.
+    """
+    from fastapi.responses import Response
+
+    return Response(
+        content=generate_latest(),
+        media_type=CONTENT_TYPE_LATEST
+    )
 
 
 # ============================================================================
