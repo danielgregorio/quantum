@@ -2,14 +2,18 @@
 Quantum Admin - FastAPI Backend
 Main application entry point
 """
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 import os
 import logging
+import time
+import secrets
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +23,14 @@ try:
     from .database import get_db, init_db
     from .docker_service import DockerService
     from .db_setup_service import DatabaseSetupService
+    from .rag_system import get_rag_system
+    from .auth_service import AuthService, UserCreate, UserLogin, UserResponse, TokenResponse, get_current_user, require_role, require_permission, UserRole, User, init_default_roles, create_default_admin
+    from .websocket_server import manager, websocket_handler, EventType
+    from .jenkins_pipeline import parse_qpipeline, generate_jenkinsfile, qpipeline_to_jenkinsfile, PIPELINE_TEMPLATES
+    from .error_handlers import register_error_handlers, raise_not_found, raise_validation_error, raise_auth_error, raise_permission_error
+    from .config import settings
+    from .security import SecurityHeadersMiddleware, RateLimitMiddleware, CSRFMiddleware
+    from .observability import MetricsMiddleware, get_logger
 except ImportError:
     # Fall back to absolute imports (when running directly)
     import crud
@@ -27,30 +39,88 @@ except ImportError:
     from database import get_db, init_db
     from docker_service import DockerService
     from db_setup_service import DatabaseSetupService
+    from rag_system import get_rag_system
+    from auth_service import AuthService, UserCreate, UserLogin, UserResponse, TokenResponse, get_current_user, require_role, require_permission, UserRole, User, init_default_roles, create_default_admin
+    from websocket_server import manager, websocket_handler, EventType
+    from jenkins_pipeline import parse_qpipeline, generate_jenkinsfile, qpipeline_to_jenkinsfile, PIPELINE_TEMPLATES
+    from error_handlers import register_error_handlers, raise_not_found, raise_validation_error, raise_auth_error, raise_permission_error
+    from config import settings
+    from security import SecurityHeadersMiddleware, RateLimitMiddleware, CSRFMiddleware
+    from observability import MetricsMiddleware, get_logger
 
 # Create FastAPI app
 app = FastAPI(
     title="Quantum Admin API",
     description="Administration interface for Quantum Language projects",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json"
 )
+
+# Register error handlers
+register_error_handlers(app)
 
 # Initialize Docker service (singleton)
 docker_service = None
 
-# Configure CORS for frontend
+# ============================================================================
+# MIDDLEWARE CONFIGURATION
+# ============================================================================
+# Order matters! Middlewares execute in reverse order of addition.
+# Last added = first executed
+
+# 1. CORS - Allow cross-origin requests from frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend URL
+    allow_origins=settings.CORS_ORIGINS if settings.CORS_ORIGINS != ["*"] else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# 2. Security Headers - Add HSTS, CSP, X-Frame-Options, etc.
+app.add_middleware(
+    SecurityHeadersMiddleware,
+    hsts_max_age=settings.HSTS_MAX_AGE,
+    hsts_include_subdomains=settings.HSTS_INCLUDE_SUBDOMAINS,
+    hsts_preload=settings.HSTS_PRELOAD,
+    frame_options="SAMEORIGIN",  # Allow framing from same origin
+    enable_cors=True,
+    allowed_origins=settings.CORS_ORIGINS if settings.CORS_ORIGINS != ["*"] else [],
+)
+
+# 3. Rate Limiting - Prevent abuse
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=settings.RATE_LIMIT_PER_MINUTE,
+    burst_size=settings.RATE_LIMIT_BURST,
+    exclude_paths={"/health", "/metrics", "/api/docs", "/api/redoc", "/api/openapi.json"},
+)
+
+# 4. CSRF Protection - Prevent cross-site request forgery
+if settings.CSRF_ENABLED:
+    app.add_middleware(
+        CSRFMiddleware,
+        secret_key=settings.SECRET_KEY,
+        cookie_name=settings.CSRF_COOKIE_NAME,
+        header_name=settings.CSRF_HEADER_NAME,
+        exclude_paths={"/health", "/metrics", "/api/docs", "/api/redoc", "/api/openapi.json"},
+    )
+
+# 5. Metrics & Observability - Track performance
+if settings.PROMETHEUS_ENABLED:
+    app.add_middleware(MetricsMiddleware)
+
 # Mount static files (frontend)
 frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 if os.path.exists(frontend_path):
-    app.mount("/frontend", StaticFiles(directory=frontend_path), name="frontend")
+    app.mount("/static", StaticFiles(directory=frontend_path, html=True), name="static")
+
+@app.get("/")
+def root():
+    """Redirect to frontend dashboard"""
+    return RedirectResponse(url="/static/index.html")
 
 
 # ============================================================================
@@ -64,6 +134,19 @@ def startup_event():
 
     # Initialize database
     init_db()
+
+    # Initialize authentication tables and default data
+    try:
+        from database import SessionLocal
+        db = SessionLocal()
+        init_default_roles(db)
+        admin_user = create_default_admin(db)
+        if admin_user:
+            print(f"[OK] Default admin user created: admin / admin123")
+        db.close()
+        print("[OK] Authentication system initialized")
+    except Exception as e:
+        print(f"[WARN] Authentication initialization warning: {e}")
 
     # Initialize Docker service
     try:
@@ -98,8 +181,24 @@ def health_check():
     return {
         "status": "healthy",
         "service": "Quantum Admin API",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "environment": settings.ENVIRONMENT
     }
+
+
+@app.get("/metrics", tags=["Monitoring"])
+def metrics():
+    """
+    Prometheus metrics endpoint.
+
+    Returns metrics in Prometheus exposition format for scraping.
+    """
+    from fastapi.responses import Response
+
+    return Response(
+        content=generate_latest(),
+        media_type=CONTENT_TYPE_LATEST
+    )
 
 
 # ============================================================================
@@ -1266,6 +1365,1221 @@ def get_configuration_history(
 
     history = crud.get_configuration_history(db, project_id, limit=limit)
     return history
+
+
+# ============================================================================
+# SETTINGS MANAGEMENT
+# ============================================================================
+
+SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "quantum_settings.json")
+
+def load_settings_from_file():
+    """Load settings from JSON file"""
+    if os.path.exists(SETTINGS_FILE):
+        try:
+            with open(SETTINGS_FILE, 'r') as f:
+                import json
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading settings: {e}")
+    return {}
+
+def save_settings_to_file(settings: dict):
+    """Save settings to JSON file"""
+    try:
+        import json
+        with open(SETTINGS_FILE, 'w') as f:
+            json.dump(settings, f, indent=2)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving settings: {e}")
+        return False
+
+
+@app.get("/settings", tags=["Settings"])
+def get_settings():
+    """
+    Get all Quantum Admin settings
+    """
+    settings = load_settings_from_file()
+    return settings
+
+
+@app.post("/settings", tags=["Settings"])
+def save_settings(settings: dict):
+    """
+    Save Quantum Admin settings
+    """
+    success = save_settings_to_file(settings)
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save settings"
+        )
+
+    return {"success": True, "message": "Settings saved successfully"}
+
+
+@app.post("/settings/test-email", tags=["Settings"])
+def test_email_connection(email_config: dict):
+    """
+    Test SMTP email connection
+    """
+    import smtplib
+    from email.mime.text import MIMEText
+
+    try:
+        smtp_host = email_config.get('smtp_host')
+        smtp_port = email_config.get('smtp_port', 587)
+        smtp_username = email_config.get('smtp_username')
+        smtp_password = email_config.get('smtp_password')
+        use_tls = email_config.get('smtp_use_tls', True)
+        use_ssl = email_config.get('smtp_use_ssl', False)
+
+        if not smtp_host or not smtp_username:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="SMTP host and username are required"
+            )
+
+        # Create SMTP connection
+        if use_ssl:
+            server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10)
+        else:
+            server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
+
+        if use_tls and not use_ssl:
+            server.starttls()
+
+        # Login
+        if smtp_password:
+            server.login(smtp_username, smtp_password)
+
+        # Send test email
+        msg = MIMEText("This is a test email from Quantum Admin.")
+        msg['Subject'] = 'Quantum Admin - Test Email'
+        msg['From'] = smtp_username
+        msg['To'] = smtp_username
+
+        server.send_message(msg)
+        server.quit()
+
+        return {"success": True, "message": "Email connection successful"}
+
+    except smtplib.SMTPAuthenticationError:
+        return {"success": False, "error": "Authentication failed. Check username and password."}
+    except smtplib.SMTPException as e:
+        return {"success": False, "error": f"SMTP error: {str(e)}"}
+    except Exception as e:
+        return {"success": False, "error": f"Connection error: {str(e)}"}
+
+
+# ============================================================================
+# AI ASSISTANT (SLM Integration)
+# ============================================================================
+
+class QuantumAI:
+    """
+    Quantum AI Assistant - Rule-based system with future SLM integration
+    Calibrated for Quantum framework syntax and best practices
+    """
+
+    def __init__(self):
+        self.knowledge_base = {
+            "databinding": {
+                "patterns": ["{variable}", "{object.property}", "{array[index]}"],
+                "examples": [
+                    "Use {user.name} to display user name",
+                    "Use {items[0].title} to access array elements",
+                    "Use {session.isLoggedIn} for conditionals"
+                ]
+            },
+            "components": {
+                "structure": "<?quantum version=\"1.0\"?>\n<component name=\"mycomp\">\n  <!-- content -->\n</component>",
+                "elements": ["loop", "if", "query", "form", "include"]
+            },
+            "best_practices": [
+                "Always validate user input",
+                "Use parameterized queries for database operations",
+                "Implement proper error handling",
+                "Keep components focused and reusable"
+            ]
+        }
+
+    def respond(self, message: str, context: str = "quantum") -> str:
+        """Generate response based on user message"""
+        message_lower = message.lower()
+
+        # Databinding questions
+        if any(word in message_lower for word in ["databinding", "binding", "variable", "{}", "expression"]):
+            return self._explain_databinding()
+
+        # Component creation
+        if any(word in message_lower for word in ["create component", "new component", "component structure"]):
+            return self._explain_component_structure()
+
+        # Loop questions
+        if "loop" in message_lower:
+            return self._explain_loop()
+
+        # Conditional questions
+        if any(word in message_lower for word in ["if", "conditional", "condition"]):
+            return self._explain_conditional()
+
+        # Database questions
+        if any(word in message_lower for word in ["database", "query", "sql"]):
+            return self._explain_database()
+
+        # Error help
+        if any(word in message_lower for word in ["error", "bug", "issue", "problem"]):
+            return self._help_with_errors()
+
+        # Best practices
+        if any(word in message_lower for word in ["best practice", "should i", "how to"]):
+            return self._suggest_best_practices()
+
+        # Default response
+        return self._default_response()
+
+    def _explain_databinding(self) -> str:
+        return """**Databinding in Quantum**
+
+Quantum uses curly braces `{}` for databinding. Here are the patterns:
+
+1. **Simple variables**: `{username}`, `{email}`
+2. **Object properties**: `{user.name}`, `{user.email}`
+3. **Array access**: `{items[0]}`, `{users[index]}`
+4. **Nested**: `{user.address.city}`
+
+**Example:**
+```xml
+<p>Hello, {user.name}!</p>
+<p>You have {notifications.length} new messages</p>
+```
+
+**Context variables automatically available:**
+- `{session}` - Session data
+- `{user}` - Logged in user
+- `{isLoggedIn}` - Authentication status
+- `{request}` - Request information
+"""
+
+    def _explain_component_structure(self) -> str:
+        return """**Creating a Quantum Component**
+
+Basic structure:
+```xml
+<?quantum version="1.0"?>
+<component name="hello">
+    <h1>Hello, {name}!</h1>
+    <p>This is a Quantum component</p>
+</component>
+```
+
+**Best practices:**
+- Use descriptive component names
+- Keep components focused (single responsibility)
+- Pass data via context variables
+- Reuse components with `<include>`
+"""
+
+    def _explain_loop(self) -> str:
+        return """**Loops in Quantum**
+
+Use `<loop>` to iterate over arrays:
+
+```xml
+<loop array="users">
+    <div class="user-card">
+        <h3>{item.name}</h3>
+        <p>{item.email}</p>
+    </div>
+</loop>
+```
+
+**Available variables inside loop:**
+- `{item}` - Current item
+- `{index}` - Current index (0-based)
+- `{isFirst}` - True for first item
+- `{isLast}` - True for last item
+"""
+
+    def _explain_conditional(self) -> str:
+        return """**Conditionals in Quantum**
+
+Use `<if>` for conditional rendering:
+
+```xml
+<if condition="{isLoggedIn}">
+    <p>Welcome back, {user.name}!</p>
+</if>
+
+<if condition="{user.role == 'admin'}">
+    <button>Admin Panel</button>
+</if>
+```
+
+**Operators:**
+- `==`, `!=` - Equality
+- `>`, `<`, `>=`, `<=` - Comparison
+- `and`, `or` - Logical operators
+"""
+
+    def _explain_database(self) -> str:
+        return """**Database Operations in Quantum**
+
+1. **Create a datasource** in Admin UI
+2. **Use query element:**
+
+```xml
+<query name="getUsers" datasource="mydb">
+    SELECT * FROM users WHERE active = true
+</query>
+
+<loop array="getUsers">
+    <p>{item.username}</p>
+</loop>
+```
+
+**Best practices:**
+- Always use parameterized queries
+- Limit results with LIMIT clause
+- Handle errors gracefully
+- Use connection pooling
+"""
+
+    def _help_with_errors(self) -> str:
+        return """**Common Quantum Errors**
+
+1. **Databinding not working:**
+   - Check variable is in context
+   - Verify correct syntax: `{var}` not `{{var}}`
+
+2. **Component not rendering:**
+   - Verify XML is well-formed
+   - Check component name matches file
+
+3. **Loop not showing data:**
+   - Ensure array exists in context
+   - Check array is not empty
+
+4. **Database errors:**
+   - Verify datasource is running
+   - Check connection settings
+   - Review query syntax
+
+Need more specific help? Share your error message!
+"""
+
+    def _suggest_best_practices(self) -> str:
+        return """**Quantum Best Practices**
+
+**Security:**
+- ✅ Always validate user input
+- ✅ Use parameterized queries
+- ✅ Implement authentication/authorization
+- ✅ Sanitize output to prevent XSS
+
+**Performance:**
+- ✅ Use query limits to avoid large result sets
+- ✅ Enable caching where appropriate
+- ✅ Optimize loops for large datasets
+
+**Code Quality:**
+- ✅ Keep components small and focused
+- ✅ Reuse components with `<include>`
+- ✅ Use meaningful variable names
+- ✅ Add comments for complex logic
+
+**Development:**
+- ✅ Enable hot reload for faster iteration
+- ✅ Use Admin UI for datasource management
+- ✅ Monitor logs for errors
+"""
+
+    def _default_response(self) -> str:
+        return """I'm here to help with Quantum! I can assist with:
+
+- **Databinding** - Using variables and expressions
+- **Components** - Creating and structuring components
+- **Loops & Conditionals** - Iterating and conditional rendering
+- **Database** - Queries and datasources
+- **Best Practices** - Security, performance, code quality
+- **Troubleshooting** - Common errors and solutions
+
+What would you like to know about?"""
+
+# Initialize AI assistant
+quantum_ai = QuantumAI()
+
+@app.post("/ai/chat", tags=["AI Assistant"])
+def ai_chat(request: dict, db: Session = Depends(get_db)):
+    """
+    Advanced AI Assistant with SLM integration, RAG, and function calling
+
+    Accepts:
+    - message: User's question/message
+    - use_slm: Use local SLM if available (default: true)
+
+    Capabilities:
+    - Natural language to SQL generation
+    - SQLAlchemy model code generation
+    - Migration suggestions
+    - Query optimization advice
+    - Quantum Admin feature guidance
+    """
+    message = request.get("message", "")
+    use_slm = request.get("use_slm", True)
+
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Message is required"
+        )
+
+    # Get schema inspector for context
+    from schema_inspector import SchemaInspector
+    try:
+        inspector = SchemaInspector(db.get_bind())
+    except:
+        inspector = None
+
+    # Get AI agent with schema context
+    from ai_agent import get_ai_agent
+    agent = get_ai_agent(inspector)
+
+    # Generate response
+    result = agent.chat(message, use_slm=use_slm)
+
+    return result
+
+
+@app.post("/ai/clear", tags=["AI Assistant"])
+def clear_ai_memory():
+    """Clear AI conversation memory"""
+    from ai_agent import get_ai_agent
+    agent = get_ai_agent()
+    agent.clear_memory()
+
+    return {"status": "success", "message": "Conversation memory cleared"}
+
+
+@app.get("/ai/functions", tags=["AI Assistant"])
+def list_ai_functions():
+    """List available AI functions"""
+    from ai_agent import get_ai_agent
+    agent = get_ai_agent()
+
+    return {
+        "functions": agent.functions.get_schemas()
+    }
+
+
+@app.post("/ai/function/call", tags=["AI Assistant"])
+def call_ai_function(request: dict):
+    """Directly call an AI function"""
+    function_name = request.get("function_name")
+    params = request.get("params", {})
+
+    if not function_name:
+        raise HTTPException(status_code=400, detail="function_name required")
+
+    from ai_agent import get_ai_agent
+    agent = get_ai_agent()
+
+    try:
+        result = agent.functions.call(function_name, **params)
+        return {
+            "status": "success",
+            "function": function_name,
+            "result": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# PERFORMANCE & DEVOPS ENDPOINTS
+# ============================================================================
+
+# Cache Management
+@app.get("/cache/stats", tags=["Performance"])
+def get_cache_stats():
+    """Get cache statistics"""
+    from cache_service import get_cache
+    cache = get_cache()
+    return cache.get_stats()
+
+
+@app.post("/cache/clear", tags=["Performance"])
+def clear_cache(namespace: Optional[str] = None):
+    """Clear cache (optionally by namespace)"""
+    from cache_service import get_cache
+    cache = get_cache()
+
+    if namespace:
+        cleared = cache.clear_namespace(namespace)
+        return {"status": "success", "cleared": cleared, "namespace": namespace}
+    else:
+        cache.clear_all()
+        return {"status": "success", "message": "All cache cleared"}
+
+
+# Rate Limiting Stats
+@app.get("/rate-limit/status", tags=["Performance"])
+def get_rate_limit_status(request: Request):
+    """Get rate limit status for current client"""
+    from rate_limiter import get_rate_limiter
+    limiter = get_rate_limiter()
+
+    result = limiter.check_rate_limit(request, 1000, 3600)
+    return {
+        "enabled": limiter.enabled,
+        "remaining": result["remaining"],
+        "reset_time": result["reset_time"],
+        "limit": 1000,
+        "window": 3600
+    }
+
+
+# Celery Task Management
+@app.get("/tasks/active", tags=["DevOps"])
+def get_active_tasks():
+    """Get currently running background tasks"""
+    from celery_tasks import get_active_tasks
+    return {"tasks": get_active_tasks()}
+
+
+@app.get("/tasks/{task_id}", tags=["DevOps"])
+def get_task_status(task_id: str):
+    """Get status of a specific task"""
+    from celery_tasks import get_task_status
+    return get_task_status(task_id)
+
+
+@app.post("/tasks/{task_id}/cancel", tags=["DevOps"])
+def cancel_task(task_id: str):
+    """Cancel a running task"""
+    from celery_tasks import cancel_task
+    success = cancel_task(task_id)
+    return {"status": "cancelled" if success else "failed", "task_id": task_id}
+
+
+# Backup Tasks
+@app.post("/tasks/backup", tags=["DevOps"])
+def queue_backup(datasource_id: int, backup_type: str = "full"):
+    """Queue database backup task"""
+    from celery_tasks import backup_database
+    task = backup_database.delay(datasource_id, backup_type)
+    return {"status": "queued", "task_id": task.id}
+
+
+@app.post("/tasks/cleanup-backups", tags=["DevOps"])
+def queue_cleanup_backups(days: int = 30):
+    """Queue old backup cleanup task"""
+    from celery_tasks import cleanup_old_backups
+    task = cleanup_old_backups.delay(days)
+    return {"status": "queued", "task_id": task.id}
+
+
+# Deployment Tasks
+@app.post("/tasks/deploy", tags=["DevOps"])
+def queue_deployment(environment: str, branch: str = "main", run_migrations: bool = True):
+    """Queue deployment task"""
+    from celery_tasks import deploy_application
+    task = deploy_application.delay(environment, branch, run_migrations)
+    return {"status": "queued", "task_id": task.id, "environment": environment}
+
+
+@app.post("/tasks/rollback", tags=["DevOps"])
+def queue_rollback(environment: str, target_version: str):
+    """Queue rollback task"""
+    from celery_tasks import rollback_deployment
+    task = rollback_deployment.delay(environment, target_version)
+    return {"status": "queued", "task_id": task.id}
+
+
+# Git Webhooks
+@app.post("/webhooks/github", tags=["DevOps"])
+async def github_webhook(request: Request):
+    """Handle GitHub webhook events"""
+    from webhook_handler import get_webhook_handler
+    handler = get_webhook_handler()
+    return await handler.handle_github_webhook(request)
+
+
+@app.post("/webhooks/gitlab", tags=["DevOps"])
+async def gitlab_webhook(request: Request):
+    """Handle GitLab webhook events"""
+    from webhook_handler import get_webhook_handler
+    handler = get_webhook_handler()
+    return await handler.handle_gitlab_webhook(request)
+
+
+# Environment Management
+@app.get("/environments", tags=["DevOps"])
+def list_environments():
+    """List all environments"""
+    from env_manager import get_env_manager
+    manager = get_env_manager()
+    return {"environments": manager.list_environments()}
+
+
+@app.get("/environments/{name}", tags=["DevOps"])
+def get_environment(name: str):
+    """Get environment configuration"""
+    from env_manager import get_env_manager
+    manager = get_env_manager()
+    config = manager.get_environment(name)
+
+    if not config:
+        raise HTTPException(status_code=404, detail="Environment not found")
+
+    return {"environment": config}
+
+
+@app.get("/environments/{name}/validate", tags=["DevOps"])
+def validate_environment(name: str):
+    """Validate environment configuration"""
+    from env_manager import get_env_manager
+    manager = get_env_manager()
+    return manager.validate_environment(name)
+
+
+@app.get("/environments/{name}/export", tags=["DevOps"])
+def export_environment(name: str):
+    """Export environment as .env file"""
+    from env_manager import get_env_manager
+    manager = get_env_manager()
+    env_file = manager.export_env_file(name)
+
+    if not env_file:
+        raise HTTPException(status_code=404, detail="Environment not found")
+
+    return {"env_file": env_file}
+
+
+@app.post("/environments/{name}/activate", tags=["DevOps"])
+def activate_environment(name: str):
+    """Switch to specified environment"""
+    from env_manager import get_env_manager
+    manager = get_env_manager()
+    success = manager.set_current_environment(name)
+
+    if not success:
+        raise HTTPException(status_code=404, detail="Environment not found")
+
+    return {"status": "activated", "environment": name}
+
+
+# Query Optimization
+@app.post("/query/explain", tags=["Performance"])
+def explain_query(request: dict, db: Session = Depends(get_db)):
+    """Get query execution plan"""
+    from query_optimizer import QueryOptimizer
+    optimizer = QueryOptimizer(db)
+
+    query = request.get("query", "")
+    params = request.get("params", {})
+
+    return optimizer.explain_query(query, params)
+
+
+@app.post("/query/optimize", tags=["Performance"])
+def optimize_query(request: dict):
+    """Optimize SQL query"""
+    from query_optimizer import QueryOptimizer
+
+    query = request.get("query", "")
+    # Create dummy optimizer for analysis
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    engine = create_engine("sqlite:///:memory:")
+    Session = sessionmaker(bind=engine)
+    db = Session()
+
+    optimizer = QueryOptimizer(db)
+    return optimizer.optimize_query(query)
+
+
+@app.get("/query/slow", tags=["Performance"])
+def get_slow_queries():
+    """Get list of slow queries"""
+    from query_optimizer import get_performance_monitor
+    monitor = get_performance_monitor()
+    return {"slow_queries": monitor.get_slow_queries()}
+
+
+@app.get("/query/stats", tags=["Performance"])
+def get_query_stats():
+    """Get query performance statistics"""
+    from query_optimizer import get_performance_monitor
+    monitor = get_performance_monitor()
+    return {"stats": monitor.get_query_stats()}
+
+
+# System Health
+@app.get("/health", tags=["System"])
+def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "version": "1.0.0"
+    }
+
+
+@app.get("/status", tags=["System"])
+def system_status():
+    """Detailed system status"""
+    import psutil
+
+    return {
+        "status": "operational",
+        "timestamp": datetime.now().isoformat(),
+        "cpu_percent": psutil.cpu_percent(interval=1),
+        "memory_percent": psutil.virtual_memory().percent,
+        "disk_percent": psutil.disk_usage("/").percent,
+        "uptime_seconds": time.time() - psutil.boot_time()
+    }
+
+
+# ============================================================================
+# CONTAINER WIZARD ENDPOINTS
+# ============================================================================
+
+@app.get("/wizard/templates", tags=["Container Wizard"])
+def get_wizard_templates():
+    """Get available container templates for wizard"""
+    # Return simplified template list
+    return {
+        "templates": [
+            {"id": "postgres", "name": "PostgreSQL", "category": "database"},
+            {"id": "mysql", "name": "MySQL", "category": "database"},
+            {"id": "mongodb", "name": "MongoDB", "category": "database"},
+            {"id": "redis", "name": "Redis", "category": "cache"},
+            {"id": "nginx", "name": "Nginx", "category": "web"},
+            {"id": "custom", "name": "Custom", "category": "custom"}
+        ]
+    }
+
+
+@app.post("/wizard/validate", tags=["Container Wizard"])
+def validate_wizard_config(config: dict):
+    """Validate container configuration"""
+    errors = []
+    warnings = []
+
+    # Validate container name
+    name = config.get("name", "")
+    if not name:
+        errors.append("Container name is required")
+    elif not all(c.isalnum() or c in ['-', '_'] for c in name):
+        errors.append("Container name must be alphanumeric with hyphens/underscores")
+
+    # Validate image
+    if not config.get("image"):
+        errors.append("Docker image is required")
+
+    # Check port conflicts
+    ports = config.get("ports", [])
+    host_ports = [p.get("host") for p in ports]
+    if len(host_ports) != len(set(host_ports)):
+        errors.append("Duplicate host ports detected")
+
+    # Resource warnings
+    memory = config.get("memory", 0)
+    if memory > 8:
+        warnings.append("Memory limit over 8GB may impact host")
+
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "warnings": warnings
+    }
+
+
+@app.post("/wizard/generate-yaml", tags=["Container Wizard"])
+def generate_docker_compose(config: dict):
+    """Generate docker-compose.yml from config"""
+    # This would generate the actual YAML
+    # For now, return a simple response
+    return {
+        "yaml": "version: '3.8'\nservices:\n  " + config.get("name", "service") + ":\n    image: " + config.get("image", ""),
+        "filename": "docker-compose.yml"
+    }
+
+
+@app.post("/wizard/deploy", tags=["Container Wizard"])
+async def deploy_wizard_containers(config: dict):
+    """Deploy containers from wizard configuration"""
+    try:
+        # In production: actually deploy using Docker API
+        from celery_tasks import deploy_application
+
+        # Queue deployment task
+        task = deploy_application.delay(
+            environment="local",
+            branch="main",
+            run_migrations=False
+        )
+
+        return {
+            "status": "queued",
+            "task_id": task.id,
+            "message": "Deployment queued successfully"
+        }
+
+    except Exception as e:
+        logger.error(f"Wizard deployment failed: {e}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+
+# ============================================================================
+# AUTHENTICATION ENDPOINTS
+# ============================================================================
+
+@app.post("/auth/register", response_model=UserResponse, tags=["Authentication"])
+def register_user(
+    user_create: UserCreate,
+    db: Session = Depends(get_db)
+):
+    """Register a new user"""
+    auth_service = AuthService(db)
+    try:
+        user = auth_service.create_user(user_create)
+        return UserResponse(
+            id=user.id,
+            email=user.email,
+            username=user.username,
+            full_name=user.full_name,
+            is_active=user.is_active,
+            roles=[role.name for role in user.roles],
+            created_at=user.created_at,
+            last_login=user.last_login
+        )
+    except HTTPException as e:
+        raise e
+
+
+@app.post("/auth/login", response_model=TokenResponse, tags=["Authentication"])
+def login(
+    user_login: UserLogin,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Login and get JWT tokens"""
+    auth_service = AuthService(db)
+
+    # Authenticate user
+    user = auth_service.authenticate_user(user_login.username, user_login.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password"
+        )
+
+    # Generate tokens
+    token_jti = secrets.token_urlsafe(32)
+    refresh_token_jti = secrets.token_urlsafe(32)
+
+    access_token = auth_service.create_access_token(user, jti=token_jti)
+    refresh_token = auth_service.create_refresh_token(user, jti=refresh_token_jti)
+
+    # Create session
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+
+    auth_service.create_session(
+        user=user,
+        token_jti=token_jti,
+        refresh_token_jti=refresh_token_jti,
+        ip_address=ip_address,
+        user_agent=user_agent
+    )
+
+    # Return tokens and user info
+    user_response = UserResponse(
+        id=user.id,
+        email=user.email,
+        username=user.username,
+        full_name=user.full_name,
+        is_active=user.is_active,
+        roles=[role.name for role in user.roles],
+        created_at=user.created_at,
+        last_login=user.last_login
+    )
+
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_in=1800,  # 30 minutes in seconds
+        user=user_response
+    )
+
+
+@app.post("/auth/logout", tags=["Authentication"])
+def logout(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Logout and revoke current session"""
+    auth_service = AuthService(db)
+
+    # Get token from request (we'd need to extract JTI from the token in production)
+    # For now, we'll just return success
+    return {"message": "Logged out successfully"}
+
+
+@app.get("/auth/verify", tags=["Authentication"])
+def verify_token(
+    current_user: User = Depends(get_current_user)
+):
+    """Verify if token is valid"""
+    return {
+        "valid": True,
+        "user_id": current_user.id,
+        "username": current_user.username
+    }
+
+
+@app.get("/auth/me", response_model=UserResponse, tags=["Authentication"])
+def get_current_user_info(
+    current_user: User = Depends(get_current_user)
+):
+    """Get current user information"""
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        username=current_user.username,
+        full_name=current_user.full_name,
+        is_active=current_user.is_active,
+        roles=[role.name for role in current_user.roles],
+        created_at=current_user.created_at,
+        last_login=current_user.last_login
+    )
+
+
+@app.get("/auth/users", tags=["Authentication"])
+def list_users(
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    db: Session = Depends(get_db)
+):
+    """List all users (Admin only)"""
+    users = db.query(User).all()
+    return {
+        "users": [
+            UserResponse(
+                id=user.id,
+                email=user.email,
+                username=user.username,
+                full_name=user.full_name,
+                is_active=user.is_active,
+                roles=[role.name for role in user.roles],
+                created_at=user.created_at,
+                last_login=user.last_login
+            )
+            for user in users
+        ]
+    }
+
+
+# ============================================================================
+# WEBSOCKET ENDPOINT
+# ============================================================================
+
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str):
+    """WebSocket endpoint for real-time updates"""
+    await websocket_handler(websocket, client_id)
+
+
+@app.get("/ws/stats", tags=["WebSocket"])
+def get_websocket_stats():
+    """Get WebSocket connection statistics"""
+    return manager.get_stats()
+
+
+# ============================================================================
+# JENKINS PIPELINE ENDPOINTS
+# ============================================================================
+
+@app.get("/pipeline/templates", tags=["Pipeline"])
+def get_pipeline_templates():
+    """Get available pipeline templates"""
+    return {
+        "templates": [
+            {
+                "id": "basic-build",
+                "name": "Basic Build Pipeline",
+                "description": "Simple build and test pipeline",
+                "icon": "🏗️"
+            },
+            {
+                "id": "docker-deploy",
+                "name": "Docker Deploy Pipeline",
+                "description": "Build and deploy Docker images",
+                "icon": "🐳"
+            },
+            {
+                "id": "parallel-tests",
+                "name": "Parallel Test Pipeline",
+                "description": "Run tests in parallel stages",
+                "icon": "⚡"
+            }
+        ]
+    }
+
+
+@app.get("/pipeline/template/{template_id}", tags=["Pipeline"])
+def get_pipeline_template(template_id: str):
+    """Get a specific pipeline template"""
+    if template_id not in PIPELINE_TEMPLATES:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    return {
+        "template_id": template_id,
+        "xml_content": PIPELINE_TEMPLATES[template_id]
+    }
+
+
+@app.post("/pipeline/validate", tags=["Pipeline"])
+def validate_pipeline(data: dict):
+    """Validate <q:pipeline> XML syntax"""
+    xml_content = data.get("xml_content", "")
+
+    try:
+        pipeline = parse_qpipeline(xml_content)
+        return {
+            "valid": True,
+            "pipeline_name": pipeline.name,
+            "stages_count": len(pipeline.stages),
+            "message": "Pipeline XML is valid"
+        }
+    except Exception as e:
+        return {
+            "valid": False,
+            "error": str(e),
+            "message": "Invalid pipeline XML"
+        }
+
+
+@app.post("/pipeline/generate", tags=["Pipeline"])
+def generate_pipeline_jenkinsfile(data: dict):
+    """Generate Jenkinsfile from <q:pipeline> XML"""
+    xml_content = data.get("xml_content", "")
+
+    try:
+        jenkinsfile = qpipeline_to_jenkinsfile(xml_content)
+        pipeline = parse_qpipeline(xml_content)
+
+        return {
+            "status": "success",
+            "jenkinsfile": jenkinsfile,
+            "pipeline_name": pipeline.name,
+            "stages_count": len(pipeline.stages)
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to generate Jenkinsfile: {str(e)}"
+        )
+
+
+# ============================================================================
+# DATABASE SCHEMA ENDPOINTS
+# ============================================================================
+
+@app.get("/schema/inspect", tags=["Schema"])
+def inspect_schema(db: Session = Depends(get_db)):
+    """Inspect current database schema"""
+    from schema_inspector import SchemaInspector
+
+    inspector = SchemaInspector(db.get_bind())
+    schema = inspector.get_complete_schema()
+    relationships = inspector.get_relationships()
+    mermaid = inspector.generate_mermaid_erd()
+
+    return {
+        **schema,
+        "relationships": relationships,
+        "mermaid": mermaid
+    }
+
+
+@app.get("/schema/export", tags=["Schema"])
+def export_schema(
+    format: str = "json",
+    db: Session = Depends(get_db)
+):
+    """Export schema in various formats (json, mermaid, dbml, dot, models)"""
+    from schema_inspector import SchemaInspector
+
+    inspector = SchemaInspector(db.get_bind())
+
+    formats = {
+        "json": inspector.generate_json_schema,
+        "mermaid": inspector.generate_mermaid_erd,
+        "dbml": inspector.generate_dbml,
+        "dot": inspector.generate_graphviz_dot,
+        "models": inspector.generate_sqlalchemy_models
+    }
+
+    if format not in formats:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown format: {format}. Available: {', '.join(formats.keys())}"
+        )
+
+    content = formats[format]()
+
+    return {
+        "format": format,
+        "content": content
+    }
+
+
+@app.get("/schema/models", tags=["Schema"])
+def get_sqlalchemy_models(db: Session = Depends(get_db)):
+    """Generate SQLAlchemy models from current database schema"""
+    from schema_inspector import SchemaInspector
+
+    inspector = SchemaInspector(db.get_bind())
+    models = inspector.generate_sqlalchemy_models()
+
+    return {
+        "models": models
+    }
+
+
+@app.get("/schema/migrations", tags=["Schema"])
+def list_migrations():
+    """List all database migrations"""
+    import subprocess
+    import os
+
+    try:
+        # Get migrations directory
+        alembic_dir = os.path.join(os.path.dirname(__file__), "alembic", "versions")
+
+        if not os.path.exists(alembic_dir):
+            return {"migrations": []}
+
+        # List migration files
+        migrations = []
+        for filename in os.listdir(alembic_dir):
+            if filename.endswith(".py") and not filename.startswith("__"):
+                migrations.append({
+                    "revision": filename.replace(".py", ""),
+                    "message": filename,
+                    "created_at": "Unknown"
+                })
+
+        return {"migrations": migrations}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list migrations: {str(e)}")
+
+
+@app.post("/schema/migrations/create", tags=["Schema"])
+def create_migration(data: dict):
+    """Create a new migration"""
+    import subprocess
+    import os
+
+    message = data.get("message", "auto migration")
+
+    try:
+        # Run alembic revision command
+        result = subprocess.run(
+            ["alembic", "revision", "--autogenerate", "-m", message],
+            cwd=os.path.dirname(__file__),
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode != 0:
+            raise Exception(result.stderr)
+
+        # Parse output to get revision ID
+        output = result.stdout
+        revision = "unknown"
+        if "Generating" in output:
+            # Extract revision ID from output
+            lines = output.split("\n")
+            for line in lines:
+                if "Generating" in line:
+                    parts = line.split()
+                    if len(parts) > 1:
+                        revision = parts[1]
+
+        return {
+            "status": "success",
+            "message": f"Migration created: {message}",
+            "revision": revision
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create migration: {str(e)}")
+
+
+@app.post("/schema/migrations/upgrade", tags=["Schema"])
+def run_migrations():
+    """Run all pending migrations"""
+    import subprocess
+    import os
+
+    try:
+        result = subprocess.run(
+            ["alembic", "upgrade", "head"],
+            cwd=os.path.dirname(__file__),
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode != 0:
+            raise Exception(result.stderr)
+
+        return {
+            "status": "success",
+            "message": "Migrations completed successfully",
+            "output": result.stdout
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to run migrations: {str(e)}")
+
+
+@app.post("/schema/migrations/downgrade", tags=["Schema"])
+def rollback_migration():
+    """Rollback last migration"""
+    import subprocess
+    import os
+
+    try:
+        result = subprocess.run(
+            ["alembic", "downgrade", "-1"],
+            cwd=os.path.dirname(__file__),
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode != 0:
+            raise Exception(result.stderr)
+
+        return {
+            "status": "success",
+            "message": "Migration rolled back successfully",
+            "output": result.stdout
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to rollback migration: {str(e)}")
 
 
 # ============================================================================

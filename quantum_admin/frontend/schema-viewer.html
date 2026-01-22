@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Admin - Database Schema Viewer</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="quantum-enhancements.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        .schema-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            height: calc(100vh - 200px);
+        }
+
+        .table-list {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .table-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .table-item:hover {
+            border-color: #667eea;
+            transform: translateX(4px);
+        }
+
+        .table-item.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .table-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .table-meta {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .schema-viewer {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e1e8ed;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: #7f8c8d;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: #2c3e50;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .column-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .column-table th,
+        .column-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e1e8ed;
+        }
+
+        .column-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .column-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-right: 4px;
+        }
+
+        .badge-pk {
+            background: #667eea;
+            color: white;
+        }
+
+        .badge-fk {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .badge-nullable {
+            background: #e1e8ed;
+            color: #7f8c8d;
+        }
+
+        .erd-diagram {
+            min-height: 400px;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            ⚛️ <span>Quantum</span>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Overview</div>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                Dashboard
+            </a>
+            <a href="monitoring.html" class="nav-item">
+                <span class="nav-icon">📈</span>
+                Monitoring
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Data Sources</div>
+            <a href="datasources.html" class="nav-item">
+                <span class="nav-icon">🗄️</span>
+                Datasources
+            </a>
+            <a href="containers.html" class="nav-item">
+                <span class="nav-icon">🐳</span>
+                Containers
+            </a>
+            <a href="schema-viewer.html" class="nav-item active">
+                <span class="nav-icon">🔍</span>
+                Schema Viewer
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Development</div>
+            <a href="components.html" class="nav-item">
+                <span class="nav-icon">📦</span>
+                Components
+            </a>
+            <a href="playground.html" class="nav-item">
+                <span class="nav-icon">🎮</span>
+                Playground
+            </a>
+            <a href="pipeline-editor.html" class="nav-item">
+                <span class="nav-icon">🔄</span>
+                Pipeline Editor
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">System</div>
+            <a href="settings.html" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                Settings
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔍 Database Schema Viewer</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="refreshSchema()">🔄 Refresh</button>
+                <button class="btn btn-primary" onclick="exportSchema()">💾 Export</button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" id="stats-grid"></div>
+
+        <!-- Schema Container -->
+        <div class="schema-container">
+            <!-- Table List -->
+            <div class="table-list">
+                <h3>Tables</h3>
+                <div id="table-list"></div>
+            </div>
+
+            <!-- Schema Viewer -->
+            <div class="schema-viewer">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('erd')">ERD Diagram</button>
+                    <button class="tab" onclick="switchTab('columns')">Columns</button>
+                    <button class="tab" onclick="switchTab('relationships')">Relationships</button>
+                    <button class="tab" onclick="switchTab('models')">SQLAlchemy Models</button>
+                    <button class="tab" onclick="switchTab('migrations')">Migrations</button>
+                </div>
+
+                <!-- ERD Tab -->
+                <div id="erd-tab" class="tab-content active">
+                    <div class="export-buttons">
+                        <button class="btn" onclick="downloadERD('mermaid')">📥 Mermaid</button>
+                        <button class="btn" onclick="downloadERD('dbml')">📥 DBML</button>
+                        <button class="btn" onclick="downloadERD('dot')">📥 Graphviz</button>
+                    </div>
+                    <div id="erd-diagram" class="erd-diagram"></div>
+                </div>
+
+                <!-- Columns Tab -->
+                <div id="columns-tab" class="tab-content">
+                    <h3 id="selected-table-name">Select a table</h3>
+                    <table class="column-table" id="columns-table">
+                        <thead>
+                            <tr>
+                                <th>Column</th>
+                                <th>Type</th>
+                                <th>Constraints</th>
+                                <th>Default</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Relationships Tab -->
+                <div id="relationships-tab" class="tab-content">
+                    <table class="column-table">
+                        <thead>
+                            <tr>
+                                <th>From Table</th>
+                                <th>From Columns</th>
+                                <th>To Table</th>
+                                <th>To Columns</th>
+                                <th>Constraint</th>
+                            </tr>
+                        </thead>
+                        <tbody id="relationships-tbody"></tbody>
+                    </table>
+                </div>
+
+                <!-- Models Tab -->
+                <div id="models-tab" class="tab-content">
+                    <div class="export-buttons">
+                        <button class="btn btn-primary" onclick="downloadModels()">💾 Download models.py</button>
+                        <button class="btn" onclick="copyModels()">📋 Copy to Clipboard</button>
+                    </div>
+                    <pre id="models-code" class="code-block"></pre>
+                </div>
+
+                <!-- Migrations Tab -->
+                <div id="migrations-tab" class="tab-content">
+                    <h3>Database Migrations</h3>
+                    <div class="export-buttons">
+                        <button class="btn btn-primary" onclick="createMigration()">➕ Create Migration</button>
+                        <button class="btn" onclick="runMigrations()">▶️ Run Migrations</button>
+                        <button class="btn" onclick="rollbackMigration()">↩️ Rollback</button>
+                    </div>
+                    <div id="migrations-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="quantum-enhancements.js"></script>
+    <script src="i18n.js"></script>
+    <script src="websocket-client.js"></script>
+    <script src="schema-viewer.js"></script>
+</body>
+</html>

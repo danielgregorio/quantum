@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Admin - Component Playground</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="quantum-enhancements.css">
+    <style>
+        .playground-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: calc(100vh - 140px);
+        }
+
+        .editor-panel, .preview-panel {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            padding: 15px 20px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-textarea {
+            flex: 1;
+            padding: 20px;
+            border: none;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+        }
+
+        .preview-frame {
+            flex: 1;
+            border: none;
+            background: white;
+        }
+
+        .toolbar {
+            padding: 10px 20px;
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+        }
+
+        .context-editor {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+        }
+
+        .context-editor textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            font-family: 'Monaco', monospace;
+            font-size: 13px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        @media (max-width: 1024px) {
+            .playground-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            ⚛️ <span>Quantum</span>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Overview</div>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                Dashboard
+            </a>
+            <a href="monitoring.html" class="nav-item">
+                <span class="nav-icon">📈</span>
+                Monitoring
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Data Sources</div>
+            <a href="datasources.html" class="nav-item">
+                <span class="nav-icon">🗄️</span>
+                Datasources
+            </a>
+            <a href="containers.html" class="nav-item">
+                <span class="nav-icon">🐳</span>
+                Containers
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Development</div>
+            <a href="components.html" class="nav-item">
+                <span class="nav-icon">📦</span>
+                Components
+            </a>
+            <a href="playground.html" class="nav-item active">
+                <span class="nav-icon">🎭</span>
+                Playground
+            </a>
+            <a href="templates.html" class="nav-item">
+                <span class="nav-icon">📚</span>
+                Templates
+            </a>
+            <a href="query-builder.html" class="nav-item">
+                <span class="nav-icon">🔍</span>
+                Query Builder
+            </a>
+            <a href="api-explorer.html" class="nav-item">
+                <span class="nav-icon">🔌</span>
+                API Explorer
+            </a>
+            <a href="logs.html" class="nav-item">
+                <span class="nav-icon">📝</span>
+                Logs
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">System</div>
+            <a href="settings.html" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                Settings
+            </a>
+            <a href="security.html" class="nav-item">
+                <span class="nav-icon">🔒</span>
+                Security
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎭 Component Playground</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="loadTemplate()">📚 Load Template</button>
+                <button class="btn" onclick="sharePlayground()">🔗 Share</button>
+                <button class="btn btn-primary" onclick="renderPreview()">▶️ Run</button>
+            </div>
+        </div>
+
+        <!-- Playground Container -->
+        <div class="playground-container">
+            <!-- Editor Panel -->
+            <div class="editor-panel">
+                <div class="panel-header">
+                    <h3>📝 Component Code</h3>
+                    <div>
+                        <button class="btn btn-sm" onclick="formatCode()">✨ Format</button>
+                        <button class="btn btn-sm" onclick="copyCode()">📋 Copy</button>
+                    </div>
+                </div>
+
+                <textarea id="code-editor" class="editor-textarea" spellcheck="false"><?xml version="1.0"?>
+<component name="hello">
+    <div class="container">
+        <h1>Hello, {name}!</h1>
+        <p>Welcome to the Quantum Playground</p>
+
+        <div class="user-list">
+            <h2>Users:</h2>
+            <loop array="users">
+                <div class="user-card">
+                    <strong>{item.name}</strong>
+                    <span>{item.email}</span>
+                </div>
+            </loop>
+        </div>
+
+        <if condition="{isAdmin}">
+            <div class="admin-panel">
+                <h3>Admin Controls</h3>
+                <button>Manage Users</button>
+            </div>
+        </if>
+    </div>
+
+    <style>
+        .container { padding: 20px; font-family: Arial, sans-serif; }
+        .user-card { padding: 10px; margin: 5px 0; background: #f0f0f0; border-radius: 4px; }
+        .admin-panel { margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px; }
+    </style>
+</component></textarea>
+
+                <!-- Context Editor -->
+                <div class="context-editor">
+                    <label><strong>📦 Context Data (JSON)</strong></label>
+                    <textarea id="context-editor" spellcheck="false">{
+  "name": "Developer",
+  "isAdmin": true,
+  "users": [
+    {"name": "Alice", "email": "alice@example.com"},
+    {"name": "Bob", "email": "bob@example.com"},
+    {"name": "Charlie", "email": "charlie@example.com"}
+  ]
+}</textarea>
+                </div>
+            </div>
+
+            <!-- Preview Panel -->
+            <div class="preview-panel">
+                <div class="panel-header">
+                    <h3>👁️ Live Preview</h3>
+                    <div>
+                        <button class="btn btn-sm" onclick="refreshPreview()">🔄 Refresh</button>
+                        <button class="btn btn-sm" onclick="openInNewTab()">🔗 Open</button>
+                    </div>
+                </div>
+
+                <iframe id="preview-frame" class="preview-frame" sandbox="allow-scripts"></iframe>
+
+                <div class="toolbar">
+                    <label>
+                        <input type="checkbox" id="auto-refresh" checked>
+                        Auto-refresh on edit
+                    </label>
+                    <span style="margin-left: auto; color: var(--text-secondary); font-size: 13px;" id="render-time"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="quantum-enhancements.js"></script>
+    <script src="i18n.js"></script>
+    <script src="websocket-client.js"></script>
+    <script src="playground.js"></script>
+</body>
+</html>

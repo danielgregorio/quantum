@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Admin - Security</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="quantum-enhancements.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            ⚛️ <span>Quantum</span>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Overview</div>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                Dashboard
+            </a>
+            <a href="monitoring.html" class="nav-item">
+                <span class="nav-icon">📈</span>
+                Monitoring
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Data Sources</div>
+            <a href="datasources.html" class="nav-item">
+                <span class="nav-icon">🗄️</span>
+                Datasources
+            </a>
+            <a href="containers.html" class="nav-item">
+                <span class="nav-icon">🐳</span>
+                Containers
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Development</div>
+            <a href="components.html" class="nav-item">
+                <span class="nav-icon">📦</span>
+                Components
+            </a>
+            <a href="api-explorer.html" class="nav-item">
+                <span class="nav-icon">🔌</span>
+                API Explorer
+            </a>
+            <a href="logs.html" class="nav-item">
+                <span class="nav-icon">📝</span>
+                Logs
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">System</div>
+            <a href="settings.html" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                Settings
+            </a>
+            <a href="security.html" class="nav-item active">
+                <span class="nav-icon">🔒</span>
+                Security
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔒 Security & Access Control</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="loadSecurityData()">🔄 Refresh</button>
+                <button class="btn btn-primary" onclick="exportAuditLog()">📥 Export Audit Log</button>
+            </div>
+        </div>
+
+        <!-- Security Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon blue">👥</div>
+                <div class="stat-content">
+                    <h3 id="total-users">0</h3>
+                    <p>Total Users</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon green">✅</div>
+                <div class="stat-content">
+                    <h3 id="active-sessions">0</h3>
+                    <p>Active Sessions</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon orange">🔐</div>
+                <div class="stat-content">
+                    <h3 id="failed-logins">0</h3>
+                    <p>Failed Logins (24h)</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon purple">🔑</div>
+                <div class="stat-content">
+                    <h3 id="api-keys">0</h3>
+                    <p>Active API Keys</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Management -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">👥 Users</h2>
+                <button class="btn btn-primary" onclick="createUser()">+ New User</button>
+            </div>
+
+            <table id="users-table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Last Login</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="6" class="text-center">
+                            <div class="spinner" style="margin: 20px auto;"></div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Roles & Permissions -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🎭 Roles & Permissions</h2>
+                <button class="btn btn-primary" onclick="createRole()">+ New Role</button>
+            </div>
+
+            <div id="roles-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- API Keys -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🔑 API Keys</h2>
+                <button class="btn btn-primary" onclick="generateApiKey()">+ Generate API Key</button>
+            </div>
+
+            <table id="api-keys-table">
+                <thead>
+                    <tr>
+                        <th>Key Name</th>
+                        <th>Key (masked)</th>
+                        <th>Created</th>
+                        <th>Last Used</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="6" class="text-center">No API keys yet. Generate one to get started.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Active Sessions -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">💻 Active Sessions</h2>
+            </div>
+
+            <table id="sessions-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>IP Address</th>
+                        <th>Location</th>
+                        <th>Started</th>
+                        <th>Last Activity</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="6" class="text-center">Loading sessions...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Audit Log -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📋 Audit Log</h2>
+                <div>
+                    <select id="audit-filter" onchange="loadAuditLog()">
+                        <option value="all">All Events</option>
+                        <option value="auth">Authentication</option>
+                        <option value="user">User Management</option>
+                        <option value="datasource">Datasource Changes</option>
+                        <option value="settings">Settings Changes</option>
+                    </select>
+                </div>
+            </div>
+
+            <table id="audit-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Event</th>
+                        <th>User</th>
+                        <th>IP Address</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody id="audit-tbody">
+                    <tr>
+                        <td colspan="5" class="text-center">Loading audit log...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Security Alerts -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">⚠️ Security Alerts</h2>
+            </div>
+
+            <div id="security-alerts">
+                <p style="text-align: center; color: #7f8c8d; padding: 20px;">
+                    ✅ No security alerts
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="quantum-enhancements.js"></script>
+    <script src="i18n.js"></script>
+    <script src="websocket-client.js"></script>
+    <script src="security.js"></script>
+</body>
+</html>

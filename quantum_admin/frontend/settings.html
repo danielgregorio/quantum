@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Admin - Settings</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="quantum-enhancements.css">
+    <style>
+        .settings-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .settings-tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #7f8c8d;
+            transition: all 0.2s;
+        }
+
+        .settings-tab:hover {
+            color: #2c3e50;
+        }
+
+        .settings-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .settings-section {
+            display: none;
+        }
+
+        .settings-section.active {
+            display: block;
+        }
+
+        .settings-group {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .settings-group h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .settings-divider {
+            border: none;
+            border-top: 1px solid #ecf0f1;
+            margin: 20px 0;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #1565c0;
+        }
+
+        .warning-box {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #e65100;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            ⚛️ <span>Quantum</span>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Overview</div>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                Dashboard
+            </a>
+            <a href="monitoring.html" class="nav-item">
+                <span class="nav-icon">📈</span>
+                Monitoring
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Data Sources</div>
+            <a href="datasources.html" class="nav-item">
+                <span class="nav-icon">🗄️</span>
+                Datasources
+            </a>
+            <a href="containers.html" class="nav-item">
+                <span class="nav-icon">🐳</span>
+                Containers
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Development</div>
+            <a href="components.html" class="nav-item">
+                <span class="nav-icon">📦</span>
+                Components
+            </a>
+            <a href="api-explorer.html" class="nav-item">
+                <span class="nav-icon">🔌</span>
+                API Explorer
+            </a>
+            <a href="logs.html" class="nav-item">
+                <span class="nav-icon">📝</span>
+                Logs
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">System</div>
+            <a href="settings.html" class="nav-item active">
+                <span class="nav-icon">⚙️</span>
+                Settings
+            </a>
+            <a href="security.html" class="nav-item">
+                <span class="nav-icon">🔒</span>
+                Security
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <h1>⚙️ Settings</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="resetToDefaults()">🔄 Reset to Defaults</button>
+                <button class="btn btn-primary" onclick="saveAllSettings()">💾 Save All Settings</button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="settings-tabs">
+            <button class="settings-tab active" onclick="switchTab('server')">🖥️ Server</button>
+            <button class="settings-tab" onclick="switchTab('auth')">🔐 Authentication</button>
+            <button class="settings-tab" onclick="switchTab('database')">🗄️ Database Defaults</button>
+            <button class="settings-tab" onclick="switchTab('email')">📧 Email</button>
+            <button class="settings-tab" onclick="switchTab('development')">🛠️ Development</button>
+            <button class="settings-tab" onclick="switchTab('security')">🔒 Security</button>
+            <button class="settings-tab" onclick="switchTab('storage')">💾 Storage</button>
+        </div>
+
+        <!-- SERVER SETTINGS -->
+        <div id="server-section" class="settings-section active">
+            <div class="settings-group">
+                <h3>🖥️ Server Configuration</h3>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="admin_port">Admin API Port</label>
+                        <input type="number" id="admin_port" value="8000">
+                        <small>Port for Quantum Admin API (requires restart)</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="quantum_port">Quantum Server Port</label>
+                        <input type="number" id="quantum_port" value="8080">
+                        <small>Port for Quantum component server (requires restart)</small>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="server_host">Host / Domain</label>
+                        <input type="text" id="server_host" value="localhost">
+                        <small>Server hostname or domain</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="base_url">Base URL</label>
+                        <input type="text" id="base_url" value="http://localhost:8000">
+                        <small>Full base URL for API endpoints</small>
+                    </div>
+                </div>
+
+                <div class="warning-box">
+                    ⚠️ Changing server ports requires restarting both Admin API and Quantum Server.
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h3>⚡ Performance</h3>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="worker_threads">Worker Threads</label>
+                        <input type="number" id="worker_threads" value="4" min="1" max="32">
+                        <small>Number of worker threads for processing requests</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="request_timeout">Request Timeout (seconds)</label>
+                        <input type="number" id="request_timeout" value="30" min="5" max="300">
+                        <small>Maximum time to wait for a request to complete</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AUTHENTICATION SETTINGS -->
+        <div id="auth-section" class="settings-section">
+            <div class="settings-group">
+                <h3>🔐 Authentication Method</h3>
+
+                <div class="form-group">
+                    <label for="auth_mode">Authentication Mode</label>
+                    <select id="auth_mode">
+                        <option value="local">Local (Database)</option>
+                        <option value="jwt">JWT Token</option>
+                        <option value="oauth">OAuth 2.0</option>
+                        <option value="ldap">LDAP / Active Directory</option>
+                        <option value="saml">SAML SSO</option>
+                    </select>
+                    <small>How users authenticate with Quantum</small>
+                </div>
+
+                <hr class="settings-divider">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="session_timeout">Session Timeout (minutes)</label>
+                        <input type="number" id="session_timeout" value="60" min="5" max="1440">
+                        <small>Auto-logout after this period of inactivity</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="max_login_attempts">Max Login Attempts</label>
+                        <input type="number" id="max_login_attempts" value="5" min="1" max="20">
+                        <small>Lock account after this many failed attempts</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="require_https">
+                        Require HTTPS for authentication
+                    </label>
+                    <small>Force HTTPS for all authentication endpoints (recommended for production)</small>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="enable_2fa">
+                        Enable Two-Factor Authentication (2FA)
+                    </label>
+                    <small>Require 2FA for all user accounts</small>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h3>👥 Default User Settings</h3>
+
+                <div class="form-group">
+                    <label for="default_role">Default User Role</label>
+                    <select id="default_role">
+                        <option value="viewer">Viewer (Read-only)</option>
+                        <option value="developer">Developer</option>
+                        <option value="admin">Administrator</option>
+                    </select>
+                    <small>Role assigned to new users by default</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="password_min_length">Minimum Password Length</label>
+                    <input type="number" id="password_min_length" value="8" min="4" max="32">
+                    <small>Minimum characters required for passwords</small>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="password_require_special" checked>
+                        Require special characters in passwords
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- DATABASE DEFAULTS -->
+        <div id="database-section" class="settings-section">
+            <div class="settings-group">
+                <h3>🗄️ Default Database Ports</h3>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="postgres_port">PostgreSQL Default Port</label>
+                        <input type="number" id="postgres_port" value="5432">
+                    </div>
+                    <div class="form-group">
+                        <label for="mysql_port">MySQL Default Port</label>
+                        <input type="number" id="mysql_port" value="3306">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="mongodb_port">MongoDB Default Port</label>
+                        <input type="number" id="mongodb_port" value="27017">
+                    </div>
+                    <div class="form-group">
+                        <label for="redis_port">Redis Default Port</label>
+                        <input type="number" id="redis_port" value="6379">
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    ℹ️ These ports are used as defaults when creating new datasources. You can override them per datasource.
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h3>🔌 Connection Settings</h3>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="db_connection_timeout">Connection Timeout (seconds)</label>
+                        <input type="number" id="db_connection_timeout" value="10" min="1" max="60">
+                        <small>Maximum time to wait for database connection</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="db_max_pool_size">Max Pool Size</label>
+                        <input type="number" id="db_max_pool_size" value="10" min="1" max="100">
+                        <small>Maximum number of connections in pool</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="default_username">Default Database Username</label>
+                    <input type="text" id="default_username" value="quantum">
+                    <small>Default username for new datasource connections</small>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="enable_query_cache" checked>
+                        Enable query result caching
+                    </label>
+                    <small>Cache frequently executed queries for better performance</small>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h3>🐳 Docker Container Defaults</h3>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="auto_start_containers" checked>
+                        Auto-start containers on server boot
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="auto_pull_images" checked>
+                        Auto-pull latest Docker images
+                    </label>
+                    <small>Automatically pull the latest version of Docker images</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="container_restart_policy">Container Restart Policy</label>
+                    <select id="container_restart_policy">
+                        <option value="no">No restart</option>
+                        <option value="on-failure">On failure only</option>
+                        <option value="unless-stopped" selected>Unless stopped</option>
+                        <option value="always">Always restart</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- EMAIL SETTINGS -->
+        <div id="email-section" class="settings-section">
+            <div class="settings-group">
+                <h3>📧 SMTP Configuration</h3>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="smtp_host">SMTP Server</label>
+                        <input type="text" id="smtp_host" placeholder="smtp.gmail.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="smtp_port">SMTP Port</label>
+                        <input type="number" id="smtp_port" value="587">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="smtp_username">SMTP Username</label>
+                        <input type="text" id="smtp_username" placeholder="your-email@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="smtp_password">SMTP Password</label>
+                        <input type="password" id="smtp_password" placeholder="Enter password">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="from_email">From Email Address</label>
+                    <input type="email" id="from_email" placeholder="noreply@quantum.dev">
+                    <small>Email address shown as sender</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="from_name">From Name</label>
+                    <input type="text" id="from_name" value="Quantum Framework">
+                    <small>Name shown as sender</small>
+                </div>
+
+                <hr class="settings-divider">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="smtp_use_tls" checked>
+                            Use TLS
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="smtp_use_ssl">
+                            Use SSL
+                        </label>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="testEmailConnection()">📧 Test Email Connection</button>
+            </div>
+        </div>
+
+        <!-- DEVELOPMENT SETTINGS -->
+        <div id="development-section" class="settings-section">
+            <div class="settings-group">
+                <h3>🛠️ Development Mode</h3>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="debug_mode" checked>
+                        Enable Debug Mode
+                    </label>
+                    <small>Show detailed error messages and stack traces</small>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="hot_reload" checked>
+                        Enable Hot Reload
+                    </label>
+                    <small>Auto-refresh browser when component files change</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="log_level">Log Level</label>
+                    <select id="log_level">
+                        <option value="DEBUG">DEBUG (Most verbose)</option>
+                        <option value="INFO" selected>INFO</option>
+                        <option value="WARNING">WARNING</option>
+                        <option value="ERROR">ERROR</option>
+                        <option value="CRITICAL">CRITICAL (Least verbose)</option>
+                    </select>
+                </div>
+
+                <div class="warning-box">
+                    ⚠️ Debug mode should be DISABLED in production for security and performance.
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h3>🔄 Auto-Refresh</h3>
+
+                <div class="form-group">
+                    <label for="refresh_interval">Dashboard Refresh Interval (seconds)</label>
+                    <input type="number" id="refresh_interval" value="30" min="5" max="300">
+                    <small>How often to refresh dashboard statistics</small>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="enable_source_maps" checked>
+                        Enable Source Maps
+                    </label>
+                    <small>Generate source maps for easier debugging</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECURITY SETTINGS -->
+        <div id="security-section" class="settings-section">
+            <div class="settings-group">
+                <h3>🔒 CORS Configuration</h3>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="enable_cors" checked>
+                        Enable CORS
+                    </label>
+                    <small>Allow Cross-Origin Resource Sharing</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="allowed_origins">Allowed Origins</label>
+                    <textarea id="allowed_origins" rows="4" placeholder="http://localhost:3000&#10;https://app.example.com"></textarea>
+                    <small>One origin per line. Use * for all origins (not recommended for production)</small>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h3>🔑 API Security</h3>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="require_api_key">
+                        Require API Key for all endpoints
+                    </label>
+                    <small>All API requests must include a valid API key</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="api_key_header">API Key Header Name</label>
+                    <input type="text" id="api_key_header" value="X-API-Key">
+                </div>
+
+                <hr class="settings-divider">
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="enable_rate_limiting" checked>
+                        Enable Rate Limiting
+                    </label>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="rate_limit_requests">Max Requests</label>
+                        <input type="number" id="rate_limit_requests" value="100" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="rate_limit_window">Per Window (seconds)</label>
+                        <input type="number" id="rate_limit_window" value="60" min="1">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STORAGE SETTINGS -->
+        <div id="storage-section" class="settings-section">
+            <div class="settings-group">
+                <h3>💾 File Upload Settings</h3>
+
+                <div class="form-group">
+                    <label for="upload_directory">Upload Directory</label>
+                    <input type="text" id="upload_directory" value="/var/quantum/uploads">
+                    <small>Directory where uploaded files are stored</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="max_file_size">Max File Size (MB)</label>
+                    <input type="number" id="max_file_size" value="10" min="1" max="1024">
+                </div>
+
+                <div class="form-group">
+                    <label for="allowed_extensions">Allowed File Extensions</label>
+                    <textarea id="allowed_extensions" rows="3" placeholder="jpg, png, gif, pdf, doc, docx">jpg, png, gif, pdf, doc, docx, txt, csv, xlsx</textarea>
+                    <small>Comma-separated list of allowed file extensions</small>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="scan_uploads" checked>
+                        Scan uploads for malware
+                    </label>
+                    <small>Automatically scan uploaded files for viruses (requires ClamAV)</small>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <h3>📁 Storage Cleanup</h3>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="auto_cleanup">
+                        Enable automatic cleanup
+                    </label>
+                    <small>Automatically delete old temporary files</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="cleanup_age">Delete files older than (days)</label>
+                    <input type="number" id="cleanup_age" value="30" min="1" max="365">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="quantum-enhancements.js"></script>
+    <script src="i18n.js"></script>
+    <script src="websocket-client.js"></script>
+    <script src="settings.js"></script>
+</body>
+</html>

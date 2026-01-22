@@ -1,8 +1,16 @@
 flask>=3.0.0
+werkzeug>=3.0.0
 pyyaml>=6.0
 sqlparse>=0.4.4
 psycopg2-binary>=2.9.9
 pymysql>=1.1.0
+bcrypt>=4.0.0
+
+# LLM Support
+ollama>=0.1.0
+
+# RAG Support
+chromadb>=0.4.0
 
 # Testing
 pytest>=7.4.0

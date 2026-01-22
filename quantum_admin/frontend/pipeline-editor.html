@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Admin - Pipeline Editor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="quantum-enhancements.css">
+    <style>
+        .editor-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: calc(100vh - 200px);
+        }
+
+        .editor-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .xml-editor {
+            width: 100%;
+            height: 100%;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            resize: none;
+        }
+
+        .jenkinsfile-output {
+            width: 100%;
+            height: 100%;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 16px;
+            background: #f8f9fa;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            overflow: auto;
+            white-space: pre;
+        }
+
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .template-card {
+            background: white;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .template-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .template-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .template-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .template-description {
+            font-size: 13px;
+            color: #7f8c8d;
+        }
+
+        .tabs-pipeline {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e1e8ed;
+        }
+
+        .tab-pipeline {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: #7f8c8d;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-pipeline:hover {
+            color: #2c3e50;
+        }
+
+        .tab-pipeline.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content-pipeline {
+            display: none;
+        }
+
+        .tab-content-pipeline.active {
+            display: block;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+
+        .success-message {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            ⚛️ <span>Quantum</span>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Overview</div>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                Dashboard
+            </a>
+            <a href="monitoring.html" class="nav-item">
+                <span class="nav-icon">📈</span>
+                Monitoring
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Data Sources</div>
+            <a href="datasources.html" class="nav-item">
+                <span class="nav-icon">🗄️</span>
+                Datasources
+            </a>
+            <a href="containers.html" class="nav-item">
+                <span class="nav-icon">🐳</span>
+                Containers
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Development</div>
+            <a href="components.html" class="nav-item">
+                <span class="nav-icon">📦</span>
+                Components
+            </a>
+            <a href="playground.html" class="nav-item">
+                <span class="nav-icon">🎮</span>
+                Playground
+            </a>
+            <a href="templates.html" class="nav-item">
+                <span class="nav-icon">📋</span>
+                Templates
+            </a>
+            <a href="query-builder.html" class="nav-item">
+                <span class="nav-icon">🔍</span>
+                Query Builder
+            </a>
+            <a href="api-explorer.html" class="nav-item">
+                <span class="nav-icon">🔌</span>
+                API Explorer
+            </a>
+            <a href="logs.html" class="nav-item">
+                <span class="nav-icon">📝</span>
+                Logs
+            </a>
+            <a href="pipeline-editor.html" class="nav-item active">
+                <span class="nav-icon">🔄</span>
+                Pipeline Editor
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">System</div>
+            <a href="settings.html" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                Settings
+            </a>
+            <a href="security.html" class="nav-item">
+                <span class="nav-icon">🔒</span>
+                Security
+            </a>
+            <a href="devops.html" class="nav-item">
+                <span class="nav-icon">🚀</span>
+                DevOps
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔄 Jenkins Pipeline Editor</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="generateJenkinsfile()">🚀 Generate Jenkinsfile</button>
+                <button class="btn btn-primary" onclick="downloadJenkinsfile()">💾 Download</button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs-pipeline">
+            <button class="tab-pipeline active" onclick="switchPipelineTab('editor')">
+                📝 Editor
+            </button>
+            <button class="tab-pipeline" onclick="switchPipelineTab('templates')">
+                📋 Templates
+            </button>
+            <button class="tab-pipeline" onclick="switchPipelineTab('docs')">
+                📖 Documentation
+            </button>
+        </div>
+
+        <!-- Editor Tab -->
+        <div id="editor-tab" class="tab-content-pipeline active">
+            <div class="editor-layout">
+                <div class="editor-panel">
+                    <h3>Quantum Pipeline XML (<code>&lt;q:pipeline&gt;</code>)</h3>
+                    <textarea id="xml-editor" class="xml-editor" spellcheck="false">
+<q:pipeline name="Example Pipeline" description="Build and deploy application">
+    <q:agent type="any"/>
+
+    <q:environment>
+        <q:var name="APP_NAME">myapp</q:var>
+        <q:var name="ENVIRONMENT">production</q:var>
+    </q:environment>
+
+    <q:stage name="Checkout">
+        <q:step type="git" url="https://github.com/user/repo.git" branch="main"/>
+    </q:stage>
+
+    <q:stage name="Build">
+        <q:step type="shell">npm install</q:step>
+        <q:step type="shell">npm run build</q:step>
+    </q:stage>
+
+    <q:stage name="Test">
+        <q:step type="shell">npm test</q:step>
+    </q:stage>
+
+    <q:stage name="Deploy">
+        <q:step type="shell">npm run deploy</q:step>
+    </q:stage>
+
+    <q:post>
+        <q:success>
+            <q:step type="shell">echo "Deployment successful!"</q:step>
+        </q:success>
+        <q:failure>
+            <q:step type="shell">echo "Deployment failed!"</q:step>
+        </q:failure>
+    </q:post>
+</q:pipeline></textarea>
+                    <div id="error-message"></div>
+                </div>
+
+                <div class="editor-panel">
+                    <h3>Generated Jenkinsfile</h3>
+                    <div id="jenkinsfile-output" class="jenkinsfile-output">
+// Click "Generate Jenkinsfile" to see the output...
+                    </div>
+                    <div id="success-message"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Templates Tab -->
+        <div id="templates-tab" class="tab-content-pipeline">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Pipeline Templates</h2>
+                </div>
+
+                <div class="template-grid">
+                    <div class="template-card" onclick="loadTemplate('basic-build')">
+                        <div class="template-icon">🏗️</div>
+                        <div class="template-name">Basic Build</div>
+                        <div class="template-description">Simple build and test pipeline</div>
+                    </div>
+
+                    <div class="template-card" onclick="loadTemplate('docker-deploy')">
+                        <div class="template-icon">🐳</div>
+                        <div class="template-name">Docker Deploy</div>
+                        <div class="template-description">Build and deploy Docker images</div>
+                    </div>
+
+                    <div class="template-card" onclick="loadTemplate('parallel-tests')">
+                        <div class="template-icon">⚡</div>
+                        <div class="template-name">Parallel Tests</div>
+                        <div class="template-description">Run tests in parallel stages</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documentation Tab -->
+        <div id="docs-tab" class="tab-content-pipeline">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Quantum Pipeline XML Documentation</h2>
+                </div>
+
+                <div style="padding: 20px; line-height: 1.8;">
+                    <h3>Overview</h3>
+                    <p>Quantum Pipeline XML (<code>&lt;q:pipeline&gt;</code>) is a simplified abstraction for Jenkins pipelines that generates valid Jenkinsfiles.</p>
+
+                    <h3>Basic Structure</h3>
+                    <pre><code>&lt;q:pipeline name="Pipeline Name" description="Description"&gt;
+    &lt;q:agent type="any"/&gt;
+    &lt;q:stage name="Stage Name"&gt;
+        &lt;q:step type="shell"&gt;command&lt;/q:step&gt;
+    &lt;/q:stage&gt;
+&lt;/q:pipeline&gt;</code></pre>
+
+                    <h3>Agent Types</h3>
+                    <ul>
+                        <li><code>any</code> - Run on any available agent</li>
+                        <li><code>docker</code> - Run in a Docker container (requires <code>image</code> attribute)</li>
+                        <li><code>node</code> - Run on a specific node (requires <code>label</code> attribute)</li>
+                    </ul>
+
+                    <h3>Step Types</h3>
+                    <ul>
+                        <li><code>shell</code> - Execute shell command</li>
+                        <li><code>script</code> - Execute Groovy script</li>
+                        <li><code>git</code> - Checkout Git repository (requires <code>url</code> and <code>branch</code>)</li>
+                        <li><code>docker</code> - Run command in Docker container</li>
+                    </ul>
+
+                    <h3>Environment Variables</h3>
+                    <pre><code>&lt;q:environment&gt;
+    &lt;q:var name="VAR_NAME"&gt;value&lt;/q:var&gt;
+&lt;/q:environment&gt;</code></pre>
+
+                    <h3>Parallel Stages</h3>
+                    <pre><code>&lt;q:stage name="Parallel Tests" parallel="true"&gt;
+    &lt;q:step&gt;test1&lt;/q:step&gt;
+    &lt;q:step&gt;test2&lt;/q:step&gt;
+&lt;/q:stage&gt;</code></pre>
+
+                    <h3>Post Actions</h3>
+                    <pre><code>&lt;q:post&gt;
+    &lt;q:success&gt;
+        &lt;q:step&gt;success commands&lt;/q:step&gt;
+    &lt;/q:success&gt;
+    &lt;q:failure&gt;
+        &lt;q:step&gt;failure commands&lt;/q:step&gt;
+    &lt;/q:failure&gt;
+&lt;/q:post&gt;</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="quantum-enhancements.js"></script>
+    <script src="i18n.js"></script>
+    <script src="websocket-client.js"></script>
+    <script src="pipeline-editor.js"></script>
+</body>
+</html>

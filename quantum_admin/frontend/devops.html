@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Admin - DevOps</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="quantum-enhancements.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            ⚛️ <span>Quantum</span>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Overview</div>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                Dashboard
+            </a>
+            <a href="monitoring.html" class="nav-item">
+                <span class="nav-icon">📈</span>
+                Monitoring
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Data Sources</div>
+            <a href="datasources.html" class="nav-item">
+                <span class="nav-icon">🗄️</span>
+                Datasources
+            </a>
+            <a href="containers.html" class="nav-item">
+                <span class="nav-icon">🐳</span>
+                Containers
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Development</div>
+            <a href="components.html" class="nav-item">
+                <span class="nav-icon">📦</span>
+                Components
+            </a>
+            <a href="playground.html" class="nav-item">
+                <span class="nav-icon">🎮</span>
+                Playground
+            </a>
+            <a href="templates.html" class="nav-item">
+                <span class="nav-icon">📋</span>
+                Templates
+            </a>
+            <a href="query-builder.html" class="nav-item">
+                <span class="nav-icon">🔍</span>
+                Query Builder
+            </a>
+            <a href="api-explorer.html" class="nav-item">
+                <span class="nav-icon">🔌</span>
+                API Explorer
+            </a>
+            <a href="logs.html" class="nav-item">
+                <span class="nav-icon">📝</span>
+                Logs
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">System</div>
+            <a href="settings.html" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                Settings
+            </a>
+            <a href="security.html" class="nav-item">
+                <span class="nav-icon">🔒</span>
+                Security
+            </a>
+            <a href="devops.html" class="nav-item active">
+                <span class="nav-icon">🚀</span>
+                DevOps
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <h1>🚀 DevOps & Performance</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="refreshAll()">🔄 Refresh All</button>
+            </div>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon green">✅</div>
+                <div class="stat-content">
+                    <h3 id="active-tasks-count">0</h3>
+                    <p>Active Tasks</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon blue">💾</div>
+                <div class="stat-content">
+                    <h3 id="cache-hit-rate">0%</h3>
+                    <p>Cache Hit Rate</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon orange">🌍</div>
+                <div class="stat-content">
+                    <h3 id="current-environment">development</h3>
+                    <p>Current Environment</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon purple">🔌</div>
+                <div class="stat-content">
+                    <h3 id="webhook-count">2</h3>
+                    <p>Webhooks Active</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deployments -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🚢 Deployments</h2>
+                <button class="btn btn-primary" onclick="showDeployModal()">🚀 New Deployment</button>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab(event, 'deploy-tab')">Deploy</button>
+                <button class="tab-btn" onclick="switchTab(event, 'rollback-tab')">Rollback</button>
+                <button class="tab-btn" onclick="switchTab(event, 'history-tab')">History</button>
+            </div>
+
+            <div id="deploy-tab" class="tab-content" style="display: block;">
+                <form id="deploy-form" style="max-width: 600px; margin: 20px 0;">
+                    <div class="form-group">
+                        <label>Environment</label>
+                        <select id="deploy-environment" class="form-control">
+                            <option value="development">Development</option>
+                            <option value="staging">Staging</option>
+                            <option value="production">Production</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Branch</label>
+                        <input type="text" id="deploy-branch" class="form-control" value="main" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="deploy-migrations" checked />
+                            Run database migrations
+                        </label>
+                    </div>
+
+                    <button type="button" class="btn btn-primary" onclick="deployApplication()">🚀 Deploy Now</button>
+                </form>
+
+                <div id="deploy-status" style="display: none; margin-top: 20px;">
+                    <h3>Deployment in Progress...</h3>
+                    <div class="progress-bar">
+                        <div id="deploy-progress" class="progress-fill" style="width: 0%;"></div>
+                    </div>
+                    <p id="deploy-message" style="margin-top: 10px; color: #7f8c8d;"></p>
+                </div>
+            </div>
+
+            <div id="rollback-tab" class="tab-content" style="display: none;">
+                <p style="color: #7f8c8d; padding: 20px;">Rollback functionality coming soon...</p>
+            </div>
+
+            <div id="history-tab" class="tab-content" style="display: none;">
+                <p style="color: #7f8c8d; padding: 20px;">Deployment history coming soon...</p>
+            </div>
+        </div>
+
+        <!-- Background Tasks -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">⚙️ Background Tasks</h2>
+                <button class="btn" onclick="loadActiveTasks()">🔄 Refresh</button>
+            </div>
+
+            <table id="tasks-table">
+                <thead>
+                    <tr>
+                        <th>Task ID</th>
+                        <th>Name</th>
+                        <th>Worker</th>
+                        <th>Status</th>
+                        <th>Started At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tasks-list">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #7f8c8d; padding: 20px;">
+                            No active tasks
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Environments -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🌍 Environments</h2>
+            </div>
+
+            <table id="environments-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>API URL</th>
+                        <th>Debug</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="environments-list">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #7f8c8d; padding: 20px;">
+                            Loading environments...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Cache Management -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">💾 Cache Management</h2>
+                <button class="btn btn-danger" onclick="clearAllCache()">🗑️ Clear All Cache</button>
+            </div>
+
+            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #27ae60;" id="cache-hits">0</div>
+                    <div style="color: #7f8c8d; font-size: 14px;">Cache Hits</div>
+                </div>
+                <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #e74c3c;" id="cache-misses">0</div>
+                    <div style="color: #7f8c8d; font-size: 14px;">Cache Misses</div>
+                </div>
+                <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #3498db;" id="cache-total">0</div>
+                    <div style="color: #7f8c8d; font-size: 14px;">Total Requests</div>
+                </div>
+                <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #9b59b6;" id="cache-errors">0</div>
+                    <div style="color: #7f8c8d; font-size: 14px;">Errors</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Monitoring -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">⚡ Performance Monitoring</h2>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab(event, 'slow-queries-tab')">Slow Queries</button>
+                <button class="tab-btn" onclick="switchTab(event, 'rate-limit-tab')">Rate Limiting</button>
+            </div>
+
+            <div id="slow-queries-tab" class="tab-content" style="display: block;">
+                <table id="slow-queries-table">
+                    <thead>
+                        <tr>
+                            <th>Query</th>
+                            <th>Duration (ms)</th>
+                            <th>Count</th>
+                            <th>Avg Time</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="slow-queries-list">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #7f8c8d; padding: 20px;">
+                                No slow queries detected
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="rate-limit-tab" class="tab-content" style="display: none;">
+                <div style="padding: 20px;">
+                    <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                        <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="font-size: 20px; font-weight: bold; color: #2c3e50;" id="rate-limit-remaining">1000</div>
+                            <div style="color: #7f8c8d; font-size: 14px;">Remaining Requests</div>
+                        </div>
+                        <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="font-size: 20px; font-weight: bold; color: #3498db;" id="rate-limit-limit">1000</div>
+                            <div style="color: #7f8c8d; font-size: 14px;">Hourly Limit</div>
+                        </div>
+                        <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="font-size: 20px; font-weight: bold; color: #27ae60;" id="rate-limit-status">Active</div>
+                            <div style="color: #7f8c8d; font-size: 14px;">Status</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="quantum-enhancements.js"></script>
+    <script src="i18n.js"></script>
+    <script src="websocket-client.js"></script>
+    <script src="devops.js"></script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Admin - API Explorer</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="quantum-enhancements.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            ⚛️ <span>Quantum</span>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Overview</div>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                Dashboard
+            </a>
+            <a href="monitoring.html" class="nav-item">
+                <span class="nav-icon">📈</span>
+                Monitoring
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Data Sources</div>
+            <a href="datasources.html" class="nav-item">
+                <span class="nav-icon">🗄️</span>
+                Datasources
+            </a>
+            <a href="containers.html" class="nav-item">
+                <span class="nav-icon">🐳</span>
+                Containers
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">Development</div>
+            <a href="components.html" class="nav-item">
+                <span class="nav-icon">📦</span>
+                Components
+            </a>
+            <a href="api-explorer.html" class="nav-item active">
+                <span class="nav-icon">🔌</span>
+                API Explorer
+            </a>
+            <a href="logs.html" class="nav-item">
+                <span class="nav-icon">📝</span>
+                Logs
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">System</div>
+            <a href="settings.html" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                Settings
+            </a>
+            <a href="security.html" class="nav-item">
+                <span class="nav-icon">🔒</span>
+                Security
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔌 API Explorer</h1>
+            <div class="header-actions">
+                <button class="btn" onclick="loadEndpoints()">🔄 Refresh</button>
+                <button class="btn btn-primary" onclick="exportCollection()">📥 Export Collection</button>
+            </div>
+        </div>
+
+        <!-- Request Builder -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🛠️ Request Builder</h2>
+            </div>
+
+            <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                <select id="method" style="padding: 10px; border: 1px solid #ddd; border-radius: 6px; width: 120px;">
+                    <option value="GET" style="color: #28a745;">GET</option>
+                    <option value="POST" style="color: #007bff;">POST</option>
+                    <option value="PUT" style="color: #ffc107;">PUT</option>
+                    <option value="PATCH" style="color: #17a2b8;">PATCH</option>
+                    <option value="DELETE" style="color: #dc3545;">DELETE</option>
+                </select>
+
+                <input type="text" id="url" placeholder="http://localhost:8000/api/endpoint" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+
+                <button class="btn btn-primary" onclick="sendRequest()" style="padding: 10px 30px;">📤 Send</button>
+            </div>
+
+            <!-- Tabs for Headers/Body/Params -->
+            <div style="border-bottom: 2px solid #ecf0f1; margin-bottom: 20px;">
+                <button class="tab-btn active" onclick="switchTab('params')">Params</button>
+                <button class="tab-btn" onclick="switchTab('headers')">Headers</button>
+                <button class="tab-btn" onclick="switchTab('body')">Body</button>
+            </div>
+
+            <!-- Params Tab -->
+            <div id="params-tab" class="tab-content active">
+                <div id="params-list">
+                    <div class="param-row" style="display: grid; grid-template-columns: 1fr 1fr 40px; gap: 10px; margin-bottom: 10px;">
+                        <input type="text" placeholder="Key" class="param-key" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <input type="text" placeholder="Value" class="param-value" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <button class="btn btn-sm" onclick="this.parentElement.remove()">🗑️</button>
+                    </div>
+                </div>
+                <button class="btn btn-sm" onclick="addParam()">+ Add Param</button>
+            </div>
+
+            <!-- Headers Tab -->
+            <div id="headers-tab" class="tab-content">
+                <div id="headers-list">
+                    <div class="header-row" style="display: grid; grid-template-columns: 1fr 1fr 40px; gap: 10px; margin-bottom: 10px;">
+                        <input type="text" placeholder="Header Name" class="header-key" value="Content-Type" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <input type="text" placeholder="Header Value" class="header-value" value="application/json" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <button class="btn btn-sm" onclick="this.parentElement.remove()">🗑️</button>
+                    </div>
+                </div>
+                <button class="btn btn-sm" onclick="addHeader()">+ Add Header</button>
+            </div>
+
+            <!-- Body Tab -->
+            <div id="body-tab" class="tab-content">
+                <select id="body-type" onchange="updateBodyEditor()" style="margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="none">None</option>
+                    <option value="json">JSON</option>
+                    <option value="form">Form Data</option>
+                    <option value="text">Raw Text</option>
+                </select>
+
+                <textarea id="body-content" rows="10" placeholder='{&#10;  "key": "value"&#10;}' style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-family: 'Monaco', monospace; display: none;"></textarea>
+
+                <div id="form-data-editor" style="display: none;">
+                    <p style="color: #7f8c8d;">Form data editor (key-value pairs)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Response Viewer -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📨 Response</h2>
+                <div>
+                    <span id="status-badge" style="display: none;"></span>
+                    <span id="response-time" style="color: #7f8c8d; margin-left: 15px;"></span>
+                </div>
+            </div>
+
+            <div id="response-viewer" style="min-height: 200px;">
+                <div style="text-align: center; padding: 60px; color: #7f8c8d;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">🔌</div>
+                    <p>Send a request to see the response here</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Saved Endpoints -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">💾 Available Endpoints</h2>
+            </div>
+
+            <div id="endpoints-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            color: #7f8c8d;
+            font-weight: 500;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .endpoint-card {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .endpoint-card:hover {
+            transform: translateX(5px);
+            background: #e9ecef;
+        }
+    </style>
+
+    <script src="quantum-enhancements.js"></script>
+    <script src="i18n.js"></script>
+    <script src="websocket-client.js"></script>
+    <script src="api-explorer.js"></script>
+</body>
+</html>

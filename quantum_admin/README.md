@@ -1,41 +1,116 @@
-# Quantum Admin
+# ⚛️ Quantum Admin
 
-Administration interface for Quantum Language projects.
+> **The Ultimate Enterprise Administration Interface**
 
-## Features
+Administration interface for Quantum Language projects with enterprise-grade features.
 
-- **Project Management**: Create, update, and manage Quantum projects
-- **Datasource Management**: Configure database connections (Docker or direct)
-- **Docker Container Management**: Create, start, stop, restart database containers
-- **Container Monitoring**: View container status, logs, and health
-- **Component Tracking**: Monitor component status and compilation
-- **API Endpoints**: View and manage REST API endpoints
-- **SQLite Database**: Zero-configuration local database
+## ✨ Features
 
-## Quick Start
+### 🔐 Authentication & Authorization
+- **JWT Authentication**: Secure token-based auth with refresh tokens
+- **RBAC System**: Role-Based Access Control (Admin, Developer, Viewer)
+- **Session Management**: Track active sessions with IP and user-agent
+- **Password Security**: bcrypt hashing with configurable rounds
 
-### 1. Install Dependencies
+### 🔌 Real-Time Updates
+- **WebSocket Server**: Bidirectional real-time communication
+- **Pub/Sub Messaging**: Channel-based event broadcasting
+- **20+ Event Types**: Containers, tasks, deployments, system, metrics
+- **Auto-Reconnect**: Exponential backoff for resilient connections
+
+### 🔄 Jenkins Pipeline Designer
+- **Visual Pipeline Editor**: `<q:pipeline>` XML abstraction
+- **Jenkinsfile Generation**: Automatic conversion to Jenkinsfile
+- **Built-in Templates**: Basic build, Docker deploy, parallel tests
+- **Advanced Features**: Parallel stages, post-actions, parameters
+
+### 🐳 Container Management
+- **Visual Wizard**: Drag-and-drop container designer
+- **12+ Templates**: PostgreSQL, MySQL, MongoDB, Redis, Nginx, LAMP, MEAN
+- **Network Diagrams**: SVG visualization of container relationships
+- **One-Click Deploy**: From design to running containers
+
+### 📊 Performance & DevOps
+- **Redis Caching**: Decorator-based caching layer
+- **Celery Queue**: Background job processing
+- **Rate Limiting**: Sliding window API rate limits
+- **CI/CD Integration**: GitHub Actions, webhooks, environments
+
+### 🎨 Modern UI
+- **Dark Mode**: System-aware theme switching
+- **Command Palette**: Cmd+K for quick navigation
+- **AI Assistant**: RAG-powered help system
+- **Multi-Language**: EN, PT-BR support
+
+### 📈 Data Management
+- **Multiple Databases**: SQLite, PostgreSQL, MySQL support
+- **Visual Query Builder**: Drag-and-drop SQL queries
+- **Chart Integration**: Chart.js visualization
+- **Component Playground**: Live code editor
+
+## 🚀 Quick Start
+
+### ⚡ Interactive Installer (Recommended)
 
 ```bash
-cd quantum_admin/backend
+# From the quantum directory (parent of quantum_admin)
+python3 install.py
+```
+
+The installer will guide you through:
+1. ✅ System verification (Python, Docker, ports)
+2. 🎯 Installation type (Full, Development, Custom)
+3. 🗄️ Database configuration (SQLite, PostgreSQL, MySQL)
+4. ⚡ Redis setup
+5. 👤 Admin user creation
+6. 📦 Automatic dependency installation
+7. ⚙️ Environment file generation
+
+**See:** [../INSTALL.md](../INSTALL.md) for detailed installation guide.
+
+---
+
+### 📋 Manual Installation
+
+If you prefer manual installation:
+
+#### 1. Install Dependencies
+
+```bash
+cd quantum_admin
 pip install -r requirements.txt
 ```
 
-### 2. Run the Server
+#### 2. Configure Environment
+
+Create `.env` file in the root directory:
 
 ```bash
-# From the quantum_admin directory
-python run.py
+DATABASE_URL=sqlite:///quantum_admin.db
+JWT_SECRET_KEY=your-secret-key
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin123
+```
+
+#### 3. Run the Server
+
+```bash
+# From the quantum_admin/backend directory
+python main.py
+
+# Or using the management CLI
+cd .. && python quantum-cli.py start
 ```
 
 The API will be available at `http://localhost:8000`
 
-**Note**: Docker Desktop must be running for datasource container management features.
+#### 4. Access the Interface
 
-### 3. Access API Documentation
-
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+- **Login Page**: http://localhost:8000/static/login.html
+- **Dashboard**: http://localhost:8000/static/index.html
+- **API Docs**: http://localhost:8000/docs
+- **Pipeline Editor**: http://localhost:8000/static/pipeline-editor.html
+- **Container Wizard**: http://localhost:8000/static/container-wizard.html
 
 ## Project Structure
 

@@ -11,9 +11,9 @@ from typing import Union, Optional, List
 sys.path.append(str(Path(__file__).parent.parent))
 
 from core.ast_nodes import (
-    QuantumNode, ComponentNode, ApplicationNode, JobNode,
+    QuantumNode, ComponentNode, ApplicationNode, JobNode, DatasourceNode,
     QuantumParam, QuantumReturn, QuantumRoute, IfNode, LoopNode, SetNode,
-    FunctionNode, DispatchEventNode, OnEventNode, RestConfig, QueryNode, QueryParamNode,
+    FunctionNode, FunctionCallNode, DispatchEventNode, OnEventNode, RestConfig, QueryNode, QueryParamNode,
     InvokeNode, InvokeHeaderNode, DataNode, ColumnNode, FieldNode, TransformNode,
     FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode,
     HTMLNode, TextNode, DocTypeNode, CommentNode, HTML_VOID_ELEMENTS,
@@ -22,6 +22,17 @@ from core.ast_nodes import (
 )
 from core.features.logging.src import LogNode, parse_log
 from core.features.dump.src import DumpNode, parse_dump
+
+# AI Features (Phase K)
+from core.features.llm.src import LLMNode, LLMGenerateNode, LLMChatNode, parse_llm, parse_llm_generate, parse_llm_chat
+from core.features.rag.src import KnowledgeNode, SearchNode, parse_knowledge, parse_search
+from core.features.agents.src import AgentNode, AgentAskNode, AgentChatNode, parse_agent, parse_agent_ask, parse_agent_chat
+
+# Functions Feature
+from core.features.functions.src import FunctionNode, parse_function, parse_function_param
+
+# Event System
+from core.features.events.src import OnEventNode, DispatchEventNode, parse_on_event, parse_dispatch_event
 
 class QuantumParseError(Exception):
     """Quantum parsing error"""
@@ -32,6 +43,7 @@ class QuantumParser:
     
     def __init__(self):
         self.quantum_ns = {'q': 'https://quantum.lang/ns'}
+        self.current_application = None  # Store application for datasource lookup
 
     def _inject_namespace(self, content: str) -> str:
         """
@@ -200,8 +212,17 @@ class QuantumParser:
             elif child_type == 'set':
                 set_node = self._parse_set_statement(child)
                 component.add_statement(set_node)
+            elif child_type == 'call':
+                call_node = self._parse_function_call(child)
+                component.add_statement(call_node)
             elif child_type == 'dispatchEvent':
                 dispatch_node = self._parse_dispatch_event(child)
+                component.add_statement(dispatch_node)
+            elif child_type == 'on':
+                on_node = parse_on_event(child)
+                component.add_statement(on_node)
+            elif child_type == 'dispatch':
+                dispatch_node = parse_dispatch_event(child)
                 component.add_statement(dispatch_node)
             elif child_type == 'query':
                 query_node = self._parse_query_statement(child)
@@ -218,6 +239,48 @@ class QuantumParser:
             elif child_type == 'dump':
                 dump_node = parse_dump(child)
                 component.add_statement(dump_node)
+
+            # AI Features (Phase K)
+            elif child_type == 'llm':
+                llm_node = parse_llm(child)
+                component.add_statement(llm_node)
+            elif child_type == 'llm-generate':
+                llm_gen_node = parse_llm_generate(child)
+                component.add_statement(llm_gen_node)
+            elif child_type == 'llm-chat':
+                llm_chat_node = parse_llm_chat(child)
+                component.add_statement(llm_chat_node)
+            elif child_type == 'knowledge':
+                knowledge_node = parse_knowledge(child)
+                component.add_statement(knowledge_node)
+            elif child_type == 'search':
+                search_node = parse_search(child)
+                component.add_statement(search_node)
+            elif child_type == 'agent':
+                agent_node = parse_agent(child)
+                component.add_statement(agent_node)
+            elif child_type == 'agent-ask':
+                agent_ask_node = parse_agent_ask(child)
+                component.add_statement(agent_ask_node)
+            elif child_type == 'agent-chat':
+                agent_chat_node = parse_agent_chat(child)
+                component.add_statement(agent_chat_node)
+
+            # Functions Feature
+            elif child_type == 'function':
+                function_node = parse_function(child)
+                # Parse function body (statements and params)
+                for func_child in child:
+                    func_child_type = self._get_element_name(func_child)
+                    if func_child_type == 'param':
+                        param = parse_function_param(func_child)
+                        function_node.add_param(param)
+                    else:
+                        # Parse statement inside function body
+                        stmt = self._parse_statement(func_child)
+                        if stmt:
+                            function_node.add_statement(stmt)
+                component.add_statement(function_node)
 
             # Forms & Actions (Phase A)
             elif child_type == 'action':
@@ -398,6 +461,33 @@ class QuantumParser:
 
         return set_node
 
+    def _parse_function_call(self, call_element: ET.Element) -> FunctionCallNode:
+        """
+        Parse q:call statement - Function invocation
+
+        Examples:
+          <q:call function="greet" name="Alice" />
+          <q:call function="calculateDiscount" price="100" percentage="20" result="finalPrice" />
+        """
+        function_name = call_element.get('function')
+        if not function_name:
+            raise QuantumParseError("Function call requires 'function' attribute")
+
+        # Extract result variable (if any)
+        result_var = call_element.get('result')
+
+        # Extract all other attributes as function arguments
+        args = {}
+        for key, value in call_element.attrib.items():
+            if key not in ('function', 'result'):
+                args[key] = value
+
+        return FunctionCallNode(
+            function_name=function_name,
+            args=args,
+            result_var=result_var
+        )
+
     def _parse_statement(self, element: ET.Element) -> Optional[QuantumNode]:
         """Parse individual statement (return, set, dispatchEvent, etc)"""
         element_type = self._get_element_name(element)
@@ -407,12 +497,18 @@ class QuantumParser:
             return self._parse_return(element)
         elif element_type == 'set':
             return self._parse_set_statement(element)
+        elif element_type == 'call':
+            return self._parse_function_call(element)
         elif element_type == 'loop':
             return self._parse_loop_statement(element)
         elif element_type == 'if':
             return self._parse_if_statement(element)
         elif element_type == 'dispatchEvent':
             return self._parse_dispatch_event(element)
+        elif element_type == 'on':
+            return parse_on_event(element)
+        elif element_type == 'dispatch':
+            return parse_dispatch_event(element)
         elif element_type == 'query':
             return self._parse_query_statement(element)
         elif element_type == 'invoke':
@@ -423,6 +519,39 @@ class QuantumParser:
             return parse_log(element)
         elif element_type == 'dump':
             return parse_dump(element)
+
+        # AI Features (Phase K)
+        elif element_type == 'llm':
+            return parse_llm(element)
+        elif element_type == 'llm-generate':
+            return parse_llm_generate(element)
+        elif element_type == 'llm-chat':
+            return parse_llm_chat(element)
+        elif element_type == 'knowledge':
+            return parse_knowledge(element)
+        elif element_type == 'search':
+            return parse_search(element)
+        elif element_type == 'agent':
+            return parse_agent(element)
+        elif element_type == 'agent-ask':
+            return parse_agent_ask(element)
+        elif element_type == 'agent-chat':
+            return parse_agent_chat(element)
+
+        # Functions Feature
+        elif element_type == 'function':
+            function_node = parse_function(element)
+            # Parse function body
+            for func_child in element:
+                func_child_type = self._get_element_name(func_child)
+                if func_child_type == 'param':
+                    param = parse_function_param(func_child)
+                    function_node.add_param(param)
+                else:
+                    stmt = self._parse_statement(func_child)
+                    if stmt:
+                        function_node.add_statement(stmt)
+            return function_node
 
         # Forms & Actions (Phase A)
         elif element_type == 'action':
@@ -459,23 +588,131 @@ class QuantumParser:
         """Parse q:application"""
         app_id = root.get('id', path.stem)
         app_type = root.get('type', 'html')
-        
+
         app = ApplicationNode(app_id, app_type)
-        
+
+        # Parse q:datasource elements (unified data sources)
+        for datasource_el in self._find_all_elements(root, 'datasource'):
+            datasource = self._parse_datasource(datasource_el)
+            app.add_datasource(datasource)
+
         # Parse q:route elements
         for route_el in self._find_all_elements(root, 'route'):
             route = self._parse_route(route_el)
             app.add_route(route)
-        
+
+        # Store application reference for query parsing
+        self.current_application = app
+
         return app
     
     def _parse_job(self, root: ET.Element, path: Path) -> JobNode:
         """Parse q:job"""
         job_id = root.get('id', path.stem)
         schedule = root.get('schedule')
-        
+
         return JobNode(job_id, schedule)
-    
+
+    def _parse_datasource(self, element: ET.Element) -> DatasourceNode:
+        """
+        Parse <datasource> tag - Unified data source configuration
+
+        Examples:
+          <!-- SQL Database -->
+          <datasource id="db" type="postgres" host="localhost" database="mydb" />
+
+          <!-- LLM -->
+          <datasource id="ai" type="llm" provider="ollama" model="llama3" temperature="0.7">
+            <system-prompt>You are a helpful assistant</system-prompt>
+          </datasource>
+
+          <!-- Knowledge/RAG -->
+          <datasource id="docs" type="knowledge" source="./docs/*.md"
+            embedding="ollama" chunk_size="500" />
+        """
+        datasource_id = element.get('id')
+        datasource_type = element.get('type')
+
+        if not datasource_id:
+            raise QuantumParseError("Datasource requires 'id' attribute")
+        if not datasource_type:
+            raise QuantumParseError("Datasource requires 'type' attribute")
+
+        # Parse common attributes
+        host = element.get('host')
+        port_str = element.get('port')
+        port = int(port_str) if port_str else None
+        database = element.get('database')
+        username = element.get('username')
+        password = element.get('password')
+
+        # Parse LLM-specific attributes
+        provider = element.get('provider')
+        model = element.get('model')
+        temperature = float(element.get('temperature', '0.7'))
+        max_tokens_str = element.get('max_tokens')
+        max_tokens = int(max_tokens_str) if max_tokens_str else None
+        api_key = element.get('api_key')
+
+        # Parse system prompt from child element
+        system_prompt = None
+        system_prompt_elem = element.find('.//system-prompt')
+        if system_prompt_elem is not None:
+            system_prompt = system_prompt_elem.text or ""
+
+        # Parse Knowledge/RAG-specific attributes
+        source = element.get('source')
+        embedding = element.get('embedding')
+        embedding_model = element.get('embedding_model')
+        chunk_size = int(element.get('chunk_size', '500'))
+        chunk_overlap = int(element.get('chunk_overlap', '100'))
+        vector_db = element.get('vector_db')
+        collection = element.get('collection')
+
+        # Parse REST API-specific attributes
+        base_url = element.get('base_url')
+        auth_type = element.get('auth_type')
+        auth_token = element.get('auth_token')
+
+        # Parse additional options
+        options = {}
+        known_attrs = {
+            'id', 'type', 'host', 'port', 'database', 'username', 'password',
+            'provider', 'model', 'temperature', 'max_tokens', 'api_key',
+            'source', 'embedding', 'embedding_model', 'chunk_size', 'chunk_overlap',
+            'vector_db', 'collection', 'base_url', 'auth_type', 'auth_token'
+        }
+        for key, value in element.attrib.items():
+            if key not in known_attrs:
+                options[key] = value
+
+        return DatasourceNode(
+            datasource_id=datasource_id,
+            datasource_type=datasource_type,
+            host=host,
+            port=port,
+            database=database,
+            username=username,
+            password=password,
+            provider=provider,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            system_prompt=system_prompt,
+            api_key=api_key,
+            source=source,
+            embedding=embedding,
+            embedding_model=embedding_model,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            vector_db=vector_db,
+            collection=collection,
+            base_url=base_url,
+            auth_type=auth_type,
+            auth_token=auth_token,
+            options=options
+        )
+
     def _parse_param(self, element: ET.Element) -> QuantumParam:
         """Parse q:param"""
         param = QuantumParam(
@@ -708,7 +945,15 @@ class QuantumParser:
         return event_node
 
     def _parse_query_statement(self, query_element: ET.Element) -> QueryNode:
-        """Parse q:query statement"""
+        """
+        Parse q:query statement
+
+        MAGIC: Auto-detects datasource type and converts to appropriate node!
+        - datasource type=llm       → converts to LLMGenerateNode
+        - datasource type=knowledge → converts to SearchNode
+        - datasource type=postgres  → QueryNode (SQL)
+        - datasource type=redis     → QueryNode (cache)
+        """
         name = query_element.get('name')
         datasource = query_element.get('datasource')
         source = query_element.get('source')
@@ -718,7 +963,20 @@ class QuantumParser:
         if not datasource and not source:
             raise QuantumParseError("Query requires either 'datasource' or 'source' attribute")
 
-        # Extract SQL content (text between tags, excluding q:param children)
+        # ✨ MAGIC: Check if datasource is LLM or Knowledge and convert!
+        if datasource and self.current_application:
+            ds_config = self.current_application.get_datasource(datasource)
+
+            if ds_config:
+                # Convert to LLMGenerateNode if datasource is LLM
+                if ds_config.datasource_type == 'llm':
+                    return self._convert_query_to_llm_generate(query_element, name, datasource)
+
+                # Convert to SearchNode if datasource is Knowledge/RAG
+                elif ds_config.datasource_type == 'knowledge':
+                    return self._convert_query_to_search(query_element, name, datasource)
+
+        # Extract SQL/query content (text between tags, excluding q:param children)
         sql_parts = []
         if query_element.text:
             sql_parts.append(query_element.text.strip())
@@ -793,6 +1051,78 @@ class QuantumParser:
                 query_node.add_param(param_node)
 
         return query_node
+
+    def _convert_query_to_llm_generate(self, query_element: ET.Element, result_var: str, llm_id: str) -> LLMGenerateNode:
+        """
+        Convert <q:query datasource="ai"> to LLMGenerateNode
+
+        Example:
+          <q:query name="summary" datasource="ai">
+            Summarize: {text}
+          </q:query>
+
+        Converts to:
+          <q:llm-generate llm="ai" prompt="Summarize: {text}" result="summary" />
+        """
+        # Extract prompt from query content
+        prompt_parts = []
+        if query_element.text:
+            prompt_parts.append(query_element.text.strip())
+
+        for child in query_element:
+            if child.tail:
+                prompt_parts.append(child.tail.strip())
+
+        prompt = '\n'.join(part for part in prompt_parts if part)
+
+        # Parse optional LLM-specific attributes
+        cache = query_element.get('cache', 'false').lower() == 'true'
+        cache_key = query_element.get('cache_key')
+        stream = query_element.get('stream', 'false').lower() == 'true'
+
+        return LLMGenerateNode(
+            llm_id=llm_id,
+            prompt=prompt,
+            result_var=result_var,
+            cache=cache,
+            cache_key=cache_key,
+            stream=stream
+        )
+
+    def _convert_query_to_search(self, query_element: ET.Element, result_var: str, knowledge_id: str) -> SearchNode:
+        """
+        Convert <q:query datasource="docs"> to SearchNode
+
+        Example:
+          <q:query name="results" datasource="docs">
+            authentication
+          </q:query>
+
+        Converts to:
+          <q:search knowledge="docs" query="authentication" result="results" />
+        """
+        # Extract query from content
+        query_parts = []
+        if query_element.text:
+            query_parts.append(query_element.text.strip())
+
+        for child in query_element:
+            if child.tail:
+                query_parts.append(child.tail.strip())
+
+        query_text = '\n'.join(part for part in query_parts if part)
+
+        # Parse optional search-specific attributes
+        top_k = int(query_element.get('top_k', '5'))
+        threshold = float(query_element.get('min_score', query_element.get('threshold', '0.0')))
+
+        return SearchNode(
+            knowledge_id=knowledge_id,
+            query=query_text,
+            result_var=result_var,
+            top_k=top_k,
+            threshold=threshold
+        )
 
     def _parse_query_param(self, param_element: ET.Element) -> QueryParamNode:
         """Parse q:param within q:query"""
