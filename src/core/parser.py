@@ -22,6 +22,10 @@ from core.ast_nodes import (
 )
 from core.features.logging.src import LogNode, parse_log
 from core.features.dump.src import DumpNode, parse_dump
+from core.features.game_engine_2d.src.parser import GameParser, GameParseError
+from core.features.game_engine_2d.src.ast_nodes import (
+    SceneNode, BehaviorNode, PrefabNode,
+)
 
 class QuantumParseError(Exception):
     """Quantum parsing error"""
@@ -35,19 +39,26 @@ class QuantumParser:
 
     def _inject_namespace(self, content: str) -> str:
         """
-        MAGIC: Automatically inject XML namespace for q: prefix
+        MAGIC: Automatically inject XML namespace for q: and qg: prefixes
 
         This allows users to write clean Quantum code without ceremony:
 
         Instead of:  <q:component name="Foo" xmlns:q="https://quantum.lang/ns">
         Write:       <q:component name="Foo">
 
+        For game apps, also injects xmlns:qg for game tags.
         Pure ColdFusion-style pragmatism!
         """
         import re
 
         # Check if namespace already present
         if 'xmlns:q' in content:
+            # Still check for qg: namespace in game apps
+            if 'xmlns:qg' not in content and ('qg:' in content or 'type="game"' in content):
+                content = content.replace(
+                    'xmlns:q="https://quantum.lang/ns"',
+                    'xmlns:q="https://quantum.lang/ns" xmlns:qg="https://quantum.lang/game"'
+                )
             return content
 
         # Find first q:component, q:application, or q:job tag
@@ -56,13 +67,29 @@ class QuantumParser:
         def add_namespace(match):
             tag = match.group(1)
             attrs = match.group(2) or ''
-            # Add namespace declaration
-            return f'<{tag}{attrs} xmlns:q="https://quantum.lang/ns">'
+            ns_decl = ' xmlns:q="https://quantum.lang/ns"'
+            # Auto-inject qg: namespace for game applications
+            if 'type="game"' in content or 'qg:' in content:
+                ns_decl += ' xmlns:qg="https://quantum.lang/game"'
+            return f'<{tag}{attrs}{ns_decl}>'
 
         # Replace first occurrence only
         content = re.sub(pattern, add_namespace, content, count=1)
 
         return content
+
+    def parse(self, source: str) -> QuantumNode:
+        """Parse Quantum XML from a string."""
+        try:
+            content = self._inject_namespace(source)
+            root = ET.fromstring(content)
+            return self._parse_root_element(root, Path("<string>"))
+        except ET.ParseError as e:
+            raise QuantumParseError(f"XML parse error: {e}")
+        except QuantumParseError:
+            raise
+        except Exception as e:
+            raise QuantumParseError(f"Unexpected error: {e}")
 
     def parse_file(self, file_path: str) -> QuantumNode:
         """Parse .q file and return AST"""
@@ -75,20 +102,10 @@ class QuantumParser:
             raise QuantumParseError(f"Invalid extension: {path.suffix}, expected .q")
 
         try:
-            # Read file content
-            with open(path, 'r', encoding='utf-8') as f:
-                content = f.read()
-
-            # MAGIC: Auto-inject namespace if not present
-            # This makes Quantum "just work" without ceremony
-            content = self._inject_namespace(content)
-
-            # Parse XML
-            root = ET.fromstring(content)
-            return self._parse_root_element(root, path)
-
-        except ET.ParseError as e:
-            raise QuantumParseError(f"XML parse error: {e}")
+            source = Path(file_path).read_text(encoding="utf-8")
+            return self.parse(source)
+        except QuantumParseError:
+            raise
         except Exception as e:
             raise QuantumParseError(f"Unexpected error: {e}")
     
@@ -411,6 +428,8 @@ class QuantumParser:
             return self._parse_loop_statement(element)
         elif element_type == 'if':
             return self._parse_if_statement(element)
+        elif element_type == 'function':
+            return self._parse_function(element)
         elif element_type == 'dispatchEvent':
             return self._parse_dispatch_event(element)
         elif element_type == 'query':
@@ -459,15 +478,49 @@ class QuantumParser:
         """Parse q:application"""
         app_id = root.get('id', path.stem)
         app_type = root.get('type', 'html')
-        
+
         app = ApplicationNode(app_id, app_type)
-        
+        app.engine = root.get('engine')
+
         # Parse q:route elements
         for route_el in self._find_all_elements(root, 'route'):
             route = self._parse_route(route_el)
             app.add_route(route)
-        
+
+        # Game Engine 2D: parse game children when type="game"
+        if app_type == 'game':
+            self._parse_game_application_children(root, app)
+
         return app
+
+    def _parse_game_application_children(self, root: ET.Element, app: ApplicationNode):
+        """Parse children of a game application (qg: elements at top level)."""
+        game_parser = GameParser(self)
+        for child in root:
+            local_name = self._get_element_name(child)
+            ns = self._get_element_game_namespace(child)
+
+            if ns == 'game':
+                node = game_parser.parse_game_element(local_name, child)
+                if isinstance(node, SceneNode):
+                    app.scenes.append(node)
+                elif isinstance(node, BehaviorNode):
+                    app.behaviors.append(node)
+                elif isinstance(node, PrefabNode):
+                    app.prefabs.append(node)
+
+    def _get_element_game_namespace(self, element: ET.Element) -> str:
+        """Detect if element belongs to qg: (game) or q: (quantum) namespace."""
+        tag = element.tag
+        if '{https://quantum.lang/game}' in tag:
+            return 'game'
+        if '{https://quantum.lang/ns}' in tag:
+            return 'quantum'
+        if tag.startswith('qg:'):
+            return 'game'
+        if tag.startswith('q:'):
+            return 'quantum'
+        return 'html'
     
     def _parse_job(self, root: ET.Element, path: Path) -> JobNode:
         """Parse q:job"""
@@ -791,6 +844,25 @@ class QuantumParser:
             if child_type == 'param':
                 param_node = self._parse_query_param(child)
                 query_node.add_param(param_node)
+
+        # Validate: reject direct {var} interpolation in SQL (SQL injection risk)
+        import re
+        if sql and re.search(r'\{[a-zA-Z_]\w*\}', sql):
+            raise QuantumParseError(
+                f"Query '{name}': direct {{var}} interpolation in SQL is not allowed. "
+                "Use :param_name with <q:param> for safe parameter binding"
+            )
+
+        # Validate: all :param references in SQL must have matching <q:param>
+        if sql:
+            sql_params = set(re.findall(r':([a-zA-Z_]\w*)', sql))
+            declared_params = {p.name for p in query_node.params}
+            missing = sql_params - declared_params
+            if missing:
+                raise QuantumParseError(
+                    f"Query '{name}': SQL parameter(s) {', '.join(':' + p for p in sorted(missing))} "
+                    "declared in SQL but no matching <q:param> element provided"
+                )
 
         return query_node
 

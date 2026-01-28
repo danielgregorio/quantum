@@ -204,41 +204,66 @@ class ComponentNode(QuantumNode):
 
 class ApplicationNode(QuantumNode):
     """Represents a <q:application>"""
-    
+
     def __init__(self, app_id: str, app_type: str):
         self.app_id = app_id
         self.app_type = app_type
+        self.engine: Optional[str] = None  # "2d" for game engine
         self.routes: List[QuantumRoute] = []
         self.components: List[ComponentNode] = []
-    
+
+        # Game Engine 2D: game-specific children
+        self.scenes: List[QuantumNode] = []     # SceneNode list
+        self.behaviors: List[QuantumNode] = []   # BehaviorNode list
+        self.prefabs: List[QuantumNode] = []     # PrefabNode list
+
     def add_route(self, route: QuantumRoute):
         self.routes.append(route)
-    
+
     def add_component(self, component: ComponentNode):
         self.components.append(component)
-    
+
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             "type": "application",
             "app_id": self.app_id,
             "app_type": self.app_type,
+            "engine": self.engine,
             "routes": [r.__dict__ for r in self.routes],
-            "components": [c.to_dict() for c in self.components]
+            "components": [c.to_dict() for c in self.components],
         }
-    
+        if self.scenes:
+            result["scenes"] = [s.to_dict() for s in self.scenes]
+        if self.behaviors:
+            result["behaviors"] = [b.to_dict() for b in self.behaviors]
+        if self.prefabs:
+            result["prefabs"] = [p.to_dict() for p in self.prefabs]
+        return result
+
     def validate(self) -> List[str]:
         errors = []
         if not self.app_id:
             errors.append("Application ID is required")
         if not self.app_type:
             errors.append("Application type is required")
-        
+
         for route in self.routes:
             errors.extend(route.validate())
-        
+
         for component in self.components:
             errors.extend(component.validate())
-        
+
+        # Validate game children
+        for scene in self.scenes:
+            if hasattr(scene, 'validate'):
+                errors.extend(scene.validate())
+        for behavior in self.behaviors:
+            if hasattr(behavior, 'validate'):
+                errors.extend(behavior.validate())
+        for prefab in self.prefabs:
+            if hasattr(prefab, 'validate'):
+                errors.extend(prefab.validate())
+
         return errors
 
 
@@ -1048,6 +1073,16 @@ class MailNode(QuantumNode):
     
     def __repr__(self):
         return f'<MailNode to={self.to} subject={self.subject}>'
+
+
+# GAME ENGINE 2D: Import game AST nodes
+from .features.game_engine_2d.src.ast_nodes import (
+    SceneNode, SpriteNode, PhysicsNode, ColliderNode, AnimationNode,
+    CameraNode, InputNode, SoundNode, ParticleNode, TimerNode,
+    SpawnNode, HudNode, TweenNode, TilemapNode, TilemapLayerNode,
+    BehaviorNode, UseNode, PrefabNode, InstanceNode, GroupNode,
+    StateMachineNode, StateNode, TransitionNode,
+)
 
 
 class TransactionNode(QuantumNode):

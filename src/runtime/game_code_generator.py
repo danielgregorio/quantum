@@ -1,0 +1,1612 @@
+"""
+Game Engine 2D - Code Generator
+
+Transforms Game AST nodes into JavaScript code that runs with PixiJS + Matter.js.
+This is a compiler/transpiler: Python generates JS, the game runs 100% in the browser.
+
+Uses JsBuilder for structured, safe JS generation - no fragile string concatenation.
+"""
+
+import json
+import re
+from typing import List, Dict, Any, Optional
+
+from core.features.game_engine_2d.src.ast_nodes import (
+    SceneNode, SpriteNode, PhysicsNode, ColliderNode, AnimationNode,
+    CameraNode, InputNode, SoundNode, ParticleNode, TimerNode,
+    SpawnNode, HudNode, TweenNode, TilemapNode, TilemapLayerNode,
+    BehaviorNode, UseNode, PrefabNode, InstanceNode, GroupNode,
+    StateMachineNode, StateNode, TransitionNode, RawCodeNode,
+)
+from core.ast_nodes import QuantumNode, SetNode, FunctionNode, IfNode, LoopNode, HTMLNode, TextNode
+
+from runtime.game_templates import (
+    HTML_TEMPLATE, PIXI_CDN, MATTER_CDN, HUD_DIV_TEMPLATE,
+    JsBuilder, js_string, js_id, js_number, js_bool, js_safe_value,
+    is_number, sanitize_hud_text, compile_binding_to_js,
+    emit_physics_sync, emit_input_system, emit_animation_system,
+    emit_easing_functions, emit_tween_system, emit_particle_system,
+    emit_audio_system, emit_timer_system,
+    emit_event_bus, emit_game_api, emit_spawn_system,
+)
+
+
+class GameCodeGenerator:
+    """Generates standalone HTML+JS from a game AST."""
+
+    def __init__(self):
+        self._sprites: List[Dict] = []
+        self._behaviors: Dict[str, BehaviorNode] = {}
+        self._prefabs: Dict[str, PrefabNode] = {}
+        self._state_vars: List[Dict] = []  # {name, value, type}
+        self._functions: List[FunctionNode] = []
+        self._sounds: List[Dict] = []
+        self._particles: List[Dict] = []
+        self._timers: List[Dict] = []
+        self._tweens: List[Dict] = []
+        self._huds: List[Dict] = []
+        self._custom_inputs: List[Dict] = []
+        self._camera: Optional[Dict] = None
+        self._physics: Optional[Dict] = None
+        self._assets: set = set()
+        self._sprite_counter: int = 0
+        self._scene_width: int = 800
+        self._scene_height: int = 600
+        self._spawners: List[Dict] = []
+        self._visual_tile_layers: List[Dict] = []
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def generate(self, scene: SceneNode, behaviors: List[BehaviorNode] = None,
+                 prefabs: List[PrefabNode] = None, title: str = "Quantum Game") -> str:
+        """Generate full HTML from a SceneNode."""
+        self._scene_width = scene.width
+        self._scene_height = scene.height
+
+        for b in (behaviors or []):
+            self._behaviors[b.name] = b
+        for p in (prefabs or []):
+            self._prefabs[p.name] = p
+
+        self._process_scene_children(scene.children)
+
+        js = JsBuilder()
+        self._build_game_js(js, scene)
+        game_js = js.build()
+
+        hud_html = self._build_hud_html()
+
+        return HTML_TEMPLATE.format(
+            title=html_escape_title(title),
+            pixi_cdn=PIXI_CDN,
+            matter_cdn=MATTER_CDN,
+            hud_html=hud_html,
+            game_js=game_js,
+        )
+
+    def _reset_scene_state(self):
+        """Reset per-scene state for multi-scene generation."""
+        self._sprites = []
+        self._state_vars = []
+        self._functions = []
+        self._sounds = []
+        self._particles = []
+        self._timers = []
+        self._tweens = []
+        self._huds = []
+        self._custom_inputs = []
+        self._camera = None
+        self._physics = None
+        self._sprite_counter = 0
+        self._spawners = []
+        self._visual_tile_layers = []
+
+    def generate_multi(self, scenes: List[SceneNode], initial: str,
+                       behaviors: List[BehaviorNode] = None,
+                       prefabs: List[PrefabNode] = None,
+                       title: str = "Quantum Game") -> str:
+        """Generate HTML with multiple scenes and scene switching."""
+        if not scenes:
+            return self.generate(SceneNode('empty'), behaviors, prefabs, title)
+
+        # Use initial/active scene dimensions for PIXI app
+        first = scenes[0]
+        for sc in scenes:
+            if sc.name == initial:
+                first = sc
+                break
+        self._scene_width = first.width
+        self._scene_height = first.height
+
+        for b in (behaviors or []):
+            self._behaviors[b.name] = b
+        for p in (prefabs or []):
+            self._prefabs[p.name] = p
+
+        # Collect all assets across all scenes
+        for scene in scenes:
+            self._reset_scene_state()
+            self._process_scene_children(scene.children)
+
+        # Now build the JS
+        js = JsBuilder()
+        js.line("(async function() {")
+        js.indent()
+
+        # PIXI App
+        js.section("PIXI APP")
+        js.const('app', 'new PIXI.Application()')
+        js.line(f"await app.init({{ width: {first.width}, height: {first.height}, background: {js_string(first.background)} }});")
+        js.line("document.body.appendChild(app.canvas);")
+
+        # Matter.js Engine
+        js.section("MATTER.JS ENGINE")
+        js.const('mEngine', 'Matter.Engine.create()')
+        js.assign('mEngine.gravity.x', '0')
+        js.assign('mEngine.gravity.y', '0')
+        js.const('mWorld', 'mEngine.world')
+
+        # Event Bus
+        js.section("EVENT BUS")
+        emit_event_bus(js)
+
+        # Shared state (merged from all scenes)
+        js.section("GAME STATE")
+        js.comment('State variables are initialized per-scene')
+
+        # Asset Loading (collect from all scenes)
+        all_assets = set()
+        for scene in scenes:
+            self._reset_scene_state()
+            self._process_scene_children(scene.children)
+            all_assets.update(self._assets)
+        js.section("ASSET LOADING")
+        if all_assets:
+            urls = sorted(all_assets)
+            asset_list = ', '.join(js_string(u) for u in urls)
+            js.line(f"await PIXI.Assets.load([{asset_list}]);")
+        else:
+            js.comment('No assets to preload')
+
+        # Animation System
+        js.section("ANIMATION SYSTEM")
+        emit_animation_system(js)
+
+        # Behaviors (shared)
+        js.section("BEHAVIORS")
+        self._emit_behaviors(js)
+
+        # Camera container
+        js.section("CAMERA")
+        js.const('_cameraContainer', 'new PIXI.Container()')
+        js.line("app.stage.addChild(_cameraContainer);")
+        js.func('updateCamera')
+        js.block_close()
+
+        # Shared sprite/body registries
+        js.section("SPRITES & BODIES")
+        js.const('_sprites', '{}')
+        js.const('_bodyToSprite', '{}')
+        emit_physics_sync(js)
+
+        # Game API
+        js.section("GAME API")
+        emit_game_api(js)
+
+        # Input
+        js.section("INPUT")
+        emit_input_system(js)
+        js.const('_controlledSprites', '{}')
+
+        # Particle system
+        js.section("PARTICLES")
+        emit_particle_system(js)
+
+        # Timer system
+        js.section("TIMERS")
+        emit_timer_system(js)
+
+        # Tween system
+        js.section("TWEENS")
+        emit_tween_system(js)
+
+        # Sound system
+        js.section("SOUNDS")
+        emit_audio_system(js)
+
+        # Teardown function
+        js.section("MULTI-SCENE")
+        js.func('_teardownScene')
+        js.line('_cameraContainer.removeChildren();')
+        js.line('Matter.Composite.clear(mWorld, false);')
+        js.line("for (const id in _sprites) delete _sprites[id];")
+        js.line("for (const id in _bodyToSprite) delete _bodyToSprite[id];")
+        js.line("for (const id in _controlledSprites) delete _controlledSprites[id];")
+        js.block_close()
+        js.blank()
+
+        js.const('_sceneInits', '{}')
+        js.blank()
+
+        # Generate init function per scene
+        for scene in scenes:
+            self._reset_scene_state()
+            self._process_scene_children(scene.children)
+            scene_name = js_id(scene.name)
+
+            js.line(f"_sceneInits[{js_string(scene.name)}] = async function() {{")
+            js.indent()
+
+            # Physics config for this scene
+            if self._physics:
+                js.assign('mEngine.gravity.x', js_number(self._physics['gravity_x']))
+                js.assign('mEngine.gravity.y', js_number(self._physics['gravity_y']))
+
+            # State vars
+            for sv in self._state_vars:
+                name = js_id(sv['name'])
+                val = js_safe_value(sv['value'], sv['type'])
+                js.line(f"var {name} = {val};")
+
+            # Sprites & Bodies
+            body_vars = []
+            for info in self._sprites:
+                sid = js_id(info['id'])
+                src = info['src']
+                x, y = js_number(info['x']), js_number(info['y'])
+                spr_var = f'_spr_{sid}'
+
+                if src:
+                    js.const(spr_var, f"PIXI.Sprite.from({js_string(src)})")
+                else:
+                    js.const(spr_var, 'new PIXI.Graphics()')
+                    if info.get('width') and info.get('height'):
+                        w, h = info['width'], info['height']
+                        js.line(f"{spr_var}.rect(-{w/2}, -{h/2}, {w}, {h});")
+                        js.line(f"{spr_var}.fill({{ color: 0x000000, alpha: 0 }});")
+
+                js.assign(f'{spr_var}.x', x)
+                js.assign(f'{spr_var}.y', y)
+                if src:
+                    js.line(f"{spr_var}.anchor.set({js_number(info['anchor_x'])}, {js_number(info['anchor_y'])});")
+                if info.get('width') and src:
+                    js.assign(f'{spr_var}.width', js_number(info['width']))
+                if info.get('height') and src:
+                    js.assign(f'{spr_var}.height', js_number(info['height']))
+                js.line(f"_cameraContainer.addChild({spr_var});")
+
+                body_var = self._emit_body(js, info, sid)
+                if body_var:
+                    body_vars.append(body_var)
+                    js.assign(f'_bodyToSprite[{body_var}.id]', js_string(info['id']))
+
+                body_ref = f'_body_{sid}' if info.get('body') else 'null'
+                tag_ref = js_string(info['tag']) if info.get('tag') else 'null'
+                js.line(f"_sprites[{js_string(info['id'])}] = {{ sprite: {spr_var}, body: {body_ref}, tag: {tag_ref}, collisionHandlers: [], behaviors: [] }};")
+
+            if body_vars:
+                js.line(f"Matter.Composite.add(mWorld, [{', '.join(body_vars)}]);")
+
+            # Behavior attachments for this scene
+            self._emit_behavior_attachments(js)
+
+            # Animations
+            self._emit_animation_registration(js)
+
+            # Controlled sprites
+            for info in self._sprites:
+                if info.get('controls'):
+                    ctrl = info['controls']
+                    sid_str = js_string(info['id'])
+                    if ctrl == 'wasd':
+                        js.assign(f'_controlledSprites[{sid_str}]',
+                                  "{ left: 'a', right: 'd', up: 'w', jump: ' ' }")
+                    elif ctrl == 'arrows':
+                        js.assign(f'_controlledSprites[{sid_str}]',
+                                  "{ left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', jump: 'ArrowUp' }")
+
+            # Camera
+            if self._camera and self._camera.get('follow'):
+                target = js_string(self._camera['follow'])
+                lerp = js_number(self._camera['lerp'])
+                js.assign('updateCamera', f"function() {{ const info = _sprites[{target}]; if (!info) return; const tx = app.screen.width / 2 - info.sprite.x; const ty = app.screen.height / 2 - info.sprite.y; _cameraContainer.x += (tx - _cameraContainer.x) * {lerp}; _cameraContainer.y += (ty - _cameraContainer.y) * {lerp}; }}")
+
+            # Functions
+            for fn in self._functions:
+                params = ', '.join(js_id(p.name) for p in fn.params)
+                js.func(js_id(fn.name), params)
+                for stmt in fn.body:
+                    self._emit_statement(js, stmt)
+                js.block_close()
+
+            # Collision handler
+            self._emit_collision_handler(js)
+
+            # Sounds
+            for s in self._sounds:
+                js.line(f"await _loadSound({js_string(s['id'])}, {js_string(s['src'])});")
+
+            # Particle instances
+            self._emit_particle_instances(js)
+
+            # Timer instances
+            self._emit_timer_instances(js)
+
+            # Tween instances
+            self._emit_tween_instances(js)
+
+            # Scene start triggers
+            self._emit_scene_start(js)
+
+            js.dedent()
+            js.line("};")
+            js.blank()
+
+        # Load scene function
+        js.func('_loadScene', 'name')
+        js.line('_teardownScene();')
+        js.if_block('_sceneInits[name]')
+        js.line('_sceneInits[name]();')
+        js.block_close()
+        js.block_close()
+        js.blank()
+
+        # HUD update placeholder
+        js.section("HUD UPDATE")
+        js.func('_updateHUD')
+        js.block_close()
+
+        # Game Loop
+        js.section("GAME LOOP")
+        self._emit_game_loop_multi(js)
+
+        # Initial scene load
+        js.line(f"_loadScene({js_string(initial)});")
+
+        js.dedent()
+        js.line("})();")
+
+        game_js = js.build()
+
+        # Collect all HUD HTML from all scenes
+        all_hud_html_parts = []
+        for scene in scenes:
+            self._reset_scene_state()
+            self._process_scene_children(scene.children)
+            hud_html = self._build_hud_html()
+            if hud_html:
+                all_hud_html_parts.append(hud_html)
+
+        return HTML_TEMPLATE.format(
+            title=html_escape_title(title),
+            pixi_cdn=PIXI_CDN,
+            matter_cdn=MATTER_CDN,
+            hud_html='\n'.join(all_hud_html_parts),
+            game_js=game_js,
+        )
+
+    def _emit_game_loop_multi(self, js: JsBuilder):
+        """Game loop for multi-scene mode."""
+        js.line("app.ticker.add((ticker) => {")
+        js.indent()
+        js.const('dt', 'ticker.deltaTime')
+        js.line('Matter.Engine.update(mEngine, dt * 16.67);')
+        js.line('syncPhysics();')
+        js.comment('Input handling')
+        js.for_entries('_sid', '_ctrl', '_controlledSprites')
+        js.const('_body', '_sprites[_sid] && _sprites[_sid].body')
+        js.if_block('!_body')
+        js.line('continue;')
+        js.block_close()
+        js.if_block('_keys[_ctrl.left]')
+        js.line("Matter.Body.setVelocity(_body, { x: -5, y: _body.velocity.y });")
+        js.block_close()
+        js.if_block('_keys[_ctrl.right]')
+        js.line("Matter.Body.setVelocity(_body, { x: 5, y: _body.velocity.y });")
+        js.block_close()
+        js.if_block('_justPressed[_ctrl.jump]')
+        js.line("Matter.Body.setVelocity(_body, { x: _body.velocity.x, y: -10 });")
+        js.line("_gameEvents.emit('player.jump', _sprites[_sid]);")
+        js.block_close()
+        js.if_block('!_keys[_ctrl.left] && !_keys[_ctrl.right]')
+        js.line("Matter.Body.setVelocity(_body, { x: _body.velocity.x * 0.8, y: _body.velocity.y });")
+        js.block_close()
+        js.block_close()
+        js.line('_clearJustPressed();')
+        js.line('updateCamera();')
+        js.line('_updateControlAnimations();')
+        js.comment('Behaviors update')
+        js.for_entries('_id', '_info', '_sprites')
+        js.for_of('b', '_info.behaviors')
+        js.if_block('b._smUpdate')
+        js.line('b._smUpdate();')
+        js.block_close()
+        js.if_block('b.update')
+        js.line('b.update();')
+        js.block_close()
+        js.block_close()
+        js.block_close()
+        js.line('_updateTimers(dt);')
+        js.line('_updateTweens(dt);')
+        js.line('_updateParticles(dt);')
+        js.line('_updateHUD();')
+        js.dedent()
+        js.line("});")
+
+    # ------------------------------------------------------------------
+    # Scene children processing
+    # ------------------------------------------------------------------
+
+    def _process_scene_children(self, children: List[QuantumNode]):
+        for child in children:
+            if isinstance(child, PhysicsNode):
+                self._physics = {
+                    'gravity_x': child.gravity_x,
+                    'gravity_y': child.gravity_y,
+                    'bounds': child.bounds,
+                    'debug': child.debug,
+                }
+            elif isinstance(child, CameraNode):
+                self._camera = {
+                    'follow': child.follow,
+                    'lerp': child.lerp,
+                    'bounds': child.bounds or 'none',
+                }
+            elif isinstance(child, SetNode):
+                self._state_vars.append({
+                    'name': child.name,
+                    'value': child.value or child.default or '""',
+                    'type': child.type or 'string',
+                })
+            elif isinstance(child, FunctionNode):
+                self._functions.append(child)
+            elif isinstance(child, SpriteNode):
+                self._process_sprite(child)
+            elif isinstance(child, InstanceNode):
+                self._process_instance(child)
+            elif isinstance(child, GroupNode):
+                self._process_group(child)
+            elif isinstance(child, SoundNode):
+                self._sounds.append({
+                    'id': child.sound_id, 'src': child.src,
+                    'volume': child.volume, 'loop': child.loop,
+                    'trigger': child.trigger, 'channel': child.channel,
+                })
+                if child.src:
+                    self._assets.add(child.src)
+            elif isinstance(child, ParticleNode):
+                self._particles.append({
+                    'id': child.particle_id, 'src': child.src,
+                    'follow': child.follow, 'trigger': child.trigger,
+                    'count': child.count, 'emit_rate': child.emit_rate,
+                    'lifetime': child.lifetime,
+                    'speed_min': child.speed_min, 'speed_max': child.speed_max,
+                    'angle_min': child.angle_min, 'angle_max': child.angle_max,
+                    'alpha_start': child.alpha_start, 'alpha_end': child.alpha_end,
+                })
+            elif isinstance(child, TimerNode):
+                self._timers.append({
+                    'id': child.timer_id, 'interval': child.interval,
+                    'repeat': child.repeat, 'auto_start': child.auto_start,
+                    'action': child.action,
+                })
+            elif isinstance(child, TweenNode):
+                self._tweens.append({
+                    'id': child.tween_id, 'target': child.target,
+                    'property': child.property, 'to': child.to_value,
+                    'duration': child.duration, 'easing': child.easing,
+                    'loop': child.loop, 'yoyo': child.yoyo,
+                    'delay': child.delay, 'auto_start': child.auto_start,
+                })
+            elif isinstance(child, HudNode):
+                self._huds.append({
+                    'position': child.position,
+                    'children': child.children,
+                })
+            elif isinstance(child, InputNode):
+                self._custom_inputs.append({
+                    'key': child.key, 'action': child.action,
+                    'type': child.input_type,
+                })
+            elif isinstance(child, SpawnNode):
+                self._spawners.append({
+                    'id': child.spawn_id,
+                    'prefab': child.prefab,
+                    'count': child.count,
+                    'interval': child.interval,
+                    'x': child.x,
+                    'y': child.y,
+                    'pool_size': child.pool_size,
+                })
+            elif isinstance(child, TilemapNode):
+                self._process_tilemap(child)
+
+    # ------------------------------------------------------------------
+    # Sprite processing (collect info, no JS emitted yet)
+    # ------------------------------------------------------------------
+
+    def _process_sprite(self, sprite: SpriteNode, group_name: str = None):
+        info = self._extract_sprite_info(sprite)
+        info['group'] = group_name
+        if sprite.src:
+            self._assets.add(sprite.src)
+        self._sprites.append(info)
+
+    def _extract_sprite_info(self, sprite: SpriteNode) -> Dict[str, Any]:
+        info: Dict[str, Any] = {
+            'id': sprite.sprite_id,
+            'src': sprite.src,
+            'x': sprite.x, 'y': sprite.y,
+            'width': sprite.width, 'height': sprite.height,
+            'anchor_x': sprite.anchor_x, 'anchor_y': sprite.anchor_y,
+            'rotation': sprite.rotation,
+            'scale_x': sprite.scale_x, 'scale_y': sprite.scale_y,
+            'alpha': sprite.alpha,
+            'visible': sprite.visible,
+            'tag': sprite.tag,
+            'layer': sprite.layer,
+            'body': sprite.body,
+            'bounce': sprite.bounce, 'friction': sprite.friction,
+            'mass': sprite.mass, 'sensor': sprite.sensor,
+            'controls': sprite.controls,
+            'speed': sprite.speed, 'jump_force': sprite.jump_force,
+            'frame_width': sprite.frame_width, 'frame_height': sprite.frame_height,
+            'group': None,
+            'animations': [],
+            'collider': None,
+            'behaviors': [],
+        }
+        for child in sprite.children:
+            if isinstance(child, AnimationNode):
+                info['animations'].append({
+                    'name': child.name, 'frames': child.frames,
+                    'speed': child.speed, 'loop': child.loop,
+                    'auto_play': child.auto_play,
+                })
+            elif isinstance(child, ColliderNode):
+                info['collider'] = {
+                    'shape': child.shape,
+                    'width': child.width, 'height': child.height,
+                    'radius': child.radius,
+                }
+            elif isinstance(child, UseNode):
+                info['behaviors'].append({
+                    'name': child.behavior,
+                    'overrides': child.overrides,
+                    'on_collision': child.on_collision,
+                    'collision_tag': child.collision_tag,
+                })
+        return info
+
+    def _process_instance(self, instance: InstanceNode):
+        prefab = self._prefabs.get(instance.prefab)
+        if not prefab:
+            return
+        for child in prefab.children:
+            if isinstance(child, SpriteNode):
+                sid = instance.instance_id or f"{instance.prefab}_{self._sprite_counter}"
+                self._sprite_counter += 1
+                info = self._extract_sprite_info(child)
+                info['id'] = sid
+                info['x'] = instance.x
+                info['y'] = instance.y
+                # Apply instance overrides to behavior overrides
+                for buse in info['behaviors']:
+                    buse['overrides'] = dict(buse['overrides'])
+                    buse['overrides'].update(instance.overrides)
+                if child.src:
+                    self._assets.add(child.src)
+                self._sprites.append(info)
+
+    def _process_group(self, group: GroupNode):
+        group_uses = []
+        for child in group.children:
+            if isinstance(child, SpriteNode):
+                self._process_sprite(child, group_name=group.name)
+            elif isinstance(child, InstanceNode):
+                self._process_instance(child)
+            elif isinstance(child, UseNode):
+                group_uses.append(child)
+        if group_uses:
+            for sprite_info in self._sprites:
+                if sprite_info.get('group') == group.name:
+                    for use in group_uses:
+                        sprite_info['behaviors'].append({
+                            'name': use.behavior,
+                            'overrides': use.overrides,
+                            'on_collision': use.on_collision,
+                            'collision_tag': use.collision_tag,
+                        })
+
+    def _process_tilemap(self, tilemap: TilemapNode):
+        if tilemap.src:
+            self._assets.add(tilemap.src)
+
+        for layer in tilemap.layers:
+            if layer.collision:
+                rows = layer.data.strip().split('\n')
+                for ry, row in enumerate(rows):
+                    for cx, cell in enumerate(row.split(',')):
+                        cell = cell.strip()
+                        if cell and cell != '0':
+                            tid = f"tile_{tilemap.tilemap_id}_{ry}_{cx}"
+                            tx = cx * tilemap.tile_width + tilemap.tile_width / 2
+                            ty = ry * tilemap.tile_height + tilemap.tile_height / 2
+                            self._sprites.append({
+                                'id': tid, 'src': '', 'x': tx, 'y': ty,
+                                'width': tilemap.tile_width, 'height': tilemap.tile_height,
+                                'anchor_x': 0.5, 'anchor_y': 0.5,
+                                'rotation': 0, 'scale_x': 1, 'scale_y': 1,
+                                'alpha': 0, 'visible': False,
+                                'tag': 'tilemap-collision', 'layer': -1,
+                                'body': 'static', 'bounce': 0, 'friction': 0.5,
+                                'mass': None, 'sensor': False,
+                                'controls': None, 'speed': 0, 'jump_force': 0,
+                                'frame_width': None, 'frame_height': None,
+                                'group': None, 'animations': [], 'collider': None,
+                                'behaviors': [],
+                            })
+            else:
+                # Visual layer — render tiles graphically
+                self._visual_tile_layers.append({
+                    'tilemap_id': tilemap.tilemap_id,
+                    'layer_name': layer.name,
+                    'data': layer.data,
+                    'tile_width': tilemap.tile_width,
+                    'tile_height': tilemap.tile_height,
+                    'src': tilemap.src,
+                })
+
+    # ------------------------------------------------------------------
+    # Main JS builder
+    # ------------------------------------------------------------------
+
+    def _build_game_js(self, js: JsBuilder, scene: SceneNode):
+        js.line("(async function() {")
+        js.indent()
+
+        # PIXI App
+        js.section("PIXI APP")
+        js.const('app', 'new PIXI.Application()')
+        js.line(f"await app.init({{ width: {scene.width}, height: {scene.height}, background: {js_string(scene.background)} }});")
+        js.line("document.body.appendChild(app.canvas);")
+
+        # Matter.js Engine
+        js.section("MATTER.JS ENGINE")
+        self._emit_physics_init(js, scene)
+
+        # Event Bus
+        js.section("EVENT BUS")
+        emit_event_bus(js)
+
+        # Game State
+        js.section("GAME STATE")
+        self._emit_state_vars(js)
+
+        # Asset Loading
+        js.section("ASSET LOADING")
+        self._emit_asset_loading(js)
+
+        # Animation System
+        js.section("ANIMATION SYSTEM")
+        emit_animation_system(js)
+
+        # Behaviors
+        js.section("BEHAVIORS")
+        self._emit_behaviors(js)
+
+        # Camera container
+        js.section("CAMERA")
+        self._emit_camera_setup(js)
+
+        # Sprites & Bodies
+        js.section("SPRITES & BODIES")
+        self._emit_sprites(js)
+
+        # Game API
+        js.section("GAME API")
+        emit_game_api(js)
+
+        # Behavior Attachments
+        js.section("BEHAVIOR ATTACHMENTS")
+        self._emit_behavior_attachments(js)
+
+        # Animations registration (after sprites)
+        js.section("ANIMATION REGISTRATION")
+        self._emit_animation_registration(js)
+
+        # Input
+        js.section("INPUT")
+        emit_input_system(js)
+        self._emit_controlled_sprites(js)
+
+        # Functions
+        js.section("FUNCTIONS")
+        self._emit_functions(js)
+
+        # Collisions
+        js.section("COLLISIONS")
+        self._emit_collision_handler(js)
+
+        # Sound
+        js.section("SOUNDS")
+        self._emit_sounds(js)
+
+        # Particles
+        js.section("PARTICLES")
+        emit_particle_system(js)
+        self._emit_particle_instances(js)
+
+        # Timers
+        js.section("TIMERS")
+        emit_timer_system(js)
+        self._emit_timer_instances(js)
+
+        # Tweens
+        js.section("TWEENS")
+        emit_tween_system(js)
+        self._emit_tween_instances(js)
+
+        # Spawners
+        js.section("SPAWNERS")
+        self._emit_spawner_instances(js)
+
+        # Visual Tilemaps
+        js.section("VISUAL TILEMAPS")
+        self._emit_visual_tilemaps(js)
+
+        # HUD Update
+        js.section("HUD UPDATE")
+        self._emit_hud_update(js)
+
+        # Game Loop
+        js.section("GAME LOOP")
+        self._emit_game_loop(js)
+
+        # Scene Start
+        js.section("SCENE START")
+        self._emit_scene_start(js)
+
+        js.dedent()
+        js.line("})();")
+
+    # ------------------------------------------------------------------
+    # Physics
+    # ------------------------------------------------------------------
+
+    def _emit_physics_init(self, js: JsBuilder, scene: SceneNode):
+        js.const('mEngine', 'Matter.Engine.create()')
+        if self._physics:
+            js.assign('mEngine.gravity.x', js_number(self._physics['gravity_x']))
+            js.assign('mEngine.gravity.y', js_number(self._physics['gravity_y']))
+        else:
+            js.assign('mEngine.gravity.x', '0')
+            js.assign('mEngine.gravity.y', '0')
+        js.const('mWorld', 'mEngine.world')
+
+        if self._physics and self._physics.get('bounds') == 'canvas':
+            w, h = scene.width, scene.height
+            hw, hh = w / 2, h / 2
+            js.comment('World bounds')
+            js.const('_bT', f'Matter.Bodies.rectangle({hw}, -25, {w}, 50, {{ isStatic: true }})')
+            js.const('_bB', f'Matter.Bodies.rectangle({hw}, {h}+25, {w}, 50, {{ isStatic: true }})')
+            js.const('_bL', f'Matter.Bodies.rectangle(-25, {hh}, 50, {h}, {{ isStatic: true }})')
+            js.const('_bR', f'Matter.Bodies.rectangle({w}+25, {hh}, 50, {h}, {{ isStatic: true }})')
+            js.line("Matter.Composite.add(mWorld, [_bT, _bB, _bL, _bR]);")
+
+    # ------------------------------------------------------------------
+    # State Variables
+    # ------------------------------------------------------------------
+
+    def _emit_state_vars(self, js: JsBuilder):
+        if not self._state_vars:
+            js.comment('no state')
+            return
+        for sv in self._state_vars:
+            name = js_id(sv['name'])
+            val = js_safe_value(sv['value'], sv['type'])
+            js.let(name, val)
+
+    # ------------------------------------------------------------------
+    # Assets
+    # ------------------------------------------------------------------
+
+    def _emit_asset_loading(self, js: JsBuilder):
+        if not self._assets:
+            js.comment('No assets to preload')
+            return
+        urls = sorted(self._assets)
+        asset_list = ', '.join(js_string(u) for u in urls)
+        js.line(f"await PIXI.Assets.load([{asset_list}]);")
+
+    # ------------------------------------------------------------------
+    # Behaviors
+    # ------------------------------------------------------------------
+
+    def _emit_behaviors(self, js: JsBuilder):
+        if not self._behaviors:
+            js.comment('no behaviors')
+            return
+        for name, bnode in self._behaviors.items():
+            cls_name = js_id(name)
+            js.class_open(cls_name)
+
+            # constructor
+            js.method('constructor', 'owner, overrides')
+            js.assign('this.owner', 'owner')
+            for child in bnode.children:
+                if isinstance(child, SetNode):
+                    prop = js_id(child.name)
+                    val = js_safe_value(child.value or child.default or '""', child.type or 'string')
+                    js.assign(f'this.{prop}', val)
+            js.line("if (overrides) Object.assign(this, overrides);")
+            js.block_close()  # constructor
+
+            # methods
+            for child in bnode.children:
+                if isinstance(child, FunctionNode):
+                    self._emit_method(js, child)
+                elif isinstance(child, StateMachineNode):
+                    self._emit_state_machine(js, child)
+
+            js.class_close()
+            js.blank()
+
+    def _emit_method(self, js: JsBuilder, fn: FunctionNode):
+        params = ', '.join(js_id(p.name) for p in fn.params)
+        js.method(js_id(fn.name), params)
+        if fn.body:
+            for stmt in fn.body:
+                self._emit_statement(js, stmt)
+        else:
+            js.comment('empty')
+        js.block_close()
+
+    def _emit_state_machine(self, js: JsBuilder, sm: StateMachineNode):
+        # _smInit
+        js.method('_smInit')
+        js.assign('this._state', js_string(sm.initial))
+        js.assign('this._states', '{}')
+        for state in sm.states:
+            transitions = {t.event: t.transition for t in state.transitions}
+            js.assign(f"this._states[{js_string(state.name)}]",
+                      f"{{ transitions: {json.dumps(transitions)} }}")
+        enter_fn = f'this._stateEnter_{js_id(sm.initial)}'
+        js.if_block(enter_fn)
+        js.line(f"{enter_fn}();")
+        js.block_close()
+        js.block_close()  # _smInit
+
+        # _smUpdate
+        js.method('_smUpdate')
+        for state in sm.states:
+            for child in state.children:
+                if isinstance(child, FunctionNode) and child.name == 'update':
+                    js.if_block(f"this._state === {js_string(state.name)}")
+                    js.line(f"this._stateUpdate_{js_id(state.name)}();")
+                    js.block_close()
+        js.block_close()  # _smUpdate
+
+        # Individual state functions
+        for state in sm.states:
+            for child in state.children:
+                if isinstance(child, FunctionNode):
+                    prefix = f"_state{child.name.capitalize()}_{js_id(state.name)}"
+                    js.method(prefix)
+                    for stmt in child.body:
+                        self._emit_statement(js, stmt)
+                    js.block_close()
+
+        # _smEmit
+        js.method('_smEmit', 'event')
+        js.const('st', 'this._states[this._state]')
+        js.if_block('st && st.transitions[event]')
+        js.const('prev', 'this._state')
+        js.assign('this._state', 'st.transitions[event]')
+        js.const('exitFn', "'_stateExit_' + prev")
+        js.if_block('this[exitFn]')
+        js.line('this[exitFn]();')
+        js.block_close()
+        js.const('enterFn', "'_stateEnter_' + this._state")
+        js.if_block('this[enterFn]')
+        js.line('this[enterFn]();')
+        js.block_close()
+        js.block_close()  # if
+        js.block_close()  # _smEmit
+
+    # ------------------------------------------------------------------
+    # Statement emission (q:set, q:if, q:loop, q:function inside bodies)
+    # ------------------------------------------------------------------
+
+    def _emit_statement(self, js: JsBuilder, node: QuantumNode):
+        if isinstance(node, SetNode):
+            self._emit_set_assignment(js, node)
+        elif isinstance(node, IfNode):
+            self._emit_if(js, node)
+        elif isinstance(node, LoopNode):
+            self._emit_loop(js, node)
+        elif isinstance(node, FunctionNode):
+            self._emit_nested_function(js, node)
+        elif isinstance(node, RawCodeNode):
+            js.line(node.code)
+        else:
+            js.comment(f"unsupported node: {type(node).__name__}")
+
+    def _emit_set_assignment(self, js: JsBuilder, node: SetNode):
+        name = node.name
+        val = self._compile_expression(node.value or '""')
+
+        if name.startswith('self.'):
+            js.assign(f'this.{name[5:]}', val)
+        else:
+            js.assign(js_id(name), val)
+
+    def _emit_if(self, js: JsBuilder, node: IfNode):
+        cond = self._compile_expression(node.condition)
+        js.if_block(cond)
+        for s in node.if_body:
+            self._emit_statement(js, s)
+        for eib in node.elseif_blocks:
+            ec = self._compile_expression(eib['condition'])
+            js.else_if_block(ec)
+            for s in eib['body']:
+                self._emit_statement(js, s)
+        if node.else_body:
+            js.else_block()
+            for s in node.else_body:
+                self._emit_statement(js, s)
+        js.block_close()
+
+    def _emit_loop(self, js: JsBuilder, node: LoopNode):
+        var = js_id(node.var_name)
+        if node.loop_type == 'range':
+            frm = node.from_value or '0'
+            to = node.to_value or '0'
+            step = str(node.step_value or 1)
+            js.for_range(var, frm, to, step)
+            for s in node.body:
+                self._emit_statement(js, s)
+            js.block_close()
+        else:
+            js.comment(f"loop type {node.loop_type} not yet compiled")
+
+    def _emit_nested_function(self, js: JsBuilder, node: FunctionNode):
+        params = ', '.join(js_id(p.name) for p in node.params)
+        js.func(js_id(node.name), params)
+        for s in node.body:
+            self._emit_statement(js, s)
+        js.block_close()
+
+    # ------------------------------------------------------------------
+    # Camera
+    # ------------------------------------------------------------------
+
+    def _emit_camera_setup(self, js: JsBuilder):
+        js.const('_cameraContainer', 'new PIXI.Container()')
+        js.line("app.stage.addChild(_cameraContainer);")
+
+        if self._camera and self._camera.get('follow'):
+            target = js_string(self._camera['follow'])
+            lerp = js_number(self._camera['lerp'])
+            js.const('_camera', f'{{ targetId: {target}, lerp: {lerp} }}')
+            js.blank()
+            js.func('updateCamera')
+            js.const('info', '_sprites[_camera.targetId]')
+            js.if_block('!info')
+            js.ret()
+            js.block_close()
+            js.const('tx', 'app.screen.width / 2 - info.sprite.x')
+            js.const('ty', 'app.screen.height / 2 - info.sprite.y')
+            js.line('_cameraContainer.x += (tx - _cameraContainer.x) * _camera.lerp;')
+            js.line('_cameraContainer.y += (ty - _cameraContainer.y) * _camera.lerp;')
+            if self._camera.get('bounds') == 'scene':
+                js.assign('_cameraContainer.x',
+                           f'Math.min(0, Math.max(app.screen.width - {self._scene_width}, _cameraContainer.x))')
+                js.assign('_cameraContainer.y',
+                           f'Math.min(0, Math.max(app.screen.height - {self._scene_height}, _cameraContainer.y))')
+            js.block_close()  # updateCamera
+        else:
+            js.func('updateCamera')
+            js.block_close()
+
+    # ------------------------------------------------------------------
+    # Sprites & Bodies
+    # ------------------------------------------------------------------
+
+    def _emit_sprites(self, js: JsBuilder):
+        js.const('_sprites', '{}')
+        js.const('_bodyToSprite', '{}')
+        body_vars = []
+
+        for info in self._sprites:
+            sid = js_id(info['id'])
+            src = info['src']
+            x, y = js_number(info['x']), js_number(info['y'])
+            spr_var = f'_spr_{sid}'
+
+            if src:
+                js.const(spr_var, f"PIXI.Sprite.from({js_string(src)})")
+            else:
+                js.const(spr_var, 'new PIXI.Graphics()')
+                if info.get('width') and info.get('height'):
+                    w, h = info['width'], info['height']
+                    js.line(f"{spr_var}.rect(-{w/2}, -{h/2}, {w}, {h});")
+                    js.line(f"{spr_var}.fill({{ color: 0x000000, alpha: 0 }});")
+
+            js.assign(f'{spr_var}.x', x)
+            js.assign(f'{spr_var}.y', y)
+
+            if src:
+                js.line(f"{spr_var}.anchor.set({js_number(info['anchor_x'])}, {js_number(info['anchor_y'])});")
+            if info.get('width') and src:
+                js.assign(f'{spr_var}.width', js_number(info['width']))
+            if info.get('height') and src:
+                js.assign(f'{spr_var}.height', js_number(info['height']))
+            if info['alpha'] != 1.0:
+                js.assign(f'{spr_var}.alpha', js_number(info['alpha']))
+            if not info['visible']:
+                js.assign(f'{spr_var}.visible', 'false')
+
+            js.line(f"_cameraContainer.addChild({spr_var});")
+
+            # Physics body
+            body_var = self._emit_body(js, info, sid)
+            if body_var:
+                body_vars.append(body_var)
+                js.assign(f'_bodyToSprite[{body_var}.id]', js_string(info['id']))
+
+            # Register in _sprites
+            body_ref = f'_body_{sid}' if info.get('body') else 'null'
+            tag_ref = js_string(info['tag']) if info.get('tag') else 'null'
+            js.line(f"_sprites[{js_string(info['id'])}] = {{ sprite: {spr_var}, body: {body_ref}, tag: {tag_ref}, collisionHandlers: [], behaviors: [] }};")
+            js.blank()
+
+        if body_vars:
+            js.line(f"Matter.Composite.add(mWorld, [{', '.join(body_vars)}]);")
+
+        js.blank()
+        emit_physics_sync(js)
+
+    def _emit_body(self, js: JsBuilder, info: Dict, sid: str) -> Optional[str]:
+        if not info.get('body'):
+            return None
+        btype = info['body']
+        is_static = btype == 'static'
+        w = info.get('width') or 32
+        h = info.get('height') or 32
+        x, y = js_number(info['x']), js_number(info['y'])
+
+        collider = info.get('collider')
+        shape = collider['shape'] if collider else 'box'
+
+        opts_parts = [f"isStatic: {js_bool(is_static)}"]
+        opts_parts.append(f"restitution: {js_number(info['bounce'])}")
+        opts_parts.append(f"friction: {js_number(info['friction'])}")
+        if info.get('mass') is not None:
+            opts_parts.append(f"mass: {js_number(info['mass'])}")
+        if info.get('sensor'):
+            opts_parts.append("isSensor: true")
+        opts = ', '.join(opts_parts)
+
+        body_var = f'_body_{sid}'
+        if shape == 'circle':
+            r = js_number((collider and collider.get('radius')) or w / 2)
+            js.const(body_var, f"Matter.Bodies.circle({x}, {y}, {r}, {{ {opts} }})")
+        else:
+            js.const(body_var, f"Matter.Bodies.rectangle({x}, {y}, {js_number(w)}, {js_number(h)}, {{ {opts} }})")
+        return body_var
+
+    # ------------------------------------------------------------------
+    # Behavior Attachments
+    # ------------------------------------------------------------------
+
+    def _emit_behavior_attachments(self, js: JsBuilder):
+        has_any = False
+        for info in self._sprites:
+            sid_str = js_string(info['id'])
+            for buse in info.get('behaviors', []):
+                has_any = True
+                bname = js_id(buse['name'])
+                overrides = json.dumps(buse['overrides']) if buse.get('overrides') else '{}'
+                js.line(f"_sprites[{sid_str}].behaviors.push(new {bname}(_sprites[{sid_str}], {overrides}));")
+                if buse.get('on_collision'):
+                    fn_name = js_id(buse['on_collision'])
+                    js.line(f"_sprites[{sid_str}].collisionHandlers.push((self, other) => {{")
+                    js.indent()
+                    if buse.get('collision_tag'):
+                        tag_val = js_string(buse['collision_tag'])
+                        js.line(f"if (other.tag !== {tag_val}) return;")
+                    js.line(f"const b = self.behaviors.find(b => b instanceof {bname});")
+                    js.line(f"if (b && b.{fn_name}) b.{fn_name}(other);")
+                    js.dedent()
+                    js.line("});")
+
+        if not has_any:
+            js.comment('no behavior attachments')
+
+        # Init state machines
+        js.comment('Init state machines')
+        js.for_entries('_id', '_info', '_sprites')
+        js.for_of('b', '_info.behaviors')
+        js.if_block('b._smInit')
+        js.line('b._smInit();')
+        js.block_close()
+        js.block_close()
+        js.block_close()
+
+    # ------------------------------------------------------------------
+    # Animation Registration
+    # ------------------------------------------------------------------
+
+    def _emit_animation_registration(self, js: JsBuilder):
+        has_anims = False
+        for info in self._sprites:
+            if info.get('animations') and info.get('frame_width') and info.get('frame_height'):
+                has_anims = True
+                sid_str = js_string(info['id'])
+                anims_obj_parts = []
+                for anim in info['animations']:
+                    a_name = js_string(anim['name'])
+                    a_frames = js_string(anim['frames'])
+                    a_speed = js_number(anim['speed'])
+                    a_loop = js_bool(anim['loop'])
+                    a_auto = js_bool(anim.get('auto_play', False))
+                    anims_obj_parts.append(
+                        f"{a_name}: {{ frames: {a_frames}, speed: {a_speed}, loop: {a_loop}, autoPlay: {a_auto} }}"
+                    )
+                anims_obj = '{ ' + ', '.join(anims_obj_parts) + ' }'
+                fw = js_number(info['frame_width'])
+                fh = js_number(info['frame_height'])
+                js.line(f"_registerAnimation({sid_str}, PIXI.Assets.get({js_string(info['src'])}), {fw}, {fh}, {anims_obj});")
+        if not has_anims:
+            js.comment('no animations to register')
+
+    # ------------------------------------------------------------------
+    # Controlled Sprites (for input/animation auto-switch)
+    # ------------------------------------------------------------------
+
+    def _emit_controlled_sprites(self, js: JsBuilder):
+        js.const('_controlledSprites', '{}')
+        for info in self._sprites:
+            if info.get('controls'):
+                ctrl = info['controls']
+                sid_str = js_string(info['id'])
+                if ctrl == 'wasd':
+                    js.assign(f'_controlledSprites[{sid_str}]',
+                              "{ left: 'a', right: 'd', up: 'w', jump: ' ' }")
+                elif ctrl == 'arrows':
+                    js.assign(f'_controlledSprites[{sid_str}]',
+                              "{ left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', jump: 'ArrowUp' }")
+
+    # ------------------------------------------------------------------
+    # Functions
+    # ------------------------------------------------------------------
+
+    def _emit_functions(self, js: JsBuilder):
+        if not self._functions:
+            js.comment('no functions')
+            return
+        for fn in self._functions:
+            params = ', '.join(js_id(p.name) for p in fn.params)
+            js.func(js_id(fn.name), params)
+            for stmt in fn.body:
+                self._emit_statement(js, stmt)
+            js.block_close()
+            js.blank()
+
+    # ------------------------------------------------------------------
+    # Collision handler
+    # ------------------------------------------------------------------
+
+    def _emit_collision_handler(self, js: JsBuilder):
+        has_collisions = any(
+            buse.get('on_collision')
+            for info in self._sprites
+            for buse in info.get('behaviors', [])
+        )
+        if not has_collisions:
+            js.comment('no collision handlers')
+            return
+
+        js.line("Matter.Events.on(mEngine, 'collisionStart', (event) => {")
+        js.indent()
+        js.for_of('pair', 'event.pairs')
+        js.const('a', '_bodyToSprite[pair.bodyA.id]')
+        js.const('b', '_bodyToSprite[pair.bodyB.id]')
+        js.if_block('a && b')
+        js.line('_handleCollision(a, b);')
+        js.line('_handleCollision(b, a);')
+        js.block_close()
+        js.block_close()
+        js.dedent()
+        js.line("});")
+        js.blank()
+
+        js.func('_handleCollision', 'selfId, otherId')
+        js.const('selfInfo', '_sprites[selfId]')
+        js.const('otherInfo', '_sprites[otherId]')
+        js.if_block('!selfInfo || !otherInfo')
+        js.ret()
+        js.block_close()
+        js.if_block('selfInfo.collisionHandlers')
+        js.for_of('handler', 'selfInfo.collisionHandlers')
+        js.line('handler(selfInfo, otherInfo);')
+        js.block_close()
+        js.block_close()
+        js.block_close()
+
+    # ------------------------------------------------------------------
+    # Sound
+    # ------------------------------------------------------------------
+
+    def _emit_sounds(self, js: JsBuilder):
+        if not self._sounds:
+            js.comment('No sounds')
+            return
+        emit_audio_system(js)
+        for s in self._sounds:
+            js.line(f"await _loadSound({js_string(s['id'])}, {js_string(s['src'])});")
+
+    # ------------------------------------------------------------------
+    # Particle instances
+    # ------------------------------------------------------------------
+
+    def _emit_particle_instances(self, js: JsBuilder):
+        if not self._particles:
+            js.comment('No particle instances')
+            return
+        for p in self._particles:
+            config_parts = [
+                f"id: {js_string(p['id'])}",
+                f"follow: {js_string(p['follow']) if p.get('follow') else 'null'}",
+                f"count: {js_number(p['count'])}",
+                f"emitRate: {js_number(p['emit_rate'])}",
+                f"lifetime: {js_number(p['lifetime'])}",
+                f"speedMin: {js_number(p['speed_min'])}",
+                f"speedMax: {js_number(p['speed_max'])}",
+                f"angleMin: {js_number(p['angle_min'])}",
+                f"angleMax: {js_number(p['angle_max'])}",
+                f"alphaStart: {js_number(p['alpha_start'])}",
+                f"alphaEnd: {js_number(p['alpha_end'])}",
+            ]
+            js.line(f"_createParticleSystem({{ {', '.join(config_parts)} }});")
+            if p.get('trigger'):
+                js.comment(f"trigger: {p['trigger']} (wired at scene start)")
+
+    # ------------------------------------------------------------------
+    # Timer instances
+    # ------------------------------------------------------------------
+
+    def _emit_timer_instances(self, js: JsBuilder):
+        if not self._timers:
+            js.comment('No timer instances')
+            return
+        for t in self._timers:
+            action = js_id(t['action'])
+            js.line(
+                f"_createTimer({js_string(t['id'])}, {js_number(t['interval'])}, "
+                f"{js_number(t['repeat'])}, {js_bool(t['auto_start'])}, "
+                f"typeof {action} === 'function' ? {action} : function(){{}});"
+            )
+
+    # ------------------------------------------------------------------
+    # Tween instances
+    # ------------------------------------------------------------------
+
+    def _emit_tween_instances(self, js: JsBuilder):
+        if not self._tweens:
+            js.comment('No tween instances')
+            return
+        for t in self._tweens:
+            config_parts = [
+                f"id: {js_string(t['id'])}",
+                f"target: {js_string(t['target'])}",
+                f"prop: {js_string(t['property'])}",
+                f"to: {js_number(t['to'])}",
+                f"duration: {js_number(t['duration'])}",
+                f"easing: {js_string(t['easing'])}",
+                f"loop: {js_bool(t['loop'])}",
+                f"yoyo: {js_bool(t['yoyo'])}",
+                f"delay: {js_number(t['delay'])}",
+                f"active: {js_bool(t['auto_start'])}",
+            ]
+            js.line(f"_createTween({{ {', '.join(config_parts)} }});")
+
+    # ------------------------------------------------------------------
+    # HUD
+    # ------------------------------------------------------------------
+
+    def _build_hud_html(self) -> str:
+        parts = []
+        for i, hud in enumerate(self._huds):
+            content = self._gen_hud_content_safe(hud['children'])
+            div = HUD_DIV_TEMPLATE.format(
+                position=hud['position'],
+                index=i,
+                content=content,
+            )
+            parts.append(f"  {div}")
+        return '\n'.join(parts)
+
+    def _gen_hud_content_safe(self, children: List) -> str:
+        """Generate HUD HTML with sanitized content."""
+        parts = []
+        for child in children:
+            if isinstance(child, HTMLNode):
+                tag = re.sub(r'[^a-zA-Z0-9]', '', child.tag)  # sanitize tag name
+                safe_attrs = []
+                for k, v in child.attributes.items():
+                    k_safe = re.sub(r'[^a-zA-Z0-9-]', '', k)
+                    # Only allow safe attributes
+                    if k_safe in ('style', 'class', 'id'):
+                        v_safe = v.replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
+                        safe_attrs.append(f'{k_safe}="{v_safe}"')
+                attrs_str = ' ' + ' '.join(safe_attrs) if safe_attrs else ''
+                inner = self._gen_hud_content_safe(child.children)
+                parts.append(f"<{tag}{attrs_str}>{inner}</{tag}>")
+            elif isinstance(child, TextNode):
+                parts.append(sanitize_hud_text(child.content))
+            else:
+                parts.append('')
+        return ''.join(parts)
+
+    def _emit_hud_update(self, js: JsBuilder):
+        if not self._huds:
+            js.comment('No HUD')
+            return
+
+        js.const('_hudElements', '[]')
+        for i in range(len(self._huds)):
+            js.line(f"_hudElements.push(document.getElementById('qg-hud-{i}'));")
+
+        js.func('_updateHUD')
+        for i, hud in enumerate(self._huds):
+            raw_content = self._get_raw_hud_text(hud['children'])
+            bindings = re.findall(r'\{([^}]+)\}', raw_content)
+            if bindings:
+                js_expr = compile_binding_to_js(raw_content)
+                # Use textContent instead of innerHTML for safety
+                js.if_block(f'_hudElements[{i}]')
+                js.assign(f'_hudElements[{i}].textContent', js_expr)
+                js.block_close()
+        js.block_close()
+
+    def _get_raw_hud_text(self, children: List) -> str:
+        """Get raw text content from HUD children for binding extraction."""
+        parts = []
+        for child in children:
+            if isinstance(child, HTMLNode):
+                parts.append(self._get_raw_hud_text(child.children))
+            elif isinstance(child, TextNode):
+                parts.append(child.content)
+        return ''.join(parts)
+
+    # ------------------------------------------------------------------
+    # Game Loop
+    # ------------------------------------------------------------------
+
+    def _emit_game_loop(self, js: JsBuilder):
+        js.line("app.ticker.add((ticker) => {")
+        js.indent()
+        js.const('dt', 'ticker.deltaTime')
+
+        # Physics update
+        js.line('Matter.Engine.update(mEngine, dt * 16.67);')
+        js.line('syncPhysics();')
+
+        # Input handling for controlled sprites
+        js.comment('Input handling')
+        self._emit_input_update_loop(js)
+
+        # Camera
+        js.line('updateCamera();')
+
+        # Control-based animation switching
+        js.line('_updateControlAnimations();')
+
+        # Behaviors update
+        js.comment('Behaviors update')
+        js.for_entries('_id', '_info', '_sprites')
+        js.for_of('b', '_info.behaviors')
+        js.if_block('b._smUpdate')
+        js.line('b._smUpdate();')
+        js.block_close()
+        js.if_block('b.update')
+        js.line('b.update();')
+        js.block_close()
+        js.block_close()
+        js.block_close()
+
+        # Timers
+        if self._timers:
+            js.line('_updateTimers(dt);')
+
+        # Tweens
+        if self._tweens:
+            js.line('_updateTweens(dt);')
+
+        # Particles
+        if self._particles:
+            js.line('_updateParticles(dt);')
+
+        # HUD
+        if self._huds:
+            js.line('_updateHUD();')
+
+        js.dedent()
+        js.line("});")
+
+    def _emit_input_update_loop(self, js: JsBuilder):
+        for info in self._sprites:
+            if info.get('controls'):
+                sid_str = js_string(info['id'])
+                ctrl = info['controls']
+                spd = js_number(info['speed'])
+                jf = js_number(info['jump_force'])
+
+                if ctrl in ('wasd', 'arrows'):
+                    js.const(f'_ctrl_{js_id(info["id"])}', f'_controlledSprites[{sid_str}]')
+                    ctrl_var = f'_ctrl_{js_id(info["id"])}'
+                    body_ref = f'_sprites[{sid_str}].body'
+
+                    js.if_block(f'_keys[{ctrl_var}.left] && {body_ref}')
+                    js.line(f"Matter.Body.setVelocity({body_ref}, {{ x: -{spd}, y: {body_ref}.velocity.y }});")
+                    js.block_close()
+                    js.if_block(f'_keys[{ctrl_var}.right] && {body_ref}')
+                    js.line(f"Matter.Body.setVelocity({body_ref}, {{ x: {spd}, y: {body_ref}.velocity.y }});")
+                    js.block_close()
+                    js.if_block(f'_justPressed[{ctrl_var}.jump] && {body_ref}')
+                    js.line(f"Matter.Body.setVelocity({body_ref}, {{ x: {body_ref}.velocity.x, y: -{jf} }});")
+                    js.line(f"_gameEvents.emit('player.jump', _sprites[{sid_str}]);")
+                    js.block_close()
+                    # Dampen horizontal velocity when no keys pressed
+                    js.if_block(f'!_keys[{ctrl_var}.left] && !_keys[{ctrl_var}.right] && {body_ref}')
+                    js.const('_v', f'{body_ref}.velocity')
+                    js.line(f"Matter.Body.setVelocity({body_ref}, {{ x: _v.x * 0.8, y: _v.y }});")
+                    js.line(f"_gameEvents.emit('player.stop', _sprites[{sid_str}]);")
+                    js.else_block()
+                    js.line(f"_gameEvents.emit('player.walk', _sprites[{sid_str}]);")
+                    js.block_close()
+
+        # Custom input actions (safe: reference by sanitized function name, no eval)
+        for ci in self._custom_inputs:
+            key = js_string(ci['key'])
+            action = js_id(ci['action'])
+            if ci['type'] == 'press':
+                js.if_block(f"_justPressed[{key}] && typeof {action} === 'function'")
+            else:
+                js.if_block(f"_keys[{key}] && typeof {action} === 'function'")
+            js.line(f"{action}();")
+            js.block_close()
+
+        js.line('_clearJustPressed();')
+
+    # ------------------------------------------------------------------
+    # Scene Start
+    # ------------------------------------------------------------------
+
+    def _emit_scene_start(self, js: JsBuilder):
+        # Play scene.start triggered sounds
+        for s in self._sounds:
+            if s.get('trigger') == 'scene.start':
+                js.line(f"_playSound({js_string(s['id'])}, {{ volume: {js_number(s['volume'])}, loop: {js_bool(s['loop'])} }});")
+            elif s.get('trigger'):
+                # Wire to event bus
+                trigger = js_string(s['trigger'])
+                sid = js_string(s['id'])
+                vol = js_number(s['volume'])
+                loop = js_bool(s['loop'])
+                js.line(f"_gameEvents.on({trigger}, () => _playSound({sid}, {{ volume: {vol}, loop: {loop} }}));")
+
+        # Activate trigger-based particles
+        for p in self._particles:
+            if p.get('trigger') == 'scene.start':
+                js.line(f"_activateParticles({js_string(p['id'])});")
+            elif p.get('trigger'):
+                trigger = js_string(p['trigger'])
+                pid = js_string(p['id'])
+                js.line(f"_gameEvents.on({trigger}, () => _activateParticles({pid}));")
+
+    # ------------------------------------------------------------------
+    # Spawner instances
+    # ------------------------------------------------------------------
+
+    def _emit_spawner_instances(self, js: JsBuilder):
+        if not self._spawners:
+            js.comment('No spawners')
+            return
+        emit_spawn_system(js)
+        for sp in self._spawners:
+            config_parts = [
+                f"id: {js_string(sp['id'])}",
+                f"prefab: {js_string(sp['prefab'])}",
+                f"poolSize: {js_number(sp['pool_size'])}",
+                f"x: {js_number(sp.get('x') or 0)}",
+                f"y: {js_number(sp.get('y') or 0)}",
+            ]
+            if sp.get('interval') is not None:
+                config_parts.append(f"interval: {js_number(sp['interval'])}")
+            js.line(f"_createSpawner({{ {', '.join(config_parts)} }});")
+
+    # ------------------------------------------------------------------
+    # Visual tilemaps
+    # ------------------------------------------------------------------
+
+    def _emit_visual_tilemaps(self, js: JsBuilder):
+        if not self._visual_tile_layers:
+            js.comment('No visual tile layers')
+            return
+        for vt in self._visual_tile_layers:
+            tilemap_id = js_id(vt['tilemap_id'])
+            layer_name = js_id(vt['layer_name'])
+            data_var = f'_tileData_{tilemap_id}_{layer_name}'
+            tw = vt['tile_width']
+            th = vt['tile_height']
+            src = vt['src']
+
+            # Emit tile data as 2D array
+            rows = vt['data'].strip().split('\n')
+            data_2d = []
+            for row in rows:
+                cells = [c.strip() for c in row.split(',') if c.strip()]
+                data_2d.append('[' + ','.join(cells) + ']')
+            js.const(data_var, '[' + ','.join(data_2d) + ']')
+
+            # Emit JS loop to create sprites from tileset
+            if src:
+                js.const(f'_tileset_{tilemap_id}', f"PIXI.Assets.get({js_string(src)})")
+                ts_var = f'_tileset_{tilemap_id}'
+                js.const(f'_tsSource_{tilemap_id}', f'{ts_var}.source || {ts_var}.baseTexture || {ts_var}')
+                js.const(f'_tsCols_{tilemap_id}', f'Math.floor(({ts_var}.width || 0) / {tw})')
+
+            js.for_range('_ty', '0', f'{data_var}.length - 1')
+            js.for_range('_tx', '0', f'{data_var}[_ty].length - 1')
+            js.const('_tileId', f'{data_var}[_ty][_tx]')
+            js.if_block('_tileId > 0')
+            if src:
+                js.const('_tileCol', f'(_tileId - 1) % _tsCols_{tilemap_id}')
+                js.const('_tileRow', f'Math.floor((_tileId - 1) / _tsCols_{tilemap_id})')
+                js.const('_tileRect', f'new PIXI.Rectangle(_tileCol * {tw}, _tileRow * {th}, {tw}, {th})')
+                js.const('_tileTex', f'new PIXI.Texture({{ source: _tsSource_{tilemap_id}, frame: _tileRect }})')
+                js.const('_tileSpr', 'new PIXI.Sprite(_tileTex)')
+            else:
+                js.const('_tileSpr', 'new PIXI.Graphics()')
+                js.line(f"_tileSpr.rect(0, 0, {tw}, {th});")
+                js.line("_tileSpr.fill({ color: 0x808080 });")
+            js.assign('_tileSpr.x', f'_tx * {tw}')
+            js.assign('_tileSpr.y', f'_ty * {th}')
+            js.line('_cameraContainer.addChild(_tileSpr);')
+            js.block_close()  # if tileId > 0
+            js.block_close()  # for _tx
+            js.block_close()  # for _ty
+            js.blank()
+
+    # ------------------------------------------------------------------
+    # Expression compilation
+    # ------------------------------------------------------------------
+
+    def _compile_expression(self, expr: str) -> str:
+        """Convert Quantum databinding expressions to JS safely."""
+        if not expr:
+            return '""'
+        expr = expr.strip()
+        # Handle {expr} databinding
+        if expr.startswith('{') and expr.endswith('}'):
+            inner = expr[1:-1]
+            inner = inner.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+            # Validate: only allow safe JS expressions (identifiers, math, dots, parens, arrays, ternary)
+            if re.match(r'^[a-zA-Z_$0-9][a-zA-Z0-9_$.\s+\-*/()%<>=!&|,\[\]?:\'"]*$', inner):
+                return inner
+            return json.dumps(expr)  # escape unsafe expressions
+        # Handle XML-escaped operators
+        expr = expr.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+        if expr.startswith('"') or expr.startswith("'") or is_number(expr) or expr in ('true', 'false'):
+            return expr
+        return json.dumps(expr)
+
+
+def html_escape_title(title: str) -> str:
+    """Escape a title for safe HTML embedding."""
+    return title.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')

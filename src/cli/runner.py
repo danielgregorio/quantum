@@ -105,13 +105,15 @@ class QuantumRunner:
         """Execute q:application"""
         print(f"[EXEC] Executing application: {app.app_id}")
         print(f"[INFO] Type: {app.app_type}")
-        
+
         if debug:
             print(f"   Routes: {len(app.routes)}")
             for route in app.routes:
                 print(f"     {route.method} {route.path}")
-        
-        if app.app_type == 'html':
+
+        if app.app_type == 'game':
+            return self._build_game(app, debug)
+        elif app.app_type == 'html':
             return self._start_web_server(app)
         elif app.app_type == 'microservices':
             return self._start_api_server(app)
@@ -120,6 +122,22 @@ class QuantumRunner:
             return 0
         else:
             print(f"[ERROR] Application type '{app.app_type}' not supported")
+            return 1
+
+    def _build_game(self, app: ApplicationNode, debug: bool = False) -> int:
+        """Build standalone HTML game from game application."""
+        from runtime.game_builder import GameBuilder, GameBuildError
+        try:
+            builder = GameBuilder()
+            output_path = builder.build_to_file(app)
+            print(f"[SUCCESS] Game built: {output_path}")
+            if debug:
+                print(f"   Scenes: {len(getattr(app, 'scenes', []))}")
+                print(f"   Behaviors: {len(getattr(app, 'behaviors', []))}")
+                print(f"   Prefabs: {len(getattr(app, 'prefabs', []))}")
+            return 0
+        except GameBuildError as e:
+            print(f"[ERROR] Game build error: {e}")
             return 1
     
     def _execute_job(self, job: JobNode, debug: bool = False) -> int:

@@ -1,0 +1,34 @@
+feature:
+  name: "game_engine_2d"
+  display_name: "Game Engine 2D (qg: namespace)"
+  version: "1.0.0"
+  status: "experimental"
+  migration_type: "option_c"
+
+description: |
+  2D game engine for Quantum Framework.
+  Compiles declarative XML (qg: namespace) to standalone HTML
+  using PixiJS (WebGL rendering) and Matter.js (physics).
+  Games run 100% in the browser - no server-side runtime needed.
+
+tags:
+  - "game"
+  - "2d"
+  - "pixi"
+  - "matter"
+  - "physics"
+  - "sprites"
+
+maintainers:
+  - "Daniel"
+  - "Claude"
+
+api:
+  ast_nodes: "src/core/features/game_engine_2d/src/ast_nodes.py"
+  parser: "src/core/features/game_engine_2d/src/parser.py"
+  code_generator: "src/runtime/game_code_generator.py"
+  builder: "src/runtime/game_builder.py"
+
+testing:
+  integration_tests: 3
+  coverage: 80
