@@ -3,7 +3,7 @@
   "category": "islands_architecture",
   "tags": ["islands", "client-side", "state"],
   "input": {
-    "component": "<q:component name=\"Counter\" interactive=\"true\">\n  <div id=\"counter\">0</div>\n  <button onclick=\"increment()\">+</button>\n  <script>\n    let count = 0;\n    function increment() {\n      count++;\n      document.getElementById('counter').textContent = count;\n    }\n  </script>\n</q:component>",
+    "component": "<q:component name=\"Counter\" interactive=\"true\">\n  <q:state name=\"count\" value=\"0\" />\n  <div>{count}</div>\n  <button q:click=\"count = count + 1\">+</button>\n</q:component>",
     "context": {
       "phase": "E",
       "feature": "islands_architecture",

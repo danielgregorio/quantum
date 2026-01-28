@@ -15,7 +15,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"factorial\" return-type=\"number\">\n  <q:param name=\"n\" type=\"number\" required=\"true\" />\n  <q:if condition=\"{n} <= 1\">\n    <q:return value=\"1\" />\n  </q:if>\n  <q:set name=\"prev\" value=\"{factorial(n - 1)}\" />\n  <q:return value=\"{n} * {prev}\" />\n</q:function>\n\n<q:call function=\"factorial\" n=\"5\" />",
+        "quantum_code": "<q:function name=\"factorial\" return-type=\"number\">\n  <q:param name=\"n\" type=\"number\" required=\"true\" />\n  <q:if condition=\"{n} &lt;= 1\">\n    <q:return value=\"1\" />\n  </q:if>\n  <q:set name=\"prev\" value=\"{factorial(n - 1)}\" />\n  <q:return value=\"{n} * {prev}\" />\n</q:function>\n\n<q:call function=\"factorial\" n=\"5\" />",
         "ast": {
           "type": "FunctionNode",
           "attributes": {
@@ -39,7 +39,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"fibonacci\" return-type=\"number\">\n  <q:param name=\"n\" type=\"number\" required=\"true\" />\n  <q:if condition=\"{n} <= 1\">\n    <q:return value=\"{n}\" />\n  </q:if>\n  <q:set name=\"a\" value=\"{fibonacci(n - 1)}\" />\n  <q:set name=\"b\" value=\"{fibonacci(n - 2)}\" />\n  <q:return value=\"{a} + {b}\" />\n</q:function>\n\n<q:call function=\"fibonacci\" n=\"6\" />",
+        "quantum_code": "<q:function name=\"fibonacci\" return-type=\"number\">\n  <q:param name=\"n\" type=\"number\" required=\"true\" />\n  <q:if condition=\"{n} &lt;= 1\">\n    <q:return value=\"{n}\" />\n  </q:if>\n  <q:set name=\"a\" value=\"{fibonacci(n - 1)}\" />\n  <q:set name=\"b\" value=\"{fibonacci(n - 2)}\" />\n  <q:return value=\"{a} + {b}\" />\n</q:function>\n\n<q:call function=\"fibonacci\" n=\"6\" />",
         "ast": {
           "type": "FunctionNode",
           "attributes": {

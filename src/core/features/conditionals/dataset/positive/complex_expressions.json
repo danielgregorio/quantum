@@ -32,7 +32,7 @@
       "id": "if-complex-004",
       "intent": "Combined AND/OR",
       "expected_output": {
-        "quantum_code": "<q:if condition=\"({age} >= 18 AND {hasLicense}) OR {isEmergency}\">\n  Can drive\n</q:if>"
+        "quantum_code": "<q:if condition=\"({age} >= 18 AND {hasLicense} == true) OR {isEmergency} == true\">\n  Can drive\n</q:if>"
       },
       "tags": ["AND", "OR", "precedence"]
     },
@@ -40,7 +40,7 @@
       "id": "if-complex-005",
       "intent": "Range check with AND",
       "expected_output": {
-        "quantum_code": "<q:if condition=\"{score} >= 0 AND {score} <= 100\">\n  Valid score\n</q:if>"
+        "quantum_code": "<q:if condition=\"{score} >= 0 AND {score} &lt;= 100\">\n  Valid score\n</q:if>"
       },
       "tags": ["AND", "range_check"]
     }

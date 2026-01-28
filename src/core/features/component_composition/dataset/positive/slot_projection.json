@@ -15,31 +15,41 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<Card title=\"User Info\">\n  <p>Name: John Doe</p>\n  <p>Email: john@example.com</p>\n</Card>",
+        "quantum_code": "<q:component name=\"SlotTest\">\n  <q:import component=\"Card\" />\n\n  <Card title=\"User Info\">\n    <p>Name: John Doe</p>\n    <p>Email: john@example.com</p>\n  </Card>\n</q:component>",
         "ast": {
-          "type": "ComponentCallNode",
-          "component_name": "Card",
-          "props": {
-            "title": "User Info"
-          },
-          "children": [
+          "type": "ComponentNode",
+          "name": "SlotTest",
+          "statements": [
             {
-              "type": "HTMLNode",
-              "tag": "p",
-              "children": [
-                {
-                  "type": "TextNode",
-                  "content": "Name: John Doe"
-                }
-              ]
+              "type": "ImportNode",
+              "component": "Card"
             },
             {
-              "type": "HTMLNode",
-              "tag": "p",
+              "type": "ComponentCallNode",
+              "component_name": "Card",
+              "props": {
+                "title": "User Info"
+              },
               "children": [
                 {
-                  "type": "TextNode",
-                  "content": "Email: john@example.com"
+                  "type": "HTMLNode",
+                  "tag": "p",
+                  "children": [
+                    {
+                      "type": "TextNode",
+                      "content": "Name: John Doe"
+                    }
+                  ]
+                },
+                {
+                  "type": "HTMLNode",
+                  "tag": "p",
+                  "children": [
+                    {
+                      "type": "TextNode",
+                      "content": "Email: john@example.com"
+                    }
+                  ]
                 }
               ]
             }
@@ -61,19 +71,34 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:set name=\"userName\" value=\"Daniel\" />\n<Card title=\"Greeting\">\n  <p>Welcome, {userName}!</p>\n</Card>",
+        "quantum_code": "<q:component name=\"SlotTest\">\n  <q:import component=\"Card\" />\n\n  <q:set name=\"userName\" value=\"Daniel\" />\n  <Card title=\"Greeting\">\n    <p>Welcome, {userName}!</p>\n  </Card>\n</q:component>",
         "ast": {
-          "type": "ComponentCallNode",
-          "component_name": "Card",
-          "children": [
+          "type": "ComponentNode",
+          "name": "SlotTest",
+          "statements": [
             {
-              "type": "HTMLNode",
-              "tag": "p",
+              "type": "ImportNode",
+              "component": "Card"
+            },
+            {
+              "type": "SetNode",
+              "name": "userName",
+              "value": "Daniel"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Card",
               "children": [
                 {
-                  "type": "TextNode",
-                  "content": "Welcome, {userName}!",
-                  "has_databinding": true
+                  "type": "HTMLNode",
+                  "tag": "p",
+                  "children": [
+                    {
+                      "type": "TextNode",
+                      "content": "Welcome, {userName}!",
+                      "has_databinding": true
+                    }
+                  ]
                 }
               ]
             }
@@ -95,22 +120,36 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<Card title=\"Actions\">\n  <p>Choose an action:</p>\n  <Button label=\"Save\" color=\"green\" />\n  <Button label=\"Cancel\" color=\"red\" />\n</Card>",
+        "quantum_code": "<q:component name=\"SlotTest\">\n  <q:import component=\"Card\" />\n  <q:import component=\"Button\" />\n\n  <Card title=\"Actions\">\n    <p>Choose an action:</p>\n    <Button label=\"Save\" color=\"green\" />\n    <Button label=\"Cancel\" color=\"red\" />\n  </Card>\n</q:component>",
         "ast": {
-          "type": "ComponentCallNode",
-          "component_name": "Card",
-          "children": [
+          "type": "ComponentNode",
+          "name": "SlotTest",
+          "statements": [
             {
-              "type": "HTMLNode",
-              "tag": "p"
+              "type": "ImportNode",
+              "component": "Card"
+            },
+            {
+              "type": "ImportNode",
+              "component": "Button"
             },
             {
               "type": "ComponentCallNode",
-              "component_name": "Button"
-            },
-            {
-              "type": "ComponentCallNode",
-              "component_name": "Button"
+              "component_name": "Card",
+              "children": [
+                {
+                  "type": "HTMLNode",
+                  "tag": "p"
+                },
+                {
+                  "type": "ComponentCallNode",
+                  "component_name": "Button"
+                },
+                {
+                  "type": "ComponentCallNode",
+                  "component_name": "Button"
+                }
+              ]
             }
           ]
         },

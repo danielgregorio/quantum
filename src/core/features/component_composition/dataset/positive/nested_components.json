@@ -99,10 +99,18 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:component name=\"Page\">\n  <q:set name=\"userName\" value=\"Daniel\" />\n  <q:set name=\"userRole\" value=\"Admin\" />\n\n  <Layout title=\"Welcome {userName}\">\n    <Card title=\"User Info\">\n      <p>Name: {userName}</p>\n      <p>Role: {userRole}</p>\n    </Card>\n  </Layout>\n</q:component>",
+        "quantum_code": "<q:component name=\"Page\">\n  <q:import component=\"Layout\" />\n  <q:import component=\"Card\" />\n\n  <q:set name=\"userName\" value=\"Daniel\" />\n  <q:set name=\"userRole\" value=\"Admin\" />\n\n  <Layout title=\"Welcome {userName}\">\n    <Card title=\"User Info\">\n      <p>Name: {userName}</p>\n      <p>Role: {userRole}</p>\n    </Card>\n  </Layout>\n</q:component>",
         "ast": {
           "type": "ComponentNode",
           "statements": [
+            {
+              "type": "ImportNode",
+              "component": "Layout"
+            },
+            {
+              "type": "ImportNode",
+              "component": "Card"
+            },
             {
               "type": "SetNode",
               "name": "userName",

@@ -15,7 +15,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:set name=\"users\" type=\"array\" value=\"[{'name': 'Alice', 'age': 25}, {'name': 'Bob', 'age': 30}]\" />\n<table>\n  <q:loop type=\"array\" var=\"user\" items=\"{users}\">\n    <tr>\n      <td>{user.name}</td>\n      <td>{user.age}</td>\n    </tr>\n  </q:loop>\n</table>",
+        "quantum_code": "<q:set name=\"users\" type=\"array\" value=\"[{name: 'Alice', age: 25}, {name: 'Bob', age: 30}]\" />\n<table>\n  <q:loop type=\"array\" var=\"user\" items=\"{users}\">\n    <tr>\n      <td>{user.name}</td>\n      <td>{user.age}</td>\n    </tr>\n  </q:loop>\n</table>",
         "runtime_behavior": "Generates table with 2 rows of user data"
       },
       "tags": ["real_world", "html_table", "ui_rendering"]
@@ -31,7 +31,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:set name=\"menuItems\" type=\"array\" value=\"[{'label': 'Home', 'url': '/'}, {'label': 'About', 'url': '/about'}, {'label': 'Contact', 'url': '/contact'}]\" />\n<nav>\n  <q:loop type=\"array\" var=\"item\" items=\"{menuItems}\">\n    <a href=\"{item.url}\">{item.label}</a>\n  </q:loop>\n</nav>",
+        "quantum_code": "<q:set name=\"menuItems\" type=\"array\" value=\"[{label: 'Home', url: '/'}, {label: 'About', url: '/about'}, {label: 'Contact', url: '/contact'}]\" />\n<nav>\n  <q:loop type=\"array\" var=\"item\" items=\"{menuItems}\">\n    <a href=\"{item.url}\">{item.label}</a>\n  </q:loop>\n</nav>",
         "runtime_behavior": "Generates navigation with 3 links"
       },
       "tags": ["real_world", "navigation", "menu"]
@@ -47,7 +47,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:set name=\"totalPages\" type=\"number\" value=\"5\" />\n<q:set name=\"currentPage\" type=\"number\" value=\"3\" />\n<div class=\"pagination\">\n  <q:loop type=\"range\" var=\"page\" from=\"1\" to=\"{totalPages}\">\n    <q:if condition=\"{page} == {currentPage}\">\n      <span class=\"active\">{page}</span>\n    <q:else/>\n      <a href=\"?page={page}\">{page}</a>\n    </q:if>\n  </q:loop>\n</div>",
+        "quantum_code": "<q:set name=\"totalPages\" type=\"number\" value=\"5\" />\n<q:set name=\"currentPage\" type=\"number\" value=\"3\" />\n<div class=\"pagination\">\n  <q:loop type=\"range\" var=\"page\" from=\"1\" to=\"5\">\n    <q:if condition=\"{page} == {currentPage}\">\n      <span class=\"active\">{page}</span>\n    <q:else/>\n      <a href=\"?page={page}\">{page}</a>\n    </q:if>\n  </q:loop>\n</div>",
         "runtime_behavior": "Generates pagination: 1 2 [3] 4 5 (3 is active)"
       },
       "tags": ["real_world", "pagination", "ui_controls"]
@@ -63,7 +63,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:set name=\"products\" type=\"array\" value=\"[{'name': 'Laptop', 'price': 999}, {'name': 'Mouse', 'price': 25}, {'name': 'Keyboard', 'price': 75}]\" />\n<div class=\"product-grid\">\n  <q:loop type=\"array\" var=\"product\" items=\"{products}\">\n    <div class=\"product-card\">\n      <h3>{product.name}</h3>\n      <p>${product.price}</p>\n      <button>Add to Cart</button>\n    </div>\n  </q:loop>\n</div>",
+        "quantum_code": "<q:set name=\"products\" type=\"array\" value=\"[{name: 'Laptop', price: 999}, {name: 'Mouse', price: 25}, {name: 'Keyboard', price: 75}]\" />\n<div class=\"product-grid\">\n  <q:loop type=\"array\" var=\"product\" items=\"{products}\">\n    <div class=\"product-card\">\n      <h3>{product.name}</h3>\n      <p>{product.price}</p>\n      <button>Add to Cart</button>\n    </div>\n  </q:loop>\n</div>",
         "runtime_behavior": "Generates 3 product cards with name, price, and button"
       },
       "tags": ["real_world", "ecommerce", "product_grid"]
@@ -95,7 +95,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:set name=\"orders\" type=\"array\" value=\"[{'id': 1, 'status': 'pending'}, {'id': 2, 'status': 'shipped'}, {'id': 3, 'status': 'delivered'}]\" />\n<q:loop type=\"array\" var=\"order\" items=\"{orders}\">\n  Order #{order.id}:\n  <q:if condition=\"{order.status} == 'pending'\">\n    <span class=\"badge yellow\">Pending</span>\n  <q:elseif condition=\"{order.status} == 'shipped'\"/>\n    <span class=\"badge blue\">Shipped</span>\n  <q:elseif condition=\"{order.status} == 'delivered'\"/>\n    <span class=\"badge green\">Delivered</span>\n  </q:if>\n</q:loop>",
+        "quantum_code": "<q:set name=\"orders\" type=\"array\" value=\"[{id: 1, status: 'pending'}, {id: 2, status: 'shipped'}, {id: 3, status: 'delivered'}]\" />\n<q:loop type=\"array\" var=\"order\" items=\"{orders}\">\n  Order #{order.id}:\n  <q:if condition=\"{order.status} == 'pending'\">\n    <span class=\"badge yellow\">Pending</span>\n  <q:elseif condition=\"{order.status} == 'shipped'\"/>\n    <span class=\"badge blue\">Shipped</span>\n  <q:elseif condition=\"{order.status} == 'delivered'\"/>\n    <span class=\"badge green\">Delivered</span>\n  </q:if>\n</q:loop>",
         "runtime_behavior": "Shows 3 orders with color-coded status badges"
       },
       "tags": ["real_world", "status_display", "conditional_styling"]

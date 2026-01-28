@@ -1,44 +1,44 @@
 [
   {
-    "description": "Missing required 'connection' attribute",
-    "code": "<q:query sql=\"SELECT * FROM users\" />",
-    "expected_behavior": "Throws validation error: 'connection' attribute is required",
+    "description": "Missing required 'datasource' attribute",
+    "code": "<q:query name=\"users\">\n    SELECT * FROM users\n</q:query>",
+    "expected_behavior": "Throws validation error: 'datasource' attribute is required",
     "error_type": "missing_required_attribute",
-    "use_case": "Validates that database connection must be specified"
+    "use_case": "Validates that datasource must be specified"
   },
   {
-    "description": "Missing required 'sql' attribute",
-    "code": "<q:query connection=\"db\" />",
-    "expected_behavior": "Throws validation error: 'sql' attribute is required",
+    "description": "Missing required 'name' attribute",
+    "code": "<q:query datasource=\"app-db\">\n    SELECT * FROM users\n</q:query>",
+    "expected_behavior": "Throws validation error: 'name' attribute is required",
     "error_type": "missing_required_attribute",
-    "use_case": "Validates that SQL query string must be provided"
+    "use_case": "Validates that query name must be provided"
   },
   {
     "description": "SQL injection attempt with unbound parameter",
-    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM users WHERE id = {user_id}\" />",
-    "expected_behavior": "Throws error: Parameters must be bound using :param_name syntax, not direct interpolation",
+    "code": "<q:query name=\"users\" datasource=\"app-db\">\n    SELECT * FROM users WHERE id = {user_id}\n</q:query>",
+    "expected_behavior": "Throws error: Parameters must be bound using :param_name syntax with <q:param>, not direct interpolation",
     "error_type": "sql_injection_risk",
     "use_case": "Prevents SQL injection by enforcing parameter binding"
   },
   {
-    "description": "Parameter binding without value",
-    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM users WHERE id = :user_id\" />",
-    "expected_behavior": "Throws error: Parameter ':user_id' is declared in SQL but no :user_id attribute provided",
+    "description": "Parameter declared in SQL but missing q:param element",
+    "code": "<q:query name=\"users\" datasource=\"app-db\">\n    SELECT * FROM users WHERE id = :user_id\n</q:query>",
+    "expected_behavior": "Throws error: Parameter ':user_id' is declared in SQL but no <q:param name=\"user_id\"> element provided",
     "error_type": "missing_parameter_value",
-    "use_case": "Validates that all SQL parameters have corresponding attribute values"
+    "use_case": "Validates that all SQL parameters have corresponding q:param declarations"
   },
   {
     "description": "Invalid SQL syntax",
-    "code": "<q:query connection=\"db\" sql=\"SELCT * FORM users\" />",
+    "code": "<q:query name=\"users\" datasource=\"app-db\">\n    SELCT * FORM users\n</q:query>",
     "expected_behavior": "Throws database error: Syntax error in SQL query",
     "error_type": "invalid_sql_syntax",
     "use_case": "Database-level validation of SQL syntax"
   },
   {
-    "description": "Attribute name mismatch with SQL parameter",
-    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM users WHERE id = :user_id\" :userid=\"123\" />",
-    "expected_behavior": "Throws error: Parameter ':user_id' declared in SQL but attribute ':userid' doesn't match (case-sensitive)",
+    "description": "Parameter name mismatch between SQL and q:param",
+    "code": "<q:query name=\"users\" datasource=\"app-db\">\n    SELECT * FROM users WHERE id = :user_id\n    <q:param name=\"userid\" value=\"123\" type=\"integer\" />\n</q:query>",
+    "expected_behavior": "Throws error: Parameter ':user_id' declared in SQL but <q:param name=\"userid\"> doesn't match (case-sensitive)",
     "error_type": "parameter_name_mismatch",
-    "use_case": "Validates exact parameter name matching between SQL and attributes"
+    "use_case": "Validates exact parameter name matching between SQL and q:param elements"
   }
 ]

@@ -3,7 +3,7 @@
   "category": "islands_architecture",
   "tags": ["islands", "binding", "input"],
   "input": {
-    "component": "<q:component name=\"LiveInput\" interactive=\"true\">\n  <input oninput=\"updateOutput(this.value)\" />\n  <p>You typed: <span id=\"output\"></span></p>\n  <script>\n    function updateOutput(value) {\n      document.getElementById('output').textContent = value;\n    }\n  </script>\n</q:component>",
+    "component": "<q:component name=\"LiveInput\" interactive=\"true\">\n  <q:state name=\"username\" value=\"\" />\n  <input q:model=\"username\" />\n  <p>You typed: {username}</p>\n</q:component>",
     "context": {
       "phase": "E",
       "feature": "islands_architecture",

@@ -3,7 +3,7 @@
   "category": "htmx_partials",
   "tags": ["htmx", "partial", "ajax"],
   "input": {
-    "component": "<div hx-get=\"/_partial/live_stats\" hx-trigger=\"load\" hx-swap=\"innerHTML\">\n  Loading...\n</div>",
+    "component": "<q:component name=\"LiveStats\">\n  <div q:partial=\"live_stats\" q:trigger=\"load\" q:swap=\"innerHTML\">\n    Loading...\n  </div>\n</q:component>",
     "context": {
       "phase": "B",
       "feature": "htmx_partials",
@@ -11,7 +11,7 @@
       "method": "GET"
     }
   },
-  "expected_behavior": "On page load, sends GET request to /_partial/live_stats and replaces div content with partial response",
+  "expected_behavior": "On page load, renders the 'live_stats' partial and replaces div content with partial response",
   "validation": {
     "partial_loaded": true,
     "ajax_request_sent": true,

@@ -39,11 +39,11 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:if condition=\"{age} < 13\">\n  Category: Child\n<q:elseif condition=\"{age} < 18\"/>\n  Category: Teen\n<q:elseif condition=\"{age} < 65\"/>\n  Category: Adult\n<q:else/>\n  Category: Senior\n</q:if>",
+        "quantum_code": "<q:if condition=\"{age} &lt; 13\">\n  Category: Child\n<q:elseif condition=\"{age} &lt; 18\"/>\n  Category: Teen\n<q:elseif condition=\"{age} &lt; 65\"/>\n  Category: Adult\n<q:else/>\n  Category: Senior\n</q:if>",
         "ast": {
           "type": "IfNode",
           "attributes": {
-            "condition": "{age} < 13",
+            "condition": "{age} &lt; 13",
             "elseif_count": 2,
             "has_else": true
           }

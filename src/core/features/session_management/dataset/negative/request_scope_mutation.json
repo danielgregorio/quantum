@@ -18,5 +18,6 @@
     "should_fail": true,
     "read_only_enforcement": true
   },
-  "note": "Request scope contains HTTP metadata (method, path, url) and should not be modifiable by components"
+  "note": "Request scope contains HTTP metadata (method, path, url) and should not be modifiable by components",
+  "design_note": "This is intentional Quantum design. Unlike ColdFusion where the request scope is mutable and often used for passing data between templates, Quantum enforces request scope as read-only. This prevents side effects and makes component behavior more predictable. Components should use q:set with local or session scope for mutable state, and treat request scope purely as an immutable source of HTTP request metadata."
 }

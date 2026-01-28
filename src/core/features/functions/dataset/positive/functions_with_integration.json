@@ -14,7 +14,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"calculateTax\">\n  <q:param name=\"amount\" type=\"number\" required=\"true\" />\n  <q:return>{amount * 0.08}</q:return>\n</q:function>\n\n<q:function name=\"getTotalPrice\">\n  <q:param name=\"price\" type=\"number\" required=\"true\" />\n  <q:return>{price + calculateTax(price)}</q:return>\n</q:function>",
+        "quantum_code": "<q:function name=\"calculateTax\">\n  <q:param name=\"amount\" type=\"number\" required=\"true\" />\n  <q:return value=\"{amount * 0.08}\" />\n</q:function>\n\n<q:function name=\"getTotalPrice\">\n  <q:param name=\"price\" type=\"number\" required=\"true\" />\n  <q:return value=\"{price + calculateTax(price)}\" />\n</q:function>",
         "runtime_behavior": "getTotalPrice calls calculateTax to compute final price"
       },
       "tags": ["integration", "function_calls", "composition"]
@@ -29,7 +29,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"getDiscountedPrice\">\n  <q:param name=\"price\" type=\"number\" required=\"true\" />\n  <q:param name=\"quantity\" type=\"number\" required=\"true\" />\n  <q:return>\n    <q:if condition=\"{quantity} >= 100\">\n      {price * 0.7}\n    <q:elseif condition=\"{quantity} >= 50\"/>\n      {price * 0.8}\n    <q:elseif condition=\"{quantity} >= 10\"/>\n      {price * 0.9}\n    <q:else/>\n      {price}\n    </q:if>\n  </q:return>\n</q:function>",
+        "quantum_code": "<q:function name=\"getDiscountedPrice\">\n  <q:param name=\"price\" type=\"number\" required=\"true\" />\n  <q:param name=\"quantity\" type=\"number\" required=\"true\" />\n  <q:set name=\"result\" type=\"number\" value=\"{price}\" />\n  <q:if condition=\"{quantity} >= 100\">\n    <q:set name=\"result\" value=\"{price * 0.7}\" />\n  <q:elseif condition=\"{quantity} >= 50\"/>\n    <q:set name=\"result\" value=\"{price * 0.8}\" />\n  <q:elseif condition=\"{quantity} >= 10\"/>\n    <q:set name=\"result\" value=\"{price * 0.9}\" />\n  </q:if>\n  <q:return value=\"{result}\" />\n</q:function>",
         "runtime_behavior": "Returns price with quantity-based discount"
       },
       "tags": ["integration", "conditionals", "business_logic"]
@@ -44,7 +44,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"sumArray\">\n  <q:param name=\"numbers\" type=\"array\" required=\"true\" />\n  <q:return>\n    <q:set name=\"total\" type=\"number\" value=\"0\" />\n    <q:loop type=\"array\" var=\"num\" items=\"{numbers}\">\n      <q:set name=\"total\" operation=\"add\" value=\"{num}\" />\n    </q:loop>\n    {total}\n  </q:return>\n</q:function>",
+        "quantum_code": "<q:function name=\"sumArray\">\n  <q:param name=\"numbers\" type=\"array\" required=\"true\" />\n  <q:set name=\"total\" type=\"number\" value=\"0\" />\n  <q:loop type=\"array\" var=\"num\" items=\"{numbers}\">\n    <q:set name=\"total\" operation=\"add\" value=\"{num}\" />\n  </q:loop>\n  <q:return value=\"{total}\" />\n</q:function>",
         "runtime_behavior": "Iterates through array and returns sum"
       },
       "tags": ["integration", "loops", "accumulation"]
@@ -59,7 +59,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"filterEven\">\n  <q:param name=\"numbers\" type=\"array\" required=\"true\" />\n  <q:return>\n    <q:set name=\"result\" type=\"array\" value=\"[]\" />\n    <q:loop type=\"array\" var=\"num\" items=\"{numbers}\">\n      <q:if condition=\"{num} % 2 == 0\">\n        <q:set name=\"result\" operation=\"push\" value=\"{num}\" />\n      </q:if>\n    </q:loop>\n    {result}\n  </q:return>\n</q:function>",
+        "quantum_code": "<q:function name=\"filterEven\">\n  <q:param name=\"numbers\" type=\"array\" required=\"true\" />\n  <q:set name=\"result\" type=\"array\" value=\"[]\" />\n  <q:loop type=\"array\" var=\"num\" items=\"{numbers}\">\n    <q:if condition=\"{num} % 2 == 0\">\n      <q:set name=\"result\" operation=\"push\" value=\"{num}\" />\n    </q:if>\n  </q:loop>\n  <q:return value=\"{result}\" />\n</q:function>",
         "runtime_behavior": "Builds and returns new array with only even numbers"
       },
       "tags": ["integration", "loops", "conditionals", "filtering"]
@@ -74,7 +74,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"double\">\n  <q:param name=\"n\" type=\"number\" required=\"true\" />\n  <q:return>{n * 2}</q:return>\n</q:function>\n\n<q:function name=\"addTen\">\n  <q:param name=\"n\" type=\"number\" required=\"true\" />\n  <q:return>{n + 10}</q:return>\n</q:function>\n\n<q:function name=\"transform\">\n  <q:param name=\"n\" type=\"number\" required=\"true\" />\n  <q:return>{addTen(double(n))}</q:return>\n</q:function>",
+        "quantum_code": "<q:function name=\"double\">\n  <q:param name=\"n\" type=\"number\" required=\"true\" />\n  <q:return value=\"{n * 2}\" />\n</q:function>\n\n<q:function name=\"addTen\">\n  <q:param name=\"n\" type=\"number\" required=\"true\" />\n  <q:return value=\"{n + 10}\" />\n</q:function>\n\n<q:function name=\"transform\">\n  <q:param name=\"n\" type=\"number\" required=\"true\" />\n  <q:return value=\"{addTen(double(n))}\" />\n</q:function>",
         "runtime_behavior": "transform(5) → double(5)=10 → addTen(10)=20"
       },
       "tags": ["integration", "composition", "chaining"]
@@ -89,7 +89,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"calculateTax\">\n  <q:param name=\"amount\" type=\"number\" required=\"true\" />\n  <q:return>{amount * 0.08}</q:return>\n</q:function>\n\n<q:function name=\"calculateShipping\">\n  <q:param name=\"weight\" type=\"number\" required=\"true\" />\n  <q:return>{weight * 2.5}</q:return>\n</q:function>\n\n<q:function name=\"getOrderTotal\">\n  <q:param name=\"subtotal\" type=\"number\" required=\"true\" />\n  <q:param name=\"weight\" type=\"number\" required=\"true\" />\n  <q:return>\n    {subtotal + calculateTax(subtotal) + calculateShipping(weight)}\n  </q:return>\n</q:function>",
+        "quantum_code": "<q:function name=\"calculateTax\">\n  <q:param name=\"amount\" type=\"number\" required=\"true\" />\n  <q:return value=\"{amount * 0.08}\" />\n</q:function>\n\n<q:function name=\"calculateShipping\">\n  <q:param name=\"weight\" type=\"number\" required=\"true\" />\n  <q:return value=\"{weight * 2.5}\" />\n</q:function>\n\n<q:function name=\"getOrderTotal\">\n  <q:param name=\"subtotal\" type=\"number\" required=\"true\" />\n  <q:param name=\"weight\" type=\"number\" required=\"true\" />\n  <q:return value=\"{subtotal + calculateTax(subtotal) + calculateShipping(weight)}\" />\n</q:function>",
         "runtime_behavior": "Combines multiple functions to calculate final order total"
       },
       "tags": ["integration", "multiple_calls", "business_logic"]

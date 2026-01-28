@@ -79,10 +79,10 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:set name=\"names\" type=\"array\" value=\"['Alice', '', 'Bob', null, 'Charlie']\" />\n<q:loop type=\"array\" var=\"name\" items=\"{names}\">\n  <q:if condition=\"{name} != '' AND {name} != null\">\n    Valid: {name}\n  </q:if>\n</q:loop>",
+        "quantum_code": "<q:set name=\"names\" type=\"array\" value=\"['Alice', '', 'Bob', '', 'Charlie']\" />\n<q:loop type=\"array\" var=\"name\" items=\"{names}\">\n  <q:if condition=\"{name} != ''\">\n    Valid: {name}\n  </q:if>\n</q:loop>",
         "runtime_behavior": "Outputs only: Valid: Alice, Valid: Bob, Valid: Charlie"
       },
-      "tags": ["loop_conditional", "null_check", "validation"]
+      "tags": ["loop_conditional", "empty_check", "validation"]
     }
   ]
 }

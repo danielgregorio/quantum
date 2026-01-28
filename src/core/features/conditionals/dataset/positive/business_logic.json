@@ -47,7 +47,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:if condition=\"{membershipLevel} == 'platinum'\">\n  ✓ Free shipping\n  ✓ Priority support\n  ✓ Exclusive access\n  ✓ 25% off all items\n<q:elseif condition=\"{membershipLevel} == 'gold'\"/>\n  ✓ Free shipping\n  ✓ Priority support\n  ✓ 15% off all items\n<q:elseif condition=\"{membershipLevel} == 'silver'\"/>\n  ✓ Free shipping on orders $50+\n  ✓ 10% off all items\n<q:else/>\n  Standard benefits\n</q:if>",
+        "quantum_code": "<q:if condition=\"{membershipLevel} == 'platinum'\">\n  Free shipping\n  Priority support\n  Exclusive access\n  25% off all items\n<q:elseif condition=\"{membershipLevel} == 'gold'\"/>\n  Free shipping\n  Priority support\n  15% off all items\n<q:elseif condition=\"{membershipLevel} == 'silver'\"/>\n  Free shipping on orders $50+\n  10% off all items\n<q:else/>\n  Standard benefits\n</q:if>",
         "runtime_behavior": "Tiered membership benefits display"
       },
       "tags": ["business_logic", "membership", "benefits"]
@@ -79,7 +79,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:if condition=\"{stockCount} == 0\">\n  <span class=\"out-of-stock\">Out of Stock</span>\n  <button disabled>Notify Me</button>\n<q:elseif condition=\"{stockCount} <= 5\"/>\n  <span class=\"low-stock\">Only {stockCount} left!</span>\n  <button>Add to Cart</button>\n<q:else/>\n  <span class=\"in-stock\">In Stock</span>\n  <button>Add to Cart</button>\n</q:if>",
+        "quantum_code": "<q:if condition=\"{stockCount} == 0\">\n  <span class=\"out-of-stock\">Out of Stock</span>\n  <button disabled=\"disabled\">Notify Me</button>\n<q:elseif condition=\"{stockCount} &lt;= 5\"/>\n  <span class=\"low-stock\">Only {stockCount} left!</span>\n  <button>Add to Cart</button>\n<q:else/>\n  <span class=\"in-stock\">In Stock</span>\n  <button>Add to Cart</button>\n</q:if>",
         "runtime_behavior": "Stock-based purchase UI and messaging"
       },
       "tags": ["business_logic", "inventory", "ecommerce"]
@@ -95,7 +95,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:if condition=\"{currentBalance} + {purchaseAmount} <= {creditLimit}\">\n  <button>Complete Purchase</button>\n  <p>Available credit: ${creditLimit - currentBalance - purchaseAmount}</p>\n<q:else/>\n  <span class=\"error\">Insufficient credit</span>\n  <button disabled>Complete Purchase</button>\n</q:if>",
+        "quantum_code": "<q:set name=\"totalAfterPurchase\" operation=\"add\" left=\"{currentBalance}\" right=\"{purchaseAmount}\" />\n<q:set name=\"availableCredit\" operation=\"subtract\" left=\"{creditLimit}\" right=\"{totalAfterPurchase}\" />\n<q:if condition=\"{totalAfterPurchase} &lt;= {creditLimit}\">\n  <button>Complete Purchase</button>\n  <p>Available credit: {availableCredit}</p>\n<q:else/>\n  <span class=\"error\">Insufficient credit</span>\n  <button disabled=\"disabled\">Complete Purchase</button>\n</q:if>",
         "runtime_behavior": "Credit limit validation for purchases"
       },
       "tags": ["business_logic", "credit", "validation"]

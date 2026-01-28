@@ -1,61 +1,61 @@
 [
   {
     "description": "Simple SELECT query with single parameter",
-    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM users WHERE id = :id\" :id=\"123\" />",
+    "code": "<q:query name=\"user\" datasource=\"app-db\">\n    SELECT * FROM users WHERE id = :id\n    <q:param name=\"id\" value=\"123\" type=\"integer\" />\n</q:query>",
     "expected_behavior": "Executes SELECT query with integer parameter binding, returns user with id=123",
     "use_case": "Fetching a single record by primary key"
   },
   {
     "description": "Basic SELECT query with string parameter",
-    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM products WHERE name = :product_name\" :product_name=\"'Laptop'\" />",
+    "code": "<q:query name=\"products\" datasource=\"app-db\">\n    SELECT * FROM products WHERE name = :product_name\n    <q:param name=\"product_name\" value=\"Laptop\" type=\"string\" />\n</q:query>",
     "expected_behavior": "Executes SELECT query with string parameter binding, returns products named 'Laptop'",
     "use_case": "Searching records by text field"
   },
   {
     "description": "Simple INSERT query without RETURNING",
-    "code": "<q:query connection=\"db\" sql=\"INSERT INTO users (name, email) VALUES (:name, :email)\" :name=\"'John Doe'\" :email=\"'john@example.com'\" />",
+    "code": "<q:query name=\"insertUser\" datasource=\"app-db\">\n    INSERT INTO users (name, email) VALUES (:name, :email)\n    <q:param name=\"name\" value=\"John Doe\" type=\"string\" />\n    <q:param name=\"email\" value=\"john@example.com\" type=\"string\" />\n</q:query>",
     "expected_behavior": "Inserts new user record with name and email",
     "use_case": "Creating new records without needing the inserted data back"
   },
   {
     "description": "Basic UPDATE query with WHERE clause",
-    "code": "<q:query connection=\"db\" sql=\"UPDATE products SET price = :new_price WHERE id = :product_id\" :new_price=\"99.99\" :product_id=\"5\" />",
+    "code": "<q:query name=\"updatePrice\" datasource=\"app-db\">\n    UPDATE products SET price = :new_price WHERE id = :product_id\n    <q:param name=\"new_price\" value=\"99.99\" type=\"decimal\" />\n    <q:param name=\"product_id\" value=\"5\" type=\"integer\" />\n</q:query>",
     "expected_behavior": "Updates price for product with id=5 to 99.99",
     "use_case": "Modifying specific records"
   },
   {
     "description": "Simple DELETE query",
-    "code": "<q:query connection=\"db\" sql=\"DELETE FROM users WHERE id = :user_id\" :user_id=\"42\" />",
+    "code": "<q:query name=\"deleteUser\" datasource=\"app-db\">\n    DELETE FROM users WHERE id = :user_id\n    <q:param name=\"user_id\" value=\"42\" type=\"integer\" />\n</q:query>",
     "expected_behavior": "Deletes user with id=42",
     "use_case": "Removing records from database"
   },
   {
     "description": "SELECT query with ORDER BY clause",
-    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM products ORDER BY price DESC\" />",
+    "code": "<q:query name=\"sortedProducts\" datasource=\"app-db\">\n    SELECT * FROM products ORDER BY price DESC\n</q:query>",
     "expected_behavior": "Returns all products sorted by price in descending order",
     "use_case": "Fetching sorted result sets"
   },
   {
     "description": "SELECT query with LIMIT clause",
-    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM users LIMIT 10\" />",
+    "code": "<q:query name=\"topUsers\" datasource=\"app-db\">\n    SELECT * FROM users LIMIT 10\n</q:query>",
     "expected_behavior": "Returns first 10 users from the database",
     "use_case": "Limiting query results for pagination or performance"
   },
   {
     "description": "INSERT with RETURNING clause",
-    "code": "<q:query connection=\"db\" sql=\"INSERT INTO users (name, email) VALUES (:name, :email) RETURNING id\" :name=\"'Jane Smith'\" :email=\"'jane@example.com'\" />",
+    "code": "<q:query name=\"newUser\" datasource=\"app-db\">\n    INSERT INTO users (name, email) VALUES (:name, :email) RETURNING id\n    <q:param name=\"name\" value=\"Jane Smith\" type=\"string\" />\n    <q:param name=\"email\" value=\"jane@example.com\" type=\"string\" />\n</q:query>",
     "expected_behavior": "Inserts user and returns the generated id",
     "use_case": "Getting auto-generated primary key after insert"
   },
   {
     "description": "SELECT with multiple parameters",
-    "code": "<q:query connection=\"db\" sql=\"SELECT * FROM orders WHERE user_id = :uid AND status = :status\" :uid=\"100\" :status=\"'pending'\" />",
+    "code": "<q:query name=\"pendingOrders\" datasource=\"app-db\">\n    SELECT * FROM orders WHERE user_id = :uid AND status = :status\n    <q:param name=\"uid\" value=\"100\" type=\"integer\" />\n    <q:param name=\"status\" value=\"pending\" type=\"string\" />\n</q:query>",
     "expected_behavior": "Returns pending orders for user with id=100",
     "use_case": "Filtering records by multiple criteria"
   },
   {
     "description": "Basic COUNT aggregate query",
-    "code": "<q:query connection=\"db\" sql=\"SELECT COUNT(*) as total FROM users\" />",
+    "code": "<q:query name=\"userCount\" datasource=\"app-db\">\n    SELECT COUNT(*) as total FROM users\n</q:query>",
     "expected_behavior": "Returns total count of users in the database",
     "use_case": "Getting record counts for statistics"
   }

@@ -63,7 +63,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:loop type=\"array\" var=\"item\" index=\"i\" items=\"{items}\">\n  <q:if condition=\"{i} % 2 == 0\">\n    <div class=\"row-even\">{item}</div>\n  <q:else/>\n    <div class=\"row-odd\">{item}</div>\n  </q:if>\n</q:loop>",
+        "quantum_code": "<q:loop type=\"array\" var=\"item\" index=\"i\" items=\"{items}\">\n  <q:set name=\"remainder\" operation=\"modulo\" left=\"{i}\" right=\"2\" />\n  <q:if condition=\"{remainder} == 0\">\n    <div class=\"row-even\">{item}</div>\n  <q:else/>\n    <div class=\"row-odd\">{item}</div>\n  </q:if>\n</q:loop>",
         "runtime_behavior": "Alternates CSS classes for zebra striping"
       },
       "tags": ["integration", "ui_pattern", "zebra_striping"]
@@ -79,7 +79,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:loop type=\"array\" var=\"item\" index=\"i\" items=\"{items}\">\n  <q:if condition=\"{i} == 0\">\n    <div class=\"first-item\">{item}</div>\n  <q:elseif condition=\"{i} == {itemCount} - 1\"/>\n    <div class=\"last-item\">{item}</div>\n  <q:else/>\n    <div class=\"item\">{item}</div>\n  </q:if>\n</q:loop>",
+        "quantum_code": "<q:set name=\"lastIndex\" operation=\"subtract\" left=\"{itemCount}\" right=\"1\" />\n<q:loop type=\"array\" var=\"item\" index=\"i\" items=\"{items}\">\n  <q:if condition=\"{i} == 0\">\n    <div class=\"first-item\">{item}</div>\n  <q:elseif condition=\"{i} == {lastIndex}\"/>\n    <div class=\"last-item\">{item}</div>\n  <q:else/>\n    <div class=\"item\">{item}</div>\n  </q:if>\n</q:loop>",
         "runtime_behavior": "First and last items get special styling"
       },
       "tags": ["integration", "ui_pattern", "boundary_detection"]

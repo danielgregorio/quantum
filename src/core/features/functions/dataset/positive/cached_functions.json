@@ -14,7 +14,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"getExpensiveData\" cache=\"true\" ttl=\"300\">\n  <q:return>\n    <!-- Expensive database query or calculation -->\n    SELECT * FROM large_table\n  </q:return>\n</q:function>",
+        "quantum_code": "<q:function name=\"getExpensiveData\" cache=\"true\" cache-ttl=\"300\">\n  <q:return value=\"SELECT * FROM large_table\" />\n</q:function>",
         "runtime_behavior": "Result is cached for 300 seconds (5 minutes)"
       },
       "tags": ["caching", "performance", "ttl"]
@@ -29,10 +29,10 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"getUserData\" cache=\"true\" ttl=\"600\" cache-key=\"user-{id}\">\n  <q:param name=\"id\" type=\"string\" required=\"true\" />\n  <q:return>\n    SELECT * FROM users WHERE id = {id}\n  </q:return>\n</q:function>",
-        "runtime_behavior": "Each user ID cached separately with key 'user-{id}' for 10 minutes"
+        "quantum_code": "<q:function name=\"getUserData\" cache=\"true\" cache-ttl=\"600\">\n  <q:param name=\"id\" type=\"string\" required=\"true\" />\n  <q:return value=\"SELECT * FROM users WHERE id = {id}\" />\n</q:function>",
+        "runtime_behavior": "Each unique parameter set cached separately for 10 minutes"
       },
-      "tags": ["caching", "cache_key", "parameterized"]
+      "tags": ["caching", "parameterized"]
     },
     {
       "id": "cache-003",
@@ -44,7 +44,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"getRealtimeData\" cache=\"true\" ttl=\"30\">\n  <q:return>\n    FETCH https://api.example.com/realtime\n  </q:return>\n</q:function>",
+        "quantum_code": "<q:function name=\"getRealtimeData\" cache=\"true\" cache-ttl=\"30\">\n  <q:return value=\"FETCH https://api.example.com/realtime\" />\n</q:function>",
         "runtime_behavior": "Short cache for near-realtime data (30 seconds)"
       },
       "tags": ["caching", "short_ttl", "api"]
@@ -59,25 +59,25 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"getConfig\" cache=\"true\" ttl=\"86400\">\n  <q:return>\n    SELECT * FROM config\n  </q:return>\n</q:function>",
+        "quantum_code": "<q:function name=\"getConfig\" cache=\"true\" cache-ttl=\"86400\">\n  <q:return value=\"SELECT * FROM config\" />\n</q:function>",
         "runtime_behavior": "Cached for 24 hours (86400 seconds) for rarely-changing data"
       },
       "tags": ["caching", "long_ttl", "configuration"]
     },
     {
       "id": "cache-005",
-      "intent": "Conditional caching",
+      "intent": "Cached function with required param",
       "input": {
-        "natural_language": "Cache only successful responses",
+        "natural_language": "Cache data lookup by ID",
         "context": {
           "scope": "component"
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"fetchData\" cache=\"true\" ttl=\"300\" cache-condition=\"success\">\n  <q:param name=\"id\" type=\"string\" required=\"true\" />\n  <q:return>\n    SELECT * FROM data WHERE id = {id}\n  </q:return>\n</q:function>",
-        "runtime_behavior": "Only caches when query returns results successfully"
+        "quantum_code": "<q:function name=\"fetchData\" cache=\"true\" cache-ttl=\"300\">\n  <q:param name=\"id\" type=\"string\" required=\"true\" />\n  <q:return value=\"SELECT * FROM data WHERE id = {id}\" />\n</q:function>",
+        "runtime_behavior": "Caches query result per unique id for 5 minutes"
       },
-      "tags": ["caching", "conditional", "error_handling"]
+      "tags": ["caching", "parameterized"]
     },
     {
       "id": "cache-006",
@@ -89,7 +89,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"getUserDashboard\" cache=\"true\" ttl=\"180\" cache-key=\"dashboard-{session.userId}\">\n  <q:return>\n    SELECT * FROM user_dashboard WHERE user_id = {session.userId}\n  </q:return>\n</q:function>",
+        "quantum_code": "<q:function name=\"getUserDashboard\" cache=\"true\" cache-ttl=\"180\">\n  <q:return value=\"SELECT * FROM user_dashboard WHERE user_id = {session.userId}\" />\n</q:function>",
         "runtime_behavior": "Each user's dashboard cached separately for 3 minutes"
       },
       "tags": ["caching", "per_user", "session"]

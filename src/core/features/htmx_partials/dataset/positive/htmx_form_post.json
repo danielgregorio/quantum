@@ -3,7 +3,7 @@
   "category": "htmx_partials",
   "tags": ["htmx", "form", "post"],
   "input": {
-    "component": "<form hx-post=\"/_partial/add_todo\" hx-target=\"#todo-list\" hx-swap=\"beforeend\">\n  <input type=\"text\" name=\"task\" required />\n  <button type=\"submit\">Add</button>\n</form>\n<div id=\"todo-list\"></div>",
+    "component": "<q:component name=\"TodoForm\">\n  <form q:post=\"/_partial/add_todo\" q:target=\"#todo-list\" q:swap=\"beforeend\">\n    <input type=\"text\" name=\"task\" required />\n    <button type=\"submit\">Add</button>\n  </form>\n  <div id=\"todo-list\"></div>\n</q:component>",
     "context": {
       "phase": "B",
       "feature": "htmx_partials",

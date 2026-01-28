@@ -15,46 +15,56 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<Layout>\n  <template slot=\"header\">\n    <h1>My Site</h1>\n  </template>\n  <p>Main content here</p>\n  <template slot=\"footer\">\n    <p>© 2025</p>\n  </template>\n</Layout>",
+        "quantum_code": "<q:component name=\"NamedSlotTest\">\n  <q:import component=\"Layout\" />\n\n  <Layout>\n    <template slot=\"header\">\n      <h1>My Site</h1>\n    </template>\n    <p>Main content here</p>\n    <template slot=\"footer\">\n      <p>\u00a9 2025</p>\n    </template>\n  </Layout>\n</q:component>",
         "ast": {
-          "type": "ComponentCallNode",
-          "component_name": "Layout",
-          "children": [
+          "type": "ComponentNode",
+          "name": "NamedSlotTest",
+          "statements": [
             {
-              "type": "HTMLNode",
-              "tag": "template",
-              "attributes": {
-                "slot": "header"
-              },
+              "type": "ImportNode",
+              "component": "Layout"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Layout",
               "children": [
                 {
                   "type": "HTMLNode",
-                  "tag": "h1",
+                  "tag": "template",
+                  "attributes": {
+                    "slot": "header"
+                  },
+                  "children": [
+                    {
+                      "type": "HTMLNode",
+                      "tag": "h1",
+                      "children": [
+                        {
+                          "type": "TextNode",
+                          "content": "My Site"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "HTMLNode",
+                  "tag": "p",
                   "children": [
                     {
                       "type": "TextNode",
-                      "content": "My Site"
+                      "content": "Main content here"
                     }
                   ]
-                }
-              ]
-            },
-            {
-              "type": "HTMLNode",
-              "tag": "p",
-              "children": [
+                },
                 {
-                  "type": "TextNode",
-                  "content": "Main content here"
+                  "type": "HTMLNode",
+                  "tag": "template",
+                  "attributes": {
+                    "slot": "footer"
+                  }
                 }
               ]
-            },
-            {
-              "type": "HTMLNode",
-              "tag": "template",
-              "attributes": {
-                "slot": "footer"
-              }
             }
           ]
         },
@@ -77,14 +87,24 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<PageLayout>\n  <p>Main content without sidebar specified</p>\n</PageLayout>",
+        "quantum_code": "<q:component name=\"NamedSlotTest\">\n  <q:import component=\"PageLayout\" />\n\n  <PageLayout>\n    <p>Main content without sidebar specified</p>\n  </PageLayout>\n</q:component>",
         "ast": {
-          "type": "ComponentCallNode",
-          "component_name": "PageLayout",
-          "children": [
+          "type": "ComponentNode",
+          "name": "NamedSlotTest",
+          "statements": [
             {
-              "type": "HTMLNode",
-              "tag": "p"
+              "type": "ImportNode",
+              "component": "PageLayout"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "PageLayout",
+              "children": [
+                {
+                  "type": "HTMLNode",
+                  "tag": "p"
+                }
+              ]
             }
           ]
         },

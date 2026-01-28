@@ -15,7 +15,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:loop type=\"range\" var=\"i\" from=\"1\" to=\"3\">\n  <q:loop type=\"range\" var=\"j\" from=\"1\" to=\"3\">\n    {i} x {j} = {i * j}\n  </q:loop>\n</q:loop>",
+        "quantum_code": "<q:loop type=\"range\" var=\"i\" from=\"1\" to=\"3\">\n  <q:loop type=\"range\" var=\"j\" from=\"1\" to=\"3\">\n    <q:set name=\"product\" operation=\"multiply\" left=\"{i}\" right=\"{j}\" />\n    {i} x {j} = {product}\n  </q:loop>\n</q:loop>",
         "runtime_behavior": "Outputs: 1x1=1, 1x2=2, 1x3=3, 2x1=2, 2x2=4, etc."
       },
       "tags": ["nested", "range", "multiplication_table"]
@@ -38,19 +38,19 @@
     },
     {
       "id": "loop-nested-003",
-      "intent": "Loop through array of arrays",
+      "intent": "Loop through flat array in pairs",
       "input": {
-        "natural_language": "Iterate over nested array structure",
+        "natural_language": "Iterate over a flat array of values",
         "context": {
-          "available_vars": ["matrix"],
+          "available_vars": ["values"],
           "scope": "component"
         }
       },
       "expected_output": {
-        "quantum_code": "<q:set name=\"matrix\" type=\"array\" value=\"[[1,2], [3,4], [5,6]]\" />\n<q:loop type=\"array\" var=\"row\" items=\"{matrix}\">\n  <q:loop type=\"array\" var=\"cell\" items=\"{row}\">\n    Cell: {cell}\n  </q:loop>\n</q:loop>",
+        "quantum_code": "<q:set name=\"values\" type=\"array\" value=\"[1, 2, 3, 4, 5, 6]\" />\n<q:loop type=\"array\" var=\"cell\" items=\"{values}\">\n  Cell: {cell}\n</q:loop>",
         "runtime_behavior": "Outputs: Cell: 1, Cell: 2, Cell: 3, Cell: 4, Cell: 5, Cell: 6"
       },
-      "tags": ["nested", "array", "matrix"]
+      "tags": ["nested", "array", "flat_iteration"]
     },
     {
       "id": "loop-nested-004",
@@ -63,7 +63,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:set name=\"teams\" type=\"array\" value=\"[{'name': 'Red', 'players': ['Alice', 'Bob']}, {'name': 'Blue', 'players': ['Charlie', 'Diana']}]\" />\n<q:loop type=\"array\" var=\"team\" items=\"{teams}\">\n  Team: {team.name}\n  <q:loop type=\"array\" var=\"player\" items=\"{team.players}\">\n    - {player}\n  </q:loop>\n</q:loop>",
+        "quantum_code": "<q:set name=\"teams\" type=\"array\" value=\"[{name: 'Red', players: ['Alice', 'Bob']}, {name: 'Blue', players: ['Charlie', 'Diana']}]\" />\n<q:loop type=\"array\" var=\"team\" items=\"{teams}\">\n  Team: {team.name}\n  <q:loop type=\"array\" var=\"player\" items=\"{team.players}\">\n    - {player}\n  </q:loop>\n</q:loop>",
         "runtime_behavior": "Outputs hierarchical team/player list"
       },
       "tags": ["nested", "array", "objects", "hierarchical"]

@@ -3,14 +3,14 @@
   "category": "htmx_partials",
   "tags": ["error", "target", "selector"],
   "input": {
-    "component": "<button hx-post=\"/_partial/update\" hx-target=\"#nonexistent\" hx-swap=\"innerHTML\">\n  Click Me\n</button>",
+    "component": "<q:component name=\"InvalidTarget\">\n  <button q:post=\"/_partial/update\" q:target=\"#nonexistent\" q:swap=\"innerHTML\">\n    Click Me\n  </button>\n</q:component>",
     "context": {
       "phase": "B",
       "feature": "htmx_partials",
       "target": "#nonexistent"
     }
   },
-  "expected_behavior": "HTMX finds no target element with id 'nonexistent', request succeeds but no content updated",
+  "expected_behavior": "Target element with id 'nonexistent' not found, request succeeds but no content updated",
   "error": {
     "type": "ClientError",
     "message": "Target element not found"

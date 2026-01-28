@@ -73,16 +73,17 @@
       "intent": "Self-closing non-void element",
       "input": {
         "natural_language": "Self-closing div tag",
-        "quantum_code": "<q:component name=\"Invalid\">\n  <div class=\"container\" />\n</q:component>"
+        "quantum_code": "<q:component name=\"SelfClosingDiv\">\n  <div class=\"container\" />\n</q:component>"
       },
       "expected_error": {
         "type": "SemanticWarning",
-        "message": "Self-closing non-void element 'div' may not render correctly",
+        "message": "Self-closing non-void element 'div' is valid XML but may not render as expected in HTML output",
         "location": "Parser validation"
       },
-      "why_invalid": "Only void elements (br, img, input, etc.) should be self-closing",
+      "note": "Self-closing div is valid XML but semantic warning - in HTML5, only void elements (br, img, input, etc.) should be self-closing. The XML parser accepts this but the renderer should warn that it may produce unexpected HTML output.",
+      "why_invalid": "Valid XML but semantically questionable for HTML output - only void elements (br, img, input, etc.) should be self-closing",
       "correction": "Use <div class=\"container\"></div> instead",
-      "tags": ["self_closing", "void_element_only", "semantic_error"]
+      "tags": ["self_closing", "void_element_only", "semantic_warning"]
     }
   ]
 }

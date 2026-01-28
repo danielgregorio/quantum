@@ -20,13 +20,23 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<Button label=\"Click me\" />",
+        "quantum_code": "<q:component name=\"PropsTest\">\n  <q:import component=\"Button\" />\n\n  <Button label=\"Click me\" />\n</q:component>",
         "ast": {
-          "type": "ComponentCallNode",
-          "component_name": "Button",
-          "props": {
-            "label": "Click me"
-          }
+          "type": "ComponentNode",
+          "name": "PropsTest",
+          "statements": [
+            {
+              "type": "ImportNode",
+              "component": "Button"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Button",
+              "props": {
+                "label": "Click me"
+              }
+            }
+          ]
         },
         "runtime_behavior": "Passes static string 'Click me' as label prop"
       },
@@ -49,13 +59,28 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:set name=\"userName\" value=\"Daniel\" />\n<WelcomeCard name=\"{userName}\" />",
+        "quantum_code": "<q:component name=\"PropsTest\">\n  <q:import component=\"WelcomeCard\" />\n\n  <q:set name=\"userName\" value=\"Daniel\" />\n  <WelcomeCard name=\"{userName}\" />\n</q:component>",
         "ast": {
-          "type": "ComponentCallNode",
-          "component_name": "WelcomeCard",
-          "props": {
-            "name": "{userName}"
-          }
+          "type": "ComponentNode",
+          "name": "PropsTest",
+          "statements": [
+            {
+              "type": "ImportNode",
+              "component": "WelcomeCard"
+            },
+            {
+              "type": "SetNode",
+              "name": "userName",
+              "value": "Daniel"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "WelcomeCard",
+              "props": {
+                "name": "{userName}"
+              }
+            }
+          ]
         },
         "runtime_behavior": "Resolves {userName} from parent context and passes to child"
       },
@@ -81,14 +106,24 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<Button label=\"Save\" color=\"green\" />",
+        "quantum_code": "<q:component name=\"PropsTest\">\n  <q:import component=\"Button\" />\n\n  <Button label=\"Save\" color=\"green\" />\n</q:component>",
         "ast": {
-          "type": "ComponentCallNode",
-          "component_name": "Button",
-          "props": {
-            "label": "Save",
-            "color": "green"
-          }
+          "type": "ComponentNode",
+          "name": "PropsTest",
+          "statements": [
+            {
+              "type": "ImportNode",
+              "component": "Button"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Button",
+              "props": {
+                "label": "Save",
+                "color": "green"
+              }
+            }
+          ]
         },
         "runtime_behavior": "Passes both label and color props to Button component"
       },
@@ -114,13 +149,23 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<Button label=\"Submit\" />",
+        "quantum_code": "<q:component name=\"PropsTest\">\n  <q:import component=\"Button\" />\n\n  <Button label=\"Submit\" />\n</q:component>",
         "ast": {
-          "type": "ComponentCallNode",
-          "component_name": "Button",
-          "props": {
-            "label": "Submit"
-          }
+          "type": "ComponentNode",
+          "name": "PropsTest",
+          "statements": [
+            {
+              "type": "ImportNode",
+              "component": "Button"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Button",
+              "props": {
+                "label": "Submit"
+              }
+            }
+          ]
         },
         "runtime_behavior": "Uses default color='blue' from q:param definition"
       },

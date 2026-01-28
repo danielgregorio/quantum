@@ -14,7 +14,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"validateEmail\">\n  <q:param name=\"email\" type=\"string\" required=\"true\" validator=\"email\" />\n  <q:return>true</q:return>\n</q:function>",
+        "quantum_code": "<q:function name=\"validateEmail\" validate-params=\"true\">\n  <q:param name=\"email\" type=\"string\" required=\"true\" />\n  <q:return value=\"true\" />\n</q:function>",
         "runtime_behavior": "Throws validation error if email format is invalid"
       },
       "tags": ["validation", "email", "format"]
@@ -29,7 +29,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"setUserAge\">\n  <q:param name=\"age\" type=\"number\" required=\"true\" validator=\"range(0,120)\" />\n  <q:return>\n    UPDATE users SET age = {age}\n  </q:return>\n</q:function>",
+        "quantum_code": "<q:function name=\"setUserAge\" validate-params=\"true\">\n  <q:param name=\"age\" type=\"number\" required=\"true\" min=\"0\" max=\"120\" />\n  <q:return value=\"UPDATE users SET age = {age}\" />\n</q:function>",
         "runtime_behavior": "Validates age is in valid range before updating"
       },
       "tags": ["validation", "range", "numeric"]
@@ -44,7 +44,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"registerUser\">\n  <q:param name=\"cpf\" type=\"string\" required=\"true\" validator=\"cpf\" />\n  <q:param name=\"name\" type=\"string\" required=\"true\" />\n  <q:return>\n    INSERT INTO users (cpf, name) VALUES ({cpf}, {name})\n  </q:return>\n</q:function>",
+        "quantum_code": "<q:function name=\"registerUser\" validate-params=\"true\">\n  <q:param name=\"cpf\" type=\"string\" required=\"true\" />\n  <q:param name=\"name\" type=\"string\" required=\"true\" />\n  <q:return value=\"INSERT INTO users (cpf, name) VALUES ({cpf}, {name})\" />\n</q:function>",
         "runtime_behavior": "Validates CPF format and checksum before insertion"
       },
       "tags": ["validation", "cpf", "brazil"]
@@ -59,40 +59,40 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"addWebsite\">\n  <q:param name=\"url\" type=\"string\" required=\"true\" validator=\"url\" />\n  <q:return>\n    INSERT INTO websites (url) VALUES ({url})\n  </q:return>\n</q:function>",
+        "quantum_code": "<q:function name=\"addWebsite\" validate-params=\"true\">\n  <q:param name=\"url\" type=\"string\" required=\"true\" />\n  <q:return value=\"INSERT INTO websites (url) VALUES ({url})\" />\n</q:function>",
         "runtime_behavior": "Validates URL format before saving"
       },
       "tags": ["validation", "url", "format"]
     },
     {
       "id": "valid-005",
-      "intent": "Multiple validators",
+      "intent": "Multiple constraints on params",
       "input": {
-        "natural_language": "Validate username with multiple rules",
+        "natural_language": "Validate username with length rules",
         "context": {
           "scope": "component"
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"createAccount\">\n  <q:param name=\"username\" type=\"string\" required=\"true\" validator=\"minLength(3),maxLength(20),alphanumeric\" />\n  <q:param name=\"email\" type=\"string\" required=\"true\" validator=\"email\" />\n  <q:return>\n    INSERT INTO accounts (username, email) VALUES ({username}, {email})\n  </q:return>\n</q:function>",
-        "runtime_behavior": "Applies multiple validation rules: length and format"
+        "quantum_code": "<q:function name=\"createAccount\" validate-params=\"true\">\n  <q:param name=\"username\" type=\"string\" required=\"true\" minLength=\"3\" maxLength=\"20\" />\n  <q:param name=\"email\" type=\"string\" required=\"true\" />\n  <q:return value=\"INSERT INTO accounts (username, email) VALUES ({username}, {email})\" />\n</q:function>",
+        "runtime_behavior": "Applies length constraints on username before insertion"
       },
-      "tags": ["validation", "multiple", "complex"]
+      "tags": ["validation", "multiple", "constraints"]
     },
     {
       "id": "valid-006",
-      "intent": "Custom validation logic",
+      "intent": "Password length validation",
       "input": {
-        "natural_language": "Validate password meets complexity requirements",
+        "natural_language": "Validate password meets minimum length",
         "context": {
           "scope": "component"
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"setPassword\">\n  <q:param name=\"password\" type=\"string\" required=\"true\" validator=\"minLength(8),hasUppercase,hasLowercase,hasNumber,hasSpecial\" />\n  <q:return>\n    UPDATE users SET password_hash = HASH({password})\n  </q:return>\n</q:function>",
-        "runtime_behavior": "Validates password complexity before hashing and storing"
+        "quantum_code": "<q:function name=\"setPassword\" validate-params=\"true\">\n  <q:param name=\"password\" type=\"string\" required=\"true\" minLength=\"8\" />\n  <q:return value=\"UPDATE users SET password_hash = HASH({password})\" />\n</q:function>",
+        "runtime_behavior": "Validates password minimum length before hashing and storing"
       },
-      "tags": ["validation", "password", "security", "complexity"]
+      "tags": ["validation", "password", "security"]
     },
     {
       "id": "valid-007",
@@ -104,7 +104,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"registerCompany\">\n  <q:param name=\"cnpj\" type=\"string\" required=\"true\" validator=\"cnpj\" />\n  <q:param name=\"companyName\" type=\"string\" required=\"true\" />\n  <q:return>\n    INSERT INTO companies (cnpj, name) VALUES ({cnpj}, {companyName})\n  </q:return>\n</q:function>",
+        "quantum_code": "<q:function name=\"registerCompany\" validate-params=\"true\">\n  <q:param name=\"cnpj\" type=\"string\" required=\"true\" />\n  <q:param name=\"companyName\" type=\"string\" required=\"true\" />\n  <q:return value=\"INSERT INTO companies (cnpj, name) VALUES ({cnpj}, {companyName})\" />\n</q:function>",
         "runtime_behavior": "Validates CNPJ format and checksum"
       },
       "tags": ["validation", "cnpj", "brazil", "company"]
