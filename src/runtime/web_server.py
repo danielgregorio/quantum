@@ -365,8 +365,8 @@ class QuantumWebServer:
                 # Fragment component - wrap with full page + HTMX
                 full_html = self._wrap_with_htmx(html, component_path)
 
-            # Extract inline CSS to external stylesheet
-            full_html = self._extract_css_to_file(full_html)
+            # Extract inline CSS and JS to external files
+            full_html = self._extract_inline_assets(full_html)
 
             return Response(full_html, mimetype='text/html')
 
@@ -420,50 +420,74 @@ class QuantumWebServer:
                     suggestion=""
                 ), 500
 
-    def _extract_css_to_file(self, html: str) -> str:
-        """
-        Extract inline <style> blocks from HTML and serve CSS as an external file.
+    def _get_static_dir(self) -> str:
+        """Resolve and ensure the static directory exists."""
+        static_dir = self.config['paths']['static']
+        if not os.path.isabs(static_dir):
+            static_dir = os.path.abspath(static_dir)
+        os.makedirs(static_dir, exist_ok=True)
+        return static_dir
 
-        Finds all <style>...</style> blocks, concatenates their content,
-        writes it to a hashed .css file in the static directory, and replaces
-        the inline styles with a <link rel="stylesheet"> tag.
+    def _extract_inline_assets(self, html: str) -> str:
+        """
+        Extract inline <style> and <script> blocks to external files.
+
+        Replaces inline CSS with <link rel="stylesheet"> and inline JS
+        (without src attribute) with <script src="...">.
 
         Args:
             html: Full HTML document string
 
         Returns:
-            HTML with inline styles replaced by external stylesheet link
+            HTML with inline assets replaced by external file references
         """
+        static_dir = self._get_static_dir()
+
+        # --- Extract CSS ---
         style_pattern = re.compile(r'<style[^>]*>(.*?)</style>', re.DOTALL | re.IGNORECASE)
-        matches = style_pattern.findall(html)
+        css_matches = style_pattern.findall(html)
 
-        if not matches:
-            return html
+        if css_matches:
+            all_css = '\n'.join(css_matches)
+            css_hash = hashlib.md5(all_css.encode()).hexdigest()[:10]
+            css_filename = f'styles-{css_hash}.css'
+            css_path = os.path.join(static_dir, css_filename)
 
-        all_css = '\n'.join(matches)
+            if not os.path.exists(css_path):
+                with open(css_path, 'w', encoding='utf-8') as f:
+                    f.write(all_css)
 
-        css_hash = hashlib.md5(all_css.encode()).hexdigest()[:10]
-        css_filename = f'styles-{css_hash}.css'
+            html = style_pattern.sub('', html)
 
-        static_dir = self.config['paths']['static']
-        if not os.path.isabs(static_dir):
-            static_dir = os.path.abspath(static_dir)
-        os.makedirs(static_dir, exist_ok=True)
-        css_path = os.path.join(static_dir, css_filename)
+            link_tag = f'<link rel="stylesheet" href="static/{css_filename}">'
+            if '</head>' in html:
+                html = html.replace('</head>', f'    {link_tag}\n  </head>', 1)
+            elif '</HEAD>' in html:
+                html = html.replace('</HEAD>', f'    {link_tag}\n  </HEAD>', 1)
 
-        if not os.path.exists(css_path):
-            with open(css_path, 'w', encoding='utf-8') as f:
-                f.write(all_css)
+        # --- Extract inline JS (skip <script src="..."> tags) ---
+        script_pattern = re.compile(
+            r'<script(?![^>]*\bsrc\b)[^>]*>(.*?)</script>', re.DOTALL | re.IGNORECASE
+        )
+        js_matches = script_pattern.findall(html)
 
-        # Remove all <style>...</style> blocks from HTML
-        html = style_pattern.sub('', html)
+        if js_matches:
+            all_js = '\n'.join(m.strip() for m in js_matches)
+            js_hash = hashlib.md5(all_js.encode()).hexdigest()[:10]
+            js_filename = f'scripts-{js_hash}.js'
+            js_path = os.path.join(static_dir, js_filename)
 
-        # Insert <link> tag in <head>
-        link_tag = f'<link rel="stylesheet" href="static/{css_filename}">'
-        if '</head>' in html:
-            html = html.replace('</head>', f'    {link_tag}\n  </head>', 1)
-        elif '</HEAD>' in html:
-            html = html.replace('</HEAD>', f'    {link_tag}\n  </HEAD>', 1)
+            if not os.path.exists(js_path):
+                with open(js_path, 'w', encoding='utf-8') as f:
+                    f.write(all_js)
+
+            html = script_pattern.sub('', html)
+
+            script_tag = f'<script src="static/{js_filename}"></script>'
+            if '</body>' in html:
+                html = html.replace('</body>', f'    {script_tag}\n  </body>', 1)
+            elif '</BODY>' in html:
+                html = html.replace('</BODY>', f'    {script_tag}\n  </BODY>', 1)
 
         return html
 
