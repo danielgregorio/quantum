@@ -6,6 +6,8 @@ ColdFusion-style simplicity: Just run `quantum start` and it works! 🪄
 
 import sys
 import os
+import re
+import hashlib
 import yaml
 from pathlib import Path
 from flask import Flask, Response, request, send_from_directory, render_template_string, session, redirect
@@ -41,10 +43,15 @@ class QuantumWebServer:
             config_path: Path to configuration file
         """
         self.config = self._load_config(config_path)
-        self.app = Flask(__name__)
+        # Disable Flask's built-in static serving - we use our own serve_static route
+        self.app = Flask(__name__, static_folder=None)
 
         # Setup secret key for sessions (flash messages)
-        self.app.secret_key = secrets.token_hex(32)
+        # Use env var or config for stable key across Gunicorn workers
+        self.app.secret_key = os.environ.get(
+            'QUANTUM_SECRET_KEY',
+            self.config.get('security', {}).get('secret_key', secrets.token_hex(32))
+        )
 
         self.parser = QuantumParser()
         self.template_cache: Dict[str, Any] = {}  # AST cache
@@ -128,6 +135,15 @@ class QuantumWebServer:
             """Serve index.q or show welcome page"""
             return self._serve_component('index')
 
+        @self.app.route('/static/<path:filepath>')
+        def serve_static(filepath):
+            """Serve static files (CSS, JS, images)"""
+            static_dir = self.config['paths']['static']
+            # Convert relative path to absolute for send_from_directory
+            if not os.path.isabs(static_dir):
+                static_dir = os.path.abspath(static_dir)
+            return send_from_directory(static_dir, filepath)
+
         @self.app.route('/<path:component_path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
         def dynamic_route(component_path):
             """Dynamically serve any .q component"""
@@ -137,11 +153,19 @@ class QuantumWebServer:
 
             return self._serve_component(component_path)
 
-        @self.app.route('/static/<path:filepath>')
-        def serve_static(filepath):
-            """Serve static files (CSS, JS, images)"""
-            static_dir = self.config['paths']['static']
-            return send_from_directory(static_dir, filepath)
+        @self.app.route('/health')
+        def health_check():
+            """Health check endpoint for container orchestration."""
+            import json
+            return Response(
+                json.dumps({
+                    'status': 'healthy',
+                    'service': 'quantum',
+                    'version': '1.0.0'
+                }),
+                status=200,
+                mimetype='application/json'
+            )
 
         @self.app.route('/_partial/<path:component_path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
         def serve_partial(component_path):
@@ -314,6 +338,17 @@ class QuantumWebServer:
             session['quantum_session'] = runtime.execution_context.session_vars
             session.modified = True
 
+            # Debug: log session state after execution
+            if self.config['server']['debug'] and request.method == 'POST':
+                import logging
+                logger = logging.getLogger('quantum.debug')
+                logger.warning(f"[DEBUG] POST form_data: {dict(request.form)}")
+                logger.warning(f"[DEBUG] session_vars after exec: {runtime.execution_context.session_vars}")
+                logger.warning(f"[DEBUG] app_vars keys: {list(runtime.execution_context.application_vars.keys())}")
+                print(f"[DEBUG] POST form_data: {dict(request.form)}", flush=True)
+                print(f"[DEBUG] session_vars after exec: {runtime.execution_context.session_vars}", flush=True)
+                print(f"[DEBUG] app_vars keys: {list(runtime.execution_context.application_vars.keys())}", flush=True)
+
             # Render to HTML using runtime's execution context
             renderer = HTMLRenderer(runtime.execution_context)
             html = renderer.render(ast)
@@ -322,8 +357,16 @@ class QuantumWebServer:
             if partial:
                 return Response(html, mimetype='text/html')
 
-            # For full page requests, wrap with HTMX support
-            full_html = self._wrap_with_htmx(html, component_path)
+            # For full page requests, add HTMX support
+            if '<html' in html.lower():
+                # Component already has full HTML structure - inject HTMX into it
+                full_html = self._inject_htmx(html)
+            else:
+                # Fragment component - wrap with full page + HTMX
+                full_html = self._wrap_with_htmx(html, component_path)
+
+            # Extract inline CSS to external stylesheet
+            full_html = self._extract_css_to_file(full_html)
 
             return Response(full_html, mimetype='text/html')
 
@@ -335,9 +378,9 @@ class QuantumWebServer:
                 # Show enhanced error in debug mode
                 return self._render_error_page(
                     title="Parse Error",
-                    message=f"Could not parse component: {component_name}",
+                    message=f"Could not parse component: {component_path}",
                     details=str(enhanced_error),
-                    suggestion="Check XML syntax and Quantum tag usage. Use 'quantum inspect {component_name}' for details."
+                    suggestion="Check XML syntax and Quantum tag usage. Use 'quantum inspect {component_path}' for details."
                 ), 400
             else:
                 return self._render_error_page(
@@ -359,14 +402,14 @@ class QuantumWebServer:
         except Exception as e:
             if self.config['server']['debug']:
                 # Enhanced runtime error
-                enhanced_error = ErrorHandler.handle_runtime_error(e, component_name, component_path)
+                enhanced_error = ErrorHandler.handle_runtime_error(e, str(component_path), component_path)
 
                 import traceback
                 return self._render_error_page(
                     title="Runtime Error",
-                    message=f"Error in component: {component_name}",
+                    message=f"Error in component: {component_path}",
                     details=str(enhanced_error) + "\n\n" + traceback.format_exc(),
-                    suggestion="Use 'quantum inspect {component_name}' to debug. Check component logic and data sources."
+                    suggestion="Use 'quantum inspect {component_path}' to debug. Check component logic and data sources."
                 ), 500
             else:
                 # Generic error in production
@@ -377,7 +420,97 @@ class QuantumWebServer:
                     suggestion=""
                 ), 500
 
-    def _wrap_with_htmx(self, html: str, component_name: str) -> str:
+    def _extract_css_to_file(self, html: str) -> str:
+        """
+        Extract inline <style> blocks from HTML and serve CSS as an external file.
+
+        Finds all <style>...</style> blocks, concatenates their content,
+        writes it to a hashed .css file in the static directory, and replaces
+        the inline styles with a <link rel="stylesheet"> tag.
+
+        Args:
+            html: Full HTML document string
+
+        Returns:
+            HTML with inline styles replaced by external stylesheet link
+        """
+        style_pattern = re.compile(r'<style[^>]*>(.*?)</style>', re.DOTALL | re.IGNORECASE)
+        matches = style_pattern.findall(html)
+
+        if not matches:
+            return html
+
+        all_css = '\n'.join(matches)
+
+        css_hash = hashlib.md5(all_css.encode()).hexdigest()[:10]
+        css_filename = f'styles-{css_hash}.css'
+
+        static_dir = self.config['paths']['static']
+        if not os.path.isabs(static_dir):
+            static_dir = os.path.abspath(static_dir)
+        os.makedirs(static_dir, exist_ok=True)
+        css_path = os.path.join(static_dir, css_filename)
+
+        if not os.path.exists(css_path):
+            with open(css_path, 'w', encoding='utf-8') as f:
+                f.write(all_css)
+
+        # Remove all <style>...</style> blocks from HTML
+        html = style_pattern.sub('', html)
+
+        # Insert <link> tag in <head>
+        link_tag = f'<link rel="stylesheet" href="static/{css_filename}">'
+        if '</head>' in html:
+            html = html.replace('</head>', f'    {link_tag}\n  </head>', 1)
+        elif '</HEAD>' in html:
+            html = html.replace('</HEAD>', f'    {link_tag}\n  </HEAD>', 1)
+
+        return html
+
+    def _inject_htmx(self, html: str) -> str:
+        """
+        Inject HTMX scripts into an existing full HTML document.
+
+        Used when the component already renders a complete HTML page
+        (e.g. type="page" components), to avoid double-wrapping.
+
+        Args:
+            html: Full HTML document string
+
+        Returns:
+            HTML document with HTMX script and config injected
+        """
+        htmx_head = '\n    <script src="https://unpkg.com/htmx.org@1.9.10"></script>'
+
+        htmx_body = """
+    <script>
+        htmx.config.defaultSwapStyle = "innerHTML";
+        htmx.config.defaultSwapDelay = 0;
+        htmx.config.historyCacheSize = 10;
+        if (window.location.hostname === 'localhost') {
+            htmx.logAll();
+        }
+    </script>"""
+
+        # Inject HTMX library before </head>
+        if '</head>' in html:
+            html = html.replace('</head>', htmx_head + '\n  </head>', 1)
+        elif '</HEAD>' in html:
+            html = html.replace('</HEAD>', htmx_head + '\n  </HEAD>', 1)
+
+        # Inject HTMX config before </body>
+        if '</body>' in html:
+            html = html.replace('</body>', htmx_body + '\n  </body>', 1)
+        elif '</BODY>' in html:
+            html = html.replace('</BODY>', htmx_body + '\n  </BODY>', 1)
+
+        # Ensure DOCTYPE is present
+        if not html.strip().lower().startswith('<!doctype'):
+            html = '<!DOCTYPE html>\n' + html
+
+        return html
+
+    def _wrap_with_htmx(self, html: str, component_path: str) -> str:
         """
         Wrap component HTML with HTMX library support (Phase B).
 
@@ -388,7 +521,7 @@ class QuantumWebServer:
 
         Args:
             html: Rendered component HTML
-            component_name: Component name for title
+            component_path: Component name for title
 
         Returns:
             Full HTML page with HTMX support
@@ -398,7 +531,7 @@ class QuantumWebServer:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{component_name} - Quantum</title>
+    <title>{component_path} - Quantum</title>
 
     <!-- Phase B: HTMX for Progressive Enhancement -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
