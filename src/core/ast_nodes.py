@@ -217,6 +217,24 @@ class ApplicationNode(QuantumNode):
         self.behaviors: List[QuantumNode] = []   # BehaviorNode list
         self.prefabs: List[QuantumNode] = []     # PrefabNode list
 
+        # Terminal Engine: terminal-specific children
+        self.screens: List[QuantumNode] = []      # ScreenNode list
+        self.keybindings: List[QuantumNode] = []  # KeybindingNode list
+        self.services: List[QuantumNode] = []     # ServiceNode list
+        self.terminal_css: str = ""               # Accumulated TCSS
+
+        # Testing Engine: testing-specific children
+        self.test_suites: List[QuantumNode] = []       # TestSuiteNode list
+        self.test_config: Optional[QuantumNode] = None  # BrowserConfigNode
+        self.test_fixtures: List[QuantumNode] = []     # FixtureNode_Testing list
+        self.test_mocks: List[QuantumNode] = []        # MockNode_Testing list
+        self.test_auth_states: List[QuantumNode] = []  # AuthNode list
+
+        # UI Engine: multi-target UI children
+        self.ui_windows: List[QuantumNode] = []    # UIWindowNode list
+        self.ui_children: List[QuantumNode] = []   # Top-level UI nodes (no window)
+        self.ui_target: str = 'html'               # html, textual, desktop
+
     def add_route(self, route: QuantumRoute):
         self.routes.append(route)
 
@@ -238,6 +256,30 @@ class ApplicationNode(QuantumNode):
             result["behaviors"] = [b.to_dict() for b in self.behaviors]
         if self.prefabs:
             result["prefabs"] = [p.to_dict() for p in self.prefabs]
+        if self.screens:
+            result["screens"] = [s.to_dict() for s in self.screens]
+        if self.keybindings:
+            result["keybindings"] = [k.to_dict() for k in self.keybindings]
+        if self.services:
+            result["services"] = [s.to_dict() for s in self.services]
+        if self.terminal_css:
+            result["terminal_css"] = self.terminal_css
+        if self.test_suites:
+            result["test_suites"] = [s.to_dict() for s in self.test_suites]
+        if self.test_config:
+            result["test_config"] = self.test_config.to_dict()
+        if self.test_fixtures:
+            result["test_fixtures"] = [f.to_dict() for f in self.test_fixtures]
+        if self.test_mocks:
+            result["test_mocks"] = [m.to_dict() for m in self.test_mocks]
+        if self.test_auth_states:
+            result["test_auth_states"] = [a.to_dict() for a in self.test_auth_states]
+        if self.ui_windows:
+            result["ui_windows"] = [w.to_dict() for w in self.ui_windows]
+        if self.ui_children:
+            result["ui_children"] = [c.to_dict() for c in self.ui_children]
+        if self.ui_target != 'html':
+            result["ui_target"] = self.ui_target
         return result
 
     def validate(self) -> List[str]:
@@ -263,6 +305,41 @@ class ApplicationNode(QuantumNode):
         for prefab in self.prefabs:
             if hasattr(prefab, 'validate'):
                 errors.extend(prefab.validate())
+
+        # Validate terminal children
+        for screen in self.screens:
+            if hasattr(screen, 'validate'):
+                errors.extend(screen.validate())
+        for keybinding in self.keybindings:
+            if hasattr(keybinding, 'validate'):
+                errors.extend(keybinding.validate())
+        for service in self.services:
+            if hasattr(service, 'validate'):
+                errors.extend(service.validate())
+
+        # Validate testing children
+        for suite in self.test_suites:
+            if hasattr(suite, 'validate'):
+                errors.extend(suite.validate())
+        if self.test_config and hasattr(self.test_config, 'validate'):
+            errors.extend(self.test_config.validate())
+        for fixture in self.test_fixtures:
+            if hasattr(fixture, 'validate'):
+                errors.extend(fixture.validate())
+        for mock in self.test_mocks:
+            if hasattr(mock, 'validate'):
+                errors.extend(mock.validate())
+        for auth in self.test_auth_states:
+            if hasattr(auth, 'validate'):
+                errors.extend(auth.validate())
+
+        # Validate UI children
+        for window in self.ui_windows:
+            if hasattr(window, 'validate'):
+                errors.extend(window.validate())
+        for ui_child in self.ui_children:
+            if hasattr(ui_child, 'validate'):
+                errors.extend(ui_child.validate())
 
         return errors
 
@@ -400,6 +477,8 @@ class QueryNode(QuantumNode):
 
         # Optional attributes
         self.source = None  # For Query-of-Queries
+        self.mode = None    # None for normal, "rag" for RAG pipeline
+        self.rag_model = None  # LLM model override for RAG queries
         self.cache = False
         self.ttl = None
         self.reactive = False
@@ -1075,6 +1154,10 @@ class MailNode(QuantumNode):
         return f'<MailNode to={self.to} subject={self.subject}>'
 
 
+# MIGRATED: KnowledgeNode moved to feature-based structure
+# Import from new location (Option C migration)
+from .features.knowledge_base.src import KnowledgeNode, KnowledgeSourceNode
+
 # GAME ENGINE 2D: Import game AST nodes
 from .features.game_engine_2d.src.ast_nodes import (
     SceneNode, SpriteNode, PhysicsNode, ColliderNode, AnimationNode,
@@ -1083,6 +1166,101 @@ from .features.game_engine_2d.src.ast_nodes import (
     BehaviorNode, UseNode, PrefabNode, InstanceNode, GroupNode,
     StateMachineNode, StateNode, TransitionNode,
 )
+
+
+class LLMMessageNode(QuantumNode):
+    """
+    Represents <q:message> inside <q:llm> for chat mode.
+
+    Examples:
+      <q:message role="system">You are a helpful assistant</q:message>
+      <q:message role="user">{userQuestion}</q:message>
+    """
+
+    def __init__(self, role: str, content: str):
+        self.role = role       # "system", "user", "assistant"
+        self.content = content
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "llm_message",
+            "role": self.role,
+            "content": self.content[:50] + '...' if len(self.content) > 50 else self.content
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if self.role not in ['system', 'user', 'assistant']:
+            errors.append(f"Invalid message role: {self.role}. Must be system, user, or assistant")
+        if not self.content:
+            errors.append("Message content is required")
+        return errors
+
+    def __repr__(self):
+        return f'<LLMMessageNode role={self.role}>'
+
+
+class LLMNode(QuantumNode):
+    """
+    Represents <q:llm> - LLM invocation via Ollama/compatible API.
+
+    Examples:
+      <q:llm name="greeting" model="phi3">
+        <q:prompt>Say hello to {userName}</q:prompt>
+      </q:llm>
+
+      <q:llm name="chat" model="mistral">
+        <q:message role="system">You are a helpful assistant</q:message>
+        <q:message role="user">{question}</q:message>
+      </q:llm>
+
+      <q:llm name="data" model="llama3" responseFormat="json">
+        <q:prompt>Extract name and age from: {text}</q:prompt>
+      </q:llm>
+    """
+
+    def __init__(self, name: str):
+        self.name = name               # Result variable name
+        self.model = None               # e.g. "phi3", "mistral", "llama3"
+        self.endpoint = None            # Override base URL (optional)
+        self.prompt = None              # Prompt text (with databinding)
+        self.system = None              # System prompt (optional)
+        self.messages: List[LLMMessageNode] = []  # Chat mode messages
+        self.temperature = None         # 0.0-2.0
+        self.max_tokens = None          # Token limit
+        self.response_format = None     # "text" or "json"
+        self.cache = False
+        self.timeout = 30
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "llm",
+            "name": self.name,
+            "model": self.model,
+            "endpoint": self.endpoint,
+            "prompt": self.prompt[:50] + '...' if self.prompt and len(self.prompt) > 50 else self.prompt,
+            "system": self.system,
+            "messages": [m.to_dict() for m in self.messages],
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "response_format": self.response_format,
+            "cache": self.cache,
+            "timeout": self.timeout
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("LLM name (result variable) is required")
+        if not self.prompt and not self.messages:
+            errors.append("LLM requires either a <q:prompt> or <q:message> children")
+        for msg in self.messages:
+            errors.extend(msg.validate())
+        return errors
+
+    def __repr__(self):
+        mode = "chat" if self.messages else "completion"
+        return f'<LLMNode name={self.name} model={self.model} mode={mode}>'
 
 
 class TransactionNode(QuantumNode):

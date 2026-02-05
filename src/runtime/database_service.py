@@ -51,13 +51,9 @@ class QueryExecutionError(Exception):
 class DatabaseService:
     """Manages database connections and query execution"""
 
-    def __init__(self, admin_api_url: str = "http://localhost:8000"):
-        self.admin_api_url = admin_api_url
-        self.connection_pool: Dict[str, Any] = {}  # Cache connections by datasource name
-
     def get_datasource_config(self, datasource_name: str) -> Dict[str, Any]:
         """
-        Fetch datasource configuration from Quantum Admin API
+        Get datasource configuration. Checks local config first, then Admin API.
 
         Args:
             datasource_name: Name of the datasource
@@ -68,6 +64,25 @@ class DatabaseService:
         Raises:
             DatabaseConnectionError: If datasource not found or not ready
         """
+        # Check local datasources first (from quantum.config.yaml)
+        if datasource_name in self.local_datasources:
+            local_cfg = self.local_datasources[datasource_name]
+            # Allow env var override for database path (e.g., QUANTUM_TASKDB_PATH)
+            import os
+            env_key = f"QUANTUM_{datasource_name.upper()}_PATH"
+            db_path = os.environ.get(env_key, local_cfg.get('database', ''))
+            # Normalize config to match Admin API format
+            return {
+                'name': datasource_name,
+                'type': local_cfg.get('driver', local_cfg.get('type', 'sqlite')),
+                'database': db_path,
+                'database_name': db_path,
+                'host': local_cfg.get('host', 'localhost'),
+                'port': local_cfg.get('port', 5432),
+                'username': local_cfg.get('username', ''),
+                'password': local_cfg.get('password', ''),
+            }
+
         try:
             url = f"{self.admin_api_url}/api/datasources/by-name/{datasource_name}"
             response = requests.get(url, timeout=5)
@@ -429,9 +444,10 @@ class DatabaseService:
         return True
     
     # Phase D: Query Caching
-    
-    def __init__(self, admin_api_url: str = "http://localhost:8000"):
+
+    def __init__(self, admin_api_url: str = "http://localhost:8000", local_datasources: Dict[str, Any] = None):
         self.admin_api_url = admin_api_url
+        self.local_datasources = local_datasources or {}
         self.connection_pool: Dict[str, Any] = {}
         # Phase D: Query cache with TTL
         self.query_cache: Dict[str, Dict[str, Any]] = {}  # cache_key -> {result, expires_at}

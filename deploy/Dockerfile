@@ -27,7 +27,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create necessary directories and set permissions
-RUN mkdir -p logs components static && chown -R quantum:quantum /app
+RUN mkdir -p logs components static data && chown -R quantum:quantum /app
 
 # Create default config if not exists
 RUN if [ ! -f quantum.config.yaml ]; then \
@@ -64,5 +64,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
-# Run with Gunicorn
-CMD gunicorn --bind 0.0.0.0:8080 --workers ${GUNICORN_WORKERS:-2} --timeout 120 src.runtime.wsgi:app
+# Run with Gunicorn (use app's gunicorn.conf.py if present)
+CMD ["sh", "-c", "if [ -f gunicorn.conf.py ]; then gunicorn --config gunicorn.conf.py src.runtime.wsgi:app; else gunicorn --bind 0.0.0.0:8080 --workers ${GUNICORN_WORKERS:-2} --timeout ${GUNICORN_TIMEOUT:-300} src.runtime.wsgi:app; fi"]

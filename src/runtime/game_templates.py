@@ -207,6 +207,16 @@ def js_safe_value(val: str, val_type: str = 'string') -> str:
             return val
         except ValueError:
             return '0'
+    elif val_type == 'array':
+        # Return array literals as-is (e.g., "[]", "[1,2,3]")
+        if val.startswith('[') and val.endswith(']'):
+            return val
+        return '[]'
+    elif val_type == 'object':
+        # Return object literals as-is (e.g., "{}", "{a:1}")
+        if val.startswith('{') and val.endswith('}'):
+            return val
+        return '{}'
     else:
         if val in ('true', 'false'):
             return val
@@ -264,7 +274,7 @@ HTML_TEMPLATE = """\
   <title>{title}</title>
   <style>
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-    body {{ overflow: hidden; background: #000; }}
+    body {{ overflow: hidden; background: #111; display: flex; justify-content: center; align-items: center; width: 100vw; height: 100vh; }}
     canvas {{ display: block; }}
     .qg-hud {{ position: absolute; pointer-events: none; padding: 8px; font-family: sans-serif; z-index: 10; }}
     .qg-hud-top-left {{ top: 0; left: 0; }}
@@ -274,13 +284,102 @@ HTML_TEMPLATE = """\
     .qg-hud-bottom-right {{ bottom: 0; right: 0; }}
     .qg-hud-bottom-center {{ bottom: 0; left: 50%; transform: translateX(-50%); }}
     .qg-hud-center {{ top: 50%; left: 50%; transform: translate(-50%, -50%); }}
+
+    /* Source Code Viewer */
+    #qg-source-btn {{
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 12px;
+      transition: all 0.2s;
+    }}
+    #qg-source-btn:hover {{
+      background: rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.9);
+    }}
+    #qg-source-modal {{
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.92);
+      z-index: 999;
+      overflow: auto;
+    }}
+    #qg-source-modal.visible {{
+      display: flex;
+      flex-direction: column;
+    }}
+    #qg-source-close {{
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 13px;
+      z-index: 1001;
+    }}
+    #qg-source-close:hover {{
+      background: rgba(255, 255, 255, 0.2);
+    }}
+    #qg-source-content {{
+      flex: 1;
+      overflow: auto;
+      padding: 48px 24px 24px;
+    }}
+    #qg-source-content pre {{
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 24px;
+      border-radius: 12px;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre;
+      tab-size: 2;
+      border: 1px solid #313244;
+      max-width: 900px;
+      margin: 0 auto;
+    }}
   </style>
 </head>
 <body>
 {hud_html}
+  <button id="qg-source-btn" onclick="toggleSource()">source</button>
+  <div id="qg-source-modal">
+    <button id="qg-source-close" onclick="toggleSource()">ESC</button>
+    <div id="qg-source-content">
+      <pre id="qg-source-code">{source_code}</pre>
+    </div>
+  </div>
   <script src="{pixi_cdn}"></script>
   <script src="{matter_cdn}"></script>
   <script>
+function toggleSource() {{
+  var modal = document.getElementById('qg-source-modal');
+  modal.classList.toggle('visible');
+}}
+document.addEventListener('keydown', function(e) {{
+  if (e.key === 'Escape') {{
+    document.getElementById('qg-source-modal').classList.remove('visible');
+  }}
+}});
 {game_js}
   </script>
 </body>
@@ -462,7 +561,7 @@ def emit_animation_system(js: JsBuilder):
     js.const('vy', 'info.body.velocity.y')
     js.blank()
     js.comment('Priority: jump > walk > idle')
-    js.if_block("Math.abs(vy) > 1 && entry.anims['jump']")
+    js.if_block("Math.abs(vy) > 5 && entry.anims['jump']")
     js.line("_switchAnimation(spriteId, 'jump');")
     js.else_if_block("vx > 0.5 && _keys[ctrl.right] && entry.anims['walk-right']")
     js.line("_switchAnimation(spriteId, 'walk-right');")
@@ -480,7 +579,7 @@ def emit_animation_system(js: JsBuilder):
 def emit_easing_functions(js: JsBuilder):
     """Emit a comprehensive set of easing functions."""
     js.comment("Easing Functions")
-    js.const('_easing', '{')
+    js.line('const _easing = {')
     js.indent()
     js.line("linear: t => t,")
     js.line("easeIn: t => t * t,")
@@ -598,7 +697,7 @@ def emit_particle_system(js: JsBuilder):
     js.blank()
 
     js.func('_createParticleSystem', 'config')
-    js.const('ps', '{')
+    js.line('const ps = {')
     js.indent()
     js.line("id: config.id,")
     js.line("follow: config.follow || null,")
@@ -742,7 +841,11 @@ def emit_audio_system(js: JsBuilder):
     js.comment('Play any queued sounds')
     js.block_open('while (_pendingSounds.length > 0)')
     js.const('pending', '_pendingSounds.shift()')
-    js.line('_doPlaySound(pending.id, pending.opts);')
+    js.const('_psrc', '_doPlaySound(pending.id, pending.opts)')
+    js.if_block('_psrc')
+    js.assign('_activeSources[pending.id]', '_psrc')
+    js.line("_psrc.onended = function() { if (_activeSources[pending.id] === _psrc) delete _activeSources[pending.id]; };")
+    js.block_close()
     js.block_close()
     js.dedent()
     js.line("});")
@@ -760,7 +863,7 @@ def emit_audio_system(js: JsBuilder):
     js.block_close()  # _initAudio
     js.blank()
 
-    js.func('_loadSound', 'id, url')
+    js.block_open('async function _loadSound(id, url)')
     js.line('_initAudio();')
     js.block_open('try')
     js.const('resp', 'await fetch(url)')
@@ -790,12 +893,31 @@ def emit_audio_system(js: JsBuilder):
     js.block_close()
     js.blank()
 
+    js.const('_activeSources', '{}')
+    js.blank()
     js.func('_playSound', 'id, opts')
     js.if_block('!_audioUnlocked')
     js.line('_pendingSounds.push({ id: id, opts: opts });')
     js.ret()
     js.block_close()
-    js.ret('_doPlaySound(id, opts)')
+    js.const('src', '_doPlaySound(id, opts)')
+    js.if_block('src')
+    js.assign('_activeSources[id]', 'src')
+    js.line("src.onended = function() { if (_activeSources[id] === src) delete _activeSources[id]; };")
+    js.block_close()
+    js.ret('src')
+    js.block_close()
+    js.blank()
+    js.func('_stopSound', 'id')
+    js.const('src', '_activeSources[id]')
+    js.if_block('src')
+    js.block_open('try')
+    js.line('src.stop();')
+    js.block_close()
+    js.block_open('catch(e)')
+    js.block_close()
+    js.line('delete _activeSources[id];')
+    js.block_close()
     js.block_close()
 
 
@@ -902,6 +1024,16 @@ def emit_game_api(js: JsBuilder):
     js.indent()
     js.if_block("typeof _playSound === 'function'")
     js.ret('_playSound(soundId, opts)')
+    js.block_close()
+    js.dedent()
+    js.line("};")
+    js.blank()
+
+    # game.stop(soundId)
+    js.line("game.stop = function(soundId) {")
+    js.indent()
+    js.if_block("typeof _stopSound === 'function'")
+    js.line('_stopSound(soundId);')
     js.block_close()
     js.dedent()
     js.line("};")
@@ -1042,6 +1174,12 @@ def emit_spawn_system(js: JsBuilder):
     """Emit the spawn/pool system."""
     js.comment("Spawn System")
     js.const('_spawners', '{}')
+    js.const('_prefabConfigs', '{}')
+    js.blank()
+
+    js.func('_registerPrefab', 'name, config')
+    js.assign('_prefabConfigs[name]', 'config')
+    js.block_close()
     js.blank()
 
     js.func('_createSpawner', 'config')
@@ -1060,10 +1198,34 @@ def emit_spawn_system(js: JsBuilder):
     js.block_close()
     js.blank()
 
+    # Helper to create a sprite from prefab config
+    js.func('_createPrefabSprite', 'prefabName, x, y')
+    js.const('config', '_prefabConfigs[prefabName]')
+    js.if_block('!config')
+    js.line("console.warn('Unknown prefab:', prefabName);")
+    js.ret('null')
+    js.block_close()
+    js.const('w', 'config.width || 20')
+    js.const('h', 'config.height || 20')
+    js.const('spr', 'new PIXI.Graphics()')
+    js.comment('Center the rectangle like main sprites')
+    js.line('spr.rect(-w/2, -h/2, w, h);')
+    js.if_block('config.color')
+    js.line("spr.fill({ color: parseInt(config.color.replace('#',''), 16) });")
+    js.else_block()
+    js.line("spr.fill({ color: 0x22c55e });")
+    js.block_close()
+    js.assign('spr.x', 'x')
+    js.assign('spr.y', 'y')
+    js.line('_cameraContainer.addChild(spr);')
+    js.ret('spr')
+    js.block_close()
+    js.blank()
+
     js.func('_spawn', 'spawnerId')
     js.const('sp', '_spawners[spawnerId]')
     js.if_block('!sp')
-    js.ret()
+    js.ret('null')
     js.block_close()
     js.comment('Find an inactive pool member')
     js.for_of('item', 'sp.pool')
@@ -1077,10 +1239,39 @@ def emit_spawn_system(js: JsBuilder):
     js.if_block('item.body')
     js.line('Matter.Body.setPosition(item.body, { x: sp.spawnX, y: sp.spawnY });')
     js.block_close()
-    js.ret()
+    js.ret('item.sprite')
     js.block_close()
     js.block_close()
+    js.comment('No inactive items, create new if under pool limit')
+    js.if_block('sp.pool.length < sp.poolSize')
+    js.const('newSprite', '_createPrefabSprite(sp.prefab, sp.spawnX, sp.spawnY)')
+    js.if_block('newSprite')
+    js.const('newItem', '{ sprite: newSprite, active: true, body: null }')
+    js.line('sp.pool.push(newItem);')
+    js.ret('newSprite')
     js.block_close()
+    js.block_close()
+    js.ret('null')
+    js.block_close()
+
+
+def emit_mouse_system(js: JsBuilder):
+    """Emit global mouse position tracking and coordinate conversion."""
+    js.comment("Mouse System")
+    js.let('_mouseX', '0')
+    js.let('_mouseY', '0')
+    js.let('_mouseWorldX', '0')
+    js.let('_mouseWorldY', '0')
+    js.line("app.canvas.addEventListener('pointermove', (e) => {")
+    js.indent()
+    js.const('rect', 'app.canvas.getBoundingClientRect()')
+    js.assign('_mouseX', 'e.clientX - rect.left')
+    js.assign('_mouseY', 'e.clientY - rect.top')
+    js.comment('Convert to world coordinates (accounting for camera)')
+    js.assign('_mouseWorldX', '_mouseX - _cameraContainer.x')
+    js.assign('_mouseWorldY', '_mouseY - _cameraContainer.y')
+    js.dedent()
+    js.line("});")
 
 
 # HUD element template (HTML)

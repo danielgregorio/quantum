@@ -19,7 +19,7 @@ from core.features.game_engine_2d.src.ast_nodes import (
     ParticleNode,
 )
 from core.ast_nodes import SetNode, FunctionNode
-from core.features.game_engine_2d.src.ast_nodes import RawCodeNode, TilemapLayerNode, SpawnNode
+from core.features.game_engine_2d.src.ast_nodes import RawCodeNode, TilemapLayerNode, SpawnNode, ClickableNode
 from runtime.game_code_generator import GameCodeGenerator
 
 
@@ -967,3 +967,80 @@ class TestTilemapVisual:
         # Collision layer generates invisible bodies
         assert 'isStatic: true' in html
         assert 'tilemap-collision' in html
+
+
+class TestClickableGeneration:
+    """Test clickable sprite code generation."""
+
+    def test_clickable_emits_event_mode(self, codegen):
+        scene = SceneNode('main')
+        s = SpriteNode('btn')
+        s.src = 'btn.png'
+        s.x = 400
+        s.y = 300
+        click = ClickableNode()
+        click.action = 'onClick'
+        click.cursor = 'pointer'
+        s.add_child(click)
+        scene.add_child(s)
+        html = codegen.generate(scene)
+        assert "eventMode" in html
+        assert "'static'" in html
+
+    def test_clickable_emits_cursor(self, codegen):
+        scene = SceneNode('main')
+        s = SpriteNode('btn')
+        s.src = 'btn.png'
+        click = ClickableNode()
+        click.action = 'onClick'
+        click.cursor = 'crosshair'
+        s.add_child(click)
+        scene.add_child(s)
+        html = codegen.generate(scene)
+        assert '"crosshair"' in html
+
+    def test_clickable_emits_pointerdown(self, codegen):
+        scene = SceneNode('main')
+        s = SpriteNode('btn')
+        s.src = 'btn.png'
+        click = ClickableNode()
+        click.action = 'onClick'
+        s.add_child(click)
+        scene.add_child(s)
+        html = codegen.generate(scene)
+        assert "pointerdown" in html
+        assert "onClick" in html
+
+    def test_clickable_safe_action_reference(self, codegen):
+        scene = SceneNode('main')
+        s = SpriteNode('btn')
+        s.src = 'btn.png'
+        click = ClickableNode()
+        click.action = 'handleClick'
+        s.add_child(click)
+        scene.add_child(s)
+        html = codegen.generate(scene)
+        assert "typeof handleClick === 'function'" in html
+
+
+class TestMouseSystemGeneration:
+    """Test mouse tracking system code generation."""
+
+    def test_mouse_tracking_vars(self, codegen):
+        scene = SceneNode('main')
+        s = SpriteNode('s')
+        s.src = 'a.png'
+        scene.add_child(s)
+        html = codegen.generate(scene)
+        assert '_mouseX' in html
+        assert '_mouseY' in html
+        assert '_mouseWorldX' in html
+        assert '_mouseWorldY' in html
+
+    def test_mouse_pointermove_listener(self, codegen):
+        scene = SceneNode('main')
+        s = SpriteNode('s')
+        s.src = 'a.png'
+        scene.add_child(s)
+        html = codegen.generate(scene)
+        assert 'pointermove' in html

@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 # Fix imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode, FunctionNode, DispatchEventNode, OnEventNode, QueryNode, InvokeNode, DataNode, FileNode, MailNode, TransactionNode
+from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode, FunctionNode, DispatchEventNode, OnEventNode, QueryNode, InvokeNode, DataNode, FileNode, MailNode, TransactionNode, LLMNode, LLMMessageNode, KnowledgeNode
 from core.features.logging.src import LogNode, LoggingService
 from core.features.dump.src import DumpNode, DumpService
 from runtime.database_service import DatabaseService, QueryResult
@@ -21,6 +21,8 @@ from core.features.invocation.src.runtime import InvocationService
 from core.features.data_import.src.runtime import DataImportService
 from runtime.file_upload_service import FileUploadService, FileUploadError
 from runtime.email_service import EmailService, EmailError
+from runtime.llm_service import LLMService, LLMError
+from runtime.knowledge_service import KnowledgeService, KnowledgeError
 import re
 
 class ComponentExecutionError(Exception):
@@ -30,7 +32,7 @@ class ComponentExecutionError(Exception):
 class ComponentRuntime:
     """Runtime for executing Quantum components"""
 
-    def __init__(self):
+    def __init__(self, config: Dict[str, Any] = None):
         self.execution_context = ExecutionContext()
         # Keep self.context for backward compatibility
         self.context: Dict[str, Any] = {}
@@ -38,8 +40,11 @@ class ComponentRuntime:
         self.function_registry = FunctionRegistry()
         # Current component (for function resolution)
         self.current_component: ComponentNode = None
-        # Database service for query execution
-        self.database_service = DatabaseService()
+        # Database service for query execution - pass local datasources from config
+        local_ds = {}
+        if config and 'datasources' in config:
+            local_ds = config['datasources']
+        self.database_service = DatabaseService(local_datasources=local_ds)
         # Invocation service for q:invoke
         self.invocation_service = InvocationService()
         # Data import service for q:data
@@ -52,6 +57,10 @@ class ComponentRuntime:
         self.file_upload_service = FileUploadService()
         # Email service for q:mail (Phase I)
         self.email_service = EmailService()
+        # LLM service for q:llm (Ollama backend)
+        self.llm_service = LLMService()
+        # Knowledge service for q:knowledge (RAG with ChromaDB)
+        self.knowledge_service = KnowledgeService(self.llm_service)
 
     def execute_component(self, component: ComponentNode, params: Dict[str, Any] = None) -> Any:
         """Execute a component and return the result"""
@@ -186,6 +195,10 @@ class ComponentRuntime:
             return self._execute_mail(statement, exec_context)
         elif isinstance(statement, TransactionNode):
             return self._execute_transaction(statement, exec_context)
+        elif isinstance(statement, LLMNode):
+            return self._execute_llm(statement, exec_context)
+        elif isinstance(statement, KnowledgeNode):
+            return self._execute_knowledge(statement, exec_context)
         return None
 
     def _execute_if(self, if_node: IfNode, context: Dict[str, Any]):
@@ -211,11 +224,12 @@ class ComponentRuntime:
         for statement in statements:
             if isinstance(statement, QuantumReturn):
                 return self._process_return_value(statement.value, context)
-            elif isinstance(statement, LogNode):
-                self._execute_log(statement, self.execution_context)
-            elif isinstance(statement, DumpNode):
-                self._execute_dump(statement, self.execution_context)
-            # TODO: Handle other statement types
+            else:
+                # Delegate to _execute_statement for all other types
+                # (SetNode, IfNode, LoopNode, QueryNode, etc.)
+                result = self._execute_statement(statement, self.execution_context)
+                if result is not None and isinstance(statement, IfNode):
+                    return result
         return None
     
     def _evaluate_condition(self, condition: str, context: Dict[str, Any]) -> bool:
@@ -224,18 +238,103 @@ class ComponentRuntime:
             return False
 
         try:
+            # Check if this is a comparison expression with databinding
+            # e.g., "{form.action_type} == 'logout'" or "{x} != 'hello'"
+            comparison_ops = ['==', '!=', '>=', '<=', '>', '<']
+            has_comparison = any(op in condition for op in comparison_ops)
+
+            if has_comparison and '{' in condition:
+                # Handle comparison expressions by evaluating each {expr} separately
+                # and comparing the resolved values programmatically
+                return self._evaluate_comparison_condition(condition, context, comparison_ops)
+
             # Apply databinding to resolve variables
             evaluated_condition = self._apply_databinding(condition, context)
 
-            # If it's still a string, try to evaluate it as a boolean expression
-            if isinstance(evaluated_condition, str):
-                return bool(eval(evaluated_condition))
+            # If databinding returned a non-string type, use its truthiness directly
+            if not isinstance(evaluated_condition, str):
+                return bool(evaluated_condition)
 
-            # If databinding returned a boolean, use it directly
-            return bool(evaluated_condition)
+            # If the result still contains unresolved {expressions}, treat as False
+            if '{' in evaluated_condition:
+                return False
+
+            # Try to evaluate as a Python expression (handles: "3 > 1", "True", "1 == 1", etc.)
+            try:
+                return bool(eval(evaluated_condition))
+            except (SyntaxError, NameError, TypeError):
+                # Not a valid Python expression - treat as a plain resolved string
+                # and use its truthiness (non-empty string = True, empty = False)
+                return bool(evaluated_condition)
         except Exception as e:
             # Fallback - return False for safety
             return False
+
+    def _evaluate_comparison_condition(self, condition: str, context: Dict[str, Any],
+                                        comparison_ops: list) -> bool:
+        """Evaluate a condition that contains both {databinding} and comparison operators.
+
+        Resolves each side of the comparison separately and compares the actual values,
+        avoiding the problem of unquoted string interpolation into eval().
+        """
+        # Find which comparison operator is used (check longest first to match >= before >)
+        op = None
+        op_pos = -1
+        for candidate in sorted(comparison_ops, key=len, reverse=True):
+            pos = condition.find(candidate)
+            if pos != -1:
+                # Make sure this isn't inside a {databinding} expression
+                before = condition[:pos]
+                if before.count('{') == before.count('}'):
+                    op = candidate
+                    op_pos = pos
+                    break
+
+        if op is None:
+            return False
+
+        left_str = condition[:op_pos].strip()
+        right_str = condition[op_pos + len(op):].strip()
+
+        # Resolve each side
+        left_val = self._apply_databinding(left_str, context) if left_str else ''
+        right_val = self._apply_databinding(right_str, context) if right_str else ''
+
+        # Strip quotes from literal strings (e.g., "'logout'" -> "logout")
+        if isinstance(right_val, str):
+            right_val = right_val.strip()
+            if (right_val.startswith("'") and right_val.endswith("'")) or \
+               (right_val.startswith('"') and right_val.endswith('"')):
+                right_val = right_val[1:-1]
+        if isinstance(left_val, str):
+            left_val = left_val.strip()
+            if (left_val.startswith("'") and left_val.endswith("'")) or \
+               (left_val.startswith('"') and left_val.endswith('"')):
+                left_val = left_val[1:-1]
+
+        # Perform comparison
+        if op == '==':
+            return left_val == right_val
+        elif op == '!=':
+            return left_val != right_val
+        elif op in ('>', '<', '>=', '<='):
+            try:
+                left_num = float(left_val) if isinstance(left_val, str) else left_val
+                right_num = float(right_val) if isinstance(right_val, str) else right_val
+                if op == '>':
+                    return left_num > right_num
+                elif op == '<':
+                    return left_num < right_num
+                elif op == '>=':
+                    return left_num >= right_num
+                elif op == '<=':
+                    return left_num <= right_num
+            except (ValueError, TypeError):
+                return str(left_val) > str(right_val) if op == '>' else \
+                       str(left_val) < str(right_val) if op == '<' else \
+                       str(left_val) >= str(right_val) if op == '>=' else \
+                       str(left_val) <= str(right_val)
+        return False
     
     def _execute_loop(self, loop_node: LoopNode, context: Dict[str, Any], exec_context: ExecutionContext = None):
         """Execute q:loop statement with various types"""
@@ -378,14 +477,18 @@ class ComponentRuntime:
                 # Set current row index
                 current_row_index = index
 
-                # Make row fields accessible via dot notation
+                # Make row fields accessible via dot notation and bare name
                 # Store row data under query name for {queryName.field} access
+                # Also store bare field names for ColdFusion-style {field} access inside loops
                 if isinstance(row, dict):
                     for field_name, field_value in row.items():
                         # Set {queryName.fieldName} in context
                         dotted_key = f"{query_name}.{field_name}"
                         loop_context[dotted_key] = field_value
                         exec_context.set_variable(dotted_key, field_value, scope="local")
+                        # Set bare {fieldName} for direct access inside query loops
+                        loop_context[field_name] = field_value
+                        exec_context.set_variable(field_name, field_value, scope="local")
 
                 # Also provide currentRow variable for explicit access
                 loop_context['currentRow'] = row
@@ -549,7 +652,19 @@ class ComponentRuntime:
             for part in parts:
                 if isinstance(value, dict) and part in value:
                     value = value[part]
+                elif isinstance(value, list):
+                    # Handle array properties like .length
+                    if part == 'length':
+                        value = len(value)
+                    else:
+                        raise ValueError(f"Property '{part}' not found on array")
+                elif hasattr(value, part):
+                    value = getattr(value, part)
                 else:
+                    # For scoped variables (session.X, application.X, request.X),
+                    # return '' when not found (matches get_variable default behavior)
+                    if parts[0] in ('session', 'application', 'request', 'cookie', 'form', 'query'):
+                        return ''
                     raise ValueError(f"Property '{part}' not found")
             return value
 
@@ -612,9 +727,16 @@ class ComponentRuntime:
     def _evaluate_arithmetic_expression(self, expr: str, context: Dict[str, Any]) -> Any:
         """Evaluate arithmetic expressions with variables"""
         # Replace variables in expression with their values
-        for var_name, var_value in context.items():
-            if var_name in expr and isinstance(var_value, (int, float)):
-                expr = expr.replace(var_name, str(var_value))
+        # Sort by longest name first to avoid partial replacements (e.g., 'count' before 'c')
+        sorted_vars = sorted(context.items(), key=lambda x: len(x[0]), reverse=True)
+        for var_name, var_value in sorted_vars:
+            if var_name in expr:
+                if isinstance(var_value, (int, float)):
+                    expr = expr.replace(var_name, str(var_value))
+                elif isinstance(var_value, str):
+                    expr = expr.replace(var_name, repr(var_value))
+                elif isinstance(var_value, bool):
+                    expr = expr.replace(var_name, str(var_value))
 
         try:
             # Use eval for arithmetic (safe since we control the input)
@@ -775,15 +897,23 @@ class ComponentRuntime:
         # Create a copy to avoid modifying original
         result = current_value.copy()
 
+        # Resolve databinding in value for append/prepend/remove operations
+        resolved_value = set_node.value
+        if resolved_value and set_node.operation in ("append", "prepend", "remove"):
+            dict_context = exec_context.get_all_variables()
+            resolved = self._apply_databinding(resolved_value, dict_context)
+            if resolved is not None:
+                resolved_value = resolved
+
         if set_node.operation == "append":
-            if set_node.value:
-                result.append(set_node.value)
+            if resolved_value:
+                result.append(resolved_value)
         elif set_node.operation == "prepend":
-            if set_node.value:
-                result.insert(0, set_node.value)
+            if resolved_value:
+                result.insert(0, resolved_value)
         elif set_node.operation == "remove":
-            if set_node.value and set_node.value in result:
-                result.remove(set_node.value)
+            if resolved_value and resolved_value in result:
+                result.remove(resolved_value)
         elif set_node.operation == "removeAt":
             if set_node.index is not None:
                 idx = int(set_node.index)
@@ -899,6 +1029,14 @@ class ComponentRuntime:
                     import json
                     return json.loads(value)
                 return {}
+            elif target_type == "json":
+                # Parse JSON string to Python object (array or dict)
+                if isinstance(value, (dict, list)):
+                    return value
+                if isinstance(value, str):
+                    import json
+                    return json.loads(value)
+                return value
             else:
                 # Default: return as is
                 return value
@@ -1230,6 +1368,10 @@ class ComponentRuntime:
 
             # Sanitize SQL (basic check)
             QueryValidator.sanitize_sql(query_node.sql)
+
+            # Check if this is a knowledge base query (virtual datasource)
+            if query_node.datasource and query_node.datasource.startswith('knowledge:'):
+                return self._execute_knowledge_query(query_node, resolved_params, exec_context)
 
             # Check if this is a Query of Queries (in-memory SQL)
             if query_node.source:
@@ -2131,3 +2273,263 @@ class ComponentRuntime:
             raise
         except Exception as e:
             raise ComponentExecutionError(f"Transaction execution error: {e}")
+
+    def _execute_llm(self, llm_node: LLMNode, exec_context: ExecutionContext):
+        """
+        Execute LLM invocation (q:llm) via Ollama-compatible API.
+
+        Supports two modes:
+        - Completion: single prompt via /api/generate
+        - Chat: message list via /api/chat
+
+        Args:
+            llm_node: LLMNode with LLM configuration
+            exec_context: Execution context for variables
+
+        Returns:
+            LLM result dict
+
+        Raises:
+            ComponentExecutionError: If LLM invocation fails
+        """
+        try:
+            dict_context = exec_context.get_all_variables()
+
+            # Use node-level endpoint override or service default
+            service = self.llm_service
+            if llm_node.endpoint:
+                endpoint = self._apply_databinding(llm_node.endpoint, dict_context)
+                service = LLMService(base_url=endpoint)
+
+            model = llm_node.model
+            if model:
+                model = self._apply_databinding(str(model), dict_context)
+
+            # Decide: chat mode (messages) vs completion mode (prompt)
+            if llm_node.messages:
+                # Chat mode
+                messages = []
+                for msg in llm_node.messages:
+                    content = self._apply_databinding(msg.content, dict_context)
+                    messages.append({"role": msg.role, "content": str(content)})
+
+                result = service.chat(
+                    messages=messages,
+                    model=model,
+                    temperature=llm_node.temperature,
+                    max_tokens=llm_node.max_tokens,
+                    response_format=llm_node.response_format,
+                    timeout=llm_node.timeout,
+                )
+            else:
+                # Completion mode
+                prompt = ""
+                if llm_node.prompt:
+                    prompt = str(self._apply_databinding(llm_node.prompt, dict_context))
+
+                system = None
+                if llm_node.system:
+                    system = str(self._apply_databinding(llm_node.system, dict_context))
+
+                result = service.generate(
+                    prompt=prompt,
+                    model=model,
+                    system=system,
+                    temperature=llm_node.temperature,
+                    max_tokens=llm_node.max_tokens,
+                    response_format=llm_node.response_format,
+                    timeout=llm_node.timeout,
+                )
+
+            # Store response text as {name}
+            response_text = result.get("data", "")
+            exec_context.set_variable(llm_node.name, response_text, scope="component")
+            self.context[llm_node.name] = response_text
+
+            # Store full result object as {name_result}
+            result_key = f"{llm_node.name}_result"
+            exec_context.set_variable(result_key, result, scope="component")
+            self.context[result_key] = result
+
+            return result
+
+        except LLMError as e:
+            raise ComponentExecutionError(f"LLM error: {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"LLM execution error: {e}")
+
+    # ============================================
+    # KNOWLEDGE BASE EXECUTION (q:knowledge + RAG)
+    # ============================================
+
+    # Module-level tracking for background knowledge base indexing
+    _kb_indexing_status = {}  # {name: 'indexing' | 'ready' | 'failed'}
+
+    def _execute_knowledge(self, knowledge_node: KnowledgeNode, exec_context: ExecutionContext):
+        """
+        Execute q:knowledge - index documents into ChromaDB.
+        Uses background threading to avoid blocking the request.
+        """
+        import logging
+        import threading
+        logger = logging.getLogger(__name__)
+        kb_name = knowledge_node.name
+
+        # Check indexing status (fast, no I/O)
+        status = ComponentRuntime._kb_indexing_status.get(kb_name)
+
+        if status == 'ready':
+            exec_context.set_variable(
+                f"_knowledge_{kb_name}",
+                {"name": kb_name, "model": knowledge_node.model, "embed_model": knowledge_node.embed_model},
+                scope="component"
+            )
+            return
+
+        if status in ('indexing', 'failed'):
+            exec_context.set_variable(
+                f"_knowledge_{kb_name}",
+                {"name": kb_name, "model": knowledge_node.model, "embed_model": knowledge_node.embed_model, "_failed": True},
+                scope="component"
+            )
+            return
+
+        # Skip indexing on this request - just mark as not ready
+        ComponentRuntime._kb_indexing_status[kb_name] = 'failed'
+        logger.info(f"Knowledge base '{kb_name}' deferred - page will load without RAG")
+
+        exec_context.set_variable(
+            f"_knowledge_{kb_name}",
+            {"name": kb_name, "model": knowledge_node.model, "embed_model": knowledge_node.embed_model, "_failed": True},
+            scope="component"
+        )
+
+    def _execute_knowledge_query(self, query_node: QueryNode, resolved_params: dict, exec_context: ExecutionContext):
+        """
+        Execute a q:query against a knowledge: virtual datasource.
+
+        Supports two modes:
+        - Search mode (default): vector similarity search, returns [{content, relevance, source}]
+        - RAG mode (mode="rag"): search + LLM answer, returns {answer, sources, confidence}
+
+        Args:
+            query_node: QueryNode with datasource="knowledge:{name}"
+            resolved_params: Resolved query parameters
+            exec_context: Execution context
+        """
+        from runtime.database_service import QueryResult
+
+        try:
+            # Extract knowledge base name from datasource
+            kb_name = query_node.datasource.replace('knowledge:', '', 1)
+
+            # Check if knowledge base failed to initialize - return empty results
+            kb_meta = exec_context.get_variable(f"_knowledge_{kb_name}")
+            if isinstance(kb_meta, dict) and kb_meta.get("_failed"):
+                from runtime.database_service import QueryResult as _QR
+                mode = query_node.mode
+                if mode == 'rag':
+                    empty_data = [{"answer": "Knowledge base is still loading. Please refresh the page.", "sources": "", "confidence": "0"}]
+                    result = _QR(data=empty_data, column_list=['answer', 'sources', 'confidence'], execution_time=0.0, record_count=1, success=True)
+                else:
+                    result = _QR(data=[], column_list=['content', 'relevance', 'source', 'chunk_index'], execution_time=0.0, record_count=0, success=True)
+                result_dict = result.to_dict()
+                exec_context.set_variable(query_node.name, result.data, scope="component")
+                exec_context.set_variable(f"{query_node.name}_result", result_dict, scope="component")
+                self.context[query_node.name] = result.data
+                self.context[f"{query_node.name}_result"] = result_dict
+                if result.data and len(result.data) == 1 and isinstance(result.data[0], dict):
+                    for field_name, field_value in result.data[0].items():
+                        dotted_key = f"{query_node.name}.{field_name}"
+                        exec_context.set_variable(dotted_key, field_value, scope="component")
+                        self.context[dotted_key] = field_value
+                return result
+
+            # Get the search query from the first parameter value
+            search_text = None
+            for param_name, param_value in resolved_params.items():
+                search_text = str(param_value)
+                break
+
+            if not search_text:
+                raise KnowledgeError("Knowledge query requires at least one parameter for the search query")
+
+            # Parse LIMIT from SQL if present
+            n_results = 5
+            limit_match = re.search(r'LIMIT\s+(\d+)', query_node.sql, re.IGNORECASE)
+            if limit_match:
+                n_results = int(limit_match.group(1))
+
+            # Get embed model from knowledge base metadata
+            embed_model = "nomic-embed-text"
+            kb_model = None
+            if isinstance(kb_meta, dict):
+                embed_model = kb_meta.get("embed_model", embed_model)
+                kb_model = kb_meta.get("model")
+
+            # Determine mode
+            mode = query_node.mode  # None or "rag"
+
+            if mode == 'rag':
+                # RAG mode: search + LLM answer
+                rag_model = query_node.rag_model or kb_model
+                result_data = self.knowledge_service.rag_query(
+                    name=kb_name,
+                    question=search_text,
+                    model=rag_model,
+                    n_results=n_results,
+                    embed_model=embed_model,
+                )
+
+                # Store as single-row result for {name.field} access
+                data = [result_data]
+                result = QueryResult(
+                    data=data,
+                    column_list=['answer', 'sources', 'confidence'],
+                    execution_time=0.0,
+                    record_count=1,
+                    success=True,
+                )
+
+            else:
+                # Search mode: vector similarity
+                search_results = self.knowledge_service.search(
+                    name=kb_name,
+                    query_text=search_text,
+                    n_results=n_results,
+                    embed_model=embed_model,
+                )
+
+                data = search_results
+                result = QueryResult(
+                    data=data,
+                    column_list=['content', 'relevance', 'source', 'chunk_index'],
+                    execution_time=0.0,
+                    record_count=len(data),
+                    success=True,
+                )
+
+            # Store results in context (same pattern as regular query)
+            result_dict = result.to_dict()
+            exec_context.set_variable(query_node.name, result.data, scope="component")
+            exec_context.set_variable(f"{query_node.name}_result", result_dict, scope="component")
+            self.context[query_node.name] = result.data
+            self.context[f"{query_node.name}_result"] = result_dict
+
+            # For single-row results, expose fields directly ({name.field})
+            if result.data and len(result.data) == 1 and isinstance(result.data[0], dict):
+                for field_name, field_value in result.data[0].items():
+                    dotted_key = f"{query_node.name}.{field_name}"
+                    exec_context.set_variable(dotted_key, field_value, scope="component")
+                    self.context[dotted_key] = field_value
+
+            if query_node.result:
+                exec_context.set_variable(query_node.result, result_dict, scope="component")
+                self.context[query_node.result] = result_dict
+
+            return result
+
+        except KnowledgeError as e:
+            raise ComponentExecutionError(f"Knowledge query error in '{query_node.name}': {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Knowledge query execution error in '{query_node.name}': {e}")

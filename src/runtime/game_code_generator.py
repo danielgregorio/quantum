@@ -17,6 +17,7 @@ from core.features.game_engine_2d.src.ast_nodes import (
     SpawnNode, HudNode, TweenNode, TilemapNode, TilemapLayerNode,
     BehaviorNode, UseNode, PrefabNode, InstanceNode, GroupNode,
     StateMachineNode, StateNode, TransitionNode, RawCodeNode,
+    ClickableNode,
 )
 from core.ast_nodes import QuantumNode, SetNode, FunctionNode, IfNode, LoopNode, HTMLNode, TextNode
 
@@ -28,6 +29,7 @@ from runtime.game_templates import (
     emit_easing_functions, emit_tween_system, emit_particle_system,
     emit_audio_system, emit_timer_system,
     emit_event_bus, emit_game_api, emit_spawn_system,
+    emit_mouse_system,
 )
 
 
@@ -60,7 +62,8 @@ class GameCodeGenerator:
     # ------------------------------------------------------------------
 
     def generate(self, scene: SceneNode, behaviors: List[BehaviorNode] = None,
-                 prefabs: List[PrefabNode] = None, title: str = "Quantum Game") -> str:
+                 prefabs: List[PrefabNode] = None, title: str = "Quantum Game",
+                 source_code: str = None) -> str:
         """Generate full HTML from a SceneNode."""
         self._scene_width = scene.width
         self._scene_height = scene.height
@@ -78,13 +81,23 @@ class GameCodeGenerator:
 
         hud_html = self._build_hud_html()
 
+        # Format source code with syntax highlighting
+        formatted_source = self._format_source_code(source_code) if source_code else "No source code available"
+
         return HTML_TEMPLATE.format(
             title=html_escape_title(title),
             pixi_cdn=PIXI_CDN,
             matter_cdn=MATTER_CDN,
             hud_html=hud_html,
             game_js=game_js,
+            source_code=formatted_source,
         )
+
+    def _format_source_code(self, source: str) -> str:
+        """Format source code with HTML escaping only (clean display)."""
+        import html
+        # Just escape HTML entities - keep it simple and clean
+        return html.escape(source)
 
     def _reset_scene_state(self):
         """Reset per-scene state for multi-scene generation."""
@@ -106,10 +119,11 @@ class GameCodeGenerator:
     def generate_multi(self, scenes: List[SceneNode], initial: str,
                        behaviors: List[BehaviorNode] = None,
                        prefabs: List[PrefabNode] = None,
-                       title: str = "Quantum Game") -> str:
+                       title: str = "Quantum Game",
+                       source_code: str = None) -> str:
         """Generate HTML with multiple scenes and scene switching."""
         if not scenes:
-            return self.generate(SceneNode('empty'), behaviors, prefabs, title)
+            return self.generate(SceneNode('empty'), behaviors, prefabs, title, source_code)
 
         # Use initial/active scene dimensions for PIXI app
         first = scenes[0]
@@ -265,7 +279,13 @@ class GameCodeGenerator:
                     if info.get('width') and info.get('height'):
                         w, h = info['width'], info['height']
                         js.line(f"{spr_var}.rect(-{w/2}, -{h/2}, {w}, {h});")
-                        js.line(f"{spr_var}.fill({{ color: 0x000000, alpha: 0 }});")
+                        # Use color if provided, otherwise default to a visible color
+                        color = info.get('color')
+                        if color:
+                            hex_color = color.lstrip('#')
+                            js.line(f"{spr_var}.fill({{ color: 0x{hex_color} }});")
+                        else:
+                            js.line(f"{spr_var}.fill({{ color: 0x4a9eff }});")
 
                 js.assign(f'{spr_var}.x', x)
                 js.assign(f'{spr_var}.y', y)
@@ -281,6 +301,31 @@ class GameCodeGenerator:
                 if body_var:
                     body_vars.append(body_var)
                     js.assign(f'_bodyToSprite[{body_var}.id]', js_string(info['id']))
+
+                # Clickable setup (multi-scene)
+                if info.get('clickable'):
+                    cursor = info['clickable'].get('cursor', 'pointer')
+                    action = js_id(info['clickable']['action'])
+                    js.assign(f"{spr_var}.eventMode", "'static'")
+                    js.assign(f"{spr_var}.cursor", js_string(cursor))
+                    sid_str_click = js_string(info['id'])
+                    js.line(f"{spr_var}.on('pointerdown', (e) => {{")
+                    js.indent()
+                    js.const('_info', f'_sprites[{sid_str_click}]')
+                    js.let('_handled', 'false')
+                    js.if_block('_info && _info.behaviors')
+                    js.for_of('_b', '_info.behaviors')
+                    js.if_block(f"typeof _b.{action} === 'function'")
+                    js.line(f"_b.{action}(e);")
+                    js.assign('_handled', 'true')
+                    js.block_close()
+                    js.block_close()
+                    js.block_close()
+                    js.if_block(f"!_handled && typeof {action} === 'function'")
+                    js.line(f"{action}(_info, e);")
+                    js.block_close()
+                    js.dedent()
+                    js.line("});")
 
                 body_ref = f'_body_{sid}' if info.get('body') else 'null'
                 tag_ref = js_string(info['tag']) if info.get('tag') else 'null'
@@ -379,12 +424,16 @@ class GameCodeGenerator:
             if hud_html:
                 all_hud_html_parts.append(hud_html)
 
+        # Format source code with syntax highlighting
+        formatted_source = self._format_source_code(source_code) if source_code else "No source code available"
+
         return HTML_TEMPLATE.format(
             title=html_escape_title(title),
             pixi_cdn=PIXI_CDN,
             matter_cdn=MATTER_CDN,
             hud_html='\n'.join(all_hud_html_parts),
             game_js=game_js,
+            source_code=formatted_source,
         )
 
     def _emit_game_loop_multi(self, js: JsBuilder):
@@ -457,7 +506,7 @@ class GameCodeGenerator:
             elif isinstance(child, SetNode):
                 self._state_vars.append({
                     'name': child.name,
-                    'value': child.value or child.default or '""',
+                    'value': child.value if child.value is not None else (child.default if child.default is not None else ''),
                     'type': child.type or 'string',
                 })
             elif isinstance(child, FunctionNode):
@@ -545,6 +594,7 @@ class GameCodeGenerator:
             'scale_x': sprite.scale_x, 'scale_y': sprite.scale_y,
             'alpha': sprite.alpha,
             'visible': sprite.visible,
+            'color': sprite.color,
             'tag': sprite.tag,
             'layer': sprite.layer,
             'body': sprite.body,
@@ -557,6 +607,7 @@ class GameCodeGenerator:
             'animations': [],
             'collider': None,
             'behaviors': [],
+            'clickable': None,
         }
         for child in sprite.children:
             if isinstance(child, AnimationNode):
@@ -578,6 +629,11 @@ class GameCodeGenerator:
                     'on_collision': child.on_collision,
                     'collision_tag': child.collision_tag,
                 })
+            elif isinstance(child, ClickableNode):
+                info['clickable'] = {
+                    'action': child.action,
+                    'cursor': child.cursor,
+                }
         return info
 
     def _process_instance(self, instance: InstanceNode):
@@ -627,27 +683,42 @@ class GameCodeGenerator:
         for layer in tilemap.layers:
             if layer.collision:
                 rows = layer.data.strip().split('\n')
-                for ry, row in enumerate(rows):
-                    for cx, cell in enumerate(row.split(',')):
-                        cell = cell.strip()
+                tw = tilemap.tile_width
+                th = tilemap.tile_height
+                # Merge adjacent horizontal tiles into single wide bodies
+                # to prevent objects from sinking between tile gaps
+                for ry, row_str in enumerate(rows):
+                    cells = row_str.split(',')
+                    cx = 0
+                    while cx < len(cells):
+                        cell = cells[cx].strip()
                         if cell and cell != '0':
-                            tid = f"tile_{tilemap.tilemap_id}_{ry}_{cx}"
-                            tx = cx * tilemap.tile_width + tilemap.tile_width / 2
-                            ty = ry * tilemap.tile_height + tilemap.tile_height / 2
+                            # Find run of adjacent filled cells
+                            run_start = cx
+                            while cx < len(cells) and cells[cx].strip() and cells[cx].strip() != '0':
+                                cx += 1
+                            run_len = cx - run_start
+                            # Create one merged body for the run
+                            total_w = run_len * tw
+                            center_x = run_start * tw + total_w / 2
+                            center_y = ry * th + th / 2
+                            tid = f"tile_{tilemap.tilemap_id}_{ry}_{run_start}"
                             self._sprites.append({
-                                'id': tid, 'src': '', 'x': tx, 'y': ty,
-                                'width': tilemap.tile_width, 'height': tilemap.tile_height,
+                                'id': tid, 'src': '', 'x': center_x, 'y': center_y,
+                                'width': total_w, 'height': th,
                                 'anchor_x': 0.5, 'anchor_y': 0.5,
                                 'rotation': 0, 'scale_x': 1, 'scale_y': 1,
                                 'alpha': 0, 'visible': False,
                                 'tag': 'tilemap-collision', 'layer': -1,
-                                'body': 'static', 'bounce': 0, 'friction': 0.5,
+                                'body': 'static', 'bounce': 0, 'friction': 1.0,
                                 'mass': None, 'sensor': False,
                                 'controls': None, 'speed': 0, 'jump_force': 0,
                                 'frame_width': None, 'frame_height': None,
                                 'group': None, 'animations': [], 'collider': None,
                                 'behaviors': [],
                             })
+                        else:
+                            cx += 1
             else:
                 # Visual layer — render tiles graphically
                 self._visual_tile_layers.append({
@@ -667,11 +738,15 @@ class GameCodeGenerator:
         js.line("(async function() {")
         js.indent()
 
-        # PIXI App
+        # PIXI App - use viewport size for canvas, not world size
         js.section("PIXI APP")
         js.const('app', 'new PIXI.Application()')
-        js.line(f"await app.init({{ width: {scene.width}, height: {scene.height}, background: {js_string(scene.background)} }});")
+        # Cap canvas to reasonable viewport when scene is larger (scrolling games)
+        viewport_w = min(scene.width, 800)
+        viewport_h = min(scene.height, 600)
+        js.line(f"await app.init({{ width: {viewport_w}, height: {viewport_h}, background: {js_string(scene.background)} }});")
         js.line("document.body.appendChild(app.canvas);")
+        js.comment(f"World size: {scene.width}x{scene.height}, Viewport: {viewport_w}x{viewport_h}")
 
         # Matter.js Engine
         js.section("MATTER.JS ENGINE")
@@ -701,6 +776,10 @@ class GameCodeGenerator:
         js.section("CAMERA")
         self._emit_camera_setup(js)
 
+        # Visual Tilemaps (before sprites so sprites render on top)
+        js.section("VISUAL TILEMAPS")
+        self._emit_visual_tilemaps(js)
+
         # Sprites & Bodies
         js.section("SPRITES & BODIES")
         self._emit_sprites(js)
@@ -721,6 +800,10 @@ class GameCodeGenerator:
         js.section("INPUT")
         emit_input_system(js)
         self._emit_controlled_sprites(js)
+
+        # Mouse
+        js.section("MOUSE")
+        emit_mouse_system(js)
 
         # Functions
         js.section("FUNCTIONS")
@@ -753,10 +836,6 @@ class GameCodeGenerator:
         js.section("SPAWNERS")
         self._emit_spawner_instances(js)
 
-        # Visual Tilemaps
-        js.section("VISUAL TILEMAPS")
-        self._emit_visual_tilemaps(js)
-
         # HUD Update
         js.section("HUD UPDATE")
         self._emit_hud_update(js)
@@ -784,6 +863,9 @@ class GameCodeGenerator:
         else:
             js.assign('mEngine.gravity.x', '0')
             js.assign('mEngine.gravity.y', '0')
+        js.comment('Increase solver iterations for tighter collision resolution')
+        js.assign('mEngine.positionIterations', '10')
+        js.assign('mEngine.velocityIterations', '8')
         js.const('mWorld', 'mEngine.world')
 
         if self._physics and self._physics.get('bounds') == 'canvas':
@@ -839,10 +921,16 @@ class GameCodeGenerator:
             for child in bnode.children:
                 if isinstance(child, SetNode):
                     prop = js_id(child.name)
-                    val = js_safe_value(child.value or child.default or '""', child.type or 'string')
+                    val = js_safe_value(child.value if child.value is not None else (child.default if child.default is not None else ''), child.type or 'string')
                     js.assign(f'this.{prop}', val)
             js.line("if (overrides) Object.assign(this, overrides);")
             js.block_close()  # constructor
+
+            # Sprite property proxies (x, y, rotation, alpha, visible)
+            # These allow behaviors to access sprite properties directly via this.x, this.y etc.
+            for prop in ['x', 'y', 'rotation', 'alpha', 'visible']:
+                js.line(f"get {prop}() {{ return this.owner.sprite.{prop}; }}")
+                js.line(f"set {prop}(v) {{ this.owner.sprite.{prop} = v; }}")
 
             # methods
             for child in bnode.children:
@@ -930,7 +1018,9 @@ class GameCodeGenerator:
         elif isinstance(node, FunctionNode):
             self._emit_nested_function(js, node)
         elif isinstance(node, RawCodeNode):
-            js.line(node.code)
+            # Convert self. to this. for JavaScript
+            code = re.sub(r'\bself\.', 'this.', node.code)
+            js.line(code)
         else:
             js.comment(f"unsupported node: {type(node).__name__}")
 
@@ -939,7 +1029,13 @@ class GameCodeGenerator:
         val = self._compile_expression(node.value or '""')
 
         if name.startswith('self.'):
-            js.assign(f'this.{name[5:]}', val)
+            prop = name[5:]
+            # Sprite properties that should be proxied to owner.sprite
+            sprite_props = {'x', 'y', 'rotation', 'alpha', 'visible', 'width', 'height'}
+            if prop in sprite_props:
+                js.assign(f'this.owner.sprite.{prop}', val)
+            else:
+                js.assign(f'this.{prop}', val)
         else:
             js.assign(js_id(name), val)
 
@@ -1033,7 +1129,15 @@ class GameCodeGenerator:
                 if info.get('width') and info.get('height'):
                     w, h = info['width'], info['height']
                     js.line(f"{spr_var}.rect(-{w/2}, -{h/2}, {w}, {h});")
-                    js.line(f"{spr_var}.fill({{ color: 0x000000, alpha: 0 }});")
+                    # Use color if provided, otherwise default to a visible color
+                    color = info.get('color')
+                    if color:
+                        # Convert hex color like "#FF0000" to 0xFF0000
+                        hex_color = color.lstrip('#')
+                        js.line(f"{spr_var}.fill({{ color: 0x{hex_color} }});")
+                    else:
+                        # Default: visible gray rectangle for debugging
+                        js.line(f"{spr_var}.fill({{ color: 0x4a9eff }});")
 
             js.assign(f'{spr_var}.x', x)
             js.assign(f'{spr_var}.y', y)
@@ -1056,6 +1160,32 @@ class GameCodeGenerator:
             if body_var:
                 body_vars.append(body_var)
                 js.assign(f'_bodyToSprite[{body_var}.id]', js_string(info['id']))
+
+            # Clickable setup
+            if info.get('clickable'):
+                cursor = info['clickable'].get('cursor', 'pointer')
+                action = js_id(info['clickable']['action'])
+                js.assign(f"{spr_var}.eventMode", "'static'")
+                js.assign(f"{spr_var}.cursor", js_string(cursor))
+                sid_str_click = js_string(info['id'])
+                js.line(f"{spr_var}.on('pointerdown', (e) => {{")
+                js.indent()
+                js.const('_info', f'_sprites[{sid_str_click}]')
+                js.comment('Try behavior method first, then global function')
+                js.let('_handled', 'false')
+                js.if_block('_info && _info.behaviors')
+                js.for_of('_b', '_info.behaviors')
+                js.if_block(f"typeof _b.{action} === 'function'")
+                js.line(f"_b.{action}(e);")
+                js.assign('_handled', 'true')
+                js.block_close()
+                js.block_close()
+                js.block_close()
+                js.if_block(f"!_handled && typeof {action} === 'function'")
+                js.line(f"{action}(_info, e);")
+                js.block_close()
+                js.dedent()
+                js.line("});")
 
             # Register in _sprites
             body_ref = f'_body_{sid}' if info.get('body') else 'null'
@@ -1084,6 +1214,12 @@ class GameCodeGenerator:
         opts_parts = [f"isStatic: {js_bool(is_static)}"]
         opts_parts.append(f"restitution: {js_number(info['bounce'])}")
         opts_parts.append(f"friction: {js_number(info['friction'])}")
+        opts_parts.append("slop: 0.01")
+        if not is_static:
+            opts_parts.append("inertia: Infinity")
+            # Round corners on player to prevent edge-catching on pipes/platforms
+            if info.get('tag') == 'player':
+                opts_parts.append("chamfer: { radius: 3 }")
         if info.get('mass') is not None:
             opts_parts.append(f"mass: {js_number(info['mass'])}")
         if info.get('sensor'):
@@ -1119,7 +1255,7 @@ class GameCodeGenerator:
                         tag_val = js_string(buse['collision_tag'])
                         js.line(f"if (other.tag !== {tag_val}) return;")
                     js.line(f"const b = self.behaviors.find(b => b instanceof {bname});")
-                    js.line(f"if (b && b.{fn_name}) b.{fn_name}(other);")
+                    js.line(f"if (b && b.{fn_name}) {{ b._other = other; b.{fn_name}(other); }}")
                     js.dedent()
                     js.line("});")
 
@@ -1175,10 +1311,12 @@ class GameCodeGenerator:
                 sid_str = js_string(info['id'])
                 if ctrl == 'wasd':
                     js.assign(f'_controlledSprites[{sid_str}]',
-                              "{ left: 'a', right: 'd', up: 'w', jump: ' ' }")
+                              "{ left: 'a', right: 'd', up: 'w', jump: ' ',"
+                              " left2: null, right2: null, up2: null, jump2: null }")
                 elif ctrl == 'arrows':
                     js.assign(f'_controlledSprites[{sid_str}]',
-                              "{ left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', jump: 'ArrowUp' }")
+                              "{ left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', jump: 'ArrowUp',"
+                              " left2: 'a', right2: 'd', up2: 'w', jump2: 'w' }")
 
     # ------------------------------------------------------------------
     # Functions
@@ -1451,20 +1589,45 @@ class GameCodeGenerator:
                     ctrl_var = f'_ctrl_{js_id(info["id"])}'
                     body_ref = f'_sprites[{sid_str}].body'
 
-                    js.if_block(f'_keys[{ctrl_var}.left] && {body_ref}')
+                    js.comment("Movement with dual key support (arrows + WASD)")
+                    js.const(f'_leftPressed_{js_id(info["id"])}',
+                             f'_keys[{ctrl_var}.left] || (_keys[{ctrl_var}.left2] || false)')
+                    js.const(f'_rightPressed_{js_id(info["id"])}',
+                             f'_keys[{ctrl_var}.right] || (_keys[{ctrl_var}.right2] || false)')
+                    js.const(f'_jumpPressed_{js_id(info["id"])}',
+                             f'_keys[{ctrl_var}.jump] || (_keys[{ctrl_var}.jump2] || false)')
+                    js.const(f'_jumpJust_{js_id(info["id"])}',
+                             f'_justPressed[{ctrl_var}.jump] || (_justPressed[{ctrl_var}.jump2] || false)')
+                    left_var = f'_leftPressed_{js_id(info["id"])}'
+                    right_var = f'_rightPressed_{js_id(info["id"])}'
+                    jump_var = f'_jumpPressed_{js_id(info["id"])}'
+                    jump_just = f'_jumpJust_{js_id(info["id"])}'
+
+                    js.if_block(f'{left_var} && {body_ref}')
                     js.line(f"Matter.Body.setVelocity({body_ref}, {{ x: -{spd}, y: {body_ref}.velocity.y }});")
+                    js.line(f"_sprites[{sid_str}].sprite.scale.x = -Math.abs(_sprites[{sid_str}].sprite.scale.x);")
                     js.block_close()
-                    js.if_block(f'_keys[{ctrl_var}.right] && {body_ref}')
+                    js.if_block(f'{right_var} && {body_ref}')
                     js.line(f"Matter.Body.setVelocity({body_ref}, {{ x: {spd}, y: {body_ref}.velocity.y }});")
+                    js.line(f"_sprites[{sid_str}].sprite.scale.x = Math.abs(_sprites[{sid_str}].sprite.scale.x);")
                     js.block_close()
-                    js.if_block(f'_justPressed[{ctrl_var}.jump] && {body_ref}')
+                    js.comment("Variable jump: initiate on press, sustain while held")
+                    js.if_block(f'{jump_just} && {body_ref} && Math.abs({body_ref}.velocity.y) < 5.0')
                     js.line(f"Matter.Body.setVelocity({body_ref}, {{ x: {body_ref}.velocity.x, y: -{jf} }});")
+                    js.line(f"_sprites[{sid_str}]._jumpFrames = 6;")
                     js.line(f"_gameEvents.emit('player.jump', _sprites[{sid_str}]);")
                     js.block_close()
-                    # Dampen horizontal velocity when no keys pressed
-                    js.if_block(f'!_keys[{ctrl_var}.left] && !_keys[{ctrl_var}.right] && {body_ref}')
-                    js.const('_v', f'{body_ref}.velocity')
-                    js.line(f"Matter.Body.setVelocity({body_ref}, {{ x: _v.x * 0.8, y: _v.y }});")
+                    js.comment("Hold jump to go higher")
+                    js.if_block(f'{jump_var} && {body_ref} && _sprites[{sid_str}]._jumpFrames > 0')
+                    js.line(f"Matter.Body.setVelocity({body_ref}, {{ x: {body_ref}.velocity.x, y: {body_ref}.velocity.y - 0.6 }});")
+                    js.line(f"_sprites[{sid_str}]._jumpFrames--;")
+                    js.block_close()
+                    js.if_block(f'!{jump_var}')
+                    js.line(f"if (_sprites[{sid_str}]._jumpFrames) _sprites[{sid_str}]._jumpFrames = 0;")
+                    js.block_close()
+                    # Stop horizontal movement when no keys pressed (platformer-style)
+                    js.if_block(f'!{left_var} && !{right_var} && {body_ref}')
+                    js.line(f"Matter.Body.setVelocity({body_ref}, {{ x: 0, y: {body_ref}.velocity.y }});")
                     js.line(f"_gameEvents.emit('player.stop', _sprites[{sid_str}]);")
                     js.else_block()
                     js.line(f"_gameEvents.emit('player.walk', _sprites[{sid_str}]);")
@@ -1518,6 +1681,28 @@ class GameCodeGenerator:
             js.comment('No spawners')
             return
         emit_spawn_system(js)
+
+        # Register prefabs used by spawners
+        registered_prefabs = set()
+        for sp in self._spawners:
+            prefab_name = sp['prefab']
+            if prefab_name not in registered_prefabs:
+                registered_prefabs.add(prefab_name)
+                prefab_node = self._prefabs.get(prefab_name)
+                if prefab_node:
+                    # Extract sprite info from prefab
+                    for child in prefab_node.children:
+                        if isinstance(child, SpriteNode):
+                            config_parts = [
+                                f"width: {js_number(child.width or 20)}",
+                                f"height: {js_number(child.height or 20)}",
+                            ]
+                            if child.color:
+                                config_parts.append(f"color: {js_string(child.color)}")
+                            js.line(f"_registerPrefab({js_string(prefab_name)}, {{ {', '.join(config_parts)} }});")
+                            break
+
+        # Create spawners
         for sp in self._spawners:
             config_parts = [
                 f"id: {js_string(sp['id'])}",
@@ -1538,6 +1723,7 @@ class GameCodeGenerator:
         if not self._visual_tile_layers:
             js.comment('No visual tile layers')
             return
+        _emitted_tilesets = set()
         for vt in self._visual_tile_layers:
             tilemap_id = js_id(vt['tilemap_id'])
             layer_name = js_id(vt['layer_name'])
@@ -1556,10 +1742,12 @@ class GameCodeGenerator:
 
             # Emit JS loop to create sprites from tileset
             if src:
-                js.const(f'_tileset_{tilemap_id}', f"PIXI.Assets.get({js_string(src)})")
-                ts_var = f'_tileset_{tilemap_id}'
-                js.const(f'_tsSource_{tilemap_id}', f'{ts_var}.source || {ts_var}.baseTexture || {ts_var}')
-                js.const(f'_tsCols_{tilemap_id}', f'Math.floor(({ts_var}.width || 0) / {tw})')
+                if tilemap_id not in _emitted_tilesets:
+                    js.const(f'_tileset_{tilemap_id}', f"PIXI.Assets.get({js_string(src)})")
+                    ts_var = f'_tileset_{tilemap_id}'
+                    js.const(f'_tsSource_{tilemap_id}', f'{ts_var}.source || {ts_var}.baseTexture || {ts_var}')
+                    js.const(f'_tsCols_{tilemap_id}', f'Math.floor(({ts_var}.width || 0) / {tw})')
+                    _emitted_tilesets.add(tilemap_id)
 
             js.for_range('_ty', '0', f'{data_var}.length - 1')
             js.for_range('_tx', '0', f'{data_var}[_ty].length - 1')
@@ -1596,12 +1784,16 @@ class GameCodeGenerator:
         if expr.startswith('{') and expr.endswith('}'):
             inner = expr[1:-1]
             inner = inner.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+            # Convert self. to this. for JavaScript
+            inner = re.sub(r'\bself\.', 'this.', inner)
             # Validate: only allow safe JS expressions (identifiers, math, dots, parens, arrays, ternary)
             if re.match(r'^[a-zA-Z_$0-9][a-zA-Z0-9_$.\s+\-*/()%<>=!&|,\[\]?:\'"]*$', inner):
                 return inner
             return json.dumps(expr)  # escape unsafe expressions
         # Handle XML-escaped operators
         expr = expr.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+        # Convert self. to this. for JavaScript
+        expr = re.sub(r'\bself\.', 'this.', expr)
         if expr.startswith('"') or expr.startswith("'") or is_number(expr) or expr in ('true', 'false'):
             return expr
         return json.dumps(expr)

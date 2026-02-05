@@ -1,0 +1,5 @@
+intent: testing_engine
+description: Compile declarative qtest: XML into pytest + Playwright test files
+input: .q file with type="testing" and qtest: namespace tags
+output: standalone test_*.py file runnable with pytest
+pipeline: XML -> Parser -> AST -> TestingCodeGenerator -> Python test file

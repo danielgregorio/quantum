@@ -14,6 +14,7 @@ from .ast_nodes import (
     SpawnNode, HudNode, TweenNode, TilemapNode, TilemapLayerNode,
     BehaviorNode, UseNode, PrefabNode, InstanceNode, GroupNode,
     StateMachineNode, StateNode, TransitionNode, RawCodeNode,
+    ClickableNode,
 )
 
 
@@ -61,6 +62,7 @@ class GameParser:
         'state-machine': '_parse_game_state_machine',
         'state': '_parse_game_state',
         'on': '_parse_game_transition',
+        'clickable': '_parse_game_clickable',
     }
 
     def parse_game_element(self, local_name: str, element: ET.Element):
@@ -208,6 +210,7 @@ class GameParser:
         node.scale_y = self._parse_float(element.get('scale-y'), 1)
         node.alpha = self._parse_float(element.get('alpha'), 1.0)
         node.visible = self._parse_bool(element.get('visible'), True)
+        node.color = element.get('color')  # Hex color for sprites without images
         node.tag = element.get('tag')
         node.layer = self._parse_int(element.get('layer'))
 
@@ -467,6 +470,12 @@ class GameParser:
                 parsed = self._parse_child(child)
                 if parsed:
                     node.add_child(parsed)
+        return node
+
+    def _parse_game_clickable(self, element: ET.Element) -> ClickableNode:
+        node = ClickableNode()
+        node.action = element.get('action', '')
+        node.cursor = element.get('cursor', 'pointer')
         return node
 
     def _parse_game_transition(self, element: ET.Element) -> TransitionNode:

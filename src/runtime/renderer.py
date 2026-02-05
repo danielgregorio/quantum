@@ -35,6 +35,9 @@ class HTMLRenderer:
     - XSS protection via HTML escaping
     """
 
+    # Tags whose text content should NOT be processed by databinding or HTML-escaped
+    RAW_CONTENT_TAGS = {'style', 'script'}
+
     def __init__(self, context: ExecutionContext, components_dir: str = "./components"):
         """
         Initialize renderer with execution context.
@@ -45,6 +48,7 @@ class HTMLRenderer:
         """
         self.context = context
         self.components_dir = components_dir
+        self._raw_mode = False
 
         # Lazy-load composer (Phase 2)
         self._composer = None
@@ -85,8 +89,14 @@ class HTMLRenderer:
             # Imports are processed at component load time, not render time
             return ''
 
-        # These should NOT appear here - they're executed during runtime, not rendered
-        elif isinstance(node, (LoopNode, IfNode, SetNode, QueryNode)):
+        elif isinstance(node, LoopNode):
+            return self._render_loop(node)
+
+        elif isinstance(node, IfNode):
+            return self._render_if(node)
+
+        # SetNode and QueryNode are executed during runtime, not rendered
+        elif isinstance(node, (SetNode, QueryNode)):
             return ''
 
         else:
@@ -131,7 +141,7 @@ class HTMLRenderer:
                 # Apply databinding to attribute value
                 processed_value = self._apply_databinding(value)
                 # Escape for HTML attribute safety (prevent XSS)
-                escaped_value = html.escape(processed_value, quote=True)
+                escaped_value = html.escape(str(processed_value), quote=True)
                 tag_parts.append(f'{key}="{escaped_value}"')
 
         opening_tag = ' '.join(tag_parts)
@@ -142,7 +152,16 @@ class HTMLRenderer:
 
         # Regular tags with children
         opening_tag += '>'
-        children_html = self.render_all(node.children)
+
+        # Style/script tags: render children as raw text (no databinding, no escaping)
+        if node.tag in self.RAW_CONTENT_TAGS:
+            prev_raw = self._raw_mode
+            self._raw_mode = True
+            children_html = self.render_all(node.children)
+            self._raw_mode = prev_raw
+        else:
+            children_html = self.render_all(node.children)
+
         closing_tag = f'</{node.tag}>'
 
         return opening_tag + children_html + closing_tag
@@ -165,13 +184,20 @@ class HTMLRenderer:
 
         text = node.content
 
+        # Inside <style>/<script> tags: return raw content without databinding or escaping
+        if self._raw_mode:
+            return text
+
         # Apply databinding if needed
         if node.has_databinding:
             text = self._apply_databinding(text)
 
         # HTML escape to prevent XSS
         # NOTE: This means you can't inject raw HTML via variables (security feature)
-        return html.escape(text)
+        # Guard against non-string values (e.g., bound methods from getattr)
+        if callable(text):
+            text = ''
+        return html.escape(str(text) if text is not None else '')
 
 
     def _render_doctype(self, node: DocTypeNode) -> str:
@@ -189,6 +215,171 @@ class HTMLRenderer:
         """
         return f'<!DOCTYPE {node.value}>'
 
+
+    def _render_loop(self, node: LoopNode) -> str:
+        """
+        Render q:loop by iterating over items and rendering body for each.
+
+        Args:
+            node: LoopNode to render
+
+        Returns:
+            Concatenated HTML from all loop iterations
+        """
+        result = []
+
+        # Get the items to iterate over
+        items = self._get_loop_items(node)
+
+        if not items:
+            return ''
+
+        # Save current context state
+        original_vars = self.context.local_vars.copy()
+
+        try:
+            for index, item in enumerate(items):
+                # Set loop variable in context
+                self.context.set_variable(node.var_name, item, scope="local")
+
+                # For query loops, set dotted variables (e.g., task.title, task.status)
+                if node.loop_type == 'query' and isinstance(item, dict):
+                    for field_name, field_value in item.items():
+                        dotted_key = f"{node.var_name}.{field_name}"
+                        self.context.set_variable(dotted_key, field_value, scope="local")
+
+                # Set index if specified
+                if node.index_name:
+                    self.context.set_variable(node.index_name, index, scope="local")
+
+                # Render loop body
+                for child in node.body:
+                    result.append(self.render(child))
+
+        finally:
+            # Restore original context
+            self.context.local_vars = original_vars
+
+        return ''.join(result)
+
+    def _get_loop_items(self, node: LoopNode) -> list:
+        """Get items to iterate over from loop node."""
+        if node.loop_type == 'array':
+            # Get items expression
+            items_expr = node.items
+            if not items_expr:
+                return []
+
+            # Apply databinding to resolve variable reference
+            if '{' in items_expr and '}' in items_expr:
+                resolved = self._apply_databinding(items_expr)
+                if isinstance(resolved, list):
+                    return resolved
+                elif isinstance(resolved, str):
+                    # Try to parse as JSON
+                    try:
+                        import json
+                        return json.loads(resolved)
+                    except:
+                        return []
+            return []
+
+        elif node.loop_type == 'range':
+            # Generate range
+            try:
+                start = int(node.from_value) if node.from_value else 1
+                end = int(node.to_value) if node.to_value else 10
+                step = node.step_value if node.step_value else 1
+                return list(range(start, end + 1, step))
+            except:
+                return []
+
+        elif node.loop_type == 'query':
+            # Query loop - resolve items from query result variable
+            items_expr = node.items
+            if not items_expr:
+                # Shorthand syntax: query_name is in var_name
+                query_name = getattr(node, 'query_name', node.var_name)
+                try:
+                    data = self.context.get_variable(query_name)
+                    if isinstance(data, list):
+                        return data
+                except:
+                    pass
+                return []
+
+            # Traditional syntax: items="{tasks}"
+            if '{' in items_expr and '}' in items_expr:
+                resolved = self._apply_databinding(items_expr)
+                if isinstance(resolved, list):
+                    return resolved
+            return []
+
+        elif node.loop_type == 'list':
+            # Split by delimiter
+            items_expr = node.items
+            if not items_expr:
+                return []
+            resolved = self._apply_databinding(items_expr) if '{' in items_expr else items_expr
+            delimiter = node.delimiter or ','
+            return [item.strip() for item in str(resolved).split(delimiter)]
+
+        return []
+
+    def _render_if(self, node: IfNode) -> str:
+        """
+        Render q:if by evaluating condition and rendering appropriate branch.
+
+        Args:
+            node: IfNode to render
+
+        Returns:
+            HTML from the matching branch
+        """
+        # Evaluate main condition
+        if self._evaluate_condition(node.condition):
+            return self.render_all(node.if_body)
+
+        # Check elseif branches
+        for elseif in (node.elseif_blocks or []):
+            if self._evaluate_condition(elseif.condition):
+                return self.render_all(elseif.body)
+
+        # Else branch
+        if node.else_body:
+            return self.render_all(node.else_body)
+
+        return ''
+
+    def _evaluate_condition(self, condition: str) -> bool:
+        """Evaluate a condition expression."""
+        if not condition:
+            return False
+
+        # Apply databinding to resolve variables
+        resolved = self._apply_databinding(condition)
+
+        # Handle common comparisons
+        if isinstance(resolved, bool):
+            return resolved
+        if isinstance(resolved, str):
+            # Check for comparison operators in the original condition
+            if '==' in condition or '!=' in condition or '>' in condition or '<' in condition:
+                try:
+                    # Get all variables for eval context
+                    vars_dict = self.context.get_all_variables()
+                    # Safe eval with only the variables
+                    return bool(eval(resolved, {"__builtins__": {}}, vars_dict))
+                except:
+                    pass
+            # String truthiness
+            return resolved.lower() not in ('', 'false', '0', 'null', 'undefined')
+        if isinstance(resolved, (int, float)):
+            return resolved != 0
+        if isinstance(resolved, list):
+            return len(resolved) > 0
+
+        return bool(resolved)
 
     def _render_comment(self, node: CommentNode) -> str:
         """
@@ -219,7 +410,7 @@ class HTMLRenderer:
         return self.render_all(node.statements)
 
 
-    def _apply_databinding(self, text: str) -> str:
+    def _apply_databinding(self, text: str) -> Any:
         """
         Replace {variable} and {expression} with actual values from context.
 
@@ -234,9 +425,26 @@ class HTMLRenderer:
             text: Text with possible {expression} patterns
 
         Returns:
-            Text with databinding replaced
+            - For pure expressions like "{items}": the actual value (list, dict, etc.)
+            - For mixed content like "Hello {name}": interpolated string
         """
+        if not text:
+            return text
 
+        pattern = r'\{([^}]+)\}'
+
+        # Check if the ENTIRE text is just a single databinding expression
+        full_match = re.fullmatch(pattern, text.strip())
+        if full_match:
+            # Pure expression - return the actual value (not converted to string)
+            expression = full_match.group(1).strip()
+            try:
+                return self._evaluate_expression(expression)
+            except Exception as e:
+                # If evaluation fails, return original placeholder
+                return text
+
+        # Mixed content (text + expressions) - need string interpolation
         def replace_binding(match):
             """Replace single {expression} match"""
             expression = match.group(1).strip()
@@ -248,11 +456,9 @@ class HTMLRenderer:
 
             except Exception as e:
                 # If evaluation fails, return error marker (useful for debugging)
-                # In production, you might want to log this and return empty string
                 return f'{{ERROR: {expression}}}'
 
         # Find and replace all {expression} patterns
-        pattern = r'\{([^}]+)\}'
         result = re.sub(pattern, replace_binding, text)
 
         return result
@@ -300,6 +506,15 @@ class HTMLRenderer:
             if value is not None:
                 return value
 
+        # Try comparison expressions (postFound == 1, count > 0)
+        if any(op in expression for op in ['==', '!=', '>=', '<=', '>', '<']):
+            try:
+                value = self._evaluate_comparison(expression)
+                if value is not None:
+                    return value
+            except:
+                pass
+
         # Try simple arithmetic expressions (price * 2, count + 1)
         if any(op in expression for op in ['+', '-', '*', '/', '(', ')']):
             try:
@@ -328,13 +543,12 @@ class HTMLRenderer:
         parts = expression.split('.')
         current = None
 
-        # Try to get root variable from all scopes
+        # Try to get root variable from context (searches all scopes automatically)
         root = parts[0]
-        current = self.context.get_variable(root, scope='local')
-        if current is None:
-            current = self.context.get_variable(root, scope='function')
-        if current is None:
-            current = self.context.get_variable(root, scope='component')
+        try:
+            current = self.context.get_variable(root)
+        except:
+            return None
 
         if current is None:
             return None
@@ -349,7 +563,7 @@ class HTMLRenderer:
                     return len(current)
                 else:
                     return None
-            elif hasattr(current, part):
+            elif hasattr(current, part) and not callable(getattr(current, part)):
                 current = getattr(current, part)
             else:
                 return None
@@ -399,6 +613,58 @@ class HTMLRenderer:
 
         return element
 
+
+    def _evaluate_comparison(self, expression: str) -> Any:
+        """Evaluate comparison expressions like 'postFound == 1', 'count > 0'."""
+        # Find the comparison operator
+        for op in ['==', '!=', '>=', '<=', '>', '<']:
+            if op in expression:
+                parts = expression.split(op, 1)
+                if len(parts) == 2:
+                    left_expr = parts[0].strip()
+                    right_expr = parts[1].strip()
+
+                    # Resolve left side
+                    try:
+                        left_val = self._evaluate_expression(left_expr)
+                    except:
+                        left_val = left_expr
+
+                    # Resolve right side
+                    try:
+                        right_val = self._evaluate_expression(right_expr)
+                    except:
+                        right_val = right_expr
+
+                    # Try numeric comparison if possible
+                    try:
+                        left_num = float(left_val) if not isinstance(left_val, (int, float)) else left_val
+                        right_num = float(right_val) if not isinstance(right_val, (int, float)) else right_val
+                        if op == '==': return left_num == right_num
+                        if op == '!=': return left_num != right_num
+                        if op == '>=': return left_num >= right_num
+                        if op == '<=': return left_num <= right_num
+                        if op == '>': return left_num > right_num
+                        if op == '<': return left_num < right_num
+                    except (ValueError, TypeError):
+                        pass
+
+                    # String comparison fallback
+                    left_str = str(left_val) if left_val is not None else ''
+                    right_str = str(right_val) if right_val is not None else ''
+                    # Strip quotes from literals
+                    for s in [left_str, right_str]:
+                        if (s.startswith("'") and s.endswith("'")) or (s.startswith('"') and s.endswith('"')):
+                            s = s[1:-1]
+                    left_str = left_str.strip("'\"")
+                    right_str = right_str.strip("'\"")
+                    if op == '==': return left_str == right_str
+                    if op == '!=': return left_str != right_str
+                    if op == '>=': return left_str >= right_str
+                    if op == '<=': return left_str <= right_str
+                    if op == '>': return left_str > right_str
+                    if op == '<': return left_str < right_str
+        return None
 
     def _evaluate_arithmetic(self, expression: str) -> Any:
         """

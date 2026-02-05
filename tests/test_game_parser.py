@@ -17,7 +17,7 @@ from core.features.game_engine_2d.src.ast_nodes import (
     CameraNode, InputNode, SoundNode, ParticleNode, TimerNode,
     SpawnNode, HudNode, TweenNode, BehaviorNode, UseNode,
     PrefabNode, InstanceNode, GroupNode,
-    StateMachineNode, StateNode, TransitionNode,
+    StateMachineNode, StateNode, TransitionNode, ClickableNode,
 )
 
 
@@ -361,3 +361,57 @@ class TestValidation:
         sm.add_state(StateNode('idle'))
         errors = sm.validate()
         assert any('not found' in e.lower() for e in errors)
+
+    def test_clickable_no_action(self):
+        c = ClickableNode()
+        errors = c.validate()
+        assert any('action' in e.lower() for e in errors)
+
+
+class TestClickableParsing:
+    """Test <qg:clickable> parsing."""
+
+    def test_clickable_in_sprite(self, parser):
+        src = '''<q:application id="g" type="game" engine="2d">
+            <qg:scene name="main" width="800" height="600">
+                <qg:sprite id="btn" src="btn.png" x="400" y="300">
+                    <qg:clickable action="onClick" cursor="pointer" />
+                </qg:sprite>
+            </qg:scene>
+        </q:application>'''
+        ast = parser.parse(src)
+        scene = ast.scenes[0]
+        sprites = [c for c in scene.children if isinstance(c, SpriteNode)]
+        s = sprites[0]
+        clickables = [c for c in s.children if isinstance(c, ClickableNode)]
+        assert len(clickables) == 1
+        assert clickables[0].action == 'onClick'
+        assert clickables[0].cursor == 'pointer'
+
+    def test_clickable_default_cursor(self, parser):
+        src = '''<q:application id="g" type="game" engine="2d">
+            <qg:scene name="main" width="800" height="600">
+                <qg:sprite id="btn" src="btn.png" x="0" y="0">
+                    <qg:clickable action="doSomething" />
+                </qg:sprite>
+            </qg:scene>
+        </q:application>'''
+        ast = parser.parse(src)
+        scene = ast.scenes[0]
+        sprites = [c for c in scene.children if isinstance(c, SpriteNode)]
+        clickables = [c for c in sprites[0].children if isinstance(c, ClickableNode)]
+        assert clickables[0].cursor == 'pointer'
+
+    def test_clickable_crosshair_cursor(self, parser):
+        src = '''<q:application id="g" type="game" engine="2d">
+            <qg:scene name="main" width="800" height="600">
+                <qg:sprite id="target" src="t.png" x="0" y="0">
+                    <qg:clickable action="onShoot" cursor="crosshair" />
+                </qg:sprite>
+            </qg:scene>
+        </q:application>'''
+        ast = parser.parse(src)
+        scene = ast.scenes[0]
+        sprites = [c for c in scene.children if isinstance(c, SpriteNode)]
+        clickables = [c for c in sprites[0].children if isinstance(c, ClickableNode)]
+        assert clickables[0].cursor == 'crosshair'

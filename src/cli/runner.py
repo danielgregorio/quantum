@@ -28,6 +28,17 @@ from runtime.component import ComponentRuntime, ComponentExecutionError
 from runtime.web_server import QuantumWebServer
 from runtime.api_server import QuantumAPIServer
 
+# Import deploy commands (lazy load to avoid import errors if requests not installed)
+def _get_deploy_module():
+    try:
+        from cli.deploy import (
+            create_deploy_parser, create_apps_parser,
+            handle_deploy, handle_apps
+        )
+        return True, create_deploy_parser, create_apps_parser, handle_deploy, handle_apps
+    except ImportError as e:
+        return False, None, None, None, str(e)
+
 class QuantumRunner:
     """Main Quantum Runner - Clean orchestration"""
     
@@ -113,13 +124,17 @@ class QuantumRunner:
 
         if app.app_type == 'game':
             return self._build_game(app, debug)
+        elif app.app_type == 'terminal':
+            return self._build_terminal(app, debug)
+        elif app.app_type == 'testing':
+            return self._build_tests(app, debug)
+        elif app.app_type == 'ui':
+            target = getattr(self, '_ui_target', 'html')
+            return self._build_ui(app, target, debug)
         elif app.app_type == 'html':
             return self._start_web_server(app)
-        elif app.app_type == 'microservices':
+        elif app.app_type in ('microservices', 'api'):
             return self._start_api_server(app)
-        elif app.app_type == 'console':
-            print("[INFO] Console apps not yet implemented")
-            return 0
         else:
             print(f"[ERROR] Application type '{app.app_type}' not supported")
             return 1
@@ -139,7 +154,54 @@ class QuantumRunner:
         except GameBuildError as e:
             print(f"[ERROR] Game build error: {e}")
             return 1
-    
+
+    def _build_terminal(self, app: ApplicationNode, debug: bool = False) -> int:
+        """Build standalone Python TUI app from terminal application."""
+        from runtime.terminal_builder import TerminalBuilder, TerminalBuildError
+        try:
+            builder = TerminalBuilder()
+            output_path = builder.build_to_file(app)
+            print(f"[SUCCESS] Terminal app built: {output_path}")
+            if debug:
+                print(f"   Screens: {len(getattr(app, 'screens', []))}")
+                print(f"   Keybindings: {len(getattr(app, 'keybindings', []))}")
+            return 0
+        except TerminalBuildError as e:
+            print(f"[ERROR] Terminal build error: {e}")
+            return 1
+
+    def _build_tests(self, app: ApplicationNode, debug: bool = False) -> int:
+        """Build standalone pytest file from testing application."""
+        from runtime.testing_builder import TestingBuilder, TestingBuildError
+        try:
+            builder = TestingBuilder()
+            output_path = builder.build_to_file(app)
+            print(f"[SUCCESS] Test file built: {output_path}")
+            if debug:
+                print(f"   Suites: {len(getattr(app, 'test_suites', []))}")
+                print(f"   Fixtures: {len(getattr(app, 'test_fixtures', []))}")
+                print(f"   Mocks: {len(getattr(app, 'test_mocks', []))}")
+            return 0
+        except TestingBuildError as e:
+            print(f"[ERROR] Test build error: {e}")
+            return 1
+
+    def _build_ui(self, app: ApplicationNode, target: str = 'html', debug: bool = False) -> int:
+        """Build multi-target UI app from UI application."""
+        from runtime.ui_builder import UIBuilder, UIBuildError
+        try:
+            builder = UIBuilder()
+            output_path = builder.build_to_file(app, target=target)
+            print(f"[SUCCESS] UI app built ({target}): {output_path}")
+            if debug:
+                print(f"   Windows: {len(getattr(app, 'ui_windows', []))}")
+                print(f"   UI children: {len(getattr(app, 'ui_children', []))}")
+                print(f"   Target: {target}")
+            return 0
+        except UIBuildError as e:
+            print(f"[ERROR] UI build error: {e}")
+            return 1
+
     def _execute_job(self, job: JobNode, debug: bool = False) -> int:
         """Execute q:job"""
         print(f"[EXEC] Executing job: {job.job_id}")
@@ -176,7 +238,7 @@ class QuantumRunner:
 def main():
     """CLI entry point"""
     parser = argparse.ArgumentParser(
-        description='Quantum CLI - Execute .q files and start servers',
+        description='Quantum CLI - Execute .q files, start servers, and deploy applications',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -185,42 +247,41 @@ Examples:
   quantum run webapp.q             # Start web server from .q file
   quantum run api.q                # Start API server
   quantum run backup-job.q         # Execute job
+  quantum deploy ./my-app          # Deploy application
+  quantum apps                     # List deployed apps
+  quantum apps logs my-app         # View app logs
         """
     )
 
-    parser.add_argument(
-        'command',
-        choices=['run', 'start'],
-        help='Command to execute'
-    )
+    subparsers = parser.add_subparsers(dest='command', help='Command to execute')
 
-    parser.add_argument(
-        'file',
-        nargs='?',  # Optional for 'start' command
-        help='.q file to execute (required for run command)'
-    )
+    # Run command
+    run_parser = subparsers.add_parser('run', help='Execute a .q file')
+    run_parser.add_argument('file', help='.q file to execute')
+    run_parser.add_argument('--debug', action='store_true', help='Debug mode')
+    run_parser.add_argument('--config', default='quantum.config.yaml', help='Config file')
+    run_parser.add_argument('--target', choices=['html', 'textual', 'desktop'], default='html',
+                            help='UI target (for type="ui" apps): html, textual, or desktop')
 
-    parser.add_argument(
-        '--port',
-        type=int,
-        default=None,  # Will use config file default
-        help='Port for web server (overrides config)'
-    )
+    # Start command
+    start_parser = subparsers.add_parser('start', help='Start web server')
+    start_parser.add_argument('--port', type=int, help='Port (overrides config)')
+    start_parser.add_argument('--config', default='quantum.config.yaml', help='Config file')
+    start_parser.add_argument('--debug', action='store_true', help='Debug mode')
 
-    parser.add_argument(
-        '--config',
-        type=str,
-        default='quantum.config.yaml',
-        help='Path to configuration file (default: quantum.config.yaml)'
-    )
+    # Deploy commands (if available)
+    deploy_available, create_deploy_parser, create_apps_parser, handle_deploy, handle_apps = _get_deploy_module()
 
-    parser.add_argument(
-        '--debug',
-        action='store_true',
-        help='Debug mode with detailed information'
-    )
+    if deploy_available:
+        create_deploy_parser(subparsers)
+        create_apps_parser(subparsers)
 
+    # Parse arguments
     args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(0)
 
     # Handle 'start' command
     if args.command == 'start':
@@ -230,7 +291,7 @@ Examples:
             sys.exit(0)
         except Exception as e:
             print(f"[ERROR] Failed to start server: {e}")
-            if args.debug:
+            if getattr(args, 'debug', False):
                 import traceback
                 traceback.print_exc()
             sys.exit(1)
@@ -243,8 +304,31 @@ Examples:
             sys.exit(1)
 
         runner = QuantumRunner()
-        exit_code = runner.run(args.file, args.debug)
+        runner._ui_target = getattr(args, 'target', 'html')
+        exit_code = runner.run(args.file, getattr(args, 'debug', False))
         sys.exit(exit_code)
+
+    # Handle 'deploy' command
+    elif args.command == 'deploy':
+        if not deploy_available:
+            print("[ERROR] Deploy functionality not available.")
+            print(f"Missing dependency: {handle_apps}")
+            print("Install with: pip install requests")
+            sys.exit(1)
+        sys.exit(handle_deploy(args))
+
+    # Handle 'apps' command
+    elif args.command == 'apps':
+        if not deploy_available:
+            print("[ERROR] Apps functionality not available.")
+            print(f"Missing dependency: {handle_apps}")
+            print("Install with: pip install requests")
+            sys.exit(1)
+        sys.exit(handle_apps(args))
+
+    else:
+        parser.print_help()
+        sys.exit(1)
 
 
 if __name__ == '__main__':

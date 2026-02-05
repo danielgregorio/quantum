@@ -118,8 +118,12 @@ class QuantumWebServer:
             try:
                 with open(config_file, 'r') as f:
                     user_config = yaml.safe_load(f) or {}
-                    # Merge user config with defaults
-                    default_config.update(user_config)
+                    # Deep merge user config with defaults
+                    for key, value in user_config.items():
+                        if key in default_config and isinstance(default_config[key], dict) and isinstance(value, dict):
+                            default_config[key].update(value)
+                        else:
+                            default_config[key] = value
             except Exception as e:
                 print(f"⚠️  Warning: Could not load config file: {e}")
                 print(f"📝 Using default configuration")
@@ -331,7 +335,7 @@ class QuantumWebServer:
             }
 
             # Execute component (runs queries, loops, functions, etc.)
-            runtime = ComponentRuntime()
+            runtime = ComponentRuntime(config=self.config)
             runtime.execute_component(ast, params)
 
             # Phase F: Sync session back to Flask session
@@ -367,6 +371,9 @@ class QuantumWebServer:
 
             # Extract inline CSS and JS to external files
             full_html = self._extract_inline_assets(full_html)
+
+            # Pretty-print HTML for readable View Source
+            full_html = self._prettify_html(full_html)
 
             return Response(full_html, mimetype='text/html')
 
@@ -490,6 +497,145 @@ class QuantumWebServer:
                 html = html.replace('</BODY>', f'    {script_tag}\n  </BODY>', 1)
 
         return html
+
+    def _prettify_html(self, html: str) -> str:
+        """
+        Pretty-print HTML with indentation for readable View Source output.
+
+        Adds newlines and 2-space indentation around block-level elements
+        while preserving content inside whitespace-sensitive elements
+        (<pre>, <textarea>) verbatim.
+
+        Args:
+            html: Full HTML document string
+
+        Returns:
+            Indented HTML string
+        """
+        BLOCK_ELEMENTS = {
+            'html', 'head', 'body', 'header', 'footer', 'main', 'section',
+            'nav', 'article', 'aside', 'div', 'ul', 'ol', 'li', 'table',
+            'thead', 'tbody', 'tr', 'th', 'td', 'form', 'fieldset',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'blockquote',
+            'figure', 'figcaption', 'details', 'summary',
+            'title', 'script', 'style', 'noscript', 'template',
+        }
+        VOID_ELEMENTS = {
+            'br', 'hr', 'img', 'input', 'meta', 'link', 'col', 'area',
+            'base', 'embed', 'source', 'track', 'wbr',
+        }
+        INLINE_ELEMENTS = {
+            'a', 'span', 'strong', 'em', 'b', 'i', 'u', 'small', 'sub',
+            'sup', 'abbr', 'cite', 'code', 'label', 'button', 'select',
+            'option', 'time', 'mark',
+        }
+        PRESERVE_ELEMENTS = {'pre', 'textarea'}
+
+        # Tokenize: split into tags and text segments
+        token_re = re.compile(r'(<[^>]+>)')
+        tokens = token_re.split(html)
+
+        tag_name_re = re.compile(r'^<\s*/?\s*([a-zA-Z][a-zA-Z0-9]*)', re.IGNORECASE)
+
+        depth = 0
+        output = []
+        preserve_depth = 0
+
+        def _at_line_start():
+            """Check if we're at the start of a line (last output ends with newline or empty)."""
+            return not output or output[-1].endswith('\n')
+
+        for token in tokens:
+            if not token:
+                continue
+
+            is_tag = token.startswith('<')
+
+            if is_tag:
+                tag_match = tag_name_re.match(token)
+                tag_name = tag_match.group(1).lower() if tag_match else ''
+                is_closing = token.startswith('</')
+                is_self_closing = token.rstrip().endswith('/>')
+                is_doctype = token.upper().startswith('<!DOCTYPE')
+                is_comment = token.startswith('<!--')
+
+                # Handle preserve elements
+                if tag_name in PRESERVE_ELEMENTS:
+                    if is_closing:
+                        preserve_depth = max(preserve_depth - 1, 0)
+                        output.append(token)
+                        output.append('\n')
+                    elif not is_self_closing:
+                        preserve_depth += 1
+                        indent = '  ' * depth
+                        if not _at_line_start():
+                            output.append('\n')
+                        output.append(f'{indent}{token}')
+                    else:
+                        indent = '  ' * depth
+                        output.append(f'{indent}{token}\n')
+                    continue
+
+                # Inside preserved content — output verbatim
+                if preserve_depth > 0:
+                    output.append(token)
+                    continue
+
+                if is_doctype or is_comment:
+                    indent = '  ' * depth
+                    if not _at_line_start():
+                        output.append('\n')
+                    output.append(f'{indent}{token}\n')
+                elif tag_name in BLOCK_ELEMENTS:
+                    if is_closing:
+                        depth = max(depth - 1, 0)
+                        indent = '  ' * depth
+                        if not _at_line_start():
+                            output.append('\n')
+                        output.append(f'{indent}{token}\n')
+                    elif is_self_closing:
+                        indent = '  ' * depth
+                        if not _at_line_start():
+                            output.append('\n')
+                        output.append(f'{indent}{token}\n')
+                    else:
+                        indent = '  ' * depth
+                        if not _at_line_start():
+                            output.append('\n')
+                        output.append(f'{indent}{token}\n')
+                        depth += 1
+                elif tag_name in VOID_ELEMENTS:
+                    indent = '  ' * depth
+                    if not _at_line_start():
+                        output.append('\n')
+                    output.append(f'{indent}{token}\n')
+                elif tag_name in INLINE_ELEMENTS:
+                    # Inline elements stay on same line as surrounding content
+                    if _at_line_start():
+                        indent = '  ' * depth
+                        output.append(f'{indent}{token}')
+                    else:
+                        output.append(token)
+                else:
+                    # Unknown tags — treat as inline
+                    output.append(token)
+            else:
+                # Text node
+                if preserve_depth > 0:
+                    output.append(token)
+                else:
+                    stripped = token.strip()
+                    if stripped:
+                        if _at_line_start():
+                            indent = '  ' * depth
+                            output.append(f'{indent}{stripped}\n')
+                        else:
+                            output.append(stripped)
+
+        result = ''.join(output)
+        # Clean up multiple blank lines
+        result = re.sub(r'\n{3,}', '\n\n', result)
+        return result.strip() + '\n'
 
     def _inject_htmx(self, html: str) -> str:
         """
@@ -699,8 +845,8 @@ class QuantumWebServer:
                     <ul>
                         <li>Port: <code>{self.config['server']['port']}</code></li>
                         <li>Components directory: <code>{components_dir}</code></li>
-                        <li>Debug mode: <code>{self.config['server']['debug']}</code></li>
-                        <li>Auto-reload: <code>{self.config['server']['reload']}</code></li>
+                        <li>Debug mode: <code>{self.config['server'].get('debug', False)}</code></li>
+                        <li>Auto-reload: <code>{self.config['server'].get('reload', False)}</code></li>
                     </ul>
                     <p>Edit <code>quantum.config.yaml</code> to customize.</p>
                 </div>
@@ -821,8 +967,8 @@ class QuantumWebServer:
         print("="*60)
         print(f"📡 Server URL:      http://localhost:{port}")
         print(f"📂 Components:      {components_dir}")
-        print(f"🔄 Auto-reload:     {self.config['server']['reload']}")
-        print(f"🐛 Debug mode:      {self.config['server']['debug']}")
+        print(f"🔄 Auto-reload:     {self.config['server'].get('reload', False)}")
+        print(f"🐛 Debug mode:      {self.config['server'].get('debug', False)}")
         print("="*60)
         print("✨ Magic is happening... Press Ctrl+C to stop")
         print("="*60 + "\n")
@@ -832,8 +978,8 @@ class QuantumWebServer:
         """Start the Quantum web server"""
         host = self.config['server']['host']
         port = self.config['server']['port']
-        debug = self.config['server']['debug']
-        reload = self.config['server']['reload']
+        debug = self.config['server'].get('debug', False)
+        reload = self.config['server'].get('reload', False)
 
         try:
             self.app.run(

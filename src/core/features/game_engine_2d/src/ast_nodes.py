@@ -74,6 +74,7 @@ class SpriteNode(QuantumNode):
         self.scale_y: float = 1
         self.alpha: float = 1.0
         self.visible: bool = True
+        self.color: Optional[str] = None  # Hex color for sprites without images
         self.tag: Optional[str] = None
         self.layer: int = 0
 
@@ -229,7 +230,7 @@ class InputNode(QuantumNode):
     def __init__(self):
         self.key: str = ""
         self.action: str = ""
-        self.input_type: str = "press"  # press, hold, release
+        self.input_type: str = "press"  # press, hold, release, click, mousedown, mouseup, mousemove
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -711,6 +712,27 @@ class RawCodeNode(QuantumNode):
         errors = []
         if not self.code or not self.code.strip():
             errors.append("RawCodeNode code is empty")
+        return errors
+
+
+class ClickableNode(QuantumNode):
+    """Represents <qg:clickable> - Makes a sprite respond to mouse/pointer events."""
+
+    def __init__(self):
+        self.action: str = ""
+        self.cursor: str = "pointer"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "game_clickable",
+            "action": self.action,
+            "cursor": self.cursor,
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.action:
+            errors.append("Clickable action is required")
         return errors
 
 

@@ -18,14 +18,31 @@ from core.ast_nodes import (
     FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode,
     HTMLNode, TextNode, DocTypeNode, CommentNode, HTML_VOID_ELEMENTS,
     ImportNode, SlotNode, ComponentCallNode,
-    ActionNode, RedirectNode, FlashNode, FileNode, MailNode, TransactionNode
+    ActionNode, RedirectNode, FlashNode, FileNode, MailNode, TransactionNode,
+    LLMNode, LLMMessageNode
 )
 from core.features.logging.src import LogNode, parse_log
 from core.features.dump.src import DumpNode, parse_dump
+from core.features.knowledge_base.src import KnowledgeNode, KnowledgeSourceNode, parse_knowledge
 from core.features.game_engine_2d.src.parser import GameParser, GameParseError
 from core.features.game_engine_2d.src.ast_nodes import (
     SceneNode, BehaviorNode, PrefabNode,
 )
+from core.features.terminal_engine.src.parser import TerminalParser, TerminalParseError
+from core.features.terminal_engine.src.ast_nodes import (
+    ScreenNode as TerminalScreenNode, KeybindingNode as TerminalKeybindingNode,
+    ServiceNode as TerminalServiceNode, CssNode as TerminalCssNode,
+)
+from core.features.testing_engine.src.parser import TestingParser, TestingParseError
+from core.features.testing_engine.src.ast_nodes import (
+    TestSuiteNode as TestingTestSuiteNode,
+    BrowserConfigNode as TestingBrowserConfigNode,
+    FixtureNode_Testing as TestingFixtureNode,
+    MockNode_Testing as TestingMockNode,
+    AuthNode as TestingAuthNode,
+)
+from core.features.ui_engine.src.parser import UIParser, UIParseError
+from core.features.ui_engine.src.ast_nodes import UIWindowNode
 
 class QuantumParseError(Exception):
     """Quantum parsing error"""
@@ -59,6 +76,24 @@ class QuantumParser:
                     'xmlns:q="https://quantum.lang/ns"',
                     'xmlns:q="https://quantum.lang/ns" xmlns:qg="https://quantum.lang/game"'
                 )
+            # Check for qt: namespace in terminal apps
+            if 'xmlns:qt' not in content and ('qt:' in content or 'type="terminal"' in content):
+                content = content.replace(
+                    'xmlns:q="https://quantum.lang/ns"',
+                    'xmlns:q="https://quantum.lang/ns" xmlns:qt="https://quantum.lang/terminal"'
+                )
+            # Check for qtest: namespace in testing apps
+            if 'xmlns:qtest' not in content and ('qtest:' in content or 'type="testing"' in content):
+                content = content.replace(
+                    'xmlns:q="https://quantum.lang/ns"',
+                    'xmlns:q="https://quantum.lang/ns" xmlns:qtest="https://quantum.lang/testing"'
+                )
+            # Check for ui: namespace in ui apps
+            if 'xmlns:ui' not in content and ('ui:' in content or 'type="ui"' in content):
+                content = content.replace(
+                    'xmlns:q="https://quantum.lang/ns"',
+                    'xmlns:q="https://quantum.lang/ns" xmlns:ui="https://quantum.lang/ui"'
+                )
             return content
 
         # Find first q:component, q:application, or q:job tag
@@ -71,6 +106,15 @@ class QuantumParser:
             # Auto-inject qg: namespace for game applications
             if 'type="game"' in content or 'qg:' in content:
                 ns_decl += ' xmlns:qg="https://quantum.lang/game"'
+            # Auto-inject qt: namespace for terminal applications
+            if 'type="terminal"' in content or 'qt:' in content:
+                ns_decl += ' xmlns:qt="https://quantum.lang/terminal"'
+            # Auto-inject qtest: namespace for testing applications
+            if 'type="testing"' in content or 'qtest:' in content:
+                ns_decl += ' xmlns:qtest="https://quantum.lang/testing"'
+            # Auto-inject ui: namespace for ui applications
+            if 'type="ui"' in content or 'ui:' in content:
+                ns_decl += ' xmlns:ui="https://quantum.lang/ui"'
             return f'<{tag}{attrs}{ns_decl}>'
 
         # Replace first occurrence only
@@ -255,6 +299,12 @@ class QuantumParser:
             elif child_type == 'transaction':
                 transaction_node = self._parse_transaction_statement(child)
                 component.add_statement(transaction_node)
+            elif child_type == 'llm':
+                llm_node = self._parse_llm_statement(child)
+                component.add_statement(llm_node)
+            elif child_type == 'knowledge':
+                knowledge_node = parse_knowledge(child)
+                component.add_statement(knowledge_node)
 
             # Component Composition (Phase 2)
             elif child_type == 'import':
@@ -361,11 +411,18 @@ class QuantumParser:
             # Query loop - index is optional
             loop_node.index_name = loop_element.get('index')
 
-        # Parse loop body statements
+        # Parse loop body - add text content before first child
+        if loop_element.text and loop_element.text.strip():
+            loop_node.add_statement(TextNode(loop_element.text))
+
+        # Parse loop body statements (child elements)
         for child in loop_element:
             statement = self._parse_statement(child)
             if statement:
                 loop_node.add_statement(statement)
+            # Add tail text after child element
+            if child.tail and child.tail.strip():
+                loop_node.add_statement(TextNode(child.tail))
 
         return loop_node
 
@@ -456,6 +513,10 @@ class QuantumParser:
             return self._parse_mail_statement(element)
         elif element_type == 'transaction':
             return self._parse_transaction_statement(element)
+        elif element_type == 'llm':
+            return self._parse_llm_statement(element)
+        elif element_type == 'knowledge':
+            return parse_knowledge(element)
 
         # Component Composition (Phase 2)
         elif element_type == 'import':
@@ -491,6 +552,18 @@ class QuantumParser:
         if app_type == 'game':
             self._parse_game_application_children(root, app)
 
+        # Terminal Engine: parse terminal children when type="terminal"
+        if app_type == 'terminal':
+            self._parse_terminal_application_children(root, app)
+
+        # Testing Engine: parse testing children when type="testing"
+        if app_type == 'testing':
+            self._parse_testing_application_children(root, app)
+
+        # UI Engine: parse ui children when type="ui"
+        if app_type == 'ui':
+            self._parse_ui_application_children(root, app)
+
         return app
 
     def _parse_game_application_children(self, root: ET.Element, app: ApplicationNode):
@@ -518,6 +591,102 @@ class QuantumParser:
             return 'quantum'
         if tag.startswith('qg:'):
             return 'game'
+        if tag.startswith('q:'):
+            return 'quantum'
+        return 'html'
+
+    def _parse_terminal_application_children(self, root: ET.Element, app: ApplicationNode):
+        """Parse children of a terminal application (qt: elements at top level)."""
+        terminal_parser = TerminalParser(self)
+        for child in root:
+            local_name = self._get_element_name(child)
+            ns = self._get_element_terminal_namespace(child)
+
+            if ns == 'terminal':
+                node = terminal_parser.parse_terminal_element(local_name, child)
+                if isinstance(node, TerminalScreenNode):
+                    app.screens.append(node)
+                elif isinstance(node, TerminalKeybindingNode):
+                    app.keybindings.append(node)
+                elif isinstance(node, TerminalServiceNode):
+                    app.services.append(node)
+                elif isinstance(node, TerminalCssNode):
+                    app.terminal_css += node.content + '\n'
+
+    def _get_element_terminal_namespace(self, element: ET.Element) -> str:
+        """Detect if element belongs to qt: (terminal) or q: (quantum) namespace."""
+        tag = element.tag
+        if '{https://quantum.lang/terminal}' in tag:
+            return 'terminal'
+        if '{https://quantum.lang/ns}' in tag:
+            return 'quantum'
+        if tag.startswith('qt:'):
+            return 'terminal'
+        if tag.startswith('q:'):
+            return 'quantum'
+        return 'html'
+
+    def _parse_testing_application_children(self, root: ET.Element, app: ApplicationNode):
+        """Parse children of a testing application (qtest: elements at top level)."""
+        testing_parser = TestingParser(self)
+        for child in root:
+            local_name = self._get_element_name(child)
+            ns = self._get_element_testing_namespace(child)
+
+            if ns == 'testing':
+                node = testing_parser.parse_testing_element(local_name, child)
+                if isinstance(node, TestingTestSuiteNode):
+                    app.test_suites.append(node)
+                elif isinstance(node, TestingBrowserConfigNode):
+                    app.test_config = node
+                elif isinstance(node, TestingFixtureNode):
+                    app.test_fixtures.append(node)
+                elif isinstance(node, TestingMockNode):
+                    app.test_mocks.append(node)
+                elif isinstance(node, TestingAuthNode):
+                    app.test_auth_states.append(node)
+
+    def _get_element_testing_namespace(self, element: ET.Element) -> str:
+        """Detect if element belongs to qtest: (testing) or q: (quantum) namespace."""
+        tag = element.tag
+        if '{https://quantum.lang/testing}' in tag:
+            return 'testing'
+        if '{https://quantum.lang/ns}' in tag:
+            return 'quantum'
+        if tag.startswith('qtest:'):
+            return 'testing'
+        if tag.startswith('q:'):
+            return 'quantum'
+        return 'html'
+
+    def _parse_ui_application_children(self, root: ET.Element, app: ApplicationNode):
+        """Parse children of a UI application (ui: elements at top level)."""
+        ui_parser = UIParser(self)
+        for child in root:
+            local_name = self._get_element_name(child)
+            ns = self._get_element_ui_namespace(child)
+
+            if ns == 'ui':
+                node = ui_parser.parse_ui_element(local_name, child)
+                if isinstance(node, UIWindowNode):
+                    app.ui_windows.append(node)
+                else:
+                    app.ui_children.append(node)
+            elif ns == 'quantum':
+                # Allow q: tags at the top level of a UI app (e.g. q:set)
+                statement = self._parse_statement(child)
+                if statement:
+                    app.ui_children.append(statement)
+
+    def _get_element_ui_namespace(self, element: ET.Element) -> str:
+        """Detect if element belongs to ui: (UI engine) or q: (quantum) namespace."""
+        tag = element.tag
+        if '{https://quantum.lang/ui}' in tag:
+            return 'ui'
+        if '{https://quantum.lang/ns}' in tag:
+            return 'quantum'
+        if tag.startswith('ui:'):
+            return 'ui'
         if tag.startswith('q:'):
             return 'quantum'
         return 'html'
@@ -837,6 +1006,10 @@ class QuantumParser:
                 pass
 
         query_node.result = query_element.get('result')
+
+        # Knowledge base / RAG attributes
+        query_node.mode = query_element.get('mode')  # None or "rag"
+        query_node.rag_model = query_element.get('model')  # LLM model for RAG
 
         # Parse q:param children
         for child in query_element:
@@ -1228,7 +1401,8 @@ class QuantumParser:
             'component', 'application', 'job', 'param', 'return', 'route',
             'if', 'elseif', 'else', 'loop', 'set', 'function', 'dispatchEvent',
             'onEvent', 'script', 'query', 'invoke', 'data', 'log', 'dump',
-            'import', 'slot'  # Phase 2
+            'import', 'slot',  # Phase 2
+            'knowledge',  # Knowledge Base / RAG
         }
         if tag in quantum_tags:
             return False
@@ -1555,3 +1729,75 @@ class QuantumParser:
                 transaction_node.add_statement(statement)
 
         return transaction_node
+
+    # ============================================
+    # LLM PARSING (q:llm with Ollama backend)
+    # ============================================
+
+    def _parse_llm_statement(self, element: ET.Element) -> LLMNode:
+        """
+        Parse q:llm statement for LLM invocation via Ollama.
+
+        Examples:
+          <q:llm name="greeting" model="phi3">
+            <q:prompt>Say hello to {userName}</q:prompt>
+          </q:llm>
+
+          <q:llm name="chat" model="mistral">
+            <q:message role="system">You are a helpful assistant</q:message>
+            <q:message role="user">{question}</q:message>
+          </q:llm>
+
+          <q:llm name="data" model="llama3" responseFormat="json" temperature="0.1">
+            <q:prompt>Extract name and age from: {text}</q:prompt>
+          </q:llm>
+        """
+        name = element.get('name')
+        if not name:
+            raise QuantumParseError("q:llm requires 'name' attribute")
+
+        llm_node = LLMNode(name)
+
+        # Parse attributes
+        llm_node.model = element.get('model')
+        llm_node.endpoint = element.get('endpoint')
+        llm_node.system = element.get('system')
+        llm_node.response_format = element.get('responseFormat')
+        llm_node.cache = element.get('cache', 'false').lower() == 'true'
+
+        temperature_attr = element.get('temperature')
+        if temperature_attr:
+            try:
+                llm_node.temperature = float(temperature_attr)
+            except ValueError:
+                pass
+
+        max_tokens_attr = element.get('maxTokens')
+        if max_tokens_attr:
+            try:
+                llm_node.max_tokens = int(max_tokens_attr)
+            except ValueError:
+                pass
+
+        timeout_attr = element.get('timeout')
+        if timeout_attr:
+            try:
+                llm_node.timeout = int(timeout_attr)
+            except ValueError:
+                pass
+
+        # Parse child elements: <q:prompt> and <q:message>
+        for child in element:
+            child_type = self._get_element_name(child)
+
+            if child_type == 'prompt':
+                # Extract prompt text content
+                llm_node.prompt = (child.text or '').strip()
+
+            elif child_type == 'message':
+                role = child.get('role', 'user')
+                content = (child.text or '').strip()
+                if content:
+                    llm_node.messages.append(LLMMessageNode(role, content))
+
+        return llm_node

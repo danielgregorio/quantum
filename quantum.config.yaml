@@ -54,6 +54,19 @@ database:
   admin_api: http://localhost:8000/api
 
 # ==========================================
+# LLM (Ollama Backend)
+# ==========================================
+llm:
+  # Ollama API base URL
+  base_url: http://10.10.1.40:11434
+
+  # Default model to use when not specified in q:llm
+  default_model: phi3
+
+  # Default timeout in seconds for LLM requests
+  timeout: 60
+
+# ==========================================
 # PERFORMANCE
 # ==========================================
 performance:
@@ -115,3 +128,40 @@ development:
 
   # Enable debug toolbar (Flask debug toolbar)
   debug_toolbar: false
+
+# ==========================================
+# DEPLOYMENT
+# ==========================================
+deploy:
+  # Deployment targets configuration
+  # Each target needs a URL and optionally an API key
+  targets:
+    forge:
+      # URL of the deploy service
+      url: http://10.10.1.40:9000
+      # API key
+      api_key: 9847be3fb4d7aaeddc8e48cf1230201bb6d1d814b5f39837d50988ee4aa08802
+
+    # Example: Add more targets
+    # staging:
+    #   url: https://staging.example.com:9000
+    #   api_key: staging-key
+    #
+    # production:
+    #   url: https://prod.example.com:9000
+    #   api_key: prod-key
+
+  # Files/directories to exclude from deployment packages
+  exclude:
+    - .git
+    - .gitignore
+    - __pycache__
+    - "*.pyc"
+    - .env
+    - .env.local
+    - node_modules
+    - .venv
+    - venv
+    - "*.log"
+    - tests
+    - "test_*.py"

@@ -83,9 +83,23 @@ class ExecutionContext:
         Update a variable in whatever scope it already exists, or create in local scope if new
 
         Args:
-            name: Variable name
+            name: Variable name (can include scope prefix like "session.userId", "application.messages")
             value: New value
         """
+        # Handle scope prefix (session.X, application.X, request.X)
+        if '.' in name:
+            prefix, var_name = name.split('.', 1)
+            if prefix in ['session', 'application', 'request', 'cookie']:
+                if prefix == 'session':
+                    self.session_vars[var_name] = value
+                elif prefix == 'application':
+                    self.application_vars[var_name] = value
+                elif prefix == 'request':
+                    self.request_vars[var_name] = value
+                elif prefix == 'cookie':
+                    self.session_vars[f'__cookie_{var_name}'] = value
+                return
+
         # Check local scope first
         if name in self.local_vars:
             self.local_vars[name] = value
