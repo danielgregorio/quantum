@@ -2,9 +2,18 @@
 UI Engine - HTML/CSS Adapter
 
 Transforms UI AST nodes into a standalone HTML/CSS page.
+Uses the design tokens system for normalized styling across targets.
+
+Desktop Mode:
+    When desktop_mode=True, the adapter transforms events for pywebview:
+    - on-click="fn" -> onclick="__quantumCall('fn')"
+    - on-submit="fn" -> onsubmit with form data collection
+    - bind="var" -> oninput with two-way binding
+    - {var} in text -> <span id="..."> for reactive updates
 """
 
-from typing import List, Optional
+import re
+from typing import List, Optional, Set, Tuple
 
 from core.ast_nodes import QuantumNode, SetNode, IfNode, LoopNode
 from core.features.ui_engine.src.ast_nodes import (
@@ -23,14 +32,22 @@ from core.features.ui_engine.src.ast_nodes import (
 from runtime.ui_html_templates import (
     HtmlBuilder, HTML_TEMPLATE, CSS_RESET, CSS_THEME, TAB_JS,
 )
+from runtime.ui_tokens import TokenConverter
 
 
 class UIHtmlAdapter:
     """Generates HTML/CSS from UI AST nodes."""
 
-    def __init__(self):
+    def __init__(self, desktop_mode: bool = False):
         self._tab_counter = 0
         self._has_tabs = False
+        self._tokens = TokenConverter('html')
+        self._features_used: Set[str] = set()  # Track features for compatibility
+
+        # Desktop mode: enables event transformation and binding tracking
+        self._desktop_mode = desktop_mode
+        self._binding_counter = 0
+        self._bindings: List[Tuple[str, str, str]] = []  # (element_id, var_name, bind_type)
 
     def generate(self, windows: List[QuantumNode], ui_children: List[QuantumNode],
                  title: str = "Quantum UI") -> str:
@@ -53,12 +70,32 @@ class UIHtmlAdapter:
         # Assemble JS
         js = TAB_JS if self._has_tabs else ''
 
+        # In desktop mode, append binding registration script
+        if self._desktop_mode and self._bindings:
+            js += '\n' + self._generate_binding_script()
+
         return HTML_TEMPLATE.format(
             title=title,
             css=css,
             body=body_html,
             js=js,
         )
+
+    def get_bindings(self) -> List[Tuple[str, str, str]]:
+        """Return the list of bindings for external use (desktop adapter)."""
+        return self._bindings.copy()
+
+    def _generate_binding_script(self) -> str:
+        """Generate JS to register all bindings on DOMContentLoaded."""
+        if not self._bindings:
+            return ''
+
+        lines = ['<script>', 'document.addEventListener("DOMContentLoaded", function() {']
+        for bind_id, var_name, bind_type in self._bindings:
+            lines.append(f"  __quantumBind('{bind_id}', '{var_name}', '{bind_type}');")
+        lines.append('});')
+        lines.append('</script>')
+        return '\n'.join(lines)
 
     # ------------------------------------------------------------------
     # Layout style helper
@@ -68,6 +105,7 @@ class UIHtmlAdapter:
         """Build inline CSS from layout attributes."""
         parts = []
         if hasattr(node, 'gap') and node.gap:
+            self._features_used.add('gap')
             parts.append(f"gap: {self._css_size(node.gap)}")
         if hasattr(node, 'padding') and node.padding:
             parts.append(f"padding: {self._css_size(node.padding)}")
@@ -76,10 +114,16 @@ class UIHtmlAdapter:
         if hasattr(node, 'align') and node.align:
             parts.append(f"align-items: {self._css_align(node.align)}")
         if hasattr(node, 'justify') and node.justify:
+            if node.justify in ('between', 'around'):
+                self._features_used.add(f'justify_{node.justify}')
             parts.append(f"justify-content: {self._css_justify(node.justify)}")
         if hasattr(node, 'width') and node.width:
+            if node.width.isdigit() or node.width.endswith('px'):
+                self._features_used.add('pixel_units')
             parts.append(f"width: {self._css_dimension(node.width)}")
         if hasattr(node, 'height') and node.height:
+            if node.height.isdigit() or node.height.endswith('px'):
+                self._features_used.add('pixel_units')
             parts.append(f"height: {self._css_dimension(node.height)}")
         if hasattr(node, 'background') and node.background:
             parts.append(f"background-color: {self._css_color(node.background)}")
@@ -88,6 +132,10 @@ class UIHtmlAdapter:
         if hasattr(node, 'border') and node.border:
             parts.append(f"border: {node.border}")
         return '; '.join(parts)
+
+    def get_features_used(self) -> Set[str]:
+        """Return set of features used during generation (for compatibility checking)."""
+        return self._features_used.copy()
 
     def _layout_attrs(self, node) -> dict:
         """Build HTML attributes from layout properties."""
@@ -119,56 +167,94 @@ class UIHtmlAdapter:
         return result
 
     # ------------------------------------------------------------------
-    # CSS value helpers
+    # CSS value helpers (using TokenConverter for normalization)
     # ------------------------------------------------------------------
 
     def _css_size(self, val: str) -> str:
-        if val.endswith('px') or val.endswith('%') or val.endswith('em') or val.endswith('rem'):
-            return val
-        try:
-            int(val)
-            return f"{val}px"
-        except ValueError:
-            return val
+        """Convert spacing value using tokens system."""
+        return self._tokens.spacing(val)
 
     def _css_dimension(self, val: str) -> str:
-        if val == 'fill':
-            return '100%'
-        if val == 'auto':
-            return 'auto'
-        if val.endswith('%'):
-            return val
-        if val.endswith('px') or val.endswith('em') or val.endswith('rem') or val.endswith('vw') or val.endswith('vh'):
-            return val
-        try:
-            int(val)
-            return f"{val}px"
-        except ValueError:
-            return val
+        """Convert size/dimension value using tokens system."""
+        return self._tokens.size(val)
 
     def _css_align(self, val: str) -> str:
-        mapping = {'start': 'flex-start', 'center': 'center',
-                   'end': 'flex-end', 'stretch': 'stretch'}
-        return mapping.get(val, val)
+        """Convert align value using tokens system."""
+        return self._tokens.align(val)
 
     def _css_justify(self, val: str) -> str:
-        mapping = {'start': 'flex-start', 'center': 'center',
-                   'end': 'flex-end', 'between': 'space-between',
-                   'around': 'space-around'}
-        return mapping.get(val, val)
+        """Convert justify value using tokens system."""
+        return self._tokens.justify(val)
 
     def _css_color(self, val: str) -> str:
-        theme_colors = {'primary', 'secondary', 'success', 'danger',
-                        'warning', 'info', 'light', 'dark'}
-        if val in theme_colors:
-            return f"var(--q-{val})"
-        return val
+        """Convert color value using tokens system."""
+        return self._tokens.color(val)
 
     def _css_font_size(self, val: str) -> str:
-        mapping = {'xs': 'var(--q-font-xs)', 'sm': 'var(--q-font-sm)',
-                   'md': 'var(--q-font-md)', 'lg': 'var(--q-font-lg)',
-                   'xl': 'var(--q-font-xl)', '2xl': 'var(--q-font-2xl)'}
-        return mapping.get(val, val)
+        """Convert font size using tokens system."""
+        return self._tokens.font_size(val)
+
+    # ------------------------------------------------------------------
+    # Desktop mode helpers
+    # ------------------------------------------------------------------
+
+    def _render_text_with_binding(self, content: str) -> str:
+        """Render text content, wrapping {var} references in spans for binding.
+
+        In desktop mode, {variable} expressions are wrapped in <span> elements
+        with unique IDs so that Python can update them reactively.
+
+        Args:
+            content: Text content that may contain {var} expressions.
+
+        Returns:
+            HTML string with binding spans if in desktop_mode, otherwise original content.
+        """
+        if not self._desktop_mode or not content:
+            return content
+
+        # Pattern to match {variable} or {expression}
+        # We only create bindings for simple variable names
+        def replace_binding(match):
+            expr = match.group(1).strip()
+            # Only bind simple variable names (alphanumeric + underscore)
+            if re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', expr):
+                bind_id = f"__qb_{self._binding_counter}"
+                self._binding_counter += 1
+                self._bindings.append((bind_id, expr, 'text'))
+                return f'<span id="{bind_id}">{{{expr}}}</span>'
+            else:
+                # Complex expressions are not bound, just rendered
+                return match.group(0)
+
+        return re.sub(r'\{([^}]+)\}', replace_binding, content)
+
+    def _transform_onclick(self, handler: str) -> str:
+        """Transform on-click handler for desktop mode."""
+        if self._desktop_mode:
+            return f"__quantumCall('{handler}')"
+        return handler
+
+    def _transform_onsubmit(self, handler: str) -> str:
+        """Transform on-submit handler for desktop mode with form data collection."""
+        if self._desktop_mode:
+            return f"event.preventDefault();__quantumCall('{handler}',__quantumFormData(this))"
+        return handler
+
+    def _transform_onchange(self, handler: str) -> str:
+        """Transform on-change handler for desktop mode."""
+        if self._desktop_mode:
+            return f"__quantumCall('{handler}',{{value:this.value}})"
+        return handler
+
+    def _add_input_binding(self, bind_name: str, element_id: str = None) -> str:
+        """Add two-way binding for input elements in desktop mode.
+
+        Returns the oninput handler string to add to the element.
+        """
+        if not self._desktop_mode or not bind_name:
+            return ''
+        return f"__quantumCall('__set_state',{{name:'{bind_name}',value:this.value}})"
 
     # ------------------------------------------------------------------
     # Node rendering dispatch
@@ -413,7 +499,11 @@ class UIHtmlAdapter:
     def _render_form(self, node: UIFormNode, b: HtmlBuilder):
         form_attrs = {'class': 'q-form'}
         if node.on_submit:
-            form_attrs['onsubmit'] = node.on_submit
+            if self._desktop_mode:
+                # Transform on-submit for pywebview with form data collection
+                form_attrs['onsubmit'] = self._transform_onsubmit(node.on_submit)
+            else:
+                form_attrs['onsubmit'] = node.on_submit
         attrs = self._merge_attrs(form_attrs, self._layout_attrs(node))
         b.open_tag('form', attrs)
         b.indent()
@@ -458,6 +548,7 @@ class UIHtmlAdapter:
     def _render_text(self, node: UITextNode, b: HtmlBuilder):
         style_parts = []
         if node.size:
+            self._features_used.add('font_size')
             style_parts.append(f"font-size: {self._css_font_size(node.size)}")
         if node.weight:
             style_parts.append(f"font-weight: {node.weight}")
@@ -467,7 +558,9 @@ class UIHtmlAdapter:
         attrs = self._merge_attrs(base_attrs, self._layout_attrs(node))
         b.open_tag('span', attrs)
         b.indent()
-        b.text(node.content)
+        # Render content with binding support in desktop mode
+        content = self._render_text_with_binding(node.content) if self._desktop_mode else node.content
+        b.text(content)
         b.dedent()
         b.close_tag('span')
 
@@ -479,11 +572,17 @@ class UIHtmlAdapter:
         if node.disabled:
             btn_attrs['disabled'] = True
         if node.on_click:
-            btn_attrs['onclick'] = node.on_click
+            if self._desktop_mode:
+                # Transform on-click for pywebview JS bridge
+                btn_attrs['onclick'] = f"__quantumCall('{node.on_click}')"
+            else:
+                btn_attrs['onclick'] = node.on_click
         attrs = self._merge_attrs(btn_attrs, self._layout_attrs(node))
         b.open_tag('button', attrs)
         b.indent()
-        b.text(node.content)
+        # Render content with binding support
+        content = self._render_text_with_binding(node.content) if self._desktop_mode else node.content
+        b.text(content)
         b.dedent()
         b.close_tag('button')
 
@@ -493,6 +592,9 @@ class UIHtmlAdapter:
             input_attrs['placeholder'] = node.placeholder
         if node.bind:
             input_attrs['name'] = node.bind
+            # Add two-way binding in desktop mode
+            if self._desktop_mode:
+                input_attrs['oninput'] = self._add_input_binding(node.bind)
         attrs = self._merge_attrs(input_attrs, self._layout_attrs(node))
         b.open_tag('input', attrs, self_closing=True)
 
@@ -628,6 +730,7 @@ class UIHtmlAdapter:
         b.close_tag('li')
 
     def _render_image(self, node: UIImageNode, b: HtmlBuilder):
+        self._features_used.add('image')
         img_attrs = {}
         if node.src:
             img_attrs['src'] = node.src
@@ -637,6 +740,8 @@ class UIHtmlAdapter:
         b.open_tag('img', attrs, self_closing=True)
 
     def _render_link(self, node: UILinkNode, b: HtmlBuilder):
+        if node.external:
+            self._features_used.add('link_external')
         a_attrs = {}
         if node.to:
             a_attrs['href'] = node.to
@@ -680,7 +785,10 @@ class UIHtmlAdapter:
     def _render_option(self, node: UIOptionNode, b: HtmlBuilder):
         opt_attrs = {'class': 'q-menu-item'}
         if node.on_click:
-            opt_attrs['onclick'] = node.on_click
+            if self._desktop_mode:
+                opt_attrs['onclick'] = self._transform_onclick(node.on_click)
+            else:
+                opt_attrs['onclick'] = node.on_click
         b.open_tag('span', opt_attrs)
         b.indent()
         b.text(node.label or node.value or '')

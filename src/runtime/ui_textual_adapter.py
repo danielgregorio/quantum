@@ -2,9 +2,10 @@
 UI Engine - Textual Adapter
 
 Transforms UI AST nodes into a standalone Python Textual (TUI) application.
+Uses the design tokens system for normalized styling across targets.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Set, Dict
 
 from core.ast_nodes import QuantumNode, SetNode, IfNode, LoopNode
 from core.features.ui_engine.src.ast_nodes import (
@@ -20,6 +21,7 @@ from core.features.ui_engine.src.ast_nodes import (
     UIFooterNode, UIRuleNode, UILoadingNode, UIBadgeNode,
 )
 from runtime.terminal_templates import PyBuilder, py_string, py_id
+from runtime.ui_tokens import TokenConverter, get_compatibility_warnings
 
 
 class UITextualAdapter:
@@ -27,10 +29,24 @@ class UITextualAdapter:
 
     def __init__(self):
         self._indent = 2  # compose() body starts at indent 2
+        self._tokens = TokenConverter('textual')
+        self._features_used: Set[str] = set()
+        self._css_rules: List[str] = []
+        self._widget_counter = 0
+
+    def _next_id(self, prefix: str = 'q') -> str:
+        """Generate unique widget ID."""
+        self._widget_counter += 1
+        return f"{prefix}_{self._widget_counter}"
 
     def generate(self, windows: List[QuantumNode], ui_children: List[QuantumNode],
                  title: str = "Quantum UI") -> str:
         """Generate complete Python Textual app from UI AST."""
+        # Reset state
+        self._css_rules = []
+        self._widget_counter = 0
+        self._features_used = set()
+
         py = PyBuilder()
 
         # Build compose body
@@ -49,7 +65,7 @@ class UITextualAdapter:
         if not compose_body.strip():
             compose_body = '        yield Static("Empty UI")'
 
-        # Build CSS for panel styling
+        # Build CSS
         css = self._build_css()
 
         # Use template
@@ -66,12 +82,152 @@ class UITextualAdapter:
         return code
 
     def _build_css(self) -> str:
-        """Generate Textual CSS for common patterns."""
-        return (
-            "/* Quantum UI Textual CSS */\\n"
-            ".q-panel { border: solid green; padding: 1 2; }\\n"
-            ".q-panel-title { text-style: bold; }\\n"
-        )
+        """Generate Textual CSS including dynamic rules from layout attributes."""
+        base_css = [
+            "/* Quantum UI Textual CSS */",
+            "",
+            "/* Base styles */",
+            ".q-panel { border: solid $primary; padding: 1 2; }",
+            ".q-panel-title { text-style: bold; color: $text; }",
+            "",
+            "/* Badge styles */",
+            ".q-badge { padding: 0 1; }",
+            ".q-badge-primary { background: $primary; color: $text; }",
+            ".q-badge-secondary { background: $secondary; color: $text; }",
+            ".q-badge-success { background: $success; color: $text; }",
+            ".q-badge-danger { background: $error; color: $text; }",
+            ".q-badge-warning { background: $warning; color: $text; }",
+            "",
+            "/* Image placeholder */",
+            ".q-image-placeholder { color: $text-muted; text-style: italic; }",
+            "",
+            "/* Link style */",
+            ".q-link { color: $primary; text-style: underline; }",
+            "",
+        ]
+
+        # Add dynamic rules
+        if self._css_rules:
+            base_css.append("/* Dynamic layout styles */")
+            base_css.extend(self._css_rules)
+
+        return '\\n'.join(base_css)
+
+    def get_features_used(self) -> Set[str]:
+        """Return set of features used during generation (for compatibility checking)."""
+        return self._features_used.copy()
+
+    def get_compatibility_warnings(self) -> List[str]:
+        """Get warnings about features that don't translate well to Textual."""
+        return get_compatibility_warnings(self._features_used, 'textual')
+
+    # ------------------------------------------------------------------
+    # Layout CSS helpers
+    # ------------------------------------------------------------------
+
+    def _layout_css_rules(self, node, widget_id: str) -> Optional[str]:
+        """Generate Textual CSS rule for a node's layout attributes."""
+        rules = []
+
+        if hasattr(node, 'padding') and node.padding:
+            val = self._tokens.spacing(node.padding)
+            rules.append(f"padding: {val}")
+
+        if hasattr(node, 'margin') and node.margin:
+            val = self._tokens.spacing(node.margin)
+            rules.append(f"margin: {val}")
+
+        if hasattr(node, 'width') and node.width:
+            val = self._tokens.size(node.width)
+            if val and val != 'auto':
+                rules.append(f"width: {val}")
+            if node.width.isdigit() or str(node.width).endswith('px'):
+                self._features_used.add('pixel_units')
+
+        if hasattr(node, 'height') and node.height:
+            val = self._tokens.size(node.height)
+            if val and val != 'auto':
+                rules.append(f"height: {val}")
+            if node.height.isdigit() or str(node.height).endswith('px'):
+                self._features_used.add('pixel_units')
+
+        if hasattr(node, 'background') and node.background:
+            val = self._tokens.color(node.background)
+            rules.append(f"background: {val}")
+
+        if hasattr(node, 'color') and node.color:
+            val = self._tokens.color(node.color)
+            rules.append(f"color: {val}")
+
+        if hasattr(node, 'border') and node.border:
+            # Simplified border handling
+            rules.append(f"border: solid $primary")
+
+        if hasattr(node, 'align') and node.align:
+            # Textual align is different - it's a content alignment
+            # align-horizontal: left | center | right
+            val = self._tokens.align(node.align)
+            rules.append(f"align-horizontal: {val}")
+
+        if hasattr(node, 'justify') and node.justify:
+            # Textual doesn't have justify-content
+            # We track it for compatibility warnings
+            if node.justify in ('between', 'around'):
+                self._features_used.add(f'justify_{node.justify}')
+
+        if hasattr(node, 'gap') and node.gap:
+            # Textual doesn't support gap directly
+            # Track for compatibility warning
+            self._features_used.add('gap')
+
+        if hasattr(node, 'visible') and node.visible == 'false':
+            rules.append("display: none")
+
+        if rules:
+            return f"#{widget_id} {{ {'; '.join(rules)}; }}"
+        return None
+
+    def _get_widget_attrs(self, node, default_id: str = None,
+                          default_classes: str = None) -> Dict[str, str]:
+        """Build widget constructor attributes from node."""
+        attrs = {}
+
+        # Use node's ui_id or generate one
+        widget_id = None
+        if hasattr(node, 'ui_id') and node.ui_id:
+            widget_id = node.ui_id
+        elif default_id:
+            widget_id = default_id
+
+        if widget_id:
+            attrs['id'] = widget_id
+
+        # Collect classes
+        classes = []
+        if default_classes:
+            classes.append(default_classes)
+        if hasattr(node, 'ui_class') and node.ui_class:
+            classes.append(node.ui_class)
+
+        if classes:
+            attrs['classes'] = ' '.join(classes)
+
+        # Generate CSS rules if we have an ID
+        if widget_id:
+            css_rule = self._layout_css_rules(node, widget_id)
+            if css_rule:
+                self._css_rules.append(css_rule)
+
+        return attrs
+
+    def _format_widget_attrs(self, attrs: Dict[str, str]) -> str:
+        """Format widget attributes for Python constructor."""
+        if not attrs:
+            return ''
+        parts = []
+        for k, v in attrs.items():
+            parts.append(f'{k}={py_string(v)}')
+        return ', '.join(parts)
 
     # ------------------------------------------------------------------
     # Node rendering dispatch
@@ -153,6 +309,8 @@ class UITextualAdapter:
             self._render_option(node, py)
         elif isinstance(node, UIDividedBoxNode):
             self._render_dividedbox(node, py)
+        elif isinstance(node, UIRadioNode):
+            self._render_radio(node, py)
         # Quantum passthrough
         elif isinstance(node, SetNode):
             py.comment(f'q:set {node.name} = {node.value}')
@@ -166,25 +324,50 @@ class UITextualAdapter:
     # ------------------------------------------------------------------
 
     def _render_window(self, node: UIWindowNode, py: PyBuilder):
-        py.line(f'with Vertical():')
+        widget_id = self._next_id('window')
+        attrs = self._get_widget_attrs(node, widget_id)
+        attrs_str = self._format_widget_attrs(attrs)
+
+        if attrs_str:
+            py.line(f'with Vertical({attrs_str}):')
+        else:
+            py.line(f'with Vertical():')
         py.indent()
         self._render_children(node.children, py)
         py.dedent()
 
     def _render_hbox(self, node: UIHBoxNode, py: PyBuilder):
-        py.line(f'with Horizontal():')
+        widget_id = self._next_id('hbox')
+        attrs = self._get_widget_attrs(node, widget_id)
+        attrs_str = self._format_widget_attrs(attrs)
+
+        if attrs_str:
+            py.line(f'with Horizontal({attrs_str}):')
+        else:
+            py.line(f'with Horizontal():')
         py.indent()
         self._render_children(node.children, py)
         py.dedent()
 
     def _render_vbox(self, node: UIVBoxNode, py: PyBuilder):
-        py.line(f'with Vertical():')
+        widget_id = self._next_id('vbox')
+        attrs = self._get_widget_attrs(node, widget_id)
+        attrs_str = self._format_widget_attrs(attrs)
+
+        if attrs_str:
+            py.line(f'with Vertical({attrs_str}):')
+        else:
+            py.line(f'with Vertical():')
         py.indent()
         self._render_children(node.children, py)
         py.dedent()
 
     def _render_panel(self, node: UIPanelNode, py: PyBuilder):
-        py.line(f'with Vertical(classes="q-panel"):')
+        widget_id = self._next_id('panel')
+        attrs = self._get_widget_attrs(node, widget_id, 'q-panel')
+        attrs_str = self._format_widget_attrs(attrs)
+
+        py.line(f'with Vertical({attrs_str}):')
         py.indent()
         if node.title:
             py.line(f'yield Static({py_string(node.title)}, classes="q-panel-title")')
@@ -192,7 +375,14 @@ class UITextualAdapter:
         py.dedent()
 
     def _render_tabpanel(self, node: UITabPanelNode, py: PyBuilder):
-        py.line(f'with TabbedContent():')
+        widget_id = self._next_id('tabs')
+        attrs = self._get_widget_attrs(node, widget_id)
+        attrs_str = self._format_widget_attrs(attrs)
+
+        if attrs_str:
+            py.line(f'with TabbedContent({attrs_str}):')
+        else:
+            py.line(f'with TabbedContent():')
         py.indent()
         tabs = [c for c in node.children if isinstance(c, UITabNode)]
         for tab in tabs:
@@ -204,13 +394,27 @@ class UITextualAdapter:
 
     def _render_tab(self, node: UITabNode, py: PyBuilder):
         # Standalone tab (should be inside tabpanel normally)
-        py.line(f'with Vertical():')
+        widget_id = self._next_id('tab')
+        attrs = self._get_widget_attrs(node, widget_id)
+        attrs_str = self._format_widget_attrs(attrs)
+
+        if attrs_str:
+            py.line(f'with Vertical({attrs_str}):')
+        else:
+            py.line(f'with Vertical():')
         py.indent()
         self._render_children(node.children, py)
         py.dedent()
 
     def _render_grid(self, node: UIGridNode, py: PyBuilder):
-        py.line(f'with Grid():')
+        widget_id = self._next_id('grid')
+        attrs = self._get_widget_attrs(node, widget_id)
+        attrs_str = self._format_widget_attrs(attrs)
+
+        if attrs_str:
+            py.line(f'with Grid({attrs_str}):')
+        else:
+            py.line(f'with Grid():')
         py.indent()
         self._render_children(node.children, py)
         py.dedent()
@@ -221,26 +425,56 @@ class UITextualAdapter:
             self._render_node(child, py)
 
     def _render_section(self, node: UISectionNode, py: PyBuilder):
+        widget_id = self._next_id('section')
+        attrs = self._get_widget_attrs(node, widget_id)
+
         collapsed = 'False' if node.expanded else 'True'
-        py.line(f'with Collapsible(title={py_string(node.title)}, collapsed={collapsed}):')
+        attrs_parts = [f'title={py_string(node.title)}', f'collapsed={collapsed}']
+        if 'id' in attrs:
+            attrs_parts.append(f'id={py_string(attrs["id"])}')
+        if 'classes' in attrs:
+            attrs_parts.append(f'classes={py_string(attrs["classes"])}')
+
+        py.line(f'with Collapsible({", ".join(attrs_parts)}):')
         py.indent()
         self._render_children(node.children, py)
         py.dedent()
 
     def _render_scrollbox(self, node: UIScrollBoxNode, py: PyBuilder):
-        py.line(f'with ScrollableContainer():')
+        widget_id = self._next_id('scroll')
+        attrs = self._get_widget_attrs(node, widget_id)
+        attrs_str = self._format_widget_attrs(attrs)
+
+        if attrs_str:
+            py.line(f'with ScrollableContainer({attrs_str}):')
+        else:
+            py.line(f'with ScrollableContainer():')
         py.indent()
         self._render_children(node.children, py)
         py.dedent()
 
     def _render_form(self, node: UIFormNode, py: PyBuilder):
-        py.line(f'with Vertical():')
+        widget_id = self._next_id('form')
+        attrs = self._get_widget_attrs(node, widget_id)
+        attrs_str = self._format_widget_attrs(attrs)
+
+        if attrs_str:
+            py.line(f'with Vertical({attrs_str}):')
+        else:
+            py.line(f'with Vertical():')
         py.indent()
         self._render_children(node.children, py)
         py.dedent()
 
     def _render_formitem(self, node: UIFormItemNode, py: PyBuilder):
-        py.line(f'with Horizontal():')
+        widget_id = self._next_id('formitem')
+        attrs = self._get_widget_attrs(node, widget_id)
+        attrs_str = self._format_widget_attrs(attrs)
+
+        if attrs_str:
+            py.line(f'with Horizontal({attrs_str}):')
+        else:
+            py.line(f'with Horizontal():')
         py.indent()
         if node.label:
             py.line(f'yield Label({py_string(node.label)})')
@@ -248,11 +482,21 @@ class UITextualAdapter:
         py.dedent()
 
     def _render_spacer(self, node: UISpacerNode, py: PyBuilder):
-        py.line(f'yield Static("")')
+        widget_id = self._next_id('spacer')
+        py.line(f'yield Static("", id={py_string(widget_id)})')
+        # Add CSS rule for spacer
+        self._css_rules.append(f'#{widget_id} {{ height: 1; }}')
 
     def _render_dividedbox(self, node: UIDividedBoxNode, py: PyBuilder):
+        widget_id = self._next_id('divided')
+        attrs = self._get_widget_attrs(node, widget_id)
+        attrs_str = self._format_widget_attrs(attrs)
+
         container = 'Horizontal' if node.direction == 'horizontal' else 'Vertical'
-        py.line(f'with {container}():')
+        if attrs_str:
+            py.line(f'with {container}({attrs_str}):')
+        else:
+            py.line(f'with {container}():')
         py.indent()
         self._render_children(node.children, py)
         py.dedent()
@@ -262,30 +506,107 @@ class UITextualAdapter:
     # ------------------------------------------------------------------
 
     def _render_text(self, node: UITextNode, py: PyBuilder):
-        py.line(f'yield Static({py_string(node.content)})')
+        widget_id = self._next_id('text')
+        attrs = self._get_widget_attrs(node, widget_id)
+
+        # Handle font size (limited in Textual)
+        if node.size:
+            self._features_used.add('font_size')
+
+        # Handle weight with text-style CSS
+        if node.weight == 'bold':
+            self._css_rules.append(f'#{widget_id} {{ text-style: bold; }}')
+
+        parts = [py_string(node.content)]
+        if 'id' in attrs:
+            parts.append(f'id={py_string(attrs["id"])}')
+        if 'classes' in attrs:
+            parts.append(f'classes={py_string(attrs["classes"])}')
+
+        py.line(f'yield Static({", ".join(parts)})')
 
     def _render_button(self, node: UIButtonNode, py: PyBuilder):
+        widget_id = self._next_id('btn')
+        attrs = self._get_widget_attrs(node, widget_id)
+
+        # Map HTML variants to Textual variants
+        # Textual accepts: default, error, primary, success, warning
+        variant_map = {
+            'secondary': 'default',
+            'danger': 'error',
+            'primary': 'primary',
+            'success': 'success',
+            'warning': 'warning',
+        }
+
         parts = [py_string(node.content)]
         if node.variant:
-            parts.append(f'variant={py_string(node.variant)}')
+            mapped_variant = variant_map.get(node.variant, 'default')
+            parts.append(f'variant={py_string(mapped_variant)}')
+        if 'id' in attrs:
+            parts.append(f'id={py_string(attrs["id"])}')
+        if 'classes' in attrs:
+            parts.append(f'classes={py_string(attrs["classes"])}')
+
         py.line(f'yield Button({", ".join(parts)})')
 
     def _render_input(self, node: UIInputNode, py: PyBuilder):
+        widget_id = self._next_id('input')
+        attrs = self._get_widget_attrs(node, widget_id)
+
         parts = []
         if node.placeholder:
             parts.append(f'placeholder={py_string(node.placeholder)}')
+        if 'id' in attrs:
+            parts.append(f'id={py_string(attrs["id"])}')
+        if 'classes' in attrs:
+            parts.append(f'classes={py_string(attrs["classes"])}')
+
         py.line(f'yield Input({", ".join(parts)})')
 
     def _render_checkbox(self, node: UICheckboxNode, py: PyBuilder):
+        widget_id = self._next_id('cb')
+        attrs = self._get_widget_attrs(node, widget_id)
+
         parts = []
         if node.label:
             parts.append(py_string(node.label))
+        if 'id' in attrs:
+            parts.append(f'id={py_string(attrs["id"])}')
+        if 'classes' in attrs:
+            parts.append(f'classes={py_string(attrs["classes"])}')
+
         py.line(f'yield Checkbox({", ".join(parts)})')
 
+    def _render_radio(self, node: UIRadioNode, py: PyBuilder):
+        widget_id = self._next_id('radio')
+        attrs = self._get_widget_attrs(node, widget_id)
+        attrs_str = self._format_widget_attrs(attrs)
+
+        # RadioSet in Textual or OptionList
+        if node.options:
+            opts = [o.strip() for o in node.options.split(',')]
+            opts_str = ', '.join(py_string(o) for o in opts)
+            py.line(f'yield OptionList({opts_str})')
+        else:
+            py.line(f'yield OptionList()')
+
     def _render_switch(self, node: UISwitchNode, py: PyBuilder):
-        py.line(f'yield Switch()')
+        widget_id = self._next_id('sw')
+        attrs = self._get_widget_attrs(node, widget_id)
+
+        parts = []
+        if 'id' in attrs:
+            parts.append(f'id={py_string(attrs["id"])}')
+        if 'classes' in attrs:
+            parts.append(f'classes={py_string(attrs["classes"])}')
+
+        py.line(f'yield Switch({", ".join(parts)})')
 
     def _render_select(self, node: UISelectNode, py: PyBuilder):
+        widget_id = self._next_id('sel')
+        attrs = self._get_widget_attrs(node, widget_id)
+
         if node.options:
             opts = [o.strip() for o in node.options.split(',')]
             opts_str = ', '.join(f'({py_string(o)}, {py_string(o)})' for o in opts)
@@ -294,19 +615,64 @@ class UITextualAdapter:
             py.line(f'yield Select([])')
 
     def _render_table(self, node: UITableNode, py: PyBuilder):
-        py.line(f'yield DataTable()')
+        widget_id = self._next_id('table')
+        attrs = self._get_widget_attrs(node, widget_id)
+
+        parts = []
+        if 'id' in attrs:
+            parts.append(f'id={py_string(attrs["id"])}')
+        if 'classes' in attrs:
+            parts.append(f'classes={py_string(attrs["classes"])}')
+
+        py.line(f'yield DataTable({", ".join(parts)})')
 
     def _render_progress(self, node: UIProgressNode, py: PyBuilder):
-        py.line(f'yield ProgressBar()')
+        widget_id = self._next_id('prog')
+        attrs = self._get_widget_attrs(node, widget_id)
+
+        parts = []
+        if 'id' in attrs:
+            parts.append(f'id={py_string(attrs["id"])}')
+        if 'classes' in attrs:
+            parts.append(f'classes={py_string(attrs["classes"])}')
+
+        py.line(f'yield ProgressBar({", ".join(parts)})')
 
     def _render_tree(self, node: UITreeNode, py: PyBuilder):
-        py.line(f'yield Tree("Tree")')
+        widget_id = self._next_id('tree')
+        attrs = self._get_widget_attrs(node, widget_id)
+
+        parts = [py_string("Tree")]
+        if 'id' in attrs:
+            parts.append(f'id={py_string(attrs["id"])}')
+        if 'classes' in attrs:
+            parts.append(f'classes={py_string(attrs["classes"])}')
+
+        py.line(f'yield Tree({", ".join(parts)})')
 
     def _render_log(self, node: UILogNode, py: PyBuilder):
-        py.line(f'yield RichLog()')
+        widget_id = self._next_id('log')
+        attrs = self._get_widget_attrs(node, widget_id)
+
+        parts = []
+        if 'id' in attrs:
+            parts.append(f'id={py_string(attrs["id"])}')
+        if 'classes' in attrs:
+            parts.append(f'classes={py_string(attrs["classes"])}')
+
+        py.line(f'yield RichLog({", ".join(parts)})')
 
     def _render_markdown(self, node: UIMarkdownNode, py: PyBuilder):
-        py.line(f'yield Markdown({py_string(node.content)})')
+        widget_id = self._next_id('md')
+        attrs = self._get_widget_attrs(node, widget_id)
+
+        parts = [py_string(node.content)]
+        if 'id' in attrs:
+            parts.append(f'id={py_string(attrs["id"])}')
+        if 'classes' in attrs:
+            parts.append(f'classes={py_string(attrs["classes"])}')
+
+        py.line(f'yield Markdown({", ".join(parts)})')
 
     def _render_header(self, node: UIHeaderNode, py: PyBuilder):
         py.line(f'yield Header()')
@@ -318,39 +684,86 @@ class UITextualAdapter:
         py.line(f'yield Rule()')
 
     def _render_loading(self, node: UILoadingNode, py: PyBuilder):
-        py.line(f'yield LoadingIndicator()')
+        widget_id = self._next_id('loading')
+        attrs = self._get_widget_attrs(node, widget_id)
+
+        parts = []
+        if 'id' in attrs:
+            parts.append(f'id={py_string(attrs["id"])}')
+        if 'classes' in attrs:
+            parts.append(f'classes={py_string(attrs["classes"])}')
+
+        py.line(f'yield LoadingIndicator({", ".join(parts)})')
 
     def _render_image(self, node: UIImageNode, py: PyBuilder):
+        """Render image as placeholder text (graceful degradation)."""
+        self._features_used.add('image')
+        widget_id = self._next_id('img')
+
+        # Create descriptive placeholder
         src = node.src or ''
-        py.line(f'yield Static({py_string(f"[image: {src}]")})')
+        alt = node.alt or src.split('/')[-1] if src else 'image'
+        placeholder = f"🖼 [{alt}]"
+
+        py.line(f'yield Static({py_string(placeholder)}, id={py_string(widget_id)}, classes="q-image-placeholder")')
 
     def _render_link(self, node: UILinkNode, py: PyBuilder):
-        py.line(f'yield Static({py_string(node.content)})')
+        """Render link as styled text (graceful degradation)."""
+        if node.external:
+            self._features_used.add('link_external')
+
+        widget_id = self._next_id('link')
+        content = node.content
+        if node.to:
+            content = f"{content} → {node.to}"
+
+        py.line(f'yield Static({py_string(content)}, id={py_string(widget_id)}, classes="q-link")')
 
     def _render_badge(self, node: UIBadgeNode, py: PyBuilder):
-        py.line(f'yield Static({py_string(node.content)})')
+        widget_id = self._next_id('badge')
+        classes = 'q-badge'
+        if node.variant:
+            classes += f' q-badge-{node.variant}'
+
+        py.line(f'yield Static({py_string(node.content)}, id={py_string(widget_id)}, classes={py_string(classes)})')
 
     def _render_list(self, node: UIListNode, py: PyBuilder):
-        py.line(f'with Vertical():')
+        widget_id = self._next_id('list')
+        attrs = self._get_widget_attrs(node, widget_id)
+        attrs_str = self._format_widget_attrs(attrs)
+
+        if attrs_str:
+            py.line(f'with Vertical({attrs_str}):')
+        else:
+            py.line(f'with Vertical():')
         py.indent()
         self._render_children(node.children, py)
         py.dedent()
 
     def _render_item(self, node: UIItemNode, py: PyBuilder):
-        py.line(f'with Horizontal():')
+        widget_id = self._next_id('item')
+        attrs = self._get_widget_attrs(node, widget_id)
+        attrs_str = self._format_widget_attrs(attrs)
+
+        if attrs_str:
+            py.line(f'with Horizontal({attrs_str}):')
+        else:
+            py.line(f'with Horizontal():')
         py.indent()
         self._render_children(node.children, py)
         py.dedent()
 
     def _render_menu(self, node: UIMenuNode, py: PyBuilder):
         # OptionList for menu
+        widget_id = self._next_id('menu')
         options = [c for c in node.children if isinstance(c, UIOptionNode)]
         if options:
             opts_str = ', '.join(py_string(o.label or o.value or '') for o in options)
-            py.line(f'yield OptionList({opts_str})')
+            py.line(f'yield OptionList({opts_str}, id={py_string(widget_id)})')
         else:
-            py.line(f'yield OptionList()')
+            py.line(f'yield OptionList(id={py_string(widget_id)})')
 
     def _render_option(self, node: UIOptionNode, py: PyBuilder):
         # Standalone options are unusual, render as Static
-        py.line(f'yield Static({py_string(node.label or node.value or "")})')
+        widget_id = self._next_id('opt')
+        py.line(f'yield Static({py_string(node.label or node.value or "")}, id={py_string(widget_id)})')

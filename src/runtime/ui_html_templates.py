@@ -119,10 +119,10 @@ CSS_THEME = """\
   --q-font-2xl: 2rem;
 }
 
-body { background: var(--q-bg); color: var(--q-text); }
+body { background: var(--q-bg); color: var(--q-text); min-height: 100vh; }
 
 /* Window */
-.q-window { max-width: 1200px; margin: 0 auto; padding: 16px; }
+.q-window { width: 100%; min-height: 100vh; display: flex; flex-direction: column; }
 
 /* Panel */
 .q-panel { border: 1px solid var(--q-border); border-radius: var(--q-radius); padding: 16px; box-shadow: var(--q-shadow); }
@@ -221,6 +221,19 @@ details.q-section .q-section-content { padding: 12px 16px; border-top: 1px solid
 .q-divider { background: var(--q-border); flex-shrink: 0; }
 .q-dividedbox-h > .q-divider { width: 4px; cursor: col-resize; }
 .q-dividedbox-v > .q-divider { height: 4px; cursor: row-resize; }
+
+/* Responsive Layout */
+.q-window > header, .q-window > .q-header { flex-shrink: 0; }
+.q-window > footer, .q-window > .q-footer { flex-shrink: 0; margin-top: auto; }
+.q-window > div:not(.q-header):not(.q-footer) { flex: 1; overflow: auto; }
+.q-panel { flex-shrink: 0; }
+
+/* Media Queries for smaller screens */
+@media (max-width: 900px) {
+  .q-window > div[style*="flex-direction: row"] { flex-direction: column !important; }
+  .q-window > div > div[style*="width: 280px"] { width: 100% !important; }
+  .q-window > div > div[style*="width: 50%"] { width: 100% !important; }
+}
 """
 
 
