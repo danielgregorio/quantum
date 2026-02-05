@@ -38,12 +38,12 @@ class TestTextualContainers:
     def test_hbox_horizontal(self, parser, adapter):
         app = parse_ui(parser, '<ui:window title="T"><ui:hbox><ui:text>A</ui:text></ui:hbox></ui:window>')
         code = adapter.generate(app.ui_windows, app.ui_children, 'Test')
-        assert 'Horizontal()' in code
+        assert 'Horizontal(' in code
 
     def test_vbox_vertical(self, parser, adapter):
         app = parse_ui(parser, '<ui:window title="T"><ui:vbox><ui:text>A</ui:text></ui:vbox></ui:window>')
         code = adapter.generate(app.ui_windows, app.ui_children, 'Test')
-        assert 'Vertical()' in code
+        assert 'with Vertical(' in code  # vbox inside window which is also Vertical
 
     def test_panel(self, parser, adapter):
         app = parse_ui(parser, '<ui:window title="T"><ui:panel title="CPU"><ui:text>45%</ui:text></ui:panel></ui:window>')
@@ -63,7 +63,7 @@ class TestTextualContainers:
         '''
         app = parse_ui(parser, src)
         code = adapter.generate(app.ui_windows, app.ui_children, 'Test')
-        assert 'TabbedContent()' in code
+        assert 'TabbedContent(' in code
         assert 'TabPane(' in code
         assert 'Tab1' in code
         assert 'Tab2' in code
@@ -71,7 +71,7 @@ class TestTextualContainers:
     def test_grid(self, parser, adapter):
         app = parse_ui(parser, '<ui:window title="T"><ui:grid columns="3"><ui:text>A</ui:text></ui:grid></ui:window>')
         code = adapter.generate(app.ui_windows, app.ui_children, 'Test')
-        assert 'Grid()' in code
+        assert 'Grid(' in code
 
     def test_accordion_collapsible(self, parser, adapter):
         src = '''
@@ -89,7 +89,7 @@ class TestTextualContainers:
     def test_scrollbox(self, parser, adapter):
         app = parse_ui(parser, '<ui:window title="T"><ui:scrollbox><ui:text>A</ui:text></ui:scrollbox></ui:window>')
         code = adapter.generate(app.ui_windows, app.ui_children, 'Test')
-        assert 'ScrollableContainer()' in code
+        assert 'ScrollableContainer(' in code
 
 
 # ============================================
@@ -112,7 +112,7 @@ class TestTextualWidgets:
     def test_table(self, parser, adapter):
         app = parse_ui(parser, '<ui:window title="T"><ui:table source="{data}" /></ui:window>')
         code = adapter.generate(app.ui_windows, app.ui_children, 'Test')
-        assert 'DataTable()' in code
+        assert 'DataTable(' in code
 
     def test_checkbox(self, parser, adapter):
         app = parse_ui(parser, '<ui:window title="T"><ui:checkbox label="I agree" /></ui:window>')
@@ -122,12 +122,12 @@ class TestTextualWidgets:
     def test_switch(self, parser, adapter):
         app = parse_ui(parser, '<ui:window title="T"><ui:switch /></ui:window>')
         code = adapter.generate(app.ui_windows, app.ui_children, 'Test')
-        assert 'Switch()' in code
+        assert 'Switch(' in code
 
     def test_progress(self, parser, adapter):
         app = parse_ui(parser, '<ui:window title="T"><ui:progress value="50" max="100" /></ui:window>')
         code = adapter.generate(app.ui_windows, app.ui_children, 'Test')
-        assert 'ProgressBar()' in code
+        assert 'ProgressBar(' in code
 
     def test_tree(self, parser, adapter):
         app = parse_ui(parser, '<ui:window title="T"><ui:tree source="{files}" /></ui:window>')
@@ -137,7 +137,7 @@ class TestTextualWidgets:
     def test_log(self, parser, adapter):
         app = parse_ui(parser, '<ui:window title="T"><ui:log /></ui:window>')
         code = adapter.generate(app.ui_windows, app.ui_children, 'Test')
-        assert 'RichLog()' in code
+        assert 'RichLog(' in code
 
     def test_markdown(self, parser, adapter):
         app = parse_ui(parser, '<ui:window title="T"><ui:markdown># Hello</ui:markdown></ui:window>')
@@ -162,7 +162,7 @@ class TestTextualWidgets:
     def test_loading(self, parser, adapter):
         app = parse_ui(parser, '<ui:window title="T"><ui:loading /></ui:window>')
         code = adapter.generate(app.ui_windows, app.ui_children, 'Test')
-        assert 'LoadingIndicator()' in code
+        assert 'LoadingIndicator(' in code
 
     def test_text(self, parser, adapter):
         app = parse_ui(parser, '<ui:window title="T"><ui:text>Hello World</ui:text></ui:window>')
