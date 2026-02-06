@@ -1,0 +1,463 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Quantum",
+  "scopeName": "source.quantum",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#doctype" },
+    { "include": "#cdata" },
+    { "include": "#quantum-tags" },
+    { "include": "#ui-tags" },
+    { "include": "#game-tags" },
+    { "include": "#terminal-tags" },
+    { "include": "#testing-tags" },
+    { "include": "#component-call-tags" },
+    { "include": "#html-tags" }
+  ],
+  "repository": {
+    "comments": {
+      "name": "comment.block.xml.quantum",
+      "begin": "<!--",
+      "end": "-->",
+      "patterns": [
+        {
+          "name": "invalid.illegal.bad-comments-or-CDATA.xml.quantum",
+          "match": "--(?!>)"
+        }
+      ]
+    },
+    "doctype": {
+      "name": "meta.doctype.xml.quantum",
+      "begin": "<!DOCTYPE",
+      "end": ">",
+      "patterns": [
+        { "include": "#string-double-quoted" },
+        { "include": "#string-single-quoted" }
+      ]
+    },
+    "cdata": {
+      "name": "string.unquoted.cdata.xml.quantum",
+      "begin": "<!\\[CDATA\\[",
+      "end": "\\]\\]>"
+    },
+    "quantum-tags": {
+      "patterns": [
+        { "include": "#quantum-tag-self-closing" },
+        { "include": "#quantum-tag-open" },
+        { "include": "#quantum-tag-close" }
+      ]
+    },
+    "quantum-tag-self-closing": {
+      "name": "meta.tag.quantum.self-closing",
+      "begin": "(<)(q:)(component|application|job|param|return|route|set|loop|if|elseif|else|function|dispatchEvent|onEvent|script|query|invoke|data|log|dump|import|slot|action|redirect|flash|file|mail|transaction|llm|message|prompt|knowledge|source|persist|var|header|column|field|transform|filter|sort|limit|compute)(?=\\s|/>)",
+      "end": "/>",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.quantum" },
+        "2": { "name": "entity.name.tag.namespace.quantum" },
+        "3": { "name": "entity.name.tag.localname.quantum" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.tag.end.quantum" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "quantum-tag-open": {
+      "name": "meta.tag.quantum.open",
+      "begin": "(<)(q:)(component|application|job|param|return|route|set|loop|if|elseif|else|function|dispatchEvent|onEvent|script|query|invoke|data|log|dump|import|slot|action|redirect|flash|file|mail|transaction|llm|message|prompt|knowledge|source|persist|var|header|column|field|transform|filter|sort|limit|compute)(?=\\s|>)",
+      "end": ">",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.quantum" },
+        "2": { "name": "entity.name.tag.namespace.quantum" },
+        "3": { "name": "entity.name.tag.localname.quantum" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.tag.end.quantum" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "quantum-tag-close": {
+      "name": "meta.tag.quantum.close",
+      "match": "(</)(q:)(component|application|job|param|return|route|set|loop|if|elseif|else|function|dispatchEvent|onEvent|script|query|invoke|data|log|dump|import|slot|action|redirect|flash|file|mail|transaction|llm|message|prompt|knowledge|source|persist|var|header|column|field|transform|filter|sort|limit|compute)(>)",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.begin.quantum" },
+        "2": { "name": "entity.name.tag.namespace.quantum" },
+        "3": { "name": "entity.name.tag.localname.quantum" },
+        "4": { "name": "punctuation.definition.tag.end.quantum" }
+      }
+    },
+    "ui-tags": {
+      "patterns": [
+        { "include": "#ui-tag-self-closing" },
+        { "include": "#ui-tag-open" },
+        { "include": "#ui-tag-close" }
+      ]
+    },
+    "ui-tag-self-closing": {
+      "name": "meta.tag.ui.self-closing",
+      "begin": "(<)(ui:)(window|hbox|vbox|panel|tabpanel|tab|grid|accordion|section|dividedbox|form|formitem|spacer|scrollbox|text|button|input|checkbox|radio|switch|select|table|column|list|item|image|link|progress|tree|menu|option|log|markdown|header|footer|rule|loading|badge|validator|animate|card|card-header|card-body|card-footer|modal|chart|avatar|tooltip|dropdown|alert|breadcrumb|breadcrumb-item|pagination|skeleton|theme|color)(?=\\s|/>)",
+      "end": "/>",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.ui" },
+        "2": { "name": "entity.name.tag.namespace.ui" },
+        "3": { "name": "entity.name.tag.localname.ui" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.tag.end.ui" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "ui-tag-open": {
+      "name": "meta.tag.ui.open",
+      "begin": "(<)(ui:)(window|hbox|vbox|panel|tabpanel|tab|grid|accordion|section|dividedbox|form|formitem|spacer|scrollbox|text|button|input|checkbox|radio|switch|select|table|column|list|item|image|link|progress|tree|menu|option|log|markdown|header|footer|rule|loading|badge|validator|animate|card|card-header|card-body|card-footer|modal|chart|avatar|tooltip|dropdown|alert|breadcrumb|breadcrumb-item|pagination|skeleton|theme|color)(?=\\s|>)",
+      "end": ">",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.ui" },
+        "2": { "name": "entity.name.tag.namespace.ui" },
+        "3": { "name": "entity.name.tag.localname.ui" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.tag.end.ui" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "ui-tag-close": {
+      "name": "meta.tag.ui.close",
+      "match": "(</)(ui:)(window|hbox|vbox|panel|tabpanel|tab|grid|accordion|section|dividedbox|form|formitem|spacer|scrollbox|text|button|input|checkbox|radio|switch|select|table|column|list|item|image|link|progress|tree|menu|option|log|markdown|header|footer|rule|loading|badge|validator|animate|card|card-header|card-body|card-footer|modal|chart|avatar|tooltip|dropdown|alert|breadcrumb|breadcrumb-item|pagination|skeleton|theme|color)(>)",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.begin.ui" },
+        "2": { "name": "entity.name.tag.namespace.ui" },
+        "3": { "name": "entity.name.tag.localname.ui" },
+        "4": { "name": "punctuation.definition.tag.end.ui" }
+      }
+    },
+    "game-tags": {
+      "patterns": [
+        { "include": "#game-tag-self-closing" },
+        { "include": "#game-tag-open" },
+        { "include": "#game-tag-close" }
+      ]
+    },
+    "game-tag-self-closing": {
+      "name": "meta.tag.game.self-closing",
+      "begin": "(<)(qg:)(scene|sprite|physics|collider|animation|camera|input|sound|particle|timer|spawn|hud|tween|tilemap|layer|behavior|use|prefab|instance|group|statemachine|state|transition)(?=\\s|/>)",
+      "end": "/>",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.game" },
+        "2": { "name": "entity.name.tag.namespace.game" },
+        "3": { "name": "entity.name.tag.localname.game" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.tag.end.game" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "game-tag-open": {
+      "name": "meta.tag.game.open",
+      "begin": "(<)(qg:)(scene|sprite|physics|collider|animation|camera|input|sound|particle|timer|spawn|hud|tween|tilemap|layer|behavior|use|prefab|instance|group|statemachine|state|transition)(?=\\s|>)",
+      "end": ">",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.game" },
+        "2": { "name": "entity.name.tag.namespace.game" },
+        "3": { "name": "entity.name.tag.localname.game" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.tag.end.game" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "game-tag-close": {
+      "name": "meta.tag.game.close",
+      "match": "(</)(qg:)(scene|sprite|physics|collider|animation|camera|input|sound|particle|timer|spawn|hud|tween|tilemap|layer|behavior|use|prefab|instance|group|statemachine|state|transition)(>)",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.begin.game" },
+        "2": { "name": "entity.name.tag.namespace.game" },
+        "3": { "name": "entity.name.tag.localname.game" },
+        "4": { "name": "punctuation.definition.tag.end.game" }
+      }
+    },
+    "terminal-tags": {
+      "patterns": [
+        { "include": "#terminal-tag-self-closing" },
+        { "include": "#terminal-tag-open" },
+        { "include": "#terminal-tag-close" }
+      ]
+    },
+    "terminal-tag-self-closing": {
+      "name": "meta.tag.terminal.self-closing",
+      "begin": "(<)(qt:)(screen|keybinding|service|css|widget|static|label|button|input|switch|select|datatable|tree|log|progress|placeholder|container|horizontal|vertical|center|scrollable)(?=\\s|/>)",
+      "end": "/>",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.terminal" },
+        "2": { "name": "entity.name.tag.namespace.terminal" },
+        "3": { "name": "entity.name.tag.localname.terminal" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.tag.end.terminal" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "terminal-tag-open": {
+      "name": "meta.tag.terminal.open",
+      "begin": "(<)(qt:)(screen|keybinding|service|css|widget|static|label|button|input|switch|select|datatable|tree|log|progress|placeholder|container|horizontal|vertical|center|scrollable)(?=\\s|>)",
+      "end": ">",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.terminal" },
+        "2": { "name": "entity.name.tag.namespace.terminal" },
+        "3": { "name": "entity.name.tag.localname.terminal" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.tag.end.terminal" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "terminal-tag-close": {
+      "name": "meta.tag.terminal.close",
+      "match": "(</)(qt:)(screen|keybinding|service|css|widget|static|label|button|input|switch|select|datatable|tree|log|progress|placeholder|container|horizontal|vertical|center|scrollable)(>)",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.begin.terminal" },
+        "2": { "name": "entity.name.tag.namespace.terminal" },
+        "3": { "name": "entity.name.tag.localname.terminal" },
+        "4": { "name": "punctuation.definition.tag.end.terminal" }
+      }
+    },
+    "testing-tags": {
+      "patterns": [
+        { "include": "#testing-tag-self-closing" },
+        { "include": "#testing-tag-open" },
+        { "include": "#testing-tag-close" }
+      ]
+    },
+    "testing-tag-self-closing": {
+      "name": "meta.tag.testing.self-closing",
+      "begin": "(<)(qtest:)(suite|test|describe|it|expect|before|after|beforeEach|afterEach|fixture|mock|auth|browser|goto|click|fill|select|check|wait|screenshot|assert)(?=\\s|/>)",
+      "end": "/>",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.testing" },
+        "2": { "name": "entity.name.tag.namespace.testing" },
+        "3": { "name": "entity.name.tag.localname.testing" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.tag.end.testing" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "testing-tag-open": {
+      "name": "meta.tag.testing.open",
+      "begin": "(<)(qtest:)(suite|test|describe|it|expect|before|after|beforeEach|afterEach|fixture|mock|auth|browser|goto|click|fill|select|check|wait|screenshot|assert)(?=\\s|>)",
+      "end": ">",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.testing" },
+        "2": { "name": "entity.name.tag.namespace.testing" },
+        "3": { "name": "entity.name.tag.localname.testing" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.tag.end.testing" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "testing-tag-close": {
+      "name": "meta.tag.testing.close",
+      "match": "(</)(qtest:)(suite|test|describe|it|expect|before|after|beforeEach|afterEach|fixture|mock|auth|browser|goto|click|fill|select|check|wait|screenshot|assert)(>)",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.begin.testing" },
+        "2": { "name": "entity.name.tag.namespace.testing" },
+        "3": { "name": "entity.name.tag.localname.testing" },
+        "4": { "name": "punctuation.definition.tag.end.testing" }
+      }
+    },
+    "component-call-tags": {
+      "patterns": [
+        { "include": "#component-call-self-closing" },
+        { "include": "#component-call-open" },
+        { "include": "#component-call-close" }
+      ]
+    },
+    "component-call-self-closing": {
+      "name": "meta.tag.component-call.self-closing",
+      "begin": "(<)([A-Z][A-Za-z0-9]*)(?=\\s|/>)",
+      "end": "/>",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.component" },
+        "2": { "name": "entity.name.type.component.quantum" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.tag.end.component" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "component-call-open": {
+      "name": "meta.tag.component-call.open",
+      "begin": "(<)([A-Z][A-Za-z0-9]*)(?=\\s|>)",
+      "end": ">",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.component" },
+        "2": { "name": "entity.name.type.component.quantum" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.tag.end.component" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "component-call-close": {
+      "name": "meta.tag.component-call.close",
+      "match": "(</)([A-Z][A-Za-z0-9]*)(>)",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.begin.component" },
+        "2": { "name": "entity.name.type.component.quantum" },
+        "3": { "name": "punctuation.definition.tag.end.component" }
+      }
+    },
+    "html-tags": {
+      "patterns": [
+        { "include": "#html-tag-self-closing" },
+        { "include": "#html-tag-open" },
+        { "include": "#html-tag-close" }
+      ]
+    },
+    "html-tag-self-closing": {
+      "name": "meta.tag.html.self-closing",
+      "begin": "(<)([a-z][a-z0-9\\-]*)(?=\\s|/>)",
+      "end": "/>",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.html" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.tag.end.html" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "html-tag-open": {
+      "name": "meta.tag.html.open",
+      "begin": "(<)([a-z][a-z0-9\\-]*)(?=\\s|>)",
+      "end": ">",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.html" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.tag.end.html" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "html-tag-close": {
+      "name": "meta.tag.html.close",
+      "match": "(</)([a-z][a-z0-9\\-]*)(>)",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.html" },
+        "3": { "name": "punctuation.definition.tag.end.html" }
+      }
+    },
+    "tag-attributes": {
+      "patterns": [
+        { "include": "#attribute-with-databinding" },
+        { "include": "#attribute-with-value" },
+        { "include": "#attribute-boolean" }
+      ]
+    },
+    "attribute-with-databinding": {
+      "name": "meta.attribute.quantum",
+      "begin": "([a-zA-Z_:][a-zA-Z0-9_:\\-]*)\\s*(=)\\s*(\")",
+      "end": "\"",
+      "beginCaptures": {
+        "1": { "name": "entity.other.attribute-name.quantum" },
+        "2": { "name": "punctuation.separator.key-value.quantum" },
+        "3": { "name": "punctuation.definition.string.begin.quantum" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.string.end.quantum" }
+      },
+      "patterns": [
+        { "include": "#databinding-expression" },
+        {
+          "name": "string.quoted.double.quantum",
+          "match": "[^\"{}]+"
+        }
+      ]
+    },
+    "attribute-with-value": {
+      "name": "meta.attribute.quantum",
+      "match": "([a-zA-Z_:][a-zA-Z0-9_:\\-]*)\\s*(=)\\s*('[^']*')",
+      "captures": {
+        "1": { "name": "entity.other.attribute-name.quantum" },
+        "2": { "name": "punctuation.separator.key-value.quantum" },
+        "3": { "name": "string.quoted.single.quantum" }
+      }
+    },
+    "attribute-boolean": {
+      "name": "entity.other.attribute-name.quantum",
+      "match": "\\b([a-zA-Z_][a-zA-Z0-9_:\\-]*)(?=\\s|/?>)"
+    },
+    "databinding-expression": {
+      "name": "meta.embedded.expression.quantum",
+      "begin": "\\{",
+      "end": "\\}",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.expression.begin.quantum" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.expression.end.quantum" }
+      },
+      "patterns": [
+        {
+          "name": "variable.other.quantum",
+          "match": "[a-zA-Z_][a-zA-Z0-9_\\.\\[\\]]*"
+        },
+        {
+          "name": "keyword.operator.quantum",
+          "match": "[+\\-*/%<>=!&|?:]+"
+        },
+        {
+          "name": "constant.numeric.quantum",
+          "match": "\\d+(\\.\\d+)?"
+        },
+        {
+          "name": "string.quoted.single.quantum",
+          "match": "'[^']*'"
+        }
+      ]
+    },
+    "string-double-quoted": {
+      "name": "string.quoted.double.quantum",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        { "include": "#databinding-expression" }
+      ]
+    },
+    "string-single-quoted": {
+      "name": "string.quoted.single.quantum",
+      "begin": "'",
+      "end": "'"
+    }
+  }
+}
