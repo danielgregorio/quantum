@@ -3,9 +3,14 @@ AST Node for State Management (q:set)
 
 This module contains the SetNode class, which represents the <q:set> tag
 for state management in Quantum Language.
+
+State Persistence Support:
+    - persist="local" - localStorage (browser) or file (desktop)
+    - persist="session" - sessionStorage (browser) or memory (desktop)
+    - persist="sync" - synchronized across tabs/windows (browser) or network (desktop)
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 # Import base class from parent AST nodes
 import sys
@@ -50,8 +55,14 @@ class SetNode(QuantumNode):
         self.key = None
         self.source = None
 
+        # State Persistence
+        self.persist: Optional[str] = None  # None, "local", "session", "sync"
+        self.persist_key: Optional[str] = None  # Custom storage key (defaults to name)
+        self.persist_encrypt: bool = False  # Encrypt persisted data
+        self.persist_ttl: Optional[int] = None  # TTL in seconds for cached persistence
+
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             "type": "set",
             "name": self.name,
             "value_type": self.type,
@@ -74,6 +85,15 @@ class SetNode(QuantumNode):
                 "maxlength": self.maxlength
             }
         }
+        # Add persistence info if enabled
+        if self.persist:
+            result["persistence"] = {
+                "scope": self.persist,
+                "key": self.persist_key or self.name,
+                "encrypt": self.persist_encrypt,
+                "ttl": self.persist_ttl
+            }
+        return result
 
     def validate(self) -> List[str]:
         errors = []
@@ -112,4 +132,93 @@ class SetNode(QuantumNode):
             if self.maxlength and len(str(self.value)) > int(self.maxlength):
                 errors.append(f"Value length {len(str(self.value))} exceeds maxlength {self.maxlength}")
 
+        # Validar persist scope
+        if self.persist:
+            valid_persist_scopes = ['local', 'session', 'sync']
+            if self.persist not in valid_persist_scopes:
+                errors.append(f"Invalid persist scope: {self.persist}. Must be one of {valid_persist_scopes}")
+
         return errors
+
+
+class PersistNode(QuantumNode):
+    """
+    Represents a <q:persist> - Explicit persistence configuration.
+
+    Allows fine-grained control over state persistence beyond the persist attribute on q:set.
+
+    Examples:
+      <q:persist scope="local" prefix="myapp_">
+        <q:var name="theme" />
+        <q:var name="locale" />
+      </q:persist>
+
+      <q:persist scope="sync" key="user_preferences" encrypt="true">
+        <q:var name="darkMode" />
+        <q:var name="fontSize" />
+      </q:persist>
+
+    Attributes:
+      scope: "local" (localStorage), "session" (sessionStorage), "sync" (cross-tab/network)
+      prefix: Optional prefix for all storage keys
+      key: If set, all vars are stored under this single key as an object
+      encrypt: Whether to encrypt persisted data
+      ttl: Time-to-live in seconds (for cache invalidation)
+      storage: Override storage backend ("localStorage", "indexedDB", "file", "db")
+    """
+
+    def __init__(
+        self,
+        scope: str = "local",
+        prefix: Optional[str] = None,
+        key: Optional[str] = None,
+        encrypt: bool = False,
+        ttl: Optional[int] = None,
+        storage: Optional[str] = None
+    ):
+        self.scope = scope
+        self.prefix = prefix
+        self.key = key
+        self.encrypt = encrypt
+        self.ttl = ttl
+        self.storage = storage
+        self.variables: List[str] = []  # List of variable names to persist
+
+    def add_variable(self, name: str):
+        """Add a variable name to persist."""
+        self.variables.append(name)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "persist",
+            "scope": self.scope,
+            "prefix": self.prefix,
+            "key": self.key,
+            "encrypt": self.encrypt,
+            "ttl": self.ttl,
+            "storage": self.storage,
+            "variables": self.variables
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+
+        # Validate scope
+        valid_scopes = ['local', 'session', 'sync']
+        if self.scope not in valid_scopes:
+            errors.append(f"Invalid persist scope: {self.scope}. Must be one of {valid_scopes}")
+
+        # Validate storage backend if specified
+        if self.storage:
+            valid_storage = ['localStorage', 'sessionStorage', 'indexedDB', 'file', 'db']
+            if self.storage not in valid_storage:
+                errors.append(f"Invalid storage backend: {self.storage}. Must be one of {valid_storage}")
+
+        # Validate variables
+        if not self.variables:
+            errors.append("q:persist must contain at least one q:var element")
+
+        return errors
+
+    def __repr__(self):
+        return f'<PersistNode scope={self.scope} vars={len(self.variables)}>'

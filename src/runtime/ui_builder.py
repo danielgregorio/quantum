@@ -8,11 +8,13 @@ Supports multiple targets:
   - html: HTML/CSS standalone page
   - textual: Python Textual TUI application
   - desktop: Python pywebview desktop application (with JS bridge)
+  - mobile / react-native: React Native mobile application
 
 Usage:
     builder = UIBuilder()
     code = builder.build(app_node, target='html')
     builder.build_to_file(app_node, target='textual', output_path='app.py')
+    builder.build_to_file(app_node, target='mobile', output_path='App.js')
 """
 
 from pathlib import Path
@@ -48,10 +50,13 @@ class UIBuilder:
         if not windows and not ui_children:
             raise UIBuildError("No UI elements found in application")
 
+        # Get theme from application
+        theme = getattr(app, 'ui_theme', None)
+
         if target == 'html':
             from runtime.ui_html_adapter import UIHtmlAdapter
             adapter = UIHtmlAdapter()
-            return adapter.generate(windows, ui_children, title)
+            return adapter.generate(windows, ui_children, title, theme=theme)
         elif target == 'textual':
             from runtime.ui_textual_adapter import UITextualAdapter
             adapter = UITextualAdapter()
@@ -69,8 +74,21 @@ class UIBuilder:
                 functions=functions,
                 state_vars=state_vars
             )
+        elif target in ('mobile', 'react-native'):
+            from runtime.ui_mobile_adapter import UIReactNativeAdapter
+            adapter = UIReactNativeAdapter()
+
+            # Extract functions and state for React Native hooks
+            functions = self._extract_functions(app)
+            state_vars = self._extract_state(app)
+
+            return adapter.generate(
+                windows, ui_children, title,
+                functions=functions,
+                state_vars=state_vars
+            )
         else:
-            raise UIBuildError(f"Unknown target: {target}. Must be html, textual, or desktop")
+            raise UIBuildError(f"Unknown target: {target}. Must be html, textual, desktop, or mobile")
 
     def build_to_file(self, app: ApplicationNode, target: str = 'html',
                       output_path: Optional[str] = None) -> str:
@@ -78,7 +96,12 @@ class UIBuilder:
         code = self.build(app, target)
 
         if output_path is None:
-            ext = '.html' if target == 'html' else '.py'
+            if target == 'html':
+                ext = '.html'
+            elif target in ('mobile', 'react-native'):
+                ext = '.js'
+            else:
+                ext = '.py'
             output_path = f"{app.app_id}{ext}"
 
         path = Path(output_path)

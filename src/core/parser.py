@@ -12,7 +12,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from core.ast_nodes import (
     QuantumNode, ComponentNode, ApplicationNode, JobNode,
-    QuantumParam, QuantumReturn, QuantumRoute, IfNode, LoopNode, SetNode,
+    QuantumParam, QuantumReturn, QuantumRoute, IfNode, LoopNode, SetNode, PersistNode,
     FunctionNode, DispatchEventNode, OnEventNode, RestConfig, QueryNode, QueryParamNode,
     InvokeNode, InvokeHeaderNode, DataNode, ColumnNode, FieldNode, TransformNode,
     FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode,
@@ -43,6 +43,7 @@ from core.features.testing_engine.src.ast_nodes import (
 )
 from core.features.ui_engine.src.parser import UIParser, UIParseError
 from core.features.ui_engine.src.ast_nodes import UIWindowNode
+from core.features.theming.src import UIThemeNode
 
 class QuantumParseError(Exception):
     """Quantum parsing error"""
@@ -305,6 +306,9 @@ class QuantumParser:
             elif child_type == 'knowledge':
                 knowledge_node = parse_knowledge(child)
                 component.add_statement(knowledge_node)
+            elif child_type == 'persist':
+                persist_node = self._parse_persist_statement(child)
+                component.add_statement(persist_node)
 
             # Component Composition (Phase 2)
             elif child_type == 'import':
@@ -470,6 +474,17 @@ class QuantumParser:
         set_node.key = set_element.get('key')
         set_node.source = set_element.get('source')
 
+        # State Persistence
+        set_node.persist = set_element.get('persist')  # "local", "session", "sync"
+        set_node.persist_key = set_element.get('persistKey')  # Custom storage key
+        set_node.persist_encrypt = set_element.get('persistEncrypt', 'false').lower() == 'true'
+        persist_ttl = set_element.get('persistTtl')
+        if persist_ttl:
+            try:
+                set_node.persist_ttl = int(persist_ttl)
+            except ValueError:
+                pass
+
         return set_node
 
     def _parse_statement(self, element: ET.Element) -> Optional[QuantumNode]:
@@ -517,6 +532,8 @@ class QuantumParser:
             return self._parse_llm_statement(element)
         elif element_type == 'knowledge':
             return parse_knowledge(element)
+        elif element_type == 'persist':
+            return self._parse_persist_statement(element)
 
         # Component Composition (Phase 2)
         elif element_type == 'import':
@@ -542,6 +559,15 @@ class QuantumParser:
 
         app = ApplicationNode(app_id, app_type)
         app.engine = root.get('engine')
+
+        # Parse theme attribute for UI applications
+        theme_attr = root.get('theme')
+        if theme_attr and app_type == 'ui':
+            app.ui_theme_preset = theme_attr
+            # Create a UIThemeNode from the attribute
+            theme_node = UIThemeNode()
+            theme_node.preset = theme_attr
+            app.ui_theme = theme_node
 
         # Parse q:route elements
         for route_el in self._find_all_elements(root, 'route'):
@@ -670,6 +696,9 @@ class QuantumParser:
                 node = ui_parser.parse_ui_element(local_name, child)
                 if isinstance(node, UIWindowNode):
                     app.ui_windows.append(node)
+                elif isinstance(node, UIThemeNode):
+                    # ui:theme overrides any theme attribute
+                    app.ui_theme = node
                 else:
                     app.ui_children.append(node)
             elif ns == 'quantum':
@@ -1801,3 +1830,55 @@ class QuantumParser:
                     llm_node.messages.append(LLMMessageNode(role, content))
 
         return llm_node
+
+    # ============================================
+    # STATE PERSISTENCE PARSING (q:persist)
+    # ============================================
+
+    def _parse_persist_statement(self, element: ET.Element) -> PersistNode:
+        """
+        Parse q:persist statement for explicit persistence configuration.
+
+        Examples:
+          <q:persist scope="local" prefix="myapp_">
+            <q:var name="theme" />
+            <q:var name="locale" />
+          </q:persist>
+
+          <q:persist scope="sync" key="user_prefs" encrypt="true">
+            <q:var name="darkMode" />
+            <q:var name="fontSize" />
+          </q:persist>
+        """
+        scope = element.get('scope', 'local')
+        prefix = element.get('prefix')
+        key = element.get('key')
+        encrypt = element.get('encrypt', 'false').lower() == 'true'
+        storage = element.get('storage')
+
+        ttl = None
+        ttl_attr = element.get('ttl')
+        if ttl_attr:
+            try:
+                ttl = int(ttl_attr)
+            except ValueError:
+                pass
+
+        persist_node = PersistNode(
+            scope=scope,
+            prefix=prefix,
+            key=key,
+            encrypt=encrypt,
+            ttl=ttl,
+            storage=storage
+        )
+
+        # Parse q:var children
+        for child in element:
+            child_type = self._get_element_name(child)
+            if child_type == 'var':
+                var_name = child.get('name')
+                if var_name:
+                    persist_node.add_variable(var_name)
+
+        return persist_node

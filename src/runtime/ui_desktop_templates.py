@@ -17,16 +17,21 @@ from typing import Any, Dict
 
 QUANTUM_STATE_CLASS = '''\
 class QuantumState:
-    """Reactive state container with JS notification."""
+    """Reactive state container with JS notification and persistence support."""
 
-    def __init__(self, window_ref):
+    def __init__(self, window_ref, persist_config: Dict[str, Dict] = None):
         self._window = window_ref
         self._state: Dict[str, Any] = {}
+        self._persist_config = persist_config or {}  # name -> {scope, key, ttl, encrypt}
+        self._storage_path = None
 
     def set(self, name: str, value: Any):
         """Set a state value and notify JS."""
         self._state[name] = value
         self._notify_js(name, value)
+        # Auto-persist if configured
+        if name in self._persist_config:
+            self._persist_value(name, value)
 
     def get(self, name: str, default: Any = None) -> Any:
         """Get a state value."""
@@ -38,8 +43,100 @@ class QuantumState:
             import json
             js_value = json.dumps(value)
             self._window.evaluate_js(
-                f"window.__quantumStateUpdate('{name}', {js_value})"
+                f"window.__quantumStateUpdate(\\'{name}\\', {js_value})"
             )
+
+    def _get_storage_path(self) -> str:
+        """Get the storage path for file-based persistence."""
+        if self._storage_path:
+            return self._storage_path
+        import os
+        import sys
+        # Use user data directory based on platform
+        if sys.platform == 'win32':
+            base = os.environ.get('LOCALAPPDATA', os.path.expanduser('~'))
+        elif sys.platform == 'darwin':
+            base = os.path.expanduser('~/Library/Application Support')
+        else:
+            base = os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
+        self._storage_path = os.path.join(base, 'quantum_app', 'persist')
+        os.makedirs(self._storage_path, exist_ok=True)
+        return self._storage_path
+
+    def _persist_value(self, name: str, value: Any):
+        """Persist a value to storage based on configuration."""
+        import json
+        import os
+        config = self._persist_config.get(name, {})
+        scope = config.get('scope', 'local')
+        key = config.get('key', name)
+        ttl = config.get('ttl')
+
+        storage_path = self._get_storage_path()
+        file_path = os.path.join(storage_path, f'{key}.json')
+
+        data = {'value': value}
+        if ttl:
+            import time
+            data['_ttl'] = int(time.time()) + ttl
+
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f)
+        except Exception as e:
+            print(f'Persist error for {name}: {e}')
+
+    def _restore_persisted(self, name: str) -> Any:
+        """Restore a persisted value from storage."""
+        import json
+        import os
+        config = self._persist_config.get(name, {})
+        key = config.get('key', name)
+
+        storage_path = self._get_storage_path()
+        file_path = os.path.join(storage_path, f'{key}.json')
+
+        if not os.path.exists(file_path):
+            return None
+
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # Check TTL expiration
+            if '_ttl' in data:
+                import time
+                if time.time() > data['_ttl']:
+                    os.remove(file_path)
+                    return None
+
+            return data.get('value')
+        except Exception as e:
+            print(f'Restore error for {name}: {e}')
+            return None
+
+    def restore_all_persisted(self):
+        """Restore all persisted values on startup."""
+        for name in self._persist_config:
+            value = self._restore_persisted(name)
+            if value is not None:
+                self._state[name] = value
+                self._notify_js(name, value)
+
+    def remove_persisted(self, name: str):
+        """Remove a persisted value from storage."""
+        import os
+        config = self._persist_config.get(name, {})
+        key = config.get('key', name)
+
+        storage_path = self._get_storage_path()
+        file_path = os.path.join(storage_path, f'{key}.json')
+
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f'Remove persist error for {name}: {e}')
 '''
 
 
@@ -54,11 +151,14 @@ class QuantumAPI:
     def __init__(self):
         self._window = None
         self.state = None
+        self._persist_config = {persist_config}
 
     def _set_window(self, window):
-        """Initialize window reference and state."""
+        """Initialize window reference and state with persistence."""
         self._window = window
-        self.state = QuantumState(window)
+        self.state = QuantumState(window, self._persist_config)
+        # Restore persisted values first
+        self.state.restore_all_persisted()
         # State initialization
 {state_init}
 

@@ -28,6 +28,7 @@ class UIDesktopAdapter:
     def __init__(self):
         self._functions: Dict[str, FunctionNode] = {}
         self._state_vars: Dict[str, Any] = {}
+        self._persist_config: Dict[str, Dict] = {}  # name -> {scope, key, ttl, encrypt}
 
     def generate(
         self,
@@ -36,6 +37,7 @@ class UIDesktopAdapter:
         title: str = "Quantum UI",
         functions: Optional[Dict[str, FunctionNode]] = None,
         state_vars: Optional[Dict[str, Any]] = None,
+        persist_config: Optional[Dict[str, Dict]] = None,
         width: int = 1024,
         height: int = 768,
     ) -> str:
@@ -47,6 +49,7 @@ class UIDesktopAdapter:
             title: Window title.
             functions: Dict of function name -> FunctionNode from q:function.
             state_vars: Dict of variable name -> initial value from q:set.
+            persist_config: Dict of variable name -> persistence config.
             width: Window width in pixels.
             height: Window height in pixels.
 
@@ -55,6 +58,7 @@ class UIDesktopAdapter:
         """
         self._functions = functions or {}
         self._state_vars = state_vars or {}
+        self._persist_config = persist_config or {}
 
         # Generate HTML with desktop_mode=True for event transformation
         html_adapter = UIHtmlAdapter(desktop_mode=True)
@@ -74,18 +78,50 @@ class UIDesktopAdapter:
         # Generate function methods
         function_methods = self._generate_functions()
 
+        # Generate persistence config as Python dict literal
+        persist_config_str = self._generate_persist_config()
+
         # Build the final Python code
         return DESKTOP_TEMPLATE.format(
             quantum_state_class=QUANTUM_STATE_CLASS,
             quantum_api_class=QUANTUM_API_CLASS.format(
                 state_init=state_init,
                 function_methods=function_methods,
+                persist_config=persist_config_str,
             ),
             title=repr(title),
             width=width,
             height=height,
             html_content=repr(html),
         )
+
+    def _generate_persist_config(self) -> str:
+        """Generate Python dict literal for persistence configuration.
+
+        Returns:
+            String representation of the persistence config dict.
+        """
+        if not self._persist_config:
+            return '{}'
+
+        parts = []
+        for name, config in self._persist_config.items():
+            scope = config.get('scope', 'local')
+            key = config.get('key', name)
+            ttl = config.get('ttl')
+            encrypt = config.get('encrypt', False)
+
+            config_parts = [
+                f"'scope': '{scope}'",
+                f"'key': '{key}'",
+                f"'encrypt': {encrypt}",
+            ]
+            if ttl:
+                config_parts.append(f"'ttl': {ttl}")
+
+            parts.append(f"'{name}': {{{', '.join(config_parts)}}}")
+
+        return '{' + ', '.join(parts) + '}'
 
     def _generate_state_init(self) -> str:
         """Generate Python code to initialize state variables.

@@ -234,6 +234,8 @@ class ApplicationNode(QuantumNode):
         self.ui_windows: List[QuantumNode] = []    # UIWindowNode list
         self.ui_children: List[QuantumNode] = []   # Top-level UI nodes (no window)
         self.ui_target: str = 'html'               # html, textual, desktop
+        self.ui_theme: Optional[QuantumNode] = None  # UIThemeNode (from ui:theme or theme attr)
+        self.ui_theme_preset: Optional[str] = None   # Theme preset from theme attribute
 
     def add_route(self, route: QuantumRoute):
         self.routes.append(route)
@@ -280,6 +282,10 @@ class ApplicationNode(QuantumNode):
             result["ui_children"] = [c.to_dict() for c in self.ui_children]
         if self.ui_target != 'html':
             result["ui_target"] = self.ui_target
+        if self.ui_theme:
+            result["ui_theme"] = self.ui_theme.to_dict()
+        if self.ui_theme_preset:
+            result["ui_theme_preset"] = self.ui_theme_preset
         return result
 
     def validate(self) -> List[str]:
@@ -461,9 +467,9 @@ class OnEventNode(QuantumNode):
         return errors
 
 
-# MIGRATED: SetNode moved to feature-based structure
+# MIGRATED: SetNode and PersistNode moved to feature-based structure
 # Import from new location (Option C migration)
-from .features.state_management.src.ast_node import SetNode
+from .features.state_management.src.ast_node import SetNode, PersistNode
 
 
 class QueryNode(QuantumNode):

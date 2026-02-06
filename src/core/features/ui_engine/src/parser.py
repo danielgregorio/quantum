@@ -19,7 +19,14 @@ from .ast_nodes import (
     UILinkNode, UIProgressNode, UITreeNode, UIMenuNode,
     UIOptionNode, UILogNode, UIMarkdownNode, UIHeaderNode,
     UIFooterNode, UIRuleNode, UILoadingNode, UIBadgeNode,
+    UIValidatorNode, UIAnimateNode, UIAnimationMixin,
+    # Component Library nodes
+    UICardNode, UICardHeaderNode, UICardBodyNode, UICardFooterNode,
+    UIModalNode, UIChartNode, UIAvatarNode, UITooltipNode,
+    UIDropdownNode, UIAlertNode, UIBreadcrumbNode, UIBreadcrumbItemNode,
+    UIPaginationNode, UISkeletonNode,
 )
+from core.features.theming.src import UIThemeNode, UIColorNode
 
 
 class UIParseError(Exception):
@@ -81,6 +88,26 @@ class UIParser:
         'rule': '_parse_ui_rule',
         'loading': '_parse_ui_loading',
         'badge': '_parse_ui_badge',
+        'validator': '_parse_ui_validator',
+        'animate': '_parse_ui_animate',
+        # Component Library
+        'card': '_parse_ui_card',
+        'card-header': '_parse_ui_card_header',
+        'card-body': '_parse_ui_card_body',
+        'card-footer': '_parse_ui_card_footer',
+        'modal': '_parse_ui_modal',
+        'chart': '_parse_ui_chart',
+        'avatar': '_parse_ui_avatar',
+        'tooltip': '_parse_ui_tooltip',
+        'dropdown': '_parse_ui_dropdown',
+        'alert': '_parse_ui_alert',
+        'breadcrumb': '_parse_ui_breadcrumb',
+        'breadcrumb-item': '_parse_ui_breadcrumb_item',
+        'pagination': '_parse_ui_pagination',
+        'skeleton': '_parse_ui_skeleton',
+        # Theming
+        'theme': '_parse_ui_theme',
+        'color': '_parse_ui_color',
     }
 
     def parse_ui_element(self, local_name: str, element: ET.Element):
@@ -147,6 +174,37 @@ class UIParser:
         node.ui_id = element.get('id')
         node.ui_class = element.get('class')
         node.visible = element.get('visible')
+
+    # ------------------------------------------------------------------
+    # Animation attributes helper
+    # ------------------------------------------------------------------
+
+    def _apply_animation_attrs(self, node, element: ET.Element):
+        """Apply animation attributes from XML element to node.
+
+        Supports:
+            - animate: Animation preset name (e.g., 'slide-in-left', 'fade-in')
+            - transition: Transition shorthand (e.g., 'scale:0.95:100ms')
+            - type: Animation type for ui:animate
+            - duration: Animation duration in ms or CSS format
+            - delay: Animation delay in ms or CSS format
+            - easing: Easing function (ease, ease-in, ease-out, linear, etc.)
+            - repeat: Repeat count ('1', '2', 'infinite')
+            - trigger: Animation trigger (on-load, on-hover, on-click, on-visible)
+            - direction: Animation direction (normal, reverse, alternate)
+        """
+        if not hasattr(node, '_init_animation_attrs'):
+            return
+
+        node.animate = element.get('animate')
+        node.transition = element.get('transition')
+        node.anim_type = element.get('type')
+        node.anim_duration = element.get('duration')
+        node.anim_delay = element.get('delay')
+        node.anim_easing = element.get('easing')
+        node.anim_repeat = element.get('repeat')
+        node.anim_trigger = element.get('trigger')
+        node.anim_direction = element.get('direction')
 
     # ------------------------------------------------------------------
     # Children dispatch - both ui: and q: tags
@@ -245,8 +303,29 @@ class UIParser:
     def _parse_ui_form(self, element: ET.Element) -> UIFormNode:
         node = UIFormNode()
         node.on_submit = element.get('on-submit')
+
+        # Validation attributes
+        node.validation_mode = element.get('validation', 'both')
+        node.error_display = element.get('error-display', 'inline')
+        node.novalidate = self._parse_bool(element.get('novalidate'))
+
         self._apply_layout_attrs(node, element)
-        self._parse_children(element, node)
+
+        # Parse children, separating validators from regular children
+        for child in element:
+            ns = self._get_namespace(child)
+            local = self._get_local_name(child)
+
+            if ns == 'ui' and local == 'validator':
+                # Parse validator and add to form's validator list
+                validator = self._parse_ui_validator(child)
+                node.add_validator(validator)
+            else:
+                # Regular child element
+                parsed = self._parse_child(child)
+                if parsed:
+                    node.add_child(parsed)
+
         return node
 
     def _parse_ui_formitem(self, element: ET.Element) -> UIFormItemNode:
@@ -297,6 +376,28 @@ class UIParser:
         node.input_type = element.get('type', 'text')
         node.on_change = element.get('on-change')
         node.on_submit = element.get('on-submit')
+
+        # Validation attributes
+        node.required = self._parse_bool(element.get('required'))
+        node.min = element.get('min')
+        node.max = element.get('max')
+        node.pattern = element.get('pattern')
+        node.error_message = element.get('error-message')
+
+        # Integer-based validation attributes
+        minlength_str = element.get('minlength')
+        if minlength_str:
+            node.minlength = self._parse_int(minlength_str)
+
+        maxlength_str = element.get('maxlength')
+        if maxlength_str:
+            node.maxlength = self._parse_int(maxlength_str)
+
+        # Custom validators (comma-separated list of validator names)
+        validators_str = element.get('validators')
+        if validators_str:
+            node.validators = [v.strip() for v in validators_str.split(',')]
+
         self._apply_layout_attrs(node, element)
         return node
 
@@ -446,4 +547,295 @@ class UIParser:
         node.variant = element.get('variant')
         node.badge_color = element.get('color')
         self._apply_layout_attrs(node, element)
+        return node
+
+    def _parse_ui_validator(self, element: ET.Element) -> UIValidatorNode:
+        """
+        Parse <ui:validator> custom validation rule.
+
+        Examples:
+            <ui:validator name="phone" pattern="^\d{10}$" message="Invalid phone" />
+            <ui:validator name="confirmPassword" match="password"
+                          message="Passwords must match" />
+            <ui:validator name="custom" expression="value.length > 5"
+                          message="Too short" />
+        """
+        node = UIValidatorNode()
+
+        # Identification
+        node.name = element.get('name')
+        node.field = element.get('field')
+
+        # Validation rules
+        node.rule_type = element.get('type')  # 'pattern', 'email', 'url', etc.
+        node.pattern = element.get('pattern')
+        node.match = element.get('match')
+        node.min = element.get('min')
+        node.max = element.get('max')
+        node.expression = element.get('expression')
+        node.server_expression = element.get('server-expression')
+
+        # Integer validation attributes
+        minlength_str = element.get('minlength')
+        if minlength_str:
+            node.minlength = self._parse_int(minlength_str)
+
+        maxlength_str = element.get('maxlength')
+        if maxlength_str:
+            node.maxlength = self._parse_int(maxlength_str)
+
+        # Error handling
+        node.message = element.get('message')
+        node.trigger = element.get('trigger', 'submit')
+
+        return node
+
+    # ------------------------------------------------------------------
+    # Animation
+    # ------------------------------------------------------------------
+
+    def _parse_ui_animate(self, element: ET.Element) -> UIAnimateNode:
+        """
+        Parse <ui:animate> animation wrapper container.
+
+        Wraps child elements and applies animation effects based on the
+        specified animation type, duration, trigger, and other properties.
+
+        Syntax examples:
+            <ui:animate type="fade" duration="300" trigger="on-load">
+                <ui:panel>Content fades in</ui:panel>
+            </ui:animate>
+
+            <ui:animate type="slide-left" delay="200" easing="ease-out">
+                <ui:text>Slides in from left</ui:text>
+            </ui:animate>
+
+            <ui:animate type="scale" trigger="on-hover" duration="150">
+                <ui:button>Hover me</ui:button>
+            </ui:animate>
+
+            <ui:animate type="bounce" repeat="infinite">
+                <ui:badge>NEW</ui:badge>
+            </ui:animate>
+
+        Attributes:
+            type: Animation type (fade, slide, scale, rotate, slide-left, etc.)
+            duration: Animation duration in ms (default: 300)
+            delay: Animation delay in ms (default: 0)
+            easing: Easing function (ease, ease-in, ease-out, linear, spring)
+            repeat: Repeat count (1, 2, ..., 'infinite')
+            trigger: When to trigger (on-load, on-hover, on-click, on-visible)
+            direction: Animation direction (normal, reverse, alternate)
+        """
+        node = UIAnimateNode()
+
+        # Apply layout attributes
+        self._apply_layout_attrs(node, element)
+
+        # Apply animation attributes
+        self._apply_animation_attrs(node, element)
+
+        # Parse children
+        self._parse_children(element, node)
+
+        return node
+
+    # ------------------------------------------------------------------
+    # Component Library
+    # ------------------------------------------------------------------
+
+    def _parse_ui_card(self, element: ET.Element) -> UICardNode:
+        """Parse <ui:card> - Card with header, body, footer."""
+        node = UICardNode()
+        node.title = element.get('title')
+        node.subtitle = element.get('subtitle')
+        node.image = element.get('image')
+        node.variant = element.get('variant')
+        self._apply_layout_attrs(node, element)
+        self._parse_children(element, node)
+        return node
+
+    def _parse_ui_card_header(self, element: ET.Element) -> UICardHeaderNode:
+        """Parse <ui:card-header> - Card header section."""
+        node = UICardHeaderNode()
+        self._apply_layout_attrs(node, element)
+        self._parse_children(element, node)
+        return node
+
+    def _parse_ui_card_body(self, element: ET.Element) -> UICardBodyNode:
+        """Parse <ui:card-body> - Card body section."""
+        node = UICardBodyNode()
+        self._apply_layout_attrs(node, element)
+        self._parse_children(element, node)
+        return node
+
+    def _parse_ui_card_footer(self, element: ET.Element) -> UICardFooterNode:
+        """Parse <ui:card-footer> - Card footer section."""
+        node = UICardFooterNode()
+        self._apply_layout_attrs(node, element)
+        self._parse_children(element, node)
+        return node
+
+    def _parse_ui_modal(self, element: ET.Element) -> UIModalNode:
+        """Parse <ui:modal> - Modal/dialog with open/close."""
+        node = UIModalNode()
+        node.title = element.get('title')
+        node.modal_id = element.get('modal-id') or element.get('id')
+        node.open = self._parse_bool(element.get('open'))
+        node.closable = self._parse_bool(element.get('closable'), True)
+        node.size = element.get('size')
+        self._apply_layout_attrs(node, element)
+        self._parse_children(element, node)
+        return node
+
+    def _parse_ui_chart(self, element: ET.Element) -> UIChartNode:
+        """Parse <ui:chart> - Simple charts (bar, line, pie)."""
+        node = UIChartNode()
+        node.chart_type = element.get('type', 'bar')
+        node.source = element.get('source')
+        node.labels = element.get('labels')
+        node.values = element.get('values')
+        node.title = element.get('title')
+        node.colors = element.get('colors')
+        self._apply_layout_attrs(node, element)
+        return node
+
+    def _parse_ui_avatar(self, element: ET.Element) -> UIAvatarNode:
+        """Parse <ui:avatar> - User avatar with image/initials."""
+        node = UIAvatarNode()
+        node.src = element.get('src')
+        node.name = element.get('name')
+        node.size = element.get('size')
+        node.shape = element.get('shape', 'circle')
+        node.status = element.get('status')
+        self._apply_layout_attrs(node, element)
+        return node
+
+    def _parse_ui_tooltip(self, element: ET.Element) -> UITooltipNode:
+        """Parse <ui:tooltip> - Tooltip on hover."""
+        node = UITooltipNode()
+        node.content = element.get('content') or (element.text or '').strip()
+        node.position = element.get('position', 'top')
+        self._apply_layout_attrs(node, element)
+        self._parse_children(element, node)
+        return node
+
+    def _parse_ui_dropdown(self, element: ET.Element) -> UIDropdownNode:
+        """Parse <ui:dropdown> - Dropdown menu."""
+        node = UIDropdownNode()
+        node.label = element.get('label')
+        node.trigger = element.get('trigger', 'click')
+        node.dropdown_align = element.get('align', 'left')
+        self._apply_layout_attrs(node, element)
+        self._parse_children(element, node)
+        return node
+
+    def _parse_ui_alert(self, element: ET.Element) -> UIAlertNode:
+        """Parse <ui:alert> - Alert/notification box."""
+        node = UIAlertNode()
+        node.content = (element.text or '').strip()
+        node.title = element.get('title')
+        node.variant = element.get('variant', 'info')
+        node.dismissible = self._parse_bool(element.get('dismissible'))
+        node.icon = element.get('icon')
+        self._apply_layout_attrs(node, element)
+        self._parse_children(element, node)
+        return node
+
+    def _parse_ui_breadcrumb(self, element: ET.Element) -> UIBreadcrumbNode:
+        """Parse <ui:breadcrumb> - Navigation breadcrumbs."""
+        node = UIBreadcrumbNode()
+        node.separator = element.get('separator', '/')
+        self._apply_layout_attrs(node, element)
+        self._parse_children(element, node)
+        return node
+
+    def _parse_ui_breadcrumb_item(self, element: ET.Element) -> UIBreadcrumbItemNode:
+        """Parse <ui:breadcrumb-item> - Individual breadcrumb item."""
+        node = UIBreadcrumbItemNode()
+        node.label = element.get('label') or (element.text or '').strip()
+        node.to = element.get('to')
+        node.icon = element.get('icon')
+        return node
+
+    def _parse_ui_pagination(self, element: ET.Element) -> UIPaginationNode:
+        """Parse <ui:pagination> - Pagination controls."""
+        node = UIPaginationNode()
+        node.total = element.get('total')
+        node.page_size = element.get('page-size', '10')
+        node.current = element.get('current', '1')
+        node.bind = element.get('bind')
+        node.on_change = element.get('on-change')
+        node.show_total = self._parse_bool(element.get('show-total'))
+        node.show_jump = self._parse_bool(element.get('show-jump'))
+        self._apply_layout_attrs(node, element)
+        return node
+
+    def _parse_ui_skeleton(self, element: ET.Element) -> UISkeletonNode:
+        """Parse <ui:skeleton> - Loading skeleton placeholder."""
+        node = UISkeletonNode()
+        node.variant = element.get('variant', 'text')
+        node.lines = self._parse_int(element.get('lines'), 1)
+        node.animated = self._parse_bool(element.get('animated'), True)
+        self._apply_layout_attrs(node, element)
+        return node
+
+    # ------------------------------------------------------------------
+    # Theming
+    # ------------------------------------------------------------------
+
+    def _parse_ui_theme(self, element: ET.Element) -> UIThemeNode:
+        """
+        Parse <ui:theme> theme configuration.
+
+        Syntax examples:
+            <!-- Use a preset theme -->
+            <ui:theme preset="dark" />
+
+            <!-- Custom theme extending a preset -->
+            <ui:theme name="ocean" preset="light">
+                <ui:color name="primary" value="#0ea5e9" />
+                <ui:color name="secondary" value="#06b6d4" />
+            </ui:theme>
+
+            <!-- Auto-switch based on system preference -->
+            <ui:theme preset="light" auto-switch="true" />
+
+        Attributes:
+            name: Custom theme name (optional)
+            preset: Base theme preset ('light', 'dark')
+            auto-switch: Enable automatic dark/light switching
+        """
+        node = UIThemeNode()
+
+        node.name = element.get('name')
+        node.preset = element.get('preset', 'light')
+        node.auto_switch = self._parse_bool(element.get('auto-switch'))
+
+        # Parse child <ui:color> elements
+        for child in element:
+            local = self._get_local_name(child)
+            if local == 'color':
+                color = self._parse_ui_color(child)
+                node.add_color(color)
+
+        return node
+
+    def _parse_ui_color(self, element: ET.Element) -> UIColorNode:
+        """
+        Parse <ui:color> custom color definition.
+
+        Syntax:
+            <ui:color name="primary" value="#3b82f6" />
+            <ui:color name="background" value="rgb(15, 23, 42)" />
+
+        Attributes:
+            name: Color token name (e.g., 'primary', 'background')
+            value: CSS color value (hex, rgb, hsl, etc.)
+        """
+        node = UIColorNode()
+
+        node.name = element.get('name', '')
+        node.value = element.get('value', '')
+
         return node

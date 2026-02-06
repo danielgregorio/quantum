@@ -13,7 +13,7 @@ Desktop Mode:
 """
 
 import re
-from typing import List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from core.ast_nodes import QuantumNode, SetNode, IfNode, LoopNode
 from core.features.ui_engine.src.ast_nodes import (
@@ -27,12 +27,35 @@ from core.features.ui_engine.src.ast_nodes import (
     UILinkNode, UIProgressNode, UITreeNode, UIMenuNode,
     UIOptionNode, UILogNode, UIMarkdownNode, UIHeaderNode,
     UIFooterNode, UIRuleNode, UILoadingNode, UIBadgeNode,
-    UILayoutMixin,
+    UILayoutMixin, UIValidatorNode, UIAnimateNode, UIAnimationMixin,
+    # Component Library nodes
+    UICardNode, UICardHeaderNode, UICardBodyNode, UICardFooterNode,
+    UIModalNode, UIChartNode, UIAvatarNode, UITooltipNode,
+    UIDropdownNode, UIAlertNode, UIBreadcrumbNode, UIBreadcrumbItemNode,
+    UIPaginationNode, UISkeletonNode,
 )
 from runtime.ui_html_templates import (
     HtmlBuilder, HTML_TEMPLATE, CSS_RESET, CSS_THEME, TAB_JS,
+    VALIDATION_JS, VALIDATION_CSS,
+    PERSISTENCE_JS, generate_persistence_registration,
+    CSS_ANIMATIONS, ANIMATION_JS,
 )
 from runtime.ui_tokens import TokenConverter
+# Optional theming imports (may not be available)
+try:
+    from core.features.theming.src import (
+        UIThemeNode,
+        get_theme_css,
+        get_theme_switch_js,
+        THEME_PRESETS,
+    )
+    HAS_THEMING = True
+except ImportError:
+    HAS_THEMING = False
+    UIThemeNode = None
+    get_theme_css = None
+    get_theme_switch_js = None
+    THEME_PRESETS = None
 
 
 class UIHtmlAdapter:
@@ -41,17 +64,44 @@ class UIHtmlAdapter:
     def __init__(self, desktop_mode: bool = False):
         self._tab_counter = 0
         self._has_tabs = False
+        self._has_validation = False  # Track if we have forms with validation
+        self._has_persistence = False  # Track if we have persisted state
+        self._has_animations = False  # Track if we have animations
         self._tokens = TokenConverter('html')
         self._features_used: Set[str] = set()  # Track features for compatibility
 
         # Desktop mode: enables event transformation and binding tracking
         self._desktop_mode = desktop_mode
+
+        # State persistence tracking
+        self._persisted_vars: List[Dict] = []  # List of persisted variable configs
         self._binding_counter = 0
         self._bindings: List[Tuple[str, str, str]] = []  # (element_id, var_name, bind_type)
 
+        # Form validation tracking
+        self._form_counter = 0
+        self._form_validators: Dict[str, List[UIValidatorNode]] = {}  # form_id -> validators
+
+        # Animation tracking
+        self._animate_counter = 0
+
+        # Theme configuration
+        self._theme: Optional[UIThemeNode] = None
+
     def generate(self, windows: List[QuantumNode], ui_children: List[QuantumNode],
-                 title: str = "Quantum UI") -> str:
-        """Generate complete HTML page from UI AST."""
+                 title: str = "Quantum UI",
+                 theme: Optional[UIThemeNode] = None) -> str:
+        """Generate complete HTML page from UI AST.
+
+        Args:
+            windows: List of UIWindowNode instances
+            ui_children: List of top-level UI nodes
+            title: Page title
+            theme: Optional UIThemeNode for theme configuration
+        """
+        # Store theme for reference
+        self._theme = theme
+
         body_builder = HtmlBuilder()
 
         # Render windows
@@ -65,14 +115,49 @@ class UIHtmlAdapter:
         body_html = body_builder.build()
 
         # Assemble CSS
-        css = CSS_RESET + '\n' + CSS_THEME
+        css = CSS_RESET + '\n'
+
+        # Add theme CSS (replaces or augments CSS_THEME)
+        if HAS_THEMING and theme and get_theme_css:
+            preset = theme.preset or 'light'
+            overrides = theme.get_color_overrides() if hasattr(theme, 'get_color_overrides') else {}
+            auto_switch = getattr(theme, 'auto_switch', False)
+            theme_css = get_theme_css(preset, overrides, auto_switch)
+            css += theme_css + '\n'
+        else:
+            css += CSS_THEME + '\n'
+
+        if self._has_validation:
+            css += VALIDATION_CSS + '\n'
+        if self._has_animations:
+            css += CSS_ANIMATIONS + '\n'
 
         # Assemble JS
-        js = TAB_JS if self._has_tabs else ''
+        js = ''
+
+        # Add theme switching JS if we have a theme
+        if HAS_THEMING and theme and get_theme_switch_js:
+            js += get_theme_switch_js() + '\n'
+
+        if self._has_tabs:
+            js += TAB_JS + '\n'
+        if self._has_validation:
+            js += VALIDATION_JS + '\n'
+            # Add form-specific validators
+            js += self._generate_validators_script() + '\n'
+
+        # Add animation JS if needed
+        if self._has_animations:
+            js += ANIMATION_JS + '\n'
+
+        # Add state persistence JS if needed
+        if self._has_persistence and self._persisted_vars:
+            js += PERSISTENCE_JS + '\n'
+            js += generate_persistence_registration(self._persisted_vars) + '\n'
 
         # In desktop mode, append binding registration script
         if self._desktop_mode and self._bindings:
-            js += '\n' + self._generate_binding_script()
+            js += self._generate_binding_script() + '\n'
 
         return HTML_TEMPLATE.format(
             title=title,
@@ -96,6 +181,56 @@ class UIHtmlAdapter:
         lines.append('});')
         lines.append('</script>')
         return '\n'.join(lines)
+
+    def _generate_validators_script(self) -> str:
+        """Generate JS to register custom validators for each form."""
+        if not self._form_validators:
+            return ''
+
+        lines = ['<script>', 'document.addEventListener("DOMContentLoaded", function() {']
+
+        for form_id, validators in self._form_validators.items():
+            for validator in validators:
+                validator_obj = self._validator_to_js_object(validator)
+                lines.append(f"  __qValidation.registerValidator('{form_id}', {validator_obj});")
+
+        lines.append('});')
+        lines.append('</script>')
+        return '\n'.join(lines)
+
+    def _validator_to_js_object(self, validator: UIValidatorNode) -> str:
+        """Convert a UIValidatorNode to a JavaScript object literal."""
+        parts = []
+        parts.append(f"name: '{validator.name}'")
+
+        if validator.field:
+            parts.append(f"field: '{validator.field}'")
+        if validator.rule_type:
+            parts.append(f"type: '{validator.rule_type}'")
+        if validator.pattern:
+            # Escape special characters for JS string
+            escaped_pattern = validator.pattern.replace('\\', '\\\\').replace("'", "\\'")
+            parts.append(f"pattern: '{escaped_pattern}'")
+        if validator.match:
+            parts.append(f"match: '{validator.match}'")
+        if validator.min:
+            parts.append(f"min: '{validator.min}'")
+        if validator.max:
+            parts.append(f"max: '{validator.max}'")
+        if validator.minlength is not None:
+            parts.append(f"minlength: {validator.minlength}")
+        if validator.maxlength is not None:
+            parts.append(f"maxlength: {validator.maxlength}")
+        if validator.expression:
+            # Custom JS expression - wrap in function
+            parts.append(f"expression: function(value, form) {{ return {validator.expression}; }}")
+        if validator.message:
+            escaped_msg = validator.message.replace("'", "\\'")
+            parts.append(f"message: '{escaped_msg}'")
+        if validator.trigger:
+            parts.append(f"trigger: '{validator.trigger}'")
+
+        return '{' + ', '.join(parts) + '}'
 
     # ------------------------------------------------------------------
     # Layout style helper
@@ -291,6 +426,8 @@ class UIHtmlAdapter:
             self._render_spacer(node, b)
         elif isinstance(node, UIScrollBoxNode):
             self._render_scrollbox(node, b)
+        elif isinstance(node, UIAnimateNode):
+            self._render_animate(node, b)
         # Widgets
         elif isinstance(node, UITextNode):
             self._render_text(node, b)
@@ -338,9 +475,48 @@ class UIHtmlAdapter:
             self._render_loading(node, b)
         elif isinstance(node, UIBadgeNode):
             self._render_badge(node, b)
+        # Component Library
+        elif isinstance(node, UICardNode):
+            self._render_card(node, b)
+        elif isinstance(node, UICardHeaderNode):
+            self._render_card_header(node, b)
+        elif isinstance(node, UICardBodyNode):
+            self._render_card_body(node, b)
+        elif isinstance(node, UICardFooterNode):
+            self._render_card_footer(node, b)
+        elif isinstance(node, UIModalNode):
+            self._render_modal(node, b)
+        elif isinstance(node, UIChartNode):
+            self._render_chart(node, b)
+        elif isinstance(node, UIAvatarNode):
+            self._render_avatar(node, b)
+        elif isinstance(node, UITooltipNode):
+            self._render_tooltip(node, b)
+        elif isinstance(node, UIDropdownNode):
+            self._render_dropdown(node, b)
+        elif isinstance(node, UIAlertNode):
+            self._render_alert(node, b)
+        elif isinstance(node, UIBreadcrumbNode):
+            self._render_breadcrumb(node, b)
+        elif isinstance(node, UIBreadcrumbItemNode):
+            self._render_breadcrumb_item(node, b)
+        elif isinstance(node, UIPaginationNode):
+            self._render_pagination(node, b)
+        elif isinstance(node, UISkeletonNode):
+            self._render_skeleton(node, b)
         # Quantum nodes passthrough
         elif isinstance(node, SetNode):
             b.comment(f'q:set {node.name} = {node.value}')
+            # Track persisted variables for HTML persistence
+            if node.persist:
+                self._has_persistence = True
+                self._persisted_vars.append({
+                    'name': node.name,
+                    'scope': node.persist,
+                    'key': node.persist_key or node.name,
+                    'ttl': node.persist_ttl,
+                    'encrypt': node.persist_encrypt
+                })
         elif isinstance(node, LoopNode):
             b.comment(f'q:loop {node.var_name}')
         elif isinstance(node, IfNode):
@@ -497,16 +673,46 @@ class UIHtmlAdapter:
         b.close_tag('div')
 
     def _render_form(self, node: UIFormNode, b: HtmlBuilder):
-        form_attrs = {'class': 'q-form'}
+        # Track form for validation
+        self._form_counter += 1
+        form_id = f"q-form-{self._form_counter}"
+
+        form_attrs = {'class': 'q-form', 'id': form_id}
+
+        # Validation mode attributes
+        if node.validation_mode in ('client', 'both'):
+            self._has_validation = True
+            form_attrs['data-validation'] = node.validation_mode
+            form_attrs['data-error-display'] = node.error_display
+
+        # HTML5 novalidate attribute (use our custom JS validation instead)
+        if node.novalidate or node.validation_mode in ('client', 'both'):
+            form_attrs['novalidate'] = True
+
         if node.on_submit:
             if self._desktop_mode:
                 # Transform on-submit for pywebview with form data collection
                 form_attrs['onsubmit'] = self._transform_onsubmit(node.on_submit)
             else:
-                form_attrs['onsubmit'] = node.on_submit
+                # Add validation check before submit
+                if node.validation_mode in ('client', 'both'):
+                    form_attrs['onsubmit'] = f"return __qValidation.validateForm('{form_id}') && ({node.on_submit})"
+                else:
+                    form_attrs['onsubmit'] = node.on_submit
+
         attrs = self._merge_attrs(form_attrs, self._layout_attrs(node))
         b.open_tag('form', attrs)
         b.indent()
+
+        # Register custom validators for this form
+        if node.validators:
+            self._form_validators[form_id] = node.validators
+
+        # Render error summary if configured
+        if node.error_display in ('summary', 'both'):
+            b.open_tag('div', {'class': 'q-validation-summary', 'id': f'{form_id}-summary', 'style': 'display:none'})
+            b.close_tag('div')
+
         self._render_children(node.children, b)
         b.dedent()
         b.close_tag('form')
@@ -595,8 +801,53 @@ class UIHtmlAdapter:
             # Add two-way binding in desktop mode
             if self._desktop_mode:
                 input_attrs['oninput'] = self._add_input_binding(node.bind)
-        attrs = self._merge_attrs(input_attrs, self._layout_attrs(node))
-        b.open_tag('input', attrs, self_closing=True)
+
+        # HTML5 validation attributes
+        if node.required:
+            input_attrs['required'] = True
+        if node.min is not None:
+            input_attrs['min'] = node.min
+        if node.max is not None:
+            input_attrs['max'] = node.max
+        if node.minlength is not None:
+            input_attrs['minlength'] = str(node.minlength)
+        if node.maxlength is not None:
+            input_attrs['maxlength'] = str(node.maxlength)
+        if node.pattern:
+            input_attrs['pattern'] = node.pattern
+
+        # Custom error message for JS validation
+        if node.error_message:
+            input_attrs['data-error-message'] = node.error_message
+
+        # Custom validators (comma-separated list)
+        if node.validators:
+            input_attrs['data-validators'] = ','.join(node.validators)
+
+        # Check if input has any validation
+        has_validation = (node.error_message or node.required or node.validators or
+                          node.pattern or node.min or node.max or
+                          node.minlength or node.maxlength)
+
+        if has_validation:
+            self._has_validation = True
+            input_id = node.bind or f"input-{id(node)}"
+            input_attrs['id'] = input_id
+            attrs = self._merge_attrs(input_attrs, self._layout_attrs(node))
+
+            # Create wrapper for input + error message
+            b.open_tag('div', {'class': 'q-input-wrapper'})
+            b.indent()
+            b.open_tag('input', attrs, self_closing=True)
+            b.open_tag('div', {'class': 'q-error-message', 'id': f'{input_id}-error', 'style': 'display:none'})
+            if node.error_message:
+                b.text(node.error_message)
+            b.close_tag('div')
+            b.dedent()
+            b.close_tag('div')
+        else:
+            attrs = self._merge_attrs(input_attrs, self._layout_attrs(node))
+            b.open_tag('input', attrs, self_closing=True)
 
     def _render_checkbox(self, node: UICheckboxNode, b: HtmlBuilder):
         attrs = self._merge_attrs({'class': 'q-checkbox'}, self._layout_attrs(node))
@@ -858,3 +1109,393 @@ class UIHtmlAdapter:
         b.text(node.content)
         b.dedent()
         b.close_tag('span')
+
+    # ------------------------------------------------------------------
+    # Animation render
+    # ------------------------------------------------------------------
+
+    def _render_animate(self, node: UIAnimateNode, b: HtmlBuilder):
+        """Render a ui:animate wrapper with animation effects.
+
+        The ui:animate node wraps child elements and applies CSS animations
+        based on the animation type, trigger, duration, and other properties.
+
+        Attributes supported:
+            - type/anim_type: fade, slide, scale, rotate, bounce, pulse, shake, etc.
+            - animate: Animation preset name (alternative to type)
+            - duration: Animation duration (e.g., '300', '300ms', '0.3s')
+            - delay: Animation delay
+            - easing: Easing function (ease, ease-in, ease-out, linear, spring, bounce)
+            - repeat: Repeat count (1, 2, 'infinite')
+            - trigger: Animation trigger (on-load, on-hover, on-click, on-visible)
+            - direction: Animation direction (normal, reverse, alternate)
+        """
+        self._has_animations = True
+        self._animate_counter += 1
+
+        # Build CSS classes
+        classes = ['q-animate']
+
+        # Animation type/preset
+        anim_type = node.anim_type or node.animate
+        if anim_type:
+            # Normalize animation type name
+            anim_class = f"q-anim-{anim_type.replace('_', '-')}"
+            classes.append(anim_class)
+
+        # Trigger class
+        trigger = node.anim_trigger or 'on-load'
+        if trigger != 'on-load':
+            classes.append(f"q-trigger-{trigger}")
+
+        # Easing class
+        if node.anim_easing:
+            easing = node.anim_easing.replace('_', '-')
+            classes.append(f"q-easing-{easing}")
+
+        # Build inline styles for animation variables
+        style_parts = []
+
+        # Duration
+        if node.anim_duration:
+            duration = node.anim_duration
+            # Add 'ms' if no unit specified
+            if duration.isdigit():
+                duration = f"{duration}ms"
+            style_parts.append(f"--q-anim-duration: {duration}")
+
+        # Delay
+        if node.anim_delay:
+            delay = node.anim_delay
+            if delay.isdigit():
+                delay = f"{delay}ms"
+            style_parts.append(f"--q-anim-delay: {delay}")
+
+        # Repeat
+        if node.anim_repeat:
+            style_parts.append(f"--q-anim-repeat: {node.anim_repeat}")
+
+        # Direction
+        if node.anim_direction:
+            style_parts.append(f"--q-anim-direction: {node.anim_direction}")
+
+        # Build attributes
+        anim_attrs = {'class': ' '.join(classes)}
+
+        if style_parts:
+            anim_attrs['style'] = '; '.join(style_parts)
+
+        # Add data attribute for once-only visibility trigger
+        if trigger == 'on-visible':
+            anim_attrs['data-anim-once'] = 'true'
+
+        # Generate unique ID if needed for JS targeting
+        anim_id = f"q-anim-{self._animate_counter}"
+        anim_attrs['id'] = anim_id
+
+        # Merge with layout attributes
+        attrs = self._merge_attrs(anim_attrs, self._layout_attrs(node))
+
+        # Render the wrapper div
+        b.open_tag('div', attrs)
+        b.indent()
+
+        # Render children
+        self._render_children(node.children, b)
+
+        b.dedent()
+        b.close_tag('div')
+
+    def _animation_attrs(self, node) -> dict:
+        """Build animation-related HTML attributes from animation properties.
+
+        This method can be used to add animation attributes to any UI node
+        that supports inline animations via the 'animate' or 'transition' attributes.
+        """
+        attrs = {}
+
+        # Check if node has animation mixin
+        if not hasattr(node, 'animate'):
+            return attrs
+
+        # Handle inline animate attribute
+        if node.animate:
+            self._has_animations = True
+            classes = ['q-animate', f"q-anim-{node.animate.replace('_', '-')}"]
+            attrs['class'] = ' '.join(classes)
+
+        # Handle inline transition attribute (e.g., "scale:0.95:100ms")
+        if hasattr(node, 'transition') and node.transition:
+            self._has_animations = True
+            attrs['data-transition'] = node.transition
+
+        return attrs
+
+    # ------------------------------------------------------------------
+    # Component Library renders
+    # ------------------------------------------------------------------
+
+    def _render_card(self, node: UICardNode, b: HtmlBuilder):
+        cls = 'q-card'
+        if node.variant:
+            cls += f' q-card-{node.variant}'
+        attrs = self._merge_attrs({'class': cls}, self._layout_attrs(node))
+        b.open_tag('div', attrs)
+        b.indent()
+        if node.image:
+            b.open_tag('div', {'class': 'q-card-image'})
+            b.open_tag('img', {'src': node.image, 'alt': node.title or ''}, self_closing=True)
+            b.close_tag('div')
+        if node.title and not any(isinstance(c, UICardHeaderNode) for c in node.children):
+            b.open_tag('div', {'class': 'q-card-header'})
+            b.open_tag('div', {'class': 'q-card-title'})
+            b.text(node.title)
+            b.close_tag('div')
+            if node.subtitle:
+                b.open_tag('div', {'class': 'q-card-subtitle'})
+                b.text(node.subtitle)
+                b.close_tag('div')
+            b.close_tag('div')
+        self._render_children(node.children, b)
+        b.dedent()
+        b.close_tag('div')
+
+    def _render_card_header(self, node: UICardHeaderNode, b: HtmlBuilder):
+        attrs = self._merge_attrs({'class': 'q-card-header'}, self._layout_attrs(node))
+        b.open_tag('div', attrs)
+        b.indent()
+        self._render_children(node.children, b)
+        b.dedent()
+        b.close_tag('div')
+
+    def _render_card_body(self, node: UICardBodyNode, b: HtmlBuilder):
+        attrs = self._merge_attrs({'class': 'q-card-body'}, self._layout_attrs(node))
+        b.open_tag('div', attrs)
+        b.indent()
+        self._render_children(node.children, b)
+        b.dedent()
+        b.close_tag('div')
+
+    def _render_card_footer(self, node: UICardFooterNode, b: HtmlBuilder):
+        attrs = self._merge_attrs({'class': 'q-card-footer'}, self._layout_attrs(node))
+        b.open_tag('div', attrs)
+        b.indent()
+        self._render_children(node.children, b)
+        b.dedent()
+        b.close_tag('div')
+
+    def _render_modal(self, node: UIModalNode, b: HtmlBuilder):
+        self._features_used.add('modal')
+        modal_id = node.modal_id or f'modal-{id(node)}'
+        overlay_class = 'q-modal-overlay' + (' q-modal-open' if node.open else '')
+        b.open_tag('div', {'class': overlay_class, 'id': modal_id})
+        b.indent()
+        dialog_class = 'q-modal' + (f' q-modal-{node.size}' if node.size else '')
+        attrs = self._merge_attrs({'class': dialog_class, 'role': 'dialog'}, self._layout_attrs(node))
+        b.open_tag('div', attrs)
+        b.indent()
+        if node.title or node.closable:
+            b.open_tag('div', {'class': 'q-modal-header'})
+            if node.title:
+                b.open_tag('h3', {'class': 'q-modal-title'})
+                b.text(node.title)
+                b.close_tag('h3')
+            if node.closable:
+                b.open_tag('button', {'class': 'q-modal-close', 'onclick': f"document.getElementById('{modal_id}').classList.remove('q-modal-open')"})
+                b.text('x')
+                b.close_tag('button')
+            b.close_tag('div')
+        b.open_tag('div', {'class': 'q-modal-body'})
+        self._render_children(node.children, b)
+        b.close_tag('div')
+        b.dedent()
+        b.close_tag('div')
+        b.dedent()
+        b.close_tag('div')
+
+    def _render_chart(self, node: UIChartNode, b: HtmlBuilder):
+        self._features_used.add('chart')
+        attrs = self._merge_attrs({'class': f'q-chart q-chart-{node.chart_type}'}, self._layout_attrs(node))
+        b.open_tag('div', attrs)
+        b.indent()
+        if node.title:
+            b.open_tag('div', {'class': 'q-chart-title'})
+            b.text(node.title)
+            b.close_tag('div')
+        b.open_tag('div', {'class': 'q-chart-container'})
+        if node.labels and node.values:
+            labels = [l.strip() for l in node.labels.split(',')]
+            values = [v.strip() for v in node.values.split(',')]
+            colors = [c.strip() for c in node.colors.split(',')] if node.colors else []
+            default_colors = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6']
+            max_val = max(float(v) for v in values) if values else 100
+            for i, (label, value) in enumerate(zip(labels, values)):
+                color = colors[i] if i < len(colors) else default_colors[i % len(default_colors)]
+                percent = (float(value) / max_val) * 100 if max_val > 0 else 0
+                if node.chart_type == 'bar':
+                    b.open_tag('div', {'class': 'q-chart-bar-group'})
+                    b.open_tag('div', {'class': 'q-chart-label'})
+                    b.text(label)
+                    b.close_tag('div')
+                    b.open_tag('div', {'class': 'q-chart-bar', 'style': f'width:{percent}%;background:{color}'})
+                    b.open_tag('span', {'class': 'q-chart-value'})
+                    b.text(value)
+                    b.close_tag('span')
+                    b.close_tag('div')
+                    b.close_tag('div')
+        b.close_tag('div')
+        b.dedent()
+        b.close_tag('div')
+
+    def _render_avatar(self, node: UIAvatarNode, b: HtmlBuilder):
+        cls = 'q-avatar' + (f' q-avatar-{node.size}' if node.size else '')
+        if node.shape == 'square':
+            cls += ' q-avatar-square'
+        attrs = self._merge_attrs({'class': cls}, self._layout_attrs(node))
+        b.open_tag('div', attrs)
+        if node.src:
+            b.open_tag('img', {'src': node.src, 'alt': node.name or ''}, self_closing=True)
+        elif node.name:
+            initials = ''.join(p[0].upper() for p in node.name.split()[:2])
+            b.open_tag('span', {'class': 'q-avatar-initials'})
+            b.text(initials or '?')
+            b.close_tag('span')
+        if node.status:
+            b.open_tag('span', {'class': f'q-avatar-status q-avatar-status-{node.status}'})
+            b.close_tag('span')
+        b.close_tag('div')
+
+    def _render_tooltip(self, node: UITooltipNode, b: HtmlBuilder):
+        self._features_used.add('tooltip')
+        attrs = self._merge_attrs({'class': f'q-tooltip-wrapper q-tooltip-{node.position}'}, self._layout_attrs(node))
+        b.open_tag('div', attrs)
+        self._render_children(node.children, b)
+        b.open_tag('span', {'class': 'q-tooltip-text', 'role': 'tooltip'})
+        b.text(node.content)
+        b.close_tag('span')
+        b.close_tag('div')
+
+    def _render_dropdown(self, node: UIDropdownNode, b: HtmlBuilder):
+        self._features_used.add('dropdown')
+        cls = f'q-dropdown q-dropdown-{node.dropdown_align}'
+        if node.trigger == 'hover':
+            cls += ' q-dropdown-hover'
+        attrs = self._merge_attrs({'class': cls}, self._layout_attrs(node))
+        b.open_tag('div', attrs)
+        b.open_tag('button', {'class': 'q-dropdown-trigger'})
+        b.text(node.label or 'Menu')
+        b.open_tag('span', {'class': 'q-dropdown-arrow'})
+        b.text(' v')
+        b.close_tag('span')
+        b.close_tag('button')
+        b.open_tag('div', {'class': 'q-dropdown-menu'})
+        self._render_children(node.children, b)
+        b.close_tag('div')
+        b.close_tag('div')
+
+    def _render_alert(self, node: UIAlertNode, b: HtmlBuilder):
+        cls = f'q-alert q-alert-{node.variant}'
+        if node.dismissible:
+            cls += ' q-alert-dismissible'
+        alert_id = f'alert-{id(node)}'
+        attrs = self._merge_attrs({'class': cls, 'role': 'alert', 'id': alert_id}, self._layout_attrs(node))
+        b.open_tag('div', attrs)
+        if node.icon:
+            b.open_tag('span', {'class': 'q-alert-icon'})
+            b.text(node.icon)
+            b.close_tag('span')
+        b.open_tag('div', {'class': 'q-alert-content'})
+        if node.title:
+            b.open_tag('div', {'class': 'q-alert-title'})
+            b.text(node.title)
+            b.close_tag('div')
+        if node.content:
+            b.open_tag('div', {'class': 'q-alert-message'})
+            b.text(node.content)
+            b.close_tag('div')
+        self._render_children(node.children, b)
+        b.close_tag('div')
+        if node.dismissible:
+            b.open_tag('button', {'class': 'q-alert-dismiss', 'onclick': f"document.getElementById('{alert_id}').style.display='none'"})
+            b.text('x')
+            b.close_tag('button')
+        b.close_tag('div')
+
+    def _render_breadcrumb(self, node: UIBreadcrumbNode, b: HtmlBuilder):
+        attrs = self._merge_attrs({'class': 'q-breadcrumb'}, self._layout_attrs(node))
+        b.open_tag('nav', attrs)
+        b.open_tag('ol', {'class': 'q-breadcrumb-list'})
+        for i, child in enumerate(node.children):
+            if isinstance(child, UIBreadcrumbItemNode):
+                is_last = i == len(node.children) - 1
+                self._render_breadcrumb_item_internal(child, b, node.separator, is_last)
+        b.close_tag('ol')
+        b.close_tag('nav')
+
+    def _render_breadcrumb_item(self, node: UIBreadcrumbItemNode, b: HtmlBuilder):
+        self._render_breadcrumb_item_internal(node, b, '/', False)
+
+    def _render_breadcrumb_item_internal(self, node: UIBreadcrumbItemNode, b: HtmlBuilder, sep: str, is_last: bool):
+        cls = 'q-breadcrumb-item' + (' q-breadcrumb-current' if is_last else '')
+        b.open_tag('li', {'class': cls})
+        if node.to and not is_last:
+            b.open_tag('a', {'href': node.to, 'class': 'q-breadcrumb-link'})
+            b.text(node.label)
+            b.close_tag('a')
+        else:
+            b.open_tag('span', {'class': 'q-breadcrumb-text'})
+            b.text(node.label)
+            b.close_tag('span')
+        if not is_last:
+            b.open_tag('span', {'class': 'q-breadcrumb-separator'})
+            b.text(sep)
+            b.close_tag('span')
+        b.close_tag('li')
+
+    def _render_pagination(self, node: UIPaginationNode, b: HtmlBuilder):
+        self._features_used.add('pagination')
+        attrs = self._merge_attrs({'class': 'q-pagination'}, self._layout_attrs(node))
+        b.open_tag('nav', attrs)
+        if node.show_total:
+            b.open_tag('span', {'class': 'q-pagination-total'})
+            b.text(f'Total: {node.total or 0} items')
+            b.close_tag('span')
+        b.open_tag('div', {'class': 'q-pagination-controls'})
+        b.open_tag('button', {'class': 'q-pagination-prev'})
+        b.text('Prev')
+        b.close_tag('button')
+        b.open_tag('span', {'class': 'q-pagination-pages'})
+        b.text(f'Page {node.current}')
+        b.close_tag('span')
+        b.open_tag('button', {'class': 'q-pagination-next'})
+        b.text('Next')
+        b.close_tag('button')
+        b.close_tag('div')
+        if node.show_jump:
+            b.open_tag('div', {'class': 'q-pagination-jump'})
+            b.text('Go to ')
+            b.open_tag('input', {'type': 'number', 'min': '1', 'class': 'q-pagination-input'}, self_closing=True)
+            b.close_tag('div')
+        b.close_tag('nav')
+
+    def _render_skeleton(self, node: UISkeletonNode, b: HtmlBuilder):
+        cls = f'q-skeleton q-skeleton-{node.variant}'
+        if node.animated:
+            cls += ' q-skeleton-animated'
+        attrs = self._merge_attrs({'class': cls}, self._layout_attrs(node))
+        if node.variant == 'text':
+            for _ in range(node.lines):
+                b.open_tag('div', attrs)
+                b.close_tag('div')
+        elif node.variant == 'card':
+            b.open_tag('div', {'class': 'q-skeleton-card'})
+            b.open_tag('div', {'class': 'q-skeleton q-skeleton-rect q-skeleton-animated', 'style': 'height:120px'})
+            b.close_tag('div')
+            b.open_tag('div', {'class': 'q-skeleton q-skeleton-text q-skeleton-animated', 'style': 'width:60%'})
+            b.close_tag('div')
+            b.open_tag('div', {'class': 'q-skeleton q-skeleton-text q-skeleton-animated', 'style': 'width:80%'})
+            b.close_tag('div')
+            b.close_tag('div')
+        else:
+            b.open_tag('div', attrs)
+            b.close_tag('div')

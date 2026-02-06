@@ -234,6 +234,395 @@ details.q-section .q-section-content { padding: 12px 16px; border-top: 1px solid
   .q-window > div > div[style*="width: 280px"] { width: 100% !important; }
   .q-window > div > div[style*="width: 50%"] { width: 100% !important; }
 }
+
+/* ============================================
+   Component Library Styles
+   ============================================ */
+
+/* Card */
+.q-card { background: var(--q-bg); border: 1px solid var(--q-border); border-radius: var(--q-radius); box-shadow: var(--q-shadow); overflow: hidden; }
+.q-card-elevated { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.q-card-outlined { box-shadow: none; border-width: 2px; }
+.q-card-image { width: 100%; }
+.q-card-image img { width: 100%; height: auto; display: block; }
+.q-card-header { padding: 16px; border-bottom: 1px solid var(--q-border); }
+.q-card-title { font-size: var(--q-font-lg); font-weight: 600; margin: 0; }
+.q-card-subtitle { font-size: var(--q-font-sm); color: var(--q-secondary); margin-top: 4px; }
+.q-card-body { padding: 16px; }
+.q-card-footer { padding: 12px 16px; background: var(--q-light); border-top: 1px solid var(--q-border); display: flex; gap: 8px; justify-content: flex-end; }
+
+/* Modal */
+.q-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+.q-modal-overlay.q-modal-open { display: flex; }
+.q-modal { background: var(--q-bg); border-radius: var(--q-radius); box-shadow: 0 8px 32px rgba(0,0,0,0.2); max-width: 500px; width: 90%; max-height: 90vh; overflow: auto; }
+.q-modal-sm { max-width: 300px; }
+.q-modal-lg { max-width: 800px; }
+.q-modal-xl { max-width: 1100px; }
+.q-modal-full { max-width: 95vw; max-height: 95vh; }
+.q-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--q-border); }
+.q-modal-title { font-size: var(--q-font-lg); font-weight: 600; margin: 0; }
+.q-modal-close { background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px 8px; color: var(--q-secondary); }
+.q-modal-close:hover { color: var(--q-text); }
+.q-modal-body { padding: 16px; }
+
+/* Chart */
+.q-chart { padding: 16px; }
+.q-chart-title { font-size: var(--q-font-lg); font-weight: 600; margin-bottom: 16px; }
+.q-chart-container { display: flex; flex-direction: column; gap: 8px; }
+.q-chart-bar-group { display: flex; align-items: center; gap: 12px; }
+.q-chart-label { min-width: 80px; font-size: var(--q-font-sm); }
+.q-chart-bar { height: 24px; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; min-width: 30px; transition: width 0.3s ease; }
+.q-chart-value { font-size: var(--q-font-xs); color: white; font-weight: 600; }
+
+/* Avatar */
+.q-avatar { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: var(--q-primary); color: white; font-weight: 600; overflow: hidden; }
+.q-avatar-xs { width: 24px; height: 24px; font-size: var(--q-font-xs); }
+.q-avatar-sm { width: 32px; height: 32px; font-size: var(--q-font-sm); }
+.q-avatar-lg { width: 56px; height: 56px; font-size: var(--q-font-lg); }
+.q-avatar-xl { width: 72px; height: 72px; font-size: var(--q-font-xl); }
+.q-avatar-square { border-radius: var(--q-radius); }
+.q-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.q-avatar-initials { text-transform: uppercase; }
+.q-avatar-status { position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--q-bg); }
+.q-avatar-status-online { background: var(--q-success); }
+.q-avatar-status-offline { background: var(--q-secondary); }
+.q-avatar-status-away { background: var(--q-warning); }
+.q-avatar-status-busy { background: var(--q-danger); }
+
+/* Tooltip */
+.q-tooltip-wrapper { position: relative; display: inline-block; }
+.q-tooltip-text { visibility: hidden; position: absolute; z-index: 100; padding: 6px 10px; background: var(--q-dark); color: white; font-size: var(--q-font-sm); border-radius: var(--q-radius); white-space: nowrap; opacity: 0; transition: opacity 0.2s; }
+.q-tooltip-wrapper:hover .q-tooltip-text { visibility: visible; opacity: 1; }
+.q-tooltip-top .q-tooltip-text { bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 8px; }
+.q-tooltip-bottom .q-tooltip-text { top: 100%; left: 50%; transform: translateX(-50%); margin-top: 8px; }
+.q-tooltip-left .q-tooltip-text { right: 100%; top: 50%; transform: translateY(-50%); margin-right: 8px; }
+.q-tooltip-right .q-tooltip-text { left: 100%; top: 50%; transform: translateY(-50%); margin-left: 8px; }
+
+/* Dropdown */
+.q-dropdown { position: relative; display: inline-block; }
+.q-dropdown-trigger { display: inline-flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--q-bg); border: 1px solid var(--q-border); border-radius: var(--q-radius); cursor: pointer; }
+.q-dropdown-arrow { font-size: var(--q-font-xs); }
+.q-dropdown-menu { position: absolute; top: 100%; left: 0; min-width: 160px; background: var(--q-bg); border: 1px solid var(--q-border); border-radius: var(--q-radius); box-shadow: var(--q-shadow); z-index: 100; display: none; margin-top: 4px; }
+.q-dropdown-right .q-dropdown-menu { left: auto; right: 0; }
+.q-dropdown:focus-within .q-dropdown-menu,
+.q-dropdown-hover:hover .q-dropdown-menu { display: block; }
+.q-dropdown-menu .q-menu-item { display: block; width: 100%; padding: 8px 12px; text-align: left; }
+
+/* Alert */
+.q-alert { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: var(--q-radius); margin-bottom: 8px; }
+.q-alert-info { background: rgba(6,182,212,0.1); border: 1px solid var(--q-info); color: var(--q-info); }
+.q-alert-success { background: rgba(34,197,94,0.1); border: 1px solid var(--q-success); color: var(--q-success); }
+.q-alert-warning { background: rgba(245,158,11,0.1); border: 1px solid var(--q-warning); color: var(--q-warning); }
+.q-alert-danger { background: rgba(239,68,68,0.1); border: 1px solid var(--q-danger); color: var(--q-danger); }
+.q-alert-icon { flex-shrink: 0; font-size: var(--q-font-lg); }
+.q-alert-content { flex: 1; }
+.q-alert-title { font-weight: 600; margin-bottom: 4px; }
+.q-alert-message { font-size: var(--q-font-sm); opacity: 0.9; }
+.q-alert-dismiss { background: none; border: none; cursor: pointer; padding: 0 4px; font-size: var(--q-font-lg); opacity: 0.6; }
+.q-alert-dismiss:hover { opacity: 1; }
+
+/* Breadcrumb */
+.q-breadcrumb { padding: 8px 0; }
+.q-breadcrumb-list { display: flex; align-items: center; list-style: none; gap: 0; flex-wrap: wrap; }
+.q-breadcrumb-item { display: flex; align-items: center; }
+.q-breadcrumb-link { color: var(--q-primary); text-decoration: none; }
+.q-breadcrumb-link:hover { text-decoration: underline; }
+.q-breadcrumb-text { color: var(--q-text); }
+.q-breadcrumb-current .q-breadcrumb-text { font-weight: 500; }
+.q-breadcrumb-separator { margin: 0 8px; color: var(--q-secondary); }
+.q-breadcrumb-icon { margin-right: 4px; }
+
+/* Pagination */
+.q-pagination { display: flex; align-items: center; gap: 16px; padding: 8px 0; }
+.q-pagination-total { font-size: var(--q-font-sm); color: var(--q-secondary); }
+.q-pagination-controls { display: flex; align-items: center; gap: 8px; }
+.q-pagination-prev, .q-pagination-next { padding: 6px 12px; background: var(--q-bg); border: 1px solid var(--q-border); border-radius: var(--q-radius); cursor: pointer; }
+.q-pagination-prev:hover, .q-pagination-next:hover { background: var(--q-light); }
+.q-pagination-pages { padding: 0 12px; font-weight: 500; }
+.q-pagination-jump { display: flex; align-items: center; gap: 8px; font-size: var(--q-font-sm); }
+.q-pagination-input { width: 60px; padding: 4px 8px; border: 1px solid var(--q-border); border-radius: var(--q-radius); }
+
+/* Skeleton */
+.q-skeleton { background: linear-gradient(90deg, var(--q-light) 25%, #e2e8f0 50%, var(--q-light) 75%); background-size: 200% 100%; border-radius: var(--q-radius); }
+.q-skeleton-animated { animation: q-skeleton-loading 1.5s infinite; }
+@keyframes q-skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.q-skeleton-text { height: 16px; margin-bottom: 8px; }
+.q-skeleton-text:last-child { width: 60%; }
+.q-skeleton-circle { width: 48px; height: 48px; border-radius: 50%; }
+.q-skeleton-rect { height: 100px; }
+.q-skeleton-card { border: 1px solid var(--q-border); border-radius: var(--q-radius); padding: 16px; }
+"""
+
+
+# ==========================================================================
+# CSS Animations
+# ==========================================================================
+
+CSS_ANIMATIONS = """\
+/* ============================================
+   Quantum UI Animation System
+   ============================================ */
+
+/* Animation container base */
+.q-animate {
+  will-change: transform, opacity;
+}
+
+/* Animation variables (customizable via inline styles) */
+.q-animate {
+  --q-anim-duration: 300ms;
+  --q-anim-delay: 0ms;
+  --q-anim-easing: ease;
+  --q-anim-repeat: 1;
+  --q-anim-direction: normal;
+}
+
+/* ----------------------------------------
+   Fade Animations
+   ---------------------------------------- */
+@keyframes q-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes q-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.q-anim-fade-in,
+.q-anim-fade {
+  animation: q-fade-in var(--q-anim-duration) var(--q-anim-easing) var(--q-anim-delay) var(--q-anim-repeat) var(--q-anim-direction) both;
+}
+
+.q-anim-fade-out {
+  animation: q-fade-out var(--q-anim-duration) var(--q-anim-easing) var(--q-anim-delay) var(--q-anim-repeat) var(--q-anim-direction) both;
+}
+
+/* ----------------------------------------
+   Slide Animations
+   ---------------------------------------- */
+@keyframes q-slide-in-left {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes q-slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes q-slide-in-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes q-slide-in-down {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.q-anim-slide,
+.q-anim-slide-left,
+.q-anim-slide-in-left {
+  animation: q-slide-in-left var(--q-anim-duration) var(--q-anim-easing) var(--q-anim-delay) var(--q-anim-repeat) var(--q-anim-direction) both;
+}
+
+.q-anim-slide-right,
+.q-anim-slide-in-right {
+  animation: q-slide-in-right var(--q-anim-duration) var(--q-anim-easing) var(--q-anim-delay) var(--q-anim-repeat) var(--q-anim-direction) both;
+}
+
+.q-anim-slide-up,
+.q-anim-slide-in-up {
+  animation: q-slide-in-up var(--q-anim-duration) var(--q-anim-easing) var(--q-anim-delay) var(--q-anim-repeat) var(--q-anim-direction) both;
+}
+
+.q-anim-slide-down,
+.q-anim-slide-in-down {
+  animation: q-slide-in-down var(--q-anim-duration) var(--q-anim-easing) var(--q-anim-delay) var(--q-anim-repeat) var(--q-anim-direction) both;
+}
+
+/* ----------------------------------------
+   Scale Animations
+   ---------------------------------------- */
+@keyframes q-scale-in {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes q-scale-out {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(0); opacity: 0; }
+}
+
+.q-anim-scale,
+.q-anim-scale-in {
+  animation: q-scale-in var(--q-anim-duration) var(--q-anim-easing) var(--q-anim-delay) var(--q-anim-repeat) var(--q-anim-direction) both;
+}
+
+.q-anim-scale-out {
+  animation: q-scale-out var(--q-anim-duration) var(--q-anim-easing) var(--q-anim-delay) var(--q-anim-repeat) var(--q-anim-direction) both;
+}
+
+/* ----------------------------------------
+   Rotate Animations
+   ---------------------------------------- */
+@keyframes q-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes q-rotate-in {
+  from { transform: rotate(-180deg); opacity: 0; }
+  to { transform: rotate(0deg); opacity: 1; }
+}
+
+.q-anim-rotate {
+  animation: q-rotate var(--q-anim-duration) var(--q-anim-easing) var(--q-anim-delay) var(--q-anim-repeat) var(--q-anim-direction) both;
+}
+
+.q-anim-rotate-in {
+  animation: q-rotate-in var(--q-anim-duration) var(--q-anim-easing) var(--q-anim-delay) var(--q-anim-repeat) var(--q-anim-direction) both;
+}
+
+/* ----------------------------------------
+   Bounce Animation
+   ---------------------------------------- */
+@keyframes q-bounce {
+  0%, 20%, 53%, 100% {
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+    transform: translateY(0);
+  }
+  40%, 43% {
+    animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    transform: translateY(-30px);
+  }
+  70% {
+    animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    transform: translateY(-15px);
+  }
+  80% {
+    transform: translateY(0);
+  }
+  90% {
+    transform: translateY(-4px);
+  }
+}
+
+.q-anim-bounce {
+  animation: q-bounce var(--q-anim-duration) var(--q-anim-easing) var(--q-anim-delay) var(--q-anim-repeat) var(--q-anim-direction) both;
+  transform-origin: center bottom;
+}
+
+/* ----------------------------------------
+   Pulse Animation
+   ---------------------------------------- */
+@keyframes q-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.q-anim-pulse {
+  animation: q-pulse var(--q-anim-duration) var(--q-anim-easing) var(--q-anim-delay) var(--q-anim-repeat) var(--q-anim-direction) both;
+}
+
+/* ----------------------------------------
+   Shake Animation
+   ---------------------------------------- */
+@keyframes q-shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.q-anim-shake {
+  animation: q-shake var(--q-anim-duration) var(--q-anim-easing) var(--q-anim-delay) var(--q-anim-repeat) var(--q-anim-direction) both;
+}
+
+/* ----------------------------------------
+   Trigger States
+   ---------------------------------------- */
+/* on-load: Play immediately (default) */
+.q-trigger-on-load {
+  /* Animation plays on page load by default */
+}
+
+/* on-hover: Play on mouse hover */
+.q-trigger-on-hover {
+  animation-play-state: paused;
+}
+.q-trigger-on-hover:hover {
+  animation-play-state: running;
+}
+
+/* on-click: Play on click (requires JS) */
+.q-trigger-on-click {
+  animation-play-state: paused;
+}
+.q-trigger-on-click.q-anim-active {
+  animation-play-state: running;
+}
+
+/* on-visible: Play when visible (requires IntersectionObserver JS) */
+.q-trigger-on-visible {
+  animation-play-state: paused;
+}
+.q-trigger-on-visible.q-anim-visible {
+  animation-play-state: running;
+}
+
+/* ----------------------------------------
+   Transition Effects (for inline use)
+   ---------------------------------------- */
+.q-transition {
+  transition-property: transform, opacity;
+  transition-duration: var(--q-anim-duration);
+  transition-timing-function: var(--q-anim-easing);
+  transition-delay: var(--q-anim-delay);
+}
+
+/* Common transition presets */
+.q-transition-scale:hover {
+  transform: scale(var(--q-transition-scale, 1.05));
+}
+
+.q-transition-scale:active {
+  transform: scale(var(--q-transition-scale-active, 0.95));
+}
+
+.q-transition-fade:hover {
+  opacity: var(--q-transition-opacity, 0.8);
+}
+
+.q-transition-lift:hover {
+  transform: translateY(var(--q-transition-lift, -2px));
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* ----------------------------------------
+   Easing Functions
+   ---------------------------------------- */
+.q-easing-linear { --q-anim-easing: linear; }
+.q-easing-ease { --q-anim-easing: ease; }
+.q-easing-ease-in { --q-anim-easing: ease-in; }
+.q-easing-ease-out { --q-anim-easing: ease-out; }
+.q-easing-ease-in-out { --q-anim-easing: ease-in-out; }
+.q-easing-spring { --q-anim-easing: cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.q-easing-bounce { --q-anim-easing: cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+
+/* ----------------------------------------
+   Reduced Motion Support
+   ---------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .q-animate,
+  .q-transition,
+  [class*="q-anim-"] {
+    animation: none !important;
+    transition: none !important;
+  }
+}
 """
 
 
@@ -276,5 +665,824 @@ document.querySelectorAll('.q-tab-header').forEach(function(btn) {
     document.getElementById(target).classList.add('active');
   });
 });
+</script>
+"""
+
+
+# ==========================================================================
+# Animation JS
+# ==========================================================================
+
+ANIMATION_JS = """\
+<script>
+// Quantum UI Animation Manager
+window.__quantumAnimate = (function() {
+    'use strict';
+
+    // IntersectionObserver for on-visible trigger
+    var visibilityObserver = null;
+
+    function initVisibilityObserver() {
+        if (visibilityObserver) return;
+        if (typeof IntersectionObserver === 'undefined') {
+            console.warn('IntersectionObserver not supported; on-visible trigger disabled');
+            return;
+        }
+
+        visibilityObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('q-anim-visible');
+                    // Optionally unobserve after first trigger
+                    if (entry.target.dataset.animOnce !== 'false') {
+                        visibilityObserver.unobserve(entry.target);
+                    }
+                }
+            });
+        }, {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        });
+    }
+
+    function setupClickTriggers() {
+        document.querySelectorAll('.q-trigger-on-click').forEach(function(el) {
+            el.addEventListener('click', function() {
+                // Remove and re-add animation class to restart
+                var classes = this.className.match(/q-anim-[\\w-]+/g) || [];
+                var self = this;
+                classes.forEach(function(cls) {
+                    self.classList.remove(cls);
+                });
+                // Force reflow
+                void this.offsetWidth;
+                classes.forEach(function(cls) {
+                    self.classList.add(cls);
+                });
+                this.classList.add('q-anim-active');
+            });
+
+            // Remove active class when animation ends
+            el.addEventListener('animationend', function() {
+                this.classList.remove('q-anim-active');
+            });
+        });
+    }
+
+    function setupVisibilityTriggers() {
+        initVisibilityObserver();
+        if (!visibilityObserver) return;
+
+        document.querySelectorAll('.q-trigger-on-visible').forEach(function(el) {
+            visibilityObserver.observe(el);
+        });
+    }
+
+    function parseTransition(transitionStr) {
+        // Parse transition shorthand: "scale:0.95:100ms" or "scale:0.95"
+        if (!transitionStr) return null;
+        var parts = transitionStr.split(':');
+        return {
+            type: parts[0] || 'scale',
+            value: parts[1] || '0.95',
+            duration: parts[2] || '150ms'
+        };
+    }
+
+    function applyTransition(el, transitionStr) {
+        var t = parseTransition(transitionStr);
+        if (!t) return;
+
+        el.classList.add('q-transition');
+        el.style.setProperty('--q-anim-duration', t.duration);
+
+        if (t.type === 'scale') {
+            el.style.setProperty('--q-transition-scale', t.value);
+            el.classList.add('q-transition-scale');
+        } else if (t.type === 'fade') {
+            el.style.setProperty('--q-transition-opacity', t.value);
+            el.classList.add('q-transition-fade');
+        } else if (t.type === 'lift') {
+            el.style.setProperty('--q-transition-lift', t.value);
+            el.classList.add('q-transition-lift');
+        }
+    }
+
+    function setupTransitions() {
+        document.querySelectorAll('[data-transition]').forEach(function(el) {
+            applyTransition(el, el.dataset.transition);
+        });
+    }
+
+    // Initialize all animation triggers
+    function init() {
+        setupClickTriggers();
+        setupVisibilityTriggers();
+        setupTransitions();
+    }
+
+    // Run on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    // Public API
+    return {
+        init: init,
+        parseTransition: parseTransition,
+        applyTransition: applyTransition,
+
+        // Programmatically trigger animation on element
+        trigger: function(el, animationType) {
+            if (typeof el === 'string') {
+                el = document.querySelector(el);
+            }
+            if (!el) return;
+
+            // Remove existing animation classes
+            var classes = el.className.match(/q-anim-[\\w-]+/g) || [];
+            classes.forEach(function(cls) {
+                el.classList.remove(cls);
+            });
+
+            // Force reflow
+            void el.offsetWidth;
+
+            // Add new animation
+            if (animationType) {
+                el.classList.add('q-anim-' + animationType);
+            }
+        },
+
+        // Reset animation (for replay)
+        reset: function(el) {
+            if (typeof el === 'string') {
+                el = document.querySelector(el);
+            }
+            if (!el) return;
+
+            var classes = el.className.match(/q-anim-[\\w-]+/g) || [];
+            classes.forEach(function(cls) {
+                el.classList.remove(cls);
+            });
+            el.classList.remove('q-anim-active', 'q-anim-visible');
+            void el.offsetWidth; // Force reflow
+        }
+    };
+})();
+</script>
+"""
+
+
+# ==========================================================================
+# State Persistence JS
+# ==========================================================================
+
+PERSISTENCE_JS = """\
+<script>
+// Quantum State Persistence Manager
+window.__quantumPersist = (function() {
+    'use strict';
+
+    // Storage backends
+    var backends = {
+        local: {
+            get: function(key) {
+                try {
+                    var item = localStorage.getItem(key);
+                    if (item) {
+                        var data = JSON.parse(item);
+                        // Check TTL expiration
+                        if (data._ttl && Date.now() > data._ttl) {
+                            localStorage.removeItem(key);
+                            return null;
+                        }
+                        return data.value;
+                    }
+                } catch (e) { console.warn('Persist local get error:', e); }
+                return null;
+            },
+            set: function(key, value, options) {
+                try {
+                    var data = { value: value };
+                    if (options && options.ttl) {
+                        data._ttl = Date.now() + (options.ttl * 1000);
+                    }
+                    localStorage.setItem(key, JSON.stringify(data));
+                    return true;
+                } catch (e) { console.warn('Persist local set error:', e); }
+                return false;
+            },
+            remove: function(key) {
+                try {
+                    localStorage.removeItem(key);
+                    return true;
+                } catch (e) { return false; }
+            }
+        },
+        session: {
+            get: function(key) {
+                try {
+                    var item = sessionStorage.getItem(key);
+                    if (item) {
+                        var data = JSON.parse(item);
+                        return data.value;
+                    }
+                } catch (e) { console.warn('Persist session get error:', e); }
+                return null;
+            },
+            set: function(key, value, options) {
+                try {
+                    sessionStorage.setItem(key, JSON.stringify({ value: value }));
+                    return true;
+                } catch (e) { console.warn('Persist session set error:', e); }
+                return false;
+            },
+            remove: function(key) {
+                try {
+                    sessionStorage.removeItem(key);
+                    return true;
+                } catch (e) { return false; }
+            }
+        },
+        sync: {
+            // Cross-tab synchronization using localStorage + BroadcastChannel
+            _channel: null,
+            _listeners: {},
+            _init: function() {
+                if (this._channel) return;
+                if (typeof BroadcastChannel !== 'undefined') {
+                    this._channel = new BroadcastChannel('quantum_persist_sync');
+                    var self = this;
+                    this._channel.onmessage = function(e) {
+                        if (e.data && e.data.type === 'sync' && self._listeners[e.data.key]) {
+                            self._listeners[e.data.key].forEach(function(cb) {
+                                cb(e.data.value);
+                            });
+                        }
+                    };
+                }
+            },
+            get: function(key) {
+                return backends.local.get('__qsync_' + key);
+            },
+            set: function(key, value, options) {
+                this._init();
+                var result = backends.local.set('__qsync_' + key, value, options);
+                if (result && this._channel) {
+                    this._channel.postMessage({ type: 'sync', key: key, value: value });
+                }
+                return result;
+            },
+            remove: function(key) {
+                return backends.local.remove('__qsync_' + key);
+            },
+            subscribe: function(key, callback) {
+                this._init();
+                if (!this._listeners[key]) {
+                    this._listeners[key] = [];
+                }
+                this._listeners[key].push(callback);
+            }
+        }
+    };
+
+    // Registered persisted variables
+    var registry = {};
+
+    return {
+        // Register a variable for persistence
+        register: function(name, scope, options) {
+            options = options || {};
+            registry[name] = {
+                scope: scope || 'local',
+                key: options.key || name,
+                encrypt: options.encrypt || false,
+                ttl: options.ttl || null,
+                prefix: options.prefix || '__qp_'
+            };
+        },
+
+        // Get storage key for a variable
+        getKey: function(name) {
+            var reg = registry[name];
+            if (!reg) return '__qp_' + name;
+            return reg.prefix + reg.key;
+        },
+
+        // Save value to persistent storage
+        save: function(name, value) {
+            var reg = registry[name];
+            if (!reg) return false;
+            var backend = backends[reg.scope] || backends.local;
+            var key = this.getKey(name);
+            return backend.set(key, value, { ttl: reg.ttl });
+        },
+
+        // Load value from persistent storage
+        load: function(name) {
+            var reg = registry[name];
+            if (!reg) return null;
+            var backend = backends[reg.scope] || backends.local;
+            var key = this.getKey(name);
+            return backend.get(key);
+        },
+
+        // Remove persisted value
+        remove: function(name) {
+            var reg = registry[name];
+            if (!reg) return false;
+            var backend = backends[reg.scope] || backends.local;
+            var key = this.getKey(name);
+            return backend.remove(key);
+        },
+
+        // Subscribe to sync updates (for sync scope)
+        subscribe: function(name, callback) {
+            var reg = registry[name];
+            if (reg && reg.scope === 'sync') {
+                backends.sync.subscribe(reg.key, callback);
+            }
+        },
+
+        // Check if variable is registered for persistence
+        isPersisted: function(name) {
+            return !!registry[name];
+        },
+
+        // Get all registered variables
+        getRegistry: function() {
+            return Object.assign({}, registry);
+        }
+    };
+})();
+
+// Integration with QuantumState (if available)
+if (typeof window.__quantumStateUpdate !== 'undefined') {
+    var originalUpdate = window.__quantumStateUpdate;
+    window.__quantumStateUpdate = function(name, value) {
+        // Call original handler
+        originalUpdate(name, value);
+        // Auto-persist if registered
+        if (window.__quantumPersist.isPersisted(name)) {
+            window.__quantumPersist.save(name, value);
+        }
+    };
+}
+</script>
+"""
+
+
+# ==========================================================================
+# Persistence Registration Helper
+# ==========================================================================
+
+def generate_persistence_registration(persisted_vars: list) -> str:
+    """Generate JS code to register persisted variables.
+
+    Args:
+        persisted_vars: List of dicts with keys: name, scope, key, ttl, encrypt, prefix
+
+    Returns:
+        JavaScript code to register variables for persistence.
+    """
+    if not persisted_vars:
+        return ''
+
+    lines = ['<script>', 'document.addEventListener("DOMContentLoaded", function() {']
+
+    for var in persisted_vars:
+        name = var.get('name', '')
+        scope = var.get('scope', 'local')
+        key = var.get('key') or name
+        ttl = var.get('ttl')
+        encrypt = 'true' if var.get('encrypt') else 'false'
+        prefix = var.get('prefix', '__qp_')
+
+        options_parts = [
+            f"key: '{key}'",
+            f"encrypt: {encrypt}",
+            f"prefix: '{prefix}'"
+        ]
+        if ttl:
+            options_parts.append(f"ttl: {ttl}")
+
+        options_str = ', '.join(options_parts)
+        lines.append(f"  window.__quantumPersist.register('{name}', '{scope}', {{{options_str}}});")
+
+        # Restore persisted value on load
+        lines.append(f"  var __pv_{name} = window.__quantumPersist.load('{name}');")
+        lines.append(f"  if (__pv_{name} !== null && typeof window.__quantumStateUpdate === 'function') {{")
+        lines.append(f"    window.__quantumStateUpdate('{name}', __pv_{name});")
+        lines.append(f"  }}")
+
+    lines.append('});')
+    lines.append('</script>')
+    return '\n'.join(lines)
+
+
+# ==========================================================================
+# Form Validation CSS
+# ==========================================================================
+
+VALIDATION_CSS = """\
+/* ============================================
+   Quantum UI Form Validation Styles
+   ============================================ */
+
+/* Input wrapper for validation */
+.q-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* Error message display */
+.q-error-message {
+  color: var(--q-danger);
+  font-size: var(--q-font-sm);
+  margin-top: 4px;
+  min-height: 1.2em;
+}
+
+/* Validation summary */
+.q-validation-summary {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--q-danger);
+  border-radius: var(--q-radius);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.q-validation-summary ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.q-validation-summary li {
+  color: var(--q-danger);
+  font-size: var(--q-font-sm);
+}
+
+/* Input states */
+.q-input.q-invalid,
+.q-input:invalid:not(:placeholder-shown) {
+  border-color: var(--q-danger);
+}
+
+.q-input.q-invalid:focus,
+.q-input:invalid:not(:placeholder-shown):focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.q-input.q-valid,
+.q-input:valid:not(:placeholder-shown) {
+  border-color: var(--q-success);
+}
+
+.q-input.q-valid:focus,
+.q-input:valid:not(:placeholder-shown):focus {
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+
+/* Required field indicator */
+.q-formitem-label.q-required::after {
+  content: " *";
+  color: var(--q-danger);
+}
+
+/* Shake animation for invalid fields */
+@keyframes q-shake-invalid {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.q-input.q-shake {
+  animation: q-shake-invalid 0.4s ease-in-out;
+}
+"""
+
+
+# ==========================================================================
+# Form Validation JS
+# ==========================================================================
+
+VALIDATION_JS = """\
+<script>
+// Quantum UI Form Validation System
+window.__qValidation = (function() {
+    'use strict';
+
+    // Registered custom validators per form
+    var formValidators = {};
+
+    // Built-in validation types
+    var builtInTypes = {
+        email: /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/,
+        url: /^https?:\\/\\/[\\w\\-]+(\\.[\\w\\-]+)+[/#?]?.*$/,
+        phone: /^[\\+]?[(]?[0-9]{1,3}[)]?[-\\s\\.]?[0-9]{1,4}[-\\s\\.]?[0-9]{4,6}$/,
+        alphanumeric: /^[a-zA-Z0-9]+$/,
+        alpha: /^[a-zA-Z]+$/,
+        numeric: /^[0-9]+$/,
+        integer: /^-?[0-9]+$/,
+        decimal: /^-?[0-9]+(\\.[0-9]+)?$/
+    };
+
+    // Default error messages
+    var defaultMessages = {
+        required: 'This field is required',
+        email: 'Please enter a valid email address',
+        url: 'Please enter a valid URL',
+        phone: 'Please enter a valid phone number',
+        pattern: 'Please match the required format',
+        minlength: 'Please enter at least {0} characters',
+        maxlength: 'Please enter no more than {0} characters',
+        min: 'Please enter a value greater than or equal to {0}',
+        max: 'Please enter a value less than or equal to {0}',
+        match: 'Fields do not match'
+    };
+
+    // Format message with parameters
+    function formatMessage(template, params) {
+        if (!params) return template;
+        if (!Array.isArray(params)) params = [params];
+        return template.replace(/\\{(\\d+)\\}/g, function(match, index) {
+            return typeof params[index] !== 'undefined' ? params[index] : match;
+        });
+    }
+
+    // Show error for an input
+    function showError(input, message) {
+        input.classList.add('q-invalid');
+        input.classList.remove('q-valid');
+
+        var errorEl = document.getElementById(input.id + '-error');
+        if (errorEl) {
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        // Shake animation
+        input.classList.add('q-shake');
+        setTimeout(function() {
+            input.classList.remove('q-shake');
+        }, 400);
+    }
+
+    // Clear error for an input
+    function clearError(input) {
+        input.classList.remove('q-invalid');
+        input.classList.add('q-valid');
+
+        var errorEl = document.getElementById(input.id + '-error');
+        if (errorEl) {
+            errorEl.style.display = 'none';
+        }
+    }
+
+    // Validate a single input
+    function validateInput(input, form) {
+        var value = input.value;
+        var customMessage = input.dataset.errorMessage;
+
+        // Required validation
+        if (input.hasAttribute('required') && !value.trim()) {
+            showError(input, customMessage || defaultMessages.required);
+            return false;
+        }
+
+        // Skip other validations if empty and not required
+        if (!value.trim()) {
+            clearError(input);
+            return true;
+        }
+
+        // Type validation
+        var inputType = input.type;
+        if (inputType === 'email' && builtInTypes.email && !builtInTypes.email.test(value)) {
+            showError(input, customMessage || defaultMessages.email);
+            return false;
+        }
+
+        if (inputType === 'url' && builtInTypes.url && !builtInTypes.url.test(value)) {
+            showError(input, customMessage || defaultMessages.url);
+            return false;
+        }
+
+        // Pattern validation
+        var pattern = input.getAttribute('pattern');
+        if (pattern) {
+            var regex = new RegExp('^' + pattern + '$');
+            if (!regex.test(value)) {
+                showError(input, customMessage || defaultMessages.pattern);
+                return false;
+            }
+        }
+
+        // Min/Max length validation
+        var minlength = input.getAttribute('minlength');
+        if (minlength && value.length < parseInt(minlength, 10)) {
+            showError(input, customMessage || formatMessage(defaultMessages.minlength, minlength));
+            return false;
+        }
+
+        var maxlength = input.getAttribute('maxlength');
+        if (maxlength && value.length > parseInt(maxlength, 10)) {
+            showError(input, customMessage || formatMessage(defaultMessages.maxlength, maxlength));
+            return false;
+        }
+
+        // Min/Max value validation (for number inputs)
+        if (inputType === 'number') {
+            var numValue = parseFloat(value);
+            var min = input.getAttribute('min');
+            if (min !== null && numValue < parseFloat(min)) {
+                showError(input, customMessage || formatMessage(defaultMessages.min, min));
+                return false;
+            }
+
+            var max = input.getAttribute('max');
+            if (max !== null && numValue > parseFloat(max)) {
+                showError(input, customMessage || formatMessage(defaultMessages.max, max));
+                return false;
+            }
+        }
+
+        // Custom validators
+        var customValidators = input.dataset.validators;
+        if (customValidators && form) {
+            var formId = form.id;
+            var validators = formValidators[formId] || [];
+            var validatorNames = customValidators.split(',').map(function(s) { return s.trim(); });
+
+            for (var i = 0; i < validatorNames.length; i++) {
+                var validatorName = validatorNames[i];
+                var validator = validators.find(function(v) { return v.name === validatorName; });
+                if (validator) {
+                    var result = runValidator(validator, value, form);
+                    if (!result.valid) {
+                        showError(input, result.message || customMessage || 'Validation failed');
+                        return false;
+                    }
+                }
+            }
+        }
+
+        clearError(input);
+        return true;
+    }
+
+    // Run a custom validator
+    function runValidator(validator, value, form) {
+        // Pattern validation
+        if (validator.pattern) {
+            var regex = new RegExp(validator.pattern);
+            if (!regex.test(value)) {
+                return { valid: false, message: validator.message };
+            }
+        }
+
+        // Type-based validation
+        if (validator.type && builtInTypes[validator.type]) {
+            if (!builtInTypes[validator.type].test(value)) {
+                return { valid: false, message: validator.message || defaultMessages[validator.type] };
+            }
+        }
+
+        // Match validation (compare to another field)
+        if (validator.match && form) {
+            var otherInput = form.querySelector('[name="' + validator.match + '"]');
+            if (otherInput && value !== otherInput.value) {
+                return { valid: false, message: validator.message || defaultMessages.match };
+            }
+        }
+
+        // Min/Max validation
+        if (validator.minlength && value.length < validator.minlength) {
+            return { valid: false, message: validator.message || formatMessage(defaultMessages.minlength, validator.minlength) };
+        }
+        if (validator.maxlength && value.length > validator.maxlength) {
+            return { valid: false, message: validator.message || formatMessage(defaultMessages.maxlength, validator.maxlength) };
+        }
+
+        // Custom expression
+        if (typeof validator.expression === 'function') {
+            try {
+                var result = validator.expression(value, form);
+                if (!result) {
+                    return { valid: false, message: validator.message };
+                }
+            } catch (e) {
+                console.warn('Validator expression error:', e);
+                return { valid: false, message: 'Validation error' };
+            }
+        }
+
+        return { valid: true };
+    }
+
+    // Validate entire form
+    function validateForm(formId) {
+        var form = document.getElementById(formId);
+        if (!form) return true;
+
+        var inputs = form.querySelectorAll('input, select, textarea');
+        var allValid = true;
+        var errors = [];
+
+        inputs.forEach(function(input) {
+            if (input.id && !validateInput(input, form)) {
+                allValid = false;
+                var errorEl = document.getElementById(input.id + '-error');
+                if (errorEl) {
+                    errors.push(errorEl.textContent);
+                }
+            }
+        });
+
+        // Form-level validators (not tied to specific fields)
+        var formLevelValidators = (formValidators[formId] || []).filter(function(v) {
+            return v.field;
+        });
+
+        formLevelValidators.forEach(function(validator) {
+            var targetInput = form.querySelector('[name="' + validator.field + '"]');
+            if (targetInput) {
+                var result = runValidator(validator, targetInput.value, form);
+                if (!result.valid) {
+                    showError(targetInput, result.message);
+                    allValid = false;
+                    errors.push(result.message);
+                }
+            }
+        });
+
+        // Update validation summary if present
+        var summaryEl = document.getElementById(formId + '-summary');
+        if (summaryEl) {
+            if (errors.length > 0) {
+                var ul = '<ul>' + errors.map(function(e) { return '<li>' + e + '</li>'; }).join('') + '</ul>';
+                summaryEl.innerHTML = ul;
+                summaryEl.style.display = 'block';
+            } else {
+                summaryEl.style.display = 'none';
+            }
+        }
+
+        return allValid;
+    }
+
+    // Setup real-time validation on blur/input
+    function setupRealtimeValidation() {
+        document.addEventListener('blur', function(e) {
+            var input = e.target;
+            if (input.matches && input.matches('input, select, textarea')) {
+                var form = input.closest('form');
+                if (form && form.dataset.validation) {
+                    validateInput(input, form);
+                }
+            }
+        }, true);
+
+        document.addEventListener('input', function(e) {
+            var input = e.target;
+            if (input.matches && input.matches('input, select, textarea') && input.classList.contains('q-invalid')) {
+                var form = input.closest('form');
+                if (form && form.dataset.validation) {
+                    validateInput(input, form);
+                }
+            }
+        }, true);
+    }
+
+    // Initialize on DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupRealtimeValidation);
+    } else {
+        setupRealtimeValidation();
+    }
+
+    // Public API
+    return {
+        validateForm: validateForm,
+        validateInput: validateInput,
+        showError: showError,
+        clearError: clearError,
+        registerValidator: function(formId, validator) {
+            if (!formValidators[formId]) {
+                formValidators[formId] = [];
+            }
+            formValidators[formId].push(validator);
+        },
+        addValidationType: function(name, regex, defaultMessage) {
+            builtInTypes[name] = regex;
+            if (defaultMessage) {
+                defaultMessages[name] = defaultMessage;
+            }
+        }
+    };
+})();
 </script>
 """
