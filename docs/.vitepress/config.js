@@ -9,8 +9,12 @@ export default defineConfig({
 
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
-      { text: 'UI Engine', link: '/ui-engine/overview' },
-      { text: 'API Reference', link: '/api/' },
+      { text: 'UI Engine', link: '/ui/overview' },
+      { text: 'Features', link: '/features/theming' },
+      { text: 'Targets', link: '/targets/html' },
+      { text: 'API Reference', link: '/api/tags-reference' },
+      { text: 'Extensibility', link: '/extensibility/plugins' },
+      { text: 'Tools', link: '/tools/cli' },
       { text: 'Examples', link: '/examples/' },
       { text: 'GitHub', link: 'https://github.com/danielgregorio/quantum' }
     ],
@@ -41,6 +45,7 @@ export default defineConfig({
           text: 'Data & Backend',
           items: [
             { text: 'Database Queries (q:query)', link: '/guide/query' },
+            { text: 'Data Fetching (q:fetch)', link: '/guide/data-fetching' },
             { text: 'Data Import', link: '/guide/data-import' },
             { text: 'Authentication', link: '/guide/authentication' },
             { text: 'Sessions & Scopes', link: '/guide/sessions' }
@@ -55,80 +60,29 @@ export default defineConfig({
           ]
         }
       ],
-      '/ui-engine/': [
+      '/ui/': [
         {
           text: 'UI Engine',
           items: [
-            { text: 'Overview', link: '/ui-engine/overview' },
-            { text: 'Design Tokens', link: '/ui-engine/design-tokens' }
+            { text: 'Overview', link: '/ui/overview' },
+            { text: 'Layout', link: '/ui/layout' },
+            { text: 'Forms', link: '/ui/forms' },
+            { text: 'Data Display', link: '/ui/data-display' },
+            { text: 'Feedback', link: '/ui/feedback' },
+            { text: 'Navigation', link: '/ui/navigation' },
+            { text: 'Overlays', link: '/ui/overlays' },
+            { text: 'Advanced Components', link: '/ui/advanced-components' }
           ]
-        },
-        {
-          text: 'Layout Components',
-          items: [
-            { text: 'Window', link: '/ui-engine/components/window' },
-            { text: 'HBox & VBox', link: '/ui-engine/components/box-layouts' },
-            { text: 'Grid', link: '/ui-engine/components/grid' },
-            { text: 'Panel', link: '/ui-engine/components/panel' },
-            { text: 'Tabs', link: '/ui-engine/components/tabs' },
-            { text: 'Accordion', link: '/ui-engine/components/accordion' }
-          ]
-        },
-        {
-          text: 'Form Components',
-          items: [
-            { text: 'Form & FormItem', link: '/ui-engine/components/form' },
-            { text: 'Input', link: '/ui-engine/components/input' },
-            { text: 'Button', link: '/ui-engine/components/button' },
-            { text: 'Checkbox & Switch', link: '/ui-engine/components/checkbox' },
-            { text: 'Select & Radio', link: '/ui-engine/components/select' }
-          ]
-        },
-        {
-          text: 'Data Components',
-          items: [
-            { text: 'Table', link: '/ui-engine/components/table' },
-            { text: 'List', link: '/ui-engine/components/list' },
-            { text: 'Tree', link: '/ui-engine/components/tree' }
-          ]
-        },
-        {
-          text: 'Display Components',
-          items: [
-            { text: 'Text', link: '/ui-engine/components/text' },
-            { text: 'Card', link: '/ui-engine/components/card' },
-            { text: 'Modal', link: '/ui-engine/components/modal' },
-            { text: 'Alert', link: '/ui-engine/components/alert' },
-            { text: 'Badge', link: '/ui-engine/components/badge' },
-            { text: 'Avatar', link: '/ui-engine/components/avatar' },
-            { text: 'Tooltip & Dropdown', link: '/ui-engine/components/tooltip-dropdown' },
-            { text: 'Chart', link: '/ui-engine/components/chart' }
-          ]
-        },
-        {
-          text: 'Navigation Components',
-          items: [
-            { text: 'Breadcrumb', link: '/ui-engine/components/breadcrumb' },
-            { text: 'Pagination', link: '/ui-engine/components/pagination' },
-            { text: 'Menu', link: '/ui-engine/components/menu' }
-          ]
-        },
+        }
+      ],
+      '/features/': [
         {
           text: 'Features',
           items: [
-            { text: 'Animation System', link: '/ui-engine/features/animation' },
-            { text: 'Form Validation', link: '/ui-engine/features/validation' },
-            { text: 'State Persistence', link: '/ui-engine/features/persistence' },
-            { text: 'Theming', link: '/ui-engine/features/theming' }
-          ]
-        },
-        {
-          text: 'Targets',
-          items: [
-            { text: 'HTML Target', link: '/ui-engine/targets/html' },
-            { text: 'Desktop (pywebview)', link: '/ui-engine/targets/desktop' },
-            { text: 'Mobile (React Native)', link: '/ui-engine/targets/mobile' },
-            { text: 'Terminal (Textual)', link: '/ui-engine/targets/terminal' }
+            { text: 'Theming', link: '/features/theming' },
+            { text: 'Animations', link: '/features/animations' },
+            { text: 'Form Validation', link: '/features/form-validation' },
+            { text: 'State Persistence', link: '/features/state-persistence' }
           ]
         }
       ],
@@ -136,10 +90,18 @@ export default defineConfig({
         {
           text: 'API Reference',
           items: [
-            { text: 'Overview', link: '/api/' },
-            { text: 'Tags Reference', link: '/api/tags' },
-            { text: 'Attributes Reference', link: '/api/attributes' },
-            { text: 'Built-in Functions', link: '/api/functions' }
+            { text: 'Tags Reference (q:)', link: '/api/tags-reference' },
+            { text: 'UI Reference (ui:)', link: '/api/ui-reference' },
+            { text: 'Attributes Reference', link: '/api/attributes-reference' }
+          ]
+        }
+      ],
+      '/extensibility/': [
+        {
+          text: 'Extensibility',
+          items: [
+            { text: 'Plugin System', link: '/extensibility/plugins' },
+            { text: 'Package Manager', link: '/extensibility/packages' }
           ]
         }
       ],
@@ -152,6 +114,28 @@ export default defineConfig({
             { text: 'Forms & Validation', link: '/examples/forms' },
             { text: 'Data Queries', link: '/examples/queries' },
             { text: 'UI Applications', link: '/examples/ui-apps' }
+          ]
+        }
+      ],
+      '/targets/': [
+        {
+          text: 'Build Targets',
+          items: [
+            { text: 'HTML Target', link: '/targets/html' },
+            { text: 'Desktop (pywebview)', link: '/targets/desktop' },
+            { text: 'Mobile (React Native)', link: '/targets/mobile' },
+            { text: 'Terminal (Textual)', link: '/targets/terminal' }
+          ]
+        }
+      ],
+      '/tools/': [
+        {
+          text: 'Developer Tools',
+          items: [
+            { text: 'CLI Commands', link: '/tools/cli' },
+            { text: 'Hot Reload', link: '/tools/hot-reload' },
+            { text: 'VS Code Extension', link: '/tools/vscode-extension' },
+            { text: 'LSP Server', link: '/tools/lsp-server' }
           ]
         }
       ]
