@@ -10,79 +10,12 @@ import time
 import signal
 import threading
 from pathlib import Path
-from typing import Optional, Set
+from typing import Optional, Set, List
 from datetime import datetime
 
 import click
 
 from cli.utils import get_console, find_project_root, find_q_files
-
-
-class FileWatcher:
-    """Watch files for changes and trigger reload."""
-
-    def __init__(self, paths: list[Path], extensions: list[str], callback):
-        self.paths = paths
-        self.extensions = extensions
-        self.callback = callback
-        self.running = False
-        self._last_mtimes: dict[Path, float] = {}
-        self._thread: Optional[threading.Thread] = None
-
-    def start(self):
-        """Start watching files."""
-        self.running = True
-        self._scan_files()
-        self._thread = threading.Thread(target=self._watch_loop, daemon=True)
-        self._thread.start()
-
-    def stop(self):
-        """Stop watching files."""
-        self.running = False
-        if self._thread:
-            self._thread.join(timeout=1)
-
-    def _scan_files(self) -> Set[Path]:
-        """Scan for all matching files."""
-        files = set()
-        for path in self.paths:
-            if path.is_file():
-                files.add(path)
-            else:
-                for ext in self.extensions:
-                    files.update(path.rglob(f'*{ext}'))
-        return files
-
-    def _watch_loop(self):
-        """Main watch loop."""
-        while self.running:
-            try:
-                files = self._scan_files()
-                changed = []
-
-                for file in files:
-                    try:
-                        mtime = file.stat().st_mtime
-                        if file in self._last_mtimes:
-                            if mtime > self._last_mtimes[file]:
-                                changed.append(file)
-                        self._last_mtimes[file] = mtime
-                    except (OSError, IOError):
-                        pass
-
-                # Clean up deleted files
-                current_files = set(files)
-                for old_file in list(self._last_mtimes.keys()):
-                    if old_file not in current_files:
-                        del self._last_mtimes[old_file]
-
-                if changed:
-                    self.callback(changed)
-
-            except Exception:
-                pass
-
-            time.sleep(0.5)
 
 
 @click.command('dev')
@@ -93,8 +26,9 @@ class FileWatcher:
               help='Config file path')
 @click.option('--debug', is_flag=True, help='Enable debug mode')
 @click.option('--quiet', '-q', is_flag=True, help='Quiet mode')
+@click.option('--ws-port', type=int, default=35729, help='WebSocket port for hot reload')
 @click.pass_context
-def dev(ctx, port: int, host: str, no_reload: bool, config: str, debug: bool, quiet: bool):
+def dev(ctx, port: int, host: str, no_reload: bool, config: str, debug: bool, quiet: bool, ws_port: int):
     """Start development server with hot reload.
 
     Watches .q files for changes and automatically reloads.
@@ -106,6 +40,8 @@ def dev(ctx, port: int, host: str, no_reload: bool, config: str, debug: bool, qu
         quantum dev --port 3000
 
         quantum dev --no-reload --debug
+
+        quantum dev --ws-port 35730
     """
     console = get_console(quiet=quiet)
 
@@ -127,39 +63,85 @@ def dev(ctx, port: int, host: str, no_reload: bool, config: str, debug: bool, qu
     q_files = find_q_files(project_root)
     console.info(f"Found {len(q_files)} .q files")
 
+    # Hot reload manager
+    hot_reload_manager = None
+
+    if not no_reload:
+        try:
+            from cli.hot_reload import HotReloadManager, ReloadType
+
+            # Determine watch paths
+            watch_paths = [project_root]
+
+            # Also watch components directory if it exists
+            components_dir = project_root / 'components'
+            if components_dir.exists():
+                watch_paths.append(components_dir)
+
+            # Watch static directory for CSS/JS changes
+            static_dir = project_root / 'static'
+            if static_dir.exists():
+                watch_paths.append(static_dir)
+
+            def on_reload(changes, reload_type):
+                """Callback when files change."""
+                console.print()
+                for change in changes:
+                    try:
+                        rel_path = change.path.relative_to(project_root)
+                    except ValueError:
+                        rel_path = change.path
+
+                    timestamp = datetime.now().strftime('%H:%M:%S')
+                    console.info(f"[dim]{timestamp}[/dim] {change.change_type}: [path]{rel_path}[/path]")
+
+                if reload_type == ReloadType.CSS:
+                    console.info("[bold green]CSS updated[/bold green] (no full reload)")
+                else:
+                    console.info("[bold blue]Reloading...[/bold blue]")
+
+            hot_reload_manager = HotReloadManager(
+                watch_paths=watch_paths,
+                extensions=['.q', '.yaml', '.yml', '.css', '.js', '.html'],
+                ws_host='localhost',
+                ws_port=ws_port,
+                debounce_ms=100,
+                on_reload=on_reload,
+                console=console
+            )
+
+            hot_reload_manager.start()
+
+        except ImportError as e:
+            console.warning(f"Hot reload dependencies not fully available: {e}")
+            console.info("Install with: pip install watchdog websockets")
+            hot_reload_manager = None
+
     # Display server info
     url = f"http://{host if host != '0.0.0.0' else 'localhost'}:{port}"
+
+    info_lines = [
+        f"[bold]Server:[/bold] {url}",
+        f"[bold]Hot Reload:[/bold] {'Disabled' if no_reload else 'Enabled'}",
+    ]
+
+    if not no_reload and hot_reload_manager:
+        info_lines.append(f"[bold]WebSocket:[/bold] ws://localhost:{ws_port}")
+
+    info_lines.append(f"[bold]Debug:[/bold] {'On' if debug else 'Off'}")
+
     console.panel(
-        f"[bold]Server:[/bold] {url}\n"
-        f"[bold]Hot Reload:[/bold] {'Disabled' if no_reload else 'Enabled'}\n"
-        f"[bold]Debug:[/bold] {'On' if debug else 'Off'}",
+        '\n'.join(info_lines),
         title="Development Server",
         style="green"
     )
-
-    # Setup file watcher
-    watcher = None
-    if not no_reload:
-        def on_change(changed_files):
-            console.print()
-            for f in changed_files:
-                rel_path = f.relative_to(project_root) if f.is_relative_to(project_root) else f
-                console.info(f"[dim]{datetime.now().strftime('%H:%M:%S')}[/dim] File changed: [path]{rel_path}[/path]")
-            console.info("Reloading...")
-
-        watcher = FileWatcher(
-            paths=[project_root],
-            extensions=['.q', '.yaml', '.yml', '.css', '.js'],
-            callback=on_change
-        )
-        watcher.start()
 
     # Setup signal handler
     def signal_handler(sig, frame):
         console.print()
         console.info("Shutting down...")
-        if watcher:
-            watcher.stop()
+        if hot_reload_manager:
+            hot_reload_manager.stop()
         sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)
@@ -177,19 +159,28 @@ def dev(ctx, port: int, host: str, no_reload: bool, config: str, debug: bool, qu
         console.print("[dim]Press Ctrl+C to stop[/dim]")
         console.print()
 
-        # Start the server
-        start_server(str(config_path), port=port)
+        # Start the server with hot reload config
+        start_server(
+            str(config_path),
+            port=port,
+            hot_reload=not no_reload,
+            hot_reload_port=ws_port if not no_reload else None
+        )
 
     except ImportError as e:
         console.error(f"Failed to import Quantum runtime: {e}")
         console.info("Make sure you're in the Quantum project directory")
+        if hot_reload_manager:
+            hot_reload_manager.stop()
         raise click.Abort()
     except Exception as e:
         console.error(f"Server error: {e}")
         if debug:
             import traceback
             console.print(traceback.format_exc())
+        if hot_reload_manager:
+            hot_reload_manager.stop()
         raise click.Abort()
     finally:
-        if watcher:
-            watcher.stop()
+        if hot_reload_manager:
+            hot_reload_manager.stop()

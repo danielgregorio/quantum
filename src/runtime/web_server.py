@@ -29,22 +29,28 @@ from runtime.error_handler import ErrorHandler, QuantumError
 
 class QuantumWebServer:
     """
-    Quantum Web Server - Magic happens here! ✨
+    Quantum Web Server - Magic happens here!
 
     Automatically serves .q files as HTML pages.
     No configuration needed (but you can customize via quantum.config.yaml)
     """
 
-    def __init__(self, config_path: str = 'quantum.config.yaml'):
+    def __init__(self, config_path: str = 'quantum.config.yaml', hot_reload: bool = False, hot_reload_port: int = None):
         """
         Initialize Quantum Web Server.
 
         Args:
             config_path: Path to configuration file
+            hot_reload: Enable hot reload mode (inject client script)
+            hot_reload_port: WebSocket port for hot reload
         """
         self.config = self._load_config(config_path)
         # Disable Flask's built-in static serving - we use our own serve_static route
         self.app = Flask(__name__, static_folder=None)
+
+        # Hot reload configuration
+        self.hot_reload_enabled = hot_reload
+        self.hot_reload_port = hot_reload_port or 35729
 
         # Setup secret key for sessions (flash messages)
         # Use env var or config for stable key across Gunicorn workers
@@ -637,6 +643,194 @@ class QuantumWebServer:
         result = re.sub(r'\n{3,}', '\n\n', result)
         return result.strip() + '\n'
 
+    def _get_hot_reload_script(self) -> str:
+        """
+        Get the hot reload client script.
+
+        Returns:
+            JavaScript code for hot reload client
+        """
+        if not self.hot_reload_enabled:
+            return ''
+
+        return f"""
+    <!-- Quantum Hot Reload Client -->
+    <script>
+    window.__QUANTUM_HOT_RELOAD_CONFIG = {{
+        host: 'localhost',
+        port: {self.hot_reload_port},
+        enableLogging: true,
+        enableToasts: true,
+        preserveState: true
+    }};
+    </script>
+    <script>
+    (function() {{
+        'use strict';
+        var config = window.__QUANTUM_HOT_RELOAD_CONFIG || {{}};
+        var WS_URL = 'ws://' + (config.host || 'localhost') + ':' + (config.port || 35729);
+        var RECONNECT_INTERVAL = 1000;
+        var MAX_RECONNECT_ATTEMPTS = 30;
+        var socket = null;
+        var reconnectAttempts = 0;
+        var overlay = null;
+        var isConnected = false;
+        var preservedState = {{}};
+
+        function log(msg) {{
+            if (config.enableLogging !== false) console.log('[Hot Reload] ' + msg);
+        }}
+
+        function connect() {{
+            if (socket && socket.readyState === WebSocket.OPEN) return;
+            try {{
+                socket = new WebSocket(WS_URL);
+                socket.onopen = function() {{
+                    log('Connected to dev server');
+                    reconnectAttempts = 0;
+                    isConnected = true;
+                    hideOverlay();
+                    showToast('Hot reload connected', 'success');
+                }};
+                socket.onclose = function() {{
+                    isConnected = false;
+                    log('Disconnected from dev server');
+                    scheduleReconnect();
+                }};
+                socket.onerror = function() {{ log('WebSocket error'); }};
+                socket.onmessage = function(e) {{
+                    try {{ handleMessage(JSON.parse(e.data)); }} catch (err) {{}}
+                }};
+            }} catch (e) {{
+                log('Failed to connect: ' + e);
+                scheduleReconnect();
+            }}
+        }}
+
+        function scheduleReconnect() {{
+            if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {{
+                showOverlay({{type: 'connection_lost', message: 'Lost connection to dev server. Restart with: quantum dev'}});
+                return;
+            }}
+            reconnectAttempts++;
+            setTimeout(connect, RECONNECT_INTERVAL);
+        }}
+
+        function handleMessage(data) {{
+            if (data.type === 'reload') {{
+                log('Reload: ' + data.reloadType);
+                if (data.reloadType === 'css') {{
+                    reloadCSS();
+                    showToast('Styles updated', 'info');
+                }} else {{
+                    preserveState();
+                    showToast('Reloading...', 'info');
+                    setTimeout(function() {{ location.reload(); }}, 100);
+                }}
+            }} else if (data.type === 'error') {{
+                showOverlay(data.error);
+            }} else if (data.type === 'clear_error') {{
+                hideOverlay();
+            }}
+        }}
+
+        function reloadCSS() {{
+            var links = document.querySelectorAll('link[rel="stylesheet"]');
+            var ts = Date.now();
+            links.forEach(function(l) {{ l.href = l.href.split('?')[0] + '?_hr=' + ts; }});
+            log('CSS reloaded');
+        }}
+
+        function preserveState() {{
+            preservedState = {{}};
+            document.querySelectorAll('form').forEach(function(f, i) {{
+                var id = f.id || 'form_' + i;
+                preservedState[id] = {{}};
+                f.querySelectorAll('input,textarea,select').forEach(function(inp) {{
+                    if (inp.name) {{
+                        preservedState[id][inp.name] = (inp.type === 'checkbox' || inp.type === 'radio') ? inp.checked : inp.value;
+                    }}
+                }});
+            }});
+            preservedState._scroll = {{x: window.scrollX, y: window.scrollY}};
+            try {{ sessionStorage.setItem('__quantum_hr_state', JSON.stringify(preservedState)); }} catch(e) {{}}
+        }}
+
+        function restoreState() {{
+            try {{
+                var s = sessionStorage.getItem('__quantum_hr_state');
+                if (!s) return;
+                var state = JSON.parse(s);
+                sessionStorage.removeItem('__quantum_hr_state');
+                Object.keys(state).forEach(function(fid) {{
+                    if (fid.startsWith('_')) return;
+                    var form = document.getElementById(fid) || document.forms[fid.replace('form_', '')];
+                    if (!form) return;
+                    Object.keys(state[fid]).forEach(function(n) {{
+                        var inp = form.querySelector('[name="' + n + '"]');
+                        if (inp) {{
+                            if (inp.type === 'checkbox' || inp.type === 'radio') inp.checked = state[fid][n];
+                            else inp.value = state[fid][n];
+                        }}
+                    }});
+                }});
+                if (state._scroll) setTimeout(function() {{ window.scrollTo(state._scroll.x, state._scroll.y); }}, 100);
+            }} catch(e) {{}}
+        }}
+
+        function showOverlay(err) {{
+            hideOverlay();
+            overlay = document.createElement('div');
+            overlay.id = '__quantum_hr_overlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;';
+            var c = document.createElement('div');
+            c.style.cssText = 'max-width:800px;padding:40px;background:#1e1e1e;border-radius:8px;color:#fff;';
+            var titleColor = err.type === 'connection_lost' ? '#ffc107' : '#f44336';
+            c.innerHTML = '<h2 style="color:' + titleColor + ';margin:0 0 16px;">' + (err.type === 'connection_lost' ? 'Connection Lost' : 'Parse Error') + '</h2>' +
+                (err.file ? '<p style="color:#888;margin:0 0 12px;font-size:14px;">File: ' + err.file + '</p>' : '') +
+                '<pre style="background:#2d2d2d;padding:16px;border-radius:4px;overflow:auto;max-height:400px;color:#ff6b6b;white-space:pre-wrap;">' + escapeHtml(err.message) + '</pre>' +
+                '<p style="color:#888;margin:16px 0 0;font-size:13px;">Fix the error and save to reload.</p>';
+            overlay.appendChild(c);
+            document.body.appendChild(overlay);
+            overlay.onclick = function(e) {{ if (e.target === overlay) hideOverlay(); }};
+        }}
+
+        function hideOverlay() {{
+            if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            overlay = null;
+        }}
+
+        function showToast(msg, type) {{
+            if (config.enableToasts === false) return;
+            var old = document.getElementById('__quantum_hr_toast');
+            if (old) old.parentNode.removeChild(old);
+            var t = document.createElement('div');
+            t.id = '__quantum_hr_toast';
+            var bg = {{success:'#4caf50',error:'#f44336',warning:'#ff9800',info:'#2196f3'}}[type] || '#2196f3';
+            t.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:12px 20px;background:' + bg + ';color:#fff;border-radius:4px;font-family:system-ui;font-size:14px;z-index:999998;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(function() {{ if (t.parentNode) {{ t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(function() {{ if (t.parentNode) t.parentNode.removeChild(t); }}, 300); }} }}, 2000);
+        }}
+
+        function escapeHtml(text) {{
+            var d = document.createElement('div');
+            d.textContent = text;
+            return d.innerHTML;
+        }}
+
+        setInterval(function() {{
+            if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({{type:'ping'}}));
+        }}, 30000);
+
+        if (document.readyState === 'loading') {{
+            document.addEventListener('DOMContentLoaded', function() {{ restoreState(); connect(); }});
+        }} else {{
+            restoreState(); connect();
+        }}
+    }})();
+    </script>"""
+
     def _inject_htmx(self, html: str) -> str:
         """
         Inject HTMX scripts into an existing full HTML document.
@@ -662,17 +856,21 @@ class QuantumWebServer:
         }
     </script>"""
 
+        # Add hot reload script if enabled
+        hot_reload_script = self._get_hot_reload_script()
+
         # Inject HTMX library before </head>
         if '</head>' in html:
             html = html.replace('</head>', htmx_head + '\n  </head>', 1)
         elif '</HEAD>' in html:
             html = html.replace('</HEAD>', htmx_head + '\n  </HEAD>', 1)
 
-        # Inject HTMX config before </body>
+        # Inject HTMX config and hot reload script before </body>
+        scripts = htmx_body + hot_reload_script
         if '</body>' in html:
-            html = html.replace('</body>', htmx_body + '\n  </body>', 1)
+            html = html.replace('</body>', scripts + '\n  </body>', 1)
         elif '</BODY>' in html:
-            html = html.replace('</BODY>', htmx_body + '\n  </BODY>', 1)
+            html = html.replace('</BODY>', scripts + '\n  </BODY>', 1)
 
         # Ensure DOCTYPE is present
         if not html.strip().lower().startswith('<!doctype'):
@@ -688,6 +886,7 @@ class QuantumWebServer:
         - HTMX library from CDN
         - Minimal CSS reset
         - HTMX configuration
+        - Hot reload client (when enabled)
 
         Args:
             html: Rendered component HTML
@@ -696,6 +895,8 @@ class QuantumWebServer:
         Returns:
             Full HTML page with HTMX support
         """
+        hot_reload_script = self._get_hot_reload_script()
+
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -754,6 +955,7 @@ class QuantumWebServer:
             htmx.logAll();
         }}
     </script>
+    {hot_reload_script}
 </body>
 </html>"""
 
@@ -963,14 +1165,16 @@ class QuantumWebServer:
         components_dir = self.config['paths']['components']
 
         print("\n" + "="*60)
-        print("🚀 QUANTUM WEB SERVER")
+        print("QUANTUM WEB SERVER")
         print("="*60)
-        print(f"📡 Server URL:      http://localhost:{port}")
-        print(f"📂 Components:      {components_dir}")
-        print(f"🔄 Auto-reload:     {self.config['server'].get('reload', False)}")
-        print(f"🐛 Debug mode:      {self.config['server'].get('debug', False)}")
+        print(f"Server URL:      http://localhost:{port}")
+        print(f"Components:      {components_dir}")
+        print(f"Auto-reload:     {self.config['server'].get('reload', False)}")
+        print(f"Debug mode:      {self.config['server'].get('debug', False)}")
+        if self.hot_reload_enabled:
+            print(f"Hot Reload:      ws://localhost:{self.hot_reload_port}")
         print("="*60)
-        print("✨ Magic is happening... Press Ctrl+C to stop")
+        print("Press Ctrl+C to stop")
         print("="*60 + "\n")
 
 
@@ -995,14 +1199,31 @@ class QuantumWebServer:
 
 
 # Convenience function for CLI
-def start_server(config_path: str = 'quantum.config.yaml'):
+def start_server(
+    config_path: str = 'quantum.config.yaml',
+    port: int = None,
+    hot_reload: bool = False,
+    hot_reload_port: int = None
+):
     """
     Start Quantum web server.
 
     Args:
         config_path: Path to configuration file
+        port: Override port from config (optional)
+        hot_reload: Enable hot reload mode
+        hot_reload_port: WebSocket port for hot reload
     """
-    server = QuantumWebServer(config_path)
+    server = QuantumWebServer(
+        config_path,
+        hot_reload=hot_reload,
+        hot_reload_port=hot_reload_port
+    )
+
+    # Override port if specified
+    if port is not None:
+        server.config['server']['port'] = port
+
     server.start()
 
 
