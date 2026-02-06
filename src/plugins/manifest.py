@@ -139,8 +139,10 @@ class PluginManifest:
     source_path: Optional[Path] = None
 
     @classmethod
-    def from_file(cls, manifest_path: Path) -> 'PluginManifest':
+    def from_file(cls, manifest_path) -> 'PluginManifest':
         """Load manifest from yaml file"""
+        if isinstance(manifest_path, str):
+            manifest_path = Path(manifest_path)
         if not manifest_path.exists():
             raise ManifestError(f"Manifest file not found: {manifest_path}")
 
