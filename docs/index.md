@@ -1,70 +1,97 @@
-# Quantum Language
+---
+layout: home
+hero:
+  name: Quantum Framework
+  text: Build Web, Desktop & Mobile Apps
+  tagline: Full-stack declarative framework using clean XML syntax. Write once, deploy anywhere.
+  actions:
+    - theme: brand
+      text: Get Started
+      link: /guide/getting-started
+    - theme: alt
+      text: View on GitHub
+      link: https://github.com/danielgregorio/quantum
 
-::: tip 🧠 Codename: FF / FireFusion
-⚡ **Status:** Core features implemented - Loops and Databinding working!
-:::
+features:
+  - icon: "🎯"
+    title: Declarative Syntax
+    details: Write components using clean XML-based syntax. No JavaScript required for basic applications.
+  - icon: "🖥️"
+    title: Multi-Target Output
+    details: Compile to HTML, Desktop (pywebview), Mobile (React Native), or Terminal (Textual) from a single codebase.
+  - icon: "🔗"
+    title: Data Binding
+    details: Powerful {variable} expressions with automatic updates and computed values.
+  - icon: "🗃️"
+    title: Built-in Database
+    details: SQL queries with q:query, transactions, caching, and query-of-queries support.
+  - icon: "🎨"
+    title: Rich UI Components
+    details: 40+ UI components including cards, modals, charts, tables, and more.
+  - icon: "⚡"
+    title: Zero Configuration
+    details: Start building immediately. Batteries included with sensible defaults.
+---
 
-## What is Quantum?
+# Welcome to Quantum
 
-Quantum is an experimental declarative language that allows you to write components, web applications, and jobs using clean XML syntax. Think of it as a bridge between configuration and programming - write once, deploy anywhere!
+Quantum is a **full-stack declarative framework** for building web applications, desktop apps, and mobile apps using a clean XML-based syntax. Inspired by ColdFusion and Adobe Flex, it allows you to create powerful applications without writing JavaScript.
 
-## ✨ Key Features
-
-- 🔄 **Loop Structures** - Range, Array, and List loops with full databinding
-- 🔗 **Variable Databinding** - Dynamic `{variable}` substitution with expressions
-- 🧩 **Component System** - Reusable, modular components
-- 🌐 **Web Applications** - HTML and API applications
-- ⚡ **Simple Syntax** - XML-based, easy to learn
-
-## 🚀 Quick Example
+## Quick Example
 
 ```xml
-<!-- Simple dynamic loop -->
-<q:component name="NumberList" xmlns:q="https://quantum.lang/ns">
-  <q:loop type="range" var="i" from="1" to="5">
-    <q:return value="Number {i}: {i * 2}" />
+<q:component name="UserList" xmlns:q="https://quantum.lang/ns">
+  <!-- Query the database -->
+  <q:query name="users" datasource="mydb">
+    SELECT id, name, email FROM users WHERE active = 1
+  </q:query>
+
+  <!-- Display results -->
+  <q:loop query="users">
+    <q:return value="User: {users.name} ({users.email})" />
   </q:loop>
 </q:component>
 ```
 
-**Output:** `["Number 1: 2", "Number 2: 4", "Number 3: 6", "Number 4: 8", "Number 5: 10"]`
+## Key Features
 
-## 🎯 Philosophy
+### Core Language
+- **Components** - Reusable .q files with parameters and return values
+- **State Management** - `q:set` for variables with validation and type checking
+- **Loops** - Range, array, list, and query iterations with `q:loop`
+- **Conditionals** - Full `q:if`/`q:elseif`/`q:else` support
+- **Functions** - Define reusable logic with `q:function`
 
-**Simplicity over configuration** - Quantum prioritizes readability and ease of use while maintaining powerful capabilities for complex scenarios.
+### UI Engine
+- **40+ Components** - Forms, tables, cards, modals, charts, and more
+- **Multi-Target** - HTML, Desktop, Mobile, and Terminal output
+- **Design Tokens** - Consistent styling across all targets
+- **Animations** - Built-in animation system with triggers
 
-## 📚 Get Started
+### Backend Features
+- **Database Queries** - SQL with parameters, caching, and transactions
+- **Authentication** - Session management and role-based access control
+- **Data Import** - JSON, CSV, and XML data sources
+- **Email** - Send emails with `q:mail`
 
-<div class="vp-feature-grid">
-  <div class="vp-feature">
-    <div class="vp-feature-icon">📖</div>
-    <h3><a href="/guide/getting-started">Getting Started</a></h3>
-    <p>Learn the basics and run your first Quantum component</p>
-  </div>
-  
-  <div class="vp-feature">
-    <div class="vp-feature-icon">🔄</div>
-    <h3><a href="/guide/loops">Loops</a></h3>
-    <p>Master Range, Array, and List loops with databinding</p>
-  </div>
-  
-  <div class="vp-feature">
-    <div class="vp-feature-icon">🌐</div>
-    <h3><a href="/examples/web-applications">Web Apps</a></h3>
-    <p>Build HTML and API applications with ease</p>
-  </div>
-</div>
+## Philosophy
 
-## 🏆 Current Status
+> **Simplicity over configuration**
 
-- ✅ **Component System** - Fully functional
-- ✅ **Loop Structures** - Range, Array, List loops implemented
-- ✅ **Variable Databinding** - `{variable}` and expressions working
-- ✅ **Conditional Logic** - `q:if`, `q:else`, `q:elseif` supported
-- ✅ **Web & API Servers** - Basic HTTP applications
-- 🚧 **State Management** - Coming next (`q:set`)
-- 🚧 **Functions** - Planned (`q:function`)
+Quantum prioritizes readability and ease of use while maintaining powerful capabilities. If you know XML and SQL, you can build full applications.
 
----
+## Getting Started
 
-*Built with ❤️ using Python and powered by a clean AST-based architecture.*
+```bash
+# Clone the repository
+git clone https://github.com/danielgregorio/quantum.git
+cd quantum
+
+# Install dependencies
+pip install flask
+
+# Run your first component
+python src/cli/runner.py run examples/hello.q
+```
+
+[Read the full Getting Started guide](/guide/getting-started)

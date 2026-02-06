@@ -2,27 +2,28 @@
 
 Components are the fundamental building blocks of Quantum applications. They encapsulate logic, data processing, and output generation in reusable, modular units.
 
-## Component Structure
+## Basic Structure
 
-Every Quantum component follows this basic structure:
+Every Quantum component follows this structure:
 
 ```xml
 <q:component name="ComponentName" xmlns:q="https://quantum.lang/ns">
   <!-- Component logic here -->
-  <q:return value="component output" />
+  <q:return value="output" />
 </q:component>
 ```
 
 ### Required Elements
 
-- **Root Element**: `q:component`
-- **Name Attribute**: Unique identifier for the component
-- **Namespace**: `xmlns:q="https://quantum.lang/ns"`
-- **Content**: The logic and output of your component
+| Element | Description |
+|---------|-------------|
+| `q:component` | Root element |
+| `name` attribute | Unique identifier (PascalCase) |
+| `xmlns:q` | Quantum namespace declaration |
 
-## Basic Components
+## Simple Components
 
-### Simple Output
+### Hello World
 
 ```xml
 <q:component name="HelloWorld" xmlns:q="https://quantum.lang/ns">
@@ -30,328 +31,357 @@ Every Quantum component follows this basic structure:
 </q:component>
 ```
 
-**Output:** `"Hello, World!"`
+Output: `"Hello, World!"`
 
-### Static Lists
+### Multiple Returns
 
 ```xml
-<q:component name="StaticList" xmlns:q="https://quantum.lang/ns">
-  <q:return value="Item 1" />
-  <q:return value="Item 2" />
-  <q:return value="Item 3" />
+<q:component name="Colors" xmlns:q="https://quantum.lang/ns">
+  <q:return value="Red" />
+  <q:return value="Green" />
+  <q:return value="Blue" />
 </q:component>
 ```
 
-**Output:** `["Item 1", "Item 2", "Item 3"]`
+Output: `["Red", "Green", "Blue"]`
 
-## Dynamic Components
+## Component Parameters
 
-### Using Loops
+Accept input with `q:param`:
 
 ```xml
-<q:component name="NumberList" xmlns:q="https://quantum.lang/ns">
+<q:component name="Greeting" xmlns:q="https://quantum.lang/ns">
+  <q:param name="name" type="string" required="true" />
+  <q:param name="formal" type="boolean" default="false" />
+
+  <q:if condition="formal">
+    <q:return value="Good day, {name}." />
+  </q:if>
+  <q:else>
+    <q:return value="Hey {name}!" />
+  </q:else>
+</q:component>
+```
+
+### Parameter Attributes
+
+| Attribute | Description | Example |
+|-----------|-------------|---------|
+| `name` | Parameter name | `name="userId"` |
+| `type` | Data type | `type="string"` |
+| `required` | Required parameter | `required="true"` |
+| `default` | Default value | `default="10"` |
+
+### Supported Types
+
+- `string` - Text values
+- `number` - Integers and decimals
+- `boolean` - true/false
+- `array` - JSON arrays
+- `object` - JSON objects
+- `email` - Valid email format
+- `date` - Date strings
+
+## Component State
+
+Use `q:set` for internal variables:
+
+```xml
+<q:component name="Counter" xmlns:q="https://quantum.lang/ns">
+  <q:set name="count" value="0" type="number" />
+  <q:set name="step" value="1" type="number" />
+
+  <q:function name="increment">
+    <q:set name="count" value="{count + step}" />
+  </q:function>
+
+  <q:return value="Count: {count}" />
+</q:component>
+```
+
+### Variable Validation
+
+```xml
+<q:set name="email"
+       type="email"
+       value="user@example.com"
+       validate="true" />
+
+<q:set name="age"
+       type="number"
+       value="25"
+       min="0"
+       max="150" />
+
+<q:set name="status"
+       type="string"
+       value="active"
+       enum="active,inactive,pending" />
+```
+
+## Component Functions
+
+Define reusable logic with `q:function`:
+
+```xml
+<q:component name="Calculator" xmlns:q="https://quantum.lang/ns">
+  <q:function name="add" returnType="number">
+    <q:param name="a" type="number" required="true" />
+    <q:param name="b" type="number" required="true" />
+    <q:set name="result" value="{a + b}" />
+    <q:return value="{result}" />
+  </q:function>
+
+  <q:function name="multiply" returnType="number">
+    <q:param name="a" type="number" required="true" />
+    <q:param name="b" type="number" required="true" />
+    <q:return value="{a * b}" />
+  </q:function>
+
+  <!-- Use the functions -->
+  <q:set name="sum" value="{add(5, 3)}" />
+  <q:set name="product" value="{multiply(4, 7)}" />
+
+  <q:return value="5 + 3 = {sum}" />
+  <q:return value="4 * 7 = {product}" />
+</q:component>
+```
+
+## Loops in Components
+
+### Range Loop
+
+```xml
+<q:component name="Numbers" xmlns:q="https://quantum.lang/ns">
   <q:loop type="range" var="i" from="1" to="5">
     <q:return value="Number {i}" />
   </q:loop>
 </q:component>
 ```
 
-**Output:** `["Number 1", "Number 2", "Number 3", "Number 4", "Number 5"]`
+Output: `["Number 1", "Number 2", "Number 3", "Number 4", "Number 5"]`
 
-### Using Conditionals
+### Array Loop
 
 ```xml
-<q:component name="ConditionalOutput" xmlns:q="https://quantum.lang/ns">
-  <q:loop type="range" var="i" from="1" to="5">
-    <q:if condition="i % 2 == 0">
-      <q:return value="{i} is even" />
-    <q:else>
-      <q:return value="{i} is odd" />
-    </q:else>
-    </q:if>
+<q:component name="Fruits" xmlns:q="https://quantum.lang/ns">
+  <q:set name="fruits" value='["Apple", "Banana", "Cherry"]' />
+
+  <q:loop type="array" var="fruit" items="{fruits}">
+    <q:return value="I like {fruit}" />
   </q:loop>
 </q:component>
 ```
 
-**Output:** `["1 is odd", "2 is even", "3 is odd", "4 is even", "5 is odd"]`
-
-## Component Elements
-
-### Return Statements (`q:return`)
-
-The `q:return` element generates output from your component:
+### List Loop
 
 ```xml
-<!-- Simple value -->
-<q:return value="Hello World" />
-
-<!-- Dynamic value with databinding -->
-<q:return value="User {userId}: {userName}" />
-
-<!-- Complex expression -->
-<q:return value="Total: {price * quantity}" />
+<q:component name="Colors" xmlns:q="https://quantum.lang/ns">
+  <q:loop type="list" var="color" items="red,green,blue" delimiter=",">
+    <q:return value="Color: {color}" />
+  </q:loop>
+</q:component>
 ```
 
-### Conditional Logic (`q:if`, `q:else`, `q:elseif`)
-
-Components support full conditional logic:
+### Loop with Index
 
 ```xml
-<q:if condition="score >= 90">
-  <q:return value="Grade: A" />
-<q:elseif condition="score >= 80">
-  <q:return value="Grade: B" />
-<q:elseif condition="score >= 70">
-  <q:return value="Grade: C" />
-<q:else>
-  <q:return value="Grade: F" />
-</q:else>
-</q:if>
+<q:component name="IndexedList" xmlns:q="https://quantum.lang/ns">
+  <q:set name="items" value='["First", "Second", "Third"]' />
+
+  <q:loop type="array" var="item" items="{items}" index="i">
+    <q:return value="{i + 1}. {item}" />
+  </q:loop>
+</q:component>
 ```
 
-### Loop Structures (`q:loop`)
+Output: `["1. First", "2. Second", "3. Third"]`
 
-Components can use all loop types:
+## Conditionals
+
+### Basic If/Else
 
 ```xml
-<!-- Range loop -->
-<q:loop type="range" var="i" from="1" to="3">
-  <q:return value="Item {i}" />
-</q:loop>
+<q:component name="AgeCheck" xmlns:q="https://quantum.lang/ns">
+  <q:param name="age" type="number" required="true" />
 
-<!-- Array loop -->
-<q:loop type="array" var="item" items='["apple", "banana"]'>
-  <q:return value="Fruit: {item}" />
-</q:loop>
-
-<!-- List loop -->
-<q:loop type="list" var="color" items="red,green,blue">
-  <q:return value="Color: {color}" />
-</q:loop>
+  <q:if condition="age >= 18">
+    <q:return value="Adult" />
+  </q:if>
+  <q:else>
+    <q:return value="Minor" />
+  </q:else>
+</q:component>
 ```
 
-## Advanced Patterns
-
-### Nested Structures
-
-Components can contain deeply nested logic:
+### Multiple Conditions
 
 ```xml
-<q:component name="NestedExample" xmlns:q="https://quantum.lang/ns">
-  <q:loop type="range" var="category" from="1" to="2">
-    <q:return value="Category {category}:" />
-    <q:loop type="range" var="item" from="1" to="3">
-      <q:if condition="item % 2 == 0">
-        <q:return value="  Even item: {item}" />
-      <q:else>
-        <q:return value="  Odd item: {item}" />
-      </q:else>
-      </q:if>
+<q:component name="Grade" xmlns:q="https://quantum.lang/ns">
+  <q:param name="score" type="number" required="true" />
+
+  <q:if condition="score >= 90">
+    <q:return value="A" />
+  </q:if>
+  <q:elseif condition="score >= 80">
+    <q:return value="B" />
+  </q:elseif>
+  <q:elseif condition="score >= 70">
+    <q:return value="C" />
+  </q:elseif>
+  <q:elseif condition="score >= 60">
+    <q:return value="D" />
+  </q:elseif>
+  <q:else>
+    <q:return value="F" />
+  </q:else>
+</q:component>
+```
+
+## Data Binding
+
+Use `{expression}` for dynamic values:
+
+### Simple Variables
+
+```xml
+<q:set name="name" value="Alice" />
+<q:return value="Hello, {name}!" />
+```
+
+### Object Properties
+
+```xml
+<q:set name="user" value='{"name": "Bob", "age": 30}' />
+<q:return value="{user.name} is {user.age} years old" />
+```
+
+### Expressions
+
+```xml
+<q:set name="price" value="100" />
+<q:set name="quantity" value="5" />
+<q:return value="Total: ${price * quantity}" />
+```
+
+### String Functions
+
+```xml
+<q:set name="text" value="hello world" />
+<q:return value="{text.toUpperCase()}" />
+```
+
+## Nested Components
+
+Components can contain nested structures:
+
+```xml
+<q:component name="Report" xmlns:q="https://quantum.lang/ns">
+  <q:set name="categories" value='[
+    {"name": "Electronics", "items": ["Phone", "Laptop"]},
+    {"name": "Clothing", "items": ["Shirt", "Pants"]}
+  ]' />
+
+  <q:loop type="array" var="category" items="{categories}">
+    <q:return value="Category: {category.name}" />
+
+    <q:loop type="array" var="item" items="{category.items}">
+      <q:return value="  - {item}" />
     </q:loop>
   </q:loop>
 </q:component>
 ```
-
-### Data Processing
-
-Components can process complex data structures:
-
-```xml
-<q:component name="DataProcessor" xmlns:q="https://quantum.lang/ns">
-  <q:loop type="array" var="user" items='[{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]'>
-    <q:if condition="user.age >= 30">
-      <q:return value="Senior: {user.name} ({user.age})" />
-    <q:else>
-      <q:return value="Junior: {user.name} ({user.age})" />
-    </q:else>
-    </q:if>
-  </q:loop>
-</q:component>
-```
-
-## Component Naming
-
-### Naming Conventions
-
-- Use **PascalCase** for component names
-- Choose descriptive, meaningful names
-- Avoid abbreviations when possible
-
-```xml
-<!-- Good -->
-<q:component name="UserProfileList" xmlns:q="https://quantum.lang/ns">
-<q:component name="ProductCatalog" xmlns:q="https://quantum.lang/ns">
-<q:component name="OrderSummary" xmlns:q="https://quantum.lang/ns">
-
-<!-- Less ideal -->
-<q:component name="UPL" xmlns:q="https://quantum.lang/ns">
-<q:component name="comp1" xmlns:q="https://quantum.lang/ns">
-<q:component name="data" xmlns:q="https://quantum.lang/ns">
-```
-
-### Unique Names
-
-Each component must have a unique name within your application:
-
-```xml
-<!-- This will work -->
-<q:component name="ProductList" xmlns:q="https://quantum.lang/ns">
-  <!-- ... -->
-</q:component>
-
-<!-- This will cause conflicts if both exist -->
-<q:component name="ProductList" xmlns:q="https://quantum.lang/ns">
-  <!-- ... -->
-</q:component>
-```
-
-## Output Behavior
-
-### Single Return
-
-Components with one `q:return` produce a single value:
-
-```xml
-<q:component name="SingleValue" xmlns:q="https://quantum.lang/ns">
-  <q:return value="Hello World" />
-</q:component>
-```
-**Result:** `"Hello World"`
-
-### Multiple Returns
-
-Components with multiple `q:return` statements produce arrays:
-
-```xml
-<q:component name="MultipleValues" xmlns:q="https://quantum.lang/ns">
-  <q:return value="First" />
-  <q:return value="Second" />
-</q:component>
-```
-**Result:** `["First", "Second"]`
-
-### No Returns
-
-Components without `q:return` statements produce empty results:
-
-```xml
-<q:component name="NoOutput" xmlns:q="https://quantum.lang/ns">
-  <q:if condition="false">
-    <q:return value="This won't execute" />
-  </q:if>
-</q:component>
-```
-**Result:** `[]`
 
 ## Error Handling
 
 ### Validation Errors
 
-Quantum validates component structure:
-
 ```xml
-<!-- Missing name attribute -->
-<q:component xmlns:q="https://quantum.lang/ns">
-  <q:return value="Error!" />
+<!-- Missing required parameter -->
+<q:component name="BadComponent" xmlns:q="https://quantum.lang/ns">
+  <q:param name="id" required="true" />
+  <!-- Error: 'id' is required but not provided -->
 </q:component>
 ```
-**Error:** `Component requires 'name' attribute`
 
 ### Runtime Errors
 
-Components can encounter runtime errors:
-
 ```xml
 <q:component name="ErrorExample" xmlns:q="https://quantum.lang/ns">
-  <q:return value="Value: {undefined_variable}" />
+  <q:return value="{undefined_variable}" />
+  <!-- Error: undefined_variable is not defined -->
 </q:component>
 ```
-**Error:** `NameError: name 'undefined_variable' is not defined`
+
+### Error Messages
+
+Quantum provides descriptive error messages:
+
+```
+[ERROR] Component 'MyComponent' at line 5:
+  Variable 'userName' is not defined in this scope.
+  Did you mean 'username'?
+```
 
 ## Best Practices
 
-### Keep Components Focused
+### 1. Single Responsibility
 
-Each component should have a single, clear responsibility:
+Each component should have one clear purpose:
 
 ```xml
-<!-- Good - focused on user display -->
-<q:component name="UserCard" xmlns:q="https://quantum.lang/ns">
-  <q:return value="Name: {user.name}" />
-  <q:return value="Email: {user.email}" />
-</q:component>
-
-<!-- Less ideal - mixing concerns -->
-<q:component name="UserAndProducts" xmlns:q="https://quantum.lang/ns">
-  <q:return value="User: {user.name}" />
-  <q:loop type="array" var="product" items="{products}">
-    <q:return value="Product: {product.name}" />
-  </q:loop>
+<!-- Good: Focused component -->
+<q:component name="UserEmail" xmlns:q="https://quantum.lang/ns">
+  <q:param name="email" type="email" required="true" />
+  <q:return value="{email}" />
 </q:component>
 ```
 
-### Use Meaningful Structure
-
-Organize your component logic clearly:
+### 2. Use Descriptive Names
 
 ```xml
-<q:component name="OrderProcessor" xmlns:q="https://quantum.lang/ns">
-  <!-- Process order items -->
-  <q:loop type="array" var="item" items="{order.items}">
-    <q:return value="Item: {item.name} - ${item.price}" />
-  </q:loop>
-  
-  <!-- Calculate total -->
-  <q:return value="Total: ${order.total}" />
-  
-  <!-- Add status -->
-  <q:if condition="order.total > 100">
-    <q:return value="Status: Premium Order" />
-  <q:else>
-    <q:return value="Status: Standard Order" />
-  </q:else>
+<!-- Good -->
+<q:component name="ProductPriceFormatter" xmlns:q="https://quantum.lang/ns">
+
+<!-- Avoid -->
+<q:component name="PF" xmlns:q="https://quantum.lang/ns">
+```
+
+### 3. Document Parameters
+
+```xml
+<!--
+  Formats a price with currency symbol.
+
+  @param amount - The price amount (required)
+  @param currency - Currency code (default: USD)
+-->
+<q:component name="PriceFormatter" xmlns:q="https://quantum.lang/ns">
+  <q:param name="amount" type="number" required="true" />
+  <q:param name="currency" type="string" default="USD" />
+  ...
+</q:component>
+```
+
+### 4. Validate Input
+
+```xml
+<q:component name="SafeComponent" xmlns:q="https://quantum.lang/ns">
+  <q:param name="count" type="number" required="true" />
+
+  <q:if condition="count < 0">
+    <q:return value="Error: count must be positive" />
   </q:if>
-</q:component>
-```
 
-### Handle Edge Cases
-
-Consider empty data and error conditions:
-
-```xml
-<q:component name="SafeUserList" xmlns:q="https://quantum.lang/ns">
-  <q:if condition="users.length > 0">
-    <q:loop type="array" var="user" items="{users}">
-      <q:return value="User: {user.name}" />
-    </q:loop>
-  <q:else>
-    <q:return value="No users found" />
-  </q:else>
-  </q:if>
-</q:component>
-```
-
-## Integration with Applications
-
-Components are designed to integrate seamlessly with Quantum applications:
-
-```xml
-<!-- This component can be used in web applications -->
-<q:component name="ApiResponse" xmlns:q="https://quantum.lang/ns">
-  <q:return value="API Version: 1.0" />
-  <q:return value="Status: Online" />
-  <q:loop type="array" var="endpoint" items="{api.endpoints}">
-    <q:return value="Endpoint: {endpoint.path}" />
+  <q:loop type="range" var="i" from="1" to="{count}">
+    <q:return value="Item {i}" />
   </q:loop>
 </q:component>
 ```
 
-## Coming Soon
+## Next Steps
 
-Future component enhancements:
-
-- **Parameters**: `q:param` for component input
-- **Local Variables**: `q:set` for internal state
-- **Function Calls**: `q:function` definitions and calls
-- **Component Composition**: Calling components from other components
-- **Lifecycle Hooks**: Initialization and cleanup logic
+- [State Management](/guide/state-management) - Advanced variable handling
+- [Functions](/guide/functions) - Creating reusable logic
+- [Loops](/guide/loops) - Iteration patterns
+- [Conditionals](/guide/conditionals) - Control flow

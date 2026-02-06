@@ -1,16 +1,17 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  title: 'Quantum Language',
-  description: 'Experimental declarative language for components, applications, and jobs',
-  
+  title: 'Quantum Framework',
+  description: 'Full-stack declarative framework for building web, desktop, and mobile applications',
+
   themeConfig: {
     logo: '/logo.svg',
-    
+
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
+      { text: 'UI Engine', link: '/ui-engine/overview' },
+      { text: 'API Reference', link: '/api/' },
       { text: 'Examples', link: '/examples/' },
-      { text: 'API', link: '/api/' },
       { text: 'GitHub', link: 'https://github.com/danielgregorio/quantum' }
     ],
 
@@ -21,27 +22,113 @@ export default defineConfig({
           items: [
             { text: 'Introduction', link: '/guide/getting-started' },
             { text: 'Installation', link: '/guide/installation' },
-            { text: 'Basic Concepts', link: '/guide/basic-concepts' }
+            { text: 'Quick Start', link: '/guide/quick-start' },
+            { text: 'Project Structure', link: '/guide/project-structure' }
           ]
         },
         {
-          text: 'Language Reference',
+          text: 'Core Concepts',
           items: [
-            { text: 'Components', link: '/guide/components' },
-            { text: 'Loops', link: '/guide/loops' },
-            { text: 'Databinding', link: '/guide/databinding' },
-            { text: 'Applications', link: '/guide/applications' }
+            { text: 'Components (.q files)', link: '/guide/components' },
+            { text: 'State Management (q:set)', link: '/guide/state-management' },
+            { text: 'Loops (q:loop)', link: '/guide/loops' },
+            { text: 'Conditionals (q:if/q:else)', link: '/guide/conditionals' },
+            { text: 'Functions (q:function)', link: '/guide/functions' },
+            { text: 'Data Binding', link: '/guide/databinding' }
+          ]
+        },
+        {
+          text: 'Data & Backend',
+          items: [
+            { text: 'Database Queries (q:query)', link: '/guide/query' },
+            { text: 'Data Import', link: '/guide/data-import' },
+            { text: 'Authentication', link: '/guide/authentication' },
+            { text: 'Sessions & Scopes', link: '/guide/sessions' }
+          ]
+        },
+        {
+          text: 'Web Applications',
+          items: [
+            { text: 'Applications', link: '/guide/applications' },
+            { text: 'Actions & Forms', link: '/guide/actions' },
+            { text: 'Email (q:mail)', link: '/guide/email' }
           ]
         }
       ],
-      '/examples/': [
+      '/ui-engine/': [
         {
-          text: 'Examples',
+          text: 'UI Engine',
           items: [
-            { text: 'Overview', link: '/examples/' },
-            { text: 'Basic Loops', link: '/examples/basic-loops' },
-            { text: 'Dynamic Data', link: '/examples/dynamic-data' },
-            { text: 'Web Applications', link: '/examples/web-applications' }
+            { text: 'Overview', link: '/ui-engine/overview' },
+            { text: 'Design Tokens', link: '/ui-engine/design-tokens' }
+          ]
+        },
+        {
+          text: 'Layout Components',
+          items: [
+            { text: 'Window', link: '/ui-engine/components/window' },
+            { text: 'HBox & VBox', link: '/ui-engine/components/box-layouts' },
+            { text: 'Grid', link: '/ui-engine/components/grid' },
+            { text: 'Panel', link: '/ui-engine/components/panel' },
+            { text: 'Tabs', link: '/ui-engine/components/tabs' },
+            { text: 'Accordion', link: '/ui-engine/components/accordion' }
+          ]
+        },
+        {
+          text: 'Form Components',
+          items: [
+            { text: 'Form & FormItem', link: '/ui-engine/components/form' },
+            { text: 'Input', link: '/ui-engine/components/input' },
+            { text: 'Button', link: '/ui-engine/components/button' },
+            { text: 'Checkbox & Switch', link: '/ui-engine/components/checkbox' },
+            { text: 'Select & Radio', link: '/ui-engine/components/select' }
+          ]
+        },
+        {
+          text: 'Data Components',
+          items: [
+            { text: 'Table', link: '/ui-engine/components/table' },
+            { text: 'List', link: '/ui-engine/components/list' },
+            { text: 'Tree', link: '/ui-engine/components/tree' }
+          ]
+        },
+        {
+          text: 'Display Components',
+          items: [
+            { text: 'Text', link: '/ui-engine/components/text' },
+            { text: 'Card', link: '/ui-engine/components/card' },
+            { text: 'Modal', link: '/ui-engine/components/modal' },
+            { text: 'Alert', link: '/ui-engine/components/alert' },
+            { text: 'Badge', link: '/ui-engine/components/badge' },
+            { text: 'Avatar', link: '/ui-engine/components/avatar' },
+            { text: 'Tooltip & Dropdown', link: '/ui-engine/components/tooltip-dropdown' },
+            { text: 'Chart', link: '/ui-engine/components/chart' }
+          ]
+        },
+        {
+          text: 'Navigation Components',
+          items: [
+            { text: 'Breadcrumb', link: '/ui-engine/components/breadcrumb' },
+            { text: 'Pagination', link: '/ui-engine/components/pagination' },
+            { text: 'Menu', link: '/ui-engine/components/menu' }
+          ]
+        },
+        {
+          text: 'Features',
+          items: [
+            { text: 'Animation System', link: '/ui-engine/features/animation' },
+            { text: 'Form Validation', link: '/ui-engine/features/validation' },
+            { text: 'State Persistence', link: '/ui-engine/features/persistence' },
+            { text: 'Theming', link: '/ui-engine/features/theming' }
+          ]
+        },
+        {
+          text: 'Targets',
+          items: [
+            { text: 'HTML Target', link: '/ui-engine/targets/html' },
+            { text: 'Desktop (pywebview)', link: '/ui-engine/targets/desktop' },
+            { text: 'Mobile (React Native)', link: '/ui-engine/targets/mobile' },
+            { text: 'Terminal (Textual)', link: '/ui-engine/targets/terminal' }
           ]
         }
       ],
@@ -50,9 +137,21 @@ export default defineConfig({
           text: 'API Reference',
           items: [
             { text: 'Overview', link: '/api/' },
-            { text: 'AST Nodes', link: '/api/ast-nodes' },
-            { text: 'Parser', link: '/api/parser' },
-            { text: 'Runtime', link: '/api/runtime' }
+            { text: 'Tags Reference', link: '/api/tags' },
+            { text: 'Attributes Reference', link: '/api/attributes' },
+            { text: 'Built-in Functions', link: '/api/functions' }
+          ]
+        }
+      ],
+      '/examples/': [
+        {
+          text: 'Examples',
+          items: [
+            { text: 'Overview', link: '/examples/' },
+            { text: 'Basic Components', link: '/examples/basic-components' },
+            { text: 'Forms & Validation', link: '/examples/forms' },
+            { text: 'Data Queries', link: '/examples/queries' },
+            { text: 'UI Applications', link: '/examples/ui-apps' }
           ]
         }
       ]
@@ -63,7 +162,7 @@ export default defineConfig({
     ],
 
     footer: {
-      message: 'Quantum Language - Simplicity over configuration',
+      message: 'Quantum Framework - Simplicity over configuration',
       copyright: 'MIT Licensed | Built with VitePress'
     },
 

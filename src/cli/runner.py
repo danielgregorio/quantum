@@ -39,6 +39,14 @@ def _get_deploy_module():
     except ImportError as e:
         return False, None, None, None, str(e)
 
+# Import package commands
+def _get_pkg_module():
+    try:
+        from cli.pkg import create_pkg_parser, handle_pkg
+        return True, create_pkg_parser, handle_pkg
+    except ImportError as e:
+        return False, None, str(e)
+
 class QuantumRunner:
     """Main Quantum Runner - Clean orchestration"""
     
@@ -250,6 +258,9 @@ Examples:
   quantum deploy ./my-app          # Deploy application
   quantum apps                     # List deployed apps
   quantum apps logs my-app         # View app logs
+  quantum pkg init ./my-component  # Initialize new package
+  quantum pkg install ./package    # Install package
+  quantum pkg list                 # List installed packages
         """
     )
 
@@ -275,6 +286,12 @@ Examples:
     if deploy_available:
         create_deploy_parser(subparsers)
         create_apps_parser(subparsers)
+
+    # Package commands (if available)
+    pkg_available, create_pkg_parser, handle_pkg = _get_pkg_module()
+
+    if pkg_available:
+        create_pkg_parser(subparsers)
 
     # Parse arguments
     args = parser.parse_args()
