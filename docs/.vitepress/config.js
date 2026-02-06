@@ -4,6 +4,8 @@ export default defineConfig({
   title: 'Quantum Framework',
   description: 'Full-stack declarative framework for building web, desktop, and mobile applications',
 
+  appearance: 'dark',
+
   themeConfig: {
     logo: '/logo.svg',
 
@@ -161,5 +163,7 @@ export default defineConfig({
       dark: 'github-dark'
     },
     lineNumbers: true
-  }
+  },
+
+  ignoreDeadLinks: true
 })
