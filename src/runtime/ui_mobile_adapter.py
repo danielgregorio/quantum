@@ -23,7 +23,10 @@ Component Mapping:
 import re
 from typing import List, Optional, Set, Dict, Any
 
-from core.ast_nodes import QuantumNode, SetNode, IfNode, LoopNode
+from core.ast_nodes import QuantumNode
+from core.features.conditionals.src.ast_node import IfNode
+from core.features.loops.src.ast_node import LoopNode
+from core.features.state_management.src.ast_node import SetNode
 from core.features.functions.src.ast_node import FunctionNode
 from core.features.ui_engine.src.ast_nodes import (
     UIWindowNode, UIHBoxNode, UIVBoxNode, UIPanelNode,
@@ -36,6 +39,10 @@ from core.features.ui_engine.src.ast_nodes import (
     UILinkNode, UIProgressNode, UITreeNode, UIMenuNode,
     UIOptionNode, UILogNode, UIMarkdownNode, UIHeaderNode,
     UIFooterNode, UIRuleNode, UILoadingNode, UIBadgeNode,
+    UICardNode, UICardHeaderNode, UICardBodyNode, UICardFooterNode,
+    UIModalNode, UIAlertNode, UIAvatarNode, UIDropdownNode,
+    UIToastNode, UIToastContainerNode, UICarouselNode, UISlideNode,
+    UIStepperNode, UIStepNode, UICalendarNode, UIDatePickerNode,
 )
 from runtime.ui_mobile_templates import (
     JsBuilder,
@@ -417,6 +424,39 @@ class UIReactNativeAdapter:
             self._render_loading(node, js)
         elif isinstance(node, UIBadgeNode):
             self._render_badge(node, js)
+        # Component Library nodes
+        elif isinstance(node, UICardNode):
+            self._render_card(node, js)
+        elif isinstance(node, UICardHeaderNode):
+            self._render_card_header(node, js)
+        elif isinstance(node, UICardBodyNode):
+            self._render_card_body(node, js)
+        elif isinstance(node, UICardFooterNode):
+            self._render_card_footer(node, js)
+        elif isinstance(node, UIModalNode):
+            self._render_modal(node, js)
+        elif isinstance(node, UIAlertNode):
+            self._render_alert(node, js)
+        elif isinstance(node, UIAvatarNode):
+            self._render_avatar(node, js)
+        elif isinstance(node, UIDropdownNode):
+            self._render_dropdown(node, js)
+        elif isinstance(node, UIToastNode):
+            self._render_toast(node, js)
+        elif isinstance(node, UIToastContainerNode):
+            self._render_toast_container(node, js)
+        elif isinstance(node, UICarouselNode):
+            self._render_carousel(node, js)
+        elif isinstance(node, UISlideNode):
+            self._render_slide(node, js)
+        elif isinstance(node, UIStepperNode):
+            self._render_stepper(node, js)
+        elif isinstance(node, UIStepNode):
+            self._render_step(node, js)
+        elif isinstance(node, UICalendarNode):
+            self._render_calendar(node, js)
+        elif isinstance(node, UIDatePickerNode):
+            self._render_date_picker(node, js)
         # Quantum passthrough
         elif isinstance(node, SetNode):
             js.comment(f'q:set {node.name} = {node.value}')
@@ -1226,5 +1266,397 @@ class UIReactNativeAdapter:
         js.jsx_text(node.content)
         js.dedent()
         js.jsx_close('Text')
+        js.dedent()
+        js.jsx_close('View')
+
+    # ------------------------------------------------------------------
+    # Component Library Renders
+    # ------------------------------------------------------------------
+
+    def _render_card(self, node: UICardNode, js: JsBuilder):
+        self._components_used.add('View')
+        self._styles_used.add('card')
+
+        style_props = self._build_style_props(node, 'card')
+        js.jsx_open('View', style_props)
+        js.indent()
+        self._render_children(node.children, js)
+        js.dedent()
+        js.jsx_close('View')
+
+    def _render_card_header(self, node: UICardHeaderNode, js: JsBuilder):
+        self._components_used.add('View')
+        self._styles_used.add('card')
+
+        js.jsx_open('View', {'style': 'styles.cardHeader'})
+        js.indent()
+        self._render_children(node.children, js)
+        js.dedent()
+        js.jsx_close('View')
+
+    def _render_card_body(self, node: UICardBodyNode, js: JsBuilder):
+        self._components_used.add('View')
+        self._styles_used.add('card')
+
+        js.jsx_open('View', {'style': 'styles.cardBody'})
+        js.indent()
+        self._render_children(node.children, js)
+        js.dedent()
+        js.jsx_close('View')
+
+    def _render_card_footer(self, node: UICardFooterNode, js: JsBuilder):
+        self._components_used.add('View')
+        self._styles_used.add('card')
+
+        js.jsx_open('View', {'style': 'styles.cardFooter'})
+        js.indent()
+        self._render_children(node.children, js)
+        js.dedent()
+        js.jsx_close('View')
+
+    def _render_modal(self, node: UIModalNode, js: JsBuilder):
+        self._components_used.add('Modal')
+        self._components_used.add('View')
+        self._components_used.add('Text')
+        self._components_used.add('TouchableOpacity')
+        self._styles_used.add('modal')
+
+        modal_id = node.modal_id or self._next_id('modal')
+        if modal_id not in self._state_vars:
+            self._state_vars[modal_id] = 'true' if node.open else 'false'
+
+        js.jsx_open('Modal', {
+            'visible': '{' + modal_id + '}',
+            'transparent': '{true}',
+            'animationType': 'fade',
+        })
+        js.indent()
+        js.jsx_open('View', {'style': 'styles.modalOverlay'})
+        js.indent()
+        js.jsx_open('View', {'style': 'styles.modalContent'})
+        js.indent()
+
+        # Title
+        if node.title:
+            js.jsx_open('Text', {'style': 'styles.modalTitle'})
+            js.indent()
+            js.jsx_text(node.title)
+            js.dedent()
+            js.jsx_close('Text')
+
+        # Close button
+        if node.closable:
+            js.jsx_open('TouchableOpacity', {
+                'style': 'styles.modalClose',
+                'onPress': '{() => set' + f'{modal_id[0].upper()}{modal_id[1:]}(false)' + '}',
+            })
+            js.indent()
+            js.jsx_open('Text')
+            js.indent()
+            js.jsx_text('✕')
+            js.dedent()
+            js.jsx_close('Text')
+            js.dedent()
+            js.jsx_close('TouchableOpacity')
+
+        self._render_children(node.children, js)
+        js.dedent()
+        js.jsx_close('View')
+        js.dedent()
+        js.jsx_close('View')
+        js.dedent()
+        js.jsx_close('Modal')
+
+    def _render_alert(self, node: UIAlertNode, js: JsBuilder):
+        self._components_used.add('View')
+        self._components_used.add('Text')
+        self._styles_used.add('alert')
+
+        variant_map = {
+            'info': 'alertInfo',
+            'success': 'alertSuccess',
+            'warning': 'alertWarning',
+            'danger': 'alertDanger',
+        }
+        variant_style = variant_map.get(node.variant, 'alertInfo')
+
+        js.jsx_open('View', {'style': f'[styles.alert, styles.{variant_style}]'})
+        js.indent()
+        if node.title:
+            js.jsx_open('Text', {'style': 'styles.alertTitle'})
+            js.indent()
+            js.jsx_text(node.title)
+            js.dedent()
+            js.jsx_close('Text')
+        if node.content:
+            js.jsx_open('Text', {'style': 'styles.alertText'})
+            js.indent()
+            js.jsx_text(node.content)
+            js.dedent()
+            js.jsx_close('Text')
+        self._render_children(node.children, js)
+        js.dedent()
+        js.jsx_close('View')
+
+    def _render_avatar(self, node: UIAvatarNode, js: JsBuilder):
+        self._components_used.add('View')
+        self._components_used.add('Text')
+        self._styles_used.add('avatar')
+
+        size_map = {
+            'xs': 24,
+            'sm': 32,
+            'md': 40,
+            'lg': 56,
+            'xl': 72,
+        }
+        size = size_map.get(node.size, 40)
+        avatar_id = self._next_id('avatar')
+
+        self._dynamic_styles.append(f"""  {avatar_id}: {{
+    width: {size},
+    height: {size},
+    borderRadius: {size // 2},
+  }},""")
+
+        if node.src:
+            self._components_used.add('Image')
+            js.jsx_open('Image', {
+                'source': "{{ uri: '" + node.src + "' }}",
+                'style': f'[styles.avatar, styles.{avatar_id}]',
+            }, self_closing=True)
+        else:
+            # Show initials
+            initials = ''
+            if node.name:
+                parts = node.name.split()
+                initials = ''.join(p[0].upper() for p in parts[:2])
+
+            js.jsx_open('View', {'style': f'[styles.avatar, styles.{avatar_id}]'})
+            js.indent()
+            js.jsx_open('Text', {'style': 'styles.avatarText'})
+            js.indent()
+            js.jsx_text(initials or '?')
+            js.dedent()
+            js.jsx_close('Text')
+            js.dedent()
+            js.jsx_close('View')
+
+    def _render_dropdown(self, node: UIDropdownNode, js: JsBuilder):
+        self._components_used.add('View')
+        self._components_used.add('Text')
+        self._components_used.add('TouchableOpacity')
+        self._styles_used.add('dropdown')
+
+        dropdown_id = self._next_id('dropdownOpen')
+        self._state_vars[dropdown_id] = 'false'
+
+        js.jsx_open('View')
+        js.indent()
+
+        # Trigger button
+        js.jsx_open('TouchableOpacity', {
+            'style': 'styles.dropdownTrigger',
+            'onPress': '{() => set' + f'{dropdown_id[0].upper()}{dropdown_id[1:]}(!{dropdown_id})' + '}',
+        })
+        js.indent()
+        js.jsx_open('Text')
+        js.indent()
+        js.jsx_text(node.label or 'Select')
+        js.dedent()
+        js.jsx_close('Text')
+        js.dedent()
+        js.jsx_close('TouchableOpacity')
+
+        # Dropdown menu
+        js.line(f'{{{dropdown_id} && (')
+        js.indent()
+        js.jsx_open('View', {'style': 'styles.dropdownMenu'})
+        js.indent()
+        self._render_children(node.children, js)
+        js.dedent()
+        js.jsx_close('View')
+        js.dedent()
+        js.line(')}')
+
+        js.dedent()
+        js.jsx_close('View')
+
+    def _render_toast(self, node: UIToastNode, js: JsBuilder):
+        self._components_used.add('View')
+        self._components_used.add('Text')
+        self._styles_used.add('toast')
+
+        variant_map = {
+            'info': 'toastInfo',
+            'success': 'toastSuccess',
+            'warning': 'toastWarning',
+            'danger': 'toastDanger',
+        }
+        variant_style = variant_map.get(node.variant, 'toastInfo')
+
+        js.jsx_open('View', {'style': f'[styles.toast, styles.{variant_style}]'})
+        js.indent()
+        if node.title:
+            js.jsx_open('Text', {'style': 'styles.toastTitle'})
+            js.indent()
+            js.jsx_text(node.title)
+            js.dedent()
+            js.jsx_close('Text')
+        js.jsx_open('Text', {'style': 'styles.toastText'})
+        js.indent()
+        js.jsx_text(node.message)
+        js.dedent()
+        js.jsx_close('Text')
+        js.dedent()
+        js.jsx_close('View')
+
+    def _render_toast_container(self, node: UIToastContainerNode, js: JsBuilder):
+        self._components_used.add('View')
+        self._styles_used.add('toast')
+
+        js.jsx_open('View', {'style': 'styles.toastContainer'}, self_closing=True)
+
+    def _render_carousel(self, node: UICarouselNode, js: JsBuilder):
+        self._components_used.add('ScrollView')
+        self._components_used.add('View')
+        self._styles_used.add('carousel')
+
+        js.jsx_open('ScrollView', {
+            'horizontal': '{true}',
+            'pagingEnabled': '{true}',
+            'showsHorizontalScrollIndicator': '{false}',
+            'style': 'styles.carousel',
+        })
+        js.indent()
+        self._render_children(node.children, js)
+        js.dedent()
+        js.jsx_close('ScrollView')
+
+    def _render_slide(self, node: UISlideNode, js: JsBuilder):
+        self._components_used.add('View')
+        self._styles_used.add('carousel')
+
+        js.jsx_open('View', {'style': 'styles.slide'})
+        js.indent()
+        self._render_children(node.children, js)
+        js.dedent()
+        js.jsx_close('View')
+
+    def _render_stepper(self, node: UIStepperNode, js: JsBuilder):
+        self._components_used.add('View')
+        self._components_used.add('Text')
+        self._styles_used.add('stepper')
+
+        stepper_id = node.bind or self._next_id('currentStep')
+        if stepper_id not in self._state_vars:
+            self._state_vars[stepper_id] = str(node.current)
+
+        steps = [c for c in node.children if isinstance(c, UIStepNode)]
+
+        orientation = 'row' if node.orientation == 'horizontal' else 'column'
+        stepper_style_id = self._next_id('stepper')
+        self._dynamic_styles.append(f"""  {stepper_style_id}: {{
+    flexDirection: '{orientation}',
+    alignItems: 'center',
+  }},""")
+
+        js.jsx_open('View', {'style': f'styles.{stepper_style_id}'})
+        js.indent()
+
+        # Step indicators
+        for i, step in enumerate(steps):
+            is_active = f'{stepper_id} === {i}'
+            is_complete = f'{stepper_id} > {i}'
+
+            js.jsx_open('View', {'style': 'styles.stepItem'})
+            js.indent()
+
+            # Circle
+            js.jsx_open('View', {
+                'style': f'[styles.stepCircle, {is_active} && styles.stepCircleActive, {is_complete} && styles.stepCircleComplete]'
+            })
+            js.indent()
+            js.jsx_open('Text', {'style': 'styles.stepNumber'})
+            js.indent()
+            js.jsx_text(str(i + 1))
+            js.dedent()
+            js.jsx_close('Text')
+            js.dedent()
+            js.jsx_close('View')
+
+            # Label
+            if node.show_labels and step.title:
+                js.jsx_open('Text', {'style': 'styles.stepLabel'})
+                js.indent()
+                js.jsx_text(step.title)
+                js.dedent()
+                js.jsx_close('Text')
+
+            js.dedent()
+            js.jsx_close('View')
+
+        js.dedent()
+        js.jsx_close('View')
+
+        # Step content
+        for i, step in enumerate(steps):
+            js.line(f'{{{stepper_id} === {i} && (')
+            js.indent()
+            js.jsx_open('View', {'style': 'styles.stepContent'})
+            js.indent()
+            self._render_children(step.children, js)
+            js.dedent()
+            js.jsx_close('View')
+            js.dedent()
+            js.line(')}')
+
+    def _render_step(self, node: UIStepNode, js: JsBuilder):
+        # Standalone step renders as View
+        self._components_used.add('View')
+
+        js.jsx_open('View')
+        js.indent()
+        self._render_children(node.children, js)
+        js.dedent()
+        js.jsx_close('View')
+
+    def _render_calendar(self, node: UICalendarNode, js: JsBuilder):
+        # Simplified calendar placeholder (real impl would need a calendar lib)
+        self._components_used.add('View')
+        self._components_used.add('Text')
+        self._styles_used.add('calendar')
+
+        js.jsx_open('View', {'style': 'styles.calendar'})
+        js.indent()
+        js.jsx_open('Text', {'style': 'styles.calendarPlaceholder'})
+        js.indent()
+        js.jsx_text('Calendar (requires react-native-calendars)')
+        js.dedent()
+        js.jsx_close('Text')
+        js.dedent()
+        js.jsx_close('View')
+
+    def _render_date_picker(self, node: UIDatePickerNode, js: JsBuilder):
+        self._components_used.add('View')
+        self._components_used.add('TextInput')
+        self._components_used.add('TouchableOpacity')
+        self._components_used.add('Text')
+        self._styles_used.add('input')
+
+        picker_id = node.bind or self._next_id('date')
+        if node.bind and node.bind not in self._state_vars:
+            self._state_vars[node.bind] = "''"
+
+        attrs = {'style': 'styles.input'}
+        if node.placeholder:
+            attrs['placeholder'] = node.placeholder
+        if node.bind:
+            attrs['value'] = '{' + node.bind + '}'
+
+        js.jsx_open('View', {'style': 'styles.datePickerContainer'})
+        js.indent()
+        js.jsx_open('TextInput', attrs, self_closing=True)
+        js.comment('Note: For full date picker, use @react-native-community/datetimepicker')
         js.dedent()
         js.jsx_close('View')

@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, Union
 from dataclasses import dataclass
 
+
 class QuantumNode(ABC):
     """Base class for all Quantum AST nodes"""
     

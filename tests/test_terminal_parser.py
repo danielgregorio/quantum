@@ -11,7 +11,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 from core.parser import QuantumParser, QuantumParseError
-from core.ast_nodes import ApplicationNode, SetNode, FunctionNode
+from core.ast_nodes import ApplicationNode
+from core.features.state_management.src.ast_node import SetNode
+from core.features.functions.src.ast_node import FunctionNode
 from core.features.terminal_engine.src.ast_nodes import (
     ScreenNode, PanelNode, LayoutNode, TableNode, ColumnNode,
     TerminalInputNode, ButtonNode, MenuNode, OptionNode,

@@ -11,7 +11,8 @@ Generates interactive Python pywebview desktop applications with:
 import re
 from typing import List, Dict, Any, Optional
 
-from core.ast_nodes import QuantumNode, SetNode
+from core.ast_nodes import QuantumNode
+from core.features.state_management.src.ast_node import SetNode
 from core.features.functions.src.ast_node import FunctionNode
 from runtime.ui_html_adapter import UIHtmlAdapter
 from runtime.ui_desktop_templates import (

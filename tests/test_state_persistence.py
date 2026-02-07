@@ -22,7 +22,7 @@ if _src_path not in sys.path:
 os.chdir(_src_path)
 
 from core.parser import QuantumParser, QuantumParseError
-from core.ast_nodes import SetNode, PersistNode
+from core.features.state_management.src.ast_node import SetNode, PersistNode
 from runtime.ui_html_templates import (
     PERSISTENCE_JS,
     generate_persistence_registration,

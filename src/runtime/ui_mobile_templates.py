@@ -669,6 +669,227 @@ BASE_STYLES = {
   menuItemText: {
     color: '#1e293b',
   },""",
+
+    'card': """\
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  cardBody: {
+    padding: 16,
+  },
+  cardFooter: {
+    padding: 16,
+    backgroundColor: '#f8fafc',
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+  },""",
+
+    'modal': """\
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    padding: 20,
+    width: '90%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+    color: '#1e293b',
+  },
+  modalClose: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    padding: 8,
+  },""",
+
+    'alert': """\
+  alert: {
+    padding: 16,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  alertInfo: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#3b82f6',
+  },
+  alertSuccess: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#22c55e',
+  },
+  alertWarning: {
+    backgroundColor: '#fffbeb',
+    borderColor: '#f59e0b',
+  },
+  alertDanger: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#ef4444',
+  },
+  alertTitle: {
+    fontWeight: '600',
+    marginBottom: 4,
+    color: '#1e293b',
+  },
+  alertText: {
+    color: '#1e293b',
+  },""",
+
+    'avatar': """\
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },""",
+
+    'dropdown': """\
+  dropdownTrigger: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8fafc',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 100,
+  },""",
+
+    'toast': """\
+  toastContainer: {
+    position: 'absolute',
+    top: 50,
+    right: 16,
+    zIndex: 1000,
+  },
+  toast: {
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  toastInfo: {
+    backgroundColor: '#3b82f6',
+  },
+  toastSuccess: {
+    backgroundColor: '#22c55e',
+  },
+  toastWarning: {
+    backgroundColor: '#f59e0b',
+  },
+  toastDanger: {
+    backgroundColor: '#ef4444',
+  },
+  toastTitle: {
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  toastText: {
+    color: '#ffffff',
+  },""",
+
+    'carousel': """\
+  carousel: {
+    flexDirection: 'row',
+  },
+  slide: {
+    width: '100%',
+  },""",
+
+    'stepper': """\
+  stepItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  stepCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e2e8f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepCircleActive: {
+    backgroundColor: '#3b82f6',
+  },
+  stepCircleComplete: {
+    backgroundColor: '#22c55e',
+  },
+  stepNumber: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  stepLabel: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#64748b',
+  },
+  stepContent: {
+    padding: 16,
+  },""",
+
+    'calendar': """\
+  calendar: {
+    padding: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  calendarPlaceholder: {
+    color: '#64748b',
+    textAlign: 'center',
+  },
+  datePickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },""",
 }
 
 

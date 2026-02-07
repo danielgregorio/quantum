@@ -7,7 +7,10 @@ Uses the design tokens system for normalized styling across targets.
 
 from typing import List, Optional, Set, Dict
 
-from core.ast_nodes import QuantumNode, SetNode, IfNode, LoopNode
+from core.ast_nodes import QuantumNode
+from core.features.conditionals.src.ast_node import IfNode
+from core.features.loops.src.ast_node import LoopNode
+from core.features.state_management.src.ast_node import SetNode
 from core.features.ui_engine.src.ast_nodes import (
     UIWindowNode, UIHBoxNode, UIVBoxNode, UIPanelNode,
     UITabPanelNode, UITabNode, UIGridNode, UIAccordionNode,

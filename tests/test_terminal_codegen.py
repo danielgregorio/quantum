@@ -18,7 +18,8 @@ from core.features.terminal_engine.src.ast_nodes import (
     KeybindingNode, TimerNode_Terminal, TreeNode, TabsNode, TabNode,
     CssNode, MenuNode, OptionNode,
 )
-from core.ast_nodes import SetNode, FunctionNode
+from core.features.state_management.src.ast_node import SetNode
+from core.features.functions.src.ast_node import FunctionNode
 from runtime.terminal_code_generator import TerminalCodeGenerator
 
 

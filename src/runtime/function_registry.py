@@ -9,7 +9,8 @@ from pathlib import Path
 # Fix imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from core.ast_nodes import FunctionNode, ComponentNode
+from core.ast_nodes import ComponentNode
+from core.features.functions.src.ast_node import FunctionNode
 
 
 class FunctionRegistry:

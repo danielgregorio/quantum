@@ -23,7 +23,9 @@ from core.features.ui_engine.src.ast_nodes import (
     UIOptionNode, UILogNode, UIMarkdownNode, UIHeaderNode,
     UIFooterNode, UIRuleNode, UILoadingNode, UIBadgeNode,
 )
-from core.ast_nodes import SetNode, LoopNode, IfNode
+from core.features.state_management.src.ast_node import SetNode
+from core.features.conditionals.src.ast_node import IfNode
+from core.features.loops.src.ast_node import LoopNode
 
 
 @pytest.fixture

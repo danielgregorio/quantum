@@ -20,7 +20,8 @@ Usage:
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
-from core.ast_nodes import ApplicationNode, SetNode
+from core.ast_nodes import ApplicationNode
+from core.features.state_management.src.ast_node import SetNode
 from core.features.functions.src.ast_node import FunctionNode
 from core.features.ui_engine.src.ast_nodes import UIWindowNode
 

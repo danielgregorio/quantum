@@ -14,7 +14,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 import pytest
 from core.parser import QuantumParser
-from core.ast_nodes import ApplicationNode, SetNode
+from core.ast_nodes import ApplicationNode
+from core.features.state_management.src.ast_node import SetNode
 from core.features.functions.src.ast_node import FunctionNode
 from core.features.ui_engine.src.ast_nodes import (
     UIWindowNode, UITextNode, UIButtonNode, UIInputNode, UIFormNode,

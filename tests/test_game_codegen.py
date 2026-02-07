@@ -18,7 +18,8 @@ from core.features.game_engine_2d.src.ast_nodes import (
     TweenNode, StateMachineNode, StateNode, TransitionNode,
     ParticleNode,
 )
-from core.ast_nodes import SetNode, FunctionNode
+from core.features.state_management.src.ast_node import SetNode
+from core.features.functions.src.ast_node import FunctionNode
 from core.features.game_engine_2d.src.ast_nodes import RawCodeNode, TilemapLayerNode, SpawnNode, ClickableNode
 from runtime.game_code_generator import GameCodeGenerator
 

@@ -12,15 +12,21 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from core.ast_nodes import (
     QuantumNode, ComponentNode, ApplicationNode, JobNode,
-    QuantumParam, QuantumReturn, QuantumRoute, IfNode, LoopNode, SetNode, PersistNode,
-    FunctionNode, DispatchEventNode, OnEventNode, RestConfig, QueryNode, QueryParamNode,
-    InvokeNode, InvokeHeaderNode, DataNode, ColumnNode, FieldNode, TransformNode,
+    QuantumParam, QuantumReturn, QuantumRoute,
+    DispatchEventNode, OnEventNode, QueryNode, QueryParamNode,
+    InvokeHeaderNode, DataNode, ColumnNode, FieldNode, TransformNode,
     FilterNode, SortNode, LimitNode, ComputeNode, HeaderNode,
     HTMLNode, TextNode, DocTypeNode, CommentNode, HTML_VOID_ELEMENTS,
     ImportNode, SlotNode, ComponentCallNode,
     ActionNode, RedirectNode, FlashNode, FileNode, MailNode, TransactionNode,
     LLMNode, LLMMessageNode
 )
+# Import feature AST nodes from their respective modules
+from core.features.conditionals.src.ast_node import IfNode
+from core.features.loops.src.ast_node import LoopNode
+from core.features.state_management.src.ast_node import SetNode, PersistNode
+from core.features.functions.src.ast_node import FunctionNode, RestConfig
+from core.features.invocation.src.ast_node import InvokeNode
 from core.features.logging.src import LogNode, parse_log
 from core.features.dump.src import DumpNode, parse_dump
 from core.features.knowledge_base.src import KnowledgeNode, KnowledgeSourceNode, parse_knowledge

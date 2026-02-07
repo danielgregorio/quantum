@@ -19,7 +19,11 @@ from core.features.terminal_engine.src.ast_nodes import (
     KeybindingNode, TimerNode_Terminal, ServiceNode, CssNode,
     OnEventNode_Terminal, RawCodeNode_Terminal,
 )
-from core.ast_nodes import QuantumNode, SetNode, FunctionNode, IfNode, LoopNode, QueryNode
+from core.ast_nodes import QuantumNode, QueryNode
+from core.features.conditionals.src.ast_node import IfNode
+from core.features.loops.src.ast_node import LoopNode
+from core.features.state_management.src.ast_node import SetNode
+from core.features.functions.src.ast_node import FunctionNode
 
 from runtime.terminal_templates import (
     APP_TEMPLATE, PyBuilder, py_string, py_id, py_bool,

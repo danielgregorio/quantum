@@ -19,7 +19,11 @@ from core.features.game_engine_2d.src.ast_nodes import (
     StateMachineNode, StateNode, TransitionNode, RawCodeNode,
     ClickableNode,
 )
-from core.ast_nodes import QuantumNode, SetNode, FunctionNode, IfNode, LoopNode, HTMLNode, TextNode
+from core.ast_nodes import QuantumNode, HTMLNode, TextNode
+from core.features.conditionals.src.ast_node import IfNode
+from core.features.loops.src.ast_node import LoopNode
+from core.features.state_management.src.ast_node import SetNode
+from core.features.functions.src.ast_node import FunctionNode
 
 from runtime.game_templates import (
     HTML_TEMPLATE, PIXI_CDN, MATTER_CDN, HUD_DIV_TEMPLATE,

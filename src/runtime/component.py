@@ -9,7 +9,12 @@ from typing import Any, Dict, List
 # Fix imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from core.ast_nodes import ComponentNode, QuantumReturn, IfNode, LoopNode, SetNode, FunctionNode, DispatchEventNode, OnEventNode, QueryNode, InvokeNode, DataNode, FileNode, MailNode, TransactionNode, LLMNode, LLMMessageNode, KnowledgeNode
+from core.ast_nodes import ComponentNode, QuantumReturn, DispatchEventNode, OnEventNode, QueryNode, DataNode, FileNode, MailNode, TransactionNode, LLMNode, LLMMessageNode, KnowledgeNode
+from core.features.conditionals.src.ast_node import IfNode
+from core.features.loops.src.ast_node import LoopNode
+from core.features.state_management.src.ast_node import SetNode
+from core.features.functions.src.ast_node import FunctionNode
+from core.features.invocation.src.ast_node import InvokeNode
 from core.features.logging.src import LogNode, LoggingService
 from core.features.dump.src import DumpNode, DumpService
 from runtime.database_service import DatabaseService, QueryResult
