@@ -16,8 +16,11 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from core.ast_nodes import (
     QuantumNode, ComponentNode, HTMLNode, TextNode, DocTypeNode,
-    CommentNode, LoopNode, IfNode, SetNode, QueryNode, ComponentCallNode, ImportNode
+    CommentNode, QueryNode, ComponentCallNode, ImportNode
 )
+from core.features.conditionals.src.ast_node import IfNode
+from core.features.loops.src.ast_node import LoopNode
+from core.features.state_management.src.ast_node import SetNode
 from runtime.execution_context import ExecutionContext
 
 
