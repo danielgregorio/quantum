@@ -351,6 +351,149 @@ details.q-section .q-section-content { padding: 12px 16px; border-top: 1px solid
 .q-skeleton-circle { width: 48px; height: 48px; border-radius: 50%; }
 .q-skeleton-rect { height: 100px; }
 .q-skeleton-card { border: 1px solid var(--q-border); border-radius: var(--q-radius); padding: 16px; }
+
+/* ============================================
+   Toast Notifications
+   ============================================ */
+
+/* Toast Container */
+.q-toast-container { position: fixed; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; max-width: 400px; }
+.q-toast-container.q-toast-top-right { top: 16px; right: 16px; }
+.q-toast-container.q-toast-top-left { top: 16px; left: 16px; }
+.q-toast-container.q-toast-bottom-right { bottom: 16px; right: 16px; }
+.q-toast-container.q-toast-bottom-left { bottom: 16px; left: 16px; }
+.q-toast-container.q-toast-top-center { top: 16px; left: 50%; transform: translateX(-50%); }
+.q-toast-container.q-toast-bottom-center { bottom: 16px; left: 50%; transform: translateX(-50%); }
+
+/* Toast */
+.q-toast { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: var(--q-radius); box-shadow: 0 4px 12px rgba(0,0,0,0.15); pointer-events: auto; animation: q-toast-in 0.3s ease; background: var(--q-bg); border: 1px solid var(--q-border); }
+.q-toast.q-toast-out { animation: q-toast-out 0.3s ease forwards; }
+.q-toast-info { border-left: 4px solid var(--q-info); }
+.q-toast-success { border-left: 4px solid var(--q-success); }
+.q-toast-warning { border-left: 4px solid var(--q-warning); }
+.q-toast-danger { border-left: 4px solid var(--q-danger); }
+.q-toast-icon { flex-shrink: 0; font-size: var(--q-font-lg); }
+.q-toast-info .q-toast-icon { color: var(--q-info); }
+.q-toast-success .q-toast-icon { color: var(--q-success); }
+.q-toast-warning .q-toast-icon { color: var(--q-warning); }
+.q-toast-danger .q-toast-icon { color: var(--q-danger); }
+.q-toast-content { flex: 1; min-width: 0; }
+.q-toast-title { font-weight: 600; margin-bottom: 2px; }
+.q-toast-message { font-size: var(--q-font-sm); color: var(--q-secondary); }
+.q-toast-close { flex-shrink: 0; background: none; border: none; cursor: pointer; padding: 0; font-size: var(--q-font-lg); color: var(--q-secondary); opacity: 0.6; }
+.q-toast-close:hover { opacity: 1; }
+@keyframes q-toast-in { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+@keyframes q-toast-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(100%); } }
+
+/* ============================================
+   Carousel / Slider
+   ============================================ */
+
+.q-carousel { position: relative; overflow: hidden; border-radius: var(--q-radius); }
+.q-carousel-track { display: flex; transition: transform 0.5s ease; }
+.q-carousel.q-carousel-fade .q-carousel-track { display: block; }
+.q-carousel-slide { flex: 0 0 100%; min-width: 100%; }
+.q-carousel.q-carousel-fade .q-carousel-slide { position: absolute; top: 0; left: 0; width: 100%; opacity: 0; transition: opacity 0.5s ease; }
+.q-carousel.q-carousel-fade .q-carousel-slide.active { position: relative; opacity: 1; }
+
+/* Carousel Arrows */
+.q-carousel-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: var(--q-font-lg); z-index: 10; transition: background 0.2s; }
+.q-carousel-arrow:hover { background: rgba(0,0,0,0.7); }
+.q-carousel-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+.q-carousel-prev { left: 12px; }
+.q-carousel-next { right: 12px; }
+
+/* Carousel Indicators */
+.q-carousel-indicators { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 10; }
+.q-carousel-indicator { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.5); border: none; cursor: pointer; transition: background 0.2s; }
+.q-carousel-indicator.active { background: white; }
+.q-carousel-indicator:hover { background: rgba(255,255,255,0.8); }
+
+/* ============================================
+   Stepper / Wizard
+   ============================================ */
+
+.q-stepper { display: flex; flex-direction: column; }
+.q-stepper-horizontal .q-stepper-header { flex-direction: row; }
+.q-stepper-vertical { flex-direction: row; }
+.q-stepper-vertical .q-stepper-header { flex-direction: column; width: 200px; }
+.q-stepper-vertical .q-stepper-content { flex: 1; }
+
+/* Stepper Header */
+.q-stepper-header { display: flex; gap: 0; margin-bottom: 24px; }
+.q-stepper-horizontal .q-stepper-header { align-items: center; }
+
+/* Step Item */
+.q-step-item { display: flex; align-items: center; flex: 1; }
+.q-stepper-vertical .q-step-item { flex-direction: column; align-items: flex-start; padding: 16px 0; }
+
+/* Step Indicator */
+.q-step-indicator { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: var(--q-font-sm); background: var(--q-light); color: var(--q-secondary); border: 2px solid var(--q-border); flex-shrink: 0; transition: all 0.3s; }
+.q-step-item.active .q-step-indicator { background: var(--q-primary); color: white; border-color: var(--q-primary); }
+.q-step-item.completed .q-step-indicator { background: var(--q-success); color: white; border-color: var(--q-success); }
+.q-step-item.error .q-step-indicator { background: var(--q-danger); color: white; border-color: var(--q-danger); }
+
+/* Step Labels */
+.q-step-labels { margin-left: 12px; }
+.q-stepper-vertical .q-step-labels { margin-left: 0; margin-top: 8px; }
+.q-step-title { font-weight: 500; color: var(--q-text); }
+.q-step-item.active .q-step-title { color: var(--q-primary); }
+.q-step-description { font-size: var(--q-font-sm); color: var(--q-secondary); margin-top: 2px; }
+.q-step-optional { font-size: var(--q-font-xs); color: var(--q-secondary); font-style: italic; }
+
+/* Step Connector */
+.q-step-connector { flex: 1; height: 2px; background: var(--q-border); margin: 0 8px; }
+.q-stepper-vertical .q-step-connector { width: 2px; height: 100%; min-height: 40px; margin: 0; margin-left: 15px; }
+.q-step-item.completed + .q-step-item .q-step-connector,
+.q-step-item.completed .q-step-connector { background: var(--q-success); }
+
+/* Stepper Content */
+.q-stepper-content { padding: 16px 0; }
+.q-step-content { display: none; }
+.q-step-content.active { display: block; animation: q-fade-in 0.3s ease; }
+
+/* Stepper Actions */
+.q-stepper-actions { display: flex; gap: 12px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid var(--q-border); margin-top: 16px; }
+
+/* ============================================
+   Calendar / Date Picker
+   ============================================ */
+
+.q-calendar { background: var(--q-bg); border: 1px solid var(--q-border); border-radius: var(--q-radius); padding: 16px; width: 300px; }
+
+/* Calendar Header */
+.q-calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.q-calendar-title { font-weight: 600; font-size: var(--q-font-md); }
+.q-calendar-nav { display: flex; gap: 8px; }
+.q-calendar-nav button { background: none; border: 1px solid var(--q-border); border-radius: var(--q-radius); width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.q-calendar-nav button:hover { background: var(--q-light); }
+
+/* Calendar Grid */
+.q-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.q-calendar-weekday { text-align: center; font-size: var(--q-font-xs); font-weight: 600; color: var(--q-secondary); padding: 8px 0; }
+
+/* Calendar Days */
+.q-calendar-day { text-align: center; padding: 8px 0; font-size: var(--q-font-sm); border-radius: var(--q-radius); cursor: pointer; transition: all 0.15s; }
+.q-calendar-day:hover { background: var(--q-light); }
+.q-calendar-day.today { font-weight: 600; color: var(--q-primary); }
+.q-calendar-day.selected { background: var(--q-primary); color: white; }
+.q-calendar-day.in-range { background: rgba(59,130,246,0.15); }
+.q-calendar-day.range-start { background: var(--q-primary); color: white; border-radius: var(--q-radius) 0 0 var(--q-radius); }
+.q-calendar-day.range-end { background: var(--q-primary); color: white; border-radius: 0 var(--q-radius) var(--q-radius) 0; }
+.q-calendar-day.other-month { color: var(--q-secondary); opacity: 0.5; }
+.q-calendar-day.disabled { color: var(--q-secondary); opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+.q-calendar-day.week-number { font-size: var(--q-font-xs); color: var(--q-secondary); cursor: default; }
+.q-calendar-day.week-number:hover { background: none; }
+
+/* Date Picker (Input + Calendar popup) */
+.q-date-picker { position: relative; }
+.q-date-picker-input { width: 100%; padding: 8px 12px; padding-right: 36px; border: 1px solid var(--q-border); border-radius: var(--q-radius); }
+.q-date-picker-input:focus { border-color: var(--q-primary); outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+.q-date-picker-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--q-secondary); pointer-events: none; }
+.q-date-picker-clear { position: absolute; right: 32px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--q-secondary); cursor: pointer; padding: 4px; }
+.q-date-picker-clear:hover { color: var(--q-text); }
+.q-date-picker-dropdown { position: absolute; top: 100%; left: 0; margin-top: 4px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; }
+.q-date-picker-dropdown.open { display: block; animation: q-fade-in 0.2s ease; }
 """
 
 
@@ -1481,6 +1624,629 @@ window.__qValidation = (function() {
             if (defaultMessage) {
                 defaultMessages[name] = defaultMessage;
             }
+        }
+    };
+})();
+</script>
+"""
+
+
+# ==========================================================================
+# Toast Notification JS
+# ==========================================================================
+
+TOAST_JS = """\
+<script>
+// Quantum UI Toast Notification System
+window.__quantumToast = (function() {
+    'use strict';
+
+    var containers = {};
+    var toastId = 0;
+
+    // Icons for variants
+    var icons = {
+        info: '&#9432;',
+        success: '&#10003;',
+        warning: '&#9888;',
+        danger: '&#10007;'
+    };
+
+    // Get or create container for position
+    function getContainer(position) {
+        if (containers[position]) return containers[position];
+
+        var container = document.createElement('div');
+        container.className = 'q-toast-container q-toast-' + position;
+        document.body.appendChild(container);
+        containers[position] = container;
+        return container;
+    }
+
+    // Create toast element
+    function createToast(options) {
+        var id = 'toast-' + (++toastId);
+        var toast = document.createElement('div');
+        toast.id = id;
+        toast.className = 'q-toast q-toast-' + (options.variant || 'info');
+
+        var html = '';
+
+        // Icon
+        if (options.icon !== false) {
+            html += '<span class="q-toast-icon">' + (options.icon || icons[options.variant] || icons.info) + '</span>';
+        }
+
+        // Content
+        html += '<div class="q-toast-content">';
+        if (options.title) {
+            html += '<div class="q-toast-title">' + options.title + '</div>';
+        }
+        html += '<div class="q-toast-message">' + (options.message || '') + '</div>';
+        html += '</div>';
+
+        // Close button
+        if (options.dismissible !== false) {
+            html += '<button class="q-toast-close" onclick="__quantumToast.dismiss(\'' + id + '\')">&times;</button>';
+        }
+
+        toast.innerHTML = html;
+        return toast;
+    }
+
+    // Show toast
+    function show(options) {
+        var position = options.position || 'top-right';
+        var container = getContainer(position);
+        var toast = createToast(options);
+
+        container.appendChild(toast);
+
+        // Auto dismiss
+        var duration = options.duration !== undefined ? options.duration : 3000;
+        if (duration > 0) {
+            setTimeout(function() {
+                dismiss(toast.id);
+            }, duration);
+        }
+
+        return toast.id;
+    }
+
+    // Dismiss toast
+    function dismiss(id) {
+        var toast = document.getElementById(id);
+        if (!toast) return;
+
+        toast.classList.add('q-toast-out');
+        setTimeout(function() {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }
+
+    // Dismiss all toasts
+    function dismissAll() {
+        Object.keys(containers).forEach(function(pos) {
+            var container = containers[pos];
+            var toasts = container.querySelectorAll('.q-toast');
+            toasts.forEach(function(t) { dismiss(t.id); });
+        });
+    }
+
+    // Shorthand methods
+    function info(message, options) {
+        return show(Object.assign({ message: message, variant: 'info' }, options || {}));
+    }
+
+    function success(message, options) {
+        return show(Object.assign({ message: message, variant: 'success' }, options || {}));
+    }
+
+    function warning(message, options) {
+        return show(Object.assign({ message: message, variant: 'warning' }, options || {}));
+    }
+
+    function danger(message, options) {
+        return show(Object.assign({ message: message, variant: 'danger' }, options || {}));
+    }
+
+    return {
+        show: show,
+        dismiss: dismiss,
+        dismissAll: dismissAll,
+        info: info,
+        success: success,
+        warning: warning,
+        danger: danger,
+        error: danger  // alias
+    };
+})();
+</script>
+"""
+
+
+# ==========================================================================
+# Carousel JS
+# ==========================================================================
+
+CAROUSEL_JS = """\
+<script>
+// Quantum UI Carousel System
+window.__quantumCarousel = (function() {
+    'use strict';
+
+    var carousels = {};
+
+    function init(id, options) {
+        var carousel = document.getElementById(id);
+        if (!carousel) return;
+
+        options = options || {};
+        var track = carousel.querySelector('.q-carousel-track');
+        var slides = carousel.querySelectorAll('.q-carousel-slide');
+        var indicators = carousel.querySelectorAll('.q-carousel-indicator');
+        var prevBtn = carousel.querySelector('.q-carousel-prev');
+        var nextBtn = carousel.querySelector('.q-carousel-next');
+
+        var state = {
+            current: options.current || 0,
+            total: slides.length,
+            autoPlay: options.autoPlay || false,
+            interval: options.interval || 5000,
+            loop: options.loop !== false,
+            animation: options.animation || 'slide',
+            timer: null
+        };
+
+        carousels[id] = state;
+
+        function goTo(index) {
+            if (index < 0) {
+                index = state.loop ? state.total - 1 : 0;
+            } else if (index >= state.total) {
+                index = state.loop ? 0 : state.total - 1;
+            }
+
+            state.current = index;
+
+            if (state.animation === 'slide') {
+                track.style.transform = 'translateX(-' + (index * 100) + '%)';
+            } else {
+                // Fade animation
+                slides.forEach(function(s, i) {
+                    s.classList.toggle('active', i === index);
+                });
+            }
+
+            // Update indicators
+            indicators.forEach(function(ind, i) {
+                ind.classList.toggle('active', i === index);
+            });
+
+            // Update arrow states if not looping
+            if (!state.loop) {
+                if (prevBtn) prevBtn.disabled = index === 0;
+                if (nextBtn) nextBtn.disabled = index === state.total - 1;
+            }
+
+            // Callback
+            if (options.onChange) {
+                options.onChange(index);
+            }
+        }
+
+        function next() {
+            goTo(state.current + 1);
+        }
+
+        function prev() {
+            goTo(state.current - 1);
+        }
+
+        function startAutoPlay() {
+            if (state.timer) clearInterval(state.timer);
+            state.timer = setInterval(next, state.interval);
+        }
+
+        function stopAutoPlay() {
+            if (state.timer) {
+                clearInterval(state.timer);
+                state.timer = null;
+            }
+        }
+
+        // Event listeners
+        if (prevBtn) prevBtn.addEventListener('click', prev);
+        if (nextBtn) nextBtn.addEventListener('click', next);
+
+        indicators.forEach(function(ind, i) {
+            ind.addEventListener('click', function() { goTo(i); });
+        });
+
+        // Pause on hover
+        carousel.addEventListener('mouseenter', stopAutoPlay);
+        carousel.addEventListener('mouseleave', function() {
+            if (state.autoPlay) startAutoPlay();
+        });
+
+        // Initialize
+        goTo(state.current);
+        if (state.autoPlay) startAutoPlay();
+
+        return {
+            goTo: goTo,
+            next: next,
+            prev: prev,
+            startAutoPlay: startAutoPlay,
+            stopAutoPlay: stopAutoPlay,
+            getCurrent: function() { return state.current; }
+        };
+    }
+
+    return { init: init, get: function(id) { return carousels[id]; } };
+})();
+</script>
+"""
+
+
+# ==========================================================================
+# Stepper JS
+# ==========================================================================
+
+STEPPER_JS = """\
+<script>
+// Quantum UI Stepper System
+window.__quantumStepper = (function() {
+    'use strict';
+
+    var steppers = {};
+
+    function init(id, options) {
+        var stepper = document.getElementById(id);
+        if (!stepper) return;
+
+        options = options || {};
+        var steps = stepper.querySelectorAll('.q-step-item');
+        var contents = stepper.querySelectorAll('.q-step-content');
+
+        var state = {
+            current: options.current || 0,
+            total: steps.length,
+            linear: options.linear !== false,
+            completed: []
+        };
+
+        steppers[id] = state;
+
+        function updateUI() {
+            steps.forEach(function(step, i) {
+                step.classList.remove('active', 'completed');
+                if (i === state.current) {
+                    step.classList.add('active');
+                } else if (state.completed.indexOf(i) !== -1) {
+                    step.classList.add('completed');
+                }
+            });
+
+            contents.forEach(function(content, i) {
+                content.classList.toggle('active', i === state.current);
+            });
+        }
+
+        function canGoTo(index) {
+            if (!state.linear) return true;
+            // In linear mode, can only go to completed steps or current+1
+            if (index <= state.current) return true;
+            if (index === state.current + 1 && state.completed.indexOf(state.current) !== -1) return true;
+            return false;
+        }
+
+        function goTo(index) {
+            if (index < 0 || index >= state.total) return false;
+            if (!canGoTo(index)) return false;
+
+            state.current = index;
+            updateUI();
+
+            if (options.onChange) {
+                options.onChange(index);
+            }
+
+            return true;
+        }
+
+        function next() {
+            return goTo(state.current + 1);
+        }
+
+        function prev() {
+            return goTo(state.current - 1);
+        }
+
+        function complete(index) {
+            if (index === undefined) index = state.current;
+            if (state.completed.indexOf(index) === -1) {
+                state.completed.push(index);
+            }
+            updateUI();
+
+            // Check if all completed
+            if (state.completed.length === state.total && options.onComplete) {
+                options.onComplete();
+            }
+        }
+
+        function setError(index, message) {
+            if (index === undefined) index = state.current;
+            var step = steps[index];
+            if (step) {
+                step.classList.add('error');
+                // Remove from completed if present
+                var ci = state.completed.indexOf(index);
+                if (ci !== -1) state.completed.splice(ci, 1);
+            }
+        }
+
+        function clearError(index) {
+            if (index === undefined) index = state.current;
+            var step = steps[index];
+            if (step) {
+                step.classList.remove('error');
+            }
+        }
+
+        // Click handlers for clickable steps
+        if (options.clickable) {
+            steps.forEach(function(step, i) {
+                step.style.cursor = 'pointer';
+                step.addEventListener('click', function() {
+                    goTo(i);
+                });
+            });
+        }
+
+        // Initialize
+        updateUI();
+
+        return {
+            goTo: goTo,
+            next: next,
+            prev: prev,
+            complete: complete,
+            setError: setError,
+            clearError: clearError,
+            getCurrent: function() { return state.current; },
+            isCompleted: function(i) { return state.completed.indexOf(i) !== -1; }
+        };
+    }
+
+    return { init: init, get: function(id) { return steppers[id]; } };
+})();
+</script>
+"""
+
+
+# ==========================================================================
+# Calendar JS
+# ==========================================================================
+
+CALENDAR_JS = """\
+<script>
+// Quantum UI Calendar System
+window.__quantumCalendar = (function() {
+    'use strict';
+
+    var calendars = {};
+
+    var monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+    var dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+    function init(id, options) {
+        var container = document.getElementById(id);
+        if (!container) return;
+
+        options = options || {};
+        var state = {
+            mode: options.mode || 'single',
+            selected: options.value ? parseDate(options.value) : null,
+            rangeStart: null,
+            rangeEnd: null,
+            multiple: [],
+            viewMonth: new Date().getMonth(),
+            viewYear: new Date().getFullYear(),
+            minDate: options.minDate ? parseDate(options.minDate) : null,
+            maxDate: options.maxDate ? parseDate(options.maxDate) : null,
+            disabledDates: (options.disabledDates || '').split(',').filter(Boolean).map(parseDate),
+            disabledDays: (options.disabledDays || '').split(',').filter(Boolean).map(Number),
+            firstDayOfWeek: options.firstDayOfWeek || 0,
+            showWeekNumbers: options.showWeekNumbers || false
+        };
+
+        calendars[id] = state;
+
+        function parseDate(str) {
+            if (!str) return null;
+            var d = new Date(str);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        function formatDate(d) {
+            if (!d) return '';
+            return d.getFullYear() + '-' +
+                   String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                   String(d.getDate()).padStart(2, '0');
+        }
+
+        function isSameDay(d1, d2) {
+            if (!d1 || !d2) return false;
+            return d1.getFullYear() === d2.getFullYear() &&
+                   d1.getMonth() === d2.getMonth() &&
+                   d1.getDate() === d2.getDate();
+        }
+
+        function isDisabled(date) {
+            if (state.minDate && date < state.minDate) return true;
+            if (state.maxDate && date > state.maxDate) return true;
+            if (state.disabledDays.indexOf(date.getDay()) !== -1) return true;
+            return state.disabledDates.some(function(d) { return isSameDay(d, date); });
+        }
+
+        function render() {
+            var html = '';
+
+            // Header
+            html += '<div class="q-calendar-header">';
+            html += '<button class="q-calendar-nav" onclick="__quantumCalendar.prevMonth(\'' + id + '\')">&lt;</button>';
+            html += '<span class="q-calendar-title">' + monthNames[state.viewMonth] + ' ' + state.viewYear + '</span>';
+            html += '<button class="q-calendar-nav" onclick="__quantumCalendar.nextMonth(\'' + id + '\')">&gt;</button>';
+            html += '</div>';
+
+            // Grid
+            html += '<div class="q-calendar-grid">';
+
+            // Weekday headers
+            var orderedDays = dayNames.slice(state.firstDayOfWeek).concat(dayNames.slice(0, state.firstDayOfWeek));
+            if (state.showWeekNumbers) html += '<div class="q-calendar-weekday"></div>';
+            orderedDays.forEach(function(d) {
+                html += '<div class="q-calendar-weekday">' + d + '</div>';
+            });
+
+            // Days
+            var firstDay = new Date(state.viewYear, state.viewMonth, 1);
+            var lastDay = new Date(state.viewYear, state.viewMonth + 1, 0);
+            var startDay = (firstDay.getDay() - state.firstDayOfWeek + 7) % 7;
+
+            // Previous month days
+            var prevMonth = new Date(state.viewYear, state.viewMonth, 0);
+            for (var i = startDay - 1; i >= 0; i--) {
+                var day = prevMonth.getDate() - i;
+                html += '<div class="q-calendar-day other-month">' + day + '</div>';
+            }
+
+            // Current month days
+            var today = new Date();
+            for (var d = 1; d <= lastDay.getDate(); d++) {
+                var date = new Date(state.viewYear, state.viewMonth, d);
+                var classes = ['q-calendar-day'];
+
+                if (isSameDay(date, today)) classes.push('today');
+                if (isDisabled(date)) classes.push('disabled');
+
+                if (state.mode === 'single' && isSameDay(date, state.selected)) {
+                    classes.push('selected');
+                } else if (state.mode === 'range') {
+                    if (isSameDay(date, state.rangeStart)) classes.push('range-start', 'selected');
+                    if (isSameDay(date, state.rangeEnd)) classes.push('range-end', 'selected');
+                    if (state.rangeStart && state.rangeEnd && date > state.rangeStart && date < state.rangeEnd) {
+                        classes.push('in-range');
+                    }
+                } else if (state.mode === 'multiple') {
+                    if (state.multiple.some(function(s) { return isSameDay(s, date); })) {
+                        classes.push('selected');
+                    }
+                }
+
+                html += '<div class="' + classes.join(' ') + '" onclick="__quantumCalendar.selectDate(\'' + id + '\', ' + d + ')">' + d + '</div>';
+            }
+
+            // Next month days
+            var remaining = (7 - ((startDay + lastDay.getDate()) % 7)) % 7;
+            for (var n = 1; n <= remaining; n++) {
+                html += '<div class="q-calendar-day other-month">' + n + '</div>';
+            }
+
+            html += '</div>';
+
+            container.innerHTML = html;
+        }
+
+        function selectDate(day) {
+            var date = new Date(state.viewYear, state.viewMonth, day);
+            if (isDisabled(date)) return;
+
+            if (state.mode === 'single') {
+                state.selected = date;
+            } else if (state.mode === 'range') {
+                if (!state.rangeStart || state.rangeEnd) {
+                    state.rangeStart = date;
+                    state.rangeEnd = null;
+                } else {
+                    if (date < state.rangeStart) {
+                        state.rangeEnd = state.rangeStart;
+                        state.rangeStart = date;
+                    } else {
+                        state.rangeEnd = date;
+                    }
+                }
+            } else if (state.mode === 'multiple') {
+                var idx = state.multiple.findIndex(function(d) { return isSameDay(d, date); });
+                if (idx === -1) {
+                    state.multiple.push(date);
+                } else {
+                    state.multiple.splice(idx, 1);
+                }
+            }
+
+            render();
+
+            if (options.onChange) {
+                options.onChange(getValue());
+            }
+        }
+
+        function getValue() {
+            if (state.mode === 'single') return state.selected ? formatDate(state.selected) : null;
+            if (state.mode === 'range') return { start: formatDate(state.rangeStart), end: formatDate(state.rangeEnd) };
+            if (state.mode === 'multiple') return state.multiple.map(formatDate);
+        }
+
+        function prevMonth() {
+            state.viewMonth--;
+            if (state.viewMonth < 0) {
+                state.viewMonth = 11;
+                state.viewYear--;
+            }
+            render();
+        }
+
+        function nextMonth() {
+            state.viewMonth++;
+            if (state.viewMonth > 11) {
+                state.viewMonth = 0;
+                state.viewYear++;
+            }
+            render();
+        }
+
+        // Initialize
+        render();
+
+        return {
+            getValue: getValue,
+            selectDate: selectDate,
+            prevMonth: prevMonth,
+            nextMonth: nextMonth,
+            render: render
+        };
+    }
+
+    return {
+        init: init,
+        get: function(id) { return calendars[id]; },
+        selectDate: function(id, day) {
+            var cal = calendars[id];
+            if (cal && cal.selectDate) cal.selectDate(day);
+        },
+        prevMonth: function(id) {
+            var cal = calendars[id];
+            if (cal && cal.prevMonth) cal.prevMonth();
+        },
+        nextMonth: function(id) {
+            var cal = calendars[id];
+            if (cal && cal.nextMonth) cal.nextMonth();
         }
     };
 })();

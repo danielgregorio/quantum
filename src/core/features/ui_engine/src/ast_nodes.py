@@ -1449,3 +1449,407 @@ class UISkeletonNode(QuantumNode, UILayoutMixin):
         if self.variant not in ('text', 'circle', 'rect', 'card'):
             errors.append(f"Invalid skeleton variant: {self.variant}")
         return errors
+
+
+# ============================================
+# TOAST NOTIFICATION
+# ============================================
+
+class UIToastNode(QuantumNode, UILayoutMixin):
+    """
+    Represents <ui:toast> - Toast notification.
+
+    Displays temporary notification messages that auto-dismiss.
+
+    Attributes:
+        variant: Style variant (info, success, warning, danger)
+        position: Screen position (top-right, top-left, bottom-right, bottom-left, top-center, bottom-center)
+        duration: Auto-dismiss time in ms (0 = no auto-dismiss)
+        dismissible: Show close button
+        icon: Icon to display
+
+    Example:
+        <ui:toast variant="success" position="top-right" duration="3000">
+            File saved successfully!
+        </ui:toast>
+    """
+
+    VALID_VARIANTS = {'info', 'success', 'warning', 'danger'}
+    VALID_POSITIONS = {'top-right', 'top-left', 'bottom-right', 'bottom-left',
+                       'top-center', 'bottom-center'}
+
+    def __init__(self):
+        self.variant: str = "info"
+        self.position: str = "top-right"
+        self.duration: int = 3000  # ms, 0 = no auto-dismiss
+        self.dismissible: bool = True
+        self.icon: Optional[str] = None
+        self.title: Optional[str] = None
+        self.message: str = ""
+        self.show: Optional[str] = None  # Binding to control visibility
+        self.on_close: Optional[str] = None  # Callback on close
+        self._init_layout_attrs()
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {"type": "ui_toast", "variant": self.variant,
+             "position": self.position, "duration": self.duration,
+             "dismissible": self.dismissible, "icon": self.icon,
+             "title": self.title, "message": self.message,
+             "show": self.show, "on_close": self.on_close}
+        d.update(self._layout_to_dict())
+        return d
+
+    def validate(self) -> List[str]:
+        errors = self._validate_layout()
+        if self.variant not in self.VALID_VARIANTS:
+            errors.append(f"Invalid toast variant: {self.variant}. Valid: {', '.join(self.VALID_VARIANTS)}")
+        if self.position not in self.VALID_POSITIONS:
+            errors.append(f"Invalid toast position: {self.position}. Valid: {', '.join(self.VALID_POSITIONS)}")
+        return errors
+
+
+class UIToastContainerNode(QuantumNode, UILayoutMixin):
+    """
+    Represents <ui:toast-container> - Container for toast notifications.
+
+    A single container should be placed in the application to manage all toasts.
+
+    Attributes:
+        position: Default position for toasts
+        max_toasts: Maximum visible toasts (older ones are dismissed)
+
+    Example:
+        <ui:toast-container position="top-right" max-toasts="5" />
+    """
+
+    def __init__(self):
+        self.position: str = "top-right"
+        self.max_toasts: int = 5
+        self._init_layout_attrs()
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {"type": "ui_toast_container", "position": self.position,
+             "max_toasts": self.max_toasts}
+        d.update(self._layout_to_dict())
+        return d
+
+    def validate(self) -> List[str]:
+        return self._validate_layout()
+
+
+# ============================================
+# CAROUSEL / SLIDER
+# ============================================
+
+class UICarouselNode(QuantumNode, UILayoutMixin):
+    """
+    Represents <ui:carousel> - Image/content carousel slider.
+
+    Displays slides with navigation controls and optional auto-play.
+
+    Attributes:
+        auto_play: Enable automatic slide advancement
+        interval: Time between slides in ms (for auto-play)
+        show_indicators: Show dot indicators
+        show_arrows: Show prev/next arrows
+        loop: Loop back to start after last slide
+        animation: Slide animation type (slide, fade)
+
+    Example:
+        <ui:carousel auto-play="true" interval="5000" show-indicators="true">
+            <ui:slide><ui:image src="img1.jpg" /></ui:slide>
+            <ui:slide><ui:image src="img2.jpg" /></ui:slide>
+            <ui:slide><ui:image src="img3.jpg" /></ui:slide>
+        </ui:carousel>
+    """
+
+    def __init__(self):
+        self.auto_play: bool = False
+        self.interval: int = 5000  # ms
+        self.show_indicators: bool = True
+        self.show_arrows: bool = True
+        self.loop: bool = True
+        self.animation: str = "slide"  # slide, fade
+        self.current: int = 0  # Current slide index
+        self.bind: Optional[str] = None  # Binding for current index
+        self.on_change: Optional[str] = None  # Callback on slide change
+        self.children: List[QuantumNode] = []  # UISlideNode children
+        self._init_layout_attrs()
+
+    def add_child(self, child: QuantumNode):
+        self.children.append(child)
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {"type": "ui_carousel", "auto_play": self.auto_play,
+             "interval": self.interval, "show_indicators": self.show_indicators,
+             "show_arrows": self.show_arrows, "loop": self.loop,
+             "animation": self.animation, "current": self.current,
+             "bind": self.bind, "on_change": self.on_change,
+             "children_count": len(self.children)}
+        d.update(self._layout_to_dict())
+        return d
+
+    def validate(self) -> List[str]:
+        errors = self._validate_layout()
+        if self.animation not in ('slide', 'fade'):
+            errors.append(f"Invalid carousel animation: {self.animation}")
+        for child in self.children:
+            if hasattr(child, 'validate'):
+                errors.extend(child.validate())
+        return errors
+
+
+class UISlideNode(QuantumNode, UILayoutMixin):
+    """
+    Represents <ui:slide> - Single slide in a carousel.
+
+    Can contain any content (images, text, cards, etc.)
+
+    Example:
+        <ui:slide>
+            <ui:image src="hero.jpg" alt="Hero image" />
+            <ui:text size="xl">Welcome!</ui:text>
+        </ui:slide>
+    """
+
+    def __init__(self):
+        self.children: List[QuantumNode] = []
+        self._init_layout_attrs()
+
+    def add_child(self, child: QuantumNode):
+        self.children.append(child)
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {"type": "ui_slide", "children_count": len(self.children)}
+        d.update(self._layout_to_dict())
+        return d
+
+    def validate(self) -> List[str]:
+        errors = self._validate_layout()
+        for child in self.children:
+            if hasattr(child, 'validate'):
+                errors.extend(child.validate())
+        return errors
+
+
+# ============================================
+# STEPPER / WIZARD
+# ============================================
+
+class UIStepperNode(QuantumNode, UILayoutMixin):
+    """
+    Represents <ui:stepper> - Multi-step wizard/progress indicator.
+
+    Shows progress through a multi-step process with navigation.
+
+    Attributes:
+        orientation: Layout direction (horizontal, vertical)
+        current: Current step index (0-based)
+        linear: If true, must complete steps in order
+        show_labels: Show step labels
+        clickable: Allow clicking on steps to navigate
+        bind: Binding for current step
+
+    Example:
+        <ui:stepper current="1" linear="true">
+            <ui:step title="Account" description="Create account">
+                <ui:form>...</ui:form>
+            </ui:step>
+            <ui:step title="Profile" description="Add details">
+                <ui:form>...</ui:form>
+            </ui:step>
+            <ui:step title="Complete" description="All done!">
+                <ui:text>Success!</ui:text>
+            </ui:step>
+        </ui:stepper>
+    """
+
+    def __init__(self):
+        self.orientation: str = "horizontal"  # horizontal, vertical
+        self.current: int = 0
+        self.linear: bool = True  # Must complete in order
+        self.show_labels: bool = True
+        self.clickable: bool = False  # Allow clicking on steps
+        self.bind: Optional[str] = None  # Binding for current step
+        self.on_change: Optional[str] = None  # Callback on step change
+        self.on_complete: Optional[str] = None  # Callback when all steps done
+        self.children: List[QuantumNode] = []  # UIStepNode children
+        self._init_layout_attrs()
+
+    def add_child(self, child: QuantumNode):
+        self.children.append(child)
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {"type": "ui_stepper", "orientation": self.orientation,
+             "current": self.current, "linear": self.linear,
+             "show_labels": self.show_labels, "clickable": self.clickable,
+             "bind": self.bind, "on_change": self.on_change,
+             "on_complete": self.on_complete,
+             "children_count": len(self.children)}
+        d.update(self._layout_to_dict())
+        return d
+
+    def validate(self) -> List[str]:
+        errors = self._validate_layout()
+        if self.orientation not in ('horizontal', 'vertical'):
+            errors.append(f"Invalid stepper orientation: {self.orientation}")
+        for child in self.children:
+            if hasattr(child, 'validate'):
+                errors.extend(child.validate())
+        return errors
+
+
+class UIStepNode(QuantumNode, UILayoutMixin):
+    """
+    Represents <ui:step> - Single step in a stepper.
+
+    Attributes:
+        title: Step title (shown in indicator)
+        description: Optional description
+        icon: Optional icon
+        optional: If true, step can be skipped
+        completed: Override completed state
+
+    Example:
+        <ui:step title="Payment" description="Enter payment details" icon="credit-card">
+            <ui:form>...</ui:form>
+        </ui:step>
+    """
+
+    def __init__(self):
+        self.title: str = ""
+        self.description: Optional[str] = None
+        self.icon: Optional[str] = None
+        self.optional: bool = False
+        self.completed: Optional[bool] = None  # Override state
+        self.error: Optional[str] = None  # Error message for this step
+        self.children: List[QuantumNode] = []  # Step content
+        self._init_layout_attrs()
+
+    def add_child(self, child: QuantumNode):
+        self.children.append(child)
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {"type": "ui_step", "title": self.title,
+             "description": self.description, "icon": self.icon,
+             "optional": self.optional, "completed": self.completed,
+             "error": self.error, "children_count": len(self.children)}
+        d.update(self._layout_to_dict())
+        return d
+
+    def validate(self) -> List[str]:
+        errors = self._validate_layout()
+        if not self.title:
+            errors.append("Step title is required")
+        for child in self.children:
+            if hasattr(child, 'validate'):
+                errors.extend(child.validate())
+        return errors
+
+
+# ============================================
+# CALENDAR / DATE PICKER
+# ============================================
+
+class UICalendarNode(QuantumNode, UILayoutMixin):
+    """
+    Represents <ui:calendar> - Calendar date picker.
+
+    Displays a calendar for date selection.
+
+    Attributes:
+        mode: Selection mode (single, range, multiple)
+        value: Selected date(s) in ISO format
+        min_date: Minimum selectable date
+        max_date: Maximum selectable date
+        disabled_dates: List of disabled dates
+        show_week_numbers: Show week numbers
+        first_day_of_week: 0=Sunday, 1=Monday, etc.
+        locale: Locale for month/day names
+
+    Example:
+        <ui:calendar mode="single" bind="selectedDate" min-date="2024-01-01" />
+        <ui:calendar mode="range" bind="dateRange" />
+    """
+
+    VALID_MODES = {'single', 'range', 'multiple'}
+
+    def __init__(self):
+        self.mode: str = "single"  # single, range, multiple
+        self.value: Optional[str] = None  # ISO date or comma-separated
+        self.bind: Optional[str] = None  # Binding for selected date(s)
+        self.min_date: Optional[str] = None  # Min date (ISO)
+        self.max_date: Optional[str] = None  # Max date (ISO)
+        self.disabled_dates: Optional[str] = None  # Comma-separated ISO dates
+        self.disabled_days: Optional[str] = None  # Days of week (0-6) to disable
+        self.show_week_numbers: bool = False
+        self.first_day_of_week: int = 0  # 0=Sunday, 1=Monday
+        self.locale: str = "en"
+        self.inline: bool = True  # Show inline vs popup
+        self.on_change: Optional[str] = None  # Callback on date change
+        self.on_month_change: Optional[str] = None  # Callback on month navigation
+        self._init_layout_attrs()
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {"type": "ui_calendar", "mode": self.mode,
+             "value": self.value, "bind": self.bind,
+             "min_date": self.min_date, "max_date": self.max_date,
+             "disabled_dates": self.disabled_dates,
+             "disabled_days": self.disabled_days,
+             "show_week_numbers": self.show_week_numbers,
+             "first_day_of_week": self.first_day_of_week,
+             "locale": self.locale, "inline": self.inline,
+             "on_change": self.on_change, "on_month_change": self.on_month_change}
+        d.update(self._layout_to_dict())
+        return d
+
+    def validate(self) -> List[str]:
+        errors = self._validate_layout()
+        if self.mode not in self.VALID_MODES:
+            errors.append(f"Invalid calendar mode: {self.mode}. Valid: {', '.join(self.VALID_MODES)}")
+        if self.first_day_of_week not in range(7):
+            errors.append(f"first_day_of_week must be 0-6, got {self.first_day_of_week}")
+        return errors
+
+
+class UIDatePickerNode(QuantumNode, UILayoutMixin):
+    """
+    Represents <ui:date-picker> - Date input with calendar popup.
+
+    Combines a text input with a calendar dropdown.
+
+    Attributes:
+        value: Selected date in ISO format
+        placeholder: Input placeholder text
+        format: Display format (e.g., "MM/DD/YYYY")
+        clearable: Show clear button
+
+    Example:
+        <ui:date-picker bind="birthDate" placeholder="Select date" format="MM/DD/YYYY" />
+    """
+
+    def __init__(self):
+        self.value: Optional[str] = None
+        self.bind: Optional[str] = None
+        self.placeholder: str = "Select date"
+        self.format: str = "YYYY-MM-DD"  # Display format
+        self.min_date: Optional[str] = None
+        self.max_date: Optional[str] = None
+        self.clearable: bool = True
+        self.disabled: bool = False
+        self.required: bool = False
+        self.on_change: Optional[str] = None
+        self._init_layout_attrs()
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {"type": "ui_date_picker", "value": self.value,
+             "bind": self.bind, "placeholder": self.placeholder,
+             "format": self.format, "min_date": self.min_date,
+             "max_date": self.max_date, "clearable": self.clearable,
+             "disabled": self.disabled, "required": self.required,
+             "on_change": self.on_change}
+        d.update(self._layout_to_dict())
+        return d
+
+    def validate(self) -> List[str]:
+        return self._validate_layout()
