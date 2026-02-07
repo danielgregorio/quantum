@@ -75,7 +75,7 @@ class UIThemeNode(QuantumNode):
     """
 
     # Valid preset names
-    VALID_PRESETS = {'light', 'dark'}
+    VALID_PRESETS = {'light', 'dark', 'high-contrast', 'sepia', 'nord', 'dracula'}
 
     # Valid color token names (matching design tokens)
     VALID_COLOR_NAMES = {
