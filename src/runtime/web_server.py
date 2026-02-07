@@ -10,7 +10,7 @@ import re
 import hashlib
 import yaml
 from pathlib import Path
-from flask import Flask, Response, request, send_from_directory, render_template_string, session, redirect
+from flask import Flask, Response, request, send_from_directory, render_template_string, session, redirect, abort
 from typing import Dict, Any, Optional
 import secrets
 
@@ -224,20 +224,24 @@ class QuantumWebServer:
             Flask Response with rendered HTML
         """
 
-        try:
-            # Build full file path
-            components_dir = self.config['paths']['components']
-            file_path = Path(components_dir) / f'{component_path}.q'
+        # Build full file path
+        components_dir = self.config['paths']['components']
+        file_path = Path(components_dir) / f'{component_path}.q'
 
-            # Check if file exists
-            if not file_path.exists():
-                # Try index.q in subdirectory
-                index_path = Path(components_dir) / component_path / 'index.q'
-                if index_path.exists():
-                    file_path = index_path
-                else:
+        # Check if file exists
+        if not file_path.exists():
+            # Try index.q in subdirectory
+            index_path = Path(components_dir) / component_path / 'index.q'
+            if index_path.exists():
+                file_path = index_path
+            else:
+                # For index route, show welcome page; for other routes, return 404
+                if component_path == 'index':
                     return self._render_welcome_page()
+                else:
+                    abort(404)
 
+        try:
             # Check cache
             cache_enabled = self.config['performance']['cache_templates']
             cache_key = str(file_path)

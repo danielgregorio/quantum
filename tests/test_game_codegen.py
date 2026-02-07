@@ -73,8 +73,11 @@ class TestBasicGeneration:
         sprite.src = 'a.png'
         scene.add_child(sprite)
         html = codegen.generate(scene)
-        assert 'width: 1280' in html
-        assert 'height: 720' in html
+        # Viewport is capped at 800x600 for scrolling games support
+        # The actual scene dimensions are shown in a comment
+        assert 'width: 800' in html
+        assert 'height: 600' in html
+        assert 'World size: 1280x720' in html
 
 
 class TestSpriteGeneration:
