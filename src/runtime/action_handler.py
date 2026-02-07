@@ -9,9 +9,10 @@ manages flash messages, and performs redirects.
 from typing import Dict, Any, Optional, List, Tuple
 from flask import request, session, redirect as flask_redirect
 from core.ast_nodes import (
-    ActionNode, RedirectNode, FlashNode, QuantumParam,
-    QueryNode, SetNode, IfNode
+    ActionNode, RedirectNode, FlashNode, QuantumParam, QueryNode
 )
+from core.features.state_management.src.ast_node import SetNode
+from core.features.conditionals.src.ast_node import IfNode
 from runtime.execution_context import ExecutionContext
 from runtime.component import ComponentRuntime
 import re
