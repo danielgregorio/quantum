@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quantum-framework"
+version = "1.0.0"
+description = "Full-stack declarative framework for building web, desktop, and mobile applications"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Daniel Gregorio", email = "danielgregorio2611@gmail.com"}
+]
+keywords = ["framework", "declarative", "xml", "web", "desktop", "mobile"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Flask",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "flask>=3.0.0",
+    "pyyaml>=6.0",
+    "sqlparse>=0.4.4",
+    "gunicorn>=21.0.0",
+    "textual>=0.80.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.1",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+db = [
+    "psycopg2-binary>=2.9.9",
+    "pymysql>=1.1.0",
+]
+rag = [
+    "chromadb>=0.5.0",
+]
+
+[project.scripts]
+quantum = "src.cli.runner:main"
+
+[project.urls]
+Homepage = "https://quantum.sargas.cloud"
+Documentation = "https://quantum.sargas.cloud"
+Repository = "https://github.com/danielgregorio/quantum"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py311', 'py312']
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"

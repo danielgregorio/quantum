@@ -1,7 +1,12 @@
 # Quantum - Experimental Language
 
-> 🧠 **Codename:** FF / FireFusion  
-> ⚡ **Status:** Initial Runner implementation
+[![CI](https://github.com/danielgregorio/quantum/actions/workflows/ci.yml/badge.svg)](https://github.com/danielgregorio/quantum/actions/workflows/ci.yml)
+[![Docker](https://github.com/danielgregorio/quantum/actions/workflows/docker.yml/badge.svg)](https://github.com/danielgregorio/quantum/actions/workflows/docker.yml)
+[![PyPI](https://img.shields.io/pypi/v/quantum-framework)](https://pypi.org/project/quantum-framework/)
+[![Docs](https://img.shields.io/badge/docs-quantum.sargas.cloud-blue)](https://quantum.sargas.cloud)
+
+> **Codename:** FF / FireFusion
+> **Status:** Initial Runner implementation
 
 ## 🚀 Project Structure
 
