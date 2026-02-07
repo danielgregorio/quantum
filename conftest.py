@@ -1,8 +1,8 @@
 """
 Root conftest.py - Registers Quantum pytest plugins globally.
 
-This file ensures that .q regression tests, AS4 transpiler tests,
-and dataset-driven tests are all discovered by pytest.
+This file ensures that .q regression tests and dataset-driven tests
+are all discovered by pytest.
 """
 
 import sys
@@ -21,7 +21,6 @@ if _root_path not in sys.path:
 # Register custom plugins
 pytest_plugins = [
     "tests.plugins.quantum_q_plugin",
-    "tests.plugins.quantum_as4_plugin",
 ]
 
 
