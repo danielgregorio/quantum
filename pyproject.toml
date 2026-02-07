@@ -27,6 +27,7 @@ dependencies = [
     "sqlparse>=0.4.4",
     "gunicorn>=21.0.0",
     "textual>=0.80.0",
+    "requests>=2.31.0",
 ]
 
 [project.optional-dependencies]
