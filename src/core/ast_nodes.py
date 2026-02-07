@@ -3,7 +3,7 @@ Quantum AST Nodes - Classes that represent elements of the Quantum language
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from dataclasses import dataclass
 
 class QuantumNode(ABC):
@@ -1315,3 +1315,430 @@ class TransactionNode(QuantumNode):
     
     def __repr__(self):
         return f'<TransactionNode isolation={self.isolation_level} statements={len(self.statements)}>'
+
+
+class InvokeHeaderNode(QuantumNode):
+    """
+    Represents an HTTP header within q:invoke.
+
+    Example:
+      <q:invoke url="..." method="POST">
+        <q:header name="Authorization" value="Bearer {token}" />
+      </q:invoke>
+    """
+
+    def __init__(self, name: str, value: str):
+        self.name = name
+        self.value = value
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "invoke_header",
+            "name": self.name,
+            "value": self.value
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("Invoke header requires 'name' attribute")
+        if self.value is None:
+            errors.append(f"Invoke header '{self.name}' requires 'value' attribute")
+        return errors
+
+    def __repr__(self):
+        return f'<InvokeHeaderNode name={self.name}>'
+
+
+class HeaderNode(QuantumNode):
+    """
+    Represents an HTTP header for data sources (q:data).
+
+    Example:
+      <q:data name="api_data" source="https://api.example.com/data" type="json">
+        <q:header name="Authorization" value="Bearer {token}" />
+      </q:data>
+    """
+
+    def __init__(self, name: str, value: str):
+        self.name = name
+        self.value = value
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "header",
+            "name": self.name,
+            "value": self.value
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("Header requires 'name' attribute")
+        if self.value is None:
+            errors.append(f"Header '{self.name}' requires 'value' attribute")
+        return errors
+
+    def __repr__(self):
+        return f'<HeaderNode name={self.name}>'
+
+
+class ColumnNode(QuantumNode):
+    """
+    Represents a column definition for CSV data import.
+
+    Example:
+      <q:data name="users" source="users.csv" type="csv">
+        <q:column name="id" type="integer" required="true" />
+        <q:column name="email" type="string" validate="email" />
+        <q:column name="age" type="integer" min="0" max="150" />
+      </q:data>
+    """
+
+    def __init__(self, name: str, col_type: str = 'string'):
+        self.name = name
+        self.col_type = col_type
+        self.required: bool = False
+        self.default: Optional[str] = None
+        self.validate_rule: Optional[str] = None
+        self.pattern: Optional[str] = None
+        self.min: Optional[Union[int, float, str]] = None
+        self.max: Optional[Union[int, float, str]] = None
+        self.minlength: Optional[int] = None
+        self.maxlength: Optional[int] = None
+        self.range: Optional[str] = None
+        self.enum: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "column",
+            "name": self.name,
+            "col_type": self.col_type,
+            "required": self.required,
+            "default": self.default,
+            "validate_rule": self.validate_rule,
+            "pattern": self.pattern,
+            "min": self.min,
+            "max": self.max,
+            "minlength": self.minlength,
+            "maxlength": self.maxlength,
+            "range": self.range,
+            "enum": self.enum
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("Column requires 'name' attribute")
+        return errors
+
+    def __repr__(self):
+        return f'<ColumnNode name={self.name} type={self.col_type}>'
+
+
+class FieldNode(QuantumNode):
+    """
+    Represents a field mapping for XML data import.
+
+    Example:
+      <q:data name="catalog" source="products.xml" type="xml">
+        <q:field name="id" xpath="//product/@id" type="integer" />
+        <q:field name="name" xpath="//product/name/text()" />
+      </q:data>
+    """
+
+    def __init__(self, name: str, xpath: str, field_type: str = 'string'):
+        self.name = name
+        self.xpath = xpath
+        self.field_type = field_type
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "field",
+            "name": self.name,
+            "xpath": self.xpath,
+            "field_type": self.field_type
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("Field requires 'name' attribute")
+        if not self.xpath:
+            errors.append("Field requires 'xpath' attribute")
+        return errors
+
+    def __repr__(self):
+        return f'<FieldNode name={self.name} xpath={self.xpath}>'
+
+
+class FilterNode(QuantumNode):
+    """
+    Represents a filter operation in data transformation.
+
+    Example:
+      <q:transform>
+        <q:filter condition="age >= 18" />
+      </q:transform>
+    """
+
+    def __init__(self, condition: str):
+        self.condition = condition
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "filter",
+            "condition": self.condition
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.condition:
+            errors.append("Filter requires 'condition' attribute")
+        return errors
+
+    def __repr__(self):
+        return f'<FilterNode condition={self.condition}>'
+
+
+class SortNode(QuantumNode):
+    """
+    Represents a sort operation in data transformation.
+
+    Example:
+      <q:transform>
+        <q:sort by="name" order="asc" />
+      </q:transform>
+    """
+
+    def __init__(self, by: str, order: str = 'asc'):
+        self.by = by
+        self.order = order
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "sort",
+            "by": self.by,
+            "order": self.order
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.by:
+            errors.append("Sort requires 'by' attribute")
+        if self.order not in ('asc', 'desc'):
+            errors.append(f"Sort order must be 'asc' or 'desc', got: {self.order}")
+        return errors
+
+    def __repr__(self):
+        return f'<SortNode by={self.by} order={self.order}>'
+
+
+class LimitNode(QuantumNode):
+    """
+    Represents a limit operation in data transformation.
+
+    Example:
+      <q:transform>
+        <q:limit value="10" />
+      </q:transform>
+    """
+
+    def __init__(self, value: int):
+        self.value = value
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "limit",
+            "value": self.value
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not isinstance(self.value, int) or self.value < 0:
+            errors.append("Limit value must be a non-negative integer")
+        return errors
+
+    def __repr__(self):
+        return f'<LimitNode value={self.value}>'
+
+
+class ComputeNode(QuantumNode):
+    """
+    Represents a compute operation in data transformation.
+
+    Example:
+      <q:transform>
+        <q:compute field="full_name" expression="first_name + ' ' + last_name" />
+      </q:transform>
+    """
+
+    def __init__(self, field: str, expression: str, comp_type: str = 'string'):
+        self.field = field
+        self.expression = expression
+        self.comp_type = comp_type
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "compute",
+            "field": self.field,
+            "expression": self.expression,
+            "comp_type": self.comp_type
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.field:
+            errors.append("Compute requires 'field' attribute")
+        if not self.expression:
+            errors.append("Compute requires 'expression' attribute")
+        return errors
+
+    def __repr__(self):
+        return f'<ComputeNode field={self.field}>'
+
+
+class TransformNode(QuantumNode):
+    """
+    Represents a container for data transformation operations.
+
+    Example:
+      <q:data name="filtered_users" source="users.csv" type="csv">
+        <q:transform>
+          <q:filter condition="age >= 18" />
+          <q:sort by="name" order="asc" />
+          <q:limit value="100" />
+        </q:transform>
+      </q:data>
+    """
+
+    def __init__(self):
+        self.operations: List[QuantumNode] = []
+
+    def add_operation(self, operation: QuantumNode):
+        """Add a transformation operation (filter, sort, limit, compute)"""
+        self.operations.append(operation)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "transform",
+            "operations": [op.to_dict() for op in self.operations]
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        for op in self.operations:
+            errors.extend(op.validate())
+        return errors
+
+    def __repr__(self):
+        return f'<TransformNode operations={len(self.operations)}>'
+
+
+class DataNode(QuantumNode):
+    """
+    Represents a data import statement (q:data).
+
+    Supports importing data from various sources:
+    - CSV files
+    - XML files
+    - JSON APIs
+    - Excel files
+
+    Example:
+      <q:data name="users" source="users.csv" type="csv" delimiter="," header="true">
+        <q:column name="id" type="integer" />
+        <q:column name="name" type="string" />
+        <q:transform>
+          <q:filter condition="id > 0" />
+        </q:transform>
+      </q:data>
+    """
+
+    def __init__(self, name: str, source: str, data_type: str = 'csv'):
+        self.name = name
+        self.source = source
+        self.data_type = data_type
+
+        # Caching options
+        self.cache: bool = True
+        self.ttl: Optional[int] = None
+
+        # CSV-specific options
+        self.delimiter: str = ','
+        self.quote: str = '"'
+        self.header: bool = True
+        self.encoding: str = 'utf-8'
+        self.skip_rows: int = 0
+
+        # XML-specific options
+        self.xpath: Optional[str] = None
+        self.namespace: Optional[str] = None
+
+        # Result metadata
+        self.result: Optional[str] = None
+
+        # Child elements
+        self.columns: List[ColumnNode] = []
+        self.fields: List[FieldNode] = []
+        self.transforms: List[TransformNode] = []
+        self.headers: List[HeaderNode] = []
+
+    def add_column(self, column: 'ColumnNode'):
+        """Add a column definition (for CSV)"""
+        self.columns.append(column)
+
+    def add_field(self, field: 'FieldNode'):
+        """Add a field mapping (for XML)"""
+        self.fields.append(field)
+
+    def add_transform(self, transform: 'TransformNode'):
+        """Add a transform container"""
+        self.transforms.append(transform)
+
+    def add_header(self, header: 'HeaderNode'):
+        """Add an HTTP header (for remote sources)"""
+        self.headers.append(header)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "data",
+            "name": self.name,
+            "source": self.source,
+            "data_type": self.data_type,
+            "cache": self.cache,
+            "ttl": self.ttl,
+            "delimiter": self.delimiter,
+            "quote": self.quote,
+            "header": self.header,
+            "encoding": self.encoding,
+            "skip_rows": self.skip_rows,
+            "xpath": self.xpath,
+            "namespace": self.namespace,
+            "result": self.result,
+            "columns": [c.to_dict() for c in self.columns],
+            "fields": [f.to_dict() for f in self.fields],
+            "transforms": [t.to_dict() for t in self.transforms],
+            "headers": [h.to_dict() for h in self.headers]
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("Data requires 'name' attribute")
+        if not self.source:
+            errors.append("Data requires 'source' attribute")
+
+        for col in self.columns:
+            errors.extend(col.validate())
+        for field in self.fields:
+            errors.extend(field.validate())
+        for transform in self.transforms:
+            errors.extend(transform.validate())
+        for header in self.headers:
+            errors.extend(header.validate())
+
+        return errors
+
+    def __repr__(self):
+        return f'<DataNode name={self.name} source={self.source} type={self.data_type}>'
