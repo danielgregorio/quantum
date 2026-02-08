@@ -69,6 +69,7 @@ jobs:
       - name: Create deployment package
         run: |
           # Create deployment tarball
+          # Exit code 1 from tar means "file changed as we read it" which is OK
           tar --exclude='.git' \
               --exclude='node_modules' \
               --exclude='docs' \
@@ -77,7 +78,9 @@ jobs:
               --exclude='.pytest_cache' \
               --exclude='htmlcov' \
               --exclude='.coverage' \
-              -czvf quantum-app.tar.gz .
+              --exclude='.venv' \
+              --exclude='venv' \
+              -czvf quantum-app.tar.gz . || [[ $? -eq 1 ]]
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
