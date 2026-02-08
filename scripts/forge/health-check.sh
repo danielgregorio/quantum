@@ -4,7 +4,7 @@
 # Usage: ./health-check.sh [port] [max_attempts]
 #
 
-PORT=${1:-8080}
+PORT=${1:-8090}
 MAX_ATTEMPTS=${2:-10}
 SLEEP_INTERVAL=3
 

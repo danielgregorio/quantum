@@ -9,7 +9,7 @@ import os
 import multiprocessing
 
 # Server socket
-bind = os.environ.get('GUNICORN_BIND', '127.0.0.1:8080')
+bind = os.environ.get('GUNICORN_BIND', '127.0.0.1:8090')
 backlog = 2048
 
 # Worker processes

@@ -18,8 +18,8 @@ on:
 env:
   APP_NAME: quantum-app
   DEPLOY_PATH: /var/www/quantum-app
-  BLUE_PORT: 8080
-  GREEN_PORT: 8081
+  BLUE_PORT: 8090
+  GREEN_PORT: 8091
 
 jobs:
   test:
