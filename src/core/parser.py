@@ -41,7 +41,7 @@ from core.features.terminal_engine.src.ast_nodes import (
 )
 from core.features.testing_engine.src.parser import TestingParser, TestingParseError
 from core.features.testing_engine.src.ast_nodes import (
-    TestSuiteNode as TestingTestSuiteNode,
+    QTestSuiteNode as TestingTestSuiteNode,
     BrowserConfigNode as TestingBrowserConfigNode,
     FixtureNode_Testing as TestingFixtureNode,
     MockNode_Testing as TestingMockNode,

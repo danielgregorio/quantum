@@ -271,8 +271,8 @@ Examples:
     run_parser.add_argument('file', help='.q file to execute')
     run_parser.add_argument('--debug', action='store_true', help='Debug mode')
     run_parser.add_argument('--config', default='quantum.config.yaml', help='Config file')
-    run_parser.add_argument('--target', choices=['html', 'textual', 'desktop'], default='html',
-                            help='UI target (for type="ui" apps): html, textual, or desktop')
+    run_parser.add_argument('--target', choices=['html', 'textual', 'desktop', 'mobile'], default='html',
+                            help='UI target (for type="ui" apps): html, textual, desktop, or mobile')
 
     # Start command
     start_parser = subparsers.add_parser('start', help='Start web server')

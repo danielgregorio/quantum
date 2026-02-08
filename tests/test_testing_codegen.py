@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 from core.parser import QuantumParser
 from core.features.testing_engine.src.ast_nodes import (
-    TestSuiteNode, TestCaseNode, ExpectNode, MockNode_Testing,
+    QTestSuiteNode, QTestCaseNode, ExpectNode, MockNode_Testing,
     FixtureNode_Testing, SetupNode_Testing, TeardownNode_Testing,
     BeforeEachNode, AfterEachNode,
     ScenarioNode, GivenNode, WhenNode, ThenNode,
@@ -23,7 +23,7 @@ from core.features.testing_engine.src.ast_nodes import (
     PerfNode, PerfMetricNode, A11yNode, GeolocationNode,
     SnapshotNode, PauseNode, ChaosNode, ChaosFailNode,
 )
-from runtime.testing_code_generator import TestingCodeGenerator
+from runtime.testing_code_generator import QTestCodeGenerator
 
 
 @pytest.fixture
@@ -33,15 +33,15 @@ def parser():
 
 @pytest.fixture
 def codegen():
-    return TestingCodeGenerator()
+    return QTestCodeGenerator()
 
 
 class TestBasicGeneration:
     """Test basic pytest code generation."""
 
     def test_generates_pytest_file(self, codegen):
-        suite = TestSuiteNode('Basic')
-        case = TestCaseNode('addition works')
+        suite = QTestSuiteNode('Basic')
+        case = QTestCaseNode('addition works')
         expect = ExpectNode()
         expect.var = '1 + 1'
         expect.equals = '2'
@@ -54,8 +54,8 @@ class TestBasicGeneration:
         assert 'assert 1 + 1 == 2' in code
 
     def test_class_naming(self, codegen):
-        suite = TestSuiteNode('User Authentication')
-        case = TestCaseNode('t')
+        suite = QTestSuiteNode('User Authentication')
+        case = QTestCaseNode('t')
         expect = ExpectNode()
         expect.var = '1'
         expect.equals = '1'
@@ -65,8 +65,8 @@ class TestBasicGeneration:
         assert 'class TestUserAuthentication' in code
 
     def test_method_naming(self, codegen):
-        suite = TestSuiteNode('S')
-        case = TestCaseNode('it should handle special characters!')
+        suite = QTestSuiteNode('S')
+        case = QTestCaseNode('it should handle special characters!')
         expect = ExpectNode()
         expect.var = '1'
         expect.equals = '1'
@@ -76,8 +76,8 @@ class TestBasicGeneration:
         assert 'def test_it_should_handle_special_characters' in code
 
     def test_multiple_assertions(self, codegen):
-        suite = TestSuiteNode('Math')
-        case = TestCaseNode('operations')
+        suite = QTestSuiteNode('Math')
+        case = QTestCaseNode('operations')
         e1 = ExpectNode()
         e1.var = '1 + 1'
         e1.equals = '2'
@@ -96,9 +96,9 @@ class TestBrowserTestGeneration:
     """Test browser test (playwright) code generation."""
 
     def test_browser_test_has_page_param(self, codegen):
-        suite = TestSuiteNode('Browser')
+        suite = QTestSuiteNode('Browser')
         suite.browser = True
-        case = TestCaseNode('loads page')
+        case = QTestCaseNode('loads page')
         case.browser = True
         nav = NavigateNode()
         nav.to = '/'
@@ -109,9 +109,9 @@ class TestBrowserTestGeneration:
         assert 'from playwright.sync_api' in code
 
     def test_navigate_generation(self, codegen):
-        suite = TestSuiteNode('Nav')
+        suite = QTestSuiteNode('Nav')
         suite.browser = True
-        case = TestCaseNode('goes to page')
+        case = QTestCaseNode('goes to page')
         case.browser = True
         nav = NavigateNode()
         nav.to = '/about'
@@ -121,9 +121,9 @@ class TestBrowserTestGeneration:
         assert 'page.goto("/about")' in code
 
     def test_navigate_back(self, codegen):
-        suite = TestSuiteNode('Nav')
+        suite = QTestSuiteNode('Nav')
         suite.browser = True
-        case = TestCaseNode('goes back')
+        case = QTestCaseNode('goes back')
         case.browser = True
         nav = NavigateNode()
         nav.back = True
@@ -133,9 +133,9 @@ class TestBrowserTestGeneration:
         assert 'page.go_back()' in code
 
     def test_click_generation(self, codegen):
-        suite = TestSuiteNode('Click')
+        suite = QTestSuiteNode('Click')
         suite.browser = True
-        case = TestCaseNode('clicks btn')
+        case = QTestCaseNode('clicks btn')
         case.browser = True
         click = ClickNode()
         click.selector = '#submit-btn'
@@ -146,9 +146,9 @@ class TestBrowserTestGeneration:
         assert '.click()' in code
 
     def test_click_by_test_id(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         click = ClickNode()
         click.test_id = 'login-btn'
@@ -158,9 +158,9 @@ class TestBrowserTestGeneration:
         assert 'get_by_test_id("login-btn")' in code
 
     def test_click_by_role(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         click = ClickNode()
         click.role = 'button'
@@ -172,9 +172,9 @@ class TestBrowserTestGeneration:
         assert 'name="Submit"' in code
 
     def test_fill_generation(self, codegen):
-        suite = TestSuiteNode('Form')
+        suite = QTestSuiteNode('Form')
         suite.browser = True
-        case = TestCaseNode('fills form')
+        case = QTestCaseNode('fills form')
         case.browser = True
         fill = FillNode()
         fill.selector = '#email'
@@ -190,8 +190,8 @@ class TestAssertGeneration:
     """Test all ExpectNode assertion variants."""
 
     def test_expect_var_equals(self, codegen):
-        suite = TestSuiteNode('S')
-        case = TestCaseNode('t')
+        suite = QTestSuiteNode('S')
+        case = QTestCaseNode('t')
         e = ExpectNode()
         e.var = 'result'
         e.equals = '42'
@@ -201,8 +201,8 @@ class TestAssertGeneration:
         assert 'assert result == 42' in code
 
     def test_expect_var_text_contains(self, codegen):
-        suite = TestSuiteNode('S')
-        case = TestCaseNode('t')
+        suite = QTestSuiteNode('S')
+        case = QTestCaseNode('t')
         e = ExpectNode()
         e.var = 'output'
         e.text_contains = 'success'
@@ -212,9 +212,9 @@ class TestAssertGeneration:
         assert '"success" in str(output)' in code
 
     def test_expect_selector_visible(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         e = ExpectNode()
         e.selector = 'h1'
@@ -225,9 +225,9 @@ class TestAssertGeneration:
         assert 'to_be_visible()' in code
 
     def test_expect_selector_text(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         e = ExpectNode()
         e.selector = 'h1'
@@ -238,9 +238,9 @@ class TestAssertGeneration:
         assert 'to_have_text("Welcome")' in code
 
     def test_expect_selector_count(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         e = ExpectNode()
         e.selector = '.item'
@@ -251,9 +251,9 @@ class TestAssertGeneration:
         assert 'to_have_count(5)' in code
 
     def test_expect_negate(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         e = ExpectNode()
         e.selector = '.error'
@@ -265,9 +265,9 @@ class TestAssertGeneration:
         assert 'not_to_be_visible()' in code
 
     def test_expect_url(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         e = ExpectNode()
         e.url = 'http://localhost/dashboard'
@@ -282,8 +282,8 @@ class TestFixtureGeneration:
     """Test fixture code generation."""
 
     def test_inline_fixture(self, codegen):
-        suite = TestSuiteNode('S')
-        case = TestCaseNode('t')
+        suite = QTestSuiteNode('S')
+        case = QTestCaseNode('t')
         e = ExpectNode()
         e.var = '1'
         e.equals = '1'
@@ -300,8 +300,8 @@ class TestFixtureGeneration:
         assert 'json.loads' in code
 
     def test_file_fixture(self, codegen):
-        suite = TestSuiteNode('S')
-        case = TestCaseNode('t')
+        suite = QTestSuiteNode('S')
+        case = QTestCaseNode('t')
         e = ExpectNode()
         e.var = '1'
         e.equals = '1'
@@ -320,8 +320,8 @@ class TestMockGeneration:
     """Test mock code generation."""
 
     def test_query_mock(self, codegen):
-        suite = TestSuiteNode('S')
-        case = TestCaseNode('t')
+        suite = QTestSuiteNode('S')
+        case = QTestCaseNode('t')
         e = ExpectNode()
         e.var = '1'
         e.equals = '1'
@@ -343,9 +343,9 @@ class TestInterceptGeneration:
     """Test network intercept code generation."""
 
     def test_intercept_with_respond(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
 
         intercept = InterceptNode()
@@ -365,9 +365,9 @@ class TestInterceptGeneration:
         assert 'status=200' in code
 
     def test_intercept_spy(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
 
         intercept = InterceptNode()
@@ -385,8 +385,8 @@ class TestAuthGeneration:
     """Test auth state code generation."""
 
     def test_auth_fixture(self, codegen):
-        suite = TestSuiteNode('S')
-        case = TestCaseNode('t')
+        suite = QTestSuiteNode('S')
+        case = QTestCaseNode('t')
         e = ExpectNode()
         e.var = '1'
         e.equals = '1'
@@ -413,10 +413,10 @@ class TestHookGeneration:
     """Test setup/teardown hook generation."""
 
     def test_setup_class(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         setup = SetupNode_Testing()
         suite.add_child(setup)
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         e = ExpectNode()
         e.var = '1'
         e.equals = '1'
@@ -427,14 +427,14 @@ class TestHookGeneration:
         assert '@classmethod' in code
 
     def test_before_each_browser(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
         before = BeforeEachNode()
         nav = NavigateNode()
         nav.to = '/'
         before.add_child(nav)
         suite.add_child(before)
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         e = ExpectNode()
         e.selector = 'h1'
@@ -450,7 +450,7 @@ class TestScenarioGeneration:
     """Test BDD scenario code generation."""
 
     def test_scenario_comments(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         scenario = ScenarioNode('user logs in')
         given = GivenNode('a registered user')
         when = WhenNode('they enter credentials')
@@ -474,9 +474,9 @@ class TestAdvancedFeatureGeneration:
     """Test advanced testing features code generation."""
 
     def test_screenshot(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         ss = ScreenshotNode()
         ss.name = 'homepage'
@@ -489,9 +489,9 @@ class TestAdvancedFeatureGeneration:
         assert 'full_page=True' in code
 
     def test_geolocation(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         geo = GeolocationNode()
         geo.latitude = -23.55
@@ -505,9 +505,9 @@ class TestAdvancedFeatureGeneration:
         assert 'grant_permissions' in code
 
     def test_keyboard(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         kb = KeyboardNode()
         kb.press = 'Enter'
@@ -517,9 +517,9 @@ class TestAdvancedFeatureGeneration:
         assert 'keyboard.press("Enter")' in code
 
     def test_wait_for(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         wf = WaitForNode()
         wf.selector = '.loaded'
@@ -532,9 +532,9 @@ class TestAdvancedFeatureGeneration:
         assert 'timeout=5000' in code
 
     def test_snapshot(self, codegen):
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         snap = SnapshotNode()
         snap.name = 'visual_test'
@@ -621,9 +621,9 @@ class TestBugFixCoverage:
 
     def test_expect_multiple_assertions_same_node(self, codegen):
         """ExpectNode with visible + text + count generates 3 assertions."""
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         e = ExpectNode()
         e.selector = '.card'
@@ -639,9 +639,9 @@ class TestBugFixCoverage:
 
     def test_wait_for_state_without_timeout(self, codegen):
         """wait_for with state='visible' but no timeout."""
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         wf = WaitForNode()
         wf.selector = '.item'
@@ -655,9 +655,9 @@ class TestBugFixCoverage:
 
     def test_wait_for_timeout_without_state(self, codegen):
         """wait_for with timeout but no state - should not produce leading comma."""
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         wf = WaitForNode()
         wf.selector = '.loaded'
@@ -672,9 +672,9 @@ class TestBugFixCoverage:
 
     def test_wait_for_selector_only(self, codegen):
         """wait_for with only selector, no state or timeout."""
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         wf = WaitForNode()
         wf.selector = '#spinner'
@@ -687,8 +687,8 @@ class TestBugFixCoverage:
 
     def test_perf_without_browser(self, codegen):
         """PerfNode in non-browser suite still generates timing code."""
-        suite = TestSuiteNode('S')
-        case = TestCaseNode('t')
+        suite = QTestSuiteNode('S')
+        case = QTestCaseNode('t')
         perf = PerfNode()
         metric = PerfMetricNode()
         metric.name = 'lcp'
@@ -704,9 +704,9 @@ class TestBugFixCoverage:
 
     def test_intercept_with_delay(self, codegen):
         """Intercept with delay generates time.sleep."""
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         intercept = InterceptNode()
         intercept.url = '**/api/slow'
@@ -724,9 +724,9 @@ class TestBugFixCoverage:
 
     def test_frame_with_nested_actions(self, codegen):
         """Frame with click + fill + expect inside."""
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         frame = FrameNode_Testing()
         frame.selector = '#myframe'
@@ -751,9 +751,9 @@ class TestBugFixCoverage:
 
     def test_download_without_save_as(self, codegen):
         """Download without save_as generates only trigger."""
-        suite = TestSuiteNode('S')
+        suite = QTestSuiteNode('S')
         suite.browser = True
-        case = TestCaseNode('t')
+        case = QTestCaseNode('t')
         case.browser = True
         dl = DownloadNode()
         dl.trigger_click = '#download-btn'
@@ -767,8 +767,8 @@ class TestBugFixCoverage:
 
     def test_chaos_multiple_failures(self, codegen):
         """ChaosNode with 2+ ChaosFailNode children - import random only once."""
-        suite = TestSuiteNode('S')
-        case = TestCaseNode('t')
+        suite = QTestSuiteNode('S')
+        case = QTestCaseNode('t')
         chaos = ChaosNode()
         fail1 = ChaosFailNode()
         fail1.service = 'db'

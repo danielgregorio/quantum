@@ -43,6 +43,8 @@ from core.features.ui_engine.src.ast_nodes import (
     UIModalNode, UIAlertNode, UIAvatarNode, UIDropdownNode,
     UIToastNode, UIToastContainerNode, UICarouselNode, UISlideNode,
     UIStepperNode, UIStepNode, UICalendarNode, UIDatePickerNode,
+    UIAnimateNode, UIChartNode, UITooltipNode, UIBreadcrumbNode,
+    UIBreadcrumbItemNode, UIPaginationNode, UISkeletonNode,
 )
 from runtime.ui_mobile_templates import (
     JsBuilder,
@@ -457,6 +459,20 @@ class UIReactNativeAdapter:
             self._render_calendar(node, js)
         elif isinstance(node, UIDatePickerNode):
             self._render_date_picker(node, js)
+        elif isinstance(node, UIAnimateNode):
+            self._render_animate(node, js)
+        elif isinstance(node, UIChartNode):
+            self._render_chart(node, js)
+        elif isinstance(node, UITooltipNode):
+            self._render_tooltip(node, js)
+        elif isinstance(node, UIBreadcrumbNode):
+            self._render_breadcrumb(node, js)
+        elif isinstance(node, UIBreadcrumbItemNode):
+            self._render_breadcrumb_item(node, js)
+        elif isinstance(node, UIPaginationNode):
+            self._render_pagination(node, js)
+        elif isinstance(node, UISkeletonNode):
+            self._render_skeleton(node, js)
         # Quantum passthrough
         elif isinstance(node, SetNode):
             js.comment(f'q:set {node.name} = {node.value}')
@@ -1660,3 +1676,157 @@ class UIReactNativeAdapter:
         js.comment('Note: For full date picker, use @react-native-community/datetimepicker')
         js.dedent()
         js.jsx_close('View')
+
+    # ------------------------------------------------------------------
+    # Additional Component Renderers
+    # ------------------------------------------------------------------
+
+    def _render_animate(self, node: UIAnimateNode, js: JsBuilder):
+        """Render animation wrapper using Animated API"""
+        self._components_used.add('Animated')
+        self._components_used.add('View')
+        self._styles_used.add('animate')
+
+        anim_type = getattr(node, 'type', 'fade') or 'fade'
+        duration = getattr(node, 'duration', 300) or 300
+
+        js.comment(f'Animation: {anim_type} ({duration}ms)')
+        js.jsx_open('Animated.View', {'style': 'styles.animate'})
+        js.indent()
+        self._render_children(node.children, js)
+        js.dedent()
+        js.jsx_close('Animated.View')
+
+    def _render_chart(self, node: UIChartNode, js: JsBuilder):
+        """Render chart placeholder - requires react-native-chart-kit"""
+        self._components_used.add('View')
+        self._components_used.add('Text')
+        self._styles_used.add('chart')
+
+        chart_type = getattr(node, 'type', 'bar') or 'bar'
+
+        js.jsx_open('View', {'style': 'styles.chart'})
+        js.indent()
+        js.jsx_open('Text', {'style': 'styles.chartPlaceholder'})
+        js.indent()
+        js.jsx_text(f'{chart_type.title()} Chart (requires react-native-chart-kit)')
+        js.dedent()
+        js.jsx_close('Text')
+        js.dedent()
+        js.jsx_close('View')
+
+    def _render_tooltip(self, node: UITooltipNode, js: JsBuilder):
+        """Render tooltip wrapper"""
+        self._components_used.add('View')
+        self._components_used.add('Text')
+        self._styles_used.add('tooltip')
+
+        content = getattr(node, 'content', '') or ''
+
+        js.jsx_open('View', {'style': 'styles.tooltipContainer'})
+        js.indent()
+        self._render_children(node.children, js)
+        if content:
+            js.jsx_open('View', {'style': 'styles.tooltip'})
+            js.indent()
+            js.jsx_open('Text', {'style': 'styles.tooltipText'})
+            js.indent()
+            js.jsx_text(content)
+            js.dedent()
+            js.jsx_close('Text')
+            js.dedent()
+            js.jsx_close('View')
+        js.dedent()
+        js.jsx_close('View')
+
+    def _render_breadcrumb(self, node: UIBreadcrumbNode, js: JsBuilder):
+        """Render breadcrumb navigation"""
+        self._components_used.add('View')
+        self._components_used.add('Text')
+        self._styles_used.add('breadcrumb')
+
+        js.jsx_open('View', {'style': 'styles.breadcrumb'})
+        js.indent()
+        self._render_children(node.children, js)
+        js.dedent()
+        js.jsx_close('View')
+
+    def _render_breadcrumb_item(self, node: UIBreadcrumbItemNode, js: JsBuilder):
+        """Render breadcrumb item"""
+        self._components_used.add('TouchableOpacity')
+        self._components_used.add('Text')
+        self._styles_used.add('breadcrumb')
+
+        label = getattr(node, 'label', '') or getattr(node, 'content', '') or ''
+        is_active = getattr(node, 'active', False)
+
+        style = 'styles.breadcrumbItemActive' if is_active else 'styles.breadcrumbItem'
+
+        js.jsx_open('TouchableOpacity', {'style': style})
+        js.indent()
+        js.jsx_open('Text', {'style': 'styles.breadcrumbText'})
+        js.indent()
+        js.jsx_text(label)
+        js.dedent()
+        js.jsx_close('Text')
+        js.dedent()
+        js.jsx_close('TouchableOpacity')
+
+    def _render_pagination(self, node: UIPaginationNode, js: JsBuilder):
+        """Render pagination controls"""
+        self._components_used.add('View')
+        self._components_used.add('TouchableOpacity')
+        self._components_used.add('Text')
+        self._styles_used.add('pagination')
+
+        total = getattr(node, 'total', 1) or 1
+        current = getattr(node, 'current', 1) or 1
+
+        js.jsx_open('View', {'style': 'styles.pagination'})
+        js.indent()
+        # Previous button
+        js.jsx_open('TouchableOpacity', {'style': 'styles.paginationButton'})
+        js.indent()
+        js.jsx_open('Text')
+        js.jsx_text('←')
+        js.dedent()
+        js.jsx_close('Text')
+        js.dedent()
+        js.jsx_close('TouchableOpacity')
+        # Page indicator
+        js.jsx_open('Text', {'style': 'styles.paginationText'})
+        js.indent()
+        js.jsx_text(f'{current} / {total}')
+        js.dedent()
+        js.jsx_close('Text')
+        # Next button
+        js.jsx_open('TouchableOpacity', {'style': 'styles.paginationButton'})
+        js.indent()
+        js.jsx_open('Text')
+        js.jsx_text('→')
+        js.dedent()
+        js.jsx_close('Text')
+        js.dedent()
+        js.jsx_close('TouchableOpacity')
+        js.dedent()
+        js.jsx_close('View')
+
+    def _render_skeleton(self, node: UISkeletonNode, js: JsBuilder):
+        """Render skeleton loading placeholder"""
+        self._components_used.add('View')
+        self._styles_used.add('skeleton')
+
+        variant = getattr(node, 'variant', 'text') or 'text'
+        width = getattr(node, 'width', None)
+        height = getattr(node, 'height', None)
+
+        style_parts = ['styles.skeleton']
+        if variant == 'circle':
+            style_parts.append('styles.skeletonCircle')
+        elif variant == 'rect':
+            style_parts.append('styles.skeletonRect')
+
+        style = style_parts[0] if len(style_parts) == 1 else f'[{", ".join(style_parts)}]'
+
+        attrs = {'style': style}
+        js.jsx_open('View', attrs, self_closing=True)

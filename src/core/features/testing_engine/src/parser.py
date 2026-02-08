@@ -10,7 +10,7 @@ from typing import Optional, List
 
 from .ast_nodes import (
     # Core testing nodes
-    TestSuiteNode, TestCaseNode, ExpectNode, MockNode_Testing,
+    QTestSuiteNode, QTestCaseNode, ExpectNode, MockNode_Testing,
     FixtureNode_Testing, SetupNode_Testing, TeardownNode_Testing,
     BeforeEachNode, AfterEachNode, GenerateNode,
     ScenarioNode, GivenNode, WhenNode, ThenNode,
@@ -175,9 +175,9 @@ class TestingParser:
     # Core testing nodes
     # ------------------------------------------------------------------
 
-    def _parse_testing_suite(self, element: ET.Element) -> TestSuiteNode:
+    def _parse_testing_suite(self, element: ET.Element) -> QTestSuiteNode:
         name = element.get('name', 'default')
-        node = TestSuiteNode(name)
+        node = QTestSuiteNode(name)
         node.browser = self._parse_bool(element.get('browser'))
         node.parallel = self._parse_bool(element.get('parallel'))
         node.workers = self._parse_int(element.get('workers'), 1)
@@ -190,9 +190,9 @@ class TestingParser:
                 node.add_child(parsed)
         return node
 
-    def _parse_testing_case(self, element: ET.Element) -> TestCaseNode:
+    def _parse_testing_case(self, element: ET.Element) -> QTestCaseNode:
         name = element.get('name', '')
-        node = TestCaseNode(name)
+        node = QTestCaseNode(name)
         node.browser = self._parse_bool(element.get('browser'))
         node.auth = element.get('auth')
         node.device = element.get('device')

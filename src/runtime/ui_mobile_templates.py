@@ -890,6 +890,100 @@ BASE_STYLES = {
     flexDirection: 'row',
     alignItems: 'center',
   },""",
+
+    'animate': """\
+  animate: {
+    flex: 1,
+  },""",
+
+    'chart': """\
+  chart: {
+    padding: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    minHeight: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chartPlaceholder: {
+    color: '#64748b',
+    textAlign: 'center',
+  },""",
+
+    'tooltip': """\
+  tooltipContainer: {
+    position: 'relative',
+  },
+  tooltip: {
+    position: 'absolute',
+    backgroundColor: '#1e293b',
+    padding: 8,
+    borderRadius: 4,
+    top: -40,
+    left: 0,
+  },
+  tooltipText: {
+    color: '#ffffff',
+    fontSize: 12,
+  },""",
+
+    'breadcrumb': """\
+  breadcrumb: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  breadcrumbItem: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  breadcrumbItemActive: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 4,
+  },
+  breadcrumbText: {
+    color: '#3b82f6',
+    fontSize: 14,
+  },""",
+
+    'pagination': """\
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+    padding: 16,
+  },
+  paginationButton: {
+    padding: 8,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 4,
+  },
+  paginationText: {
+    fontSize: 14,
+    color: '#1e293b',
+  },""",
+
+    'skeleton': """\
+  skeleton: {
+    backgroundColor: '#e2e8f0',
+    borderRadius: 4,
+    height: 16,
+    width: '100%',
+  },
+  skeletonCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  skeletonRect: {
+    height: 100,
+    borderRadius: 8,
+  },""",
 }
 
 

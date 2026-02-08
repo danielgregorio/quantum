@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 from core.parser import QuantumParser, QuantumParseError
 from core.ast_nodes import ApplicationNode
 from core.features.testing_engine.src.ast_nodes import (
-    TestSuiteNode, TestCaseNode, ExpectNode, MockNode_Testing,
+    QTestSuiteNode, QTestCaseNode, ExpectNode, MockNode_Testing,
     FixtureNode_Testing, SetupNode_Testing, TeardownNode_Testing,
     BeforeEachNode, AfterEachNode, GenerateNode,
     ScenarioNode, GivenNode, WhenNode, ThenNode,
@@ -59,7 +59,7 @@ class TestNamespaceInjection:
         </q:application>'''
         ast = parser.parse(src)
         assert len(ast.test_suites) == 1
-        assert isinstance(ast.test_suites[0], TestSuiteNode)
+        assert isinstance(ast.test_suites[0], QTestSuiteNode)
         assert ast.test_suites[0].name == 'MySuite'
 
 
@@ -114,7 +114,7 @@ class TestCaseParsing:
         ast = parser.parse(src)
         suite = ast.test_suites[0]
         case = suite.children[0]
-        assert isinstance(case, TestCaseNode)
+        assert isinstance(case, QTestCaseNode)
         assert case.name == 'test login'
         assert case.browser is True
         assert case.auth == 'admin'
@@ -632,7 +632,7 @@ class TestFullIntegration:
         # Check browser test case children
         before_each = [c for c in browser_suite.children if isinstance(c, BeforeEachNode)]
         assert len(before_each) == 1
-        cases = [c for c in browser_suite.children if isinstance(c, TestCaseNode)]
+        cases = [c for c in browser_suite.children if isinstance(c, QTestCaseNode)]
         assert len(cases) == 1
         assert len(cases[0].children) == 6  # expect, click, wait-for, fill, click, screenshot
 
@@ -641,12 +641,12 @@ class TestValidation:
     """Test AST validation."""
 
     def test_suite_requires_name(self):
-        suite = TestSuiteNode('')
+        suite = QTestSuiteNode('')
         errors = suite.validate()
         assert any('name' in e.lower() for e in errors)
 
     def test_case_requires_name(self):
-        case = TestCaseNode('')
+        case = QTestCaseNode('')
         errors = case.validate()
         assert any('name' in e.lower() for e in errors)
 

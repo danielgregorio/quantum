@@ -15,10 +15,10 @@ from typing import Optional
 
 from core.ast_nodes import ApplicationNode
 from core.features.testing_engine.src.ast_nodes import (
-    TestSuiteNode, BrowserConfigNode, FixtureNode_Testing,
+    QTestSuiteNode, BrowserConfigNode, FixtureNode_Testing,
     MockNode_Testing, AuthNode,
 )
-from runtime.testing_code_generator import TestingCodeGenerator
+from runtime.testing_code_generator import QTestCodeGenerator
 
 
 class TestingBuildError(Exception):
@@ -48,11 +48,11 @@ class TestingBuilder:
         if not suites:
             raise TestingBuildError("No test suites found in testing application")
 
-        valid_suites = [s for s in suites if isinstance(s, TestSuiteNode)]
+        valid_suites = [s for s in suites if isinstance(s, QTestSuiteNode)]
         if not valid_suites:
-            raise TestingBuildError("No valid TestSuiteNode found in testing application")
+            raise TestingBuildError("No valid QTestSuiteNode found in testing application")
 
-        generator = TestingCodeGenerator()
+        generator = QTestCodeGenerator()
         python_code = generator.generate(
             suites=valid_suites,
             title=app.app_id,

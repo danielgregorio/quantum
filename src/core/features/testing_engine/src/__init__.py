@@ -4,7 +4,7 @@ Testing Engine - AST nodes and parser for the qtest: namespace.
 
 from .ast_nodes import (
     # Core testing nodes
-    TestSuiteNode, TestCaseNode, ExpectNode, MockNode_Testing,
+    QTestSuiteNode, QTestCaseNode, ExpectNode, MockNode_Testing,
     FixtureNode_Testing, SetupNode_Testing, TeardownNode_Testing,
     BeforeEachNode, AfterEachNode, GenerateNode,
     ScenarioNode, GivenNode, WhenNode, ThenNode,
@@ -23,7 +23,7 @@ from .ast_nodes import (
 
 __all__ = [
     # Core testing nodes
-    'TestSuiteNode', 'TestCaseNode', 'ExpectNode', 'MockNode_Testing',
+    'QTestSuiteNode', 'QTestCaseNode', 'ExpectNode', 'MockNode_Testing',
     'FixtureNode_Testing', 'SetupNode_Testing', 'TeardownNode_Testing',
     'BeforeEachNode', 'AfterEachNode', 'GenerateNode',
     'ScenarioNode', 'GivenNode', 'WhenNode', 'ThenNode',

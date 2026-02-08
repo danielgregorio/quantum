@@ -15,7 +15,7 @@ from runtime.testing_templates import (
 
 from core.features.testing_engine.src.ast_nodes import (
     # Core
-    TestSuiteNode, TestCaseNode, ExpectNode, MockNode_Testing,
+    QTestSuiteNode, QTestCaseNode, ExpectNode, MockNode_Testing,
     FixtureNode_Testing, SetupNode_Testing, TeardownNode_Testing,
     BeforeEachNode, AfterEachNode, GenerateNode,
     ScenarioNode, GivenNode, WhenNode, ThenNode,
@@ -33,7 +33,7 @@ from core.features.testing_engine.src.ast_nodes import (
 )
 
 
-class TestingCodeGenerator:
+class QTestCodeGenerator:
     """Generates standalone pytest file from Testing AST nodes."""
 
     def __init__(self):
@@ -45,7 +45,7 @@ class TestingCodeGenerator:
 
     def generate(
         self,
-        suites: List[TestSuiteNode],
+        suites: List[QTestSuiteNode],
         title: str = "Quantum Tests",
         browser_config: Optional[BrowserConfigNode] = None,
         fixtures: Optional[List[FixtureNode_Testing]] = None,
@@ -65,7 +65,7 @@ class TestingCodeGenerator:
                 self._has_browser_tests = True
                 break
             for child in suite.children:
-                if isinstance(child, TestCaseNode) and child.browser:
+                if isinstance(child, QTestCaseNode) and child.browser:
                     self._has_browser_tests = True
                     break
 
@@ -181,7 +181,7 @@ class TestingCodeGenerator:
     # Suite generation
     # ------------------------------------------------------------------
 
-    def _generate_suite(self, py: PyBuilder, suite: TestSuiteNode):
+    def _generate_suite(self, py: PyBuilder, suite: QTestSuiteNode):
         class_name = sanitize_class_name(suite.name)
         py.blank()
         py.class_def(class_name)
@@ -203,7 +203,7 @@ class TestingCodeGenerator:
             elif isinstance(child, AfterEachNode):
                 self._generate_after_each(py, child, suite.browser)
                 has_content = True
-            elif isinstance(child, TestCaseNode):
+            elif isinstance(child, QTestCaseNode):
                 is_browser = child.browser or suite.browser
                 self._generate_test_case(py, child, is_browser)
                 has_content = True
@@ -273,7 +273,7 @@ class TestingCodeGenerator:
     # Test case generation
     # ------------------------------------------------------------------
 
-    def _generate_test_case(self, py: PyBuilder, case: TestCaseNode, is_browser: bool):
+    def _generate_test_case(self, py: PyBuilder, case: QTestCaseNode, is_browser: bool):
         method_name = f"test_{sanitize_test_name(case.name)}"
 
         if is_browser:

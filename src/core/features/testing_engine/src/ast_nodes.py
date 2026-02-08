@@ -18,7 +18,7 @@ from core.ast_nodes import QuantumNode
 # CORE TESTING NODES
 # ============================================
 
-class TestSuiteNode(QuantumNode):
+class QTestSuiteNode(QuantumNode):
     """Represents <qtest:suite> - Top-level test suite container."""
 
     def __init__(self, name: str):
@@ -53,7 +53,7 @@ class TestSuiteNode(QuantumNode):
         return errors
 
 
-class TestCaseNode(QuantumNode):
+class QTestCaseNode(QuantumNode):
     """Represents <qtest:case> - Individual test case."""
 
     def __init__(self, name: str):
