@@ -1,0 +1,111 @@
+name: Deploy App to Staging
+
+on:
+  push:
+    branches: [develop]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+  workflow_dispatch:
+
+env:
+  APP_NAME: quantum-staging
+  DEPLOY_PATH: /var/www/quantum-staging
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,db]"
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create deployment package
+        run: |
+          tar --exclude='.git' \
+              --exclude='node_modules' \
+              --exclude='docs' \
+              --exclude='__pycache__' \
+              --exclude='*.pyc' \
+              --exclude='.pytest_cache' \
+              -czvf quantum-app.tar.gz .
+
+      - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.FORGE_SSH_KEY }}
+          HOST: ${{ secrets.FORGE_STAGING_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          HOST: ${{ secrets.FORGE_STAGING_HOST }}
+          USER: ${{ secrets.FORGE_USER }}
+        run: |
+          scp quantum-app.tar.gz $USER@$HOST:/tmp/
+
+          ssh $USER@$HOST << 'ENDSSH'
+            set -e
+
+            # Backup current
+            if [ -d "${{ env.DEPLOY_PATH }}" ]; then
+              sudo rm -rf "${{ env.DEPLOY_PATH }}.bak"
+              sudo mv "${{ env.DEPLOY_PATH }}" "${{ env.DEPLOY_PATH }}.bak"
+            fi
+
+            # Deploy
+            sudo mkdir -p "${{ env.DEPLOY_PATH }}"
+            sudo tar -xzf /tmp/quantum-app.tar.gz -C "${{ env.DEPLOY_PATH }}"
+            sudo chown -R www-data:www-data "${{ env.DEPLOY_PATH }}"
+
+            # Install dependencies
+            cd "${{ env.DEPLOY_PATH }}"
+            sudo -u www-data python3 -m venv venv
+            sudo -u www-data ./venv/bin/pip install -e ".[db]"
+
+            # Restart service
+            sudo systemctl restart quantum-staging
+
+            # Cleanup
+            rm /tmp/quantum-app.tar.gz
+          ENDSSH
+
+      - name: Health check
+        env:
+          HOST: ${{ secrets.FORGE_STAGING_HOST }}
+          USER: ${{ secrets.FORGE_USER }}
+        run: |
+          sleep 10
+          for i in {1..5}; do
+            STATUS=$(ssh $USER@$HOST "curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/health 2>/dev/null || echo '000'")
+            if [ "$STATUS" == "200" ]; then
+              echo "Staging deploy successful!"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Health check failed!"
+          exit 1

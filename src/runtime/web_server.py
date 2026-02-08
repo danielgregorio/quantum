@@ -1231,5 +1231,22 @@ def start_server(
     server.start()
 
 
+def create_app(config_path: str = 'quantum.config.yaml') -> Flask:
+    """
+    Application factory for Gunicorn/WSGI deployment.
+
+    Usage with Gunicorn:
+        gunicorn 'src.runtime.web_server:create_app()'
+
+    Args:
+        config_path: Path to configuration file
+
+    Returns:
+        Flask application instance
+    """
+    server = QuantumWebServer(config_path)
+    return server.app
+
+
 if __name__ == '__main__':
     start_server()

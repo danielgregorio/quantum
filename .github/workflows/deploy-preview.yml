@@ -1,0 +1,173 @@
+name: Deploy PR Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+
+env:
+  PREVIEW_DOMAIN: preview.quantum.sargas.cloud
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,db]"
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+
+  deploy-preview:
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: preview
+      url: https://pr-${{ github.event.number }}.${{ env.PREVIEW_DOMAIN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create deployment package
+        run: |
+          tar --exclude='.git' \
+              --exclude='node_modules' \
+              --exclude='docs' \
+              --exclude='__pycache__' \
+              -czvf quantum-preview.tar.gz .
+
+      - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.FORGE_SSH_KEY }}
+          HOST: ${{ secrets.FORGE_PREVIEW_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+
+      - name: Deploy preview
+        env:
+          HOST: ${{ secrets.FORGE_PREVIEW_HOST }}
+          USER: ${{ secrets.FORGE_USER }}
+          PR_NUMBER: ${{ github.event.number }}
+        run: |
+          PREVIEW_PATH="/var/www/previews/pr-$PR_NUMBER"
+          PREVIEW_PORT=$((9000 + $PR_NUMBER))
+
+          scp quantum-preview.tar.gz $USER@$HOST:/tmp/
+
+          ssh $USER@$HOST << ENDSSH
+            set -e
+
+            # Create preview directory
+            sudo mkdir -p "$PREVIEW_PATH"
+            sudo tar -xzf /tmp/quantum-preview.tar.gz -C "$PREVIEW_PATH"
+            sudo chown -R www-data:www-data "$PREVIEW_PATH"
+
+            # Setup venv
+            cd "$PREVIEW_PATH"
+            sudo -u www-data python3 -m venv venv
+            sudo -u www-data ./venv/bin/pip install -e .
+
+            # Create systemd service
+            sudo tee /etc/systemd/system/quantum-preview-$PR_NUMBER.service > /dev/null << 'EOF'
+          [Unit]
+          Description=Quantum Preview PR-$PR_NUMBER
+          After=network.target
+
+          [Service]
+          User=www-data
+          Group=www-data
+          WorkingDirectory=$PREVIEW_PATH
+          ExecStart=$PREVIEW_PATH/venv/bin/gunicorn -w 2 -b 127.0.0.1:$PREVIEW_PORT 'src.runtime.web_server:create_app()'
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+            sudo systemctl daemon-reload
+            sudo systemctl enable quantum-preview-$PR_NUMBER
+            sudo systemctl restart quantum-preview-$PR_NUMBER
+
+            # Add nginx config
+            sudo tee /etc/nginx/sites-available/quantum-preview-$PR_NUMBER > /dev/null << EOF
+          server {
+              listen 80;
+              server_name pr-$PR_NUMBER.${{ env.PREVIEW_DOMAIN }};
+
+              location / {
+                  proxy_pass http://127.0.0.1:$PREVIEW_PORT;
+                  proxy_set_header Host \\\$host;
+                  proxy_set_header X-Real-IP \\\$remote_addr;
+              }
+          }
+          EOF
+
+            sudo ln -sf /etc/nginx/sites-available/quantum-preview-$PR_NUMBER /etc/nginx/sites-enabled/
+            sudo nginx -t && sudo systemctl reload nginx
+
+            rm /tmp/quantum-preview.tar.gz
+          ENDSSH
+
+      - name: Comment PR with preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🚀 **Preview deployed!**\n\n🔗 https://pr-${context.issue.number}.${{ env.PREVIEW_DOMAIN }}\n\nThis preview will be automatically deleted when the PR is closed.`
+            })
+
+  cleanup-preview:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.FORGE_SSH_KEY }}
+          HOST: ${{ secrets.FORGE_PREVIEW_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+
+      - name: Cleanup preview
+        env:
+          HOST: ${{ secrets.FORGE_PREVIEW_HOST }}
+          USER: ${{ secrets.FORGE_USER }}
+          PR_NUMBER: ${{ github.event.number }}
+        run: |
+          ssh $USER@$HOST << ENDSSH
+            # Stop and remove service
+            sudo systemctl stop quantum-preview-$PR_NUMBER || true
+            sudo systemctl disable quantum-preview-$PR_NUMBER || true
+            sudo rm -f /etc/systemd/system/quantum-preview-$PR_NUMBER.service
+
+            # Remove nginx config
+            sudo rm -f /etc/nginx/sites-enabled/quantum-preview-$PR_NUMBER
+            sudo rm -f /etc/nginx/sites-available/quantum-preview-$PR_NUMBER
+            sudo nginx -t && sudo systemctl reload nginx
+
+            # Remove files
+            sudo rm -rf /var/www/previews/pr-$PR_NUMBER
+
+            sudo systemctl daemon-reload
+          ENDSSH

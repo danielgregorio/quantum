@@ -1,0 +1,254 @@
+name: Deploy App to Production
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '.gitignore'
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deploy even if tests fail'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  APP_NAME: quantum-app
+  DEPLOY_PATH: /var/www/quantum-app
+  BLUE_PORT: 8080
+  GREEN_PORT: 8081
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.deploy }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,db]"
+
+      - name: Run tests
+        id: tests
+        run: pytest tests/ -v --tb=short
+        continue-on-error: ${{ github.event.inputs.force_deploy == 'true' }}
+
+      - name: Check if should deploy
+        id: check
+        run: |
+          if [[ "${{ steps.tests.outcome }}" == "success" || "${{ github.event.inputs.force_deploy }}" == "true" ]]; then
+            echo "deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: test
+    if: needs.test.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Create deployment package
+        run: |
+          # Create deployment tarball
+          tar --exclude='.git' \
+              --exclude='node_modules' \
+              --exclude='docs' \
+              --exclude='__pycache__' \
+              --exclude='*.pyc' \
+              --exclude='.pytest_cache' \
+              --exclude='htmlcov' \
+              --exclude='.coverage' \
+              -czvf quantum-app.tar.gz .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: quantum-app
+          path: quantum-app.tar.gz
+          retention-days: 7
+
+  deploy:
+    needs: [test, build]
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: quantum-app
+
+      - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.FORGE_SSH_KEY }}
+          HOST: ${{ secrets.FORGE_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+
+      - name: Determine deployment slot
+        id: slot
+        env:
+          HOST: ${{ secrets.FORGE_HOST }}
+          USER: ${{ secrets.FORGE_USER }}
+        run: |
+          # Check which slot is currently active
+          CURRENT=$(ssh $USER@$HOST "cat ${{ env.DEPLOY_PATH }}/current_slot 2>/dev/null || echo 'blue'")
+          if [ "$CURRENT" == "blue" ]; then
+            echo "target=green" >> $GITHUB_OUTPUT
+            echo "port=${{ env.GREEN_PORT }}" >> $GITHUB_OUTPUT
+          else
+            echo "target=blue" >> $GITHUB_OUTPUT
+            echo "port=${{ env.BLUE_PORT }}" >> $GITHUB_OUTPUT
+          fi
+          echo "Current slot: $CURRENT, deploying to: $(cat $GITHUB_OUTPUT | grep target | cut -d= -f2)"
+
+      - name: Deploy to inactive slot
+        env:
+          HOST: ${{ secrets.FORGE_HOST }}
+          USER: ${{ secrets.FORGE_USER }}
+          SLOT: ${{ steps.slot.outputs.target }}
+          PORT: ${{ steps.slot.outputs.port }}
+        run: |
+          SLOT_PATH="${{ env.DEPLOY_PATH }}/$SLOT"
+
+          # Upload package
+          scp quantum-app.tar.gz $USER@$HOST:/tmp/
+
+          # Deploy to slot
+          ssh $USER@$HOST << 'ENDSSH'
+            set -e
+
+            SLOT_PATH="${{ env.DEPLOY_PATH }}/${{ steps.slot.outputs.target }}"
+
+            # Backup current if exists
+            if [ -d "$SLOT_PATH" ]; then
+              sudo rm -rf "${SLOT_PATH}.bak"
+              sudo mv "$SLOT_PATH" "${SLOT_PATH}.bak"
+            fi
+
+            # Create new deployment
+            sudo mkdir -p "$SLOT_PATH"
+            sudo tar -xzf /tmp/quantum-app.tar.gz -C "$SLOT_PATH"
+            sudo chown -R www-data:www-data "$SLOT_PATH"
+
+            # Install dependencies
+            cd "$SLOT_PATH"
+            sudo -u www-data python3 -m venv venv
+            sudo -u www-data ./venv/bin/pip install -e ".[db]"
+
+            # Start new instance
+            sudo systemctl start quantum-${{ steps.slot.outputs.target }}
+
+            # Cleanup
+            rm /tmp/quantum-app.tar.gz
+          ENDSSH
+
+      - name: Health check
+        id: health
+        env:
+          HOST: ${{ secrets.FORGE_HOST }}
+          USER: ${{ secrets.FORGE_USER }}
+          PORT: ${{ steps.slot.outputs.port }}
+        run: |
+          echo "Waiting for app to start..."
+          sleep 10
+
+          # Check health endpoint
+          for i in {1..10}; do
+            STATUS=$(ssh $USER@$HOST "curl -s -o /dev/null -w '%{http_code}' http://localhost:$PORT/health 2>/dev/null || echo '000'")
+            if [ "$STATUS" == "200" ]; then
+              echo "Health check passed!"
+              echo "healthy=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            echo "Attempt $i: Status $STATUS, retrying..."
+            sleep 5
+          done
+
+          echo "healthy=false" >> $GITHUB_OUTPUT
+          exit 1
+        continue-on-error: true
+
+      - name: Switch traffic or rollback
+        env:
+          HOST: ${{ secrets.FORGE_HOST }}
+          USER: ${{ secrets.FORGE_USER }}
+          SLOT: ${{ steps.slot.outputs.target }}
+          HEALTHY: ${{ steps.health.outputs.healthy }}
+        run: |
+          if [ "$HEALTHY" == "true" ]; then
+            echo "Switching traffic to $SLOT..."
+            ssh $USER@$HOST << 'ENDSSH'
+              # Update nginx upstream
+              sudo sed -i "s/quantum-[a-z]*/quantum-${{ steps.slot.outputs.target }}/" /etc/nginx/sites-available/quantum
+              sudo nginx -t && sudo systemctl reload nginx
+
+              # Update current slot marker
+              echo "${{ steps.slot.outputs.target }}" | sudo tee ${{ env.DEPLOY_PATH }}/current_slot
+
+              # Stop old slot
+              OLD_SLOT=$([ "${{ steps.slot.outputs.target }}" == "blue" ] && echo "green" || echo "blue")
+              sudo systemctl stop quantum-$OLD_SLOT || true
+            ENDSSH
+            echo "Deployment successful!"
+          else
+            echo "Health check failed, rolling back..."
+            ssh $USER@$HOST << 'ENDSSH'
+              # Stop failed deployment
+              sudo systemctl stop quantum-${{ steps.slot.outputs.target }} || true
+
+              # Restore backup if exists
+              SLOT_PATH="${{ env.DEPLOY_PATH }}/${{ steps.slot.outputs.target }}"
+              if [ -d "${SLOT_PATH}.bak" ]; then
+                sudo rm -rf "$SLOT_PATH"
+                sudo mv "${SLOT_PATH}.bak" "$SLOT_PATH"
+              fi
+            ENDSSH
+            exit 1
+          fi
+
+      - name: Notify success
+        if: success()
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK" ]; then
+            curl -X POST -H 'Content-type: application/json' \
+              --data "{\"text\":\"✅ Quantum deployed to production successfully!\nCommit: ${{ github.sha }}\nBy: ${{ github.actor }}\"}" \
+              $SLACK_WEBHOOK
+          fi
+
+      - name: Notify failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK" ]; then
+            curl -X POST -H 'Content-type: application/json' \
+              --data "{\"text\":\"❌ Quantum production deploy FAILED!\nCommit: ${{ github.sha }}\nBy: ${{ github.actor }}\nCheck: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+              $SLACK_WEBHOOK
+          fi
