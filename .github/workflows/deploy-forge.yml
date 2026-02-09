@@ -32,12 +32,38 @@ jobs:
 
       - name: Update nginx config
         run: |
-          echo "=== What listens on 8888? ==="
-          sudo grep -r "listen 8888" /etc/nginx/ 2>/dev/null || true
-          echo ""
-          echo "=== Config on port 8888 ==="
-          sudo grep -B5 -A20 "listen 8888" /etc/nginx/sites-available/* 2>/dev/null || true
-          echo ""
-          echo "=== What's the Quantum server config? ==="
-          cat /etc/nginx/sites-available/quantum 2>/dev/null | head -50 || true
+          echo "=== Creating docs-only nginx config ==="
+          sudo tee /etc/nginx/sites-available/quantum > /dev/null << 'NGINX'
+          # Quantum Documentation Site
+          server {
+              listen 80;
+              server_name quantum.sargas.cloud;
+
+              root /var/www/quantum.sargas.cloud;
+              index index.html;
+
+              location / {
+                  try_files $uri $uri/ $uri.html =404;
+              }
+
+              location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+                  expires 30d;
+                  add_header Cache-Control "public, immutable";
+              }
+
+              error_page 404 /404.html;
+          }
+          NGINX
+
+          echo "=== Also updating quantum.sargas.cloud config ==="
+          sudo cp /etc/nginx/sites-available/quantum /etc/nginx/sites-available/quantum.sargas.cloud
+
+          echo "=== Testing nginx ==="
+          sudo nginx -t
+
+          echo "=== Reloading nginx ==="
+          sudo systemctl reload nginx
+
+          echo "=== Verification ==="
+          curl -s http://localhost/ | head -3
           echo "Done!"
