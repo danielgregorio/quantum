@@ -32,6 +32,11 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -t ed25519 -H $HOST >> ~/.ssh/known_hosts 2>/dev/null
-          scp -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new quantum-docs.tar.gz $USER@$HOST:/tmp/
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new $USER@$HOST "sudo rm -rf /var/www/quantum.sargas.cloud/* && sudo tar -xzf /tmp/quantum-docs.tar.gz -C /var/www/quantum.sargas.cloud/ && sudo chown -R www-data:www-data /var/www/quantum.sargas.cloud/ && rm /tmp/quantum-docs.tar.gz"
+          echo "Testing SSH key format..."
+          head -1 ~/.ssh/id_ed25519
+          echo "Scanning host..."
+          ssh-keyscan -t ed25519,rsa -H $HOST >> ~/.ssh/known_hosts 2>&1 || true
+          echo "Attempting SCP..."
+          scp -v -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new quantum-docs.tar.gz $USER@$HOST:/tmp/
+          echo "Attempting SSH..."
+          ssh -v -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new $USER@$HOST "sudo rm -rf /var/www/quantum.sargas.cloud/* && sudo tar -xzf /tmp/quantum-docs.tar.gz -C /var/www/quantum.sargas.cloud/ && sudo chown -R www-data:www-data /var/www/quantum.sargas.cloud/ && rm /tmp/quantum-docs.tar.gz"
