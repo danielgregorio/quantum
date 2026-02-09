@@ -1,0 +1,176 @@
+{
+  "category": "loops",
+  "name": "Loops",
+  "description": "Iteration with q:loop - arrays, ranges, and lists",
+  "icon": "🔄",
+  "docsPath": "/guide/loops",
+  "exampleCount": 8,
+  "examples": [
+    {
+      "file": "counter.q",
+      "title": "Counter",
+      "description": "Example demonstrating Counter",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "q:loop",
+        "q:set",
+        "arrays",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:loop",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 22
+    },
+    {
+      "file": "test-loop-all-types.q",
+      "title": "Loop All Types",
+      "description": "Example demonstrating Loop All Types",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "q:loop",
+        "q:set",
+        "q:return",
+        "arrays",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:loop",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 39
+    },
+    {
+      "file": "test-loop-array-index.q",
+      "title": "Loop Array Index",
+      "description": "Example demonstrating Loop Array Index",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "arrays",
+        "q:loop",
+        "q:return"
+      ],
+      "features": [
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 6
+    },
+    {
+      "file": "test-loop-array.q",
+      "title": "Loop Array",
+      "description": "Example demonstrating Loop Array",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "arrays",
+        "q:loop",
+        "q:return"
+      ],
+      "features": [
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 6
+    },
+    {
+      "file": "test-loop-list-delimiter.q",
+      "title": "Loop List Delimiter",
+      "description": "Example demonstrating Loop List Delimiter",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "arrays",
+        "q:loop",
+        "q:return"
+      ],
+      "features": [
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 6
+    },
+    {
+      "file": "test-loop-list.q",
+      "title": "Loop List",
+      "description": "Example demonstrating Loop List",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "arrays",
+        "q:loop",
+        "q:return"
+      ],
+      "features": [
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 6
+    },
+    {
+      "file": "test-loop-range-step.q",
+      "title": "Loop Range Step",
+      "description": "Example demonstrating Loop Range Step",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "arrays",
+        "q:loop",
+        "q:return"
+      ],
+      "features": [
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 6
+    },
+    {
+      "file": "test-loop-range.q",
+      "title": "Loop Range",
+      "description": "Example demonstrating Loop Range",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "arrays",
+        "q:loop",
+        "q:return"
+      ],
+      "features": [
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 6
+    }
+  ]
+}

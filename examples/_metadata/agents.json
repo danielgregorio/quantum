@@ -1,0 +1,176 @@
+{
+  "category": "agents",
+  "name": "AI Agents",
+  "description": "AI agents with q:agent, tools, and multi-agent teams",
+  "icon": "🤖",
+  "docsPath": "/guide/agents",
+  "exampleCount": 6,
+  "examples": [
+    {
+      "file": "agent_demo.q",
+      "title": "Agent Demo",
+      "description": "Input parameter",
+      "complexity": "advanced",
+      "tags": [
+        "q:agent",
+        "q:loop",
+        "q:function",
+        "AI",
+        "q:team",
+        "q:if",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:agent",
+        "q:function",
+        "q:if",
+        "q:loop",
+        "q:param",
+        "q:return",
+        "q:set",
+        "q:tool"
+      ],
+      "relatedDocs": [
+        "/guide/agents"
+      ],
+      "lineCount": 98
+    },
+    {
+      "file": "agent_multi_provider.q",
+      "title": "Agent Multi Provider",
+      "description": "Provider selection (default: ollama)",
+      "complexity": "advanced",
+      "tags": [
+        "q:agent",
+        "q:function",
+        "AI",
+        "q:team",
+        "q:if",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:agent",
+        "q:function",
+        "q:if",
+        "q:param",
+        "q:return",
+        "q:set",
+        "q:tool"
+      ],
+      "relatedDocs": [
+        "/guide/agents"
+      ],
+      "lineCount": 135
+    },
+    {
+      "file": "llm_demo.q",
+      "title": "Llm Demo",
+      "description": "==============================",
+      "complexity": "beginner",
+      "tags": [
+        "q:agent",
+        "AI",
+        "q:set",
+        "q:team",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/agents"
+      ],
+      "lineCount": 48
+    },
+    {
+      "file": "multi_agent_support.q",
+      "title": "Multi Agent Support",
+      "description": "Customer question (would normally come from form input)",
+      "complexity": "advanced",
+      "tags": [
+        "q:agent",
+        "q:loop",
+        "AI",
+        "q:team",
+        "q:if",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:agent",
+        "q:if",
+        "q:loop",
+        "q:param",
+        "q:return",
+        "q:set",
+        "q:team",
+        "q:tool"
+      ],
+      "relatedDocs": [
+        "/guide/agents"
+      ],
+      "lineCount": 234
+    },
+    {
+      "file": "quantum-assistant.q",
+      "title": "Quantum Assistant",
+      "description": "1. Knowledge base: index features/ with persist (only indexes once)",
+      "complexity": "advanced",
+      "tags": [
+        "q:query",
+        "q:agent",
+        "q:loop",
+        "AI",
+        "q:team",
+        "q:if",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:if",
+        "q:loop",
+        "q:param",
+        "q:query",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/agents"
+      ],
+      "lineCount": 192
+    },
+    {
+      "file": "rag.q",
+      "title": "Rag",
+      "description": "Knowledge base with inline text sources",
+      "complexity": "intermediate",
+      "tags": [
+        "q:query",
+        "q:agent",
+        "q:loop",
+        "AI",
+        "q:team",
+        "q:if",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:if",
+        "q:loop",
+        "q:param",
+        "q:query",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/agents"
+      ],
+      "lineCount": 117
+    }
+  ]
+}

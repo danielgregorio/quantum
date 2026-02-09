@@ -1,0 +1,765 @@
+{
+  "category": "advanced",
+  "name": "Advanced",
+  "description": "Complex examples combining multiple features",
+  "icon": "🚀",
+  "docsPath": "/architecture/",
+  "exampleCount": 32,
+  "examples": [
+    {
+      "file": "api-tests.q",
+      "title": "Api Tests",
+      "description": "Example demonstrating Api Tests",
+      "complexity": "advanced",
+      "tags": [
+        "multi-feature",
+        "advanced",
+        "databinding",
+        "q:application"
+      ],
+      "features": [
+        "databinding",
+        "q:application"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 65
+    },
+    {
+      "file": "api.q",
+      "title": "Api",
+      "description": "API Example",
+      "complexity": "advanced",
+      "tags": [
+        "q:route",
+        "q:application",
+        "multi-feature",
+        "q:return",
+        "databinding",
+        "advanced"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:return",
+        "q:route"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 7
+    },
+    {
+      "file": "basic-tests.q",
+      "title": "Basic Tests",
+      "description": "Example demonstrating Basic Tests",
+      "complexity": "advanced",
+      "tags": [
+        "multi-feature",
+        "advanced",
+        "databinding",
+        "q:application"
+      ],
+      "features": [
+        "databinding",
+        "q:application"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 38
+    },
+    {
+      "file": "browser-tests.q",
+      "title": "Browser Tests",
+      "description": "Example demonstrating Browser Tests",
+      "complexity": "advanced",
+      "tags": [
+        "multi-feature",
+        "advanced",
+        "q:application"
+      ],
+      "features": [
+        "q:application"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 73
+    },
+    {
+      "file": "chat-messages.q",
+      "title": "Chat Messages",
+      "description": "Chat Messages Partial - renders only the message list for HTMX polling",
+      "complexity": "beginner",
+      "tags": [
+        "q:loop",
+        "application_scope",
+        "multi-feature",
+        "q:if",
+        "databinding",
+        "advanced"
+      ],
+      "features": [
+        "application_scope",
+        "databinding",
+        "q:if",
+        "q:loop"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 19
+    },
+    {
+      "file": "chat-tui.q",
+      "title": "Chat Tui",
+      "description": "Example demonstrating Chat Tui",
+      "complexity": "advanced",
+      "tags": [
+        "q:application",
+        "q:function",
+        "q:set",
+        "multi-feature",
+        "databinding",
+        "advanced"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:function",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 26
+    },
+    {
+      "file": "chat.q",
+      "title": "Chat",
+      "description": "Quantum Chat - Real-time chat app using HTMX polling",
+      "complexity": "intermediate",
+      "tags": [
+        "q:else",
+        "advanced",
+        "application_scope",
+        "multi-feature",
+        "q:if",
+        "databinding",
+        "htmx"
+      ],
+      "features": [
+        "application_scope",
+        "databinding",
+        "htmx",
+        "q:else",
+        "q:if",
+        "q:loop",
+        "q:set",
+        "session"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 128
+    },
+    {
+      "file": "complete-test.q",
+      "title": "Complete Test",
+      "description": "Complete Conditional Test",
+      "complexity": "beginner",
+      "tags": [
+        "multi-feature",
+        "q:if",
+        "advanced",
+        "q:return"
+      ],
+      "features": [
+        "q:if",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 10
+    },
+    {
+      "file": "fetch-example.q",
+      "title": "Fetch Example",
+      "description": "Basic GET request with loading states",
+      "complexity": "intermediate",
+      "tags": [
+        "q:fetch",
+        "q:function",
+        "q:invoke",
+        "multi-feature",
+        "q:if",
+        "databinding",
+        "advanced"
+      ],
+      "features": [
+        "databinding",
+        "q:fetch",
+        "q:function",
+        "q:if",
+        "q:invoke",
+        "q:loop",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 126
+    },
+    {
+      "file": "filebrowser.q",
+      "title": "Filebrowser",
+      "description": "Example demonstrating Filebrowser",
+      "complexity": "advanced",
+      "tags": [
+        "multi-feature",
+        "advanced",
+        "databinding",
+        "q:application"
+      ],
+      "features": [
+        "databinding",
+        "q:application"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 20
+    },
+    {
+      "file": "hello.q",
+      "title": "Hello",
+      "description": "Hello World Component",
+      "complexity": "beginner",
+      "tags": [
+        "multi-feature",
+        "advanced",
+        "q:return"
+      ],
+      "features": [
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 5
+    },
+    {
+      "file": "job_execution_demo.q",
+      "title": "Job Execution Demo",
+      "description": "Daily cleanup task - runs every 24 hours",
+      "complexity": "advanced",
+      "tags": [
+        "q:mail",
+        "q:log",
+        "q:function",
+        "multi-feature",
+        "databinding",
+        "advanced",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:log",
+        "q:mail",
+        "q:param",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 158
+    },
+    {
+      "file": "message_queue_demo.q",
+      "title": "Message Queue Demo",
+      "description": "Queue Management",
+      "complexity": "intermediate",
+      "tags": [
+        "q:else",
+        "q:log",
+        "multi-feature",
+        "q:if",
+        "databinding",
+        "advanced",
+        "q:mail"
+      ],
+      "features": [
+        "databinding",
+        "q:else",
+        "q:if",
+        "q:log",
+        "q:mail",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 150
+    },
+    {
+      "file": "python-data-processing.q",
+      "title": "Python Data Processing",
+      "description": "Import data processing modules",
+      "complexity": "advanced",
+      "tags": [
+        "ui:",
+        "q:loop",
+        "q:set",
+        "multi-feature",
+        "databinding",
+        "advanced"
+      ],
+      "features": [
+        "databinding",
+        "q:loop",
+        "q:set",
+        "ui:"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 249
+    },
+    {
+      "file": "python-scripting.q",
+      "title": "Python Scripting",
+      "description": "Import Python modules",
+      "complexity": "advanced",
+      "tags": [
+        "ui:",
+        "multi-feature",
+        "q:set",
+        "databinding",
+        "advanced"
+      ],
+      "features": [
+        "databinding",
+        "q:set",
+        "ui:"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 175
+    },
+    {
+      "file": "state_persistence_demo.q",
+      "title": "State Persistence Demo",
+      "description": "Persisted state variables",
+      "complexity": "intermediate",
+      "tags": [
+        "ui:",
+        "q:function",
+        "q:set",
+        "multi-feature",
+        "databinding",
+        "advanced"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:set",
+        "ui:"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 75
+    },
+    {
+      "file": "task-manager-desktop.q",
+      "title": "Task Manager Desktop",
+      "description": "State Variables",
+      "complexity": "advanced",
+      "tags": [
+        "ui:",
+        "q:application",
+        "q:function",
+        "q:set",
+        "multi-feature",
+        "databinding",
+        "advanced"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:function",
+        "q:set",
+        "ui:"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 332
+    },
+    {
+      "file": "test-component-params.q",
+      "title": "Component Params",
+      "description": "Example demonstrating Component Params",
+      "complexity": "beginner",
+      "tags": [
+        "q:set",
+        "q:return",
+        "multi-feature",
+        "databinding",
+        "advanced",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 25
+    },
+    {
+      "file": "test-dump-array.q",
+      "title": "Dump Array",
+      "description": "Example demonstrating Dump Array",
+      "complexity": "beginner",
+      "tags": [
+        "q:dump",
+        "multi-feature",
+        "q:return",
+        "databinding",
+        "advanced",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:dump",
+        "q:param",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 9
+    },
+    {
+      "file": "test-dump-basic.q",
+      "title": "Dump Basic",
+      "description": "Example demonstrating Dump Basic",
+      "complexity": "beginner",
+      "tags": [
+        "q:dump",
+        "multi-feature",
+        "q:return",
+        "databinding",
+        "advanced",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:dump",
+        "q:param",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 11
+    },
+    {
+      "file": "test-dump-complete.q",
+      "title": "Dump Complete",
+      "description": "Example demonstrating Dump Complete",
+      "complexity": "intermediate",
+      "tags": [
+        "q:dump",
+        "q:set",
+        "q:return",
+        "multi-feature",
+        "q:if",
+        "databinding",
+        "advanced"
+      ],
+      "features": [
+        "databinding",
+        "q:dump",
+        "q:if",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 35
+    },
+    {
+      "file": "test-dump-conditional.q",
+      "title": "Dump Conditional",
+      "description": "Example demonstrating Dump Conditional",
+      "complexity": "beginner",
+      "tags": [
+        "q:dump",
+        "multi-feature",
+        "q:return",
+        "databinding",
+        "advanced",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:dump",
+        "q:param",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 10
+    },
+    {
+      "file": "test-dump-formats.q",
+      "title": "Dump Formats",
+      "description": "Example demonstrating Dump Formats",
+      "complexity": "beginner",
+      "tags": [
+        "q:dump",
+        "multi-feature",
+        "q:return",
+        "databinding",
+        "advanced",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:dump",
+        "q:param",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 11
+    },
+    {
+      "file": "test-email-complete.q",
+      "title": "Email Complete",
+      "description": "Example demonstrating Email Complete",
+      "complexity": "intermediate",
+      "tags": [
+        "application_scope",
+        "multi-feature",
+        "q:return",
+        "advanced",
+        "q:mail"
+      ],
+      "features": [
+        "application_scope",
+        "q:mail",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 52
+    },
+    {
+      "file": "test-log-basic.q",
+      "title": "Log Basic",
+      "description": "Example demonstrating Log Basic",
+      "complexity": "beginner",
+      "tags": [
+        "multi-feature",
+        "q:log",
+        "advanced",
+        "q:return"
+      ],
+      "features": [
+        "q:log",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 9
+    },
+    {
+      "file": "test-log-complete.q",
+      "title": "Log Complete",
+      "description": "Example demonstrating Log Complete",
+      "complexity": "beginner",
+      "tags": [
+        "q:log",
+        "q:set",
+        "q:return",
+        "multi-feature",
+        "databinding",
+        "advanced"
+      ],
+      "features": [
+        "databinding",
+        "q:log",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 30
+    },
+    {
+      "file": "test-log-conditional.q",
+      "title": "Log Conditional",
+      "description": "Example demonstrating Log Conditional",
+      "complexity": "beginner",
+      "tags": [
+        "q:log",
+        "multi-feature",
+        "q:return",
+        "databinding",
+        "advanced",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:log",
+        "q:param",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 12
+    },
+    {
+      "file": "test-log-databinding.q",
+      "title": "Log Databinding",
+      "description": "Example demonstrating Log Databinding",
+      "complexity": "beginner",
+      "tags": [
+        "q:log",
+        "multi-feature",
+        "q:return",
+        "databinding",
+        "advanced",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:log",
+        "q:param",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 11
+    },
+    {
+      "file": "test-log-with-loop.q",
+      "title": "Log With Loop",
+      "description": "Example demonstrating Log With Loop",
+      "complexity": "beginner",
+      "tags": [
+        "q:loop",
+        "q:log",
+        "multi-feature",
+        "q:return",
+        "databinding",
+        "advanced"
+      ],
+      "features": [
+        "databinding",
+        "q:log",
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 8
+    },
+    {
+      "file": "test-mobile.q",
+      "title": "Mobile",
+      "description": "Example demonstrating Mobile",
+      "complexity": "advanced",
+      "tags": [
+        "ui:",
+        "q:application",
+        "q:function",
+        "q:set",
+        "multi-feature",
+        "databinding",
+        "advanced"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:function",
+        "q:set",
+        "ui:"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 31
+    },
+    {
+      "file": "webapp.q",
+      "title": "Webapp",
+      "description": "Web Application Example",
+      "complexity": "advanced",
+      "tags": [
+        "q:route",
+        "q:application",
+        "multi-feature",
+        "q:return",
+        "advanced"
+      ],
+      "features": [
+        "q:application",
+        "q:return",
+        "q:route"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 7
+    },
+    {
+      "file": "websocket-chat.q",
+      "title": "Websocket Chat",
+      "description": "State variables",
+      "complexity": "advanced",
+      "tags": [
+        "q:action",
+        "q:loop",
+        "q:log",
+        "multi-feature",
+        "q:if",
+        "databinding",
+        "advanced"
+      ],
+      "features": [
+        "databinding",
+        "q:action",
+        "q:if",
+        "q:log",
+        "q:loop",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/architecture/"
+      ],
+      "lineCount": 167
+    }
+  ]
+}

@@ -1,0 +1,228 @@
+{
+  "category": "forms-actions",
+  "name": "Forms & Actions",
+  "description": "Form handling, validation, and user actions",
+  "icon": "📝",
+  "docsPath": "/guide/actions",
+  "exampleCount": 9,
+  "examples": [
+    {
+      "file": "form_validation.q",
+      "title": "Form Validation",
+      "description": "Custom validators defined at form level",
+      "complexity": "advanced",
+      "tags": [
+        "q:action",
+        "ui:",
+        "q:application",
+        "validation",
+        "forms",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "ui:"
+      ],
+      "relatedDocs": [
+        "/guide/actions"
+      ],
+      "lineCount": 105
+    },
+    {
+      "file": "test-action-complete.q",
+      "title": "Action Complete",
+      "description": "Example demonstrating Action Complete",
+      "complexity": "intermediate",
+      "tags": [
+        "q:else",
+        "q:action",
+        "validation",
+        "q:if",
+        "forms",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:action",
+        "q:else",
+        "q:if",
+        "q:param",
+        "q:return",
+        "q:set",
+        "session"
+      ],
+      "relatedDocs": [
+        "/guide/actions"
+      ],
+      "lineCount": 47
+    },
+    {
+      "file": "test-action-flash.q",
+      "title": "Action Flash",
+      "description": "Example demonstrating Action Flash",
+      "complexity": "intermediate",
+      "tags": [
+        "q:action",
+        "validation",
+        "session",
+        "q:set",
+        "forms",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:action",
+        "q:param",
+        "q:set",
+        "session"
+      ],
+      "relatedDocs": [
+        "/guide/actions"
+      ],
+      "lineCount": 14
+    },
+    {
+      "file": "test-action-redirect.q",
+      "title": "Action Redirect",
+      "description": "Example demonstrating Action Redirect",
+      "complexity": "beginner",
+      "tags": [
+        "q:action",
+        "validation",
+        "q:set",
+        "forms",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:action",
+        "q:param",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/actions"
+      ],
+      "lineCount": 14
+    },
+    {
+      "file": "test-action-simple.q",
+      "title": "Action Simple",
+      "description": "Example demonstrating Action Simple",
+      "complexity": "beginner",
+      "tags": [
+        "q:action",
+        "validation",
+        "q:set",
+        "forms",
+        "q:param"
+      ],
+      "features": [
+        "q:action",
+        "q:param",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/actions"
+      ],
+      "lineCount": 15
+    },
+    {
+      "file": "test-action-validation.q",
+      "title": "Action Validation",
+      "description": "Example demonstrating Action Validation",
+      "complexity": "beginner",
+      "tags": [
+        "q:action",
+        "validation",
+        "q:set",
+        "forms",
+        "q:param"
+      ],
+      "features": [
+        "q:action",
+        "q:param",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/actions"
+      ],
+      "lineCount": 15
+    },
+    {
+      "file": "test-upload-basic.q",
+      "title": "Upload Basic",
+      "description": "Example demonstrating Upload Basic",
+      "complexity": "beginner",
+      "tags": [
+        "q:action",
+        "q:file",
+        "validation",
+        "forms",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:action",
+        "q:file",
+        "q:param"
+      ],
+      "relatedDocs": [
+        "/guide/actions"
+      ],
+      "lineCount": 18
+    },
+    {
+      "file": "test-upload-naming.q",
+      "title": "Upload Naming",
+      "description": "Example demonstrating Upload Naming",
+      "complexity": "beginner",
+      "tags": [
+        "q:action",
+        "q:file",
+        "validation",
+        "forms",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:action",
+        "q:file",
+        "q:param"
+      ],
+      "relatedDocs": [
+        "/guide/actions"
+      ],
+      "lineCount": 20
+    },
+    {
+      "file": "test-upload-validation.q",
+      "title": "Upload Validation",
+      "description": "Example demonstrating Upload Validation",
+      "complexity": "beginner",
+      "tags": [
+        "q:action",
+        "q:file",
+        "validation",
+        "forms",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:action",
+        "q:file",
+        "q:param"
+      ],
+      "relatedDocs": [
+        "/guide/actions"
+      ],
+      "lineCount": 20
+    }
+  ]
+}

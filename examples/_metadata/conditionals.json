@@ -1,0 +1,225 @@
+{
+  "category": "conditionals",
+  "name": "Conditionals",
+  "description": "Conditional logic with q:if, q:else, and q:elseif",
+  "icon": "🔀",
+  "docsPath": "/guide/conditionals",
+  "exampleCount": 10,
+  "examples": [
+    {
+      "file": "simple-if.q",
+      "title": "Simple If",
+      "description": "Simple If Test",
+      "complexity": "beginner",
+      "tags": [
+        "q:if",
+        "q:else",
+        "q:elseif",
+        "q:return"
+      ],
+      "features": [
+        "q:else",
+        "q:if",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/conditionals"
+      ],
+      "lineCount": 10
+    },
+    {
+      "file": "test-conditionals-complete.q",
+      "title": "Conditionals Complete",
+      "description": "Example demonstrating Conditionals Complete",
+      "complexity": "intermediate",
+      "tags": [
+        "q:else",
+        "q:elseif",
+        "q:return",
+        "q:if",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:else",
+        "q:elseif",
+        "q:if",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/conditionals"
+      ],
+      "lineCount": 55
+    },
+    {
+      "file": "test-conditionals.q",
+      "title": "Conditionals",
+      "description": "Example demonstrating Conditionals",
+      "complexity": "beginner",
+      "tags": [
+        "q:else",
+        "q:elseif",
+        "q:return",
+        "q:if",
+        "q:param"
+      ],
+      "features": [
+        "q:if",
+        "q:param",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/conditionals"
+      ],
+      "lineCount": 10
+    },
+    {
+      "file": "test-else-fixed.q",
+      "title": "Else Fixed",
+      "description": "Example demonstrating Else Fixed",
+      "complexity": "beginner",
+      "tags": [
+        "q:if",
+        "q:else",
+        "q:elseif",
+        "q:return"
+      ],
+      "features": [
+        "q:else",
+        "q:if",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/conditionals"
+      ],
+      "lineCount": 10
+    },
+    {
+      "file": "test-else.q",
+      "title": "Else",
+      "description": "Example demonstrating Else",
+      "complexity": "beginner",
+      "tags": [
+        "q:if",
+        "q:else",
+        "q:elseif",
+        "q:return"
+      ],
+      "features": [
+        "q:if",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/conditionals"
+      ],
+      "lineCount": 11
+    },
+    {
+      "file": "test-elseif.q",
+      "title": "Elseif",
+      "description": "Example demonstrating Elseif",
+      "complexity": "beginner",
+      "tags": [
+        "q:if",
+        "q:else",
+        "q:return",
+        "q:elseif"
+      ],
+      "features": [
+        "q:else",
+        "q:elseif",
+        "q:if",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/conditionals"
+      ],
+      "lineCount": 13
+    },
+    {
+      "file": "test-false-else.q",
+      "title": "False Else",
+      "description": "Example demonstrating False Else",
+      "complexity": "beginner",
+      "tags": [
+        "q:if",
+        "q:else",
+        "q:elseif",
+        "q:return"
+      ],
+      "features": [
+        "q:else",
+        "q:if",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/conditionals"
+      ],
+      "lineCount": 10
+    },
+    {
+      "file": "test-if-else-correct.q",
+      "title": "If Else Correct",
+      "description": "Example demonstrating If Else Correct",
+      "complexity": "beginner",
+      "tags": [
+        "q:if",
+        "q:else",
+        "q:elseif",
+        "q:return"
+      ],
+      "features": [
+        "q:else",
+        "q:if",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/conditionals"
+      ],
+      "lineCount": 10
+    },
+    {
+      "file": "test-if-else-fixed.q",
+      "title": "If Else Fixed",
+      "description": "Example demonstrating If Else Fixed",
+      "complexity": "beginner",
+      "tags": [
+        "q:if",
+        "q:else",
+        "q:elseif",
+        "q:return"
+      ],
+      "features": [
+        "q:else",
+        "q:if",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/conditionals"
+      ],
+      "lineCount": 10
+    },
+    {
+      "file": "test-if-else.q",
+      "title": "If Else",
+      "description": "Example demonstrating If Else",
+      "complexity": "beginner",
+      "tags": [
+        "q:if",
+        "q:else",
+        "q:elseif",
+        "q:return"
+      ],
+      "features": [
+        "q:else",
+        "q:if",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/conditionals"
+      ],
+      "lineCount": 10
+    }
+  ]
+}

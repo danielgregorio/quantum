@@ -1,0 +1,474 @@
+{
+  "category": "functions",
+  "name": "Functions",
+  "description": "Reusable logic with q:function and q:invoke",
+  "icon": "⚡",
+  "docsPath": "/guide/functions",
+  "exampleCount": 18,
+  "examples": [
+    {
+      "file": "test-function-complete.q",
+      "title": "Function Complete",
+      "description": "Example demonstrating Function Complete",
+      "complexity": "intermediate",
+      "tags": [
+        "functions",
+        "q:loop",
+        "q:function",
+        "q:invoke",
+        "q:return",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:loop",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 55
+    },
+    {
+      "file": "test-function-if-logic.q",
+      "title": "Function If Logic",
+      "description": "Example demonstrating Function If Logic",
+      "complexity": "intermediate",
+      "tags": [
+        "functions",
+        "q:function",
+        "q:invoke",
+        "q:return",
+        "q:if",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:if",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 25
+    },
+    {
+      "file": "test-function-local-vars.q",
+      "title": "Function Local Vars",
+      "description": "Example demonstrating Function Local Vars",
+      "complexity": "intermediate",
+      "tags": [
+        "functions",
+        "q:function",
+        "q:invoke",
+        "q:set",
+        "q:return",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 21
+    },
+    {
+      "file": "test-function-multiple.q",
+      "title": "Function Multiple",
+      "description": "Example demonstrating Function Multiple",
+      "complexity": "intermediate",
+      "tags": [
+        "functions",
+        "q:function",
+        "q:invoke",
+        "q:set",
+        "q:return",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 29
+    },
+    {
+      "file": "test-function-nested.q",
+      "title": "Function Nested",
+      "description": "Example demonstrating Function Nested",
+      "complexity": "intermediate",
+      "tags": [
+        "functions",
+        "q:function",
+        "q:invoke",
+        "q:set",
+        "q:return",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 20
+    },
+    {
+      "file": "test-function-params.q",
+      "title": "Function Params",
+      "description": "Example demonstrating Function Params",
+      "complexity": "intermediate",
+      "tags": [
+        "functions",
+        "q:function",
+        "q:invoke",
+        "q:set",
+        "q:return",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 19
+    },
+    {
+      "file": "test-function-pure.q",
+      "title": "Function Pure",
+      "description": "Example demonstrating Function Pure",
+      "complexity": "intermediate",
+      "tags": [
+        "functions",
+        "q:function",
+        "q:invoke",
+        "q:set",
+        "q:return",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 21
+    },
+    {
+      "file": "test-function-recursion.q",
+      "title": "Function Recursion",
+      "description": "Example demonstrating Function Recursion",
+      "complexity": "intermediate",
+      "tags": [
+        "functions",
+        "q:function",
+        "q:invoke",
+        "q:return",
+        "q:if",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:if",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 24
+    },
+    {
+      "file": "test-function-rest-api.q",
+      "title": "Function Rest Api",
+      "description": "Example demonstrating Function Rest Api",
+      "complexity": "intermediate",
+      "tags": [
+        "functions",
+        "q:function",
+        "q:invoke",
+        "q:set",
+        "q:return",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 31
+    },
+    {
+      "file": "test-function-scope.q",
+      "title": "Function Scope",
+      "description": "Example demonstrating Function Scope",
+      "complexity": "intermediate",
+      "tags": [
+        "functions",
+        "q:function",
+        "q:invoke",
+        "q:set",
+        "q:return",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 30
+    },
+    {
+      "file": "test-function-simple.q",
+      "title": "Function Simple",
+      "description": "Example demonstrating Function Simple",
+      "complexity": "intermediate",
+      "tags": [
+        "functions",
+        "q:function",
+        "q:invoke",
+        "q:set",
+        "q:return",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 16
+    },
+    {
+      "file": "test-function-string-ops.q",
+      "title": "Function String Ops",
+      "description": "Example demonstrating Function String Ops",
+      "complexity": "intermediate",
+      "tags": [
+        "functions",
+        "q:function",
+        "q:invoke",
+        "q:set",
+        "q:return",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 25
+    },
+    {
+      "file": "test-function-validation.q",
+      "title": "Function Validation",
+      "description": "Example demonstrating Function Validation",
+      "complexity": "intermediate",
+      "tags": [
+        "functions",
+        "q:function",
+        "q:invoke",
+        "q:set",
+        "q:return",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 16
+    },
+    {
+      "file": "test-function-with-array.q",
+      "title": "Function With Array",
+      "description": "Example demonstrating Function With Array",
+      "complexity": "intermediate",
+      "tags": [
+        "functions",
+        "q:loop",
+        "q:function",
+        "q:invoke",
+        "q:return",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:loop",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 38
+    },
+    {
+      "file": "test-invoke-complete.q",
+      "title": "Invoke Complete",
+      "description": "Example demonstrating Invoke Complete",
+      "complexity": "beginner",
+      "tags": [
+        "functions",
+        "q:function",
+        "q:invoke",
+        "q:return",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:invoke",
+        "q:param",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 36
+    },
+    {
+      "file": "test-invoke-function.q",
+      "title": "Invoke Function",
+      "description": "Define a function that we'll invoke",
+      "complexity": "intermediate",
+      "tags": [
+        "functions",
+        "q:function",
+        "q:invoke",
+        "q:return",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:function",
+        "q:invoke",
+        "q:param",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 44
+    },
+    {
+      "file": "test-invoke-http-get.q",
+      "title": "Invoke Http Get",
+      "description": "Example demonstrating Invoke Http Get",
+      "complexity": "beginner",
+      "tags": [
+        "functions",
+        "q:function",
+        "q:invoke",
+        "q:return",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:invoke",
+        "q:param",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 26
+    },
+    {
+      "file": "test-invoke-http-post.q",
+      "title": "Invoke Http Post",
+      "description": "Example demonstrating Invoke Http Post",
+      "complexity": "beginner",
+      "tags": [
+        "databinding",
+        "q:function",
+        "q:invoke",
+        "q:return",
+        "functions"
+      ],
+      "features": [
+        "databinding",
+        "q:invoke",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/functions"
+      ],
+      "lineCount": 20
+    }
+  ]
+}

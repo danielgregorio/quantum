@@ -1,0 +1,229 @@
+{
+  "category": "ui-theming",
+  "name": "UI & Theming",
+  "description": "UI components, themes, and animations",
+  "icon": "🎨",
+  "docsPath": "/ui/overview",
+  "exampleCount": 10,
+  "examples": [
+    {
+      "file": "animations_demo.q",
+      "title": "Animations Demo",
+      "description": "Header with fade-in animation",
+      "complexity": "advanced",
+      "tags": [
+        "components",
+        "theming",
+        "ui:",
+        "q:application"
+      ],
+      "features": [
+        "q:application",
+        "ui:"
+      ],
+      "relatedDocs": [
+        "/ui/overview"
+      ],
+      "lineCount": 213
+    },
+    {
+      "file": "component_library_demo.q",
+      "title": "Component Library Demo",
+      "description": "Example demonstrating Component Library Demo",
+      "complexity": "advanced",
+      "tags": [
+        "components",
+        "theming",
+        "ui:",
+        "q:application"
+      ],
+      "features": [
+        "q:application",
+        "ui:"
+      ],
+      "relatedDocs": [
+        "/ui/overview"
+      ],
+      "lineCount": 167
+    },
+    {
+      "file": "dashboard-ui.q",
+      "title": "Dashboard Ui",
+      "description": "Example demonstrating Dashboard Ui",
+      "complexity": "advanced",
+      "tags": [
+        "components",
+        "theming",
+        "ui:",
+        "q:application",
+        "q:set",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:set",
+        "ui:"
+      ],
+      "relatedDocs": [
+        "/ui/overview"
+      ],
+      "lineCount": 60
+    },
+    {
+      "file": "dashboard.q",
+      "title": "Dashboard",
+      "description": "Example demonstrating Dashboard",
+      "complexity": "advanced",
+      "tags": [
+        "components",
+        "theming",
+        "ui:",
+        "q:application",
+        "q:set",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/ui/overview"
+      ],
+      "lineCount": 33
+    },
+    {
+      "file": "test-ui-animations.q",
+      "title": "Ui Animations",
+      "description": "Header with fade animation",
+      "complexity": "advanced",
+      "tags": [
+        "components",
+        "theming",
+        "ui:",
+        "q:application"
+      ],
+      "features": [
+        "q:application",
+        "ui:"
+      ],
+      "relatedDocs": [
+        "/ui/overview"
+      ],
+      "lineCount": 275
+    },
+    {
+      "file": "test-ui-components-new.q",
+      "title": "Ui Components New",
+      "description": "Quantum UI - New Component Library Demo",
+      "complexity": "advanced",
+      "tags": [
+        "components",
+        "theming",
+        "ui:",
+        "q:application",
+        "q:function",
+        "q:set",
+        "databinding",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:function",
+        "q:param",
+        "q:set",
+        "ui:"
+      ],
+      "relatedDocs": [
+        "/ui/overview"
+      ],
+      "lineCount": 252
+    },
+    {
+      "file": "test-ui-theme-autoswitch.q",
+      "title": "Ui Theme Autoswitch",
+      "description": "Enable auto-switching between light and dark themes",
+      "complexity": "advanced",
+      "tags": [
+        "components",
+        "theming",
+        "ui:",
+        "q:application"
+      ],
+      "features": [
+        "q:application",
+        "ui:"
+      ],
+      "relatedDocs": [
+        "/ui/overview"
+      ],
+      "lineCount": 91
+    },
+    {
+      "file": "test-ui-theme-custom.q",
+      "title": "Ui Theme Custom",
+      "description": "Define custom \"ocean\" theme extending light preset",
+      "complexity": "advanced",
+      "tags": [
+        "components",
+        "theming",
+        "ui:",
+        "q:application"
+      ],
+      "features": [
+        "q:application",
+        "ui:"
+      ],
+      "relatedDocs": [
+        "/ui/overview"
+      ],
+      "lineCount": 73
+    },
+    {
+      "file": "test-ui-theme-dark.q",
+      "title": "Ui Theme Dark",
+      "description": "Header section",
+      "complexity": "advanced",
+      "tags": [
+        "components",
+        "theming",
+        "ui:",
+        "q:application"
+      ],
+      "features": [
+        "q:application",
+        "ui:"
+      ],
+      "relatedDocs": [
+        "/ui/overview"
+      ],
+      "lineCount": 68
+    },
+    {
+      "file": "test-ui-themes-all.q",
+      "title": "Ui Themes All",
+      "description": "Quantum UI - Theme Presets Demo",
+      "complexity": "advanced",
+      "tags": [
+        "components",
+        "theming",
+        "ui:",
+        "q:application",
+        "q:function",
+        "q:param"
+      ],
+      "features": [
+        "q:application",
+        "q:function",
+        "q:param",
+        "ui:"
+      ],
+      "relatedDocs": [
+        "/ui/overview"
+      ],
+      "lineCount": 164
+    }
+  ]
+}

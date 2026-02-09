@@ -1,0 +1,751 @@
+{
+  "category": "state-management",
+  "name": "State Management",
+  "description": "Variables, data binding, and state operations with q:set",
+  "icon": "📦",
+  "docsPath": "/guide/state-management",
+  "exampleCount": 35,
+  "examples": [
+    {
+      "file": "test-application-scope.q",
+      "title": "Application Scope",
+      "description": "Example demonstrating Application Scope",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "application_scope",
+        "databinding",
+        "q:set"
+      ],
+      "features": [
+        "application_scope",
+        "databinding",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 13
+    },
+    {
+      "file": "test-databinding-arithmetic.q",
+      "title": "Databinding Arithmetic",
+      "description": "Example demonstrating Databinding Arithmetic",
+      "complexity": "beginner",
+      "tags": [
+        "q:loop",
+        "q:set",
+        "q:return",
+        "variables",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 6
+    },
+    {
+      "file": "test-databinding-array.q",
+      "title": "Databinding Array",
+      "description": "Example demonstrating Databinding Array",
+      "complexity": "beginner",
+      "tags": [
+        "q:loop",
+        "q:set",
+        "q:return",
+        "variables",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 6
+    },
+    {
+      "file": "test-databinding-complete.q",
+      "title": "Databinding Complete",
+      "description": "Example demonstrating Databinding Complete",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 36
+    },
+    {
+      "file": "test-databinding-list.q",
+      "title": "Databinding List",
+      "description": "Example demonstrating Databinding List",
+      "complexity": "beginner",
+      "tags": [
+        "q:loop",
+        "q:set",
+        "q:return",
+        "variables",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 6
+    },
+    {
+      "file": "test-databinding-simple.q",
+      "title": "Databinding Simple",
+      "description": "Example demonstrating Databinding Simple",
+      "complexity": "beginner",
+      "tags": [
+        "q:loop",
+        "q:set",
+        "q:return",
+        "variables",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 6
+    },
+    {
+      "file": "test-email-basic.q",
+      "title": "Email Basic",
+      "description": "Example demonstrating Email Basic",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:mail"
+      ],
+      "features": [
+        "databinding",
+        "q:mail",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 21
+    },
+    {
+      "file": "test-email-html.q",
+      "title": "Email Html",
+      "description": "Example demonstrating Email Html",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:mail"
+      ],
+      "features": [
+        "databinding",
+        "q:mail",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 22
+    },
+    {
+      "file": "test-email-recipients.q",
+      "title": "Email Recipients",
+      "description": "Example demonstrating Email Recipients",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:mail"
+      ],
+      "features": [
+        "databinding",
+        "q:mail",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 25
+    },
+    {
+      "file": "test-htmx-partial.q",
+      "title": "Htmx Partial",
+      "description": "Example demonstrating Htmx Partial",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "htmx"
+      ],
+      "features": [
+        "databinding",
+        "htmx",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 15
+    },
+    {
+      "file": "test-htmx-swap.q",
+      "title": "Htmx Swap",
+      "description": "Example demonstrating Htmx Swap",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "htmx"
+      ],
+      "features": [
+        "databinding",
+        "htmx",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 33
+    },
+    {
+      "file": "test-htmx-trigger.q",
+      "title": "Htmx Trigger",
+      "description": "Example demonstrating Htmx Trigger",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "htmx"
+      ],
+      "features": [
+        "databinding",
+        "htmx",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 25
+    },
+    {
+      "file": "test-island-events.q",
+      "title": "Island Events",
+      "description": "Example demonstrating Island Events",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set"
+      ],
+      "features": [
+        "databinding",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 29
+    },
+    {
+      "file": "test-island-interactive.q",
+      "title": "Island Interactive",
+      "description": "Example demonstrating Island Interactive",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set"
+      ],
+      "features": [
+        "databinding",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 32
+    },
+    {
+      "file": "test-request-scope.q",
+      "title": "Request Scope",
+      "description": "Example demonstrating Request Scope",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set"
+      ],
+      "features": [
+        "databinding",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 12
+    },
+    {
+      "file": "test-session-scope.q",
+      "title": "Session Scope",
+      "description": "Example demonstrating Session Scope",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "session",
+        "databinding",
+        "q:set"
+      ],
+      "features": [
+        "databinding",
+        "q:set",
+        "session"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 13
+    },
+    {
+      "file": "test-set-all-operations.q",
+      "title": "Set All Operations",
+      "description": "Example demonstrating Set All Operations",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 41
+    },
+    {
+      "file": "test-set-all-scopes.q",
+      "title": "Set All Scopes",
+      "description": "Example demonstrating Set All Scopes",
+      "complexity": "intermediate",
+      "tags": [
+        "application_scope",
+        "session",
+        "q:set",
+        "q:return",
+        "variables",
+        "databinding"
+      ],
+      "features": [
+        "application_scope",
+        "databinding",
+        "q:return",
+        "q:set",
+        "session"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 25
+    },
+    {
+      "file": "test-set-all-types.q",
+      "title": "Set All Types",
+      "description": "Example demonstrating Set All Types",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 38
+    },
+    {
+      "file": "test-set-array.q",
+      "title": "Set Array",
+      "description": "Example demonstrating Set Array",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 10
+    },
+    {
+      "file": "test-set-debug.q",
+      "title": "Set Debug",
+      "description": "Example demonstrating Set Debug",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 7
+    },
+    {
+      "file": "test-set-expression.q",
+      "title": "Set Expression",
+      "description": "Example demonstrating Set Expression",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 9
+    },
+    {
+      "file": "test-set-increment.q",
+      "title": "Set Increment",
+      "description": "Example demonstrating Set Increment",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 10
+    },
+    {
+      "file": "test-set-loop-debug.q",
+      "title": "Set Loop Debug",
+      "description": "Example demonstrating Set Loop Debug",
+      "complexity": "beginner",
+      "tags": [
+        "q:loop",
+        "q:set",
+        "q:return",
+        "variables",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:loop",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 11
+    },
+    {
+      "file": "test-set-object.q",
+      "title": "Set Object",
+      "description": "Example demonstrating Set Object",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 9
+    },
+    {
+      "file": "test-set-simple.q",
+      "title": "Set Simple",
+      "description": "Example demonstrating Set Simple",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 7
+    },
+    {
+      "file": "test-set-validation-cpf.q",
+      "title": "Set Validation Cpf",
+      "description": "Example demonstrating Set Validation Cpf",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 7
+    },
+    {
+      "file": "test-set-validation-email-invalid.q",
+      "title": "Set Validation Email Invalid",
+      "description": "Example demonstrating Set Validation Email Invalid",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 7
+    },
+    {
+      "file": "test-set-validation-email.q",
+      "title": "Set Validation Email",
+      "description": "Example demonstrating Set Validation Email",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 7
+    },
+    {
+      "file": "test-set-validation-enum.q",
+      "title": "Set Validation Enum",
+      "description": "Example demonstrating Set Validation Enum",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 7
+    },
+    {
+      "file": "test-set-validation-length.q",
+      "title": "Set Validation Length",
+      "description": "Example demonstrating Set Validation Length",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 7
+    },
+    {
+      "file": "test-set-validation-minmax.q",
+      "title": "Set Validation Minmax",
+      "description": "Example demonstrating Set Validation Minmax",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 7
+    },
+    {
+      "file": "test-set-validation-range.q",
+      "title": "Set Validation Range",
+      "description": "Example demonstrating Set Validation Range",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 7
+    },
+    {
+      "file": "test-set-with-loop.q",
+      "title": "Set With Loop",
+      "description": "Example demonstrating Set With Loop",
+      "complexity": "beginner",
+      "tags": [
+        "q:loop",
+        "q:set",
+        "q:return",
+        "variables",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:loop",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 12
+    },
+    {
+      "file": "test-validation-complete.q",
+      "title": "Validation Complete",
+      "description": "Example demonstrating Validation Complete",
+      "complexity": "beginner",
+      "tags": [
+        "variables",
+        "databinding",
+        "q:set",
+        "q:return"
+      ],
+      "features": [
+        "databinding",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/state-management"
+      ],
+      "lineCount": 41
+    }
+  ]
+}

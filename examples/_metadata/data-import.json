@@ -1,0 +1,178 @@
+{
+  "category": "data-import",
+  "name": "Data Import",
+  "description": "Loading data from CSV, JSON, and XML files",
+  "icon": "📊",
+  "docsPath": "/guide/data-import",
+  "exampleCount": 7,
+  "examples": [
+    {
+      "file": "test-data-csv-simple.q",
+      "title": "Data Csv Simple",
+      "description": "Example demonstrating Data Csv Simple",
+      "complexity": "beginner",
+      "tags": [
+        "CSV",
+        "q:loop",
+        "q:return",
+        "JSON",
+        "databinding",
+        "q:data"
+      ],
+      "features": [
+        "databinding",
+        "q:data",
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/data-import"
+      ],
+      "lineCount": 18
+    },
+    {
+      "file": "test-data-json-simple.q",
+      "title": "Data Json Simple",
+      "description": "Example demonstrating Data Json Simple",
+      "complexity": "beginner",
+      "tags": [
+        "CSV",
+        "q:loop",
+        "q:return",
+        "JSON",
+        "databinding",
+        "q:data"
+      ],
+      "features": [
+        "databinding",
+        "q:data",
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/data-import"
+      ],
+      "lineCount": 12
+    },
+    {
+      "file": "test-data-transform-compute.q",
+      "title": "Data Transform Compute",
+      "description": "Example demonstrating Data Transform Compute",
+      "complexity": "beginner",
+      "tags": [
+        "CSV",
+        "q:loop",
+        "q:return",
+        "JSON",
+        "databinding",
+        "q:data"
+      ],
+      "features": [
+        "databinding",
+        "q:data",
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/data-import"
+      ],
+      "lineCount": 16
+    },
+    {
+      "file": "test-data-transform-filter.q",
+      "title": "Data Transform Filter",
+      "description": "Example demonstrating Data Transform Filter",
+      "complexity": "beginner",
+      "tags": [
+        "CSV",
+        "q:loop",
+        "q:return",
+        "JSON",
+        "databinding",
+        "q:data"
+      ],
+      "features": [
+        "databinding",
+        "q:data",
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/data-import"
+      ],
+      "lineCount": 21
+    },
+    {
+      "file": "test-data-transform-limit.q",
+      "title": "Data Transform Limit",
+      "description": "Example demonstrating Data Transform Limit",
+      "complexity": "beginner",
+      "tags": [
+        "CSV",
+        "q:loop",
+        "q:return",
+        "JSON",
+        "databinding",
+        "q:data"
+      ],
+      "features": [
+        "databinding",
+        "q:data",
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/data-import"
+      ],
+      "lineCount": 19
+    },
+    {
+      "file": "test-data-transform-sort.q",
+      "title": "Data Transform Sort",
+      "description": "Example demonstrating Data Transform Sort",
+      "complexity": "beginner",
+      "tags": [
+        "CSV",
+        "q:loop",
+        "q:return",
+        "JSON",
+        "databinding",
+        "q:data"
+      ],
+      "features": [
+        "databinding",
+        "q:data",
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/data-import"
+      ],
+      "lineCount": 16
+    },
+    {
+      "file": "test-data-xml-simple.q",
+      "title": "Data Xml Simple",
+      "description": "Example demonstrating Data Xml Simple",
+      "complexity": "beginner",
+      "tags": [
+        "CSV",
+        "q:loop",
+        "q:return",
+        "JSON",
+        "databinding",
+        "q:data"
+      ],
+      "features": [
+        "databinding",
+        "q:data",
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/data-import"
+      ],
+      "lineCount": 18
+    }
+  ]
+}

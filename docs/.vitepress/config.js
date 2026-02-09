@@ -109,13 +109,27 @@ export default defineConfig({
       ],
       '/examples/': [
         {
-          text: 'Examples',
+          text: 'Examples Gallery',
           items: [
-            { text: 'Overview', link: '/examples/' },
-            { text: 'Basic Components', link: '/examples/basic-components' },
-            { text: 'Forms & Validation', link: '/examples/forms' },
-            { text: 'Data Queries', link: '/examples/queries' },
-            { text: 'UI Applications', link: '/examples/ui-apps' }
+            { text: 'Overview', link: '/examples/' }
+          ]
+        },
+        {
+          text: 'By Feature',
+          collapsed: false,
+          items: [
+            { text: 'State Management', link: '/examples/state-management' },
+            { text: 'Loops', link: '/examples/loops' },
+            { text: 'Conditionals', link: '/examples/conditionals' },
+            { text: 'Functions', link: '/examples/functions' },
+            { text: 'Database Queries', link: '/examples/queries' },
+            { text: 'Forms & Actions', link: '/examples/forms-actions' },
+            { text: 'Authentication', link: '/examples/authentication' },
+            { text: 'AI Agents', link: '/examples/agents' },
+            { text: 'UI & Theming', link: '/examples/ui-theming' },
+            { text: 'Games', link: '/examples/games' },
+            { text: 'Data Import', link: '/examples/data-import' },
+            { text: 'Advanced', link: '/examples/advanced' }
           ]
         }
       ],
