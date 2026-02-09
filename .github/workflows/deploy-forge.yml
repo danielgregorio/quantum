@@ -43,12 +43,10 @@ jobs:
               server_name quantum.sargas.cloud;
 
               root /var/www/quantum.sargas.cloud;
-              index index.html index.htm;
+              index index.html;
 
-              # VitePress static site routing
+              # Static site - let nginx handle directory indexes automatically
               location / {
-                  # First try exact file, then directory index, then .html extension
-                  try_files $uri ${uri}index.html $uri/index.html $uri.html =404;
               }
 
               # Cache static assets
