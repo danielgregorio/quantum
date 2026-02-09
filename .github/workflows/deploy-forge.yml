@@ -69,16 +69,20 @@ jobs:
           echo "=== Testing nginx ==="
           sudo nginx -t
 
-          echo "=== Check what's on port 80 ==="
-          sudo lsof -i :80 || true
-          sudo ss -tlnp | grep :80 || true
+          echo "=== Port 80 is used by Docker, need to free it ==="
+          echo "Stopping Docker container on port 80..."
+          sudo docker ps --filter "publish=80" -q | xargs -r sudo docker stop || true
+          sleep 2
 
-          echo "=== Full restart nginx ==="
-          sudo systemctl restart nginx || true
+          echo "Checking port 80 again..."
+          sudo ss -tlnp | grep :80 || echo "Port 80 is now free"
+
+          echo "=== Starting nginx ==="
+          sudo systemctl restart nginx
           sleep 2
 
           echo "=== Verify nginx is running ==="
-          sudo systemctl status nginx | head -10 || true
+          sudo systemctl status nginx | head -10
 
           echo "=== Check main nginx config ==="
           cat /etc/nginx/nginx.conf | grep -A5 "http {" || true
