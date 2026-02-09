@@ -75,9 +75,14 @@ jobs:
           echo "=== Check main nginx config ==="
           cat /etc/nginx/nginx.conf | grep -A5 "http {" || true
 
-          echo "=== Check for SSL config ==="
+          echo "=== Check for other server configs ==="
           ls -la /etc/nginx/sites-enabled/
+          echo "=== Quantum config ==="
           cat /etc/nginx/sites-enabled/quantum.sargas.cloud || true
+          echo "=== OpenFlex config (check for conflicts) ==="
+          cat /etc/nginx/sites-enabled/openflex.sargas.cloud 2>/dev/null | head -20 || true
+          echo "=== Nginx error log (last 5 lines) ==="
+          tail -5 /var/log/nginx/error.log 2>/dev/null || true
 
           echo "=== Verification ==="
           echo "Homepage:"
