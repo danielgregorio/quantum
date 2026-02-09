@@ -32,6 +32,9 @@ jobs:
 
       - name: Update nginx config
         run: |
+          echo "=== Current site config BEFORE ==="
+          cat /etc/nginx/sites-available/quantum.sargas.cloud
+          echo ""
           echo "=== Copying all nginx configs ==="
           sudo cp config/forge/nginx-locations.conf /etc/nginx/snippets/quantum-locations.conf
           sudo cp config/forge/nginx-proxy.conf /etc/nginx/snippets/quantum-proxy.conf
@@ -40,7 +43,8 @@ jobs:
           sudo nginx -t
           echo "=== Reloading nginx ==="
           sudo systemctl reload nginx
+          echo "=== Check listening ports ==="
+          sudo ss -tlnp | grep nginx || true
           echo "=== Verification ==="
-          curl -s -o /dev/null -w "%{http_code}" http://localhost/ || true
-          echo ""
+          curl -s http://localhost/ | head -5 || true
           echo "Nginx config updated!"
