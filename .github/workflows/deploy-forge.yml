@@ -69,8 +69,16 @@ jobs:
           echo "=== Testing nginx ==="
           sudo nginx -t
 
-          echo "=== Reloading nginx ==="
-          sudo systemctl reload nginx
+          echo "=== Check what's on port 80 ==="
+          sudo lsof -i :80 || true
+          sudo ss -tlnp | grep :80 || true
+
+          echo "=== Full restart nginx ==="
+          sudo systemctl restart nginx || true
+          sleep 2
+
+          echo "=== Verify nginx is running ==="
+          sudo systemctl status nginx | head -10 || true
 
           echo "=== Check main nginx config ==="
           cat /etc/nginx/nginx.conf | grep -A5 "http {" || true
