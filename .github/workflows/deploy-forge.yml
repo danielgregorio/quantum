@@ -32,6 +32,16 @@ jobs:
 
       - name: Update nginx config
         run: |
+          echo "=== Current nginx sites-enabled ==="
+          ls -la /etc/nginx/sites-enabled/
+          echo "=== Copying locations config ==="
           sudo cp config/forge/nginx-locations.conf /etc/nginx/snippets/quantum-locations.conf
-          sudo nginx -t && sudo systemctl reload nginx
+          echo "=== Verifying config content ==="
+          head -20 /etc/nginx/snippets/quantum-locations.conf
+          echo "=== Testing nginx ==="
+          sudo nginx -t
+          echo "=== Reloading nginx ==="
+          sudo systemctl reload nginx
+          echo "=== Verifying docs directory ==="
+          ls -la /var/www/quantum.sargas.cloud/ | head -10
           echo "Nginx config updated!"
