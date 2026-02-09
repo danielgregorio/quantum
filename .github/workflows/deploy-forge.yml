@@ -40,13 +40,14 @@ jobs:
           # Quantum Documentation Site - VitePress
           server {
               listen 80;
+              listen [::]:80;
               server_name quantum.sargas.cloud;
 
               root /var/www/quantum.sargas.cloud;
               index index.html;
 
-              # Static site - let nginx handle directory indexes automatically
               location / {
+                  try_files $uri $uri/ =404;
               }
 
               # Cache static assets
@@ -71,15 +72,19 @@ jobs:
           echo "=== Reloading nginx ==="
           sudo systemctl reload nginx
 
+          echo "=== Check main nginx config ==="
+          cat /etc/nginx/nginx.conf | grep -A5 "http {" || true
+
+          echo "=== Check for SSL config ==="
+          ls -la /etc/nginx/sites-enabled/
+          cat /etc/nginx/sites-enabled/quantum.sargas.cloud || true
+
           echo "=== Verification ==="
           echo "Homepage:"
           curl -s http://localhost/ | head -3
           echo ""
-          echo "Examples index exists?"
-          ls -la /var/www/quantum.sargas.cloud/examples/index.html 2>&1 || echo "NO INDEX.HTML!"
-          echo ""
-          echo "Examples page (no trailing slash):"
-          curl -s http://localhost/examples | head -3
+          echo "Direct file access (examples/index.html):"
+          curl -s http://localhost/examples/index.html | head -3
           echo ""
           echo "Examples page (with trailing slash):"
           curl -s http://localhost/examples/ | head -3
