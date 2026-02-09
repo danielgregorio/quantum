@@ -32,9 +32,12 @@ jobs:
 
       - name: Update nginx config
         run: |
+          echo "=== Debug: List sites-enabled symlinks ==="
+          ls -la /etc/nginx/sites-enabled/ || true
+
           echo "=== Creating docs-only nginx config ==="
-          sudo tee /etc/nginx/sites-available/quantum > /dev/null << 'NGINX'
-          # Quantum Documentation Site
+          sudo tee /etc/nginx/sites-available/quantum.sargas.cloud > /dev/null << 'NGINX'
+          # Quantum Documentation Site - VitePress
           server {
               listen 80;
               server_name quantum.sargas.cloud;
@@ -42,11 +45,13 @@ jobs:
               root /var/www/quantum.sargas.cloud;
               index index.html;
 
+              # VitePress SPA-style routing
               location / {
-                  try_files $uri $uri/ $uri.html =404;
+                  try_files $uri $uri/index.html $uri.html /index.html;
               }
 
-              location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+              # Cache static assets
+              location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
                   expires 30d;
                   add_header Cache-Control "public, immutable";
               }
@@ -55,8 +60,11 @@ jobs:
           }
           NGINX
 
-          echo "=== Also updating quantum.sargas.cloud config ==="
-          sudo cp /etc/nginx/sites-available/quantum /etc/nginx/sites-available/quantum.sargas.cloud
+          echo "=== Ensure symlink exists ==="
+          sudo ln -sf /etc/nginx/sites-available/quantum.sargas.cloud /etc/nginx/sites-enabled/quantum.sargas.cloud
+
+          echo "=== Remove any conflicting default config ==="
+          sudo rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
 
           echo "=== Testing nginx ==="
           sudo nginx -t
@@ -65,5 +73,12 @@ jobs:
           sudo systemctl reload nginx
 
           echo "=== Verification ==="
+          echo "Homepage:"
           curl -s http://localhost/ | head -3
+          echo ""
+          echo "Examples page:"
+          curl -s http://localhost/examples/ | head -3
+          echo ""
+          echo "Check files exist:"
+          ls -la /var/www/quantum.sargas.cloud/examples/ | head -5
           echo "Done!"
