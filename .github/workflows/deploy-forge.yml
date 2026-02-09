@@ -28,4 +28,10 @@ jobs:
           sudo rm -rf /var/www/quantum.sargas.cloud/*
           sudo cp -r docs/.vitepress/dist/* /var/www/quantum.sargas.cloud/
           sudo chown -R www-data:www-data /var/www/quantum.sargas.cloud/
-          echo "Deployed successfully!"
+          echo "Docs deployed!"
+
+      - name: Update nginx config
+        run: |
+          sudo cp config/forge/nginx-locations.conf /etc/nginx/snippets/quantum-locations.conf
+          sudo nginx -t && sudo systemctl reload nginx
+          echo "Nginx config updated!"
