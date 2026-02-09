@@ -47,6 +47,22 @@ def _get_pkg_module():
     except ImportError as e:
         return False, None, str(e)
 
+# Import jobs commands
+def _get_jobs_module():
+    try:
+        from cli.jobs import create_jobs_parser, handle_jobs
+        return True, create_jobs_parser, handle_jobs
+    except ImportError as e:
+        return False, None, str(e)
+
+# Import message queue commands
+def _get_mq_module():
+    try:
+        from cli.mq import create_mq_parser, handle_mq
+        return True, create_mq_parser, handle_mq
+    except ImportError as e:
+        return False, None, str(e)
+
 class QuantumRunner:
     """Main Quantum Runner - Clean orchestration"""
     
@@ -261,6 +277,12 @@ Examples:
   quantum pkg init ./my-component  # Initialize new package
   quantum pkg install ./package    # Install package
   quantum pkg list                 # List installed packages
+  quantum jobs list                # List scheduled jobs
+  quantum jobs run my-job          # Run a job manually
+  quantum jobs worker start        # Start job worker
+  quantum mq queues list           # List message queues
+  quantum mq publish topic message # Publish to topic
+  quantum mq worker --queues q1,q2 # Start message worker
         """
     )
 
@@ -292,6 +314,18 @@ Examples:
 
     if pkg_available:
         create_pkg_parser(subparsers)
+
+    # Jobs commands (if available)
+    jobs_available, create_jobs_parser, handle_jobs = _get_jobs_module()
+
+    if jobs_available:
+        create_jobs_parser(subparsers)
+
+    # Message queue commands (if available)
+    mq_available, create_mq_parser, handle_mq = _get_mq_module()
+
+    if mq_available:
+        create_mq_parser(subparsers)
 
     # Parse arguments
     args = parser.parse_args()
@@ -342,6 +376,30 @@ Examples:
             print("Install with: pip install requests")
             sys.exit(1)
         sys.exit(handle_apps(args))
+
+    # Handle 'jobs' command
+    elif args.command == 'jobs':
+        if not jobs_available:
+            print("[ERROR] Jobs functionality not available.")
+            print(f"Error: {handle_jobs}")
+            sys.exit(1)
+        sys.exit(handle_jobs(args))
+
+    # Handle 'mq' command
+    elif args.command == 'mq':
+        if not mq_available:
+            print("[ERROR] Message queue functionality not available.")
+            print(f"Error: {handle_mq}")
+            sys.exit(1)
+        sys.exit(handle_mq(args))
+
+    # Handle 'pkg' command
+    elif args.command == 'pkg':
+        if not pkg_available:
+            print("[ERROR] Package functionality not available.")
+            print(f"Error: {handle_pkg}")
+            sys.exit(1)
+        sys.exit(handle_pkg(args))
 
     else:
         parser.print_help()

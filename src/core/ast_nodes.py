@@ -4,7 +4,7 @@ Quantum AST Nodes - Classes that represent elements of the Quantum language
 
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, Union
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 class QuantumNode(ABC):
@@ -352,26 +352,213 @@ class ApplicationNode(QuantumNode):
 
 
 class JobNode(QuantumNode):
-    """Represents a <q:job>"""
-    
-    def __init__(self, job_id: str, schedule: Optional[str] = None):
-        self.job_id = job_id
-        self.schedule = schedule
+    """
+    Represents a <q:job> - Job queue for batch processing.
+
+    Examples:
+      <q:job name="sendEmail" queue="emails" priority="5">
+        <q:param name="to" type="string" />
+        <q:param name="subject" type="string" />
+        <q:mail to="{to}" subject="{subject}">...</q:mail>
+      </q:job>
+
+      <q:job name="processOrder" action="dispatch" delay="5m" />
+    """
+
+    def __init__(self, name: str, queue: str = 'default', action: str = 'define'):
+        self.name = name
+        self.queue = queue
+        self.action = action  # define, dispatch, batch
+        self.delay: Optional[str] = None  # e.g., '30s', '5m', '1h'
+        self.priority: int = 0
+        self.attempts: int = 3
+        self.backoff: str = '30s'
+        self.timeout: Optional[str] = None
+        self.params: List['QuantumParam'] = []
+        self.body: List['QuantumNode'] = []
+
+        # Legacy compatibility
+        self.job_id: Optional[str] = name
+        self.schedule: Optional[str] = None
         self.tasks: List[Dict[str, Any]] = []
-    
+
+    def add_param(self, param: 'QuantumParam'):
+        """Add parameter to job"""
+        self.params.append(param)
+
+    def add_statement(self, statement: 'QuantumNode'):
+        """Add statement to job body"""
+        self.body.append(statement)
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": "job",
+            "name": self.name,
+            "queue": self.queue,
+            "action": self.action,
+            "delay": self.delay,
+            "priority": self.priority,
+            "attempts": self.attempts,
+            "backoff": self.backoff,
+            "timeout": self.timeout,
+            "params": [p.__dict__ for p in self.params],
+            "body_statements": len(self.body),
+            # Legacy
             "job_id": self.job_id,
             "schedule": self.schedule,
             "tasks": self.tasks
         }
-    
+
     def validate(self) -> List[str]:
         errors = []
-        if not self.job_id:
-            errors.append("Job ID is required")
+        if not self.name:
+            errors.append("Job name is required")
+        if self.action not in ['define', 'dispatch', 'batch']:
+            errors.append(f"Invalid job action: {self.action}. Must be define, dispatch, or batch")
+        if self.priority < 0 or self.priority > 10:
+            errors.append(f"Job priority must be between 0 and 10")
+        for param in self.params:
+            errors.extend(param.validate())
+        for statement in self.body:
+            if hasattr(statement, 'validate'):
+                errors.extend(statement.validate())
         return errors
+
+    def __repr__(self):
+        return f'<JobNode name={self.name} queue={self.queue} action={self.action}>'
+
+
+@dataclass
+class ScheduleNode(QuantumNode):
+    """
+    Represents a <q:schedule> - Scheduled task execution (like cfschedule).
+
+    Examples:
+      <q:schedule name="dailyReport" interval="1d" timezone="America/Sao_Paulo">
+        <q:query datasource="db" name="stats">SELECT * FROM daily_stats</q:query>
+        <q:mail to="admin@example.com" subject="Daily Report">...</q:mail>
+      </q:schedule>
+
+      <q:schedule name="cleanup" cron="0 2 * * *" retry="3">
+        <q:query datasource="db">DELETE FROM temp_data WHERE created_at < NOW() - INTERVAL 7 DAY</q:query>
+      </q:schedule>
+
+      <q:schedule name="oneTimeTask" at="2024-12-25T00:00:00" enabled="true" />
+    """
+    name: str
+    action: str = 'run'  # run, pause, resume, delete
+    interval: Optional[str] = None  # 30s, 5m, 1h, 1d
+    cron: Optional[str] = None  # cron expression
+    at: Optional[str] = None  # specific datetime (ISO 8601)
+    timezone: str = 'UTC'
+    retry: int = 3
+    timeout: Optional[str] = None
+    overlap: bool = False  # Allow overlapping executions
+    enabled: bool = True
+    body: List['QuantumNode'] = field(default_factory=list)
+
+    def add_statement(self, statement: 'QuantumNode'):
+        """Add statement to schedule body"""
+        self.body.append(statement)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "schedule",
+            "name": self.name,
+            "action": self.action,
+            "interval": self.interval,
+            "cron": self.cron,
+            "at": self.at,
+            "timezone": self.timezone,
+            "retry": self.retry,
+            "timeout": self.timeout,
+            "overlap": self.overlap,
+            "enabled": self.enabled,
+            "body_statements": len(self.body)
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("Schedule name is required")
+        if self.action not in ['run', 'pause', 'resume', 'delete']:
+            errors.append(f"Invalid schedule action: {self.action}. Must be run, pause, resume, or delete")
+        # Must have at least one trigger type for 'run' action
+        if self.action == 'run' and not (self.interval or self.cron or self.at):
+            errors.append("Schedule requires 'interval', 'cron', or 'at' attribute for run action")
+        if self.retry < 0:
+            errors.append("Schedule retry must be non-negative")
+        for statement in self.body:
+            if hasattr(statement, 'validate'):
+                errors.extend(statement.validate())
+        return errors
+
+    def __repr__(self):
+        trigger = self.interval or self.cron or self.at or 'none'
+        return f'<ScheduleNode name={self.name} trigger={trigger}>'
+
+
+@dataclass
+class ThreadNode(QuantumNode):
+    """
+    Represents a <q:thread> - Async thread execution (like cfthread).
+
+    Examples:
+      <q:thread name="sendEmails" priority="high">
+        <q:loop query="pendingEmails">
+          <q:mail to="{email}" subject="Notification">...</q:mail>
+        </q:loop>
+      </q:thread>
+
+      <q:thread name="processImages" timeout="5m" onComplete="handleComplete">
+        <q:invoke url="/api/process" method="POST" />
+      </q:thread>
+
+      <q:thread name="worker1" action="join" />  <!-- Wait for thread -->
+      <q:thread name="worker1" action="terminate" />  <!-- Kill thread -->
+    """
+    name: str
+    action: str = 'run'  # run, join, terminate
+    priority: str = 'normal'  # low, normal, high
+    timeout: Optional[str] = None  # e.g., '30s', '5m'
+    on_complete: Optional[str] = None  # Callback function name
+    on_error: Optional[str] = None  # Error handler function name
+    body: List['QuantumNode'] = field(default_factory=list)
+
+    def add_statement(self, statement: 'QuantumNode'):
+        """Add statement to thread body"""
+        self.body.append(statement)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "thread",
+            "name": self.name,
+            "action": self.action,
+            "priority": self.priority,
+            "timeout": self.timeout,
+            "on_complete": self.on_complete,
+            "on_error": self.on_error,
+            "body_statements": len(self.body)
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("Thread name is required")
+        if self.action not in ['run', 'join', 'terminate']:
+            errors.append(f"Invalid thread action: {self.action}. Must be run, join, or terminate")
+        if self.priority not in ['low', 'normal', 'high']:
+            errors.append(f"Invalid thread priority: {self.priority}. Must be low, normal, or high")
+        # Body required only for 'run' action
+        if self.action == 'run' and not self.body:
+            errors.append("Thread with action='run' requires body statements")
+        for statement in self.body:
+            if hasattr(statement, 'validate'):
+                errors.extend(statement.validate())
+        return errors
+
+    def __repr__(self):
+        return f'<ThreadNode name={self.name} action={self.action} priority={self.priority}>'
 
 
 # MIGRATED: LoopNode moved to feature-based structure
@@ -1743,3 +1930,628 @@ class DataNode(QuantumNode):
 
     def __repr__(self):
         return f'<DataNode name={self.name} source={self.source} type={self.data_type}>'
+
+
+# ============================================
+# MESSAGE QUEUE NODES (Phase: Message Queue System)
+# ============================================
+
+@dataclass
+class MessageHeaderNode(QuantumNode):
+    """
+    Represents a message header for q:message.
+
+    Example:
+      <q:message topic="orders.created">
+        <q:header name="priority" value="high" />
+        <q:header name="correlation-id" value="{requestId}" />
+      </q:message>
+    """
+    name: str = ""
+    value: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "message_header",
+            "name": self.name,
+            "value": self.value
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("Message header requires 'name' attribute")
+        return errors
+
+    def __repr__(self):
+        return f'<MessageHeaderNode name={self.name}>'
+
+
+@dataclass
+class MessageNode(QuantumNode):
+    """
+    Represents a message publish/send operation (q:message).
+
+    Supports three modes:
+    - publish: Pub/Sub to a topic (fanout)
+    - send: Direct queue send (point-to-point)
+    - request: Request/reply pattern with timeout
+
+    Examples:
+      <!-- Publish to topic -->
+      <q:message name="result" topic="orders.created" type="publish">
+        <q:body>{orderData}</q:body>
+      </q:message>
+
+      <!-- Send to queue -->
+      <q:message name="taskId" queue="email-queue" type="send">
+        <q:header name="priority" value="high" />
+        <q:body>{"to": "{email}", "subject": "Welcome!"}</q:body>
+      </q:message>
+
+      <!-- Request/reply -->
+      <q:message name="response" queue="calculator" type="request" timeout="5000">
+        <q:body>{"operation": "add", "a": 5, "b": 3}</q:body>
+      </q:message>
+    """
+    name: Optional[str] = None  # result variable name
+    topic: Optional[str] = None  # for pub/sub
+    queue: Optional[str] = None  # for direct queue
+    type: str = 'publish'  # publish, send, request
+    timeout: Optional[str] = None  # for request type (ms)
+    headers: List['MessageHeaderNode'] = field(default_factory=list)
+    body: Optional[str] = None
+
+    def add_header(self, header: 'MessageHeaderNode'):
+        """Add a header to the message"""
+        self.headers.append(header)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "message",
+            "name": self.name,
+            "topic": self.topic,
+            "queue": self.queue,
+            "message_type": self.type,
+            "timeout": self.timeout,
+            "headers": [h.to_dict() for h in self.headers],
+            "body": self.body[:50] + '...' if self.body and len(self.body) > 50 else self.body
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+
+        if not self.topic and not self.queue:
+            errors.append("Message requires either 'topic' or 'queue' attribute")
+
+        if self.topic and self.queue:
+            errors.append("Message cannot have both 'topic' and 'queue' attributes")
+
+        if self.type not in ['publish', 'send', 'request']:
+            errors.append(f"Invalid message type: {self.type}. Must be publish, send, or request")
+
+        if self.type == 'request' and not self.timeout:
+            # Default timeout for request type
+            pass  # Will use default in runtime
+
+        for header in self.headers:
+            errors.extend(header.validate())
+
+        return errors
+
+    def __repr__(self):
+        target = self.topic if self.topic else self.queue
+        return f'<MessageNode type={self.type} target={target}>'
+
+
+@dataclass
+class SubscribeNode(QuantumNode):
+    """
+    Represents a subscription to topics or queue consumption (q:subscribe).
+
+    Examples:
+      <!-- Subscribe to topic -->
+      <q:subscribe name="orderHandler" topic="orders.*" ack="auto">
+        <q:onMessage>
+          <q:set name="order" value="{message.body}" />
+          <q:log message="Received order: {order.id}" />
+        </q:onMessage>
+        <q:onError>
+          <q:log level="error" message="Failed to process: {error}" />
+        </q:onError>
+      </q:subscribe>
+
+      <!-- Consume from queue with manual ack -->
+      <q:subscribe name="emailWorker" queue="email-queue" ack="manual" prefetch="10">
+        <q:onMessage>
+          <q:mail to="{message.body.to}" subject="{message.body.subject}" />
+          <q:messageAck />
+        </q:onMessage>
+      </q:subscribe>
+    """
+    name: str = ""
+    topic: Optional[str] = None  # single topic
+    topics: Optional[str] = None  # comma-separated or pattern
+    queue: Optional[str] = None  # for queue consumption
+    ack: str = 'auto'  # auto, manual
+    prefetch: int = 1  # prefetch count
+    on_message: List['QuantumNode'] = field(default_factory=list)
+    on_error: List['QuantumNode'] = field(default_factory=list)
+
+    def add_on_message_statement(self, statement: 'QuantumNode'):
+        """Add statement to on_message handler"""
+        self.on_message.append(statement)
+
+    def add_on_error_statement(self, statement: 'QuantumNode'):
+        """Add statement to on_error handler"""
+        self.on_error.append(statement)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "subscribe",
+            "name": self.name,
+            "topic": self.topic,
+            "topics": self.topics,
+            "queue": self.queue,
+            "ack": self.ack,
+            "prefetch": self.prefetch,
+            "on_message_count": len(self.on_message),
+            "on_error_count": len(self.on_error)
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+
+        if not self.name:
+            errors.append("Subscribe requires 'name' attribute")
+
+        if not self.topic and not self.topics and not self.queue:
+            errors.append("Subscribe requires 'topic', 'topics', or 'queue' attribute")
+
+        if self.ack not in ['auto', 'manual']:
+            errors.append(f"Invalid ack mode: {self.ack}. Must be 'auto' or 'manual'")
+
+        if self.prefetch < 1:
+            errors.append(f"Prefetch must be at least 1 (got {self.prefetch})")
+
+        for statement in self.on_message:
+            if hasattr(statement, 'validate'):
+                errors.extend(statement.validate())
+
+        for statement in self.on_error:
+            if hasattr(statement, 'validate'):
+                errors.extend(statement.validate())
+
+        return errors
+
+    def __repr__(self):
+        target = self.topic or self.topics or self.queue
+        return f'<SubscribeNode name={self.name} target={target}>'
+
+
+@dataclass
+class QueueNode(QuantumNode):
+    """
+    Represents queue/exchange declaration and management (q:queue).
+
+    Actions:
+    - declare: Create queue/exchange if not exists
+    - purge: Remove all messages from queue
+    - delete: Delete the queue
+    - info: Get queue information (message count, consumers, etc.)
+
+    Examples:
+      <!-- Declare a durable queue -->
+      <q:queue name="email-queue" action="declare" durable="true" />
+
+      <!-- Declare with dead letter queue -->
+      <q:queue name="orders" action="declare" durable="true"
+               deadLetterQueue="orders-dlq" ttl="86400000" />
+
+      <!-- Purge messages -->
+      <q:queue name="temp-queue" action="purge" />
+
+      <!-- Get queue info -->
+      <q:queue name="orders" action="info" result="queueInfo" />
+    """
+    name: str = ""
+    action: str = 'declare'  # declare, purge, delete, info
+    durable: bool = True
+    exclusive: bool = False
+    auto_delete: bool = False
+    dead_letter_queue: Optional[str] = None
+    ttl: Optional[int] = None  # message TTL in ms
+    result: Optional[str] = None  # for info action
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "queue",
+            "name": self.name,
+            "action": self.action,
+            "durable": self.durable,
+            "exclusive": self.exclusive,
+            "auto_delete": self.auto_delete,
+            "dead_letter_queue": self.dead_letter_queue,
+            "ttl": self.ttl,
+            "result": self.result
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+
+        if not self.name:
+            errors.append("Queue requires 'name' attribute")
+
+        if self.action not in ['declare', 'purge', 'delete', 'info']:
+            errors.append(f"Invalid queue action: {self.action}. Must be declare, purge, delete, or info")
+
+        if self.action == 'info' and not self.result:
+            errors.append("Queue 'info' action requires 'result' attribute")
+
+        if self.ttl is not None and self.ttl < 0:
+            errors.append(f"TTL must be non-negative (got {self.ttl})")
+
+        return errors
+
+    def __repr__(self):
+        return f'<QueueNode name={self.name} action={self.action}>'
+
+
+@dataclass
+class MessageAckNode(QuantumNode):
+    """
+    Represents message acknowledgment (q:messageAck).
+
+    Used inside q:subscribe with ack="manual" to acknowledge
+    successful message processing.
+
+    Example:
+      <q:subscribe name="worker" queue="tasks" ack="manual">
+        <q:onMessage>
+          <!-- Process message -->
+          <q:set name="processed" value="true" />
+          <!-- Acknowledge on success -->
+          <q:messageAck />
+        </q:onMessage>
+      </q:subscribe>
+    """
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "message_ack"
+        }
+
+    def validate(self) -> List[str]:
+        return []
+
+    def __repr__(self):
+        return '<MessageAckNode>'
+
+
+@dataclass
+class MessageNackNode(QuantumNode):
+    """
+    Represents negative message acknowledgment (q:messageNack).
+
+    Used inside q:subscribe with ack="manual" to reject a message.
+    The requeue attribute controls whether the message is requeued.
+
+    Examples:
+      <!-- Reject and requeue (for retry) -->
+      <q:messageNack requeue="true" />
+
+      <!-- Reject without requeue (send to DLQ if configured) -->
+      <q:messageNack requeue="false" />
+    """
+    requeue: bool = True
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "message_nack",
+            "requeue": self.requeue
+        }
+
+    def validate(self) -> List[str]:
+        return []
+
+    def __repr__(self):
+        return f'<MessageNackNode requeue={self.requeue}>'
+
+
+# =============================================================================
+# Python Scripting Nodes (q:python, q:pyimport, q:class, q:decorator)
+# =============================================================================
+
+@dataclass
+class PythonNode(QuantumNode):
+    """
+    Represents a Python code block (q:python).
+
+    Allows embedding native Python code within Quantum components.
+    The 'q' bridge object provides access to the Quantum context.
+
+    Attributes:
+        code: The Python code to execute
+        scope: Variable scope ('component', 'isolated', 'module')
+        async_mode: Whether to execute as async code
+        timeout: Maximum execution time (e.g., '30s')
+        result: Variable name to store the result
+
+    Examples:
+      <!-- Simple Python block -->
+      <q:python>
+          import pandas as pd
+          df = pd.read_csv('data.csv')
+          q.total = df['sales'].sum()
+      </q:python>
+
+      <!-- Async execution -->
+      <q:python async="true" timeout="30s">
+          import aiohttp
+          async with aiohttp.ClientSession() as session:
+              response = await session.get(url)
+              q.data = await response.json()
+      </q:python>
+
+      <!-- Isolated scope (variables don't leak) -->
+      <q:python scope="isolated">
+          temp = calculate_something()
+          q.export('result', temp)
+      </q:python>
+
+      <!-- With result capture -->
+      <q:python result="calculation">
+          return sum([1, 2, 3, 4, 5])
+      </q:python>
+    """
+    code: str
+    scope: str = "component"  # component, isolated, module
+    async_mode: bool = False
+    timeout: Optional[str] = None
+    result: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "python",
+            "code": self.code,
+            "scope": self.scope,
+            "async": self.async_mode,
+            "timeout": self.timeout,
+            "result": self.result
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.code or not self.code.strip():
+            errors.append("Python code block cannot be empty")
+        if self.scope not in ('component', 'isolated', 'module'):
+            errors.append(f"Invalid scope: {self.scope}. Must be 'component', 'isolated', or 'module'")
+        return errors
+
+    def __repr__(self):
+        code_preview = self.code[:50] + '...' if len(self.code) > 50 else self.code
+        return f'<PythonNode scope={self.scope} code="{code_preview}">'
+
+
+@dataclass
+class PyImportNode(QuantumNode):
+    """
+    Represents a Python module import (q:pyimport).
+
+    Imports Python modules into the component's namespace for use
+    in q:python blocks and expressions.
+
+    Attributes:
+        module: The module to import (e.g., 'pandas', 'sklearn.ensemble')
+        alias: Optional alias (e.g., 'pd' for pandas)
+        names: Specific names to import from the module
+
+    Examples:
+      <!-- Import with alias -->
+      <q:pyimport module="pandas" as="pd" />
+      <q:pyimport module="numpy" as="np" />
+
+      <!-- Import specific names -->
+      <q:pyimport module="sklearn.ensemble" names="RandomForestClassifier, GradientBoostingClassifier" />
+
+      <!-- Import everything from module -->
+      <q:pyimport module="math" names="*" />
+
+      <!-- Simple import -->
+      <q:pyimport module="json" />
+    """
+    module: str
+    alias: Optional[str] = None
+    names: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "pyimport",
+            "module": self.module,
+            "alias": self.alias,
+            "names": self.names
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.module:
+            errors.append("Module name is required for q:pyimport")
+        if self.alias and self.names:
+            errors.append("Cannot use both 'as' and 'names' in the same import")
+        return errors
+
+    def __repr__(self):
+        if self.alias:
+            return f'<PyImportNode module={self.module} as={self.alias}>'
+        elif self.names:
+            return f'<PyImportNode from={self.module} names={self.names}>'
+        return f'<PyImportNode module={self.module}>'
+
+
+@dataclass
+class PyClassNode(QuantumNode):
+    """
+    Represents an inline Python class definition (q:class).
+
+    Allows defining Python classes within Quantum components.
+
+    Attributes:
+        name: The class name
+        code: The class body (methods, attributes)
+        bases: Base classes to inherit from
+        decorators: Decorators to apply to the class
+
+    Examples:
+      <q:class name="OrderProcessor">
+          def __init__(self, db):
+              self.db = db
+
+          def process(self, order_id):
+              order = self.db.get(order_id)
+              return self.validate(order)
+
+          def validate(self, order):
+              return order.total > 0
+      </q:class>
+
+      <!-- With inheritance -->
+      <q:class name="AdminUser" bases="User, Permissions">
+          role = 'admin'
+
+          def has_permission(self, perm):
+              return True
+      </q:class>
+    """
+    name: str
+    code: str
+    bases: List[str] = field(default_factory=list)
+    decorators: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "pyclass",
+            "name": self.name,
+            "code": self.code,
+            "bases": self.bases,
+            "decorators": self.decorators
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("Class name is required for q:class")
+        if not self.name.isidentifier():
+            errors.append(f"Invalid class name: {self.name}")
+        return errors
+
+    def __repr__(self):
+        bases_str = f"({', '.join(self.bases)})" if self.bases else ""
+        return f'<PyClassNode name={self.name}{bases_str}>'
+
+
+@dataclass
+class PyDecoratorNode(QuantumNode):
+    """
+    Represents a Python decorator definition (q:decorator).
+
+    Allows defining reusable decorators for functions.
+
+    Attributes:
+        name: The decorator name
+        code: The decorator implementation
+        params: Parameters the decorator accepts
+
+    Examples:
+      <!-- Caching decorator -->
+      <q:decorator name="cached" params="ttl">
+          from functools import wraps
+          def decorator(func):
+              cache = {}
+              @wraps(func)
+              def wrapper(*args):
+                  if args in cache:
+                      return cache[args]
+                  result = func(*args)
+                  cache[args] = result
+                  return result
+              return wrapper
+          return decorator
+      </q:decorator>
+
+      <!-- Logging decorator -->
+      <q:decorator name="logged">
+          import logging
+          def decorator(func):
+              def wrapper(*args, **kwargs):
+                  logging.info(f"Calling {func.__name__}")
+                  return func(*args, **kwargs)
+              return wrapper
+          return decorator
+      </q:decorator>
+    """
+    name: str
+    code: str
+    params: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "pydecorator",
+            "name": self.name,
+            "code": self.code,
+            "params": self.params
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("Decorator name is required")
+        if not self.name.isidentifier():
+            errors.append(f"Invalid decorator name: {self.name}")
+        return errors
+
+    def __repr__(self):
+        return f'<PyDecoratorNode name={self.name}>'
+
+
+@dataclass
+class PyExprNode(QuantumNode):
+    """
+    Represents an inline Python expression (q:expr or {py: ...}).
+
+    Used for embedding Python expressions within templates and attributes.
+
+    Attributes:
+        expr: The Python expression to evaluate
+        format_spec: Optional format specification
+
+    Examples:
+      <!-- In attributes -->
+      <q:set name="total" value="{py: sum(items)}" />
+
+      <!-- With formatting -->
+      <span>{py: price * 1.1:.2f}</span>
+
+      <!-- List comprehension -->
+      <q:set name="adults" value="{py: [u for u in users if u.age >= 18]}" />
+
+      <!-- Ternary expression -->
+      <span class="{py: 'active' if is_active else 'inactive'}">Status</span>
+    """
+    expr: str
+    format_spec: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "pyexpr",
+            "expr": self.expr,
+            "format_spec": self.format_spec
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.expr or not self.expr.strip():
+            errors.append("Python expression cannot be empty")
+        return errors
+
+    def __repr__(self):
+        return f'<PyExprNode expr="{self.expr}">'

@@ -32,18 +32,12 @@ jobs:
 
       - name: Update nginx config
         run: |
-          echo "=== All nginx configs ==="
-          ls -la /etc/nginx/sites-enabled/
+          echo "=== What listens on 8888? ==="
+          sudo grep -r "listen 8888" /etc/nginx/ 2>/dev/null || true
           echo ""
-          echo "=== Main nginx.conf includes ==="
-          grep -E "include|sites-enabled" /etc/nginx/nginx.conf || true
+          echo "=== Config on port 8888 ==="
+          sudo grep -B5 -A20 "listen 8888" /etc/nginx/sites-available/* 2>/dev/null || true
           echo ""
-          echo "=== Port 80 config (Forge managed?) ==="
-          sudo grep -r "listen 80" /etc/nginx/ 2>/dev/null | head -10 || true
-          echo ""
-          echo "=== Port 443 config ==="
-          sudo grep -r "listen 443" /etc/nginx/ 2>/dev/null | head -10 || true
-          echo ""
-          echo "=== Forge site config ==="
-          cat /etc/nginx/sites-available/quantum.sargas.cloud 2>/dev/null || true
+          echo "=== What's the Quantum server config? ==="
+          cat /etc/nginx/sites-available/quantum 2>/dev/null | head -50 || true
           echo "Done!"

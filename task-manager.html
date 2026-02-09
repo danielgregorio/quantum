@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskManager</title>
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+img, picture, video, canvas, svg { display: block; max-width: 100%; }
+input, button, textarea, select { font: inherit; }
+
+:root {
+  --q-primary: #3b82f6;
+  --q-secondary: #64748b;
+  --q-success: #22c55e;
+  --q-danger: #ef4444;
+  --q-warning: #f59e0b;
+  --q-info: #06b6d4;
+  --q-light: #f8fafc;
+  --q-dark: #1e293b;
+  --q-bg: #ffffff;
+  --q-text: #1e293b;
+  --q-border: #e2e8f0;
+  --q-radius: 6px;
+  --q-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  --q-font-xs: 0.75rem;
+  --q-font-sm: 0.875rem;
+  --q-font-md: 1rem;
+  --q-font-lg: 1.25rem;
+  --q-font-xl: 1.5rem;
+  --q-font-2xl: 2rem;
+}
+
+body { background: var(--q-bg); color: var(--q-text); min-height: 100vh; }
+
+/* Window */
+.q-window { width: 100%; min-height: 100vh; display: flex; flex-direction: column; }
+
+/* Panel */
+.q-panel { border: 1px solid var(--q-border); border-radius: var(--q-radius); padding: 16px; box-shadow: var(--q-shadow); }
+.q-panel-title { font-weight: 600; margin-bottom: 12px; font-size: var(--q-font-lg); border-bottom: 1px solid var(--q-border); padding-bottom: 8px; }
+
+/* Buttons */
+.q-btn { display: inline-flex; align-items: center; justify-content: center; padding: 8px 16px; border: 1px solid var(--q-border); border-radius: var(--q-radius); cursor: pointer; font-weight: 500; transition: all 0.15s; background: var(--q-bg); }
+.q-btn:hover { opacity: 0.9; }
+.q-btn-primary { background: var(--q-primary); color: white; border-color: var(--q-primary); }
+.q-btn-secondary { background: var(--q-secondary); color: white; border-color: var(--q-secondary); }
+.q-btn-danger { background: var(--q-danger); color: white; border-color: var(--q-danger); }
+.q-btn-success { background: var(--q-success); color: white; border-color: var(--q-success); }
+.q-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Inputs */
+.q-input { width: 100%; padding: 8px 12px; border: 1px solid var(--q-border); border-radius: var(--q-radius); outline: none; transition: border-color 0.15s; }
+.q-input:focus { border-color: var(--q-primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+
+/* Checkbox / Switch */
+.q-checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.q-switch { position: relative; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.q-switch input { display: none; }
+.q-switch-track { width: 40px; height: 22px; background: var(--q-border); border-radius: 11px; position: relative; transition: background 0.2s; }
+.q-switch input:checked + .q-switch-track { background: var(--q-primary); }
+.q-switch-thumb { width: 18px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform 0.2s; }
+.q-switch input:checked + .q-switch-track .q-switch-thumb { transform: translateX(18px); }
+
+/* Table */
+.q-table { width: 100%; border-collapse: collapse; }
+.q-table th, .q-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--q-border); }
+.q-table th { font-weight: 600; background: var(--q-light); }
+.q-table tr:hover { background: var(--q-light); }
+
+/* Tabs */
+.q-tabs { display: flex; flex-direction: column; }
+.q-tab-headers { display: flex; border-bottom: 2px solid var(--q-border); gap: 0; }
+.q-tab-header { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; font-weight: 500; color: var(--q-secondary); transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; }
+.q-tab-header.active { color: var(--q-primary); border-bottom-color: var(--q-primary); }
+.q-tab-content { display: none; padding: 16px 0; }
+.q-tab-content.active { display: block; }
+
+/* Form */
+.q-form { display: flex; flex-direction: column; gap: 16px; }
+.q-formitem { display: flex; flex-direction: row; align-items: center; gap: 12px; }
+.q-formitem-label { min-width: 120px; font-weight: 500; }
+
+/* Badge */
+.q-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; font-size: var(--q-font-xs); font-weight: 600; background: var(--q-light); color: var(--q-text); }
+.q-badge-primary { background: var(--q-primary); color: white; }
+.q-badge-secondary { background: var(--q-secondary); color: white; }
+.q-badge-success { background: var(--q-success); color: white; }
+.q-badge-danger { background: var(--q-danger); color: white; }
+.q-badge-warning { background: var(--q-warning); color: white; }
+
+/* Loading */
+.q-loading { display: flex; align-items: center; gap: 8px; color: var(--q-secondary); }
+.q-spinner { width: 20px; height: 20px; border: 2px solid var(--q-border); border-top-color: var(--q-primary); border-radius: 50%; animation: q-spin 0.6s linear infinite; }
+@keyframes q-spin { to { transform: rotate(360deg); } }
+
+/* Log */
+.q-log { font-family: 'SF Mono', 'Fira Code', monospace; font-size: var(--q-font-sm); background: var(--q-dark); color: #e2e8f0; padding: 12px; border-radius: var(--q-radius); overflow-y: auto; max-height: 400px; }
+
+/* Progress */
+progress { width: 100%; height: 8px; border-radius: 4px; overflow: hidden; appearance: none; }
+progress::-webkit-progress-bar { background: var(--q-light); border-radius: 4px; }
+progress::-webkit-progress-value { background: var(--q-primary); border-radius: 4px; }
+
+/* Header / Footer */
+.q-header { padding: 12px 16px; background: var(--q-dark); color: white; font-weight: 600; font-size: var(--q-font-lg); }
+.q-footer { padding: 12px 16px; background: var(--q-light); color: var(--q-secondary); border-top: 1px solid var(--q-border); font-size: var(--q-font-sm); }
+
+/* Scrollbox */
+.q-scrollbox { overflow: auto; }
+
+/* Accordion / Section */
+details.q-section { border: 1px solid var(--q-border); border-radius: var(--q-radius); margin-bottom: 4px; }
+details.q-section summary { padding: 10px 16px; cursor: pointer; font-weight: 500; }
+details.q-section .q-section-content { padding: 12px 16px; border-top: 1px solid var(--q-border); }
+
+/* Spacer */
+.q-spacer { flex: 1; }
+
+/* Select */
+.q-select { width: 100%; padding: 8px 12px; border: 1px solid var(--q-border); border-radius: var(--q-radius); outline: none; background: var(--q-bg); }
+.q-select:focus { border-color: var(--q-primary); }
+
+/* Menu */
+.q-menu { display: flex; gap: 4px; }
+.q-menu-item { padding: 8px 16px; cursor: pointer; border-radius: var(--q-radius); transition: background 0.15s; }
+.q-menu-item:hover { background: var(--q-light); }
+
+/* DividedBox */
+.q-dividedbox { display: flex; gap: 0; }
+.q-dividedbox-h { flex-direction: row; }
+.q-dividedbox-v { flex-direction: column; }
+.q-divider { background: var(--q-border); flex-shrink: 0; }
+.q-dividedbox-h > .q-divider { width: 4px; cursor: col-resize; }
+.q-dividedbox-v > .q-divider { height: 4px; cursor: row-resize; }
+
+/* Responsive Layout */
+.q-window > header, .q-window > .q-header { flex-shrink: 0; }
+.q-window > footer, .q-window > .q-footer { flex-shrink: 0; margin-top: auto; }
+.q-window > div:not(.q-header):not(.q-footer) { flex: 1; overflow: auto; }
+.q-panel { flex-shrink: 0; }
+
+/* Media Queries for smaller screens */
+@media (max-width: 900px) {
+  .q-window > div[style*="flex-direction: row"] { flex-direction: column !important; }
+  .q-window > div > div[style*="width: 280px"] { width: 100% !important; }
+  .q-window > div > div[style*="width: 50%"] { width: 100% !important; }
+}
+
+  </style>
+</head>
+<body>
+<div class="q-window">
+  <header class="q-header">
+    <div style="display: flex; flex-direction: row; padding: 8px; align-items: center; justify-content: space-between">
+      <div style="display: flex; flex-direction: row; gap: 12px; align-items: center">
+        <span style="font-size: var(--q-font-xl); font-weight: bold">
+          Task Manager Pro
+        </span>
+        <span class="q-badge q-badge-primary">
+          v2.0
+        </span>
+      </div>
+      <div style="display: flex; flex-direction: row; gap: 16px; align-items: center">
+        <button class="q-btn q-btn-secondary" onclick="dismissNotifications">
+          Notificacoes ({notifications})
+        </button>
+        <span>
+          Ola, {username}
+        </span>
+      </div>
+    </div>
+  </header>
+  <div style="display: flex; flex-direction: row; gap: 16px; padding: 16px">
+    <div style="display: flex; flex-direction: column; gap: 16px; width: 280px">
+      <div class="q-panel">
+        <div class="q-panel-title">
+          Estatisticas
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; flex-direction: row; justify-content: space-between">
+            <span>
+              Total de Tarefas:
+            </span>
+            <span style="font-weight: bold">
+              {taskCount}
+            </span>
+          </div>
+          <div style="display: flex; flex-direction: row; justify-content: space-between">
+            <span>
+              Concluidas:
+            </span>
+            <span style="font-weight: bold">
+              {completedCount}
+            </span>
+          </div>
+          <div style="display: flex; flex-direction: row; justify-content: space-between">
+            <span>
+              Pendentes:
+            </span>
+            <span style="font-weight: bold">
+              {taskCount}
+            </span>
+          </div>
+          <hr />
+          <div style="display: flex; flex-direction: row; justify-content: space-between">
+            <span>
+              Filtro Atual:
+            </span>
+            <span class="q-badge q-badge-secondary">
+              {currentFilter}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="q-panel">
+        <div class="q-panel-title">
+          Acoes Rapidas
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <button class="q-btn q-btn-primary" onclick="addTask">
+            + Nova Tarefa
+          </button>
+          <button class="q-btn q-btn-success" onclick="completeTask">
+            Marcar Concluida
+          </button>
+          <button class="q-btn q-btn-secondary" onclick="clearCompleted">
+            Limpar Concluidas
+          </button>
+          <button class="q-btn q-btn-danger" onclick="resetAll">
+            Resetar Tudo
+          </button>
+        </div>
+      </div>
+      <div class="q-panel">
+        <div class="q-panel-title">
+          Filtros
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <button class="q-btn" onclick="filterAll">
+            Todas
+          </button>
+          <button class="q-btn" onclick="filterActive">
+            Ativas
+          </button>
+          <button class="q-btn" onclick="filterCompleted">
+            Concluidas
+          </button>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 16px; width: 100%">
+      <div class="q-tabs">
+        <div class="q-tab-headers">
+          <button class="q-tab-header active" data-tab="tabs-1-tab-0" data-tab-group="tabs-1">
+            Tarefas
+          </button>
+          <button class="q-tab-header" data-tab="tabs-1-tab-1" data-tab-group="tabs-1">
+            Calendario
+          </button>
+          <button class="q-tab-header" data-tab="tabs-1-tab-2" data-tab-group="tabs-1">
+            Relatorios
+          </button>
+          <button class="q-tab-header" data-tab="tabs-1-tab-3" data-tab-group="tabs-1">
+            Configuracoes
+          </button>
+        </div>
+        <div id="tabs-1-tab-0" class="q-tab-content active" data-tab-group="tabs-1">
+          <div style="display: flex; flex-direction: column; gap: 16px">
+            <div class="q-panel">
+              <div class="q-panel-title">
+                Adicionar Nova Tarefa
+              </div>
+              <form class="q-form" onsubmit="addTask">
+                <div style="display: flex; flex-direction: row; gap: 12px; align-items: flex-end">
+                  <div style="display: flex; flex-direction: column; gap: 4px; width: 100%">
+                    <span style="font-size: var(--q-font-sm)">
+                      Titulo da Tarefa
+                    </span>
+                    <input class="q-input" type="text" placeholder="Digite o titulo..." name="taskTitle" />
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 4px; width: 200px">
+                    <span style="font-size: var(--q-font-sm)">
+                      Prioridade
+                    </span>
+                    <select class="q-select" name="priority">
+                      <option value="Baixa">
+                        Baixa
+                      </option>
+                      <option value="Media">
+                        Media
+                      </option>
+                      <option value="Alta">
+                        Alta
+                      </option>
+                      <option value="Urgente">
+                        Urgente
+                      </option>
+                    </select>
+                  </div>
+                  <button class="q-btn q-btn-primary">
+                    Adicionar
+                  </button>
+                </div>
+              </form>
+            </div>
+            <div class="q-panel">
+              <div class="q-panel-title">
+                Lista de Tarefas
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px">
+                <div style="display: flex; flex-direction: row; padding: 8px; align-items: center; justify-content: space-between; background-color: var(--q-light)">
+                  <label class="q-checkbox">
+                    <input type="checkbox" />
+                    Implementar autenticacao
+                  </label>
+                  <div style="display: flex; flex-direction: row; gap: 8px">
+                    <span class="q-badge q-badge-danger">
+                      Urgente
+                    </span>
+                    <button class="q-btn q-btn-success" onclick="completeTask">
+                      Concluir
+                    </button>
+                  </div>
+                </div>
+                <div style="display: flex; flex-direction: row; padding: 8px; align-items: center; justify-content: space-between; background-color: var(--q-light)">
+                  <label class="q-checkbox">
+                    <input type="checkbox" />
+                    Criar documentacao da API
+                  </label>
+                  <div style="display: flex; flex-direction: row; gap: 8px">
+                    <span class="q-badge q-badge-warning">
+                      Alta
+                    </span>
+                    <button class="q-btn q-btn-success" onclick="completeTask">
+                      Concluir
+                    </button>
+                  </div>
+                </div>
+                <div style="display: flex; flex-direction: row; padding: 8px; align-items: center; justify-content: space-between; background-color: var(--q-light)">
+                  <label class="q-checkbox">
+                    <input type="checkbox" />
+                    Revisar pull requests
+                  </label>
+                  <div style="display: flex; flex-direction: row; gap: 8px">
+                    <span class="q-badge q-badge-primary">
+                      Media
+                    </span>
+                    <button class="q-btn q-btn-success" onclick="completeTask">
+                      Concluir
+                    </button>
+                  </div>
+                </div>
+                <div style="display: flex; flex-direction: row; padding: 8px; align-items: center; justify-content: space-between; background-color: var(--q-light)">
+                  <label class="q-checkbox">
+                    <input type="checkbox" />
+                    Atualizar dependencias
+                  </label>
+                  <div style="display: flex; flex-direction: row; gap: 8px">
+                    <span class="q-badge q-badge-secondary">
+                      Baixa
+                    </span>
+                    <button class="q-btn q-btn-success" onclick="completeTask">
+                      Concluir
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="tabs-1-tab-1" class="q-tab-content" data-tab-group="tabs-1">
+          <div class="q-panel">
+            <div class="q-panel-title">
+              Visao do Calendario
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 16px; padding: 32px; align-items: center">
+              <span style="font-size: var(--q-font-xl)">
+                Calendario de Tarefas
+              </span>
+              <span>
+                Visualize suas tarefas por data
+              </span>
+              <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px">
+                <span style="font-weight: bold">
+                  Dom
+                </span>
+                <span style="font-weight: bold">
+                  Seg
+                </span>
+                <span style="font-weight: bold">
+                  Ter
+                </span>
+                <span style="font-weight: bold">
+                  Qua
+                </span>
+                <span style="font-weight: bold">
+                  Qui
+                </span>
+                <span style="font-weight: bold">
+                  Sex
+                </span>
+                <span style="font-weight: bold">
+                  Sab
+                </span>
+              </div>
+              <div class="q-loading">
+                <div class="q-spinner">
+                </div>
+                Carregando calendario...
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="tabs-1-tab-2" class="q-tab-content" data-tab-group="tabs-1">
+          <div style="display: flex; flex-direction: row; gap: 16px">
+            <div class="q-panel" style="width: 50%">
+              <div class="q-panel-title">
+                Produtividade Semanal
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 12px">
+                <div style="display: flex; flex-direction: row; justify-content: space-between">
+                  <span>
+                    Segunda
+                  </span>
+                  <progress value="80" max="100">
+                  </progress>
+                </div>
+                <div style="display: flex; flex-direction: row; justify-content: space-between">
+                  <span>
+                    Terca
+                  </span>
+                  <progress value="65" max="100">
+                  </progress>
+                </div>
+                <div style="display: flex; flex-direction: row; justify-content: space-between">
+                  <span>
+                    Quarta
+                  </span>
+                  <progress value="90" max="100">
+                  </progress>
+                </div>
+                <div style="display: flex; flex-direction: row; justify-content: space-between">
+                  <span>
+                    Quinta
+                  </span>
+                  <progress value="45" max="100">
+                  </progress>
+                </div>
+                <div style="display: flex; flex-direction: row; justify-content: space-between">
+                  <span>
+                    Sexta
+                  </span>
+                  <progress value="70" max="100">
+                  </progress>
+                </div>
+              </div>
+            </div>
+            <div class="q-panel" style="width: 50%">
+              <div class="q-panel-title">
+                Resumo por Prioridade
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 12px">
+                <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between">
+                  <div style="display: flex; flex-direction: row; gap: 8px; align-items: center">
+                    <span class="q-badge q-badge-danger">
+                      Urgente
+                    </span>
+                  </div>
+                  <span style="font-weight: bold">
+                    3 tarefas
+                  </span>
+                </div>
+                <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between">
+                  <div style="display: flex; flex-direction: row; gap: 8px; align-items: center">
+                    <span class="q-badge q-badge-warning">
+                      Alta
+                    </span>
+                  </div>
+                  <span style="font-weight: bold">
+                    7 tarefas
+                  </span>
+                </div>
+                <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between">
+                  <div style="display: flex; flex-direction: row; gap: 8px; align-items: center">
+                    <span class="q-badge q-badge-primary">
+                      Media
+                    </span>
+                  </div>
+                  <span style="font-weight: bold">
+                    12 tarefas
+                  </span>
+                </div>
+                <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between">
+                  <div style="display: flex; flex-direction: row; gap: 8px; align-items: center">
+                    <span class="q-badge q-badge-secondary">
+                      Baixa
+                    </span>
+                  </div>
+                  <span style="font-weight: bold">
+                    5 tarefas
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="tabs-1-tab-3" class="q-tab-content" data-tab-group="tabs-1">
+          <div style="display: flex; flex-direction: row; gap: 16px">
+            <div class="q-panel" style="width: 50%">
+              <div class="q-panel-title">
+                Perfil do Usuario
+              </div>
+              <form class="q-form" onsubmit="saveSettings">
+                <div style="display: flex; flex-direction: column; gap: 16px">
+                  <div class="q-formitem">
+                    <label class="q-formitem-label">
+                      Nome
+                    </label>
+                    <input class="q-input" type="text" placeholder="Seu nome" name="username" />
+                  </div>
+                  <div class="q-formitem">
+                    <label class="q-formitem-label">
+                      Email
+                    </label>
+                    <input class="q-input" type="email" placeholder="seu@email.com" name="email" />
+                  </div>
+                  <div class="q-formitem">
+                    <label class="q-formitem-label">
+                      Fuso Horario
+                    </label>
+                    <select class="q-select" name="timezone">
+                      <option value="America/Sao_Paulo">
+                        America/Sao_Paulo
+                      </option>
+                      <option value="America/New_York">
+                        America/New_York
+                      </option>
+                      <option value="Europe/London">
+                        Europe/London
+                      </option>
+                      <option value="Asia/Tokyo">
+                        Asia/Tokyo
+                      </option>
+                    </select>
+                  </div>
+                  <div class="q-formitem">
+                    <label class="q-formitem-label">
+                      Idioma
+                    </label>
+                    <select class="q-select" name="language">
+                      <option value="Portugues">
+                        Portugues
+                      </option>
+                      <option value="English">
+                        English
+                      </option>
+                      <option value="Espanol">
+                        Espanol
+                      </option>
+                    </select>
+                  </div>
+                  <div style="display: flex; flex-direction: row; gap: 8px; justify-content: flex-end">
+                    <button class="q-btn q-btn-secondary">
+                      Cancelar
+                    </button>
+                    <button class="q-btn q-btn-primary">
+                      Salvar
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="q-panel" style="width: 50%">
+              <div class="q-panel-title">
+                Preferencias
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 16px">
+                <div class="q-formitem">
+                  <label class="q-formitem-label">
+                    Modo Escuro
+                  </label>
+                  <label class="q-switch">
+                    <input type="checkbox" name="darkMode" />
+                    <span class="q-switch-track">
+                      <span class="q-switch-thumb">
+                      </span>
+                    </span>
+                    Ativar tema escuro
+                  </label>
+                </div>
+                <div class="q-formitem">
+                  <label class="q-formitem-label">
+                    Notificacoes
+                  </label>
+                  <label class="q-switch">
+                    <input type="checkbox" name="notifications_enabled" />
+                    <span class="q-switch-track">
+                      <span class="q-switch-thumb">
+                      </span>
+                    </span>
+                    Receber notificacoes
+                  </label>
+                </div>
+                <div class="q-formitem">
+                  <label class="q-formitem-label">
+                    Som
+                  </label>
+                  <label class="q-switch">
+                    <input type="checkbox" name="sound_enabled" />
+                    <span class="q-switch-track">
+                      <span class="q-switch-thumb">
+                      </span>
+                    </span>
+                    Sons de notificacao
+                  </label>
+                </div>
+                <div class="q-formitem">
+                  <label class="q-formitem-label">
+                    Auto-save
+                  </label>
+                  <label class="q-switch">
+                    <input type="checkbox" name="autosave" />
+                    <span class="q-switch-track">
+                      <span class="q-switch-thumb">
+                      </span>
+                    </span>
+                    Salvar automaticamente
+                  </label>
+                </div>
+                <hr />
+                <span style="font-size: var(--q-font-sm); font-weight: bold">
+                  Dados
+                </span>
+                <div style="display: flex; flex-direction: row; gap: 8px">
+                  <button class="q-btn q-btn-secondary" onclick="exportData">
+                    Exportar
+                  </button>
+                  <button class="q-btn q-btn-secondary" onclick="importData">
+                    Importar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer class="q-footer">
+    <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between">
+      <span>
+        Task Manager Pro - Quantum Framework
+      </span>
+      <div style="display: flex; flex-direction: row; gap: 16px">
+        <span>
+          Tarefas: {taskCount}
+        </span>
+        <span>
+          Concluidas: {completedCount}
+        </span>
+        <span>
+          Filtro: {currentFilter}
+        </span>
+      </div>
+    </div>
+  </footer>
+</div>
+<!-- q:set taskCount = 0 -->
+<!-- q:set completedCount = 0 -->
+<!-- q:set currentFilter = all -->
+<!-- q:set darkMode = false -->
+<!-- q:set username = Usuario -->
+<!-- q:set notifications = 3 -->
+<script>
+document.querySelectorAll('.q-tab-header').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var group = this.dataset.tabGroup;
+    var target = this.dataset.tab;
+    document.querySelectorAll('.q-tab-header[data-tab-group="' + group + '"]').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.q-tab-content[data-tab-group="' + group + '"]').forEach(function(c) { c.classList.remove('active'); });
+    this.classList.add('active');
+    document.getElementById(target).classList.add('active');
+  });
+});
+</script>
+
+</body>
+</html>

@@ -9,13 +9,25 @@ from typing import Any, Dict, List
 # Fix imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from core.ast_nodes import ComponentNode, QuantumReturn, DispatchEventNode, OnEventNode, QueryNode, DataNode, FileNode, MailNode, TransactionNode, LLMNode, LLMMessageNode
+from core.ast_nodes import (
+    ComponentNode, QuantumReturn, DispatchEventNode, OnEventNode, QueryNode,
+    DataNode, FileNode, MailNode, TransactionNode, LLMNode, LLMMessageNode,
+    JobNode, ScheduleNode, ThreadNode,  # Job Execution System
+    # Message Queue System
+    MessageNode, SubscribeNode, QueueNode, MessageAckNode, MessageNackNode,
+    # Python Scripting System
+    PythonNode, PyImportNode, PyClassNode, PyDecoratorNode, PyExprNode
+)
 from core.features.conditionals.src.ast_node import IfNode
 from core.features.loops.src.ast_node import LoopNode
 from core.features.state_management.src.ast_node import SetNode
 from core.features.functions.src.ast_node import FunctionNode
 from core.features.invocation.src.ast_node import InvokeNode
 from core.features.knowledge_base.src.ast_node import KnowledgeNode
+from core.features.agents.src.ast_node import AgentNode, AgentTeamNode
+from core.features.websocket.src import (
+    WebSocketNode, WebSocketHandlerNode, WebSocketSendNode, WebSocketCloseNode
+)
 from core.features.logging.src import LogNode, LoggingService
 from core.features.dump.src import DumpNode, DumpService
 from runtime.database_service import DatabaseService, QueryResult
@@ -29,6 +41,17 @@ from runtime.file_upload_service import FileUploadService, FileUploadError
 from runtime.email_service import EmailService, EmailError
 from runtime.llm_service import LLMService, LLMError
 from runtime.knowledge_service import KnowledgeService, KnowledgeError
+from runtime.agent_service import (
+    AgentService, AgentError, get_agent_service,
+    get_multi_agent_service, MultiAgentService, BUILTIN_TOOLS
+)
+from runtime.message_queue_service import MessageQueueService, MessageQueueError
+from runtime.job_executor import (
+    JobExecutor, ScheduleService, ThreadService, JobQueueService,
+    JobExecutorError, ScheduleError, ThreadError, JobQueueError,
+    parse_duration
+)
+from runtime.expression_cache import get_expression_cache, ExpressionCache
 import re
 
 class ComponentExecutionError(Exception):
@@ -67,6 +90,24 @@ class ComponentRuntime:
         self.llm_service = LLMService()
         # Knowledge service for q:knowledge (RAG with ChromaDB)
         self.knowledge_service = KnowledgeService(self.llm_service)
+        # Message queue service for q:message, q:subscribe, q:queue
+        mq_config = {}
+        if config and 'message_queue' in config:
+            mq_config = config['message_queue']
+        self.message_queue_service = MessageQueueService(mq_config)
+        # Job executor for q:schedule, q:thread, q:job
+        job_db_path = "quantum_jobs.db"
+        if config and 'job_db_path' in config:
+            job_db_path = config['job_db_path']
+        max_thread_workers = 10
+        if config and 'max_thread_workers' in config:
+            max_thread_workers = config['max_thread_workers']
+        self.job_executor = JobExecutor(
+            max_thread_workers=max_thread_workers,
+            job_db_path=job_db_path
+        )
+        # Expression cache for performance optimization (Phase 1)
+        self._expr_cache = get_expression_cache()
 
     def execute_component(self, component: ComponentNode, params: Dict[str, Any] = None) -> Any:
         """Execute a component and return the result"""
@@ -205,6 +246,44 @@ class ComponentRuntime:
             return self._execute_llm(statement, exec_context)
         elif isinstance(statement, KnowledgeNode):
             return self._execute_knowledge(statement, exec_context)
+        elif isinstance(statement, AgentNode):
+            return self._execute_agent(statement, exec_context)
+        elif isinstance(statement, AgentTeamNode):
+            return self._execute_team(statement, exec_context)
+        # WebSocket System
+        elif isinstance(statement, WebSocketNode):
+            return self._execute_websocket(statement, exec_context)
+        elif isinstance(statement, WebSocketSendNode):
+            return self._execute_websocket_send(statement, exec_context)
+        elif isinstance(statement, WebSocketCloseNode):
+            return self._execute_websocket_close(statement, exec_context)
+        # Job Execution System
+        elif isinstance(statement, ScheduleNode):
+            return self._execute_schedule(statement, exec_context)
+        elif isinstance(statement, ThreadNode):
+            return self._execute_thread(statement, exec_context)
+        elif isinstance(statement, JobNode):
+            return self._execute_job(statement, exec_context)
+        # Message Queue System
+        elif isinstance(statement, MessageNode):
+            return self._execute_message(statement, exec_context)
+        elif isinstance(statement, SubscribeNode):
+            return self._execute_subscribe(statement, exec_context)
+        elif isinstance(statement, QueueNode):
+            return self._execute_queue(statement, exec_context)
+        elif isinstance(statement, MessageAckNode):
+            return self._execute_message_ack(statement, exec_context)
+        elif isinstance(statement, MessageNackNode):
+            return self._execute_message_nack(statement, exec_context)
+        # Python Scripting System
+        elif isinstance(statement, PythonNode):
+            return self._execute_python(statement, exec_context)
+        elif isinstance(statement, PyImportNode):
+            return self._execute_pyimport(statement, exec_context)
+        elif isinstance(statement, PyClassNode):
+            return self._execute_pyclass(statement, exec_context)
+        elif isinstance(statement, PyDecoratorNode):
+            return self._execute_pydecorator(statement, exec_context)
         return None
 
     def _execute_if(self, if_node: IfNode, context: Dict[str, Any]):
@@ -267,8 +346,9 @@ class ComponentRuntime:
 
             # Try to evaluate as a Python expression (handles: "3 > 1", "True", "1 == 1", etc.)
             try:
-                return bool(eval(evaluated_condition))
-            except (SyntaxError, NameError, TypeError):
+                # Use expression cache for faster evaluation
+                return self._expr_cache.evaluate_condition(evaluated_condition, context)
+            except (ValueError, RuntimeError):
                 # Not a valid Python expression - treat as a plain resolved string
                 # and use its truthiness (non-empty string = True, empty = False)
                 return bool(evaluated_condition)
@@ -731,24 +811,29 @@ class ComponentRuntime:
         return value
 
     def _evaluate_arithmetic_expression(self, expr: str, context: Dict[str, Any]) -> Any:
-        """Evaluate arithmetic expressions with variables"""
-        # Replace variables in expression with their values
-        # Sort by longest name first to avoid partial replacements (e.g., 'count' before 'c')
-        sorted_vars = sorted(context.items(), key=lambda x: len(x[0]), reverse=True)
-        for var_name, var_value in sorted_vars:
-            if var_name in expr:
-                if isinstance(var_value, (int, float)):
-                    expr = expr.replace(var_name, str(var_value))
-                elif isinstance(var_value, str):
-                    expr = expr.replace(var_name, repr(var_value))
-                elif isinstance(var_value, bool):
-                    expr = expr.replace(var_name, str(var_value))
-
+        """Evaluate arithmetic expressions with variables using expression cache"""
         try:
-            # Use eval for arithmetic (safe since we control the input)
-            return eval(expr)
-        except:
-            raise ValueError(f"Cannot evaluate expression: {expr}")
+            # Try using the expression cache (compiled bytecode)
+            return self._expr_cache.evaluate(expr, context)
+        except (ValueError, RuntimeError):
+            # Fallback to variable substitution for complex expressions
+            # Sort by longest name first to avoid partial replacements (e.g., 'count' before 'c')
+            sorted_vars = sorted(context.items(), key=lambda x: len(x[0]), reverse=True)
+            substituted = expr
+            for var_name, var_value in sorted_vars:
+                if var_name in substituted:
+                    if isinstance(var_value, (int, float)):
+                        substituted = substituted.replace(var_name, str(var_value))
+                    elif isinstance(var_value, str):
+                        substituted = substituted.replace(var_name, repr(var_value))
+                    elif isinstance(var_value, bool):
+                        substituted = substituted.replace(var_name, str(var_value))
+
+            try:
+                # Use eval for arithmetic (safe since we control the input)
+                return eval(substituted)
+            except:
+                raise ValueError(f"Cannot evaluate expression: {expr}")
 
     def _execute_set(self, set_node: SetNode, exec_context: ExecutionContext):
         """Execute q:set statement"""
@@ -2365,6 +2450,449 @@ class ComponentRuntime:
             raise ComponentExecutionError(f"LLM execution error: {e}")
 
     # ============================================
+    # AGENT EXECUTION (q:agent with tool use)
+    # ============================================
+
+    def _execute_agent(self, agent_node: AgentNode, exec_context: ExecutionContext):
+        """
+        Execute q:agent - AI agent with tool use capabilities.
+
+        Uses the ReAct pattern:
+        1. THINK: LLM analyzes task and available tools
+        2. ACT: Execute a tool
+        3. OBSERVE: Process tool result
+        4. REPEAT: Until task complete or max_iterations
+
+        Args:
+            agent_node: AgentNode with tools and task
+            exec_context: Current execution context
+
+        Returns:
+            AgentResult dict with success, result, actions, etc.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            # Get agent service
+            agent_service = get_agent_service()
+
+            # Get context as dict for databinding
+            dict_context = exec_context.to_dict()
+
+            # Resolve instruction with databinding
+            instruction = ""
+            if agent_node.instruction:
+                instruction = str(self._apply_databinding(
+                    agent_node.instruction.content, dict_context
+                ))
+
+            # Resolve task and context with databinding
+            task = ""
+            context = ""
+            if agent_node.execute:
+                task = str(self._apply_databinding(
+                    agent_node.execute.task, dict_context
+                ))
+                if agent_node.execute.context:
+                    context = str(self._apply_databinding(
+                        agent_node.execute.context, dict_context
+                    ))
+
+            # Build tool definitions
+            tools = []
+            for tool_node in agent_node.tools:
+                tool_def = {
+                    "name": tool_node.name,
+                    "description": tool_node.description,
+                    "params": [
+                        {
+                            "name": p.name,
+                            "type": p.type,
+                            "required": p.required,
+                            "default": p.default,
+                            "description": p.description
+                        }
+                        for p in tool_node.params
+                    ],
+                    "body": tool_node.body  # AST nodes for execution
+                }
+                tools.append(tool_def)
+
+            # Create tool executor function
+            def tool_executor(tool_name: str, tool_args: dict, body: list):
+                """Execute tool body with arguments in context."""
+                # Set tool arguments in context
+                for arg_name, arg_value in tool_args.items():
+                    exec_context.set_variable(arg_name, arg_value, scope="local")
+                    self.context[arg_name] = arg_value
+
+                # Execute body statements
+                result = None
+                for node in body:
+                    result = self._execute_node(node, exec_context)
+
+                # Check for return value
+                return_val = exec_context.get_variable("_return", None)
+                if return_val is not None:
+                    return return_val
+                return result
+
+            # Execute agent
+            logger.info(f"Executing agent '{agent_node.name}' with task: {task[:100]}...")
+
+            # Resolve API key with databinding (for env vars)
+            api_key = ""
+            if agent_node.api_key:
+                api_key = str(self._apply_databinding(
+                    agent_node.api_key, dict_context
+                ))
+
+            result = agent_service.execute(
+                instruction=instruction,
+                tools=tools,
+                task=task,
+                context=context,
+                model=agent_node.model,
+                endpoint=agent_node.endpoint,
+                provider=agent_node.provider,
+                api_key=api_key,
+                max_iterations=agent_node.max_iterations,
+                timeout_ms=agent_node.timeout,
+                tool_executor=tool_executor
+            )
+
+            # Store response as {name}
+            exec_context.set_variable(agent_node.name, result.result, scope="component")
+            self.context[agent_node.name] = result.result
+
+            # Store full result as {name}_result
+            result_key = f"{agent_node.name}_result"
+            result_dict = result.to_dict()
+            exec_context.set_variable(result_key, result_dict, scope="component")
+            self.context[result_key] = result_dict
+
+            logger.info(f"Agent '{agent_node.name}' completed: success={result.success}, "
+                       f"actions={result.action_count}, time={result.execution_time_ms:.0f}ms")
+
+            return result_dict
+
+        except AgentError as e:
+            raise ComponentExecutionError(f"Agent error: {e}")
+        except Exception as e:
+            logger.exception(f"Agent execution error: {e}")
+            raise ComponentExecutionError(f"Agent execution error: {e}")
+
+    # ============================================
+    # MULTI-AGENT TEAM EXECUTION (q:team)
+    # ============================================
+
+    def _execute_team(self, team_node: AgentTeamNode, exec_context: ExecutionContext):
+        """
+        Execute q:team - multi-agent collaboration.
+
+        Coordinates multiple agents that can hand off tasks to each other,
+        share context, and work together to complete complex tasks.
+
+        Args:
+            team_node: AgentTeamNode with agents, shared state, and task
+            exec_context: Current execution context
+
+        Returns:
+            TeamResult dict with success, final response, handoffs, etc.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            # Get multi-agent service
+            multi_agent_service = get_multi_agent_service()
+
+            # Get context as dict for databinding
+            dict_context = exec_context.to_dict()
+
+            # Initialize shared context from q:shared
+            shared = {}
+            for stmt in team_node.shared:
+                self._execute_statement(stmt, exec_context)
+                if hasattr(stmt, 'name'):
+                    value = exec_context.get_variable(stmt.name)
+                    shared[stmt.name] = value
+
+            # Build agent configurations
+            agents = {}
+            for agent_node in team_node.agents:
+                # Resolve instruction with databinding
+                instruction = ""
+                if agent_node.instruction:
+                    instruction = str(self._apply_databinding(
+                        agent_node.instruction.content, dict_context
+                    ))
+
+                # Resolve API key with databinding
+                api_key = ""
+                if agent_node.api_key:
+                    api_key = str(self._apply_databinding(
+                        agent_node.api_key, dict_context
+                    ))
+
+                # Build tool definitions
+                tools = []
+                for tool_node in agent_node.tools:
+                    if tool_node.builtin:
+                        # Built-in tool - just need name and builtin flag
+                        tool_def = {
+                            "name": tool_node.name,
+                            "builtin": True
+                        }
+                    else:
+                        # Custom tool with body
+                        tool_def = {
+                            "name": tool_node.name,
+                            "description": tool_node.description,
+                            "params": [
+                                {
+                                    "name": p.name,
+                                    "type": p.type,
+                                    "required": p.required,
+                                    "default": p.default,
+                                    "description": p.description
+                                }
+                                for p in tool_node.params
+                            ],
+                            "body": tool_node.body
+                        }
+                    tools.append(tool_def)
+
+                agents[agent_node.name] = {
+                    "instruction": instruction,
+                    "model": agent_node.model,
+                    "endpoint": agent_node.endpoint,
+                    "provider": agent_node.provider,
+                    "api_key": api_key,
+                    "max_iterations": agent_node.max_iterations,
+                    "timeout": agent_node.timeout,
+                    "tools": tools
+                }
+
+            # Create team
+            team = multi_agent_service.create_team(
+                name=team_node.name,
+                agents=agents,
+                shared=shared,
+                supervisor=team_node.supervisor,
+                max_handoffs=team_node.max_handoffs,
+                max_total_iterations=team_node.max_total_iterations
+            )
+
+            # Create tool executor function for custom tools
+            def tool_executor(tool_name: str, tool_args: dict, body: list):
+                """Execute tool body with arguments in context."""
+                # Set tool arguments in context
+                for arg_name, arg_value in tool_args.items():
+                    exec_context.set_variable(arg_name, arg_value, scope="local")
+                    self.context[arg_name] = arg_value
+
+                # Execute body statements
+                result = None
+                for node in body:
+                    result = self._execute_node(node, exec_context)
+
+                # Check for return value
+                return_val = exec_context.get_variable("_return", None)
+                if return_val is not None:
+                    return return_val
+                return result
+
+            # Resolve task and context with databinding
+            task = ""
+            context = ""
+            entry_agent = None
+            if team_node.execute:
+                task = str(self._apply_databinding(
+                    team_node.execute.task, dict_context
+                ))
+                if team_node.execute.context:
+                    context = str(self._apply_databinding(
+                        team_node.execute.context, dict_context
+                    ))
+                if team_node.execute.entry:
+                    entry_agent = team_node.execute.entry
+
+            logger.info(f"Executing team '{team_node.name}' with entry agent '{entry_agent or team_node.supervisor}'")
+
+            # Execute team
+            result = team.execute(
+                task=task,
+                entry_agent=entry_agent,
+                context=context,
+                tool_executor=tool_executor
+            )
+
+            # Store final response as {name}
+            exec_context.set_variable(team_node.name, result.final_response, scope="component")
+            self.context[team_node.name] = result.final_response
+
+            # Store full result as {name}_result
+            result_key = f"{team_node.name}_result"
+            result_dict = result.to_dict()
+            exec_context.set_variable(result_key, result_dict, scope="component")
+            self.context[result_key] = result_dict
+
+            logger.info(f"Team '{team_node.name}' completed: success={result.success}, "
+                       f"handoffs={len(result.handoffs)}, final_agent={result.final_agent}, "
+                       f"time={result.execution_time_ms:.0f}ms")
+
+            return result_dict
+
+        except AgentError as e:
+            raise ComponentExecutionError(f"Team agent error: {e}")
+        except Exception as e:
+            logger.exception(f"Team execution error: {e}")
+            raise ComponentExecutionError(f"Team execution error: {e}")
+
+    # ============================================
+    # WEBSOCKET EXECUTION (q:websocket)
+    # ============================================
+
+    def _execute_websocket(self, ws_node: WebSocketNode, exec_context: ExecutionContext):
+        """
+        Execute q:websocket - create WebSocket connection.
+
+        For HTML target, generates client-side JavaScript.
+        For server-side, registers connection handlers.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            # Get context for databinding
+            dict_context = exec_context.to_dict()
+
+            # Resolve URL with databinding
+            url = str(self._apply_databinding(ws_node.url, dict_context))
+
+            # Import WebSocket service and adapter
+            from runtime.websocket_service import get_websocket_service, WebSocketState
+            from runtime.websocket_adapter import get_websocket_html_adapter
+
+            ws_service = get_websocket_service()
+            html_adapter = get_websocket_html_adapter()
+
+            # Register connection in service
+            connection = ws_service.register_connection(
+                name=ws_node.name,
+                url=url,
+                metadata={
+                    "auto_connect": ws_node.auto_connect,
+                    "reconnect": ws_node.reconnect,
+                    "heartbeat": ws_node.heartbeat
+                }
+            )
+
+            # Register event handlers
+            for handler in ws_node.handlers:
+                def create_handler(handler_node):
+                    def handler_fn(event_data):
+                        # Set event data in context
+                        exec_context.set_variable("data", event_data.get("data"), scope="local")
+                        exec_context.set_variable("error", event_data.get("error"), scope="local")
+                        exec_context.set_variable("event", event_data, scope="local")
+                        self.context["data"] = event_data.get("data")
+                        self.context["error"] = event_data.get("error")
+                        self.context["event"] = event_data
+
+                        # Execute handler body
+                        for node in handler_node.body:
+                            self._execute_node(node, exec_context)
+                    return handler_fn
+
+                ws_service.register_handler(
+                    ws_node.name,
+                    handler.event,
+                    create_handler(handler)
+                )
+
+            # Store connection status in context
+            status = connection.to_dict()
+            exec_context.set_variable(ws_node.name, status, scope="component")
+            self.context[ws_node.name] = status
+
+            # For HTML rendering, store the generated JavaScript
+            if hasattr(self, '_websocket_scripts'):
+                self._websocket_scripts.append(html_adapter.generate_connection(ws_node, dict_context))
+            else:
+                self._websocket_scripts = [html_adapter.generate_connection(ws_node, dict_context)]
+
+            # Also store manager script (once)
+            manager_script = html_adapter.generate_manager_script()
+            if manager_script:
+                if not hasattr(self, '_websocket_manager_script'):
+                    self._websocket_manager_script = manager_script
+
+            logger.info(f"WebSocket '{ws_node.name}' registered: {url}")
+            return status
+
+        except Exception as e:
+            logger.exception(f"WebSocket execution error: {e}")
+            raise ComponentExecutionError(f"WebSocket error: {e}")
+
+    def _execute_websocket_send(self, send_node: WebSocketSendNode, exec_context: ExecutionContext):
+        """Execute q:websocket-send - send message through WebSocket."""
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            dict_context = exec_context.to_dict()
+
+            # Resolve message with databinding
+            message = self._apply_databinding(send_node.message, dict_context)
+
+            # Get WebSocket service
+            from runtime.websocket_service import get_websocket_service
+            ws_service = get_websocket_service()
+
+            # Send message
+            success = ws_service.send_message(
+                connection_name=send_node.connection,
+                data=message,
+                msg_type=send_node.type
+            )
+
+            if success:
+                logger.debug(f"WebSocket send to '{send_node.connection}': {str(message)[:100]}")
+            else:
+                logger.warning(f"WebSocket send failed - connection '{send_node.connection}' not found or not open")
+
+            return success
+
+        except Exception as e:
+            logger.error(f"WebSocket send error: {e}")
+            return False
+
+    def _execute_websocket_close(self, close_node: WebSocketCloseNode, exec_context: ExecutionContext):
+        """Execute q:websocket-close - close WebSocket connection."""
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            from runtime.websocket_service import get_websocket_service
+            ws_service = get_websocket_service()
+
+            ws_service.close_connection(
+                connection_name=close_node.connection,
+                code=close_node.code,
+                reason=close_node.reason
+            )
+
+            logger.info(f"WebSocket '{close_node.connection}' close requested")
+            return True
+
+        except Exception as e:
+            logger.error(f"WebSocket close error: {e}")
+            return False
+
+    # ============================================
     # KNOWLEDGE BASE EXECUTION (q:knowledge + RAG)
     # ============================================
 
@@ -2539,3 +3067,1011 @@ class ComponentRuntime:
             raise ComponentExecutionError(f"Knowledge query error in '{query_node.name}': {e}")
         except Exception as e:
             raise ComponentExecutionError(f"Knowledge query execution error in '{query_node.name}': {e}")
+
+    # ============================================
+    # JOB EXECUTION SYSTEM (q:schedule, q:thread, q:job)
+    # ============================================
+
+    def _execute_schedule(self, schedule_node: ScheduleNode, exec_context: ExecutionContext):
+        """
+        Execute q:schedule - Scheduled task execution.
+
+        Supports:
+        - action="run": Start/update a scheduled task
+        - action="pause": Pause an existing schedule
+        - action="resume": Resume a paused schedule
+        - action="delete": Remove a schedule
+
+        Examples:
+          <q:schedule name="dailyReport" interval="1d">
+            <q:query datasource="db" name="stats">SELECT * FROM daily_stats</q:query>
+          </q:schedule>
+
+          <q:schedule name="cleanup" cron="0 2 * * *" retry="3" />
+        """
+        try:
+            name = schedule_node.name
+            action = schedule_node.action
+
+            if action == 'run':
+                # Create schedule callback that executes body statements
+                def schedule_callback():
+                    # Create child context for schedule execution
+                    child_context = exec_context.create_child_context()
+                    for statement in schedule_node.body:
+                        try:
+                            self._execute_statement(statement, child_context)
+                        except Exception as e:
+                            # Log but continue (schedule will retry if configured)
+                            import logging
+                            logging.getLogger(__name__).error(
+                                f"Schedule '{name}' statement failed: {e}"
+                            )
+                            raise
+
+                # Add schedule
+                schedule_info = self.job_executor.schedule.add_schedule(
+                    name=name,
+                    callback=schedule_callback,
+                    interval=schedule_node.interval,
+                    cron=schedule_node.cron,
+                    at=schedule_node.at,
+                    timezone=schedule_node.timezone,
+                    enabled=schedule_node.enabled,
+                    overlap=schedule_node.overlap
+                )
+
+                # Store schedule info in context
+                result = {
+                    'name': schedule_info.name,
+                    'trigger_type': schedule_info.trigger_type,
+                    'trigger_info': schedule_info.trigger_info,
+                    'next_run': str(schedule_info.next_run) if schedule_info.next_run else None,
+                    'enabled': schedule_info.enabled
+                }
+                exec_context.set_variable(f"schedule_{name}", result, scope="component")
+                self.context[f"schedule_{name}"] = result
+
+                return result
+
+            elif action == 'pause':
+                success = self.job_executor.schedule.pause_schedule(name)
+                return {'name': name, 'action': 'pause', 'success': success}
+
+            elif action == 'resume':
+                success = self.job_executor.schedule.resume_schedule(name)
+                return {'name': name, 'action': 'resume', 'success': success}
+
+            elif action == 'delete':
+                success = self.job_executor.schedule.remove_schedule(name)
+                return {'name': name, 'action': 'delete', 'success': success}
+
+            else:
+                raise ComponentExecutionError(f"Invalid schedule action: {action}")
+
+        except ScheduleError as e:
+            raise ComponentExecutionError(f"Schedule error in '{schedule_node.name}': {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Schedule execution error in '{schedule_node.name}': {e}")
+
+    def _execute_thread(self, thread_node: ThreadNode, exec_context: ExecutionContext):
+        """
+        Execute q:thread - Async thread execution.
+
+        Supports:
+        - action="run": Start a new background thread
+        - action="join": Wait for thread completion
+        - action="terminate": Request thread termination
+
+        Examples:
+          <q:thread name="sendEmails" priority="high">
+            <q:loop query="pendingEmails">
+              <q:mail to="{email}" subject="Notification">...</q:mail>
+            </q:loop>
+          </q:thread>
+
+          <q:thread name="worker1" action="join" />
+        """
+        try:
+            name = thread_node.name
+            action = thread_node.action
+
+            if action == 'run':
+                # Capture current context for thread execution
+                # (copy variables to avoid race conditions)
+                thread_context_vars = exec_context.get_all_variables().copy()
+
+                def thread_callback():
+                    # Create isolated context for thread
+                    from runtime.execution_context import ExecutionContext as EC
+                    child_context = EC()
+                    for var_name, var_value in thread_context_vars.items():
+                        child_context.set_variable(var_name, var_value, scope="component")
+
+                    results = []
+                    for statement in thread_node.body:
+                        result = self._execute_statement(statement, child_context)
+                        if result is not None:
+                            results.append(result)
+
+                    return results if results else None
+
+                # Build completion/error callbacks if specified
+                on_complete = None
+                on_error = None
+
+                if thread_node.on_complete:
+                    # Call a function from the function registry
+                    func_name = thread_node.on_complete
+
+                    def on_complete_cb(result):
+                        func = self.function_registry.get_function(func_name)
+                        if func:
+                            self._execute_function(func, {'result': result})
+
+                    on_complete = on_complete_cb
+
+                if thread_node.on_error:
+                    func_name = thread_node.on_error
+
+                    def on_error_cb(error):
+                        func = self.function_registry.get_function(func_name)
+                        if func:
+                            self._execute_function(func, {'error': str(error)})
+
+                    on_error = on_error_cb
+
+                # Run thread
+                thread_info = self.job_executor.thread.run_thread(
+                    name=name,
+                    callback=thread_callback,
+                    priority=thread_node.priority,
+                    timeout=thread_node.timeout,
+                    on_complete=on_complete,
+                    on_error=on_error
+                )
+
+                # Store thread info in context
+                result = {
+                    'name': thread_info.name,
+                    'priority': thread_info.priority,
+                    'started_at': str(thread_info.started_at),
+                    'status': thread_info.status
+                }
+                exec_context.set_variable(f"thread_{name}", result, scope="component")
+                self.context[f"thread_{name}"] = result
+
+                return result
+
+            elif action == 'join':
+                # Wait for thread completion
+                timeout_seconds = None
+                if thread_node.timeout:
+                    timeout_seconds = parse_duration(thread_node.timeout)
+
+                try:
+                    result = self.job_executor.thread.join_thread(name, timeout=timeout_seconds)
+
+                    # Update thread info
+                    thread_info = self.job_executor.thread.get_thread(name)
+                    if thread_info:
+                        join_result = {
+                            'name': thread_info.name,
+                            'status': thread_info.status,
+                            'result': thread_info.result,
+                            'error': thread_info.error
+                        }
+                        exec_context.set_variable(f"thread_{name}", join_result, scope="component")
+                        self.context[f"thread_{name}"] = join_result
+
+                    return result
+
+                except ThreadError as e:
+                    raise ComponentExecutionError(f"Thread join failed: {e}")
+
+            elif action == 'terminate':
+                success = self.job_executor.thread.terminate_thread(name)
+                return {'name': name, 'action': 'terminate', 'success': success}
+
+            else:
+                raise ComponentExecutionError(f"Invalid thread action: {action}")
+
+        except ThreadError as e:
+            raise ComponentExecutionError(f"Thread error in '{thread_node.name}': {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Thread execution error in '{thread_node.name}': {e}")
+
+    def _execute_job(self, job_node: JobNode, exec_context: ExecutionContext):
+        """
+        Execute q:job - Job queue for batch processing.
+
+        Supports:
+        - action="define": Register a job handler (for later dispatch)
+        - action="dispatch": Add job to queue for processing
+        - action="batch": Dispatch multiple jobs at once
+
+        Examples:
+          <q:job name="sendEmail" queue="emails" priority="5">
+            <q:param name="to" type="string" />
+            <q:mail to="{to}" subject="Notification">...</q:mail>
+          </q:job>
+
+          <q:job name="processOrder" action="dispatch" delay="5m">
+            <q:param name="orderId" value="{orderId}" />
+          </q:job>
+        """
+        try:
+            name = job_node.name
+            action = job_node.action
+
+            if action == 'define':
+                # Register job handler
+                def job_handler(params: Dict[str, Any]):
+                    # Create context with job params
+                    from runtime.execution_context import ExecutionContext as EC
+                    child_context = EC()
+                    for param_name, param_value in params.items():
+                        child_context.set_variable(param_name, param_value, scope="component")
+
+                    # Execute job body
+                    for statement in job_node.body:
+                        self._execute_statement(statement, child_context)
+
+                self.job_executor.job_queue.register_handler(name, job_handler)
+
+                # Start worker for the queue if not already running
+                queue = job_node.queue
+                self.job_executor.job_queue.start_worker(queue)
+
+                result = {
+                    'name': name,
+                    'action': 'define',
+                    'queue': queue,
+                    'success': True
+                }
+                exec_context.set_variable(f"job_{name}", result, scope="component")
+                self.context[f"job_{name}"] = result
+
+                return result
+
+            elif action == 'dispatch':
+                # Build params from job params
+                params = {}
+                context_vars = exec_context.get_all_variables()
+                for param in job_node.params:
+                    param_value = param.default
+                    if param.name in context_vars:
+                        param_value = context_vars[param.name]
+                    # If param has value attribute, resolve it
+                    if hasattr(param, 'value') and param.value:
+                        param_value = self._apply_databinding(param.value, context_vars)
+                    params[param.name] = param_value
+
+                # Dispatch job
+                job_id = self.job_executor.job_queue.dispatch(
+                    name=name,
+                    queue=job_node.queue,
+                    params=params,
+                    delay=job_node.delay,
+                    priority=job_node.priority,
+                    attempts=job_node.attempts,
+                    backoff=job_node.backoff
+                )
+
+                result = {
+                    'job_id': job_id,
+                    'name': name,
+                    'queue': job_node.queue,
+                    'action': 'dispatch',
+                    'params': params,
+                    'success': True
+                }
+                exec_context.set_variable(f"dispatched_job_{name}", result, scope="component")
+                self.context[f"dispatched_job_{name}"] = result
+
+                return result
+
+            elif action == 'batch':
+                # Dispatch multiple jobs - params define the list
+                # For now, dispatch a single job with all collected params
+                params = {}
+                context_vars = exec_context.get_all_variables()
+                for param in job_node.params:
+                    param_value = param.default
+                    if param.name in context_vars:
+                        param_value = context_vars[param.name]
+                    params[param.name] = param_value
+
+                job_ids = self.job_executor.job_queue.dispatch_batch(
+                    jobs=[{'name': name, 'params': params}],
+                    queue=job_node.queue
+                )
+
+                result = {
+                    'job_ids': job_ids,
+                    'name': name,
+                    'queue': job_node.queue,
+                    'action': 'batch',
+                    'count': len(job_ids),
+                    'success': True
+                }
+                exec_context.set_variable(f"batch_job_{name}", result, scope="component")
+                self.context[f"batch_job_{name}"] = result
+
+                return result
+
+            else:
+                raise ComponentExecutionError(f"Invalid job action: {action}")
+
+        except JobQueueError as e:
+            raise ComponentExecutionError(f"Job queue error in '{job_node.name}': {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Job execution error in '{job_node.name}': {e}")
+
+    # ============================================
+    # MESSAGE QUEUE SYSTEM EXECUTION METHODS
+    # ============================================
+
+    def _execute_message(self, message_node: MessageNode, exec_context: ExecutionContext):
+        """
+        Execute q:message statement for publishing/sending messages.
+
+        Args:
+            message_node: MessageNode with message configuration
+            exec_context: Execution context for variables
+
+        Returns:
+            Result dict with message ID and status
+        """
+        try:
+            dict_context = exec_context.get_all_variables()
+
+            # Resolve topic/queue names with databinding
+            topic = None
+            queue = None
+            if message_node.topic:
+                topic = self._apply_databinding(message_node.topic, dict_context)
+            if message_node.queue:
+                queue = self._apply_databinding(message_node.queue, dict_context)
+
+            # Resolve headers
+            headers = {}
+            for header in message_node.headers:
+                header_name = header.name
+                header_value = self._apply_databinding(header.value, dict_context)
+                headers[header_name] = str(header_value)
+
+            # Resolve body with databinding
+            body = None
+            if message_node.body:
+                body = self._apply_databinding(message_node.body, dict_context)
+
+            # Execute based on message type
+            msg_type = message_node.type
+
+            if msg_type == 'publish' and topic:
+                result = self.message_queue_service.publish(
+                    topic=topic,
+                    body=body,
+                    headers=headers
+                )
+            elif msg_type == 'send' and queue:
+                result = self.message_queue_service.send(
+                    queue=queue,
+                    body=body,
+                    headers=headers
+                )
+            elif msg_type == 'request' and queue:
+                timeout = 5000  # Default timeout
+                if message_node.timeout:
+                    timeout = int(self._apply_databinding(message_node.timeout, dict_context))
+                result = self.message_queue_service.request(
+                    queue=queue,
+                    body=body,
+                    headers=headers,
+                    timeout=timeout
+                )
+            else:
+                raise ComponentExecutionError(
+                    f"Invalid message configuration: type={msg_type}, topic={topic}, queue={queue}"
+                )
+
+            # Store result in context if name is specified
+            if message_node.name:
+                result_dict = result.to_dict()
+                exec_context.set_variable(message_node.name, result_dict, scope="component")
+                self.context[message_node.name] = result_dict
+
+                # For request type, also store the response data directly
+                if msg_type == 'request' and result.data:
+                    exec_context.set_variable(f"{message_node.name}.data", result.data, scope="component")
+                    self.context[f"{message_node.name}.data"] = result.data
+
+            return result.to_dict()
+
+        except MessageQueueError as e:
+            raise ComponentExecutionError(f"Message queue error: {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Message execution error: {e}")
+
+    def _execute_subscribe(self, subscribe_node: SubscribeNode, exec_context: ExecutionContext):
+        """
+        Execute q:subscribe statement for subscribing to topics or consuming from queues.
+
+        Note: Subscriptions are registered but run asynchronously.
+        The on_message and on_error handlers are executed when messages arrive.
+
+        Args:
+            subscribe_node: SubscribeNode with subscription configuration
+            exec_context: Execution context for variables
+
+        Returns:
+            Subscription ID
+        """
+        try:
+            dict_context = exec_context.get_all_variables()
+
+            # Resolve topic/queue names
+            topic = None
+            topics = None
+            queue = None
+
+            if subscribe_node.topic:
+                topic = self._apply_databinding(subscribe_node.topic, dict_context)
+            if subscribe_node.topics:
+                topics = self._apply_databinding(subscribe_node.topics, dict_context)
+            if subscribe_node.queue:
+                queue = self._apply_databinding(subscribe_node.queue, dict_context)
+
+            # Create handler function for messages
+            def message_handler(message_context: dict):
+                """Handle incoming message by executing on_message statements."""
+                # Create a child context for message processing
+                msg_context = exec_context.create_child_context()
+
+                # Add message to context
+                msg_context.set_variable('message', message_context, scope="local")
+
+                # Add message fields for convenience
+                for key, value in message_context.items():
+                    msg_context.set_variable(f"message.{key}", value, scope="local")
+
+                try:
+                    # Execute on_message statements
+                    for statement in subscribe_node.on_message:
+                        self._execute_statement(statement, msg_context)
+
+                except Exception as e:
+                    # Execute on_error statements
+                    error_context = msg_context
+                    error_context.set_variable('error', str(e), scope="local")
+
+                    for statement in subscribe_node.on_error:
+                        try:
+                            self._execute_statement(statement, error_context)
+                        except Exception as inner_e:
+                            print(f"[MessageQueue] Error in on_error handler: {inner_e}")
+
+                    # Re-raise if no error handler
+                    if not subscribe_node.on_error:
+                        raise
+
+            # Register subscription
+            subscription_id = self.message_queue_service.subscribe(
+                name=subscribe_node.name,
+                topic=topic,
+                topics=topics,
+                queue=queue,
+                handler=message_handler,
+                ack=subscribe_node.ack,
+                prefetch=subscribe_node.prefetch
+            )
+
+            # Store subscription info in context
+            subscription_info = {
+                'id': subscription_id,
+                'name': subscribe_node.name,
+                'topic': topic,
+                'topics': topics,
+                'queue': queue,
+                'ack': subscribe_node.ack,
+                'active': True
+            }
+
+            exec_context.set_variable(subscribe_node.name, subscription_info, scope="component")
+            self.context[subscribe_node.name] = subscription_info
+
+            return subscription_info
+
+        except MessageQueueError as e:
+            raise ComponentExecutionError(f"Subscribe error: {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Subscribe execution error: {e}")
+
+    def _execute_queue(self, queue_node: QueueNode, exec_context: ExecutionContext):
+        """
+        Execute q:queue statement for queue declaration and management.
+
+        Args:
+            queue_node: QueueNode with queue configuration
+            exec_context: Execution context for variables
+
+        Returns:
+            Result dict based on action
+        """
+        try:
+            dict_context = exec_context.get_all_variables()
+
+            # Resolve queue name
+            queue_name = self._apply_databinding(queue_node.name, dict_context)
+            action = queue_node.action
+
+            if action == 'declare':
+                # Resolve dead letter queue name if specified
+                dlq = None
+                if queue_node.dead_letter_queue:
+                    dlq = self._apply_databinding(queue_node.dead_letter_queue, dict_context)
+
+                result = self.message_queue_service.declare_queue(
+                    name=queue_name,
+                    durable=queue_node.durable,
+                    exclusive=queue_node.exclusive,
+                    auto_delete=queue_node.auto_delete,
+                    dead_letter_queue=dlq,
+                    ttl=queue_node.ttl
+                )
+
+            elif action == 'purge':
+                result = self.message_queue_service.purge_queue(queue_name)
+
+            elif action == 'delete':
+                result = self.message_queue_service.delete_queue(queue_name)
+
+            elif action == 'info':
+                result = self.message_queue_service.get_queue_info(queue_name)
+
+                # Store info in result variable
+                if queue_node.result and result.success:
+                    exec_context.set_variable(queue_node.result, result.data, scope="component")
+                    self.context[queue_node.result] = result.data
+
+            else:
+                raise ComponentExecutionError(f"Invalid queue action: {action}")
+
+            return result.to_dict()
+
+        except MessageQueueError as e:
+            raise ComponentExecutionError(f"Queue error in '{queue_node.name}': {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Queue execution error in '{queue_node.name}': {e}")
+
+    def _execute_message_ack(self, ack_node: MessageAckNode, exec_context: ExecutionContext):
+        """
+        Execute q:messageAck statement for acknowledging messages.
+
+        This is used inside q:subscribe with ack="manual" to acknowledge
+        successful message processing.
+
+        Args:
+            ack_node: MessageAckNode
+            exec_context: Execution context
+
+        Returns:
+            None
+        """
+        try:
+            self.message_queue_service.ack()
+        except Exception as e:
+            raise ComponentExecutionError(f"Message ack error: {e}")
+
+    def _execute_message_nack(self, nack_node: MessageNackNode, exec_context: ExecutionContext):
+        """
+        Execute q:messageNack statement for negative acknowledgment.
+
+        This is used inside q:subscribe with ack="manual" to reject a message.
+
+        Args:
+            nack_node: MessageNackNode with requeue setting
+            exec_context: Execution context
+
+        Returns:
+            None
+        """
+        try:
+            self.message_queue_service.nack(requeue=nack_node.requeue)
+        except Exception as e:
+            raise ComponentExecutionError(f"Message nack error: {e}")
+
+    # =========================================================================
+    # Python Scripting System (q:python, q:pyimport, q:class, q:decorator)
+    # =========================================================================
+
+    def _execute_python(self, python_node: PythonNode, exec_context: ExecutionContext):
+        """
+        Execute q:python block with embedded Python code.
+
+        The code has access to the magical 'q' object (QuantumBridge) that provides:
+        - Variable access: q.variable, q.variable = value
+        - Database: q.query(), q.execute()
+        - HTTP: q.get(), q.post()
+        - Message queue: q.publish(), q.dispatch()
+        - Logging: q.info(), q.warn(), q.error()
+        - And more...
+
+        Args:
+            python_node: PythonNode with code, scope, async_mode, timeout, result
+            exec_context: Execution context
+
+        Returns:
+            The result of the Python execution (stored in result variable if specified)
+        """
+        from runtime.python_bridge import QuantumBridge, QuantumBridgeError
+
+        try:
+            # Get the Python code
+            code = python_node.code
+            if not code or not code.strip():
+                return None
+
+            # Build services dict for the bridge
+            services = {
+                'db': getattr(self, 'database_service', None),
+                'cache': getattr(self, 'cache_service', None),
+                'broker': getattr(self, 'message_queue_service', None),
+                'jobs': getattr(self, 'job_executor', None),
+            }
+
+            # Create the bridge (the magical 'q' object)
+            q = QuantumBridge(
+                context=self.context,
+                services=services,
+                request=getattr(self, 'request', None)
+            )
+
+            # Build the execution namespace
+            namespace = {
+                'q': q,
+                '__builtins__': __builtins__,
+                # Inject commonly used imports
+                'json': __import__('json'),
+                'datetime': __import__('datetime'),
+                're': __import__('re'),
+                'math': __import__('math'),
+            }
+
+            # Add component variables to namespace for direct access
+            for key, value in self.context.items():
+                if not key.startswith('_'):
+                    namespace[key] = value
+
+            # Add imported modules from q:pyimport
+            py_modules = exec_context.get_variable('_py_modules')
+            if py_modules:
+                namespace.update(py_modules)
+
+            # Add defined classes from q:class
+            py_classes = exec_context.get_variable('_py_classes')
+            if py_classes:
+                namespace.update(py_classes)
+
+            # Add defined decorators from q:decorator
+            py_decorators = exec_context.get_variable('_py_decorators')
+            if py_decorators:
+                namespace.update(py_decorators)
+
+            # Execute the code
+            if python_node.async_mode:
+                # Async execution
+                result = self._execute_python_async(code, namespace, python_node.timeout)
+            else:
+                # Sync execution
+                exec(code, namespace)
+                result = namespace.get('_result_', None)
+
+            # Sync variables back from 'q' to context
+            exports = q._exports
+            for key, value in exports.items():
+                self.context[key] = value
+                exec_context.set_variable(key, value, scope="component")
+
+            # Also sync any variable set via q.variable = value
+            for key in dir(q):
+                if not key.startswith('_'):
+                    try:
+                        value = getattr(q, key)
+                        if not callable(value):
+                            self.context[key] = value
+                            exec_context.set_variable(key, value, scope="component")
+                    except Exception:
+                        pass
+
+            # Store result if specified
+            if python_node.result and result is not None:
+                self.context[python_node.result] = result
+                exec_context.set_variable(python_node.result, result, scope="component")
+
+            return result
+
+        except QuantumBridgeError as e:
+            raise ComponentExecutionError(f"Python bridge error: {e}")
+        except SyntaxError as e:
+            raise ComponentExecutionError(f"Python syntax error: {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Python execution error: {e}")
+
+    def _execute_python_async(self, code: str, namespace: dict, timeout: str = None):
+        """
+        Execute Python code asynchronously with optional timeout.
+
+        Args:
+            code: Python code to execute
+            namespace: Execution namespace
+            timeout: Optional timeout string (e.g., "30s", "5m")
+
+        Returns:
+            Execution result
+        """
+        import threading
+        import asyncio
+
+        result_container = {'result': None, 'error': None}
+
+        def run_code():
+            try:
+                # Create event loop for async code
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+                # Wrap code in async function if needed
+                if 'await ' in code or 'async ' in code:
+                    async_code = f"""
+async def _async_main():
+{chr(10).join('    ' + line for line in code.split(chr(10)))}
+    return locals().get('_result_')
+
+import asyncio
+_result_ = asyncio.get_event_loop().run_until_complete(_async_main())
+"""
+                    exec(async_code, namespace)
+                else:
+                    exec(code, namespace)
+
+                result_container['result'] = namespace.get('_result_')
+            except Exception as e:
+                result_container['error'] = e
+            finally:
+                loop.close()
+
+        # Parse timeout
+        timeout_seconds = None
+        if timeout:
+            timeout_seconds = self._parse_timeout(timeout)
+
+        # Run in thread
+        thread = threading.Thread(target=run_code)
+        thread.start()
+        thread.join(timeout=timeout_seconds)
+
+        if thread.is_alive():
+            raise ComponentExecutionError(f"Python execution timed out after {timeout}")
+
+        if result_container['error']:
+            raise result_container['error']
+
+        return result_container['result']
+
+    def _parse_timeout(self, timeout: str) -> float:
+        """Parse timeout string to seconds (e.g., '30s', '5m', '1h')"""
+        if not timeout:
+            return None
+
+        timeout = timeout.strip().lower()
+        multipliers = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400}
+
+        for suffix, mult in multipliers.items():
+            if timeout.endswith(suffix):
+                try:
+                    return float(timeout[:-1]) * mult
+                except ValueError:
+                    return None
+
+        try:
+            return float(timeout)
+        except ValueError:
+            return None
+
+    def _execute_pyimport(self, import_node: PyImportNode, exec_context: ExecutionContext):
+        """
+        Execute q:pyimport statement to import Python modules.
+
+        Examples:
+            <q:pyimport module="pandas" alias="pd" />
+            <q:pyimport module="numpy" names="array,zeros,ones" />
+
+        Args:
+            import_node: PyImportNode with module, alias, names
+            exec_context: Execution context
+
+        Returns:
+            None (modules are stored for use in q:python blocks)
+        """
+        try:
+            module_name = import_node.module
+            alias = import_node.alias
+            names = import_node.names
+
+            # Get or create modules dict
+            py_modules = exec_context.get_variable('_py_modules')
+            if py_modules is None:
+                py_modules = {}
+                exec_context.set_variable('_py_modules', py_modules, scope="component")
+
+            # Import the module
+            module = __import__(module_name, fromlist=names if names else [])
+
+            if names:
+                # Import specific names: from module import name1, name2
+                for name in names:
+                    if hasattr(module, name):
+                        py_modules[name] = getattr(module, name)
+                    else:
+                        raise ComponentExecutionError(
+                            f"Cannot import '{name}' from module '{module_name}'"
+                        )
+            else:
+                # Import module with optional alias
+                key = alias if alias else module_name.split('.')[0]
+                py_modules[key] = module
+
+            # Update stored modules
+            exec_context.set_variable('_py_modules', py_modules, scope="component")
+
+        except ImportError as e:
+            raise ComponentExecutionError(f"Python import error: {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Python import error: {e}")
+
+    def _execute_pyclass(self, class_node: PyClassNode, exec_context: ExecutionContext):
+        """
+        Execute q:class statement to define a Python class.
+
+        Example:
+            <q:class name="UserValidator" bases="BaseValidator">
+                def validate(self, data):
+                    return data.get('email') and '@' in data['email']
+            </q:class>
+
+        Args:
+            class_node: PyClassNode with name, code, bases, decorators
+            exec_context: Execution context
+
+        Returns:
+            None (class is stored for use in q:python blocks)
+        """
+        try:
+            class_name = class_node.name
+            code = class_node.code
+            bases = class_node.bases or []
+            decorators = class_node.decorators or []
+
+            # Get or create classes dict
+            py_classes = exec_context.get_variable('_py_classes')
+            if py_classes is None:
+                py_classes = {}
+                exec_context.set_variable('_py_classes', py_classes, scope="component")
+
+            # Get modules and existing classes for resolution
+            py_modules = exec_context.get_variable('_py_modules') or {}
+            py_decorators = exec_context.get_variable('_py_decorators') or {}
+
+            # Build namespace for class definition
+            namespace = {
+                '__builtins__': __builtins__,
+                **py_modules,
+                **py_classes,
+                **py_decorators,
+            }
+
+            # Resolve base classes
+            base_classes = []
+            for base in bases:
+                if base in namespace:
+                    base_classes.append(namespace[base])
+                elif base == 'object':
+                    base_classes.append(object)
+                else:
+                    raise ComponentExecutionError(f"Unknown base class: {base}")
+
+            if not base_classes:
+                base_classes = [object]
+
+            # Build class definition
+            indent = "    "
+            class_body = '\n'.join(indent + line for line in code.strip().split('\n'))
+
+            decorator_str = ''
+            for dec in decorators:
+                decorator_str += f"@{dec}\n"
+
+            bases_str = ', '.join(bases) if bases else 'object'
+            class_def = f"{decorator_str}class {class_name}({bases_str}):\n{class_body}"
+
+            # Execute class definition
+            exec(class_def, namespace)
+
+            # Store the class
+            py_classes[class_name] = namespace[class_name]
+            exec_context.set_variable('_py_classes', py_classes, scope="component")
+
+        except SyntaxError as e:
+            raise ComponentExecutionError(f"Python class syntax error: {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Python class error: {e}")
+
+    def _execute_pydecorator(self, decorator_node: PyDecoratorNode, exec_context: ExecutionContext):
+        """
+        Execute q:decorator statement to define a Python decorator.
+
+        Example:
+            <q:decorator name="cached" params="ttl">
+                def decorator(func):
+                    cache = {}
+                    def wrapper(*args, **kwargs):
+                        key = str(args) + str(kwargs)
+                        if key not in cache:
+                            cache[key] = func(*args, **kwargs)
+                        return cache[key]
+                    return wrapper
+                return decorator
+            </q:decorator>
+
+        Args:
+            decorator_node: PyDecoratorNode with name, code, params
+            exec_context: Execution context
+
+        Returns:
+            None (decorator is stored for use in q:python and q:class blocks)
+        """
+        try:
+            decorator_name = decorator_node.name
+            code = decorator_node.code
+            params = decorator_node.params or []
+
+            # Get or create decorators dict
+            py_decorators = exec_context.get_variable('_py_decorators')
+            if py_decorators is None:
+                py_decorators = {}
+                exec_context.set_variable('_py_decorators', py_decorators, scope="component")
+
+            # Get modules for resolution
+            py_modules = exec_context.get_variable('_py_modules') or {}
+
+            # Build namespace
+            namespace = {
+                '__builtins__': __builtins__,
+                **py_modules,
+            }
+
+            # Build decorator function
+            params_str = ', '.join(params) if params else ''
+            indent = "    "
+            decorator_body = '\n'.join(indent + line for line in code.strip().split('\n'))
+
+            if params:
+                # Parameterized decorator
+                decorator_def = f"def {decorator_name}({params_str}):\n{decorator_body}"
+            else:
+                # Simple decorator
+                decorator_def = f"def {decorator_name}(func):\n{decorator_body}"
+
+            # Execute decorator definition
+            exec(decorator_def, namespace)
+
+            # Store the decorator
+            py_decorators[decorator_name] = namespace[decorator_name]
+            exec_context.set_variable('_py_decorators', py_decorators, scope="component")
+
+        except SyntaxError as e:
+            raise ComponentExecutionError(f"Python decorator syntax error: {e}")
+        except Exception as e:
+            raise ComponentExecutionError(f"Python decorator error: {e}")

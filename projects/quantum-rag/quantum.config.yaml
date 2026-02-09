@@ -1,0 +1,17 @@
+server:
+  port: 8080
+  host: 0.0.0.0
+  reload: false
+  debug: true
+
+paths:
+  components: ./components
+  static: ./static
+
+defaults:
+  title: Quantum RAG Demo
+
+llm:
+  base_url: http://10.10.1.40:11434
+  default_model: phi3
+  timeout: 300

@@ -1,0 +1,75 @@
+# Primary Intention: q:log
+
+## What the user wants to accomplish
+The user wants to log structured events, errors, and debugging information during component execution for monitoring, debugging, and audit purposes.
+
+## User's mental model
+"I need to track what's happening in my application - log user actions, capture errors, and monitor performance."
+
+## Natural language expressions users might use
+- "Log when a user logs in"
+- "Track this error to Sentry"
+- "Record payment transaction details"
+- "Debug this API response"
+- "Monitor how long this query takes"
+- "Audit user data changes"
+- "Send critical errors to Slack"
+- "Log user activity for compliance"
+
+## Core user needs
+1. Log events at different severity levels (trace, debug, info, warning, error, critical)
+2. Attach structured context data (user objects, API responses, etc.)
+3. Conditional logging based on result success/failure
+4. Non-blocking async logging (no performance impact)
+5. Multiple output destinations (files, console, external services)
+6. Automatic log rotation and retention
+7. Correlation IDs for request tracking
+8. Performance metrics (duration, memory)
+9. Integration with error tracking services (Sentry, Datadog)
+10. Compliance/audit logging to database
+
+## Expected outcomes
+- Events are logged with timestamp, level, message, and context
+- Logs are written asynchronously without blocking rendering
+- Files rotate automatically to prevent disk space issues
+- Structured JSON format for machine parsing
+- Beautiful console output for development
+- Errors captured with stack traces
+- Integration with monitoring services works seamlessly
+
+## Emotional context
+- Users want **confidence** - knowing critical errors won't go unnoticed
+- Users want **visibility** - seeing what's happening in production
+- Users feel **safe** when audit logs capture compliance-critical actions
+- Users feel **productive** when debugging is fast (structured logs)
+- Users feel **professional** when using proper logging vs console.log
+- Users want **peace of mind** - logs capture everything without manual work
+
+## Common patterns
+1. **Error Tracking**: Log API failures with full context
+2. **User Activity**: Track authentication, permissions, data access
+3. **Performance Monitoring**: Record query execution times, API latency
+4. **Audit Logging**: Capture who changed what and when
+5. **Debug Workflow**: Conditional debug logs that help troubleshoot issues
+6. **Business Events**: Log transactions, orders, conversions
+7. **Integration Monitoring**: Track webhook calls, 3rd party API status
+8. **Compliance**: GDPR/HIPAA audit trails
+
+## Success criteria
+- Logging is declarative and minimal syntax
+- No performance impact on request processing
+- Structured data is preserved (not string concatenation)
+- Multiple destinations supported (file, Sentry, webhook, etc.)
+- Conditional logging works with result objects
+- Log rotation happens automatically
+- Integration with external services is simple
+
+## Anti-patterns to avoid
+- String concatenation for log messages
+- Synchronous logging that blocks rendering
+- No structure (unstructured text logs)
+- Manual log rotation
+- Console.log in production
+- Missing context data
+- No error capturing
+- Unable to send to external services

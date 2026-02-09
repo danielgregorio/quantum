@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>index - Quantum</title>
+
+    <!-- Phase B: HTMX for Progressive Enhancement -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <style>
+        /* Minimal CSS reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+        }
+
+        /* HTMX Loading indicators */
+        .htmx-indicator {
+            display: none;
+        }
+
+        .htmx-request .htmx-indicator {
+            display: inline;
+        }
+
+        .htmx-request.htmx-indicator {
+            display: inline;
+        }
+
+        /* Loading spinner */
+        .htmx-indicator:after {
+            content: "⏳";
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <html><head><title>Quantum Blog</title><meta name="viewport" content="width=device-width, initial-scale=1" /><style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; color: #1e293b; }
+
+      /* Header */
+      header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        border-bottom: 2px solid #6366f1;
+      }
+      .header-inner {
+        max-width: 1000px; margin: 0 auto; padding: 16px 24px;
+        display: flex; justify-content: space-between; align-items: center;
+      }
+      .logo { color: #fff; font-size: 1.25rem; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+      .logo-icon { background: #6366f1; color: white; width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; }
+      nav { display: flex; align-items: center; gap: 6px; }
+      nav a {
+        color: #94a3b8; text-decoration: none; font-size: 0.85rem; font-weight: 500;
+        padding: 6px 14px; border-radius: 6px; transition: all 0.2s;
+      }
+      nav a:hover { color: #e2e8f0; background: rgba(255,255,255,0.08); }
+
+      /* Hero */
+      .hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #312e81 100%);
+        padding: 64px 24px 56px; text-align: center; position: relative; overflow: hidden;
+      }
+      .hero::before {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        background: radial-gradient(circle at 30% 50%, rgba(99,102,241,0.15) 0%, transparent 50%),
+                    radial-gradient(circle at 70% 50%, rgba(139,92,246,0.1) 0%, transparent 50%);
+      }
+      .hero-content { position: relative; z-index: 1; max-width: 600px; margin: 0 auto; }
+      .hero h1 { color: #fff; font-size: 2.5rem; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.02em; }
+      .hero h1 span { background: linear-gradient(135deg, #818cf8, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+      .hero p { color: #94a3b8; font-size: 1.1rem; line-height: 1.6; }
+      .hero-stats { display: flex; justify-content: center; gap: 32px; margin-top: 28px; }
+      .hero-stat { color: #cbd5e1; font-size: 0.85rem; }
+      .hero-stat strong { display: block; font-size: 1.5rem; color: #fff; font-weight: 700; }
+
+      /* Main */
+      .main { max-width: 1000px; margin: 0 auto; padding: 48px 24px; }
+      .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+      .section-title { font-size: 1.3rem; font-weight: 700; color: #0f172a; }
+      .post-count-badge { background: #ede9fe; color: #6d28d9; font-size: 0.8rem; font-weight: 600; padding: 4px 12px; border-radius: 20px; }
+
+      /* Post cards */
+      .posts-grid { display: flex; flex-direction: column; gap: 20px; }
+      .post-card {
+        background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+        padding: 28px 32px; transition: all 0.25s ease;
+        display: block; text-decoration: none; color: inherit;
+      }
+      .post-card:hover { border-color: #c7d2fe; box-shadow: 0 8px 24px rgba(99,102,241,0.08); transform: translateY(-2px); }
+      .post-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+      .post-tag { background: #f1f5f9; color: #6366f1; font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+      .post-date { color: #94a3b8; font-size: 0.8rem; }
+      .post-card h2 { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-bottom: 8px; line-height: 1.4; }
+      .post-card p { color: #64748b; font-size: 0.95rem; line-height: 1.7; }
+      .post-card .post-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #f1f5f9; }
+      .post-author { display: flex; align-items: center; gap: 8px; }
+      .author-avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.7rem; font-weight: 700; }
+      .author-name { font-size: 0.85rem; color: #475569; font-weight: 500; }
+      .read-more { color: #6366f1; font-size: 0.85rem; font-weight: 600; }
+
+      /* Footer */
+      footer { max-width: 1000px; margin: 0 auto; padding: 32px 24px; border-top: 1px solid #e2e8f0; }
+      .footer-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+      .footer-brand { font-size: 0.85rem; color: #94a3b8; }
+      .footer-brand strong { color: #6366f1; }
+      .footer-links a { color: #94a3b8; text-decoration: none; font-size: 0.8rem; margin-left: 16px; }
+      .footer-links a:hover { color: #6366f1; }
+
+      @media (max-width: 640px) {
+        .hero h1 { font-size: 1.8rem; }
+        .hero-stats { gap: 20px; }
+        .post-card { padding: 20px; }
+        .footer-content { flex-direction: column; text-align: center; }
+      }
+    </style></head><body><header><div class="header-inner"><a href="/quantum-blog/" class="logo"><span class="logo-icon">Q</span>Quantum Blog</a><nav><a href="/quantum-blog/">Home</a><a href="/quantum-blog/admin">Admin</a><a href="/quantum-blog/logout">Logout</a><a href="/quantum-blog/login">Login</a></nav></div></header><section class="hero"><div class="hero-content"><h1>The <span>Quantum</span> Blog</h1><p>A fully functional blog built with the Quantum Framework. No JavaScript. Pure declarative XML components.</p><div class="hero-stats"><div class="hero-stat"><strong>3</strong> Posts
+          </div><div class="hero-stat"><strong>0</strong> JavaScript
+          </div><div class="hero-stat"><strong>5</strong> Components
+          </div></div></div></section><main class="main"><div class="section-header"><h2 class="section-title">Latest Posts</h2><span class="post-count-badge">3 published</span></div><div class="posts-grid"><a href="/quantum-blog/post?id=1" class="post-card"><div class="post-top"><span class="post-tag">Announcement</span><span class="post-date">2026-01-28</span></div><h2>Welcome to Quantum Blog</h2><p>This blog is built entirely with the Quantum Framework - no JavaScript needed! Discover how declarative XML components power a full-stack web application.</p><div class="post-footer"><div class="post-author"><div class="author-avatar">A</div><span class="author-name">Admin</span></div><span class="read-more">Read more →</span></div></a><a href="/quantum-blog/post?id=2" class="post-card"><div class="post-top"><span class="post-tag">Technical</span><span class="post-date">2026-01-28</span></div><h2>How Quantum Works Under the Hood</h2><p>A deep dive into the Quantum Framework architecture - from XML parsing to HTML rendering, see how it all connects.</p><div class="post-footer"><div class="post-author"><div class="author-avatar">A</div><span class="author-name">Admin</span></div><span class="read-more">Read more →</span></div></a><a href="/quantum-blog/post?id=3" class="post-card"><div class="post-top"><span class="post-tag">DevOps</span><span class="post-date">2026-01-27</span></div><h2>Deploy in One Command</h2><p>From development to production with a single command. Learn how Quantum makes deployment effortless.</p><div class="post-footer"><div class="post-author"><div class="author-avatar">A</div><span class="author-name">Admin</span></div><span class="read-more">Read more →</span></div></a></div><div style="text-align:center; padding:60px 20px; color:#94a3b8;"><p>No posts yet. <a href="/quantum-blog/admin" style="color:#6366f1;">Create one</a>.</p></div></main><footer><div class="footer-content"><span class="footer-brand">Built with <strong>Quantum Framework</strong></span><div class="footer-links"><a href="/quantum-blog/">Home</a><a href="/quantum-blog/login">Login</a></div></div></footer></body></html>
+
+    <!-- HTMX Configuration -->
+    <script>
+        // Configure HTMX
+        htmx.config.defaultSwapStyle = "innerHTML";
+        htmx.config.defaultSwapDelay = 0;
+        htmx.config.historyCacheSize = 10;
+
+        // Log HTMX events in debug mode
+        if (window.location.hostname === 'localhost') {
+            htmx.logAll();
+        }
+    </script>
+</body>
+</html>

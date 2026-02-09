@@ -1,0 +1,85 @@
+feature:
+  name: "query"
+  display_name: "Database Query (q:query)"
+  version: "1.0.0"
+  status: "stable"
+  migration_type: "option_a"
+
+description: |
+  Declarative database query component inspired by ColdFusion's <cfquery> with modern enhancements.
+  Provides secure, type-safe database access with automatic parameter binding and SQL injection protection.
+
+tags:
+  - "database"
+  - "sql"
+  - "queries"
+  - "datasources"
+
+maintainers:
+  - "Daniel"
+  - "Claude"
+
+api:
+  ast_nodes:
+    - "QueryNode"
+    - "QueryParamNode"
+  parser: "src/core/parser.py::_parse_query_statement"
+  runtime: "src/runtime/component.py::_execute_query"
+
+dependencies:
+  python:
+    - "sqlparse>=0.4.4"
+    - "psycopg2-binary>=2.9.9"
+    - "pymysql>=1.1.0"
+  quantum:
+    - "quantum_admin"
+    - "ExecutionContext"
+
+database_support:
+  - "PostgreSQL"
+  - "MySQL"
+  - "MariaDB"
+  - "MongoDB (planned)"
+
+security:
+  - "Parameterized queries (SQL injection protection)"
+  - "Type validation"
+  - "maxLength constraints"
+  - "SQL sanitization"
+
+testing:
+  integration_tests: 4
+  coverage: 100
+  examples:
+    - "test-query-basic.q"
+    - "test-query-params.q"
+    - "test-query-insert.q"
+    - "test-query-loop.q"
+
+phases:
+  phase_1:
+    status: "complete"
+    features:
+      - "Basic SELECT/INSERT/UPDATE/DELETE"
+      - "Parameter binding with :name syntax"
+      - "Type validation (9 types)"
+      - "Connection pooling"
+      - "Query metadata"
+  phase_2:
+    status: "planned"
+    features:
+      - "Multiple queries per component"
+      - "Pagination support"
+      - "Query of Queries"
+  phase_3:
+    status: "planned"
+    features:
+      - "Transactions"
+      - "Query caching"
+      - "Stored procedures"
+  phase_4:
+    status: "planned"
+    features:
+      - "Reactive queries"
+      - "Query monitoring"
+      - "GraphQL-style features"

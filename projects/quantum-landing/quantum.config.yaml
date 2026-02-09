@@ -1,0 +1,21 @@
+server:
+  port: 8080
+  host: 0.0.0.0
+  reload: false
+  debug: false
+paths:
+  components: ./components
+  static: ./static
+  logs: ./logs
+defaults:
+  component_type: pure
+  charset: utf-8
+  timeout: 30
+performance:
+  cache_templates: true
+  cache_ttl: 300
+security:
+  xss_protection: true
+logging:
+  level: INFO
+  console: true

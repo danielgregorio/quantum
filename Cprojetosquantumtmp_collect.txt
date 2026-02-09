@@ -1,0 +1,861 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.7, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\danie\AppData\Local\Programs\Python\Python312\python.exe
+cachedir: .pytest_cache
+rootdir: C:\projetos\quantum
+configfile: pytest.ini
+testpaths: tests, examples
+plugins: cov-7.0.0, mock-3.15.1
+collecting ... collected 397 items
+
+<Dir quantum>
+  <Package tests>
+    <Package dataset>
+      <Module test_dataset_features.py>
+        Parametrized tests generated from feature dataset JSON files.
+        
+        Scans src/core/features/*/dataset/positive/*.json and negative/*.json.
+        - Positive examples: parse the quantum_code and validate the AST is produced.
+        - Negative examples: verify the parser raises an exception.
+        <Function test_dataset_example[authentication/positive/login_action_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[authentication/positive/protected_component_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[authentication/positive/rbac_role_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[authentication/negative/insufficient_role_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[authentication/negative/unauthenticated_access_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/named-slot-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/named-slot-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/nested-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/nested-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/nested-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/nested-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/props-simple-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/props-simple-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/props-simple-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/props-advanced-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/import-simple-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/import-simple-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/import-simple-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/slot-simple-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/slot-simple-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/positive/slot-simple-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/negative/comp-invalid-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/negative/comp-invalid-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/negative/comp-invalid-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/negative/comp-invalid-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/negative/comp-invalid-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/negative/comp-invalid-006]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[component_composition/negative/comp-invalid-007]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/biz-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/biz-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/biz-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/biz-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/biz-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/biz-006]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-complex-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-complex-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-complex-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-complex-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-complex-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/cond-loop-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/cond-loop-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/cond-loop-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/cond-loop-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/cond-loop-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-else-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-else-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-else-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-elseif-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-elseif-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-elseif-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-nested-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-nested-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-nested-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-nested-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/val-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/val-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/val-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/val-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-simple-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-simple-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/if-simple-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/ui-cond-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/ui-cond-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/ui-cond-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/ui-cond-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/ui-cond-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/positive/ui-cond-006]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/negative/if-invalid-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/negative/if-invalid-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/negative/if-invalid-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/negative/if-invalid-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[conditionals/negative/if-invalid-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[database_backend/positive/db_transaction_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[database_backend/positive/db_cache_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[database_backend/negative/db_error_002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[database_backend/negative/db_error_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[developer_experience/positive/dx_cli_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[developer_experience/positive/dx_error_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[developer_experience/negative/dx_error_002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[developer_experience/negative/dx_error_003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[email_sending/positive/email_basic_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[email_sending/positive/email_cc_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[email_sending/negative/email_error_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[email_sending/negative/email_error_002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[file_uploads/positive/file_upload_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[file_uploads/positive/file_validation_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[file_uploads/negative/file_error_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[file_uploads/negative/file_error_002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[forms_actions/positive/flash-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[forms_actions/positive/flash-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[forms_actions/positive/flash-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[forms_actions/positive/action-simple-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[forms_actions/positive/action-simple-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[forms_actions/positive/action-simple-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[forms_actions/positive/valid-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[forms_actions/positive/valid-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[forms_actions/positive/valid-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[forms_actions/positive/valid-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[forms_actions/negative/action-invalid-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[forms_actions/negative/action-invalid-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[forms_actions/negative/redirect-invalid-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[forms_actions/negative/flash-invalid-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/func-math-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/func-math-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/func-math-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/async-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/async-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/async-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/async-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/async-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/cache-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/cache-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/cache-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/cache-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/cache-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/cache-006]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/func-int-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/func-int-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/func-int-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/func-int-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/func-int-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/func-int-006]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/func-recursive-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/func-recursive-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/func-recursive-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/rest-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/rest-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/rest-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/rest-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/rest-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/rest-006]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/rest-007]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/func-simple-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/func-simple-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/func-simple-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/valid-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/valid-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/valid-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/valid-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/valid-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/valid-006]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/positive/valid-007]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/negative/func-invalid-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/negative/func-invalid-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/negative/func-invalid-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/negative/func-invalid-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/negative/func-invalid-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[functions/negative/func-invalid-006]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/positive/databind-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/positive/databind-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/positive/databind-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/positive/databind-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/positive/mixed-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/positive/mixed-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/positive/mixed-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/positive/html-simple-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/positive/html-simple-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/positive/html-simple-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/positive/void-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/positive/void-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/positive/void-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/positive/void-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/negative/html-invalid-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/negative/html-invalid-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/negative/html-invalid-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/negative/html-invalid-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[html_rendering/negative/html-invalid-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[htmx_partials/positive/htmx_002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[htmx_partials/positive/htmx_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[htmx_partials/negative/htmx_error_002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[htmx_partials/negative/htmx_error_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[islands_architecture/positive/islands_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[islands_architecture/positive/islands_002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[islands_architecture/negative/islands_error_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[islands_architecture/negative/islands_error_002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-array-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-array-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-array-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-edge-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-edge-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-edge-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-edge-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-edge-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-edge-006]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-edge-007]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-list-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-list-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-list-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-cond-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-cond-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-cond-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-cond-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-cond-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-state-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-state-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-state-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-state-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-state-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-state-006]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-nested-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-nested-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-nested-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-nested-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-range-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-range-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-range-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-real-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-real-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-real-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-real-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-real-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-real-006]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/positive/loop-real-007]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/negative/loop-invalid-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/negative/loop-invalid-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/negative/loop-invalid-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/negative/loop-invalid-004]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[loops/negative/loop-invalid-005]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/basic_patterns_0]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/basic_patterns_1]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/basic_patterns_2]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/basic_patterns_3]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/basic_patterns_4]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/basic_patterns_5]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/basic_patterns_6]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/basic_patterns_7]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/basic_patterns_8]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/basic_patterns_9]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/complex_scenarios_0]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/complex_scenarios_1]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/complex_scenarios_2]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/complex_scenarios_3]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/complex_scenarios_4]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/complex_scenarios_5]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/complex_scenarios_6]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/complex_scenarios_7]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/complex_scenarios_8]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/complex_scenarios_9]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/edge_cases_0]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/edge_cases_1]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/edge_cases_2]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/edge_cases_3]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/edge_cases_4]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/edge_cases_5]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/edge_cases_6]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/edge_cases_7]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/edge_cases_8]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/edge_cases_9]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/integration_patterns_0]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/integration_patterns_1]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/integration_patterns_2]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/integration_patterns_3]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/integration_patterns_4]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/integration_patterns_5]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/integration_patterns_6]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/integration_patterns_7]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/integration_patterns_8]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/integration_patterns_9]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/real_world_patterns_0]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/real_world_patterns_1]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/real_world_patterns_2]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/real_world_patterns_3]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/real_world_patterns_4]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/real_world_patterns_5]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/real_world_patterns_6]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/real_world_patterns_7]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/real_world_patterns_8]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/positive/real_world_patterns_9]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/negative/invalid_syntax_0]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/negative/invalid_syntax_1]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/negative/invalid_syntax_2]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/negative/invalid_syntax_3]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/negative/invalid_syntax_4]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[query/negative/invalid_syntax_5]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[session_management/positive/application_state_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[session_management/positive/session_counter_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[session_management/positive/user_login_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[session_management/negative/invalid_scope_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[session_management/negative/request_scope_mutation_001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[state_management/positive/set-001]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[state_management/positive/set-002]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[state_management/positive/set-003]>
+          Validate a single dataset example (positive or negative).
+        <Function test_dataset_example[state_management/negative/set-error-001]>
+          Validate a single dataset example (positive or negative).
+    <Dir integration>
+      <Module test_web_server.py>
+        Integration Tests for Web Server
+        
+        Tests the complete rendering pipeline.
+        <Class TestWebServerIntegration>
+          Test complete web server integration
+          <Function test_simple_component_rendering>
+            Test rendering a simple component via HTTP
+          <Function test_component_composition>
+            Test component composition rendering
+          <Function test_static_files>
+            Test static file serving
+          <Function test_404_handling>
+            Test 404 error handling
+    <Dir unit>
+      <Module test_parser.py>
+        Unit Tests for Quantum Parser
+        
+        Tests Phase 1 & Phase 2 parsing capabilities.
+        <Class TestBasicParsing>
+          Test basic component parsing
+          <Function test_parse_simple_component>
+            Test parsing a simple component
+          <Function test_namespace_auto_injection>
+            Test magic namespace injection
+          <Function test_databinding_detection>
+            Test that databinding is detected in TextNodes
+        <Class TestComponentComposition>
+          Test Phase 2 component composition parsing
+          <Function test_parse_import>
+            Test parsing q:import
+          <Function test_parse_component_call>
+            Test parsing uppercase component calls
+          <Function test_parse_slot>
+            Test parsing q:slot
+        <Class TestErrorHandling>
+          Test error handling
+          <Function test_invalid_xml>
+            Test that invalid XML raises error
+          <Function test_file_not_found>
+            Test file not found error
+      <Module test_renderer.py>
+        Unit Tests for HTML Renderer
+        
+        Tests databinding and HTML rendering.
+        <Class TestDatabinding>
+          Test databinding functionality
+          <Function test_simple_variable_binding>
+            Test simple {variable} databinding
+          <Function test_nested_property_binding>
+            Test {object.property} databinding
+          <Function test_html_node_rendering>
+            Test HTML node rendering
+        <Class TestComponentRendering>
+          Test component rendering
+          <Function test_component_with_children>
+            Test rendering component with child nodes
+  <Dir examples>
+    <QuantumQFile test-action-flash.q>
+      <QuantumQItem test-action-flash.q>
+    <QuantumQFile test-action-redirect.q>
+      <QuantumQItem test-action-redirect.q>
+    <QuantumQFile test-action-simple.q>
+      <QuantumQItem test-action-simple.q>
+    <QuantumQFile test-action-validation.q>
+      <QuantumQItem test-action-validation.q>
+    <QuantumQFile test-application-scope.q>
+      <QuantumQItem test-application-scope.q>
+    <QuantumQFile test-auth-login.q>
+      <QuantumQItem test-auth-login.q>
+    <QuantumQFile test-auth-logout.q>
+      <QuantumQItem test-auth-logout.q>
+    <QuantumQFile test-auth-protected.q>
+      <QuantumQItem test-auth-protected.q>
+    <QuantumQFile test-auth-role.q>
+      <QuantumQItem test-auth-role.q>
+    <QuantumQFile test-conditionals.q>
+      <QuantumQItem test-conditionals.q>
+    <QuantumQFile test-data-csv-simple.q>
+      <QuantumQItem test-data-csv-simple.q>
+    <QuantumQFile test-data-json-simple.q>
+      <QuantumQItem test-data-json-simple.q>
+    <QuantumQFile test-data-transform-compute.q>
+      <QuantumQItem test-data-transform-compute.q>
+    <QuantumQFile test-data-transform-filter.q>
+      <QuantumQItem test-data-transform-filter.q>
+    <QuantumQFile test-data-transform-limit.q>
+      <QuantumQItem test-data-transform-limit.q>
+    <QuantumQFile test-data-transform-sort.q>
+      <QuantumQItem test-data-transform-sort.q>
+    <QuantumQFile test-data-xml-simple.q>
+      <QuantumQItem test-data-xml-simple.q>
+    <QuantumQFile test-databinding-arithmetic.q>
+      <QuantumQItem test-databinding-arithmetic.q>
+    <QuantumQFile test-databinding-array.q>
+      <QuantumQItem test-databinding-array.q>
+    <QuantumQFile test-databinding-list.q>
+      <QuantumQItem test-databinding-list.q>
+    <QuantumQFile test-databinding-simple.q>
+      <QuantumQItem test-databinding-simple.q>
+    <QuantumQFile test-dump-array.q>
+      <QuantumQItem test-dump-array.q>
+    <QuantumQFile test-dump-basic.q>
+      <QuantumQItem test-dump-basic.q>
+    <QuantumQFile test-dump-conditional.q>
+      <QuantumQItem test-dump-conditional.q>
+    <QuantumQFile test-dump-formats.q>
+      <QuantumQItem test-dump-formats.q>
+    <QuantumQFile test-else-fixed.q>
+      <QuantumQItem test-else-fixed.q>
+    <QuantumQFile test-else.q>
+      <QuantumQItem test-else.q>
+    <QuantumQFile test-elseif.q>
+      <QuantumQItem test-elseif.q>
+    <QuantumQFile test-email-basic.q>
+      <QuantumQItem test-email-basic.q>
+    <QuantumQFile test-email-html.q>
+      <QuantumQItem test-email-html.q>
+    <QuantumQFile test-email-recipients.q>
+      <QuantumQItem test-email-recipients.q>
+    <QuantumQFile test-false-else.q>
+      <QuantumQItem test-false-else.q>
+    <QuantumQFile test-function-if-logic.q>
+      <QuantumQItem test-function-if-logic.q>
+    <QuantumQFile test-function-local-vars.q>
+      <QuantumQItem test-function-local-vars.q>
+    <QuantumQFile test-function-multiple.q>
+      <QuantumQItem test-function-multiple.q>
+    <QuantumQFile test-function-nested.q>
+      <QuantumQItem test-function-nested.q>
+    <QuantumQFile test-function-params.q>
+      <QuantumQItem test-function-params.q>
+    <QuantumQFile test-function-pure.q>
+      <QuantumQItem test-function-pure.q>
+    <QuantumQFile test-function-recursion.q>
+      <QuantumQItem test-function-recursion.q>
+    <QuantumQFile test-function-rest-api.q>
+      <QuantumQItem test-function-rest-api.q>
+    <QuantumQFile test-function-scope.q>
+      <QuantumQItem test-function-scope.q>
+    <QuantumQFile test-function-simple.q>
+      <QuantumQItem test-function-simple.q>
+    <QuantumQFile test-function-string-ops.q>
+      <QuantumQItem test-function-string-ops.q>
+    <QuantumQFile test-function-validation.q>
+      <QuantumQItem test-function-validation.q>
+    <QuantumQFile test-function-with-array.q>
+      <QuantumQItem test-function-with-array.q>
+    <QuantumQFile test-htmx-partial.q>
+      <QuantumQItem test-htmx-partial.q>
+    <QuantumQFile test-htmx-swap.q>
+      <QuantumQItem test-htmx-swap.q>
+    <QuantumQFile test-htmx-trigger.q>
+      <QuantumQItem test-htmx-trigger.q>
+    <QuantumQFile test-if-else-correct.q>
+      <QuantumQItem test-if-else-correct.q>
+    <QuantumQFile test-if-else-fixed.q>
+      <QuantumQItem test-if-else-fixed.q>
+    <QuantumQFile test-if-else.q>
+      <QuantumQItem test-if-else.q>
+    <QuantumQFile test-invoke-function.q>
+      <QuantumQItem test-invoke-function.q>
+    <QuantumQFile test-invoke-http-get.q>
+      <QuantumQItem test-invoke-http-get.q>
+    <QuantumQFile test-invoke-http-post.q>
+      <QuantumQItem test-invoke-http-post.q>
+    <QuantumQFile test-island-events.q>
+      <QuantumQItem test-island-events.q>
+    <QuantumQFile test-island-interactive.q>
+      <QuantumQItem test-island-interactive.q>
+    <QuantumQFile test-log-basic.q>
+      <QuantumQItem test-log-basic.q>
+    <QuantumQFile test-log-conditional.q>
+      <QuantumQItem test-log-conditional.q>
+    <QuantumQFile test-log-databinding.q>
+      <QuantumQItem test-log-databinding.q>
+    <QuantumQFile test-log-with-loop.q>
+      <QuantumQItem test-log-with-loop.q>
+    <QuantumQFile test-loop-array-index.q>
+      <QuantumQItem test-loop-array-index.q>
+    <QuantumQFile test-loop-array.q>
+      <QuantumQItem test-loop-array.q>
+    <QuantumQFile test-loop-list-delimiter.q>
+      <QuantumQItem test-loop-list-delimiter.q>
+    <QuantumQFile test-loop-list.q>
+      <QuantumQItem test-loop-list.q>
+    <QuantumQFile test-loop-range-step.q>
+      <QuantumQItem test-loop-range-step.q>
+    <QuantumQFile test-loop-range.q>
+      <QuantumQItem test-loop-range.q>
+    <QuantumQFile test-query-basic.q>
+      <QuantumQItem test-query-basic.q>
+    <QuantumQFile test-query-cache.q>
+      <QuantumQItem test-query-cache.q>
+    <QuantumQFile test-query-insert.q>
+      <QuantumQItem test-query-insert.q>
+    <QuantumQFile test-query-loop.q>
+      <QuantumQItem test-query-loop.q>
+    <QuantumQFile test-query-metadata.q>
+      <QuantumQItem test-query-metadata.q>
+    <QuantumQFile test-query-multiple.q>
+      <QuantumQItem test-query-multiple.q>
+    <QuantumQFile test-query-of-queries.q>
+      <QuantumQItem test-query-of-queries.q>
+    <QuantumQFile test-query-pagination.q>
+      <QuantumQItem test-query-pagination.q>
+    <QuantumQFile test-query-params.q>
+      <QuantumQItem test-query-params.q>
+    <QuantumQFile test-request-scope.q>
+      <QuantumQItem test-request-scope.q>
+    <QuantumQFile test-session-scope.q>
+      <QuantumQItem test-session-scope.q>
+    <QuantumQFile test-set-array.q>
+      <QuantumQItem test-set-array.q>
+    <QuantumQFile test-set-debug.q>
+      <QuantumQItem test-set-debug.q>
+    <QuantumQFile test-set-expression.q>
+      <QuantumQItem test-set-expression.q>
+    <QuantumQFile test-set-increment.q>
+      <QuantumQItem test-set-increment.q>
+    <QuantumQFile test-set-loop-debug.q>
+      <QuantumQItem test-set-loop-debug.q>
+    <QuantumQFile test-set-object.q>
+      <QuantumQItem test-set-object.q>
+    <QuantumQFile test-set-simple.q>
+      <QuantumQItem test-set-simple.q>
+    <QuantumQFile test-set-validation-cpf.q>
+      <QuantumQItem test-set-validation-cpf.q>
+    <QuantumQFile test-set-validation-email-invalid.q>
+      <QuantumQItem test-set-validation-email-invalid.q>
+    <QuantumQFile test-set-validation-email.q>
+      <QuantumQItem test-set-validation-email.q>
+    <QuantumQFile test-set-validation-enum.q>
+      <QuantumQItem test-set-validation-enum.q>
+    <QuantumQFile test-set-validation-length.q>
+      <QuantumQItem test-set-validation-length.q>
+    <QuantumQFile test-set-validation-minmax.q>
+      <QuantumQItem test-set-validation-minmax.q>
+    <QuantumQFile test-set-validation-range.q>
+      <QuantumQItem test-set-validation-range.q>
+    <QuantumQFile test-set-with-loop.q>
+      <QuantumQItem test-set-with-loop.q>
+    <QuantumQFile test-transaction-basic.q>
+      <QuantumQItem test-transaction-basic.q>
+    <QuantumQFile test-transaction-isolation.q>
+      <QuantumQItem test-transaction-isolation.q>
+    <QuantumQFile test-transaction-rollback.q>
+      <QuantumQItem test-transaction-rollback.q>
+    <QuantumQFile test-upload-basic.q>
+      <QuantumQItem test-upload-basic.q>
+    <QuantumQFile test-upload-naming.q>
+      <QuantumQItem test-upload-naming.q>
+    <QuantumQFile test-upload-validation.q>
+      <QuantumQItem test-upload-validation.q>
+<AS4TestFile quantum-as4/test_codegen_debug.py>
+  <AS4TestItem test_codegen_debug>
+<AS4TestFile quantum-as4/test_direct_compile.py>
+  <AS4TestItem test_direct_compile>
+<AS4TestFile quantum-as4/test_function_local_vars.py>
+  <AS4TestItem test_function_local_vars>
+<AS4TestFile quantum-as4/test_object_literal_bug.py>
+  <AS4TestItem test_object_literal_bug>
+<AS4TestFile quantum-as4/test_parse_products.py>
+  <AS4TestItem test_parse_products>
+<AS4TestFile quantum-as4/test_parser_bug.py>
+  <AS4TestItem test_parser_bug>
+<AS4TestFile quantum-as4/test_regex_debug.py>
+  <AS4TestItem test_regex_debug>
+<AS4TestFile quantum-as4/test_transpiler_comprehensive.py>
+  <AS4TestItem test_transpiler_comprehensive>
+<AS4TestFile quantum-as4/test_transpiler_v2.py>
+  <AS4TestItem test_transpiler_v2>
+<AS4TestFile quantum-as4/test_var_assignment.py>
+  <AS4TestItem test_var_assignment>
+
+======================== 397 tests collected in 0.23s =========================

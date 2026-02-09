@@ -1,0 +1,17 @@
+<q:component name="TowerDefenseGame" type="page">
+
+  <html>
+  <head>
+    <title>Tower Defense - Quantum</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { background: #111; display: flex; justify-content: center; align-items: center; width: 100vw; height: 100vh; overflow: hidden; }
+      iframe { border: none; background: #000; }
+    </style>
+  </head>
+  <body>
+    <iframe src="static/game.html" width="800" height="600" frameborder="0" scrolling="no"></iframe>
+  </body>
+  </html>
+
+</q:component>
