@@ -32,19 +32,18 @@ jobs:
 
       - name: Update nginx config
         run: |
-          echo "=== Current site config BEFORE ==="
-          cat /etc/nginx/sites-available/quantum.sargas.cloud
+          echo "=== All nginx configs ==="
+          ls -la /etc/nginx/sites-enabled/
           echo ""
-          echo "=== Copying all nginx configs ==="
-          sudo cp config/forge/nginx-locations.conf /etc/nginx/snippets/quantum-locations.conf
-          sudo cp config/forge/nginx-proxy.conf /etc/nginx/snippets/quantum-proxy.conf
-          sudo cp config/forge/nginx.conf /etc/nginx/sites-available/quantum.sargas.cloud
-          echo "=== Testing nginx ==="
-          sudo nginx -t
-          echo "=== Reloading nginx ==="
-          sudo systemctl reload nginx
-          echo "=== Check listening ports ==="
-          sudo ss -tlnp | grep nginx || true
-          echo "=== Verification ==="
-          curl -s http://localhost/ | head -5 || true
-          echo "Nginx config updated!"
+          echo "=== Main nginx.conf includes ==="
+          grep -E "include|sites-enabled" /etc/nginx/nginx.conf || true
+          echo ""
+          echo "=== Port 80 config (Forge managed?) ==="
+          sudo grep -r "listen 80" /etc/nginx/ 2>/dev/null | head -10 || true
+          echo ""
+          echo "=== Port 443 config ==="
+          sudo grep -r "listen 443" /etc/nginx/ 2>/dev/null | head -10 || true
+          echo ""
+          echo "=== Forge site config ==="
+          cat /etc/nginx/sites-available/quantum.sargas.cloud 2>/dev/null || true
+          echo "Done!"
