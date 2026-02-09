@@ -30,12 +30,9 @@ jobs:
           sudo chown -R www-data:www-data /var/www/quantum.sargas.cloud/
           echo "Docs deployed!"
 
-      - name: Update nginx config
+      - name: Configure and start nginx
         run: |
-          echo "=== Debug: List sites-enabled symlinks ==="
-          ls -la /etc/nginx/sites-enabled/ || true
-
-          echo "=== Creating docs-only nginx config ==="
+          # Create nginx config for VitePress static site
           sudo tee /etc/nginx/sites-available/quantum.sargas.cloud > /dev/null << 'NGINX'
           # Quantum Documentation Site - VitePress
           server {
@@ -60,59 +57,21 @@ jobs:
           }
           NGINX
 
-          echo "=== Ensure symlink exists ==="
+          # Ensure symlink exists
           sudo ln -sf /etc/nginx/sites-available/quantum.sargas.cloud /etc/nginx/sites-enabled/quantum.sargas.cloud
 
-          echo "=== Remove any conflicting default config ==="
-          sudo rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
-
-          echo "=== Testing nginx ==="
+          # Test nginx config
           sudo nginx -t
 
-          echo "=== Port 80 is used by Docker, need to free it ==="
-          echo "Stopping Docker container on port 80..."
+          # Stop any Docker container on port 80
           sudo docker ps --filter "publish=80" -q | xargs -r sudo docker stop || true
-          sleep 2
+          sleep 1
 
-          echo "Checking port 80 again..."
-          sudo ss -tlnp | grep :80 || echo "Port 80 is now free"
-
-          echo "=== Starting nginx ==="
+          # Start nginx
           sudo systemctl restart nginx
-          sleep 2
 
-          echo "=== Verify nginx is running ==="
-          sudo systemctl status nginx | head -10
-
-          echo "=== Check main nginx config ==="
-          cat /etc/nginx/nginx.conf | grep -A5 "http {" || true
-
-          echo "=== Check for other server configs ==="
-          ls -la /etc/nginx/sites-enabled/
-          echo "=== Quantum config ==="
-          cat /etc/nginx/sites-enabled/quantum.sargas.cloud || true
-          echo "=== OpenFlex config (check for conflicts) ==="
-          cat /etc/nginx/sites-enabled/openflex.sargas.cloud 2>/dev/null | head -20 || true
-          echo "=== Nginx error log (last 5 lines) ==="
-          tail -5 /var/log/nginx/error.log 2>/dev/null || true
-
-          echo "=== Verification ==="
-          echo "Homepage:"
-          curl -s http://localhost/ | head -3
-          echo ""
-          echo "File permissions on /var/www/quantum.sargas.cloud:"
-          ls -la /var/www/quantum.sargas.cloud/ | head -10
-          echo ""
-          echo "File permissions on examples dir:"
-          ls -la /var/www/quantum.sargas.cloud/examples/ | head -5
-          echo ""
-          echo "Can nginx user read the file?"
-          sudo -u www-data cat /var/www/quantum.sargas.cloud/examples/index.html | head -3
-          echo ""
-          echo "Direct file access (examples/index.html):"
-          curl -s http://localhost/examples/index.html | head -3
-          echo ""
-          echo "Examples page (with trailing slash):"
-          curl -s http://localhost/examples/ | head -3
-          echo ""
-          echo "Done!"
+          # Verify deployment
+          echo "Verifying deployment..."
+          curl -s http://localhost/ | head -1
+          curl -s http://localhost/examples/ | head -1
+          echo "Deployment complete!"
