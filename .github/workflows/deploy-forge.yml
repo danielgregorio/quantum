@@ -39,9 +39,9 @@ jobs:
           sudo tee /etc/nginx/sites-available/quantum.sargas.cloud > /dev/null << 'NGINX'
           # Quantum Documentation Site - VitePress
           server {
-              listen 80;
-              listen [::]:80;
-              server_name quantum.sargas.cloud;
+              listen 80 default_server;
+              listen [::]:80 default_server;
+              server_name quantum.sargas.cloud localhost _;
 
               root /var/www/quantum.sargas.cloud;
               index index.html;
@@ -82,6 +82,15 @@ jobs:
           echo "=== Verification ==="
           echo "Homepage:"
           curl -s http://localhost/ | head -3
+          echo ""
+          echo "File permissions on /var/www/quantum.sargas.cloud:"
+          ls -la /var/www/quantum.sargas.cloud/ | head -10
+          echo ""
+          echo "File permissions on examples dir:"
+          ls -la /var/www/quantum.sargas.cloud/examples/ | head -5
+          echo ""
+          echo "Can nginx user read the file?"
+          sudo -u www-data cat /var/www/quantum.sargas.cloud/examples/index.html | head -3
           echo ""
           echo "Direct file access (examples/index.html):"
           curl -s http://localhost/examples/index.html | head -3
