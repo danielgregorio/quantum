@@ -43,11 +43,12 @@ jobs:
               server_name quantum.sargas.cloud;
 
               root /var/www/quantum.sargas.cloud;
-              index index.html;
+              index index.html index.htm;
 
-              # VitePress SPA-style routing
+              # VitePress static site routing
               location / {
-                  try_files $uri $uri/index.html $uri.html /index.html;
+                  # First try exact file, then directory index, then .html extension
+                  try_files $uri ${uri}index.html $uri/index.html $uri.html =404;
               }
 
               # Cache static assets
@@ -76,9 +77,13 @@ jobs:
           echo "Homepage:"
           curl -s http://localhost/ | head -3
           echo ""
-          echo "Examples page:"
+          echo "Examples index exists?"
+          ls -la /var/www/quantum.sargas.cloud/examples/index.html 2>&1 || echo "NO INDEX.HTML!"
+          echo ""
+          echo "Examples page (no trailing slash):"
+          curl -s http://localhost/examples | head -3
+          echo ""
+          echo "Examples page (with trailing slash):"
           curl -s http://localhost/examples/ | head -3
           echo ""
-          echo "Check files exist:"
-          ls -la /var/www/quantum.sargas.cloud/examples/ | head -5
           echo "Done!"
