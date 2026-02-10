@@ -131,70 +131,128 @@ def serve_admin_ui_root(request: Request = None, db: Session = Depends(get_db)):
     return HTMLResponse(content=get_admin_shell("Dashboard", "dashboard", ""))
 
 
-@app.get("/admin/{path:path}", tags=["Admin UI"], response_class=HTMLResponse)
-@app.get("/{path:path}", tags=["Admin UI"], response_class=HTMLResponse)
-def serve_admin_ui(path: str = "", request: Request = None, db: Session = Depends(get_db)):
-    """
-    Serve Quantum Admin UI pages - SPA style with dynamic content loading
-    """
-    import os
-    import re
+# Admin UI pages - defined as explicit routes to avoid conflicts with API routes
+ADMIN_UI_PAGE_CONFIG = {
+    "": ("Dashboard", "dashboard"),
+    "projects": ("Applications", "projects"),
+    "docker": ("Docker", "docker"),
+    "deploy": ("Deploy", "deploy"),
+    "jobs": ("Jobs", "jobs"),
+    "cicd": ("CI/CD", "cicd"),
+    "tests": ("Tests", "tests"),
+    "settings": ("Settings", "settings"),
+    "resources": ("Resources", "resources"),
+    "users": ("Users", "users"),
+    "components": ("Components", "components"),
+}
 
-    # Strip /admin prefix if present (for local dev)
-    if path.startswith("admin/"):
-        path = path[6:]
-    elif path == "admin":
-        path = ""
 
-    # Normalize path
-    path = path.strip("/")
-
-    # Handle logout
-    if path == "logout":
+def _serve_admin_page(page: str, db: Session):
+    """Common handler for admin UI pages"""
+    if page == "login":
+        return HTMLResponse(content=get_login_page())
+    if page == "logout":
         response = RedirectResponse(url=f"{URL_PREFIX}/login")
         response.delete_cookie("token")
         return response
+    title, active = ADMIN_UI_PAGE_CONFIG.get(page, ("Quantum Admin", "dashboard"))
+    return HTMLResponse(content=get_admin_shell(title, active, page))
 
-    # Check for project detail page: /admin/projects/{id}
-    project_match = re.match(r'^projects/(\d+)$', path)
-    if project_match:
-        project_id = int(project_match.group(1))
-        project = crud.get_project(db, project_id)
-        if project:
-            return HTMLResponse(content=get_admin_shell(
-                f"Application: {project.name}",
-                "projects",
-                "project_detail",
-                project_id=project_id
-            ))
-        else:
-            return HTMLResponse(content=get_admin_shell("Application Not Found", "projects", "projects"))
 
-    # Page titles and active states
-    pages = {
-        "": ("Dashboard", "dashboard"),
-        "projects": ("Applications", "projects"),
-        "docker": ("Docker", "docker"),
-        "deploy": ("Deploy", "deploy"),
-        "jobs": ("Jobs", "jobs"),
-        "cicd": ("CI/CD", "cicd"),
-        "tests": ("Tests", "tests"),
-        "components": ("Components", "components"),
-        "settings": ("Settings", "settings"),
-        "resources": ("Resources", "resources"),
-        "users": ("Users", "users"),
-        "login": ("Login", "login"),
-    }
+@app.get("/projects/{project_id:int}", tags=["Admin UI"], response_class=HTMLResponse)
+@app.get("/admin/projects/{project_id:int}", tags=["Admin UI"], response_class=HTMLResponse)
+def serve_project_detail(project_id: int, db: Session = Depends(get_db)):
+    """Serve project detail page"""
+    project = crud.get_project(db, project_id)
+    if project:
+        return HTMLResponse(content=get_admin_shell(
+            f"Application: {project.name}",
+            "projects",
+            "project_detail",
+            project_id=project_id
+        ))
+    return HTMLResponse(content=get_admin_shell("Application Not Found", "projects", "projects"))
 
-    page_key = path.split("/")[0] if path else ""
-    title, active = pages.get(page_key, ("Quantum Admin", "dashboard"))
 
-    # Login page is special
-    if page_key == "login":
-        return HTMLResponse(content=get_login_page())
+@app.get("/login", tags=["Admin UI"], response_class=HTMLResponse)
+@app.get("/admin/login", tags=["Admin UI"], response_class=HTMLResponse)
+def serve_login_page():
+    return HTMLResponse(content=get_login_page())
 
-    # Build the admin shell with dynamic content area
-    return HTMLResponse(content=get_admin_shell(title, active, page_key))
+
+@app.get("/logout", tags=["Admin UI"], response_class=HTMLResponse)
+@app.get("/admin/logout", tags=["Admin UI"], response_class=HTMLResponse)
+def serve_logout_page():
+    response = RedirectResponse(url=f"{URL_PREFIX}/login")
+    response.delete_cookie("token")
+    return response
+
+
+# Explicit routes for each admin UI page
+@app.get("/projects", tags=["Admin UI"], response_class=HTMLResponse)
+@app.get("/admin/projects", tags=["Admin UI"], response_class=HTMLResponse)
+def serve_projects_page(db: Session = Depends(get_db)):
+    return _serve_admin_page("projects", db)
+
+
+@app.get("/docker", tags=["Admin UI"], response_class=HTMLResponse)
+@app.get("/admin/docker", tags=["Admin UI"], response_class=HTMLResponse)
+def serve_docker_page(db: Session = Depends(get_db)):
+    return _serve_admin_page("docker", db)
+
+
+@app.get("/deploy", tags=["Admin UI"], response_class=HTMLResponse)
+@app.get("/admin/deploy", tags=["Admin UI"], response_class=HTMLResponse)
+def serve_deploy_page(db: Session = Depends(get_db)):
+    return _serve_admin_page("deploy", db)
+
+
+@app.get("/jobs", tags=["Admin UI"], response_class=HTMLResponse)
+@app.get("/admin/jobs", tags=["Admin UI"], response_class=HTMLResponse)
+def serve_jobs_page(db: Session = Depends(get_db)):
+    return _serve_admin_page("jobs", db)
+
+
+@app.get("/cicd", tags=["Admin UI"], response_class=HTMLResponse)
+@app.get("/admin/cicd", tags=["Admin UI"], response_class=HTMLResponse)
+def serve_cicd_page(db: Session = Depends(get_db)):
+    return _serve_admin_page("cicd", db)
+
+
+@app.get("/tests", tags=["Admin UI"], response_class=HTMLResponse)
+@app.get("/admin/tests", tags=["Admin UI"], response_class=HTMLResponse)
+def serve_tests_page(db: Session = Depends(get_db)):
+    return _serve_admin_page("tests", db)
+
+
+@app.get("/settings", tags=["Admin UI"], response_class=HTMLResponse)
+@app.get("/admin/settings", tags=["Admin UI"], response_class=HTMLResponse)
+def serve_settings_page(db: Session = Depends(get_db)):
+    return _serve_admin_page("settings", db)
+
+
+@app.get("/resources", tags=["Admin UI"], response_class=HTMLResponse)
+@app.get("/admin/resources", tags=["Admin UI"], response_class=HTMLResponse)
+def serve_resources_page(db: Session = Depends(get_db)):
+    return _serve_admin_page("resources", db)
+
+
+@app.get("/users", tags=["Admin UI"], response_class=HTMLResponse)
+@app.get("/admin/users", tags=["Admin UI"], response_class=HTMLResponse)
+def serve_users_page(db: Session = Depends(get_db)):
+    return _serve_admin_page("users", db)
+
+
+@app.get("/components", tags=["Admin UI"], response_class=HTMLResponse)
+@app.get("/admin/components", tags=["Admin UI"], response_class=HTMLResponse)
+def serve_components_page(db: Session = Depends(get_db)):
+    return _serve_admin_page("components", db)
+
+
+# This is now just a simple handler for the old serve_admin_ui function reference
+def serve_admin_ui(path: str = "", request: Request = None, db: Session = Depends(get_db)):
+    """Legacy function - not used as a route anymore"""
+    pass  # No longer used
 
 
 def get_login_page():
