@@ -1,0 +1,19 @@
+name: Landing Page
+description: Marketing landing page with sections and contact form
+icon: "&#127968;"
+category: marketing
+features:
+  - Hero section
+  - Features grid
+  - Testimonials
+  - Contact form
+  - Responsive design
+options:
+  - name: include_contact
+    label: Include Contact Form
+    type: boolean
+    default: true
+  - name: include_newsletter
+    label: Include Newsletter Signup
+    type: boolean
+    default: false

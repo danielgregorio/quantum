@@ -1,11 +1,16 @@
 """
 Docker Service for Quantum Admin
 Manages Docker containers for database datasources
+
+Supports both local Docker and remote Docker via:
+- DOCKER_HOST environment variable (e.g., ssh://user@host or tcp://host:2375)
+- Default: local Docker socket
 """
 import docker
 from docker.errors import DockerException, NotFound, APIError
 from typing import Dict, Optional, List
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -22,18 +27,40 @@ class DockerService:
         "mariadb": "mariadb:11.2"
     }
 
-    def __init__(self):
-        """Initialize Docker client"""
+    def __init__(self, docker_host: str = None):
+        """
+        Initialize Docker client
+
+        Args:
+            docker_host: Docker host URL. Options:
+                - None: Use DOCKER_HOST env var or local socket
+                - "ssh://user@host": Connect via SSH
+                - "tcp://host:2375": Connect via TCP (insecure)
+                - "unix:///var/run/docker.sock": Local Unix socket
+        """
         try:
-            self.client = docker.from_env()
+            # Check for explicit docker_host or environment variable
+            host = docker_host or os.environ.get("DOCKER_HOST")
+
+            if host:
+                logger.info(f"🔗 Connecting to Docker at: {host}")
+                self.client = docker.DockerClient(base_url=host)
+                self.remote = True
+                self.host = host
+            else:
+                logger.info("🔗 Connecting to local Docker...")
+                self.client = docker.from_env()
+                self.remote = False
+                self.host = "local"
+
             # Test connection
             self.client.ping()
-            logger.info("✅ Docker client connected successfully")
+            logger.info(f"✅ Docker client connected successfully ({self.host})")
         except DockerException as e:
             logger.error(f"❌ Failed to connect to Docker: {e}")
             raise RuntimeError(
-                "Docker is not running or not accessible. "
-                "Please ensure Docker Desktop is running."
+                f"Docker is not running or not accessible at {host or 'local'}. "
+                "Please ensure Docker is running or check DOCKER_HOST configuration."
             )
 
     def get_default_image(self, db_type: str) -> str:

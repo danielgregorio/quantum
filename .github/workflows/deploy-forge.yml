@@ -6,6 +6,7 @@ on:
     paths:
       - 'docs/**'
       - 'examples/**'
+      - 'quantum_admin/**'
   workflow_dispatch:
 
 jobs:
@@ -18,23 +19,76 @@ jobs:
         with:
           node-version: '20'
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Build docs
         run: |
           npm ci
           npm run docs:build
 
-      - name: Deploy to web directory
+      - name: Deploy docs to web directory
         run: |
-          sudo rm -rf /var/www/quantum.sargas.cloud/*
+          sudo mkdir -p /var/www/quantum.sargas.cloud
+          sudo rm -rf /var/www/quantum.sargas.cloud/*.html /var/www/quantum.sargas.cloud/assets 2>/dev/null || true
           sudo cp -r docs/.vitepress/dist/* /var/www/quantum.sargas.cloud/
           sudo chown -R www-data:www-data /var/www/quantum.sargas.cloud/
           echo "Docs deployed!"
 
-      - name: Configure and start nginx
+      - name: Deploy Quantum Admin
         run: |
-          # Create nginx config for VitePress static site
+          # Create admin directory
+          sudo mkdir -p /var/www/quantum-admin
+
+          # Copy admin files
+          sudo rm -rf /var/www/quantum-admin/* 2>/dev/null || true
+          sudo cp -r quantum_admin/* /var/www/quantum-admin/
+
+          # Setup Python virtual environment
+          cd /var/www/quantum-admin
+          sudo python3 -m venv venv
+          sudo ./venv/bin/pip install --upgrade pip
+          sudo ./venv/bin/pip install -r backend/requirements.txt
+
+          # Set ownership
+          sudo chown -R www-data:www-data /var/www/quantum-admin/
+
+          echo "Admin files deployed!"
+
+      - name: Setup Quantum Admin systemd service
+        run: |
+          sudo tee /etc/systemd/system/quantum-admin.service > /dev/null << 'SERVICE'
+          [Unit]
+          Description=Quantum Admin FastAPI Service
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=www-data
+          Group=www-data
+          WorkingDirectory=/var/www/quantum-admin
+          Environment="PATH=/var/www/quantum-admin/venv/bin"
+          ExecStart=/var/www/quantum-admin/venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8001
+          Restart=always
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+          SERVICE
+
+          sudo systemctl daemon-reload
+          sudo systemctl enable quantum-admin
+          sudo systemctl restart quantum-admin
+
+          # Wait for service to start
+          sleep 3
+          sudo systemctl status quantum-admin --no-pager || true
+
+      - name: Configure nginx
+        run: |
           sudo tee /etc/nginx/sites-available/quantum.sargas.cloud > /dev/null << 'NGINX'
-          # Quantum Documentation Site - VitePress
+          # Quantum Documentation Site + Admin
           server {
               listen 80 default_server;
               listen [::]:80 default_server;
@@ -43,6 +97,27 @@ jobs:
               root /var/www/quantum.sargas.cloud;
               index index.html;
 
+              # Quantum Admin - FastAPI app
+              location /admin {
+                  proxy_pass http://127.0.0.1:8001;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_read_timeout 86400;
+              }
+
+              # Admin static files
+              location /static {
+                  proxy_pass http://127.0.0.1:8001/static;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+              }
+
+              # VitePress docs (default)
               location / {
                   try_files $uri $uri/ =404;
               }
@@ -67,11 +142,15 @@ jobs:
           sudo docker ps --filter "publish=80" -q | xargs -r sudo docker stop || true
           sleep 1
 
-          # Start nginx
+          # Restart nginx
           sudo systemctl restart nginx
 
-          # Verify deployment
-          echo "Verifying deployment..."
+      - name: Verify deployment
+        run: |
+          echo "Verifying docs deployment..."
           curl -s http://localhost/ | head -1
-          curl -s http://localhost/examples/ | head -1
+
+          echo "Verifying admin deployment..."
+          curl -s http://localhost/admin/ | head -5 || echo "Admin check failed"
+
           echo "Deployment complete!"

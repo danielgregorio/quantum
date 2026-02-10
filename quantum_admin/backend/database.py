@@ -1,12 +1,15 @@
 """
 Database configuration and session management
 """
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from .models import Base
 
-# SQLite database file location
-DATABASE_URL = "sqlite:///./quantum_admin.db"
+# SQLite database file location - use absolute path relative to quantum_admin folder
+_QUANTUM_ADMIN_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_DB_PATH = os.path.join(_QUANTUM_ADMIN_DIR, "quantum_admin.db")
+DATABASE_URL = f"sqlite:///{_DB_PATH}"
 
 # Create engine with SQLite-specific settings
 engine = create_engine(

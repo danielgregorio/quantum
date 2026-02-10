@@ -1,0 +1,26 @@
+name: REST API
+description: RESTful API with CRUD operations and authentication
+icon: "&#128268;"
+category: backend
+features:
+  - RESTful endpoints
+  - JWT authentication
+  - Database integration
+  - Swagger docs
+options:
+  - name: include_auth
+    label: Include Authentication
+    type: boolean
+    default: true
+  - name: include_swagger
+    label: Generate Swagger Docs
+    type: boolean
+    default: true
+  - name: database
+    label: Database Type
+    type: select
+    default: postgres
+    choices:
+      - postgres
+      - mysql
+      - sqlite

@@ -46,7 +46,10 @@ def update_project(
     project_id: int,
     name: Optional[str] = None,
     description: Optional[str] = None,
-    status: Optional[str] = None
+    status: Optional[str] = None,
+    source_path: Optional[str] = None,
+    git_url: Optional[str] = None,
+    git_branch: Optional[str] = None
 ) -> Optional[models.Project]:
     """Update an existing project"""
     project = get_project(db, project_id)
@@ -59,6 +62,12 @@ def update_project(
         project.description = description
     if status is not None:
         project.status = status
+    if source_path is not None:
+        project.source_path = source_path
+    if git_url is not None:
+        project.git_url = git_url
+    if git_branch is not None:
+        project.git_branch = git_branch
 
     project.updated_at = datetime.utcnow()
     db.commit()

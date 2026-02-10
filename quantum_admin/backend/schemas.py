@@ -16,18 +16,26 @@ class ProjectBase(BaseModel):
 
 
 class ProjectCreate(ProjectBase):
-    pass
+    source_path: Optional[str] = None
+    git_url: Optional[str] = None
+    git_branch: Optional[str] = "main"
 
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     status: Optional[str] = Field(None, pattern="^(active|inactive)$")
+    source_path: Optional[str] = None
+    git_url: Optional[str] = None
+    git_branch: Optional[str] = None
 
 
 class ProjectResponse(ProjectBase):
     id: int
     status: str
+    source_path: Optional[str] = None
+    git_url: Optional[str] = None
+    git_branch: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -99,8 +107,98 @@ class ComponentResponse(BaseModel):
     error_message: Optional[str]
     last_compiled: Optional[datetime]
 
+    # Metadata counters
+    function_count: int = 0
+    endpoint_count: int = 0
+    query_count: int = 0
+
+    # Test tracking
+    test_count: int = 0
+    tests_passing: int = 0
+    tests_failing: int = 0
+    last_test_run_at: Optional[datetime] = None
+
     class Config:
         from_attributes = True
+
+    def get_has_tests(self) -> bool:
+        """Check if component has tests"""
+        return self.test_count > 0
+
+    def get_test_coverage(self) -> int:
+        """Calculate test coverage percentage"""
+        if self.test_count == 0:
+            return 0
+        return int((self.tests_passing / self.test_count) * 100)
+
+
+# ============================================================================
+# COMPONENT TEST SCHEMAS
+# ============================================================================
+
+class ComponentTestCreate(BaseModel):
+    """Schema for creating a component test record"""
+    component_id: int
+    test_file: str = Field(..., min_length=1, max_length=512)
+    test_name: str = Field(..., min_length=1, max_length=255)
+    test_type: str = Field(default="unit", pattern="^(unit|integration|api|e2e)$")
+    generated_by: Optional[str] = Field(default="auto", pattern="^(auto|manual)$")
+
+
+class ComponentTestUpdate(BaseModel):
+    """Schema for updating a component test record"""
+    last_status: Optional[str] = Field(None, pattern="^(passed|failed|skipped|pending|error)$")
+    last_run_at: Optional[datetime] = None
+    last_duration_seconds: Optional[int] = None
+    last_error_message: Optional[str] = None
+
+
+class ComponentTestResponse(BaseModel):
+    """Schema for component test response"""
+    id: int
+    component_id: int
+    test_file: str
+    test_name: str
+    test_type: str
+    generated_at: Optional[datetime]
+    generated_by: Optional[str]
+    last_status: Optional[str]
+    last_run_at: Optional[datetime]
+    last_duration_seconds: Optional[int]
+    last_error_message: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class GenerateTestsRequest(BaseModel):
+    """Schema for test generation request"""
+    test_types: List[str] = Field(default=["unit", "api"], description="Types of tests to generate")
+    output_dir: Optional[str] = Field(default="tests/", description="Output directory for test files")
+
+
+class GenerateTestsResponse(BaseModel):
+    """Schema for test generation response"""
+    component_id: int
+    component_name: str
+    generated: int
+    tests: List[dict]
+
+
+class RunComponentTestsRequest(BaseModel):
+    """Schema for running component tests"""
+    test_types: Optional[List[str]] = Field(default=None, description="Optional filter by test types")
+    verbose: bool = Field(default=False, description="Verbose output")
+
+
+class RunComponentTestsResponse(BaseModel):
+    """Schema for component tests run response"""
+    test_run_id: int
+    component_id: int
+    status: str
+    message: str
 
 
 # ============================================================================

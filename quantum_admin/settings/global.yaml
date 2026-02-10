@@ -1,0 +1,70 @@
+# Quantum Admin - Global Settings
+# This file contains all global configuration for the Quantum Admin
+
+server:
+  port: 8001
+  host: "0.0.0.0"
+  debug: true
+  reload: true
+
+docker:
+  # Remote Docker via SSH (Forge server)
+  host: "ssh://abathur@10.10.1.40"
+  # Local Docker registry on Forge
+  registry: "10.10.1.40:32777"
+  # Default timeout for operations (seconds)
+  timeout: 30
+
+email:
+  enabled: false
+  provider: "smtp"
+  host: "smtp.gmail.com"
+  port: 587
+  use_tls: true
+  username: ""
+  password: ""
+  from_address: "noreply@quantum.local"
+
+security:
+  # JWT Configuration
+  secret_key: "change-me-in-production-use-env-var"
+  jwt_algorithm: "HS256"
+  jwt_expiry_hours: 24
+  # CORS
+  allowed_origins:
+    - "*"
+  # Rate limiting
+  rate_limit_enabled: false
+  rate_limit_requests: 100
+  rate_limit_window: 60
+
+deployment:
+  # Default deployment settings
+  default_dockerfile: "Dockerfile"
+  default_port: 8080
+  health_check_path: "/health"
+  health_check_timeout: 30
+
+  # Environments
+  environments:
+    - name: "production"
+      host: "quantum.sargas.cloud"
+      user: "abathur"
+      ssh_key: "~/.ssh/id_ed25519"
+      deploy_path: "/var/www/quantum-app"
+
+    - name: "staging"
+      host: "10.10.1.40"
+      user: "abathur"
+      ssh_key: "~/.ssh/id_ed25519"
+      deploy_path: "/home/abathur/staging"
+
+database:
+  # Admin database
+  url: "sqlite:///quantum_admin.db"
+  echo: false
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s [%(levelname)s] %(message)s"
+  file: "logs/quantum_admin.log"
