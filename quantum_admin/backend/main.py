@@ -10824,8 +10824,22 @@ def get_resources_overview_html(
     db: Session = Depends(get_db)
 ):
     """Get resource overview as HTML for dashboard"""
-    resource_manager = get_resource_manager(db)
-    overview = resource_manager.scan_resources(docker_service.client if docker_service else None)
+    try:
+        resource_manager = get_resource_manager(db)
+        overview = resource_manager.scan_resources(docker_service.client if docker_service else None)
+    except Exception as e:
+        # Return error card if resource scanning fails
+        return HTMLResponse(content=f'''
+        <div class="qa-card qa-p-4">
+            <div class="qa-text-center qa-text-muted">
+                <svg width="48" height="48" class="qa-mx-auto qa-mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <p class="qa-mb-2">Resource scanning unavailable</p>
+                <p class="qa-text-sm">System monitoring requires psutil. Error: {str(e)[:100]}</p>
+            </div>
+        </div>
+        ''')
 
     ports_count = len(overview.get("ports_in_use", []))
     procs_count = len(overview.get("quantum_processes", []))
@@ -11531,8 +11545,15 @@ def get_ports_html(
     db: Session = Depends(get_db)
 ):
     """Get port allocations as HTML table"""
-    resource_manager = get_resource_manager(db)
-    ports = resource_manager.ports.list_allocations()
+    try:
+        resource_manager = get_resource_manager(db)
+        ports = resource_manager.ports.list_allocations()
+    except Exception as e:
+        return HTMLResponse(content=f'''
+            <div class="qa-empty qa-p-8 qa-text-center">
+                <p class="qa-text-muted">Error loading port allocations: {str(e)[:50]}</p>
+            </div>
+        ''')
 
     if not ports:
         return HTMLResponse(content='''
@@ -11602,8 +11623,15 @@ def get_secrets_html(
     db: Session = Depends(get_db)
 ):
     """Get secrets as HTML table"""
-    resource_manager = get_resource_manager(db)
-    secrets = resource_manager.secrets.list_secrets()
+    try:
+        resource_manager = get_resource_manager(db)
+        secrets = resource_manager.secrets.list_secrets()
+    except Exception as e:
+        return HTMLResponse(content=f'''
+            <div class="qa-empty qa-p-8 qa-text-center">
+                <p class="qa-text-muted">Error loading secrets: {str(e)[:50]}</p>
+            </div>
+        ''')
 
     if not secrets:
         return HTMLResponse(content='''
@@ -11681,8 +11709,15 @@ def get_services_html(
     db: Session = Depends(get_db)
 ):
     """Get services as HTML table"""
-    resource_manager = get_resource_manager(db)
-    services = resource_manager.services.list_services()
+    try:
+        resource_manager = get_resource_manager(db)
+        services = resource_manager.services.list_services()
+    except Exception as e:
+        return HTMLResponse(content=f'''
+            <div class="qa-empty qa-p-8 qa-text-center">
+                <p class="qa-text-muted">Error loading services: {str(e)[:50]}</p>
+            </div>
+        ''')
 
     if not services:
         return HTMLResponse(content='''
@@ -11752,8 +11787,15 @@ def get_services_html(
 @app.get("/api/resources/discovered-ports-html", response_class=HTMLResponse, tags=["Resources UI"])
 def get_discovered_ports_html(db: Session = Depends(get_db)):
     """Get discovered ports (via psutil) as HTML list"""
-    resource_manager = get_resource_manager(db)
-    ports = resource_manager.scan_ports()
+    try:
+        resource_manager = get_resource_manager(db)
+        ports = resource_manager.scan_ports()
+    except Exception as e:
+        return HTMLResponse(content=f'''
+            <div class="qa-empty qa-p-6 qa-text-center">
+                <p class="qa-text-muted">Port scanning unavailable: {str(e)[:50]}</p>
+            </div>
+        ''')
 
     if not ports:
         return HTMLResponse(content='''
@@ -11788,8 +11830,15 @@ def get_discovered_ports_html(db: Session = Depends(get_db)):
 @app.get("/api/resources/containers-html", response_class=HTMLResponse, tags=["Resources UI"])
 def get_discovered_containers_html(db: Session = Depends(get_db)):
     """Get Docker containers as HTML list"""
-    resource_manager = get_resource_manager(db)
-    containers = resource_manager.scan_containers(docker_service.client if docker_service else None)
+    try:
+        resource_manager = get_resource_manager(db)
+        containers = resource_manager.scan_containers(docker_service.client if docker_service else None)
+    except Exception as e:
+        return HTMLResponse(content=f'''
+            <div class="qa-empty qa-p-6 qa-text-center">
+                <p class="qa-text-muted">Container scanning unavailable: {str(e)[:50]}</p>
+            </div>
+        ''')
 
     if not containers:
         return HTMLResponse(content='''
