@@ -648,7 +648,7 @@ def get_projects_content():
       </div>
     </div>
 
-    <div id="projects-grid" hx-get="{URL_PREFIX}/projects" hx-trigger="load" hx-swap="innerHTML" class="qa-grid qa-grid-3">
+    <div id="projects-grid" hx-get="{URL_PREFIX}/api/projects-grid" hx-trigger="load" hx-swap="innerHTML" class="qa-grid qa-grid-3">
       <div class="qa-card qa-pulse"><div class="qa-card-body"><div class="qa-text-muted">Loading projects...</div></div></div>
     </div>
 
@@ -6933,6 +6933,62 @@ def list_projects(
 
     # Default: return JSON
     return projects
+
+
+@app.get("/api/projects-grid", response_class=HTMLResponse, tags=["Projects"])
+def get_projects_grid(db: Session = Depends(get_db)):
+    """Get projects as HTML grid cards for HTMX"""
+    projects = crud.get_projects(db, limit=100)
+
+    if not projects:
+        return HTMLResponse(content='''
+            <div class="qa-card" style="grid-column: span 3;">
+                <div class="qa-card-body qa-text-center qa-p-8">
+                    <svg width="48" height="48" class="qa-mx-auto qa-mb-4 qa-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                    <p class="qa-text-muted qa-mb-4">No applications yet</p>
+                    <button class="qa-btn qa-btn-primary" onclick="openProjectModal()">Create your first application</button>
+                </div>
+            </div>
+        ''')
+
+    cards = ""
+    for p in projects:
+        status_class = "qa-badge-success" if p.status == "active" else "qa-badge-gray"
+        status_label = "Active" if p.status == "active" else "Inactive"
+        ds_count = len(p.datasources) if hasattr(p, 'datasources') and p.datasources else 0
+
+        cards += f'''
+        <div class="qa-card qa-card-hover" onclick="window.location='{URL_PREFIX}/projects/{p.id}'" style="cursor: pointer;">
+            <div class="qa-card-body">
+                <div class="qa-flex qa-justify-between qa-items-start qa-mb-3">
+                    <div class="qa-project-icon">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                        </svg>
+                    </div>
+                    <span class="qa-badge {status_class}">{status_label}</span>
+                </div>
+                <h3 class="qa-card-title qa-mb-2">{p.name}</h3>
+                <p class="qa-text-sm qa-text-muted qa-mb-4" style="min-height: 40px;">{p.description or "No description"}</p>
+                <div class="qa-flex qa-justify-between qa-items-center qa-text-xs qa-text-muted">
+                    <span><strong>{ds_count}</strong> datasource{"s" if ds_count != 1 else ""}</span>
+                    <span>ID: {p.id}</span>
+                </div>
+            </div>
+            <div class="qa-card-footer qa-flex qa-justify-end qa-gap-2">
+                <button class="qa-btn qa-btn-ghost qa-btn-sm" onclick="event.stopPropagation(); editProject({p.id})">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
+                <button class="qa-btn qa-btn-ghost qa-btn-sm qa-text-danger" onclick="event.stopPropagation(); deleteProject({p.id}, '{p.name}')">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+            </div>
+        </div>
+        '''
+
+    return HTMLResponse(content=cards)
 
 
 @app.post(
