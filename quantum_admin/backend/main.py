@@ -122,15 +122,17 @@ def shutdown_event():
 # ROOT & HEALTH CHECK
 # ============================================================================
 
-@app.get("/", tags=["Root"])
-def root():
-    """Redirect to admin UI"""
-    return RedirectResponse(url="/admin/")
-
-
+# Admin UI routes - supports both direct access and behind reverse proxy
+@app.get("/", tags=["Admin UI"], response_class=HTMLResponse)
 @app.get("/admin/", tags=["Admin UI"], response_class=HTMLResponse)
 @app.get("/admin", tags=["Admin UI"], response_class=HTMLResponse)
+def serve_admin_ui_root(request: Request = None, db: Session = Depends(get_db)):
+    """Serve admin UI dashboard"""
+    return HTMLResponse(content=get_admin_shell("Dashboard", "dashboard", ""))
+
+
 @app.get("/admin/{path:path}", tags=["Admin UI"], response_class=HTMLResponse)
+@app.get("/{path:path}", tags=["Admin UI"], response_class=HTMLResponse)
 def serve_admin_ui(path: str = "", request: Request = None, db: Session = Depends(get_db)):
     """
     Serve Quantum Admin UI pages - SPA style with dynamic content loading
@@ -138,12 +140,18 @@ def serve_admin_ui(path: str = "", request: Request = None, db: Session = Depend
     import os
     import re
 
+    # Strip /admin prefix if present (for local dev)
+    if path.startswith("admin/"):
+        path = path[6:]
+    elif path == "admin":
+        path = ""
+
     # Normalize path
     path = path.strip("/")
 
     # Handle logout
     if path == "logout":
-        response = RedirectResponse(url="/admin/login")
+        response = RedirectResponse(url=f"{URL_PREFIX}/login")
         response.delete_cookie("token")
         return response
 
