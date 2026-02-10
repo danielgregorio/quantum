@@ -54,6 +54,10 @@ jobs:
           # Set ownership
           sudo chown -R www-data:www-data /var/www/quantum-admin/
 
+          # Verify static files exist
+          echo "Checking static files..."
+          ls -la /var/www/quantum-admin/static/ || echo "Static directory missing!"
+
           echo "Admin files deployed!"
 
       - name: Setup Quantum Admin systemd service
@@ -116,11 +120,11 @@ jobs:
                   proxy_read_timeout 86400;
               }
 
-              # Admin static files
+              # Admin static files - serve directly from filesystem
               location /admin/static/ {
-                  proxy_pass http://127.0.0.1:8001/static/;
-                  proxy_set_header Host $host;
-                  proxy_set_header X-Real-IP $remote_addr;
+                  alias /var/www/quantum-admin/static/;
+                  expires 30d;
+                  add_header Cache-Control "public, immutable";
               }
 
               # VitePress docs (default)
