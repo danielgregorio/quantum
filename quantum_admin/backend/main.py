@@ -1960,7 +1960,7 @@ def get_deploy_content():
 
       async function loadProjects() {
         try {
-          const res = await fetch('{URL_PREFIX}/projects');
+          const res = await fetch('{URL_PREFIX}/api/projects');
           const projects = await res.json();
           const select = document.getElementById('project-select');
           select.innerHTML = '<option value="">Select an application...</option>';
@@ -3259,7 +3259,7 @@ def get_jobs_content():
     </div>
 
     <!-- Stats Cards -->
-    <div class="qa-grid qa-grid-4 qa-gap-4 qa-mb-6" hx-get="{URL_PREFIX}/jobs/overview" hx-trigger="load, every 10s" hx-swap="innerHTML">
+    <div class="qa-grid qa-grid-4 qa-gap-4 qa-mb-6" hx-get="{URL_PREFIX}/api/jobs/overview-html" hx-trigger="load, every 10s" hx-swap="innerHTML">
       <div class="qa-stat-card qa-pulse"><div class="qa-stat-label">Loading...</div><div class="qa-stat-value">-</div></div>
       <div class="qa-stat-card qa-pulse"><div class="qa-stat-label">Loading...</div><div class="qa-stat-value">-</div></div>
       <div class="qa-stat-card qa-pulse"><div class="qa-stat-label">Loading...</div><div class="qa-stat-value">-</div></div>
@@ -3279,9 +3279,9 @@ def get_jobs_content():
       <div class="qa-card">
         <div class="qa-card-header qa-flex qa-justify-between qa-items-center">
           <h3 class="qa-card-title">Queued Jobs</h3>
-          <button class="qa-btn qa-btn-secondary qa-btn-sm" hx-get="{URL_PREFIX}/jobs" hx-target="#jobs-list" hx-swap="innerHTML">Refresh</button>
+          <button class="qa-btn qa-btn-secondary qa-btn-sm" hx-get="{URL_PREFIX}/api/jobs-list" hx-target="#jobs-list" hx-swap="innerHTML">Refresh</button>
         </div>
-        <div class="qa-card-body qa-p-0" id="jobs-list" hx-get="{URL_PREFIX}/jobs" hx-trigger="load" hx-swap="innerHTML">
+        <div class="qa-card-body qa-p-0" id="jobs-list" hx-get="{URL_PREFIX}/api/jobs-list" hx-trigger="load" hx-swap="innerHTML">
           <div class="qa-text-center qa-text-muted qa-p-6">Loading jobs...</div>
         </div>
       </div>
@@ -3364,7 +3364,7 @@ def get_cicd_content():
 
     <script>
     // Load projects for selector
-    fetch('{URL_PREFIX}/projects').then(r => r.json()).then(projects => {
+    fetch('{URL_PREFIX}/api/projects').then(r => r.json()).then(projects => {
       const select = document.getElementById('cicd-project');
       projects.forEach(p => {
         const opt = document.createElement('option');
@@ -3419,7 +3419,7 @@ def get_tests_content():
 
     <script>
     // Load projects for selector
-    fetch('{URL_PREFIX}/projects').then(r => r.json()).then(projects => {
+    fetch('{URL_PREFIX}/api/projects').then(r => r.json()).then(projects => {
       const select = document.getElementById('tests-project');
       projects.forEach(p => {
         const opt = document.createElement('option');
@@ -3521,7 +3521,7 @@ def get_components_content():
     let currentProjectId = null;
 
     // Load projects for selector
-    fetch('{URL_PREFIX}/projects').then(r => r.json()).then(projects => {
+    fetch('{URL_PREFIX}/api/projects').then(r => r.json()).then(projects => {
       const select = document.getElementById('components-project');
       projects.forEach(p => {
         const opt = document.createElement('option');
@@ -6990,6 +6990,83 @@ def get_projects_grid(db: Session = Depends(get_db)):
         '''
 
     return HTMLResponse(content=cards)
+
+
+@app.get("/api/projects", tags=["Projects"])
+def get_projects_json(db: Session = Depends(get_db)):
+    """Get all projects as JSON for API calls"""
+    projects = crud.get_projects(db, limit=100)
+    return [{"id": p.id, "name": p.name, "description": p.description, "status": p.status} for p in projects]
+
+
+@app.get("/api/jobs-list", response_class=HTMLResponse, tags=["Jobs"])
+def get_jobs_list_html():
+    """Get jobs list as HTML fragment for HTMX"""
+    job_service = get_job_service()
+    jobs = job_service.list_jobs(limit=50)
+
+    if not jobs:
+        return HTMLResponse(content='''
+            <div class="qa-text-center qa-text-muted qa-p-6">
+                <svg width="48" height="48" class="qa-mx-auto qa-mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                <p class="qa-mb-2">No jobs in queue</p>
+                <p class="qa-text-sm">Jobs will appear here when scheduled or triggered</p>
+            </div>
+        ''')
+
+    html = '<table class="qa-table qa-table-striped"><thead><tr>'
+    html += '<th>ID</th><th>Type</th><th>Status</th><th>Created</th><th>Actions</th>'
+    html += '</tr></thead><tbody>'
+
+    for job in jobs:
+        status_class = {
+            'pending': 'qa-badge-warning',
+            'running': 'qa-badge-info',
+            'completed': 'qa-badge-success',
+            'failed': 'qa-badge-danger',
+            'cancelled': 'qa-badge-gray'
+        }.get(job.get('status', 'pending'), 'qa-badge-gray')
+
+        html += f'''<tr>
+            <td>{job.get('id', '-')}</td>
+            <td>{job.get('type', '-')}</td>
+            <td><span class="qa-badge {status_class}">{job.get('status', 'unknown')}</span></td>
+            <td>{job.get('created_at', '-')}</td>
+            <td>
+                <button class="qa-btn qa-btn-ghost qa-btn-xs" onclick="viewJob({job.get('id')})">View</button>
+            </td>
+        </tr>'''
+
+    html += '</tbody></table>'
+    return HTMLResponse(content=html)
+
+
+@app.get("/api/jobs/overview-html", response_class=HTMLResponse, tags=["Jobs"])
+def get_jobs_overview_html():
+    """Get jobs overview stats as HTML for HTMX"""
+    job_service = get_job_service()
+    overview = job_service.get_overview()
+
+    return HTMLResponse(content=f'''
+        <div class="qa-stat-card">
+            <div class="qa-stat-label">Total Jobs</div>
+            <div class="qa-stat-value">{overview.get('total_jobs', 0)}</div>
+        </div>
+        <div class="qa-stat-card">
+            <div class="qa-stat-label">Running</div>
+            <div class="qa-stat-value qa-text-info">{overview.get('running', 0)}</div>
+        </div>
+        <div class="qa-stat-card">
+            <div class="qa-stat-label">Pending</div>
+            <div class="qa-stat-value qa-text-warning">{overview.get('pending', 0)}</div>
+        </div>
+        <div class="qa-stat-card">
+            <div class="qa-stat-label">Failed (24h)</div>
+            <div class="qa-stat-value qa-text-danger">{overview.get('failed_24h', 0)}</div>
+        </div>
+    ''')
 
 
 @app.post(
