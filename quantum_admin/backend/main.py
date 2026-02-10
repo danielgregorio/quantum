@@ -49,6 +49,8 @@ security = HTTPBearer(auto_error=False)
 # Create FastAPI app
 # Get root path from environment (for reverse proxy deployment)
 ROOT_PATH = os.environ.get("ROOT_PATH", "")
+# URL prefix for all routes in HTML templates
+URL_PREFIX = ROOT_PATH
 
 app = FastAPI(
     title="Quantum Admin API",
@@ -195,7 +197,7 @@ def get_login_page():
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - Quantum Admin</title>
-  <link rel="stylesheet" href="/static/quantum-admin.css">
+  <link rel="stylesheet" href="{URL_PREFIX}/static/quantum-admin.css">
 </head>
 <body class="qa-login-page">
   <div class="qa-login-card">
@@ -231,11 +233,11 @@ def get_login_page():
       const username = document.getElementById('username').value;
       const password = document.getElementById('password').value;
       try {
-        const res = await fetch('/auth/login?username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password), {method: 'POST'});
+        const res = await fetch('{URL_PREFIX}/auth/login?username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password), {method: 'POST'});
         const data = await res.json();
         if (data.access_token) {
           localStorage.setItem('token', data.access_token);
-          window.location.href = '/admin/';
+          window.location.href = '{URL_PREFIX}/admin/';
         } else {
           document.getElementById('error-msg').classList.remove('qa-hidden');
         }
@@ -282,14 +284,14 @@ def get_admin_shell(title: str, active: str, page: str, project_id: int = None):
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{title} - Quantum Admin</title>
   <script src="https://unpkg.com/htmx.org@2.0.0"></script>
-  <link rel="stylesheet" href="/static/quantum-admin.css">
+  <link rel="stylesheet" href="{URL_PREFIX}/static/quantum-admin.css">
 </head>
 <body>
   <div class="qa-layout">
     <!-- Sidebar -->
     <aside class="qa-sidebar">
       <div class="qa-sidebar-header">
-        <a href="/admin/" class="qa-sidebar-logo">
+        <a href="{URL_PREFIX}/admin/" class="qa-sidebar-logo">
           <div class="qa-sidebar-logo-icon">Q</div>
           <div>
             <span class="qa-sidebar-logo-text">Quantum Admin</span>
@@ -299,53 +301,53 @@ def get_admin_shell(title: str, active: str, page: str, project_id: int = None):
       </div>
       <nav class="qa-sidebar-nav">
         <div class="qa-sidebar-section">
-          <a href="/admin/" class="{nav_class("dashboard")}">
+          <a href="{URL_PREFIX}/admin/" class="{nav_class("dashboard")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             Dashboard
           </a>
-          <a href="/admin/projects" class="{nav_class("projects")}">
+          <a href="{URL_PREFIX}/admin/projects" class="{nav_class("projects")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
             Applications
           </a>
-          <a href="/admin/docker" class="{nav_class("docker")}">
+          <a href="{URL_PREFIX}/admin/docker" class="{nav_class("docker")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
             Docker
           </a>
-          <a href="/admin/deploy" class="{nav_class("deploy")}">
+          <a href="{URL_PREFIX}/admin/deploy" class="{nav_class("deploy")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
             Deploy
           </a>
         </div>
         <div class="qa-sidebar-section">
           <div class="qa-sidebar-section-title">DevOps</div>
-          <a href="/admin/jobs" class="{nav_class("jobs")}">
+          <a href="{URL_PREFIX}/admin/jobs" class="{nav_class("jobs")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Jobs
           </a>
-          <a href="/admin/cicd" class="{nav_class("cicd")}">
+          <a href="{URL_PREFIX}/admin/cicd" class="{nav_class("cicd")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             CI/CD
           </a>
-          <a href="/admin/tests" class="{nav_class("tests")}">
+          <a href="{URL_PREFIX}/admin/tests" class="{nav_class("tests")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Tests
           </a>
-          <a href="/admin/components" class="{nav_class("components")}">
+          <a href="{URL_PREFIX}/admin/components" class="{nav_class("components")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
             Components
           </a>
         </div>
         <div class="qa-sidebar-section">
           <div class="qa-sidebar-section-title">System</div>
-          <a href="/admin/resources" class="{nav_class("resources")}">
+          <a href="{URL_PREFIX}/admin/resources" class="{nav_class("resources")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
             Resources
           </a>
-          <a href="/admin/settings" class="{nav_class("settings")}">
+          <a href="{URL_PREFIX}/admin/settings" class="{nav_class("settings")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             Settings
           </a>
-          <a href="/admin/users" class="{nav_class("users")}">
+          <a href="{URL_PREFIX}/admin/users" class="{nav_class("users")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
             Users
           </a>
@@ -363,7 +365,7 @@ def get_admin_shell(title: str, active: str, page: str, project_id: int = None):
             <div class="qa-sidebar-user-name">admin</div>
             <div class="qa-sidebar-user-role">Administrator</div>
           </div>
-          <a href="/admin/logout" class="qa-btn qa-btn-ghost qa-btn-icon">
+          <a href="{URL_PREFIX}/admin/logout" class="qa-btn qa-btn-ghost qa-btn-icon">
             <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
           </a>
         </div>
@@ -374,7 +376,7 @@ def get_admin_shell(title: str, active: str, page: str, project_id: int = None):
     <main class="qa-main">
       <header class="qa-header">
         <h2 class="qa-header-title">{title}</h2>
-        <div id="header-status" hx-get="/docker/status" hx-trigger="load, every 30s" hx-swap="innerHTML" class="qa-header-status">
+        <div id="header-status" hx-get="{URL_PREFIX}/docker/status" hx-trigger="load, every 30s" hx-swap="innerHTML" class="qa-header-status">
           <span class="qa-header-status-dot" style="background: var(--q-text-dim);"></span>
           <span class="qa-text-muted">Checking...</span>
         </div>
@@ -403,7 +405,7 @@ def get_admin_shell(title: str, active: str, page: str, project_id: int = None):
 def get_dashboard_content():
     return '''
     <!-- Row 1: Core Stats (4 cards) -->
-    <div class="qa-grid qa-grid-4 qa-mb-4" hx-get="/dashboard/stats" hx-trigger="load" hx-swap="innerHTML">
+    <div class="qa-grid qa-grid-4 qa-mb-4" hx-get="{URL_PREFIX}/dashboard/stats" hx-trigger="load" hx-swap="innerHTML">
       <div class="qa-stat-card qa-pulse"><div class="qa-stat-label">Loading...</div><div class="qa-stat-value">-</div></div>
       <div class="qa-stat-card qa-pulse"><div class="qa-stat-label">Loading...</div><div class="qa-stat-value">-</div></div>
       <div class="qa-stat-card qa-pulse"><div class="qa-stat-label">Loading...</div><div class="qa-stat-value">-</div></div>
@@ -418,15 +420,15 @@ def get_dashboard_content():
     <div class="qa-grid qa-grid-3 qa-gap-6">
       <div class="qa-card" style="grid-column: span 2;">
         <div class="qa-card-header"><h3 class="qa-card-title">Recent Activity</h3></div>
-        <div class="qa-card-body" id="activity-feed" hx-get="/dashboard/activity" hx-trigger="load, every 30s" hx-swap="innerHTML"><div class="qa-text-center qa-text-muted qa-p-6">Loading...</div></div>
+        <div class="qa-card-body" id="activity-feed" hx-get="{URL_PREFIX}/dashboard/activity" hx-trigger="load, every 30s" hx-swap="innerHTML"><div class="qa-text-center qa-text-muted qa-p-6">Loading...</div></div>
       </div>
       <div class="qa-card">
         <div class="qa-card-header"><h3 class="qa-card-title">Quick Actions</h3></div>
         <div class="qa-card-body" style="padding: 8px;">
-          <a href="/admin/projects" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>New Application</a>
-          <a href="/admin/deploy" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>Deploy App</a>
-          <a href="/admin/docker" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>Manage Containers</a>
-          <a href="/admin/settings" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Settings</a>
+          <a href="{URL_PREFIX}/admin/projects" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>New Application</a>
+          <a href="{URL_PREFIX}/admin/deploy" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>Deploy App</a>
+          <a href="{URL_PREFIX}/admin/docker" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>Manage Containers</a>
+          <a href="{URL_PREFIX}/admin/settings" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Settings</a>
         </div>
       </div>
     </div>
@@ -434,16 +436,16 @@ def get_dashboard_content():
       <div class="qa-card">
         <div class="qa-card-header">
           <h3 class="qa-card-title">Docker Status</h3>
-          <button class="qa-btn qa-btn-ghost qa-btn-sm" hx-post="/docker/connect?host=ssh://abathur@10.10.1.40" hx-target="#docker-info" hx-swap="innerHTML">Reconnect</button>
+          <button class="qa-btn qa-btn-ghost qa-btn-sm" hx-post="{URL_PREFIX}/docker/connect?host=ssh://abathur@10.10.1.40" hx-target="#docker-info" hx-swap="innerHTML">Reconnect</button>
         </div>
-        <div class="qa-card-body" id="docker-info" hx-get="/docker/info" hx-trigger="load" hx-swap="innerHTML"><div class="qa-text-center qa-text-muted">Connecting...</div></div>
+        <div class="qa-card-body" id="docker-info" hx-get="{URL_PREFIX}/docker/info" hx-trigger="load" hx-swap="innerHTML"><div class="qa-text-center qa-text-muted">Connecting...</div></div>
       </div>
       <div class="qa-card">
         <div class="qa-card-header"><h3 class="qa-card-title">System Health</h3></div>
         <div class="qa-card-body">
           <div class="qa-flex qa-justify-between qa-items-center qa-mb-4"><span class="qa-text-secondary">API Server</span><span class="qa-flex qa-items-center qa-gap-2"><span class="qa-connector-status-dot connected"></span><span class="qa-text-success">Online</span></span></div>
-          <div class="qa-flex qa-justify-between qa-items-center qa-mb-4"><span class="qa-text-secondary">Database</span><span hx-get="/health/database" hx-trigger="load" hx-swap="innerHTML"></span></div>
-          <div class="qa-flex qa-justify-between qa-items-center"><span class="qa-text-secondary">Docker</span><span hx-get="/docker/status" hx-trigger="load" hx-swap="innerHTML"></span></div>
+          <div class="qa-flex qa-justify-between qa-items-center qa-mb-4"><span class="qa-text-secondary">Database</span><span hx-get="{URL_PREFIX}/health/database" hx-trigger="load" hx-swap="innerHTML"></span></div>
+          <div class="qa-flex qa-justify-between qa-items-center"><span class="qa-text-secondary">Docker</span><span hx-get="{URL_PREFIX}/docker/status" hx-trigger="load" hx-swap="innerHTML"></span></div>
         </div>
       </div>
     </div>
@@ -454,8 +456,8 @@ def get_docker_content():
     return '''
     <div class="qa-card qa-mb-6">
       <div class="qa-card-body qa-flex qa-justify-between qa-items-center">
-        <div hx-get="/docker/status" hx-trigger="load, every 30s" hx-swap="innerHTML" class="qa-flex qa-items-center qa-gap-2"></div>
-        <button class="qa-btn qa-btn-secondary" hx-post="/docker/connect?host=ssh://abathur@10.10.1.40" hx-swap="none" onclick="setTimeout(()=>location.reload(),1000)">Reconnect</button>
+        <div hx-get="{URL_PREFIX}/docker/status" hx-trigger="load, every 30s" hx-swap="innerHTML" class="qa-flex qa-items-center qa-gap-2"></div>
+        <button class="qa-btn qa-btn-secondary" hx-post="{URL_PREFIX}/docker/connect?host=ssh://abathur@10.10.1.40" hx-swap="none" onclick="setTimeout(()=>location.reload(),1000)">Reconnect</button>
       </div>
     </div>
     <div class="qa-tabs">
@@ -467,7 +469,7 @@ def get_docker_content():
     <div id="tab-containers" class="qa-tab-panel active">
       <div class="qa-flex qa-justify-between qa-items-center qa-mb-4">
         <select class="qa-input qa-select" style="width: 160px;"><option value="all">All</option><option value="running">Running</option><option value="stopped">Stopped</option></select>
-        <button class="qa-btn qa-btn-secondary" hx-get="/docker/containers" hx-target="#containers-tbody" hx-swap="innerHTML">Refresh</button>
+        <button class="qa-btn qa-btn-secondary" hx-get="{URL_PREFIX}/docker/containers" hx-target="#containers-tbody" hx-swap="innerHTML">Refresh</button>
       </div>
       <div class="qa-card" style="overflow: hidden;">
         <table class="qa-table">
@@ -481,7 +483,7 @@ def get_docker_content():
               <th class="qa-text-right">Actions</th>
             </tr>
           </thead>
-          <tbody id="containers-tbody" hx-get="/docker/containers" hx-trigger="load" hx-swap="innerHTML">
+          <tbody id="containers-tbody" hx-get="{URL_PREFIX}/docker/containers" hx-trigger="load" hx-swap="innerHTML">
             <tr><td colspan="6" class="qa-text-center qa-text-muted qa-p-6">Loading...</td></tr>
           </tbody>
         </table>
@@ -498,7 +500,7 @@ def get_docker_content():
               <th>Created</th>
             </tr>
           </thead>
-          <tbody id="images-tbody" hx-get="/docker/images" hx-trigger="load" hx-swap="innerHTML">
+          <tbody id="images-tbody" hx-get="{URL_PREFIX}/docker/images" hx-trigger="load" hx-swap="innerHTML">
             <tr><td colspan="4" class="qa-text-center qa-text-muted qa-p-6">Loading...</td></tr>
           </tbody>
         </table>
@@ -510,7 +512,7 @@ def get_docker_content():
           <thead>
             <tr><th>Name</th><th>Driver</th><th>Mountpoint</th></tr>
           </thead>
-          <tbody id="volumes-tbody" hx-get="/docker/volumes" hx-trigger="load" hx-swap="innerHTML">
+          <tbody id="volumes-tbody" hx-get="{URL_PREFIX}/docker/volumes" hx-trigger="load" hx-swap="innerHTML">
             <tr><td colspan="3" class="qa-text-center qa-text-muted qa-p-6">Loading...</td></tr>
           </tbody>
         </table>
@@ -522,7 +524,7 @@ def get_docker_content():
           <thead>
             <tr><th>Name</th><th>Driver</th><th>Scope</th></tr>
           </thead>
-          <tbody id="networks-tbody" hx-get="/docker/networks" hx-trigger="load" hx-swap="innerHTML">
+          <tbody id="networks-tbody" hx-get="{URL_PREFIX}/docker/networks" hx-trigger="load" hx-swap="innerHTML">
             <tr><td colspan="3" class="qa-text-center qa-text-muted qa-p-6">Loading...</td></tr>
           </tbody>
         </table>
@@ -535,9 +537,9 @@ def get_docker_content():
         document.querySelectorAll('.qa-tab').forEach(b => b.classList.remove('active'));
         event.target.classList.add('active');
       }
-      function startContainer(id) { fetch('/docker/containers/' + id + '/start', {method:'POST'}).then(() => htmx.trigger('#containers-tbody', 'load')); }
-      function stopContainer(id) { fetch('/docker/containers/' + id + '/stop', {method:'POST'}).then(() => htmx.trigger('#containers-tbody', 'load')); }
-      function showLogs(id) { window.open('/docker/containers/' + id + '/logs', '_blank'); }
+      function startContainer(id) { fetch('{URL_PREFIX}/docker/containers/' + id + '/start', {method:'POST'}).then(() => htmx.trigger('#containers-tbody', 'load')); }
+      function stopContainer(id) { fetch('{URL_PREFIX}/docker/containers/' + id + '/stop', {method:'POST'}).then(() => htmx.trigger('#containers-tbody', 'load')); }
+      function showLogs(id) { window.open('{URL_PREFIX}/docker/containers/' + id + '/logs', '_blank'); }
     </script>
     '''
 
@@ -558,7 +560,7 @@ def get_projects_content():
       </div>
     </div>
 
-    <div id="projects-grid" hx-get="/projects" hx-trigger="load" hx-swap="innerHTML" class="qa-grid qa-grid-3">
+    <div id="projects-grid" hx-get="{URL_PREFIX}/projects" hx-trigger="load" hx-swap="innerHTML" class="qa-grid qa-grid-3">
       <div class="qa-card qa-pulse"><div class="qa-card-body"><div class="qa-text-muted">Loading projects...</div></div></div>
     </div>
 
@@ -626,7 +628,7 @@ def get_projects_content():
         document.getElementById('project-modal-title').textContent = 'Edit Application';
         document.getElementById('project-save-text').textContent = 'Save Changes';
         // Load project data
-        fetch('/projects/' + projectId, {
+        fetch('{URL_PREFIX}/projects/' + projectId, {
           headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
         })
         .then(r => r.json())
@@ -687,7 +689,7 @@ def get_projects_content():
 
     function confirmDeleteProject() {
       const id = document.getElementById('delete-project-id').value;
-      fetch('/projects/' + id, {
+      fetch('{URL_PREFIX}/projects/' + id, {
         method: 'DELETE',
         headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
       })
@@ -735,7 +737,7 @@ def get_projects_content():
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <div class="qa-modal-body" hx-get="/create-project-wizard" hx-trigger="load" hx-swap="innerHTML">
+        <div class="qa-modal-body" hx-get="{URL_PREFIX}/create-project-wizard" hx-trigger="load" hx-swap="innerHTML">
           <div class="qa-text-center qa-p-6">Loading templates...</div>
         </div>
       </div>
@@ -748,7 +750,7 @@ def get_project_detail_content(project_id: int):
     return f'''
     <!-- Back button and header -->
     <div class="qa-flex qa-items-center qa-gap-4 qa-mb-6">
-      <a href="/admin/projects" class="qa-btn qa-btn-ghost">
+      <a href="{URL_PREFIX}/admin/projects" class="qa-btn qa-btn-ghost">
         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
         Back to Applications
       </a>
@@ -756,7 +758,7 @@ def get_project_detail_content(project_id: int):
 
     <!-- Project header with status -->
     <div class="qa-card qa-mb-6">
-      <div class="qa-card-body qa-flex qa-justify-between qa-items-center" id="project-header" hx-get="/api/projects/{project_id}/header" hx-trigger="load" hx-swap="innerHTML">
+      <div class="qa-card-body qa-flex qa-justify-between qa-items-center" id="project-header" hx-get="{URL_PREFIX}/api/projects/{project_id}/header" hx-trigger="load" hx-swap="innerHTML">
         <div class="qa-flex qa-items-center qa-gap-4">
           <div class="qa-project-icon" style="width: 56px; height: 56px;">
             <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
@@ -817,7 +819,7 @@ def get_project_detail_content(project_id: int):
           <div class="qa-card-header">
             <h3 class="qa-card-title">Application Settings</h3>
           </div>
-          <div class="qa-card-body" hx-get="/api/projects/{project_id}/general" hx-trigger="load" hx-swap="innerHTML">
+          <div class="qa-card-body" hx-get="{URL_PREFIX}/api/projects/{project_id}/general" hx-trigger="load" hx-swap="innerHTML">
             <div class="qa-text-center qa-text-muted qa-p-6">Loading...</div>
           </div>
         </div>
@@ -829,7 +831,7 @@ def get_project_detail_content(project_id: int):
           <div class="qa-card-header">
             <h3 class="qa-card-title">Source Code Configuration</h3>
           </div>
-          <div class="qa-card-body" hx-get="/api/projects/{project_id}/source-html" hx-trigger="load" hx-swap="innerHTML">
+          <div class="qa-card-body" hx-get="{URL_PREFIX}/api/projects/{project_id}/source-html" hx-trigger="load" hx-swap="innerHTML">
             <div class="qa-text-center qa-text-muted qa-p-6">Loading...</div>
           </div>
         </div>
@@ -845,7 +847,7 @@ def get_project_detail_content(project_id: int):
               Add Datasource
             </button>
           </div>
-          <div class="qa-card-body" id="datasources-list" hx-get="/api/projects/{project_id}/datasources-html" hx-trigger="load" hx-swap="innerHTML">
+          <div class="qa-card-body" id="datasources-list" hx-get="{URL_PREFIX}/api/projects/{project_id}/datasources-html" hx-trigger="load" hx-swap="innerHTML">
             <div class="qa-text-center qa-text-muted qa-p-6">Loading datasources...</div>
           </div>
         </div>
@@ -858,7 +860,7 @@ def get_project_detail_content(project_id: int):
             <h3 class="qa-card-title">Connector Access</h3>
             <p class="qa-text-sm qa-text-muted">Configure which connectors this project can access</p>
           </div>
-          <div class="qa-card-body" id="connectors-list" hx-get="/api/projects/{project_id}/connectors-html" hx-trigger="load" hx-swap="innerHTML">
+          <div class="qa-card-body" id="connectors-list" hx-get="{URL_PREFIX}/api/projects/{project_id}/connectors-html" hx-trigger="load" hx-swap="innerHTML">
             <div class="qa-text-center qa-text-muted qa-p-6">Loading connectors...</div>
           </div>
         </div>
@@ -877,7 +879,7 @@ def get_project_detail_content(project_id: int):
               </button>
             </div>
           </div>
-          <div class="qa-card-body" id="environments-list" hx-get="/api/projects/{project_id}/environments-html" hx-trigger="load" hx-swap="innerHTML">
+          <div class="qa-card-body" id="environments-list" hx-get="{URL_PREFIX}/api/projects/{project_id}/environments-html" hx-trigger="load" hx-swap="innerHTML">
             <div class="qa-text-center qa-text-muted qa-p-6">Loading environments...</div>
           </div>
         </div>
@@ -889,7 +891,7 @@ def get_project_detail_content(project_id: int):
           <div class="qa-card-header">
             <h3 class="qa-card-title">Application Paths</h3>
           </div>
-          <div class="qa-card-body" hx-get="/api/projects/{project_id}/paths-html" hx-trigger="load" hx-swap="innerHTML">
+          <div class="qa-card-body" hx-get="{URL_PREFIX}/api/projects/{project_id}/paths-html" hx-trigger="load" hx-swap="innerHTML">
             <div class="qa-text-center qa-text-muted qa-p-6">Loading paths...</div>
           </div>
         </div>
@@ -905,7 +907,7 @@ def get_project_detail_content(project_id: int):
               Add Variable
             </button>
           </div>
-          <div class="qa-card-body" id="envvars-list" hx-get="/projects/{project_id}/environment-variables" hx-trigger="load" hx-swap="innerHTML">
+          <div class="qa-card-body" id="envvars-list" hx-get="{URL_PREFIX}/projects/{project_id}/environment-variables" hx-trigger="load" hx-swap="innerHTML">
             <div class="qa-text-center qa-text-muted qa-p-6">Loading environment variables...</div>
           </div>
         </div>
@@ -922,7 +924,7 @@ def get_project_detail_content(project_id: int):
                   <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                   Auto
                 </button>
-                <button class="qa-btn qa-btn-secondary qa-btn-sm" hx-get="/api/projects/{project_id}/logs-html" hx-target="#logs-list" hx-swap="innerHTML">
+                <button class="qa-btn qa-btn-secondary qa-btn-sm" hx-get="{URL_PREFIX}/api/projects/{project_id}/logs-html" hx-target="#logs-list" hx-swap="innerHTML">
                   <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                   Refresh
                 </button>
@@ -949,7 +951,7 @@ def get_project_detail_content(project_id: int):
               </select>
             </div>
           </div>
-          <div class="qa-card-body qa-p-0" id="logs-list" hx-get="/api/projects/{project_id}/logs-html" hx-trigger="load" hx-swap="innerHTML" style="max-height: 500px; overflow-y: auto;">
+          <div class="qa-card-body qa-p-0" id="logs-list" hx-get="{URL_PREFIX}/api/projects/{project_id}/logs-html" hx-trigger="load" hx-swap="innerHTML" style="max-height: 500px; overflow-y: auto;">
             <div class="qa-text-center qa-text-muted qa-p-6">Loading logs...</div>
           </div>
         </div>
@@ -991,12 +993,12 @@ def get_project_detail_content(project_id: int):
         <div class="qa-card">
           <div class="qa-card-header qa-flex qa-justify-between qa-items-center">
             <h3 class="qa-card-title">Activity Log</h3>
-            <button class="qa-btn qa-btn-secondary qa-btn-sm" hx-get="/api/projects/{project_id}/audit-log-html" hx-target="#activity-list" hx-swap="innerHTML">
+            <button class="qa-btn qa-btn-secondary qa-btn-sm" hx-get="{URL_PREFIX}/api/projects/{project_id}/audit-log-html" hx-target="#activity-list" hx-swap="innerHTML">
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
               Refresh
             </button>
           </div>
-          <div class="qa-card-body" id="activity-list" hx-get="/api/projects/{project_id}/audit-log-html" hx-trigger="load" hx-swap="innerHTML">
+          <div class="qa-card-body" id="activity-list" hx-get="{URL_PREFIX}/api/projects/{project_id}/audit-log-html" hx-trigger="load" hx-swap="innerHTML">
             <div class="qa-text-center qa-text-muted qa-p-6">Loading activity log...</div>
           </div>
         </div>
@@ -1869,7 +1871,7 @@ def get_deploy_content():
 
       async function loadProjects() {
         try {
-          const res = await fetch('/projects');
+          const res = await fetch('{URL_PREFIX}/projects');
           const projects = await res.json();
           const select = document.getElementById('project-select');
           select.innerHTML = '<option value="">Select an application...</option>';
@@ -1949,7 +1951,7 @@ def get_deploy_content():
         if (!currentProjectId) return;
 
         try {
-          const res = await fetch('/deploy/start', {
+          const res = await fetch('{URL_PREFIX}/deploy/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `project_id=${currentProjectId}&environment_id=${envId}`
@@ -2261,7 +2263,7 @@ def get_settings_content():
           </div>
         </div>
         <div class="qa-card-footer qa-flex qa-justify-end qa-gap-2">
-          <button class="qa-btn qa-btn-secondary" hx-post="/docker/connect?host=ssh://abathur@10.10.1.40" hx-swap="none">Test Connection</button>
+          <button class="qa-btn qa-btn-secondary" hx-post="{URL_PREFIX}/docker/connect?host=ssh://abathur@10.10.1.40" hx-swap="none">Test Connection</button>
           <button class="qa-btn qa-btn-primary">Save Docker Settings</button>
         </div>
       </div>
@@ -2306,7 +2308,7 @@ def get_settings_content():
       </div>
 
       <!-- Connectors Grid -->
-      <div id="connectors-grid" class="qa-grid qa-grid-3" hx-get="/settings/connectors" hx-trigger="load" hx-swap="innerHTML">
+      <div id="connectors-grid" class="qa-grid qa-grid-3" hx-get="{URL_PREFIX}/settings/connectors" hx-trigger="load" hx-swap="innerHTML">
         <div class="qa-text-center qa-text-muted qa-p-6" style="grid-column: span 3;">Loading connectors...</div>
       </div>
     </div>
@@ -2491,7 +2493,7 @@ def get_settings_content():
       async function loadApplications() {
         if (applicationsCache) return applicationsCache;
         try {
-          const res = await fetch('/projects');
+          const res = await fetch('{URL_PREFIX}/projects');
           applicationsCache = await res.json();
           return applicationsCache;
         } catch (e) {
@@ -2526,7 +2528,7 @@ def get_settings_content():
         if (id) {
           title.textContent = 'Edit Connector';
           // Load connector data
-          fetch('/settings/connectors/id/' + id)
+          fetch('{URL_PREFIX}/settings/connectors/id/' + id)
             .then(r => r.json())
             .then(conn => {
               form.querySelector('[name="name"]').value = conn.name || '';
@@ -2638,7 +2640,7 @@ def get_settings_content():
 
         showToast('Testing connection...', 'info');
 
-        const res = await fetch('/settings/connectors/test', {
+        const res = await fetch('{URL_PREFIX}/settings/connectors/test', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -2654,7 +2656,7 @@ def get_settings_content():
 
       async function testConnector(id) {
         showToast('Testing connection...', 'info');
-        const res = await fetch('/settings/connectors/' + id + '/test', { method: 'POST' });
+        const res = await fetch('{URL_PREFIX}/settings/connectors/' + id + '/test', { method: 'POST' });
         const result = await res.json();
         if (result.success) {
           showToast('Connection successful!', 'success');
@@ -2670,13 +2672,13 @@ def get_settings_content():
 
       async function deleteConnector(id) {
         if (!confirm('Delete this connector?')) return;
-        await fetch('/settings/connectors/' + id, { method: 'DELETE' });
+        await fetch('{URL_PREFIX}/settings/connectors/' + id, { method: 'DELETE' });
         refreshConnectors();
         showToast('Connector deleted', 'success');
       }
 
       async function setDefaultConnector(id) {
-        await fetch('/settings/connectors/' + id + '/default', { method: 'POST' });
+        await fetch('{URL_PREFIX}/settings/connectors/' + id + '/default', { method: 'POST' });
         refreshConnectors();
         showToast('Default connector updated', 'success');
       }
@@ -2711,7 +2713,7 @@ def get_settings_content():
       </div>
 
       <!-- Provider Cards Grid -->
-      <div id="cloud-integrations-grid" class="qa-grid qa-grid-2 qa-gap-4" hx-get="/settings/cloud" hx-trigger="load" hx-swap="innerHTML">
+      <div id="cloud-integrations-grid" class="qa-grid qa-grid-2 qa-gap-4" hx-get="{URL_PREFIX}/settings/cloud" hx-trigger="load" hx-swap="innerHTML">
         <div class="qa-text-center qa-text-muted qa-p-6" style="grid-column: span 2;">Loading cloud integrations...</div>
       </div>
 
@@ -2903,7 +2905,7 @@ def get_settings_content():
 
         if (id) {
           title.textContent = 'Edit Cloud Integration';
-          fetch('/settings/cloud/' + id)
+          fetch('{URL_PREFIX}/settings/cloud/' + id)
             .then(r => r.json())
             .then(data => {
               form.querySelector('[name="name"]').value = data.name || '';
@@ -3022,7 +3024,7 @@ def get_settings_content():
 
         showToast('Testing connection...', 'info');
 
-        const res = await fetch('/settings/cloud/test', {
+        const res = await fetch('{URL_PREFIX}/settings/cloud/test', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ provider, credentials })
@@ -3038,14 +3040,14 @@ def get_settings_content():
 
       async function deleteCloudIntegration(id) {
         if (!confirm('Delete this cloud integration?')) return;
-        await fetch('/settings/cloud/' + id, { method: 'DELETE' });
+        await fetch('{URL_PREFIX}/settings/cloud/' + id, { method: 'DELETE' });
         htmx.ajax('GET', '/settings/cloud', { target: '#cloud-integrations-grid', swap: 'innerHTML' });
         showToast('Integration deleted', 'success');
       }
 
       async function testExistingCloudIntegration(id) {
         showToast('Testing connection...', 'info');
-        const res = await fetch('/settings/cloud/' + id + '/test', { method: 'POST' });
+        const res = await fetch('{URL_PREFIX}/settings/cloud/' + id + '/test', { method: 'POST' });
         const result = await res.json();
         if (result.success) {
           showToast('Connection successful!', 'success');
@@ -3168,7 +3170,7 @@ def get_jobs_content():
     </div>
 
     <!-- Stats Cards -->
-    <div class="qa-grid qa-grid-4 qa-gap-4 qa-mb-6" hx-get="/jobs/overview" hx-trigger="load, every 10s" hx-swap="innerHTML">
+    <div class="qa-grid qa-grid-4 qa-gap-4 qa-mb-6" hx-get="{URL_PREFIX}/jobs/overview" hx-trigger="load, every 10s" hx-swap="innerHTML">
       <div class="qa-stat-card qa-pulse"><div class="qa-stat-label">Loading...</div><div class="qa-stat-value">-</div></div>
       <div class="qa-stat-card qa-pulse"><div class="qa-stat-label">Loading...</div><div class="qa-stat-value">-</div></div>
       <div class="qa-stat-card qa-pulse"><div class="qa-stat-label">Loading...</div><div class="qa-stat-value">-</div></div>
@@ -3188,9 +3190,9 @@ def get_jobs_content():
       <div class="qa-card">
         <div class="qa-card-header qa-flex qa-justify-between qa-items-center">
           <h3 class="qa-card-title">Queued Jobs</h3>
-          <button class="qa-btn qa-btn-secondary qa-btn-sm" hx-get="/jobs" hx-target="#jobs-list" hx-swap="innerHTML">Refresh</button>
+          <button class="qa-btn qa-btn-secondary qa-btn-sm" hx-get="{URL_PREFIX}/jobs" hx-target="#jobs-list" hx-swap="innerHTML">Refresh</button>
         </div>
-        <div class="qa-card-body qa-p-0" id="jobs-list" hx-get="/jobs" hx-trigger="load" hx-swap="innerHTML">
+        <div class="qa-card-body qa-p-0" id="jobs-list" hx-get="{URL_PREFIX}/jobs" hx-trigger="load" hx-swap="innerHTML">
           <div class="qa-text-center qa-text-muted qa-p-6">Loading jobs...</div>
         </div>
       </div>
@@ -3200,7 +3202,7 @@ def get_jobs_content():
     <div id="tab-schedules" class="qa-tab-content qa-hidden">
       <div class="qa-card">
         <div class="qa-card-header"><h3 class="qa-card-title">Scheduled Tasks</h3></div>
-        <div class="qa-card-body" id="schedules-list" hx-get="/schedules" hx-trigger="load" hx-swap="innerHTML">
+        <div class="qa-card-body" id="schedules-list" hx-get="{URL_PREFIX}/schedules" hx-trigger="load" hx-swap="innerHTML">
           <div class="qa-text-center qa-text-muted qa-p-6">Loading schedules...</div>
         </div>
       </div>
@@ -3210,7 +3212,7 @@ def get_jobs_content():
     <div id="tab-threads" class="qa-tab-content qa-hidden">
       <div class="qa-card">
         <div class="qa-card-header"><h3 class="qa-card-title">Running Threads</h3></div>
-        <div class="qa-card-body" id="threads-list" hx-get="/threads" hx-trigger="load" hx-swap="innerHTML">
+        <div class="qa-card-body" id="threads-list" hx-get="{URL_PREFIX}/threads" hx-trigger="load" hx-swap="innerHTML">
           <div class="qa-text-center qa-text-muted qa-p-6">Loading threads...</div>
         </div>
       </div>
@@ -3220,7 +3222,7 @@ def get_jobs_content():
     <div id="tab-queues" class="qa-tab-content qa-hidden">
       <div class="qa-card">
         <div class="qa-card-header"><h3 class="qa-card-title">Queue Statistics</h3></div>
-        <div class="qa-card-body" id="queues-list" hx-get="/queues" hx-trigger="load" hx-swap="innerHTML">
+        <div class="qa-card-body" id="queues-list" hx-get="{URL_PREFIX}/queues" hx-trigger="load" hx-swap="innerHTML">
           <div class="qa-text-center qa-text-muted qa-p-6">Loading queues...</div>
         </div>
       </div>
@@ -3264,7 +3266,7 @@ def get_cicd_content():
         </div>
         <div class="qa-card">
           <div class="qa-card-header"><h3 class="qa-card-title">Webhook Events</h3></div>
-          <div class="qa-card-body" hx-get="/webhooks/events" hx-trigger="load" hx-swap="innerHTML">
+          <div class="qa-card-body" hx-get="{URL_PREFIX}/webhooks/events" hx-trigger="load" hx-swap="innerHTML">
             <p class="qa-text-muted qa-text-center qa-p-6">Loading webhook events...</p>
           </div>
         </div>
@@ -3273,7 +3275,7 @@ def get_cicd_content():
 
     <script>
     // Load projects for selector
-    fetch('/projects').then(r => r.json()).then(projects => {
+    fetch('{URL_PREFIX}/projects').then(r => r.json()).then(projects => {
       const select = document.getElementById('cicd-project');
       projects.forEach(p => {
         const opt = document.createElement('option');
@@ -3328,7 +3330,7 @@ def get_tests_content():
 
     <script>
     // Load projects for selector
-    fetch('/projects').then(r => r.json()).then(projects => {
+    fetch('{URL_PREFIX}/projects').then(r => r.json()).then(projects => {
       const select = document.getElementById('tests-project');
       projects.forEach(p => {
         const opt = document.createElement('option');
@@ -3430,7 +3432,7 @@ def get_components_content():
     let currentProjectId = null;
 
     // Load projects for selector
-    fetch('/projects').then(r => r.json()).then(projects => {
+    fetch('{URL_PREFIX}/projects').then(r => r.json()).then(projects => {
       const select = document.getElementById('components-project');
       projects.forEach(p => {
         const opt = document.createElement('option');
@@ -3457,7 +3459,7 @@ def get_components_content():
     function syncComponents() {
       if (!currentProjectId) return;
       showToast('Syncing components from filesystem...', 'info');
-      fetch('/projects/' + currentProjectId + '/components/sync', { method: 'POST' })
+      fetch('{URL_PREFIX}/projects/' + currentProjectId + '/components/sync', { method: 'POST' })
         .then(r => r.json())
         .then(data => {
           showToast('Synced: ' + data.created + ' created, ' + data.updated + ' updated, ' + data.deleted + ' deleted', 'success');
@@ -3469,7 +3471,7 @@ def get_components_content():
     function syncTestsFromFS() {
       if (!currentProjectId) return;
       showToast('Discovering existing tests...', 'info');
-      fetch('/api/projects/' + currentProjectId + '/components/sync-tests', { method: 'POST' })
+      fetch('{URL_PREFIX}/api/projects/' + currentProjectId + '/components/sync-tests', { method: 'POST' })
         .then(r => r.json())
         .then(data => {
           showToast('Discovered ' + data.tests_synced + ' tests, updated ' + data.components_updated + ' components', 'success');
@@ -3481,7 +3483,7 @@ def get_components_content():
     function runAllTests() {
       if (!currentProjectId) return;
       showToast('Starting test run for all components...', 'info');
-      fetch('/api/projects/' + currentProjectId + '/tests/run-all', { method: 'POST' })
+      fetch('{URL_PREFIX}/api/projects/' + currentProjectId + '/tests/run-all', { method: 'POST' })
         .then(r => r.json())
         .then(data => {
           showToast('Test run started: ' + data.test_run_id, 'success');
@@ -3494,7 +3496,7 @@ def get_components_content():
     function generateMissingTests() {
       if (!currentProjectId) return;
       showToast('Generating tests for components without tests...', 'info');
-      fetch('/api/projects/' + currentProjectId + '/components/generate-missing-tests', { method: 'POST' })
+      fetch('{URL_PREFIX}/api/projects/' + currentProjectId + '/components/generate-missing-tests', { method: 'POST' })
         .then(r => r.json())
         .then(data => {
           showToast('Generated tests for ' + data.components_processed + ' components', 'success');
@@ -3505,7 +3507,7 @@ def get_components_content():
 
     function runComponentTests(componentId) {
       showToast('Running tests for component...', 'info');
-      fetch('/api/projects/' + currentProjectId + '/components/' + componentId + '/tests/run', { method: 'POST' })
+      fetch('{URL_PREFIX}/api/projects/' + currentProjectId + '/components/' + componentId + '/tests/run', { method: 'POST' })
         .then(r => r.json())
         .then(data => {
           showToast('Test run started: ' + data.test_run_id, 'success');
@@ -3516,7 +3518,7 @@ def get_components_content():
 
     function generateComponentTests(componentId) {
       showToast('Generating tests for component...', 'info');
-      fetch('/projects/' + currentProjectId + '/components/' + componentId + '/tests/generate', { method: 'POST' })
+      fetch('{URL_PREFIX}/projects/' + currentProjectId + '/components/' + componentId + '/tests/generate', { method: 'POST' })
         .then(r => r.json())
         .then(data => {
           showToast('Generated ' + data.generated + ' tests', 'success');
@@ -3527,7 +3529,7 @@ def get_components_content():
 
     function viewComponentDetails(componentId) {
       // Open modal or navigate to details page
-      window.location.href = '/admin/projects/' + currentProjectId + '/components/' + componentId;
+      window.location.href = '{URL_PREFIX}/admin/projects/' + currentProjectId + '/components/' + componentId;
     }
 
     function toggleAllComponents(checkbox) {
@@ -3538,7 +3540,7 @@ def get_components_content():
 
     function pollTestRun(testRunId) {
       const interval = setInterval(() => {
-        fetch('/projects/' + currentProjectId + '/test-runs/' + testRunId)
+        fetch('{URL_PREFIX}/projects/' + currentProjectId + '/test-runs/' + testRunId)
           .then(r => r.json())
           .then(data => {
             if (data.status === 'completed' || data.status === 'failed') {
@@ -3572,7 +3574,7 @@ def get_resources_content():
     </div>
 
     <!-- Stats Cards with Auto-Discovery -->
-    <div class="qa-mb-6" hx-get="/resources/overview-html" hx-trigger="load" hx-swap="innerHTML">
+    <div class="qa-mb-6" hx-get="{URL_PREFIX}/resources/overview-html" hx-trigger="load" hx-swap="innerHTML">
       <div class="qa-grid qa-grid-4 qa-gap-4">
         <div class="qa-stat-card qa-pulse"><div class="qa-stat-label">Loading...</div><div class="qa-stat-value">-</div></div>
         <div class="qa-stat-card qa-pulse"><div class="qa-stat-label">Loading...</div><div class="qa-stat-value">-</div></div>
@@ -3608,11 +3610,11 @@ def get_resources_content():
         <div class="qa-card">
           <div class="qa-card-header qa-flex qa-justify-between qa-items-center">
             <h3 class="qa-card-title">Ports in Use</h3>
-            <button class="qa-btn qa-btn-ghost qa-btn-sm" hx-get="/api/resources/discovered-ports-html" hx-target="#discovered-ports-list" hx-swap="innerHTML">
+            <button class="qa-btn qa-btn-ghost qa-btn-sm" hx-get="{URL_PREFIX}/api/resources/discovered-ports-html" hx-target="#discovered-ports-list" hx-swap="innerHTML">
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             </button>
           </div>
-          <div class="qa-card-body qa-p-0" id="discovered-ports-list" hx-get="/api/resources/discovered-ports-html" hx-trigger="load" hx-swap="innerHTML" style="max-height: 400px; overflow-y: auto;">
+          <div class="qa-card-body qa-p-0" id="discovered-ports-list" hx-get="{URL_PREFIX}/api/resources/discovered-ports-html" hx-trigger="load" hx-swap="innerHTML" style="max-height: 400px; overflow-y: auto;">
             <div class="qa-text-center qa-text-muted qa-p-6">Scanning ports...</div>
           </div>
         </div>
@@ -3621,11 +3623,11 @@ def get_resources_content():
         <div class="qa-card">
           <div class="qa-card-header qa-flex qa-justify-between qa-items-center">
             <h3 class="qa-card-title">Docker Containers</h3>
-            <button class="qa-btn qa-btn-ghost qa-btn-sm" hx-get="/api/resources/containers-html" hx-target="#discovered-containers-list" hx-swap="innerHTML">
+            <button class="qa-btn qa-btn-ghost qa-btn-sm" hx-get="{URL_PREFIX}/api/resources/containers-html" hx-target="#discovered-containers-list" hx-swap="innerHTML">
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             </button>
           </div>
-          <div class="qa-card-body qa-p-0" id="discovered-containers-list" hx-get="/api/resources/containers-html" hx-trigger="load" hx-swap="innerHTML" style="max-height: 400px; overflow-y: auto;">
+          <div class="qa-card-body qa-p-0" id="discovered-containers-list" hx-get="{URL_PREFIX}/api/resources/containers-html" hx-trigger="load" hx-swap="innerHTML" style="max-height: 400px; overflow-y: auto;">
             <div class="qa-text-center qa-text-muted qa-p-6">Scanning containers...</div>
           </div>
         </div>
@@ -3635,7 +3637,7 @@ def get_resources_content():
       <div class="qa-card qa-mt-4">
         <div class="qa-card-header qa-flex qa-justify-between qa-items-center">
           <h3 class="qa-card-title">Resource Sync</h3>
-          <button class="qa-btn qa-btn-secondary qa-btn-sm" hx-post="/resources/sync" hx-target="#sync-results" hx-swap="innerHTML">
+          <button class="qa-btn qa-btn-secondary qa-btn-sm" hx-post="{URL_PREFIX}/resources/sync" hx-target="#sync-results" hx-swap="innerHTML">
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             Sync Now
           </button>
@@ -3656,7 +3658,7 @@ def get_resources_content():
             Allocate Port
           </button>
         </div>
-        <div class="qa-card-body qa-p-0" hx-get="/api/resources/ports-html" hx-trigger="load" hx-swap="innerHTML" id="ports-table">
+        <div class="qa-card-body qa-p-0" hx-get="{URL_PREFIX}/api/resources/ports-html" hx-trigger="load" hx-swap="innerHTML" id="ports-table">
           <div class="qa-text-center qa-text-muted qa-p-6">Loading ports...</div>
         </div>
       </div>
@@ -3672,7 +3674,7 @@ def get_resources_content():
             Add Secret
           </button>
         </div>
-        <div class="qa-card-body qa-p-0" hx-get="/api/resources/secrets-html" hx-trigger="load" hx-swap="innerHTML" id="secrets-table">
+        <div class="qa-card-body qa-p-0" hx-get="{URL_PREFIX}/api/resources/secrets-html" hx-trigger="load" hx-swap="innerHTML" id="secrets-table">
           <div class="qa-text-center qa-text-muted qa-p-6">Loading secrets...</div>
         </div>
       </div>
@@ -3694,7 +3696,7 @@ def get_resources_content():
             </button>
           </div>
         </div>
-        <div class="qa-card-body qa-p-0" hx-get="/api/resources/services-html" hx-trigger="load" hx-swap="innerHTML" id="services-table">
+        <div class="qa-card-body qa-p-0" hx-get="{URL_PREFIX}/api/resources/services-html" hx-trigger="load" hx-swap="innerHTML" id="services-table">
           <div class="qa-text-center qa-text-muted qa-p-6">Loading services...</div>
         </div>
       </div>
@@ -3722,7 +3724,7 @@ def get_resources_content():
 
       async function runHealthChecks() {
         try {
-          const response = await fetch('/resources/services/health-check', { method: 'POST' });
+          const response = await fetch('{URL_PREFIX}/resources/services/health-check', { method: 'POST' });
           const data = await response.json();
           showToast('Health checks completed', 'success');
           htmx.trigger('#services-table', 'load');
@@ -4645,7 +4647,7 @@ def get_docker_info(request: Request = None):
                 <div class="qa-empty qa-p-4">
                     <p class="qa-text-muted">Docker not connected</p>
                     <button class="qa-btn qa-btn-primary qa-btn-sm qa-mt-4"
-                            hx-post="/docker/connect?host=ssh://abathur@10.10.1.40"
+                            hx-post="{URL_PREFIX}/docker/connect?host=ssh://abathur@10.10.1.40"
                             hx-swap="outerHTML">
                         Connect to Forge
                     </button>
@@ -5237,7 +5239,7 @@ def get_rollback_html(
                 {"" if v.is_current else f'''
                 <button class="qa-btn qa-btn-warning qa-btn-sm"
                         onclick="confirmRollback({v.id}, '{commit_short}')"
-                        hx-post="/projects/{project_id}/environments/{env_id}/rollback?target_version_id={v.id}"
+                        hx-post="{URL_PREFIX}/projects/{project_id}/environments/{env_id}/rollback?target_version_id={v.id}"
                         hx-confirm="Are you sure you want to rollback to {commit_short}?"
                         hx-target="closest .qa-card-body"
                         hx-swap="innerHTML">
@@ -6123,7 +6125,7 @@ def get_cicd_dashboard_html(
                             <td>{time_str}</td>
                             <td>
                                 <button class="qa-btn qa-btn-sm"
-                                        hx-post="/projects/{project_id}/pipelines/{e.id}/retry"
+                                        hx-post="{URL_PREFIX}/projects/{project_id}/pipelines/{e.id}/retry"
                                         hx-swap="none">
                                     Retry
                                 </button>
@@ -6506,7 +6508,7 @@ def get_jobs_dashboard_html(db: Session = Depends(get_db)):
                 <h4>Job Queue</h4>
                 <div>
                     <button class="qa-btn qa-btn-sm qa-btn-primary"
-                            hx-get="/api/jobs/dashboard"
+                            hx-get="{URL_PREFIX}/api/jobs/dashboard"
                             hx-target=".qa-jobs-dashboard"
                             hx-swap="outerHTML">
                         Refresh
@@ -6560,7 +6562,7 @@ def get_jobs_dashboard_html(db: Session = Depends(get_db)):
             if job.get('status') == 'pending':
                 html += f'''
                                 <button class="qa-btn qa-btn-sm qa-btn-danger"
-                                        hx-post="/jobs/{job.get('id')}/cancel"
+                                        hx-post="{URL_PREFIX}/jobs/{job.get('id')}/cancel"
                                         hx-swap="none"
                                         hx-confirm="Cancel this job?">
                                     Cancel
@@ -6569,7 +6571,7 @@ def get_jobs_dashboard_html(db: Session = Depends(get_db)):
             elif job.get('status') == 'failed':
                 html += f'''
                                 <button class="qa-btn qa-btn-sm qa-btn-warning"
-                                        hx-post="/jobs/{job.get('id')}/retry"
+                                        hx-post="{URL_PREFIX}/jobs/{job.get('id')}/retry"
                                         hx-swap="none">
                                     Retry
                                 </button>
@@ -6630,7 +6632,7 @@ def get_jobs_dashboard_html(db: Session = Depends(get_db)):
                             <td>{sched.get('run_count', 0)}</td>
                             <td>
                                 <button class="qa-btn qa-btn-sm qa-btn-primary"
-                                        hx-post="/schedules/{sched.get('name')}/run"
+                                        hx-post="{URL_PREFIX}/schedules/{sched.get('name')}/run"
                                         hx-swap="none">
                                     Run Now
                                 </button>
@@ -6639,7 +6641,7 @@ def get_jobs_dashboard_html(db: Session = Depends(get_db)):
             if sched.get('enabled'):
                 html += f'''
                                 <button class="qa-btn qa-btn-sm"
-                                        hx-post="/schedules/{sched.get('name')}/pause"
+                                        hx-post="{URL_PREFIX}/schedules/{sched.get('name')}/pause"
                                         hx-swap="none">
                                     Pause
                                 </button>
@@ -6647,7 +6649,7 @@ def get_jobs_dashboard_html(db: Session = Depends(get_db)):
             else:
                 html += f'''
                                 <button class="qa-btn qa-btn-sm"
-                                        hx-post="/schedules/{sched.get('name')}/resume"
+                                        hx-post="{URL_PREFIX}/schedules/{sched.get('name')}/resume"
                                         hx-swap="none">
                                     Resume
                                 </button>
@@ -6704,7 +6706,7 @@ def get_jobs_dashboard_html(db: Session = Depends(get_db)):
                             <td>{q.get('failed', 0)}</td>
                             <td>
                                 <button class="qa-btn qa-btn-sm qa-btn-danger"
-                                        hx-post="/queues/{q.get('name')}/purge?status=completed"
+                                        hx-post="{URL_PREFIX}/queues/{q.get('name')}/purge?status=completed"
                                         hx-swap="none"
                                         hx-confirm="Purge completed jobs from this queue?">
                                     Purge Completed
@@ -7120,7 +7122,7 @@ def get_project_general_html(project_id: int, request: Request, db: Session = De
         <script>
         function saveGeneralSettings(e) {{
           e.preventDefault();
-          fetch('/projects/{project_id}', {{
+          fetch('{URL_PREFIX}/projects/{project_id}', {{
             method: 'PUT',
             headers: {{
               'Content-Type': 'application/json',
@@ -7207,7 +7209,7 @@ def get_project_source_html(project_id: int, db: Session = Depends(get_db)):
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                 Pull Latest
               </button>
-              <a href="/admin/components" class="qa-btn qa-btn-secondary" {"style='pointer-events:none;opacity:0.5'" if not source_path else ""}>
+              <a href="{URL_PREFIX}/admin/components" class="qa-btn qa-btn-secondary" {"style='pointer-events:none;opacity:0.5'" if not source_path else ""}>
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6z"/></svg>
                 Discover Components
               </a>
@@ -7218,7 +7220,7 @@ def get_project_source_html(project_id: int, db: Session = Depends(get_db)):
         <script>
         function saveSourceSettings(e) {{
           e.preventDefault();
-          fetch('/projects/{project_id}', {{
+          fetch('{URL_PREFIX}/projects/{project_id}', {{
             method: 'PUT',
             headers: {{
               'Content-Type': 'application/json',
@@ -7271,7 +7273,7 @@ def get_project_source_html(project_id: int, db: Session = Depends(get_db)):
             return;
           }}
           if (!confirm('Pull latest changes in ' + sourcePath + '?')) return;
-          fetch('/projects/{project_id}/git/pull', {{ method: 'POST' }})
+          fetch('{URL_PREFIX}/projects/{project_id}/git/pull', {{ method: 'POST' }})
             .then(r => r.json())
             .then(data => {{
               if (data.commit) {{
@@ -7441,7 +7443,7 @@ def get_project_connectors_html(project_id: int, request: Request, db: Session =
         <script>
         function toggleConnector(connId, enabled) {{
           // Save connector access
-          fetch('/projects/{project_id}/settings', {{
+          fetch('{URL_PREFIX}/projects/{project_id}/settings', {{
             method: 'PUT',
             headers: {{
               'Content-Type': 'application/json',
@@ -7610,7 +7612,7 @@ def get_project_paths_html(project_id: int, request: Request, db: Session = Depe
         <script>
         function savePathsSettings(e) {{
           e.preventDefault();
-          fetch('/projects/{project_id}/settings', {{
+          fetch('{URL_PREFIX}/projects/{project_id}/settings', {{
             method: 'PUT',
             headers: {{
               'Content-Type': 'application/json',
@@ -9425,14 +9427,14 @@ def get_test_dashboard_html(
         <!-- Actions -->
         <div class="qa-actions qa-mb-4">
             <button class="qa-btn qa-btn-primary"
-                    hx-post="/projects/{project_id}/tests/run"
+                    hx-post="{URL_PREFIX}/projects/{project_id}/tests/run"
                     hx-trigger="click"
                     hx-swap="afterbegin"
                     hx-target="#test-runs-list">
                 <i class="qa-icon">play</i> Run All Tests
             </button>
             <button class="qa-btn qa-btn-secondary"
-                    hx-get="/api/projects/{project_id}/tests/dashboard"
+                    hx-get="{URL_PREFIX}/api/projects/{project_id}/tests/dashboard"
                     hx-trigger="click"
                     hx-swap="outerHTML">
                 <i class="qa-icon">refresh</i> Refresh
@@ -9505,7 +9507,7 @@ def get_test_dashboard_html(
                             <td>{started}</td>
                             <td>
                                 <button class="qa-btn qa-btn-sm"
-                                        hx-get="/api/projects/{project_id}/tests/runs/{run.id}/details"
+                                        hx-get="{URL_PREFIX}/api/projects/{project_id}/tests/runs/{run.id}/details"
                                         hx-target="#test-details-modal"
                                         hx-swap="innerHTML">
                                     View
@@ -11265,7 +11267,7 @@ def get_ports_html(
                 if (!confirm('Release port ' + port + '?')) return;
 
                 const params = new URLSearchParams({{ port: port, host: host }});
-                const response = await fetch('/resources/ports/release?' + params, {{ method: 'POST' }});
+                const response = await fetch('{URL_PREFIX}/resources/ports/release?' + params, {{ method: 'POST' }});
 
                 if (response.ok) {{
                     htmx.trigger('#ports-table', 'load');
@@ -11331,7 +11333,7 @@ def get_secrets_html(
                 if (!newValue) return;
 
                 const params = new URLSearchParams({{ new_value: newValue }});
-                const response = await fetch('/resources/secrets/' + id + '/rotate?' + params, {{ method: 'POST' }});
+                const response = await fetch('{URL_PREFIX}/resources/secrets/' + id + '/rotate?' + params, {{ method: 'POST' }});
 
                 if (response.ok) {{
                     htmx.trigger('#secrets-table', 'load');
@@ -11344,7 +11346,7 @@ def get_secrets_html(
             async function deleteSecret(id) {{
                 if (!confirm('Delete this secret?')) return;
 
-                const response = await fetch('/resources/secrets/' + id, {{ method: 'DELETE' }});
+                const response = await fetch('{URL_PREFIX}/resources/secrets/' + id, {{ method: 'DELETE' }});
 
                 if (response.ok) {{
                     htmx.trigger('#secrets-table', 'load');
@@ -11408,7 +11410,7 @@ def get_services_html(
         </table>
         <script>
             async function checkServiceHealth(id) {{
-                const response = await fetch('/resources/services/' + id + '/health');
+                const response = await fetch('{URL_PREFIX}/resources/services/' + id + '/health');
                 const data = await response.json();
                 alert('Health: ' + data.status + (data.response_time ? ' (' + data.response_time + 'ms)' : ''));
                 htmx.trigger('#services-table', 'load');
@@ -11417,7 +11419,7 @@ def get_services_html(
             async function unregisterService(id) {{
                 if (!confirm('Unregister this service?')) return;
 
-                const response = await fetch('/resources/services/' + id, {{ method: 'DELETE' }});
+                const response = await fetch('{URL_PREFIX}/resources/services/' + id, {{ method: 'DELETE' }});
 
                 if (response.ok) {{
                     htmx.trigger('#services-table', 'load');
@@ -11748,7 +11750,7 @@ def get_docker_dashboard_html():
         <div class="qa-flex qa-justify-between qa-items-center qa-mb-6">
             <h3>Docker Management</h3>
             <button class="qa-btn qa-btn-primary"
-                    hx-get="/api/docker/dashboard"
+                    hx-get="{URL_PREFIX}/api/docker/dashboard"
                     hx-target=".qa-docker-dashboard"
                     hx-swap="outerHTML">
                 Refresh
@@ -11835,13 +11837,13 @@ def get_docker_dashboard_html():
         if status == 'running':
             html += f'''
                                 <button class="qa-btn qa-btn-sm qa-btn-danger"
-                                        hx-post="/docker/containers/{c.get('id')}/stop"
+                                        hx-post="{URL_PREFIX}/docker/containers/{c.get('id')}/stop"
                                         hx-swap="none">Stop</button>
             '''
         else:
             html += f'''
                                 <button class="qa-btn qa-btn-sm qa-btn-success"
-                                        hx-post="/docker/containers/{c.get('id')}/start"
+                                        hx-post="{URL_PREFIX}/docker/containers/{c.get('id')}/start"
                                         hx-swap="none">Start</button>
             '''
 
@@ -11999,7 +12001,7 @@ def get_settings_dashboard_html(user: User = Depends(require_auth)):
                     <h4>Docker</h4>
                 </div>
                 <div class="qa-card-body">
-                    <form hx-post="/api/settings/docker" hx-swap="none">
+                    <form hx-post="{URL_PREFIX}/api/settings/docker" hx-swap="none">
                         <div class="qa-form-group">
                             <label class="qa-label">Docker Host</label>
                             <input type="text" name="docker_host" class="qa-input"
@@ -12023,7 +12025,7 @@ def get_settings_dashboard_html(user: User = Depends(require_auth)):
                     <h4>Authentication</h4>
                 </div>
                 <div class="qa-card-body">
-                    <form hx-post="/api/settings/auth" hx-swap="none">
+                    <form hx-post="{URL_PREFIX}/api/settings/auth" hx-swap="none">
                         <div class="qa-form-group">
                             <label class="qa-label">JWT Secret</label>
                             <input type="password" name="jwt_secret" class="qa-input"
@@ -12045,7 +12047,7 @@ def get_settings_dashboard_html(user: User = Depends(require_auth)):
                     <h4>Webhooks</h4>
                 </div>
                 <div class="qa-card-body">
-                    <form hx-post="/api/settings/webhooks" hx-swap="none">
+                    <form hx-post="{URL_PREFIX}/api/settings/webhooks" hx-swap="none">
                         <div class="qa-form-group">
                             <label class="qa-label">GitHub Webhook Secret</label>
                             <input type="password" name="github_secret" class="qa-input"
@@ -12118,7 +12120,7 @@ def get_components_dashboard_html(
                     </svg>
                     <h4 class="qa-mb-2">Source Path Not Configured</h4>
                     <p class="qa-text-muted qa-mb-4">Configure the source code path in Application Settings to discover components.</p>
-                    <a href="/admin/projects/{project_id}" class="qa-btn qa-btn-primary">Configure Application</a>
+                    <a href="{URL_PREFIX}/admin/projects/{project_id}" class="qa-btn qa-btn-primary">Configure Application</a>
                 </div>
             </div>
         </div>
@@ -12165,7 +12167,7 @@ def get_components_dashboard_html(
                 <p class="qa-text-muted qa-text-sm">Source: <code>{scan_path}</code></p>
             </div>
             <button class="qa-btn qa-btn-ghost"
-                    hx-get="/api/projects/{project_id}/components/dashboard"
+                    hx-get="{URL_PREFIX}/api/projects/{project_id}/components/dashboard"
                     hx-target=".qa-components-dashboard"
                     hx-swap="outerHTML">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -12755,7 +12757,7 @@ def get_create_project_wizard():
                 <h3 class="qa-mb-4">Choose a Template</h3>
                 <p class="qa-text-muted qa-mb-4">Select a template to get started quickly, or start with a blank project.</p>
 
-                <div id="template-grid" class="qa-grid qa-grid-3 qa-gap-4" hx-get="/templates-html" hx-trigger="load" hx-swap="innerHTML">
+                <div id="template-grid" class="qa-grid qa-grid-3 qa-gap-4" hx-get="{URL_PREFIX}/templates-html" hx-trigger="load" hx-swap="innerHTML">
                     <div class="qa-text-center qa-text-muted qa-p-6" style="grid-column: span 3;">Loading templates...</div>
                 </div>
 
@@ -12832,7 +12834,7 @@ def get_create_project_wizard():
             }
 
             function loadTemplateOptions(templateId) {
-                fetch('/templates/' + templateId)
+                fetch('{URL_PREFIX}/templates/' + templateId)
                     .then(r => r.json())
                     .then(template => {
                         const container = document.getElementById('template-options');
@@ -12916,7 +12918,7 @@ def get_create_project_wizard():
 
                 showToast('Creating project...', 'info');
 
-                fetch('/projects/from-template', {
+                fetch('{URL_PREFIX}/projects/from-template', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
@@ -12927,7 +12929,7 @@ def get_create_project_wizard():
                         showToast('Project created successfully!', 'success');
                         // Close modal and navigate to project
                         closeCreateWizard();
-                        window.location.href = '/admin/projects/' + result.id;
+                        window.location.href = '{URL_PREFIX}/admin/projects/' + result.id;
                     } else {
                         showToast('Error: ' + (result.detail || 'Unknown error'), 'error');
                     }
