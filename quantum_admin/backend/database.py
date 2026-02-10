@@ -36,6 +36,7 @@ def seed_db():
     Seed database with sample data if empty
     """
     from . import models
+    import uuid
 
     db = SessionLocal()
     try:
@@ -69,24 +70,33 @@ def seed_db():
             db.add(p)
         db.flush()
 
-        # Create sample connectors
+        # Create sample connectors (id is String, required)
         connectors = [
             models.Connector(
+                id="postgres-prod",
                 name="PostgreSQL Production",
-                connector_type="database",
-                config={"host": "db.example.com", "port": 5432, "database": "production"},
+                type="database",
+                provider="postgres",
+                host="db.example.com",
+                port=5432,
+                database="production",
                 status="connected"
             ),
             models.Connector(
+                id="redis-cache",
                 name="Redis Cache",
-                connector_type="cache",
-                config={"host": "redis.example.com", "port": 6379},
+                type="cache",
+                provider="redis",
+                host="redis.example.com",
+                port=6379,
                 status="connected"
             ),
             models.Connector(
+                id="s3-storage",
                 name="AWS S3 Storage",
-                connector_type="storage",
-                config={"bucket": "my-app-files", "region": "us-east-1"},
+                type="storage",
+                provider="s3",
+                database="my-app-files",
                 status="disconnected"
             ),
         ]
@@ -96,49 +106,33 @@ def seed_db():
         # Create sample environments for first project
         environments = [
             models.Environment(
-                name="Development",
-                env_type="development",
+                name="dev",
+                display_name="Development",
                 project_id=1,
-                config={"debug": True, "log_level": "DEBUG"},
-                status="active"
+                order=1,
+                branch="develop",
+                is_active=True
             ),
             models.Environment(
-                name="Staging",
-                env_type="staging",
+                name="staging",
+                display_name="Staging",
                 project_id=1,
-                config={"debug": False, "log_level": "INFO"},
-                status="active"
+                order=2,
+                branch="staging",
+                is_active=True
             ),
             models.Environment(
-                name="Production",
-                env_type="production",
+                name="production",
+                display_name="Production",
                 project_id=1,
-                config={"debug": False, "log_level": "WARNING"},
-                status="inactive"
+                order=3,
+                branch="main",
+                requires_approval=True,
+                is_active=True
             ),
         ]
         for e in environments:
             db.add(e)
-
-        # Create sample jobs
-        jobs = [
-            models.Job(
-                name="Daily Backup",
-                job_type="backup",
-                schedule="0 2 * * *",
-                status="active",
-                config={"target": "s3://backups/daily"}
-            ),
-            models.Job(
-                name="Health Check",
-                job_type="health",
-                schedule="*/5 * * * *",
-                status="active",
-                config={"endpoints": ["/health", "/api/status"]}
-            ),
-        ]
-        for j in jobs:
-            db.add(j)
 
         db.commit()
         print("[OK] Database seeded with sample data")
@@ -146,6 +140,8 @@ def seed_db():
     except Exception as e:
         db.rollback()
         print(f"[ERROR] Failed to seed database: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
         db.close()
 
