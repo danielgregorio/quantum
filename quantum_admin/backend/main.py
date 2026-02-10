@@ -282,10 +282,13 @@ def get_admin_shell(title: str, active: str, page: str, project_id: int = None):
     else:
         content = page_contents.get(page, page_contents["dashboard"])
 
+    # Replace {URL_PREFIX} placeholder in content
+    content = content.replace("{URL_PREFIX}", URL_PREFIX)
+
     def nav_class(name):
         return "qa-sidebar-link active" if name == active else "qa-sidebar-link"
 
-    return f'''<!DOCTYPE html>
+    html = f'''<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -408,6 +411,8 @@ def get_admin_shell(title: str, active: str, page: str, project_id: int = None):
   </script>
 </body>
 </html>'''
+    # Replace any remaining {URL_PREFIX} in the HTML
+    return html.replace("{URL_PREFIX}", URL_PREFIX)
 
 
 def get_dashboard_content():
