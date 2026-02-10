@@ -77,9 +77,26 @@ if os.path.exists(frontend_path):
     app.mount("/frontend", StaticFiles(directory=frontend_path), name="frontend")
 
 # Mount static files (CSS, JS, etc.)
-static_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
-if os.path.exists(static_path):
-    app.mount("/static", StaticFiles(directory=static_path), name="static")
+# Try multiple possible locations
+static_paths = [
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), "static"),  # quantum_admin/static
+    os.path.join(os.path.dirname(__file__), "..", "static"),  # relative path
+    "/var/www/quantum-admin/static",  # production path
+]
+
+static_mounted = False
+for static_path in static_paths:
+    if os.path.exists(static_path) and os.path.isdir(static_path):
+        try:
+            app.mount("/static", StaticFiles(directory=static_path), name="static")
+            print(f"[OK] Static files mounted from: {static_path}")
+            static_mounted = True
+            break
+        except Exception as e:
+            print(f"[WARN] Failed to mount static from {static_path}: {e}")
+
+if not static_mounted:
+    print(f"[WARN] Static files directory not found. Tried: {static_paths}")
 
 
 # ============================================================================
