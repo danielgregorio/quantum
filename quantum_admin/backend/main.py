@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 try:
     # Try relative imports (when running as module)
     from . import crud, schemas, models
-    from .database import get_db, init_db
+    from .database import get_db, init_db, seed_db
     from .docker_service import DockerService
     from .db_setup_service import DatabaseSetupService
     from .settings_service import get_settings_service, SettingsService
@@ -32,7 +32,7 @@ except ImportError:
     import crud
     import schemas
     import models
-    from database import get_db, init_db
+    from database import get_db, init_db, seed_db
     from docker_service import DockerService
     from db_setup_service import DatabaseSetupService
     from settings_service import get_settings_service, SettingsService
@@ -110,6 +110,7 @@ def startup_event():
 
     # Initialize database
     init_db()
+    seed_db()
 
     # Initialize Docker service - try Forge first
     forge_host = os.environ.get("DOCKER_HOST", "ssh://abathur@10.10.1.40")
