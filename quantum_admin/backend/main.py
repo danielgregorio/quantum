@@ -3291,7 +3291,7 @@ def get_jobs_content():
     <div id="tab-schedules" class="qa-tab-content qa-hidden">
       <div class="qa-card">
         <div class="qa-card-header"><h3 class="qa-card-title">Scheduled Tasks</h3></div>
-        <div class="qa-card-body" id="schedules-list" hx-get="{URL_PREFIX}/schedules" hx-trigger="load" hx-swap="innerHTML">
+        <div class="qa-card-body" id="schedules-list" hx-get="{URL_PREFIX}/api/schedules-list" hx-trigger="load" hx-swap="innerHTML">
           <div class="qa-text-center qa-text-muted qa-p-6">Loading schedules...</div>
         </div>
       </div>
@@ -3301,7 +3301,7 @@ def get_jobs_content():
     <div id="tab-threads" class="qa-tab-content qa-hidden">
       <div class="qa-card">
         <div class="qa-card-header"><h3 class="qa-card-title">Running Threads</h3></div>
-        <div class="qa-card-body" id="threads-list" hx-get="{URL_PREFIX}/threads" hx-trigger="load" hx-swap="innerHTML">
+        <div class="qa-card-body" id="threads-list" hx-get="{URL_PREFIX}/api/threads-list" hx-trigger="load" hx-swap="innerHTML">
           <div class="qa-text-center qa-text-muted qa-p-6">Loading threads...</div>
         </div>
       </div>
@@ -3311,7 +3311,7 @@ def get_jobs_content():
     <div id="tab-queues" class="qa-tab-content qa-hidden">
       <div class="qa-card">
         <div class="qa-card-header"><h3 class="qa-card-title">Queue Statistics</h3></div>
-        <div class="qa-card-body" id="queues-list" hx-get="{URL_PREFIX}/queues" hx-trigger="load" hx-swap="innerHTML">
+        <div class="qa-card-body" id="queues-list" hx-get="{URL_PREFIX}/api/queues-list" hx-trigger="load" hx-swap="innerHTML">
           <div class="qa-text-center qa-text-muted qa-p-6">Loading queues...</div>
         </div>
       </div>
@@ -3355,7 +3355,7 @@ def get_cicd_content():
         </div>
         <div class="qa-card">
           <div class="qa-card-header"><h3 class="qa-card-title">Webhook Events</h3></div>
-          <div class="qa-card-body" hx-get="{URL_PREFIX}/webhooks/events" hx-trigger="load" hx-swap="innerHTML">
+          <div class="qa-card-body" hx-get="{URL_PREFIX}/api/webhooks/events-html" hx-trigger="load" hx-swap="innerHTML">
             <p class="qa-text-muted qa-text-center qa-p-6">Loading webhook events...</p>
           </div>
         </div>
@@ -7067,6 +7067,102 @@ def get_jobs_overview_html():
             <div class="qa-stat-value qa-text-danger">{overview.get('failed_24h', 0)}</div>
         </div>
     ''')
+
+
+@app.get("/api/schedules-list", response_class=HTMLResponse, tags=["Jobs"])
+def get_schedules_list_html():
+    """Get scheduled tasks as HTML fragment"""
+    job_service = get_job_service()
+    schedules = job_service.list_schedules() if hasattr(job_service, 'list_schedules') else []
+
+    if not schedules:
+        return HTMLResponse(content='''
+            <div class="qa-text-center qa-text-muted qa-p-6">
+                <p class="qa-mb-2">No scheduled tasks</p>
+                <p class="qa-text-sm">Create a schedule to run jobs automatically</p>
+            </div>
+        ''')
+
+    html = '<table class="qa-table"><thead><tr><th>Name</th><th>Schedule</th><th>Next Run</th><th>Status</th></tr></thead><tbody>'
+    for s in schedules:
+        html += f'<tr><td>{s.get("name", "-")}</td><td><code>{s.get("cron", "-")}</code></td><td>{s.get("next_run", "-")}</td><td>{s.get("status", "-")}</td></tr>'
+    html += '</tbody></table>'
+    return HTMLResponse(content=html)
+
+
+@app.get("/api/threads-list", response_class=HTMLResponse, tags=["Jobs"])
+def get_threads_list_html():
+    """Get running threads as HTML fragment"""
+    job_service = get_job_service()
+    threads = job_service.list_threads() if hasattr(job_service, 'list_threads') else []
+
+    if not threads:
+        return HTMLResponse(content='''
+            <div class="qa-text-center qa-text-muted qa-p-6">
+                <p class="qa-mb-2">No running threads</p>
+                <p class="qa-text-sm">Background threads will appear here when active</p>
+            </div>
+        ''')
+
+    html = '<table class="qa-table"><thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Started</th></tr></thead><tbody>'
+    for t in threads:
+        html += f'<tr><td>{t.get("id", "-")}</td><td>{t.get("name", "-")}</td><td>{t.get("status", "-")}</td><td>{t.get("started", "-")}</td></tr>'
+    html += '</tbody></table>'
+    return HTMLResponse(content=html)
+
+
+@app.get("/api/queues-list", response_class=HTMLResponse, tags=["Jobs"])
+def get_queues_list_html():
+    """Get queue statistics as HTML fragment"""
+    job_service = get_job_service()
+    queues = job_service.list_queues() if hasattr(job_service, 'list_queues') else []
+
+    if not queues:
+        return HTMLResponse(content='''
+            <div class="qa-text-center qa-text-muted qa-p-6">
+                <p class="qa-mb-2">No queues configured</p>
+                <p class="qa-text-sm">Job queues will appear here when configured</p>
+            </div>
+        ''')
+
+    html = '<div class="qa-grid qa-grid-3 qa-gap-4">'
+    for q in queues:
+        html += f'''
+            <div class="qa-stat-card">
+                <div class="qa-stat-label">{q.get("name", "Unknown")}</div>
+                <div class="qa-stat-value">{q.get("size", 0)}</div>
+                <div class="qa-text-xs qa-text-muted">{q.get("status", "unknown")}</div>
+            </div>
+        '''
+    html += '</div>'
+    return HTMLResponse(content=html)
+
+
+@app.get("/api/webhooks/events-html", response_class=HTMLResponse, tags=["CI/CD"])
+def get_webhooks_events_html(db: Session = Depends(get_db)):
+    """Get webhook events as HTML fragment"""
+    events = db.query(models.WebhookEvent).order_by(models.WebhookEvent.received_at.desc()).limit(20).all()
+
+    if not events:
+        return HTMLResponse(content='''
+            <div class="qa-text-center qa-text-muted qa-p-6">
+                <p class="qa-mb-2">No webhook events received</p>
+                <p class="qa-text-sm">Events from GitHub, GitLab, or other sources will appear here</p>
+            </div>
+        ''')
+
+    html = '<table class="qa-table qa-table-striped"><thead><tr><th>Time</th><th>Source</th><th>Event</th><th>Status</th></tr></thead><tbody>'
+    for e in events:
+        status_class = 'qa-badge-success' if e.processed else 'qa-badge-warning'
+        status_text = 'Processed' if e.processed else 'Pending'
+        html += f'''<tr>
+            <td class="qa-text-sm">{e.received_at.strftime("%Y-%m-%d %H:%M") if e.received_at else "-"}</td>
+            <td>{e.source or "-"}</td>
+            <td><code>{e.event_type or "-"}</code></td>
+            <td><span class="qa-badge {status_class}">{status_text}</span></td>
+        </tr>'''
+    html += '</tbody></table>'
+    return HTMLResponse(content=html)
 
 
 @app.post(
