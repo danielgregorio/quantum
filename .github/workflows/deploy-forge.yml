@@ -121,7 +121,8 @@ jobs:
               }
 
               # Admin static files - serve directly from filesystem
-              location /admin/static/ {
+              # ^~ makes this preferential prefix (beats regex matches)
+              location ^~ /admin/static/ {
                   alias /var/www/quantum-admin/static/;
                   expires 30d;
                   add_header Cache-Control "public, immutable";
@@ -162,5 +163,8 @@ jobs:
 
           echo "Verifying admin deployment..."
           curl -s http://localhost/admin/ | head -5 || echo "Admin check failed"
+
+          echo "Verifying static files..."
+          curl -sI http://localhost/admin/static/quantum-admin.css | head -5
 
           echo "Deployment complete!"
