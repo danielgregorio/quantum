@@ -1290,7 +1290,7 @@ def get_project_detail_content(project_id: int):
       if (dsId) {{
         document.getElementById('datasource-modal-title').textContent = 'Edit Datasource';
         // Load datasource data
-        fetch(`/projects/${{PROJECT_ID}}/datasources`, {{
+        fetch(`/admin/projects/${{PROJECT_ID}}/datasources`, {{
           headers: {{ 'Authorization': 'Bearer ' + localStorage.getItem('token') }}
         }})
         .then(r => r.json())
@@ -1363,7 +1363,7 @@ def get_project_detail_content(project_id: int):
     function deleteDatasource(dsId, dsName) {{
       if (!confirm(`Delete datasource "${{dsName}}"? This cannot be undone.`)) return;
 
-      fetch(`/datasources/${{dsId}}`, {{
+      fetch(`/admin/datasources/${{dsId}}`, {{
         method: 'DELETE',
         headers: {{ 'Authorization': 'Bearer ' + localStorage.getItem('token') }}
       }})
@@ -1377,7 +1377,7 @@ def get_project_detail_content(project_id: int):
     }}
 
     function startDatasource(dsId) {{
-      fetch(`/datasources/${{dsId}}/start`, {{
+      fetch(`/admin/datasources/${{dsId}}/start`, {{
         method: 'POST',
         headers: {{ 'Authorization': 'Bearer ' + localStorage.getItem('token') }}
       }})
@@ -1392,7 +1392,7 @@ def get_project_detail_content(project_id: int):
     }}
 
     function stopDatasource(dsId) {{
-      fetch(`/datasources/${{dsId}}/stop`, {{
+      fetch(`/admin/datasources/${{dsId}}/stop`, {{
         method: 'POST',
         headers: {{ 'Authorization': 'Bearer ' + localStorage.getItem('token') }}
       }})
@@ -1430,7 +1430,7 @@ def get_project_detail_content(project_id: int):
     }}
 
     function refreshLogs(dsId) {{
-      fetch(`/datasources/${{dsId}}/logs?tail=200`, {{
+      fetch(`/admin/datasources/${{dsId}}/logs?tail=200`, {{
         headers: {{ 'Authorization': 'Bearer ' + localStorage.getItem('token') }}
       }})
       .then(r => r.json())
@@ -1454,7 +1454,7 @@ def get_project_detail_content(project_id: int):
       btn.innerHTML = '<span class="qa-spinner qa-spinner-sm"></span>';
       btn.disabled = true;
 
-      fetch(`/datasources/${{dsId}}/test`, {{
+      fetch(`/admin/datasources/${{dsId}}/test`, {{
         method: 'POST',
         headers: {{ 'Authorization': 'Bearer ' + localStorage.getItem('token') }}
       }})
@@ -1481,7 +1481,7 @@ def get_project_detail_content(project_id: int):
 
     function createDefaultEnvs(projectId) {{
       const pid = projectId || PROJECT_ID;
-      fetch(`/projects/${{pid}}/environments/defaults`, {{
+      fetch(`/admin/projects/${{pid}}/environments/defaults`, {{
         method: 'POST',
         headers: {{ 'Authorization': 'Bearer ' + localStorage.getItem('token') }}
       }})
@@ -1501,7 +1501,7 @@ def get_project_detail_content(project_id: int):
       if (envId) {{
         document.getElementById('environment-modal-title').textContent = 'Edit Environment';
         // Load environment data
-        fetch(`/projects/${{PROJECT_ID}}/environments/${{envId}}`, {{
+        fetch(`/admin/projects/${{PROJECT_ID}}/environments/${{envId}}`, {{
           headers: {{ 'Authorization': 'Bearer ' + localStorage.getItem('token') }}
         }})
         .then(r => r.json())
@@ -1579,7 +1579,7 @@ def get_project_detail_content(project_id: int):
     function deleteEnvironment(envId, envName) {{
       if (!confirm(`Delete environment "${{envName}}"? This cannot be undone.`)) return;
 
-      fetch(`/projects/${{PROJECT_ID}}/environments/${{envId}}`, {{
+      fetch(`/admin/projects/${{PROJECT_ID}}/environments/${{envId}}`, {{
         method: 'DELETE',
         headers: {{ 'Authorization': 'Bearer ' + localStorage.getItem('token') }}
       }})
@@ -1598,7 +1598,7 @@ def get_project_detail_content(project_id: int):
       btn.innerHTML = '<span class="qa-spinner"></span> Testing...';
       btn.disabled = true;
 
-      fetch(`/projects/${{PROJECT_ID}}/environments/${{envId}}/test`, {{
+      fetch(`/admin/projects/${{PROJECT_ID}}/environments/${{envId}}/test`, {{
         method: 'POST',
         headers: {{ 'Authorization': 'Bearer ' + localStorage.getItem('token') }}
       }})
@@ -1632,7 +1632,7 @@ def get_project_detail_content(project_id: int):
       btn.innerHTML = '<span class="qa-spinner"></span> Launching...';
       btn.disabled = true;
 
-      fetch(`/projects/${{projectId}}/environments/${{envId}}/launch`, {{
+      fetch(`/admin/projects/${{projectId}}/environments/${{envId}}/launch`, {{
         method: 'POST',
         headers: {{
           'Authorization': 'Bearer ' + localStorage.getItem('token'),
@@ -1984,7 +1984,7 @@ def get_deploy_content():
         document.getElementById('versions-section').classList.remove('qa-hidden');
 
         try {
-          const res = await fetch(`/projects/${projectId}/environments`);
+          const res = await fetch(`/admin/projects/${projectId}/environments`);
           environments = await res.json();
           renderEnvironments();
           updateEnvFilter();
@@ -2138,7 +2138,7 @@ def get_deploy_content():
         if (!currentDeployId) return;
 
         try {
-          await fetch(`/deploy/pipeline/${currentDeployId}/cancel`, { method: 'POST' });
+          await fetch(`/admin/deploy/pipeline/${currentDeployId}/cancel`, { method: 'POST' });
           showToast('Deployment cancelled', 'warning');
         } catch (e) {
           showToast('Failed to cancel', 'error');
@@ -2204,7 +2204,7 @@ def get_deploy_content():
         if (!currentProjectId) return;
 
         try {
-          const res = await fetch(`/projects/${currentProjectId}/environments/defaults`, { method: 'POST' });
+          const res = await fetch(`/admin/projects/${currentProjectId}/environments/defaults`, { method: 'POST' });
           if (res.ok) {
             showToast('Default environments created', 'success');
             loadEnvironments(currentProjectId);
@@ -2257,8 +2257,8 @@ def get_deploy_content():
         data.port = parseInt(data.port) || 8000;
 
         const url = envId
-          ? `/projects/${currentProjectId}/environments/${envId}`
-          : `/projects/${currentProjectId}/environments`;
+          ? `/admin/projects/${currentProjectId}/environments/${envId}`
+          : `/admin/projects/${currentProjectId}/environments`;
         const method = envId ? 'PUT' : 'POST';
 
         try {
@@ -2293,7 +2293,7 @@ def get_deploy_content():
         const envId = document.getElementById('env-id').value;
         if (envId) {
           try {
-            const res = await fetch(`/projects/${currentProjectId}/environments/${envId}/test`, { method: 'POST' });
+            const res = await fetch(`/admin/projects/${currentProjectId}/environments/${envId}/test`, { method: 'POST' });
             const result = await res.json();
             if (result.success) {
               showToast(`Connected! Docker ${result.docker_version}`, 'success');
