@@ -237,7 +237,7 @@ def get_login_page():
         const data = await res.json();
         if (data.access_token) {
           localStorage.setItem('token', data.access_token);
-          window.location.href = '{URL_PREFIX}/admin/';
+          window.location.href = '{URL_PREFIX}/';
         } else {
           document.getElementById('error-msg').classList.remove('qa-hidden');
         }
@@ -291,7 +291,7 @@ def get_admin_shell(title: str, active: str, page: str, project_id: int = None):
     <!-- Sidebar -->
     <aside class="qa-sidebar">
       <div class="qa-sidebar-header">
-        <a href="{URL_PREFIX}/admin/" class="qa-sidebar-logo">
+        <a href="{URL_PREFIX}/" class="qa-sidebar-logo">
           <div class="qa-sidebar-logo-icon">Q</div>
           <div>
             <span class="qa-sidebar-logo-text">Quantum Admin</span>
@@ -301,53 +301,53 @@ def get_admin_shell(title: str, active: str, page: str, project_id: int = None):
       </div>
       <nav class="qa-sidebar-nav">
         <div class="qa-sidebar-section">
-          <a href="{URL_PREFIX}/admin/" class="{nav_class("dashboard")}">
+          <a href="{URL_PREFIX}/" class="{nav_class("dashboard")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             Dashboard
           </a>
-          <a href="{URL_PREFIX}/admin/projects" class="{nav_class("projects")}">
+          <a href="{URL_PREFIX}/projects" class="{nav_class("projects")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
             Applications
           </a>
-          <a href="{URL_PREFIX}/admin/docker" class="{nav_class("docker")}">
+          <a href="{URL_PREFIX}/docker" class="{nav_class("docker")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
             Docker
           </a>
-          <a href="{URL_PREFIX}/admin/deploy" class="{nav_class("deploy")}">
+          <a href="{URL_PREFIX}/deploy" class="{nav_class("deploy")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
             Deploy
           </a>
         </div>
         <div class="qa-sidebar-section">
           <div class="qa-sidebar-section-title">DevOps</div>
-          <a href="{URL_PREFIX}/admin/jobs" class="{nav_class("jobs")}">
+          <a href="{URL_PREFIX}/jobs" class="{nav_class("jobs")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Jobs
           </a>
-          <a href="{URL_PREFIX}/admin/cicd" class="{nav_class("cicd")}">
+          <a href="{URL_PREFIX}/cicd" class="{nav_class("cicd")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             CI/CD
           </a>
-          <a href="{URL_PREFIX}/admin/tests" class="{nav_class("tests")}">
+          <a href="{URL_PREFIX}/tests" class="{nav_class("tests")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Tests
           </a>
-          <a href="{URL_PREFIX}/admin/components" class="{nav_class("components")}">
+          <a href="{URL_PREFIX}/components" class="{nav_class("components")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
             Components
           </a>
         </div>
         <div class="qa-sidebar-section">
           <div class="qa-sidebar-section-title">System</div>
-          <a href="{URL_PREFIX}/admin/resources" class="{nav_class("resources")}">
+          <a href="{URL_PREFIX}/resources" class="{nav_class("resources")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
             Resources
           </a>
-          <a href="{URL_PREFIX}/admin/settings" class="{nav_class("settings")}">
+          <a href="{URL_PREFIX}/settings" class="{nav_class("settings")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             Settings
           </a>
-          <a href="{URL_PREFIX}/admin/users" class="{nav_class("users")}">
+          <a href="{URL_PREFIX}/users" class="{nav_class("users")}">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
             Users
           </a>
@@ -365,7 +365,7 @@ def get_admin_shell(title: str, active: str, page: str, project_id: int = None):
             <div class="qa-sidebar-user-name">admin</div>
             <div class="qa-sidebar-user-role">Administrator</div>
           </div>
-          <a href="{URL_PREFIX}/admin/logout" class="qa-btn qa-btn-ghost qa-btn-icon">
+          <a href="{URL_PREFIX}/logout" class="qa-btn qa-btn-ghost qa-btn-icon">
             <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
           </a>
         </div>
@@ -425,10 +425,10 @@ def get_dashboard_content():
       <div class="qa-card">
         <div class="qa-card-header"><h3 class="qa-card-title">Quick Actions</h3></div>
         <div class="qa-card-body" style="padding: 8px;">
-          <a href="{URL_PREFIX}/admin/projects" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>New Application</a>
-          <a href="{URL_PREFIX}/admin/deploy" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>Deploy App</a>
-          <a href="{URL_PREFIX}/admin/docker" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>Manage Containers</a>
-          <a href="{URL_PREFIX}/admin/settings" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Settings</a>
+          <a href="{URL_PREFIX}/projects" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>New Application</a>
+          <a href="{URL_PREFIX}/deploy" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>Deploy App</a>
+          <a href="{URL_PREFIX}/docker" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>Manage Containers</a>
+          <a href="{URL_PREFIX}/settings" class="qa-sidebar-link"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Settings</a>
         </div>
       </div>
     </div>
@@ -750,7 +750,7 @@ def get_project_detail_content(project_id: int):
     return f'''
     <!-- Back button and header -->
     <div class="qa-flex qa-items-center qa-gap-4 qa-mb-6">
-      <a href="{URL_PREFIX}/admin/projects" class="qa-btn qa-btn-ghost">
+      <a href="{URL_PREFIX}/projects" class="qa-btn qa-btn-ghost">
         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
         Back to Applications
       </a>
@@ -3529,7 +3529,7 @@ def get_components_content():
 
     function viewComponentDetails(componentId) {
       // Open modal or navigate to details page
-      window.location.href = '{URL_PREFIX}/admin/projects/' + currentProjectId + '/components/' + componentId;
+      window.location.href = '{URL_PREFIX}/projects/' + currentProjectId + '/components/' + componentId;
     }
 
     function toggleAllComponents(checkbox) {
@@ -7209,7 +7209,7 @@ def get_project_source_html(project_id: int, db: Session = Depends(get_db)):
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                 Pull Latest
               </button>
-              <a href="{URL_PREFIX}/admin/components" class="qa-btn qa-btn-secondary" {"style='pointer-events:none;opacity:0.5'" if not source_path else ""}>
+              <a href="{URL_PREFIX}/components" class="qa-btn qa-btn-secondary" {"style='pointer-events:none;opacity:0.5'" if not source_path else ""}>
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6z"/></svg>
                 Discover Components
               </a>
@@ -12120,7 +12120,7 @@ def get_components_dashboard_html(
                     </svg>
                     <h4 class="qa-mb-2">Source Path Not Configured</h4>
                     <p class="qa-text-muted qa-mb-4">Configure the source code path in Application Settings to discover components.</p>
-                    <a href="{URL_PREFIX}/admin/projects/{project_id}" class="qa-btn qa-btn-primary">Configure Application</a>
+                    <a href="{URL_PREFIX}/projects/{project_id}" class="qa-btn qa-btn-primary">Configure Application</a>
                 </div>
             </div>
         </div>
@@ -12929,7 +12929,7 @@ def get_create_project_wizard():
                         showToast('Project created successfully!', 'success');
                         // Close modal and navigate to project
                         closeCreateWizard();
-                        window.location.href = '{URL_PREFIX}/admin/projects/' + result.id;
+                        window.location.href = '{URL_PREFIX}/projects/' + result.id;
                     } else {
                         showToast('Error: ' + (result.detail || 'Unknown error'), 'error');
                     }
