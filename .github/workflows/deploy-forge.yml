@@ -69,7 +69,8 @@ jobs:
           Group=www-data
           WorkingDirectory=/var/www/quantum-admin
           Environment="PATH=/var/www/quantum-admin/venv/bin"
-          ExecStart=/var/www/quantum-admin/venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8001
+          Environment="ROOT_PATH=/admin"
+          ExecStart=/var/www/quantum-admin/venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8001 --root-path /admin
           Restart=always
           RestartSec=5
 

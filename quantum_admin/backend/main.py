@@ -47,10 +47,14 @@ except ImportError:
 security = HTTPBearer(auto_error=False)
 
 # Create FastAPI app
+# Get root path from environment (for reverse proxy deployment)
+ROOT_PATH = os.environ.get("ROOT_PATH", "")
+
 app = FastAPI(
     title="Quantum Admin API",
     description="Administration interface for Quantum Language projects",
-    version="1.0.0"
+    version="1.0.0",
+    root_path=ROOT_PATH
 )
 
 # Initialize Docker service (singleton)
