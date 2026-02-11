@@ -61,6 +61,10 @@ class Datasource(Base):
     setup_status = Column(String(50), default='pending')  # pending, configuring, ready, error
     auto_start = Column(Boolean, default=False)
 
+    # Visibility/Sharing
+    visibility = Column(String(20), default='private')  # private, shared, public
+    shared_with = Column(Text, default='[]')  # JSON array of project_ids for "shared" visibility
+
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -314,9 +318,10 @@ class Connector(Base):
     last_tested = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    # Scope: public (available to all apps) or application (exclusive to one app)
-    scope = Column(String(50), default='public')  # "public" or "application"
-    application_id = Column(Integer, ForeignKey('projects.id'), nullable=True)
+    # Visibility: private (project-only), shared (specific projects), public (all projects)
+    visibility = Column(String(20), default='public')  # private, shared, public
+    shared_with = Column(Text, default='[]')  # JSON array of project_ids for "shared" visibility
+    owner_project_id = Column(Integer, ForeignKey('projects.id'), nullable=True)  # Project that owns this connector
 
     # Relationship to application (Project)
     application = relationship("Project", backref="connectors")

@@ -930,7 +930,25 @@ def get_project_detail_content(project_id: int):
       <div id="tab-datasources" class="qa-tab-content qa-hidden">
         <div class="qa-card">
           <div class="qa-card-header qa-flex qa-justify-between qa-items-center">
-            <h3 class="qa-card-title">Datasources</h3>
+            <div>
+              <h3 class="qa-card-title">Datasources</h3>
+              <!-- Visibility Sub-tabs -->
+              <div class="qa-flex qa-gap-2 qa-mt-3">
+                <button class="qa-btn qa-btn-sm ds-visibility-tab active" data-visibility="all" onclick="filterDatasourceVisibility('all')">All</button>
+                <button class="qa-btn qa-btn-sm qa-btn-ghost ds-visibility-tab" data-visibility="private" onclick="filterDatasourceVisibility('private')">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                  Private
+                </button>
+                <button class="qa-btn qa-btn-sm qa-btn-ghost ds-visibility-tab" data-visibility="shared" onclick="filterDatasourceVisibility('shared')">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                  Shared
+                </button>
+                <button class="qa-btn qa-btn-sm qa-btn-ghost ds-visibility-tab" data-visibility="public" onclick="filterDatasourceVisibility('public')">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  Public
+                </button>
+              </div>
+            </div>
             <button class="qa-btn qa-btn-primary qa-btn-sm" onclick="openDatasourceModal()">
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
               Add Datasource
@@ -946,8 +964,26 @@ def get_project_detail_content(project_id: int):
       <div id="tab-connectors" class="qa-tab-content qa-hidden">
         <div class="qa-card">
           <div class="qa-card-header">
-            <h3 class="qa-card-title">Connector Access</h3>
-            <p class="qa-text-sm qa-text-muted">Configure which connectors this project can access</p>
+            <div>
+              <h3 class="qa-card-title">Connector Access</h3>
+              <p class="qa-text-sm qa-text-muted qa-mb-3">Configure which connectors this project can access</p>
+              <!-- Visibility Sub-tabs -->
+              <div class="qa-flex qa-gap-2">
+                <button class="qa-btn qa-btn-sm conn-visibility-tab active" data-visibility="all" onclick="filterConnectorVisibility('all')">All</button>
+                <button class="qa-btn qa-btn-sm qa-btn-ghost conn-visibility-tab" data-visibility="private" onclick="filterConnectorVisibility('private')">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                  Private
+                </button>
+                <button class="qa-btn qa-btn-sm qa-btn-ghost conn-visibility-tab" data-visibility="shared" onclick="filterConnectorVisibility('shared')">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                  Shared
+                </button>
+                <button class="qa-btn qa-btn-sm qa-btn-ghost conn-visibility-tab" data-visibility="public" onclick="filterConnectorVisibility('public')">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  Public
+                </button>
+              </div>
+            </div>
           </div>
           <div class="qa-card-body" id="connectors-list" hx-get="{URL_PREFIX}/api/projects/{project_id}/connectors-html" hx-trigger="load" hx-swap="innerHTML">
             <div class="qa-text-center qa-text-muted qa-p-6">Loading connectors...</div>
@@ -1280,6 +1316,42 @@ def get_project_detail_content(project_id: int):
       // Update tab content
       document.querySelectorAll('.qa-tab-content').forEach(c => c.classList.add('qa-hidden'));
       document.getElementById(`tab-${{tabName}}`).classList.remove('qa-hidden');
+    }}
+
+    // Visibility filter for Datasources
+    let currentDsVisibility = 'all';
+    function filterDatasourceVisibility(visibility) {{
+      currentDsVisibility = visibility;
+      // Update active tab styling
+      document.querySelectorAll('.ds-visibility-tab').forEach(btn => {{
+        btn.classList.remove('active');
+        if (btn.dataset.visibility !== 'all') btn.classList.add('qa-btn-ghost');
+      }});
+      const activeBtn = document.querySelector(`.ds-visibility-tab[data-visibility="${{visibility}}"]`);
+      if (activeBtn) {{
+        activeBtn.classList.add('active');
+        activeBtn.classList.remove('qa-btn-ghost');
+      }}
+      // Reload datasources with filter
+      htmx.ajax('GET', `{URL_PREFIX}/api/projects/{project_id}/datasources-html?visibility=${{visibility}}`, '#datasources-list');
+    }}
+
+    // Visibility filter for Connectors
+    let currentConnVisibility = 'all';
+    function filterConnectorVisibility(visibility) {{
+      currentConnVisibility = visibility;
+      // Update active tab styling
+      document.querySelectorAll('.conn-visibility-tab').forEach(btn => {{
+        btn.classList.remove('active');
+        if (btn.dataset.visibility !== 'all') btn.classList.add('qa-btn-ghost');
+      }});
+      const activeBtn = document.querySelector(`.conn-visibility-tab[data-visibility="${{visibility}}"]`);
+      if (activeBtn) {{
+        activeBtn.classList.add('active');
+        activeBtn.classList.remove('qa-btn-ghost');
+      }}
+      // Reload connectors with filter
+      htmx.ajax('GET', `{URL_PREFIX}/api/projects/{project_id}/connectors-html?visibility=${{visibility}}`, '#connectors-list');
     }}
 
     // Datasource modal
@@ -7607,9 +7679,42 @@ def get_project_source_html(project_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/api/projects/{project_id}/datasources-html", tags=["Project Detail"])
-def get_project_datasources_html(project_id: int, request: Request, db: Session = Depends(get_db)):
-    """Get project datasources list HTML"""
-    datasources = crud.get_datasources(db, project_id)
+def get_project_datasources_html(
+    project_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    visibility: str = "all"
+):
+    """Get project datasources list HTML with visibility filtering"""
+    import json
+
+    # Get datasources for this project
+    all_datasources = crud.get_datasources(db, project_id)
+
+    # Also get public and shared datasources from other projects
+    if visibility in ["all", "public", "shared"]:
+        other_datasources = db.query(models.Datasource).filter(
+            models.Datasource.project_id != project_id
+        ).all()
+
+        for ds in other_datasources:
+            ds_visibility = getattr(ds, 'visibility', 'private')
+            if ds_visibility == 'public':
+                all_datasources.append(ds)
+            elif ds_visibility == 'shared':
+                shared_with = json.loads(getattr(ds, 'shared_with', '[]') or '[]')
+                if project_id in shared_with:
+                    all_datasources.append(ds)
+
+    # Filter by visibility if not "all"
+    if visibility != "all":
+        datasources = []
+        for ds in all_datasources:
+            ds_visibility = getattr(ds, 'visibility', 'private')
+            if ds_visibility == visibility:
+                datasources.append(ds)
+    else:
+        datasources = all_datasources
 
     if not datasources:
         return HTMLResponse(content='''
@@ -7653,8 +7758,18 @@ def get_project_datasources_html(project_id: int, request: Request, db: Session 
                   </button>
                 '''
 
+        # Visibility badge
+        ds_visibility = getattr(ds, 'visibility', 'private')
+        visibility_map = {
+            'private': ('qa-badge-gray', '🔒'),
+            'shared': ('qa-badge-info', '👥'),
+            'public': ('qa-badge-success', '🌐')
+        }
+        vis_class, vis_icon = visibility_map.get(ds_visibility, ('qa-badge-gray', '🔒'))
+        is_external = ds.project_id != project_id
+
         rows += f'''
-        <tr>
+        <tr{"  style='opacity: 0.8;'" if is_external else ""}>
           <td>
             <div class="qa-flex qa-items-center qa-gap-2">
               <span style="font-size: 1.2rem;">{type_icon}</span>
@@ -7668,6 +7783,11 @@ def get_project_datasources_html(project_id: int, request: Request, db: Session 
           <td>{ds.connection_type.title()}</td>
           <td class="qa-font-mono qa-text-sm">{ds.host or "localhost"}:{ds.port or "—"}</td>
           <td>
+            <span class="qa-badge {vis_class}" title="{ds_visibility.title()}">
+              {vis_icon} {ds_visibility.title()}
+            </span>
+          </td>
+          <td>
             <span class="qa-badge {status_class}">
               <span class="qa-mr-1">{status_icon}</span> {ds.status}
             </span>
@@ -7678,12 +7798,12 @@ def get_project_datasources_html(project_id: int, request: Request, db: Session 
               <button class="qa-btn qa-btn-ghost qa-btn-xs" onclick="testDatasourceConnection({ds.id})" title="Test Connection">
                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
               </button>
-              <button class="qa-btn qa-btn-ghost qa-btn-xs" onclick="openDatasourceModal({ds.id})" title="Edit">
+              {"" if is_external else f'''<button class="qa-btn qa-btn-ghost qa-btn-xs" onclick="openDatasourceModal({ds.id})" title="Edit">
                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
               </button>
               <button class="qa-btn qa-btn-ghost qa-btn-xs qa-text-danger" onclick="deleteDatasource({ds.id}, '{ds.name}')" title="Delete">
                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-              </button>
+              </button>'''}
             </div>
           </td>
         </tr>
@@ -7697,6 +7817,7 @@ def get_project_datasources_html(project_id: int, request: Request, db: Session 
               <th>Type</th>
               <th>Connection</th>
               <th>Host:Port</th>
+              <th>Visibility</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -7707,50 +7828,86 @@ def get_project_datasources_html(project_id: int, request: Request, db: Session 
 
 
 @app.get("/api/projects/{project_id}/connectors-html", tags=["Project Detail"])
-def get_project_connectors_html(project_id: int, request: Request, db: Session = Depends(get_db)):
-    """Get project connectors access HTML"""
-    settings_service = get_settings_service()
-    connectors = settings_service.get_connectors()
+def get_project_connectors_html(
+    project_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    visibility: str = "all"
+):
+    """Get project connectors access HTML with visibility filtering"""
+    import json
 
-    # Get project's allowed connectors
-    project_settings = settings_service.get_project_settings(project_id)
-    allowed_connectors = project_settings.get("allowed_connectors", [])
+    # Get all connectors from database
+    all_connectors = db.query(models.Connector).all()
+
+    # Filter connectors based on visibility
+    connectors = []
+    for conn in all_connectors:
+        conn_visibility = getattr(conn, 'visibility', 'public')
+        owner_project = getattr(conn, 'owner_project_id', None)
+
+        # Determine if this connector is accessible to this project
+        is_accessible = False
+        if conn_visibility == 'public':
+            is_accessible = True
+        elif conn_visibility == 'private' and owner_project == project_id:
+            is_accessible = True
+        elif conn_visibility == 'shared':
+            shared_with = json.loads(getattr(conn, 'shared_with', '[]') or '[]')
+            if project_id in shared_with or owner_project == project_id:
+                is_accessible = True
+
+        # Apply visibility filter
+        if visibility == "all" and is_accessible:
+            connectors.append(conn)
+        elif visibility == conn_visibility and is_accessible:
+            connectors.append(conn)
 
     if not connectors:
-        return HTMLResponse(content='''
+        return HTMLResponse(content=f'''
             <div class="qa-text-center qa-p-8">
-              <p class="qa-text-muted">No connectors available. Configure connectors in Settings.</p>
+              <p class="qa-text-muted">No connectors available{" for this filter" if visibility != "all" else ""}.</p>
+              <a href="{URL_PREFIX}/settings" class="qa-btn qa-btn-primary qa-btn-sm qa-mt-4">Configure Connectors</a>
             </div>
         ''')
 
     items = ""
     for conn in connectors:
-        conn_id = conn.get("id", conn.get("name", ""))
-        is_allowed = conn_id in allowed_connectors or conn.get("scope") == "public"
-        is_public = conn.get("scope") == "public"
+        conn_visibility = getattr(conn, 'visibility', 'public')
+        owner_project = getattr(conn, 'owner_project_id', None)
+        is_owner = owner_project == project_id
 
-        checked = "checked" if is_allowed else ""
-        disabled = "disabled" if is_public else ""
+        # Visibility badge
+        visibility_map = {
+            'private': ('qa-badge-gray', '🔒', 'Private'),
+            'shared': ('qa-badge-info', '👥', 'Shared'),
+            'public': ('qa-badge-success', '🌐', 'Public')
+        }
+        vis_class, vis_icon, vis_text = visibility_map.get(conn_visibility, ('qa-badge-success', '🌐', 'Public'))
 
-        scope_badge = '<span class="qa-badge qa-badge-success qa-ml-2">Public</span>' if is_public else ""
+        # Status badge
+        status_class = "qa-badge-success" if conn.status == "connected" else "qa-badge-danger" if conn.status == "error" else "qa-badge-gray"
 
         items += f'''
         <div class="qa-flex qa-items-center qa-justify-between qa-p-4 qa-border-b">
           <div class="qa-flex qa-items-center qa-gap-3">
-            <div class="qa-connector-icon">
+            <div class="qa-connector-icon" style="background: var(--q-bg-secondary); padding: 8px; border-radius: 8px;">
               <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
               </svg>
             </div>
             <div>
-              <div class="qa-font-medium">{conn.get("name", "Unknown")}{scope_badge}</div>
-              <div class="qa-text-sm qa-text-muted">{conn.get("type", "Unknown")} - {conn.get("provider", "Unknown")}</div>
+              <div class="qa-font-medium">
+                {conn.name}
+                <span class="qa-badge {vis_class} qa-ml-2">{vis_icon} {vis_text}</span>
+              </div>
+              <div class="qa-text-sm qa-text-muted">{conn.type} - {conn.provider} @ {conn.host}:{conn.port}</div>
             </div>
           </div>
-          <label class="qa-switch">
-            <input type="checkbox" {checked} {disabled} onchange="toggleConnector('{conn_id}', this.checked)" />
-            <span class="qa-switch-slider"></span>
-          </label>
+          <div class="qa-flex qa-items-center qa-gap-3">
+            <span class="qa-badge {status_class}">{conn.status}</span>
+            {"<span class='qa-text-xs qa-text-muted'>(Owner)</span>" if is_owner else ""}
+          </div>
         </div>
         '''
 
@@ -7758,21 +7915,6 @@ def get_project_connectors_html(project_id: int, request: Request, db: Session =
         <div class="qa-connectors-list">
           {items}
         </div>
-        <script>
-        function toggleConnector(connId, enabled) {{
-          // Save connector access
-          fetch('{URL_PREFIX}/projects/{project_id}/settings', {{
-            method: 'PUT',
-            headers: {{
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + localStorage.getItem('token')
-            }},
-            body: JSON.stringify({{
-              toggle_connector: {{ id: connId, enabled: enabled }}
-            }})
-          }});
-        }}
-        </script>
     ''')
 
 
@@ -7887,47 +8029,169 @@ def get_project_environments_html(project_id: int, request: Request, db: Session
 
 @app.get("/api/projects/{project_id}/paths-html", tags=["Project Detail"])
 def get_project_paths_html(project_id: int, request: Request, db: Session = Depends(get_db)):
-    """Get project paths configuration HTML"""
+    """Get project paths configuration HTML with full path display"""
+    import os
+
+    # Get project for base path
+    project = crud.get_project(db, project_id)
+    base_path = project.source_path if project and project.source_path else "/path/to/project"
+
     settings_service = get_settings_service()
     project_settings = settings_service.get_project_settings(project_id)
 
     paths = project_settings.get("paths", {})
-    components_path = paths.get("components", "./components")
-    static_path = paths.get("static", "./static")
-    logs_path = paths.get("logs", "./logs")
-    migrations_path = paths.get("migrations", "./migrations")
+    components_rel = paths.get("components", "./components")
+    static_rel = paths.get("static", "./static")
+    logs_rel = paths.get("logs", "./logs")
+    migrations_rel = paths.get("migrations", "./migrations")
+
+    # Build full paths
+    def resolve_path(base, rel):
+        if rel.startswith('./'):
+            return os.path.join(base, rel[2:]).replace('\\\\', '/')
+        elif rel.startswith('/'):
+            return rel
+        else:
+            return os.path.join(base, rel).replace('\\\\', '/')
+
+    components_full = resolve_path(base_path, components_rel)
+    static_full = resolve_path(base_path, static_rel)
+    logs_full = resolve_path(base_path, logs_rel)
+    migrations_full = resolve_path(base_path, migrations_rel)
 
     return HTMLResponse(content=f'''
+        <!-- Base Path Configuration -->
+        <div class="qa-card qa-mb-4" style="background: var(--q-bg-tertiary);">
+          <div class="qa-card-body qa-p-4">
+            <div class="qa-flex qa-justify-between qa-items-center">
+              <div>
+                <label class="qa-label qa-mb-1">Project Base Path</label>
+                <p class="qa-font-mono qa-text-sm" style="color: var(--q-primary);">{base_path}</p>
+              </div>
+              <div class="qa-flex qa-gap-2">
+                <button type="button" class="qa-btn qa-btn-ghost qa-btn-sm" onclick="togglePathView()" id="path-view-toggle">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  Toggle View
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <form id="paths-form" onsubmit="savePathsSettings(event)">
-          <div class="qa-form-row">
-            <div class="qa-form-group">
-              <label class="qa-label">Components Path</label>
-              <input type="text" id="path-components" class="qa-input" value="{components_path}" />
-              <p class="qa-text-xs qa-text-muted qa-mt-1">Directory containing .q component files</p>
-            </div>
-            <div class="qa-form-group">
-              <label class="qa-label">Static Files Path</label>
-              <input type="text" id="path-static" class="qa-input" value="{static_path}" />
-              <p class="qa-text-xs qa-text-muted qa-mt-1">Directory for static assets (CSS, JS, images)</p>
-            </div>
-          </div>
-          <div class="qa-form-row">
-            <div class="qa-form-group">
-              <label class="qa-label">Logs Path</label>
-              <input type="text" id="path-logs" class="qa-input" value="{logs_path}" />
-              <p class="qa-text-xs qa-text-muted qa-mt-1">Directory for application logs</p>
-            </div>
-            <div class="qa-form-group">
-              <label class="qa-label">Migrations Path</label>
-              <input type="text" id="path-migrations" class="qa-input" value="{migrations_path}" />
-              <p class="qa-text-xs qa-text-muted qa-mt-1">Directory for database migrations</p>
-            </div>
-          </div>
-          <div class="qa-mt-4">
-            <button type="submit" class="qa-btn qa-btn-primary">Save Paths</button>
+          <!-- Path entries as table for better readability -->
+          <table class="qa-table qa-mb-4" id="paths-table">
+            <thead>
+              <tr>
+                <th style="width: 150px;">Path Type</th>
+                <th class="path-full-col">Full Path</th>
+                <th class="path-rel-col qa-hidden">Relative Path</th>
+                <th style="width: 100px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Components</strong></td>
+                <td class="path-full-col">
+                  <code class="qa-font-mono qa-text-sm" style="background: var(--q-bg-secondary); padding: 4px 8px; border-radius: 4px;">{components_full}</code>
+                </td>
+                <td class="path-rel-col qa-hidden">
+                  <input type="text" id="path-components" class="qa-input qa-input-sm" value="{components_rel}" style="font-family: monospace;" />
+                </td>
+                <td>
+                  <button type="button" class="qa-btn qa-btn-ghost qa-btn-sm" onclick="copyToClipboard('{components_full}')" title="Copy full path">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Static Files</strong></td>
+                <td class="path-full-col">
+                  <code class="qa-font-mono qa-text-sm" style="background: var(--q-bg-secondary); padding: 4px 8px; border-radius: 4px;">{static_full}</code>
+                </td>
+                <td class="path-rel-col qa-hidden">
+                  <input type="text" id="path-static" class="qa-input qa-input-sm" value="{static_rel}" style="font-family: monospace;" />
+                </td>
+                <td>
+                  <button type="button" class="qa-btn qa-btn-ghost qa-btn-sm" onclick="copyToClipboard('{static_full}')" title="Copy full path">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Logs</strong></td>
+                <td class="path-full-col">
+                  <code class="qa-font-mono qa-text-sm" style="background: var(--q-bg-secondary); padding: 4px 8px; border-radius: 4px;">{logs_full}</code>
+                </td>
+                <td class="path-rel-col qa-hidden">
+                  <input type="text" id="path-logs" class="qa-input qa-input-sm" value="{logs_rel}" style="font-family: monospace;" />
+                </td>
+                <td>
+                  <button type="button" class="qa-btn qa-btn-ghost qa-btn-sm" onclick="copyToClipboard('{logs_full}')" title="Copy full path">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Migrations</strong></td>
+                <td class="path-full-col">
+                  <code class="qa-font-mono qa-text-sm" style="background: var(--q-bg-secondary); padding: 4px 8px; border-radius: 4px;">{migrations_full}</code>
+                </td>
+                <td class="path-rel-col qa-hidden">
+                  <input type="text" id="path-migrations" class="qa-input qa-input-sm" value="{migrations_rel}" style="font-family: monospace;" />
+                </td>
+                <td>
+                  <button type="button" class="qa-btn qa-btn-ghost qa-btn-sm" onclick="copyToClipboard('{migrations_full}')" title="Copy full path">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="qa-flex qa-justify-between qa-items-center">
+            <p class="qa-text-xs qa-text-muted">
+              <svg width="12" height="12" class="qa-inline qa-mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Click "Toggle View" to edit relative paths. Full paths are calculated from the project base path.
+            </p>
+            <button type="submit" class="qa-btn qa-btn-primary path-rel-col qa-hidden">Save Paths</button>
           </div>
         </form>
         <script>
+        let isEditMode = false;
+
+        function togglePathView() {{
+          isEditMode = !isEditMode;
+          const fullCols = document.querySelectorAll('.path-full-col');
+          const relCols = document.querySelectorAll('.path-rel-col');
+          const toggleBtn = document.getElementById('path-view-toggle');
+
+          if (isEditMode) {{
+            fullCols.forEach(el => el.classList.add('qa-hidden'));
+            relCols.forEach(el => el.classList.remove('qa-hidden'));
+            toggleBtn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg> View Full Paths';
+          }} else {{
+            fullCols.forEach(el => el.classList.remove('qa-hidden'));
+            relCols.forEach(el => el.classList.add('qa-hidden'));
+            toggleBtn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Edit Paths';
+          }}
+        }}
+
+        function copyToClipboard(text) {{
+          navigator.clipboard.writeText(text).then(() => {{
+            showToast('Path copied to clipboard!', 'success');
+          }}).catch(() => {{
+            // Fallback for older browsers
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast('Path copied to clipboard!', 'success');
+          }});
+        }}
+
         function savePathsSettings(e) {{
           e.preventDefault();
           fetch('{URL_PREFIX}/projects/{project_id}/settings', {{
@@ -7946,8 +8210,12 @@ def get_project_paths_html(project_id: int, request: Request, db: Session = Depe
             }})
           }})
           .then(r => {{
-            if (r.ok) alert('Paths saved!');
-            else r.json().then(d => alert(d.detail || 'Error saving'));
+            if (r.ok) {{
+              showToast('Paths saved successfully!', 'success');
+              // Reload to show updated full paths
+              htmx.ajax('GET', '{URL_PREFIX}/api/projects/{project_id}/paths-html', '#tab-paths .qa-card-body');
+            }}
+            else r.json().then(d => showToast(d.detail || 'Error saving paths', 'error'));
           }});
         }}
         </script>
