@@ -28,10 +28,16 @@ class LogLevel:
 
 class LogSource:
     APP = "app"          # Application logs (stdout/stderr)
-    DB = "db"            # Database query logs
+    DB = "database"      # Database query logs
     ACCESS = "access"    # HTTP access logs
+    API = "api"          # External API calls
+    SECURITY = "security"  # Security events (auth, permissions)
     DEPLOY = "deploy"    # Deployment logs
     SYSTEM = "system"    # System/infrastructure logs
+
+    @classmethod
+    def all_sources(cls):
+        return [cls.APP, cls.DB, cls.ACCESS, cls.API, cls.SECURITY, cls.DEPLOY, cls.SYSTEM]
 
 
 def create_log(
@@ -173,7 +179,7 @@ def get_log_stats(
 
     # Count by source
     source_counts = {}
-    for source in [LogSource.APP, LogSource.DB, LogSource.ACCESS, LogSource.DEPLOY, LogSource.SYSTEM]:
+    for source in LogSource.all_sources():
         count = query.filter(ApplicationLog.source == source).count()
         source_counts[source] = count
 

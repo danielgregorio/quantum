@@ -1042,55 +1042,138 @@ def get_project_detail_content(project_id: int):
       <div id="tab-logs" class="qa-tab-content qa-hidden">
         <div class="qa-card">
           <div class="qa-card-header">
-            <div class="qa-flex qa-justify-between qa-items-center qa-mb-3">
+            <div class="qa-flex qa-justify-between qa-items-center qa-mb-4">
               <h3 class="qa-card-title">Application Logs</h3>
               <div class="qa-flex qa-gap-2">
-                <button class="qa-btn qa-btn-ghost qa-btn-sm" id="logs-auto-refresh" onclick="toggleAutoRefresh()">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                <button class="qa-btn qa-btn-ghost qa-btn-sm" id="logs-auto-refresh" onclick="toggleLogsAutoRefresh()">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                   Auto
                 </button>
-                <button class="qa-btn qa-btn-secondary qa-btn-sm" hx-get="{URL_PREFIX}/api/projects/{project_id}/logs-html" hx-target="#logs-list" hx-swap="innerHTML">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                <button class="qa-btn qa-btn-secondary qa-btn-sm" onclick="refreshLogs()">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                   Refresh
+                </button>
+                <button class="qa-btn qa-btn-ghost qa-btn-sm" onclick="exportLogs()">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                  Export
                 </button>
               </div>
             </div>
-            <!-- Filters -->
-            <div class="qa-flex qa-gap-2 qa-flex-wrap">
-              <input type="text" id="log-search" class="qa-input qa-input-sm" placeholder="Search logs..." style="width: 200px;" onkeyup="filterLogs()">
-              <select id="log-source" class="qa-input qa-input-sm qa-select" style="width: 120px;" onchange="filterLogs()">
-                <option value="">All Sources</option>
-                <option value="app">App</option>
-                <option value="db">Database</option>
-                <option value="access">Access</option>
-                <option value="deploy">Deploy</option>
-                <option value="system">System</option>
-              </select>
-              <select id="log-level" class="qa-input qa-input-sm qa-select" style="width: 120px;" onchange="filterLogs()">
+
+            <!-- Source Sub-tabs -->
+            <div class="qa-flex qa-gap-2 qa-mb-4 qa-flex-wrap">
+              <button class="qa-btn qa-btn-sm log-source-tab active" data-source="all" onclick="filterLogSource('all')">
+                All
+              </button>
+              <button class="qa-btn qa-btn-sm qa-btn-ghost log-source-tab" data-source="app" onclick="filterLogSource('app')">
+                <span style="color: #3B82F6;">&#128241;</span> App
+              </button>
+              <button class="qa-btn qa-btn-sm qa-btn-ghost log-source-tab" data-source="database" onclick="filterLogSource('database')">
+                <span style="color: #8B5CF6;">&#128451;</span> Database
+              </button>
+              <button class="qa-btn qa-btn-sm qa-btn-ghost log-source-tab" data-source="access" onclick="filterLogSource('access')">
+                <span style="color: #10B981;">&#127760;</span> Access
+              </button>
+              <button class="qa-btn qa-btn-sm qa-btn-ghost log-source-tab" data-source="api" onclick="filterLogSource('api')">
+                <span style="color: #F59E0B;">&#128268;</span> API
+              </button>
+              <button class="qa-btn qa-btn-sm qa-btn-ghost log-source-tab" data-source="security" onclick="filterLogSource('security')">
+                <span style="color: #EF4444;">&#128274;</span> Security
+              </button>
+              <button class="qa-btn qa-btn-sm qa-btn-ghost log-source-tab" data-source="deploy" onclick="filterLogSource('deploy')">
+                <span style="color: #06B6D4;">&#128640;</span> Deploy
+              </button>
+            </div>
+
+            <!-- Filters Row -->
+            <div class="qa-flex qa-gap-3 qa-flex-wrap qa-items-center">
+              <div class="qa-flex qa-items-center qa-gap-2">
+                <svg width="16" height="16" class="qa-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input type="text" id="log-search" class="qa-input qa-input-sm" placeholder="Search logs..." style="width: 200px;" onkeyup="debounceLogSearch()">
+              </div>
+
+              <select id="log-level" class="qa-input qa-input-sm qa-select" style="width: 120px;" onchange="refreshLogs()">
                 <option value="">All Levels</option>
-                <option value="DEBUG">Debug</option>
-                <option value="INFO">Info</option>
-                <option value="WARNING">Warning</option>
-                <option value="ERROR">Error</option>
+                <option value="DEBUG">Debug+</option>
+                <option value="INFO">Info+</option>
+                <option value="WARNING">Warn+</option>
+                <option value="ERROR">Error+</option>
                 <option value="CRITICAL">Critical</option>
               </select>
+
+              <select id="log-since" class="qa-input qa-input-sm qa-select" style="width: 130px;" onchange="refreshLogs()">
+                <option value="15">Last 15 min</option>
+                <option value="60" selected>Last hour</option>
+                <option value="360">Last 6 hours</option>
+                <option value="1440">Last 24 hours</option>
+                <option value="10080">Last 7 days</option>
+                <option value="43200">Last 30 days</option>
+              </select>
+
+              <div id="log-stats" class="qa-text-sm qa-text-muted qa-ml-auto">
+                <!-- Stats will be loaded here -->
+              </div>
             </div>
           </div>
-          <div class="qa-card-body qa-p-0" id="logs-list" hx-get="{URL_PREFIX}/api/projects/{project_id}/logs-html" hx-trigger="load" hx-swap="innerHTML" style="max-height: 500px; overflow-y: auto;">
-            <div class="qa-text-center qa-text-muted qa-p-6">Loading logs...</div>
+
+          <!-- Log entries container -->
+          <div class="qa-card-body qa-p-0" id="logs-container" style="max-height: 600px; overflow-y: auto;">
+            <div id="logs-list" hx-get="{URL_PREFIX}/api/projects/{project_id}/logs-html" hx-trigger="load" hx-swap="innerHTML">
+              <div class="qa-text-center qa-text-muted qa-p-6">Loading logs...</div>
+            </div>
           </div>
         </div>
         <script>
+          let currentLogSource = 'all';
           let logsAutoRefresh = false;
           let logsInterval = null;
+          let logSearchDebounce = null;
 
-          function toggleAutoRefresh() {{
+          function filterLogSource(source) {{
+            currentLogSource = source;
+            // Update active tab
+            document.querySelectorAll('.log-source-tab').forEach(btn => {{
+              btn.classList.remove('active');
+              if (btn.dataset.source !== 'all') btn.classList.add('qa-btn-ghost');
+            }});
+            const activeBtn = document.querySelector(`.log-source-tab[data-source="${{source}}"]`);
+            if (activeBtn) {{
+              activeBtn.classList.add('active');
+              activeBtn.classList.remove('qa-btn-ghost');
+            }}
+            refreshLogs();
+          }}
+
+          function refreshLogs() {{
+            const source = currentLogSource;
+            const level = document.getElementById('log-level').value;
+            const since = document.getElementById('log-since').value;
+            const search = document.getElementById('log-search').value;
+
+            const params = new URLSearchParams();
+            params.append('source', source);
+            params.append('minutes', since);
+            if (level) params.append('level', level);
+            if (search) params.append('search', search);
+
+            htmx.ajax('GET', `{URL_PREFIX}/api/projects/{project_id}/logs-html?${{params}}`, '#logs-list');
+            loadLogStats();
+          }}
+
+          function debounceLogSearch() {{
+            clearTimeout(logSearchDebounce);
+            logSearchDebounce = setTimeout(refreshLogs, 300);
+          }}
+
+          function toggleLogsAutoRefresh() {{
             logsAutoRefresh = !logsAutoRefresh;
             const btn = document.getElementById('logs-auto-refresh');
             if (logsAutoRefresh) {{
               btn.classList.add('qa-btn-primary');
               btn.classList.remove('qa-btn-ghost');
-              logsInterval = setInterval(() => htmx.trigger('#logs-list', 'load'), 5000);
+              logsInterval = setInterval(refreshLogs, 5000);
             }} else {{
               btn.classList.remove('qa-btn-primary');
               btn.classList.add('qa-btn-ghost');
@@ -1098,18 +1181,43 @@ def get_project_detail_content(project_id: int):
             }}
           }}
 
-          function filterLogs() {{
-            const search = document.getElementById('log-search').value;
-            const source = document.getElementById('log-source').value;
-            const level = document.getElementById('log-level').value;
-
-            let url = '/api/projects/{project_id}/logs-html?limit=100';
-            if (search) url += '&search=' + encodeURIComponent(search);
-            if (source) url += '&source=' + source;
-            if (level) url += '&level=' + level;
-
-            htmx.ajax('GET', url, {{ target: '#logs-list', swap: 'innerHTML' }});
+          function loadLogStats() {{
+            const since = document.getElementById('log-since').value;
+            const hours = Math.ceil(parseInt(since) / 60);
+            fetch(`{URL_PREFIX}/api/projects/{project_id}/logs/stats?hours=${{hours}}`)
+              .then(r => r.json())
+              .then(stats => {{
+                const errorCount = (stats.by_level?.error || 0) + (stats.by_level?.critical || 0);
+                document.getElementById('log-stats').innerHTML = `
+                  <span class="qa-mr-3">Total: <strong>${{stats.total}}</strong></span>
+                  <span class="qa-text-danger">Errors: <strong>${{errorCount}}</strong></span>
+                `;
+              }})
+              .catch(() => {{}});
           }}
+
+          function exportLogs() {{
+            const source = currentLogSource;
+            const level = document.getElementById('log-level').value;
+            const since = document.getElementById('log-since').value;
+            const search = document.getElementById('log-search').value;
+
+            const params = new URLSearchParams();
+            params.append('source', source);
+            params.append('minutes', since);
+            params.append('limit', '10000');
+            if (level) params.append('level', level);
+            if (search) params.append('search', search);
+
+            window.open(`{URL_PREFIX}/api/projects/{project_id}/logs/export?${{params}}`, '_blank');
+          }}
+
+          // Load stats on tab activation
+          document.addEventListener('htmx:afterOnLoad', function(evt) {{
+            if (evt.detail.target && evt.detail.target.id === 'logs-list') {{
+              loadLogStats();
+            }}
+          }});
         </script>
       </div>
 
@@ -10710,7 +10818,8 @@ def get_project_logs_html(
     source: Optional[str] = None,
     level: Optional[str] = None,
     search: Optional[str] = None,
-    limit: int = 50,
+    minutes: Optional[int] = 60,
+    limit: int = 200,
     db: Session = Depends(get_db)
 ):
     """Get project logs as HTML for HTMX"""
@@ -10720,57 +10829,235 @@ def get_project_logs_html(
     if not project:
         return HTMLResponse(content='<p class="qa-text-muted">Project not found</p>')
 
+    # Calculate since time from minutes
+    since_dt = datetime.utcnow() - timedelta(minutes=minutes) if minutes else None
+
     log_service = get_log_service(db)
     logs = log_service.get_logs(
         project_id=project_id,
-        source=source,
+        source=source if source and source != 'all' else None,
         level=level,
         search=search,
+        since=since_dt,
         limit=limit
     )
 
     if not logs:
         return HTMLResponse(content='''
-            <div class="qa-text-center qa-p-6">
-                <p class="qa-text-muted">No logs found</p>
-                <p class="qa-text-xs qa-text-dim qa-mt-2">Logs will appear here as your application runs</p>
+            <div class="qa-text-center qa-p-8">
+                <svg width="48" height="48" class="qa-mx-auto qa-mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="opacity: 0.4;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p class="qa-text-muted qa-mb-2">No logs found</p>
+                <p class="qa-text-xs qa-text-dim">Try adjusting your filters or time range</p>
             </div>
         ''')
 
-    html = '<div class="qa-log-list" style="font-family: monospace; font-size: 13px;">'
+    # Source icons and colors
+    source_config = {
+        'app': ('&#128241;', '#3B82F6', 'APP'),       # Mobile phone icon
+        'database': ('&#128451;', '#8B5CF6', 'DB'),   # File cabinet icon
+        'db': ('&#128451;', '#8B5CF6', 'DB'),         # Legacy support
+        'access': ('&#127760;', '#10B981', 'HTTP'),   # Globe icon
+        'api': ('&#128268;', '#F59E0B', 'API'),       # Plug icon
+        'security': ('&#128274;', '#EF4444', 'SEC'),  # Lock icon
+        'deploy': ('&#128640;', '#06B6D4', 'DEPLOY'), # Rocket icon
+        'system': ('&#9881;', '#6B7280', 'SYS'),      # Gear icon
+    }
+
+    level_styles = {
+        'DEBUG': ('qa-text-muted', ''),
+        'INFO': ('', 'color: #3B82F6;'),
+        'WARNING': ('', 'color: #F59E0B;'),
+        'ERROR': ('', 'color: #EF4444;'),
+        'CRITICAL': ('qa-font-bold', 'color: #EF4444; background: rgba(239,68,68,0.1);')
+    }
+
+    html = '<div class="qa-log-list" style="font-family: \'SF Mono\', Monaco, monospace; font-size: 12px;">'
     for log in logs:
         timestamp = log.timestamp.strftime('%H:%M:%S') if log.timestamp else ''
-        level_class = {
-            'DEBUG': 'qa-text-muted',
-            'INFO': 'qa-text-info',
-            'WARNING': 'qa-text-warning',
-            'ERROR': 'qa-text-danger',
-            'CRITICAL': 'qa-text-danger qa-font-bold'
-        }.get(log.level, 'qa-text-secondary')
+        level_class, level_style = level_styles.get(log.level, ('', ''))
 
-        source_badge = {
-            'app': ('APP', 'primary'),
-            'db': ('DB', 'info'),
-            'access': ('HTTP', 'success'),
-            'deploy': ('DEPLOY', 'warning'),
-            'system': ('SYS', 'muted')
-        }.get(log.source, ('LOG', 'muted'))
+        src = source_config.get(log.source, ('&#128196;', '#6B7280', 'LOG'))
+        src_icon, src_color, src_label = src
 
-        message = log.message[:150] if log.message else ''
-        if len(log.message or '') > 150:
+        message = log.message[:200] if log.message else ''
+        if len(log.message or '') > 200:
             message += '...'
 
+        # Duration badge if available
+        duration_html = ''
+        if log.response_time_ms:
+            dur_color = '#10B981' if log.response_time_ms < 100 else '#F59E0B' if log.response_time_ms < 500 else '#EF4444'
+            duration_html = f'<span style="color: {dur_color}; font-size: 11px; margin-left: 8px;">{log.response_time_ms}ms</span>'
+
+        # Component badge if available
+        component_html = ''
+        if log.component_name:
+            component_html = f'<span style="color: #6B7280; font-size: 11px; margin-left: 8px;">[{log.component_name}]</span>'
+
         html += f'''
-            <div class="qa-log-item qa-flex qa-gap-2 qa-p-2" style="border-bottom: 1px solid var(--q-border); white-space: nowrap; overflow: hidden;">
-                <span class="qa-text-muted" style="width: 70px; flex-shrink: 0;">{timestamp}</span>
-                <span class="qa-badge qa-badge-{source_badge[1]}" style="width: 50px; flex-shrink: 0; text-align: center;">{source_badge[0]}</span>
-                <span class="{level_class}" style="width: 60px; flex-shrink: 0;">{log.level}</span>
-                <span class="qa-text-secondary" style="overflow: hidden; text-overflow: ellipsis;">{message}</span>
+            <div class="qa-log-item qa-flex qa-items-center qa-gap-3 qa-p-2" style="border-bottom: 1px solid var(--q-border); {level_style}">
+                <span class="qa-text-muted" style="min-width: 65px; flex-shrink: 0;">{timestamp}</span>
+                <span style="background: {src_color}15; color: {src_color}; padding: 2px 8px; border-radius: 4px; min-width: 70px; text-align: center; font-size: 11px;">
+                    {src_icon} {src_label}
+                </span>
+                <span class="{level_class}" style="min-width: 55px; flex-shrink: 0;">{log.level}</span>
+                <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {message}{component_html}
+                </span>
+                {duration_html}
             </div>
         '''
     html += '</div>'
 
     return HTMLResponse(content=html)
+
+
+@app.get("/api/projects/{project_id}/logs/export", tags=["Logs"])
+def export_project_logs(
+    project_id: int,
+    source: Optional[str] = None,
+    level: Optional[str] = None,
+    search: Optional[str] = None,
+    minutes: Optional[int] = 60,
+    limit: int = 10000,
+    format: str = "json",
+    db: Session = Depends(get_db)
+):
+    """Export project logs as JSON or CSV"""
+    from datetime import datetime, timedelta
+    from starlette.responses import Response
+
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    since_dt = datetime.utcnow() - timedelta(minutes=minutes) if minutes else None
+
+    log_service = get_log_service(db)
+    logs = log_service.get_logs(
+        project_id=project_id,
+        source=source if source and source != 'all' else None,
+        level=level,
+        search=search,
+        since=since_dt,
+        limit=limit
+    )
+
+    if format == "csv":
+        import csv
+        import io
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['timestamp', 'level', 'source', 'message', 'component', 'duration_ms'])
+        for log in logs:
+            writer.writerow([
+                log.timestamp.isoformat() if log.timestamp else '',
+                log.level,
+                log.source,
+                log.message,
+                log.component_name or '',
+                log.response_time_ms or ''
+            ])
+        content = output.getvalue()
+        return Response(
+            content=content,
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=logs-{project.name}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv"}
+        )
+    else:
+        return [log.to_dict() for log in logs]
+
+
+@app.post("/api/projects/{project_id}/logs/generate-sample", tags=["Logs"])
+def generate_sample_logs(
+    project_id: int,
+    count: int = 20,
+    db: Session = Depends(get_db)
+):
+    """Generate sample logs for testing the UI"""
+    from datetime import datetime, timedelta
+    import random
+    try:
+        from .models import ApplicationLog
+    except ImportError:
+        from models import ApplicationLog
+
+    project = crud.get_project(db, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    sources = ['app', 'database', 'access', 'api', 'security', 'deploy']
+    levels = ['DEBUG', 'INFO', 'INFO', 'INFO', 'WARNING', 'ERROR']  # More INFO than errors
+    components = ['main', 'auth', 'api', 'database', 'cache', 'router']
+
+    sample_messages = {
+        'app': [
+            'Application started successfully',
+            'Configuration loaded from environment',
+            'Background task completed',
+            'Cache refreshed',
+            'Worker process spawned'
+        ],
+        'database': [
+            'SELECT * FROM users WHERE id = ? executed',
+            'INSERT INTO logs VALUES (?, ?, ?) executed',
+            'Connection pool refreshed',
+            'Query optimization applied',
+            'Database backup completed'
+        ],
+        'access': [
+            'GET /api/users 200',
+            'POST /api/auth/login 200',
+            'GET /api/posts 200',
+            'PUT /api/settings 200',
+            'DELETE /api/cache 204'
+        ],
+        'api': [
+            'External API call to stripe.com',
+            'OAuth token refreshed',
+            'Webhook delivered successfully',
+            'Rate limit check passed',
+            'API response cached'
+        ],
+        'security': [
+            'User login successful: user@example.com',
+            'Password reset requested',
+            'Two-factor authentication verified',
+            'Session expired, user logged out',
+            'Permission check passed for admin role'
+        ],
+        'deploy': [
+            'Deployment started: v1.2.3',
+            'Docker image built successfully',
+            'Health check passed',
+            'Rollback completed',
+            'Environment variables updated'
+        ]
+    }
+
+    created = 0
+    for i in range(count):
+        source = random.choice(sources)
+        level = random.choice(levels)
+        message = random.choice(sample_messages[source])
+
+        log_entry = ApplicationLog(
+            project_id=project_id,
+            timestamp=datetime.utcnow() - timedelta(minutes=random.randint(0, 60)),
+            level=level,
+            source=source,
+            message=message,
+            component_name=random.choice(components),
+            response_time_ms=random.randint(10, 500) if source in ['database', 'access', 'api'] else None,
+            response_status=random.choice([200, 201, 204]) if source == 'access' else None
+        )
+        db.add(log_entry)
+        created += 1
+
+    db.commit()
+    return {"created": created, "message": f"Generated {created} sample logs"}
 
 
 @app.get("/api/projects/{project_id}/logs/stats", tags=["Logs"])

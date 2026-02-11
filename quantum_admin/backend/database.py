@@ -2,6 +2,7 @@
 Database configuration and session management
 """
 import os
+from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from .models import Base
@@ -133,6 +134,64 @@ def seed_db():
         ]
         for e in environments:
             db.add(e)
+
+        # Create sample application logs
+        from datetime import timedelta
+        sample_logs = [
+            models.ApplicationLog(
+                project_id=1,
+                timestamp=datetime.utcnow() - timedelta(minutes=5),
+                level="INFO",
+                source="app",
+                message="Application started successfully",
+                component_name="main"
+            ),
+            models.ApplicationLog(
+                project_id=1,
+                timestamp=datetime.utcnow() - timedelta(minutes=4),
+                level="INFO",
+                source="database",
+                message="Database connection established",
+                response_time_ms=45
+            ),
+            models.ApplicationLog(
+                project_id=1,
+                timestamp=datetime.utcnow() - timedelta(minutes=3),
+                level="INFO",
+                source="access",
+                message="GET /api/posts 200",
+                request_method="GET",
+                request_path="/api/posts",
+                response_status=200,
+                response_time_ms=120
+            ),
+            models.ApplicationLog(
+                project_id=1,
+                timestamp=datetime.utcnow() - timedelta(minutes=2),
+                level="WARNING",
+                source="api",
+                message="External API rate limit approaching",
+                component_name="oauth_service"
+            ),
+            models.ApplicationLog(
+                project_id=1,
+                timestamp=datetime.utcnow() - timedelta(minutes=1),
+                level="INFO",
+                source="security",
+                message="User login successful: admin@example.com",
+                component_name="auth"
+            ),
+            models.ApplicationLog(
+                project_id=1,
+                timestamp=datetime.utcnow(),
+                level="INFO",
+                source="deploy",
+                message="Deployment completed: v1.2.3",
+                component_name="deployer"
+            ),
+        ]
+        for log in sample_logs:
+            db.add(log)
 
         db.commit()
         print("[OK] Database seeded with sample data")
