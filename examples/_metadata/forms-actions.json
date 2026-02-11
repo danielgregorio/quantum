@@ -27,7 +27,10 @@
       "relatedDocs": [
         "/guide/actions"
       ],
-      "lineCount": 105
+      "lineCount": 105,
+      "output": "Error: AttributeError: 'ApplicationNode' object has no attribute 'name'",
+      "outputType": "error",
+      "sourceCode": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!--\n    Form Validation Example\n\n    Demonstrates the declarative form validation system in Quantum UI Engine.\n    Includes HTML5 validation attributes, custom validators, and error display modes.\n-->\n<q:application id=\"FormValidationDemo\" type=\"ui\">\n    <ui:window title=\"Registration Form with Validation\">\n        <ui:panel title=\"User Registration\">\n            <!--\n                Form with validation attributes:\n                - validation=\"both\" - Validate on client and server\n                - error-display=\"both\" - Show inline errors + summary\n            -->\n            <ui:form validation=\"both\" error-display=\"both\" on-submit=\"handleSubmit()\">\n\n                <!-- Custom validators defined at form level -->\n                <ui:validator name=\"passwordStrength\"\n                              pattern=\"^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]{8,}$\"\n                              message=\"Password must have at least 8 characters with uppercase, lowercase, and number\" />\n\n                <ui:validator name=\"passwordMatch\"\n                              match=\"password\"\n                              message=\"Passwords must match\" />\n\n                <ui:validator name=\"ageRange\"\n                              field=\"age\"\n                              min=\"18\"\n                              max=\"120\"\n                              message=\"Age must be between 18 and 120\" />\n\n                <!-- Email field with HTML5 validation -->\n                <ui:formitem label=\"Email\">\n                    <ui:input bind=\"email\"\n                              type=\"email\"\n                              required=\"true\"\n                              placeholder=\"user@example.com\"\n                              error-message=\"Please enter a valid email address\" />\n                </ui:formitem>\n\n                <!-- Username with pattern and length constraints -->\n                <ui:formitem label=\"Username\">\n                    <ui:input bind=\"username\"\n                              required=\"true\"\n                              minlength=\"3\"\n                              maxlength=\"20\"\n                              pattern=\"[a-zA-Z0-9_]+\"\n                              placeholder=\"alphanumeric_only\"\n                              error-message=\"Username must be 3-20 alphanumeric characters or underscores\" />\n                </ui:formitem>\n\n                <!-- Password with custom validator -->\n                <ui:formitem label=\"Password\">\n                    <ui:input bind=\"password\"\n                              type=\"password\"\n                              required=\"true\"\n                              validators=\"passwordStrength\"\n                              placeholder=\"8+ characters, mixed case + number\" />\n                </ui:formitem>\n\n                <!-- Confirm Password with match validator -->\n                <ui:formitem label=\"Confirm Password\">\n                    <ui:input bind=\"confirmPassword\"\n                              type=\"password\"\n                              required=\"true\"\n                              validators=\"passwordMatch\"\n                              error-message=\"Passwords do not match\" />\n                </ui:formitem>\n\n                <!-- Age with min/max constraints -->\n                <ui:formitem label=\"Age\">\n                    <ui:input bind=\"age\"\n                              type=\"number\"\n                              min=\"18\"\n                              max=\"120\"\n                              placeholder=\"18-120\"\n                              error-message=\"You must be at least 18 years old\" />\n                </ui:formitem>\n\n                <!-- Phone with pattern -->\n                <ui:formitem label=\"Phone (Optional)\">\n                    <ui:input bind=\"phone\"\n                              type=\"tel\"\n                              pattern=\"\\d{10,11}\"\n                              placeholder=\"10-11 digits\"\n                              error-message=\"Phone must be 10-11 digits\" />\n                </ui:formitem>\n\n                <!-- Website with URL validation -->\n                <ui:formitem label=\"Website (Optional)\">\n                    <ui:input bind=\"website\"\n                              type=\"url\"\n                              placeholder=\"https://example.com\" />\n                </ui:formitem>\n\n                <ui:hbox gap=\"12\" justify=\"end\">\n                    <ui:button variant=\"secondary\">Cancel</ui:button>\n                    <ui:button variant=\"primary\">Register</ui:button>\n                </ui:hbox>\n            </ui:form>\n        </ui:panel>\n    </ui:window>\n</q:application>\n"
     },
     {
       "file": "test-action-complete.q",
@@ -56,7 +59,10 @@
       "relatedDocs": [
         "/guide/actions"
       ],
-      "lineCount": 47
+      "lineCount": 47,
+      "output": "Actions defined: simpleSubmit, validateUser, loginAction, saveData",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Action Complete -->\n<!-- Demonstrates all q:action patterns for form handling -->\n<q:component name=\"TestActionComplete\" xmlns:q=\"https://quantum.lang/ns\">\n\n  <!-- Simple form action -->\n  <q:action name=\"simpleSubmit\" method=\"POST\">\n    <q:set name=\"message\" value=\"Form submitted!\" />\n    <q:return value=\"{message}\" />\n  </q:action>\n\n  <!-- Action with validation -->\n  <q:action name=\"validateUser\" method=\"POST\">\n    <q:param name=\"username\" required=\"true\" minLength=\"3\" maxLength=\"20\" />\n    <q:param name=\"email\" required=\"true\" pattern=\"^[^@]+@[^@]+\\.[^@]+$\" />\n    <q:param name=\"age\" type=\"number\" required=\"true\" min=\"18\" max=\"120\" />\n\n    <q:set name=\"result\" value=\"User {username} validated\" />\n    <q:return value=\"{result}\" />\n  </q:action>\n\n  <!-- Action with redirect -->\n  <q:action name=\"loginAction\" method=\"POST\">\n    <q:param name=\"user\" required=\"true\" />\n    <q:param name=\"pass\" required=\"true\" />\n\n    <q:if condition=\"user == 'admin' and pass == 'secret'\">\n      <q:set name=\"session.loggedIn\" value=\"true\" />\n      <q:redirect url=\"/dashboard\" />\n      <q:else>\n        <q:flash type=\"error\" message=\"Invalid credentials\" />\n        <q:redirect url=\"/login\" />\n      </q:else>\n    </q:if>\n  </q:action>\n\n  <!-- Action with flash messages -->\n  <q:action name=\"saveData\" method=\"POST\">\n    <q:param name=\"data\" required=\"true\" />\n\n    <q:set name=\"saved\" value=\"true\" />\n    <q:flash type=\"success\" message=\"Data saved successfully!\" />\n    <q:return value=\"Saved: {saved}\" />\n  </q:action>\n\n  <q:return value=\"Actions defined: simpleSubmit, validateUser, loginAction, saveData\" />\n</q:component>\n"
     },
     {
       "file": "test-action-flash.q",
@@ -82,7 +88,10 @@
       "relatedDocs": [
         "/guide/actions"
       ],
-      "lineCount": 14
+      "lineCount": 14,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<q:component name=\"TestActionFlash\">\n  <!-- Test: Flash messages in actions -->\n\n  <q:action name=\"saveSettings\" method=\"POST\">\n    <q:param name=\"theme\" type=\"string\" required=\"true\" />\n\n    <q:set name=\"session.theme\" value=\"{theme}\" />\n    <q:flash message=\"Settings saved successfully!\" type=\"success\" />\n  </q:action>\n\n  <!-- Expected: Flash message defined -->\n  Flash message support enabled\n</q:component>\n"
     },
     {
       "file": "test-action-redirect.q",
@@ -106,7 +115,10 @@
       "relatedDocs": [
         "/guide/actions"
       ],
-      "lineCount": 14
+      "lineCount": 14,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<q:component name=\"TestActionRedirect\">\n  <!-- Test: Redirect with flash message -->\n\n  <q:action name=\"deleteItem\" method=\"POST\">\n    <q:param name=\"itemId\" type=\"integer\" required=\"true\" />\n\n    <q:set name=\"deleted\" value=\"true\" />\n    <q:redirect url=\"/items\" flash=\"Item {itemId} deleted successfully\" />\n  </q:action>\n\n  <!-- Expected: Redirect defined with flash message -->\n  Redirect with flash message configured\n</q:component>\n"
     },
     {
       "file": "test-action-simple.q",
@@ -128,7 +140,10 @@
       "relatedDocs": [
         "/guide/actions"
       ],
-      "lineCount": 15
+      "lineCount": 15,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<q:component name=\"TestActionSimple\">\n  <!-- Test: Simple action execution -->\n\n  <q:action name=\"createUser\" method=\"POST\">\n    <q:param name=\"username\" type=\"string\" required=\"true\" />\n    <q:param name=\"email\" type=\"email\" required=\"true\" />\n\n    <q:set name=\"userCreated\" value=\"true\" />\n    <q:set name=\"userId\" value=\"123\" />\n  </q:action>\n\n  <!-- Expected: Action defined successfully, params validated -->\n  Action 'createUser' defined successfully\n</q:component>\n"
     },
     {
       "file": "test-action-validation.q",
@@ -150,7 +165,10 @@
       "relatedDocs": [
         "/guide/actions"
       ],
-      "lineCount": 15
+      "lineCount": 15,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<q:component name=\"TestActionValidation\">\n  <!-- Test: Action parameter validation -->\n\n  <q:action name=\"register\" method=\"POST\">\n    <q:param name=\"email\" type=\"email\" required=\"true\" />\n    <q:param name=\"password\" type=\"string\" minlength=\"8\" required=\"true\" />\n    <q:param name=\"age\" type=\"integer\" min=\"18\" max=\"120\" required=\"true\" />\n\n    <q:set name=\"registered\" value=\"true\" />\n  </q:action>\n\n  <!-- Expected: Validation rules defined correctly -->\n  Validation rules: email, password (min 8 chars), age (18-120)\n</q:component>\n"
     },
     {
       "file": "test-upload-basic.q",
@@ -174,7 +192,10 @@
       "relatedDocs": [
         "/guide/actions"
       ],
-      "lineCount": 18
+      "lineCount": 18,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<q:component name=\"TestUploadBasic\">\n  <!-- Test: Basic file upload -->\n\n  <q:action name=\"uploadFile\" method=\"POST\">\n    <q:param name=\"document\" type=\"file\" required=\"true\" />\n\n    <q:file action=\"upload\"\n            file=\"{document}\"\n            destination=\"./uploads/\"\n            result=\"uploadResult\" />\n\n    <q:flash message=\"File uploaded: {uploadResult.filename}\" type=\"success\" />\n  </q:action>\n\n  <!-- Expected: File upload configured -->\n  File upload action configured\n</q:component>\n"
     },
     {
       "file": "test-upload-naming.q",
@@ -198,7 +219,10 @@
       "relatedDocs": [
         "/guide/actions"
       ],
-      "lineCount": 20
+      "lineCount": 20,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<q:component name=\"TestUploadNaming\">\n  <!-- Test: File upload with unique naming strategy -->\n\n  <q:action name=\"uploadDocument\" method=\"POST\">\n    <q:param name=\"file\" type=\"file\" required=\"true\" />\n\n    <q:file action=\"upload\"\n            file=\"{file}\"\n            destination=\"./uploads/documents/\"\n            nameConflict=\"makeUnique\"\n            result=\"uploadResult\" />\n\n    <!-- Expected: Unique filename generated (UUID-based) -->\n    <q:flash message=\"File saved as: {uploadResult.filename}\" type=\"success\" />\n  </q:action>\n\n  <!-- Expected: Naming strategy configured -->\n  Naming strategy: makeUnique (prevents conflicts)\n</q:component>\n"
     },
     {
       "file": "test-upload-validation.q",
@@ -222,7 +246,10 @@
       "relatedDocs": [
         "/guide/actions"
       ],
-      "lineCount": 20
+      "lineCount": 20,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<q:component name=\"TestUploadValidation\">\n  <!-- Test: File upload with validation (size and type) -->\n\n  <q:action name=\"uploadAvatar\" method=\"POST\">\n    <q:param name=\"avatar\" type=\"file\" required=\"true\" />\n\n    <q:file action=\"upload\"\n            file=\"{avatar}\"\n            destination=\"./uploads/avatars/\"\n            maxSize=\"5MB\"\n            allowedTypes=\"image/jpeg,image/png,image/gif\"\n            result=\"uploadResult\" />\n\n    <q:flash message=\"Avatar uploaded!\" type=\"success\" />\n  </q:action>\n\n  <!-- Expected: Validation rules (max 5MB, images only) -->\n  File validation: max 5MB, images only (JPEG, PNG, GIF)\n</q:component>\n"
     }
   ]
 }

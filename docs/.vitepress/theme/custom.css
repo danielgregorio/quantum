@@ -186,3 +186,25 @@
     min-width: 80px;
   }
 }
+
+/* Example Output Preview Global Styles */
+.output-preview-card {
+  border-left: 3px solid var(--vp-c-green-1);
+}
+
+.output-preview-card.has-error {
+  border-left-color: var(--vp-c-danger-1);
+}
+
+/* Syntax highlighting for output */
+.output-highlight-string {
+  color: var(--vp-c-green-1);
+}
+
+.output-highlight-number {
+  color: var(--vp-c-brand-1);
+}
+
+.output-highlight-keyword {
+  color: var(--vp-c-warning-1);
+}

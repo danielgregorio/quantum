@@ -31,7 +31,10 @@
       "relatedDocs": [
         "/guide/functions"
       ],
-      "lineCount": 55
+      "lineCount": 55,
+      "output": "Hello, World! | Welcome, John! | Sum: 15 | Diff: 5 | Product: 50",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Function Complete -->\n<!-- Demonstrates all function patterns -->\n<q:component name=\"TestFunctionComplete\" xmlns:q=\"https://quantum.lang/ns\">\n\n  <!-- Simple function with parameters -->\n  <q:function name=\"greet\" returnType=\"string\">\n    <q:param name=\"name\" type=\"string\" required=\"true\" />\n    <q:param name=\"greeting\" type=\"string\" default=\"Hello\" />\n    <q:return value=\"{greeting}, {name}!\" />\n  </q:function>\n\n  <!-- Function with number operations -->\n  <q:function name=\"add\" returnType=\"number\">\n    <q:param name=\"a\" type=\"number\" required=\"true\" />\n    <q:param name=\"b\" type=\"number\" required=\"true\" />\n    <q:set name=\"result\" type=\"number\" value=\"{a + b}\" />\n    <q:return value=\"{result}\" />\n  </q:function>\n\n  <q:function name=\"subtract\" returnType=\"number\">\n    <q:param name=\"a\" type=\"number\" required=\"true\" />\n    <q:param name=\"b\" type=\"number\" required=\"true\" />\n    <q:set name=\"result\" type=\"number\" value=\"{a - b}\" />\n    <q:return value=\"{result}\" />\n  </q:function>\n\n  <q:function name=\"multiply\" returnType=\"number\">\n    <q:param name=\"a\" type=\"number\" required=\"true\" />\n    <q:param name=\"b\" type=\"number\" required=\"true\" />\n    <q:set name=\"result\" type=\"number\" value=\"{a * b}\" />\n    <q:return value=\"{result}\" />\n  </q:function>\n\n  <!-- Function with array parameter -->\n  <q:function name=\"sumArray\" returnType=\"number\">\n    <q:param name=\"numbers\" type=\"array\" required=\"true\" />\n\n    <q:set name=\"total\" type=\"number\" value=\"0\" />\n    <q:loop type=\"array\" var=\"num\" items=\"{numbers}\">\n      <q:set name=\"total\" value=\"{total + num}\" />\n    </q:loop>\n\n    <q:return value=\"{total}\" />\n  </q:function>\n\n  <!-- Call functions -->\n  <q:set name=\"msg1\" value=\"{greet('World')}\" />\n  <q:set name=\"msg2\" value=\"{greet('John', 'Welcome')}\" />\n  <q:set name=\"sum\" value=\"{add(10, 5)}\" />\n  <q:set name=\"diff\" value=\"{subtract(10, 5)}\" />\n  <q:set name=\"product\" value=\"{multiply(10, 5)}\" />\n\n  <q:return value=\"{msg1} | {msg2} | Sum: {sum} | Diff: {diff} | Product: {product}\" />\n</q:component>\n"
     },
     {
       "file": "test-function-if-logic.q",
@@ -58,7 +61,10 @@
       "relatedDocs": [
         "/guide/functions"
       ],
-      "lineCount": 25
+      "lineCount": 25,
+      "output": "zero, zero, zero",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Function with If Logic -->\n<q:component name=\"TestFunctionIfLogic\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Function that checks if number is positive, negative, or zero -->\n  <q:function name=\"checkNumber\" returnType=\"string\">\n    <q:param name=\"num\" type=\"number\" required=\"true\" />\n\n    <q:if condition=\"{num > 0}\">\n      <q:return value=\"positive\" />\n    </q:if>\n\n    <q:if condition=\"{num &lt; 0}\">\n      <q:return value=\"negative\" />\n    </q:if>\n\n    <q:return value=\"zero\" />\n  </q:function>\n\n  <!-- Test with different numbers -->\n  <q:set name=\"result1\" value=\"{checkNumber(5)}\" />\n  <q:set name=\"result2\" value=\"{checkNumber(-3)}\" />\n  <q:set name=\"result3\" value=\"{checkNumber(0)}\" />\n\n  <q:return value=\"{result1}, {result2}, {result3}\" />\n</q:component>\n"
     },
     {
       "file": "test-function-local-vars.q",
@@ -84,7 +90,10 @@
       "relatedDocs": [
         "/guide/functions"
       ],
-      "lineCount": 21
+      "lineCount": 21,
+      "output": "Total: 345",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Function with Local Variables -->\n<q:component name=\"TestFunctionLocalVars\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Function that uses local variables for computation -->\n  <q:function name=\"calculateTotal\" returnType=\"number\">\n    <q:param name=\"price\" type=\"number\" required=\"true\" />\n    <q:param name=\"quantity\" type=\"number\" required=\"true\" />\n    <q:param name=\"taxRate\" type=\"number\" default=\"0.1\" />\n\n    <!-- Local computation -->\n    <q:set name=\"subtotal\" type=\"number\" value=\"{price * quantity}\" />\n    <q:set name=\"tax\" type=\"number\" value=\"{subtotal * taxRate}\" />\n    <q:set name=\"total\" type=\"number\" value=\"{subtotal + tax}\" />\n\n    <q:return value=\"{total}\" />\n  </q:function>\n\n  <!-- Test function call -->\n  <q:set name=\"orderTotal\" value=\"{calculateTotal(100, 3, 0.15)}\" />\n  <q:return value=\"Total: {orderTotal}\" />\n</q:component>\n"
     },
     {
       "file": "test-function-multiple.q",
@@ -110,7 +119,10 @@
       "relatedDocs": [
         "/guide/functions"
       ],
-      "lineCount": 29
+      "lineCount": 29,
+      "output": "HELLO world 25",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Multiple Functions in Same Component -->\n<q:component name=\"TestFunctionMultiple\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- String manipulation -->\n  <q:function name=\"toUpperCase\" returnType=\"string\">\n    <q:param name=\"text\" type=\"string\" required=\"true\" />\n    <q:set name=\"result\" type=\"string\" value=\"{text}\" operation=\"uppercase\" />\n    <q:return value=\"{result}\" />\n  </q:function>\n\n  <q:function name=\"toLowerCase\" returnType=\"string\">\n    <q:param name=\"text\" type=\"string\" required=\"true\" />\n    <q:set name=\"result\" type=\"string\" value=\"{text}\" operation=\"lowercase\" />\n    <q:return value=\"{result}\" />\n  </q:function>\n\n  <!-- Math operations -->\n  <q:function name=\"square\" returnType=\"number\">\n    <q:param name=\"n\" type=\"number\" required=\"true\" />\n    <q:return value=\"{n * n}\" />\n  </q:function>\n\n  <!-- Test all functions -->\n  <q:set name=\"upper\" value=\"{toUpperCase('hello')}\" />\n  <q:set name=\"lower\" value=\"{toLowerCase('WORLD')}\" />\n  <q:set name=\"squared\" value=\"{square(5)}\" />\n\n  <q:return value=\"{upper} {lower} {squared}\" />\n</q:component>\n"
     },
     {
       "file": "test-function-nested.q",
@@ -136,7 +148,10 @@
       "relatedDocs": [
         "/guide/functions"
       ],
-      "lineCount": 20
+      "lineCount": 20,
+      "output": "Result: 20",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Nested Function Calls -->\n<q:component name=\"TestFunctionNested\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Simple arithmetic functions -->\n  <q:function name=\"add\" returnType=\"number\">\n    <q:param name=\"a\" type=\"number\" required=\"true\" />\n    <q:param name=\"b\" type=\"number\" required=\"true\" />\n    <q:return value=\"{a + b}\" />\n  </q:function>\n\n  <q:function name=\"multiply\" returnType=\"number\">\n    <q:param name=\"a\" type=\"number\" required=\"true\" />\n    <q:param name=\"b\" type=\"number\" required=\"true\" />\n    <q:return value=\"{a * b}\" />\n  </q:function>\n\n  <!-- Test nested calls: multiply(add(2, 3), 4) = multiply(5, 4) = 20 -->\n  <q:set name=\"result\" value=\"{multiply(add(2, 3), 4)}\" />\n  <q:return value=\"Result: {result}\" />\n</q:component>\n"
     },
     {
       "file": "test-function-params.q",
@@ -162,7 +177,10 @@
       "relatedDocs": [
         "/guide/functions"
       ],
-      "lineCount": 19
+      "lineCount": 19,
+      "output": "Hi, Alice! | Hello, Bob!",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Function Parameters (required, default, types) -->\n<q:component name=\"TestFunctionParams\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Function with required and optional parameters -->\n  <q:function name=\"greet\" returnType=\"string\">\n    <q:param name=\"name\" type=\"string\" required=\"true\" />\n    <q:param name=\"greeting\" type=\"string\" default=\"Hello\" />\n\n    <q:return value=\"{greeting}, {name}!\" />\n  </q:function>\n\n  <!-- Test with both parameters -->\n  <q:set name=\"message1\" value=\"{greet('Alice', 'Hi')}\" />\n\n  <!-- Test with default parameter -->\n  <q:set name=\"message2\" value=\"{greet('Bob')}\" />\n\n  <q:return value=\"{message1} | {message2}\" />\n</q:component>\n"
     },
     {
       "file": "test-function-pure.q",
@@ -188,7 +206,10 @@
       "relatedDocs": [
         "/guide/functions"
       ],
-      "lineCount": 21
+      "lineCount": 21,
+      "output": "90, 170, 90",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Pure Function (no side effects) -->\n<q:component name=\"TestFunctionPure\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Pure function - always returns same output for same input -->\n  <q:function name=\"calculateDiscount\" returnType=\"number\" pure=\"true\" memoize=\"true\">\n    <q:param name=\"price\" type=\"number\" required=\"true\" />\n    <q:param name=\"discountPercent\" type=\"number\" required=\"true\" />\n\n    <q:set name=\"discount\" type=\"number\" value=\"{price * discountPercent / 100}\" />\n    <q:set name=\"finalPrice\" type=\"number\" value=\"{price - discount}\" />\n\n    <q:return value=\"{finalPrice}\" />\n  </q:function>\n\n  <!-- Test multiple calls with same arguments (should be memoized) -->\n  <q:set name=\"price1\" value=\"{calculateDiscount(100, 10)}\" />\n  <q:set name=\"price2\" value=\"{calculateDiscount(200, 15)}\" />\n  <q:set name=\"price3\" value=\"{calculateDiscount(100, 10)}\" />\n\n  <q:return value=\"{price1}, {price2}, {price3}\" />\n</q:component>\n"
     },
     {
       "file": "test-function-recursion.q",
@@ -215,7 +236,10 @@
       "relatedDocs": [
         "/guide/functions"
       ],
-      "lineCount": 24
+      "lineCount": 24,
+      "output": "Factorial(5) = {factorial(5)}",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Recursive Function (Factorial) -->\n<q:component name=\"TestFunctionRecursion\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Factorial function: factorial(n) = n * factorial(n-1), factorial(0) = 1 -->\n  <q:function name=\"factorial\" returnType=\"number\">\n    <q:param name=\"n\" type=\"number\" required=\"true\" />\n\n    <!-- Base case: factorial(0) = 1 -->\n    <q:if condition=\"{n &lt;= 0}\">\n      <q:return value=\"1\" />\n    </q:if>\n\n    <!-- Recursive case: n * factorial(n-1) -->\n    <q:set name=\"nMinus1\" type=\"number\" value=\"{n}\" operation=\"decrement\" />\n    <q:set name=\"recursiveResult\" type=\"number\" value=\"{factorial(nMinus1)}\" />\n    <q:set name=\"result\" type=\"number\" value=\"{n * recursiveResult}\" />\n\n    <q:return value=\"{result}\" />\n  </q:function>\n\n  <!-- Test: factorial(5) = 120 -->\n  <q:set name=\"fact5\" value=\"{factorial(5)}\" />\n  <q:return value=\"Factorial(5) = {fact5}\" />\n</q:component>\n"
     },
     {
       "file": "test-function-rest-api.q",
@@ -267,7 +291,10 @@
       "relatedDocs": [
         "/guide/functions"
       ],
-      "lineCount": 30
+      "lineCount": 30,
+      "output": "[PUBLIC] [PRIVATE] test | [UTILITY] global",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Function Scopes (component, global) -->\n<q:component name=\"TestFunctionScope\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Component-scoped function (default) -->\n  <q:function name=\"privateHelper\" returnType=\"string\" access=\"private\">\n    <q:param name=\"text\" type=\"string\" required=\"true\" />\n    <q:return value=\"[PRIVATE] {text}\" />\n  </q:function>\n\n  <!-- Public component function -->\n  <q:function name=\"publicAPI\" returnType=\"string\" access=\"public\">\n    <q:param name=\"input\" type=\"string\" required=\"true\" />\n\n    <!-- Can call private function within same component -->\n    <q:set name=\"processed\" value=\"{privateHelper(input)}\" />\n    <q:return value=\"[PUBLIC] {processed}\" />\n  </q:function>\n\n  <!-- Global-scoped function (accessible from other components) -->\n  <q:function name=\"utilityFunction\" returnType=\"string\" scope=\"global\">\n    <q:param name=\"data\" type=\"string\" required=\"true\" />\n    <q:return value=\"[UTILITY] {data}\" />\n  </q:function>\n\n  <!-- Test function calls -->\n  <q:set name=\"result1\" value=\"{publicAPI('test')}\" />\n  <q:set name=\"result2\" value=\"{utilityFunction('global')}\" />\n\n  <q:return value=\"{result1} | {result2}\" />\n</q:component>\n"
     },
     {
       "file": "test-function-simple.q",
@@ -293,7 +320,10 @@
       "relatedDocs": [
         "/guide/functions"
       ],
-      "lineCount": 16
+      "lineCount": 16,
+      "output": "Sum: 8",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Function Simple -->\n<q:component name=\"TestFunctionSimple\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Função simples: adição -->\n  <q:function name=\"add\" returnType=\"number\">\n    <q:param name=\"a\" type=\"number\" required=\"true\" />\n    <q:param name=\"b\" type=\"number\" required=\"true\" />\n\n    <q:set name=\"result\" type=\"number\" value=\"{a + b}\" />\n    <q:return value=\"{result}\" />\n  </q:function>\n\n  <!-- Chamar função e retornar resultado -->\n  <q:set name=\"sum\" value=\"{add(5, 3)}\" />\n  <q:return value=\"Sum: {sum}\" />\n</q:component>\n"
     },
     {
       "file": "test-function-string-ops.q",
@@ -319,7 +349,10 @@
       "relatedDocs": [
         "/guide/functions"
       ],
-      "lineCount": 25
+      "lineCount": 25,
+      "output": "Name: John Doe",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Function with String Operations -->\n<q:component name=\"TestFunctionStringOps\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Concatenate strings -->\n  <q:function name=\"concat\" returnType=\"string\">\n    <q:param name=\"first\" type=\"string\" required=\"true\" />\n    <q:param name=\"second\" type=\"string\" required=\"true\" />\n    <q:param name=\"separator\" type=\"string\" default=\" \" />\n\n    <q:return value=\"{first}{separator}{second}\" />\n  </q:function>\n\n  <!-- Format full name -->\n  <q:function name=\"formatName\" returnType=\"string\">\n    <q:param name=\"firstName\" type=\"string\" required=\"true\" />\n    <q:param name=\"lastName\" type=\"string\" required=\"true\" />\n\n    <q:set name=\"fullName\" value=\"{concat(firstName, lastName)}\" />\n    <q:return value=\"{fullName}\" />\n  </q:function>\n\n  <!-- Test -->\n  <q:set name=\"name\" value=\"{formatName('John', 'Doe')}\" />\n  <q:return value=\"Name: {name}\" />\n</q:component>\n"
     },
     {
       "file": "test-function-validation.q",
@@ -345,7 +378,10 @@
       "relatedDocs": [
         "/guide/functions"
       ],
-      "lineCount": 16
+      "lineCount": 16,
+      "output": "User john@example.com registered as user",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Function Parameter Validation -->\n<q:component name=\"TestFunctionValidation\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Function with parameter validation -->\n  <q:function name=\"registerUser\" returnType=\"string\" validate=\"true\">\n    <q:param name=\"email\" type=\"string\" required=\"true\" validate=\"email\" />\n    <q:param name=\"age\" type=\"number\" required=\"true\" min=\"18\" max=\"100\" />\n    <q:param name=\"role\" type=\"string\" required=\"true\" enum=\"admin,user,guest\" />\n\n    <q:return value=\"User {email} registered as {role}\" />\n  </q:function>\n\n  <!-- Test with valid data -->\n  <q:set name=\"result\" value=\"{registerUser('john@example.com', 25, 'user')}\" />\n  <q:return value=\"{result}\" />\n</q:component>\n"
     },
     {
       "file": "test-function-with-array.q",
@@ -372,7 +408,10 @@
       "relatedDocs": [
         "/guide/functions"
       ],
-      "lineCount": 38
+      "lineCount": 38,
+      "output": "Count: 3, Sum: 100",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Function with Array Operations -->\n<q:component name=\"TestFunctionWithArray\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Function that counts elements in an array -->\n  <q:function name=\"countElements\" returnType=\"number\">\n    <q:param name=\"items\" type=\"array\" required=\"true\" />\n\n    <q:set name=\"count\" type=\"number\" value=\"0\" />\n\n    <q:loop type=\"array\" items=\"{items}\" var=\"item\">\n      <q:set name=\"count\" operation=\"increment\" />\n    </q:loop>\n\n    <q:return value=\"{count}\" />\n  </q:function>\n\n  <!-- Function that sums numbers in an array -->\n  <q:function name=\"sumNumbers\" returnType=\"number\">\n    <q:param name=\"numbers\" type=\"array\" required=\"true\" />\n\n    <q:set name=\"total\" type=\"number\" value=\"0\" />\n\n    <q:loop type=\"array\" items=\"{numbers}\" var=\"num\">\n      <q:set name=\"total\" operation=\"add\" value=\"{num}\" />\n    </q:loop>\n\n    <q:return value=\"{total}\" />\n  </q:function>\n\n  <!-- Test with arrays -->\n  <q:set name=\"myArray\" type=\"array\" value='[\"apple\", \"banana\", \"cherry\"]' />\n  <q:set name=\"myNumbers\" type=\"array\" value=\"[10, 20, 30, 40]\" />\n\n  <q:set name=\"itemCount\" type=\"number\" value=\"{countElements(myArray)}\" />\n  <q:set name=\"sum\" type=\"number\" value=\"{sumNumbers(myNumbers)}\" />\n\n  <q:return value=\"Count: {itemCount}, Sum: {sum}\" />\n</q:component>\n"
     },
     {
       "file": "test-invoke-complete.q",
@@ -396,7 +435,10 @@
       "relatedDocs": [
         "/guide/functions"
       ],
-      "lineCount": 36
+      "lineCount": 36,
+      "output": "User: Leanne Graham | Posts: sunt aut facere repellat provident occaecati excepturi optio reprehenderit | Todo: delectus aut autem",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Invoke Complete -->\n<!-- Demonstrates all q:invoke patterns for HTTP requests -->\n<q:component name=\"TestInvokeComplete\" xmlns:q=\"https://quantum.lang/ns\">\n\n  <!-- Basic GET request -->\n  <q:invoke name=\"basicGet\"\n            url=\"https://jsonplaceholder.typicode.com/users/1\"\n            method=\"GET\" />\n\n  <!-- GET with query parameters -->\n  <q:invoke name=\"withParams\"\n            url=\"https://jsonplaceholder.typicode.com/posts\"\n            method=\"GET\">\n    <q:param name=\"userId\" default=\"1\" />\n    <q:param name=\"_limit\" default=\"2\" />\n  </q:invoke>\n\n  <!-- GET with custom headers -->\n  <q:invoke name=\"withHeaders\"\n            url=\"https://jsonplaceholder.typicode.com/todos/1\"\n            method=\"GET\">\n    <q:header name=\"Accept\" value=\"application/json\" />\n    <q:header name=\"X-Custom-Header\" value=\"QuantumTest\" />\n  </q:invoke>\n\n  <!-- POST request with body -->\n  <q:invoke name=\"postData\"\n            url=\"https://jsonplaceholder.typicode.com/posts\"\n            method=\"POST\">\n    <q:header name=\"Content-Type\" value=\"application/json\" />\n    <q:body>{\"title\": \"Test Post\", \"body\": \"Content\", \"userId\": 1}</q:body>\n  </q:invoke>\n\n  <q:return value=\"User: {basicGet.name} | Posts: {withParams[0].title} | Todo: {withHeaders.title}\" />\n</q:component>\n"
     },
     {
       "file": "test-invoke-function.q",
@@ -422,7 +464,10 @@
       "relatedDocs": [
         "/guide/functions"
       ],
-      "lineCount": 44
+      "lineCount": 44,
+      "output": "sum=None, product1=None, product2=None",
+      "outputType": "text",
+      "sourceCode": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<q:component xmlns:q=\"https://quantum.lang/ns\" name=\"test-invoke-function\">\n\n    <!-- Define a function that we'll invoke -->\n    <q:function name=\"calculateSum\">\n        <q:param name=\"a\" type=\"number\" required=\"true\" />\n        <q:param name=\"b\" type=\"number\" required=\"true\" />\n\n        <q:set name=\"result\" value=\"{a} + {b}\" type=\"number\" />\n\n        <q:return value=\"{result}\" />\n    </q:function>\n\n    <!-- Define another function with multiplication -->\n    <q:function name=\"multiply\">\n        <q:param name=\"x\" type=\"number\" required=\"true\" />\n        <q:param name=\"y\" type=\"number\" required=\"true\" />\n\n        <q:set name=\"product\" value=\"{x} * {y}\" type=\"number\" />\n\n        <q:return value=\"{product}\" />\n    </q:function>\n\n    <!-- Test 1: Invoke calculateSum function -->\n    <q:invoke name=\"sum1\" function=\"calculateSum\">\n        <q:param name=\"a\" default=\"10\" />\n        <q:param name=\"b\" default=\"20\" />\n    </q:invoke>\n\n    <!-- Test 2: Invoke multiply function -->\n    <q:invoke name=\"product1\" function=\"multiply\">\n        <q:param name=\"x\" default=\"5\" />\n        <q:param name=\"y\" default=\"6\" />\n    </q:invoke>\n\n    <!-- Test 3: Chain invocations - use result from sum1 -->\n    <q:invoke name=\"product2\" function=\"multiply\">\n        <q:param name=\"x\" default=\"{sum1}\" />\n        <q:param name=\"y\" default=\"2\" />\n    </q:invoke>\n\n    <q:return value=\"sum={sum1}, product1={product1}, product2={product2}\" />\n</q:component>\n"
     },
     {
       "file": "test-invoke-http-get.q",

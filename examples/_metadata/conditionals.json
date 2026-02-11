@@ -25,7 +25,10 @@
       "relatedDocs": [
         "/guide/conditionals"
       ],
-      "lineCount": 10
+      "lineCount": 10,
+      "output": "Condition is true!",
+      "outputType": "text",
+      "sourceCode": "<!-- Simple If Test -->\n<q:component name=\"SimpleIf\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:if condition=\"1 == 1\">\n    <q:return value=\"Condition is true!\" />\n  <q:else>\n    <q:return value=\"Condition is false!\" />\n  </q:else>\n  </q:if>\n</q:component>\n"
     },
     {
       "file": "test-conditionals-complete.q",
@@ -50,7 +53,10 @@
       "relatedDocs": [
         "/guide/conditionals"
       ],
-      "lineCount": 55
+      "lineCount": 55,
+      "output": "Result: Passed, Status: Good, Grade: B (with bonus), Range: In 80s range",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Conditionals Complete -->\n<!-- Demonstrates all conditional patterns -->\n<q:component name=\"TestConditionalsComplete\" xmlns:q=\"https://quantum.lang/ns\">\n\n  <q:set name=\"score\" type=\"number\" value=\"85\" />\n  <q:set name=\"hasBonus\" type=\"boolean\" value=\"true\" />\n  <q:set name=\"result\" value=\"\" />\n\n  <!-- Simple if -->\n  <q:if condition=\"score >= 60\">\n    <q:set name=\"result\" value=\"Passed\" />\n  </q:if>\n\n  <!-- If with else -->\n  <q:set name=\"status\" value=\"\" />\n  <q:if condition=\"score >= 90\">\n    <q:set name=\"status\" value=\"Excellent\" />\n    <q:else>\n      <q:set name=\"status\" value=\"Good\" />\n    </q:else>\n  </q:if>\n\n  <!-- If with elseif and else -->\n  <q:set name=\"grade\" value=\"\" />\n  <q:if condition=\"score >= 90\">\n    <q:set name=\"grade\" value=\"A\" />\n    <q:elseif condition=\"score >= 80\">\n      <q:set name=\"grade\" value=\"B\" />\n    </q:elseif>\n    <q:elseif condition=\"score >= 70\">\n      <q:set name=\"grade\" value=\"C\" />\n    </q:elseif>\n    <q:elseif condition=\"score >= 60\">\n      <q:set name=\"grade\" value=\"D\" />\n    </q:elseif>\n    <q:else>\n      <q:set name=\"grade\" value=\"F\" />\n    </q:else>\n  </q:if>\n\n  <!-- Boolean conditions -->\n  <q:set name=\"bonusText\" value=\"\" />\n  <q:if condition=\"hasBonus == true\">\n    <q:set name=\"bonusText\" value=\" (with bonus)\" />\n  </q:if>\n\n  <!-- Comparison operators -->\n  <q:set name=\"comparison\" value=\"\" />\n  <q:if condition=\"score > 80 and score &lt; 90\">\n    <q:set name=\"comparison\" value=\"In 80s range\" />\n  </q:if>\n\n  <q:return value=\"Result: {result}, Status: {status}, Grade: {grade}{bonusText}, Range: {comparison}\" />\n</q:component>\n"
     },
     {
       "file": "test-conditionals.q",
@@ -72,7 +78,10 @@
       "relatedDocs": [
         "/guide/conditionals"
       ],
-      "lineCount": 10
+      "lineCount": 10,
+      "output": "Execution Error: Validation errors: [\"Required parameter 'age' is missing\"]",
+      "outputType": "error",
+      "sourceCode": "<!-- Test Conditional Logic -->\n<q:component name=\"TestConditionals\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:param name=\"age\" type=\"number\" required=\"true\" />\n  <q:param name=\"hasParentConsent\" type=\"boolean\" default=\"false\" />\n  \n  <q:if condition=\"age >= 18\">\n    <q:return value=\"Adult content available\" />\n  </q:if>\n</q:component>\n"
     },
     {
       "file": "test-else-fixed.q",
@@ -93,7 +102,10 @@
       "relatedDocs": [
         "/guide/conditionals"
       ],
-      "lineCount": 10
+      "lineCount": 10,
+      "output": "Else block should show!",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Else Block -->\n<q:component name=\"TestElseBlock\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:if condition=\"1 > 5\">\n    <q:return value=\"This should NOT show\" />\n    <q:else>\n      <q:return value=\"Else block should show!\" />\n    </q:else>\n  </q:if>\n</q:component>\n"
     },
     {
       "file": "test-else.q",
@@ -113,7 +125,10 @@
       "relatedDocs": [
         "/guide/conditionals"
       ],
-      "lineCount": 11
+      "lineCount": 11,
+      "output": "This should show!",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Else Block -->\n<q:component name=\"TestElse\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:if condition=\"False\">\n    <q:return value=\"Should not show\" />\n  </q:if>\n  \n  <q:if condition=\"True\">\n    <q:return value=\"This should show!\" />\n  </q:if>\n</q:component>\n"
     },
     {
       "file": "test-elseif.q",
@@ -135,7 +150,10 @@
       "relatedDocs": [
         "/guide/conditionals"
       ],
-      "lineCount": 13
+      "lineCount": 13,
+      "output": "ElseIf condition is true!",
+      "outputType": "text",
+      "sourceCode": "<!-- Test ElseIf -->\n<q:component name=\"TestElseIf\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:if condition=\"1 == 2\">\n    <q:return value=\"First condition false\" />\n    <q:elseif condition=\"2 == 2\">\n      <q:return value=\"ElseIf condition is true!\" />\n    </q:elseif>\n    <q:else>\n      <q:return value=\"Else block\" />\n    </q:else>\n  </q:if>\n</q:component>\n"
     },
     {
       "file": "test-false-else.q",
@@ -156,7 +174,10 @@
       "relatedDocs": [
         "/guide/conditionals"
       ],
-      "lineCount": 10
+      "lineCount": 10,
+      "output": "Else block should show!",
+      "outputType": "text",
+      "sourceCode": "<!-- Test False Condition with Else -->\n<q:component name=\"TestFalseCondition\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:if condition=\"1 > 5\">\n    <q:return value=\"This should NOT show\" />\n  <q:else>\n    <q:return value=\"Else block should show!\" />\n  </q:else>\n  </q:if>\n</q:component>\n"
     },
     {
       "file": "test-if-else-correct.q",
@@ -177,7 +198,10 @@
       "relatedDocs": [
         "/guide/conditionals"
       ],
-      "lineCount": 10
+      "lineCount": 10,
+      "output": "Else block executed!",
+      "outputType": "text",
+      "sourceCode": "<!-- Test If-Else (Correct Structure) -->\n<q:component name=\"TestIfElse\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:if condition=\"1 == 2\">\n    <q:return value=\"This should not execute\" />\n    <q:else>\n      <q:return value=\"Else block executed!\" />\n    </q:else>\n  </q:if>\n</q:component>\n"
     },
     {
       "file": "test-if-else-fixed.q",
@@ -198,7 +222,10 @@
       "relatedDocs": [
         "/guide/conditionals"
       ],
-      "lineCount": 10
+      "lineCount": 10,
+      "output": "Else block executed!",
+      "outputType": "text",
+      "sourceCode": "<!-- Test If-Else (Fixed) -->\n<q:component name=\"TestIfElse\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:if condition=\"1 == 2\">\n    <q:return value=\"This should not execute\" />\n  <q:else>\n    <q:return value=\"Else block executed!\" />\n  </q:else>\n  </q:if>\n</q:component>\n"
     },
     {
       "file": "test-if-else.q",
@@ -219,7 +246,10 @@
       "relatedDocs": [
         "/guide/conditionals"
       ],
-      "lineCount": 10
+      "lineCount": 10,
+      "output": "Else block executed successfully!",
+      "outputType": "text",
+      "sourceCode": "<!-- Test If-Else -->\n<q:component name=\"TestIfElse\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:if condition=\"2 > 5\">\n    <q:return value=\"This should not execute\" />\n  <q:else>\n    <q:return value=\"Else block executed successfully!\" />\n  </q:else>\n  </q:if>\n</q:component>\n"
     }
   ]
 }

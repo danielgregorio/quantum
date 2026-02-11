@@ -5,12 +5,11 @@ Administration interface for Quantum Language projects.
 ## Features
 
 - **Project Management**: Create, update, and manage Quantum projects
-- **Datasource Management**: Configure database connections (Docker or direct)
-- **Docker Container Management**: Create, start, stop, restart database containers
-- **Container Monitoring**: View container status, logs, and health
-- **Component Tracking**: Monitor component status and compilation
-- **API Endpoints**: View and manage REST API endpoints
-- **SQLite Database**: Zero-configuration local database
+- **Infrastructure Connectors**: Database, MQ, Cache, Storage, AI providers
+- **Docker Container Management**: Create, start, stop, restart containers
+- **Settings Management**: YAML-based configuration with environment resolution
+- **User Authentication**: JWT-based auth with role support
+- **Dark Theme UI**: Modern semantic CSS without Tailwind
 
 ## Quick Start
 
@@ -26,169 +25,80 @@ pip install -r requirements.txt
 ```bash
 # From the quantum_admin directory
 python run.py
+
+# Or with uvicorn directly
+cd quantum_admin && python -m uvicorn backend.main:app --port 8001 --reload
 ```
 
-The API will be available at `http://localhost:8000`
+The admin UI will be available at `http://localhost:8001/admin`
 
-**Note**: Docker Desktop must be running for datasource container management features.
+**Default credentials**: `admin` / `admin`
 
 ### 3. Access API Documentation
 
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+- **Swagger UI**: http://localhost:8001/docs
+- **ReDoc**: http://localhost:8001/redoc
 
 ## Project Structure
 
 ```
 quantum_admin/
 ├── backend/
-│   ├── __init__.py
-│   ├── main.py          # FastAPI application
-│   ├── models.py        # SQLAlchemy models
-│   ├── database.py      # Database configuration
-│   ├── crud.py          # Database operations
-│   ├── schemas.py       # Pydantic schemas
-│   ├── docker_service.py # Docker container management
+│   ├── main.py              # FastAPI application (79 endpoints)
+│   ├── models.py            # SQLAlchemy models (11 models)
+│   ├── database.py          # Database configuration
+│   ├── crud.py              # Database operations
+│   ├── schemas.py           # Pydantic schemas
+│   ├── docker_service.py    # Docker container management
+│   ├── connector_service.py # Infrastructure connectors (flagship)
+│   ├── settings_service.py  # YAML configuration
+│   ├── auth_service.py      # JWT authentication
 │   └── requirements.txt
-├── frontend/            # Future: React/Alpine.js UI
-├── projects/            # Project data storage
-├── run.py               # Application launcher
-└── quantum_admin.db     # SQLite database (auto-created)
+├── static/
+│   └── quantum-admin.css    # Dark theme CSS
+├── settings/
+│   ├── global.yaml          # Global configuration
+│   └── connectors.yaml      # Connector definitions
+├── run.py                   # Application launcher
+└── quantum_admin.db         # SQLite database (auto-created)
 ```
 
-## API Endpoints
+## Key Endpoints
+
+### Authentication
+- `POST /auth/login` - JWT login
+- `GET /auth/me` - Current user info
 
 ### Projects
-
 - `GET /projects` - List all projects
-- `POST /projects` - Create a new project
+- `POST /projects` - Create project
 - `GET /projects/{id}` - Get project details
-- `PUT /projects/{id}` - Update a project
-- `DELETE /projects/{id}` - Delete a project
 
-### Datasources
+### Connectors (Infrastructure)
+- `GET /settings/connectors` - List all connectors
+- `POST /settings/connectors` - Create connector
+- `POST /settings/connectors/{id}/test` - Test connection
+- `POST /settings/connectors/{id}/docker/start` - Start Docker container
 
-- `GET /projects/{id}/datasources` - List datasources for a project
-- `POST /projects/{id}/datasources` - Create a new datasource (with Docker container)
+### Docker
+- `GET /docker/status` - Docker connection status
+- `GET /docker/containers` - List containers
+- `POST /docker/containers/{id}/start` - Start container
+- `GET /docker/containers/{id}/logs` - View logs
 
-### Docker Container Management
+### Settings
+- `GET /settings` - Get all settings
+- `PUT /settings` - Update settings
 
-- `POST /datasources/{id}/start` - Start a datasource container
-- `POST /datasources/{id}/stop` - Stop a datasource container
-- `POST /datasources/{id}/restart` - Restart a datasource container
-- `GET /datasources/{id}/status` - Get detailed container status
-- `GET /datasources/{id}/logs?lines=100` - Get container logs
-- `GET /docker/containers?all=true` - List all Docker containers
+## Supported Connectors
 
-### Components
-
-- `GET /projects/{id}/components` - List components for a project
-
-### Endpoints
-
-- `GET /projects/{id}/endpoints` - List API endpoints for a project
-
-## Example Usage
-
-### Create a Project
-
-```bash
-curl -X POST "http://localhost:8000/projects" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "my-app", "description": "My Quantum application"}'
-```
-
-### List Projects
-
-```bash
-curl "http://localhost:8000/projects"
-```
-
-### Get Project Details
-
-```bash
-curl "http://localhost:8000/projects/1"
-```
-
-### Create a Docker Datasource
-
-```bash
-curl -X POST "http://localhost:8000/projects/1/datasources" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "main-db",
-    "type": "postgres",
-    "connection_type": "docker",
-    "image": "postgres:16-alpine",
-    "port": 5432,
-    "database_name": "mydb",
-    "username": "admin",
-    "password": "secret",
-    "auto_start": true
-  }'
-```
-
-### Start a Database Container
-
-```bash
-curl -X POST "http://localhost:8000/datasources/1/start"
-```
-
-### Check Container Status
-
-```bash
-curl "http://localhost:8000/datasources/1/status"
-```
-
-### View Container Logs
-
-```bash
-curl "http://localhost:8000/datasources/1/logs?lines=50"
-```
-
-## Development
-
-### Database Schema
-
-The SQLite database includes these tables:
-
-- **projects**: Project metadata
-- **datasources**: Database connections (Docker/direct)
-- **migrations**: Schema migration tracking
-- **components**: Component status tracking
-- **endpoints**: REST API endpoint definitions
-
-### Adding New Features
-
-1. Update `models.py` for new database tables
-2. Add CRUD operations to `crud.py`
-3. Define request/response schemas in `schemas.py`
-4. Implement API endpoints in `main.py`
-
-## Next Steps
-
-- [x] Add Docker container management
-- [ ] Implement password encryption
-- [ ] Build frontend UI
-- [ ] Add component scanning
-- [ ] Implement hot reload (SSE)
-- [ ] Add migration system
-
-## Docker Support
-
-Quantum Admin supports managing database containers for:
-- **PostgreSQL** (postgres:16-alpine, postgres:15-alpine, etc.)
-- **MySQL** (mysql:8.0, mysql:5.7, etc.)
-- **MariaDB** (mariadb:11.2, mariadb:10.11, etc.)
-- **MongoDB** (mongo:7.0, mongo:6.0, etc.)
-- **Redis** (redis:7.2-alpine, redis:6.2-alpine, etc.)
-
-Containers are automatically configured with:
-- Auto-generated connection strings
-- Environment variables for credentials
-- Port mapping to host
-- Restart policies
-- Health monitoring
+| Type | Providers |
+|------|-----------|
+| **Database** | PostgreSQL, MySQL, MariaDB, MongoDB, SQLite |
+| **Message Queue** | RabbitMQ, Redis Queue, Kafka |
+| **Cache** | Redis, Memcached |
+| **Storage** | S3, MinIO, Local |
+| **AI** | Ollama, LMStudio, Anthropic, OpenAI, OpenRouter |
 
 ## License
 

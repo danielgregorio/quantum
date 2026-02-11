@@ -47,7 +47,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 6
+      "lineCount": 6,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Databinding with Arithmetic -->\n<q:component name=\"TestDatabindingArithmetic\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:loop type=\"range\" var=\"i\" from=\"1\" to=\"3\">\n    <q:return value=\"Item {i}, Next: {i + 1}\" />\n  </q:loop>\n</q:component>"
     },
     {
       "file": "test-databinding-array.q",
@@ -69,7 +72,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 6
+      "lineCount": 6,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Databinding with Array Loop -->\n<q:component name=\"TestDatabindingArray\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:loop type=\"array\" var=\"fruit\" index=\"idx\" items='[\"apple\", \"banana\", \"orange\"]'>\n    <q:return value=\"{idx}: {fruit}\" />\n  </q:loop>\n</q:component>"
     },
     {
       "file": "test-databinding-complete.q",
@@ -90,7 +96,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 36
+      "lineCount": 36,
+      "output": "Hello, John! | Math: 15, 5, 50, 2.0 | User: John Doe, City: NYC, Color: red",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Databinding Complete -->\n<!-- Demonstrates all databinding patterns -->\n<q:component name=\"TestDatabindingComplete\" xmlns:q=\"https://quantum.lang/ns\">\n\n  <!-- Simple variable binding -->\n  <q:set name=\"name\" value=\"John\" />\n  <q:set name=\"greeting\" value=\"Hello, {name}!\" />\n\n  <!-- Arithmetic expressions -->\n  <q:set name=\"a\" type=\"number\" value=\"10\" />\n  <q:set name=\"b\" type=\"number\" value=\"5\" />\n  <q:set name=\"sum\" value=\"{a + b}\" />\n  <q:set name=\"diff\" value=\"{a - b}\" />\n  <q:set name=\"product\" value=\"{a * b}\" />\n  <q:set name=\"quotient\" value=\"{a / b}\" />\n\n  <!-- String concatenation in expressions -->\n  <q:set name=\"firstName\" value=\"John\" />\n  <q:set name=\"lastName\" value=\"Doe\" />\n  <q:set name=\"fullName\" value=\"{firstName} {lastName}\" />\n\n  <!-- Nested property access -->\n  <q:set name=\"user\" type=\"object\" value='{\"name\": \"Alice\", \"address\": {\"city\": \"NYC\"}}' />\n  <q:set name=\"userCity\" value=\"{user.address.city}\" />\n\n  <!-- Array access -->\n  <q:set name=\"colors\" type=\"array\" value='[\"red\", \"green\", \"blue\"]' />\n  <q:set name=\"firstColor\" value=\"{colors[0]}\" />\n  <q:set name=\"lastColor\" value=\"{colors[2]}\" />\n\n  <!-- Multiple bindings in one string -->\n  <q:set name=\"summary\" value=\"User: {firstName} {lastName}, City: {userCity}, Color: {firstColor}\" />\n\n  <q:return value=\"{greeting} | Math: {sum}, {diff}, {product}, {quotient} | {summary}\" />\n</q:component>\n"
     },
     {
       "file": "test-databinding-list.q",
@@ -112,7 +121,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 6
+      "lineCount": 6,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Databinding with List Loop -->\n<q:component name=\"TestDatabindingList\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:loop type=\"list\" var=\"color\" items=\"red,green,blue\">\n    <q:return value=\"Color: {color}\" />\n  </q:loop>\n</q:component>"
     },
     {
       "file": "test-databinding-simple.q",
@@ -134,7 +146,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 6
+      "lineCount": 6,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Simple Databinding -->\n<q:component name=\"TestDatabinding\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:loop type=\"range\" var=\"i\" from=\"1\" to=\"3\">\n    <q:return value=\"Number {i}\" />\n  </q:loop>\n</q:component>"
     },
     {
       "file": "test-email-basic.q",
@@ -359,7 +374,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 41
+      "lineCount": 41,
+      "output": "Counter: 222, Fruits: ['cherry', 'banana', 'apple'], Upper: HELLO WORLD",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set All Operations -->\n<!-- Demonstrates all q:set operations in one file -->\n<q:component name=\"TestSetAllOperations\" xmlns:q=\"https://quantum.lang/ns\">\n\n  <!-- Basic assign (default operation) -->\n  <q:set name=\"message\" value=\"Hello\" />\n\n  <!-- Number operations -->\n  <q:set name=\"counter\" type=\"number\" value=\"10\" />\n  <q:set name=\"counter\" operation=\"increment\" />\n  <q:set name=\"counter\" operation=\"increment\" />\n  <q:set name=\"counter\" operation=\"decrement\" />\n  <q:set name=\"counter\" operation=\"add\" value=\"100\" />\n  <q:set name=\"counter\" operation=\"multiply\" value=\"2\" />\n\n  <!-- Array operations -->\n  <q:set name=\"fruits\" type=\"array\" value=\"[]\" />\n  <q:set name=\"fruits\" operation=\"append\" value=\"apple\" />\n  <q:set name=\"fruits\" operation=\"append\" value=\"banana\" />\n  <q:set name=\"fruits\" operation=\"prepend\" value=\"cherry\" />\n  <q:set name=\"fruits\" operation=\"sort\" />\n  <q:set name=\"fruits\" operation=\"reverse\" />\n  <q:set name=\"fruits\" operation=\"unique\" />\n\n  <!-- String operations -->\n  <q:set name=\"text\" value=\"  Hello World  \" />\n  <q:set name=\"text\" operation=\"trim\" />\n  <q:set name=\"textUpper\" value=\"{text}\" />\n  <q:set name=\"textUpper\" operation=\"uppercase\" />\n  <q:set name=\"textLower\" value=\"{text}\" />\n  <q:set name=\"textLower\" operation=\"lowercase\" />\n\n  <!-- Object operations -->\n  <q:set name=\"user\" type=\"object\" value=\"{}\" />\n  <q:set name=\"user\" operation=\"merge\" value='{\"name\":\"Daniel\"}' />\n  <q:set name=\"user\" operation=\"merge\" value='{\"age\":30}' />\n  <q:set name=\"user\" operation=\"setProperty\" key=\"email\" value=\"test@example.com\" />\n\n  <q:return value=\"Counter: {counter}, Fruits: {fruits}, Upper: {textUpper}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-all-scopes.q",
@@ -405,7 +423,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 38
+      "lineCount": 38,
+      "output": "Name: John Doe, Age: 30, Price: 19.99, Active: True",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set All Types -->\n<!-- Demonstrates all valid q:set types -->\n<q:component name=\"TestSetAllTypes\" xmlns:q=\"https://quantum.lang/ns\">\n\n  <!-- String type (default) -->\n  <q:set name=\"name\" type=\"string\" value=\"John Doe\" />\n\n  <!-- Number type -->\n  <q:set name=\"age\" type=\"number\" value=\"30\" />\n\n  <!-- Decimal type -->\n  <q:set name=\"price\" type=\"decimal\" value=\"19.99\" />\n\n  <!-- Boolean type -->\n  <q:set name=\"active\" type=\"boolean\" value=\"true\" />\n  <q:set name=\"inactive\" type=\"boolean\" value=\"false\" />\n\n  <!-- Date type -->\n  <q:set name=\"birthday\" type=\"date\" value=\"1990-01-15\" />\n\n  <!-- DateTime type -->\n  <q:set name=\"createdAt\" type=\"datetime\" value=\"2025-01-15 10:30:00\" />\n\n  <!-- Array type -->\n  <q:set name=\"colors\" type=\"array\" value='[\"red\", \"green\", \"blue\"]' />\n\n  <!-- Object type -->\n  <q:set name=\"config\" type=\"object\" value='{\"debug\": true, \"timeout\": 30}' />\n\n  <!-- JSON type -->\n  <q:set name=\"data\" type=\"json\" value='{\"items\": [1, 2, 3]}' />\n\n  <!-- Null type -->\n  <q:set name=\"empty\" type=\"null\" value=\"\" />\n\n  <q:return value=\"Name: {name}, Age: {age}, Price: {price}, Active: {active}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-array.q",
@@ -426,7 +447,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 10
+      "lineCount": 10,
+      "output": "List: ['apple', 'banana', 'orange']",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set Array -->\n<q:component name=\"TestSetArray\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Teste: operações em arrays -->\n  <q:set name=\"list\" type=\"array\" value=\"[]\" />\n  <q:set name=\"list\" operation=\"append\" value=\"apple\" />\n  <q:set name=\"list\" operation=\"append\" value=\"banana\" />\n  <q:set name=\"list\" operation=\"append\" value=\"orange\" />\n  <q:return value=\"List: {list}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-debug.q",
@@ -447,7 +471,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 7
+      "lineCount": 7,
+      "output": "x = 8",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set Debug -->\n<q:component name=\"TestSetDebug\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:set name=\"x\" type=\"number\" value=\"5\" />\n  <q:set name=\"x\" operation=\"add\" value=\"3\" />\n  <q:return value=\"x = {x}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-expression.q",
@@ -468,7 +495,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 9
+      "lineCount": 9,
+      "output": "Sum: 8",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set Expression -->\n<q:component name=\"TestSetExpression\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Teste: expressões aritméticas -->\n  <q:set name=\"a\" type=\"number\" value=\"5\" />\n  <q:set name=\"b\" type=\"number\" value=\"3\" />\n  <q:set name=\"sum\" type=\"number\" value=\"{a + b}\" />\n  <q:return value=\"Sum: {sum}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-increment.q",
@@ -489,7 +519,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 10
+      "lineCount": 10,
+      "output": "Counter: 3",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set Increment -->\n<q:component name=\"TestSetIncrement\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Teste: incremento -->\n  <q:set name=\"counter\" type=\"number\" value=\"0\" />\n  <q:set name=\"counter\" operation=\"increment\" />\n  <q:set name=\"counter\" operation=\"increment\" />\n  <q:set name=\"counter\" operation=\"increment\" />\n  <q:return value=\"Counter: {counter}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-loop-debug.q",
@@ -512,7 +545,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 11
+      "lineCount": 11,
+      "output": "Total: 3",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set Loop Debug -->\n<q:component name=\"TestSetLoopDebug\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:set name=\"total\" type=\"number\" value=\"0\" scope=\"component\" />\n\n  <q:loop type=\"range\" var=\"i\" from=\"1\" to=\"3\">\n    <q:set name=\"total\" operation=\"add\" value=\"1\" scope=\"component\" />\n  </q:loop>\n\n  <q:return value=\"Total: {total}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-object.q",
@@ -533,7 +569,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 9
+      "lineCount": 9,
+      "output": "User: {'name': 'Daniel', 'age': 30}",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set Object -->\n<q:component name=\"TestSetObject\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Teste: operações em objects -->\n  <q:set name=\"user\" type=\"object\" value=\"{}\" />\n  <q:set name=\"user\" operation=\"merge\" value='{\"name\":\"Daniel\"}' />\n  <q:set name=\"user\" operation=\"merge\" value='{\"age\":30}' />\n  <q:return value=\"User: {user}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-simple.q",
@@ -554,7 +593,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 7
+      "lineCount": 7,
+      "output": "x = 10",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set Simple -->\n<q:component name=\"TestSetSimple\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Teste básico: atribuição simples -->\n  <q:set name=\"x\" value=\"10\" />\n  <q:return value=\"x = {x}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-validation-cpf.q",
@@ -575,7 +617,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 7
+      "lineCount": 7,
+      "output": "CPF: 123.456.789-09",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set Validation CPF -->\n<q:component name=\"TestSetValidationCPF\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Valid CPF -->\n  <q:set name=\"cpf\" type=\"string\" value=\"123.456.789-09\" validate=\"cpf\" />\n  <q:return value=\"CPF: {cpf}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-validation-email-invalid.q",
@@ -596,7 +641,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 7
+      "lineCount": 7,
+      "output": "Execution Error: Execution error: Validation error for 'email': Invalid email format",
+      "outputType": "error",
+      "sourceCode": "<!-- Test Set Validation Email Invalid -->\n<q:component name=\"TestSetValidationEmailInvalid\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Invalid email - should fail -->\n  <q:set name=\"email\" type=\"string\" value=\"not-an-email\" validate=\"email\" />\n  <q:return value=\"Email: {email}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-validation-email.q",
@@ -617,7 +665,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 7
+      "lineCount": 7,
+      "output": "Email: daniel@example.com",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set Validation Email -->\n<q:component name=\"TestSetValidationEmail\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Valid email -->\n  <q:set name=\"email\" type=\"string\" value=\"daniel@example.com\" validate=\"email\" />\n  <q:return value=\"Email: {email}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-validation-enum.q",
@@ -638,7 +689,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 7
+      "lineCount": 7,
+      "output": "Status: active",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set Validation Enum -->\n<q:component name=\"TestSetValidationEnum\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Valid enum value -->\n  <q:set name=\"status\" type=\"string\" value=\"active\" enum=\"pending,active,inactive\" />\n  <q:return value=\"Status: {status}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-validation-length.q",
@@ -659,7 +713,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 7
+      "lineCount": 7,
+      "output": "Username: daniel",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set Validation Length -->\n<q:component name=\"TestSetValidationLength\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Valid length -->\n  <q:set name=\"username\" type=\"string\" value=\"daniel\" minlength=\"3\" maxlength=\"20\" />\n  <q:return value=\"Username: {username}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-validation-minmax.q",
@@ -680,7 +737,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 7
+      "lineCount": 7,
+      "output": "Score: 85",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set Validation Min Max -->\n<q:component name=\"TestSetValidationMinMax\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Valid min/max -->\n  <q:set name=\"score\" type=\"number\" value=\"85\" min=\"0\" max=\"100\" />\n  <q:return value=\"Score: {score}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-validation-range.q",
@@ -701,7 +761,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 7
+      "lineCount": 7,
+      "output": "Age: 25",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set Validation Range -->\n<q:component name=\"TestSetValidationRange\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Valid range -->\n  <q:set name=\"age\" type=\"number\" value=\"25\" range=\"18..120\" />\n  <q:return value=\"Age: {age}\" />\n</q:component>\n"
     },
     {
       "file": "test-set-with-loop.q",
@@ -724,7 +787,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 12
+      "lineCount": 12,
+      "output": "Total: 15",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Set With Loop -->\n<q:component name=\"TestSetWithLoop\" xmlns:q=\"https://quantum.lang/ns\">\n  <!-- Teste: set com loop -->\n  <q:set name=\"total\" type=\"number\" value=\"0\" />\n\n  <q:loop type=\"range\" var=\"i\" from=\"1\" to=\"5\">\n    <q:set name=\"total\" operation=\"add\" value=\"{i}\" />\n  </q:loop>\n\n  <q:return value=\"Total: {total}\" />\n</q:component>\n"
     },
     {
       "file": "test-validation-complete.q",
@@ -745,7 +811,10 @@
       "relatedDocs": [
         "/guide/state-management"
       ],
-      "lineCount": 41
+      "lineCount": 41,
+      "output": "Username: john_doe, Age: 25, Email: john@example.com, Status: active",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Validation Complete -->\n<!-- Demonstrates all q:set validation patterns -->\n<q:component name=\"TestValidationComplete\" xmlns:q=\"https://quantum.lang/ns\">\n\n  <!-- String length validation -->\n  <q:set name=\"username\" value=\"john_doe\"\n         validation=\"length\"\n         minLength=\"3\"\n         maxLength=\"20\" />\n\n  <!-- Numeric range validation -->\n  <q:set name=\"age\" type=\"number\" value=\"25\"\n         validation=\"range\"\n         min=\"18\"\n         max=\"120\" />\n\n  <!-- Email pattern validation -->\n  <q:set name=\"email\" value=\"john@example.com\"\n         validation=\"email\" />\n\n  <!-- Enum validation -->\n  <q:set name=\"status\" value=\"active\"\n         validation=\"enum\"\n         allowedValues=\"active,inactive,pending\" />\n\n  <!-- CPF validation (Brazilian ID) -->\n  <q:set name=\"cpf\" value=\"123.456.789-09\"\n         validation=\"cpf\" />\n\n  <!-- Custom pattern validation -->\n  <q:set name=\"phone\" value=\"555-1234\"\n         validation=\"pattern\"\n         pattern=\"^\\d{3}-\\d{4}$\" />\n\n  <!-- Required field -->\n  <q:set name=\"required_field\" value=\"must have value\"\n         required=\"true\" />\n\n  <q:return value=\"Username: {username}, Age: {age}, Email: {email}, Status: {status}\" />\n</q:component>\n"
     }
   ]
 }

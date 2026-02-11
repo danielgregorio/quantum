@@ -63,6 +63,14 @@ def _get_mq_module():
     except ImportError as e:
         return False, None, str(e)
 
+# Import migration commands
+def _get_migrate_module():
+    try:
+        from cli.commands.migrate import MigrationRunner
+        return True, MigrationRunner
+    except ImportError as e:
+        return False, str(e)
+
 class QuantumRunner:
     """Main Quantum Runner - Clean orchestration"""
     
@@ -327,6 +335,21 @@ Examples:
     if mq_available:
         create_mq_parser(subparsers)
 
+    # Migration commands
+    migrate_parser = subparsers.add_parser('migrate', help='Database migration commands')
+    migrate_subparsers = migrate_parser.add_subparsers(dest='migrate_command')
+
+    migrate_subparsers.add_parser('status', help='Show migration status')
+
+    migrate_up_parser = migrate_subparsers.add_parser('up', help='Apply pending migrations')
+    migrate_up_parser.add_argument('-n', '--count', type=int, help='Number of migrations to apply')
+
+    migrate_down_parser = migrate_subparsers.add_parser('down', help='Rollback migrations')
+    migrate_down_parser.add_argument('-n', '--count', type=int, default=1, help='Number of migrations to rollback')
+
+    migrate_create_parser = migrate_subparsers.add_parser('create', help='Create a new migration')
+    migrate_create_parser.add_argument('name', help='Migration name')
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -400,6 +423,66 @@ Examples:
             print(f"Error: {handle_pkg}")
             sys.exit(1)
         sys.exit(handle_pkg(args))
+
+    # Handle 'migrate' command
+    elif args.command == 'migrate':
+        migrate_available, result = _get_migrate_module()
+        if not migrate_available:
+            print(f"[ERROR] Migration functionality not available: {result}")
+            sys.exit(1)
+
+        MigrationRunner = result
+
+        try:
+            runner = MigrationRunner()
+
+            if args.migrate_command == 'status':
+                import json
+                status = runner.status()
+                print(f"\nDatabase: {status['database_type']}")
+                print(f"Applied migrations: {status['total_applied']}")
+                print(f"Pending migrations: {status['total_pending']}")
+
+                if status['applied']:
+                    print("\nApplied:")
+                    for m in status['applied']:
+                        print(f"  {m['version']}: {m['name']} (applied: {m['applied_at']})")
+
+                if status['pending']:
+                    print("\nPending:")
+                    for m in status['pending']:
+                        print(f"  {m['version']}: {m['name']}")
+
+            elif args.migrate_command == 'up':
+                results = runner.up(count=getattr(args, 'count', None))
+                applied = sum(1 for r in results if r.get('status') == 'applied')
+                failed = sum(1 for r in results if r.get('status') == 'failed')
+                print(f"\nApplied: {applied}, Failed: {failed}")
+                if failed:
+                    sys.exit(1)
+
+            elif args.migrate_command == 'down':
+                results = runner.down(count=getattr(args, 'count', 1))
+                rolled_back = sum(1 for r in results if r.get('status') == 'rolled_back')
+                failed = sum(1 for r in results if r.get('status') == 'failed')
+                print(f"\nRolled back: {rolled_back}, Failed: {failed}")
+                if failed:
+                    sys.exit(1)
+
+            elif args.migrate_command == 'create':
+                filepath = runner.create(args.name)
+                print(f"Created migration: {filepath}")
+                print(f"Also created rollback: {filepath.with_suffix('.down.sql')}")
+
+            else:
+                print("Usage: quantum migrate <status|up|down|create> [options]")
+                sys.exit(1)
+
+            sys.exit(0)
+
+        except Exception as e:
+            print(f"[ERROR] Migration failed: {e}")
+            sys.exit(1)
 
     else:
         parser.print_help()

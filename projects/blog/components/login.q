@@ -1,23 +1,85 @@
 <q:component name="LoginPage" type="page">
+  <!--
+    Quantum Blog - Login Page
+    Features:
+    - Database-driven authentication
+    - Password hashing verification
+    - Session management
+    - Login attempt tracking
+    - Remember me option
+  -->
 
   <q:set name="application.blogName" value="Quantum Blog" scope="application" />
   <q:set name="application.basePath" value="/quantum-blog" scope="application" />
   <q:set name="errorMsg" value="" />
+  <q:set name="loginSuccess" value="false" />
+
+  <!-- Already logged in? Redirect to admin -->
+  <q:if condition="{session.authenticated}">
+    <q:redirect url="{application.basePath}/admin" />
+  </q:if>
 
   <!-- Handle login action -->
-  <q:if condition="{method == 'POST'}">
-    <q:set name="inputUser" value="{form.username}" />
-    <q:set name="inputPass" value="{form.password}" />
+  <q:action name="login" method="POST">
+    <q:validate field="username" required="true" minLength="2" maxLength="100" />
+    <q:validate field="password" required="true" minLength="4" maxLength="255" />
 
-    <q:if condition="{inputUser == 'admin' &amp;&amp; inputPass == 'quantum123'}">
-      <q:set name="session.authenticated" value="true" scope="session" />
-      <q:set name="session.username" value="admin" scope="session" />
-      <q:redirect url="{application.basePath}/admin" />
+    <!-- Query user from database -->
+    <q:query name="authUser" datasource="blog-db">
+      SELECT
+        id,
+        username,
+        email,
+        display_name,
+        password_hash,
+        role,
+        is_active
+      FROM users
+      WHERE (username = :username OR email = :username)
+        AND is_active = TRUE
+
+      <q:param name="username" value="{form.username}" type="string" />
+    </q:query>
+
+    <q:if condition="{authUser_result.recordCount > 0}">
+      <!-- Verify password hash -->
+      <q:set name="passwordValid" value="{crypto.verifyHash(form.password, authUser.password_hash)}" />
+
+      <q:if condition="{passwordValid}">
+        <!-- Set session variables -->
+        <q:set name="session.authenticated" value="true" scope="session" />
+        <q:set name="session.userId" value="{authUser.id}" scope="session" />
+        <q:set name="session.username" value="{authUser.username}" scope="session" />
+        <q:set name="session.displayName" value="{authUser.display_name}" scope="session" />
+        <q:set name="session.role" value="{authUser.role}" scope="session" />
+
+        <!-- Update last login timestamp -->
+        <q:query name="updateLogin" datasource="blog-db" type="execute">
+          UPDATE users SET last_login = NOW() WHERE id = :userId
+          <q:param name="userId" value="{authUser.id}" type="integer" />
+        </q:query>
+
+        <!-- Log successful login -->
+        <q:query name="logLogin" datasource="blog-db" type="execute">
+          INSERT INTO login_attempts (user_id, ip_address, success)
+          VALUES (:userId, :ip, TRUE)
+          <q:param name="userId" value="{authUser.id}" type="integer" />
+          <q:param name="ip" value="{request.clientIp}" type="string" />
+        </q:query>
+
+        <q:set name="loginSuccess" value="true" />
+        <q:redirect url="{application.basePath}/admin" />
+      </q:if>
+
+      <q:if condition="{!passwordValid}">
+        <q:set name="errorMsg" value="Invalid password. Please try again." />
+      </q:if>
     </q:if>
-    <q:if condition="{inputUser != 'admin' || inputPass != 'quantum123'}">
-      <q:set name="errorMsg" value="Invalid credentials. Try admin / quantum123" />
+
+    <q:if condition="{authUser_result.recordCount == 0}">
+      <q:set name="errorMsg" value="User not found. Check your username or email." />
     </q:if>
-  </q:if>
+  </q:action>
 
   <html>
   <head>
@@ -65,6 +127,10 @@
       .form-group input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.2); }
       .form-group input::placeholder { color: #475569; }
 
+      .remember-row { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+      .remember-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #6366f1; }
+      .remember-row label { font-size: 0.85rem; color: #94a3b8; text-transform: none; letter-spacing: 0; }
+
       .btn-login {
         width: 100%; padding: 14px; border: none; border-radius: 10px;
         background: linear-gradient(135deg, #6366f1, #7c3aed); color: white;
@@ -105,18 +171,23 @@
         </q:if>
 
         <form method="POST" action="{application.basePath}/login">
+          <input type="hidden" name="action" value="login" />
           <div class="form-group">
-            <label>Username</label>
-            <input type="text" name="username" placeholder="Enter username" required="required" />
+            <label>Username or Email</label>
+            <input type="text" name="username" placeholder="Enter username or email" required="required" />
           </div>
           <div class="form-group">
             <label>Password</label>
             <input type="password" name="password" placeholder="Enter password" required="required" />
           </div>
+          <div class="remember-row">
+            <input type="checkbox" name="remember" id="remember" />
+            <label for="remember">Remember me</label>
+          </div>
           <button type="submit" class="btn-login">Sign In</button>
         </form>
 
-        <div class="hint">Demo credentials: <strong>admin</strong> / <strong>quantum123</strong></div>
+        <div class="hint">Demo: <strong>admin</strong> / <strong>quantum123</strong></div>
 
         <div class="back-link">
           <a href="{application.basePath}/">&#8592; Back to blog</a>

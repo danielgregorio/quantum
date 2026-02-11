@@ -3,19 +3,77 @@ server:
   host: 0.0.0.0
   reload: false
   debug: true
+
 paths:
   components: ./components
   static: ./static
   logs: ./logs
+  migrations: ./migrations
+
 defaults:
   component_type: pure
   charset: utf-8
   timeout: 30
+
+# Database configuration
+# Supports PostgreSQL for production and SQLite for development
+datasources:
+  blog-db:
+    # Production: PostgreSQL
+    driver: ${DB_DRIVER:sqlite}
+    host: ${DB_HOST:localhost}
+    port: ${DB_PORT:5432}
+    database: ${DB_NAME:quantum_blog}
+    username: ${DB_USER:quantum}
+    password: ${DB_PASSWORD:quantum123}
+    pool_size: 5
+    max_overflow: 10
+
+    # Development: SQLite (used when DB_DRIVER=sqlite or not set)
+    sqlite_path: ./data/blog.db
+
+# Cache configuration
+cache:
+  enabled: true
+  driver: memory  # memory, redis
+  default_ttl: 300
+
+  # Query-specific cache settings
+  queries:
+    getPublishedPosts: 60      # 1 minute for post listing
+    getPopularPosts: 300       # 5 minutes for popular posts
+    getPostBySlug: 120         # 2 minutes for individual posts
+    getTags: 600               # 10 minutes for tags
+
+# AI/LLM configuration (uses Quantum Admin connector)
+llm:
+  connector: llm  # References the public LLM connector
+  cache_responses: true
+  cache_ttl: 3600  # 1 hour
+
+# Performance settings
 performance:
   cache_templates: true
   cache_ttl: 300
+  gzip_responses: true
+  minify_html: true
+
+# Security
 security:
   xss_protection: true
+  csrf_protection: true
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 60
+
+# SEO
+seo:
+  site_name: "Quantum Blog"
+  site_description: "A modern blog built with the Quantum Framework"
+  default_image: "/static/og-image.png"
+
+# Logging
 logging:
   level: INFO
   console: true
+  file: ./logs/blog.log

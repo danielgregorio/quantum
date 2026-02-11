@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   file: { type: String, required: true },
@@ -9,8 +9,15 @@ const props = defineProps({
   tags: { type: Array, default: () => [] },
   features: { type: Array, default: () => [] },
   relatedDocs: { type: Array, default: () => [] },
-  lineCount: { type: Number, default: 0 }
+  lineCount: { type: Number, default: 0 },
+  // New props for output preview
+  output: { type: String, default: '' },
+  outputType: { type: String, default: 'text' },
+  sourceCode: { type: String, default: '' }
 })
+
+// Toggle for showing source code
+const showSource = ref(false)
 
 const complexityClass = computed(() => `complexity-${props.complexity}`)
 
@@ -48,6 +55,31 @@ const displayTags = computed(() => {
     <div class="card-meta">
       <span class="line-count" v-if="lineCount">{{ lineCount }} lines</span>
       <span class="file-name">{{ file }}</span>
+    </div>
+
+    <!-- Source Code Preview (collapsible) -->
+    <div class="source-section" v-if="sourceCode">
+      <button class="source-toggle" @click="showSource = !showSource">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline :points="showSource ? '6 9 12 15 18 9' : '9 18 15 12 9 6'"/>
+        </svg>
+        <span>{{ showSource ? 'Hide' : 'Show' }} Source</span>
+      </button>
+      <div class="source-content" v-show="showSource">
+        <pre><code>{{ sourceCode }}</code></pre>
+      </div>
+    </div>
+
+    <!-- Output Preview -->
+    <div class="output-section" v-if="output">
+      <div class="output-header">
+        <span class="output-icon">&#x25B6;</span>
+        <span>Output</span>
+        <span class="output-type-badge" :class="'badge-' + outputType">{{ outputType }}</span>
+      </div>
+      <div class="output-content" :class="outputType">
+        <pre>{{ output }}</pre>
+      </div>
     </div>
 
     <div class="card-actions">
@@ -198,5 +230,136 @@ const displayTags = computed(() => {
 
 .btn-docs:hover {
   background: var(--vp-c-default-3);
+}
+
+/* Source Code Section */
+.source-section {
+  margin-top: 4px;
+  border-top: 1px solid var(--vp-c-divider);
+  padding-top: 12px;
+}
+
+.source-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--vp-c-default-soft);
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--vp-c-text-2);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.source-toggle:hover {
+  background: var(--vp-c-default-3);
+  color: var(--vp-c-text-1);
+}
+
+.source-content {
+  margin-top: 10px;
+  background: var(--vp-c-bg-alt);
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.source-content pre {
+  margin: 0;
+  padding: 0;
+  font-family: var(--vp-font-family-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.source-content code {
+  background: none;
+  padding: 0;
+  color: var(--vp-c-text-1);
+}
+
+/* Output Preview Section */
+.output-section {
+  margin-top: 4px;
+  border-top: 1px solid var(--vp-c-divider);
+  padding-top: 12px;
+}
+
+.output-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--vp-c-text-2);
+  margin-bottom: 8px;
+}
+
+.output-icon {
+  color: var(--vp-c-green-1);
+  font-size: 10px;
+}
+
+.output-type-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.badge-text {
+  background: rgba(100, 108, 255, 0.15);
+  color: #646cff;
+}
+
+.badge-json {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.badge-html {
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+}
+
+.badge-error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.output-content {
+  background: var(--vp-c-bg-alt);
+  padding: 12px;
+  border-radius: 8px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 13px;
+  max-height: 150px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.output-content pre {
+  margin: 0;
+  padding: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.output-content.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--vp-c-danger-1);
+}
+
+.output-content.json {
+  color: var(--vp-c-green-1);
 }
 </style>
