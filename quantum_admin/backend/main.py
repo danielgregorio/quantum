@@ -11064,10 +11064,9 @@ def generate_sample_logs(
 def get_project_log_stats(
     project_id: int,
     hours: int = 24,
-    db: Session = Depends(get_db),
-    user: User = Depends(require_auth)
+    db: Session = Depends(get_db)
 ):
-    """Get log statistics for a project"""
+    """Get log statistics for a project (no auth required for UI)"""
     project = crud.get_project(db, project_id)
     if not project:
         raise HTTPException(
