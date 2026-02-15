@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-02-14T09:48:37.947059",
+  "python_version": "3.12.7 (tags/v3.12.7:0b05ead, Oct  1 2024, 03:06:41) [MSC v.1941 64 bit (AMD64)]",
+  "results": [
+    {
+      "name": "python_native_loop",
+      "iterations": 10000,
+      "total_time_ms": 0.17839999054558575,
+      "avg_time_us": 0.017839999054558575,
+      "ops_per_sec": 56053814.629798114,
+      "category": "baseline"
+    },
+    {
+      "name": "expression_cache_loop",
+      "iterations": 10000,
+      "total_time_ms": 3.9815999916754663,
+      "avg_time_us": 0.39815999916754663,
+      "ops_per_sec": 2511553.149715569,
+      "category": "expression"
+    },
+    {
+      "name": "expression_fast_loop",
+      "iterations": 10000,
+      "total_time_ms": 2.1240999922156334,
+      "avg_time_us": 0.21240999922156334,
+      "ops_per_sec": 4707876.294264788,
+      "category": "expression"
+    },
+    {
+      "name": "databinding_simple",
+      "iterations": 10000,
+      "total_time_ms": 23.604099988006055,
+      "avg_time_us": 2.3604099988006055,
+      "ops_per_sec": 423655.21265717805,
+      "category": "databinding"
+    },
+    {
+      "name": "parser_component",
+      "iterations": 500,
+      "total_time_ms": 18.38809999753721,
+      "avg_time_us": 36.77619999507442,
+      "ops_per_sec": 27191.498853441462,
+      "category": "parser"
+    },
+    {
+      "name": "component_loop_100",
+      "iterations": 200,
+      "total_time_ms": 280.94480000436306,
+      "avg_time_us": 1404.7240000218153,
+      "ops_per_sec": 711.883615560402,
+      "category": "component"
+    },
+    {
+      "name": "html_render_loop",
+      "iterations": 500,
+      "total_time_ms": 249.78779998491518,
+      "avg_time_us": 499.57559996983036,
+      "ops_per_sec": 2001.699042267858,
+      "category": "render"
+    }
+  ],
+  "summary": {
+    "python_baseline_ops": 56053814.629798114,
+    "expression_cache_ratio": 22.31838678633823,
+    "expression_fast_ratio": 11.906390721881072,
+    "component_ratio": 78740.13870325136
+  }
+}

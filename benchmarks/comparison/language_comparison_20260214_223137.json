@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-02-14T22:31:37.936293",
+  "results": [
+    {
+      "language": "Python 3.12",
+      "test": "loop_100k",
+      "time_ms": 98.17879999172874,
+      "iterations": 50,
+      "ops_per_sec": 509.2749147902841
+    },
+    {
+      "language": "Quantum Interpreted",
+      "test": "loop_100k",
+      "time_ms": 41038.530799996806,
+      "iterations": 50,
+      "ops_per_sec": 1.2183672033406199
+    },
+    {
+      "language": "Quantum Transpiled",
+      "test": "loop_100k",
+      "time_ms": 96.75160000915639,
+      "iterations": 50,
+      "ops_per_sec": 516.7873192305666
+    },
+    {
+      "language": "Node.js 24",
+      "test": "loop_100k",
+      "time_ms": 4.221,
+      "iterations": 50,
+      "ops_per_sec": 11845.534233593935
+    },
+    {
+      "language": "Python 3.12",
+      "test": "string_build",
+      "time_ms": 0.3277999931015074,
+      "iterations": 50,
+      "ops_per_sec": 152532.03493667208
+    },
+    {
+      "language": "Quantum Interpreted",
+      "test": "string_build",
+      "time_ms": 27.282900002319366,
+      "iterations": 50,
+      "ops_per_sec": 1832.6497548189311
+    },
+    {
+      "language": "Quantum Transpiled",
+      "test": "string_build",
+      "time_ms": 0.029000017093494534,
+      "iterations": 50,
+      "ops_per_sec": 1724136.9147750025
+    },
+    {
+      "language": "Node.js 24",
+      "test": "string_build",
+      "time_ms": 0.3466,
+      "iterations": 50,
+      "ops_per_sec": 144258.51125216385
+    },
+    {
+      "language": "Python 3.12",
+      "test": "fibonacci_25",
+      "time_ms": 298.2703000016045,
+      "iterations": 50,
+      "ops_per_sec": 167.6331837254029
+    },
+    {
+      "language": "Node.js 24",
+      "test": "fibonacci_25",
+      "time_ms": 27.7754,
+      "iterations": 50,
+      "ops_per_sec": 1800.154093190377
+    },
+    {
+      "language": "Python 3.12",
+      "test": "dict_ops",
+      "time_ms": 9.087700018426403,
+      "iterations": 50,
+      "ops_per_sec": 5501.942174435665
+    },
+    {
+      "language": "Node.js 24",
+      "test": "dict_ops",
+      "time_ms": 6.9919,
+      "iterations": 50,
+      "ops_per_sec": 7151.132024199431
+    }
+  ]
+}
