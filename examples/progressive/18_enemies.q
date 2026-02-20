@@ -68,14 +68,11 @@
     <qg:sprite id="level-bg" src="assets/smw/sprites/yoshi-island-1.png"
                x="2560" y="216" width="5120" height="432" />
 
-    <!-- COLLISION GEOMETRY -->
-    <!-- The "hills" are just background decoration - ground is flat -->
-    <!-- Ground level is at y=384 (48px from bottom of 432px image) -->
-
-    <!-- Single ground collision covering the entire level -->
-    <!-- width=5120 (full level), height=48, center at x=2560, y=408 (top at y=384) -->
-    <qg:sprite id="ground" width="5120" height="48" x="2560" y="408"
-               tag="terrain" body="static" visible="false" />
+    <!-- DEBUG: Visible ground collision to see where it is -->
+    <!-- Looking at the screenshot, ground is at the very bottom of the 432px image -->
+    <!-- Ground top should be at approximately y=415 -->
+    <qg:sprite id="ground" width="5120" height="32" x="2560" y="416"
+               tag="terrain" body="static" color="#FF000080" />
 
     <!-- Question blocks (matching image positions) -->
     <qg:instance prefab="qblock" id="qb1" x="496" y="256" />
@@ -102,27 +99,27 @@
     <qg:instance prefab="coin" x="4096" y="288" />
     <qg:instance prefab="coin" x="4112" y="288" />
 
-    <!-- Rex enemies distributed through level (ground top at y=384, Rex height=24, center at y=372) -->
-    <qg:instance prefab="rex" id="rex1" x="450" y="360" />
-    <qg:instance prefab="rex" id="rex2" x="700" y="360" />
-    <qg:instance prefab="rex" id="rex3" x="950" y="360" />
-    <qg:instance prefab="rex" id="rex4" x="1300" y="360" />
-    <qg:instance prefab="rex" id="rex5" x="1600" y="360" />
-    <qg:instance prefab="rex" id="rex6" x="1900" y="360" />
-    <qg:instance prefab="rex" id="rex7" x="2200" y="360" />
-    <qg:instance prefab="rex" id="rex8" x="2700" y="360" />
-    <qg:instance prefab="rex" id="rex9" x="3100" y="360" />
-    <qg:instance prefab="rex" id="rex10" x="3500" y="360" />
-    <qg:instance prefab="rex" id="rex11" x="3900" y="360" />
-    <qg:instance prefab="rex" id="rex12" x="4300" y="360" />
+    <!-- Rex enemies (ground top at y=400, Rex height=24, center at y=388) -->
+    <qg:instance prefab="rex" id="rex1" x="450" y="388" />
+    <qg:instance prefab="rex" id="rex2" x="700" y="388" />
+    <qg:instance prefab="rex" id="rex3" x="950" y="388" />
+    <qg:instance prefab="rex" id="rex4" x="1300" y="388" />
+    <qg:instance prefab="rex" id="rex5" x="1600" y="388" />
+    <qg:instance prefab="rex" id="rex6" x="1900" y="388" />
+    <qg:instance prefab="rex" id="rex7" x="2200" y="388" />
+    <qg:instance prefab="rex" id="rex8" x="2700" y="388" />
+    <qg:instance prefab="rex" id="rex9" x="3100" y="388" />
+    <qg:instance prefab="rex" id="rex10" x="3500" y="388" />
+    <qg:instance prefab="rex" id="rex11" x="3900" y="388" />
+    <qg:instance prefab="rex" id="rex12" x="4300" y="388" />
 
     <!-- Goal at the end (visible in image around x=4900) -->
     <qg:sprite id="goal" width="16" height="80" x="4950" y="344"
                color="#00FF00" tag="goal" body="static" sensor="true" />
 
-    <!-- Mario (starting position - ground top at y=384, Mario height=24, center at y=372) -->
+    <!-- Mario (ground top at y=400, Mario height=24, center at y=388) -->
     <qg:sprite id="mario" src="assets/smw/sprites/mario_small.png"
-               x="80" y="360" tag="player"
+               x="80" y="388" tag="player"
                frame-width="16" frame-height="24"
                body="dynamic" controls="arrows" speed="2.5" jump-force="8" friction="0">
       <qg:animation name="idle" frames="0" speed="0.1" loop="true" auto-play="true" />
