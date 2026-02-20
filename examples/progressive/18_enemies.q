@@ -68,25 +68,59 @@
     <qg:sprite id="level-bg" src="assets/smw/sprites/yoshi-island-1.png"
                x="2560" y="216" width="5120" height="432" />
 
-    <!-- Ground collision (main floor at y=350) -->
-    <qg:sprite id="ground-main" width="5120" height="80" x="2560" y="392"
+    <!-- COLLISION GEOMETRY based on level analysis -->
+    <!-- Ground level is at y=385 in the image -->
+
+    <!-- Main ground - flat sections (y=385, height extends down) -->
+    <!-- Section 1: Start to first hill (x=0 to x=176) -->
+    <qg:sprite id="ground1" width="176" height="50" x="88" y="410"
                tag="terrain" body="static" visible="false" />
 
-    <!-- Hill 1 collision (x=176-368, rises from y=350 to y=270) -->
-    <qg:sprite id="hill1-slope1" width="96" height="16" x="224" y="318"
-               tag="terrain" body="static" visible="false" rotation="-30" />
-    <qg:sprite id="hill1-top" width="48" height="80" x="320" y="310"
+    <!-- Hill 1 (x=176 to x=368) - peaks around y=312 -->
+    <qg:sprite id="hill1-left" width="64" height="80" x="208" y="350"
                tag="terrain" body="static" visible="false" />
-    <qg:sprite id="hill1-slope2" width="96" height="16" x="416" y="318"
-               tag="terrain" body="static" visible="false" rotation="30" />
+    <qg:sprite id="hill1-top" width="80" height="80" x="280" y="330"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="hill1-right" width="64" height="80" x="352" y="350"
+               tag="terrain" body="static" visible="false" />
 
-    <!-- Hill 2 collision (x=720-912) -->
-    <qg:sprite id="hill2-slope1" width="96" height="16" x="768" y="318"
-               tag="terrain" body="static" visible="false" rotation="-30" />
-    <qg:sprite id="hill2-top" width="48" height="80" x="864" y="310"
+    <!-- Section 2: After hill 1 to hill 2 (x=368 to x=640) -->
+    <qg:sprite id="ground2" width="272" height="50" x="504" y="410"
                tag="terrain" body="static" visible="false" />
-    <qg:sprite id="hill2-slope2" width="96" height="16" x="960" y="318"
-               tag="terrain" body="static" visible="false" rotation="30" />
+
+    <!-- Hill 2 (x=640 to x=848) -->
+    <qg:sprite id="hill2-left" width="64" height="80" x="672" y="350"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="hill2-top" width="80" height="80" x="744" y="330"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="hill2-right" width="64" height="80" x="816" y="350"
+               tag="terrain" body="static" visible="false" />
+
+    <!-- Section 3: After hill 2 to pipes area (x=848 to x=1600) -->
+    <qg:sprite id="ground3" width="752" height="50" x="1224" y="410"
+               tag="terrain" body="static" visible="false" />
+
+    <!-- Section 4: Middle area (x=1600 to x=2400) -->
+    <qg:sprite id="ground4" width="800" height="50" x="2000" y="410"
+               tag="terrain" body="static" visible="false" />
+
+    <!-- Elevated platform area (x=2400 to x=2900) - y around 289 -->
+    <qg:sprite id="platform1" width="400" height="50" x="2600" y="350"
+               tag="terrain" body="static" visible="false" />
+
+    <!-- Section 5: After platform to hill (x=2900 to x=3600) -->
+    <qg:sprite id="ground5" width="700" height="50" x="3250" y="410"
+               tag="terrain" body="static" visible="false" />
+
+    <!-- Section 6: Stepped area near end (x=3600 to x=4200) -->
+    <qg:sprite id="ground6" width="400" height="50" x="3800" y="400"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="step1" width="200" height="50" x="4100" y="380"
+               tag="terrain" body="static" visible="false" />
+
+    <!-- Section 7: Final stretch to goal (x=4200 to x=5120) -->
+    <qg:sprite id="ground7" width="920" height="50" x="4660" y="410"
+               tag="terrain" body="static" visible="false" />
 
     <!-- Question blocks (matching image positions) -->
     <qg:instance prefab="qblock" id="qb1" x="496" y="256" />
@@ -113,27 +147,27 @@
     <qg:instance prefab="coin" x="4096" y="288" />
     <qg:instance prefab="coin" x="4112" y="288" />
 
-    <!-- Rex enemies distributed through level (ground at y=328) -->
-    <qg:instance prefab="rex" id="rex1" x="400" y="328" />
-    <qg:instance prefab="rex" id="rex2" x="640" y="328" />
-    <qg:instance prefab="rex" id="rex3" x="880" y="328" />
-    <qg:instance prefab="rex" id="rex4" x="1200" y="328" />
-    <qg:instance prefab="rex" id="rex5" x="1520" y="328" />
-    <qg:instance prefab="rex" id="rex6" x="1840" y="328" />
-    <qg:instance prefab="rex" id="rex7" x="2160" y="328" />
-    <qg:instance prefab="rex" id="rex8" x="2480" y="328" />
-    <qg:instance prefab="rex" id="rex9" x="3040" y="328" />
-    <qg:instance prefab="rex" id="rex10" x="3520" y="328" />
-    <qg:instance prefab="rex" id="rex11" x="3840" y="328" />
-    <qg:instance prefab="rex" id="rex12" x="4160" y="328" />
+    <!-- Rex enemies distributed through level (ground at y=385) -->
+    <qg:instance prefab="rex" id="rex1" x="450" y="370" />
+    <qg:instance prefab="rex" id="rex2" x="700" y="370" />
+    <qg:instance prefab="rex" id="rex3" x="950" y="370" />
+    <qg:instance prefab="rex" id="rex4" x="1300" y="370" />
+    <qg:instance prefab="rex" id="rex5" x="1600" y="370" />
+    <qg:instance prefab="rex" id="rex6" x="1900" y="370" />
+    <qg:instance prefab="rex" id="rex7" x="2200" y="370" />
+    <qg:instance prefab="rex" id="rex8" x="2700" y="330" />
+    <qg:instance prefab="rex" id="rex9" x="3100" y="370" />
+    <qg:instance prefab="rex" id="rex10" x="3500" y="370" />
+    <qg:instance prefab="rex" id="rex11" x="3900" y="370" />
+    <qg:instance prefab="rex" id="rex12" x="4300" y="370" />
 
     <!-- Goal at the end (visible in image around x=4900) -->
-    <qg:sprite id="goal" width="16" height="64" x="4950" y="304"
+    <qg:sprite id="goal" width="16" height="80" x="4950" y="350"
                color="#00FF00" tag="goal" body="static" sensor="true" />
 
-    <!-- Mario (starting position on ground) -->
+    <!-- Mario (starting position on ground at y=385) -->
     <qg:sprite id="mario" src="assets/smw/sprites/mario_small.png"
-               x="80" y="328" tag="player"
+               x="80" y="370" tag="player"
                frame-width="16" frame-height="24"
                body="dynamic" controls="arrows" speed="2.5" jump-force="8" friction="0">
       <qg:animation name="idle" frames="0" speed="0.1" loop="true" auto-play="true" />

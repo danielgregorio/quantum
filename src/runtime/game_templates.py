@@ -275,7 +275,7 @@ HTML_TEMPLATE = """\
   <style>
     * {{ margin: 0; padding: 0; box-sizing: border-box; }}
     body {{ overflow: hidden; background: #111; display: flex; justify-content: center; align-items: center; width: 100vw; height: 100vh; }}
-    canvas {{ display: block; }}
+    canvas {{ display: block; image-rendering: pixelated; image-rendering: crisp-edges; transform: scale(3); transform-origin: center center; }}
     .qg-hud {{ position: absolute; pointer-events: none; padding: 8px; font-family: sans-serif; z-index: 10; }}
     .qg-hud-top-left {{ top: 0; left: 0; }}
     .qg-hud-top-right {{ top: 0; right: 0; }}
