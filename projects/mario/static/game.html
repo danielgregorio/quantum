@@ -113,8 +113,8 @@
   Our version: 96 tiles (1536 pixels) - scaled positions
 --&gt;
 &lt;q:application id=&quot;yoshi-island-1&quot; type=&quot;game&quot; engine=&quot;2d&quot;&gt;
-  &lt;qg:scene name=&quot;main&quot; width=&quot;1536&quot; height=&quot;288&quot; viewport-width=&quot;512&quot; viewport-height=&quot;288&quot; background=&quot;#5C94FC&quot;&gt;
-    &lt;qg:physics gravity-y=&quot;0.8&quot; /&gt;
+  &lt;qg:scene name=&quot;main&quot; width=&quot;1536&quot; height=&quot;288&quot; viewport-width=&quot;1920&quot; viewport-height=&quot;1080&quot; background=&quot;#5C94FC&quot;&gt;
+    &lt;qg:physics gravity-y=&quot;1.5&quot; /&gt;
     &lt;qg:camera follow=&quot;mario&quot; lerp=&quot;0.08&quot; bounds=&quot;scene&quot; /&gt;
 
     &lt;!-- Game state --&gt;
@@ -231,7 +231,7 @@
     &lt;qg:sprite id=&quot;mario&quot; src=&quot;assets/smw/sprites/mario_small.png&quot;
                x=&quot;64&quot; y=&quot;180&quot; tag=&quot;player&quot;
                frame-width=&quot;16&quot; frame-height=&quot;24&quot;
-               body=&quot;dynamic&quot; controls=&quot;arrows&quot; speed=&quot;1.5&quot; jump-force=&quot;5&quot; friction=&quot;0&quot;&gt;
+               body=&quot;dynamic&quot; controls=&quot;arrows&quot; speed=&quot;2&quot; jump-force=&quot;7&quot; friction=&quot;0&quot;&gt;
       &lt;qg:animation name=&quot;idle&quot; frames=&quot;0&quot; speed=&quot;0.1&quot; loop=&quot;true&quot; auto-play=&quot;true&quot; /&gt;
       &lt;qg:animation name=&quot;walk&quot; frames=&quot;1-3&quot; speed=&quot;0.18&quot; loop=&quot;true&quot; /&gt;
       &lt;qg:animation name=&quot;jump&quot; frames=&quot;4&quot; speed=&quot;0.1&quot; loop=&quot;false&quot; /&gt;
@@ -280,6 +280,9 @@
     &lt;qg:event name=&quot;game-init&quot; handler=&quot;onGameInit&quot; /&gt;
 
     &lt;q:function name=&quot;onGameInit&quot;&gt;
+      // Iris-in effect on level start
+      game.irisIn(null, 45)
+
       // Restore lives and score from sessionStorage (after death respawn)
       const savedLives = sessionStorage.getItem(&#x27;mario_lives&#x27;)
       const savedScore = sessionStorage.getItem(&#x27;mario_score&#x27;)
@@ -305,6 +308,19 @@
       game.setRexAI(&#x27;rex8&#x27;, -0.4)
       game.setRexAI(&#x27;rex9&#x27;, -0.4)
       game.setRexAI(&#x27;rex10&#x27;, -0.4)
+
+      // Handle music autoplay - try to play, if blocked wait for interaction
+      const tryPlayMusic = () =&gt; {
+        game.playSound(&#x27;bgm-level&#x27;, { loop: true, volume: 0.5 })
+      }
+      // Browser autoplay requires user gesture - add click handler
+      const startMusic = () =&gt; {
+        tryPlayMusic()
+        document.removeEventListener(&#x27;click&#x27;, startMusic)
+        document.removeEventListener(&#x27;keydown&#x27;, startMusic)
+      }
+      document.addEventListener(&#x27;click&#x27;, startMusic, { once: true })
+      document.addEventListener(&#x27;keydown&#x27;, startMusic, { once: true })
     &lt;/q:function&gt;
 
     &lt;q:function name=&quot;onCoinCollected&quot;&gt;
@@ -329,14 +345,20 @@
       if (isDead) return
       const mario = _sprites[&#x27;mario&#x27;]
       const enemy = data.other
-      if (!mario || !enemy || !mario.body) return
+      if (!mario || !enemy || !mario.body || !enemy.body) return
 
-      // Check if Mario is above the Rex (stomp)
-      const marioBottom = mario.body.position.y + 12
-      const enemyTop = enemy.body.position.y - 16
+      // Rex is 12x24, Mario is 16x24
+      // Body positions are at center
+      const marioFeet = mario.body.position.y + 12
+      const rexHead = enemy.body.position.y - (enemy._rexSquished ? 6 : 12)
       const marioVelY = mario.body.velocity.y
 
-      if (marioBottom &amp;lt; enemyTop + 8 &amp;amp;&amp;amp; marioVelY &gt; 0) {
+      // Stomp: Mario&#x27;s feet must be above Rex&#x27;s head AND Mario must be falling
+      // More strict check: feet must be clearly above head (not just touching)
+      const isAbove = marioFeet &amp;lt; rexHead + 4
+      const isFalling = marioVelY &gt; 0.5
+
+      if (isAbove &amp;amp;&amp;amp; isFalling) {
         // Stomp! Emit sound event
         _gameEvents.emit(&#x27;enemy-stomped&#x27;, { enemy: enemy.id })
 
@@ -353,7 +375,7 @@
           score = score + 100
         }
         // Bounce Mario up
-        Matter.Body.setVelocity(mario.body, { x: mario.body.velocity.x, y: -5 })
+        Matter.Body.setVelocity(mario.body, { x: mario.body.velocity.x, y: -6 })
         document.getElementById(&#x27;score-display&#x27;).textContent = score
       } else {
         // Side collision - Mario dies!
@@ -375,25 +397,33 @@
     &lt;/q:function&gt;
 
     &lt;q:function name=&quot;onDeathAnimationComplete&quot;&gt;
-      if (lives &amp;lt;= 0) {
-        // Game Over
-        document.getElementById(&#x27;gameover-score&#x27;).textContent = score
-        document.getElementById(&#x27;game-over&#x27;).style.display = &#x27;block&#x27;
-      } else {
-        // Reload entire level (enemies, blocks, everything back to initial state)
-        // Store lives in sessionStorage to preserve across reload
-        sessionStorage.setItem(&#x27;mario_lives&#x27;, lives)
-        sessionStorage.setItem(&#x27;mario_score&#x27;, score)
-        location.reload()
-      }
+      // Iris-out effect before transition
+      game.irisOut(function() {
+        if (lives &amp;lt;= 0) {
+          // Game Over
+          document.getElementById(&#x27;gameover-score&#x27;).textContent = score
+          document.getElementById(&#x27;game-over&#x27;).style.display = &#x27;block&#x27;
+        } else {
+          // Reload entire level (enemies, blocks, everything back to initial state)
+          // Store lives in sessionStorage to preserve across reload
+          sessionStorage.setItem(&#x27;mario_lives&#x27;, lives)
+          sessionStorage.setItem(&#x27;mario_score&#x27;, score)
+          location.reload()
+        }
+      }, 30)
     &lt;/q:function&gt;
 
     &lt;q:function name=&quot;onLevelComplete&quot;&gt;
-      // Stop background music, play course clear
+      // Stop background music
       game.stopSound(&#x27;bgm-level&#x27;)
+      game.pause()
       score = score + 1000
-      document.getElementById(&#x27;final-score&#x27;).textContent = score
-      document.getElementById(&#x27;level-complete&#x27;).style.display = &#x27;block&#x27;
+
+      // Iris-out effect then show level complete
+      game.irisOut(function() {
+        document.getElementById(&#x27;final-score&#x27;).textContent = score
+        document.getElementById(&#x27;level-complete&#x27;).style.display = &#x27;block&#x27;
+      }, 45)
     &lt;/q:function&gt;
   &lt;/qg:scene&gt;
 &lt;/q:application&gt;
@@ -416,14 +446,14 @@ document.addEventListener('keydown', function(e) {
 
   // === PIXI APP ===
   const app = new PIXI.Application();
-  await app.init({ width: 512, height: 288, background: "#5C94FC" });
+  await app.init({ width: 1920, height: 1080, background: "#5C94FC" });
   document.body.appendChild(app.canvas);
-  // World size: 1536x288, Viewport: 512x288
+  // World size: 1536x288, Viewport: 1920x1080
 
   // === MATTER.JS ENGINE ===
   const mEngine = Matter.Engine.create();
   mEngine.gravity.x = 0;
-  mEngine.gravity.y = 0.8;
+  mEngine.gravity.y = 1.5;
   // Increase solver iterations for tighter collision resolution
   mEngine.positionIterations = 10;
   mEngine.velocityIterations = 8;
@@ -1369,6 +1399,8 @@ document.addEventListener('keydown', function(e) {
     }
     info.behaviors.push({
       update: function() {
+        // Skip if game is paused
+        if (game._paused) return;
         const gInfo = _sprites[goombaId];
         if (!gInfo || !gInfo.body) return;
 
@@ -1483,6 +1515,65 @@ document.addEventListener('keydown', function(e) {
     }
   };
 
+  game.irisIn = function(callback, duration) {
+    duration = duration || 30;
+    const overlay = new PIXI.Graphics();
+    overlay.zIndex = 9999;
+    _app.stage.addChild(overlay);
+    _app.stage.sortChildren();
+    let frame = 0;
+    const centerX = _app.screen.width / 2;
+    const centerY = _app.screen.height / 2;
+    const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY) + 50;
+    const animate = () => {
+      frame++;
+      const t = frame / duration;
+      const radius = maxRadius * t;
+      overlay.clear();
+      overlay.rect(0, 0, _app.screen.width, _app.screen.height);
+      overlay.fill(0x000000);
+      overlay.circle(centerX, centerY, radius);
+      overlay.cut();
+      if (frame < duration) {
+        requestAnimationFrame(animate);
+      } else {
+        _app.stage.removeChild(overlay);
+        if (callback) callback();
+      }
+    };
+    animate();
+  };
+
+  game.irisOut = function(callback, duration) {
+    duration = duration || 30;
+    const overlay = new PIXI.Graphics();
+    overlay.zIndex = 9999;
+    _app.stage.addChild(overlay);
+    _app.stage.sortChildren();
+    let frame = 0;
+    const centerX = _app.screen.width / 2;
+    const centerY = _app.screen.height / 2;
+    const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY) + 50;
+    const animate = () => {
+      frame++;
+      const t = 1 - (frame / duration);
+      const radius = maxRadius * t;
+      overlay.clear();
+      overlay.rect(0, 0, _app.screen.width, _app.screen.height);
+      overlay.fill(0x000000);
+      if (radius > 0) {
+        overlay.circle(centerX, centerY, radius);
+        overlay.cut();
+      }
+      if (frame < duration) {
+        requestAnimationFrame(animate);
+      } else {
+        if (callback) callback();
+      }
+    };
+    animate();
+  };
+
   game.killPlayer = function(playerId, deathSpriteSrc) {
     const info = _sprites[playerId];
     if (!info || info._isDying) {
@@ -1535,9 +1626,9 @@ document.addEventListener('keydown', function(e) {
         info.sprite.y = deathY;
         requestAnimationFrame(deathAnim);
       } else {
-        // Second phase: wait for death sound to finish (~3 seconds = 180 frames)
+        // Second phase: wait for death sound to finish (~4 seconds = 240 frames)
         waitFrames++;
-        if (waitFrames < 120) {
+        if (waitFrames < 240) {
           requestAnimationFrame(deathAnim);
         } else {
           // Death animation complete - emit event
@@ -1642,6 +1733,8 @@ document.addEventListener('keydown', function(e) {
 
   // === FUNCTIONS ===
   function onGameInit(data) {
+    // Iris-in effect on level start
+    game.irisIn(null, 45)
     // Restore lives and score from sessionStorage (after death respawn)
     const savedLives = sessionStorage.getItem('mario_lives')
     const savedScore = sessionStorage.getItem('mario_score')
@@ -1666,6 +1759,18 @@ document.addEventListener('keydown', function(e) {
     game.setRexAI('rex8', -0.4)
     game.setRexAI('rex9', -0.4)
     game.setRexAI('rex10', -0.4)
+    // Handle music autoplay - try to play, if blocked wait for interaction
+    const tryPlayMusic = () => {
+    game.playSound('bgm-level', { loop: true, volume: 0.5 })
+    }
+    // Browser autoplay requires user gesture - add click handler
+    const startMusic = () => {
+    tryPlayMusic()
+    document.removeEventListener('click', startMusic)
+    document.removeEventListener('keydown', startMusic)
+    }
+    document.addEventListener('click', startMusic, { once: true })
+    document.addEventListener('keydown', startMusic, { once: true })
   }
 
   function onCoinCollected(data) {
@@ -1690,12 +1795,17 @@ document.addEventListener('keydown', function(e) {
     if (isDead) return
     const mario = _sprites['mario']
     const enemy = data.other
-    if (!mario || !enemy || !mario.body) return
-    // Check if Mario is above the Rex (stomp)
-    const marioBottom = mario.body.position.y + 12
-    const enemyTop = enemy.body.position.y - 16
+    if (!mario || !enemy || !mario.body || !enemy.body) return
+    // Rex is 12x24, Mario is 16x24
+    // Body positions are at center
+    const marioFeet = mario.body.position.y + 12
+    const rexHead = enemy.body.position.y - (enemy._rexSquished ? 6 : 12)
     const marioVelY = mario.body.velocity.y
-    if (marioBottom < enemyTop + 8 && marioVelY > 0) {
+    // Stomp: Mario's feet must be above Rex's head AND Mario must be falling
+    // More strict check: feet must be clearly above head (not just touching)
+    const isAbove = marioFeet < rexHead + 4
+    const isFalling = marioVelY > 0.5
+    if (isAbove && isFalling) {
     // Stomp! Emit sound event
     _gameEvents.emit('enemy-stomped', { enemy: enemy.id })
     // Check if Rex already squished
@@ -1711,7 +1821,7 @@ document.addEventListener('keydown', function(e) {
     score = score + 100
     }
     // Bounce Mario up
-    Matter.Body.setVelocity(mario.body, { x: mario.body.velocity.x, y: -5 })
+    Matter.Body.setVelocity(mario.body, { x: mario.body.velocity.x, y: -6 })
     document.getElementById('score-display').textContent = score
     } else {
     // Side collision - Mario dies!
@@ -1733,6 +1843,8 @@ document.addEventListener('keydown', function(e) {
   }
 
   function onDeathAnimationComplete(data) {
+    // Iris-out effect before transition
+    game.irisOut(function() {
     if (lives <= 0) {
     // Game Over
     document.getElementById('gameover-score').textContent = score
@@ -1744,14 +1856,19 @@ document.addEventListener('keydown', function(e) {
     sessionStorage.setItem('mario_score', score)
     location.reload()
     }
+    }, 30)
   }
 
   function onLevelComplete(data) {
-    // Stop background music, play course clear
+    // Stop background music
     game.stopSound('bgm-level')
+    game.pause()
     score = score + 1000
+    // Iris-out effect then show level complete
+    game.irisOut(function() {
     document.getElementById('final-score').textContent = score
     document.getElementById('level-complete').style.display = 'block'
+    }, 45)
   }
 
 
@@ -2171,11 +2288,11 @@ document.addEventListener('keydown', function(e) {
     const _jumpPressed_mario = _keys[_ctrl_mario.jump] || (_keys[_ctrl_mario.jump2] || false);
     const _jumpJust_mario = _justPressed[_ctrl_mario.jump] || (_justPressed[_ctrl_mario.jump2] || false);
     if (_leftPressed_mario && _sprites["mario"].body) {
-      Matter.Body.setVelocity(_sprites["mario"].body, { x: -1.5, y: _sprites["mario"].body.velocity.y });
+      Matter.Body.setVelocity(_sprites["mario"].body, { x: -2, y: _sprites["mario"].body.velocity.y });
       _sprites["mario"].sprite.scale.x = Math.abs(_sprites["mario"].sprite.scale.x);
     }
     if (_rightPressed_mario && _sprites["mario"].body) {
-      Matter.Body.setVelocity(_sprites["mario"].body, { x: 1.5, y: _sprites["mario"].body.velocity.y });
+      Matter.Body.setVelocity(_sprites["mario"].body, { x: 2, y: _sprites["mario"].body.velocity.y });
       _sprites["mario"].sprite.scale.x = -Math.abs(_sprites["mario"].sprite.scale.x);
     }
     // SMW-style jump: coyote time, variable height, asymmetric gravity
@@ -2193,7 +2310,7 @@ document.addEventListener('keydown', function(e) {
     }
     const _canJump_mario = _isGrounded_mario || _sprites["mario"]._coyoteFrames > 0;
     if (_jumpJust_mario && _sprites["mario"].body && _canJump_mario) {
-      Matter.Body.setVelocity(_sprites["mario"].body, { x: _sprites["mario"].body.velocity.x, y: -5 });
+      Matter.Body.setVelocity(_sprites["mario"].body, { x: _sprites["mario"].body.velocity.x, y: -7 });
       _sprites["mario"]._jumpHeld = true;
       _sprites["mario"]._coyoteFrames = 0;
       _gameEvents.emit('player.jump', _sprites["mario"]);
