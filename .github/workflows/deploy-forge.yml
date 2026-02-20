@@ -7,6 +7,7 @@ on:
       - 'docs/**'
       - 'examples/**'
       - 'quantum_admin/**'
+      - 'projects/mario/**'
   workflow_dispatch:
 
 jobs:
@@ -59,6 +60,21 @@ jobs:
           ls -la /var/www/quantum-admin/static/ || echo "Static directory missing!"
 
           echo "Admin files deployed!"
+
+      - name: Deploy Mario Game
+        run: |
+          # Create mario directory
+          sudo mkdir -p /var/www/quantum.sargas.cloud/mario
+
+          # Copy mario static files (game.html and assets)
+          sudo rm -rf /var/www/quantum.sargas.cloud/mario/* 2>/dev/null || true
+          sudo cp projects/mario/static/game.html /var/www/quantum.sargas.cloud/mario/index.html
+          sudo cp -r projects/mario/static/assets /var/www/quantum.sargas.cloud/mario/
+
+          # Set ownership
+          sudo chown -R www-data:www-data /var/www/quantum.sargas.cloud/mario/
+
+          echo "Mario game deployed!"
 
       - name: Setup Quantum Admin systemd service
         run: |
