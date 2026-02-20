@@ -10,7 +10,7 @@
     </style>
   </head>
   <body>
-    <iframe src="static/game.html" width="800" height="448"
+    <iframe src="static/game.html" width="1024" height="576"
             frameborder="0" scrolling="no"></iframe>
   </body>
   </html>
