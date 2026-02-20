@@ -1,20 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Phase 18: Yoshi's Island 1 (Simplified)
+  Phase 18: Yoshi's Island 1 (Full Level)
 
   Recreation of the first level from SMW with:
+  - Full level image as background (5120x432 pixels)
   - Rex enemies (purple dinosaurs)
   - Camera scrolling
-  - Real enemy positions (scaled)
   - Stomp mechanic (2 hits to kill Rex)
 
-  Original level: ~432 tiles wide
-  Our version: 96 tiles (1536 pixels) - scaled positions
+  Level: 320 tiles wide (5120 pixels)
 -->
 <q:application id="yoshi-island-1" type="game" engine="2d">
-  <qg:scene name="main" width="1536" height="224" viewport-width="256" viewport-height="224" background="#5C94FC">
+  <qg:scene name="main" width="5120" height="432" viewport-width="256" viewport-height="224" background="#5C94FC">
     <qg:physics gravity-y="1.2" />
-    <qg:camera follow="mario" lerp="0.08" bounds="scene" />
+    <qg:camera follow="mario" lerp="0.08" bounds="scene" offset-y="-80" />
 
     <!-- Game state -->
     <q:set name="coins" value="0" type="number" />
@@ -65,63 +64,78 @@
       </qg:sprite>
     </qg:prefab>
 
-    <!-- Terrain - 96 tiles wide (1536px), 14 tiles tall (224px) - SNES resolution -->
-    <!-- Ground at rows 12-13 -->
-    <qg:tilemap id="level" src="assets/smw/sprites/stage1_unique.png"
-                tile-width="16" tile-height="16">
-      <qg:layer name="terrain" collision="true">
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9
-14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14
-14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14
-      </qg:layer>
-    </qg:tilemap>
+    <!-- Full level background image -->
+    <qg:sprite id="level-bg" src="assets/smw/sprites/yoshi-island-1.png"
+               x="2560" y="216" width="5120" height="432" />
 
-    <!-- Question blocks (y=112, above ground) -->
-    <qg:instance prefab="qblock" id="qb1" x="160" y="112" />
-    <qg:instance prefab="qblock" id="qb2" x="400" y="112" />
-    <qg:instance prefab="qblock" id="qb3" x="700" y="112" />
-    <qg:instance prefab="qblock" id="qb4" x="1100" y="112" />
+    <!-- Ground collision (main floor at y=350) -->
+    <qg:sprite id="ground-main" width="5120" height="80" x="2560" y="392"
+               tag="terrain" body="static" visible="false" />
 
-    <!-- Coins (y=120, floating above ground) -->
-    <qg:instance prefab="coin" x="128" y="120" />
-    <qg:instance prefab="coin" x="240" y="120" />
-    <qg:instance prefab="coin" x="500" y="120" />
-    <qg:instance prefab="coin" x="800" y="120" />
-    <qg:instance prefab="coin" x="1000" y="120" />
-    <qg:instance prefab="coin" x="1300" y="120" />
+    <!-- Hill 1 collision (x=176-368, rises from y=350 to y=270) -->
+    <qg:sprite id="hill1-slope1" width="96" height="16" x="224" y="318"
+               tag="terrain" body="static" visible="false" rotation="-30" />
+    <qg:sprite id="hill1-top" width="48" height="80" x="320" y="310"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="hill1-slope2" width="96" height="16" x="416" y="318"
+               tag="terrain" body="static" visible="false" rotation="30" />
 
-    <!-- Rex enemies on ground (y=152, ground is at 176, Rex is 24px tall) -->
-    <qg:instance prefab="rex" id="rex1" x="180" y="152" />
-    <qg:instance prefab="rex" id="rex2" x="280" y="152" />
-    <qg:instance prefab="rex" id="rex3" x="350" y="152" />
-    <qg:instance prefab="rex" id="rex4" x="450" y="152" />
-    <qg:instance prefab="rex" id="rex5" x="550" y="152" />
-    <qg:instance prefab="rex" id="rex6" x="650" y="152" />
-    <qg:instance prefab="rex" id="rex7" x="750" y="152" />
-    <qg:instance prefab="rex" id="rex8" x="900" y="152" />
-    <qg:instance prefab="rex" id="rex9" x="1050" y="152" />
-    <qg:instance prefab="rex" id="rex10" x="1200" y="152" />
+    <!-- Hill 2 collision (x=720-912) -->
+    <qg:sprite id="hill2-slope1" width="96" height="16" x="768" y="318"
+               tag="terrain" body="static" visible="false" rotation="-30" />
+    <qg:sprite id="hill2-top" width="48" height="80" x="864" y="310"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="hill2-slope2" width="96" height="16" x="960" y="318"
+               tag="terrain" body="static" visible="false" rotation="30" />
 
-    <!-- Goal at the end -->
-    <qg:sprite id="goal" width="8" height="48" x="1480" y="152"
+    <!-- Question blocks (matching image positions) -->
+    <qg:instance prefab="qblock" id="qb1" x="496" y="256" />
+    <qg:instance prefab="qblock" id="qb2" x="592" y="256" />
+    <qg:instance prefab="qblock" id="qb3" x="1040" y="256" />
+    <qg:instance prefab="qblock" id="qb4" x="3200" y="192" />
+    <qg:instance prefab="qblock" id="qb5" x="3216" y="192" />
+    <qg:instance prefab="qblock" id="qb6" x="3232" y="192" />
+    <qg:instance prefab="qblock" id="qb7" x="3248" y="192" />
+
+    <!-- Coins (matching image - floating coins) -->
+    <qg:instance prefab="coin" x="160" y="288" />
+    <qg:instance prefab="coin" x="528" y="224" />
+    <qg:instance prefab="coin" x="560" y="224" />
+    <qg:instance prefab="coin" x="1600" y="288" />
+    <qg:instance prefab="coin" x="2656" y="176" />
+    <qg:instance prefab="coin" x="2672" y="176" />
+    <qg:instance prefab="coin" x="2688" y="176" />
+    <qg:instance prefab="coin" x="2704" y="176" />
+    <qg:instance prefab="coin" x="2720" y="176" />
+    <qg:instance prefab="coin" x="3600" y="272" />
+    <qg:instance prefab="coin" x="3616" y="272" />
+    <qg:instance prefab="coin" x="4080" y="288" />
+    <qg:instance prefab="coin" x="4096" y="288" />
+    <qg:instance prefab="coin" x="4112" y="288" />
+
+    <!-- Rex enemies distributed through level (ground at y=328) -->
+    <qg:instance prefab="rex" id="rex1" x="400" y="328" />
+    <qg:instance prefab="rex" id="rex2" x="640" y="328" />
+    <qg:instance prefab="rex" id="rex3" x="880" y="328" />
+    <qg:instance prefab="rex" id="rex4" x="1200" y="328" />
+    <qg:instance prefab="rex" id="rex5" x="1520" y="328" />
+    <qg:instance prefab="rex" id="rex6" x="1840" y="328" />
+    <qg:instance prefab="rex" id="rex7" x="2160" y="328" />
+    <qg:instance prefab="rex" id="rex8" x="2480" y="328" />
+    <qg:instance prefab="rex" id="rex9" x="3040" y="328" />
+    <qg:instance prefab="rex" id="rex10" x="3520" y="328" />
+    <qg:instance prefab="rex" id="rex11" x="3840" y="328" />
+    <qg:instance prefab="rex" id="rex12" x="4160" y="328" />
+
+    <!-- Goal at the end (visible in image around x=4900) -->
+    <qg:sprite id="goal" width="16" height="64" x="4950" y="304"
                color="#00FF00" tag="goal" body="static" sensor="true" />
 
-    <!-- Mario (on ground at y=152) -->
+    <!-- Mario (starting position on ground) -->
     <qg:sprite id="mario" src="assets/smw/sprites/mario_small.png"
-               x="64" y="152" tag="player"
+               x="80" y="328" tag="player"
                frame-width="16" frame-height="24"
-               body="dynamic" controls="arrows" speed="2" jump-force="7" friction="0">
+               body="dynamic" controls="arrows" speed="2.5" jump-force="8" friction="0">
       <qg:animation name="idle" frames="0" speed="0.1" loop="true" auto-play="true" />
       <qg:animation name="walk" frames="1-3" speed="0.18" loop="true" />
       <qg:animation name="jump" frames="4" speed="0.1" loop="false" />
@@ -157,7 +171,7 @@
     </qg:hud>
 
     <!-- Death zone at bottom (below visible area) -->
-    <qg:sprite id="deathzone" width="1536" height="16" x="768" y="250"
+    <qg:sprite id="deathzone" width="5120" height="16" x="2560" y="480"
                tag="death" body="static" sensor="true" visible="false" />
 
     <!-- Events -->
@@ -188,16 +202,18 @@
       }
 
       // Setup Rex AI - all walk left
-      game.setRexAI('rex1', -0.4)
-      game.setRexAI('rex2', -0.4)
-      game.setRexAI('rex3', -0.4)
-      game.setRexAI('rex4', -0.4)
-      game.setRexAI('rex5', -0.4)
-      game.setRexAI('rex6', -0.4)
-      game.setRexAI('rex7', -0.4)
-      game.setRexAI('rex8', -0.4)
-      game.setRexAI('rex9', -0.4)
-      game.setRexAI('rex10', -0.4)
+      game.setRexAI('rex1', -0.5)
+      game.setRexAI('rex2', -0.5)
+      game.setRexAI('rex3', -0.5)
+      game.setRexAI('rex4', -0.5)
+      game.setRexAI('rex5', -0.5)
+      game.setRexAI('rex6', -0.5)
+      game.setRexAI('rex7', -0.5)
+      game.setRexAI('rex8', -0.5)
+      game.setRexAI('rex9', -0.5)
+      game.setRexAI('rex10', -0.5)
+      game.setRexAI('rex11', -0.5)
+      game.setRexAI('rex12', -0.5)
 
       // Handle music autoplay - try to play, if blocked wait for interaction
       const tryPlayMusic = () => {

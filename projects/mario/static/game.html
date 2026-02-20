@@ -101,21 +101,20 @@
     <div id="qg-source-content">
       <pre id="qg-source-code">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
 &lt;!--
-  Phase 18: Yoshi&#x27;s Island 1 (Simplified)
+  Phase 18: Yoshi&#x27;s Island 1 (Full Level)
 
   Recreation of the first level from SMW with:
+  - Full level image as background (5120x432 pixels)
   - Rex enemies (purple dinosaurs)
   - Camera scrolling
-  - Real enemy positions (scaled)
   - Stomp mechanic (2 hits to kill Rex)
 
-  Original level: ~432 tiles wide
-  Our version: 96 tiles (1536 pixels) - scaled positions
+  Level: 320 tiles wide (5120 pixels)
 --&gt;
 &lt;q:application id=&quot;yoshi-island-1&quot; type=&quot;game&quot; engine=&quot;2d&quot;&gt;
-  &lt;qg:scene name=&quot;main&quot; width=&quot;1536&quot; height=&quot;224&quot; viewport-width=&quot;256&quot; viewport-height=&quot;224&quot; background=&quot;#5C94FC&quot;&gt;
+  &lt;qg:scene name=&quot;main&quot; width=&quot;5120&quot; height=&quot;432&quot; viewport-width=&quot;256&quot; viewport-height=&quot;224&quot; background=&quot;#5C94FC&quot;&gt;
     &lt;qg:physics gravity-y=&quot;1.2&quot; /&gt;
-    &lt;qg:camera follow=&quot;mario&quot; lerp=&quot;0.08&quot; bounds=&quot;scene&quot; /&gt;
+    &lt;qg:camera follow=&quot;mario&quot; lerp=&quot;0.08&quot; bounds=&quot;scene&quot; offset-y=&quot;-80&quot; /&gt;
 
     &lt;!-- Game state --&gt;
     &lt;q:set name=&quot;coins&quot; value=&quot;0&quot; type=&quot;number&quot; /&gt;
@@ -166,63 +165,78 @@
       &lt;/qg:sprite&gt;
     &lt;/qg:prefab&gt;
 
-    &lt;!-- Terrain - 96 tiles wide (1536px), 14 tiles tall (224px) - SNES resolution --&gt;
-    &lt;!-- Ground at rows 12-13 --&gt;
-    &lt;qg:tilemap id=&quot;level&quot; src=&quot;assets/smw/sprites/stage1_unique.png&quot;
-                tile-width=&quot;16&quot; tile-height=&quot;16&quot;&gt;
-      &lt;qg:layer name=&quot;terrain&quot; collision=&quot;true&quot;&gt;
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9
-14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14
-14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14
-      &lt;/qg:layer&gt;
-    &lt;/qg:tilemap&gt;
+    &lt;!-- Full level background image --&gt;
+    &lt;qg:sprite id=&quot;level-bg&quot; src=&quot;assets/smw/sprites/yoshi-island-1.png&quot;
+               x=&quot;2560&quot; y=&quot;216&quot; width=&quot;5120&quot; height=&quot;432&quot; /&gt;
 
-    &lt;!-- Question blocks (y=112, above ground) --&gt;
-    &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb1&quot; x=&quot;160&quot; y=&quot;112&quot; /&gt;
-    &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb2&quot; x=&quot;400&quot; y=&quot;112&quot; /&gt;
-    &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb3&quot; x=&quot;700&quot; y=&quot;112&quot; /&gt;
-    &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb4&quot; x=&quot;1100&quot; y=&quot;112&quot; /&gt;
+    &lt;!-- Ground collision (main floor at y=350) --&gt;
+    &lt;qg:sprite id=&quot;ground-main&quot; width=&quot;5120&quot; height=&quot;80&quot; x=&quot;2560&quot; y=&quot;392&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
 
-    &lt;!-- Coins (y=120, floating above ground) --&gt;
-    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;128&quot; y=&quot;120&quot; /&gt;
-    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;240&quot; y=&quot;120&quot; /&gt;
-    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;500&quot; y=&quot;120&quot; /&gt;
-    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;800&quot; y=&quot;120&quot; /&gt;
-    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;1000&quot; y=&quot;120&quot; /&gt;
-    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;1300&quot; y=&quot;120&quot; /&gt;
+    &lt;!-- Hill 1 collision (x=176-368, rises from y=350 to y=270) --&gt;
+    &lt;qg:sprite id=&quot;hill1-slope1&quot; width=&quot;96&quot; height=&quot;16&quot; x=&quot;224&quot; y=&quot;318&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; rotation=&quot;-30&quot; /&gt;
+    &lt;qg:sprite id=&quot;hill1-top&quot; width=&quot;48&quot; height=&quot;80&quot; x=&quot;320&quot; y=&quot;310&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+    &lt;qg:sprite id=&quot;hill1-slope2&quot; width=&quot;96&quot; height=&quot;16&quot; x=&quot;416&quot; y=&quot;318&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; rotation=&quot;30&quot; /&gt;
 
-    &lt;!-- Rex enemies on ground (y=152, ground is at 176, Rex is 24px tall) --&gt;
-    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex1&quot; x=&quot;180&quot; y=&quot;152&quot; /&gt;
-    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex2&quot; x=&quot;280&quot; y=&quot;152&quot; /&gt;
-    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex3&quot; x=&quot;350&quot; y=&quot;152&quot; /&gt;
-    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex4&quot; x=&quot;450&quot; y=&quot;152&quot; /&gt;
-    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex5&quot; x=&quot;550&quot; y=&quot;152&quot; /&gt;
-    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex6&quot; x=&quot;650&quot; y=&quot;152&quot; /&gt;
-    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex7&quot; x=&quot;750&quot; y=&quot;152&quot; /&gt;
-    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex8&quot; x=&quot;900&quot; y=&quot;152&quot; /&gt;
-    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex9&quot; x=&quot;1050&quot; y=&quot;152&quot; /&gt;
-    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex10&quot; x=&quot;1200&quot; y=&quot;152&quot; /&gt;
+    &lt;!-- Hill 2 collision (x=720-912) --&gt;
+    &lt;qg:sprite id=&quot;hill2-slope1&quot; width=&quot;96&quot; height=&quot;16&quot; x=&quot;768&quot; y=&quot;318&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; rotation=&quot;-30&quot; /&gt;
+    &lt;qg:sprite id=&quot;hill2-top&quot; width=&quot;48&quot; height=&quot;80&quot; x=&quot;864&quot; y=&quot;310&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+    &lt;qg:sprite id=&quot;hill2-slope2&quot; width=&quot;96&quot; height=&quot;16&quot; x=&quot;960&quot; y=&quot;318&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; rotation=&quot;30&quot; /&gt;
 
-    &lt;!-- Goal at the end --&gt;
-    &lt;qg:sprite id=&quot;goal&quot; width=&quot;8&quot; height=&quot;48&quot; x=&quot;1480&quot; y=&quot;152&quot;
+    &lt;!-- Question blocks (matching image positions) --&gt;
+    &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb1&quot; x=&quot;496&quot; y=&quot;256&quot; /&gt;
+    &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb2&quot; x=&quot;592&quot; y=&quot;256&quot; /&gt;
+    &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb3&quot; x=&quot;1040&quot; y=&quot;256&quot; /&gt;
+    &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb4&quot; x=&quot;3200&quot; y=&quot;192&quot; /&gt;
+    &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb5&quot; x=&quot;3216&quot; y=&quot;192&quot; /&gt;
+    &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb6&quot; x=&quot;3232&quot; y=&quot;192&quot; /&gt;
+    &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb7&quot; x=&quot;3248&quot; y=&quot;192&quot; /&gt;
+
+    &lt;!-- Coins (matching image - floating coins) --&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;160&quot; y=&quot;288&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;528&quot; y=&quot;224&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;560&quot; y=&quot;224&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;1600&quot; y=&quot;288&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;2656&quot; y=&quot;176&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;2672&quot; y=&quot;176&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;2688&quot; y=&quot;176&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;2704&quot; y=&quot;176&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;2720&quot; y=&quot;176&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;3600&quot; y=&quot;272&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;3616&quot; y=&quot;272&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;4080&quot; y=&quot;288&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;4096&quot; y=&quot;288&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;4112&quot; y=&quot;288&quot; /&gt;
+
+    &lt;!-- Rex enemies distributed through level (ground at y=328) --&gt;
+    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex1&quot; x=&quot;400&quot; y=&quot;328&quot; /&gt;
+    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex2&quot; x=&quot;640&quot; y=&quot;328&quot; /&gt;
+    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex3&quot; x=&quot;880&quot; y=&quot;328&quot; /&gt;
+    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex4&quot; x=&quot;1200&quot; y=&quot;328&quot; /&gt;
+    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex5&quot; x=&quot;1520&quot; y=&quot;328&quot; /&gt;
+    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex6&quot; x=&quot;1840&quot; y=&quot;328&quot; /&gt;
+    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex7&quot; x=&quot;2160&quot; y=&quot;328&quot; /&gt;
+    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex8&quot; x=&quot;2480&quot; y=&quot;328&quot; /&gt;
+    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex9&quot; x=&quot;3040&quot; y=&quot;328&quot; /&gt;
+    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex10&quot; x=&quot;3520&quot; y=&quot;328&quot; /&gt;
+    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex11&quot; x=&quot;3840&quot; y=&quot;328&quot; /&gt;
+    &lt;qg:instance prefab=&quot;rex&quot; id=&quot;rex12&quot; x=&quot;4160&quot; y=&quot;328&quot; /&gt;
+
+    &lt;!-- Goal at the end (visible in image around x=4900) --&gt;
+    &lt;qg:sprite id=&quot;goal&quot; width=&quot;16&quot; height=&quot;64&quot; x=&quot;4950&quot; y=&quot;304&quot;
                color=&quot;#00FF00&quot; tag=&quot;goal&quot; body=&quot;static&quot; sensor=&quot;true&quot; /&gt;
 
-    &lt;!-- Mario (on ground at y=152) --&gt;
+    &lt;!-- Mario (starting position on ground) --&gt;
     &lt;qg:sprite id=&quot;mario&quot; src=&quot;assets/smw/sprites/mario_small.png&quot;
-               x=&quot;64&quot; y=&quot;152&quot; tag=&quot;player&quot;
+               x=&quot;80&quot; y=&quot;328&quot; tag=&quot;player&quot;
                frame-width=&quot;16&quot; frame-height=&quot;24&quot;
-               body=&quot;dynamic&quot; controls=&quot;arrows&quot; speed=&quot;2&quot; jump-force=&quot;7&quot; friction=&quot;0&quot;&gt;
+               body=&quot;dynamic&quot; controls=&quot;arrows&quot; speed=&quot;2.5&quot; jump-force=&quot;8&quot; friction=&quot;0&quot;&gt;
       &lt;qg:animation name=&quot;idle&quot; frames=&quot;0&quot; speed=&quot;0.1&quot; loop=&quot;true&quot; auto-play=&quot;true&quot; /&gt;
       &lt;qg:animation name=&quot;walk&quot; frames=&quot;1-3&quot; speed=&quot;0.18&quot; loop=&quot;true&quot; /&gt;
       &lt;qg:animation name=&quot;jump&quot; frames=&quot;4&quot; speed=&quot;0.1&quot; loop=&quot;false&quot; /&gt;
@@ -258,7 +272,7 @@
     &lt;/qg:hud&gt;
 
     &lt;!-- Death zone at bottom (below visible area) --&gt;
-    &lt;qg:sprite id=&quot;deathzone&quot; width=&quot;1536&quot; height=&quot;16&quot; x=&quot;768&quot; y=&quot;250&quot;
+    &lt;qg:sprite id=&quot;deathzone&quot; width=&quot;5120&quot; height=&quot;16&quot; x=&quot;2560&quot; y=&quot;480&quot;
                tag=&quot;death&quot; body=&quot;static&quot; sensor=&quot;true&quot; visible=&quot;false&quot; /&gt;
 
     &lt;!-- Events --&gt;
@@ -289,16 +303,18 @@
       }
 
       // Setup Rex AI - all walk left
-      game.setRexAI(&#x27;rex1&#x27;, -0.4)
-      game.setRexAI(&#x27;rex2&#x27;, -0.4)
-      game.setRexAI(&#x27;rex3&#x27;, -0.4)
-      game.setRexAI(&#x27;rex4&#x27;, -0.4)
-      game.setRexAI(&#x27;rex5&#x27;, -0.4)
-      game.setRexAI(&#x27;rex6&#x27;, -0.4)
-      game.setRexAI(&#x27;rex7&#x27;, -0.4)
-      game.setRexAI(&#x27;rex8&#x27;, -0.4)
-      game.setRexAI(&#x27;rex9&#x27;, -0.4)
-      game.setRexAI(&#x27;rex10&#x27;, -0.4)
+      game.setRexAI(&#x27;rex1&#x27;, -0.5)
+      game.setRexAI(&#x27;rex2&#x27;, -0.5)
+      game.setRexAI(&#x27;rex3&#x27;, -0.5)
+      game.setRexAI(&#x27;rex4&#x27;, -0.5)
+      game.setRexAI(&#x27;rex5&#x27;, -0.5)
+      game.setRexAI(&#x27;rex6&#x27;, -0.5)
+      game.setRexAI(&#x27;rex7&#x27;, -0.5)
+      game.setRexAI(&#x27;rex8&#x27;, -0.5)
+      game.setRexAI(&#x27;rex9&#x27;, -0.5)
+      game.setRexAI(&#x27;rex10&#x27;, -0.5)
+      game.setRexAI(&#x27;rex11&#x27;, -0.5)
+      game.setRexAI(&#x27;rex12&#x27;, -0.5)
 
       // Handle music autoplay - try to play, if blocked wait for interaction
       const tryPlayMusic = () =&gt; {
@@ -439,7 +455,7 @@ document.addEventListener('keydown', function(e) {
   const app = new PIXI.Application();
   await app.init({ width: 256, height: 224, background: "#5C94FC" });
   document.body.appendChild(app.canvas);
-  // World size: 1536x224, Viewport: 256x224
+  // World size: 5120x432, Viewport: 256x224
 
   // === MATTER.JS ENGINE ===
   const mEngine = Matter.Engine.create();
@@ -479,7 +495,7 @@ document.addEventListener('keydown', function(e) {
   let isDead = 0;
 
   // === ASSET LOADING ===
-  await PIXI.Assets.load(["assets/smw/sounds/music/music-map1.wav", "assets/smw/sounds/smw_coin.wav", "assets/smw/sounds/smw_course_clear.wav", "assets/smw/sounds/smw_jump.wav", "assets/smw/sounds/smw_lost_a_life.wav", "assets/smw/sounds/smw_message_block.wav", "assets/smw/sounds/smw_stomp.wav", "assets/smw/sprites/coin_animated.png", "assets/smw/sprites/mario_death.png", "assets/smw/sprites/mario_small.png", "assets/smw/sprites/qblock_animated.png", "assets/smw/sprites/qblock_used.png", "assets/smw/sprites/rex_walk.png", "assets/smw/sprites/stage1_unique.png"]);
+  await PIXI.Assets.load(["assets/smw/sounds/music/music-map1.wav", "assets/smw/sounds/smw_coin.wav", "assets/smw/sounds/smw_course_clear.wav", "assets/smw/sounds/smw_jump.wav", "assets/smw/sounds/smw_lost_a_life.wav", "assets/smw/sounds/smw_message_block.wav", "assets/smw/sounds/smw_stomp.wav", "assets/smw/sprites/coin_animated.png", "assets/smw/sprites/mario_death.png", "assets/smw/sprites/mario_small.png", "assets/smw/sprites/qblock_animated.png", "assets/smw/sprites/qblock_used.png", "assets/smw/sprites/rex_walk.png", "assets/smw/sprites/yoshi-island-1.png"]);
 
   // === ANIMATION SYSTEM ===
   // Animation System
@@ -644,34 +660,12 @@ document.addEventListener('keydown', function(e) {
     const ty = app.screen.height / 2 - info.sprite.y;
     _cameraContainer.x += (tx - _cameraContainer.x) * _camera.lerp;
     _cameraContainer.y += (ty - _cameraContainer.y) * _camera.lerp;
-    _cameraContainer.x = Math.min(0, Math.max(app.screen.width - 1536, _cameraContainer.x));
-    _cameraContainer.y = Math.min(0, Math.max(app.screen.height - 224, _cameraContainer.y));
+    _cameraContainer.x = Math.min(0, Math.max(app.screen.width - 5120, _cameraContainer.x));
+    _cameraContainer.y = Math.min(0, Math.max(app.screen.height - 432, _cameraContainer.y));
   }
 
   // === VISUAL TILEMAPS ===
-  const _tileData_level_terrain = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9],[14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14],[14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14]];
-  const _tileset_level = PIXI.Assets.get("assets/smw/sprites/stage1_unique.png");
-  const _tsSource_level = _tileset_level.source || _tileset_level.baseTexture || _tileset_level;
-  const _tsCols_level = Math.floor((_tsSource_level.width || _tileset_level.width || 256) / 16);
-  // Create tiles for layer terrain
-  function _getTileTex_level(tileId) {
-    const col = tileId % _tsCols_level;
-    const row = Math.floor(tileId / _tsCols_level);
-    const rect = new PIXI.Rectangle(col * 16, row * 16, 16, 16);
-    return new PIXI.Texture({ source: _tsSource_level, frame: rect });
-  }
-  for (let _ty = 0; _ty <= _tileData_level_terrain.length - 1; _ty += 1) {
-    for (let _tx = 0; _tx <= _tileData_level_terrain[_ty].length - 1; _tx += 1) {
-      const _tileId = _tileData_level_terrain[_ty][_tx];
-      if (_tileId > 0) {
-        const _tileSpr = new PIXI.Sprite(_getTileTex_level(_tileId));
-        _tileSpr.x = _tx * 16;
-        _tileSpr.y = _ty * 16;
-        _cameraContainer.addChild(_tileSpr);
-      }
-    }
-  }
-
+  // No visual tile layers
 
   // === SPRITES & BODIES ===
   const _sprites = {};
@@ -696,52 +690,102 @@ document.addEventListener('keydown', function(e) {
   _cameraContainer.addChild(_spr__preload_death);
   _sprites["_preload_death"] = { id: "_preload_death", sprite: _spr__preload_death, body: null, tag: null, collisionHandlers: [], behaviors: [] };
 
-  const _spr_tile_level_11_0 = new PIXI.Graphics();
-  _spr_tile_level_11_0.rect(-768.0, -8.0, 1536, 16);
-  _spr_tile_level_11_0.fill({ color: 0x4a9eff });
-  _spr_tile_level_11_0.x = 768;
-  _spr_tile_level_11_0.y = 184;
-  _spr_tile_level_11_0.alpha = 0;
-  _spr_tile_level_11_0.visible = false;
-  _cameraContainer.addChild(_spr_tile_level_11_0);
-  const _body_tile_level_11_0 = Matter.Bodies.rectangle(768, 184, 1536, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
-  _bodyToSprite[_body_tile_level_11_0.id] = "tile_level_11_0";
-  _sprites["tile_level_11_0"] = { id: "tile_level_11_0", sprite: _spr_tile_level_11_0, body: _body_tile_level_11_0, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+  const _spr_level_bg = PIXI.Sprite.from("assets/smw/sprites/yoshi-island-1.png");
+  _spr_level_bg.x = 2560;
+  _spr_level_bg.y = 216;
+  _spr_level_bg.anchor.set(0.5, 0.5);
+  _spr_level_bg.width = 5120;
+  _spr_level_bg.height = 432;
+  _cameraContainer.addChild(_spr_level_bg);
+  _sprites["level-bg"] = { id: "level-bg", sprite: _spr_level_bg, body: null, tag: null, collisionHandlers: [], behaviors: [] };
 
-  const _spr_tile_level_12_0 = new PIXI.Graphics();
-  _spr_tile_level_12_0.rect(-768.0, -8.0, 1536, 16);
-  _spr_tile_level_12_0.fill({ color: 0x4a9eff });
-  _spr_tile_level_12_0.x = 768;
-  _spr_tile_level_12_0.y = 200;
-  _spr_tile_level_12_0.alpha = 0;
-  _spr_tile_level_12_0.visible = false;
-  _cameraContainer.addChild(_spr_tile_level_12_0);
-  const _body_tile_level_12_0 = Matter.Bodies.rectangle(768, 200, 1536, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
-  _bodyToSprite[_body_tile_level_12_0.id] = "tile_level_12_0";
-  _sprites["tile_level_12_0"] = { id: "tile_level_12_0", sprite: _spr_tile_level_12_0, body: _body_tile_level_12_0, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+  const _spr_ground_main = new PIXI.Graphics();
+  _spr_ground_main.rect(-2560.0, -40.0, 5120.0, 80.0);
+  _spr_ground_main.fill({ color: 0x4a9eff });
+  _spr_ground_main.x = 2560;
+  _spr_ground_main.y = 392;
+  _spr_ground_main.visible = false;
+  _cameraContainer.addChild(_spr_ground_main);
+  const _body_ground_main = Matter.Bodies.rectangle(2560, 392, 5120, 80, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_ground_main.id] = "ground-main";
+  _sprites["ground-main"] = { id: "ground-main", sprite: _spr_ground_main, body: _body_ground_main, tag: "terrain", collisionHandlers: [], behaviors: [] };
 
-  const _spr_tile_level_13_0 = new PIXI.Graphics();
-  _spr_tile_level_13_0.rect(-768.0, -8.0, 1536, 16);
-  _spr_tile_level_13_0.fill({ color: 0x4a9eff });
-  _spr_tile_level_13_0.x = 768;
-  _spr_tile_level_13_0.y = 216;
-  _spr_tile_level_13_0.alpha = 0;
-  _spr_tile_level_13_0.visible = false;
-  _cameraContainer.addChild(_spr_tile_level_13_0);
-  const _body_tile_level_13_0 = Matter.Bodies.rectangle(768, 216, 1536, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
-  _bodyToSprite[_body_tile_level_13_0.id] = "tile_level_13_0";
-  _sprites["tile_level_13_0"] = { id: "tile_level_13_0", sprite: _spr_tile_level_13_0, body: _body_tile_level_13_0, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+  const _spr_hill1_slope1 = new PIXI.Graphics();
+  _spr_hill1_slope1.rect(-48.0, -8.0, 96.0, 16.0);
+  _spr_hill1_slope1.fill({ color: 0x4a9eff });
+  _spr_hill1_slope1.x = 224;
+  _spr_hill1_slope1.y = 318;
+  _spr_hill1_slope1.visible = false;
+  _cameraContainer.addChild(_spr_hill1_slope1);
+  const _body_hill1_slope1 = Matter.Bodies.rectangle(224, 318, 96, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_hill1_slope1.id] = "hill1-slope1";
+  _sprites["hill1-slope1"] = { id: "hill1-slope1", sprite: _spr_hill1_slope1, body: _body_hill1_slope1, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_hill1_top = new PIXI.Graphics();
+  _spr_hill1_top.rect(-24.0, -40.0, 48.0, 80.0);
+  _spr_hill1_top.fill({ color: 0x4a9eff });
+  _spr_hill1_top.x = 320;
+  _spr_hill1_top.y = 310;
+  _spr_hill1_top.visible = false;
+  _cameraContainer.addChild(_spr_hill1_top);
+  const _body_hill1_top = Matter.Bodies.rectangle(320, 310, 48, 80, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_hill1_top.id] = "hill1-top";
+  _sprites["hill1-top"] = { id: "hill1-top", sprite: _spr_hill1_top, body: _body_hill1_top, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_hill1_slope2 = new PIXI.Graphics();
+  _spr_hill1_slope2.rect(-48.0, -8.0, 96.0, 16.0);
+  _spr_hill1_slope2.fill({ color: 0x4a9eff });
+  _spr_hill1_slope2.x = 416;
+  _spr_hill1_slope2.y = 318;
+  _spr_hill1_slope2.visible = false;
+  _cameraContainer.addChild(_spr_hill1_slope2);
+  const _body_hill1_slope2 = Matter.Bodies.rectangle(416, 318, 96, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_hill1_slope2.id] = "hill1-slope2";
+  _sprites["hill1-slope2"] = { id: "hill1-slope2", sprite: _spr_hill1_slope2, body: _body_hill1_slope2, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_hill2_slope1 = new PIXI.Graphics();
+  _spr_hill2_slope1.rect(-48.0, -8.0, 96.0, 16.0);
+  _spr_hill2_slope1.fill({ color: 0x4a9eff });
+  _spr_hill2_slope1.x = 768;
+  _spr_hill2_slope1.y = 318;
+  _spr_hill2_slope1.visible = false;
+  _cameraContainer.addChild(_spr_hill2_slope1);
+  const _body_hill2_slope1 = Matter.Bodies.rectangle(768, 318, 96, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_hill2_slope1.id] = "hill2-slope1";
+  _sprites["hill2-slope1"] = { id: "hill2-slope1", sprite: _spr_hill2_slope1, body: _body_hill2_slope1, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_hill2_top = new PIXI.Graphics();
+  _spr_hill2_top.rect(-24.0, -40.0, 48.0, 80.0);
+  _spr_hill2_top.fill({ color: 0x4a9eff });
+  _spr_hill2_top.x = 864;
+  _spr_hill2_top.y = 310;
+  _spr_hill2_top.visible = false;
+  _cameraContainer.addChild(_spr_hill2_top);
+  const _body_hill2_top = Matter.Bodies.rectangle(864, 310, 48, 80, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_hill2_top.id] = "hill2-top";
+  _sprites["hill2-top"] = { id: "hill2-top", sprite: _spr_hill2_top, body: _body_hill2_top, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_hill2_slope2 = new PIXI.Graphics();
+  _spr_hill2_slope2.rect(-48.0, -8.0, 96.0, 16.0);
+  _spr_hill2_slope2.fill({ color: 0x4a9eff });
+  _spr_hill2_slope2.x = 960;
+  _spr_hill2_slope2.y = 318;
+  _spr_hill2_slope2.visible = false;
+  _cameraContainer.addChild(_spr_hill2_slope2);
+  const _body_hill2_slope2 = Matter.Bodies.rectangle(960, 318, 96, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_hill2_slope2.id] = "hill2-slope2";
+  _sprites["hill2-slope2"] = { id: "hill2-slope2", sprite: _spr_hill2_slope2, body: _body_hill2_slope2, tag: "terrain", collisionHandlers: [], behaviors: [] };
 
   const _qb1_baseTex = PIXI.Assets.get("assets/smw/sprites/qblock_animated.png");
   const _qb1_src = _qb1_baseTex.source || _qb1_baseTex.baseTexture || _qb1_baseTex;
   const _qb1_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _qb1_frameTex = new PIXI.Texture({ source: _qb1_src, frame: _qb1_rect });
   const _spr_qb1 = new PIXI.Sprite(_qb1_frameTex);
-  _spr_qb1.x = 160;
-  _spr_qb1.y = 112;
+  _spr_qb1.x = 496;
+  _spr_qb1.y = 256;
   _spr_qb1.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_qb1);
-  const _body_qb1 = Matter.Bodies.rectangle(160, 112, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  const _body_qb1 = Matter.Bodies.rectangle(496, 256, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_qb1.id] = "qb1";
   _sprites["qb1"] = { id: "qb1", sprite: _spr_qb1, body: _body_qb1, tag: "qblock", collisionHandlers: [], behaviors: [] };
 
@@ -750,11 +794,11 @@ document.addEventListener('keydown', function(e) {
   const _qb2_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _qb2_frameTex = new PIXI.Texture({ source: _qb2_src, frame: _qb2_rect });
   const _spr_qb2 = new PIXI.Sprite(_qb2_frameTex);
-  _spr_qb2.x = 400;
-  _spr_qb2.y = 112;
+  _spr_qb2.x = 592;
+  _spr_qb2.y = 256;
   _spr_qb2.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_qb2);
-  const _body_qb2 = Matter.Bodies.rectangle(400, 112, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  const _body_qb2 = Matter.Bodies.rectangle(592, 256, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_qb2.id] = "qb2";
   _sprites["qb2"] = { id: "qb2", sprite: _spr_qb2, body: _body_qb2, tag: "qblock", collisionHandlers: [], behaviors: [] };
 
@@ -763,11 +807,11 @@ document.addEventListener('keydown', function(e) {
   const _qb3_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _qb3_frameTex = new PIXI.Texture({ source: _qb3_src, frame: _qb3_rect });
   const _spr_qb3 = new PIXI.Sprite(_qb3_frameTex);
-  _spr_qb3.x = 700;
-  _spr_qb3.y = 112;
+  _spr_qb3.x = 1040;
+  _spr_qb3.y = 256;
   _spr_qb3.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_qb3);
-  const _body_qb3 = Matter.Bodies.rectangle(700, 112, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  const _body_qb3 = Matter.Bodies.rectangle(1040, 256, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_qb3.id] = "qb3";
   _sprites["qb3"] = { id: "qb3", sprite: _spr_qb3, body: _body_qb3, tag: "qblock", collisionHandlers: [], behaviors: [] };
 
@@ -776,63 +820,63 @@ document.addEventListener('keydown', function(e) {
   const _qb4_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _qb4_frameTex = new PIXI.Texture({ source: _qb4_src, frame: _qb4_rect });
   const _spr_qb4 = new PIXI.Sprite(_qb4_frameTex);
-  _spr_qb4.x = 1100;
-  _spr_qb4.y = 112;
+  _spr_qb4.x = 3200;
+  _spr_qb4.y = 192;
   _spr_qb4.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_qb4);
-  const _body_qb4 = Matter.Bodies.rectangle(1100, 112, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  const _body_qb4 = Matter.Bodies.rectangle(3200, 192, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_qb4.id] = "qb4";
   _sprites["qb4"] = { id: "qb4", sprite: _spr_qb4, body: _body_qb4, tag: "qblock", collisionHandlers: [], behaviors: [] };
 
-  const _coin_4_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
-  const _coin_4_src = _coin_4_baseTex.source || _coin_4_baseTex.baseTexture || _coin_4_baseTex;
-  const _coin_4_rect = new PIXI.Rectangle(0, 0, 16, 16);
-  const _coin_4_frameTex = new PIXI.Texture({ source: _coin_4_src, frame: _coin_4_rect });
-  const _spr_coin_4 = new PIXI.Sprite(_coin_4_frameTex);
-  _spr_coin_4.x = 128;
-  _spr_coin_4.y = 120;
-  _spr_coin_4.anchor.set(0.5, 0.5);
-  _cameraContainer.addChild(_spr_coin_4);
-  const _body_coin_4 = Matter.Bodies.rectangle(128, 120, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
-  _bodyToSprite[_body_coin_4.id] = "coin_4";
-  _sprites["coin_4"] = { id: "coin_4", sprite: _spr_coin_4, body: _body_coin_4, tag: "coin", collisionHandlers: [], behaviors: [] };
+  const _qb5_baseTex = PIXI.Assets.get("assets/smw/sprites/qblock_animated.png");
+  const _qb5_src = _qb5_baseTex.source || _qb5_baseTex.baseTexture || _qb5_baseTex;
+  const _qb5_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _qb5_frameTex = new PIXI.Texture({ source: _qb5_src, frame: _qb5_rect });
+  const _spr_qb5 = new PIXI.Sprite(_qb5_frameTex);
+  _spr_qb5.x = 3216;
+  _spr_qb5.y = 192;
+  _spr_qb5.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_qb5);
+  const _body_qb5 = Matter.Bodies.rectangle(3216, 192, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_qb5.id] = "qb5";
+  _sprites["qb5"] = { id: "qb5", sprite: _spr_qb5, body: _body_qb5, tag: "qblock", collisionHandlers: [], behaviors: [] };
 
-  const _coin_5_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
-  const _coin_5_src = _coin_5_baseTex.source || _coin_5_baseTex.baseTexture || _coin_5_baseTex;
-  const _coin_5_rect = new PIXI.Rectangle(0, 0, 16, 16);
-  const _coin_5_frameTex = new PIXI.Texture({ source: _coin_5_src, frame: _coin_5_rect });
-  const _spr_coin_5 = new PIXI.Sprite(_coin_5_frameTex);
-  _spr_coin_5.x = 240;
-  _spr_coin_5.y = 120;
-  _spr_coin_5.anchor.set(0.5, 0.5);
-  _cameraContainer.addChild(_spr_coin_5);
-  const _body_coin_5 = Matter.Bodies.rectangle(240, 120, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
-  _bodyToSprite[_body_coin_5.id] = "coin_5";
-  _sprites["coin_5"] = { id: "coin_5", sprite: _spr_coin_5, body: _body_coin_5, tag: "coin", collisionHandlers: [], behaviors: [] };
+  const _qb6_baseTex = PIXI.Assets.get("assets/smw/sprites/qblock_animated.png");
+  const _qb6_src = _qb6_baseTex.source || _qb6_baseTex.baseTexture || _qb6_baseTex;
+  const _qb6_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _qb6_frameTex = new PIXI.Texture({ source: _qb6_src, frame: _qb6_rect });
+  const _spr_qb6 = new PIXI.Sprite(_qb6_frameTex);
+  _spr_qb6.x = 3232;
+  _spr_qb6.y = 192;
+  _spr_qb6.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_qb6);
+  const _body_qb6 = Matter.Bodies.rectangle(3232, 192, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_qb6.id] = "qb6";
+  _sprites["qb6"] = { id: "qb6", sprite: _spr_qb6, body: _body_qb6, tag: "qblock", collisionHandlers: [], behaviors: [] };
 
-  const _coin_6_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
-  const _coin_6_src = _coin_6_baseTex.source || _coin_6_baseTex.baseTexture || _coin_6_baseTex;
-  const _coin_6_rect = new PIXI.Rectangle(0, 0, 16, 16);
-  const _coin_6_frameTex = new PIXI.Texture({ source: _coin_6_src, frame: _coin_6_rect });
-  const _spr_coin_6 = new PIXI.Sprite(_coin_6_frameTex);
-  _spr_coin_6.x = 500;
-  _spr_coin_6.y = 120;
-  _spr_coin_6.anchor.set(0.5, 0.5);
-  _cameraContainer.addChild(_spr_coin_6);
-  const _body_coin_6 = Matter.Bodies.rectangle(500, 120, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
-  _bodyToSprite[_body_coin_6.id] = "coin_6";
-  _sprites["coin_6"] = { id: "coin_6", sprite: _spr_coin_6, body: _body_coin_6, tag: "coin", collisionHandlers: [], behaviors: [] };
+  const _qb7_baseTex = PIXI.Assets.get("assets/smw/sprites/qblock_animated.png");
+  const _qb7_src = _qb7_baseTex.source || _qb7_baseTex.baseTexture || _qb7_baseTex;
+  const _qb7_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _qb7_frameTex = new PIXI.Texture({ source: _qb7_src, frame: _qb7_rect });
+  const _spr_qb7 = new PIXI.Sprite(_qb7_frameTex);
+  _spr_qb7.x = 3248;
+  _spr_qb7.y = 192;
+  _spr_qb7.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_qb7);
+  const _body_qb7 = Matter.Bodies.rectangle(3248, 192, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_qb7.id] = "qb7";
+  _sprites["qb7"] = { id: "qb7", sprite: _spr_qb7, body: _body_qb7, tag: "qblock", collisionHandlers: [], behaviors: [] };
 
   const _coin_7_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
   const _coin_7_src = _coin_7_baseTex.source || _coin_7_baseTex.baseTexture || _coin_7_baseTex;
   const _coin_7_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _coin_7_frameTex = new PIXI.Texture({ source: _coin_7_src, frame: _coin_7_rect });
   const _spr_coin_7 = new PIXI.Sprite(_coin_7_frameTex);
-  _spr_coin_7.x = 800;
-  _spr_coin_7.y = 120;
+  _spr_coin_7.x = 160;
+  _spr_coin_7.y = 288;
   _spr_coin_7.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_coin_7);
-  const _body_coin_7 = Matter.Bodies.rectangle(800, 120, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  const _body_coin_7 = Matter.Bodies.rectangle(160, 288, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
   _bodyToSprite[_body_coin_7.id] = "coin_7";
   _sprites["coin_7"] = { id: "coin_7", sprite: _spr_coin_7, body: _body_coin_7, tag: "coin", collisionHandlers: [], behaviors: [] };
 
@@ -841,11 +885,11 @@ document.addEventListener('keydown', function(e) {
   const _coin_8_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _coin_8_frameTex = new PIXI.Texture({ source: _coin_8_src, frame: _coin_8_rect });
   const _spr_coin_8 = new PIXI.Sprite(_coin_8_frameTex);
-  _spr_coin_8.x = 1000;
-  _spr_coin_8.y = 120;
+  _spr_coin_8.x = 528;
+  _spr_coin_8.y = 224;
   _spr_coin_8.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_coin_8);
-  const _body_coin_8 = Matter.Bodies.rectangle(1000, 120, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  const _body_coin_8 = Matter.Bodies.rectangle(528, 224, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
   _bodyToSprite[_body_coin_8.id] = "coin_8";
   _sprites["coin_8"] = { id: "coin_8", sprite: _spr_coin_8, body: _body_coin_8, tag: "coin", collisionHandlers: [], behaviors: [] };
 
@@ -854,24 +898,167 @@ document.addEventListener('keydown', function(e) {
   const _coin_9_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _coin_9_frameTex = new PIXI.Texture({ source: _coin_9_src, frame: _coin_9_rect });
   const _spr_coin_9 = new PIXI.Sprite(_coin_9_frameTex);
-  _spr_coin_9.x = 1300;
-  _spr_coin_9.y = 120;
+  _spr_coin_9.x = 560;
+  _spr_coin_9.y = 224;
   _spr_coin_9.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_coin_9);
-  const _body_coin_9 = Matter.Bodies.rectangle(1300, 120, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  const _body_coin_9 = Matter.Bodies.rectangle(560, 224, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
   _bodyToSprite[_body_coin_9.id] = "coin_9";
   _sprites["coin_9"] = { id: "coin_9", sprite: _spr_coin_9, body: _body_coin_9, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin_10_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_10_src = _coin_10_baseTex.source || _coin_10_baseTex.baseTexture || _coin_10_baseTex;
+  const _coin_10_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_10_frameTex = new PIXI.Texture({ source: _coin_10_src, frame: _coin_10_rect });
+  const _spr_coin_10 = new PIXI.Sprite(_coin_10_frameTex);
+  _spr_coin_10.x = 1600;
+  _spr_coin_10.y = 288;
+  _spr_coin_10.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_10);
+  const _body_coin_10 = Matter.Bodies.rectangle(1600, 288, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_10.id] = "coin_10";
+  _sprites["coin_10"] = { id: "coin_10", sprite: _spr_coin_10, body: _body_coin_10, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin_11_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_11_src = _coin_11_baseTex.source || _coin_11_baseTex.baseTexture || _coin_11_baseTex;
+  const _coin_11_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_11_frameTex = new PIXI.Texture({ source: _coin_11_src, frame: _coin_11_rect });
+  const _spr_coin_11 = new PIXI.Sprite(_coin_11_frameTex);
+  _spr_coin_11.x = 2656;
+  _spr_coin_11.y = 176;
+  _spr_coin_11.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_11);
+  const _body_coin_11 = Matter.Bodies.rectangle(2656, 176, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_11.id] = "coin_11";
+  _sprites["coin_11"] = { id: "coin_11", sprite: _spr_coin_11, body: _body_coin_11, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin_12_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_12_src = _coin_12_baseTex.source || _coin_12_baseTex.baseTexture || _coin_12_baseTex;
+  const _coin_12_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_12_frameTex = new PIXI.Texture({ source: _coin_12_src, frame: _coin_12_rect });
+  const _spr_coin_12 = new PIXI.Sprite(_coin_12_frameTex);
+  _spr_coin_12.x = 2672;
+  _spr_coin_12.y = 176;
+  _spr_coin_12.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_12);
+  const _body_coin_12 = Matter.Bodies.rectangle(2672, 176, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_12.id] = "coin_12";
+  _sprites["coin_12"] = { id: "coin_12", sprite: _spr_coin_12, body: _body_coin_12, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin_13_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_13_src = _coin_13_baseTex.source || _coin_13_baseTex.baseTexture || _coin_13_baseTex;
+  const _coin_13_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_13_frameTex = new PIXI.Texture({ source: _coin_13_src, frame: _coin_13_rect });
+  const _spr_coin_13 = new PIXI.Sprite(_coin_13_frameTex);
+  _spr_coin_13.x = 2688;
+  _spr_coin_13.y = 176;
+  _spr_coin_13.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_13);
+  const _body_coin_13 = Matter.Bodies.rectangle(2688, 176, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_13.id] = "coin_13";
+  _sprites["coin_13"] = { id: "coin_13", sprite: _spr_coin_13, body: _body_coin_13, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin_14_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_14_src = _coin_14_baseTex.source || _coin_14_baseTex.baseTexture || _coin_14_baseTex;
+  const _coin_14_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_14_frameTex = new PIXI.Texture({ source: _coin_14_src, frame: _coin_14_rect });
+  const _spr_coin_14 = new PIXI.Sprite(_coin_14_frameTex);
+  _spr_coin_14.x = 2704;
+  _spr_coin_14.y = 176;
+  _spr_coin_14.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_14);
+  const _body_coin_14 = Matter.Bodies.rectangle(2704, 176, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_14.id] = "coin_14";
+  _sprites["coin_14"] = { id: "coin_14", sprite: _spr_coin_14, body: _body_coin_14, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin_15_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_15_src = _coin_15_baseTex.source || _coin_15_baseTex.baseTexture || _coin_15_baseTex;
+  const _coin_15_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_15_frameTex = new PIXI.Texture({ source: _coin_15_src, frame: _coin_15_rect });
+  const _spr_coin_15 = new PIXI.Sprite(_coin_15_frameTex);
+  _spr_coin_15.x = 2720;
+  _spr_coin_15.y = 176;
+  _spr_coin_15.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_15);
+  const _body_coin_15 = Matter.Bodies.rectangle(2720, 176, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_15.id] = "coin_15";
+  _sprites["coin_15"] = { id: "coin_15", sprite: _spr_coin_15, body: _body_coin_15, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin_16_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_16_src = _coin_16_baseTex.source || _coin_16_baseTex.baseTexture || _coin_16_baseTex;
+  const _coin_16_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_16_frameTex = new PIXI.Texture({ source: _coin_16_src, frame: _coin_16_rect });
+  const _spr_coin_16 = new PIXI.Sprite(_coin_16_frameTex);
+  _spr_coin_16.x = 3600;
+  _spr_coin_16.y = 272;
+  _spr_coin_16.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_16);
+  const _body_coin_16 = Matter.Bodies.rectangle(3600, 272, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_16.id] = "coin_16";
+  _sprites["coin_16"] = { id: "coin_16", sprite: _spr_coin_16, body: _body_coin_16, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin_17_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_17_src = _coin_17_baseTex.source || _coin_17_baseTex.baseTexture || _coin_17_baseTex;
+  const _coin_17_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_17_frameTex = new PIXI.Texture({ source: _coin_17_src, frame: _coin_17_rect });
+  const _spr_coin_17 = new PIXI.Sprite(_coin_17_frameTex);
+  _spr_coin_17.x = 3616;
+  _spr_coin_17.y = 272;
+  _spr_coin_17.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_17);
+  const _body_coin_17 = Matter.Bodies.rectangle(3616, 272, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_17.id] = "coin_17";
+  _sprites["coin_17"] = { id: "coin_17", sprite: _spr_coin_17, body: _body_coin_17, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin_18_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_18_src = _coin_18_baseTex.source || _coin_18_baseTex.baseTexture || _coin_18_baseTex;
+  const _coin_18_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_18_frameTex = new PIXI.Texture({ source: _coin_18_src, frame: _coin_18_rect });
+  const _spr_coin_18 = new PIXI.Sprite(_coin_18_frameTex);
+  _spr_coin_18.x = 4080;
+  _spr_coin_18.y = 288;
+  _spr_coin_18.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_18);
+  const _body_coin_18 = Matter.Bodies.rectangle(4080, 288, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_18.id] = "coin_18";
+  _sprites["coin_18"] = { id: "coin_18", sprite: _spr_coin_18, body: _body_coin_18, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin_19_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_19_src = _coin_19_baseTex.source || _coin_19_baseTex.baseTexture || _coin_19_baseTex;
+  const _coin_19_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_19_frameTex = new PIXI.Texture({ source: _coin_19_src, frame: _coin_19_rect });
+  const _spr_coin_19 = new PIXI.Sprite(_coin_19_frameTex);
+  _spr_coin_19.x = 4096;
+  _spr_coin_19.y = 288;
+  _spr_coin_19.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_19);
+  const _body_coin_19 = Matter.Bodies.rectangle(4096, 288, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_19.id] = "coin_19";
+  _sprites["coin_19"] = { id: "coin_19", sprite: _spr_coin_19, body: _body_coin_19, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin_20_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_20_src = _coin_20_baseTex.source || _coin_20_baseTex.baseTexture || _coin_20_baseTex;
+  const _coin_20_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_20_frameTex = new PIXI.Texture({ source: _coin_20_src, frame: _coin_20_rect });
+  const _spr_coin_20 = new PIXI.Sprite(_coin_20_frameTex);
+  _spr_coin_20.x = 4112;
+  _spr_coin_20.y = 288;
+  _spr_coin_20.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_20);
+  const _body_coin_20 = Matter.Bodies.rectangle(4112, 288, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_20.id] = "coin_20";
+  _sprites["coin_20"] = { id: "coin_20", sprite: _spr_coin_20, body: _body_coin_20, tag: "coin", collisionHandlers: [], behaviors: [] };
 
   const _rex1_baseTex = PIXI.Assets.get("assets/smw/sprites/rex_walk.png");
   const _rex1_src = _rex1_baseTex.source || _rex1_baseTex.baseTexture || _rex1_baseTex;
   const _rex1_rect = new PIXI.Rectangle(0, 0, 12, 24);
   const _rex1_frameTex = new PIXI.Texture({ source: _rex1_src, frame: _rex1_rect });
   const _spr_rex1 = new PIXI.Sprite(_rex1_frameTex);
-  _spr_rex1.x = 180;
-  _spr_rex1.y = 152;
+  _spr_rex1.x = 400;
+  _spr_rex1.y = 328;
   _spr_rex1.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_rex1);
-  const _body_rex1 = Matter.Bodies.rectangle(180, 152, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
+  const _body_rex1 = Matter.Bodies.rectangle(400, 328, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
   _bodyToSprite[_body_rex1.id] = "rex1";
   _sprites["rex1"] = { id: "rex1", sprite: _spr_rex1, body: _body_rex1, tag: "enemy", collisionHandlers: [], behaviors: [] };
 
@@ -880,11 +1067,11 @@ document.addEventListener('keydown', function(e) {
   const _rex2_rect = new PIXI.Rectangle(0, 0, 12, 24);
   const _rex2_frameTex = new PIXI.Texture({ source: _rex2_src, frame: _rex2_rect });
   const _spr_rex2 = new PIXI.Sprite(_rex2_frameTex);
-  _spr_rex2.x = 280;
-  _spr_rex2.y = 152;
+  _spr_rex2.x = 640;
+  _spr_rex2.y = 328;
   _spr_rex2.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_rex2);
-  const _body_rex2 = Matter.Bodies.rectangle(280, 152, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
+  const _body_rex2 = Matter.Bodies.rectangle(640, 328, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
   _bodyToSprite[_body_rex2.id] = "rex2";
   _sprites["rex2"] = { id: "rex2", sprite: _spr_rex2, body: _body_rex2, tag: "enemy", collisionHandlers: [], behaviors: [] };
 
@@ -893,11 +1080,11 @@ document.addEventListener('keydown', function(e) {
   const _rex3_rect = new PIXI.Rectangle(0, 0, 12, 24);
   const _rex3_frameTex = new PIXI.Texture({ source: _rex3_src, frame: _rex3_rect });
   const _spr_rex3 = new PIXI.Sprite(_rex3_frameTex);
-  _spr_rex3.x = 350;
-  _spr_rex3.y = 152;
+  _spr_rex3.x = 880;
+  _spr_rex3.y = 328;
   _spr_rex3.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_rex3);
-  const _body_rex3 = Matter.Bodies.rectangle(350, 152, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
+  const _body_rex3 = Matter.Bodies.rectangle(880, 328, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
   _bodyToSprite[_body_rex3.id] = "rex3";
   _sprites["rex3"] = { id: "rex3", sprite: _spr_rex3, body: _body_rex3, tag: "enemy", collisionHandlers: [], behaviors: [] };
 
@@ -906,11 +1093,11 @@ document.addEventListener('keydown', function(e) {
   const _rex4_rect = new PIXI.Rectangle(0, 0, 12, 24);
   const _rex4_frameTex = new PIXI.Texture({ source: _rex4_src, frame: _rex4_rect });
   const _spr_rex4 = new PIXI.Sprite(_rex4_frameTex);
-  _spr_rex4.x = 450;
-  _spr_rex4.y = 152;
+  _spr_rex4.x = 1200;
+  _spr_rex4.y = 328;
   _spr_rex4.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_rex4);
-  const _body_rex4 = Matter.Bodies.rectangle(450, 152, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
+  const _body_rex4 = Matter.Bodies.rectangle(1200, 328, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
   _bodyToSprite[_body_rex4.id] = "rex4";
   _sprites["rex4"] = { id: "rex4", sprite: _spr_rex4, body: _body_rex4, tag: "enemy", collisionHandlers: [], behaviors: [] };
 
@@ -919,11 +1106,11 @@ document.addEventListener('keydown', function(e) {
   const _rex5_rect = new PIXI.Rectangle(0, 0, 12, 24);
   const _rex5_frameTex = new PIXI.Texture({ source: _rex5_src, frame: _rex5_rect });
   const _spr_rex5 = new PIXI.Sprite(_rex5_frameTex);
-  _spr_rex5.x = 550;
-  _spr_rex5.y = 152;
+  _spr_rex5.x = 1520;
+  _spr_rex5.y = 328;
   _spr_rex5.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_rex5);
-  const _body_rex5 = Matter.Bodies.rectangle(550, 152, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
+  const _body_rex5 = Matter.Bodies.rectangle(1520, 328, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
   _bodyToSprite[_body_rex5.id] = "rex5";
   _sprites["rex5"] = { id: "rex5", sprite: _spr_rex5, body: _body_rex5, tag: "enemy", collisionHandlers: [], behaviors: [] };
 
@@ -932,11 +1119,11 @@ document.addEventListener('keydown', function(e) {
   const _rex6_rect = new PIXI.Rectangle(0, 0, 12, 24);
   const _rex6_frameTex = new PIXI.Texture({ source: _rex6_src, frame: _rex6_rect });
   const _spr_rex6 = new PIXI.Sprite(_rex6_frameTex);
-  _spr_rex6.x = 650;
-  _spr_rex6.y = 152;
+  _spr_rex6.x = 1840;
+  _spr_rex6.y = 328;
   _spr_rex6.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_rex6);
-  const _body_rex6 = Matter.Bodies.rectangle(650, 152, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
+  const _body_rex6 = Matter.Bodies.rectangle(1840, 328, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
   _bodyToSprite[_body_rex6.id] = "rex6";
   _sprites["rex6"] = { id: "rex6", sprite: _spr_rex6, body: _body_rex6, tag: "enemy", collisionHandlers: [], behaviors: [] };
 
@@ -945,11 +1132,11 @@ document.addEventListener('keydown', function(e) {
   const _rex7_rect = new PIXI.Rectangle(0, 0, 12, 24);
   const _rex7_frameTex = new PIXI.Texture({ source: _rex7_src, frame: _rex7_rect });
   const _spr_rex7 = new PIXI.Sprite(_rex7_frameTex);
-  _spr_rex7.x = 750;
-  _spr_rex7.y = 152;
+  _spr_rex7.x = 2160;
+  _spr_rex7.y = 328;
   _spr_rex7.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_rex7);
-  const _body_rex7 = Matter.Bodies.rectangle(750, 152, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
+  const _body_rex7 = Matter.Bodies.rectangle(2160, 328, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
   _bodyToSprite[_body_rex7.id] = "rex7";
   _sprites["rex7"] = { id: "rex7", sprite: _spr_rex7, body: _body_rex7, tag: "enemy", collisionHandlers: [], behaviors: [] };
 
@@ -958,11 +1145,11 @@ document.addEventListener('keydown', function(e) {
   const _rex8_rect = new PIXI.Rectangle(0, 0, 12, 24);
   const _rex8_frameTex = new PIXI.Texture({ source: _rex8_src, frame: _rex8_rect });
   const _spr_rex8 = new PIXI.Sprite(_rex8_frameTex);
-  _spr_rex8.x = 900;
-  _spr_rex8.y = 152;
+  _spr_rex8.x = 2480;
+  _spr_rex8.y = 328;
   _spr_rex8.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_rex8);
-  const _body_rex8 = Matter.Bodies.rectangle(900, 152, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
+  const _body_rex8 = Matter.Bodies.rectangle(2480, 328, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
   _bodyToSprite[_body_rex8.id] = "rex8";
   _sprites["rex8"] = { id: "rex8", sprite: _spr_rex8, body: _body_rex8, tag: "enemy", collisionHandlers: [], behaviors: [] };
 
@@ -971,11 +1158,11 @@ document.addEventListener('keydown', function(e) {
   const _rex9_rect = new PIXI.Rectangle(0, 0, 12, 24);
   const _rex9_frameTex = new PIXI.Texture({ source: _rex9_src, frame: _rex9_rect });
   const _spr_rex9 = new PIXI.Sprite(_rex9_frameTex);
-  _spr_rex9.x = 1050;
-  _spr_rex9.y = 152;
+  _spr_rex9.x = 3040;
+  _spr_rex9.y = 328;
   _spr_rex9.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_rex9);
-  const _body_rex9 = Matter.Bodies.rectangle(1050, 152, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
+  const _body_rex9 = Matter.Bodies.rectangle(3040, 328, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
   _bodyToSprite[_body_rex9.id] = "rex9";
   _sprites["rex9"] = { id: "rex9", sprite: _spr_rex9, body: _body_rex9, tag: "enemy", collisionHandlers: [], behaviors: [] };
 
@@ -984,21 +1171,47 @@ document.addEventListener('keydown', function(e) {
   const _rex10_rect = new PIXI.Rectangle(0, 0, 12, 24);
   const _rex10_frameTex = new PIXI.Texture({ source: _rex10_src, frame: _rex10_rect });
   const _spr_rex10 = new PIXI.Sprite(_rex10_frameTex);
-  _spr_rex10.x = 1200;
-  _spr_rex10.y = 152;
+  _spr_rex10.x = 3520;
+  _spr_rex10.y = 328;
   _spr_rex10.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_rex10);
-  const _body_rex10 = Matter.Bodies.rectangle(1200, 152, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
+  const _body_rex10 = Matter.Bodies.rectangle(3520, 328, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
   _bodyToSprite[_body_rex10.id] = "rex10";
   _sprites["rex10"] = { id: "rex10", sprite: _spr_rex10, body: _body_rex10, tag: "enemy", collisionHandlers: [], behaviors: [] };
 
+  const _rex11_baseTex = PIXI.Assets.get("assets/smw/sprites/rex_walk.png");
+  const _rex11_src = _rex11_baseTex.source || _rex11_baseTex.baseTexture || _rex11_baseTex;
+  const _rex11_rect = new PIXI.Rectangle(0, 0, 12, 24);
+  const _rex11_frameTex = new PIXI.Texture({ source: _rex11_src, frame: _rex11_rect });
+  const _spr_rex11 = new PIXI.Sprite(_rex11_frameTex);
+  _spr_rex11.x = 3840;
+  _spr_rex11.y = 328;
+  _spr_rex11.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_rex11);
+  const _body_rex11 = Matter.Bodies.rectangle(3840, 328, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_rex11.id] = "rex11";
+  _sprites["rex11"] = { id: "rex11", sprite: _spr_rex11, body: _body_rex11, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _rex12_baseTex = PIXI.Assets.get("assets/smw/sprites/rex_walk.png");
+  const _rex12_src = _rex12_baseTex.source || _rex12_baseTex.baseTexture || _rex12_baseTex;
+  const _rex12_rect = new PIXI.Rectangle(0, 0, 12, 24);
+  const _rex12_frameTex = new PIXI.Texture({ source: _rex12_src, frame: _rex12_rect });
+  const _spr_rex12 = new PIXI.Sprite(_rex12_frameTex);
+  _spr_rex12.x = 4160;
+  _spr_rex12.y = 328;
+  _spr_rex12.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_rex12);
+  const _body_rex12 = Matter.Bodies.rectangle(4160, 328, 12, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_rex12.id] = "rex12";
+  _sprites["rex12"] = { id: "rex12", sprite: _spr_rex12, body: _body_rex12, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
   const _spr_goal = new PIXI.Graphics();
-  _spr_goal.rect(-4.0, -24.0, 8.0, 48.0);
+  _spr_goal.rect(-8.0, -32.0, 16.0, 64.0);
   _spr_goal.fill({ color: 0x00FF00 });
-  _spr_goal.x = 1480;
-  _spr_goal.y = 152;
+  _spr_goal.x = 4950;
+  _spr_goal.y = 304;
   _cameraContainer.addChild(_spr_goal);
-  const _body_goal = Matter.Bodies.rectangle(1480, 152, 8, 48, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  const _body_goal = Matter.Bodies.rectangle(4950, 304, 16, 64, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
   _bodyToSprite[_body_goal.id] = "goal";
   _sprites["goal"] = { id: "goal", sprite: _spr_goal, body: _body_goal, tag: "goal", collisionHandlers: [], behaviors: [] };
 
@@ -1007,26 +1220,26 @@ document.addEventListener('keydown', function(e) {
   const _mario_rect = new PIXI.Rectangle(0, 0, 16, 24);
   const _mario_frameTex = new PIXI.Texture({ source: _mario_src, frame: _mario_rect });
   const _spr_mario = new PIXI.Sprite(_mario_frameTex);
-  _spr_mario.x = 64;
-  _spr_mario.y = 152;
+  _spr_mario.x = 80;
+  _spr_mario.y = 328;
   _spr_mario.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_mario);
-  const _body_mario = Matter.Bodies.rectangle(64, 152, 16, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity, chamfer: { radius: 3 } });
+  const _body_mario = Matter.Bodies.rectangle(80, 328, 16, 24, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity, chamfer: { radius: 3 } });
   _bodyToSprite[_body_mario.id] = "mario";
   _sprites["mario"] = { id: "mario", sprite: _spr_mario, body: _body_mario, tag: "player", collisionHandlers: [], behaviors: [] };
 
   const _spr_deathzone = new PIXI.Graphics();
-  _spr_deathzone.rect(-768.0, -8.0, 1536.0, 16.0);
+  _spr_deathzone.rect(-2560.0, -8.0, 5120.0, 16.0);
   _spr_deathzone.fill({ color: 0x4a9eff });
-  _spr_deathzone.x = 768;
-  _spr_deathzone.y = 250;
+  _spr_deathzone.x = 2560;
+  _spr_deathzone.y = 480;
   _spr_deathzone.visible = false;
   _cameraContainer.addChild(_spr_deathzone);
-  const _body_deathzone = Matter.Bodies.rectangle(768, 250, 1536, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  const _body_deathzone = Matter.Bodies.rectangle(2560, 480, 5120, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
   _bodyToSprite[_body_deathzone.id] = "deathzone";
   _sprites["deathzone"] = { id: "deathzone", sprite: _spr_deathzone, body: _body_deathzone, tag: "death", collisionHandlers: [], behaviors: [] };
 
-  Matter.Composite.add(mWorld, [_body_tile_level_11_0, _body_tile_level_12_0, _body_tile_level_13_0, _body_qb1, _body_qb2, _body_qb3, _body_qb4, _body_coin_4, _body_coin_5, _body_coin_6, _body_coin_7, _body_coin_8, _body_coin_9, _body_rex1, _body_rex2, _body_rex3, _body_rex4, _body_rex5, _body_rex6, _body_rex7, _body_rex8, _body_rex9, _body_rex10, _body_goal, _body_mario, _body_deathzone]);
+  Matter.Composite.add(mWorld, [_body_ground_main, _body_hill1_slope1, _body_hill1_top, _body_hill1_slope2, _body_hill2_slope1, _body_hill2_top, _body_hill2_slope2, _body_qb1, _body_qb2, _body_qb3, _body_qb4, _body_qb5, _body_qb6, _body_qb7, _body_coin_7, _body_coin_8, _body_coin_9, _body_coin_10, _body_coin_11, _body_coin_12, _body_coin_13, _body_coin_14, _body_coin_15, _body_coin_16, _body_coin_17, _body_coin_18, _body_coin_19, _body_coin_20, _body_rex1, _body_rex2, _body_rex3, _body_rex4, _body_rex5, _body_rex6, _body_rex7, _body_rex8, _body_rex9, _body_rex10, _body_rex11, _body_rex12, _body_goal, _body_mario, _body_deathzone]);
 
   function syncPhysics() {
     for (const [id, info] of Object.entries(_sprites)) {
@@ -1661,12 +1874,23 @@ document.addEventListener('keydown', function(e) {
   _registerAnimation("qb2", PIXI.Assets.get("assets/smw/sprites/qblock_animated.png"), 16, 16, { "shine": { frames: "0,1,2,3", speed: 0.15, loop: true, autoPlay: true } });
   _registerAnimation("qb3", PIXI.Assets.get("assets/smw/sprites/qblock_animated.png"), 16, 16, { "shine": { frames: "0,1,2,3", speed: 0.15, loop: true, autoPlay: true } });
   _registerAnimation("qb4", PIXI.Assets.get("assets/smw/sprites/qblock_animated.png"), 16, 16, { "shine": { frames: "0,1,2,3", speed: 0.15, loop: true, autoPlay: true } });
-  _registerAnimation("coin_4", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
-  _registerAnimation("coin_5", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
-  _registerAnimation("coin_6", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("qb5", PIXI.Assets.get("assets/smw/sprites/qblock_animated.png"), 16, 16, { "shine": { frames: "0,1,2,3", speed: 0.15, loop: true, autoPlay: true } });
+  _registerAnimation("qb6", PIXI.Assets.get("assets/smw/sprites/qblock_animated.png"), 16, 16, { "shine": { frames: "0,1,2,3", speed: 0.15, loop: true, autoPlay: true } });
+  _registerAnimation("qb7", PIXI.Assets.get("assets/smw/sprites/qblock_animated.png"), 16, 16, { "shine": { frames: "0,1,2,3", speed: 0.15, loop: true, autoPlay: true } });
   _registerAnimation("coin_7", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
   _registerAnimation("coin_8", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
   _registerAnimation("coin_9", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_10", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_11", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_12", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_13", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_14", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_15", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_16", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_17", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_18", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_19", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_20", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
   _registerAnimation("rex1", PIXI.Assets.get("assets/smw/sprites/rex_walk.png"), 12, 24, { "walk": { frames: "0-1", speed: 0.15, loop: true, autoPlay: true } });
   _registerAnimation("rex2", PIXI.Assets.get("assets/smw/sprites/rex_walk.png"), 12, 24, { "walk": { frames: "0-1", speed: 0.15, loop: true, autoPlay: true } });
   _registerAnimation("rex3", PIXI.Assets.get("assets/smw/sprites/rex_walk.png"), 12, 24, { "walk": { frames: "0-1", speed: 0.15, loop: true, autoPlay: true } });
@@ -1677,6 +1901,8 @@ document.addEventListener('keydown', function(e) {
   _registerAnimation("rex8", PIXI.Assets.get("assets/smw/sprites/rex_walk.png"), 12, 24, { "walk": { frames: "0-1", speed: 0.15, loop: true, autoPlay: true } });
   _registerAnimation("rex9", PIXI.Assets.get("assets/smw/sprites/rex_walk.png"), 12, 24, { "walk": { frames: "0-1", speed: 0.15, loop: true, autoPlay: true } });
   _registerAnimation("rex10", PIXI.Assets.get("assets/smw/sprites/rex_walk.png"), 12, 24, { "walk": { frames: "0-1", speed: 0.15, loop: true, autoPlay: true } });
+  _registerAnimation("rex11", PIXI.Assets.get("assets/smw/sprites/rex_walk.png"), 12, 24, { "walk": { frames: "0-1", speed: 0.15, loop: true, autoPlay: true } });
+  _registerAnimation("rex12", PIXI.Assets.get("assets/smw/sprites/rex_walk.png"), 12, 24, { "walk": { frames: "0-1", speed: 0.15, loop: true, autoPlay: true } });
   _registerAnimation("mario", PIXI.Assets.get("assets/smw/sprites/mario_small.png"), 16, 24, { "idle": { frames: "0", speed: 0.1, loop: true, autoPlay: true }, "walk": { frames: "1-3", speed: 0.18, loop: true, autoPlay: false }, "jump": { frames: "4", speed: 0.1, loop: false, autoPlay: false } });
 
   // === INPUT ===
@@ -1728,16 +1954,18 @@ document.addEventListener('keydown', function(e) {
     sessionStorage.removeItem('mario_score')
     }
     // Setup Rex AI - all walk left
-    game.setRexAI('rex1', -0.4)
-    game.setRexAI('rex2', -0.4)
-    game.setRexAI('rex3', -0.4)
-    game.setRexAI('rex4', -0.4)
-    game.setRexAI('rex5', -0.4)
-    game.setRexAI('rex6', -0.4)
-    game.setRexAI('rex7', -0.4)
-    game.setRexAI('rex8', -0.4)
-    game.setRexAI('rex9', -0.4)
-    game.setRexAI('rex10', -0.4)
+    game.setRexAI('rex1', -0.5)
+    game.setRexAI('rex2', -0.5)
+    game.setRexAI('rex3', -0.5)
+    game.setRexAI('rex4', -0.5)
+    game.setRexAI('rex5', -0.5)
+    game.setRexAI('rex6', -0.5)
+    game.setRexAI('rex7', -0.5)
+    game.setRexAI('rex8', -0.5)
+    game.setRexAI('rex9', -0.5)
+    game.setRexAI('rex10', -0.5)
+    game.setRexAI('rex11', -0.5)
+    game.setRexAI('rex12', -0.5)
     // Handle music autoplay - try to play, if blocked wait for interaction
     const tryPlayMusic = () => {
     game.playSound('bgm-level', { loop: true, volume: 0.5 })
@@ -2267,11 +2495,11 @@ document.addEventListener('keydown', function(e) {
     const _jumpPressed_mario = _keys[_ctrl_mario.jump] || (_keys[_ctrl_mario.jump2] || false);
     const _jumpJust_mario = _justPressed[_ctrl_mario.jump] || (_justPressed[_ctrl_mario.jump2] || false);
     if (_leftPressed_mario && _sprites["mario"].body) {
-      Matter.Body.setVelocity(_sprites["mario"].body, { x: -2, y: _sprites["mario"].body.velocity.y });
+      Matter.Body.setVelocity(_sprites["mario"].body, { x: -2.5, y: _sprites["mario"].body.velocity.y });
       _sprites["mario"].sprite.scale.x = Math.abs(_sprites["mario"].sprite.scale.x);
     }
     if (_rightPressed_mario && _sprites["mario"].body) {
-      Matter.Body.setVelocity(_sprites["mario"].body, { x: 2, y: _sprites["mario"].body.velocity.y });
+      Matter.Body.setVelocity(_sprites["mario"].body, { x: 2.5, y: _sprites["mario"].body.velocity.y });
       _sprites["mario"].sprite.scale.x = -Math.abs(_sprites["mario"].sprite.scale.x);
     }
     // SMW-style jump: coyote time, variable height, asymmetric gravity
@@ -2289,7 +2517,7 @@ document.addEventListener('keydown', function(e) {
     }
     const _canJump_mario = _isGrounded_mario || _sprites["mario"]._coyoteFrames > 0;
     if (_jumpJust_mario && _sprites["mario"].body && _canJump_mario) {
-      Matter.Body.setVelocity(_sprites["mario"].body, { x: _sprites["mario"].body.velocity.x, y: -7 });
+      Matter.Body.setVelocity(_sprites["mario"].body, { x: _sprites["mario"].body.velocity.x, y: -8 });
       _sprites["mario"]._jumpHeld = true;
       _sprites["mario"]._coyoteFrames = 0;
       _gameEvents.emit('player.jump', _sprites["mario"]);
