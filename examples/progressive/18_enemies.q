@@ -12,8 +12,8 @@
   Our version: 96 tiles (1536 pixels) - scaled positions
 -->
 <q:application id="yoshi-island-1" type="game" engine="2d">
-  <qg:scene name="main" width="1536" height="288" viewport-width="1920" viewport-height="1080" background="#5C94FC">
-    <qg:physics gravity-y="1.5" />
+  <qg:scene name="main" width="1536" height="224" viewport-width="256" viewport-height="224" background="#5C94FC">
+    <qg:physics gravity-y="1.2" />
     <qg:camera follow="mario" lerp="0.08" bounds="scene" />
 
     <!-- Game state -->
@@ -65,8 +65,8 @@
       </qg:sprite>
     </qg:prefab>
 
-    <!-- Terrain - 96 tiles wide (1536px), 18 tiles tall (288px) -->
-    <!-- Ground at row 14-17, some hills and platforms -->
+    <!-- Terrain - 96 tiles wide (1536px), 14 tiles tall (224px) - SNES resolution -->
+    <!-- Ground at rows 12-13 -->
     <qg:tilemap id="level" src="assets/smw/sprites/stage1_unique.png"
                 tile-width="16" tile-height="16">
       <qg:layer name="terrain" collision="true">
@@ -81,54 +81,45 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9
-14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14
 14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14
 14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14
       </qg:layer>
     </qg:tilemap>
 
-    <!-- Question blocks -->
-    <qg:instance prefab="qblock" id="qb1" x="160" y="160" />
-    <qg:instance prefab="qblock" id="qb2" x="400" y="160" />
-    <qg:instance prefab="qblock" id="qb3" x="700" y="160" />
-    <qg:instance prefab="qblock" id="qb4" x="1100" y="160" />
+    <!-- Question blocks (y=112, above ground) -->
+    <qg:instance prefab="qblock" id="qb1" x="160" y="112" />
+    <qg:instance prefab="qblock" id="qb2" x="400" y="112" />
+    <qg:instance prefab="qblock" id="qb3" x="700" y="112" />
+    <qg:instance prefab="qblock" id="qb4" x="1100" y="112" />
 
-    <!-- Coins -->
-    <qg:instance prefab="coin" x="128" y="168" />
-    <qg:instance prefab="coin" x="240" y="168" />
-    <qg:instance prefab="coin" x="500" y="168" />
-    <qg:instance prefab="coin" x="800" y="168" />
-    <qg:instance prefab="coin" x="1000" y="168" />
-    <qg:instance prefab="coin" x="1300" y="168" />
+    <!-- Coins (y=120, floating above ground) -->
+    <qg:instance prefab="coin" x="128" y="120" />
+    <qg:instance prefab="coin" x="240" y="120" />
+    <qg:instance prefab="coin" x="500" y="120" />
+    <qg:instance prefab="coin" x="800" y="120" />
+    <qg:instance prefab="coin" x="1000" y="120" />
+    <qg:instance prefab="coin" x="1300" y="120" />
 
-    <!-- Rex enemies - positions scaled from original (432 tiles -> 96 tiles, ratio ~0.22)
-         Original positions -> Scaled positions:
-         (~38, 12) -> (84, 192)
-         (~48, 12) -> (106, 192)
-         (~52, 12) -> (115, 192)
-         ... scaled to fit our 96-tile level -->
-    <qg:instance prefab="rex" id="rex1" x="180" y="192" />
-    <qg:instance prefab="rex" id="rex2" x="280" y="192" />
-    <qg:instance prefab="rex" id="rex3" x="350" y="192" />
-    <qg:instance prefab="rex" id="rex4" x="450" y="192" />
-    <qg:instance prefab="rex" id="rex5" x="550" y="192" />
-    <qg:instance prefab="rex" id="rex6" x="650" y="192" />
-    <qg:instance prefab="rex" id="rex7" x="750" y="192" />
-    <qg:instance prefab="rex" id="rex8" x="900" y="192" />
-    <qg:instance prefab="rex" id="rex9" x="1050" y="192" />
-    <qg:instance prefab="rex" id="rex10" x="1200" y="192" />
+    <!-- Rex enemies on ground (y=152, ground is at 176, Rex is 24px tall) -->
+    <qg:instance prefab="rex" id="rex1" x="180" y="152" />
+    <qg:instance prefab="rex" id="rex2" x="280" y="152" />
+    <qg:instance prefab="rex" id="rex3" x="350" y="152" />
+    <qg:instance prefab="rex" id="rex4" x="450" y="152" />
+    <qg:instance prefab="rex" id="rex5" x="550" y="152" />
+    <qg:instance prefab="rex" id="rex6" x="650" y="152" />
+    <qg:instance prefab="rex" id="rex7" x="750" y="152" />
+    <qg:instance prefab="rex" id="rex8" x="900" y="152" />
+    <qg:instance prefab="rex" id="rex9" x="1050" y="152" />
+    <qg:instance prefab="rex" id="rex10" x="1200" y="152" />
 
     <!-- Goal at the end -->
-    <qg:sprite id="goal" width="8" height="48" x="1480" y="184"
+    <qg:sprite id="goal" width="8" height="48" x="1480" y="152"
                color="#00FF00" tag="goal" body="static" sensor="true" />
 
-    <!-- Mario -->
+    <!-- Mario (on ground at y=152) -->
     <qg:sprite id="mario" src="assets/smw/sprites/mario_small.png"
-               x="64" y="180" tag="player"
+               x="64" y="152" tag="player"
                frame-width="16" frame-height="24"
                body="dynamic" controls="arrows" speed="2" jump-force="7" friction="0">
       <qg:animation name="idle" frames="0" speed="0.1" loop="true" auto-play="true" />
@@ -165,8 +156,8 @@
       </div>
     </qg:hud>
 
-    <!-- Death zone at bottom -->
-    <qg:sprite id="deathzone" width="1536" height="16" x="768" y="320"
+    <!-- Death zone at bottom (below visible area) -->
+    <qg:sprite id="deathzone" width="1536" height="16" x="768" y="250"
                tag="death" body="static" sensor="true" visible="false" />
 
     <!-- Events -->
