@@ -12,7 +12,7 @@
 -->
 <q:application id="yoshi-island-1" type="game" engine="2d">
   <qg:scene name="main" width="5120" height="432" viewport-width="256" viewport-height="224" background="#5C94FC">
-    <qg:physics gravity-y="2.0" />
+    <qg:physics gravity-y="1.5" />
     <qg:camera follow="mario" lerp="0.08" bounds="scene" offset-y="-80" />
 
     <!-- Game state -->
@@ -72,13 +72,13 @@
     <qg:sprite id="ground" width="5120" height="32" x="2560" y="401"
                tag="terrain" body="static" visible="false" />
 
-    <!-- Diagonal pipe (x=900-1050) - stair-step collision -->
+    <!-- Diagonal pipe - DEBUG: visible green boxes -->
     <qg:sprite id="pipe1-base" width="48" height="48" x="924" y="361"
-               tag="terrain" body="static" visible="false" />
+               tag="terrain" body="static" color="#00FF00" />
     <qg:sprite id="pipe1-mid" width="48" height="48" x="972" y="329"
-               tag="terrain" body="static" visible="false" />
+               tag="terrain" body="static" color="#00FF00" />
     <qg:sprite id="pipe1-top" width="48" height="48" x="1020" y="297"
-               tag="terrain" body="static" visible="false" />
+               tag="terrain" body="static" color="#00FF00" />
 
     <!-- Vertical pipes (x=1100-1200) -->
     <qg:sprite id="pipe2" width="32" height="64" x="1136" y="353"
@@ -165,7 +165,7 @@
     <qg:sprite id="mario" src="assets/smw/sprites/mario_small.png"
                x="80" y="373" tag="player"
                frame-width="16" frame-height="24"
-               body="dynamic" controls="arrows" speed="2.5" jump-force="6.5" friction="0">
+               body="dynamic" controls="arrows" speed="2.5" jump-force="9" friction="0">
       <qg:animation name="idle" frames="0" speed="0.1" loop="true" auto-play="true" />
       <qg:animation name="walk" frames="1-3" speed="0.18" loop="true" />
       <qg:animation name="jump" frames="4" speed="0.1" loop="false" />
