@@ -157,11 +157,7 @@
       &lt;/qg:sprite&gt;
     &lt;/qg:prefab&gt;
 
-    &lt;qg:prefab name=&quot;yoshi-coin&quot;&gt;
-      &lt;qg:sprite src=&quot;assets/smw/sprites/test_yoshi_coins.png&quot;
-                 width=&quot;28&quot; height=&quot;28&quot;
-                 tag=&quot;coin&quot; body=&quot;static&quot; sensor=&quot;true&quot; /&gt;
-    &lt;/qg:prefab&gt;
+    &lt;!-- Yoshi coins removed - spritesheet issue --&gt;
 
     &lt;qg:prefab name=&quot;rex&quot;&gt;
       &lt;qg:sprite src=&quot;assets/smw/sprites/rex_walk.png&quot;
@@ -179,26 +175,26 @@
     &lt;qg:sprite id=&quot;ground&quot; width=&quot;5120&quot; height=&quot;32&quot; x=&quot;2560&quot; y=&quot;399&quot;
                tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
 
-    &lt;!-- Hill/slope collision (stair steps) - first hill at x≈400-650 --&gt;
+    &lt;!-- Hill/slope collision (stair steps) - DEBUG: visible green --&gt;
     &lt;qg:sprite id=&quot;hill1-step1&quot; width=&quot;50&quot; height=&quot;16&quot; x=&quot;425&quot; y=&quot;375&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-step2&quot; width=&quot;50&quot; height=&quot;16&quot; x=&quot;475&quot; y=&quot;359&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-step3&quot; width=&quot;50&quot; height=&quot;16&quot; x=&quot;525&quot; y=&quot;343&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-step4&quot; width=&quot;50&quot; height=&quot;16&quot; x=&quot;575&quot; y=&quot;327&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-top&quot; width=&quot;80&quot; height=&quot;16&quot; x=&quot;640&quot; y=&quot;311&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
     &lt;!-- Down slope --&gt;
     &lt;qg:sprite id=&quot;hill1-down1&quot; width=&quot;50&quot; height=&quot;16&quot; x=&quot;705&quot; y=&quot;327&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-down2&quot; width=&quot;50&quot; height=&quot;16&quot; x=&quot;755&quot; y=&quot;343&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-down3&quot; width=&quot;50&quot; height=&quot;16&quot; x=&quot;805&quot; y=&quot;359&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-down4&quot; width=&quot;50&quot; height=&quot;16&quot; x=&quot;855&quot; y=&quot;375&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
 
     &lt;!-- Question blocks (matching image positions) --&gt;
     &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb1&quot; x=&quot;496&quot; y=&quot;256&quot; /&gt;
@@ -210,14 +206,7 @@
     &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb7&quot; x=&quot;3248&quot; y=&quot;192&quot; /&gt;
 
     &lt;!-- Coins (matching image - floating coins) --&gt;
-    &lt;!-- Yoshi Coins (Dragon Coins) --&gt;
-    &lt;qg:instance prefab=&quot;yoshi-coin&quot; id=&quot;ycoin1&quot; x=&quot;500&quot; y=&quot;280&quot; /&gt;
-    &lt;qg:instance prefab=&quot;yoshi-coin&quot; id=&quot;ycoin2&quot; x=&quot;1200&quot; y=&quot;260&quot; /&gt;
-    &lt;qg:instance prefab=&quot;yoshi-coin&quot; id=&quot;ycoin3&quot; x=&quot;2000&quot; y=&quot;280&quot; /&gt;
-    &lt;qg:instance prefab=&quot;yoshi-coin&quot; id=&quot;ycoin4&quot; x=&quot;3000&quot; y=&quot;260&quot; /&gt;
-    &lt;qg:instance prefab=&quot;yoshi-coin&quot; id=&quot;ycoin5&quot; x=&quot;4000&quot; y=&quot;280&quot; /&gt;
-
-    &lt;!-- Regular coins --&gt;
+    &lt;!-- Coins --&gt;
     &lt;qg:instance prefab=&quot;coin&quot; x=&quot;160&quot; y=&quot;288&quot; /&gt;
     &lt;qg:instance prefab=&quot;coin&quot; x=&quot;528&quot; y=&quot;224&quot; /&gt;
     &lt;qg:instance prefab=&quot;coin&quot; x=&quot;560&quot; y=&quot;224&quot; /&gt;
@@ -514,7 +503,7 @@ document.addEventListener('keydown', function(e) {
   let isDead = 0;
 
   // === ASSET LOADING ===
-  await PIXI.Assets.load(["assets/smw/sounds/music/music-map1.wav", "assets/smw/sounds/smw_coin.wav", "assets/smw/sounds/smw_course_clear.wav", "assets/smw/sounds/smw_jump.wav", "assets/smw/sounds/smw_lost_a_life.wav", "assets/smw/sounds/smw_message_block.wav", "assets/smw/sounds/smw_stomp.wav", "assets/smw/sprites/coin_animated.png", "assets/smw/sprites/mario_death.png", "assets/smw/sprites/mario_small.png", "assets/smw/sprites/qblock_animated.png", "assets/smw/sprites/qblock_used.png", "assets/smw/sprites/rex_walk.png", "assets/smw/sprites/test_yoshi_coins.png", "assets/smw/sprites/yoshi-island-1.png"]);
+  await PIXI.Assets.load(["assets/smw/sounds/music/music-map1.wav", "assets/smw/sounds/smw_coin.wav", "assets/smw/sounds/smw_course_clear.wav", "assets/smw/sounds/smw_jump.wav", "assets/smw/sounds/smw_lost_a_life.wav", "assets/smw/sounds/smw_message_block.wav", "assets/smw/sounds/smw_stomp.wav", "assets/smw/sprites/coin_animated.png", "assets/smw/sprites/mario_death.png", "assets/smw/sprites/mario_small.png", "assets/smw/sprites/qblock_animated.png", "assets/smw/sprites/qblock_used.png", "assets/smw/sprites/rex_walk.png", "assets/smw/sprites/yoshi-island-1.png"]);
 
   // === ANIMATION SYSTEM ===
   // Animation System
@@ -731,10 +720,9 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_step1 = new PIXI.Graphics();
   _spr_hill1_step1.rect(-25.0, -8.0, 50.0, 16.0);
-  _spr_hill1_step1.fill({ color: 0x4a9eff });
+  _spr_hill1_step1.fill({ color: 0x00FF00 });
   _spr_hill1_step1.x = 425;
   _spr_hill1_step1.y = 375;
-  _spr_hill1_step1.visible = false;
   _cameraContainer.addChild(_spr_hill1_step1);
   const _body_hill1_step1 = Matter.Bodies.rectangle(425, 375, 50, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_step1.id] = "hill1-step1";
@@ -742,10 +730,9 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_step2 = new PIXI.Graphics();
   _spr_hill1_step2.rect(-25.0, -8.0, 50.0, 16.0);
-  _spr_hill1_step2.fill({ color: 0x4a9eff });
+  _spr_hill1_step2.fill({ color: 0x00FF00 });
   _spr_hill1_step2.x = 475;
   _spr_hill1_step2.y = 359;
-  _spr_hill1_step2.visible = false;
   _cameraContainer.addChild(_spr_hill1_step2);
   const _body_hill1_step2 = Matter.Bodies.rectangle(475, 359, 50, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_step2.id] = "hill1-step2";
@@ -753,10 +740,9 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_step3 = new PIXI.Graphics();
   _spr_hill1_step3.rect(-25.0, -8.0, 50.0, 16.0);
-  _spr_hill1_step3.fill({ color: 0x4a9eff });
+  _spr_hill1_step3.fill({ color: 0x00FF00 });
   _spr_hill1_step3.x = 525;
   _spr_hill1_step3.y = 343;
-  _spr_hill1_step3.visible = false;
   _cameraContainer.addChild(_spr_hill1_step3);
   const _body_hill1_step3 = Matter.Bodies.rectangle(525, 343, 50, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_step3.id] = "hill1-step3";
@@ -764,10 +750,9 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_step4 = new PIXI.Graphics();
   _spr_hill1_step4.rect(-25.0, -8.0, 50.0, 16.0);
-  _spr_hill1_step4.fill({ color: 0x4a9eff });
+  _spr_hill1_step4.fill({ color: 0x00FF00 });
   _spr_hill1_step4.x = 575;
   _spr_hill1_step4.y = 327;
-  _spr_hill1_step4.visible = false;
   _cameraContainer.addChild(_spr_hill1_step4);
   const _body_hill1_step4 = Matter.Bodies.rectangle(575, 327, 50, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_step4.id] = "hill1-step4";
@@ -775,10 +760,9 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_top = new PIXI.Graphics();
   _spr_hill1_top.rect(-40.0, -8.0, 80.0, 16.0);
-  _spr_hill1_top.fill({ color: 0x4a9eff });
+  _spr_hill1_top.fill({ color: 0x00FF00 });
   _spr_hill1_top.x = 640;
   _spr_hill1_top.y = 311;
-  _spr_hill1_top.visible = false;
   _cameraContainer.addChild(_spr_hill1_top);
   const _body_hill1_top = Matter.Bodies.rectangle(640, 311, 80, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_top.id] = "hill1-top";
@@ -786,10 +770,9 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_down1 = new PIXI.Graphics();
   _spr_hill1_down1.rect(-25.0, -8.0, 50.0, 16.0);
-  _spr_hill1_down1.fill({ color: 0x4a9eff });
+  _spr_hill1_down1.fill({ color: 0x00FF00 });
   _spr_hill1_down1.x = 705;
   _spr_hill1_down1.y = 327;
-  _spr_hill1_down1.visible = false;
   _cameraContainer.addChild(_spr_hill1_down1);
   const _body_hill1_down1 = Matter.Bodies.rectangle(705, 327, 50, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_down1.id] = "hill1-down1";
@@ -797,10 +780,9 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_down2 = new PIXI.Graphics();
   _spr_hill1_down2.rect(-25.0, -8.0, 50.0, 16.0);
-  _spr_hill1_down2.fill({ color: 0x4a9eff });
+  _spr_hill1_down2.fill({ color: 0x00FF00 });
   _spr_hill1_down2.x = 755;
   _spr_hill1_down2.y = 343;
-  _spr_hill1_down2.visible = false;
   _cameraContainer.addChild(_spr_hill1_down2);
   const _body_hill1_down2 = Matter.Bodies.rectangle(755, 343, 50, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_down2.id] = "hill1-down2";
@@ -808,10 +790,9 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_down3 = new PIXI.Graphics();
   _spr_hill1_down3.rect(-25.0, -8.0, 50.0, 16.0);
-  _spr_hill1_down3.fill({ color: 0x4a9eff });
+  _spr_hill1_down3.fill({ color: 0x00FF00 });
   _spr_hill1_down3.x = 805;
   _spr_hill1_down3.y = 359;
-  _spr_hill1_down3.visible = false;
   _cameraContainer.addChild(_spr_hill1_down3);
   const _body_hill1_down3 = Matter.Bodies.rectangle(805, 359, 50, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_down3.id] = "hill1-down3";
@@ -819,10 +800,9 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_down4 = new PIXI.Graphics();
   _spr_hill1_down4.rect(-25.0, -8.0, 50.0, 16.0);
-  _spr_hill1_down4.fill({ color: 0x4a9eff });
+  _spr_hill1_down4.fill({ color: 0x00FF00 });
   _spr_hill1_down4.x = 855;
   _spr_hill1_down4.y = 375;
-  _spr_hill1_down4.visible = false;
   _cameraContainer.addChild(_spr_hill1_down4);
   const _body_hill1_down4 = Matter.Bodies.rectangle(855, 375, 50, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_down4.id] = "hill1-down4";
@@ -919,71 +899,81 @@ document.addEventListener('keydown', function(e) {
   _bodyToSprite[_body_qb7.id] = "qb7";
   _sprites["qb7"] = { id: "qb7", sprite: _spr_qb7, body: _body_qb7, tag: "qblock", collisionHandlers: [], behaviors: [] };
 
-  const _spr_ycoin1 = PIXI.Sprite.from("assets/smw/sprites/test_yoshi_coins.png");
-  _spr_ycoin1.x = 500;
-  _spr_ycoin1.y = 280;
-  _spr_ycoin1.anchor.set(0.5, 0.5);
-  _spr_ycoin1.width = 28;
-  _spr_ycoin1.height = 28;
-  _cameraContainer.addChild(_spr_ycoin1);
-  const _body_ycoin1 = Matter.Bodies.rectangle(500, 280, 28, 28, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
-  _bodyToSprite[_body_ycoin1.id] = "ycoin1";
-  _sprites["ycoin1"] = { id: "ycoin1", sprite: _spr_ycoin1, body: _body_ycoin1, tag: "coin", collisionHandlers: [], behaviors: [] };
+  const _coin_7_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_7_src = _coin_7_baseTex.source || _coin_7_baseTex.baseTexture || _coin_7_baseTex;
+  const _coin_7_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_7_frameTex = new PIXI.Texture({ source: _coin_7_src, frame: _coin_7_rect });
+  const _spr_coin_7 = new PIXI.Sprite(_coin_7_frameTex);
+  _spr_coin_7.x = 160;
+  _spr_coin_7.y = 288;
+  _spr_coin_7.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_7);
+  const _body_coin_7 = Matter.Bodies.rectangle(160, 288, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_7.id] = "coin_7";
+  _sprites["coin_7"] = { id: "coin_7", sprite: _spr_coin_7, body: _body_coin_7, tag: "coin", collisionHandlers: [], behaviors: [] };
 
-  const _spr_ycoin2 = PIXI.Sprite.from("assets/smw/sprites/test_yoshi_coins.png");
-  _spr_ycoin2.x = 1200;
-  _spr_ycoin2.y = 260;
-  _spr_ycoin2.anchor.set(0.5, 0.5);
-  _spr_ycoin2.width = 28;
-  _spr_ycoin2.height = 28;
-  _cameraContainer.addChild(_spr_ycoin2);
-  const _body_ycoin2 = Matter.Bodies.rectangle(1200, 260, 28, 28, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
-  _bodyToSprite[_body_ycoin2.id] = "ycoin2";
-  _sprites["ycoin2"] = { id: "ycoin2", sprite: _spr_ycoin2, body: _body_ycoin2, tag: "coin", collisionHandlers: [], behaviors: [] };
+  const _coin_8_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_8_src = _coin_8_baseTex.source || _coin_8_baseTex.baseTexture || _coin_8_baseTex;
+  const _coin_8_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_8_frameTex = new PIXI.Texture({ source: _coin_8_src, frame: _coin_8_rect });
+  const _spr_coin_8 = new PIXI.Sprite(_coin_8_frameTex);
+  _spr_coin_8.x = 528;
+  _spr_coin_8.y = 224;
+  _spr_coin_8.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_8);
+  const _body_coin_8 = Matter.Bodies.rectangle(528, 224, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_8.id] = "coin_8";
+  _sprites["coin_8"] = { id: "coin_8", sprite: _spr_coin_8, body: _body_coin_8, tag: "coin", collisionHandlers: [], behaviors: [] };
 
-  const _spr_ycoin3 = PIXI.Sprite.from("assets/smw/sprites/test_yoshi_coins.png");
-  _spr_ycoin3.x = 2000;
-  _spr_ycoin3.y = 280;
-  _spr_ycoin3.anchor.set(0.5, 0.5);
-  _spr_ycoin3.width = 28;
-  _spr_ycoin3.height = 28;
-  _cameraContainer.addChild(_spr_ycoin3);
-  const _body_ycoin3 = Matter.Bodies.rectangle(2000, 280, 28, 28, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
-  _bodyToSprite[_body_ycoin3.id] = "ycoin3";
-  _sprites["ycoin3"] = { id: "ycoin3", sprite: _spr_ycoin3, body: _body_ycoin3, tag: "coin", collisionHandlers: [], behaviors: [] };
+  const _coin_9_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_9_src = _coin_9_baseTex.source || _coin_9_baseTex.baseTexture || _coin_9_baseTex;
+  const _coin_9_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_9_frameTex = new PIXI.Texture({ source: _coin_9_src, frame: _coin_9_rect });
+  const _spr_coin_9 = new PIXI.Sprite(_coin_9_frameTex);
+  _spr_coin_9.x = 560;
+  _spr_coin_9.y = 224;
+  _spr_coin_9.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_9);
+  const _body_coin_9 = Matter.Bodies.rectangle(560, 224, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_9.id] = "coin_9";
+  _sprites["coin_9"] = { id: "coin_9", sprite: _spr_coin_9, body: _body_coin_9, tag: "coin", collisionHandlers: [], behaviors: [] };
 
-  const _spr_ycoin4 = PIXI.Sprite.from("assets/smw/sprites/test_yoshi_coins.png");
-  _spr_ycoin4.x = 3000;
-  _spr_ycoin4.y = 260;
-  _spr_ycoin4.anchor.set(0.5, 0.5);
-  _spr_ycoin4.width = 28;
-  _spr_ycoin4.height = 28;
-  _cameraContainer.addChild(_spr_ycoin4);
-  const _body_ycoin4 = Matter.Bodies.rectangle(3000, 260, 28, 28, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
-  _bodyToSprite[_body_ycoin4.id] = "ycoin4";
-  _sprites["ycoin4"] = { id: "ycoin4", sprite: _spr_ycoin4, body: _body_ycoin4, tag: "coin", collisionHandlers: [], behaviors: [] };
+  const _coin_10_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_10_src = _coin_10_baseTex.source || _coin_10_baseTex.baseTexture || _coin_10_baseTex;
+  const _coin_10_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_10_frameTex = new PIXI.Texture({ source: _coin_10_src, frame: _coin_10_rect });
+  const _spr_coin_10 = new PIXI.Sprite(_coin_10_frameTex);
+  _spr_coin_10.x = 1600;
+  _spr_coin_10.y = 288;
+  _spr_coin_10.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_10);
+  const _body_coin_10 = Matter.Bodies.rectangle(1600, 288, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_10.id] = "coin_10";
+  _sprites["coin_10"] = { id: "coin_10", sprite: _spr_coin_10, body: _body_coin_10, tag: "coin", collisionHandlers: [], behaviors: [] };
 
-  const _spr_ycoin5 = PIXI.Sprite.from("assets/smw/sprites/test_yoshi_coins.png");
-  _spr_ycoin5.x = 4000;
-  _spr_ycoin5.y = 280;
-  _spr_ycoin5.anchor.set(0.5, 0.5);
-  _spr_ycoin5.width = 28;
-  _spr_ycoin5.height = 28;
-  _cameraContainer.addChild(_spr_ycoin5);
-  const _body_ycoin5 = Matter.Bodies.rectangle(4000, 280, 28, 28, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
-  _bodyToSprite[_body_ycoin5.id] = "ycoin5";
-  _sprites["ycoin5"] = { id: "ycoin5", sprite: _spr_ycoin5, body: _body_ycoin5, tag: "coin", collisionHandlers: [], behaviors: [] };
+  const _coin_11_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_11_src = _coin_11_baseTex.source || _coin_11_baseTex.baseTexture || _coin_11_baseTex;
+  const _coin_11_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _coin_11_frameTex = new PIXI.Texture({ source: _coin_11_src, frame: _coin_11_rect });
+  const _spr_coin_11 = new PIXI.Sprite(_coin_11_frameTex);
+  _spr_coin_11.x = 2656;
+  _spr_coin_11.y = 176;
+  _spr_coin_11.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_11);
+  const _body_coin_11 = Matter.Bodies.rectangle(2656, 176, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin_11.id] = "coin_11";
+  _sprites["coin_11"] = { id: "coin_11", sprite: _spr_coin_11, body: _body_coin_11, tag: "coin", collisionHandlers: [], behaviors: [] };
 
   const _coin_12_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
   const _coin_12_src = _coin_12_baseTex.source || _coin_12_baseTex.baseTexture || _coin_12_baseTex;
   const _coin_12_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _coin_12_frameTex = new PIXI.Texture({ source: _coin_12_src, frame: _coin_12_rect });
   const _spr_coin_12 = new PIXI.Sprite(_coin_12_frameTex);
-  _spr_coin_12.x = 160;
-  _spr_coin_12.y = 288;
+  _spr_coin_12.x = 2672;
+  _spr_coin_12.y = 176;
   _spr_coin_12.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_coin_12);
-  const _body_coin_12 = Matter.Bodies.rectangle(160, 288, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  const _body_coin_12 = Matter.Bodies.rectangle(2672, 176, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
   _bodyToSprite[_body_coin_12.id] = "coin_12";
   _sprites["coin_12"] = { id: "coin_12", sprite: _spr_coin_12, body: _body_coin_12, tag: "coin", collisionHandlers: [], behaviors: [] };
 
@@ -992,11 +982,11 @@ document.addEventListener('keydown', function(e) {
   const _coin_13_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _coin_13_frameTex = new PIXI.Texture({ source: _coin_13_src, frame: _coin_13_rect });
   const _spr_coin_13 = new PIXI.Sprite(_coin_13_frameTex);
-  _spr_coin_13.x = 528;
-  _spr_coin_13.y = 224;
+  _spr_coin_13.x = 2688;
+  _spr_coin_13.y = 176;
   _spr_coin_13.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_coin_13);
-  const _body_coin_13 = Matter.Bodies.rectangle(528, 224, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  const _body_coin_13 = Matter.Bodies.rectangle(2688, 176, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
   _bodyToSprite[_body_coin_13.id] = "coin_13";
   _sprites["coin_13"] = { id: "coin_13", sprite: _spr_coin_13, body: _body_coin_13, tag: "coin", collisionHandlers: [], behaviors: [] };
 
@@ -1005,11 +995,11 @@ document.addEventListener('keydown', function(e) {
   const _coin_14_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _coin_14_frameTex = new PIXI.Texture({ source: _coin_14_src, frame: _coin_14_rect });
   const _spr_coin_14 = new PIXI.Sprite(_coin_14_frameTex);
-  _spr_coin_14.x = 560;
-  _spr_coin_14.y = 224;
+  _spr_coin_14.x = 2704;
+  _spr_coin_14.y = 176;
   _spr_coin_14.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_coin_14);
-  const _body_coin_14 = Matter.Bodies.rectangle(560, 224, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  const _body_coin_14 = Matter.Bodies.rectangle(2704, 176, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
   _bodyToSprite[_body_coin_14.id] = "coin_14";
   _sprites["coin_14"] = { id: "coin_14", sprite: _spr_coin_14, body: _body_coin_14, tag: "coin", collisionHandlers: [], behaviors: [] };
 
@@ -1018,11 +1008,11 @@ document.addEventListener('keydown', function(e) {
   const _coin_15_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _coin_15_frameTex = new PIXI.Texture({ source: _coin_15_src, frame: _coin_15_rect });
   const _spr_coin_15 = new PIXI.Sprite(_coin_15_frameTex);
-  _spr_coin_15.x = 1600;
-  _spr_coin_15.y = 288;
+  _spr_coin_15.x = 2720;
+  _spr_coin_15.y = 176;
   _spr_coin_15.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_coin_15);
-  const _body_coin_15 = Matter.Bodies.rectangle(1600, 288, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  const _body_coin_15 = Matter.Bodies.rectangle(2720, 176, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
   _bodyToSprite[_body_coin_15.id] = "coin_15";
   _sprites["coin_15"] = { id: "coin_15", sprite: _spr_coin_15, body: _body_coin_15, tag: "coin", collisionHandlers: [], behaviors: [] };
 
@@ -1031,11 +1021,11 @@ document.addEventListener('keydown', function(e) {
   const _coin_16_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _coin_16_frameTex = new PIXI.Texture({ source: _coin_16_src, frame: _coin_16_rect });
   const _spr_coin_16 = new PIXI.Sprite(_coin_16_frameTex);
-  _spr_coin_16.x = 2656;
-  _spr_coin_16.y = 176;
+  _spr_coin_16.x = 3600;
+  _spr_coin_16.y = 272;
   _spr_coin_16.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_coin_16);
-  const _body_coin_16 = Matter.Bodies.rectangle(2656, 176, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  const _body_coin_16 = Matter.Bodies.rectangle(3600, 272, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
   _bodyToSprite[_body_coin_16.id] = "coin_16";
   _sprites["coin_16"] = { id: "coin_16", sprite: _spr_coin_16, body: _body_coin_16, tag: "coin", collisionHandlers: [], behaviors: [] };
 
@@ -1044,11 +1034,11 @@ document.addEventListener('keydown', function(e) {
   const _coin_17_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _coin_17_frameTex = new PIXI.Texture({ source: _coin_17_src, frame: _coin_17_rect });
   const _spr_coin_17 = new PIXI.Sprite(_coin_17_frameTex);
-  _spr_coin_17.x = 2672;
-  _spr_coin_17.y = 176;
+  _spr_coin_17.x = 3616;
+  _spr_coin_17.y = 272;
   _spr_coin_17.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_coin_17);
-  const _body_coin_17 = Matter.Bodies.rectangle(2672, 176, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  const _body_coin_17 = Matter.Bodies.rectangle(3616, 272, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
   _bodyToSprite[_body_coin_17.id] = "coin_17";
   _sprites["coin_17"] = { id: "coin_17", sprite: _spr_coin_17, body: _body_coin_17, tag: "coin", collisionHandlers: [], behaviors: [] };
 
@@ -1057,11 +1047,11 @@ document.addEventListener('keydown', function(e) {
   const _coin_18_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _coin_18_frameTex = new PIXI.Texture({ source: _coin_18_src, frame: _coin_18_rect });
   const _spr_coin_18 = new PIXI.Sprite(_coin_18_frameTex);
-  _spr_coin_18.x = 2688;
-  _spr_coin_18.y = 176;
+  _spr_coin_18.x = 4080;
+  _spr_coin_18.y = 288;
   _spr_coin_18.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_coin_18);
-  const _body_coin_18 = Matter.Bodies.rectangle(2688, 176, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  const _body_coin_18 = Matter.Bodies.rectangle(4080, 288, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
   _bodyToSprite[_body_coin_18.id] = "coin_18";
   _sprites["coin_18"] = { id: "coin_18", sprite: _spr_coin_18, body: _body_coin_18, tag: "coin", collisionHandlers: [], behaviors: [] };
 
@@ -1070,11 +1060,11 @@ document.addEventListener('keydown', function(e) {
   const _coin_19_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _coin_19_frameTex = new PIXI.Texture({ source: _coin_19_src, frame: _coin_19_rect });
   const _spr_coin_19 = new PIXI.Sprite(_coin_19_frameTex);
-  _spr_coin_19.x = 2704;
-  _spr_coin_19.y = 176;
+  _spr_coin_19.x = 4096;
+  _spr_coin_19.y = 288;
   _spr_coin_19.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_coin_19);
-  const _body_coin_19 = Matter.Bodies.rectangle(2704, 176, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  const _body_coin_19 = Matter.Bodies.rectangle(4096, 288, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
   _bodyToSprite[_body_coin_19.id] = "coin_19";
   _sprites["coin_19"] = { id: "coin_19", sprite: _spr_coin_19, body: _body_coin_19, tag: "coin", collisionHandlers: [], behaviors: [] };
 
@@ -1083,78 +1073,13 @@ document.addEventListener('keydown', function(e) {
   const _coin_20_rect = new PIXI.Rectangle(0, 0, 16, 16);
   const _coin_20_frameTex = new PIXI.Texture({ source: _coin_20_src, frame: _coin_20_rect });
   const _spr_coin_20 = new PIXI.Sprite(_coin_20_frameTex);
-  _spr_coin_20.x = 2720;
-  _spr_coin_20.y = 176;
+  _spr_coin_20.x = 4112;
+  _spr_coin_20.y = 288;
   _spr_coin_20.anchor.set(0.5, 0.5);
   _cameraContainer.addChild(_spr_coin_20);
-  const _body_coin_20 = Matter.Bodies.rectangle(2720, 176, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  const _body_coin_20 = Matter.Bodies.rectangle(4112, 288, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
   _bodyToSprite[_body_coin_20.id] = "coin_20";
   _sprites["coin_20"] = { id: "coin_20", sprite: _spr_coin_20, body: _body_coin_20, tag: "coin", collisionHandlers: [], behaviors: [] };
-
-  const _coin_21_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
-  const _coin_21_src = _coin_21_baseTex.source || _coin_21_baseTex.baseTexture || _coin_21_baseTex;
-  const _coin_21_rect = new PIXI.Rectangle(0, 0, 16, 16);
-  const _coin_21_frameTex = new PIXI.Texture({ source: _coin_21_src, frame: _coin_21_rect });
-  const _spr_coin_21 = new PIXI.Sprite(_coin_21_frameTex);
-  _spr_coin_21.x = 3600;
-  _spr_coin_21.y = 272;
-  _spr_coin_21.anchor.set(0.5, 0.5);
-  _cameraContainer.addChild(_spr_coin_21);
-  const _body_coin_21 = Matter.Bodies.rectangle(3600, 272, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
-  _bodyToSprite[_body_coin_21.id] = "coin_21";
-  _sprites["coin_21"] = { id: "coin_21", sprite: _spr_coin_21, body: _body_coin_21, tag: "coin", collisionHandlers: [], behaviors: [] };
-
-  const _coin_22_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
-  const _coin_22_src = _coin_22_baseTex.source || _coin_22_baseTex.baseTexture || _coin_22_baseTex;
-  const _coin_22_rect = new PIXI.Rectangle(0, 0, 16, 16);
-  const _coin_22_frameTex = new PIXI.Texture({ source: _coin_22_src, frame: _coin_22_rect });
-  const _spr_coin_22 = new PIXI.Sprite(_coin_22_frameTex);
-  _spr_coin_22.x = 3616;
-  _spr_coin_22.y = 272;
-  _spr_coin_22.anchor.set(0.5, 0.5);
-  _cameraContainer.addChild(_spr_coin_22);
-  const _body_coin_22 = Matter.Bodies.rectangle(3616, 272, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
-  _bodyToSprite[_body_coin_22.id] = "coin_22";
-  _sprites["coin_22"] = { id: "coin_22", sprite: _spr_coin_22, body: _body_coin_22, tag: "coin", collisionHandlers: [], behaviors: [] };
-
-  const _coin_23_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
-  const _coin_23_src = _coin_23_baseTex.source || _coin_23_baseTex.baseTexture || _coin_23_baseTex;
-  const _coin_23_rect = new PIXI.Rectangle(0, 0, 16, 16);
-  const _coin_23_frameTex = new PIXI.Texture({ source: _coin_23_src, frame: _coin_23_rect });
-  const _spr_coin_23 = new PIXI.Sprite(_coin_23_frameTex);
-  _spr_coin_23.x = 4080;
-  _spr_coin_23.y = 288;
-  _spr_coin_23.anchor.set(0.5, 0.5);
-  _cameraContainer.addChild(_spr_coin_23);
-  const _body_coin_23 = Matter.Bodies.rectangle(4080, 288, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
-  _bodyToSprite[_body_coin_23.id] = "coin_23";
-  _sprites["coin_23"] = { id: "coin_23", sprite: _spr_coin_23, body: _body_coin_23, tag: "coin", collisionHandlers: [], behaviors: [] };
-
-  const _coin_24_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
-  const _coin_24_src = _coin_24_baseTex.source || _coin_24_baseTex.baseTexture || _coin_24_baseTex;
-  const _coin_24_rect = new PIXI.Rectangle(0, 0, 16, 16);
-  const _coin_24_frameTex = new PIXI.Texture({ source: _coin_24_src, frame: _coin_24_rect });
-  const _spr_coin_24 = new PIXI.Sprite(_coin_24_frameTex);
-  _spr_coin_24.x = 4096;
-  _spr_coin_24.y = 288;
-  _spr_coin_24.anchor.set(0.5, 0.5);
-  _cameraContainer.addChild(_spr_coin_24);
-  const _body_coin_24 = Matter.Bodies.rectangle(4096, 288, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
-  _bodyToSprite[_body_coin_24.id] = "coin_24";
-  _sprites["coin_24"] = { id: "coin_24", sprite: _spr_coin_24, body: _body_coin_24, tag: "coin", collisionHandlers: [], behaviors: [] };
-
-  const _coin_25_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
-  const _coin_25_src = _coin_25_baseTex.source || _coin_25_baseTex.baseTexture || _coin_25_baseTex;
-  const _coin_25_rect = new PIXI.Rectangle(0, 0, 16, 16);
-  const _coin_25_frameTex = new PIXI.Texture({ source: _coin_25_src, frame: _coin_25_rect });
-  const _spr_coin_25 = new PIXI.Sprite(_coin_25_frameTex);
-  _spr_coin_25.x = 4112;
-  _spr_coin_25.y = 288;
-  _spr_coin_25.anchor.set(0.5, 0.5);
-  _cameraContainer.addChild(_spr_coin_25);
-  const _body_coin_25 = Matter.Bodies.rectangle(4112, 288, 16, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
-  _bodyToSprite[_body_coin_25.id] = "coin_25";
-  _sprites["coin_25"] = { id: "coin_25", sprite: _spr_coin_25, body: _body_coin_25, tag: "coin", collisionHandlers: [], behaviors: [] };
 
   const _rex1_baseTex = PIXI.Assets.get("assets/smw/sprites/rex_walk.png");
   const _rex1_src = _rex1_baseTex.source || _rex1_baseTex.baseTexture || _rex1_baseTex;
@@ -1346,7 +1271,7 @@ document.addEventListener('keydown', function(e) {
   _bodyToSprite[_body_deathzone.id] = "deathzone";
   _sprites["deathzone"] = { id: "deathzone", sprite: _spr_deathzone, body: _body_deathzone, tag: "death", collisionHandlers: [], behaviors: [] };
 
-  Matter.Composite.add(mWorld, [_body_ground, _body_hill1_step1, _body_hill1_step2, _body_hill1_step3, _body_hill1_step4, _body_hill1_top, _body_hill1_down1, _body_hill1_down2, _body_hill1_down3, _body_hill1_down4, _body_qb1, _body_qb2, _body_qb3, _body_qb4, _body_qb5, _body_qb6, _body_qb7, _body_ycoin1, _body_ycoin2, _body_ycoin3, _body_ycoin4, _body_ycoin5, _body_coin_12, _body_coin_13, _body_coin_14, _body_coin_15, _body_coin_16, _body_coin_17, _body_coin_18, _body_coin_19, _body_coin_20, _body_coin_21, _body_coin_22, _body_coin_23, _body_coin_24, _body_coin_25, _body_rex1, _body_rex2, _body_rex3, _body_rex4, _body_rex5, _body_rex6, _body_rex7, _body_rex8, _body_rex9, _body_rex10, _body_rex11, _body_rex12, _body_goal, _body_mario, _body_deathzone]);
+  Matter.Composite.add(mWorld, [_body_ground, _body_hill1_step1, _body_hill1_step2, _body_hill1_step3, _body_hill1_step4, _body_hill1_top, _body_hill1_down1, _body_hill1_down2, _body_hill1_down3, _body_hill1_down4, _body_qb1, _body_qb2, _body_qb3, _body_qb4, _body_qb5, _body_qb6, _body_qb7, _body_coin_7, _body_coin_8, _body_coin_9, _body_coin_10, _body_coin_11, _body_coin_12, _body_coin_13, _body_coin_14, _body_coin_15, _body_coin_16, _body_coin_17, _body_coin_18, _body_coin_19, _body_coin_20, _body_rex1, _body_rex2, _body_rex3, _body_rex4, _body_rex5, _body_rex6, _body_rex7, _body_rex8, _body_rex9, _body_rex10, _body_rex11, _body_rex12, _body_goal, _body_mario, _body_deathzone]);
 
   function syncPhysics() {
     for (const [id, info] of Object.entries(_sprites)) {
@@ -1984,6 +1909,11 @@ document.addEventListener('keydown', function(e) {
   _registerAnimation("qb5", PIXI.Assets.get("assets/smw/sprites/qblock_animated.png"), 16, 16, { "shine": { frames: "0,1,2,3", speed: 0.15, loop: true, autoPlay: true } });
   _registerAnimation("qb6", PIXI.Assets.get("assets/smw/sprites/qblock_animated.png"), 16, 16, { "shine": { frames: "0,1,2,3", speed: 0.15, loop: true, autoPlay: true } });
   _registerAnimation("qb7", PIXI.Assets.get("assets/smw/sprites/qblock_animated.png"), 16, 16, { "shine": { frames: "0,1,2,3", speed: 0.15, loop: true, autoPlay: true } });
+  _registerAnimation("coin_7", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_8", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_9", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_10", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_11", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
   _registerAnimation("coin_12", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
   _registerAnimation("coin_13", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
   _registerAnimation("coin_14", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
@@ -1993,11 +1923,6 @@ document.addEventListener('keydown', function(e) {
   _registerAnimation("coin_18", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
   _registerAnimation("coin_19", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
   _registerAnimation("coin_20", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
-  _registerAnimation("coin_21", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
-  _registerAnimation("coin_22", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
-  _registerAnimation("coin_23", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
-  _registerAnimation("coin_24", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
-  _registerAnimation("coin_25", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 16, { "spin": { frames: "0,1,2,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
   _registerAnimation("rex1", PIXI.Assets.get("assets/smw/sprites/rex_walk.png"), 12, 24, { "walk": { frames: "0-1", speed: 0.15, loop: true, autoPlay: true } });
   _registerAnimation("rex2", PIXI.Assets.get("assets/smw/sprites/rex_walk.png"), 12, 24, { "walk": { frames: "0-1", speed: 0.15, loop: true, autoPlay: true } });
   _registerAnimation("rex3", PIXI.Assets.get("assets/smw/sprites/rex_walk.png"), 12, 24, { "walk": { frames: "0-1", speed: 0.15, loop: true, autoPlay: true } });

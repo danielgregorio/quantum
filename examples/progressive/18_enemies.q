@@ -56,11 +56,7 @@
       </qg:sprite>
     </qg:prefab>
 
-    <qg:prefab name="yoshi-coin">
-      <qg:sprite src="assets/smw/sprites/test_yoshi_coins.png"
-                 width="28" height="28"
-                 tag="coin" body="static" sensor="true" />
-    </qg:prefab>
+    <!-- Yoshi coins removed - spritesheet issue -->
 
     <qg:prefab name="rex">
       <qg:sprite src="assets/smw/sprites/rex_walk.png"
@@ -78,26 +74,26 @@
     <qg:sprite id="ground" width="5120" height="32" x="2560" y="399"
                tag="terrain" body="static" visible="false" />
 
-    <!-- Hill/slope collision (stair steps) - first hill at x≈400-650 -->
+    <!-- Hill/slope collision (stair steps) - DEBUG: visible green -->
     <qg:sprite id="hill1-step1" width="50" height="16" x="425" y="375"
-               tag="terrain" body="static" visible="false" />
+               tag="terrain" body="static" color="#00FF00" />
     <qg:sprite id="hill1-step2" width="50" height="16" x="475" y="359"
-               tag="terrain" body="static" visible="false" />
+               tag="terrain" body="static" color="#00FF00" />
     <qg:sprite id="hill1-step3" width="50" height="16" x="525" y="343"
-               tag="terrain" body="static" visible="false" />
+               tag="terrain" body="static" color="#00FF00" />
     <qg:sprite id="hill1-step4" width="50" height="16" x="575" y="327"
-               tag="terrain" body="static" visible="false" />
+               tag="terrain" body="static" color="#00FF00" />
     <qg:sprite id="hill1-top" width="80" height="16" x="640" y="311"
-               tag="terrain" body="static" visible="false" />
+               tag="terrain" body="static" color="#00FF00" />
     <!-- Down slope -->
     <qg:sprite id="hill1-down1" width="50" height="16" x="705" y="327"
-               tag="terrain" body="static" visible="false" />
+               tag="terrain" body="static" color="#00FF00" />
     <qg:sprite id="hill1-down2" width="50" height="16" x="755" y="343"
-               tag="terrain" body="static" visible="false" />
+               tag="terrain" body="static" color="#00FF00" />
     <qg:sprite id="hill1-down3" width="50" height="16" x="805" y="359"
-               tag="terrain" body="static" visible="false" />
+               tag="terrain" body="static" color="#00FF00" />
     <qg:sprite id="hill1-down4" width="50" height="16" x="855" y="375"
-               tag="terrain" body="static" visible="false" />
+               tag="terrain" body="static" color="#00FF00" />
 
     <!-- Question blocks (matching image positions) -->
     <qg:instance prefab="qblock" id="qb1" x="496" y="256" />
@@ -109,14 +105,7 @@
     <qg:instance prefab="qblock" id="qb7" x="3248" y="192" />
 
     <!-- Coins (matching image - floating coins) -->
-    <!-- Yoshi Coins (Dragon Coins) -->
-    <qg:instance prefab="yoshi-coin" id="ycoin1" x="500" y="280" />
-    <qg:instance prefab="yoshi-coin" id="ycoin2" x="1200" y="260" />
-    <qg:instance prefab="yoshi-coin" id="ycoin3" x="2000" y="280" />
-    <qg:instance prefab="yoshi-coin" id="ycoin4" x="3000" y="260" />
-    <qg:instance prefab="yoshi-coin" id="ycoin5" x="4000" y="280" />
-
-    <!-- Regular coins -->
+    <!-- Coins -->
     <qg:instance prefab="coin" x="160" y="288" />
     <qg:instance prefab="coin" x="528" y="224" />
     <qg:instance prefab="coin" x="560" y="224" />
