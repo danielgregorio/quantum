@@ -12,7 +12,7 @@
 -->
 <q:application id="yoshi-island-1" type="game" engine="2d">
   <qg:scene name="main" width="5120" height="432" viewport-width="256" viewport-height="224" background="#5C94FC">
-    <qg:physics gravity-y="1.0" />
+    <qg:physics gravity-y="1.2" />
     <qg:camera follow="mario" lerp="0.08" bounds="scene" offset-y="-80" />
 
     <!-- Game state -->
@@ -72,15 +72,7 @@
     <qg:sprite id="ground" width="5120" height="32" x="2560" y="369"
                tag="terrain" body="static" visible="false" />
 
-    <!-- Diagonal pipe near start - stair collision (invisible) -->
-    <qg:sprite id="pipe1-1" width="40" height="24" x="200" y="341"
-               tag="terrain" body="static" visible="false" />
-    <qg:sprite id="pipe1-2" width="40" height="24" x="230" y="317"
-               tag="terrain" body="static" visible="false" />
-    <qg:sprite id="pipe1-3" width="40" height="24" x="260" y="293"
-               tag="terrain" body="static" visible="false" />
-    <qg:sprite id="pipe1-4" width="40" height="24" x="290" y="269"
-               tag="terrain" body="static" visible="false" />
+    <!-- NOTE: Pipe collisions removed - causing issues, will add later -->
 
     <!-- Question blocks (matching image positions) -->
     <qg:instance prefab="qblock" id="qb1" x="496" y="256" />
@@ -129,7 +121,7 @@
     <qg:sprite id="mario" src="assets/smw/sprites/mario_small.png"
                x="80" y="341" tag="player"
                frame-width="16" frame-height="24"
-               body="dynamic" controls="arrows" speed="2.5" jump-force="12" friction="0">
+               body="dynamic" controls="arrows" speed="2.5" jump-force="7" friction="0">
       <qg:animation name="idle" frames="0" speed="0.1" loop="true" auto-play="true" />
       <qg:animation name="walk" frames="1-3" speed="0.18" loop="true" />
       <qg:animation name="jump" frames="4" speed="0.1" loop="false" />
