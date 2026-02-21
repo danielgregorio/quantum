@@ -12,7 +12,7 @@
 -->
 <q:application id="yoshi-island-1" type="game" engine="2d">
   <qg:scene name="main" width="5120" height="432" viewport-width="256" viewport-height="224" background="#5C94FC">
-    <qg:physics gravity-y="1.2" />
+    <qg:physics gravity-y="1.5" />
     <qg:camera follow="mario" lerp="0.08" bounds="scene" offset-y="-80" />
 
     <!-- Game state -->
@@ -56,6 +56,12 @@
       </qg:sprite>
     </qg:prefab>
 
+    <qg:prefab name="yoshi-coin">
+      <qg:sprite src="assets/smw/sprites/test_yoshi_coins.png"
+                 width="28" height="28"
+                 tag="coin" body="static" sensor="true" />
+    </qg:prefab>
+
     <qg:prefab name="rex">
       <qg:sprite src="assets/smw/sprites/rex_walk.png"
                  frame-width="12" frame-height="24"
@@ -72,7 +78,26 @@
     <qg:sprite id="ground" width="5120" height="32" x="2560" y="399"
                tag="terrain" body="static" visible="false" />
 
-    <!-- NOTE: Pipe collisions removed - causing issues, will add later -->
+    <!-- Hill/slope collision (stair steps) - first hill at x≈400-650 -->
+    <qg:sprite id="hill1-step1" width="50" height="16" x="425" y="375"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="hill1-step2" width="50" height="16" x="475" y="359"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="hill1-step3" width="50" height="16" x="525" y="343"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="hill1-step4" width="50" height="16" x="575" y="327"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="hill1-top" width="80" height="16" x="640" y="311"
+               tag="terrain" body="static" visible="false" />
+    <!-- Down slope -->
+    <qg:sprite id="hill1-down1" width="50" height="16" x="705" y="327"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="hill1-down2" width="50" height="16" x="755" y="343"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="hill1-down3" width="50" height="16" x="805" y="359"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="hill1-down4" width="50" height="16" x="855" y="375"
+               tag="terrain" body="static" visible="false" />
 
     <!-- Question blocks (matching image positions) -->
     <qg:instance prefab="qblock" id="qb1" x="496" y="256" />
@@ -84,6 +109,14 @@
     <qg:instance prefab="qblock" id="qb7" x="3248" y="192" />
 
     <!-- Coins (matching image - floating coins) -->
+    <!-- Yoshi Coins (Dragon Coins) -->
+    <qg:instance prefab="yoshi-coin" id="ycoin1" x="500" y="280" />
+    <qg:instance prefab="yoshi-coin" id="ycoin2" x="1200" y="260" />
+    <qg:instance prefab="yoshi-coin" id="ycoin3" x="2000" y="280" />
+    <qg:instance prefab="yoshi-coin" id="ycoin4" x="3000" y="260" />
+    <qg:instance prefab="yoshi-coin" id="ycoin5" x="4000" y="280" />
+
+    <!-- Regular coins -->
     <qg:instance prefab="coin" x="160" y="288" />
     <qg:instance prefab="coin" x="528" y="224" />
     <qg:instance prefab="coin" x="560" y="224" />
@@ -121,7 +154,7 @@
     <qg:sprite id="mario" src="assets/smw/sprites/mario_small.png"
                x="80" y="371" tag="player"
                frame-width="16" frame-height="24"
-               body="dynamic" controls="arrows" speed="2.5" jump-force="7" friction="0">
+               body="dynamic" controls="arrows" speed="2" jump-force="5.5" friction="0.1">
       <qg:animation name="idle" frames="0" speed="0.1" loop="true" auto-play="true" />
       <qg:animation name="walk" frames="1-3" speed="0.18" loop="true" />
       <qg:animation name="jump" frames="4" speed="0.1" loop="false" />
