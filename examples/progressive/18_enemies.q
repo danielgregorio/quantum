@@ -68,9 +68,9 @@
     <qg:sprite id="level-bg" src="assets/smw/sprites/yoshi-island-1.png"
                x="2560" y="216" width="5120" height="432" />
 
-    <!-- DEBUG: Visible ground collision (red) to see where it is -->
-    <!-- Ground top should be at approximately y=400 -->
-    <qg:sprite id="ground" width="5120" height="32" x="2560" y="416"
+    <!-- DEBUG: Visible ground collision (red) -->
+    <!-- Ground top at y=352 (grass line), center at y=368 -->
+    <qg:sprite id="ground" width="5120" height="32" x="2560" y="368"
                tag="terrain" body="static" color="#FF0000" />
 
     <!-- Question blocks (matching image positions) -->
@@ -98,27 +98,27 @@
     <qg:instance prefab="coin" x="4096" y="288" />
     <qg:instance prefab="coin" x="4112" y="288" />
 
-    <!-- Rex enemies (ground top at y=400, Rex height=24, center at y=388) -->
-    <qg:instance prefab="rex" id="rex1" x="450" y="388" />
-    <qg:instance prefab="rex" id="rex2" x="700" y="388" />
-    <qg:instance prefab="rex" id="rex3" x="950" y="388" />
-    <qg:instance prefab="rex" id="rex4" x="1300" y="388" />
-    <qg:instance prefab="rex" id="rex5" x="1600" y="388" />
-    <qg:instance prefab="rex" id="rex6" x="1900" y="388" />
-    <qg:instance prefab="rex" id="rex7" x="2200" y="388" />
-    <qg:instance prefab="rex" id="rex8" x="2700" y="388" />
-    <qg:instance prefab="rex" id="rex9" x="3100" y="388" />
-    <qg:instance prefab="rex" id="rex10" x="3500" y="388" />
-    <qg:instance prefab="rex" id="rex11" x="3900" y="388" />
-    <qg:instance prefab="rex" id="rex12" x="4300" y="388" />
+    <!-- Rex enemies (ground top at y=352, Rex height=24, center at y=340) -->
+    <qg:instance prefab="rex" id="rex1" x="450" y="340" />
+    <qg:instance prefab="rex" id="rex2" x="700" y="340" />
+    <qg:instance prefab="rex" id="rex3" x="950" y="340" />
+    <qg:instance prefab="rex" id="rex4" x="1300" y="340" />
+    <qg:instance prefab="rex" id="rex5" x="1600" y="340" />
+    <qg:instance prefab="rex" id="rex6" x="1900" y="340" />
+    <qg:instance prefab="rex" id="rex7" x="2200" y="340" />
+    <qg:instance prefab="rex" id="rex8" x="2700" y="340" />
+    <qg:instance prefab="rex" id="rex9" x="3100" y="340" />
+    <qg:instance prefab="rex" id="rex10" x="3500" y="340" />
+    <qg:instance prefab="rex" id="rex11" x="3900" y="340" />
+    <qg:instance prefab="rex" id="rex12" x="4300" y="340" />
 
     <!-- Goal at the end (visible in image around x=4900) -->
     <qg:sprite id="goal" width="16" height="80" x="4950" y="344"
                color="#00FF00" tag="goal" body="static" sensor="true" />
 
-    <!-- Mario (ground top at y=400, Mario height=24, center at y=388) -->
+    <!-- Mario (ground top at y=352, Mario height=24, center at y=340) -->
     <qg:sprite id="mario" src="assets/smw/sprites/mario_small.png"
-               x="80" y="388" tag="player"
+               x="80" y="340" tag="player"
                frame-width="16" frame-height="24"
                body="dynamic" controls="arrows" speed="2.5" jump-force="8" friction="0">
       <qg:animation name="idle" frames="0" speed="0.1" loop="true" auto-play="true" />
