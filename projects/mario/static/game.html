@@ -169,11 +169,10 @@
     &lt;qg:sprite id=&quot;level-bg&quot; src=&quot;assets/smw/sprites/yoshi-island-1.png&quot;
                x=&quot;2560&quot; y=&quot;216&quot; width=&quot;5120&quot; height=&quot;432&quot; /&gt;
 
-    &lt;!-- DEBUG: Visible ground collision to see where it is --&gt;
-    &lt;!-- Looking at the screenshot, ground is at the very bottom of the 432px image --&gt;
-    &lt;!-- Ground top should be at approximately y=415 --&gt;
+    &lt;!-- DEBUG: Visible ground collision (red) to see where it is --&gt;
+    &lt;!-- Ground top should be at approximately y=400 --&gt;
     &lt;qg:sprite id=&quot;ground&quot; width=&quot;5120&quot; height=&quot;32&quot; x=&quot;2560&quot; y=&quot;416&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#FF000080&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#FF0000&quot; /&gt;
 
     &lt;!-- Question blocks (matching image positions) --&gt;
     &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb1&quot; x=&quot;496&quot; y=&quot;256&quot; /&gt;
@@ -687,7 +686,7 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_ground = new PIXI.Graphics();
   _spr_ground.rect(-2560.0, -16.0, 5120.0, 32.0);
-  _spr_ground.fill({ color: 0xFF000080 });
+  _spr_ground.fill({ color: 0xFF0000 });
   _spr_ground.x = 2560;
   _spr_ground.y = 416;
   _cameraContainer.addChild(_spr_ground);

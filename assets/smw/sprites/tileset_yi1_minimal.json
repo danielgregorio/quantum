@@ -1,0 +1,28 @@
+{
+  "tile_size": 16,
+  "columns": 16,
+  "rows": 11,
+  "description": "Yoshi's Island 1 minimal tileset - proper SMW ground tiles",
+  "tiles": {
+    "corner_tl": 1,
+    "edge_top": 2,
+    "corner_tr": 3,
+    "edge_left": 17,
+    "fill": 18,
+    "edge_right": 19,
+    "corner_bl": 33,
+    "edge_bottom": 34,
+    "corner_br": 35,
+    "slope_up_1": 49,
+    "slope_up_2": 50,
+    "slope_down_1": 51,
+    "slope_down_2": 52,
+    "slope_fill": 65,
+    "hill_left": 225,
+    "hill_mid": 226,
+    "hill_right": 227,
+    "bush_left": 241,
+    "bush_mid": 242,
+    "bush_right": 243
+  }
+}

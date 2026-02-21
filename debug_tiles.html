@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Debug Tiles</title>
+  <style>
+    body { background: #111; color: #fff; font-family: monospace; padding: 20px; }
+    #log { background: #222; padding: 10px; margin: 10px 0; max-height: 300px; overflow: auto; }
+    canvas { border: 1px solid #fff; }
+  </style>
+</head>
+<body>
+  <h2>Debug: Tile Rendering</h2>
+  <div id="log"></div>
+  <div id="canvas-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
+  <script>
+    function log(msg) {
+      const div = document.getElementById('log');
+      div.innerHTML += msg + '<br>';
+      console.log(msg);
+    }
+
+    (async function() {
+      log('Starting PIXI...');
+
+      const app = new PIXI.Application();
+      await app.init({ width: 256, height: 128, background: '#5CA0FF' });
+      document.getElementById('canvas-container').appendChild(app.canvas);
+      log('PIXI initialized: ' + app.canvas.width + 'x' + app.canvas.height);
+
+      // Load tileset
+      const tilesetPath = 'assets/smw/sprites/tileset_yi1_minimal_transparent.png';
+      log('Loading tileset: ' + tilesetPath);
+
+      try {
+        await PIXI.Assets.load([tilesetPath]);
+        log('Tileset loaded!');
+
+        const tileset = PIXI.Assets.get(tilesetPath);
+        log('Tileset type: ' + typeof tileset);
+        log('Tileset constructor: ' + (tileset ? tileset.constructor.name : 'null'));
+        log('Tileset width: ' + (tileset ? tileset.width : 'null'));
+        log('Tileset height: ' + (tileset ? tileset.height : 'null'));
+
+        if (tileset) {
+          log('Tileset.source: ' + (tileset.source ? tileset.source.constructor.name : 'null'));
+          log('Tileset.source.width: ' + (tileset.source ? tileset.source.width : 'null'));
+          log('Tileset.baseTexture: ' + (tileset.baseTexture ? 'exists' : 'null'));
+        }
+
+        // Try to get source
+        const source = tileset.source || tileset.baseTexture || tileset;
+        log('Source type: ' + (source ? source.constructor.name : 'null'));
+        log('Source width: ' + (source ? source.width : 'null'));
+
+        // Calculate columns
+        const tileW = 16, tileH = 16;
+        const cols = Math.floor((tileset.width || 0) / tileW);
+        log('Calculated columns (from tileset.width): ' + cols);
+
+        const colsFromSource = Math.floor((source.width || 0) / tileW);
+        log('Calculated columns (from source.width): ' + colsFromSource);
+
+        // Test render: 4 tiles in a row
+        const tileData = [[1, 2, 2, 3], [17, 18, 18, 19]];
+        const actualCols = colsFromSource > 0 ? colsFromSource : cols;
+        log('Using columns: ' + actualCols);
+
+        if (actualCols <= 0) {
+          log('ERROR: Cannot calculate tileset columns!');
+          return;
+        }
+
+        for (let ty = 0; ty < tileData.length; ty++) {
+          for (let tx = 0; tx < tileData[ty].length; tx++) {
+            const tileId = tileData[ty][tx];
+            if (tileId > 0) {
+              const tileCol = tileId % actualCols;
+              const tileRow = Math.floor(tileId / actualCols);
+              log('Tile ' + tileId + ' -> col=' + tileCol + ', row=' + tileRow);
+
+              try {
+                const rect = new PIXI.Rectangle(tileCol * tileW, tileRow * tileH, tileW, tileH);
+                log('  Rectangle: ' + rect.x + ',' + rect.y + ' ' + rect.width + 'x' + rect.height);
+
+                const frameTex = new PIXI.Texture({ source: source, frame: rect });
+                const sprite = new PIXI.Sprite(frameTex);
+                sprite.x = tx * tileW;
+                sprite.y = ty * tileH;
+                app.stage.addChild(sprite);
+                log('  Sprite created at ' + sprite.x + ',' + sprite.y);
+              } catch (e) {
+                log('  ERROR creating tile: ' + e.message);
+              }
+            }
+          }
+        }
+
+        log('Done!');
+
+      } catch (e) {
+        log('ERROR loading tileset: ' + e.message);
+        console.error(e);
+      }
+    })();
+  </script>
+</body>
+</html>

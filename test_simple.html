@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head><title>Simple Test</title></head>
+<body style="background:#333;color:#fff;font-family:monospace">
+  <h2>Simple Image Test</h2>
+
+  <p>Direct IMG (should be 48x32):</p>
+  <img id="img1" src="assets/smw/sprites/ts_1771589671.png" onload="showSize(this, 'size1')" />
+  <div id="size1"></div>
+
+  <p>With cache buster:</p>
+  <img id="img2" onload="showSize(this, 'size2')" />
+  <div id="size2"></div>
+
+  <script>
+    function showSize(img, targetId) {
+      document.getElementById(targetId).textContent =
+        'naturalWidth: ' + img.naturalWidth + ', naturalHeight: ' + img.naturalHeight;
+    }
+
+    // Load with cache buster
+    document.getElementById('img2').src =
+      'assets/smw/sprites/ts_1771589671.png?' + Date.now();
+  </script>
+</body>
+</html>

@@ -25,6 +25,8 @@ class SceneNode(QuantumNode):
         self.name = name
         self.width: int = 800
         self.height: int = 600
+        self.viewport_width: Optional[int] = None  # Canvas width (defaults to width)
+        self.viewport_height: Optional[int] = None  # Canvas height (defaults to height)
         self.background: str = "#000000"
         self.active: bool = True
         self.children: List[QuantumNode] = []
@@ -93,6 +95,13 @@ class SpriteNode(QuantumNode):
         self.controls: Optional[str] = None  # wasd, arrows, custom
         self.speed: float = 5.0
         self.jump_force: float = 10.0
+
+        # SMW-style jump physics
+        self.gravity_up: Optional[float] = None  # Gravity while ascending (lower = floatier)
+        self.gravity_down: Optional[float] = None  # Gravity while descending (higher = snappier)
+        self.jump_hold_boost: float = 0.4  # Extra upward force while holding jump
+        self.coyote_frames: int = 6  # Frames allowed to jump after leaving platform
+        self.max_fall_speed: float = 15.0  # Terminal velocity
 
         # Children (animations, colliders, behaviors)
         self.children: List[QuantumNode] = []
@@ -198,6 +207,43 @@ class AnimationNode(QuantumNode):
             errors.append("Animation name is required")
         if not self.frames:
             errors.append("Animation frames are required")
+        return errors
+
+
+class OnCollisionNode(QuantumNode):
+    """Represents <qg:on-collision> - Inline collision handler for sprites.
+
+    Allows simple collision responses without creating behaviors:
+        <qg:sprite id="mario" tag="player">
+            <qg:on-collision with-tag="coin" action="destroy-other" />
+            <qg:on-collision with-tag="enemy" action="emit:player-hit" />
+        </qg:sprite>
+
+    Supported actions:
+        - destroy-self: Remove this sprite
+        - destroy-other: Remove the colliding sprite
+        - emit:eventName: Emit a custom event
+    """
+
+    def __init__(self):
+        self.with_tag: Optional[str] = None  # Tag to collide with
+        self.with_id: Optional[str] = None   # Specific sprite ID to collide with
+        self.action: str = ""                # Action to perform
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "game_on_collision",
+            "with_tag": self.with_tag,
+            "with_id": self.with_id,
+            "action": self.action,
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.with_tag and not self.with_id:
+            errors.append("on-collision requires with-tag or with-id")
+        if not self.action:
+            errors.append("on-collision requires an action")
         return errors
 
 
@@ -429,6 +475,29 @@ class TweenNode(QuantumNode):
         return errors
 
 
+class TileAnimationNode(QuantumNode):
+    """Represents <qg:tile-animation> - Animated tile definition."""
+
+    def __init__(self, tile_id: int):
+        self.tile_id = tile_id  # Which tile ID to animate
+        self.frames: List[int] = []  # List of tile IDs for animation frames
+        self.speed: float = 0.15  # Seconds per frame
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "game_tile_animation",
+            "tile_id": self.tile_id,
+            "frames": self.frames,
+            "speed": self.speed,
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.frames:
+            errors.append("Tile animation must have at least one frame")
+        return errors
+
+
 class TilemapNode(QuantumNode):
     """Represents <qg:tilemap> - Tile-based map."""
 
@@ -438,9 +507,13 @@ class TilemapNode(QuantumNode):
         self.tile_width: int = 32
         self.tile_height: int = 32
         self.layers: List['TilemapLayerNode'] = []
+        self.tile_animations: List['TileAnimationNode'] = []  # Animated tile definitions
 
     def add_layer(self, layer: 'TilemapLayerNode'):
         self.layers.append(layer)
+
+    def add_tile_animation(self, anim: 'TileAnimationNode'):
+        self.tile_animations.append(anim)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -756,4 +829,47 @@ class TransitionNode(QuantumNode):
             errors.append("Transition event is required")
         if not self.transition:
             errors.append("Transition target state is required")
+        return errors
+
+
+class EventNode(QuantumNode):
+    """Represents <qg:event> - Declarative event listener.
+
+    Allows registering event handlers at scene level:
+        <qg:event name="coinCollected" handler="onCoinCollected" />
+        <qg:event name="playerDied" handler="onPlayerDied" filter-tag="player" />
+
+    Attributes:
+        name: Event name to listen for (e.g., "coinCollected", "player.jump")
+        handler: Function name to call when event fires
+        filter_tag: Optional tag filter - only handle events from sprites with this tag
+        filter_id: Optional sprite ID filter - only handle events from this specific sprite
+        scope: Event scope - "scene" (default), "sprite", or "global"
+    """
+
+    def __init__(self, name: str, handler: str):
+        self.name = name
+        self.handler = handler
+        self.filter_tag: Optional[str] = None
+        self.filter_id: Optional[str] = None
+        self.scope: str = "scene"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "type": "game_event",
+            "name": self.name,
+            "handler": self.handler,
+            "filter_tag": self.filter_tag,
+            "filter_id": self.filter_id,
+            "scope": self.scope,
+        }
+
+    def validate(self) -> List[str]:
+        errors = []
+        if not self.name:
+            errors.append("Event name is required")
+        if not self.handler:
+            errors.append("Event handler is required")
+        if self.scope not in ("scene", "sprite", "global"):
+            errors.append(f"Invalid event scope: {self.scope}. Must be scene, sprite, or global")
         return errors

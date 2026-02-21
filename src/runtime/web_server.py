@@ -263,7 +263,7 @@ class QuantumWebServer:
             session_data = session['quantum_session']
 
             # Check if component requires authentication
-            if ast.require_auth:
+            if getattr(ast, 'require_auth', False):
                 if not AuthService.is_authenticated(session_data):
                     # Not authenticated - redirect to login
                     session['redirect_after_login'] = request.path

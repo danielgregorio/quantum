@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Teste Isolado</title>
+  <style>
+    body { background: #222; color: #fff; font-family: monospace; padding: 20px; }
+    canvas { border: 2px solid red; }
+    img { border: 2px solid green; }
+  </style>
+</head>
+<body>
+  <h2>Teste Isolado - Sem Cache</h2>
+
+  <h3>1. Imagem via IMG tag (sem PIXI):</h3>
+  <img id="imgTest" src="assets/smw/sprites/ts_1771589671.png" />
+  <div id="imgInfo"></div>
+
+  <h3>2. Imagem via PIXI:</h3>
+  <div id="pixiContainer"></div>
+  <div id="pixiInfo"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
+  <script>
+    // Test 1: Verificar imagem via IMG
+    const img = document.getElementById('imgTest');
+    img.onload = function() {
+      document.getElementById('imgInfo').textContent =
+        'IMG size: ' + img.naturalWidth + 'x' + img.naturalHeight;
+    };
+
+    // Test 2: Verificar via PIXI
+    (async function() {
+      const app = new PIXI.Application();
+      await app.init({ width: 200, height: 100, background: '#5CA0FF' });
+      document.getElementById('pixiContainer').appendChild(app.canvas);
+
+      const path = 'assets/smw/sprites/ts_1771589671.png';
+      await PIXI.Assets.load([path]);
+
+      const tex = PIXI.Assets.get(path);
+      const info = `PIXI texture: ${tex.width}x${tex.height}`;
+      document.getElementById('pixiInfo').textContent = info;
+
+      // Renderizar tileset
+      const spr = new PIXI.Sprite(tex);
+      spr.x = 10;
+      spr.y = 10;
+      app.stage.addChild(spr);
+
+      // Adicionar grade
+      const g = new PIXI.Graphics();
+      for (let x = 10; x <= 10 + 48; x += 16) {
+        g.moveTo(x, 10).lineTo(x, 10 + 32);
+      }
+      for (let y = 10; y <= 10 + 32; y += 16) {
+        g.moveTo(10, y).lineTo(10 + 48, y);
+      }
+      g.stroke({ color: 0xff0000, width: 1 });
+      app.stage.addChild(g);
+    })();
+  </script>
+</body>
+</html>

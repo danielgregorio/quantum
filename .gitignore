@@ -130,6 +130,12 @@ Thumbs.db
 *.q.temp
 test_data/*.db
 nul
+quantum_admin.db
+test_gen_output.json
+projects/blog/data/
+
+# Medium posts drafts (work in progress)
+medium-posts/drafts/
 
 # Claude development files
 CLAUDE.MD

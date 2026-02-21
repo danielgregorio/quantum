@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>08_full_map.q</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #111; display: flex; justify-content: center; align-items: center; width: 100vw; height: 100vh; }
+    canvas { display: block; }
+    .qg-hud { position: absolute; pointer-events: none; padding: 8px; font-family: sans-serif; z-index: 10; }
+    .qg-hud-top-left { top: 0; left: 0; }
+    .qg-hud-top-right { top: 0; right: 0; }
+    .qg-hud-top-center { top: 0; left: 50%; transform: translateX(-50%); }
+    .qg-hud-bottom-left { bottom: 0; left: 0; }
+    .qg-hud-bottom-right { bottom: 0; right: 0; }
+    .qg-hud-bottom-center { bottom: 0; left: 50%; transform: translateX(-50%); }
+    .qg-hud-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+    /* Source Code Viewer */
+    #qg-source-btn {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    #qg-source-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.9);
+    }
+    #qg-source-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.92);
+      z-index: 999;
+      overflow: auto;
+    }
+    #qg-source-modal.visible {
+      display: flex;
+      flex-direction: column;
+    }
+    #qg-source-close {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 13px;
+      z-index: 1001;
+    }
+    #qg-source-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    #qg-source-content {
+      flex: 1;
+      overflow: auto;
+      padding: 48px 24px 24px;
+    }
+    #qg-source-content pre {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 24px;
+      border-radius: 12px;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre;
+      tab-size: 2;
+      border: 1px solid #313244;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+  <button id="qg-source-btn" onclick="toggleSource()">source</button>
+  <div id="qg-source-modal">
+    <button id="qg-source-close" onclick="toggleSource()">ESC</button>
+    <div id="qg-source-content">
+      <pre id="qg-source-code">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;!--
+  Phase 8: Full SMW Map
+
+  Authentic SMW-style level with:
+  - Hills (decorative background)
+  - Ground with proper tiles
+  - Platforms at different heights
+  - Gaps to jump over
+  - Multiple sections
+
+  Tileset reference (stage1_unique.png):
+  - Tile 0-2: Hill tops
+  - Tile 9: Grass surface
+  - Tile 14: Underground solid
+  - Other tiles: Various platforms and decorations
+--&gt;
+&lt;q:application id=&quot;full-map&quot; type=&quot;game&quot; engine=&quot;2d&quot;&gt;
+  &lt;qg:scene name=&quot;main&quot; width=&quot;768&quot; height=&quot;144&quot; viewport-width=&quot;256&quot; viewport-height=&quot;144&quot; background=&quot;#5C94FC&quot;&gt;
+    &lt;qg:physics gravity-y=&quot;0.4&quot; /&gt;
+    &lt;qg:camera follow=&quot;mario&quot; lerp=&quot;0.08&quot; bounds=&quot;scene&quot; /&gt;
+
+    &lt;!-- Prefabs --&gt;
+    &lt;qg:prefab name=&quot;coin&quot;&gt;
+      &lt;qg:sprite src=&quot;assets/smw/sprites/coin_animated.png&quot;
+                 frame-width=&quot;16&quot; frame-height=&quot;24&quot;&gt;
+        &lt;qg:animation name=&quot;spin&quot; frames=&quot;0,1,2,3,4,3,2,1&quot; speed=&quot;0.12&quot; loop=&quot;true&quot; auto-play=&quot;true&quot; /&gt;
+      &lt;/qg:sprite&gt;
+    &lt;/qg:prefab&gt;
+
+    &lt;qg:tilemap id=&quot;level&quot; src=&quot;assets/smw/sprites/stage1_unique.png&quot;
+                tile-width=&quot;16&quot; tile-height=&quot;16&quot;&gt;
+      &lt;!-- Main terrain layer --&gt;
+      &lt;qg:layer name=&quot;terrain&quot; collision=&quot;true&quot;&gt;
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,9,9,9,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,9,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,9,9,9
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0,0,9,9,9,9,9,9,9,9,9,9,9,0,0,0,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9
+14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,0,0,0,14,14,14,14,14,14,14,14,14,14,14,0,0,0,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14
+14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,0,0,0,14,14,14,14,14,14,14,14,14,14,14,0,0,0,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14
+      &lt;/qg:layer&gt;
+    &lt;/qg:tilemap&gt;
+
+    &lt;!-- Coins placed strategically --&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;80&quot; y=&quot;72&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;112&quot; y=&quot;72&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;176&quot; y=&quot;56&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;256&quot; y=&quot;40&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;368&quot; y=&quot;56&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;400&quot; y=&quot;56&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;480&quot; y=&quot;24&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;512&quot; y=&quot;24&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;608&quot; y=&quot;56&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;640&quot; y=&quot;56&quot; /&gt;
+    &lt;qg:instance prefab=&quot;coin&quot; x=&quot;720&quot; y=&quot;56&quot; /&gt;
+
+    &lt;!-- Mario --&gt;
+    &lt;qg:sprite id=&quot;mario&quot; src=&quot;assets/smw/sprites/mario_small.png&quot;
+               x=&quot;32&quot; y=&quot;64&quot;
+               frame-width=&quot;16&quot; frame-height=&quot;16&quot;
+               body=&quot;dynamic&quot; controls=&quot;arrows&quot; speed=&quot;1&quot; jump-force=&quot;2.8&quot; friction=&quot;0&quot;&gt;
+      &lt;qg:animation name=&quot;idle&quot; frames=&quot;0&quot; speed=&quot;0.1&quot; loop=&quot;true&quot; auto-play=&quot;true&quot; /&gt;
+      &lt;qg:animation name=&quot;walk&quot; frames=&quot;1-2&quot; speed=&quot;0.18&quot; loop=&quot;true&quot; /&gt;
+    &lt;/qg:sprite&gt;
+  &lt;/qg:scene&gt;
+&lt;/q:application&gt;
+</pre>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20/build/matter.min.js"></script>
+  <script>
+function toggleSource() {
+  var modal = document.getElementById('qg-source-modal');
+  modal.classList.toggle('visible');
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.getElementById('qg-source-modal').classList.remove('visible');
+  }
+});
+(async function() {
+
+  // === PIXI APP ===
+  const app = new PIXI.Application();
+  await app.init({ width: 256, height: 144, background: "#5C94FC" });
+  document.body.appendChild(app.canvas);
+  // World size: 768x144, Viewport: 256x144
+
+  // === MATTER.JS ENGINE ===
+  const mEngine = Matter.Engine.create();
+  mEngine.gravity.x = 0;
+  mEngine.gravity.y = 0.4;
+  // Increase solver iterations for tighter collision resolution
+  mEngine.positionIterations = 10;
+  mEngine.velocityIterations = 8;
+  const mWorld = mEngine.world;
+
+  // === EVENT BUS ===
+  // Event Bus
+  const _gameEvents = { _listeners: {} };
+  _gameEvents.on = function(event, cb) {
+    if (!this._listeners[event]) {
+      this._listeners[event] = [];
+    }
+    this._listeners[event].push(cb);
+  };
+  _gameEvents.off = function(event, cb) {
+    if (this._listeners[event]) {
+      this._listeners[event] = this._listeners[event].filter(fn => fn !== cb);
+    }
+  };
+  _gameEvents.emit = function(event, data) {
+    if (this._listeners[event]) {
+      for (const cb of this._listeners[event]) {
+        cb(data);
+      }
+    }
+  };
+
+  // === GAME STATE ===
+  // no state
+
+  // === ASSET LOADING ===
+  await PIXI.Assets.load(["assets/smw/sprites/coin_animated.png", "assets/smw/sprites/mario_small.png", "assets/smw/sprites/stage1_unique.png"]);
+
+  // === ANIMATION SYSTEM ===
+  // Animation System
+  const _animatedSprites = {};
+
+  function _parseFrames(spec) {
+    if (spec.includes('-')) {
+      const parts = spec.split('-').map(Number);
+      const result = [];
+      for (let i = parts[0]; i <= parts[1]; i += 1) {
+        result.push(i);
+      }
+      return result;
+    }
+    return spec.split(',').map(s => parseInt(s.trim(), 10));
+  }
+
+  function _registerAnimation(spriteId, texture, frameW, frameH, anims) {
+    if (!texture || !frameW || !frameH) {
+      return;
+    }
+    const baseTexture = texture.source || texture.baseTexture || texture;
+    const texW = baseTexture.width || texture.width;
+    const texH = baseTexture.height || texture.height;
+    const cols = Math.floor(texW / frameW);
+    const rows = Math.floor(texH / frameH);
+    const totalFrames = cols * rows;
+
+    // Build frame textures
+    const frameTextures = [];
+    for (let i = 0; i <= totalFrames - 1; i += 1) {
+      const fx = i % cols;
+      const fy = Math.floor(i / cols);
+      const rect = new PIXI.Rectangle(fx * frameW, fy * frameH, frameW, frameH);
+      const frameTex = new PIXI.Texture({ source: baseTexture, frame: rect });
+      frameTextures.push(frameTex);
+    }
+
+    // Parse named animations
+    const animDefs = {};
+    let defaultAnim = null;
+    for (const [name, cfg] of Object.entries(anims)) {
+      const frames = _parseFrames(cfg.frames);
+      const textures = frames.filter(f => f < frameTextures.length).map(f => frameTextures[f]);
+      if (textures.length > 0) {
+        animDefs[name] = { textures: textures, speed: cfg.speed || 0.1, loop: cfg.loop !== false };
+        if (cfg.autoPlay) {
+          defaultAnim = name;
+        }
+      }
+    }
+
+    if (Object.keys(animDefs).length === 0) {
+      return;
+    }
+
+    if (!defaultAnim) {
+      defaultAnim = Object.keys(animDefs)[0];
+    }
+
+    // Create animated sprite
+    const firstAnim = animDefs[defaultAnim];
+    const animSprite = new PIXI.AnimatedSprite(firstAnim.textures);
+    animSprite.animationSpeed = firstAnim.speed;
+    if (firstAnim.loop !== false) {
+      animSprite.loop = true;
+    }
+    animSprite.play();
+
+    // Copy transform from static sprite
+    const info = _sprites[spriteId];
+    if (info) {
+      const oldSprite = info.sprite;
+      animSprite.x = oldSprite.x;
+      animSprite.y = oldSprite.y;
+      animSprite.anchor.x = oldSprite.anchor ? oldSprite.anchor.x : 0.5;
+      animSprite.anchor.y = oldSprite.anchor ? oldSprite.anchor.y : 0.5;
+      animSprite.alpha = oldSprite.alpha;
+      animSprite.visible = oldSprite.visible;
+
+      // Replace in container
+      const parent = oldSprite.parent;
+      if (parent) {
+        const idx = parent.getChildIndex(oldSprite);
+        parent.removeChild(oldSprite);
+        parent.addChildAt(animSprite, idx);
+      }
+      info.sprite = animSprite;
+      _animatedSprites[spriteId] = { anims: animDefs, current: defaultAnim, sprite: animSprite };
+    }
+  }
+
+  function _switchAnimation(spriteId, animName) {
+    const entry = _animatedSprites[spriteId];
+    if (!entry || entry.current === animName || !entry.anims[animName]) {
+      return;
+    }
+    const anim = entry.anims[animName];
+    entry.sprite.textures = anim.textures;
+    entry.sprite.animationSpeed = anim.speed;
+    entry.sprite.loop = anim.loop !== false;
+    entry.sprite.gotoAndPlay(0);
+    entry.current = animName;
+  }
+
+  function _updateControlAnimations() {
+    for (const [spriteId, ctrl] of Object.entries(_controlledSprites)) {
+      const entry = _animatedSprites[spriteId];
+      if (!entry) {
+        continue;
+      }
+      const info = _sprites[spriteId];
+      if (!info || !info.body) {
+        continue;
+      }
+      const vx = Math.abs(info.body.velocity.x);
+      const vy = info.body.velocity.y;
+
+      // Priority: jump > walk > idle
+      if (Math.abs(vy) > 5 && entry.anims['jump']) {
+        _switchAnimation(spriteId, 'jump');
+      } else if (vx > 0.5 && _keys[ctrl.right] && entry.anims['walk-right']) {
+        _switchAnimation(spriteId, 'walk-right');
+      } else if (vx > 0.5 && _keys[ctrl.left] && entry.anims['walk-left']) {
+        _switchAnimation(spriteId, 'walk-left');
+      } else if (vx > 0.5 && (entry.anims['walk'] || entry.anims['walk-right'])) {
+        _switchAnimation(spriteId, entry.anims['walk'] ? 'walk' : 'walk-right');
+      } else if (entry.anims['idle']) {
+        _switchAnimation(spriteId, 'idle');
+      }
+    }
+  }
+
+  // === BEHAVIORS ===
+  // no behaviors
+
+  // === CAMERA ===
+  const _cameraContainer = new PIXI.Container();
+  app.stage.addChild(_cameraContainer);
+  const _camera = { targetId: "mario", lerp: 0.08 };
+
+  function updateCamera() {
+    const info = _sprites[_camera.targetId];
+    if (!info) {
+      return;
+    }
+    const tx = app.screen.width / 2 - info.sprite.x;
+    const ty = app.screen.height / 2 - info.sprite.y;
+    _cameraContainer.x += (tx - _cameraContainer.x) * _camera.lerp;
+    _cameraContainer.y += (ty - _cameraContainer.y) * _camera.lerp;
+    _cameraContainer.x = Math.min(0, Math.max(app.screen.width - 768, _cameraContainer.x));
+    _cameraContainer.y = Math.min(0, Math.max(app.screen.height - 144, _cameraContainer.y));
+  }
+
+  // === VISUAL TILEMAPS ===
+  const _tileData_level_terrain = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,9,9,9,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,9,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,9,9,9],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,0,0,0,9,9,9,9,9,9,9,9,9,9,9,0,0,0,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9],[14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,0,0,0,14,14,14,14,14,14,14,14,14,14,14,0,0,0,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14],[14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,0,0,0,14,14,14,14,14,14,14,14,14,14,14,0,0,0,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14]];
+  const _tileset_level = PIXI.Assets.get("assets/smw/sprites/stage1_unique.png");
+  const _tsSource_level = _tileset_level.source || _tileset_level.baseTexture || _tileset_level;
+  const _tsCols_level = Math.floor((_tsSource_level.width || _tileset_level.width || 256) / 16);
+  // Create tiles for layer terrain
+  function _getTileTex_level(tileId) {
+    const col = tileId % _tsCols_level;
+    const row = Math.floor(tileId / _tsCols_level);
+    const rect = new PIXI.Rectangle(col * 16, row * 16, 16, 16);
+    return new PIXI.Texture({ source: _tsSource_level, frame: rect });
+  }
+  for (let _ty = 0; _ty <= _tileData_level_terrain.length - 1; _ty += 1) {
+    for (let _tx = 0; _tx <= _tileData_level_terrain[_ty].length - 1; _tx += 1) {
+      const _tileId = _tileData_level_terrain[_ty][_tx];
+      if (_tileId > 0) {
+        const _tileSpr = new PIXI.Sprite(_getTileTex_level(_tileId));
+        _tileSpr.x = _tx * 16;
+        _tileSpr.y = _ty * 16;
+        _cameraContainer.addChild(_tileSpr);
+      }
+    }
+  }
+
+
+  // === SPRITES & BODIES ===
+  const _sprites = {};
+  const _bodyToSprite = {};
+  const _spr_tile_level_2_30 = new PIXI.Graphics();
+  _spr_tile_level_2_30.rect(-24.0, -8.0, 48, 16);
+  _spr_tile_level_2_30.fill({ color: 0x4a9eff });
+  _spr_tile_level_2_30.x = 504;
+  _spr_tile_level_2_30.y = 40;
+  _spr_tile_level_2_30.alpha = 0;
+  _spr_tile_level_2_30.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_2_30);
+  const _body_tile_level_2_30 = Matter.Bodies.rectangle(504, 40, 48, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_2_30.id] = "tile_level_2_30";
+  _sprites["tile_level_2_30"] = { sprite: _spr_tile_level_2_30, body: _body_tile_level_2_30, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_3_22 = new PIXI.Graphics();
+  _spr_tile_level_3_22.rect(-24.0, -8.0, 48, 16);
+  _spr_tile_level_3_22.fill({ color: 0x4a9eff });
+  _spr_tile_level_3_22.x = 376;
+  _spr_tile_level_3_22.y = 56;
+  _spr_tile_level_3_22.alpha = 0;
+  _spr_tile_level_3_22.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_3_22);
+  const _body_tile_level_3_22 = Matter.Bodies.rectangle(376, 56, 48, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_3_22.id] = "tile_level_3_22";
+  _sprites["tile_level_3_22"] = { sprite: _spr_tile_level_3_22, body: _body_tile_level_3_22, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_3_38 = new PIXI.Graphics();
+  _spr_tile_level_3_38.rect(-24.0, -8.0, 48, 16);
+  _spr_tile_level_3_38.fill({ color: 0x4a9eff });
+  _spr_tile_level_3_38.x = 632;
+  _spr_tile_level_3_38.y = 56;
+  _spr_tile_level_3_38.alpha = 0;
+  _spr_tile_level_3_38.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_3_38);
+  const _body_tile_level_3_38 = Matter.Bodies.rectangle(632, 56, 48, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_3_38.id] = "tile_level_3_38";
+  _sprites["tile_level_3_38"] = { sprite: _spr_tile_level_3_38, body: _body_tile_level_3_38, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_4_10 = new PIXI.Graphics();
+  _spr_tile_level_4_10.rect(-24.0, -8.0, 48, 16);
+  _spr_tile_level_4_10.fill({ color: 0x4a9eff });
+  _spr_tile_level_4_10.x = 184;
+  _spr_tile_level_4_10.y = 72;
+  _spr_tile_level_4_10.alpha = 0;
+  _spr_tile_level_4_10.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_4_10);
+  const _body_tile_level_4_10 = Matter.Bodies.rectangle(184, 72, 48, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_4_10.id] = "tile_level_4_10";
+  _sprites["tile_level_4_10"] = { sprite: _spr_tile_level_4_10, body: _body_tile_level_4_10, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_4_44 = new PIXI.Graphics();
+  _spr_tile_level_4_44.rect(-32.0, -8.0, 64, 16);
+  _spr_tile_level_4_44.fill({ color: 0x4a9eff });
+  _spr_tile_level_4_44.x = 736;
+  _spr_tile_level_4_44.y = 72;
+  _spr_tile_level_4_44.alpha = 0;
+  _spr_tile_level_4_44.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_4_44);
+  const _body_tile_level_4_44 = Matter.Bodies.rectangle(736, 72, 64, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_4_44.id] = "tile_level_4_44";
+  _sprites["tile_level_4_44"] = { sprite: _spr_tile_level_4_44, body: _body_tile_level_4_44, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_6_0 = new PIXI.Graphics();
+  _spr_tile_level_6_0.rect(-120.0, -8.0, 240, 16);
+  _spr_tile_level_6_0.fill({ color: 0x4a9eff });
+  _spr_tile_level_6_0.x = 120;
+  _spr_tile_level_6_0.y = 104;
+  _spr_tile_level_6_0.alpha = 0;
+  _spr_tile_level_6_0.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_6_0);
+  const _body_tile_level_6_0 = Matter.Bodies.rectangle(120, 104, 240, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_6_0.id] = "tile_level_6_0";
+  _sprites["tile_level_6_0"] = { sprite: _spr_tile_level_6_0, body: _body_tile_level_6_0, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_6_18 = new PIXI.Graphics();
+  _spr_tile_level_6_18.rect(-88.0, -8.0, 176, 16);
+  _spr_tile_level_6_18.fill({ color: 0x4a9eff });
+  _spr_tile_level_6_18.x = 376;
+  _spr_tile_level_6_18.y = 104;
+  _spr_tile_level_6_18.alpha = 0;
+  _spr_tile_level_6_18.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_6_18);
+  const _body_tile_level_6_18 = Matter.Bodies.rectangle(376, 104, 176, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_6_18.id] = "tile_level_6_18";
+  _sprites["tile_level_6_18"] = { sprite: _spr_tile_level_6_18, body: _body_tile_level_6_18, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_6_32 = new PIXI.Graphics();
+  _spr_tile_level_6_32.rect(-128.0, -8.0, 256, 16);
+  _spr_tile_level_6_32.fill({ color: 0x4a9eff });
+  _spr_tile_level_6_32.x = 640;
+  _spr_tile_level_6_32.y = 104;
+  _spr_tile_level_6_32.alpha = 0;
+  _spr_tile_level_6_32.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_6_32);
+  const _body_tile_level_6_32 = Matter.Bodies.rectangle(640, 104, 256, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_6_32.id] = "tile_level_6_32";
+  _sprites["tile_level_6_32"] = { sprite: _spr_tile_level_6_32, body: _body_tile_level_6_32, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_7_0 = new PIXI.Graphics();
+  _spr_tile_level_7_0.rect(-120.0, -8.0, 240, 16);
+  _spr_tile_level_7_0.fill({ color: 0x4a9eff });
+  _spr_tile_level_7_0.x = 120;
+  _spr_tile_level_7_0.y = 120;
+  _spr_tile_level_7_0.alpha = 0;
+  _spr_tile_level_7_0.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_7_0);
+  const _body_tile_level_7_0 = Matter.Bodies.rectangle(120, 120, 240, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_7_0.id] = "tile_level_7_0";
+  _sprites["tile_level_7_0"] = { sprite: _spr_tile_level_7_0, body: _body_tile_level_7_0, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_7_18 = new PIXI.Graphics();
+  _spr_tile_level_7_18.rect(-88.0, -8.0, 176, 16);
+  _spr_tile_level_7_18.fill({ color: 0x4a9eff });
+  _spr_tile_level_7_18.x = 376;
+  _spr_tile_level_7_18.y = 120;
+  _spr_tile_level_7_18.alpha = 0;
+  _spr_tile_level_7_18.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_7_18);
+  const _body_tile_level_7_18 = Matter.Bodies.rectangle(376, 120, 176, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_7_18.id] = "tile_level_7_18";
+  _sprites["tile_level_7_18"] = { sprite: _spr_tile_level_7_18, body: _body_tile_level_7_18, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_7_32 = new PIXI.Graphics();
+  _spr_tile_level_7_32.rect(-128.0, -8.0, 256, 16);
+  _spr_tile_level_7_32.fill({ color: 0x4a9eff });
+  _spr_tile_level_7_32.x = 640;
+  _spr_tile_level_7_32.y = 120;
+  _spr_tile_level_7_32.alpha = 0;
+  _spr_tile_level_7_32.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_7_32);
+  const _body_tile_level_7_32 = Matter.Bodies.rectangle(640, 120, 256, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_7_32.id] = "tile_level_7_32";
+  _sprites["tile_level_7_32"] = { sprite: _spr_tile_level_7_32, body: _body_tile_level_7_32, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_8_0 = new PIXI.Graphics();
+  _spr_tile_level_8_0.rect(-120.0, -8.0, 240, 16);
+  _spr_tile_level_8_0.fill({ color: 0x4a9eff });
+  _spr_tile_level_8_0.x = 120;
+  _spr_tile_level_8_0.y = 136;
+  _spr_tile_level_8_0.alpha = 0;
+  _spr_tile_level_8_0.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_8_0);
+  const _body_tile_level_8_0 = Matter.Bodies.rectangle(120, 136, 240, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_8_0.id] = "tile_level_8_0";
+  _sprites["tile_level_8_0"] = { sprite: _spr_tile_level_8_0, body: _body_tile_level_8_0, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_8_18 = new PIXI.Graphics();
+  _spr_tile_level_8_18.rect(-88.0, -8.0, 176, 16);
+  _spr_tile_level_8_18.fill({ color: 0x4a9eff });
+  _spr_tile_level_8_18.x = 376;
+  _spr_tile_level_8_18.y = 136;
+  _spr_tile_level_8_18.alpha = 0;
+  _spr_tile_level_8_18.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_8_18);
+  const _body_tile_level_8_18 = Matter.Bodies.rectangle(376, 136, 176, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_8_18.id] = "tile_level_8_18";
+  _sprites["tile_level_8_18"] = { sprite: _spr_tile_level_8_18, body: _body_tile_level_8_18, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_8_32 = new PIXI.Graphics();
+  _spr_tile_level_8_32.rect(-128.0, -8.0, 256, 16);
+  _spr_tile_level_8_32.fill({ color: 0x4a9eff });
+  _spr_tile_level_8_32.x = 640;
+  _spr_tile_level_8_32.y = 136;
+  _spr_tile_level_8_32.alpha = 0;
+  _spr_tile_level_8_32.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_8_32);
+  const _body_tile_level_8_32 = Matter.Bodies.rectangle(640, 136, 256, 16, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_8_32.id] = "tile_level_8_32";
+  _sprites["tile_level_8_32"] = { sprite: _spr_tile_level_8_32, body: _body_tile_level_8_32, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _coin_0_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_0_src = _coin_0_baseTex.source || _coin_0_baseTex.baseTexture || _coin_0_baseTex;
+  const _coin_0_rect = new PIXI.Rectangle(0, 0, 16, 24);
+  const _coin_0_frameTex = new PIXI.Texture({ source: _coin_0_src, frame: _coin_0_rect });
+  const _spr_coin_0 = new PIXI.Sprite(_coin_0_frameTex);
+  _spr_coin_0.x = 80;
+  _spr_coin_0.y = 72;
+  _spr_coin_0.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_0);
+  _sprites["coin_0"] = { sprite: _spr_coin_0, body: null, tag: null, collisionHandlers: [], behaviors: [] };
+
+  const _coin_1_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_1_src = _coin_1_baseTex.source || _coin_1_baseTex.baseTexture || _coin_1_baseTex;
+  const _coin_1_rect = new PIXI.Rectangle(0, 0, 16, 24);
+  const _coin_1_frameTex = new PIXI.Texture({ source: _coin_1_src, frame: _coin_1_rect });
+  const _spr_coin_1 = new PIXI.Sprite(_coin_1_frameTex);
+  _spr_coin_1.x = 112;
+  _spr_coin_1.y = 72;
+  _spr_coin_1.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_1);
+  _sprites["coin_1"] = { sprite: _spr_coin_1, body: null, tag: null, collisionHandlers: [], behaviors: [] };
+
+  const _coin_2_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_2_src = _coin_2_baseTex.source || _coin_2_baseTex.baseTexture || _coin_2_baseTex;
+  const _coin_2_rect = new PIXI.Rectangle(0, 0, 16, 24);
+  const _coin_2_frameTex = new PIXI.Texture({ source: _coin_2_src, frame: _coin_2_rect });
+  const _spr_coin_2 = new PIXI.Sprite(_coin_2_frameTex);
+  _spr_coin_2.x = 176;
+  _spr_coin_2.y = 56;
+  _spr_coin_2.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_2);
+  _sprites["coin_2"] = { sprite: _spr_coin_2, body: null, tag: null, collisionHandlers: [], behaviors: [] };
+
+  const _coin_3_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_3_src = _coin_3_baseTex.source || _coin_3_baseTex.baseTexture || _coin_3_baseTex;
+  const _coin_3_rect = new PIXI.Rectangle(0, 0, 16, 24);
+  const _coin_3_frameTex = new PIXI.Texture({ source: _coin_3_src, frame: _coin_3_rect });
+  const _spr_coin_3 = new PIXI.Sprite(_coin_3_frameTex);
+  _spr_coin_3.x = 256;
+  _spr_coin_3.y = 40;
+  _spr_coin_3.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_3);
+  _sprites["coin_3"] = { sprite: _spr_coin_3, body: null, tag: null, collisionHandlers: [], behaviors: [] };
+
+  const _coin_4_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_4_src = _coin_4_baseTex.source || _coin_4_baseTex.baseTexture || _coin_4_baseTex;
+  const _coin_4_rect = new PIXI.Rectangle(0, 0, 16, 24);
+  const _coin_4_frameTex = new PIXI.Texture({ source: _coin_4_src, frame: _coin_4_rect });
+  const _spr_coin_4 = new PIXI.Sprite(_coin_4_frameTex);
+  _spr_coin_4.x = 368;
+  _spr_coin_4.y = 56;
+  _spr_coin_4.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_4);
+  _sprites["coin_4"] = { sprite: _spr_coin_4, body: null, tag: null, collisionHandlers: [], behaviors: [] };
+
+  const _coin_5_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_5_src = _coin_5_baseTex.source || _coin_5_baseTex.baseTexture || _coin_5_baseTex;
+  const _coin_5_rect = new PIXI.Rectangle(0, 0, 16, 24);
+  const _coin_5_frameTex = new PIXI.Texture({ source: _coin_5_src, frame: _coin_5_rect });
+  const _spr_coin_5 = new PIXI.Sprite(_coin_5_frameTex);
+  _spr_coin_5.x = 400;
+  _spr_coin_5.y = 56;
+  _spr_coin_5.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_5);
+  _sprites["coin_5"] = { sprite: _spr_coin_5, body: null, tag: null, collisionHandlers: [], behaviors: [] };
+
+  const _coin_6_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_6_src = _coin_6_baseTex.source || _coin_6_baseTex.baseTexture || _coin_6_baseTex;
+  const _coin_6_rect = new PIXI.Rectangle(0, 0, 16, 24);
+  const _coin_6_frameTex = new PIXI.Texture({ source: _coin_6_src, frame: _coin_6_rect });
+  const _spr_coin_6 = new PIXI.Sprite(_coin_6_frameTex);
+  _spr_coin_6.x = 480;
+  _spr_coin_6.y = 24;
+  _spr_coin_6.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_6);
+  _sprites["coin_6"] = { sprite: _spr_coin_6, body: null, tag: null, collisionHandlers: [], behaviors: [] };
+
+  const _coin_7_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_7_src = _coin_7_baseTex.source || _coin_7_baseTex.baseTexture || _coin_7_baseTex;
+  const _coin_7_rect = new PIXI.Rectangle(0, 0, 16, 24);
+  const _coin_7_frameTex = new PIXI.Texture({ source: _coin_7_src, frame: _coin_7_rect });
+  const _spr_coin_7 = new PIXI.Sprite(_coin_7_frameTex);
+  _spr_coin_7.x = 512;
+  _spr_coin_7.y = 24;
+  _spr_coin_7.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_7);
+  _sprites["coin_7"] = { sprite: _spr_coin_7, body: null, tag: null, collisionHandlers: [], behaviors: [] };
+
+  const _coin_8_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_8_src = _coin_8_baseTex.source || _coin_8_baseTex.baseTexture || _coin_8_baseTex;
+  const _coin_8_rect = new PIXI.Rectangle(0, 0, 16, 24);
+  const _coin_8_frameTex = new PIXI.Texture({ source: _coin_8_src, frame: _coin_8_rect });
+  const _spr_coin_8 = new PIXI.Sprite(_coin_8_frameTex);
+  _spr_coin_8.x = 608;
+  _spr_coin_8.y = 56;
+  _spr_coin_8.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_8);
+  _sprites["coin_8"] = { sprite: _spr_coin_8, body: null, tag: null, collisionHandlers: [], behaviors: [] };
+
+  const _coin_9_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_9_src = _coin_9_baseTex.source || _coin_9_baseTex.baseTexture || _coin_9_baseTex;
+  const _coin_9_rect = new PIXI.Rectangle(0, 0, 16, 24);
+  const _coin_9_frameTex = new PIXI.Texture({ source: _coin_9_src, frame: _coin_9_rect });
+  const _spr_coin_9 = new PIXI.Sprite(_coin_9_frameTex);
+  _spr_coin_9.x = 640;
+  _spr_coin_9.y = 56;
+  _spr_coin_9.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_9);
+  _sprites["coin_9"] = { sprite: _spr_coin_9, body: null, tag: null, collisionHandlers: [], behaviors: [] };
+
+  const _coin_10_baseTex = PIXI.Assets.get("assets/smw/sprites/coin_animated.png");
+  const _coin_10_src = _coin_10_baseTex.source || _coin_10_baseTex.baseTexture || _coin_10_baseTex;
+  const _coin_10_rect = new PIXI.Rectangle(0, 0, 16, 24);
+  const _coin_10_frameTex = new PIXI.Texture({ source: _coin_10_src, frame: _coin_10_rect });
+  const _spr_coin_10 = new PIXI.Sprite(_coin_10_frameTex);
+  _spr_coin_10.x = 720;
+  _spr_coin_10.y = 56;
+  _spr_coin_10.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin_10);
+  _sprites["coin_10"] = { sprite: _spr_coin_10, body: null, tag: null, collisionHandlers: [], behaviors: [] };
+
+  const _mario_baseTex = PIXI.Assets.get("assets/smw/sprites/mario_small.png");
+  const _mario_src = _mario_baseTex.source || _mario_baseTex.baseTexture || _mario_baseTex;
+  const _mario_rect = new PIXI.Rectangle(0, 0, 16, 16);
+  const _mario_frameTex = new PIXI.Texture({ source: _mario_src, frame: _mario_rect });
+  const _spr_mario = new PIXI.Sprite(_mario_frameTex);
+  _spr_mario.x = 32;
+  _spr_mario.y = 64;
+  _spr_mario.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_mario);
+  const _body_mario = Matter.Bodies.rectangle(32, 64, 16, 16, { isStatic: false, restitution: 0.1, friction: 0, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_mario.id] = "mario";
+  _sprites["mario"] = { sprite: _spr_mario, body: _body_mario, tag: null, collisionHandlers: [], behaviors: [] };
+
+  Matter.Composite.add(mWorld, [_body_tile_level_2_30, _body_tile_level_3_22, _body_tile_level_3_38, _body_tile_level_4_10, _body_tile_level_4_44, _body_tile_level_6_0, _body_tile_level_6_18, _body_tile_level_6_32, _body_tile_level_7_0, _body_tile_level_7_18, _body_tile_level_7_32, _body_tile_level_8_0, _body_tile_level_8_18, _body_tile_level_8_32, _body_mario]);
+
+  function syncPhysics() {
+    for (const [id, info] of Object.entries(_sprites)) {
+      if (info.body && !info.body.isStatic) {
+        info.sprite.x = info.body.position.x;
+        info.sprite.y = info.body.position.y;
+        info.sprite.rotation = info.body.angle;
+      }
+    }
+  }
+
+  // === GAME API ===
+  // Game API
+  const game = { camera: {} };
+
+  game.destroy = function(info) {
+    if (!info) {
+      return;
+    }
+    // Find sprite id
+    let spriteId = null;
+    for (const [id, entry] of Object.entries(_sprites)) {
+      if (entry === info || entry.sprite === info) {
+        spriteId = id;
+        break;
+      }
+    }
+    if (!spriteId) {
+      return;
+    }
+    const entry = _sprites[spriteId];
+    if (entry.sprite && entry.sprite.parent) {
+      entry.sprite.parent.removeChild(entry.sprite);
+    }
+    if (entry.body) {
+      Matter.Composite.remove(mWorld, entry.body);
+    }
+    delete _sprites[spriteId];
+  };
+
+  game.play = function(soundId, opts) {
+    if (typeof _playSound === 'function') {
+      return _playSound(soundId, opts);
+    }
+  };
+
+  game.stop = function(soundId) {
+    if (typeof _stopSound === 'function') {
+      _stopSound(soundId);
+    }
+  };
+
+  game.emit = function(info, event) {
+    _gameEvents.emit(event, info);
+    if (info && info.tag) {
+      _gameEvents.emit(info.tag + '.' + event, info);
+    }
+  };
+
+  game.loadScene = function(name) {
+    if (typeof _loadScene === 'function') {
+      _loadScene(name);
+    }
+  };
+
+  game.respawn = function(id, x, y) {
+    const info = _sprites[id];
+    if (!info) {
+      return;
+    }
+    if (info.sprite) {
+      info.sprite.x = x;
+      info.sprite.y = y;
+      info.sprite.visible = true;
+    }
+    if (info.body) {
+      Matter.Body.setPosition(info.body, { x: x, y: y });
+      Matter.Body.setVelocity(info.body, { x: 0, y: 0 });
+    }
+  };
+
+  game.destroyGroup = function(groupName) {
+    const toRemove = [];
+    for (const [id, info] of Object.entries(_sprites)) {
+      if (info.group === groupName) {
+        toRemove.push(info);
+      }
+    }
+    for (const info of toRemove) {
+      game.destroy(info);
+    }
+  };
+
+  game.moveX = function(info, dx) {
+    if (info && info.body) {
+      Matter.Body.setVelocity(info.body, { x: dx, y: info.body.velocity.y });
+    }
+  };
+
+  game.moveToward = function(info, targetId, speed) {
+    if (!info || !info.body) {
+      return;
+    }
+    const target = _sprites[targetId];
+    if (!target) {
+      return;
+    }
+    const dx = target.sprite.x - info.sprite.x;
+    const dy = target.sprite.y - info.sprite.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 1) {
+      return;
+    }
+    Matter.Body.setVelocity(info.body, { x: (dx / dist) * speed, y: (dy / dist) * speed });
+  };
+
+  game.patrol = function(info, speed) {
+    game.moveX(info, speed);
+  };
+
+  game.camera.shake = function(intensity, duration) {
+    let _shakeFrames = Math.floor((duration || 0.3) * 60);
+    const _shakeIntensity = intensity || 5;
+    const origX = _cameraContainer.x;
+    const origY = _cameraContainer.y;
+    const _shakeTick = () => {
+      if (_shakeFrames <= 0) {
+        _cameraContainer.x = origX;
+        _cameraContainer.y = origY;
+        return;
+      }
+      _cameraContainer.x = origX + (Math.random() - 0.5) * _shakeIntensity * 2;
+      _cameraContainer.y = origY + (Math.random() - 0.5) * _shakeIntensity * 2;
+      _shakeFrames--;
+      requestAnimationFrame(_shakeTick);
+    };
+    _shakeTick();
+  };
+
+  game.spawn = function(id) {
+    if (typeof _spawn === 'function') {
+      _spawn(id);
+    }
+  };
+
+  // === BEHAVIOR ATTACHMENTS ===
+  // no behavior attachments
+  // Init state machines
+  for (const [_id, _info] of Object.entries(_sprites)) {
+    for (const b of _info.behaviors) {
+      if (b._smInit) {
+        b._smInit();
+      }
+    }
+  }
+
+  // === ANIMATION REGISTRATION ===
+  _registerAnimation("coin_0", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 24, { "spin": { frames: "0,1,2,3,4,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_1", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 24, { "spin": { frames: "0,1,2,3,4,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_2", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 24, { "spin": { frames: "0,1,2,3,4,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_3", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 24, { "spin": { frames: "0,1,2,3,4,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_4", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 24, { "spin": { frames: "0,1,2,3,4,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_5", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 24, { "spin": { frames: "0,1,2,3,4,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_6", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 24, { "spin": { frames: "0,1,2,3,4,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_7", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 24, { "spin": { frames: "0,1,2,3,4,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_8", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 24, { "spin": { frames: "0,1,2,3,4,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_9", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 24, { "spin": { frames: "0,1,2,3,4,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("coin_10", PIXI.Assets.get("assets/smw/sprites/coin_animated.png"), 16, 24, { "spin": { frames: "0,1,2,3,4,3,2,1", speed: 0.12, loop: true, autoPlay: true } });
+  _registerAnimation("mario", PIXI.Assets.get("assets/smw/sprites/mario_small.png"), 16, 16, { "idle": { frames: "0", speed: 0.1, loop: true, autoPlay: true }, "walk": { frames: "1-2", speed: 0.18, loop: true, autoPlay: false } });
+
+  // === INPUT ===
+  const _keys = {};
+  const _justPressed = {};
+  window.addEventListener('keydown', (e) => {
+    if (!_keys[e.key]) _justPressed[e.key] = true;
+    _keys[e.key] = true;
+  });
+  window.addEventListener('keyup', (e) => {
+    _keys[e.key] = false;
+  });
+  function _clearJustPressed() {
+    for (const k in _justPressed) delete _justPressed[k];
+  }
+  const _controlledSprites = {};
+  _controlledSprites["mario"] = { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', jump: 'ArrowUp', left2: 'a', right2: 'd', up2: 'w', jump2: 'w' };
+
+  // === MOUSE ===
+  // Mouse System
+  let _mouseX = 0;
+  let _mouseY = 0;
+  let _mouseWorldX = 0;
+  let _mouseWorldY = 0;
+  app.canvas.addEventListener('pointermove', (e) => {
+    const rect = app.canvas.getBoundingClientRect();
+    _mouseX = e.clientX - rect.left;
+    _mouseY = e.clientY - rect.top;
+    // Convert to world coordinates (accounting for camera)
+    _mouseWorldX = _mouseX - _cameraContainer.x;
+    _mouseWorldY = _mouseY - _cameraContainer.y;
+  });
+
+  // === FUNCTIONS ===
+  // no functions
+
+  // === COLLISIONS ===
+  // no collision handlers
+
+  // === SOUNDS ===
+  // No sounds
+
+  // === PARTICLES ===
+  // Particle System
+  const _particleSystems = {};
+
+  function _createParticleSystem(config) {
+    const ps = {
+      id: config.id,
+      follow: config.follow || null,
+      trigger: config.trigger || null,
+      count: config.count || 20,
+      emitRate: config.emitRate || 10,
+      lifetime: config.lifetime || 1,
+      speedMin: config.speedMin || 1,
+      speedMax: config.speedMax || 3,
+      angleMin: (config.angleMin || 0) * Math.PI / 180,
+      angleMax: (config.angleMax || 360) * Math.PI / 180,
+      alphaStart: config.alphaStart !== undefined ? config.alphaStart : 1,
+      alphaEnd: config.alphaEnd !== undefined ? config.alphaEnd : 0,
+      active: false,
+      emitTimer: 0,
+      pool: [],
+      container: new PIXI.Container(),
+    };
+
+    // Pre-allocate particle pool
+    for (let i = 0; i <= ps.count - 1; i += 1) {
+      const p = new PIXI.Graphics();
+      p.circle(0, 0, 3);
+      p.fill({ color: 0xffffff });
+      p.visible = false;
+      p._life = 0; p._maxLife = 0; p._vx = 0; p._vy = 0;
+      p._alphaStart = 1; p._alphaEnd = 0;
+      ps.container.addChild(p);
+      ps.pool.push(p);
+    }
+
+    _cameraContainer.addChild(ps.container);
+    _particleSystems[config.id] = ps;
+    return ps;
+  }
+
+  function _emitParticle(ps, x, y) {
+    for (const p of ps.pool) {
+      if (!p.visible) {
+        p.x = x;
+        p.y = y;
+        const angle = ps.angleMin + Math.random() * (ps.angleMax - ps.angleMin);
+        const speed = ps.speedMin + Math.random() * (ps.speedMax - ps.speedMin);
+        p._vx = Math.cos(angle) * speed;
+        p._vy = Math.sin(angle) * speed;
+        p._life = 0;
+        p._maxLife = ps.lifetime;
+        p._alphaStart = ps.alphaStart;
+        p._alphaEnd = ps.alphaEnd;
+        p.alpha = ps.alphaStart;
+        p.visible = true;
+        return;
+      }
+    }
+  }
+
+  function _activateParticles(psId) {
+    const ps = _particleSystems[psId];
+    if (ps) {
+      ps.active = true;
+    }
+  }
+
+  function _deactivateParticles(psId) {
+    const ps = _particleSystems[psId];
+    if (ps) {
+      ps.active = false;
+    }
+  }
+
+  function _updateParticles(dt) {
+    for (const [id, ps] of Object.entries(_particleSystems)) {
+      // Emit new particles if active
+      if (ps.active) {
+        ps.emitTimer += dt / 60;
+        const interval = 1 / ps.emitRate;
+        while (ps.emitTimer >= interval) {
+          ps.emitTimer -= interval;
+          let ex = 0;
+          let ey = 0;
+          if (ps.follow) {
+            const info = _sprites[ps.follow];
+            if (info) {
+              ex = info.sprite.x;
+              ey = info.sprite.y;
+            }
+          }
+          _emitParticle(ps, ex, ey);
+        }
+      }
+
+      // Update living particles
+      for (const p of ps.pool) {
+        if (!p.visible) {
+          continue;
+        }
+        p._life += dt / 60;
+        if (p._life >= p._maxLife) {
+          p.visible = false;
+          continue;
+        }
+        const lifeT = p._life / p._maxLife;
+        p.x = p.x + p._vx;
+        p.y = p.y + p._vy;
+        p.alpha = p._alphaStart + (p._alphaEnd - p._alphaStart) * lifeT;
+      }
+    }
+  }
+  // No particle instances
+
+  // === TIMERS ===
+  // Timer System
+  const _timers = {};
+  const _timerActions = {};
+
+  function _createTimer(id, interval, repeat, autoStart, actionFn) {
+    _timers[id] = { elapsed: 0, interval: interval, repeat: repeat, count: 0, active: autoStart };
+    _timerActions[id] = actionFn;
+  }
+
+  function _updateTimers(dt) {
+    for (const [tid, t] of Object.entries(_timers)) {
+      if (!t.active) {
+        continue;
+      }
+      t.elapsed += dt / 60;
+      if (t.elapsed >= t.interval) {
+        t.elapsed = 0;
+        if (_timerActions[tid]) {
+          _timerActions[tid]();
+        }
+        t.count++;
+        if (t.repeat >= 0 && t.count >= t.repeat) {
+          t.active = false;
+        }
+      }
+    }
+  }
+  // No timer instances
+
+  // === TWEENS ===
+  // Easing Functions
+  const _easing = {
+    linear: t => t,
+    easeIn: t => t * t,
+    easeOut: t => t * (2 - t),
+    easeInOut: t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+    easeInCubic: t => t * t * t,
+    easeOutCubic: t => (--t) * t * t + 1,
+    easeInOutCubic: t => t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1,
+    easeInQuart: t => t * t * t * t,
+    easeOutQuart: t => 1 - (--t) * t * t * t,
+    easeInOutQuart: t => t < 0.5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t,
+    easeOutBounce: t => {
+      if (t < 1/2.75) return 7.5625 * t * t;
+      if (t < 2/2.75) return 7.5625 * (t -= 1.5/2.75) * t + 0.75;
+      if (t < 2.5/2.75) return 7.5625 * (t -= 2.25/2.75) * t + 0.9375;
+      return 7.5625 * (t -= 2.625/2.75) * t + 0.984375;
+    },
+    easeInBounce: t => 1 - _easing.easeOutBounce(1 - t),
+    easeOutElastic: t => {
+      if (t === 0 || t === 1) return t;
+      return Math.pow(2, -10 * t) * Math.sin((t - 0.075) * (2 * Math.PI) / 0.3) + 1;
+    },
+    easeInElastic: t => {
+      if (t === 0 || t === 1) return t;
+      return -Math.pow(2, 10 * (t - 1)) * Math.sin((t - 1.075) * (2 * Math.PI) / 0.3);
+    },
+  };
+
+  const _tweens = {};
+  let _tweenIdCounter = 0;
+
+  function _createTween(config) {
+    const id = config.id || ('tween_' + _tweenIdCounter++);
+    _tweens[id] = {
+      target: config.target,
+      prop: config.prop,
+      from: null,
+      to: config.to,
+      duration: config.duration || 1,
+      easing: config.easing || 'linear',
+      loop: !!config.loop,
+      yoyo: !!config.yoyo,
+      delay: config.delay || 0,
+      elapsed: 0,
+      delayElapsed: 0,
+      active: config.active !== false,
+      started: false,
+    };
+    return id;
+  }
+
+  function _updateTweens(dt) {
+    for (const [tid, tw] of Object.entries(_tweens)) {
+      if (!tw.active) {
+        continue;
+      }
+      // Handle delay
+      if (tw.delayElapsed < tw.delay) {
+        tw.delayElapsed += dt / 60;
+        continue;
+      }
+      // Init start value on first frame
+      if (!tw.started) {
+        const info = _sprites[tw.target];
+        if (!info) {
+          continue;
+        }
+        tw.from = info.sprite[tw.prop];
+        tw.started = true;
+      }
+      tw.elapsed += dt / 60;
+      const rawT = Math.min(tw.elapsed / tw.duration, 1);
+      const easeFn = _easing[tw.easing] || _easing.linear;
+      const t = easeFn(rawT);
+      const info = _sprites[tw.target];
+      if (info) {
+        info.sprite[tw.prop] = tw.from + (tw.to - tw.from) * t;
+      }
+      if (rawT >= 1) {
+        if (tw.loop) {
+          tw.elapsed = 0;
+          if (tw.yoyo) {
+            const tmp = tw.from;
+            tw.from = tw.to;
+            tw.to = tmp;
+          }
+        } else {
+          tw.active = false;
+        }
+      }
+    }
+  }
+  // No tween instances
+
+  // === SPAWNERS ===
+  // No spawners
+
+  // === HUD UPDATE ===
+  // No HUD
+
+  // === GAME LOOP ===
+  app.ticker.add((ticker) => {
+    const dt = ticker.deltaTime;
+    // Sub-step physics with velocity clamping to prevent tunneling
+    const _fixedDt = 16.67;
+    const _maxSteps = 3;
+    const _maxVel = 12;
+    const _steps = Math.min(Math.ceil(dt), _maxSteps);
+    for (let _i = 0; _i <= _steps; _i += 1) {
+      // Clamp velocities BEFORE physics step
+      for (const [_sid, _sinfo] of Object.entries(_sprites)) {
+        if (_sinfo.body && !_sinfo.body.isStatic) {
+          const _bv = _sinfo.body.velocity;
+          if (Math.abs(_bv.x) > _maxVel || Math.abs(_bv.y) > _maxVel) {
+            Matter.Body.setVelocity(_sinfo.body, {
+              x: Math.max(-_maxVel, Math.min(_maxVel, _bv.x)),
+              y: Math.max(-_maxVel, Math.min(_maxVel, _bv.y))
+            });
+          }
+        }
+      }
+      Matter.Engine.update(mEngine, _fixedDt);
+    }
+    syncPhysics();
+    // Input handling
+    const _ctrl_mario = _controlledSprites["mario"];
+    // Movement with dual key support (arrows + WASD)
+    const _leftPressed_mario = _keys[_ctrl_mario.left] || (_keys[_ctrl_mario.left2] || false);
+    const _rightPressed_mario = _keys[_ctrl_mario.right] || (_keys[_ctrl_mario.right2] || false);
+    const _jumpPressed_mario = _keys[_ctrl_mario.jump] || (_keys[_ctrl_mario.jump2] || false);
+    const _jumpJust_mario = _justPressed[_ctrl_mario.jump] || (_justPressed[_ctrl_mario.jump2] || false);
+    if (_leftPressed_mario && _sprites["mario"].body) {
+      Matter.Body.setVelocity(_sprites["mario"].body, { x: -1, y: _sprites["mario"].body.velocity.y });
+      _sprites["mario"].sprite.scale.x = -Math.abs(_sprites["mario"].sprite.scale.x);
+    }
+    if (_rightPressed_mario && _sprites["mario"].body) {
+      Matter.Body.setVelocity(_sprites["mario"].body, { x: 1, y: _sprites["mario"].body.velocity.y });
+      _sprites["mario"].sprite.scale.x = Math.abs(_sprites["mario"].sprite.scale.x);
+    }
+    // SMW-style jump: coyote time, variable height, asymmetric gravity
+    if (_sprites["mario"]._coyoteFrames === undefined) {
+      _sprites["mario"]._coyoteFrames = 0;
+      _sprites["mario"]._jumpHeld = false;
+      _sprites["mario"]._wasGrounded = false;
+    }
+    const _isGrounded_mario = _sprites["mario"].body && Math.abs(_sprites["mario"].body.velocity.y) < 1.0;
+    if (_isGrounded_mario) {
+      _sprites["mario"]._coyoteFrames = 6;
+      _sprites["mario"]._wasGrounded = true;
+    } else if (_sprites["mario"]._coyoteFrames > 0) {
+      _sprites["mario"]._coyoteFrames--;
+    }
+    const _canJump_mario = _isGrounded_mario || _sprites["mario"]._coyoteFrames > 0;
+    if (_jumpJust_mario && _sprites["mario"].body && _canJump_mario) {
+      Matter.Body.setVelocity(_sprites["mario"].body, { x: _sprites["mario"].body.velocity.x, y: -2.8 });
+      _sprites["mario"]._jumpHeld = true;
+      _sprites["mario"]._coyoteFrames = 0;
+      _gameEvents.emit('player.jump', _sprites["mario"]);
+    }
+    if (_jumpPressed_mario && _sprites["mario"].body && _sprites["mario"]._jumpHeld && _sprites["mario"].body.velocity.y < 0) {
+      Matter.Body.setVelocity(_sprites["mario"].body, { x: _sprites["mario"].body.velocity.x, y: _sprites["mario"].body.velocity.y - 0.4 });
+    }
+    if (!_jumpPressed_mario) {
+      _sprites["mario"]._jumpHeld = false;
+    }
+    if (_sprites["mario"].body && _sprites["mario"].body.velocity.y > 15) {
+      Matter.Body.setVelocity(_sprites["mario"].body, { x: _sprites["mario"].body.velocity.x, y: 15 });
+    }
+    if (!_leftPressed_mario && !_rightPressed_mario && _sprites["mario"].body) {
+      Matter.Body.setVelocity(_sprites["mario"].body, { x: 0, y: _sprites["mario"].body.velocity.y });
+      _gameEvents.emit('player.stop', _sprites["mario"]);
+    } else {
+      _gameEvents.emit('player.walk', _sprites["mario"]);
+    }
+    _clearJustPressed();
+    updateCamera();
+    _updateControlAnimations();
+    // Behaviors update
+    for (const [_id, _info] of Object.entries(_sprites)) {
+      for (const b of _info.behaviors) {
+        if (b._smUpdate) {
+          b._smUpdate();
+        }
+        if (b.update) {
+          b.update();
+        }
+      }
+    }
+  });
+
+  // === SCENE START ===
+})();
+  </script>
+</body>
+</html>

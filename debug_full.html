@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Debug - SMW Stage 1 Tileset</title>
+  <style>
+    body { background: #111; color: #fff; font-family: monospace; padding: 20px; }
+    #log { background: #222; padding: 10px; margin: 10px 0; max-height: 200px; overflow: auto; font-size: 11px; }
+    .success { color: #5f5; }
+    .error { color: #f55; }
+    canvas { border: 2px solid #fff; margin: 10px; }
+    .test { display: inline-block; text-align: center; margin: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Debug: SMW Stage 1 Tileset (TileFactory)</h2>
+  <div id="log"></div>
+  <div id="tests"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
+  <script>
+    function log(msg, type = '') {
+      document.getElementById('log').innerHTML += `<div class="${type}">${msg}</div>`;
+    }
+
+    async function createTest(name, width, height, fn) {
+      const div = document.createElement('div');
+      div.className = 'test';
+      div.innerHTML = `<div>${name}</div>`;
+      document.getElementById('tests').appendChild(div);
+
+      const app = new PIXI.Application();
+      await app.init({ width, height, background: '#5C94FC' });
+      div.appendChild(app.canvas);
+      await fn(app);
+    }
+
+    (async function() {
+      log('PIXI ' + PIXI.VERSION);
+
+      const tileset = 'assets/smw/sprites/stage1_unique.png';
+      await PIXI.Assets.load([tileset]);
+
+      const tex = PIXI.Assets.get(tileset);
+      log(`Tileset: ${tex.width}x${tex.height}`, 'success');
+
+      const src = tex.source || tex.baseTexture || tex;
+      const tw = 16, th = 16;
+      const cols = Math.floor(src.width / tw);
+      log(`Colunas: ${cols}`);
+
+      // Test 1: Mostrar tileset completo
+      await createTest('Tileset Completo', tex.width, tex.height, async (app) => {
+        const spr = new PIXI.Sprite(tex);
+        app.stage.addChild(spr);
+
+        // Grade
+        const g = new PIXI.Graphics();
+        for (let x = 0; x <= tex.width; x += 16) g.moveTo(x, 0).lineTo(x, tex.height);
+        for (let y = 0; y <= tex.height; y += 16) g.moveTo(0, y).lineTo(tex.width, y);
+        g.stroke({ color: 0xff0000, alpha: 0.3 });
+        app.stage.addChild(g);
+      });
+
+      // Test 2: Tiles de chão (9 = grama, 14 = terra)
+      await createTest('Chão (tile 9 + 14)', 128, 48, async (app) => {
+        const tileIds = [
+          [9, 9, 9, 9, 9, 9, 9, 9],
+          [14, 14, 14, 14, 14, 14, 14, 14],
+          [14, 14, 14, 14, 14, 14, 14, 14]
+        ];
+
+        for (let ty = 0; ty < tileIds.length; ty++) {
+          for (let tx = 0; tx < tileIds[ty].length; tx++) {
+            const id = tileIds[ty][tx];
+            if (id > 0) {
+              const col = id % cols;
+              const row = Math.floor(id / cols);
+              const rect = new PIXI.Rectangle(col * tw, row * th, tw, th);
+              const ftex = new PIXI.Texture({ source: src, frame: rect });
+              const spr = new PIXI.Sprite(ftex);
+              spr.x = tx * tw;
+              spr.y = ty * th;
+              app.stage.addChild(spr);
+            }
+          }
+        }
+      });
+
+      // Test 3: Hills (tiles 28,29,30)
+      await createTest('Hills (28-30)', 64, 32, async (app) => {
+        const ids = [28, 29, 30];
+        for (let i = 0; i < ids.length; i++) {
+          const id = ids[i];
+          const col = id % cols;
+          const row = Math.floor(id / cols);
+          const rect = new PIXI.Rectangle(col * tw, row * th, tw, th);
+          const ftex = new PIXI.Texture({ source: src, frame: rect });
+          const spr = new PIXI.Sprite(ftex);
+          spr.x = 8 + i * tw;
+          spr.y = 8;
+          app.stage.addChild(spr);
+        }
+      });
+
+      log('=== DONE ===', 'success');
+    })();
+  </script>
+</body>
+</html>

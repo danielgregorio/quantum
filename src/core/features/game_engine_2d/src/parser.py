@@ -12,9 +12,9 @@ from .ast_nodes import (
     SceneNode, SpriteNode, PhysicsNode, ColliderNode, AnimationNode,
     CameraNode, InputNode, SoundNode, ParticleNode, TimerNode,
     SpawnNode, HudNode, TweenNode, TilemapNode, TilemapLayerNode,
-    BehaviorNode, UseNode, PrefabNode, InstanceNode, GroupNode,
-    StateMachineNode, StateNode, TransitionNode, RawCodeNode,
-    ClickableNode,
+    TileAnimationNode, BehaviorNode, UseNode, PrefabNode, InstanceNode,
+    GroupNode, StateMachineNode, StateNode, TransitionNode, RawCodeNode,
+    ClickableNode, EventNode, OnCollisionNode,
 )
 
 
@@ -63,6 +63,8 @@ class GameParser:
         'state': '_parse_game_state',
         'on': '_parse_game_transition',
         'clickable': '_parse_game_clickable',
+        'event': '_parse_game_event',
+        'on-collision': '_parse_game_on_collision',
     }
 
     def parse_game_element(self, local_name: str, element: ET.Element):
@@ -186,6 +188,9 @@ class GameParser:
         node = SceneNode(name)
         node.width = self._parse_int(element.get('width'), 800)
         node.height = self._parse_int(element.get('height'), 600)
+        # Viewport size (canvas size) - defaults to scene size if not specified
+        node.viewport_width = self._parse_int(element.get('viewport-width')) if element.get('viewport-width') else None
+        node.viewport_height = self._parse_int(element.get('viewport-height')) if element.get('viewport-height') else None
         node.background = element.get('background', '#000000')
         node.active = self._parse_bool(element.get('active'), True)
 
@@ -229,6 +234,13 @@ class GameParser:
         node.controls = element.get('controls')
         node.speed = self._parse_float(element.get('speed'), 5.0)
         node.jump_force = self._parse_float(element.get('jump-force'), 10.0)
+
+        # SMW-style jump physics
+        node.gravity_up = self._parse_float(element.get('gravity-up')) if element.get('gravity-up') else None
+        node.gravity_down = self._parse_float(element.get('gravity-down')) if element.get('gravity-down') else None
+        node.jump_hold_boost = self._parse_float(element.get('jump-hold-boost'), 0.4)
+        node.coyote_frames = self._parse_int(element.get('coyote-frames'), 6)
+        node.max_fall_speed = self._parse_float(element.get('max-fall-speed'), 15.0)
 
         for child in element:
             parsed = self._parse_child(child)
@@ -370,6 +382,22 @@ class GameParser:
             if local == 'layer':
                 layer = self._parse_game_layer(child)
                 node.add_layer(layer)
+            elif local == 'tile-animation':
+                anim = self._parse_game_tile_animation(child)
+                node.add_tile_animation(anim)
+        return node
+
+    def _parse_game_tile_animation(self, element: ET.Element) -> TileAnimationNode:
+        """Parse <qg:tile-animation tile-id="5" frames="5,6,7,8" speed="0.15" />"""
+        tile_id = self._parse_int(element.get('tile-id'), 0)
+        node = TileAnimationNode(tile_id)
+        node.speed = self._parse_float(element.get('speed'), 0.15)
+
+        # Parse frames as comma-separated list of integers
+        frames_str = element.get('frames', '')
+        if frames_str:
+            node.frames = [int(f.strip()) for f in frames_str.split(',') if f.strip()]
+
         return node
 
     def _parse_game_layer(self, element: ET.Element) -> TilemapLayerNode:
@@ -482,3 +510,41 @@ class GameParser:
         event = element.get('event', '')
         transition = element.get('transition', '')
         return TransitionNode(event, transition)
+
+    def _parse_game_event(self, element: ET.Element) -> EventNode:
+        """Parse <qg:event> - Declarative event listener.
+
+        Attributes:
+            name: Event name to listen for
+            handler or action: Function to call when event fires
+            filter-tag: Optional tag filter
+            filter-id: Optional sprite ID filter
+            scope: Event scope (scene, sprite, global)
+        """
+        name = element.get('name', '')
+        handler = element.get('handler') or element.get('action', '')
+        node = EventNode(name, handler)
+        node.filter_tag = element.get('filter-tag')
+        node.filter_id = element.get('filter-id')
+        node.scope = element.get('scope', 'scene')
+        return node
+
+    def _parse_game_on_collision(self, element: ET.Element) -> OnCollisionNode:
+        """Parse <qg:on-collision> - Inline collision handler for sprites.
+
+        Attributes:
+            with-tag: Tag of target sprites to collide with
+            with-id: Specific sprite ID to collide with
+            action: Action to perform (destroy-self, destroy-other, emit:eventName, call:funcName)
+
+        Example:
+            <qg:sprite id="mario" tag="player">
+              <qg:on-collision with-tag="coin" action="destroy-other" />
+              <qg:on-collision with-tag="enemy" action="emit:player-hit" />
+            </qg:sprite>
+        """
+        node = OnCollisionNode()
+        node.with_tag = element.get('with-tag')
+        node.with_id = element.get('with-id')
+        node.action = element.get('action', '')
+        return node

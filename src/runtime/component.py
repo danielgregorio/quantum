@@ -51,17 +51,101 @@ from runtime.job_executor import (
     JobExecutorError, ScheduleError, ThreadError, JobQueueError,
     parse_duration
 )
-from runtime.expression_cache import get_expression_cache, ExpressionCache
+from runtime.expression_cache import get_expression_cache, ExpressionCache, get_databinding_cache, DataBindingCache
+from runtime.executor_registry import ExecutorRegistry
+from runtime.service_container import ServiceContainer
 import re
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class ComponentExecutionError(Exception):
     """Error in component execution"""
     pass
 
+
+def _create_executor_registry(runtime: 'ComponentRuntime') -> ExecutorRegistry:
+    """
+    Create and populate the executor registry with all executors.
+
+    This factory function creates all modular executors and registers them.
+    The registry can then dispatch execution to the appropriate executor
+    based on node type.
+
+    Args:
+        runtime: ComponentRuntime instance for executor initialization
+
+    Returns:
+        Populated ExecutorRegistry
+    """
+    from runtime.executors import (
+        # Control flow
+        IfExecutor, LoopExecutor, SetExecutor,
+        # Data
+        QueryExecutor, InvokeExecutor, DataExecutor, TransactionExecutor,
+        # Services
+        LogExecutor, DumpExecutor, FileExecutor, MailExecutor,
+        # AI
+        LLMExecutor, AgentExecutor, TeamExecutor, KnowledgeExecutor,
+        # Messaging
+        WebSocketExecutor, WebSocketSendExecutor, WebSocketCloseExecutor,
+        MessageExecutor, SubscribeExecutor, QueueExecutor,
+        # Jobs
+        ScheduleExecutor, ThreadExecutor, JobExecutor,
+        # Scripting
+        PythonExecutor, PyImportExecutor, PyClassExecutor,
+    )
+
+    registry = ExecutorRegistry()
+
+    # Register all executors
+    executors = [
+        # Control flow
+        IfExecutor(runtime),
+        LoopExecutor(runtime),
+        SetExecutor(runtime),
+        # Data
+        QueryExecutor(runtime),
+        InvokeExecutor(runtime),
+        DataExecutor(runtime),
+        TransactionExecutor(runtime),
+        # Services
+        LogExecutor(runtime),
+        DumpExecutor(runtime),
+        FileExecutor(runtime),
+        MailExecutor(runtime),
+        # AI
+        LLMExecutor(runtime),
+        AgentExecutor(runtime),
+        TeamExecutor(runtime),
+        KnowledgeExecutor(runtime),
+        # Messaging
+        WebSocketExecutor(runtime),
+        WebSocketSendExecutor(runtime),
+        WebSocketCloseExecutor(runtime),
+        MessageExecutor(runtime),
+        SubscribeExecutor(runtime),
+        QueueExecutor(runtime),
+        # Jobs
+        ScheduleExecutor(runtime),
+        ThreadExecutor(runtime),
+        JobExecutor(runtime),
+        # Scripting
+        PythonExecutor(runtime),
+        PyImportExecutor(runtime),
+        PyClassExecutor(runtime),
+    ]
+
+    registry.register_all(executors)
+    logger.debug(f"Initialized executor registry with {registry.executor_count} executors")
+
+    return registry
+
 class ComponentRuntime:
     """Runtime for executing Quantum components"""
 
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any] = None, use_modular_executors: bool = True):
         self.execution_context = ExecutionContext()
         # Keep self.context for backward compatibility
         self.context: Dict[str, Any] = {}
@@ -69,6 +153,25 @@ class ComponentRuntime:
         self.function_registry = FunctionRegistry()
         # Current component (for function resolution)
         self.current_component: ComponentNode = None
+
+        # === NEW: Service Container for dependency injection ===
+        self._services = ServiceContainer(config)
+
+        # === NEW: Executor Registry for modular dispatch ===
+        self._use_modular_executors = use_modular_executors
+        self._executor_registry: ExecutorRegistry = None
+        if use_modular_executors:
+            self._executor_registry = _create_executor_registry(self)
+        else:
+            import warnings
+            warnings.warn(
+                "use_modular_executors=False is deprecated and will be removed in v2.0. "
+                "The modular ExecutorRegistry is now the default.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+
+        # === LEGACY: Direct service references for backward compatibility ===
         # Database service for query execution - pass local datasources from config
         local_ds = {}
         if config and 'datasources' in config:
@@ -108,6 +211,24 @@ class ComponentRuntime:
         )
         # Expression cache for performance optimization (Phase 1)
         self._expr_cache = get_expression_cache()
+        # Databinding cache for optimized {variable} interpolation (Phase 1 enhancement)
+        self._databinding_cache = get_databinding_cache()
+        # Pre-compiled regex patterns (avoid re-compilation on every call)
+        self._databinding_pattern = re.compile(r'\{([^}]+)\}')
+        self._array_index_pattern = re.compile(r'^(\w+)\[(\d+)\](\.(.+))?$')
+        self._order_by_pattern = re.compile(r'\s+ORDER\s+BY\s+[^;]+?(?=\s+(?:LIMIT|OFFSET|FOR\s+UPDATE)|$)', re.IGNORECASE)
+        self._limit_pattern = re.compile(r'\s+LIMIT\s+\d+', re.IGNORECASE)
+        self._offset_pattern = re.compile(r'\s+OFFSET\s+\d+', re.IGNORECASE)
+
+    @property
+    def services(self) -> ServiceContainer:
+        """Access to service container"""
+        return self._services
+
+    @property
+    def executor_registry(self) -> ExecutorRegistry:
+        """Access to executor registry (may be None if not using modular executors)"""
+        return self._executor_registry
 
     def execute_component(self, component: ComponentNode, params: Dict[str, Any] = None) -> Any:
         """Execute a component and return the result"""
@@ -219,6 +340,21 @@ class ComponentRuntime:
         else:
             exec_context = self.execution_context
             dict_context = context
+
+        # === NEW: Try modular executor registry first ===
+        if self._use_modular_executors and self._executor_registry:
+            try:
+                if self._executor_registry.can_execute(statement):
+                    return self._executor_registry.execute(statement, exec_context)
+            except Exception as e:
+                # Log warning and fall back to legacy execution
+                logger.warning(f"Modular executor failed for {type(statement).__name__}: {e}")
+
+        # === LEGACY: Fall back to if-elif chain ===
+        # DEPRECATION NOTE: This if-elif chain is deprecated and will be removed in v2.0
+        # All node execution should go through the modular ExecutorRegistry
+        node_type = type(statement).__name__
+        logger.debug(f"LEGACY FALLBACK: Executing {node_type} via if-elif chain (deprecated)")
 
         if isinstance(statement, IfNode):
             return self._execute_if(statement, dict_context)
@@ -677,9 +813,11 @@ class ComponentRuntime:
         return items_expr.split(delimiter)
     
     def _apply_databinding(self, text: str, context: Dict[str, Any]) -> Any:
-        """Apply variable databinding to text using {variable} syntax"""
-        import re
+        """Apply variable databinding to text using {variable} syntax.
 
+        Optimized with pre-compiled regex pattern and DataBindingCache for
+        improved performance on repeated evaluations.
+        """
         if not text:
             return text
 
@@ -687,17 +825,17 @@ class ComponentRuntime:
         if context is None:
             context = {}
 
-        # Pattern to match {variable} or {variable.property}
-        pattern = r'\{([^}]+)\}'
+        # Use pre-compiled pattern (avoid re-compilation on every call)
+        pattern = self._databinding_pattern
 
         # Check if the ENTIRE text is just a single databinding expression
-        full_match = re.fullmatch(pattern, text.strip())
+        full_match = pattern.fullmatch(text.strip())
         if full_match:
             # Pure expression - return the actual value (not converted to string)
             var_expr = full_match.group(1).strip()
             try:
                 return self._evaluate_databinding_expression(var_expr, context)
-            except Exception as e:
+            except Exception:
                 # If evaluation fails, return original placeholder
                 return text
 
@@ -707,12 +845,12 @@ class ComponentRuntime:
             try:
                 result = self._evaluate_databinding_expression(var_expr, context)
                 return str(result)
-            except Exception as e:
+            except Exception:
                 # If evaluation fails, return original placeholder
                 return match.group(0)
 
-        # Replace all {variable} patterns
-        result = re.sub(pattern, replace_variable, text)
+        # Replace all {variable} patterns using pre-compiled pattern
+        result = pattern.sub(replace_variable, text)
         return result
     
     def _evaluate_databinding_expression(self, expr: str, context: Dict[str, Any]) -> Any:
@@ -768,11 +906,8 @@ class ComponentRuntime:
         - result[0].id
         - users[1].name
         """
-        import re
-
-        # Match pattern: variable[index] or variable[index].property.chain
-        # Pattern: word[number](.property)*
-        match = re.match(r'^(\w+)\[(\d+)\](\.(.+))?$', expr.strip())
+        # Use pre-compiled pattern for better performance
+        match = self._array_index_pattern.match(expr.strip())
 
         if not match:
             raise ValueError(f"Invalid array index expression: {expr}")
@@ -1565,18 +1700,13 @@ class ComponentRuntime:
         - Queries with GROUP BY
         - Queries with complex WHERE clauses
         """
-        import re
-
         # Normalize SQL (remove extra whitespace, newlines)
         sql = ' '.join(original_sql.split())
 
-        # Remove ORDER BY clause (not needed for COUNT and causes issues in subquery)
-        # Match ORDER BY ... up to end or until LIMIT/OFFSET/FOR UPDATE
-        sql = re.sub(r'\s+ORDER\s+BY\s+[^;]+?(?=\s+(?:LIMIT|OFFSET|FOR\s+UPDATE)|$)', '', sql, flags=re.IGNORECASE)
-
-        # Remove LIMIT and OFFSET clauses (pagination will be added separately)
-        sql = re.sub(r'\s+LIMIT\s+\d+', '', sql, flags=re.IGNORECASE)
-        sql = re.sub(r'\s+OFFSET\s+\d+', '', sql, flags=re.IGNORECASE)
+        # Remove ORDER BY, LIMIT, OFFSET clauses using pre-compiled patterns
+        sql = self._order_by_pattern.sub('', sql)
+        sql = self._limit_pattern.sub('', sql)
+        sql = self._offset_pattern.sub('', sql)
 
         # Wrap in COUNT subquery
         # This handles all edge cases: JOINs, GROUP BY, complex WHERE, etc.

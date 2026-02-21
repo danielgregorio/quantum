@@ -6,13 +6,13 @@
 
 ## The Saturday Night That Started It All
 
-It was a Saturday night. I was frustrated. Not the fun kind — the "I've written way too much JavaScript this week and I'm done with React's useEffect dependency array" kind of frustrated.
+It was a Saturday night. I was frustrated. Not the fun kind ... the "I've written way too much JavaScript this week and I'm done with React's useEffect dependency array" kind of frustrated.
 
 I was staring at my screen, annoyed at writing yet another `useState`, `useEffect`, `useCallback` combo just to fetch some data and display it. Hundreds of lines of boilerplate for what should be simple: get data, show data.
 
 Then I remembered ColdFusion.
 
-## Wait, ColdFusion? In 2024?
+## Wait, ColdFusion? In 2026?
 
 Yeah, I know. But hear me out.
 
@@ -44,11 +44,11 @@ Declarative UI. In 2006. Before React was even a twinkle in Facebook's eye.
 
 So there I was, frustrated on a Saturday night, frustrated about modern web development, nostalgic about XML-based languages from 20 years ago.
 
-And I did what any reasonable developer would do in 2024.
+And I did what any reasonable developer would do in 2026.
 
 I opened Claude and typed:
 
-> "I want to create a programming language that uses XML syntax, runs on Python, and lets me build web apps without writing JavaScript. Is that stupid?"
+> "What are the perks of wanting to create a programming language that uses an easy XML syntax like ColdFusion used to, runs on Python (in the same way coldfusion used to run on Java), and lets me build web apps by magic declarative language"
 
 Claude's response was something like: "It's unconventional, but there are valid reasons why this could work. Let me help you think through the architecture."
 
@@ -58,7 +58,7 @@ And that's when things got interesting.
 
 ## The First 24 Hours
 
-What happened next was a blur of coffee and XML.
+What happened next was a blur of soda and XML.
 
 Claude helped me design the basic structure. We'd have a parser that reads XML files. Each tag would be a node in an AST (Abstract Syntax Tree). A runtime would execute those nodes.
 
@@ -100,7 +100,7 @@ Because like quantum physics, it should "just work" without you needing to under
 
 Here's what I learned in those first 24 hours:
 
-**Claude didn't write Quantum for me.** I had to know what I wanted. I had to understand parsers, ASTs, runtime execution. I had to make architectural decisions.
+From the beginning, I had to know what I wanted. I had to understand parsers, ASTs, runtime execution. I had to make architectural decisions. One person cannot just prompt "Make me a nice programming language, make it fast and add extra coolness"... we're not there yet, and maybe it's for the good.
 
 But Claude was like having a senior developer available 24/7 who:
 - Never gets frustrated at "stupid" questions
@@ -111,6 +111,8 @@ But Claude was like having a senior developer available 24/7 who:
 The first version of the parser? I described what I wanted in plain English. Claude gave me a starting point. I modified it. Asked for improvements. Got stuck on edge cases. Asked for help. Fixed bugs together.
 
 It wasn't AI coding for me. It was pair programming at 2AM with someone who doesn't need sleep.
+
+The more I abstracted important concepts, the more Claude got lost and deviated ... hallucinated, even. I needed to be in control for this to work. So I kept it simple.
 
 ## What's Next
 
@@ -124,17 +126,19 @@ That first weekend prototype eventually became something real. Something I use i
 
 But I'll save those for the next posts.
 
-For now, if you're sitting there frustrated at your current stack, tired of the complexity, done with the boilerplate — maybe you don't need to accept it. Maybe you can build something different.
+For now, if you're sitting there frustrated at your current stack, tired of the complexity, done with the boilerplate ... maybe you don't need to accept it. Maybe you can build something different.
 
-Maybe you just need a frustrating Saturday night and an AI that's willing to entertain your stupidest ideas.
+We're living in a strange moment. The tools to build almost anything are now accessible to anyone with curiosity and a Saturday night to spare. The Age of AI isn't about machines taking over... it's about individuals reclaiming the power to create. Every paradigm that feels permanent was once someone's crazy idea. Maybe yours is next.
 
 ---
 
-*Next post: "I Put an LLM Inside My Programming Language. It Got Weird." — Where we add AI capabilities directly into the language syntax, because apparently I have no limits.*
+*Next post: "I Put an LLM Inside My Programming Language. It Got Weird." ... Where we add AI capabilities directly into the language syntax, because apparently I have no limits.*
 
 ---
 
 **If you want to see the code:** [github.com/danielgregorio/quantum](https://github.com/danielgregorio/quantum)
+
+**If you want to see the docs:** [quantum.sargas.cloud](https://quantum.sargas.cloud)
 
 **If you want to tell me this is stupid:** I already know. I built it anyway.
 

@@ -1,0 +1,5 @@
+Runtime: CPython 3.12.7
+Expression Evaluation: 686841 ops/sec
+Databinding Resolution: 423690 ops/sec
+Parser Only: 37272 ops/sec
+Simulated Quantum Loop: 730655 ops/sec

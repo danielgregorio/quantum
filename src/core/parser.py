@@ -63,15 +63,109 @@ from core.features.testing_engine.src.ast_nodes import (
 from core.features.ui_engine.src.parser import UIParser, UIParseError
 from core.features.ui_engine.src.ast_nodes import UIWindowNode
 from core.features.theming.src import UIThemeNode
+from core.parser_registry import ParserRegistry
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _create_parser_registry(parser: 'QuantumParser') -> ParserRegistry:
+    """
+    Create and populate the parser registry with all modular parsers.
+
+    This factory function creates all modular parsers and registers them.
+    The registry can then dispatch parsing to the appropriate parser
+    based on tag name.
+
+    Args:
+        parser: QuantumParser instance for parser initialization
+
+    Returns:
+        Populated ParserRegistry
+    """
+    from core.parsers import (
+        # Control flow
+        IfParser, LoopParser, SetParser,
+        # Data
+        QueryParser, InvokeParser, DataParser, TransactionParser,
+        # Services
+        LogParser, DumpParser, FileParser, MailParser,
+        # AI
+        LLMParser, AgentParser, TeamParser, KnowledgeParser,
+        # Messaging
+        WebSocketParser, WebSocketSendParser, WebSocketCloseParser,
+        MessageParser, SubscribeParser, QueueParser,
+        # Jobs
+        ScheduleParser, ThreadParser, JobParser,
+        # Scripting
+        PythonParser, PyImportParser, PyClassParser,
+        # HTML
+        HTMLParser, ComponentCallParser,
+    )
+
+    registry = ParserRegistry()
+
+    # Register all tag-based parsers
+    parsers = [
+        # Control flow
+        IfParser(parser),
+        LoopParser(parser),
+        SetParser(parser),
+        # Data
+        QueryParser(parser),
+        InvokeParser(parser),
+        DataParser(parser),
+        TransactionParser(parser),
+        # Services
+        LogParser(parser),
+        DumpParser(parser),
+        FileParser(parser),
+        MailParser(parser),
+        # AI
+        LLMParser(parser),
+        AgentParser(parser),
+        TeamParser(parser),
+        KnowledgeParser(parser),
+        # Messaging
+        WebSocketParser(parser),
+        WebSocketSendParser(parser),
+        WebSocketCloseParser(parser),
+        MessageParser(parser),
+        SubscribeParser(parser),
+        QueueParser(parser),
+        # Jobs
+        ScheduleParser(parser),
+        ThreadParser(parser),
+        JobParser(parser),
+        # Scripting
+        PythonParser(parser),
+        PyImportParser(parser),
+        PyClassParser(parser),
+        # HTML (registers for common HTML tags)
+        HTMLParser(parser),
+    ]
+
+    registry.register_all(parsers)
+
+    # Store special parsers for fallback handling
+    # These are used when no specific tag parser matches
+    registry.html_parser = HTMLParser(parser)
+    registry.component_call_parser = ComponentCallParser(parser)
+
+    logger.debug(f"Initialized parser registry with {registry.parser_count} parsers")
+
+    return registry
+
 
 class QuantumParseError(Exception):
     """Quantum parsing error"""
     pass
 
+
 class QuantumParser:
     """Main parser for .q files"""
 
-    def __init__(self, use_cache: bool = True):
+    def __init__(self, use_cache: bool = True, use_modular_parsers: bool = True):
         self.quantum_ns = {'q': 'https://quantum.lang/ns'}
         self._use_cache = use_cache
         self._ast_cache = None
@@ -81,6 +175,25 @@ class QuantumParser:
                 self._ast_cache = get_ast_cache()
             except ImportError:
                 self._use_cache = False
+
+        # === NEW: Parser Registry for modular dispatch ===
+        self._use_modular_parsers = use_modular_parsers
+        self._parser_registry: ParserRegistry = None
+        if use_modular_parsers:
+            self._parser_registry = _create_parser_registry(self)
+        else:
+            import warnings
+            warnings.warn(
+                "use_modular_parsers=False is deprecated and will be removed in v2.0. "
+                "The modular ParserRegistry is now the default.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+
+    @property
+    def parser_registry(self) -> ParserRegistry:
+        """Access to parser registry (may be None if not using modular parsers)"""
+        return self._parser_registry
 
     def _inject_namespace(self, content: str) -> str:
         """
@@ -599,6 +712,20 @@ class QuantumParser:
         """Parse individual statement (return, set, dispatchEvent, etc)"""
         element_type = self._get_element_name(element)
 
+        # === NEW: Try modular parser registry first ===
+        if self._use_modular_parsers and self._parser_registry:
+            try:
+                if self._parser_registry.has_parser(element_type):
+                    return self._parser_registry.parse(element, element_type)
+            except Exception as e:
+                # Log warning and fall back to legacy parsing
+                logger.warning(f"Modular parser failed for '{element_type}': {e}")
+
+        # === LEGACY: Fall back to if-elif chain ===
+        # DEPRECATION NOTE: This if-elif chain is deprecated and will be removed in v2.0
+        # All parsing should go through the modular ParserRegistry
+        logger.debug(f"LEGACY FALLBACK: Parsing '{element_type}' via if-elif chain (deprecated)")
+
         # Quantum tags
         if element_type == 'return':
             return self._parse_return(element)
@@ -693,10 +820,27 @@ class QuantumParser:
         # Component calls (Phase 2) - Check BEFORE HTML elements
         # Detect imported component usage by uppercase naming convention
         elif element_type and element_type[0].isupper():
+            # === NEW: Try modular ComponentCallParser first ===
+            if self._use_modular_parsers and self._parser_registry:
+                try:
+                    from core.parsers import ComponentCallParser
+                    if ComponentCallParser.is_component_call(element_type):
+                        return self._parser_registry.component_call_parser.parse(element)
+                except Exception as e:
+                    logger.warning(f"Modular ComponentCallParser failed for '{element_type}': {e}")
+            # === LEGACY: Fall back to original method ===
             return self._parse_component_call(element)
 
         # HTML elements (Phase 1)
         elif self._is_html_element(element):
+            # === NEW: Try modular HTMLParser first ===
+            if self._use_modular_parsers and self._parser_registry:
+                try:
+                    if self._parser_registry.html_parser.can_parse(element_type):
+                        return self._parser_registry.html_parser.parse(element)
+                except Exception as e:
+                    logger.warning(f"Modular HTMLParser failed for '{element_type}': {e}")
+            # === LEGACY: Fall back to original method ===
             return self._parse_html_element(element)
 
         return None
@@ -1773,18 +1917,29 @@ class QuantumParser:
           <q:import component="Header" />
           <q:import component="Button" from="./ui" />
           <q:import component="AdminLayout" as="Layout" />
+
+        Game Engine Imports:
+          <q:import behavior="PlayerBehavior" from="./behaviors" />
+          <q:import prefab="KoopaGreen" from="./prefabs" />
+          <q:import tilemap="yi1" from="./levels" />
         """
         component = element.get('component')
+        behavior = element.get('behavior')
+        prefab = element.get('prefab')
+        tilemap = element.get('tilemap')
         from_path = element.get('from')
         alias = element.get('as')
-        
-        if not component:
-            raise QuantumParseError("q:import requires 'component' attribute")
-        
+
+        if not component and not behavior and not prefab and not tilemap:
+            raise QuantumParseError("q:import requires one of 'component', 'behavior', 'prefab', or 'tilemap' attribute")
+
         return ImportNode(
             component=component,
             from_path=from_path,
-            alias=alias
+            alias=alias,
+            behavior=behavior,
+            prefab=prefab,
+            tilemap=tilemap
         )
 
     def _parse_slot_statement(self, element: ET.Element) -> SlotNode:

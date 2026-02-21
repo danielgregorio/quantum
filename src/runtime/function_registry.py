@@ -28,17 +28,18 @@ class FunctionRegistry:
 
     def register_component(self, component: ComponentNode):
         """Register all functions from a component"""
-        if component.name not in self.components:
-            self.components[component.name] = {}
+        component_name = getattr(component, 'name', None) or getattr(component, 'id', 'unknown')
+        if component_name not in self.components:
+            self.components[component_name] = {}
 
-        for func in component.functions:
+        for func in getattr(component, 'functions', []):
             self.register_function(func, component)
 
     def register_function(self, func: FunctionNode, container: ComponentNode):
         """Register function in appropriate scope"""
-
-        if container.name not in self.components:
-            self.components[container.name] = {}
+        container_name = getattr(container, 'name', None) or getattr(container, 'id', 'unknown')
+        if container_name not in self.components:
+            self.components[container_name] = {}
 
         self.components[container.name][func.name] = func
 

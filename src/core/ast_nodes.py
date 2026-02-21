@@ -920,41 +920,74 @@ class CommentNode(QuantumNode):
 class ImportNode(QuantumNode):
     """
     Represents component import declaration.
-    
+
     Phase 2: Component Composition
-    
+
     Examples:
       <q:import component="Header" />
       <q:import component="Button" from="./components/ui" />
       <q:import component="AdminLayout" as="Layout" />
+
+    Game Engine Imports (SMW Componentization):
+      <q:import behavior="PlayerBehavior" from="./behaviors" />
+      <q:import prefab="KoopaGreen" from="./prefabs" />
+      <q:import tilemap="yi1" from="./levels" />
     """
-    
+
     def __init__(
         self,
-        component: str,
+        component: Optional[str] = None,
         from_path: Optional[str] = None,
-        alias: Optional[str] = None
+        alias: Optional[str] = None,
+        behavior: Optional[str] = None,
+        prefab: Optional[str] = None,
+        tilemap: Optional[str] = None
     ):
         self.component = component
         self.from_path = from_path
-        self.alias = alias or component
-        
+        self.alias = alias or component or behavior or prefab or tilemap
+
+        # Game engine imports
+        self.behavior = behavior
+        self.prefab = prefab
+        self.tilemap = tilemap
+
+    @property
+    def import_type(self) -> str:
+        """Return the type of import: component, behavior, prefab, or tilemap."""
+        if self.behavior:
+            return "behavior"
+        elif self.prefab:
+            return "prefab"
+        elif self.tilemap:
+            return "tilemap"
+        return "component"
+
+    @property
+    def name(self) -> str:
+        """Return the imported item's name regardless of type."""
+        return self.component or self.behavior or self.prefab or self.tilemap or ""
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": "import",
+            "import_type": self.import_type,
             "component": self.component,
+            "behavior": self.behavior,
+            "prefab": self.prefab,
+            "tilemap": self.tilemap,
             "from": self.from_path,
             "alias": self.alias
         }
-    
+
     def validate(self) -> List[str]:
         errors = []
-        if not self.component:
-            errors.append("Component name is required for q:import")
+        if not self.component and not self.behavior and not self.prefab and not self.tilemap:
+            errors.append("One of component, behavior, prefab, or tilemap is required for q:import")
         return errors
-    
+
     def __repr__(self):
-        return f'<ImportNode component={self.component}>'
+        return f'<ImportNode {self.import_type}={self.name}>'
 
 
 class SlotNode(QuantumNode):

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Debug Mario Sprite</title>
+  <style>
+    body { background: #111; color: #fff; font-family: monospace; padding: 20px; }
+    #log { background: #222; padding: 10px; margin: 10px 0; max-height: 300px; overflow: auto; }
+    canvas { border: 1px solid #fff; }
+  </style>
+</head>
+<body>
+  <h2>Debug: Mario Sprite Frame Cutting</h2>
+  <div id="log"></div>
+  <div id="canvas-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
+  <script>
+    function log(msg) {
+      const div = document.getElementById('log');
+      div.innerHTML += msg + '<br>';
+      console.log(msg);
+    }
+
+    (async function() {
+      log('Starting PIXI...');
+
+      const app = new PIXI.Application();
+      await app.init({ width: 256, height: 128, background: '#5CA0FF' });
+      document.getElementById('canvas-container').appendChild(app.canvas);
+
+      // Load mario spritesheet
+      const marioPath = 'assets/smw/sprites/mario_small.png';
+      log('Loading: ' + marioPath);
+
+      try {
+        await PIXI.Assets.load([marioPath]);
+        log('Loaded!');
+
+        const texture = PIXI.Assets.get(marioPath);
+        log('Texture type: ' + texture.constructor.name);
+        log('Texture width: ' + texture.width);
+        log('Texture height: ' + texture.height);
+
+        const source = texture.source || texture.baseTexture || texture;
+        log('Source type: ' + source.constructor.name);
+        log('Source width: ' + source.width);
+        log('Source height: ' + source.height);
+
+        // Test 1: Full sprite (wrong - 48x32)
+        log('--- Test 1: Full sprite (should be 48x32) ---');
+        const fullSprite = PIXI.Sprite.from(marioPath);
+        fullSprite.x = 20;
+        fullSprite.y = 40;
+        app.stage.addChild(fullSprite);
+        log('Full sprite size: ' + fullSprite.width + 'x' + fullSprite.height);
+
+        // Test 2: First frame only (16x32)
+        log('--- Test 2: First frame (should be 16x32) ---');
+        const frameW = 16, frameH = 32;
+        const rect = new PIXI.Rectangle(0, 0, frameW, frameH);
+        log('Frame rect: ' + rect.x + ',' + rect.y + ' ' + rect.width + 'x' + rect.height);
+
+        const frameTex = new PIXI.Texture({ source: source, frame: rect });
+        const frameSprite = new PIXI.Sprite(frameTex);
+        frameSprite.x = 100;
+        frameSprite.y = 40;
+        app.stage.addChild(frameSprite);
+        log('Frame sprite size: ' + frameSprite.width + 'x' + frameSprite.height);
+
+        // Test 3: All 3 frames
+        log('--- Test 3: All 3 frames ---');
+        for (let i = 0; i < 3; i++) {
+          const fRect = new PIXI.Rectangle(i * frameW, 0, frameW, frameH);
+          const fTex = new PIXI.Texture({ source: source, frame: fRect });
+          const fSpr = new PIXI.Sprite(fTex);
+          fSpr.x = 150 + i * 24;
+          fSpr.y = 40;
+          app.stage.addChild(fSpr);
+          log('Frame ' + i + ': ' + fSpr.width + 'x' + fSpr.height);
+        }
+
+        // Labels
+        const style = { fontSize: 10, fill: '#ffffff' };
+        const t1 = new PIXI.Text({ text: 'Full (48x32)', style });
+        t1.x = 10; t1.y = 80;
+        app.stage.addChild(t1);
+
+        const t2 = new PIXI.Text({ text: 'Frame 0', style });
+        t2.x = 90; t2.y = 80;
+        app.stage.addChild(t2);
+
+        const t3 = new PIXI.Text({ text: 'Frames 0-2', style });
+        t3.x = 150; t3.y = 80;
+        app.stage.addChild(t3);
+
+        log('Done!');
+
+      } catch (e) {
+        log('ERROR: ' + e.message);
+        console.error(e);
+      }
+    })();
+  </script>
+</body>
+</html>

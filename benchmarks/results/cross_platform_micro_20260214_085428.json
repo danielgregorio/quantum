@@ -1,0 +1,249 @@
+{
+  "timestamp": "20260214_085428",
+  "languages": {
+    "python": {
+      "name": "Python",
+      "command": "python",
+      "version_cmd": "python --version",
+      "available": true,
+      "version": "Python 3.12.7"
+    },
+    "node": {
+      "name": "Node.js",
+      "command": "node",
+      "version_cmd": "node --version",
+      "available": true,
+      "version": "v24.12.0"
+    },
+    "php": {
+      "name": "PHP",
+      "command": "php",
+      "version_cmd": "php --version",
+      "available": false,
+      "version": ""
+    },
+    "ruby": {
+      "name": "Ruby",
+      "command": "ruby",
+      "version_cmd": "ruby --version",
+      "available": false,
+      "version": ""
+    },
+    "perl": {
+      "name": "Perl",
+      "command": "perl",
+      "version_cmd": "perl --version",
+      "available": true,
+      "version": "This is perl 5, version 38, subversion 2 (v5.38.2) built for x86_64-msys-thread-multi"
+    },
+    "java": {
+      "name": "Java",
+      "command": "java",
+      "version_cmd": "java --version",
+      "available": false,
+      "version": ""
+    }
+  },
+  "results": [
+    {
+      "language": "Quantum",
+      "test_name": "loop",
+      "iterations": 100000,
+      "total_time_ms": 925.965600006748,
+      "avg_time_us": 9.25965600006748,
+      "ops_per_sec": 107995.37261348721,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Python",
+      "test_name": "loop",
+      "iterations": 100000,
+      "total_time_ms": 3.5569,
+      "avg_time_us": 0.035569,
+      "ops_per_sec": 28114369.254125785,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Node.js",
+      "test_name": "loop",
+      "iterations": 100000,
+      "total_time_ms": 0.5685,
+      "avg_time_us": 0.005685,
+      "ops_per_sec": 175901495.16270888,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Perl",
+      "test_name": "loop",
+      "iterations": 100000,
+      "total_time_ms": 2.197027,
+      "avg_time_us": 0.02197027,
+      "ops_per_sec": 45516054.19505541,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Quantum",
+      "test_name": "string",
+      "iterations": 50000,
+      "total_time_ms": 95.88169999187812,
+      "avg_time_us": 1.9176339998375624,
+      "ops_per_sec": 521475.94383740966,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Python",
+      "test_name": "string",
+      "iterations": 50000,
+      "total_time_ms": 3.4984,
+      "avg_time_us": 0.069968,
+      "ops_per_sec": 14292247.884747313,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Node.js",
+      "test_name": "string",
+      "iterations": 50000,
+      "total_time_ms": 2.1092,
+      "avg_time_us": 0.042184,
+      "ops_per_sec": 23705670.39635881,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Perl",
+      "test_name": "string",
+      "iterations": 50000,
+      "total_time_ms": 1.914978,
+      "avg_time_us": 0.03829956,
+      "ops_per_sec": 26109960.53218366,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Quantum",
+      "test_name": "dict",
+      "iterations": 50000,
+      "total_time_ms": 0,
+      "avg_time_us": 0,
+      "ops_per_sec": 0,
+      "success": false,
+      "error": "Unknown test: dict"
+    },
+    {
+      "language": "Python",
+      "test_name": "dict",
+      "iterations": 50000,
+      "total_time_ms": 12.836,
+      "avg_time_us": 0.25672,
+      "ops_per_sec": 3895294.4842630103,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Node.js",
+      "test_name": "dict",
+      "iterations": 50000,
+      "total_time_ms": 16.8404,
+      "avg_time_us": 0.33680799999999994,
+      "ops_per_sec": 2969050.616374908,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Perl",
+      "test_name": "dict",
+      "iterations": 50000,
+      "total_time_ms": 0,
+      "avg_time_us": 0,
+      "ops_per_sec": 0,
+      "success": false,
+      "error": "Execution failed"
+    },
+    {
+      "language": "Quantum",
+      "test_name": "conditional",
+      "iterations": 100000,
+      "total_time_ms": 189.00089999078773,
+      "avg_time_us": 1.8900089999078773,
+      "ops_per_sec": 529098.009611987,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Python",
+      "test_name": "conditional",
+      "iterations": 100000,
+      "total_time_ms": 7.8196,
+      "avg_time_us": 0.078196,
+      "ops_per_sec": 12788377.922144355,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Node.js",
+      "test_name": "conditional",
+      "iterations": 100000,
+      "total_time_ms": 0.6278,
+      "avg_time_us": 0.006278000000000001,
+      "ops_per_sec": 159286396.94170117,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Perl",
+      "test_name": "conditional",
+      "iterations": 100000,
+      "total_time_ms": 7.754087,
+      "avg_time_us": 0.07754087,
+      "ops_per_sec": 12896424.814423671,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Quantum",
+      "test_name": "json",
+      "iterations": 10000,
+      "total_time_ms": 0,
+      "avg_time_us": 0,
+      "ops_per_sec": 0,
+      "success": false,
+      "error": "Unknown test: json"
+    },
+    {
+      "language": "Python",
+      "test_name": "json",
+      "iterations": 10000,
+      "total_time_ms": 22.8189,
+      "avg_time_us": 2.2818899999999998,
+      "ops_per_sec": 438233.2189544632,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Node.js",
+      "test_name": "json",
+      "iterations": 10000,
+      "total_time_ms": 4.9053,
+      "avg_time_us": 0.49053,
+      "ops_per_sec": 2038611.2979838133,
+      "success": true,
+      "error": ""
+    },
+    {
+      "language": "Perl",
+      "test_name": "json",
+      "iterations": 10000,
+      "total_time_ms": 275.972128,
+      "avg_time_us": 27.5972128,
+      "ops_per_sec": 36235.543322693804,
+      "success": true,
+      "error": ""
+    }
+  ]
+}

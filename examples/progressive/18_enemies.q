@@ -68,11 +68,10 @@
     <qg:sprite id="level-bg" src="assets/smw/sprites/yoshi-island-1.png"
                x="2560" y="216" width="5120" height="432" />
 
-    <!-- DEBUG: Visible ground collision to see where it is -->
-    <!-- Looking at the screenshot, ground is at the very bottom of the 432px image -->
-    <!-- Ground top should be at approximately y=415 -->
+    <!-- DEBUG: Visible ground collision (red) to see where it is -->
+    <!-- Ground top should be at approximately y=400 -->
     <qg:sprite id="ground" width="5120" height="32" x="2560" y="416"
-               tag="terrain" body="static" color="#FF000080" />
+               tag="terrain" body="static" color="#FF0000" />
 
     <!-- Question blocks (matching image positions) -->
     <qg:instance prefab="qblock" id="qb1" x="496" y="256" />
