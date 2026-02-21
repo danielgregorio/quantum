@@ -12,7 +12,7 @@
 -->
 <q:application id="yoshi-island-1" type="game" engine="2d">
   <qg:scene name="main" width="5120" height="432" viewport-width="256" viewport-height="224" background="#5C94FC">
-    <qg:physics gravity-y="1.2" />
+    <qg:physics gravity-y="2.0" />
     <qg:camera follow="mario" lerp="0.08" bounds="scene" offset-y="-80" />
 
     <!-- Game state -->
@@ -72,6 +72,52 @@
     <qg:sprite id="ground" width="5120" height="32" x="2560" y="401"
                tag="terrain" body="static" visible="false" />
 
+    <!-- Diagonal pipe (x=900-1050) - stair-step collision -->
+    <qg:sprite id="pipe1-base" width="48" height="48" x="924" y="361"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="pipe1-mid" width="48" height="48" x="972" y="329"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="pipe1-top" width="48" height="48" x="1020" y="297"
+               tag="terrain" body="static" visible="false" />
+
+    <!-- Vertical pipes (x=1100-1200) -->
+    <qg:sprite id="pipe2" width="32" height="64" x="1136" y="353"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="pipe3" width="32" height="96" x="1200" y="337"
+               tag="terrain" body="static" visible="false" />
+
+    <!-- Elevated platform section (x=2400-2800) -->
+    <qg:sprite id="platform1" width="400" height="32" x="2600" y="337"
+               tag="terrain" body="static" visible="false" />
+
+    <!-- Ramp up to platform (x=2200-2400) - stair steps -->
+    <qg:sprite id="ramp1-1" width="64" height="16" x="2232" y="377"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="ramp1-2" width="64" height="16" x="2296" y="361"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="ramp1-3" width="64" height="16" x="2360" y="345"
+               tag="terrain" body="static" visible="false" />
+
+    <!-- Ramp down from platform (x=2800-3000) -->
+    <qg:sprite id="ramp2-1" width="64" height="16" x="2832" y="345"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="ramp2-2" width="64" height="16" x="2896" y="361"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="ramp2-3" width="64" height="16" x="2960" y="377"
+               tag="terrain" body="static" visible="false" />
+
+    <!-- Steps near end (x=4400-4600) -->
+    <qg:sprite id="step1" width="64" height="16" x="4432" y="377"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="step2" width="64" height="16" x="4496" y="361"
+               tag="terrain" body="static" visible="false" />
+    <qg:sprite id="step3" width="64" height="16" x="4560" y="345"
+               tag="terrain" body="static" visible="false" />
+
+    <!-- Final pipe before goal -->
+    <qg:sprite id="pipe-final" width="32" height="64" x="4800" y="353"
+               tag="terrain" body="static" visible="false" />
+
     <!-- Question blocks (matching image positions) -->
     <qg:instance prefab="qblock" id="qb1" x="496" y="256" />
     <qg:instance prefab="qblock" id="qb2" x="592" y="256" />
@@ -119,7 +165,7 @@
     <qg:sprite id="mario" src="assets/smw/sprites/mario_small.png"
                x="80" y="373" tag="player"
                frame-width="16" frame-height="24"
-               body="dynamic" controls="arrows" speed="2.5" jump-force="8" friction="0">
+               body="dynamic" controls="arrows" speed="2.5" jump-force="5" friction="0">
       <qg:animation name="idle" frames="0" speed="0.1" loop="true" auto-play="true" />
       <qg:animation name="walk" frames="1-3" speed="0.18" loop="true" />
       <qg:animation name="jump" frames="4" speed="0.1" loop="false" />

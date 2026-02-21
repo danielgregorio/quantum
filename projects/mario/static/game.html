@@ -113,7 +113,7 @@
 --&gt;
 &lt;q:application id=&quot;yoshi-island-1&quot; type=&quot;game&quot; engine=&quot;2d&quot;&gt;
   &lt;qg:scene name=&quot;main&quot; width=&quot;5120&quot; height=&quot;432&quot; viewport-width=&quot;256&quot; viewport-height=&quot;224&quot; background=&quot;#5C94FC&quot;&gt;
-    &lt;qg:physics gravity-y=&quot;1.2&quot; /&gt;
+    &lt;qg:physics gravity-y=&quot;2.0&quot; /&gt;
     &lt;qg:camera follow=&quot;mario&quot; lerp=&quot;0.08&quot; bounds=&quot;scene&quot; offset-y=&quot;-80&quot; /&gt;
 
     &lt;!-- Game state --&gt;
@@ -173,6 +173,52 @@
     &lt;qg:sprite id=&quot;ground&quot; width=&quot;5120&quot; height=&quot;32&quot; x=&quot;2560&quot; y=&quot;401&quot;
                tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
 
+    &lt;!-- Diagonal pipe (x=900-1050) - stair-step collision --&gt;
+    &lt;qg:sprite id=&quot;pipe1-base&quot; width=&quot;48&quot; height=&quot;48&quot; x=&quot;924&quot; y=&quot;361&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+    &lt;qg:sprite id=&quot;pipe1-mid&quot; width=&quot;48&quot; height=&quot;48&quot; x=&quot;972&quot; y=&quot;329&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+    &lt;qg:sprite id=&quot;pipe1-top&quot; width=&quot;48&quot; height=&quot;48&quot; x=&quot;1020&quot; y=&quot;297&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+
+    &lt;!-- Vertical pipes (x=1100-1200) --&gt;
+    &lt;qg:sprite id=&quot;pipe2&quot; width=&quot;32&quot; height=&quot;64&quot; x=&quot;1136&quot; y=&quot;353&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+    &lt;qg:sprite id=&quot;pipe3&quot; width=&quot;32&quot; height=&quot;96&quot; x=&quot;1200&quot; y=&quot;337&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+
+    &lt;!-- Elevated platform section (x=2400-2800) --&gt;
+    &lt;qg:sprite id=&quot;platform1&quot; width=&quot;400&quot; height=&quot;32&quot; x=&quot;2600&quot; y=&quot;337&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+
+    &lt;!-- Ramp up to platform (x=2200-2400) - stair steps --&gt;
+    &lt;qg:sprite id=&quot;ramp1-1&quot; width=&quot;64&quot; height=&quot;16&quot; x=&quot;2232&quot; y=&quot;377&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+    &lt;qg:sprite id=&quot;ramp1-2&quot; width=&quot;64&quot; height=&quot;16&quot; x=&quot;2296&quot; y=&quot;361&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+    &lt;qg:sprite id=&quot;ramp1-3&quot; width=&quot;64&quot; height=&quot;16&quot; x=&quot;2360&quot; y=&quot;345&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+
+    &lt;!-- Ramp down from platform (x=2800-3000) --&gt;
+    &lt;qg:sprite id=&quot;ramp2-1&quot; width=&quot;64&quot; height=&quot;16&quot; x=&quot;2832&quot; y=&quot;345&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+    &lt;qg:sprite id=&quot;ramp2-2&quot; width=&quot;64&quot; height=&quot;16&quot; x=&quot;2896&quot; y=&quot;361&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+    &lt;qg:sprite id=&quot;ramp2-3&quot; width=&quot;64&quot; height=&quot;16&quot; x=&quot;2960&quot; y=&quot;377&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+
+    &lt;!-- Steps near end (x=4400-4600) --&gt;
+    &lt;qg:sprite id=&quot;step1&quot; width=&quot;64&quot; height=&quot;16&quot; x=&quot;4432&quot; y=&quot;377&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+    &lt;qg:sprite id=&quot;step2&quot; width=&quot;64&quot; height=&quot;16&quot; x=&quot;4496&quot; y=&quot;361&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+    &lt;qg:sprite id=&quot;step3&quot; width=&quot;64&quot; height=&quot;16&quot; x=&quot;4560&quot; y=&quot;345&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+
+    &lt;!-- Final pipe before goal --&gt;
+    &lt;qg:sprite id=&quot;pipe-final&quot; width=&quot;32&quot; height=&quot;64&quot; x=&quot;4800&quot; y=&quot;353&quot;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
+
     &lt;!-- Question blocks (matching image positions) --&gt;
     &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb1&quot; x=&quot;496&quot; y=&quot;256&quot; /&gt;
     &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb2&quot; x=&quot;592&quot; y=&quot;256&quot; /&gt;
@@ -220,7 +266,7 @@
     &lt;qg:sprite id=&quot;mario&quot; src=&quot;assets/smw/sprites/mario_small.png&quot;
                x=&quot;80&quot; y=&quot;373&quot; tag=&quot;player&quot;
                frame-width=&quot;16&quot; frame-height=&quot;24&quot;
-               body=&quot;dynamic&quot; controls=&quot;arrows&quot; speed=&quot;2.5&quot; jump-force=&quot;8&quot; friction=&quot;0&quot;&gt;
+               body=&quot;dynamic&quot; controls=&quot;arrows&quot; speed=&quot;2.5&quot; jump-force=&quot;5&quot; friction=&quot;0&quot;&gt;
       &lt;qg:animation name=&quot;idle&quot; frames=&quot;0&quot; speed=&quot;0.1&quot; loop=&quot;true&quot; auto-play=&quot;true&quot; /&gt;
       &lt;qg:animation name=&quot;walk&quot; frames=&quot;1-3&quot; speed=&quot;0.18&quot; loop=&quot;true&quot; /&gt;
       &lt;qg:animation name=&quot;jump&quot; frames=&quot;4&quot; speed=&quot;0.1&quot; loop=&quot;false&quot; /&gt;
@@ -444,7 +490,7 @@ document.addEventListener('keydown', function(e) {
   // === MATTER.JS ENGINE ===
   const mEngine = Matter.Engine.create();
   mEngine.gravity.x = 0;
-  mEngine.gravity.y = 1.2;
+  mEngine.gravity.y = 2;
   // Increase solver iterations for tighter collision resolution
   mEngine.positionIterations = 10;
   mEngine.velocityIterations = 8;
@@ -693,6 +739,182 @@ document.addEventListener('keydown', function(e) {
   const _body_ground = Matter.Bodies.rectangle(2560, 401, 5120, 32, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_ground.id] = "ground";
   _sprites["ground"] = { id: "ground", sprite: _spr_ground, body: _body_ground, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_pipe1_base = new PIXI.Graphics();
+  _spr_pipe1_base.rect(-24.0, -24.0, 48.0, 48.0);
+  _spr_pipe1_base.fill({ color: 0x4a9eff });
+  _spr_pipe1_base.x = 924;
+  _spr_pipe1_base.y = 361;
+  _spr_pipe1_base.visible = false;
+  _cameraContainer.addChild(_spr_pipe1_base);
+  const _body_pipe1_base = Matter.Bodies.rectangle(924, 361, 48, 48, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_pipe1_base.id] = "pipe1-base";
+  _sprites["pipe1-base"] = { id: "pipe1-base", sprite: _spr_pipe1_base, body: _body_pipe1_base, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_pipe1_mid = new PIXI.Graphics();
+  _spr_pipe1_mid.rect(-24.0, -24.0, 48.0, 48.0);
+  _spr_pipe1_mid.fill({ color: 0x4a9eff });
+  _spr_pipe1_mid.x = 972;
+  _spr_pipe1_mid.y = 329;
+  _spr_pipe1_mid.visible = false;
+  _cameraContainer.addChild(_spr_pipe1_mid);
+  const _body_pipe1_mid = Matter.Bodies.rectangle(972, 329, 48, 48, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_pipe1_mid.id] = "pipe1-mid";
+  _sprites["pipe1-mid"] = { id: "pipe1-mid", sprite: _spr_pipe1_mid, body: _body_pipe1_mid, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_pipe1_top = new PIXI.Graphics();
+  _spr_pipe1_top.rect(-24.0, -24.0, 48.0, 48.0);
+  _spr_pipe1_top.fill({ color: 0x4a9eff });
+  _spr_pipe1_top.x = 1020;
+  _spr_pipe1_top.y = 297;
+  _spr_pipe1_top.visible = false;
+  _cameraContainer.addChild(_spr_pipe1_top);
+  const _body_pipe1_top = Matter.Bodies.rectangle(1020, 297, 48, 48, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_pipe1_top.id] = "pipe1-top";
+  _sprites["pipe1-top"] = { id: "pipe1-top", sprite: _spr_pipe1_top, body: _body_pipe1_top, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_pipe2 = new PIXI.Graphics();
+  _spr_pipe2.rect(-16.0, -32.0, 32.0, 64.0);
+  _spr_pipe2.fill({ color: 0x4a9eff });
+  _spr_pipe2.x = 1136;
+  _spr_pipe2.y = 353;
+  _spr_pipe2.visible = false;
+  _cameraContainer.addChild(_spr_pipe2);
+  const _body_pipe2 = Matter.Bodies.rectangle(1136, 353, 32, 64, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_pipe2.id] = "pipe2";
+  _sprites["pipe2"] = { id: "pipe2", sprite: _spr_pipe2, body: _body_pipe2, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_pipe3 = new PIXI.Graphics();
+  _spr_pipe3.rect(-16.0, -48.0, 32.0, 96.0);
+  _spr_pipe3.fill({ color: 0x4a9eff });
+  _spr_pipe3.x = 1200;
+  _spr_pipe3.y = 337;
+  _spr_pipe3.visible = false;
+  _cameraContainer.addChild(_spr_pipe3);
+  const _body_pipe3 = Matter.Bodies.rectangle(1200, 337, 32, 96, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_pipe3.id] = "pipe3";
+  _sprites["pipe3"] = { id: "pipe3", sprite: _spr_pipe3, body: _body_pipe3, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_platform1 = new PIXI.Graphics();
+  _spr_platform1.rect(-200.0, -16.0, 400.0, 32.0);
+  _spr_platform1.fill({ color: 0x4a9eff });
+  _spr_platform1.x = 2600;
+  _spr_platform1.y = 337;
+  _spr_platform1.visible = false;
+  _cameraContainer.addChild(_spr_platform1);
+  const _body_platform1 = Matter.Bodies.rectangle(2600, 337, 400, 32, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_platform1.id] = "platform1";
+  _sprites["platform1"] = { id: "platform1", sprite: _spr_platform1, body: _body_platform1, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_ramp1_1 = new PIXI.Graphics();
+  _spr_ramp1_1.rect(-32.0, -8.0, 64.0, 16.0);
+  _spr_ramp1_1.fill({ color: 0x4a9eff });
+  _spr_ramp1_1.x = 2232;
+  _spr_ramp1_1.y = 377;
+  _spr_ramp1_1.visible = false;
+  _cameraContainer.addChild(_spr_ramp1_1);
+  const _body_ramp1_1 = Matter.Bodies.rectangle(2232, 377, 64, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_ramp1_1.id] = "ramp1-1";
+  _sprites["ramp1-1"] = { id: "ramp1-1", sprite: _spr_ramp1_1, body: _body_ramp1_1, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_ramp1_2 = new PIXI.Graphics();
+  _spr_ramp1_2.rect(-32.0, -8.0, 64.0, 16.0);
+  _spr_ramp1_2.fill({ color: 0x4a9eff });
+  _spr_ramp1_2.x = 2296;
+  _spr_ramp1_2.y = 361;
+  _spr_ramp1_2.visible = false;
+  _cameraContainer.addChild(_spr_ramp1_2);
+  const _body_ramp1_2 = Matter.Bodies.rectangle(2296, 361, 64, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_ramp1_2.id] = "ramp1-2";
+  _sprites["ramp1-2"] = { id: "ramp1-2", sprite: _spr_ramp1_2, body: _body_ramp1_2, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_ramp1_3 = new PIXI.Graphics();
+  _spr_ramp1_3.rect(-32.0, -8.0, 64.0, 16.0);
+  _spr_ramp1_3.fill({ color: 0x4a9eff });
+  _spr_ramp1_3.x = 2360;
+  _spr_ramp1_3.y = 345;
+  _spr_ramp1_3.visible = false;
+  _cameraContainer.addChild(_spr_ramp1_3);
+  const _body_ramp1_3 = Matter.Bodies.rectangle(2360, 345, 64, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_ramp1_3.id] = "ramp1-3";
+  _sprites["ramp1-3"] = { id: "ramp1-3", sprite: _spr_ramp1_3, body: _body_ramp1_3, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_ramp2_1 = new PIXI.Graphics();
+  _spr_ramp2_1.rect(-32.0, -8.0, 64.0, 16.0);
+  _spr_ramp2_1.fill({ color: 0x4a9eff });
+  _spr_ramp2_1.x = 2832;
+  _spr_ramp2_1.y = 345;
+  _spr_ramp2_1.visible = false;
+  _cameraContainer.addChild(_spr_ramp2_1);
+  const _body_ramp2_1 = Matter.Bodies.rectangle(2832, 345, 64, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_ramp2_1.id] = "ramp2-1";
+  _sprites["ramp2-1"] = { id: "ramp2-1", sprite: _spr_ramp2_1, body: _body_ramp2_1, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_ramp2_2 = new PIXI.Graphics();
+  _spr_ramp2_2.rect(-32.0, -8.0, 64.0, 16.0);
+  _spr_ramp2_2.fill({ color: 0x4a9eff });
+  _spr_ramp2_2.x = 2896;
+  _spr_ramp2_2.y = 361;
+  _spr_ramp2_2.visible = false;
+  _cameraContainer.addChild(_spr_ramp2_2);
+  const _body_ramp2_2 = Matter.Bodies.rectangle(2896, 361, 64, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_ramp2_2.id] = "ramp2-2";
+  _sprites["ramp2-2"] = { id: "ramp2-2", sprite: _spr_ramp2_2, body: _body_ramp2_2, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_ramp2_3 = new PIXI.Graphics();
+  _spr_ramp2_3.rect(-32.0, -8.0, 64.0, 16.0);
+  _spr_ramp2_3.fill({ color: 0x4a9eff });
+  _spr_ramp2_3.x = 2960;
+  _spr_ramp2_3.y = 377;
+  _spr_ramp2_3.visible = false;
+  _cameraContainer.addChild(_spr_ramp2_3);
+  const _body_ramp2_3 = Matter.Bodies.rectangle(2960, 377, 64, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_ramp2_3.id] = "ramp2-3";
+  _sprites["ramp2-3"] = { id: "ramp2-3", sprite: _spr_ramp2_3, body: _body_ramp2_3, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_step1 = new PIXI.Graphics();
+  _spr_step1.rect(-32.0, -8.0, 64.0, 16.0);
+  _spr_step1.fill({ color: 0x4a9eff });
+  _spr_step1.x = 4432;
+  _spr_step1.y = 377;
+  _spr_step1.visible = false;
+  _cameraContainer.addChild(_spr_step1);
+  const _body_step1 = Matter.Bodies.rectangle(4432, 377, 64, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_step1.id] = "step1";
+  _sprites["step1"] = { id: "step1", sprite: _spr_step1, body: _body_step1, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_step2 = new PIXI.Graphics();
+  _spr_step2.rect(-32.0, -8.0, 64.0, 16.0);
+  _spr_step2.fill({ color: 0x4a9eff });
+  _spr_step2.x = 4496;
+  _spr_step2.y = 361;
+  _spr_step2.visible = false;
+  _cameraContainer.addChild(_spr_step2);
+  const _body_step2 = Matter.Bodies.rectangle(4496, 361, 64, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_step2.id] = "step2";
+  _sprites["step2"] = { id: "step2", sprite: _spr_step2, body: _body_step2, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_step3 = new PIXI.Graphics();
+  _spr_step3.rect(-32.0, -8.0, 64.0, 16.0);
+  _spr_step3.fill({ color: 0x4a9eff });
+  _spr_step3.x = 4560;
+  _spr_step3.y = 345;
+  _spr_step3.visible = false;
+  _cameraContainer.addChild(_spr_step3);
+  const _body_step3 = Matter.Bodies.rectangle(4560, 345, 64, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_step3.id] = "step3";
+  _sprites["step3"] = { id: "step3", sprite: _spr_step3, body: _body_step3, tag: "terrain", collisionHandlers: [], behaviors: [] };
+
+  const _spr_pipe_final = new PIXI.Graphics();
+  _spr_pipe_final.rect(-16.0, -32.0, 32.0, 64.0);
+  _spr_pipe_final.fill({ color: 0x4a9eff });
+  _spr_pipe_final.x = 4800;
+  _spr_pipe_final.y = 353;
+  _spr_pipe_final.visible = false;
+  _cameraContainer.addChild(_spr_pipe_final);
+  const _body_pipe_final = Matter.Bodies.rectangle(4800, 353, 32, 64, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_pipe_final.id] = "pipe-final";
+  _sprites["pipe-final"] = { id: "pipe-final", sprite: _spr_pipe_final, body: _body_pipe_final, tag: "terrain", collisionHandlers: [], behaviors: [] };
 
   const _qb1_baseTex = PIXI.Assets.get("assets/smw/sprites/qblock_animated.png");
   const _qb1_src = _qb1_baseTex.source || _qb1_baseTex.baseTexture || _qb1_baseTex;
@@ -1157,7 +1379,7 @@ document.addEventListener('keydown', function(e) {
   _bodyToSprite[_body_deathzone.id] = "deathzone";
   _sprites["deathzone"] = { id: "deathzone", sprite: _spr_deathzone, body: _body_deathzone, tag: "death", collisionHandlers: [], behaviors: [] };
 
-  Matter.Composite.add(mWorld, [_body_ground, _body_qb1, _body_qb2, _body_qb3, _body_qb4, _body_qb5, _body_qb6, _body_qb7, _body_coin_7, _body_coin_8, _body_coin_9, _body_coin_10, _body_coin_11, _body_coin_12, _body_coin_13, _body_coin_14, _body_coin_15, _body_coin_16, _body_coin_17, _body_coin_18, _body_coin_19, _body_coin_20, _body_rex1, _body_rex2, _body_rex3, _body_rex4, _body_rex5, _body_rex6, _body_rex7, _body_rex8, _body_rex9, _body_rex10, _body_rex11, _body_rex12, _body_goal, _body_mario, _body_deathzone]);
+  Matter.Composite.add(mWorld, [_body_ground, _body_pipe1_base, _body_pipe1_mid, _body_pipe1_top, _body_pipe2, _body_pipe3, _body_platform1, _body_ramp1_1, _body_ramp1_2, _body_ramp1_3, _body_ramp2_1, _body_ramp2_2, _body_ramp2_3, _body_step1, _body_step2, _body_step3, _body_pipe_final, _body_qb1, _body_qb2, _body_qb3, _body_qb4, _body_qb5, _body_qb6, _body_qb7, _body_coin_7, _body_coin_8, _body_coin_9, _body_coin_10, _body_coin_11, _body_coin_12, _body_coin_13, _body_coin_14, _body_coin_15, _body_coin_16, _body_coin_17, _body_coin_18, _body_coin_19, _body_coin_20, _body_rex1, _body_rex2, _body_rex3, _body_rex4, _body_rex5, _body_rex6, _body_rex7, _body_rex8, _body_rex9, _body_rex10, _body_rex11, _body_rex12, _body_goal, _body_mario, _body_deathzone]);
 
   function syncPhysics() {
     for (const [id, info] of Object.entries(_sprites)) {
@@ -2435,7 +2657,7 @@ document.addEventListener('keydown', function(e) {
     }
     const _canJump_mario = _isGrounded_mario || _sprites["mario"]._coyoteFrames > 0;
     if (_jumpJust_mario && _sprites["mario"].body && _canJump_mario) {
-      Matter.Body.setVelocity(_sprites["mario"].body, { x: _sprites["mario"].body.velocity.x, y: -8 });
+      Matter.Body.setVelocity(_sprites["mario"].body, { x: _sprites["mario"].body.velocity.x, y: -5 });
       _sprites["mario"]._jumpHeld = true;
       _sprites["mario"]._coyoteFrames = 0;
       _gameEvents.emit('player.jump', _sprites["mario"]);
