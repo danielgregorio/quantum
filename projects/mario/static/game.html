@@ -175,26 +175,25 @@
     &lt;qg:sprite id=&quot;ground&quot; width=&quot;5120&quot; height=&quot;32&quot; x=&quot;2560&quot; y=&quot;399&quot;
                tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
 
-    &lt;!-- Hill 1 collision (stair steps) - starts at x≈170 DEBUG: green --&gt;
+    &lt;!-- Hill 1 collision (invisible) --&gt;
     &lt;qg:sprite id=&quot;hill1-step1&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;190&quot; y=&quot;375&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-step2&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;230&quot; y=&quot;359&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-step3&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;270&quot; y=&quot;343&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-step4&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;310&quot; y=&quot;327&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-top&quot; width=&quot;60&quot; height=&quot;16&quot; x=&quot;360&quot; y=&quot;311&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
-    &lt;!-- Down slope --&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-down1&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;410&quot; y=&quot;327&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-down2&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;450&quot; y=&quot;343&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-down3&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;490&quot; y=&quot;359&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-down4&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;530&quot; y=&quot;375&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#00FF00&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
 
     &lt;!-- Question blocks (matching image positions) --&gt;
     &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb1&quot; x=&quot;496&quot; y=&quot;256&quot; /&gt;
@@ -720,9 +719,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_step1 = new PIXI.Graphics();
   _spr_hill1_step1.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_step1.fill({ color: 0x00FF00 });
+  _spr_hill1_step1.fill({ color: 0x4a9eff });
   _spr_hill1_step1.x = 190;
   _spr_hill1_step1.y = 375;
+  _spr_hill1_step1.visible = false;
   _cameraContainer.addChild(_spr_hill1_step1);
   const _body_hill1_step1 = Matter.Bodies.rectangle(190, 375, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_step1.id] = "hill1-step1";
@@ -730,9 +730,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_step2 = new PIXI.Graphics();
   _spr_hill1_step2.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_step2.fill({ color: 0x00FF00 });
+  _spr_hill1_step2.fill({ color: 0x4a9eff });
   _spr_hill1_step2.x = 230;
   _spr_hill1_step2.y = 359;
+  _spr_hill1_step2.visible = false;
   _cameraContainer.addChild(_spr_hill1_step2);
   const _body_hill1_step2 = Matter.Bodies.rectangle(230, 359, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_step2.id] = "hill1-step2";
@@ -740,9 +741,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_step3 = new PIXI.Graphics();
   _spr_hill1_step3.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_step3.fill({ color: 0x00FF00 });
+  _spr_hill1_step3.fill({ color: 0x4a9eff });
   _spr_hill1_step3.x = 270;
   _spr_hill1_step3.y = 343;
+  _spr_hill1_step3.visible = false;
   _cameraContainer.addChild(_spr_hill1_step3);
   const _body_hill1_step3 = Matter.Bodies.rectangle(270, 343, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_step3.id] = "hill1-step3";
@@ -750,9 +752,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_step4 = new PIXI.Graphics();
   _spr_hill1_step4.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_step4.fill({ color: 0x00FF00 });
+  _spr_hill1_step4.fill({ color: 0x4a9eff });
   _spr_hill1_step4.x = 310;
   _spr_hill1_step4.y = 327;
+  _spr_hill1_step4.visible = false;
   _cameraContainer.addChild(_spr_hill1_step4);
   const _body_hill1_step4 = Matter.Bodies.rectangle(310, 327, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_step4.id] = "hill1-step4";
@@ -760,9 +763,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_top = new PIXI.Graphics();
   _spr_hill1_top.rect(-30.0, -8.0, 60.0, 16.0);
-  _spr_hill1_top.fill({ color: 0x00FF00 });
+  _spr_hill1_top.fill({ color: 0x4a9eff });
   _spr_hill1_top.x = 360;
   _spr_hill1_top.y = 311;
+  _spr_hill1_top.visible = false;
   _cameraContainer.addChild(_spr_hill1_top);
   const _body_hill1_top = Matter.Bodies.rectangle(360, 311, 60, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_top.id] = "hill1-top";
@@ -770,9 +774,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_down1 = new PIXI.Graphics();
   _spr_hill1_down1.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_down1.fill({ color: 0x00FF00 });
+  _spr_hill1_down1.fill({ color: 0x4a9eff });
   _spr_hill1_down1.x = 410;
   _spr_hill1_down1.y = 327;
+  _spr_hill1_down1.visible = false;
   _cameraContainer.addChild(_spr_hill1_down1);
   const _body_hill1_down1 = Matter.Bodies.rectangle(410, 327, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_down1.id] = "hill1-down1";
@@ -780,9 +785,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_down2 = new PIXI.Graphics();
   _spr_hill1_down2.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_down2.fill({ color: 0x00FF00 });
+  _spr_hill1_down2.fill({ color: 0x4a9eff });
   _spr_hill1_down2.x = 450;
   _spr_hill1_down2.y = 343;
+  _spr_hill1_down2.visible = false;
   _cameraContainer.addChild(_spr_hill1_down2);
   const _body_hill1_down2 = Matter.Bodies.rectangle(450, 343, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_down2.id] = "hill1-down2";
@@ -790,9 +796,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_down3 = new PIXI.Graphics();
   _spr_hill1_down3.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_down3.fill({ color: 0x00FF00 });
+  _spr_hill1_down3.fill({ color: 0x4a9eff });
   _spr_hill1_down3.x = 490;
   _spr_hill1_down3.y = 359;
+  _spr_hill1_down3.visible = false;
   _cameraContainer.addChild(_spr_hill1_down3);
   const _body_hill1_down3 = Matter.Bodies.rectangle(490, 359, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_down3.id] = "hill1-down3";
@@ -800,9 +807,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_down4 = new PIXI.Graphics();
   _spr_hill1_down4.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_down4.fill({ color: 0x00FF00 });
+  _spr_hill1_down4.fill({ color: 0x4a9eff });
   _spr_hill1_down4.x = 530;
   _spr_hill1_down4.y = 375;
+  _spr_hill1_down4.visible = false;
   _cameraContainer.addChild(_spr_hill1_down4);
   const _body_hill1_down4 = Matter.Bodies.rectangle(530, 375, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_down4.id] = "hill1-down4";

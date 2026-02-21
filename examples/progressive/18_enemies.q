@@ -74,26 +74,25 @@
     <qg:sprite id="ground" width="5120" height="32" x="2560" y="399"
                tag="terrain" body="static" visible="false" />
 
-    <!-- Hill 1 collision (stair steps) - starts at x≈170 DEBUG: green -->
+    <!-- Hill 1 collision (invisible) -->
     <qg:sprite id="hill1-step1" width="40" height="16" x="190" y="375"
-               tag="terrain" body="static" color="#00FF00" />
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-step2" width="40" height="16" x="230" y="359"
-               tag="terrain" body="static" color="#00FF00" />
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-step3" width="40" height="16" x="270" y="343"
-               tag="terrain" body="static" color="#00FF00" />
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-step4" width="40" height="16" x="310" y="327"
-               tag="terrain" body="static" color="#00FF00" />
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-top" width="60" height="16" x="360" y="311"
-               tag="terrain" body="static" color="#00FF00" />
-    <!-- Down slope -->
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-down1" width="40" height="16" x="410" y="327"
-               tag="terrain" body="static" color="#00FF00" />
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-down2" width="40" height="16" x="450" y="343"
-               tag="terrain" body="static" color="#00FF00" />
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-down3" width="40" height="16" x="490" y="359"
-               tag="terrain" body="static" color="#00FF00" />
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-down4" width="40" height="16" x="530" y="375"
-               tag="terrain" body="static" color="#00FF00" />
+               tag="terrain" body="static" visible="false" />
 
     <!-- Question blocks (matching image positions) -->
     <qg:instance prefab="qblock" id="qb1" x="496" y="256" />
