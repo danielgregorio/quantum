@@ -191,52 +191,65 @@
     <qg:event name="game-init" handler="onGameInit" />
 
     <q:function name="onGameInit">
-      // === DEBUG: Create collision minimap below game ===
-      const minimapDiv = document.createElement('div')
-      minimapDiv.id = 'collision-minimap'
-      minimapDiv.style.cssText = 'width:768px; height:65px; margin:10px auto; background:#333; position:relative; border:2px solid #fff; overflow:hidden;'
+      // === DEBUG: Tile grid overlay showing collisions ===
+      // Create a PIXI Graphics overlay for tile grid
+      const tileSize = 16
+      const levelW = 5120
+      const levelH = 432
+      const tilesX = Math.ceil(levelW / tileSize)
+      const tilesY = Math.ceil(levelH / tileSize)
 
-      // Level background (scaled down: 5120 -> 768 = scale 0.15)
-      const scale = 768 / 5120
-      const bgImg = document.createElement('img')
-      bgImg.src = 'assets/smw/sprites/yoshi-island-1.png'
-      bgImg.style.cssText = 'width:768px; height:' + (432 * scale) + 'px; position:absolute; top:0; left:0; opacity:0.5;'
-      minimapDiv.appendChild(bgImg)
-
-      // Collision boxes (red rectangles)
-      const collisions = [
-        // Ground: x=0, y=383, w=5120, h=32
-        {x: 0, y: 383, w: 5120, h: 32, label: 'GROUND'},
-        // Hill 1 steps
-        {x: 170, y: 367, w: 40, h: 16, label: 'H1-1'},
-        {x: 210, y: 351, w: 40, h: 16, label: 'H1-2'},
-        {x: 250, y: 335, w: 40, h: 16, label: 'H1-3'},
-        {x: 290, y: 319, w: 40, h: 16, label: 'H1-4'},
-        {x: 330, y: 303, w: 60, h: 16, label: 'H1-TOP'},
-        {x: 390, y: 319, w: 40, h: 16, label: 'H1-D1'},
-        {x: 430, y: 335, w: 40, h: 16, label: 'H1-D2'},
-        {x: 470, y: 351, w: 40, h: 16, label: 'H1-D3'},
-        {x: 510, y: 367, w: 40, h: 16, label: 'H1-D4'},
+      // Collision areas (in pixels)
+      const collisionRects = [
+        // Ground: full width at bottom
+        {x: 0, y: 383, w: 5120, h: 49},
+        // Hill 1 - left slope
+        {x: 170, y: 367, w: 40, h: 16},
+        {x: 210, y: 351, w: 40, h: 32},
+        {x: 250, y: 335, w: 40, h: 48},
+        {x: 290, y: 319, w: 40, h: 64},
+        // Hill 1 - top
+        {x: 330, y: 303, w: 60, h: 80},
+        // Hill 1 - right slope
+        {x: 390, y: 319, w: 40, h: 64},
+        {x: 430, y: 335, w: 40, h: 48},
+        {x: 470, y: 351, w: 40, h: 32},
+        {x: 510, y: 367, w: 40, h: 16},
       ]
 
-      collisions.forEach(c => {
-        const box = document.createElement('div')
-        box.style.cssText = 'position:absolute; background:rgba(255,0,0,0.7); border:1px solid #ff0;'
-        box.style.left = (c.x * scale) + 'px'
-        box.style.top = (c.y * scale) + 'px'
-        box.style.width = (c.w * scale) + 'px'
-        box.style.height = Math.max(2, c.h * scale) + 'px'
-        box.title = c.label + ' (x:' + c.x + ', y:' + c.y + ')'
-        minimapDiv.appendChild(box)
-      })
+      // Function to check if a tile overlaps any collision
+      function tileHasCollision(tx, ty) {
+        const tileX = tx * tileSize
+        const tileY = ty * tileSize
+        for (const r of collisionRects) {
+          const overlapX = (tileX &lt; r.x + r.w) &amp;&amp; (tileX + tileSize &gt; r.x)
+          const overlapY = (tileY &lt; r.y + r.h) &amp;&amp; (tileY + tileSize &gt; r.y)
+          if (overlapX &amp;&amp; overlapY) {
+            return true
+          }
+        }
+        return false
+      }
 
-      // Add label
-      const label = document.createElement('div')
-      label.style.cssText = 'position:absolute; bottom:2px; left:5px; color:#fff; font-size:10px; font-family:monospace;'
-      label.textContent = 'COLLISION MAP (red = solid)'
-      minimapDiv.appendChild(label)
+      // Create grid overlay graphics
+      const gridOverlay = new PIXI.Graphics()
+      gridOverlay.zIndex = 1000
 
-      document.body.appendChild(minimapDiv)
+      // Draw tile grid with colors
+      for (let ty = 0; ty &lt; tilesY; ty++) {
+        for (let tx = 0; tx &lt; tilesX; tx++) {
+          const hasCol = tileHasCollision(tx, ty)
+          if (hasCol) {
+            // Red outline for collision tiles
+            gridOverlay.rect(tx * tileSize, ty * tileSize, tileSize, tileSize)
+            gridOverlay.stroke({ color: 0xFF0000, width: 1, alpha: 0.8 })
+          }
+        }
+      }
+
+      // Add to camera container so it scrolls with camera
+      _cameraContainer.addChild(gridOverlay)
+      _cameraContainer.sortChildren()
       // === END DEBUG ===
 
       // Iris-in effect on level start
