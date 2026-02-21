@@ -266,7 +266,7 @@
     &lt;qg:sprite id=&quot;mario&quot; src=&quot;assets/smw/sprites/mario_small.png&quot;
                x=&quot;80&quot; y=&quot;373&quot; tag=&quot;player&quot;
                frame-width=&quot;16&quot; frame-height=&quot;24&quot;
-               body=&quot;dynamic&quot; controls=&quot;arrows&quot; speed=&quot;2.5&quot; jump-force=&quot;5&quot; friction=&quot;0&quot;&gt;
+               body=&quot;dynamic&quot; controls=&quot;arrows&quot; speed=&quot;2.5&quot; jump-force=&quot;6.5&quot; friction=&quot;0&quot;&gt;
       &lt;qg:animation name=&quot;idle&quot; frames=&quot;0&quot; speed=&quot;0.1&quot; loop=&quot;true&quot; auto-play=&quot;true&quot; /&gt;
       &lt;qg:animation name=&quot;walk&quot; frames=&quot;1-3&quot; speed=&quot;0.18&quot; loop=&quot;true&quot; /&gt;
       &lt;qg:animation name=&quot;jump&quot; frames=&quot;4&quot; speed=&quot;0.1&quot; loop=&quot;false&quot; /&gt;
@@ -1851,25 +1851,25 @@ document.addEventListener('keydown', function(e) {
     duration = duration || 30;
     const overlay = new PIXI.Graphics();
     overlay.zIndex = 9999;
-    _app.stage.addChild(overlay);
-    _app.stage.sortChildren();
+    app.stage.addChild(overlay);
+    app.stage.sortChildren();
     let frame = 0;
-    const centerX = _app.screen.width / 2;
-    const centerY = _app.screen.height / 2;
+    const centerX = app.screen.width / 2;
+    const centerY = app.screen.height / 2;
     const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY) + 50;
     const animate = () => {
       frame++;
       const t = frame / duration;
       const radius = maxRadius * t;
       overlay.clear();
-      overlay.rect(0, 0, _app.screen.width, _app.screen.height);
+      overlay.rect(0, 0, app.screen.width, app.screen.height);
       overlay.fill(0x000000);
       overlay.circle(centerX, centerY, radius);
       overlay.cut();
       if (frame < duration) {
         requestAnimationFrame(animate);
       } else {
-        _app.stage.removeChild(overlay);
+        app.stage.removeChild(overlay);
         if (callback) callback();
       }
     };
@@ -1880,18 +1880,18 @@ document.addEventListener('keydown', function(e) {
     duration = duration || 30;
     const overlay = new PIXI.Graphics();
     overlay.zIndex = 9999;
-    _app.stage.addChild(overlay);
-    _app.stage.sortChildren();
+    app.stage.addChild(overlay);
+    app.stage.sortChildren();
     let frame = 0;
-    const centerX = _app.screen.width / 2;
-    const centerY = _app.screen.height / 2;
+    const centerX = app.screen.width / 2;
+    const centerY = app.screen.height / 2;
     const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY) + 50;
     const animate = () => {
       frame++;
       const t = 1 - (frame / duration);
       const radius = maxRadius * t;
       overlay.clear();
-      overlay.rect(0, 0, _app.screen.width, _app.screen.height);
+      overlay.rect(0, 0, app.screen.width, app.screen.height);
       overlay.fill(0x000000);
       if (radius > 0) {
         overlay.circle(centerX, centerY, radius);
@@ -2657,7 +2657,7 @@ document.addEventListener('keydown', function(e) {
     }
     const _canJump_mario = _isGrounded_mario || _sprites["mario"]._coyoteFrames > 0;
     if (_jumpJust_mario && _sprites["mario"].body && _canJump_mario) {
-      Matter.Body.setVelocity(_sprites["mario"].body, { x: _sprites["mario"].body.velocity.x, y: -5 });
+      Matter.Body.setVelocity(_sprites["mario"].body, { x: _sprites["mario"].body.velocity.x, y: -6.5 });
       _sprites["mario"]._jumpHeld = true;
       _sprites["mario"]._coyoteFrames = 0;
       _gameEvents.emit('player.jump', _sprites["mario"]);

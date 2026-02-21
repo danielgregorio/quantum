@@ -165,7 +165,7 @@
     <qg:sprite id="mario" src="assets/smw/sprites/mario_small.png"
                x="80" y="373" tag="player"
                frame-width="16" frame-height="24"
-               body="dynamic" controls="arrows" speed="2.5" jump-force="5" friction="0">
+               body="dynamic" controls="arrows" speed="2.5" jump-force="6.5" friction="0">
       <qg:animation name="idle" frames="0" speed="0.1" loop="true" auto-play="true" />
       <qg:animation name="walk" frames="1-3" speed="0.18" loop="true" />
       <qg:animation name="jump" frames="4" speed="0.1" loop="false" />
