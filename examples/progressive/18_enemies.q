@@ -70,30 +70,29 @@
     <qg:sprite id="level-bg" src="assets/smw/sprites/yoshi-island-1.png"
                x="2560" y="216" width="5120" height="432" />
 
-    <!-- DEBUG: All collision boxes visible in RED -->
-    <!-- Ground collision -->
+    <!-- Ground collision (invisible - see minimap below) -->
     <qg:sprite id="ground" width="5120" height="32" x="2560" y="399"
-               tag="terrain" body="static" color="#FF0000" />
+               tag="terrain" body="static" visible="false" />
 
-    <!-- Hill 1 collision -->
+    <!-- Hill 1 collision (invisible - see minimap below) -->
     <qg:sprite id="hill1-step1" width="40" height="16" x="190" y="375"
-               tag="terrain" body="static" color="#FF0000" />
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-step2" width="40" height="16" x="230" y="359"
-               tag="terrain" body="static" color="#FF0000" />
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-step3" width="40" height="16" x="270" y="343"
-               tag="terrain" body="static" color="#FF0000" />
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-step4" width="40" height="16" x="310" y="327"
-               tag="terrain" body="static" color="#FF0000" />
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-top" width="60" height="16" x="360" y="311"
-               tag="terrain" body="static" color="#FF0000" />
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-down1" width="40" height="16" x="410" y="327"
-               tag="terrain" body="static" color="#FF0000" />
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-down2" width="40" height="16" x="450" y="343"
-               tag="terrain" body="static" color="#FF0000" />
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-down3" width="40" height="16" x="490" y="359"
-               tag="terrain" body="static" color="#FF0000" />
+               tag="terrain" body="static" visible="false" />
     <qg:sprite id="hill1-down4" width="40" height="16" x="530" y="375"
-               tag="terrain" body="static" color="#FF0000" />
+               tag="terrain" body="static" visible="false" />
 
     <!-- Question blocks (matching image positions) -->
     <qg:instance prefab="qblock" id="qb1" x="496" y="256" />
@@ -192,6 +191,54 @@
     <qg:event name="game-init" handler="onGameInit" />
 
     <q:function name="onGameInit">
+      // === DEBUG: Create collision minimap below game ===
+      const minimapDiv = document.createElement('div')
+      minimapDiv.id = 'collision-minimap'
+      minimapDiv.style.cssText = 'width:768px; height:65px; margin:10px auto; background:#333; position:relative; border:2px solid #fff; overflow:hidden;'
+
+      // Level background (scaled down: 5120 -> 768 = scale 0.15)
+      const scale = 768 / 5120
+      const bgImg = document.createElement('img')
+      bgImg.src = 'assets/smw/sprites/yoshi-island-1.png'
+      bgImg.style.cssText = 'width:768px; height:' + (432 * scale) + 'px; position:absolute; top:0; left:0; opacity:0.5;'
+      minimapDiv.appendChild(bgImg)
+
+      // Collision boxes (red rectangles)
+      const collisions = [
+        // Ground: x=0, y=383, w=5120, h=32
+        {x: 0, y: 383, w: 5120, h: 32, label: 'GROUND'},
+        // Hill 1 steps
+        {x: 170, y: 367, w: 40, h: 16, label: 'H1-1'},
+        {x: 210, y: 351, w: 40, h: 16, label: 'H1-2'},
+        {x: 250, y: 335, w: 40, h: 16, label: 'H1-3'},
+        {x: 290, y: 319, w: 40, h: 16, label: 'H1-4'},
+        {x: 330, y: 303, w: 60, h: 16, label: 'H1-TOP'},
+        {x: 390, y: 319, w: 40, h: 16, label: 'H1-D1'},
+        {x: 430, y: 335, w: 40, h: 16, label: 'H1-D2'},
+        {x: 470, y: 351, w: 40, h: 16, label: 'H1-D3'},
+        {x: 510, y: 367, w: 40, h: 16, label: 'H1-D4'},
+      ]
+
+      collisions.forEach(c => {
+        const box = document.createElement('div')
+        box.style.cssText = 'position:absolute; background:rgba(255,0,0,0.7); border:1px solid #ff0;'
+        box.style.left = (c.x * scale) + 'px'
+        box.style.top = (c.y * scale) + 'px'
+        box.style.width = (c.w * scale) + 'px'
+        box.style.height = Math.max(2, c.h * scale) + 'px'
+        box.title = c.label + ' (x:' + c.x + ', y:' + c.y + ')'
+        minimapDiv.appendChild(box)
+      })
+
+      // Add label
+      const label = document.createElement('div')
+      label.style.cssText = 'position:absolute; bottom:2px; left:5px; color:#fff; font-size:10px; font-family:monospace;'
+      label.textContent = 'COLLISION MAP (red = solid)'
+      minimapDiv.appendChild(label)
+
+      document.body.appendChild(minimapDiv)
+      // === END DEBUG ===
+
       // Iris-in effect on level start
       game.irisIn(null, 45)
 

@@ -171,30 +171,29 @@
     &lt;qg:sprite id=&quot;level-bg&quot; src=&quot;assets/smw/sprites/yoshi-island-1.png&quot;
                x=&quot;2560&quot; y=&quot;216&quot; width=&quot;5120&quot; height=&quot;432&quot; /&gt;
 
-    &lt;!-- DEBUG: All collision boxes visible in RED --&gt;
-    &lt;!-- Ground collision --&gt;
+    &lt;!-- Ground collision (invisible - see minimap below) --&gt;
     &lt;qg:sprite id=&quot;ground&quot; width=&quot;5120&quot; height=&quot;32&quot; x=&quot;2560&quot; y=&quot;399&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#FF0000&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
 
-    &lt;!-- Hill 1 collision --&gt;
+    &lt;!-- Hill 1 collision (invisible - see minimap below) --&gt;
     &lt;qg:sprite id=&quot;hill1-step1&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;190&quot; y=&quot;375&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#FF0000&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-step2&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;230&quot; y=&quot;359&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#FF0000&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-step3&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;270&quot; y=&quot;343&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#FF0000&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-step4&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;310&quot; y=&quot;327&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#FF0000&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-top&quot; width=&quot;60&quot; height=&quot;16&quot; x=&quot;360&quot; y=&quot;311&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#FF0000&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-down1&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;410&quot; y=&quot;327&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#FF0000&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-down2&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;450&quot; y=&quot;343&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#FF0000&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-down3&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;490&quot; y=&quot;359&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#FF0000&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
     &lt;qg:sprite id=&quot;hill1-down4&quot; width=&quot;40&quot; height=&quot;16&quot; x=&quot;530&quot; y=&quot;375&quot;
-               tag=&quot;terrain&quot; body=&quot;static&quot; color=&quot;#FF0000&quot; /&gt;
+               tag=&quot;terrain&quot; body=&quot;static&quot; visible=&quot;false&quot; /&gt;
 
     &lt;!-- Question blocks (matching image positions) --&gt;
     &lt;qg:instance prefab=&quot;qblock&quot; id=&quot;qb1&quot; x=&quot;496&quot; y=&quot;256&quot; /&gt;
@@ -293,6 +292,54 @@
     &lt;qg:event name=&quot;game-init&quot; handler=&quot;onGameInit&quot; /&gt;
 
     &lt;q:function name=&quot;onGameInit&quot;&gt;
+      // === DEBUG: Create collision minimap below game ===
+      const minimapDiv = document.createElement(&#x27;div&#x27;)
+      minimapDiv.id = &#x27;collision-minimap&#x27;
+      minimapDiv.style.cssText = &#x27;width:768px; height:65px; margin:10px auto; background:#333; position:relative; border:2px solid #fff; overflow:hidden;&#x27;
+
+      // Level background (scaled down: 5120 -&gt; 768 = scale 0.15)
+      const scale = 768 / 5120
+      const bgImg = document.createElement(&#x27;img&#x27;)
+      bgImg.src = &#x27;assets/smw/sprites/yoshi-island-1.png&#x27;
+      bgImg.style.cssText = &#x27;width:768px; height:&#x27; + (432 * scale) + &#x27;px; position:absolute; top:0; left:0; opacity:0.5;&#x27;
+      minimapDiv.appendChild(bgImg)
+
+      // Collision boxes (red rectangles)
+      const collisions = [
+        // Ground: x=0, y=383, w=5120, h=32
+        {x: 0, y: 383, w: 5120, h: 32, label: &#x27;GROUND&#x27;},
+        // Hill 1 steps
+        {x: 170, y: 367, w: 40, h: 16, label: &#x27;H1-1&#x27;},
+        {x: 210, y: 351, w: 40, h: 16, label: &#x27;H1-2&#x27;},
+        {x: 250, y: 335, w: 40, h: 16, label: &#x27;H1-3&#x27;},
+        {x: 290, y: 319, w: 40, h: 16, label: &#x27;H1-4&#x27;},
+        {x: 330, y: 303, w: 60, h: 16, label: &#x27;H1-TOP&#x27;},
+        {x: 390, y: 319, w: 40, h: 16, label: &#x27;H1-D1&#x27;},
+        {x: 430, y: 335, w: 40, h: 16, label: &#x27;H1-D2&#x27;},
+        {x: 470, y: 351, w: 40, h: 16, label: &#x27;H1-D3&#x27;},
+        {x: 510, y: 367, w: 40, h: 16, label: &#x27;H1-D4&#x27;},
+      ]
+
+      collisions.forEach(c =&gt; {
+        const box = document.createElement(&#x27;div&#x27;)
+        box.style.cssText = &#x27;position:absolute; background:rgba(255,0,0,0.7); border:1px solid #ff0;&#x27;
+        box.style.left = (c.x * scale) + &#x27;px&#x27;
+        box.style.top = (c.y * scale) + &#x27;px&#x27;
+        box.style.width = (c.w * scale) + &#x27;px&#x27;
+        box.style.height = Math.max(2, c.h * scale) + &#x27;px&#x27;
+        box.title = c.label + &#x27; (x:&#x27; + c.x + &#x27;, y:&#x27; + c.y + &#x27;)&#x27;
+        minimapDiv.appendChild(box)
+      })
+
+      // Add label
+      const label = document.createElement(&#x27;div&#x27;)
+      label.style.cssText = &#x27;position:absolute; bottom:2px; left:5px; color:#fff; font-size:10px; font-family:monospace;&#x27;
+      label.textContent = &#x27;COLLISION MAP (red = solid)&#x27;
+      minimapDiv.appendChild(label)
+
+      document.body.appendChild(minimapDiv)
+      // === END DEBUG ===
+
       // Iris-in effect on level start
       game.irisIn(null, 45)
 
@@ -709,9 +756,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_ground = new PIXI.Graphics();
   _spr_ground.rect(-2560.0, -16.0, 5120.0, 32.0);
-  _spr_ground.fill({ color: 0xFF0000 });
+  _spr_ground.fill({ color: 0x4a9eff });
   _spr_ground.x = 2560;
   _spr_ground.y = 399;
+  _spr_ground.visible = false;
   _cameraContainer.addChild(_spr_ground);
   const _body_ground = Matter.Bodies.rectangle(2560, 399, 5120, 32, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_ground.id] = "ground";
@@ -719,9 +767,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_step1 = new PIXI.Graphics();
   _spr_hill1_step1.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_step1.fill({ color: 0xFF0000 });
+  _spr_hill1_step1.fill({ color: 0x4a9eff });
   _spr_hill1_step1.x = 190;
   _spr_hill1_step1.y = 375;
+  _spr_hill1_step1.visible = false;
   _cameraContainer.addChild(_spr_hill1_step1);
   const _body_hill1_step1 = Matter.Bodies.rectangle(190, 375, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_step1.id] = "hill1-step1";
@@ -729,9 +778,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_step2 = new PIXI.Graphics();
   _spr_hill1_step2.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_step2.fill({ color: 0xFF0000 });
+  _spr_hill1_step2.fill({ color: 0x4a9eff });
   _spr_hill1_step2.x = 230;
   _spr_hill1_step2.y = 359;
+  _spr_hill1_step2.visible = false;
   _cameraContainer.addChild(_spr_hill1_step2);
   const _body_hill1_step2 = Matter.Bodies.rectangle(230, 359, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_step2.id] = "hill1-step2";
@@ -739,9 +789,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_step3 = new PIXI.Graphics();
   _spr_hill1_step3.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_step3.fill({ color: 0xFF0000 });
+  _spr_hill1_step3.fill({ color: 0x4a9eff });
   _spr_hill1_step3.x = 270;
   _spr_hill1_step3.y = 343;
+  _spr_hill1_step3.visible = false;
   _cameraContainer.addChild(_spr_hill1_step3);
   const _body_hill1_step3 = Matter.Bodies.rectangle(270, 343, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_step3.id] = "hill1-step3";
@@ -749,9 +800,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_step4 = new PIXI.Graphics();
   _spr_hill1_step4.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_step4.fill({ color: 0xFF0000 });
+  _spr_hill1_step4.fill({ color: 0x4a9eff });
   _spr_hill1_step4.x = 310;
   _spr_hill1_step4.y = 327;
+  _spr_hill1_step4.visible = false;
   _cameraContainer.addChild(_spr_hill1_step4);
   const _body_hill1_step4 = Matter.Bodies.rectangle(310, 327, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_step4.id] = "hill1-step4";
@@ -759,9 +811,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_top = new PIXI.Graphics();
   _spr_hill1_top.rect(-30.0, -8.0, 60.0, 16.0);
-  _spr_hill1_top.fill({ color: 0xFF0000 });
+  _spr_hill1_top.fill({ color: 0x4a9eff });
   _spr_hill1_top.x = 360;
   _spr_hill1_top.y = 311;
+  _spr_hill1_top.visible = false;
   _cameraContainer.addChild(_spr_hill1_top);
   const _body_hill1_top = Matter.Bodies.rectangle(360, 311, 60, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_top.id] = "hill1-top";
@@ -769,9 +822,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_down1 = new PIXI.Graphics();
   _spr_hill1_down1.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_down1.fill({ color: 0xFF0000 });
+  _spr_hill1_down1.fill({ color: 0x4a9eff });
   _spr_hill1_down1.x = 410;
   _spr_hill1_down1.y = 327;
+  _spr_hill1_down1.visible = false;
   _cameraContainer.addChild(_spr_hill1_down1);
   const _body_hill1_down1 = Matter.Bodies.rectangle(410, 327, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_down1.id] = "hill1-down1";
@@ -779,9 +833,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_down2 = new PIXI.Graphics();
   _spr_hill1_down2.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_down2.fill({ color: 0xFF0000 });
+  _spr_hill1_down2.fill({ color: 0x4a9eff });
   _spr_hill1_down2.x = 450;
   _spr_hill1_down2.y = 343;
+  _spr_hill1_down2.visible = false;
   _cameraContainer.addChild(_spr_hill1_down2);
   const _body_hill1_down2 = Matter.Bodies.rectangle(450, 343, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_down2.id] = "hill1-down2";
@@ -789,9 +844,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_down3 = new PIXI.Graphics();
   _spr_hill1_down3.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_down3.fill({ color: 0xFF0000 });
+  _spr_hill1_down3.fill({ color: 0x4a9eff });
   _spr_hill1_down3.x = 490;
   _spr_hill1_down3.y = 359;
+  _spr_hill1_down3.visible = false;
   _cameraContainer.addChild(_spr_hill1_down3);
   const _body_hill1_down3 = Matter.Bodies.rectangle(490, 359, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_down3.id] = "hill1-down3";
@@ -799,9 +855,10 @@ document.addEventListener('keydown', function(e) {
 
   const _spr_hill1_down4 = new PIXI.Graphics();
   _spr_hill1_down4.rect(-20.0, -8.0, 40.0, 16.0);
-  _spr_hill1_down4.fill({ color: 0xFF0000 });
+  _spr_hill1_down4.fill({ color: 0x4a9eff });
   _spr_hill1_down4.x = 530;
   _spr_hill1_down4.y = 375;
+  _spr_hill1_down4.visible = false;
   _cameraContainer.addChild(_spr_hill1_down4);
   const _body_hill1_down4 = Matter.Bodies.rectangle(530, 375, 40, 16, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
   _bodyToSprite[_body_hill1_down4.id] = "hill1-down4";
@@ -1969,6 +2026,48 @@ document.addEventListener('keydown', function(e) {
 
   // === FUNCTIONS ===
   function onGameInit(data) {
+    // === DEBUG: Create collision minimap below game ===
+    const minimapDiv = document.createElement('div')
+    minimapDiv.id = 'collision-minimap'
+    minimapDiv.style.cssText = 'width:768px; height:65px; margin:10px auto; background:#333; position:relative; border:2px solid #fff; overflow:hidden;'
+    // Level background (scaled down: 5120 -> 768 = scale 0.15)
+    const scale = 768 / 5120
+    const bgImg = document.createElement('img')
+    bgImg.src = 'assets/smw/sprites/yoshi-island-1.png'
+    bgImg.style.cssText = 'width:768px; height:' + (432 * scale) + 'px; position:absolute; top:0; left:0; opacity:0.5;'
+    minimapDiv.appendChild(bgImg)
+    // Collision boxes (red rectangles)
+    const collisions = [
+    // Ground: x=0, y=383, w=5120, h=32
+    {x: 0, y: 383, w: 5120, h: 32, label: 'GROUND'},
+    // Hill 1 steps
+    {x: 170, y: 367, w: 40, h: 16, label: 'H1-1'},
+    {x: 210, y: 351, w: 40, h: 16, label: 'H1-2'},
+    {x: 250, y: 335, w: 40, h: 16, label: 'H1-3'},
+    {x: 290, y: 319, w: 40, h: 16, label: 'H1-4'},
+    {x: 330, y: 303, w: 60, h: 16, label: 'H1-TOP'},
+    {x: 390, y: 319, w: 40, h: 16, label: 'H1-D1'},
+    {x: 430, y: 335, w: 40, h: 16, label: 'H1-D2'},
+    {x: 470, y: 351, w: 40, h: 16, label: 'H1-D3'},
+    {x: 510, y: 367, w: 40, h: 16, label: 'H1-D4'},
+    ]
+    collisions.forEach(c => {
+    const box = document.createElement('div')
+    box.style.cssText = 'position:absolute; background:rgba(255,0,0,0.7); border:1px solid #ff0;'
+    box.style.left = (c.x * scale) + 'px'
+    box.style.top = (c.y * scale) + 'px'
+    box.style.width = (c.w * scale) + 'px'
+    box.style.height = Math.max(2, c.h * scale) + 'px'
+    box.title = c.label + ' (x:' + c.x + ', y:' + c.y + ')'
+    minimapDiv.appendChild(box)
+    })
+    // Add label
+    const label = document.createElement('div')
+    label.style.cssText = 'position:absolute; bottom:2px; left:5px; color:#fff; font-size:10px; font-family:monospace;'
+    label.textContent = 'COLLISION MAP (red = solid)'
+    minimapDiv.appendChild(label)
+    document.body.appendChild(minimapDiv)
+    // === END DEBUG ===
     // Iris-in effect on level start
     game.irisIn(null, 45)
     // Restore lives and score from sessionStorage (after death respawn)
