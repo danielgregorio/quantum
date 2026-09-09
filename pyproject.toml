@@ -66,7 +66,12 @@ Documentation = "https://quantum.sargas.cloud"
 Repository = "https://github.com/danielgregorio/quantum"
 
 [tool.setuptools.packages.find]
-include = ["quantum*"]
+# So o pacote `quantum` e seus subpacotes. O glob anterior `quantum*` varria
+# junto `quantum_admin` (app FastAPI separado, com deps proprias que nao sao
+# do core), e as pastas `quantum-as4`/`quantum-lsp` (projetos irmaos,
+# hifenados e nem importaveis) — 91 arquivos de peso morto no wheel. O ponto
+# em `quantum.*` casa subpacotes; sem ele, `quantum_admin` nao entra.
+include = ["quantum", "quantum.*"]
 
 
 [tool.black]

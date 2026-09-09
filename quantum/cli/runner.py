@@ -323,6 +323,18 @@ Examples:
   quantum mq worker --queues q1,q2 # Start message worker
         """
     )
+    # --version: le a versao do metadata do pacote instalado (funciona quando
+    # veio de `pip install`), com fallback para quando roda da arvore fonte.
+    try:
+        from importlib.metadata import version as _pkg_version, PackageNotFoundError
+        try:
+            _versao = _pkg_version("quantum-framework")
+        except PackageNotFoundError:
+            _versao = "dev (nao instalado via pip)"
+    except Exception:
+        _versao = "unknown"
+    parser.add_argument('--version', action='version',
+                        version=f'quantum {_versao}')
 
     subparsers = parser.add_subparsers(dest='command', help='Command to execute')
 
