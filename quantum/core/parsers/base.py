@@ -138,12 +138,58 @@ class BaseTagParser(ABC):
         Returns:
             List of AST nodes
         """
+        from quantum.core.features.conditionals.src.ast_node import IfNode
+
         statements = []
         for child in parent:
+            nome = self.get_element_name(child)
+
+            # `<q:else>` / `<q:elseif>` como IRMAO de `<q:if>`.
+            #
+            # A forma que funcionava era so a ANINHADA (o else dentro do if);
+            # a irma — `</q:if>` e depois `<q:else>` — nao tinha parser
+            # registrado (IfParser.tag_names = ['if']), caia no fallback e
+            # era DESCARTADA sem uma palavra. A documentacao ensinava a forma
+            # irma em dezenas de exemplos (inclusive o passo 3 do quick-start)
+            # e 7 arquivos .q entregues a usavam, entao o else simplesmente
+            # nao acontecia e ninguem era avisado.
+            #
+            # Agora um else/elseif que segue um q:if e anexado a ele — as duas
+            # formas passam a significar a mesma coisa. Um else/elseif SEM um
+            # if antes e um erro de verdade, e agora e dito em voz alta.
+            if nome in ('else', 'elseif'):
+                anterior = statements[-1] if statements else None
+                if isinstance(anterior, IfNode):
+                    self._attach_else_branch(anterior, nome, child)
+                    continue
+                from quantum.core.parser import QuantumParseError
+                raise QuantumParseError(
+                    f"<q:{nome}> has no matching <q:if> before it. "
+                    f"Put it inside the if, or right after it: "
+                    f"<q:if ...>...</q:if> <q:{nome}>...</q:{nome}>"
+                )
+
             node = self.parse_statement(child)
             if node is not None:
                 statements.append(node)
         return statements
+
+    def _attach_else_branch(self, if_node, kind: str, element: 'ET.Element'):
+        """Anexa um else/elseif IRMAO ao IfNode anterior — mesmo resultado do
+        aninhado, que o IfParser ja monta com estes mesmos metodos."""
+        if kind == 'elseif':
+            condicao = self.get_attr(element, 'condition', '')
+            corpo = []
+            for filho in element:
+                stmt = self.parse_statement(filho)
+                if stmt:
+                    corpo.append(stmt)
+            if_node.add_elseif_block(condicao, corpo)
+        else:
+            for filho in element:
+                stmt = self.parse_statement(filho)
+                if stmt:
+                    if_node.add_else_statement(stmt)
 
     def get_attr(self, element: ET.Element, name: str, default: str = None) -> Optional[str]:
         """

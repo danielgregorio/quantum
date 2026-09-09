@@ -48,15 +48,15 @@ Key files:
 
 | File | Role |
 |------|------|
-| `src/core/parser.py` | Parser orchestrator |
-| `src/core/parser_registry.py` | Registry of tag parsers |
-| `src/core/ast_nodes.py` | AST node definitions |
-| `src/runtime/component.py` | Execution orchestrator |
-| `src/runtime/executor_registry.py` | Registry of node executors |
-| `src/runtime/service_container.py` | Dependency injection for services |
+| `quantum/core/parser.py` | Parser orchestrator |
+| `quantum/core/parser_registry.py` | Registry of tag parsers |
+| `quantum/core/ast_nodes.py` | AST node definitions |
+| `quantum/runtime/component.py` | Execution orchestrator |
+| `quantum/runtime/executor_registry.py` | Registry of node executors |
+| `quantum/runtime/service_container.py` | Dependency injection for services |
 
-Parsers live under `src/core/parsers/{category}/` and executors under
-`src/runtime/executors/{category}/`, where `category` is one of `control_flow`, `data`,
+Parsers live under `quantum/core/parsers/{category}/` and executors under
+`quantum/runtime/executors/{category}/`, where `category` is one of `control_flow`, `data`,
 `ai`, `messaging`, `jobs`, `services`, `scripting`, or `html`.
 
 ---
@@ -65,7 +65,7 @@ Parsers live under `src/core/parsers/{category}/` and executors under
 
 Say you want to add `<q:greet name="...">`. You touch four places:
 
-### 1. Define the AST node — `src/core/ast_nodes.py`
+### 1. Define the AST node — `quantum/core/ast_nodes.py`
 
 ```python
 @dataclass
@@ -73,7 +73,7 @@ class GreetNode(ASTNode):
     name: str
 ```
 
-### 2. Write the parser — `src/core/parsers/control_flow/greet_parser.py`
+### 2. Write the parser — `quantum/core/parsers/control_flow/greet_parser.py`
 
 ```python
 from typing import List
@@ -90,7 +90,7 @@ class GreetParser(BaseTagParser):
         return GreetNode(name=self.get_attr(element, 'name'))
 ```
 
-### 3. Write the executor — `src/runtime/executors/control_flow/greet_executor.py`
+### 3. Write the executor — `quantum/runtime/executors/control_flow/greet_executor.py`
 
 ```python
 from typing import Any, List, Type
@@ -108,18 +108,17 @@ class GreetExecutor(BaseExecutor):
 
 ### 4. Register both
 
-- Parser → add to `QuantumParser._register_parsers()` in `src/core/parser.py`
-- Executor → add to `ComponentRuntime._register_executors()` in `src/runtime/component.py`
+- Parser → add to `QuantumParser._register_parsers()` in `quantum/core/parser.py`
+- Executor → add to `ComponentRuntime._register_executors()` in `quantum/runtime/component.py`
 
 Then write a test (see below) and you're done. Larger features should follow the
-**Option C** structure under `src/core/features/{feature}/` — see `CLAUDE.md` and existing
-features for the full layout (`manifest.yaml`, `intentions/`, `dataset/`).
+**Option C** structure under `quantum/core/features/{feature}/` — see the existing features under `quantum/core/features/` for the full layout (`manifest.yaml`, `intentions/`, `dataset/`).
 
 ---
 
 ## 4. Testing
 
-Tests live in `tests/`, mirroring `src/`, and use pytest.
+Tests live in `tests/`, mirroring `quantum/`, and use pytest.
 
 ```bash
 pytest tests/ -q                      # full suite
@@ -136,7 +135,7 @@ it, and asserts the output. Fixtures live in `tests/conftest.py`.
 
 - **Python:** type hints on public functions, docstrings on non-trivial ones, absolute
   imports (`from core.parser import QuantumParser`), AST nodes as `@dataclass`.
-- **Linting:** `ruff check src/ tests/` and `black src/ tests/` before pushing.
+- **Linting:** `ruff check quantum/ tests/` and `black quantum/ tests/` before pushing.
 - **`.q` files:** Quantum tags use the `q:` prefix; databinding uses `{braces}`; components
   need `<q:component name="...">`.
 
@@ -146,7 +145,7 @@ it, and asserts the output. Fixtures live in `tests/conftest.py`.
 
 1. **Fork** and create a branch: `git checkout -b feat/my-feature` (or `fix/`, `docs/`).
 2. Make your change **with tests**.
-3. Run `pytest tests/ -q` and `ruff check src/ tests/` — both green.
+3. Run `pytest tests/ -q` and `ruff check quantum/ tests/` — both green.
 4. Use clear, conventional commit messages (`feat:`, `fix:`, `docs:`, `chore:`, `test:`).
 5. Open a PR using the template; link any related issue and describe the *why*.
 

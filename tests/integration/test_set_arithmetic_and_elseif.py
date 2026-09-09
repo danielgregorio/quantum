@@ -112,3 +112,59 @@ class TestElseIfRenders:
     def test_only_one_branch_renders(self):
         _, html = _run(_component(self.TPL.format(n=2)))
         assert html.count("<p>") == 1
+
+
+class TestElseElseifSibling:
+    """`<q:else>`/`<q:elseif>` como IRMAO de `<q:if>` — a forma que a doc ensina.
+
+    So a forma ANINHADA (else dentro do if) funcionava. A irma — `</q:if>` e
+    depois `<q:else>` — nao tinha parser registrado (IfParser.tag_names =
+    ['if']), caia no fallback e era DESCARTADA sem uma palavra: o else
+    simplesmente nao acontecia. docs/guide/conditionals.md ensina a forma
+    irma (o if-else e o elseif-chain), e 7 arquivos .q entregues a usavam.
+
+    Agora o parser anexa um else/elseif que segue um q:if ao if anterior; as
+    duas formas viram a mesma coisa. Um else/elseif SEM if antes vira erro
+    explicito, em vez de sumir.
+    """
+
+    def test_else_irmao_escolhe_o_ramo_do_else(self):
+        _, html = _run(_component(
+            '<q:set name="n" type="integer" value="5" />'
+            '<q:if condition="n > 10"><p>GRANDE</p></q:if>'
+            '<q:else><p>PEQUENO</p></q:else>'))
+        assert 'PEQUENO' in html and 'GRANDE' not in html, html
+
+    def test_else_irmao_escolhe_o_ramo_do_if(self):
+        _, html = _run(_component(
+            '<q:set name="n" type="integer" value="20" />'
+            '<q:if condition="n > 10"><p>GRANDE</p></q:if>'
+            '<q:else><p>PEQUENO</p></q:else>'))
+        assert 'GRANDE' in html and 'PEQUENO' not in html, html
+
+    def test_elseif_irmao(self):
+        # o exemplo verbatim do docs/guide/conditionals.md (score)
+        _, html = _run(_component(
+            '<q:set name="score" type="integer" value="85" />'
+            '<q:if condition="score >= 90"><p>A</p></q:if>'
+            '<q:elseif condition="score >= 80"><p>B</p></q:elseif>'
+            '<q:else><p>F</p></q:else>'))
+        assert 'B' in html and 'A' not in html and 'F' not in html, html
+
+    def test_a_forma_aninhada_continua_funcionando(self):
+        _, html = _run(_component(
+            '<q:set name="n" type="integer" value="5" />'
+            '<q:if condition="n > 10"><p>GRANDE</p>'
+            '<q:else><p>PEQUENO</p></q:else></q:if>'))
+        assert 'PEQUENO' in html and 'GRANDE' not in html, html
+
+    def test_else_orfao_e_erro_e_nao_silencio(self):
+        from quantum.core.parser import QuantumParseError
+        with pytest.raises(QuantumParseError, match="no matching <q:if>"):
+            QuantumParser().parse(_component('<q:else><p>x</p></q:else>'))
+
+    def test_elseif_orfao_tambem(self):
+        from quantum.core.parser import QuantumParseError
+        with pytest.raises(QuantumParseError, match="no matching <q:if>"):
+            QuantumParser().parse(_component(
+                '<q:elseif condition="1==1"><p>x</p></q:elseif>'))

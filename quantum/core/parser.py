@@ -568,6 +568,21 @@ class QuantumParser:
                 component.add_statement(job_node)
                 continue
 
+            # `<q:else>` / `<q:elseif>` IRMAO de um `<q:if>` no corpo do
+            # componente: anexa ao if anterior. A forma irma nao tinha parser
+            # e sumia calada — a documentacao a ensinava e arquivos entregues
+            # a usavam (ver base.parse_statements para o porque completo).
+            if child_type in ('else', 'elseif'):
+                anterior = component.statements[-1] if component.statements else None
+                if isinstance(anterior, IfNode):
+                    self._attach_else_sibling(anterior, child_type, child)
+                    continue
+                raise QuantumParseError(
+                    f"<q:{child_type}> has no matching <q:if> before it. "
+                    f"Put it inside the if, or right after it: "
+                    f"<q:if ...>...</q:if> <q:{child_type}>...</q:{child_type}>"
+                )
+
             # Delegate to modular parser registry via _parse_statement
             node = self._parse_statement(child)
             if node is not None:
@@ -575,6 +590,23 @@ class QuantumParser:
                 # Check if this produces HTML
                 if self._is_html_element(child) or (child_type and child_type[0].isupper()):
                     component.has_html = True
+
+    def _attach_else_sibling(self, if_node: 'IfNode', kind: str, element: ET.Element):
+        """Anexa um else/elseif IRMAO ao IfNode anterior — mesmo resultado da
+        forma aninhada que o IfParser ja monta."""
+        if kind == 'elseif':
+            condicao = element.get('condition', '')
+            corpo = []
+            for filho in element:
+                stmt = self._parse_statement(filho)
+                if stmt:
+                    corpo.append(stmt)
+            if_node.add_elseif_block(condicao, corpo)
+        else:
+            for filho in element:
+                stmt = self._parse_statement(filho)
+                if stmt:
+                    if_node.add_else_statement(stmt)
 
     def _parse_statement(self, element: ET.Element) -> Optional[QuantumNode]:
         """Parse individual statement (return, set, dispatchEvent, etc)"""
