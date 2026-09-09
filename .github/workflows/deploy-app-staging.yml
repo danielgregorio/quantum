@@ -1,11 +1,11 @@
 name: Deploy App to Staging
 
 on:
-  push:
-    branches: [develop]
-    paths-ignore:
-      - 'docs/**'
-      - '*.md'
+  # Manual apenas. Este workflow depende de secrets/self-hosted runner
+  # da infra pessoal do autor, que nao existem neste repositorio; ao
+  # disparar automatico ele falha em todo push e pinta o repo de
+  # vermelho. Rode pela aba Actions quando os secrets estiverem
+  # configurados.
   workflow_dispatch:
 
 env:

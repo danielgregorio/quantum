@@ -1,19 +1,12 @@
 name: Deploy App to Production
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - 'docs/**'
-      - '*.md'
-      - '.gitignore'
+  # Manual apenas. Este workflow depende de secrets/self-hosted runner
+  # da infra pessoal do autor, que nao existem neste repositorio; ao
+  # disparar automatico ele falha em todo push e pinta o repo de
+  # vermelho. Rode pela aba Actions quando os secrets estiverem
+  # configurados.
   workflow_dispatch:
-    inputs:
-      force_deploy:
-        description: 'Force deploy even if tests fail'
-        required: false
-        default: 'false'
-        type: boolean
 
 env:
   APP_NAME: quantum-app
