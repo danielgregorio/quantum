@@ -528,14 +528,24 @@ class HTMLRenderer:
                 getattr(node, 'name', '<component>'), nome
             )
 
-        corpo_js = '\n'.join(
-            f"  window[{json.dumps(nome)}] = window[{json.dumps(nome)}] || "
-            f"function () {{ throw new Error({json.dumps(
-                f'q:function \"{nome}\" runs on the server and is not '
+        # A mensagem sai numa variavel antes de entrar na f-string. Ter a
+        # expressao quebrada em varias linhas DENTRO das chaves e PEP 701,
+        # valido so no Python 3.12+ — e o pyproject declara 3.11. Rodando so
+        # 3.12 aqui, isso passou despercebido ate o CI (matriz 3.11/3.12)
+        # recusar o modulo inteiro com SyntaxError na coleta.
+        linhas_js = []
+        for nome in sorted(chamadas):
+            recado = (
+                f'q:function "{nome}" runs on the server and is not '
                 f'available in the browser. Use <q:action> to handle this '
-                f'from the page, or define the handler in <q:script>.')}); }};"
-            for nome in sorted(chamadas)
-        )
+                f'from the page, or define the handler in <q:script>.'
+            )
+            alvo = json.dumps(nome)
+            linhas_js.append(
+                f"  window[{alvo}] = window[{alvo}] || "
+                f"function () {{ throw new Error({json.dumps(recado)}); }};"
+            )
+        corpo_js = '\n'.join(linhas_js)
         # `</` vira `<\/`: nenhum texto dentro do script pode fechar a tag
         # antes da hora.
         corpo_js = corpo_js.replace('</', '<\\/')
