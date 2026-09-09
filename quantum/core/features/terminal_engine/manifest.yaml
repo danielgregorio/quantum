@@ -1,0 +1,32 @@
+feature:
+  name: "terminal_engine"
+  display_name: "Terminal Engine (qt: namespace)"
+  version: "1.0.0"
+  status: "experimental"
+  migration_type: "option_c"
+
+description: |
+  Terminal UI engine for Quantum Framework.
+  Compiles declarative XML (qt: namespace) to standalone Python
+  applications using Textual (TUI framework).
+  Apps run in the terminal - no browser needed.
+
+tags:
+  - "terminal"
+  - "tui"
+  - "textual"
+  - "cli"
+
+maintainers:
+  - "Daniel"
+  - "Claude"
+
+api:
+  ast_nodes: "src/core/features/terminal_engine/src/ast_nodes.py"
+  parser: "src/core/features/terminal_engine/src/parser.py"
+  code_generator: "src/runtime/terminal_code_generator.py"
+  builder: "src/runtime/terminal_builder.py"
+
+testing:
+  integration_tests: 3
+  coverage: 80

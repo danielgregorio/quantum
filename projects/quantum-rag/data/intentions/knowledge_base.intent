@@ -1,0 +1,47 @@
+intent: knowledge_base
+version: 1.0
+
+description: |
+  The q:knowledge tag defines a virtual knowledge base that can be queried
+  using the existing q:query tag with a "knowledge:" datasource prefix.
+  Behind the scenes, text is chunked, embedded via Ollama, and stored in
+  ChromaDB for vector similarity search.  An optional RAG mode pipes
+  search results into an LLM to generate a natural-language answer.
+
+trigger:
+  tag: q:knowledge
+  attributes:
+    required: [name]
+    optional: [model, embedModel, chunkSize, chunkOverlap, persist, persistPath, rebuild]
+  children:
+    - tag: q:source
+      attributes:
+        required: [type]
+        optional: [path, pattern, url, datasource, chunkSize, chunkOverlap]
+
+semantics:
+  - DEFINE a named knowledge base that registers as datasource "knowledge:{name}"
+  - INDEX sources: extract text, chunk, embed via Ollama, store in ChromaDB
+  - SEARCH via q:query with datasource="knowledge:{name}" returns [{content, relevance, source}]
+  - RAG via q:query with mode="rag" returns {answer, sources, confidence}
+
+examples:
+  positive:
+    - |
+      <q:knowledge name="docs" embedModel="nomic-embed-text">
+        <q:source type="text">Quantum Framework enables declarative web apps.</q:source>
+      </q:knowledge>
+    - |
+      <q:knowledge name="articles" model="phi3" persist="true">
+        <q:source type="directory" path="./docs/" pattern="*.md" />
+      </q:knowledge>
+
+  negative:
+    - |
+      <!-- Missing name -->
+      <q:knowledge>
+        <q:source type="text">Hello</q:source>
+      </q:knowledge>
+    - |
+      <!-- No sources -->
+      <q:knowledge name="empty" />

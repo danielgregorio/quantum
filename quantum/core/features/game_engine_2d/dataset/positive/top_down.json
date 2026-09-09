@@ -1,0 +1,11 @@
+{
+  "name": "top_down",
+  "description": "Top-down game with state machine behavior",
+  "input": "<q:application id=\"top-down\" type=\"game\" engine=\"2d\">\n  <qg:behavior name=\"Patrol\">\n    <q:set name=\"speed\" value=\"2\" />\n    <qg:state-machine initial=\"walk-right\">\n      <qg:state name=\"walk-right\">\n        <qg:on event=\"hit-wall\" transition=\"walk-left\" />\n        <q:function name=\"update\">\n          <q:set name=\"self.x\" value=\"{self.x + self.speed}\" />\n        </q:function>\n      </qg:state>\n      <qg:state name=\"walk-left\">\n        <qg:on event=\"hit-wall\" transition=\"walk-right\" />\n        <q:function name=\"update\">\n          <q:set name=\"self.x\" value=\"{self.x - self.speed}\" />\n        </q:function>\n      </qg:state>\n    </qg:state-machine>\n  </qg:behavior>\n  <qg:scene name=\"main\" width=\"800\" height=\"600\" background=\"#2a2a2a\">\n    <qg:sprite id=\"player\" src=\"player.png\" x=\"400\" y=\"300\" controls=\"wasd\" speed=\"4\" body=\"dynamic\" />\n    <qg:sprite id=\"enemy\" src=\"enemy.png\" x=\"200\" y=\"200\" body=\"dynamic\">\n      <qg:use behavior=\"Patrol\" speed=\"2\" />\n    </qg:sprite>\n  </qg:scene>\n</q:application>",
+  "expected": {
+    "type": "application",
+    "app_type": "game",
+    "scenes": 1,
+    "behaviors": 1
+  }
+}

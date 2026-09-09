@@ -1,0 +1,451 @@
+{
+  "category": "queries",
+  "name": "Database Queries",
+  "description": "Database operations with q:query and transactions",
+  "icon": "🗄️",
+  "docsPath": "/guide/query",
+  "exampleCount": 17,
+  "examples": [
+    {
+      "file": "job-queue-example.q",
+      "title": "Job Queue Example",
+      "description": "Define a job handler",
+      "complexity": "advanced",
+      "tags": [
+        "q:query",
+        "q:else",
+        "q:action",
+        "database",
+        "q:invoke",
+        "q:if",
+        "databinding",
+        "SQL"
+      ],
+      "features": [
+        "databinding",
+        "q:action",
+        "q:else",
+        "q:if",
+        "q:invoke",
+        "q:log",
+        "q:loop",
+        "q:mail",
+        "q:param",
+        "q:query",
+        "session"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 149
+    },
+    {
+      "file": "job-schedule-example.q",
+      "title": "Job Schedule Example",
+      "description": "Schedule a task to run every 5 minutes",
+      "complexity": "advanced",
+      "tags": [
+        "q:query",
+        "q:action",
+        "q:log",
+        "q:function",
+        "q:invoke",
+        "database",
+        "databinding",
+        "SQL"
+      ],
+      "features": [
+        "databinding",
+        "q:action",
+        "q:function",
+        "q:invoke",
+        "q:log",
+        "q:loop",
+        "q:mail",
+        "q:param",
+        "q:query",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 85
+    },
+    {
+      "file": "job-thread-example.q",
+      "title": "Job Thread Example",
+      "description": "Example: Async Threads with q:thread",
+      "complexity": "advanced",
+      "tags": [
+        "q:query",
+        "q:action",
+        "q:log",
+        "q:function",
+        "q:invoke",
+        "database",
+        "databinding",
+        "SQL"
+      ],
+      "features": [
+        "databinding",
+        "q:action",
+        "q:function",
+        "q:invoke",
+        "q:log",
+        "q:loop",
+        "q:mail",
+        "q:param",
+        "q:query",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 114
+    },
+    {
+      "file": "message-queue-example.q",
+      "title": "Message Queue Example",
+      "description": "Declare queues",
+      "complexity": "advanced",
+      "tags": [
+        "q:query",
+        "q:else",
+        "q:action",
+        "database",
+        "q:function",
+        "q:if",
+        "databinding",
+        "SQL"
+      ],
+      "features": [
+        "databinding",
+        "q:action",
+        "q:else",
+        "q:function",
+        "q:if",
+        "q:invoke",
+        "q:log",
+        "q:param",
+        "q:query"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 235
+    },
+    {
+      "file": "test-query-basic.q",
+      "title": "Query Basic",
+      "description": "Display results using query loop shorthand",
+      "complexity": "beginner",
+      "tags": [
+        "q:query",
+        "q:loop",
+        "q:return",
+        "database",
+        "databinding",
+        "SQL"
+      ],
+      "features": [
+        "databinding",
+        "q:loop",
+        "q:query",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 23
+    },
+    {
+      "file": "test-query-cache.q",
+      "title": "Query Cache",
+      "description": "Example demonstrating Query Cache",
+      "complexity": "beginner",
+      "tags": [
+        "q:query",
+        "databinding",
+        "database",
+        "SQL"
+      ],
+      "features": [
+        "databinding",
+        "q:query"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 11
+    },
+    {
+      "file": "test-query-complete.q",
+      "title": "Query Complete",
+      "description": "Example demonstrating Query Complete",
+      "complexity": "intermediate",
+      "tags": [
+        "q:query",
+        "q:loop",
+        "q:return",
+        "database",
+        "databinding",
+        "SQL",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:loop",
+        "q:param",
+        "q:query",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 38
+    },
+    {
+      "file": "test-query-insert.q",
+      "title": "Query Insert",
+      "description": "Test: INSERT query with RETURNING clause (PostgreSQL)",
+      "complexity": "intermediate",
+      "tags": [
+        "q:query",
+        "q:set",
+        "q:return",
+        "database",
+        "databinding",
+        "SQL",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:param",
+        "q:query",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 26
+    },
+    {
+      "file": "test-query-loop.q",
+      "title": "Query Loop",
+      "description": "Fetch users",
+      "complexity": "intermediate",
+      "tags": [
+        "q:query",
+        "q:else",
+        "database",
+        "q:loop",
+        "q:if",
+        "databinding",
+        "SQL",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:else",
+        "q:if",
+        "q:loop",
+        "q:param",
+        "q:query",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 41
+    },
+    {
+      "file": "test-query-metadata.q",
+      "title": "Query Metadata",
+      "description": "Test: Enhanced query metadata (affectedRows, lastInsertId)",
+      "complexity": "intermediate",
+      "tags": [
+        "q:query",
+        "q:set",
+        "q:return",
+        "database",
+        "databinding",
+        "SQL",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:param",
+        "q:query",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 40
+    },
+    {
+      "file": "test-query-multiple.q",
+      "title": "Query Multiple",
+      "description": "Query 1: Get users",
+      "complexity": "beginner",
+      "tags": [
+        "q:query",
+        "q:return",
+        "database",
+        "databinding",
+        "SQL"
+      ],
+      "features": [
+        "databinding",
+        "q:query",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 31
+    },
+    {
+      "file": "test-query-of-queries.q",
+      "title": "Query Of Queries",
+      "description": "Step 1: Get all users from database",
+      "complexity": "beginner",
+      "tags": [
+        "q:query",
+        "q:return",
+        "database",
+        "databinding",
+        "SQL"
+      ],
+      "features": [
+        "databinding",
+        "q:query",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 33
+    },
+    {
+      "file": "test-query-pagination.q",
+      "title": "Query Pagination",
+      "description": "Paginated query - page 1, 5 records per page",
+      "complexity": "beginner",
+      "tags": [
+        "q:query",
+        "q:return",
+        "database",
+        "databinding",
+        "SQL"
+      ],
+      "features": [
+        "databinding",
+        "q:query",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 20
+    },
+    {
+      "file": "test-query-params.q",
+      "title": "Query Params",
+      "description": "Test: SELECT query with parameter binding",
+      "complexity": "intermediate",
+      "tags": [
+        "q:query",
+        "q:loop",
+        "q:return",
+        "database",
+        "databinding",
+        "SQL",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:loop",
+        "q:param",
+        "q:query",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 31
+    },
+    {
+      "file": "test-transaction-basic.q",
+      "title": "Transaction Basic",
+      "description": "Example demonstrating Transaction Basic",
+      "complexity": "advanced",
+      "tags": [
+        "q:query",
+        "SQL",
+        "database",
+        "q:transaction"
+      ],
+      "features": [
+        "q:query",
+        "q:transaction"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 17
+    },
+    {
+      "file": "test-transaction-isolation.q",
+      "title": "Transaction Isolation",
+      "description": "Example demonstrating Transaction Isolation",
+      "complexity": "advanced",
+      "tags": [
+        "q:query",
+        "q:transaction",
+        "q:set",
+        "database",
+        "databinding",
+        "SQL"
+      ],
+      "features": [
+        "databinding",
+        "q:query",
+        "q:set",
+        "q:transaction"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 15
+    },
+    {
+      "file": "test-transaction-rollback.q",
+      "title": "Transaction Rollback",
+      "description": "Example demonstrating Transaction Rollback",
+      "complexity": "advanced",
+      "tags": [
+        "q:query",
+        "q:transaction",
+        "database",
+        "databinding",
+        "SQL"
+      ],
+      "features": [
+        "databinding",
+        "q:query",
+        "q:transaction"
+      ],
+      "relatedDocs": [
+        "/guide/query"
+      ],
+      "lineCount": 18
+    }
+  ]
+}

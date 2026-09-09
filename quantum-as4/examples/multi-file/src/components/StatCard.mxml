@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<Component
+    xmlns:fx="http://ns.adobe.com/mxml/2009"
+    xmlns:s="library://ns.adobe.com/flex/spark">
+
+    <fx:Metadata>
+        [Property(name="title", type="String")]
+        [Property(name="value", type="String")]
+        [Property(name="icon", type="String")]
+    </fx:Metadata>
+
+    <fx:Script>
+        <![CDATA[
+            [Bindable]
+            public var title:String = "";
+
+            [Bindable]
+            public var value:String = "0";
+
+            [Bindable]
+            public var icon:String = "";
+        ]]>
+    </fx:Script>
+
+    <fx:Style>
+        .stat-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-width: 200px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-title {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+    </fx:Style>
+
+    <s:VBox styleName="stat-card" gap="10">
+        <s:Label text="{title}" styleName="stat-title"/>
+        <s:Label text="{value}" styleName="stat-value"/>
+    </s:VBox>
+
+</Component>

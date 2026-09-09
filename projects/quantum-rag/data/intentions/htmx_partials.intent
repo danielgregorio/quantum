@@ -1,0 +1,18 @@
+intention:
+  name: "HTMX Partials - Progressive Enhancement"
+  version: "1.0.0"
+  category: "interactivity"
+  goal: |
+    Enable progressive enhancement with HTMX-style partial page updates.
+    Add interactivity without JavaScript frameworks using simple attributes.
+
+  planned_features:
+    - "q:partial='name' - Mark component as partial"
+    - "q:trigger='load|click|change|every Xs' - Event triggers"
+    - "q:target='#selector' - Update target"
+    - "q:swap='innerHTML|outerHTML|beforeend' - Swap strategy"
+    - "q:post|q:get|q:put|q:delete='/api/endpoint' - HTTP methods"
+    - "q:indicator='#loading' - Loading indicator"
+    - "Progressive enhancement (degrades gracefully)"
+
+  status: "Phase B - Planned for future implementation"

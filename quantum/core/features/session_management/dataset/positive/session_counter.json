@@ -1,0 +1,18 @@
+{
+  "example_id": "session_counter_001",
+  "category": "session_management",
+  "tags": ["session", "counter", "increment"],
+  "input": {
+    "component": "<q:component name=\"VisitCounter\">\n  <q:if condition=\"{session.visitCount} == ''\">\n    <q:set name=\"session.visitCount\" value=\"0\" />\n  </q:if>\n  <q:set name=\"session.visitCount\" value=\"{session.visitCount + 1}\" />\n  <p>You have visited this page {session.visitCount} times.</p>\n</q:component>",
+    "context": {
+      "phase": "F",
+      "feature": "session_management"
+    }
+  },
+  "expected_behavior": "Increments user-specific visit counter on each page load",
+  "validation": {
+    "session_persistence": true,
+    "user_isolation": true,
+    "counter_increments": true
+  }
+}

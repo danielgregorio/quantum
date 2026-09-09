@@ -1,0 +1,34 @@
+feature:
+  name: "session_management"
+  display_name: "Session Management (Session/Application/Request Scopes)"
+  version: "1.0.0"
+  status: "planned"
+  phase: F
+  category: "state"
+
+  description: |
+    ColdFusion-style session, application, and request scopes for managing
+    state across requests, users, and the application lifecycle.
+
+capabilities:
+  - "session.variable - User-specific, persistent across requests"
+  - "application.variable - Shared across all users"
+  - "request.variable - Request-specific, cleared after response"
+  - "cookie.variable - Browser cookies"
+  - "Session timeout configuration"
+  - "Session invalidation (logout)"
+
+examples:
+  session_scope: |
+    <q:set name="session.userId" value="123" />
+    <q:set name="session.cart" value="{items: []}" />
+
+    <q:if condition="{session.userId} != ''">
+      <p>Welcome back, user {session.userId}!</p>
+    </q:if>
+
+  application_scope: |
+    <q:set name="application.startTime" value="{now()}" />
+    <q:set name="application.visitCount" value="{application.visitCount + 1}" />
+
+production_ready: false

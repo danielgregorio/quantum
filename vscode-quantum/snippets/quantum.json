@@ -1,0 +1,594 @@
+{
+  "Quantum Component": {
+    "prefix": "qcomp",
+    "body": [
+      "<q:component name=\"${1:ComponentName}\">",
+      "\t$0",
+      "</q:component>"
+    ],
+    "description": "Create a new Quantum component"
+  },
+  "Quantum Application": {
+    "prefix": "qapp",
+    "body": [
+      "<q:application id=\"${1:app-id}\" type=\"${2|html,ui,game,terminal,testing|}\">",
+      "\t$0",
+      "</q:application>"
+    ],
+    "description": "Create a new Quantum application"
+  },
+  "Quantum Set Variable": {
+    "prefix": "qset",
+    "body": [
+      "<q:set name=\"${1:variableName}\" value=\"${2:value}\" />"
+    ],
+    "description": "Set a variable value"
+  },
+  "Quantum Set with Type": {
+    "prefix": "qsett",
+    "body": [
+      "<q:set name=\"${1:variableName}\" type=\"${2|string,number,boolean,array,object|}\" value=\"${3:value}\" />"
+    ],
+    "description": "Set a typed variable"
+  },
+  "Quantum Loop Range": {
+    "prefix": "qloop",
+    "body": [
+      "<q:loop from=\"${1:1}\" to=\"${2:10}\" index=\"${3:i}\">",
+      "\t$0",
+      "</q:loop>"
+    ],
+    "description": "Create a numeric range loop"
+  },
+  "Quantum Loop Array": {
+    "prefix": "qloopa",
+    "body": [
+      "<q:loop type=\"array\" items=\"{${1:items}}\" var=\"${2:item}\" index=\"${3:i}\">",
+      "\t$0",
+      "</q:loop>"
+    ],
+    "description": "Loop over an array"
+  },
+  "Quantum Loop Query": {
+    "prefix": "qloopq",
+    "body": [
+      "<q:loop query=\"${1:queryName}\">",
+      "\t$0",
+      "</q:loop>"
+    ],
+    "description": "Loop over query results"
+  },
+  "Quantum If": {
+    "prefix": "qif",
+    "body": [
+      "<q:if condition=\"${1:condition}\">",
+      "\t$0",
+      "</q:if>"
+    ],
+    "description": "Conditional if block"
+  },
+  "Quantum If-Else": {
+    "prefix": "qife",
+    "body": [
+      "<q:if condition=\"${1:condition}\">",
+      "\t$2",
+      "\t<q:else>",
+      "\t\t$0",
+      "\t</q:else>",
+      "</q:if>"
+    ],
+    "description": "Conditional if-else block"
+  },
+  "Quantum If-ElseIf-Else": {
+    "prefix": "qifee",
+    "body": [
+      "<q:if condition=\"${1:condition}\">",
+      "\t$2",
+      "\t<q:elseif condition=\"${3:condition2}\">",
+      "\t\t$4",
+      "\t</q:elseif>",
+      "\t<q:else>",
+      "\t\t$0",
+      "\t</q:else>",
+      "</q:if>"
+    ],
+    "description": "Conditional if-elseif-else block"
+  },
+  "Quantum Function": {
+    "prefix": "qfunc",
+    "body": [
+      "<q:function name=\"${1:functionName}\">",
+      "\t$0",
+      "</q:function>"
+    ],
+    "description": "Define a function"
+  },
+  "Quantum Function with Params": {
+    "prefix": "qfuncp",
+    "body": [
+      "<q:function name=\"${1:functionName}\" returnType=\"${2:any}\">",
+      "\t<q:param name=\"${3:paramName}\" type=\"${4:string}\" />",
+      "\t$0",
+      "</q:function>"
+    ],
+    "description": "Define a function with parameters"
+  },
+  "Quantum REST Function": {
+    "prefix": "qfuncr",
+    "body": [
+      "<q:function name=\"${1:functionName}\" endpoint=\"${2:/api/endpoint}\" method=\"${3|GET,POST,PUT,DELETE|}\">",
+      "\t<q:param name=\"${4:id}\" type=\"${5:integer}\" />",
+      "\t$0",
+      "</q:function>"
+    ],
+    "description": "Define a REST API function"
+  },
+  "Quantum Parameter": {
+    "prefix": "qparam",
+    "body": [
+      "<q:param name=\"${1:paramName}\" type=\"${2|string,integer,boolean,decimal,array,object|}\" ${3:required=\"true\"} />"
+    ],
+    "description": "Define a parameter"
+  },
+  "Quantum Query": {
+    "prefix": "qquery",
+    "body": [
+      "<q:query name=\"${1:queryName}\" datasource=\"${2:db}\">",
+      "\t${3:SELECT * FROM table}",
+      "</q:query>"
+    ],
+    "description": "Database query"
+  },
+  "Quantum Query with Params": {
+    "prefix": "qqueryp",
+    "body": [
+      "<q:query name=\"${1:queryName}\" datasource=\"${2:db}\">",
+      "\t<q:param name=\"${3:id}\" type=\"${4:integer}\" value=\"{${5:id}}\" />",
+      "\t${6:SELECT * FROM table WHERE id = :id}",
+      "</q:query>"
+    ],
+    "description": "Database query with parameters"
+  },
+  "Quantum Import": {
+    "prefix": "qimport",
+    "body": [
+      "<q:import component=\"${1:ComponentName}\" ${2:from=\"./components\"} />"
+    ],
+    "description": "Import a component"
+  },
+  "Quantum Slot": {
+    "prefix": "qslot",
+    "body": [
+      "<q:slot name=\"${1:default}\" />"
+    ],
+    "description": "Content projection slot"
+  },
+  "Quantum Action": {
+    "prefix": "qaction",
+    "body": [
+      "<q:action name=\"${1:actionName}\" method=\"${2|POST,PUT,DELETE|}\">",
+      "\t<q:param name=\"${3:param}\" type=\"${4:string}\" required=\"true\" />",
+      "\t$0",
+      "\t<q:redirect url=\"${5:/success}\" flash=\"${6:Success!}\" />",
+      "</q:action>"
+    ],
+    "description": "Form action handler"
+  },
+  "Quantum Redirect": {
+    "prefix": "qredirect",
+    "body": [
+      "<q:redirect url=\"${1:/path}\" ${2:flash=\"Message\"} />"
+    ],
+    "description": "Redirect response"
+  },
+  "Quantum Flash": {
+    "prefix": "qflash",
+    "body": [
+      "<q:flash type=\"${1|info,success,warning,error|}\" message=\"${2:message}\" />"
+    ],
+    "description": "Flash message"
+  },
+  "Quantum Invoke": {
+    "prefix": "qinvoke",
+    "body": [
+      "<q:invoke name=\"${1:result}\" url=\"${2:https://api.example.com}\" method=\"${3|GET,POST,PUT,DELETE|}\" />"
+    ],
+    "description": "HTTP API invocation"
+  },
+  "Quantum Mail": {
+    "prefix": "qmail",
+    "body": [
+      "<q:mail to=\"{${1:email}}\" from=\"${2:noreply@app.com}\" subject=\"${3:Subject}\">",
+      "\t$0",
+      "</q:mail>"
+    ],
+    "description": "Send email"
+  },
+  "Quantum LLM": {
+    "prefix": "qllm",
+    "body": [
+      "<q:llm name=\"${1:response}\" model=\"${2:phi3}\">",
+      "\t<q:prompt>${3:Your prompt here}</q:prompt>",
+      "</q:llm>"
+    ],
+    "description": "LLM invocation"
+  },
+  "Quantum LLM Chat": {
+    "prefix": "qllmc",
+    "body": [
+      "<q:llm name=\"${1:response}\" model=\"${2:mistral}\">",
+      "\t<q:message role=\"system\">${3:You are a helpful assistant}</q:message>",
+      "\t<q:message role=\"user\">{${4:userQuestion}}</q:message>",
+      "</q:llm>"
+    ],
+    "description": "LLM chat conversation"
+  },
+  "Quantum Transaction": {
+    "prefix": "qtrans",
+    "body": [
+      "<q:transaction>",
+      "\t$0",
+      "</q:transaction>"
+    ],
+    "description": "Database transaction"
+  },
+  "Quantum File Upload": {
+    "prefix": "qfile",
+    "body": [
+      "<q:file action=\"upload\" file=\"{${1:file}}\" destination=\"${2:./uploads/}\" />"
+    ],
+    "description": "File upload handling"
+  },
+  "Quantum Log": {
+    "prefix": "qlog",
+    "body": [
+      "<q:log level=\"${1|info,debug,warn,error|}\" message=\"${2:message}\" />"
+    ],
+    "description": "Log a message"
+  },
+  "Quantum Dump": {
+    "prefix": "qdump",
+    "body": [
+      "<q:dump var=\"{${1:variable}}\" />"
+    ],
+    "description": "Debug dump variable"
+  },
+  "Quantum DispatchEvent": {
+    "prefix": "qdispatch",
+    "body": [
+      "<q:dispatchEvent event=\"${1:eventName}\" data=\"{${2:data}}\" />"
+    ],
+    "description": "Publish an event"
+  },
+  "Quantum OnEvent": {
+    "prefix": "qonevent",
+    "body": [
+      "<q:onEvent event=\"${1:eventName}\">",
+      "\t$0",
+      "</q:onEvent>"
+    ],
+    "description": "Event handler"
+  },
+  "UI Window": {
+    "prefix": "uiwin",
+    "body": [
+      "<ui:window title=\"${1:Window Title}\">",
+      "\t$0",
+      "</ui:window>"
+    ],
+    "description": "UI Window container"
+  },
+  "UI HBox": {
+    "prefix": "uihbox",
+    "body": [
+      "<ui:hbox gap=\"${1:8}\" align=\"${2|start,center,end,stretch|}\">",
+      "\t$0",
+      "</ui:hbox>"
+    ],
+    "description": "Horizontal flex container"
+  },
+  "UI VBox": {
+    "prefix": "uivbox",
+    "body": [
+      "<ui:vbox gap=\"${1:8}\" align=\"${2|start,center,end,stretch|}\">",
+      "\t$0",
+      "</ui:vbox>"
+    ],
+    "description": "Vertical flex container"
+  },
+  "UI Panel": {
+    "prefix": "uipanel",
+    "body": [
+      "<ui:panel title=\"${1:Panel Title}\" ${2:collapsible=\"true\"}>",
+      "\t$0",
+      "</ui:panel>"
+    ],
+    "description": "Bordered panel with title"
+  },
+  "UI Button": {
+    "prefix": "uibtn",
+    "body": [
+      "<ui:button on-click=\"${1:handleClick}\" variant=\"${2|primary,secondary,danger,success|}\">${3:Button Text}</ui:button>"
+    ],
+    "description": "Clickable button"
+  },
+  "UI Input": {
+    "prefix": "uiinput",
+    "body": [
+      "<ui:input bind=\"${1:value}\" type=\"${2|text,password,email,number|}\" placeholder=\"${3:Enter value}\" />"
+    ],
+    "description": "Text input field"
+  },
+  "UI Input with Validation": {
+    "prefix": "uiinputv",
+    "body": [
+      "<ui:input bind=\"${1:value}\" type=\"${2:text}\" placeholder=\"${3:Enter value}\" required=\"true\" ${4:minlength=\"3\"} error-message=\"${5:Invalid input}\" />"
+    ],
+    "description": "Input with validation"
+  },
+  "UI Text": {
+    "prefix": "uitext",
+    "body": [
+      "<ui:text size=\"${1|xs,sm,md,lg,xl,2xl|}\" ${2:weight=\"bold\"}>${3:Text content}</ui:text>"
+    ],
+    "description": "Text display"
+  },
+  "UI Checkbox": {
+    "prefix": "uicheck",
+    "body": [
+      "<ui:checkbox bind=\"${1:checked}\" label=\"${2:Checkbox label}\" />"
+    ],
+    "description": "Checkbox input"
+  },
+  "UI Switch": {
+    "prefix": "uiswitch",
+    "body": [
+      "<ui:switch bind=\"${1:enabled}\" label=\"${2:Toggle label}\" />"
+    ],
+    "description": "Toggle switch"
+  },
+  "UI Select": {
+    "prefix": "uiselect",
+    "body": [
+      "<ui:select bind=\"${1:selected}\" options=\"${2:opt1,opt2,opt3}\" />"
+    ],
+    "description": "Dropdown select"
+  },
+  "UI Table": {
+    "prefix": "uitable",
+    "body": [
+      "<ui:table source=\"{${1:data}}\">",
+      "\t<ui:column key=\"${2:id}\" label=\"${3:ID}\" />",
+      "\t<ui:column key=\"${4:name}\" label=\"${5:Name}\" />",
+      "</ui:table>"
+    ],
+    "description": "Data table"
+  },
+  "UI List": {
+    "prefix": "uilist",
+    "body": [
+      "<ui:list source=\"{${1:items}}\" as=\"${2:item}\">",
+      "\t<ui:item>",
+      "\t\t$0",
+      "\t</ui:item>",
+      "</ui:list>"
+    ],
+    "description": "Repeating list"
+  },
+  "UI Form": {
+    "prefix": "uiform",
+    "body": [
+      "<ui:form on-submit=\"${1:handleSubmit}\">",
+      "\t<ui:formitem label=\"${2:Field Label}\">",
+      "\t\t<ui:input bind=\"${3:value}\" />",
+      "\t</ui:formitem>",
+      "\t<ui:button variant=\"primary\">${4:Submit}</ui:button>",
+      "</ui:form>"
+    ],
+    "description": "Form with validation"
+  },
+  "UI FormItem": {
+    "prefix": "uiformitem",
+    "body": [
+      "<ui:formitem label=\"${1:Label}\">",
+      "\t$0",
+      "</ui:formitem>"
+    ],
+    "description": "Form field with label"
+  },
+  "UI Image": {
+    "prefix": "uiimg",
+    "body": [
+      "<ui:image src=\"${1:path/to/image}\" alt=\"${2:description}\" />"
+    ],
+    "description": "Image display"
+  },
+  "UI Link": {
+    "prefix": "uilink",
+    "body": [
+      "<ui:link to=\"${1:/path}\" ${2:external=\"true\"}>${3:Link text}</ui:link>"
+    ],
+    "description": "Hyperlink"
+  },
+  "UI Progress": {
+    "prefix": "uiprogress",
+    "body": [
+      "<ui:progress value=\"{${1:progress}}\" max=\"${2:100}\" />"
+    ],
+    "description": "Progress bar"
+  },
+  "UI TabPanel": {
+    "prefix": "uitabs",
+    "body": [
+      "<ui:tabpanel>",
+      "\t<ui:tab title=\"${1:Tab 1}\">",
+      "\t\t$2",
+      "\t</ui:tab>",
+      "\t<ui:tab title=\"${3:Tab 2}\">",
+      "\t\t$0",
+      "\t</ui:tab>",
+      "</ui:tabpanel>"
+    ],
+    "description": "Tabbed content"
+  },
+  "UI Grid": {
+    "prefix": "uigrid",
+    "body": [
+      "<ui:grid columns=\"${1:3}\" gap=\"${2:16}\">",
+      "\t$0",
+      "</ui:grid>"
+    ],
+    "description": "CSS grid container"
+  },
+  "UI Card": {
+    "prefix": "uicard",
+    "body": [
+      "<ui:card title=\"${1:Card Title}\" ${2:subtitle=\"Subtitle\"}>",
+      "\t<ui:card-body>",
+      "\t\t$0",
+      "\t</ui:card-body>",
+      "</ui:card>"
+    ],
+    "description": "Card component"
+  },
+  "UI Modal": {
+    "prefix": "uimodal",
+    "body": [
+      "<ui:modal modal-id=\"${1:modal-id}\" title=\"${2:Modal Title}\">",
+      "\t$0",
+      "</ui:modal>"
+    ],
+    "description": "Modal dialog"
+  },
+  "UI Alert": {
+    "prefix": "uialert",
+    "body": [
+      "<ui:alert variant=\"${1|info,success,warning,danger|}\" ${2:dismissible=\"true\"}>${3:Alert message}</ui:alert>"
+    ],
+    "description": "Alert notification"
+  },
+  "UI Badge": {
+    "prefix": "uibadge",
+    "body": [
+      "<ui:badge variant=\"${1|primary,secondary,danger,success,warning|}\">${2:Badge}</ui:badge>"
+    ],
+    "description": "Status badge"
+  },
+  "UI Avatar": {
+    "prefix": "uiavatar",
+    "body": [
+      "<ui:avatar src=\"${1:path/to/image}\" name=\"${2:User Name}\" size=\"${3|xs,sm,md,lg,xl|}\" />"
+    ],
+    "description": "User avatar"
+  },
+  "UI Tooltip": {
+    "prefix": "uitooltip",
+    "body": [
+      "<ui:tooltip content=\"${1:Tooltip text}\" position=\"${2|top,bottom,left,right|}\">",
+      "\t$0",
+      "</ui:tooltip>"
+    ],
+    "description": "Tooltip wrapper"
+  },
+  "UI Dropdown": {
+    "prefix": "uidropdown",
+    "body": [
+      "<ui:dropdown label=\"${1:Options}\">",
+      "\t<ui:option value=\"${2:opt1}\" label=\"${3:Option 1}\" />",
+      "\t<ui:option value=\"${4:opt2}\" label=\"${5:Option 2}\" />",
+      "</ui:dropdown>"
+    ],
+    "description": "Dropdown menu"
+  },
+  "UI Chart": {
+    "prefix": "uichart",
+    "body": [
+      "<ui:chart type=\"${1|bar,line,pie,doughnut|}\" labels=\"${2:Jan,Feb,Mar}\" values=\"${3:10,20,30}\" title=\"${4:Chart Title}\" />"
+    ],
+    "description": "Simple chart"
+  },
+  "UI Breadcrumb": {
+    "prefix": "uibread",
+    "body": [
+      "<ui:breadcrumb>",
+      "\t<ui:breadcrumb-item label=\"${1:Home}\" to=\"${2:/}\" />",
+      "\t<ui:breadcrumb-item label=\"${3:Current}\" />",
+      "</ui:breadcrumb>"
+    ],
+    "description": "Navigation breadcrumbs"
+  },
+  "UI Pagination": {
+    "prefix": "uipage",
+    "body": [
+      "<ui:pagination total=\"{${1:total}}\" page-size=\"${2:10}\" bind=\"${3:currentPage}\" on-change=\"${4:handlePageChange}\" />"
+    ],
+    "description": "Pagination controls"
+  },
+  "UI Skeleton": {
+    "prefix": "uiskel",
+    "body": [
+      "<ui:skeleton variant=\"${1|text,circle,rect,card|}\" lines=\"${2:3}\" />"
+    ],
+    "description": "Loading skeleton"
+  },
+  "UI Loading": {
+    "prefix": "uiload",
+    "body": [
+      "<ui:loading text=\"${1:Loading...}\" />"
+    ],
+    "description": "Loading indicator"
+  },
+  "UI Animate": {
+    "prefix": "uianim",
+    "body": [
+      "<ui:animate type=\"${1|fade,slide,scale,slide-left,slide-right,bounce,pulse|}\" duration=\"${2:300}\" trigger=\"${3|on-load,on-hover,on-click,on-visible|}\">",
+      "\t$0",
+      "</ui:animate>"
+    ],
+    "description": "Animation wrapper"
+  },
+  "UI Theme": {
+    "prefix": "uitheme",
+    "body": [
+      "<ui:theme preset=\"${1|light,dark|}\" ${2:auto-switch=\"true\"}>",
+      "\t<ui:color name=\"${3:primary}\" value=\"${4:#3b82f6}\" />",
+      "</ui:theme>"
+    ],
+    "description": "Theme configuration"
+  },
+  "UI Spacer": {
+    "prefix": "uispacer",
+    "body": [
+      "<ui:spacer size=\"${1:16}\" />"
+    ],
+    "description": "Flexible space"
+  },
+  "UI Rule": {
+    "prefix": "uirule",
+    "body": [
+      "<ui:rule />"
+    ],
+    "description": "Horizontal separator"
+  },
+  "UI Accordion": {
+    "prefix": "uiaccord",
+    "body": [
+      "<ui:accordion>",
+      "\t<ui:section title=\"${1:Section 1}\" expanded=\"true\">",
+      "\t\t$2",
+      "\t</ui:section>",
+      "\t<ui:section title=\"${3:Section 2}\">",
+      "\t\t$0",
+      "\t</ui:section>",
+      "</ui:accordion>"
+    ],
+    "description": "Collapsible accordion"
+  },
+  "UI Validator": {
+    "prefix": "uivalid",
+    "body": [
+      "<ui:validator name=\"${1:validatorName}\" pattern=\"${2:^[a-z]+$}\" message=\"${3:Invalid format}\" />"
+    ],
+    "description": "Custom validator rule"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "platformer",
+  "description": "Platformer with behaviors, prefabs, and instances",
+  "input": "<q:application id=\"platformer\" type=\"game\" engine=\"2d\">\n  <qg:behavior name=\"Collectible\">\n    <q:set name=\"value\" value=\"10\" />\n    <q:function name=\"onCollect\">\n      <q:set name=\"score\" value=\"{score + self.value}\" scope=\"scene\" />\n    </q:function>\n  </qg:behavior>\n  <qg:prefab name=\"Coin\">\n    <qg:sprite src=\"coin.png\" body=\"dynamic\" sensor=\"true\" tag=\"coin\">\n      <qg:use behavior=\"Collectible\" value=\"10\" on-collision=\"onCollect\" />\n    </qg:sprite>\n  </qg:prefab>\n  <qg:scene name=\"level1\" width=\"1280\" height=\"720\" background=\"#87CEEB\">\n    <qg:physics gravity-y=\"9.8\" bounds=\"canvas\" />\n    <q:set name=\"score\" value=\"0\" type=\"integer\" />\n    <qg:camera follow=\"player\" lerp=\"0.1\" bounds=\"scene\" />\n    <qg:sprite id=\"player\" src=\"hero.png\" x=\"100\" y=\"400\" controls=\"wasd\" speed=\"5\" jump-force=\"12\" body=\"dynamic\" />\n    <qg:sprite id=\"ground\" src=\"ground.png\" x=\"640\" y=\"700\" width=\"1280\" height=\"40\" body=\"static\" />\n    <qg:instance prefab=\"Coin\" x=\"300\" y=\"350\" />\n    <qg:instance prefab=\"Coin\" x=\"500\" y=\"350\" />\n    <qg:hud position=\"top-left\">\n      <text style=\"font-size:24px; color:white\">Score: {score}</text>\n    </qg:hud>\n  </qg:scene>\n</q:application>",
+  "expected": {
+    "type": "application",
+    "app_type": "game",
+    "scenes": 1,
+    "behaviors": 1,
+    "prefabs": 1
+  }
+}

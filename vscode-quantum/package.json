@@ -1,0 +1,472 @@
+{
+  "name": "quantum-language",
+  "displayName": "Quantum Language Support",
+  "description": "Syntax highlighting, IntelliSense, code navigation, preview, and AI assistance for Quantum Framework (.q files)",
+  "version": "1.0.0",
+  "publisher": "quantum-framework",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Linters",
+    "Formatters",
+    "Debuggers"
+  ],
+  "keywords": [
+    "quantum",
+    "web framework",
+    "declarative",
+    "xml",
+    "coldfusion-like"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/quantum-framework/quantum"
+  },
+  "icon": "images/quantum-icon.png",
+  "activationEvents": [
+    "onLanguage:quantum",
+    "onCommand:quantum.openPreview",
+    "onView:quantumComponentTree"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "quantum",
+        "aliases": [
+          "Quantum",
+          "quantum"
+        ],
+        "extensions": [
+          ".q"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "quantum",
+        "scopeName": "source.quantum",
+        "path": "./syntaxes/quantum.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "quantum",
+        "path": "./snippets/quantum.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "quantum.openPreview",
+        "title": "Open Preview",
+        "category": "Quantum",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "quantum.openPreviewToSide",
+        "title": "Open Preview to the Side",
+        "category": "Quantum",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "quantum.refreshPreview",
+        "title": "Refresh Preview",
+        "category": "Quantum",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "quantum.togglePreviewView",
+        "title": "Toggle HTML/Rendered View",
+        "category": "Quantum"
+      },
+      {
+        "command": "quantum.refreshComponentTree",
+        "title": "Refresh Component Tree",
+        "category": "Quantum",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "quantum.goToDefinition",
+        "title": "Go to Definition",
+        "category": "Quantum"
+      },
+      {
+        "command": "quantum.run",
+        "title": "Run Quantum File",
+        "category": "Quantum",
+        "icon": "$(play)"
+      },
+      {
+        "command": "quantum.startServer",
+        "title": "Start Development Server",
+        "category": "Quantum",
+        "icon": "$(server)"
+      },
+      {
+        "command": "quantum.quickRun",
+        "title": "Quick Run",
+        "category": "Quantum",
+        "icon": "$(run)"
+      },
+      {
+        "command": "quantum.runTask",
+        "title": "Run Task...",
+        "category": "Quantum"
+      },
+      {
+        "command": "quantum.explainError",
+        "title": "Explain Error",
+        "category": "Quantum",
+        "icon": "$(lightbulb)"
+      },
+      {
+        "command": "quantum.suggestFix",
+        "title": "Suggest Fix",
+        "category": "Quantum",
+        "icon": "$(lightbulb-autofix)"
+      },
+      {
+        "command": "quantum.suggestFixWithAI",
+        "title": "Suggest Fix with AI",
+        "category": "Quantum"
+      },
+      {
+        "command": "quantum.lookupDocumentation",
+        "title": "Lookup Documentation",
+        "category": "Quantum",
+        "icon": "$(book)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "quantum.run",
+          "when": "resourceLangId == quantum",
+          "group": "navigation@1"
+        },
+        {
+          "command": "quantum.openPreviewToSide",
+          "when": "resourceLangId == quantum",
+          "group": "navigation@2"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "quantum.explainError",
+          "when": "resourceLangId == quantum",
+          "group": "quantum@1"
+        },
+        {
+          "command": "quantum.suggestFix",
+          "when": "resourceLangId == quantum",
+          "group": "quantum@2"
+        },
+        {
+          "command": "quantum.lookupDocumentation",
+          "when": "resourceLangId == quantum",
+          "group": "quantum@3"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "quantum.refreshComponentTree",
+          "when": "view == quantumComponentTree",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "quantum.openPreview",
+          "when": "resourceLangId == quantum"
+        },
+        {
+          "command": "quantum.run",
+          "when": "resourceLangId == quantum"
+        },
+        {
+          "command": "quantum.explainError",
+          "when": "resourceLangId == quantum"
+        },
+        {
+          "command": "quantum.goToDefinition",
+          "when": "false"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "quantum",
+          "title": "Quantum",
+          "icon": "$(circuit-board)"
+        }
+      ]
+    },
+    "views": {
+      "quantum": [
+        {
+          "id": "quantumComponentTree",
+          "name": "Component Structure",
+          "contextualTitle": "Quantum Components",
+          "icon": "$(symbol-class)"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Quantum",
+      "properties": {
+        "quantum.validation.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable validation of Quantum files"
+        },
+        "quantum.validation.showWarnings": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show warnings in addition to errors"
+        },
+        "quantum.completion.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable code completion"
+        },
+        "quantum.hover.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable hover documentation"
+        },
+        "quantum.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Path to Python executable"
+        },
+        "quantum.frameworkPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to Quantum framework installation"
+        },
+        "quantum.serverPort": {
+          "type": "number",
+          "default": 8080,
+          "description": "Port for development server"
+        },
+        "quantum.buildOutputDir": {
+          "type": "string",
+          "default": "./dist",
+          "description": "Output directory for builds"
+        },
+        "quantum.preview.autoRefresh": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-refresh preview on save"
+        },
+        "quantum.preview.refreshDelay": {
+          "type": "number",
+          "default": 300,
+          "description": "Delay in ms before refreshing preview"
+        },
+        "quantum.ai.provider": {
+          "type": "string",
+          "enum": [
+            "anthropic",
+            "openai",
+            "ollama"
+          ],
+          "default": "anthropic",
+          "description": "AI provider for code assistance"
+        },
+        "quantum.ai.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for Anthropic (Claude)"
+        },
+        "quantum.ai.model": {
+          "type": "string",
+          "default": "claude-sonnet-4-20250514",
+          "description": "Model to use for Anthropic"
+        },
+        "quantum.ai.openaiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for OpenAI"
+        },
+        "quantum.ai.openaiModel": {
+          "type": "string",
+          "default": "gpt-4",
+          "description": "Model to use for OpenAI"
+        },
+        "quantum.ai.ollamaUrl": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "URL for local Ollama server"
+        },
+        "quantum.ai.ollamaModel": {
+          "type": "string",
+          "default": "llama2",
+          "description": "Model to use for Ollama"
+        }
+      }
+    },
+    "taskDefinitions": [
+      {
+        "type": "quantum",
+        "required": [
+          "command"
+        ],
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": [
+              "run",
+              "start",
+              "build",
+              "test",
+              "lint"
+            ],
+            "description": "Quantum command to run"
+          },
+          "file": {
+            "type": "string",
+            "description": "File to process"
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Additional arguments"
+          }
+        }
+      }
+    ],
+    "problemMatchers": [
+      {
+        "name": "quantum",
+        "owner": "quantum",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s+(error|warning|info):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      },
+      {
+        "name": "quantumParser",
+        "owner": "quantum",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^Parse error in (.+) at line (\\d+): (.+)$",
+          "file": 1,
+          "line": 2,
+          "message": 3
+        }
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "quantum",
+        "label": "Quantum Debug",
+        "languages": [
+          "quantum"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Quantum file to run",
+                "default": "${file}"
+              },
+              "cwd": {
+                "type": "string",
+                "description": "Working directory",
+                "default": "${workspaceFolder}"
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Command line arguments"
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "quantum",
+            "request": "launch",
+            "name": "Run Quantum File",
+            "program": "${file}"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "Quantum: Run File",
+            "description": "Run the current Quantum file",
+            "body": {
+              "type": "quantum",
+              "request": "launch",
+              "name": "Run Quantum File",
+              "program": "^\"${file}\""
+            }
+          }
+        ]
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "quantum.run",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "resourceLangId == quantum"
+      },
+      {
+        "command": "quantum.openPreviewToSide",
+        "key": "ctrl+k v",
+        "mac": "cmd+k v",
+        "when": "resourceLangId == quantum"
+      },
+      {
+        "command": "quantum.lookupDocumentation",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
+        "when": "resourceLangId == quantum"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.74.0",
+    "@typescript-eslint/eslint-plugin": "^5.0.0",
+    "@typescript-eslint/parser": "^5.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0",
+    "@vscode/vsce": "^2.0.0"
+  }
+}

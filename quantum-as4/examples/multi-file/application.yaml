@@ -1,0 +1,30 @@
+# Multi-File Application Example
+
+application:
+  name: "User Management App"
+  version: "1.0.0"
+  description: "Multi-file MXML application demonstrating module system"
+
+entry:
+  mxml: "src/Main.mxml"
+  assets: "assets/"
+
+source:
+  root: "src"
+  auto_discover: true
+
+targets:
+  web:
+    enabled: true
+    output: "dist/web"
+    config:
+      title: "User Management"
+      optimize: false
+      source_maps: true
+
+build:
+  mode: "development"
+  source_maps: true
+
+assets:
+  images: []

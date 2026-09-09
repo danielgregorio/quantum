@@ -1,0 +1,96 @@
+{
+  "dataset_type": "positive",
+  "feature": "component_composition",
+  "category": "simple_import",
+  "description": "Valid examples of basic q:import statements",
+  "examples": [
+    {
+      "id": "import-simple-001",
+      "intent": "Import a button component",
+      "input": {
+        "natural_language": "Import Button component and use it",
+        "context": {
+          "available_components": ["Button"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"Page\">\n  <q:import component=\"Button\" />\n  <Button label=\"Save\" />\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "ImportNode",
+              "component": "Button",
+              "from_path": null,
+              "alias": "Button"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Button",
+              "props": {
+                "label": "Save"
+              }
+            }
+          ]
+        },
+        "runtime_behavior": "Imports Button.q and renders button with label 'Save'"
+      },
+      "tags": ["simple", "import", "component_call"]
+    },
+    {
+      "id": "import-simple-002",
+      "intent": "Import with from path",
+      "input": {
+        "natural_language": "Import Card component from ui directory",
+        "context": {
+          "available_components": ["ui/Card"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"Page\">\n  <q:import component=\"Card\" from=\"./ui\" />\n  <Card title=\"Welcome\" />\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "ImportNode",
+              "component": "Card",
+              "from_path": "./ui",
+              "alias": "Card"
+            }
+          ]
+        },
+        "runtime_behavior": "Resolves Card.q from ./ui/components directory"
+      },
+      "tags": ["import", "from_path", "directory_resolution"]
+    },
+    {
+      "id": "import-simple-003",
+      "intent": "Import with alias",
+      "input": {
+        "natural_language": "Import Layout component with alias AdminLayout",
+        "context": {
+          "available_components": ["Layout"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"Page\">\n  <q:import component=\"Layout\" as=\"AdminLayout\" />\n  <AdminLayout title=\"Admin Panel\" />\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "ImportNode",
+              "component": "Layout",
+              "from_path": null,
+              "alias": "AdminLayout"
+            }
+          ]
+        },
+        "runtime_behavior": "Imports Layout.q but references it as AdminLayout"
+      },
+      "tags": ["import", "alias", "renaming"]
+    }
+  ]
+}

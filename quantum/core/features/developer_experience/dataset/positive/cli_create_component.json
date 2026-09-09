@@ -1,0 +1,21 @@
+{
+  "example_id": "dx_cli_001",
+  "category": "developer_experience",
+  "tags": ["cli", "create", "component"],
+  "input": {
+    "command": "quantum create component MyComponent",
+    "context": {
+      "phase": "C",
+      "feature": "developer_experience",
+      "operation": "create_component",
+      "template": "basic"
+    }
+  },
+  "expected_behavior": "Creates a new component file at components/MyComponent.q with basic template",
+  "validation": {
+    "file_created": "components/MyComponent.q",
+    "contains_component_tag": true,
+    "template_applied": "basic",
+    "success_message_shown": true
+  }
+}

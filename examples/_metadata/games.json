@@ -1,0 +1,276 @@
+{
+  "category": "games",
+  "name": "Games",
+  "description": "Game development with qg:scene, sprites, and physics",
+  "icon": "🎮",
+  "docsPath": "/features/game-engine",
+  "exampleCount": 9,
+  "examples": [
+    {
+      "file": "adventure.q",
+      "title": "Adventure",
+      "description": "Example demonstrating Adventure",
+      "complexity": "advanced",
+      "tags": [
+        "games",
+        "qg:scene",
+        "qg:sprite",
+        "q:application",
+        "q:function",
+        "q:set",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:function",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/features/game-engine"
+      ],
+      "lineCount": 33
+    },
+    {
+      "file": "fighter.q",
+      "title": "Fighter",
+      "description": "==================== FIGHTER BEHAVIOR ====================",
+      "complexity": "advanced",
+      "tags": [
+        "games",
+        "qg:scene",
+        "qg:sprite",
+        "q:application",
+        "q:function",
+        "q:set",
+        "q:if",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:function",
+        "q:if",
+        "q:set",
+        "qg:hud",
+        "qg:input",
+        "qg:scene",
+        "qg:sprite"
+      ],
+      "relatedDocs": [
+        "/features/game-engine"
+      ],
+      "lineCount": 223
+    },
+    {
+      "file": "kenney_platformer.q",
+      "title": "Kenney Platformer",
+      "description": "=== BEHAVIORS ===",
+      "complexity": "advanced",
+      "tags": [
+        "games",
+        "qg:scene",
+        "qg:hud",
+        "qg:sprite",
+        "q:application",
+        "q:function",
+        "q:set",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:function",
+        "q:set",
+        "qg:hud",
+        "qg:input",
+        "qg:scene",
+        "qg:sprite"
+      ],
+      "relatedDocs": [
+        "/features/game-engine"
+      ],
+      "lineCount": 558
+    },
+    {
+      "file": "mario.q",
+      "title": "Mario",
+      "description": "=== BEHAVIORS ===",
+      "complexity": "advanced",
+      "tags": [
+        "games",
+        "qg:scene",
+        "qg:hud",
+        "qg:sprite",
+        "q:application",
+        "q:function",
+        "q:set",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:function",
+        "q:set",
+        "qg:hud",
+        "qg:input",
+        "qg:scene",
+        "qg:sprite"
+      ],
+      "relatedDocs": [
+        "/features/game-engine"
+      ],
+      "lineCount": 517
+    },
+    {
+      "file": "platformer.q",
+      "title": "Platformer",
+      "description": "==================== BEHAVIORS ====================",
+      "complexity": "advanced",
+      "tags": [
+        "games",
+        "qg:scene",
+        "qg:hud",
+        "qg:sprite",
+        "q:application",
+        "q:function",
+        "q:set",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:function",
+        "q:set",
+        "qg:hud",
+        "qg:scene",
+        "qg:sprite"
+      ],
+      "relatedDocs": [
+        "/features/game-engine"
+      ],
+      "lineCount": 121
+    },
+    {
+      "file": "smw_world1.q",
+      "title": "Smw World1",
+      "description": "=== BEHAVIORS ===",
+      "complexity": "advanced",
+      "tags": [
+        "games",
+        "qg:scene",
+        "qg:hud",
+        "qg:sprite",
+        "q:application",
+        "q:function",
+        "q:set",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:function",
+        "q:set",
+        "qg:hud",
+        "qg:input",
+        "qg:scene",
+        "qg:sprite"
+      ],
+      "relatedDocs": [
+        "/features/game-engine"
+      ],
+      "lineCount": 800
+    },
+    {
+      "file": "snake.q",
+      "title": "Snake",
+      "description": "Snake game with proper tail following and food collision",
+      "complexity": "advanced",
+      "tags": [
+        "games",
+        "qg:scene",
+        "qg:hud",
+        "qg:sprite",
+        "q:application",
+        "q:function",
+        "q:set",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:function",
+        "q:set",
+        "qg:hud",
+        "qg:input",
+        "qg:scene",
+        "qg:sprite",
+        "qg:timer"
+      ],
+      "relatedDocs": [
+        "/features/game-engine"
+      ],
+      "lineCount": 150
+    },
+    {
+      "file": "tictactoe.q",
+      "title": "Tictactoe",
+      "description": "Example demonstrating Tictactoe",
+      "complexity": "advanced",
+      "tags": [
+        "games",
+        "qg:scene",
+        "qg:hud",
+        "qg:sprite",
+        "q:application",
+        "q:function",
+        "q:set",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:function",
+        "q:set",
+        "qg:hud",
+        "qg:input",
+        "qg:scene",
+        "qg:sprite"
+      ],
+      "relatedDocs": [
+        "/features/game-engine"
+      ],
+      "lineCount": 133
+    },
+    {
+      "file": "tower_defense.q",
+      "title": "Tower Defense",
+      "description": "Example demonstrating Tower Defense",
+      "complexity": "advanced",
+      "tags": [
+        "games",
+        "qg:scene",
+        "qg:hud",
+        "qg:sprite",
+        "q:application",
+        "q:function",
+        "q:set",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:application",
+        "q:function",
+        "q:set",
+        "qg:hud",
+        "qg:scene",
+        "qg:sprite",
+        "qg:timer"
+      ],
+      "relatedDocs": [
+        "/features/game-engine"
+      ],
+      "lineCount": 213
+    }
+  ]
+}

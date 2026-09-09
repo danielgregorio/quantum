@@ -1,0 +1,2366 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>kenney_platformer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #111; display: flex; justify-content: center; align-items: center; width: 100vw; height: 100vh; }
+    canvas { display: block; }
+    .qg-hud { position: absolute; pointer-events: none; padding: 8px; font-family: sans-serif; z-index: 10; }
+    .qg-hud-top-left { top: 0; left: 0; }
+    .qg-hud-top-right { top: 0; right: 0; }
+    .qg-hud-top-center { top: 0; left: 50%; transform: translateX(-50%); }
+    .qg-hud-bottom-left { bottom: 0; left: 0; }
+    .qg-hud-bottom-right { bottom: 0; right: 0; }
+    .qg-hud-bottom-center { bottom: 0; left: 50%; transform: translateX(-50%); }
+    .qg-hud-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+    /* Source Code Viewer */
+    #qg-source-btn {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    #qg-source-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.9);
+    }
+    #qg-source-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.92);
+      z-index: 999;
+      overflow: auto;
+    }
+    #qg-source-modal.visible {
+      display: flex;
+      flex-direction: column;
+    }
+    #qg-source-close {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 13px;
+      z-index: 1001;
+    }
+    #qg-source-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    #qg-source-content {
+      flex: 1;
+      overflow: auto;
+      padding: 48px 24px 24px;
+    }
+    #qg-source-content pre {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 24px;
+      border-radius: 12px;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre;
+      tab-size: 2;
+      border: 1px solid #313244;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="qg-hud qg-hud-top-left" id="qg-hud-0"><text style="font-size:14px; color:#fff; font-family:monospace; text-shadow:1px 1px #000; padding:8px;">
+        LIVES: {lives}
+      </text></div>
+  <div class="qg-hud qg-hud-top-center" id="qg-hud-1"><text style="font-size:14px; color:#ffd700; font-family:monospace; text-shadow:1px 1px #000;">
+        SCORE: {score}
+      </text></div>
+  <div class="qg-hud qg-hud-top-right" id="qg-hud-2"><text style="font-size:14px; color:#fff; font-family:monospace; text-shadow:1px 1px #000; padding:8px;">
+        COINS: {coins}
+      </text></div>
+  <div class="qg-hud qg-hud-center" id="qg-hud-3"><text style="font-size:36px; color:#fff; font-family:monospace; text-shadow:3px 3px #000;">
+        {gameOver ? 'GAME OVER' : (won ? 'LEVEL COMPLETE!' : '')}
+      </text></div>
+  <button id="qg-source-btn" onclick="toggleSource()">source</button>
+  <div id="qg-source-modal">
+    <button id="qg-source-close" onclick="toggleSource()">ESC</button>
+    <div id="qg-source-content">
+      <pre id="qg-source-code">No source code available</pre>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20/build/matter.min.js"></script>
+  <script>
+function toggleSource() {
+  var modal = document.getElementById('qg-source-modal');
+  modal.classList.toggle('visible');
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.getElementById('qg-source-modal').classList.remove('visible');
+  }
+});
+(async function() {
+
+  // === PIXI APP ===
+  const app = new PIXI.Application();
+  await app.init({ width: 800, height: 450, background: "#92CDDB" });
+  document.body.appendChild(app.canvas);
+  // World size: 3600x450, Viewport: 800x450
+
+  // === MATTER.JS ENGINE ===
+  const mEngine = Matter.Engine.create();
+  mEngine.gravity.x = 0;
+  mEngine.gravity.y = 9.8;
+  // Increase solver iterations for tighter collision resolution
+  mEngine.positionIterations = 10;
+  mEngine.velocityIterations = 8;
+  const mWorld = mEngine.world;
+
+  // === EVENT BUS ===
+  // Event Bus
+  const _gameEvents = { _listeners: {} };
+  _gameEvents.on = function(event, cb) {
+    if (!this._listeners[event]) {
+      this._listeners[event] = [];
+    }
+    this._listeners[event].push(cb);
+  };
+  _gameEvents.off = function(event, cb) {
+    if (this._listeners[event]) {
+      this._listeners[event] = this._listeners[event].filter(fn => fn !== cb);
+    }
+  };
+  _gameEvents.emit = function(event, data) {
+    if (this._listeners[event]) {
+      for (const cb of this._listeners[event]) {
+        cb(data);
+      }
+    }
+  };
+
+  // === GAME STATE ===
+  let score = 0;
+  let coins = 0;
+  let lives = 3;
+  let gameOver = false;
+  let won = false;
+
+  // === ASSET LOADING ===
+  await PIXI.Assets.load(["assets/kenney/audio/block.ogg", "assets/kenney/audio/coin.ogg", "assets/kenney/audio/hurt.ogg", "assets/kenney/audio/jump.ogg", "assets/kenney/audio/powerup.ogg", "assets/kenney/audio/stomp.ogg", "assets/kenney/audio/win.ogg", "assets/kenney/tilemap-characters_packed.png", "assets/kenney/tilemap_packed.png"]);
+
+  // === ANIMATION SYSTEM ===
+  // Animation System
+  const _animatedSprites = {};
+
+  function _parseFrames(spec) {
+    if (spec.includes('-')) {
+      const parts = spec.split('-').map(Number);
+      const result = [];
+      for (let i = parts[0]; i <= parts[1]; i += 1) {
+        result.push(i);
+      }
+      return result;
+    }
+    return spec.split(',').map(s => parseInt(s.trim(), 10));
+  }
+
+  function _registerAnimation(spriteId, texture, frameW, frameH, anims) {
+    if (!texture || !frameW || !frameH) {
+      return;
+    }
+    const baseTexture = texture.source || texture.baseTexture || texture;
+    const texW = baseTexture.width || texture.width;
+    const texH = baseTexture.height || texture.height;
+    const cols = Math.floor(texW / frameW);
+    const rows = Math.floor(texH / frameH);
+    const totalFrames = cols * rows;
+
+    // Build frame textures
+    const frameTextures = [];
+    for (let i = 0; i <= totalFrames - 1; i += 1) {
+      const fx = i % cols;
+      const fy = Math.floor(i / cols);
+      const rect = new PIXI.Rectangle(fx * frameW, fy * frameH, frameW, frameH);
+      const frameTex = new PIXI.Texture({ source: baseTexture, frame: rect });
+      frameTextures.push(frameTex);
+    }
+
+    // Parse named animations
+    const animDefs = {};
+    let defaultAnim = null;
+    for (const [name, cfg] of Object.entries(anims)) {
+      const frames = _parseFrames(cfg.frames);
+      const textures = frames.filter(f => f < frameTextures.length).map(f => frameTextures[f]);
+      if (textures.length > 0) {
+        animDefs[name] = { textures: textures, speed: cfg.speed || 0.1, loop: cfg.loop !== false };
+        if (cfg.autoPlay) {
+          defaultAnim = name;
+        }
+      }
+    }
+
+    if (Object.keys(animDefs).length === 0) {
+      return;
+    }
+
+    if (!defaultAnim) {
+      defaultAnim = Object.keys(animDefs)[0];
+    }
+
+    // Create animated sprite
+    const firstAnim = animDefs[defaultAnim];
+    const animSprite = new PIXI.AnimatedSprite(firstAnim.textures);
+    animSprite.animationSpeed = firstAnim.speed;
+    if (firstAnim.loop !== false) {
+      animSprite.loop = true;
+    }
+    animSprite.play();
+
+    // Copy transform from static sprite
+    const info = _sprites[spriteId];
+    if (info) {
+      const oldSprite = info.sprite;
+      animSprite.x = oldSprite.x;
+      animSprite.y = oldSprite.y;
+      animSprite.anchor.x = oldSprite.anchor ? oldSprite.anchor.x : 0.5;
+      animSprite.anchor.y = oldSprite.anchor ? oldSprite.anchor.y : 0.5;
+      if (oldSprite.width) {
+        animSprite.width = oldSprite.width;
+      }
+      if (oldSprite.height) {
+        animSprite.height = oldSprite.height;
+      }
+      animSprite.alpha = oldSprite.alpha;
+      animSprite.visible = oldSprite.visible;
+
+      // Replace in container
+      const parent = oldSprite.parent;
+      if (parent) {
+        const idx = parent.getChildIndex(oldSprite);
+        parent.removeChild(oldSprite);
+        parent.addChildAt(animSprite, idx);
+      }
+      info.sprite = animSprite;
+      _animatedSprites[spriteId] = { anims: animDefs, current: defaultAnim, sprite: animSprite };
+    }
+  }
+
+  function _switchAnimation(spriteId, animName) {
+    const entry = _animatedSprites[spriteId];
+    if (!entry || entry.current === animName || !entry.anims[animName]) {
+      return;
+    }
+    const anim = entry.anims[animName];
+    entry.sprite.textures = anim.textures;
+    entry.sprite.animationSpeed = anim.speed;
+    entry.sprite.loop = anim.loop !== false;
+    entry.sprite.gotoAndPlay(0);
+    entry.current = animName;
+  }
+
+  function _updateControlAnimations() {
+    for (const [spriteId, ctrl] of Object.entries(_controlledSprites)) {
+      const entry = _animatedSprites[spriteId];
+      if (!entry) {
+        continue;
+      }
+      const info = _sprites[spriteId];
+      if (!info || !info.body) {
+        continue;
+      }
+      const vx = Math.abs(info.body.velocity.x);
+      const vy = info.body.velocity.y;
+
+      // Priority: jump > walk > idle
+      if (Math.abs(vy) > 5 && entry.anims['jump']) {
+        _switchAnimation(spriteId, 'jump');
+      } else if (vx > 0.5 && _keys[ctrl.right] && entry.anims['walk-right']) {
+        _switchAnimation(spriteId, 'walk-right');
+      } else if (vx > 0.5 && _keys[ctrl.left] && entry.anims['walk-left']) {
+        _switchAnimation(spriteId, 'walk-left');
+      } else if (vx > 0.5 && (entry.anims['walk'] || entry.anims['walk-right'])) {
+        _switchAnimation(spriteId, entry.anims['walk'] ? 'walk' : 'walk-right');
+      } else if (entry.anims['idle']) {
+        _switchAnimation(spriteId, 'idle');
+      }
+    }
+  }
+
+  // === BEHAVIORS ===
+  class PlayerBehavior {
+    constructor(owner, overrides) {
+      this.owner = owner;
+      this.invulnFrames = 0;
+      this.checkpointX = 36;
+      this.checkpointY = 348;
+      if (overrides) Object.assign(this, overrides);
+    }
+    get x() { return this.owner.sprite.x; }
+    set x(v) { this.owner.sprite.x = v; }
+    get y() { return this.owner.sprite.y; }
+    set y(v) { this.owner.sprite.y = v; }
+    get rotation() { return this.owner.sprite.rotation; }
+    set rotation(v) { this.owner.sprite.rotation = v; }
+    get alpha() { return this.owner.sprite.alpha; }
+    set alpha(v) { this.owner.sprite.alpha = v; }
+    get visible() { return this.owner.sprite.visible; }
+    set visible(v) { this.owner.sprite.visible = v; }
+    onEnemyHit() {
+      var other = this._other;
+      var myBody = this.owner.body;
+      var enemyBody = other ? other.body : null;
+      if (this.invulnFrames > 0) return;
+      var stomped = false;
+      if (myBody && enemyBody) {
+      var myBottom = myBody.position.y + 12;
+      var enemyTop = enemyBody.position.y - 12;
+      stomped = (myBottom < enemyTop + 14) && (myBody.velocity.y > 1);
+      }
+      if (stomped) {
+      Matter.Body.setVelocity(myBody, {x: myBody.velocity.x, y: -10});
+      game.destroy(other);
+      score += 100;
+      game.play('stomp_sfx');
+      _updateHUD();
+      } else {
+      lives--;
+      this.invulnFrames = 120;
+      game.play('hurt_sfx');
+      if (lives <= 0) {
+      gameOver = true;
+      } else {
+      game.respawn("player", this.checkpointX, this.checkpointY);
+      }
+      _updateHUD();
+      }
+    }
+    onCoinGet() {
+      var other = this._other;
+      coins++;
+      score += 50;
+      game.destroy(other);
+      game.play('coin_sfx');
+      if (coins >= 100) {
+      coins = 0;
+      lives++;
+      }
+      _updateHUD();
+    }
+    onGemGet() {
+      var other = this._other;
+      score += 500;
+      game.destroy(other);
+      game.play('powerup_sfx');
+      _updateHUD();
+    }
+    onBlockHit() {
+      var other = this._other;
+      var myBody = this.owner.body;
+      if (myBody && other && other.body) {
+      var myY = myBody.position.y;
+      var blockY = other.body.position.y;
+      if (myY > blockY + 4 && myBody.velocity.y < 0) {
+      coins++;
+      score += 50;
+      game.play('block_sfx');
+      Matter.Body.setVelocity(myBody, {x: myBody.velocity.x, y: 2});
+      var spr = other.sprite;
+      if (spr) {
+      var origY = spr.y;
+      spr.y -= 6;
+      setTimeout(function() { spr.y = origY; }, 150);
+      }
+      _updateHUD();
+      }
+      }
+    }
+    onFlagGet() {
+      if (!won) {
+      won = true;
+      score += 5000;
+      game.play('win_sfx');
+      _updateHUD();
+      var myBody = _sprites["player"].body;
+      if (myBody) {
+      Matter.Body.setStatic(myBody, true);
+      Matter.Body.setVelocity(myBody, {x: 0, y: 0});
+      }
+      }
+    }
+    onCheckpoint() {
+      this.checkpointX = this.owner.body ? this.owner.body.position.x : this.checkpointX;
+      this.checkpointY = this.owner.body ? this.owner.body.position.y : this.checkpointY;
+    }
+    onDeath() {
+      lives--;
+      if (lives <= 0) {
+      gameOver = true;
+      } else {
+      game.respawn("player", this.checkpointX, this.checkpointY);
+      }
+      _updateHUD();
+    }
+    update() {
+      if (this.invulnFrames > 0) {
+      this.invulnFrames--;
+      var spr = this.owner.sprite;
+      if (spr) {
+      spr.alpha = (this.invulnFrames % 8 < 4) ? 0.3 : 1.0;
+      }
+      if (this.invulnFrames === 0 && spr) {
+      spr.alpha = 1.0;
+      }
+      }
+    }
+  }
+
+  class PatrolAI {
+    constructor(owner, overrides) {
+      this.owner = owner;
+      this.dir = -1;
+      this.spd = 1.0;
+      if (overrides) Object.assign(this, overrides);
+    }
+    get x() { return this.owner.sprite.x; }
+    set x(v) { this.owner.sprite.x = v; }
+    get y() { return this.owner.sprite.y; }
+    set y(v) { this.owner.sprite.y = v; }
+    get rotation() { return this.owner.sprite.rotation; }
+    set rotation(v) { this.owner.sprite.rotation = v; }
+    get alpha() { return this.owner.sprite.alpha; }
+    set alpha(v) { this.owner.sprite.alpha = v; }
+    get visible() { return this.owner.sprite.visible; }
+    set visible(v) { this.owner.sprite.visible = v; }
+    update() {
+      var b = this.owner.body;
+      if (b) Matter.Body.setVelocity(b, {x: this.dir * this.spd, y: b.velocity.y});
+    }
+    onWall() {
+      this.dir *= -1;
+    }
+  }
+
+  class SmartPatrolAI {
+    constructor(owner, overrides) {
+      this.owner = owner;
+      this.dir = -1;
+      this.spd = 0.8;
+      if (overrides) Object.assign(this, overrides);
+    }
+    get x() { return this.owner.sprite.x; }
+    set x(v) { this.owner.sprite.x = v; }
+    get y() { return this.owner.sprite.y; }
+    set y(v) { this.owner.sprite.y = v; }
+    get rotation() { return this.owner.sprite.rotation; }
+    set rotation(v) { this.owner.sprite.rotation = v; }
+    get alpha() { return this.owner.sprite.alpha; }
+    set alpha(v) { this.owner.sprite.alpha = v; }
+    get visible() { return this.owner.sprite.visible; }
+    set visible(v) { this.owner.sprite.visible = v; }
+    update() {
+      var b = this.owner.body;
+      if (b) Matter.Body.setVelocity(b, {x: this.dir * this.spd, y: b.velocity.y});
+    }
+    onWall() {
+      this.dir *= -1;
+    }
+    onEdge() {
+      this.dir *= -1;
+    }
+  }
+
+  class FloatingCoin {
+    constructor(owner, overrides) {
+      this.owner = owner;
+      this.timer = 0;
+      this.baseY = 0;
+      this.initialized = false;
+      if (overrides) Object.assign(this, overrides);
+    }
+    get x() { return this.owner.sprite.x; }
+    set x(v) { this.owner.sprite.x = v; }
+    get y() { return this.owner.sprite.y; }
+    set y(v) { this.owner.sprite.y = v; }
+    get rotation() { return this.owner.sprite.rotation; }
+    set rotation(v) { this.owner.sprite.rotation = v; }
+    get alpha() { return this.owner.sprite.alpha; }
+    set alpha(v) { this.owner.sprite.alpha = v; }
+    get visible() { return this.owner.sprite.visible; }
+    set visible(v) { this.owner.sprite.visible = v; }
+    update() {
+      if (!this.initialized) {
+      this.baseY = this.owner.sprite ? this.owner.sprite.y : 0;
+      this.initialized = true;
+      }
+      this.timer += 0.05;
+      var spr = this.owner.sprite;
+      if (spr) {
+      spr.y = this.baseY + Math.sin(this.timer) * 3;
+      }
+    }
+  }
+
+  class QBlockBehavior {
+    constructor(owner, overrides) {
+      this.owner = owner;
+      this.active = true;
+      if (overrides) Object.assign(this, overrides);
+    }
+    get x() { return this.owner.sprite.x; }
+    set x(v) { this.owner.sprite.x = v; }
+    get y() { return this.owner.sprite.y; }
+    set y(v) { this.owner.sprite.y = v; }
+    get rotation() { return this.owner.sprite.rotation; }
+    set rotation(v) { this.owner.sprite.rotation = v; }
+    get alpha() { return this.owner.sprite.alpha; }
+    set alpha(v) { this.owner.sprite.alpha = v; }
+    get visible() { return this.owner.sprite.visible; }
+    set visible(v) { this.owner.sprite.visible = v; }
+    onHit() {
+      if (!this.active) return;
+      var other = this._other;
+      if (!other || !other.body) return;
+      var playerY = other.body.position.y;
+      var blockY = this.owner.body ? this.owner.body.position.y : this.owner.sprite.y;
+      if (playerY > blockY + 4) {
+      this.active = false;
+      coins++;
+      score += 50;
+      game.play('block_sfx');
+      _updateHUD();
+      var spr = this.owner.sprite;
+      if (spr) {
+      var origY = spr.y;
+      spr.y -= 6;
+      setTimeout(function() { spr.y = origY; }, 150);
+      }
+      }
+    }
+  }
+
+
+  // === CAMERA ===
+  const _cameraContainer = new PIXI.Container();
+  app.stage.addChild(_cameraContainer);
+  const _camera = { targetId: "player", lerp: 0.08 };
+
+  function updateCamera() {
+    const info = _sprites[_camera.targetId];
+    if (!info) {
+      return;
+    }
+    const tx = app.screen.width / 2 - info.sprite.x;
+    const ty = app.screen.height / 2 - info.sprite.y;
+    _cameraContainer.x += (tx - _cameraContainer.x) * _camera.lerp;
+    _cameraContainer.y += (ty - _cameraContainer.y) * _camera.lerp;
+    _cameraContainer.x = Math.min(0, Math.max(app.screen.width - 3600, _cameraContainer.x));
+    _cameraContainer.y = Math.min(0, Math.max(app.screen.height - 450, _cameraContainer.y));
+  }
+
+  // === VISUAL TILEMAPS ===
+  const _tileData_level_terrain_visual = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,44,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,152,0,152,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,11,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,68,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,152,0,0,0,152,0,0,0,0,152,0,0,0,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,68,0,0,0,0,0,0,0,0,0,0,0,0,0,0,68,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,152,152,152,0,0,0,0,0,0,0,0,0,0,0,0,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,152,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,44,0,0,0,0,0,0,0,0,0,0,0,0,152,0,0,0,0,0,152,0,0,0,0,0,0,0,0,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,152,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,10,10,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,152,152,152,0,0,0,0,11,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,42,43,42,44,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,11,0,0,0,0,12,0,0,0,0,11,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,42,44,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,10,10,10,10,10,10,10,10,0,0,0,0,12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,22,23,23,23,23,23,23,23,23,23,23,23,23,23,24,0,152,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,44,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,10,10,10,10,10,10,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,38,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,41,44,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,44,0,0,0,0,0,0,0,0,0,0,0,0,113,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,10,10,10,10,10,10,10,10,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,113,0,0,0,0,0,0,0,0,0],[0,0,0,58,58,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,58,0,0,0,0,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,58,58,0,0,0,0,0,0,38,0,25,25,5,5,5,5,5,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,64,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,64,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,110,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,0,0,0,0,0,0,0,0,0,58,58,0,0,0,110,0,0,0,0,58,0,0,0,0],[22,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,24,0,0,0,22,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,22,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,0,0,0,22,23,23,23,23,23,23,0,0,0,0,22,23,23,23,23,23,0,0,0,0,22,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23],[25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25],[25,25,5,5,5,5,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25],[25,25,25,25,25,25,25,25,25,25,6,6,6,6,6,6,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25]];
+  const _tileset_level = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _tsSource_level = _tileset_level.source || _tileset_level.baseTexture || _tileset_level;
+  const _tsCols_level = Math.floor((_tileset_level.width || 0) / 18);
+  for (let _ty = 0; _ty <= _tileData_level_terrain_visual.length - 1; _ty += 1) {
+    for (let _tx = 0; _tx <= _tileData_level_terrain_visual[_ty].length - 1; _tx += 1) {
+      const _tileId = _tileData_level_terrain_visual[_ty][_tx];
+      if (_tileId > 0) {
+        const _tileCol = (_tileId - 1) % _tsCols_level;
+        const _tileRow = Math.floor((_tileId - 1) / _tsCols_level);
+        const _tileRect = new PIXI.Rectangle(_tileCol * 18, _tileRow * 18, 18, 18);
+        const _tileTex = new PIXI.Texture({ source: _tsSource_level, frame: _tileRect });
+        const _tileSpr = new PIXI.Sprite(_tileTex);
+        _tileSpr.x = _tx * 18;
+        _tileSpr.y = _ty * 18;
+        _cameraContainer.addChild(_tileSpr);
+      }
+    }
+  }
+
+
+  // === SPRITES & BODIES ===
+  const _sprites = {};
+  const _bodyToSprite = {};
+  const _spr_tile_level_10_90 = new PIXI.Graphics();
+  _spr_tile_level_10_90.rect(-189.0, -9.0, 378, 18);
+  _spr_tile_level_10_90.fill({ color: 0x4a9eff });
+  _spr_tile_level_10_90.x = 1809;
+  _spr_tile_level_10_90.y = 189;
+  _spr_tile_level_10_90.alpha = 0;
+  _spr_tile_level_10_90.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_10_90);
+  const _body_tile_level_10_90 = Matter.Bodies.rectangle(1809, 189, 378, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_10_90.id] = "tile_level_10_90";
+  _sprites["tile_level_10_90"] = { sprite: _spr_tile_level_10_90, body: _body_tile_level_10_90, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_13_174 = new PIXI.Graphics();
+  _spr_tile_level_13_174.rect(-18.0, -9.0, 36, 18);
+  _spr_tile_level_13_174.fill({ color: 0x4a9eff });
+  _spr_tile_level_13_174.x = 3150;
+  _spr_tile_level_13_174.y = 243;
+  _spr_tile_level_13_174.alpha = 0;
+  _spr_tile_level_13_174.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_13_174);
+  const _body_tile_level_13_174 = Matter.Bodies.rectangle(3150, 243, 36, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_13_174.id] = "tile_level_13_174";
+  _sprites["tile_level_13_174"] = { sprite: _spr_tile_level_13_174, body: _body_tile_level_13_174, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_14_172 = new PIXI.Graphics();
+  _spr_tile_level_14_172.rect(-36.0, -9.0, 72, 18);
+  _spr_tile_level_14_172.fill({ color: 0x4a9eff });
+  _spr_tile_level_14_172.x = 3132;
+  _spr_tile_level_14_172.y = 261;
+  _spr_tile_level_14_172.alpha = 0;
+  _spr_tile_level_14_172.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_14_172);
+  const _body_tile_level_14_172 = Matter.Bodies.rectangle(3132, 261, 72, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_14_172.id] = "tile_level_14_172";
+  _sprites["tile_level_14_172"] = { sprite: _spr_tile_level_14_172, body: _body_tile_level_14_172, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_15_170 = new PIXI.Graphics();
+  _spr_tile_level_15_170.rect(-54.0, -9.0, 108, 18);
+  _spr_tile_level_15_170.fill({ color: 0x4a9eff });
+  _spr_tile_level_15_170.x = 3114;
+  _spr_tile_level_15_170.y = 279;
+  _spr_tile_level_15_170.alpha = 0;
+  _spr_tile_level_15_170.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_15_170);
+  const _body_tile_level_15_170 = Matter.Bodies.rectangle(3114, 279, 108, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_15_170.id] = "tile_level_15_170";
+  _sprites["tile_level_15_170"] = { sprite: _spr_tile_level_15_170, body: _body_tile_level_15_170, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_16_78 = new PIXI.Graphics();
+  _spr_tile_level_16_78.rect(-18.0, -9.0, 36, 18);
+  _spr_tile_level_16_78.fill({ color: 0x4a9eff });
+  _spr_tile_level_16_78.x = 1422;
+  _spr_tile_level_16_78.y = 297;
+  _spr_tile_level_16_78.alpha = 0;
+  _spr_tile_level_16_78.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_16_78);
+  const _body_tile_level_16_78 = Matter.Bodies.rectangle(1422, 297, 36, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_16_78.id] = "tile_level_16_78";
+  _sprites["tile_level_16_78"] = { sprite: _spr_tile_level_16_78, body: _body_tile_level_16_78, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_16_168 = new PIXI.Graphics();
+  _spr_tile_level_16_168.rect(-72.0, -9.0, 144, 18);
+  _spr_tile_level_16_168.fill({ color: 0x4a9eff });
+  _spr_tile_level_16_168.x = 3096;
+  _spr_tile_level_16_168.y = 297;
+  _spr_tile_level_16_168.alpha = 0;
+  _spr_tile_level_16_168.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_16_168);
+  const _body_tile_level_16_168 = Matter.Bodies.rectangle(3096, 297, 144, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_16_168.id] = "tile_level_16_168";
+  _sprites["tile_level_16_168"] = { sprite: _spr_tile_level_16_168, body: _body_tile_level_16_168, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_17_39 = new PIXI.Graphics();
+  _spr_tile_level_17_39.rect(-45.0, -9.0, 90, 18);
+  _spr_tile_level_17_39.fill({ color: 0x4a9eff });
+  _spr_tile_level_17_39.x = 747;
+  _spr_tile_level_17_39.y = 315;
+  _spr_tile_level_17_39.alpha = 0;
+  _spr_tile_level_17_39.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_17_39);
+  const _body_tile_level_17_39 = Matter.Bodies.rectangle(747, 315, 90, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_17_39.id] = "tile_level_17_39";
+  _sprites["tile_level_17_39"] = { sprite: _spr_tile_level_17_39, body: _body_tile_level_17_39, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_17_146 = new PIXI.Graphics();
+  _spr_tile_level_17_146.rect(-27.0, -9.0, 54, 18);
+  _spr_tile_level_17_146.fill({ color: 0x4a9eff });
+  _spr_tile_level_17_146.x = 2655;
+  _spr_tile_level_17_146.y = 315;
+  _spr_tile_level_17_146.alpha = 0;
+  _spr_tile_level_17_146.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_17_146);
+  const _body_tile_level_17_146 = Matter.Bodies.rectangle(2655, 315, 54, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_17_146.id] = "tile_level_17_146";
+  _sprites["tile_level_17_146"] = { sprite: _spr_tile_level_17_146, body: _body_tile_level_17_146, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_17_166 = new PIXI.Graphics();
+  _spr_tile_level_17_166.rect(-90.0, -9.0, 180, 18);
+  _spr_tile_level_17_166.fill({ color: 0x4a9eff });
+  _spr_tile_level_17_166.x = 3078;
+  _spr_tile_level_17_166.y = 315;
+  _spr_tile_level_17_166.alpha = 0;
+  _spr_tile_level_17_166.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_17_166);
+  const _body_tile_level_17_166 = Matter.Bodies.rectangle(3078, 315, 180, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_17_166.id] = "tile_level_17_166";
+  _sprites["tile_level_17_166"] = { sprite: _spr_tile_level_17_166, body: _body_tile_level_17_166, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_18_60 = new PIXI.Graphics();
+  _spr_tile_level_18_60.rect(-135.0, -9.0, 270, 18);
+  _spr_tile_level_18_60.fill({ color: 0x4a9eff });
+  _spr_tile_level_18_60.x = 1215;
+  _spr_tile_level_18_60.y = 333;
+  _spr_tile_level_18_60.alpha = 0;
+  _spr_tile_level_18_60.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_18_60);
+  const _body_tile_level_18_60 = Matter.Bodies.rectangle(1215, 333, 270, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_18_60.id] = "tile_level_18_60";
+  _sprites["tile_level_18_60"] = { sprite: _spr_tile_level_18_60, body: _body_tile_level_18_60, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_18_136 = new PIXI.Graphics();
+  _spr_tile_level_18_136.rect(-18.0, -9.0, 36, 18);
+  _spr_tile_level_18_136.fill({ color: 0x4a9eff });
+  _spr_tile_level_18_136.x = 2466;
+  _spr_tile_level_18_136.y = 333;
+  _spr_tile_level_18_136.alpha = 0;
+  _spr_tile_level_18_136.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_18_136);
+  const _body_tile_level_18_136 = Matter.Bodies.rectangle(2466, 333, 36, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_18_136.id] = "tile_level_18_136";
+  _sprites["tile_level_18_136"] = { sprite: _spr_tile_level_18_136, body: _body_tile_level_18_136, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_18_164 = new PIXI.Graphics();
+  _spr_tile_level_18_164.rect(-108.0, -9.0, 216, 18);
+  _spr_tile_level_18_164.fill({ color: 0x4a9eff });
+  _spr_tile_level_18_164.x = 3060;
+  _spr_tile_level_18_164.y = 333;
+  _spr_tile_level_18_164.alpha = 0;
+  _spr_tile_level_18_164.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_18_164);
+  const _body_tile_level_18_164 = Matter.Bodies.rectangle(3060, 333, 216, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_18_164.id] = "tile_level_18_164";
+  _sprites["tile_level_18_164"] = { sprite: _spr_tile_level_18_164, body: _body_tile_level_18_164, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_19_60 = new PIXI.Graphics();
+  _spr_tile_level_19_60.rect(-135.0, -9.0, 270, 18);
+  _spr_tile_level_19_60.fill({ color: 0x4a9eff });
+  _spr_tile_level_19_60.x = 1215;
+  _spr_tile_level_19_60.y = 351;
+  _spr_tile_level_19_60.alpha = 0;
+  _spr_tile_level_19_60.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_19_60);
+  const _body_tile_level_19_60 = Matter.Bodies.rectangle(1215, 351, 270, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_19_60.id] = "tile_level_19_60";
+  _sprites["tile_level_19_60"] = { sprite: _spr_tile_level_19_60, body: _body_tile_level_19_60, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_19_76 = new PIXI.Graphics();
+  _spr_tile_level_19_76.rect(-18.0, -9.0, 36, 18);
+  _spr_tile_level_19_76.fill({ color: 0x4a9eff });
+  _spr_tile_level_19_76.x = 1386;
+  _spr_tile_level_19_76.y = 351;
+  _spr_tile_level_19_76.alpha = 0;
+  _spr_tile_level_19_76.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_19_76);
+  const _body_tile_level_19_76 = Matter.Bodies.rectangle(1386, 351, 36, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_19_76.id] = "tile_level_19_76";
+  _sprites["tile_level_19_76"] = { sprite: _spr_tile_level_19_76, body: _body_tile_level_19_76, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_19_126 = new PIXI.Graphics();
+  _spr_tile_level_19_126.rect(-18.0, -9.0, 36, 18);
+  _spr_tile_level_19_126.fill({ color: 0x4a9eff });
+  _spr_tile_level_19_126.x = 2286;
+  _spr_tile_level_19_126.y = 351;
+  _spr_tile_level_19_126.alpha = 0;
+  _spr_tile_level_19_126.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_19_126);
+  const _body_tile_level_19_126 = Matter.Bodies.rectangle(2286, 351, 36, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_19_126.id] = "tile_level_19_126";
+  _sprites["tile_level_19_126"] = { sprite: _spr_tile_level_19_126, body: _body_tile_level_19_126, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_19_162 = new PIXI.Graphics();
+  _spr_tile_level_19_162.rect(-126.0, -9.0, 252, 18);
+  _spr_tile_level_19_162.fill({ color: 0x4a9eff });
+  _spr_tile_level_19_162.x = 3042;
+  _spr_tile_level_19_162.y = 351;
+  _spr_tile_level_19_162.alpha = 0;
+  _spr_tile_level_19_162.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_19_162);
+  const _body_tile_level_19_162 = Matter.Bodies.rectangle(3042, 351, 252, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_19_162.id] = "tile_level_19_162";
+  _sprites["tile_level_19_162"] = { sprite: _spr_tile_level_19_162, body: _body_tile_level_19_162, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_20_60 = new PIXI.Graphics();
+  _spr_tile_level_20_60.rect(-135.0, -9.0, 270, 18);
+  _spr_tile_level_20_60.fill({ color: 0x4a9eff });
+  _spr_tile_level_20_60.x = 1215;
+  _spr_tile_level_20_60.y = 369;
+  _spr_tile_level_20_60.alpha = 0;
+  _spr_tile_level_20_60.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_20_60);
+  const _body_tile_level_20_60 = Matter.Bodies.rectangle(1215, 369, 270, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_20_60.id] = "tile_level_20_60";
+  _sprites["tile_level_20_60"] = { sprite: _spr_tile_level_20_60, body: _body_tile_level_20_60, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_20_160 = new PIXI.Graphics();
+  _spr_tile_level_20_160.rect(-144.0, -9.0, 288, 18);
+  _spr_tile_level_20_160.fill({ color: 0x4a9eff });
+  _spr_tile_level_20_160.x = 3024;
+  _spr_tile_level_20_160.y = 369;
+  _spr_tile_level_20_160.alpha = 0;
+  _spr_tile_level_20_160.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_20_160);
+  const _body_tile_level_20_160 = Matter.Bodies.rectangle(3024, 369, 288, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_20_160.id] = "tile_level_20_160";
+  _sprites["tile_level_20_160"] = { sprite: _spr_tile_level_20_160, body: _body_tile_level_20_160, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_21_0 = new PIXI.Graphics();
+  _spr_tile_level_21_0.rect(-315.0, -9.0, 630, 18);
+  _spr_tile_level_21_0.fill({ color: 0x4a9eff });
+  _spr_tile_level_21_0.x = 315;
+  _spr_tile_level_21_0.y = 387;
+  _spr_tile_level_21_0.alpha = 0;
+  _spr_tile_level_21_0.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_21_0);
+  const _body_tile_level_21_0 = Matter.Bodies.rectangle(315, 387, 630, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_21_0.id] = "tile_level_21_0";
+  _sprites["tile_level_21_0"] = { sprite: _spr_tile_level_21_0, body: _body_tile_level_21_0, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_21_38 = new PIXI.Graphics();
+  _spr_tile_level_21_38.rect(-333.0, -9.0, 666, 18);
+  _spr_tile_level_21_38.fill({ color: 0x4a9eff });
+  _spr_tile_level_21_38.x = 1017;
+  _spr_tile_level_21_38.y = 387;
+  _spr_tile_level_21_38.alpha = 0;
+  _spr_tile_level_21_38.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_21_38);
+  const _body_tile_level_21_38 = Matter.Bodies.rectangle(1017, 387, 666, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_21_38.id] = "tile_level_21_38";
+  _sprites["tile_level_21_38"] = { sprite: _spr_tile_level_21_38, body: _body_tile_level_21_38, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_21_79 = new PIXI.Graphics();
+  _spr_tile_level_21_79.rect(-414.0, -9.0, 828, 18);
+  _spr_tile_level_21_79.fill({ color: 0x4a9eff });
+  _spr_tile_level_21_79.x = 1836;
+  _spr_tile_level_21_79.y = 387;
+  _spr_tile_level_21_79.alpha = 0;
+  _spr_tile_level_21_79.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_21_79);
+  const _body_tile_level_21_79 = Matter.Bodies.rectangle(1836, 387, 828, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_21_79.id] = "tile_level_21_79";
+  _sprites["tile_level_21_79"] = { sprite: _spr_tile_level_21_79, body: _body_tile_level_21_79, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_21_128 = new PIXI.Graphics();
+  _spr_tile_level_21_128.rect(-63.0, -9.0, 126, 18);
+  _spr_tile_level_21_128.fill({ color: 0x4a9eff });
+  _spr_tile_level_21_128.x = 2367;
+  _spr_tile_level_21_128.y = 387;
+  _spr_tile_level_21_128.alpha = 0;
+  _spr_tile_level_21_128.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_21_128);
+  const _body_tile_level_21_128 = Matter.Bodies.rectangle(2367, 387, 126, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_21_128.id] = "tile_level_21_128";
+  _sprites["tile_level_21_128"] = { sprite: _spr_tile_level_21_128, body: _body_tile_level_21_128, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_21_139 = new PIXI.Graphics();
+  _spr_tile_level_21_139.rect(-54.0, -9.0, 108, 18);
+  _spr_tile_level_21_139.fill({ color: 0x4a9eff });
+  _spr_tile_level_21_139.x = 2556;
+  _spr_tile_level_21_139.y = 387;
+  _spr_tile_level_21_139.alpha = 0;
+  _spr_tile_level_21_139.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_21_139);
+  const _body_tile_level_21_139 = Matter.Bodies.rectangle(2556, 387, 108, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_21_139.id] = "tile_level_21_139";
+  _sprites["tile_level_21_139"] = { sprite: _spr_tile_level_21_139, body: _body_tile_level_21_139, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_21_149 = new PIXI.Graphics();
+  _spr_tile_level_21_149.rect(-459.0, -9.0, 918, 18);
+  _spr_tile_level_21_149.fill({ color: 0x4a9eff });
+  _spr_tile_level_21_149.x = 3141;
+  _spr_tile_level_21_149.y = 387;
+  _spr_tile_level_21_149.alpha = 0;
+  _spr_tile_level_21_149.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_21_149);
+  const _body_tile_level_21_149 = Matter.Bodies.rectangle(3141, 387, 918, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_21_149.id] = "tile_level_21_149";
+  _sprites["tile_level_21_149"] = { sprite: _spr_tile_level_21_149, body: _body_tile_level_21_149, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_22_0 = new PIXI.Graphics();
+  _spr_tile_level_22_0.rect(-315.0, -9.0, 630, 18);
+  _spr_tile_level_22_0.fill({ color: 0x4a9eff });
+  _spr_tile_level_22_0.x = 315;
+  _spr_tile_level_22_0.y = 405;
+  _spr_tile_level_22_0.alpha = 0;
+  _spr_tile_level_22_0.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_22_0);
+  const _body_tile_level_22_0 = Matter.Bodies.rectangle(315, 405, 630, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_22_0.id] = "tile_level_22_0";
+  _sprites["tile_level_22_0"] = { sprite: _spr_tile_level_22_0, body: _body_tile_level_22_0, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_22_38 = new PIXI.Graphics();
+  _spr_tile_level_22_38.rect(-333.0, -9.0, 666, 18);
+  _spr_tile_level_22_38.fill({ color: 0x4a9eff });
+  _spr_tile_level_22_38.x = 1017;
+  _spr_tile_level_22_38.y = 405;
+  _spr_tile_level_22_38.alpha = 0;
+  _spr_tile_level_22_38.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_22_38);
+  const _body_tile_level_22_38 = Matter.Bodies.rectangle(1017, 405, 666, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_22_38.id] = "tile_level_22_38";
+  _sprites["tile_level_22_38"] = { sprite: _spr_tile_level_22_38, body: _body_tile_level_22_38, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_22_79 = new PIXI.Graphics();
+  _spr_tile_level_22_79.rect(-414.0, -9.0, 828, 18);
+  _spr_tile_level_22_79.fill({ color: 0x4a9eff });
+  _spr_tile_level_22_79.x = 1836;
+  _spr_tile_level_22_79.y = 405;
+  _spr_tile_level_22_79.alpha = 0;
+  _spr_tile_level_22_79.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_22_79);
+  const _body_tile_level_22_79 = Matter.Bodies.rectangle(1836, 405, 828, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_22_79.id] = "tile_level_22_79";
+  _sprites["tile_level_22_79"] = { sprite: _spr_tile_level_22_79, body: _body_tile_level_22_79, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_22_128 = new PIXI.Graphics();
+  _spr_tile_level_22_128.rect(-63.0, -9.0, 126, 18);
+  _spr_tile_level_22_128.fill({ color: 0x4a9eff });
+  _spr_tile_level_22_128.x = 2367;
+  _spr_tile_level_22_128.y = 405;
+  _spr_tile_level_22_128.alpha = 0;
+  _spr_tile_level_22_128.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_22_128);
+  const _body_tile_level_22_128 = Matter.Bodies.rectangle(2367, 405, 126, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_22_128.id] = "tile_level_22_128";
+  _sprites["tile_level_22_128"] = { sprite: _spr_tile_level_22_128, body: _body_tile_level_22_128, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_22_139 = new PIXI.Graphics();
+  _spr_tile_level_22_139.rect(-54.0, -9.0, 108, 18);
+  _spr_tile_level_22_139.fill({ color: 0x4a9eff });
+  _spr_tile_level_22_139.x = 2556;
+  _spr_tile_level_22_139.y = 405;
+  _spr_tile_level_22_139.alpha = 0;
+  _spr_tile_level_22_139.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_22_139);
+  const _body_tile_level_22_139 = Matter.Bodies.rectangle(2556, 405, 108, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_22_139.id] = "tile_level_22_139";
+  _sprites["tile_level_22_139"] = { sprite: _spr_tile_level_22_139, body: _body_tile_level_22_139, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_22_149 = new PIXI.Graphics();
+  _spr_tile_level_22_149.rect(-459.0, -9.0, 918, 18);
+  _spr_tile_level_22_149.fill({ color: 0x4a9eff });
+  _spr_tile_level_22_149.x = 3141;
+  _spr_tile_level_22_149.y = 405;
+  _spr_tile_level_22_149.alpha = 0;
+  _spr_tile_level_22_149.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_22_149);
+  const _body_tile_level_22_149 = Matter.Bodies.rectangle(3141, 405, 918, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_22_149.id] = "tile_level_22_149";
+  _sprites["tile_level_22_149"] = { sprite: _spr_tile_level_22_149, body: _body_tile_level_22_149, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_23_0 = new PIXI.Graphics();
+  _spr_tile_level_23_0.rect(-315.0, -9.0, 630, 18);
+  _spr_tile_level_23_0.fill({ color: 0x4a9eff });
+  _spr_tile_level_23_0.x = 315;
+  _spr_tile_level_23_0.y = 423;
+  _spr_tile_level_23_0.alpha = 0;
+  _spr_tile_level_23_0.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_23_0);
+  const _body_tile_level_23_0 = Matter.Bodies.rectangle(315, 423, 630, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_23_0.id] = "tile_level_23_0";
+  _sprites["tile_level_23_0"] = { sprite: _spr_tile_level_23_0, body: _body_tile_level_23_0, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_23_38 = new PIXI.Graphics();
+  _spr_tile_level_23_38.rect(-333.0, -9.0, 666, 18);
+  _spr_tile_level_23_38.fill({ color: 0x4a9eff });
+  _spr_tile_level_23_38.x = 1017;
+  _spr_tile_level_23_38.y = 423;
+  _spr_tile_level_23_38.alpha = 0;
+  _spr_tile_level_23_38.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_23_38);
+  const _body_tile_level_23_38 = Matter.Bodies.rectangle(1017, 423, 666, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_23_38.id] = "tile_level_23_38";
+  _sprites["tile_level_23_38"] = { sprite: _spr_tile_level_23_38, body: _body_tile_level_23_38, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_23_79 = new PIXI.Graphics();
+  _spr_tile_level_23_79.rect(-414.0, -9.0, 828, 18);
+  _spr_tile_level_23_79.fill({ color: 0x4a9eff });
+  _spr_tile_level_23_79.x = 1836;
+  _spr_tile_level_23_79.y = 423;
+  _spr_tile_level_23_79.alpha = 0;
+  _spr_tile_level_23_79.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_23_79);
+  const _body_tile_level_23_79 = Matter.Bodies.rectangle(1836, 423, 828, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_23_79.id] = "tile_level_23_79";
+  _sprites["tile_level_23_79"] = { sprite: _spr_tile_level_23_79, body: _body_tile_level_23_79, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_23_128 = new PIXI.Graphics();
+  _spr_tile_level_23_128.rect(-63.0, -9.0, 126, 18);
+  _spr_tile_level_23_128.fill({ color: 0x4a9eff });
+  _spr_tile_level_23_128.x = 2367;
+  _spr_tile_level_23_128.y = 423;
+  _spr_tile_level_23_128.alpha = 0;
+  _spr_tile_level_23_128.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_23_128);
+  const _body_tile_level_23_128 = Matter.Bodies.rectangle(2367, 423, 126, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_23_128.id] = "tile_level_23_128";
+  _sprites["tile_level_23_128"] = { sprite: _spr_tile_level_23_128, body: _body_tile_level_23_128, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_23_139 = new PIXI.Graphics();
+  _spr_tile_level_23_139.rect(-54.0, -9.0, 108, 18);
+  _spr_tile_level_23_139.fill({ color: 0x4a9eff });
+  _spr_tile_level_23_139.x = 2556;
+  _spr_tile_level_23_139.y = 423;
+  _spr_tile_level_23_139.alpha = 0;
+  _spr_tile_level_23_139.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_23_139);
+  const _body_tile_level_23_139 = Matter.Bodies.rectangle(2556, 423, 108, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_23_139.id] = "tile_level_23_139";
+  _sprites["tile_level_23_139"] = { sprite: _spr_tile_level_23_139, body: _body_tile_level_23_139, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_23_149 = new PIXI.Graphics();
+  _spr_tile_level_23_149.rect(-459.0, -9.0, 918, 18);
+  _spr_tile_level_23_149.fill({ color: 0x4a9eff });
+  _spr_tile_level_23_149.x = 3141;
+  _spr_tile_level_23_149.y = 423;
+  _spr_tile_level_23_149.alpha = 0;
+  _spr_tile_level_23_149.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_23_149);
+  const _body_tile_level_23_149 = Matter.Bodies.rectangle(3141, 423, 918, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_23_149.id] = "tile_level_23_149";
+  _sprites["tile_level_23_149"] = { sprite: _spr_tile_level_23_149, body: _body_tile_level_23_149, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_24_0 = new PIXI.Graphics();
+  _spr_tile_level_24_0.rect(-315.0, -9.0, 630, 18);
+  _spr_tile_level_24_0.fill({ color: 0x4a9eff });
+  _spr_tile_level_24_0.x = 315;
+  _spr_tile_level_24_0.y = 441;
+  _spr_tile_level_24_0.alpha = 0;
+  _spr_tile_level_24_0.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_24_0);
+  const _body_tile_level_24_0 = Matter.Bodies.rectangle(315, 441, 630, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_24_0.id] = "tile_level_24_0";
+  _sprites["tile_level_24_0"] = { sprite: _spr_tile_level_24_0, body: _body_tile_level_24_0, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_24_38 = new PIXI.Graphics();
+  _spr_tile_level_24_38.rect(-333.0, -9.0, 666, 18);
+  _spr_tile_level_24_38.fill({ color: 0x4a9eff });
+  _spr_tile_level_24_38.x = 1017;
+  _spr_tile_level_24_38.y = 441;
+  _spr_tile_level_24_38.alpha = 0;
+  _spr_tile_level_24_38.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_24_38);
+  const _body_tile_level_24_38 = Matter.Bodies.rectangle(1017, 441, 666, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_24_38.id] = "tile_level_24_38";
+  _sprites["tile_level_24_38"] = { sprite: _spr_tile_level_24_38, body: _body_tile_level_24_38, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_24_79 = new PIXI.Graphics();
+  _spr_tile_level_24_79.rect(-414.0, -9.0, 828, 18);
+  _spr_tile_level_24_79.fill({ color: 0x4a9eff });
+  _spr_tile_level_24_79.x = 1836;
+  _spr_tile_level_24_79.y = 441;
+  _spr_tile_level_24_79.alpha = 0;
+  _spr_tile_level_24_79.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_24_79);
+  const _body_tile_level_24_79 = Matter.Bodies.rectangle(1836, 441, 828, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_24_79.id] = "tile_level_24_79";
+  _sprites["tile_level_24_79"] = { sprite: _spr_tile_level_24_79, body: _body_tile_level_24_79, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_24_128 = new PIXI.Graphics();
+  _spr_tile_level_24_128.rect(-63.0, -9.0, 126, 18);
+  _spr_tile_level_24_128.fill({ color: 0x4a9eff });
+  _spr_tile_level_24_128.x = 2367;
+  _spr_tile_level_24_128.y = 441;
+  _spr_tile_level_24_128.alpha = 0;
+  _spr_tile_level_24_128.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_24_128);
+  const _body_tile_level_24_128 = Matter.Bodies.rectangle(2367, 441, 126, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_24_128.id] = "tile_level_24_128";
+  _sprites["tile_level_24_128"] = { sprite: _spr_tile_level_24_128, body: _body_tile_level_24_128, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_24_139 = new PIXI.Graphics();
+  _spr_tile_level_24_139.rect(-54.0, -9.0, 108, 18);
+  _spr_tile_level_24_139.fill({ color: 0x4a9eff });
+  _spr_tile_level_24_139.x = 2556;
+  _spr_tile_level_24_139.y = 441;
+  _spr_tile_level_24_139.alpha = 0;
+  _spr_tile_level_24_139.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_24_139);
+  const _body_tile_level_24_139 = Matter.Bodies.rectangle(2556, 441, 108, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_24_139.id] = "tile_level_24_139";
+  _sprites["tile_level_24_139"] = { sprite: _spr_tile_level_24_139, body: _body_tile_level_24_139, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_tile_level_24_149 = new PIXI.Graphics();
+  _spr_tile_level_24_149.rect(-459.0, -9.0, 918, 18);
+  _spr_tile_level_24_149.fill({ color: 0x4a9eff });
+  _spr_tile_level_24_149.x = 3141;
+  _spr_tile_level_24_149.y = 441;
+  _spr_tile_level_24_149.alpha = 0;
+  _spr_tile_level_24_149.visible = false;
+  _cameraContainer.addChild(_spr_tile_level_24_149);
+  const _body_tile_level_24_149 = Matter.Bodies.rectangle(3141, 441, 918, 18, { isStatic: true, restitution: 0, friction: 1, slop: 0.01 });
+  _bodyToSprite[_body_tile_level_24_149.id] = "tile_level_24_149";
+  _sprites["tile_level_24_149"] = { sprite: _spr_tile_level_24_149, body: _body_tile_level_24_149, tag: "tilemap-collision", collisionHandlers: [], behaviors: [] };
+
+  const _spr_player = PIXI.Sprite.from("assets/kenney/tilemap-characters_packed.png");
+  _spr_player.x = 36;
+  _spr_player.y = 348;
+  _spr_player.anchor.set(0.5, 0.5);
+  _spr_player.width = 24;
+  _spr_player.height = 24;
+  _cameraContainer.addChild(_spr_player);
+  const _body_player = Matter.Bodies.rectangle(36, 348, 24, 24, { isStatic: false, restitution: 0, friction: 0.8, slop: 0.01, inertia: Infinity, chamfer: { radius: 3 } });
+  _bodyToSprite[_body_player.id] = "player";
+  _sprites["player"] = { sprite: _spr_player, body: _body_player, tag: "player", collisionHandlers: [], behaviors: [] };
+
+  const _spr_enemy1 = PIXI.Sprite.from("assets/kenney/tilemap-characters_packed.png");
+  _spr_enemy1.x = 756;
+  _spr_enemy1.y = 348;
+  _spr_enemy1.anchor.set(0.5, 0.5);
+  _spr_enemy1.width = 24;
+  _spr_enemy1.height = 24;
+  _cameraContainer.addChild(_spr_enemy1);
+  const _body_enemy1 = Matter.Bodies.rectangle(756, 348, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy1.id] = "enemy1";
+  _sprites["enemy1"] = { sprite: _spr_enemy1, body: _body_enemy1, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _spr_enemy2 = PIXI.Sprite.from("assets/kenney/tilemap-characters_packed.png");
+  _spr_enemy2.x = 864;
+  _spr_enemy2.y = 348;
+  _spr_enemy2.anchor.set(0.5, 0.5);
+  _spr_enemy2.width = 24;
+  _spr_enemy2.height = 24;
+  _cameraContainer.addChild(_spr_enemy2);
+  const _body_enemy2 = Matter.Bodies.rectangle(864, 348, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy2.id] = "enemy2";
+  _sprites["enemy2"] = { sprite: _spr_enemy2, body: _body_enemy2, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _spr_enemy3 = PIXI.Sprite.from("assets/kenney/tilemap-characters_packed.png");
+  _spr_enemy3.x = 1152;
+  _spr_enemy3.y = 294;
+  _spr_enemy3.anchor.set(0.5, 0.5);
+  _spr_enemy3.width = 24;
+  _spr_enemy3.height = 24;
+  _cameraContainer.addChild(_spr_enemy3);
+  const _body_enemy3 = Matter.Bodies.rectangle(1152, 294, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy3.id] = "enemy3";
+  _sprites["enemy3"] = { sprite: _spr_enemy3, body: _body_enemy3, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _spr_enemy4 = PIXI.Sprite.from("assets/kenney/tilemap-characters_packed.png");
+  _spr_enemy4.x = 1260;
+  _spr_enemy4.y = 294;
+  _spr_enemy4.anchor.set(0.5, 0.5);
+  _spr_enemy4.width = 24;
+  _spr_enemy4.height = 24;
+  _cameraContainer.addChild(_spr_enemy4);
+  const _body_enemy4 = Matter.Bodies.rectangle(1260, 294, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy4.id] = "enemy4";
+  _sprites["enemy4"] = { sprite: _spr_enemy4, body: _body_enemy4, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _spr_enemy5 = PIXI.Sprite.from("assets/kenney/tilemap-characters_packed.png");
+  _spr_enemy5.x = 1728;
+  _spr_enemy5.y = 348;
+  _spr_enemy5.anchor.set(0.5, 0.5);
+  _spr_enemy5.width = 24;
+  _spr_enemy5.height = 24;
+  _cameraContainer.addChild(_spr_enemy5);
+  const _body_enemy5 = Matter.Bodies.rectangle(1728, 348, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy5.id] = "enemy5";
+  _sprites["enemy5"] = { sprite: _spr_enemy5, body: _body_enemy5, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _spr_enemy6 = PIXI.Sprite.from("assets/kenney/tilemap-characters_packed.png");
+  _spr_enemy6.x = 1854;
+  _spr_enemy6.y = 348;
+  _spr_enemy6.anchor.set(0.5, 0.5);
+  _spr_enemy6.width = 24;
+  _spr_enemy6.height = 24;
+  _cameraContainer.addChild(_spr_enemy6);
+  const _body_enemy6 = Matter.Bodies.rectangle(1854, 348, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy6.id] = "enemy6";
+  _sprites["enemy6"] = { sprite: _spr_enemy6, body: _body_enemy6, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _spr_enemy7 = PIXI.Sprite.from("assets/kenney/tilemap-characters_packed.png");
+  _spr_enemy7.x = 2340;
+  _spr_enemy7.y = 348;
+  _spr_enemy7.anchor.set(0.5, 0.5);
+  _spr_enemy7.width = 24;
+  _spr_enemy7.height = 24;
+  _cameraContainer.addChild(_spr_enemy7);
+  const _body_enemy7 = Matter.Bodies.rectangle(2340, 348, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy7.id] = "enemy7";
+  _sprites["enemy7"] = { sprite: _spr_enemy7, body: _body_enemy7, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _spr_enemy8 = PIXI.Sprite.from("assets/kenney/tilemap-characters_packed.png");
+  _spr_enemy8.x = 2970;
+  _spr_enemy8.y = 294;
+  _spr_enemy8.anchor.set(0.5, 0.5);
+  _spr_enemy8.width = 24;
+  _spr_enemy8.height = 24;
+  _cameraContainer.addChild(_spr_enemy8);
+  const _body_enemy8 = Matter.Bodies.rectangle(2970, 294, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy8.id] = "enemy8";
+  _sprites["enemy8"] = { sprite: _spr_enemy8, body: _body_enemy8, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin1 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin1.x = 153;
+  _spr_coin1.y = 315;
+  _spr_coin1.anchor.set(0.5, 0.5);
+  _spr_coin1.width = 18;
+  _spr_coin1.height = 18;
+  _cameraContainer.addChild(_spr_coin1);
+  const _body_coin1 = Matter.Bodies.rectangle(153, 315, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin1.id] = "coin1";
+  _sprites["coin1"] = { sprite: _spr_coin1, body: _body_coin1, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin2 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin2.x = 171;
+  _spr_coin2.y = 315;
+  _spr_coin2.anchor.set(0.5, 0.5);
+  _spr_coin2.width = 18;
+  _spr_coin2.height = 18;
+  _cameraContainer.addChild(_spr_coin2);
+  const _body_coin2 = Matter.Bodies.rectangle(171, 315, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin2.id] = "coin2";
+  _sprites["coin2"] = { sprite: _spr_coin2, body: _body_coin2, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin3 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin3.x = 189;
+  _spr_coin3.y = 315;
+  _spr_coin3.anchor.set(0.5, 0.5);
+  _spr_coin3.width = 18;
+  _spr_coin3.height = 18;
+  _cameraContainer.addChild(_spr_coin3);
+  const _body_coin3 = Matter.Bodies.rectangle(189, 315, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin3.id] = "coin3";
+  _sprites["coin3"] = { sprite: _spr_coin3, body: _body_coin3, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin4 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin4.x = 639;
+  _spr_coin4.y = 297;
+  _spr_coin4.anchor.set(0.5, 0.5);
+  _spr_coin4.width = 18;
+  _spr_coin4.height = 18;
+  _cameraContainer.addChild(_spr_coin4);
+  const _body_coin4 = Matter.Bodies.rectangle(639, 297, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin4.id] = "coin4";
+  _sprites["coin4"] = { sprite: _spr_coin4, body: _body_coin4, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin5 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin5.x = 657;
+  _spr_coin5.y = 279;
+  _spr_coin5.anchor.set(0.5, 0.5);
+  _spr_coin5.width = 18;
+  _spr_coin5.height = 18;
+  _cameraContainer.addChild(_spr_coin5);
+  const _body_coin5 = Matter.Bodies.rectangle(657, 279, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin5.id] = "coin5";
+  _sprites["coin5"] = { sprite: _spr_coin5, body: _body_coin5, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin6 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin6.x = 675;
+  _spr_coin6.y = 297;
+  _spr_coin6.anchor.set(0.5, 0.5);
+  _spr_coin6.width = 18;
+  _spr_coin6.height = 18;
+  _cameraContainer.addChild(_spr_coin6);
+  const _body_coin6 = Matter.Bodies.rectangle(675, 297, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin6.id] = "coin6";
+  _sprites["coin6"] = { sprite: _spr_coin6, body: _body_coin6, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin7 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin7.x = 1125;
+  _spr_coin7.y = 279;
+  _spr_coin7.anchor.set(0.5, 0.5);
+  _spr_coin7.width = 18;
+  _spr_coin7.height = 18;
+  _cameraContainer.addChild(_spr_coin7);
+  const _body_coin7 = Matter.Bodies.rectangle(1125, 279, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin7.id] = "coin7";
+  _sprites["coin7"] = { sprite: _spr_coin7, body: _body_coin7, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin8 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin8.x = 1143;
+  _spr_coin8.y = 279;
+  _spr_coin8.anchor.set(0.5, 0.5);
+  _spr_coin8.width = 18;
+  _spr_coin8.height = 18;
+  _cameraContainer.addChild(_spr_coin8);
+  const _body_coin8 = Matter.Bodies.rectangle(1143, 279, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin8.id] = "coin8";
+  _sprites["coin8"] = { sprite: _spr_coin8, body: _body_coin8, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin9 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin9.x = 1161;
+  _spr_coin9.y = 279;
+  _spr_coin9.anchor.set(0.5, 0.5);
+  _spr_coin9.width = 18;
+  _spr_coin9.height = 18;
+  _cameraContainer.addChild(_spr_coin9);
+  const _body_coin9 = Matter.Bodies.rectangle(1161, 279, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin9.id] = "coin9";
+  _sprites["coin9"] = { sprite: _spr_coin9, body: _body_coin9, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin10 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin10.x = 1377;
+  _spr_coin10.y = 333;
+  _spr_coin10.anchor.set(0.5, 0.5);
+  _spr_coin10.width = 18;
+  _spr_coin10.height = 18;
+  _cameraContainer.addChild(_spr_coin10);
+  const _body_coin10 = Matter.Bodies.rectangle(1377, 333, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin10.id] = "coin10";
+  _sprites["coin10"] = { sprite: _spr_coin10, body: _body_coin10, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin11 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin11.x = 1413;
+  _spr_coin11.y = 279;
+  _spr_coin11.anchor.set(0.5, 0.5);
+  _spr_coin11.width = 18;
+  _spr_coin11.height = 18;
+  _cameraContainer.addChild(_spr_coin11);
+  const _body_coin11 = Matter.Bodies.rectangle(1413, 279, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin11.id] = "coin11";
+  _sprites["coin11"] = { sprite: _spr_coin11, body: _body_coin11, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin12 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin12.x = 1683;
+  _spr_coin12.y = 261;
+  _spr_coin12.anchor.set(0.5, 0.5);
+  _spr_coin12.width = 18;
+  _spr_coin12.height = 18;
+  _cameraContainer.addChild(_spr_coin12);
+  const _body_coin12 = Matter.Bodies.rectangle(1683, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin12.id] = "coin12";
+  _sprites["coin12"] = { sprite: _spr_coin12, body: _body_coin12, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin13 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin13.x = 1755;
+  _spr_coin13.y = 261;
+  _spr_coin13.anchor.set(0.5, 0.5);
+  _spr_coin13.width = 18;
+  _spr_coin13.height = 18;
+  _cameraContainer.addChild(_spr_coin13);
+  const _body_coin13 = Matter.Bodies.rectangle(1755, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin13.id] = "coin13";
+  _sprites["coin13"] = { sprite: _spr_coin13, body: _body_coin13, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin14 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin14.x = 1845;
+  _spr_coin14.y = 261;
+  _spr_coin14.anchor.set(0.5, 0.5);
+  _spr_coin14.width = 18;
+  _spr_coin14.height = 18;
+  _cameraContainer.addChild(_spr_coin14);
+  const _body_coin14 = Matter.Bodies.rectangle(1845, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin14.id] = "coin14";
+  _sprites["coin14"] = { sprite: _spr_coin14, body: _body_coin14, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin15 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin15.x = 1935;
+  _spr_coin15.y = 261;
+  _spr_coin15.anchor.set(0.5, 0.5);
+  _spr_coin15.width = 18;
+  _spr_coin15.height = 18;
+  _cameraContainer.addChild(_spr_coin15);
+  const _body_coin15 = Matter.Bodies.rectangle(1935, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin15.id] = "coin15";
+  _sprites["coin15"] = { sprite: _spr_coin15, body: _body_coin15, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin16 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin16.x = 1665;
+  _spr_coin16.y = 297;
+  _spr_coin16.anchor.set(0.5, 0.5);
+  _spr_coin16.width = 18;
+  _spr_coin16.height = 18;
+  _cameraContainer.addChild(_spr_coin16);
+  const _body_coin16 = Matter.Bodies.rectangle(1665, 297, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin16.id] = "coin16";
+  _sprites["coin16"] = { sprite: _spr_coin16, body: _body_coin16, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin17 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin17.x = 1773;
+  _spr_coin17.y = 297;
+  _spr_coin17.anchor.set(0.5, 0.5);
+  _spr_coin17.width = 18;
+  _spr_coin17.height = 18;
+  _cameraContainer.addChild(_spr_coin17);
+  const _body_coin17 = Matter.Bodies.rectangle(1773, 297, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin17.id] = "coin17";
+  _sprites["coin17"] = { sprite: _spr_coin17, body: _body_coin17, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin18 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin18.x = 1953;
+  _spr_coin18.y = 297;
+  _spr_coin18.anchor.set(0.5, 0.5);
+  _spr_coin18.width = 18;
+  _spr_coin18.height = 18;
+  _cameraContainer.addChild(_spr_coin18);
+  const _body_coin18 = Matter.Bodies.rectangle(1953, 297, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin18.id] = "coin18";
+  _sprites["coin18"] = { sprite: _spr_coin18, body: _body_coin18, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin19 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin19.x = 3213;
+  _spr_coin19.y = 225;
+  _spr_coin19.anchor.set(0.5, 0.5);
+  _spr_coin19.width = 18;
+  _spr_coin19.height = 18;
+  _cameraContainer.addChild(_spr_coin19);
+  const _body_coin19 = Matter.Bodies.rectangle(3213, 225, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin19.id] = "coin19";
+  _sprites["coin19"] = { sprite: _spr_coin19, body: _body_coin19, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_coin20 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_coin20.x = 3249;
+  _spr_coin20.y = 225;
+  _spr_coin20.anchor.set(0.5, 0.5);
+  _spr_coin20.width = 18;
+  _spr_coin20.height = 18;
+  _cameraContainer.addChild(_spr_coin20);
+  const _body_coin20 = Matter.Bodies.rectangle(3249, 225, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin20.id] = "coin20";
+  _sprites["coin20"] = { sprite: _spr_coin20, body: _body_coin20, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _spr_gem1 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_gem1.x = 1179;
+  _spr_gem1.y = 261;
+  _spr_gem1.anchor.set(0.5, 0.5);
+  _spr_gem1.width = 18;
+  _spr_gem1.height = 18;
+  _cameraContainer.addChild(_spr_gem1);
+  const _body_gem1 = Matter.Bodies.rectangle(1179, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_gem1.id] = "gem1";
+  _sprites["gem1"] = { sprite: _spr_gem1, body: _body_gem1, tag: "gem", collisionHandlers: [], behaviors: [] };
+
+  const _spr_gem2 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_gem2.x = 2475;
+  _spr_gem2.y = 261;
+  _spr_gem2.anchor.set(0.5, 0.5);
+  _spr_gem2.width = 18;
+  _spr_gem2.height = 18;
+  _cameraContainer.addChild(_spr_gem2);
+  const _body_gem2 = Matter.Bodies.rectangle(2475, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_gem2.id] = "gem2";
+  _sprites["gem2"] = { sprite: _spr_gem2, body: _body_gem2, tag: "gem", collisionHandlers: [], behaviors: [] };
+
+  const _spr_gem3 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_gem3.x = 2745;
+  _spr_gem3.y = 261;
+  _spr_gem3.anchor.set(0.5, 0.5);
+  _spr_gem3.width = 18;
+  _spr_gem3.height = 18;
+  _cameraContainer.addChild(_spr_gem3);
+  const _body_gem3 = Matter.Bodies.rectangle(2745, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_gem3.id] = "gem3";
+  _sprites["gem3"] = { sprite: _spr_gem3, body: _body_gem3, tag: "gem", collisionHandlers: [], behaviors: [] };
+
+  const _spr_qblock1 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_qblock1.x = 279;
+  _spr_qblock1.y = 315;
+  _spr_qblock1.anchor.set(0.5, 0.5);
+  _spr_qblock1.width = 18;
+  _spr_qblock1.height = 18;
+  _cameraContainer.addChild(_spr_qblock1);
+  const _body_qblock1 = Matter.Bodies.rectangle(279, 315, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_qblock1.id] = "qblock1";
+  _sprites["qblock1"] = { sprite: _spr_qblock1, body: _body_qblock1, tag: "qblock", collisionHandlers: [], behaviors: [] };
+
+  const _spr_qblock2 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_qblock2.x = 819;
+  _spr_qblock2.y = 261;
+  _spr_qblock2.anchor.set(0.5, 0.5);
+  _spr_qblock2.width = 18;
+  _spr_qblock2.height = 18;
+  _cameraContainer.addChild(_spr_qblock2);
+  const _body_qblock2 = Matter.Bodies.rectangle(819, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_qblock2.id] = "qblock2";
+  _sprites["qblock2"] = { sprite: _spr_qblock2, body: _body_qblock2, tag: "qblock", collisionHandlers: [], behaviors: [] };
+
+  const _spr_qblock3 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_qblock3.x = 1719;
+  _spr_qblock3.y = 315;
+  _spr_qblock3.anchor.set(0.5, 0.5);
+  _spr_qblock3.width = 18;
+  _spr_qblock3.height = 18;
+  _cameraContainer.addChild(_spr_qblock3);
+  const _body_qblock3 = Matter.Bodies.rectangle(1719, 315, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_qblock3.id] = "qblock3";
+  _sprites["qblock3"] = { sprite: _spr_qblock3, body: _body_qblock3, tag: "qblock", collisionHandlers: [], behaviors: [] };
+
+  const _spr_qblock4 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_qblock4.x = 1809;
+  _spr_qblock4.y = 315;
+  _spr_qblock4.anchor.set(0.5, 0.5);
+  _spr_qblock4.width = 18;
+  _spr_qblock4.height = 18;
+  _cameraContainer.addChild(_spr_qblock4);
+  const _body_qblock4 = Matter.Bodies.rectangle(1809, 315, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_qblock4.id] = "qblock4";
+  _sprites["qblock4"] = { sprite: _spr_qblock4, body: _body_qblock4, tag: "qblock", collisionHandlers: [], behaviors: [] };
+
+  const _spr_qblock5 = PIXI.Sprite.from("assets/kenney/tilemap_packed.png");
+  _spr_qblock5.x = 1899;
+  _spr_qblock5.y = 315;
+  _spr_qblock5.anchor.set(0.5, 0.5);
+  _spr_qblock5.width = 18;
+  _spr_qblock5.height = 18;
+  _cameraContainer.addChild(_spr_qblock5);
+  const _body_qblock5 = Matter.Bodies.rectangle(1899, 315, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_qblock5.id] = "qblock5";
+  _sprites["qblock5"] = { sprite: _spr_qblock5, body: _body_qblock5, tag: "qblock", collisionHandlers: [], behaviors: [] };
+
+  const _spr_goal_flag = new PIXI.Graphics();
+  _spr_goal_flag.rect(-2.0, -36.0, 4.0, 72.0);
+  _spr_goal_flag.fill({ color: 0xFF4444 });
+  _spr_goal_flag.x = 3429;
+  _spr_goal_flag.y = 324;
+  _cameraContainer.addChild(_spr_goal_flag);
+  const _body_goal_flag = Matter.Bodies.rectangle(3429, 324, 4, 72, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_goal_flag.id] = "goal_flag";
+  _sprites["goal_flag"] = { sprite: _spr_goal_flag, body: _body_goal_flag, tag: "flagpole", collisionHandlers: [], behaviors: [] };
+
+  const _spr_checkpoint1 = new PIXI.Graphics();
+  _spr_checkpoint1.rect(-9.0, -18.0, 18.0, 36.0);
+  _spr_checkpoint1.fill({ color: 0x00000000 });
+  _spr_checkpoint1.x = 2529;
+  _spr_checkpoint1.y = 342;
+  _spr_checkpoint1.visible = false;
+  _cameraContainer.addChild(_spr_checkpoint1);
+  const _body_checkpoint1 = Matter.Bodies.rectangle(2529, 342, 18, 36, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_checkpoint1.id] = "checkpoint1";
+  _sprites["checkpoint1"] = { sprite: _spr_checkpoint1, body: _body_checkpoint1, tag: "checkpoint", collisionHandlers: [], behaviors: [] };
+
+  const _spr_deathzone = new PIXI.Graphics();
+  _spr_deathzone.rect(-1800.0, -16.0, 3600.0, 32.0);
+  _spr_deathzone.fill({ color: 0x000000 });
+  _spr_deathzone.x = 1800;
+  _spr_deathzone.y = 470;
+  _spr_deathzone.visible = false;
+  _cameraContainer.addChild(_spr_deathzone);
+  const _body_deathzone = Matter.Bodies.rectangle(1800, 470, 3600, 32, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_deathzone.id] = "deathzone";
+  _sprites["deathzone"] = { sprite: _spr_deathzone, body: _body_deathzone, tag: "deathzone", collisionHandlers: [], behaviors: [] };
+
+  Matter.Composite.add(mWorld, [_body_tile_level_10_90, _body_tile_level_13_174, _body_tile_level_14_172, _body_tile_level_15_170, _body_tile_level_16_78, _body_tile_level_16_168, _body_tile_level_17_39, _body_tile_level_17_146, _body_tile_level_17_166, _body_tile_level_18_60, _body_tile_level_18_136, _body_tile_level_18_164, _body_tile_level_19_60, _body_tile_level_19_76, _body_tile_level_19_126, _body_tile_level_19_162, _body_tile_level_20_60, _body_tile_level_20_160, _body_tile_level_21_0, _body_tile_level_21_38, _body_tile_level_21_79, _body_tile_level_21_128, _body_tile_level_21_139, _body_tile_level_21_149, _body_tile_level_22_0, _body_tile_level_22_38, _body_tile_level_22_79, _body_tile_level_22_128, _body_tile_level_22_139, _body_tile_level_22_149, _body_tile_level_23_0, _body_tile_level_23_38, _body_tile_level_23_79, _body_tile_level_23_128, _body_tile_level_23_139, _body_tile_level_23_149, _body_tile_level_24_0, _body_tile_level_24_38, _body_tile_level_24_79, _body_tile_level_24_128, _body_tile_level_24_139, _body_tile_level_24_149, _body_player, _body_enemy1, _body_enemy2, _body_enemy3, _body_enemy4, _body_enemy5, _body_enemy6, _body_enemy7, _body_enemy8, _body_coin1, _body_coin2, _body_coin3, _body_coin4, _body_coin5, _body_coin6, _body_coin7, _body_coin8, _body_coin9, _body_coin10, _body_coin11, _body_coin12, _body_coin13, _body_coin14, _body_coin15, _body_coin16, _body_coin17, _body_coin18, _body_coin19, _body_coin20, _body_gem1, _body_gem2, _body_gem3, _body_qblock1, _body_qblock2, _body_qblock3, _body_qblock4, _body_qblock5, _body_goal_flag, _body_checkpoint1, _body_deathzone]);
+
+  function syncPhysics() {
+    for (const [id, info] of Object.entries(_sprites)) {
+      if (info.body && !info.body.isStatic) {
+        info.sprite.x = info.body.position.x;
+        info.sprite.y = info.body.position.y;
+        info.sprite.rotation = info.body.angle;
+      }
+    }
+  }
+
+  // === GAME API ===
+  // Game API
+  const game = { camera: {} };
+
+  game.destroy = function(info) {
+    if (!info) {
+      return;
+    }
+    // Find sprite id
+    let spriteId = null;
+    for (const [id, entry] of Object.entries(_sprites)) {
+      if (entry === info || entry.sprite === info) {
+        spriteId = id;
+        break;
+      }
+    }
+    if (!spriteId) {
+      return;
+    }
+    const entry = _sprites[spriteId];
+    if (entry.sprite && entry.sprite.parent) {
+      entry.sprite.parent.removeChild(entry.sprite);
+    }
+    if (entry.body) {
+      Matter.Composite.remove(mWorld, entry.body);
+    }
+    delete _sprites[spriteId];
+  };
+
+  game.play = function(soundId, opts) {
+    if (typeof _playSound === 'function') {
+      return _playSound(soundId, opts);
+    }
+  };
+
+  game.stop = function(soundId) {
+    if (typeof _stopSound === 'function') {
+      _stopSound(soundId);
+    }
+  };
+
+  game.emit = function(info, event) {
+    _gameEvents.emit(event, info);
+    if (info && info.tag) {
+      _gameEvents.emit(info.tag + '.' + event, info);
+    }
+  };
+
+  game.loadScene = function(name) {
+    if (typeof _loadScene === 'function') {
+      _loadScene(name);
+    }
+  };
+
+  game.respawn = function(id, x, y) {
+    const info = _sprites[id];
+    if (!info) {
+      return;
+    }
+    if (info.sprite) {
+      info.sprite.x = x;
+      info.sprite.y = y;
+      info.sprite.visible = true;
+    }
+    if (info.body) {
+      Matter.Body.setPosition(info.body, { x: x, y: y });
+      Matter.Body.setVelocity(info.body, { x: 0, y: 0 });
+    }
+  };
+
+  game.destroyGroup = function(groupName) {
+    const toRemove = [];
+    for (const [id, info] of Object.entries(_sprites)) {
+      if (info.group === groupName) {
+        toRemove.push(info);
+      }
+    }
+    for (const info of toRemove) {
+      game.destroy(info);
+    }
+  };
+
+  game.moveX = function(info, dx) {
+    if (info && info.body) {
+      Matter.Body.setVelocity(info.body, { x: dx, y: info.body.velocity.y });
+    }
+  };
+
+  game.moveToward = function(info, targetId, speed) {
+    if (!info || !info.body) {
+      return;
+    }
+    const target = _sprites[targetId];
+    if (!target) {
+      return;
+    }
+    const dx = target.sprite.x - info.sprite.x;
+    const dy = target.sprite.y - info.sprite.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 1) {
+      return;
+    }
+    Matter.Body.setVelocity(info.body, { x: (dx / dist) * speed, y: (dy / dist) * speed });
+  };
+
+  game.patrol = function(info, speed) {
+    game.moveX(info, speed);
+  };
+
+  game.camera.shake = function(intensity, duration) {
+    let _shakeFrames = Math.floor((duration || 0.3) * 60);
+    const _shakeIntensity = intensity || 5;
+    const origX = _cameraContainer.x;
+    const origY = _cameraContainer.y;
+    const _shakeTick = () => {
+      if (_shakeFrames <= 0) {
+        _cameraContainer.x = origX;
+        _cameraContainer.y = origY;
+        return;
+      }
+      _cameraContainer.x = origX + (Math.random() - 0.5) * _shakeIntensity * 2;
+      _cameraContainer.y = origY + (Math.random() - 0.5) * _shakeIntensity * 2;
+      _shakeFrames--;
+      requestAnimationFrame(_shakeTick);
+    };
+    _shakeTick();
+  };
+
+  game.spawn = function(id) {
+    if (typeof _spawn === 'function') {
+      _spawn(id);
+    }
+  };
+
+  // === BEHAVIOR ATTACHMENTS ===
+  _sprites["player"].behaviors.push(new PlayerBehavior(_sprites["player"], {}));
+  _sprites["player"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "enemy") return;
+    const b = self.behaviors.find(b => b instanceof PlayerBehavior);
+    if (b && b.onEnemyHit) { b._other = other; b.onEnemyHit(other); }
+  });
+  _sprites["player"].behaviors.push(new PlayerBehavior(_sprites["player"], {}));
+  _sprites["player"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "coin") return;
+    const b = self.behaviors.find(b => b instanceof PlayerBehavior);
+    if (b && b.onCoinGet) { b._other = other; b.onCoinGet(other); }
+  });
+  _sprites["player"].behaviors.push(new PlayerBehavior(_sprites["player"], {}));
+  _sprites["player"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "gem") return;
+    const b = self.behaviors.find(b => b instanceof PlayerBehavior);
+    if (b && b.onGemGet) { b._other = other; b.onGemGet(other); }
+  });
+  _sprites["player"].behaviors.push(new PlayerBehavior(_sprites["player"], {}));
+  _sprites["player"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "qblock") return;
+    const b = self.behaviors.find(b => b instanceof PlayerBehavior);
+    if (b && b.onBlockHit) { b._other = other; b.onBlockHit(other); }
+  });
+  _sprites["player"].behaviors.push(new PlayerBehavior(_sprites["player"], {}));
+  _sprites["player"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "flagpole") return;
+    const b = self.behaviors.find(b => b instanceof PlayerBehavior);
+    if (b && b.onFlagGet) { b._other = other; b.onFlagGet(other); }
+  });
+  _sprites["player"].behaviors.push(new PlayerBehavior(_sprites["player"], {}));
+  _sprites["player"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "checkpoint") return;
+    const b = self.behaviors.find(b => b instanceof PlayerBehavior);
+    if (b && b.onCheckpoint) { b._other = other; b.onCheckpoint(other); }
+  });
+  _sprites["player"].behaviors.push(new PlayerBehavior(_sprites["player"], {}));
+  _sprites["player"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "deathzone") return;
+    const b = self.behaviors.find(b => b instanceof PlayerBehavior);
+    if (b && b.onDeath) { b._other = other; b.onDeath(other); }
+  });
+  _sprites["enemy1"].behaviors.push(new PatrolAI(_sprites["enemy1"], {}));
+  _sprites["enemy1"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof PatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["enemy2"].behaviors.push(new PatrolAI(_sprites["enemy2"], {}));
+  _sprites["enemy2"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof PatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["enemy3"].behaviors.push(new SmartPatrolAI(_sprites["enemy3"], {}));
+  _sprites["enemy3"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof SmartPatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["enemy4"].behaviors.push(new SmartPatrolAI(_sprites["enemy4"], {}));
+  _sprites["enemy4"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof SmartPatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["enemy5"].behaviors.push(new PatrolAI(_sprites["enemy5"], {}));
+  _sprites["enemy5"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof PatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["enemy6"].behaviors.push(new PatrolAI(_sprites["enemy6"], {}));
+  _sprites["enemy6"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof PatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["enemy7"].behaviors.push(new SmartPatrolAI(_sprites["enemy7"], {}));
+  _sprites["enemy7"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof SmartPatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["enemy8"].behaviors.push(new PatrolAI(_sprites["enemy8"], {}));
+  _sprites["enemy8"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof PatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["coin1"].behaviors.push(new FloatingCoin(_sprites["coin1"], {}));
+  _sprites["coin2"].behaviors.push(new FloatingCoin(_sprites["coin2"], {}));
+  _sprites["coin3"].behaviors.push(new FloatingCoin(_sprites["coin3"], {}));
+  _sprites["coin4"].behaviors.push(new FloatingCoin(_sprites["coin4"], {}));
+  _sprites["coin5"].behaviors.push(new FloatingCoin(_sprites["coin5"], {}));
+  _sprites["coin6"].behaviors.push(new FloatingCoin(_sprites["coin6"], {}));
+  _sprites["coin7"].behaviors.push(new FloatingCoin(_sprites["coin7"], {}));
+  _sprites["coin8"].behaviors.push(new FloatingCoin(_sprites["coin8"], {}));
+  _sprites["coin9"].behaviors.push(new FloatingCoin(_sprites["coin9"], {}));
+  _sprites["coin10"].behaviors.push(new FloatingCoin(_sprites["coin10"], {}));
+  _sprites["coin11"].behaviors.push(new FloatingCoin(_sprites["coin11"], {}));
+  _sprites["coin12"].behaviors.push(new FloatingCoin(_sprites["coin12"], {}));
+  _sprites["coin13"].behaviors.push(new FloatingCoin(_sprites["coin13"], {}));
+  _sprites["coin14"].behaviors.push(new FloatingCoin(_sprites["coin14"], {}));
+  _sprites["coin15"].behaviors.push(new FloatingCoin(_sprites["coin15"], {}));
+  _sprites["coin16"].behaviors.push(new FloatingCoin(_sprites["coin16"], {}));
+  _sprites["coin17"].behaviors.push(new FloatingCoin(_sprites["coin17"], {}));
+  _sprites["coin18"].behaviors.push(new FloatingCoin(_sprites["coin18"], {}));
+  _sprites["coin19"].behaviors.push(new FloatingCoin(_sprites["coin19"], {}));
+  _sprites["coin20"].behaviors.push(new FloatingCoin(_sprites["coin20"], {}));
+  _sprites["gem1"].behaviors.push(new FloatingCoin(_sprites["gem1"], {}));
+  _sprites["gem2"].behaviors.push(new FloatingCoin(_sprites["gem2"], {}));
+  _sprites["gem3"].behaviors.push(new FloatingCoin(_sprites["gem3"], {}));
+  _sprites["qblock1"].behaviors.push(new QBlockBehavior(_sprites["qblock1"], {}));
+  _sprites["qblock1"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "player") return;
+    const b = self.behaviors.find(b => b instanceof QBlockBehavior);
+    if (b && b.onHit) { b._other = other; b.onHit(other); }
+  });
+  _sprites["qblock2"].behaviors.push(new QBlockBehavior(_sprites["qblock2"], {}));
+  _sprites["qblock2"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "player") return;
+    const b = self.behaviors.find(b => b instanceof QBlockBehavior);
+    if (b && b.onHit) { b._other = other; b.onHit(other); }
+  });
+  _sprites["qblock3"].behaviors.push(new QBlockBehavior(_sprites["qblock3"], {}));
+  _sprites["qblock3"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "player") return;
+    const b = self.behaviors.find(b => b instanceof QBlockBehavior);
+    if (b && b.onHit) { b._other = other; b.onHit(other); }
+  });
+  _sprites["qblock4"].behaviors.push(new QBlockBehavior(_sprites["qblock4"], {}));
+  _sprites["qblock4"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "player") return;
+    const b = self.behaviors.find(b => b instanceof QBlockBehavior);
+    if (b && b.onHit) { b._other = other; b.onHit(other); }
+  });
+  _sprites["qblock5"].behaviors.push(new QBlockBehavior(_sprites["qblock5"], {}));
+  _sprites["qblock5"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "player") return;
+    const b = self.behaviors.find(b => b instanceof QBlockBehavior);
+    if (b && b.onHit) { b._other = other; b.onHit(other); }
+  });
+  // Init state machines
+  for (const [_id, _info] of Object.entries(_sprites)) {
+    for (const b of _info.behaviors) {
+      if (b._smInit) {
+        b._smInit();
+      }
+    }
+  }
+
+  // === ANIMATION REGISTRATION ===
+  _registerAnimation("player", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "idle": { frames: "0", speed: 0.1, loop: true, autoPlay: true }, "walk": { frames: "1,2", speed: 0.15, loop: true, autoPlay: false } });
+  _registerAnimation("enemy1", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "18,19,20", speed: 0.2, loop: true, autoPlay: true } });
+  _registerAnimation("enemy2", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "18,19,20", speed: 0.2, loop: true, autoPlay: true } });
+  _registerAnimation("enemy3", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "24,25,26", speed: 0.2, loop: true, autoPlay: true } });
+  _registerAnimation("enemy4", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "18,19,20", speed: 0.2, loop: true, autoPlay: true } });
+  _registerAnimation("enemy5", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "24,25,26", speed: 0.2, loop: true, autoPlay: true } });
+  _registerAnimation("enemy6", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "18,19,20", speed: 0.2, loop: true, autoPlay: true } });
+  _registerAnimation("enemy7", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "24,25,26", speed: 0.2, loop: true, autoPlay: true } });
+  _registerAnimation("enemy8", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "18,19,20", speed: 0.2, loop: true, autoPlay: true } });
+
+  // === INPUT ===
+  const _keys = {};
+  const _justPressed = {};
+  window.addEventListener('keydown', (e) => {
+    if (!_keys[e.key]) _justPressed[e.key] = true;
+    _keys[e.key] = true;
+  });
+  window.addEventListener('keyup', (e) => {
+    _keys[e.key] = false;
+  });
+  function _clearJustPressed() {
+    for (const k in _justPressed) delete _justPressed[k];
+  }
+  const _controlledSprites = {};
+  _controlledSprites["player"] = { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', jump: 'ArrowUp', left2: 'a', right2: 'd', up2: 'w', jump2: 'w' };
+
+  // === MOUSE ===
+  // Mouse System
+  let _mouseX = 0;
+  let _mouseY = 0;
+  let _mouseWorldX = 0;
+  let _mouseWorldY = 0;
+  app.canvas.addEventListener('pointermove', (e) => {
+    const rect = app.canvas.getBoundingClientRect();
+    _mouseX = e.clientX - rect.left;
+    _mouseY = e.clientY - rect.top;
+    // Convert to world coordinates (accounting for camera)
+    _mouseWorldX = _mouseX - _cameraContainer.x;
+    _mouseWorldY = _mouseY - _cameraContainer.y;
+  });
+
+  // === FUNCTIONS ===
+  function restart() {
+    game.respawn("player", 36, 348);
+    score = 0;
+    coins = 0;
+    lives = 3;
+    gameOver = false;
+    won = false;
+    _updateHUD();
+  }
+
+
+  // === COLLISIONS ===
+  Matter.Events.on(mEngine, 'collisionStart', (event) => {
+    for (const pair of event.pairs) {
+      const a = _bodyToSprite[pair.bodyA.id];
+      const b = _bodyToSprite[pair.bodyB.id];
+      if (a && b) {
+        _handleCollision(a, b);
+        _handleCollision(b, a);
+      }
+    }
+  });
+
+  function _handleCollision(selfId, otherId) {
+    const selfInfo = _sprites[selfId];
+    const otherInfo = _sprites[otherId];
+    if (!selfInfo || !otherInfo) {
+      return;
+    }
+    if (selfInfo.collisionHandlers) {
+      for (const handler of selfInfo.collisionHandlers) {
+        handler(selfInfo, otherInfo);
+      }
+    }
+  }
+
+  // === SOUNDS ===
+  // Audio System
+  const _sounds = {};
+  let _audioCtx = null;
+  let _audioUnlocked = false;
+  const _pendingSounds = [];
+
+  function _initAudio() {
+    if (_audioCtx) {
+      return;
+    }
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Unlock audio on any user interaction
+    const unlockEvents = ['click', 'keydown', 'touchstart', 'pointerdown'];
+    function _unlock() {
+      if (_audioUnlocked) {
+        return;
+      }
+      if (_audioCtx.state === 'suspended') {
+        _audioCtx.resume().then(() => {
+          _audioUnlocked = true;
+          // Play any queued sounds
+          while (_pendingSounds.length > 0) {
+            const pending = _pendingSounds.shift();
+            const _psrc = _doPlaySound(pending.id, pending.opts);
+            if (_psrc) {
+              _activeSources[pending.id] = _psrc;
+              _psrc.onended = function() { if (_activeSources[pending.id] === _psrc) delete _activeSources[pending.id]; };
+            }
+          }
+        });
+      } else {
+        _audioUnlocked = true;
+      }
+      for (const evt of unlockEvents) {
+        document.removeEventListener(evt, _unlock);
+      }
+    }
+
+    for (const evt of unlockEvents) {
+      document.addEventListener(evt, _unlock, { once: false });
+    }
+  }
+
+  async function _loadSound(id, url) {
+    _initAudio();
+    try {
+      const resp = await fetch(url);
+      const buf = await resp.arrayBuffer();
+      _sounds[id] = await _audioCtx.decodeAudioData(buf);
+    }
+    catch(e) {
+      console.warn('Sound load failed:', id, e);
+    }
+  }
+
+  function _doPlaySound(id, opts) {
+    opts = opts || {};
+    const buf = _sounds[id];
+    if (!buf) {
+      return;
+    }
+    const src = _audioCtx.createBufferSource();
+    src.buffer = buf;
+    const gain = _audioCtx.createGain();
+    gain.gain.value = opts.volume !== undefined ? opts.volume : 1;
+    src.connect(gain).connect(_audioCtx.destination);
+    src.loop = !!opts.loop;
+    src.start(0);
+    return src;
+  }
+
+  const _activeSources = {};
+
+  function _playSound(id, opts) {
+    if (!_audioUnlocked) {
+      _pendingSounds.push({ id: id, opts: opts });
+      return;
+    }
+    const src = _doPlaySound(id, opts);
+    if (src) {
+      _activeSources[id] = src;
+      src.onended = function() { if (_activeSources[id] === src) delete _activeSources[id]; };
+    }
+    return src;
+  }
+
+  function _stopSound(id) {
+    const src = _activeSources[id];
+    if (src) {
+      try {
+        src.stop();
+      }
+      catch(e) {
+      }
+      delete _activeSources[id];
+    }
+  }
+  await _loadSound("jump_sfx", "assets/kenney/audio/jump.ogg");
+  await _loadSound("coin_sfx", "assets/kenney/audio/coin.ogg");
+  await _loadSound("powerup_sfx", "assets/kenney/audio/powerup.ogg");
+  await _loadSound("stomp_sfx", "assets/kenney/audio/stomp.ogg");
+  await _loadSound("hurt_sfx", "assets/kenney/audio/hurt.ogg");
+  await _loadSound("win_sfx", "assets/kenney/audio/win.ogg");
+  await _loadSound("block_sfx", "assets/kenney/audio/block.ogg");
+
+  // === PARTICLES ===
+  // Particle System
+  const _particleSystems = {};
+
+  function _createParticleSystem(config) {
+    const ps = {
+      id: config.id,
+      follow: config.follow || null,
+      trigger: config.trigger || null,
+      count: config.count || 20,
+      emitRate: config.emitRate || 10,
+      lifetime: config.lifetime || 1,
+      speedMin: config.speedMin || 1,
+      speedMax: config.speedMax || 3,
+      angleMin: (config.angleMin || 0) * Math.PI / 180,
+      angleMax: (config.angleMax || 360) * Math.PI / 180,
+      alphaStart: config.alphaStart !== undefined ? config.alphaStart : 1,
+      alphaEnd: config.alphaEnd !== undefined ? config.alphaEnd : 0,
+      active: false,
+      emitTimer: 0,
+      pool: [],
+      container: new PIXI.Container(),
+    };
+
+    // Pre-allocate particle pool
+    for (let i = 0; i <= ps.count - 1; i += 1) {
+      const p = new PIXI.Graphics();
+      p.circle(0, 0, 3);
+      p.fill({ color: 0xffffff });
+      p.visible = false;
+      p._life = 0; p._maxLife = 0; p._vx = 0; p._vy = 0;
+      p._alphaStart = 1; p._alphaEnd = 0;
+      ps.container.addChild(p);
+      ps.pool.push(p);
+    }
+
+    _cameraContainer.addChild(ps.container);
+    _particleSystems[config.id] = ps;
+    return ps;
+  }
+
+  function _emitParticle(ps, x, y) {
+    for (const p of ps.pool) {
+      if (!p.visible) {
+        p.x = x;
+        p.y = y;
+        const angle = ps.angleMin + Math.random() * (ps.angleMax - ps.angleMin);
+        const speed = ps.speedMin + Math.random() * (ps.speedMax - ps.speedMin);
+        p._vx = Math.cos(angle) * speed;
+        p._vy = Math.sin(angle) * speed;
+        p._life = 0;
+        p._maxLife = ps.lifetime;
+        p._alphaStart = ps.alphaStart;
+        p._alphaEnd = ps.alphaEnd;
+        p.alpha = ps.alphaStart;
+        p.visible = true;
+        return;
+      }
+    }
+  }
+
+  function _activateParticles(psId) {
+    const ps = _particleSystems[psId];
+    if (ps) {
+      ps.active = true;
+    }
+  }
+
+  function _deactivateParticles(psId) {
+    const ps = _particleSystems[psId];
+    if (ps) {
+      ps.active = false;
+    }
+  }
+
+  function _updateParticles(dt) {
+    for (const [id, ps] of Object.entries(_particleSystems)) {
+      // Emit new particles if active
+      if (ps.active) {
+        ps.emitTimer += dt / 60;
+        const interval = 1 / ps.emitRate;
+        while (ps.emitTimer >= interval) {
+          ps.emitTimer -= interval;
+          let ex = 0;
+          let ey = 0;
+          if (ps.follow) {
+            const info = _sprites[ps.follow];
+            if (info) {
+              ex = info.sprite.x;
+              ey = info.sprite.y;
+            }
+          }
+          _emitParticle(ps, ex, ey);
+        }
+      }
+
+      // Update living particles
+      for (const p of ps.pool) {
+        if (!p.visible) {
+          continue;
+        }
+        p._life += dt / 60;
+        if (p._life >= p._maxLife) {
+          p.visible = false;
+          continue;
+        }
+        const lifeT = p._life / p._maxLife;
+        p.x = p.x + p._vx;
+        p.y = p.y + p._vy;
+        p.alpha = p._alphaStart + (p._alphaEnd - p._alphaStart) * lifeT;
+      }
+    }
+  }
+  // No particle instances
+
+  // === TIMERS ===
+  // Timer System
+  const _timers = {};
+  const _timerActions = {};
+
+  function _createTimer(id, interval, repeat, autoStart, actionFn) {
+    _timers[id] = { elapsed: 0, interval: interval, repeat: repeat, count: 0, active: autoStart };
+    _timerActions[id] = actionFn;
+  }
+
+  function _updateTimers(dt) {
+    for (const [tid, t] of Object.entries(_timers)) {
+      if (!t.active) {
+        continue;
+      }
+      t.elapsed += dt / 60;
+      if (t.elapsed >= t.interval) {
+        t.elapsed = 0;
+        if (_timerActions[tid]) {
+          _timerActions[tid]();
+        }
+        t.count++;
+        if (t.repeat >= 0 && t.count >= t.repeat) {
+          t.active = false;
+        }
+      }
+    }
+  }
+  // No timer instances
+
+  // === TWEENS ===
+  // Easing Functions
+  const _easing = {
+    linear: t => t,
+    easeIn: t => t * t,
+    easeOut: t => t * (2 - t),
+    easeInOut: t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+    easeInCubic: t => t * t * t,
+    easeOutCubic: t => (--t) * t * t + 1,
+    easeInOutCubic: t => t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1,
+    easeInQuart: t => t * t * t * t,
+    easeOutQuart: t => 1 - (--t) * t * t * t,
+    easeInOutQuart: t => t < 0.5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t,
+    easeOutBounce: t => {
+      if (t < 1/2.75) return 7.5625 * t * t;
+      if (t < 2/2.75) return 7.5625 * (t -= 1.5/2.75) * t + 0.75;
+      if (t < 2.5/2.75) return 7.5625 * (t -= 2.25/2.75) * t + 0.9375;
+      return 7.5625 * (t -= 2.625/2.75) * t + 0.984375;
+    },
+    easeInBounce: t => 1 - _easing.easeOutBounce(1 - t),
+    easeOutElastic: t => {
+      if (t === 0 || t === 1) return t;
+      return Math.pow(2, -10 * t) * Math.sin((t - 0.075) * (2 * Math.PI) / 0.3) + 1;
+    },
+    easeInElastic: t => {
+      if (t === 0 || t === 1) return t;
+      return -Math.pow(2, 10 * (t - 1)) * Math.sin((t - 1.075) * (2 * Math.PI) / 0.3);
+    },
+  };
+
+  const _tweens = {};
+  let _tweenIdCounter = 0;
+
+  function _createTween(config) {
+    const id = config.id || ('tween_' + _tweenIdCounter++);
+    _tweens[id] = {
+      target: config.target,
+      prop: config.prop,
+      from: null,
+      to: config.to,
+      duration: config.duration || 1,
+      easing: config.easing || 'linear',
+      loop: !!config.loop,
+      yoyo: !!config.yoyo,
+      delay: config.delay || 0,
+      elapsed: 0,
+      delayElapsed: 0,
+      active: config.active !== false,
+      started: false,
+    };
+    return id;
+  }
+
+  function _updateTweens(dt) {
+    for (const [tid, tw] of Object.entries(_tweens)) {
+      if (!tw.active) {
+        continue;
+      }
+      // Handle delay
+      if (tw.delayElapsed < tw.delay) {
+        tw.delayElapsed += dt / 60;
+        continue;
+      }
+      // Init start value on first frame
+      if (!tw.started) {
+        const info = _sprites[tw.target];
+        if (!info) {
+          continue;
+        }
+        tw.from = info.sprite[tw.prop];
+        tw.started = true;
+      }
+      tw.elapsed += dt / 60;
+      const rawT = Math.min(tw.elapsed / tw.duration, 1);
+      const easeFn = _easing[tw.easing] || _easing.linear;
+      const t = easeFn(rawT);
+      const info = _sprites[tw.target];
+      if (info) {
+        info.sprite[tw.prop] = tw.from + (tw.to - tw.from) * t;
+      }
+      if (rawT >= 1) {
+        if (tw.loop) {
+          tw.elapsed = 0;
+          if (tw.yoyo) {
+            const tmp = tw.from;
+            tw.from = tw.to;
+            tw.to = tmp;
+          }
+        } else {
+          tw.active = false;
+        }
+      }
+    }
+  }
+  // No tween instances
+
+  // === SPAWNERS ===
+  // No spawners
+
+  // === HUD UPDATE ===
+  const _hudElements = [];
+  _hudElements.push(document.getElementById('qg-hud-0'));
+  _hudElements.push(document.getElementById('qg-hud-1'));
+  _hudElements.push(document.getElementById('qg-hud-2'));
+  _hudElements.push(document.getElementById('qg-hud-3'));
+  function _updateHUD() {
+    if (_hudElements[0]) {
+      _hudElements[0].textContent = "\n        LIVES: " + String(lives) + "\n      ";
+    }
+    if (_hudElements[1]) {
+      _hudElements[1].textContent = "\n        SCORE: " + String(score) + "\n      ";
+    }
+    if (_hudElements[2]) {
+      _hudElements[2].textContent = "\n        COINS: " + String(coins) + "\n      ";
+    }
+    if (_hudElements[3]) {
+      _hudElements[3].textContent = "\n        " + String(gameOver ? 'GAME OVER' : (won ? 'LEVEL COMPLETE!' : '')) + "\n      ";
+    }
+  }
+
+  // === GAME LOOP ===
+  app.ticker.add((ticker) => {
+    const dt = ticker.deltaTime;
+    Matter.Engine.update(mEngine, dt * 16.67);
+    syncPhysics();
+    // Input handling
+    const _ctrl_player = _controlledSprites["player"];
+    // Movement with dual key support (arrows + WASD)
+    const _leftPressed_player = _keys[_ctrl_player.left] || (_keys[_ctrl_player.left2] || false);
+    const _rightPressed_player = _keys[_ctrl_player.right] || (_keys[_ctrl_player.right2] || false);
+    const _jumpPressed_player = _keys[_ctrl_player.jump] || (_keys[_ctrl_player.jump2] || false);
+    const _jumpJust_player = _justPressed[_ctrl_player.jump] || (_justPressed[_ctrl_player.jump2] || false);
+    if (_leftPressed_player && _sprites["player"].body) {
+      Matter.Body.setVelocity(_sprites["player"].body, { x: -4, y: _sprites["player"].body.velocity.y });
+      _sprites["player"].sprite.scale.x = -Math.abs(_sprites["player"].sprite.scale.x);
+    }
+    if (_rightPressed_player && _sprites["player"].body) {
+      Matter.Body.setVelocity(_sprites["player"].body, { x: 4, y: _sprites["player"].body.velocity.y });
+      _sprites["player"].sprite.scale.x = Math.abs(_sprites["player"].sprite.scale.x);
+    }
+    // Variable jump: initiate on press, sustain while held
+    if (_jumpJust_player && _sprites["player"].body && Math.abs(_sprites["player"].body.velocity.y) < 5.0) {
+      Matter.Body.setVelocity(_sprites["player"].body, { x: _sprites["player"].body.velocity.x, y: -22 });
+      _sprites["player"]._jumpFrames = 6;
+      _gameEvents.emit('player.jump', _sprites["player"]);
+    }
+    // Hold jump to go higher
+    if (_jumpPressed_player && _sprites["player"].body && _sprites["player"]._jumpFrames > 0) {
+      Matter.Body.setVelocity(_sprites["player"].body, { x: _sprites["player"].body.velocity.x, y: _sprites["player"].body.velocity.y - 0.6 });
+      _sprites["player"]._jumpFrames--;
+    }
+    if (!_jumpPressed_player) {
+      if (_sprites["player"]._jumpFrames) _sprites["player"]._jumpFrames = 0;
+    }
+    if (!_leftPressed_player && !_rightPressed_player && _sprites["player"].body) {
+      Matter.Body.setVelocity(_sprites["player"].body, { x: 0, y: _sprites["player"].body.velocity.y });
+      _gameEvents.emit('player.stop', _sprites["player"]);
+    } else {
+      _gameEvents.emit('player.walk', _sprites["player"]);
+    }
+    if (_justPressed["r"] && typeof restart === 'function') {
+      restart();
+    }
+    _clearJustPressed();
+    updateCamera();
+    _updateControlAnimations();
+    // Behaviors update
+    for (const [_id, _info] of Object.entries(_sprites)) {
+      for (const b of _info.behaviors) {
+        if (b._smUpdate) {
+          b._smUpdate();
+        }
+        if (b.update) {
+          b.update();
+        }
+      }
+    }
+    _updateHUD();
+  });
+
+  // === SCENE START ===
+  _gameEvents.on("player.jump", () => _playSound("jump_sfx", { volume: 1, loop: false }));
+})();
+  </script>
+</body>
+</html>

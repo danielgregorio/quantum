@@ -1,0 +1,32 @@
+{
+  "dataset_type": "positive",
+  "feature": "forms_actions",
+  "category": "validation_rules",
+  "description": "Valid examples of parameter validation",
+  "examples": [
+    {
+      "id": "valid-001",
+      "intent": "Email validation",
+      "quantum_code": "<q:param name=\"email\" type=\"email\" required=\"true\" />",
+      "tags": ["email", "required"]
+    },
+    {
+      "id": "valid-002",
+      "intent": "String length validation",
+      "quantum_code": "<q:param name=\"username\" type=\"string\" minlength=\"3\" maxlength=\"20\" required=\"true\" />",
+      "tags": ["string", "length", "required"]
+    },
+    {
+      "id": "valid-003",
+      "intent": "Numeric range validation",
+      "quantum_code": "<q:param name=\"age\" type=\"integer\" min=\"18\" max=\"120\" />",
+      "tags": ["integer", "range", "optional"]
+    },
+    {
+      "id": "valid-004",
+      "intent": "Enum validation",
+      "quantum_code": "<q:param name=\"status\" type=\"string\" enum=\"pending,approved,rejected\" required=\"true\" />",
+      "tags": ["enum", "string", "required"]
+    }
+  ]
+}

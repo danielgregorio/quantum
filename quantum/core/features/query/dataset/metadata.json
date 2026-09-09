@@ -1,0 +1,113 @@
+{
+  "feature": "query",
+  "version": "2.0.0",
+  "description": "Database query feature with parameter binding, supporting SELECT, INSERT, UPDATE, DELETE operations with full integration to q:loop, q:if, and q:set",
+  "statistics": {
+    "total_examples": 56,
+    "positive_examples": 50,
+    "negative_examples": 6,
+    "categories": {
+      "basic_patterns": 10,
+      "integration_patterns": 10,
+      "edge_cases": 10,
+      "real_world_patterns": 10,
+      "complex_scenarios": 10
+    }
+  },
+  "training_readiness": {
+    "status": "ready_for_production_training",
+    "confidence": "high",
+    "notes": "Comprehensive coverage with 50 positive examples showing multiple implementation styles across all categories, plus 6 negative examples for error handling"
+  },
+  "example_diversity": {
+    "implementation_styles": "Shows 3-7 different approaches per pattern type including basic queries, JOINs, subqueries, CTEs, window functions, aggregations, and upserts",
+    "complexity_levels": "Basic (10) -> Integration (10) -> Edge Cases (10) -> Real-World (10) -> Advanced (10)",
+    "use_cases": [
+      "Single record retrieval by ID",
+      "Text search with LIKE",
+      "Insert with and without RETURNING",
+      "Update with WHERE conditions",
+      "Delete operations",
+      "Sorting with ORDER BY",
+      "Pagination with LIMIT/OFFSET",
+      "Parameter binding (string, integer, decimal, boolean, datetime, array)",
+      "Loop integration for result display",
+      "Conditional query execution with q:if",
+      "State variable integration with q:set",
+      "Empty result handling",
+      "NULL value handling",
+      "Multiple parameter queries",
+      "Complex WHERE clauses",
+      "JOIN queries (INNER, LEFT)",
+      "Aggregate functions (COUNT, SUM, AVG)",
+      "GROUP BY with HAVING",
+      "Subqueries in WHERE and SELECT",
+      "Recursive CTEs for hierarchical data",
+      "Window functions for analytics",
+      "Upsert with ON CONFLICT",
+      "Batch operations",
+      "Dashboard statistics",
+      "E-commerce patterns (cart, catalog, orders)",
+      "Search with filters",
+      "Reporting and analytics",
+      "Comment threads",
+      "Inventory management",
+      "Financial transactions"
+    ],
+    "multiple_solutions": "Same problems solved with different SQL techniques: filtering (WHERE vs HAVING vs subquery), counting (aggregate vs accumulator), joining (explicit vs implicit), pagination (LIMIT/OFFSET vs window functions)"
+  },
+  "coverage_analysis": {
+    "sql_operations": {
+      "SELECT": "Complete coverage with simple, filtered, sorted, limited, joined, and aggregated queries",
+      "INSERT": "Covered with and without RETURNING, single and batch operations",
+      "UPDATE": "Single and batch updates, conditional updates based on queries",
+      "DELETE": "Simple and conditional deletes"
+    },
+    "parameter_types": {
+      "string": "Multiple examples with quotes and special characters",
+      "integer": "Primary keys, counts, IDs",
+      "decimal": "Prices, monetary values",
+      "boolean": "Flags and status fields",
+      "datetime": "Date ranges and timestamps",
+      "array": "IN clause with multiple values",
+      "null": "Optional filters and nullable columns"
+    },
+    "integration_patterns": {
+      "q:loop": "Result iteration, nested loops, grouped display",
+      "q:if": "Conditional queries, result validation, empty checks",
+      "q:set": "State capture, calculations, accumulation",
+      "combined": "Multi-feature workflows and pipelines"
+    },
+    "advanced_sql": {
+      "joins": "INNER, LEFT, multiple table joins",
+      "aggregations": "COUNT, SUM, AVG with GROUP BY",
+      "subqueries": "Correlated and non-correlated",
+      "cte": "Recursive CTEs for hierarchical data",
+      "window_functions": "ROW_NUMBER, AVG OVER",
+      "upsert": "ON CONFLICT DO UPDATE patterns"
+    },
+    "real_world_scenarios": {
+      "e_commerce": "Product catalog, shopping cart, order processing",
+      "dashboards": "KPIs, metrics, analytics",
+      "user_management": "Profiles, activity feeds, authentication",
+      "reporting": "Business reports with grouping and aggregation",
+      "inventory": "Stock management and alerts",
+      "financial": "Transactions with validation"
+    }
+  },
+  "dataset_quality": {
+    "completeness": "100% - All required categories covered with 10 examples each",
+    "diversity": "High - Multiple SQL techniques for same use cases",
+    "real_world_relevance": "High - Production-ready patterns for actual applications",
+    "error_coverage": "Complete - Validation, syntax, injection prevention",
+    "integration_depth": "Complete - Full coverage of feature interactions"
+  },
+  "llm_training_benefits": {
+    "pattern_recognition": "50 examples provide sufficient data for pattern learning",
+    "style_flexibility": "Multiple approaches teach adaptable code generation",
+    "best_practices": "Security (parameter binding), performance (pagination), error handling",
+    "practical_application": "Real-world scenarios ensure generated code is production-ready"
+  },
+  "created_at": "2025-10-02",
+  "last_updated": "2025-10-02"
+}

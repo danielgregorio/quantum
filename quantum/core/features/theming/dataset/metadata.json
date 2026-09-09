@@ -1,0 +1,13 @@
+{
+  "feature": "theming",
+  "version": "1.0.0",
+  "description": "Test dataset for the Quantum theming system",
+  "positive_count": 5,
+  "negative_count": 3,
+  "categories": {
+    "preset_themes": "Using light/dark preset themes",
+    "custom_themes": "Defining custom color schemes",
+    "auto_switch": "Automatic theme switching",
+    "theme_attribute": "Theme attribute on q:application"
+  }
+}

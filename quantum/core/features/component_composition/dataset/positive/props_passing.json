@@ -1,0 +1,175 @@
+{
+  "dataset_type": "positive",
+  "feature": "component_composition",
+  "category": "props_passing",
+  "description": "Valid examples of passing props to child components",
+  "examples": [
+    {
+      "id": "props-simple-001",
+      "intent": "Pass static string prop",
+      "input": {
+        "natural_language": "Pass label prop to Button component",
+        "context": {
+          "component": "Button",
+          "props": {
+            "label": {
+              "type": "string",
+              "required": true
+            }
+          }
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"PropsTest\">\n  <q:import component=\"Button\" />\n\n  <Button label=\"Click me\" />\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "name": "PropsTest",
+          "statements": [
+            {
+              "type": "ImportNode",
+              "component": "Button"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Button",
+              "props": {
+                "label": "Click me"
+              }
+            }
+          ]
+        },
+        "runtime_behavior": "Passes static string 'Click me' as label prop"
+      },
+      "tags": ["props", "static_value", "string"]
+    },
+    {
+      "id": "props-simple-002",
+      "intent": "Pass variable via databinding",
+      "input": {
+        "natural_language": "Pass userName variable to WelcomeCard",
+        "context": {
+          "available_vars": ["userName"],
+          "component": "WelcomeCard",
+          "props": {
+            "name": {
+              "type": "string",
+              "required": true
+            }
+          }
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"PropsTest\">\n  <q:import component=\"WelcomeCard\" />\n\n  <q:set name=\"userName\" value=\"Daniel\" />\n  <WelcomeCard name=\"{userName}\" />\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "name": "PropsTest",
+          "statements": [
+            {
+              "type": "ImportNode",
+              "component": "WelcomeCard"
+            },
+            {
+              "type": "SetNode",
+              "name": "userName",
+              "value": "Daniel"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "WelcomeCard",
+              "props": {
+                "name": "{userName}"
+              }
+            }
+          ]
+        },
+        "runtime_behavior": "Resolves {userName} from parent context and passes to child"
+      },
+      "tags": ["props", "databinding", "variable"]
+    },
+    {
+      "id": "props-simple-003",
+      "intent": "Pass multiple props",
+      "input": {
+        "natural_language": "Pass label and color to Button",
+        "context": {
+          "component": "Button",
+          "props": {
+            "label": {
+              "type": "string",
+              "required": true
+            },
+            "color": {
+              "type": "string",
+              "default": "blue"
+            }
+          }
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"PropsTest\">\n  <q:import component=\"Button\" />\n\n  <Button label=\"Save\" color=\"green\" />\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "name": "PropsTest",
+          "statements": [
+            {
+              "type": "ImportNode",
+              "component": "Button"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Button",
+              "props": {
+                "label": "Save",
+                "color": "green"
+              }
+            }
+          ]
+        },
+        "runtime_behavior": "Passes both label and color props to Button component"
+      },
+      "tags": ["props", "multiple_props", "required_and_optional"]
+    },
+    {
+      "id": "props-advanced-001",
+      "intent": "Use default prop value",
+      "input": {
+        "natural_language": "Call Button without color prop, use default",
+        "context": {
+          "component": "Button",
+          "props": {
+            "label": {
+              "type": "string",
+              "required": true
+            },
+            "color": {
+              "type": "string",
+              "default": "blue"
+            }
+          }
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"PropsTest\">\n  <q:import component=\"Button\" />\n\n  <Button label=\"Submit\" />\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "name": "PropsTest",
+          "statements": [
+            {
+              "type": "ImportNode",
+              "component": "Button"
+            },
+            {
+              "type": "ComponentCallNode",
+              "component_name": "Button",
+              "props": {
+                "label": "Submit"
+              }
+            }
+          ]
+        },
+        "runtime_behavior": "Uses default color='blue' from q:param definition"
+      },
+      "tags": ["props", "defaults", "optional_props"]
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+feature:
+  name: dump
+  display_name: q:dump
+  version: 1.0.0
+  status: planned
+  category: debugging
+
+description:
+  short: Variable inspection component for beautiful debugging output
+  long: |
+    q:dump provides ColdFusion cfdump-like variable inspection with beautiful HTML output,
+    syntax highlighting, expandable trees for nested structures, and support for all
+    data types including primitives, arrays, objects, and circular references.
+
+components:
+  ast:
+    - DumpNode
+  parser:
+    - parse_dump
+  runtime:
+    - execute_dump
+    - format_dump_html
+    - format_dump_json
+    - format_dump_text
+    - handle_circular_refs
+
+dependencies:
+  internal:
+    - execution_context  # For variable resolution
+    - databinding  # For var attribute
+  external:
+    - rich  # Beautiful console/HTML output
+    - pygments  # Syntax highlighting
+
+capabilities:
+  phase_1:
+    - Variable inspection (all types)
+    - Beautiful HTML output
+    - Syntax highlighting
+    - Nested structure support
+    - Type information display
+    - Conditional dumping (when attribute)
+    - Multiple output formats (HTML, JSON, text)
+    - Depth limiting
+    - Labels for identification
+    - Circular reference handling
+  phase_2:
+    - Expandable/collapsible trees (JavaScript)
+    - Search within dumped data
+    - Compare two variables side-by-side
+    - Export to file
+    - Custom themes
+    - Performance metrics (memory size, dump time)
+
+attributes:
+  required:
+    - var  # Variable to dump
+  optional:
+    - label  # Identifying label (default: variable name)
+    - format  # Output format: html, json, text (default: html)
+    - depth  # Max depth for nesting (default: 10)
+    - when  # Conditional expression (default: always)
+    - expand  # Auto-expand depth (default: 2)
+    - show_types  # Show type information (default: true)
+
+result_object:
+  fields:
+    - success  # boolean
+    - rendered  # boolean (was output added to response)
+    - format  # string (html/json/text)
+    - size  # integer (bytes of output)
+
+documentation:
+  readme: docs/README.md
+  guide: ../../../../docs/guide/dump.md
+
+testing:
+  unit_tests: tests/test_parser.py, tests/test_runtime.py
+  integration_tests: tests/test_integration.py
+  example_files:
+    - examples/test-dump-primitives.q
+    - examples/test-dump-objects.q
+    - examples/test-dump-arrays.q
+    - examples/test-dump-nested.q
+    - examples/test-dump-conditional.q
+
+dataset:
+  positive_examples: 30-50
+  negative_examples: 5-10
+  categories:
+    - basic_patterns
+    - integration_patterns
+    - edge_cases
+    - real_world_patterns
+    - complex_scenarios
+
+training:
+  status: planned
+  readiness: not_started
+
+migration:
+  breaking_changes: false
+  migration_guide: N/A (new feature)
+
+priority: high
+estimated_effort: 1 week
+target_release: Q1 2025

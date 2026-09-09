@@ -1,0 +1,209 @@
+intention:
+  name: "Database Query with q:query"
+  version: "1.0.0"
+  category: "database"
+
+  goal: |
+    Enable developers to execute secure SQL queries against configured datasources
+    with automatic parameter binding, type validation, and SQL injection protection.
+
+  why: |
+    Applications need to interact with databases to read and write data.
+    Database operations should be secure, type-safe, declarative, and easy to use.
+    SQL injection is a critical vulnerability that must be prevented automatically.
+
+  capabilities:
+    - "Execute SELECT queries to retrieve data"
+    - "Execute INSERT/UPDATE/DELETE queries to modify data"
+    - "Use named parameters with :name syntax for SQL injection protection"
+    - "Validate parameter types (string, integer, decimal, boolean, datetime, array, json)"
+    - "Access query results in loops and databinding"
+    - "Get query metadata (recordCount, columnList, executionTime)"
+    - "Connect to PostgreSQL, MySQL, MariaDB databases"
+    - "Use connection pooling for performance"
+
+  examples:
+    - intent: "I want to fetch all users from the database"
+      usage: |
+        <q:query name="users" datasource="my-postgres-db">
+            SELECT id, name, email FROM users
+            WHERE active = true
+        </q:query>
+
+        <q:loop items="{users}" var="user">
+            <p>{user.name} - {user.email}</p>
+        </q:loop>
+
+    - intent: "I want to search for users by status with a parameter"
+      usage: |
+        <q:query name="activeUsers" datasource="app-db">
+            SELECT * FROM users
+            WHERE status = :status
+            ORDER BY created_at DESC
+
+            <q:param name="status" value="active" type="string" />
+        </q:query>
+
+    - intent: "I want to insert a new user and get the generated ID"
+      usage: |
+        <q:query name="newUser" datasource="app-db">
+            INSERT INTO users (name, email, password_hash)
+            VALUES (:name, :email, :password)
+            RETURNING id, created_at
+
+            <q:param name="name" value="{form.name}" type="string" />
+            <q:param name="email" value="{form.email}" type="string" />
+            <q:param name="password" value="{hashedPassword}" type="string" />
+        </q:query>
+
+        <p>User created with ID: {newUser.id}</p>
+
+    - intent: "I want to count active users"
+      usage: |
+        <q:query name="userCount" datasource="app-db">
+            SELECT COUNT(*) as total FROM users WHERE status = :status
+            <q:param name="status" value="active" type="string" />
+        </q:query>
+
+        <p>Total active users: {userCount.total}</p>
+
+    - intent: "I want to update user information"
+      usage: |
+        <q:query name="updateUser" datasource="app-db">
+            UPDATE users
+            SET name = :name, updated_at = NOW()
+            WHERE id = :userId
+
+            <q:param name="name" value="{form.name}" type="string" />
+            <q:param name="userId" value="{session.userId}" type="integer" />
+        </q:query>
+
+  syntax:
+    tag: "q:query"
+    attributes:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "Variable name for query results"
+
+      - name: "datasource"
+        type: "string"
+        required: true
+        description: "Datasource name from Quantum Admin"
+
+      - name: "source"
+        type: "string"
+        required: false
+        description: "Query name for Query-of-Queries (Phase 2)"
+
+      - name: "cache"
+        type: "boolean"
+        required: false
+        default: false
+        description: "Enable query caching (Phase 3)"
+
+      - name: "ttl"
+        type: "integer"
+        required: false
+        description: "Cache time-to-live in seconds (Phase 3)"
+
+      - name: "timeout"
+        type: "integer"
+        required: false
+        description: "Query timeout in seconds"
+
+      - name: "maxrows"
+        type: "integer"
+        required: false
+        description: "Maximum rows to return"
+
+      - name: "result"
+        type: "string"
+        required: false
+        description: "Variable name for query metadata"
+
+    children:
+      - tag: "q:param"
+        description: "Parameter declaration for SQL binding"
+        attributes:
+          - name: "name"
+            type: "string"
+            required: true
+            description: "Parameter name (matches :name in SQL)"
+
+          - name: "value"
+            type: "string|expression"
+            required: true
+            description: "Parameter value or databinding expression"
+
+          - name: "type"
+            type: "enum"
+            required: true
+            values: ["string", "integer", "decimal", "boolean", "datetime", "date", "time", "array", "json"]
+            description: "Parameter data type"
+
+          - name: "null"
+            type: "boolean"
+            required: false
+            default: false
+            description: "Allow null value"
+
+          - name: "maxLength"
+            type: "integer"
+            required: false
+            description: "Maximum string length (for string type)"
+
+          - name: "scale"
+            type: "integer"
+            required: false
+            description: "Decimal scale (for decimal type)"
+
+  constraints:
+    - "Query name must be valid identifier"
+    - "Datasource must exist in Quantum Admin and be running"
+    - "SQL must use :name syntax for parameters, not string concatenation"
+    - "All :parameters in SQL must have corresponding <q:param> declarations"
+    - "Parameter types must match SQL usage"
+    - "Parameter names must be valid identifiers"
+
+  security:
+    - "All queries use parameterized statements (no SQL injection possible)"
+    - "Type validation prevents type confusion attacks"
+    - "maxLength prevents buffer overflow"
+    - "SQL sanitization blocks comment injection"
+    - "Datasource credentials never exposed to templates"
+
+  dependencies:
+    - feature: "databinding"
+      reason: "Parameter values use {variable} syntax"
+
+    - feature: "loops"
+      reason: "Query results are used in q:loop"
+
+    - component: "quantum_admin"
+      reason: "Datasource configuration and management"
+
+    - component: "execution_context"
+      reason: "Query results stored as variables"
+
+  result_object:
+    description: "Query results are stored as both array and metadata"
+    array_access: |
+      {queryName}  # Array of row objects
+      {queryName[0].columnName}  # Access specific row/column
+
+    metadata_access: |
+      {queryName_result.recordCount}  # Number of rows returned
+      {queryName_result.columnList}  # Array of column names
+      {queryName_result.executionTime}  # Query execution time in ms
+      {queryName_result.sql}  # Executed SQL (debug mode only)
+
+  future:
+    - "Add Query of Queries (in-memory processing)"
+    - "Add pagination support with automatic COUNT(*)"
+    - "Add transaction support (<q:transaction>)"
+    - "Add query caching with TTL"
+    - "Add stored procedure support"
+    - "Add batch operations"
+    - "Add reactive queries (auto-refresh)"
+    - "Add MongoDB support"

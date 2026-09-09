@@ -1,0 +1,69 @@
+feature:
+  name: knowledge_base
+  display_name: q:knowledge
+  version: 1.0.0
+  status: implemented
+  category: ai
+
+description:
+  short: RAG with virtual knowledge bases using ChromaDB and Ollama embeddings
+  long: |
+    q:knowledge defines virtual knowledge bases that register as datasources.
+    The existing q:query tag works unchanged - only the datasource routing gains
+    a branch for the "knowledge:" prefix. Behind the scenes: embedding, vector
+    search, and optional LLM-generated answers (RAG).
+
+components:
+  ast:
+    - KnowledgeNode
+    - KnowledgeSourceNode
+  parser:
+    - parse_knowledge
+  runtime:
+    - KnowledgeService
+    - index_knowledge
+    - search
+    - rag_query
+
+dependencies:
+  internal:
+    - execution_context
+    - llm_service
+    - query
+  external:
+    - chromadb
+    - requests
+
+capabilities:
+  phase_1:
+    - Inline text sources
+    - File sources (single file)
+    - Directory sources (glob pattern)
+    - Query sources (from database)
+    - Vector search via ChromaDB
+    - Ollama embeddings (nomic-embed-text)
+    - RAG pipeline (search + LLM answer)
+    - Persistent ChromaDB collections
+    - Configurable chunking (size, overlap)
+  phase_2:
+    - URL sources (web scraping)
+    - PDF/DOCX parsing
+    - Incremental indexing
+    - Hybrid search (vector + keyword)
+
+attributes:
+  required:
+    - name
+  optional:
+    - model
+    - embedModel
+    - chunkSize
+    - chunkOverlap
+    - persist
+    - persistPath
+    - rebuild
+
+child_elements:
+  - q:source
+
+priority: high

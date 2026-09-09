@@ -1,0 +1,173 @@
+{
+  "timestamp": "2026-02-14T22:57:10.562540",
+  "results": [
+    {
+      "language": "Python 3.12",
+      "test": "loop_100k",
+      "time_ms": 96.78819999680854,
+      "iterations": 50,
+      "ops_per_sec": 516.5918986162434
+    },
+    {
+      "language": "Quantum Interpreted",
+      "test": "loop_100k",
+      "time_ms": 40592.98190000118,
+      "iterations": 50,
+      "ops_per_sec": 1.2317400116890291
+    },
+    {
+      "language": "Quantum Transpiled",
+      "test": "loop_100k",
+      "time_ms": 95.31029997742735,
+      "iterations": 50,
+      "ops_per_sec": 524.60227291113
+    },
+    {
+      "language": "Lua 5.4",
+      "test": "loop_100k",
+      "time_ms": 11.0,
+      "iterations": 50,
+      "ops_per_sec": 4545.454545454546
+    },
+    {
+      "language": "Perl 5.42",
+      "test": "loop_100k",
+      "time_ms": 131.108999252319,
+      "iterations": 50,
+      "ops_per_sec": 381.3620749539481
+    },
+    {
+      "language": "PHP 8.4",
+      "test": "loop_100k",
+      "time_ms": 43.0395,
+      "iterations": 50,
+      "ops_per_sec": 1161.7235330336086
+    },
+    {
+      "language": "Ruby 3.3",
+      "test": "loop_100k",
+      "time_ms": 217.52000000560656,
+      "iterations": 50,
+      "ops_per_sec": 229.86392055310435
+    },
+    {
+      "language": "Python 3.12",
+      "test": "string_build",
+      "time_ms": 0.2967999898828566,
+      "iterations": 50,
+      "ops_per_sec": 168463.61760232673
+    },
+    {
+      "language": "Quantum Interpreted",
+      "test": "string_build",
+      "time_ms": 26.771500008180737,
+      "iterations": 50,
+      "ops_per_sec": 1867.6577698194417
+    },
+    {
+      "language": "Quantum Transpiled",
+      "test": "string_build",
+      "time_ms": 0.030700000934302807,
+      "iterations": 50,
+      "ops_per_sec": 1628664.4455483465
+    },
+    {
+      "language": "Lua 5.4",
+      "test": "string_build",
+      "time_ms": 1.0,
+      "iterations": 50,
+      "ops_per_sec": 50000.0
+    },
+    {
+      "language": "Perl 5.42",
+      "test": "string_build",
+      "time_ms": 0.563859939575195,
+      "iterations": 50,
+      "ops_per_sec": 88674.50317124742
+    },
+    {
+      "language": "PHP 8.4",
+      "test": "string_build",
+      "time_ms": 0.2655,
+      "iterations": 50,
+      "ops_per_sec": 188323.91713747647
+    },
+    {
+      "language": "Ruby 3.3",
+      "test": "string_build",
+      "time_ms": 0.902600004337728,
+      "iterations": 50,
+      "ops_per_sec": 55395.52377543683
+    },
+    {
+      "language": "Python 3.12",
+      "test": "fibonacci_25",
+      "time_ms": 300.65340001601726,
+      "iterations": 50,
+      "ops_per_sec": 166.3044555535918
+    },
+    {
+      "language": "Lua 5.4",
+      "test": "fibonacci_25",
+      "time_ms": 138.0,
+      "iterations": 50,
+      "ops_per_sec": 362.3188405797101
+    },
+    {
+      "language": "Perl 5.42",
+      "test": "fibonacci_25",
+      "time_ms": 1135.75911521912,
+      "iterations": 50,
+      "ops_per_sec": 44.02341951739792
+    },
+    {
+      "language": "PHP 8.4",
+      "test": "fibonacci_25",
+      "time_ms": 285.73,
+      "iterations": 50,
+      "ops_per_sec": 174.99037552934587
+    },
+    {
+      "language": "Ruby 3.3",
+      "test": "fibonacci_25",
+      "time_ms": 177.16329998802394,
+      "iterations": 50,
+      "ops_per_sec": 282.22549480270436
+    },
+    {
+      "language": "Python 3.12",
+      "test": "dict_ops",
+      "time_ms": 9.52959997812286,
+      "iterations": 50,
+      "ops_per_sec": 5246.809951601872
+    },
+    {
+      "language": "Lua 5.4",
+      "test": "dict_ops",
+      "time_ms": 20.0,
+      "iterations": 50,
+      "ops_per_sec": 2500.0
+    },
+    {
+      "language": "Perl 5.42",
+      "test": "dict_ops",
+      "time_ms": 26.1240005493164,
+      "iterations": 50,
+      "ops_per_sec": 1913.9488190413613
+    },
+    {
+      "language": "PHP 8.4",
+      "test": "dict_ops",
+      "time_ms": 6.3876,
+      "iterations": 50,
+      "ops_per_sec": 7827.666103074707
+    },
+    {
+      "language": "Ruby 3.3",
+      "test": "dict_ops",
+      "time_ms": 14.9758999759797,
+      "iterations": 50,
+      "ops_per_sec": 3338.697512683479
+    }
+  ]
+}

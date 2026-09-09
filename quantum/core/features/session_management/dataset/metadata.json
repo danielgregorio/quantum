@@ -1,0 +1,31 @@
+{
+  "feature": "session_management",
+  "version": "1.0.0",
+  "status": "implemented",
+  "phase": "F",
+  "created": "2025-11-05",
+  "updated": "2025-11-05",
+  "statistics": {
+    "total_examples": 5,
+    "positive_examples": 3,
+    "negative_examples": 2,
+    "categories": {
+      "session_scope": 2,
+      "application_scope": 1,
+      "request_scope": 1,
+      "errors": 2
+    }
+  },
+  "coverage": {
+    "session_variables": true,
+    "application_variables": true,
+    "request_variables": true,
+    "cookie_variables": false,
+    "persistence": true,
+    "user_isolation": true,
+    "global_state": true,
+    "error_handling": true
+  },
+  "test_component": "components/session_demo.q",
+  "documentation": "docs/features/session_management.md"
+}

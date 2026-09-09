@@ -1,0 +1,21 @@
+{
+  "example_id": "invalid_scope_001",
+  "category": "session_management",
+  "tags": ["error", "invalid_scope", "syntax"],
+  "input": {
+    "component": "<q:component name=\"InvalidScope\">\n  <!-- WRONG: Unknown scope prefix -->\n  <q:set name=\"global.someValue\" value=\"123\" />\n  <p>{global.someValue}</p>\n</q:component>",
+    "context": {
+      "phase": "F",
+      "feature": "session_management"
+    }
+  },
+  "expected_behavior": "Should fail - 'global' is not a valid scope",
+  "error": {
+    "type": "InvalidScopeError",
+    "message": "Invalid scope prefix 'global'. Valid scopes: session, application, request, cookie"
+  },
+  "validation": {
+    "should_fail": true,
+    "error_handling": true
+  }
+}

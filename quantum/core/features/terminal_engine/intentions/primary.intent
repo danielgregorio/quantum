@@ -1,0 +1,37 @@
+intent:
+  name: "terminal_engine"
+  description: "Compile declarative XML with qt: namespace into standalone Python TUI applications using Textual"
+
+triggers:
+  - '<q:application type="terminal">'
+  - "qt:screen"
+  - "qt:panel"
+  - "qt:table"
+  - "qt:input"
+  - "qt:button"
+
+semantics:
+  - "qt:screen defines a full terminal screen mapped to a Textual Screen subclass"
+  - "qt:panel creates a bordered container with optional title"
+  - "qt:layout arranges children horizontally or vertically"
+  - "qt:table displays tabular data using DataTable widget"
+  - "qt:input provides text input with optional on-submit handler"
+  - "qt:button creates a clickable button with variant styling"
+  - "qt:menu displays a selection list using OptionList"
+  - "qt:text renders Rich-markup styled text via Static widget"
+  - "qt:progress shows a progress bar"
+  - "qt:tree renders a tree view"
+  - "qt:tabs/qt:tab provide tabbed content"
+  - "qt:log provides scrollable rich log output"
+  - "qt:header/qt:footer add fixed bars"
+  - "qt:keybinding maps keyboard shortcuts to actions"
+  - "qt:timer sets up periodic callbacks"
+  - "qt:css defines Textual CSS styling"
+  - "q:set inside qt:screen becomes a reactive attribute"
+  - "q:function defines methods on the App class"
+  - "q:query generates sqlite3 database access code"
+
+compilation:
+  input: "XML with qt: namespace tags"
+  output: "Standalone Python file using textual library"
+  pipeline: "Parser -> AST -> TerminalCodeGenerator -> .py file"

@@ -1,0 +1,104 @@
+{
+  "dataset_type": "positive",
+  "feature": "loops",
+  "category": "loops_with_state",
+  "description": "Examples using q:set inside loops for accumulation and state management",
+  "examples": [
+    {
+      "id": "loop-state-001",
+      "intent": "Sum array elements",
+      "input": {
+        "natural_language": "Calculate sum of numbers in an array",
+        "context": {
+          "available_vars": ["numbers"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"numbers\" type=\"array\" value=\"[10, 20, 30, 40, 50]\" />\n<q:set name=\"sum\" type=\"number\" value=\"0\" />\n<q:loop type=\"array\" var=\"num\" items=\"{numbers}\">\n  <q:set name=\"sum\" operation=\"add\" value=\"{num}\" />\n</q:loop>\nTotal: {sum}",
+        "runtime_behavior": "Outputs: Total: 150"
+      },
+      "tags": ["loop_state", "accumulator", "sum"]
+    },
+    {
+      "id": "loop-state-002",
+      "intent": "Count matching items",
+      "input": {
+        "natural_language": "Count how many items match a criteria",
+        "context": {
+          "available_vars": ["ages"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"ages\" type=\"array\" value=\"[15, 22, 17, 30, 12, 25]\" />\n<q:set name=\"adults\" type=\"number\" value=\"0\" />\n<q:loop type=\"array\" var=\"age\" items=\"{ages}\">\n  <q:if condition=\"{age} >= 18\">\n    <q:set name=\"adults\" operation=\"increment\" />\n  </q:if>\n</q:loop>\nAdults: {adults}",
+        "runtime_behavior": "Outputs: Adults: 3"
+      },
+      "tags": ["loop_state", "counter", "conditional_increment"]
+    },
+    {
+      "id": "loop-state-003",
+      "intent": "Build concatenated string",
+      "input": {
+        "natural_language": "Join array items into comma-separated string",
+        "context": {
+          "available_vars": ["fruits"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"fruits\" type=\"array\" value=\"['apple', 'banana', 'cherry']\" />\n<q:set name=\"result\" value=\"\" />\n<q:loop type=\"array\" var=\"fruit\" index=\"i\" items=\"{fruits}\">\n  <q:if condition=\"{i} > 0\">\n    <q:set name=\"result\" operation=\"concat\" value=\", \" />\n  </q:if>\n  <q:set name=\"result\" operation=\"concat\" value=\"{fruit}\" />\n</q:loop>\nFruits: {result}",
+        "runtime_behavior": "Outputs: Fruits: apple, banana, cherry"
+      },
+      "tags": ["loop_state", "string_building", "concatenation"]
+    },
+    {
+      "id": "loop-state-004",
+      "intent": "Find maximum value",
+      "input": {
+        "natural_language": "Find the largest number in array",
+        "context": {
+          "available_vars": ["values"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"values\" type=\"array\" value=\"[23, 45, 12, 67, 34]\" />\n<q:set name=\"max\" type=\"number\" value=\"-999999\" />\n<q:loop type=\"array\" var=\"val\" items=\"{values}\">\n  <q:if condition=\"{val} > {max}\">\n    <q:set name=\"max\" value=\"{val}\" />\n  </q:if>\n</q:loop>\nMaximum: {max}",
+        "runtime_behavior": "Outputs: Maximum: 67"
+      },
+      "tags": ["loop_state", "max_value", "comparison"]
+    },
+    {
+      "id": "loop-state-005",
+      "intent": "Product of numbers",
+      "input": {
+        "natural_language": "Multiply all numbers together",
+        "context": {
+          "available_vars": ["factors"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"factors\" type=\"array\" value=\"[2, 3, 4, 5]\" />\n<q:set name=\"product\" type=\"number\" value=\"1\" />\n<q:loop type=\"array\" var=\"factor\" items=\"{factors}\">\n  <q:set name=\"product\" operation=\"multiply\" value=\"{factor}\" />\n</q:loop>\nProduct: {product}",
+        "runtime_behavior": "Outputs: Product: 120 (2*3*4*5)"
+      },
+      "tags": ["loop_state", "accumulator", "multiplication"]
+    },
+    {
+      "id": "loop-state-006",
+      "intent": "Build filtered array",
+      "input": {
+        "natural_language": "Create new array with only even numbers",
+        "context": {
+          "available_vars": ["numbers"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"numbers\" type=\"array\" value=\"[1, 2, 3, 4, 5, 6, 7, 8]\" />\n<q:set name=\"evens\" type=\"array\" value=\"[]\" />\n<q:loop type=\"array\" var=\"num\" items=\"{numbers}\">\n  <q:if condition=\"{num} % 2 == 0\">\n    <q:set name=\"evens\" operation=\"push\" value=\"{num}\" />\n  </q:if>\n</q:loop>\nEvens: {evens}",
+        "runtime_behavior": "Outputs: Evens: [2, 4, 6, 8]"
+      },
+      "tags": ["loop_state", "array_building", "filter"]
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+feature:
+  name: llm_integration
+  display_name: q:llm
+  version: 1.0.0
+  status: planned
+  category: ai
+
+description:
+  short: LLM integration for AI-powered content generation, classification, and extraction
+  long: |
+    q:llm brings Large Language Models directly into Quantum templates. Start with local
+    models via LM Studio (free, unlimited), then optionally migrate to cloud providers.
+    Supports content generation, classification, data extraction, and more.
+
+components:
+  ast:
+    - LLMNode
+    - LLMPromptNode
+    - LLMMessageNode
+    - LLMParamNode
+    - LLMSchemaNode
+  parser:
+    - parse_llm
+    - parse_llm_prompt
+    - parse_llm_message
+    - parse_llm_param
+    - parse_llm_schema
+  runtime:
+    - execute_llm_call
+    - call_completion_api
+    - call_chat_api
+    - parse_json_response
+    - cache_llm_response
+
+dependencies:
+  internal:
+    - execution_context
+  external:
+    - requests  # HTTP requests to LLM APIs
+    - json  # JSON parsing
+
+capabilities:
+  phase_1:
+    - LM Studio completions API
+    - LM Studio chat API
+    - Basic parameters (temperature, max_tokens, top_p)
+    - JSON response format
+    - Prompt databinding
+    - Result objects
+    - Response caching
+  phase_2:
+    - OpenAI API support
+    - Anthropic Claude API support
+    - Cohere API support
+    - Automatic provider detection
+    - Cost tracking
+  phase_3:
+    - Streaming responses
+    - Function calling (tool use)
+    - Vision models
+    - Embeddings generation
+
+attributes:
+  required:
+    - name
+    - endpoint
+    - model
+  optional:
+    - response_format  # text, json
+    - temperature  # 0.0-2.0
+    - max_tokens
+    - top_p
+    - frequency_penalty
+    - presence_penalty
+    - stop  # array
+    - cache
+    - ttl
+    - timeout
+    - api_key  # for cloud providers
+
+child_elements:
+  - q:prompt  # Completion prompt
+  - q:message  # Chat messages (role + content)
+  - q:param  # Model parameters
+  - q:schema  # Output schema for JSON mode
+
+result_object:
+  fields:
+    - success
+    - data  # Generated text or parsed JSON
+    - error
+    - executionTime
+    - tokenUsage  # {prompt_tokens, completion_tokens, total_tokens}
+    - model
+    - cached
+    - finishReason
+
+priority: high
+estimated_effort: 2 weeks
+target_release: Q2 2025
