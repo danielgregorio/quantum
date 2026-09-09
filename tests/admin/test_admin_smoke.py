@@ -40,7 +40,17 @@ def app():
 
 @pytest.fixture(scope="module")
 def client(app):
-    return TestClient(app.app, raise_server_exceptions=False)
+    # `with` de proposito: o TestClient do Starlette so dispara os eventos de
+    # startup quando usado como context manager — e e no startup que o admin
+    # roda `init_db()` (create_all) e `seed_db()`.
+    #
+    # Sem isso o teste dependia de um `quantum_admin.db` que ja existisse no
+    # disco. Na maquina de quem desenvolve ele existe (sobrou de alguma
+    # execucao real), entao passava; num clone limpo — o CI, ou qualquer
+    # pessoa nova — nao existe, nao ha tabelas, e OITENTA E QUATRO rotas
+    # respondiam 500. Verde aqui, vermelho la, por estado da maquina.
+    with TestClient(app.app, raise_server_exceptions=False) as c:
+        yield c
 
 
 @pytest.fixture(scope="module")
