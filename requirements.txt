@@ -16,7 +16,7 @@ requests>=2.31.0
 
 # Terminal Engine (TUI)
 textual>=0.80.0
-httpx>=0.25.0
+httpx>=0.28.1
 
 # Testing
 pytest>=7.4.0
