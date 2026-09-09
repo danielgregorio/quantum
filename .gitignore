@@ -1,0 +1,284 @@
+# Debug files and scripts
+debug/
+debug_*.py
+debug_*.txt
+test_debug*.py
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+dist_gtk/
+dist_cli/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Node
+node_modules/
+
+# Quantum specific
+# Add any Quantum-specific temp files or outputs here
+*.q.temp
+screenshots/mario/
+projects/mario/static/_test_game.html
+test_data/*.db
+nul
+quantum_admin.db
+test_gen_output.json
+projects/blog/data/
+quantum_admin/settings/generated_test.json
+quantum_admin/settings/last_test_result.json
+
+# Deploy tarballs / archives
+*.tar
+*.tar.gz
+
+# Generated test HTML outputs at repo root
+/[0-9][0-9]_*.html
+/debug_*.html
+/test_*.html
+/smw*.html
+/tilemap_test.html
+/task-manager.html
+/temp_snake_game.html
+/kenney_platformer.html
+/rag_error.html
+/dashboard.html
+
+# Debug images at repo root
+/debug_*.png
+/mario_debug.png
+/mario_frames.png
+/downloaded.png
+/reference_tileset.png
+/tilemap_preview.png
+/tiles_extracted.png
+/tileset_debug.png
+/print.png
+/print_crops/
+
+# Debug artifact dirs (frame dumps, tile crops, etc.)
+/debug_*/
+
+# Corrupted-path scratch files (Windows redirection writing "C:projetos..." literally)
+/C:projetos*
+
+# Scratch logs / post drafts / cookies at repo root
+/test_post*.txt
+/test_blog*.txt
+/test_live_post*.txt
+/test_post_live.txt
+/test_qb*.txt
+/test_output.txt
+/post*.txt
+/home.txt
+/blog_logs*.txt
+/bench_result_cpython.txt
+/tmp_*.txt
+/tmp_*.json
+/temp_check.js
+/cookies.txt
+/*cookies*.txt
+*.md.backup
+
+# Medium posts drafts (work in progress)
+medium-posts/drafts/
+
+# Claude development files
+CLAUDE.MD
+claude_*.md
+debug_notes.md
+
+# Godot editor cache (generated, user-specific)
+.godot/
+projects/mario/godot/.godot/
+projects/mario/godot/scripts/*.bak
+projects/mario/godot/_codegen_backup/
+
+# Temporary debug images and scripts
+_*.png
+analyze_level.py
+find_ground.py
+find_hills.py
+inspect_tileset.py
+collision_data.json
+collision_editor.html
+print_crops/
+
+# PID files
+.quantum.pid
+# persisted knowledge-base vectors (a trailing comment on the same line
+# does NOT work — git reads it as part of the pattern)
+.quantum/
+quantum_kb/
+
+# CSS/JS extracted from .q pages, named by content hash. Regenerated on
+# every render, so a new file appears each time any page's <style> changes and
+# the old one is never collected. Five got committed before this rule.
+/static/styles-*.css
+/static/scripts-*.js
+
+# HTML that examples/*.q write into the repo root when run. The .q test
+# suite produces these on every run, so they land in `git status` and get
+# swept into unrelated commits.
+/*.html
+
+# Artifacts that examples/*.q write into the CURRENT DIRECTORY when run —
+# the terminal and testing engines default their output path to
+# `<name>.py` relative to cwd, so running the .q suite from the repo root
+# litters it, and the files get swept into unrelated commits (twice this
+# session). Ignore root-level generated .py, keeping the three real ones.
+/*.py
+!/compile_game.py
+!/conftest.py
+!/test_database.py
+
+# Database files (binary, not for version control)
+*.db
+*.db-journal
+
+# Debug/test HTML files
+projects/mario/static/_*.html
+projects/mario/static/_*.png
+projects/mario/static/p[0-9]_*.png
+projects/mario/static/phase[0-9]*.png
+projects/mario/static/raw_*.png
+# --- Assets de terceiros (Nintendo/SMW) - NAO redistribuir ---
+# Rastreados por engano ate 2026-09; removidos do indice com `git rm --cached`
+# (preservados no disco para o demo rodar localmente). Um clone publico NAO
+# os recebe. Para o demo Mario funcionar para estranhos, repontar para os
+# Kenney CC0 ja presentes em projects/kenney-platformer/.
+assets/smw/
+projects/mario/assets/
+projects/super-mario-world/godot/assets/
+examples/mario/assets/
+
+# install.py e o instalador CLI oficial (melhor peca de onboarding). A regra
+# `/*.py` acima o engolia; esta negacao o traz de volta.
+!/install.py
+
+# --- Estado de runtime / build que estava rastreado por engano (2026-09) ---
+coverage.json
+docs/.vitepress/cache/
+# Settings do admin gravam segredos cifrados (com chave publica!) - runtime, nunca versionar
+quantum_admin/settings/*.yaml
+!quantum_admin/settings/*.example.yaml
+
+# Scripts de ops pessoais do homelab (tinham senha SSH hardcoded, agora morta).
+# Nao pertencem a um repo de framework. Preservados no disco; mover para fora
+# do repo e atualizar a senha se ainda usar.
+scripts/add_rag_route.py
+scripts/fix_quantum_nginx.py

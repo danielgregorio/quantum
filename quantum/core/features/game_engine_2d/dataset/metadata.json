@@ -1,0 +1,7 @@
+{
+  "feature": "game_engine_2d",
+  "version": "1.0.0",
+  "description": "Dataset for 2D Game Engine feature tests",
+  "positive_tests": 3,
+  "negative_tests": 1
+}

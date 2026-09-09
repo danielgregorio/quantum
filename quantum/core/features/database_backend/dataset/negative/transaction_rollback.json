@@ -1,0 +1,23 @@
+{
+  "example_id": "db_error_001",
+  "category": "database_backend",
+  "tags": ["error", "transaction", "rollback"],
+  "input": {
+    "component": "<q:component name=\"FailedTransfer\">\n  <q:action name=\"transfer\" method=\"POST\">\n    <q:param name=\"from_id\" type=\"integer\" required=\"true\" />\n    <q:param name=\"to_id\" type=\"integer\" required=\"true\" />\n    <q:param name=\"amount\" type=\"decimal\" required=\"true\" />\n    \n    <q:transaction>\n      <!-- This will succeed -->\n      <q:query datasource=\"default\" name=\"debit\">\n        UPDATE accounts SET balance = balance - :amount WHERE id = :from_id\n        <q:param name=\"amount\" type=\"decimal\" value=\"{amount}\" />\n        <q:param name=\"from_id\" type=\"integer\" value=\"{from_id}\" />\n      </q:query>\n      \n      <!-- This will fail (invalid column) - triggers rollback -->\n      <q:query datasource=\"default\" name=\"credit\">\n        UPDATE accounts SET invalid_column = balance + :amount WHERE id = :to_id\n        <q:param name=\"amount\" type=\"decimal\" value=\"{amount}\" />\n        <q:param name=\"to_id\" type=\"integer\" value=\"{to_id}\" />\n      </q:query>\n    </q:transaction>\n  </q:action>\n</q:component>",
+    "context": {
+      "phase": "D",
+      "feature": "database_backend",
+      "expected_error": "SQL error - invalid column"
+    }
+  },
+  "expected_behavior": "Second query fails, entire transaction is rolled back, first UPDATE is undone",
+  "error": {
+    "type": "ComponentExecutionError",
+    "message": "Transaction failed and was rolled back"
+  },
+  "validation": {
+    "should_fail": true,
+    "transaction_rolled_back": true,
+    "first_query_undone": true
+  }
+}

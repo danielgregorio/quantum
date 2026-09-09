@@ -1,0 +1,36 @@
+feature:
+  name: "ui_engine"
+  display_name: "UI Engine (ui: namespace)"
+  version: "1.0.0"
+  status: "experimental"
+  migration_type: "option_c"
+
+description: |
+  Multi-target UI engine for Quantum Framework.
+  Compiles declarative XML (ui: namespace) to multiple targets:
+  HTML/CSS (web), Python Textual (TUI), and Desktop (pywebview).
+  A single .q file can generate any target via --target flag.
+
+tags:
+  - "ui"
+  - "html"
+  - "textual"
+  - "desktop"
+  - "pywebview"
+  - "multi-target"
+
+maintainers:
+  - "Daniel"
+  - "Claude"
+
+api:
+  ast_nodes: "src/core/features/ui_engine/src/ast_nodes.py"
+  parser: "src/core/features/ui_engine/src/parser.py"
+  html_adapter: "src/runtime/ui_html_adapter.py"
+  textual_adapter: "src/runtime/ui_textual_adapter.py"
+  desktop_adapter: "src/runtime/ui_desktop_adapter.py"
+  builder: "src/runtime/ui_builder.py"
+
+testing:
+  integration_tests: 3
+  coverage: 80

@@ -1,0 +1,87 @@
+{
+  "dataset_type": "negative",
+  "feature": "loops",
+  "category": "syntax_errors",
+  "description": "Invalid loop syntax that should be rejected",
+  "examples": [
+    {
+      "id": "loop-invalid-001",
+      "intent": "Missing required var attribute",
+      "input": {
+        "natural_language": "Loop without specifying variable name",
+        "quantum_code": "<q:loop type=\"range\" from=\"1\" to=\"5\">\n  Value\n</q:loop>"
+      },
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Loop var name is required",
+        "location": "q:loop attribute validation"
+      },
+      "why_invalid": "var attribute is mandatory for all loop types",
+      "tags": ["missing_attribute", "var"]
+    },
+    {
+      "id": "loop-invalid-002",
+      "intent": "Invalid loop type",
+      "input": {
+        "natural_language": "Using unsupported loop type",
+        "quantum_code": "<q:loop type=\"foreach\" var=\"item\" items=\"data\">\n  {item}\n</q:loop>"
+      },
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Invalid loop type: foreach. Must be one of: range, array, list, object, query, while",
+        "location": "LoopNode validation"
+      },
+      "why_invalid": "type must be one of the supported values",
+      "correction": "Use type=\"array\" instead of type=\"foreach\"",
+      "tags": ["invalid_type", "unsupported_value"]
+    },
+    {
+      "id": "loop-invalid-003",
+      "intent": "Range loop missing from/to",
+      "input": {
+        "natural_language": "Range loop without bounds",
+        "quantum_code": "<q:loop type=\"range\" var=\"i\">\n  {i}\n</q:loop>"
+      },
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Range loop requires 'from' and 'to' attributes",
+        "location": "LoopNode validation"
+      },
+      "why_invalid": "Range loops must specify start and end values",
+      "correction": "Add from=\"1\" to=\"10\"",
+      "tags": ["missing_bounds", "range"]
+    },
+    {
+      "id": "loop-invalid-004",
+      "intent": "Array loop without items",
+      "input": {
+        "natural_language": "Array loop missing source",
+        "quantum_code": "<q:loop type=\"array\" var=\"item\">\n  {item}\n</q:loop>"
+      },
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Array/list loop requires 'items' attribute",
+        "location": "LoopNode validation"
+      },
+      "why_invalid": "Must specify what array/list to iterate over",
+      "correction": "Add items=\"{myArray}\"",
+      "tags": ["missing_items", "array"]
+    },
+    {
+      "id": "loop-invalid-005",
+      "intent": "Step value of zero",
+      "input": {
+        "natural_language": "Range loop with zero step (infinite loop)",
+        "quantum_code": "<q:loop type=\"range\" var=\"i\" from=\"1\" to=\"10\" step=\"0\">\n  {i}\n</q:loop>"
+      },
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Step value cannot be zero",
+        "location": "LoopNode validation"
+      },
+      "why_invalid": "Zero step creates infinite loop",
+      "correction": "Use step=\"1\" or step=\"-1\"",
+      "tags": ["invalid_step", "zero_step"]
+    }
+  ]
+}

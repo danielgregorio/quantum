@@ -1,0 +1,46 @@
+# Primary Intention: q:llm
+
+## What the user wants to accomplish
+The user wants to use AI/LLMs to generate content, classify data, extract information, or perform other language understanding tasks directly in their templates.
+
+## User's mental model
+"I want AI to help me with this task - generate text, classify content, extract data, etc."
+
+## Natural language expressions
+- "Generate a product description using AI"
+- "Classify this review sentiment"
+- "Extract contact information from this text"
+- "Translate this with context awareness"
+- "Summarize these customer feedback responses"
+- "Moderate this comment for toxicity"
+
+## Core user needs
+1. Content generation (descriptions, emails, copy)
+2. Text classification (sentiment, category, intent)
+3. Data extraction (structured data from unstructured text)
+4. Translation with context
+5. Summarization
+6. Content moderation
+7. Conversational responses
+
+## Expected outcomes
+- AI generates relevant, useful content
+- Results are immediately usable in templates
+- Errors are handled gracefully
+- Responses are cached to avoid redundant calls
+- Works with local models (free) and cloud providers (paid)
+
+## Emotional context
+- Users want **innovation** - AI capabilities without complex setup
+- Users want **cost control** - local models first, cloud optional
+- Users feel **empowered** when AI aug
+
+ments their applications
+- Users feel **confident** when outputs are structured and validated
+
+## Success criteria
+- User can call LLM with minimal syntax
+- Works with LM Studio out of the box
+- Migration to cloud providers is trivial (change endpoint/model)
+- JSON responses are parsed automatically
+- Caching reduces redundant API calls

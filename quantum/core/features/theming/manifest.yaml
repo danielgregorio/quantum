@@ -1,0 +1,73 @@
+feature:
+  name: "theming"
+  display_name: "Theming System (ui:theme)"
+  version: "1.0.0"
+  status: "experimental"
+  migration_type: "option_c"
+
+description: |
+  Comprehensive theming system for Quantum UI Engine.
+  Supports dark/light mode, custom color themes, and runtime theme switching.
+  Integrates with the design tokens system for consistent styling across targets.
+
+tags:
+  - "ui"
+  - "theming"
+  - "dark-mode"
+  - "light-mode"
+  - "css-variables"
+  - "design-tokens"
+
+maintainers:
+  - "Daniel"
+  - "Claude"
+
+dependencies:
+  required:
+    - feature: "ui_engine"
+      version: ">=1.0.0"
+      reason: "Extends UI engine with theming capabilities"
+
+capabilities:
+  syntax:
+    - "<ui:theme> tag for theme definition"
+    - "theme attribute on <q:application>"
+    - "Preset themes (light, dark)"
+    - "Custom color definitions"
+    - "CSS variable integration"
+
+  runtime:
+    - "Theme CSS injection"
+    - "Runtime theme switching"
+    - "Design tokens normalization"
+    - "Dark/light mode detection"
+
+api:
+  ast_nodes: "src/core/features/theming/src/ast_node.py"
+  presets: "src/core/features/theming/src/presets.py"
+  parser: "src/core/features/ui_engine/src/parser.py"
+  html_adapter: "src/runtime/ui_html_adapter.py"
+
+testing:
+  unit_tests: 5
+  integration_tests: 3
+  coverage: 80
+
+documentation:
+  guide: "docs/guide/theming.md"
+  examples: "examples/test-ui-theme-*.q"
+
+metrics:
+  lines_of_code: 250
+  complexity: "low"
+  performance: "O(1) for theme switching"
+
+changelog:
+  - version: "1.0.0"
+    date: "2025-02-05"
+    changes:
+      - "Initial theming system implementation"
+      - "Dark and light preset themes"
+      - "Custom theme support"
+      - "Runtime theme switching via JavaScript"
+      - "Integration with design tokens"

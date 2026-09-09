@@ -1,0 +1,93 @@
+intention:
+  name: "State Management with q:set"
+  version: "1.0.0"
+  category: "state"
+
+  goal: |
+    Enable developers to declare and manipulate component state variables
+    with type safety, validation, and scope management.
+
+  why: |
+    Components need to maintain state across their lifecycle.
+    State changes should be predictable, type-safe, and traceable.
+
+  capabilities:
+    - "Create variables with explicit types"
+    - "Update variables with operations (assign, increment, add, etc.)"
+    - "Validate values against rules (email, cpf, url, etc.)"
+    - "Manage scope (local, function, component, session)"
+    - "Transform strings (uppercase, lowercase, trim, etc.)"
+
+  examples:
+    - intent: "I want to store a user's email address"
+      usage: |
+        <q:set name="userEmail" type="string" value="user@example.com" validate="email" />
+
+    - intent: "I want to count items in a loop"
+      usage: |
+        <q:set name="count" type="number" value="0" />
+        <q:loop items="{myArray}" var="item">
+          <q:set name="count" operation="increment" />
+        </q:loop>
+
+    - intent: "I want to accumulate a total"
+      usage: |
+        <q:set name="total" type="number" value="0" />
+        <q:set name="total" operation="add" value="{price}" />
+
+  syntax:
+    tag: "q:set"
+    attributes:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "Variable name"
+
+      - name: "type"
+        type: "enum"
+        required: false
+        values: ["string", "number", "boolean", "array", "object"]
+        default: "string"
+        description: "Variable type"
+
+      - name: "value"
+        type: "string|expression"
+        required: true
+        description: "Initial value or databinding expression"
+
+      - name: "operation"
+        type: "enum"
+        required: false
+        values: ["assign", "increment", "decrement", "add", "subtract", "multiply", "divide", "append", "prepend", "uppercase", "lowercase", "trim"]
+        description: "Operation to perform"
+
+      - name: "validate"
+        type: "string"
+        required: false
+        description: "Validation rule name"
+
+      - name: "scope"
+        type: "enum"
+        required: false
+        values: ["local", "function", "component", "session"]
+        default: "local"
+        description: "Variable scope"
+
+  constraints:
+    - "Variable name must be valid identifier"
+    - "Type must match value format"
+    - "Validation rules must exist in QuantumValidators"
+    - "Operations must be compatible with type"
+    - "Scope must be valid in current context"
+
+  dependencies:
+    - feature: "databinding"
+      reason: "Expressions use {variable} syntax"
+
+    - feature: "validation"
+      reason: "Uses QuantumValidators for validation"
+
+  future:
+    - "Add computed properties (derived state)"
+    - "Add reactive watchers (onChange handlers)"
+    - "Add state persistence (localStorage integration)"

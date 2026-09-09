@@ -1,0 +1,23 @@
+{
+  "example_id": "htmx_error_001",
+  "category": "htmx_partials",
+  "tags": ["error", "404", "partial"],
+  "input": {
+    "component": "<q:component name=\"MissingPartial\">\n  <div q:partial=\"nonexistent\" q:trigger=\"load\">\n    Loading...\n  </div>\n</q:component>",
+    "context": {
+      "phase": "B",
+      "feature": "htmx_partials",
+      "partial_name": "nonexistent"
+    }
+  },
+  "expected_behavior": "Partial 'nonexistent' not found, error message displayed",
+  "error": {
+    "type": "404",
+    "message": "Partial component not found"
+  },
+  "validation": {
+    "should_fail": true,
+    "status_code": 404,
+    "error_displayed": true
+  }
+}

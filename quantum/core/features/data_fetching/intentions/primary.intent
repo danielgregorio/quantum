@@ -1,0 +1,73 @@
+# Primary Intention: q:fetch
+
+## What the user wants to accomplish
+The user wants to declaratively fetch data from an API or remote source with automatic handling of loading, error, and success states, without writing imperative JavaScript or managing fetch lifecycle manually.
+
+## User's mental model
+"I need data from an API, and I want to show a loading spinner while fetching, handle errors gracefully, and display the data when it arrives."
+
+## Natural language expressions users might use
+- "Fetch user data from the API"
+- "Load products from the server"
+- "Get data from this endpoint and show a loading state"
+- "Make an API call with caching"
+- "Poll the server for new messages every 10 seconds"
+- "POST this form data to the API"
+- "Fetch with retry on failure"
+- "Load data with a skeleton loader"
+
+## Core user needs
+1. Fetch data from REST APIs (GET, POST, PUT, DELETE)
+2. Show loading indicator while fetching
+3. Display error message on failure
+4. Render content on success
+5. Cache responses to avoid redundant requests
+6. Poll/refetch data at intervals
+7. Set custom headers (authentication, etc.)
+8. Transform/process response data
+9. Abort requests when component unmounts
+10. Handle timeouts gracefully
+
+## Expected outcomes
+- Data is fetched and available via {name} variable
+- Loading state is available via {name_loading}
+- Error message is available via {name_error}
+- Visual feedback is shown during loading
+- Error is displayed if fetch fails
+- Success content renders when data arrives
+- Cached data is reused within TTL
+- Polling fetches new data at intervals
+
+## Emotional context
+- Users want **simplicity** - declarative syntax, not imperative code
+- Users want **reliability** - automatic error handling and retries
+- Users want **performance** - caching and abort on unmount
+- Users feel **confident** when they see loading states
+- Users feel **in control** with error messages and retry options
+- Users feel **empowered** when data updates automatically
+
+## Common patterns
+1. **List Fetching**: Load a list of items from an API
+2. **Detail Fetching**: Load a single item by ID
+3. **Form Submission**: POST data and handle response
+4. **Authenticated Requests**: Include auth headers
+5. **Polling/Live Data**: Refresh data at intervals
+6. **Cached Data**: Reuse recently fetched data
+7. **Paginated Data**: Fetch pages of results
+8. **Dependent Fetches**: Fetch B after A completes
+
+## Success criteria
+- User can fetch data with minimal syntax
+- Loading/error/success states work automatically
+- Caching reduces redundant requests
+- Polling keeps data fresh
+- Error handling is built-in
+- Works across targets (HTML, Desktop, Mobile)
+
+## Anti-patterns to avoid
+- Requiring manual state management for loading/error
+- Forcing users to write JavaScript fetch code
+- No caching by default
+- Silent failures without error display
+- Blocking UI during fetch
+- Memory leaks from unaborted requests

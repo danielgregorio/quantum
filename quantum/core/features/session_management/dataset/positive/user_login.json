@@ -1,0 +1,18 @@
+{
+  "example_id": "user_login_001",
+  "category": "session_management",
+  "tags": ["session", "authentication", "user_data"],
+  "input": {
+    "component": "<q:component name=\"LoginHandler\">\n  <q:action name=\"login\" method=\"POST\">\n    <q:param name=\"username\" type=\"string\" required=\"true\" />\n    <q:param name=\"password\" type=\"string\" required=\"true\" />\n    \n    <!-- Store user info in session -->\n    <q:set name=\"session.userId\" value=\"123\" />\n    <q:set name=\"session.username\" value=\"{username}\" />\n    <q:set name=\"session.loggedIn\" value=\"true\" />\n    <q:set name=\"session.loginTime\" value=\"2025-11-05 10:30:00\" />\n    \n    <q:redirect url=\"/dashboard\" flash=\"Welcome back, {username}!\" />\n  </q:action>\n  \n  <form method=\"POST\">\n    <input type=\"text\" name=\"username\" />\n    <input type=\"password\" name=\"password\" />\n    <button type=\"submit\">Login</button>\n  </form>\n</q:component>",
+    "context": {
+      "phase": "F",
+      "feature": "session_management"
+    }
+  },
+  "expected_behavior": "Stores user authentication data in session scope",
+  "validation": {
+    "session_storage": true,
+    "multiple_variables": true,
+    "persists_across_requests": true
+  }
+}

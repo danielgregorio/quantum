@@ -1,0 +1,117 @@
+feature:
+  name: "forms_actions"
+  display_name: "Forms & Actions (Server-Side Form Handling)"
+  version: "1.0.0"
+  status: "stable"
+  phase: A
+  category: "forms"
+
+  description: |
+    Server-side form handling with automatic data binding, validation,
+    flash messages, and redirect support. ColdFusion-inspired action
+    handlers that process POST/PUT/DELETE requests with zero ceremony.
+
+dependencies:
+  features:
+    - "state_management"
+    - "databinding"
+    - "query" # For database operations in actions
+  external:
+    - "Flask>=2.3.0"
+
+api:
+  ast_nodes:
+    - "ActionNode"
+    - "RedirectNode"
+    - "FlashNode"
+  parser: "src/core/parser.py::_parse_action_statement"
+  runtime: "src/runtime/action_handler.py::ActionHandler"
+
+architecture:
+  pattern: "Server-Side Actions"
+  csrf_protection: "Automatic (enabled by default)"
+  validation: "Server-side with q:param rules"
+  flash_messages: "Session-based, shown once"
+
+capabilities:
+  - "Define actions with q:action"
+  - "Automatic form data binding"
+  - "Server-side parameter validation"
+  - "Flash messages across redirects"
+  - "Redirect after POST pattern"
+  - "CSRF protection (automatic)"
+  - "Rate limiting support"
+  - "Authentication checks"
+
+implementation:
+  files:
+    - "src/core/ast_nodes.py (ActionNode, RedirectNode, FlashNode)"
+    - "src/core/parser.py (_parse_action_statement, _parse_redirect_statement, _parse_flash_statement)"
+    - "src/runtime/action_handler.py (ActionHandler)"
+    - "src/runtime/web_server.py (action routing)"
+
+  validation_types:
+    - "required"
+    - "type (email, url, integer, etc.)"
+    - "minlength / maxlength"
+    - "min / max (numeric)"
+    - "pattern (regex)"
+    - "enum (allowed values)"
+
+testing:
+  framework: "pytest"
+  markers:
+    - "unit"
+    - "integration"
+    - "phaseA"
+  coverage:
+    lines: "~90%"
+    branches: "~85%"
+
+examples:
+  simple_form_action: |
+    <q:action name="createUser" method="POST">
+      <q:param name="email" type="email" required="true" />
+      <q:param name="password" type="string" minlength="8" required="true" />
+      <q:query datasource="db">
+        INSERT INTO users (email, password) VALUES (:email, :password)
+      </q:query>
+      <q:redirect url="/users" flash="User created successfully!" />
+    </q:action>
+
+    <form method="POST" action="/createUser">
+      <input name="email" type="email" />
+      <input name="password" type="password" />
+      <button type="submit">Create User</button>
+    </form>
+
+  validation_example: |
+    <q:action name="updateProfile" method="POST">
+      <q:param name="username" type="string" minlength="3" maxlength="20" required="true" />
+      <q:param name="age" type="integer" min="18" max="120" />
+      <q:param name="website" type="url" />
+      <q:query datasource="db">
+        UPDATE users SET username=:username, age=:age, website=:website WHERE id=:userId
+      </q:query>
+      <q:redirect url="/profile" flash="Profile updated!" />
+    </q:action>
+
+  flash_messages: |
+    <q:component name="Page">
+      <!-- Display flash message if present -->
+      <q:if condition="{flash != ''}">
+        <div class="alert alert-{flashType}">
+          {flash}
+        </div>
+      </q:if>
+    </q:component>
+
+validation:
+  - "Action name is required"
+  - "Method must be POST, PUT, DELETE, or PATCH"
+  - "Params validated against rules (required, type, min/max, etc.)"
+  - "CSRF token validated (unless disabled)"
+  - "Rate limits enforced (if configured)"
+
+production_ready: true
+stable_since: "2025-11-05"

@@ -1,0 +1,248 @@
+intention:
+  name: "HTML Rendering with Template Mixing"
+  version: "1.0.0"
+  category: "rendering"
+  goal: |
+    Enable developers to write HTML directly within Quantum components without
+    special syntax or wrappers. HTML is treated as first-class content alongside
+    Quantum control structures, following the ColdFusion/PHP template mixing pattern.
+
+  capabilities:
+    - "Write standard HTML tags directly in .q files"
+    - "Mix HTML with Quantum tags (q:if, q:loop, q:set, etc.)"
+    - "Render HTML with proper element structure"
+    - "Handle void elements (self-closing tags)"
+    - "Support HTML attributes (static and dynamic)"
+    - "Databinding in text content and attributes"
+    - "Preserve formatting and structure"
+    - "No XML namespace pollution in output"
+
+  syntax:
+    html_elements:
+      description: "Standard HTML5 elements rendered as-is"
+      examples:
+        - "<div>Content</div>"
+        - "<p class='text'>Hello</p>"
+        - "<button type='submit'>Save</button>"
+
+    void_elements:
+      description: "Self-closing HTML elements"
+      list: "br, hr, img, input, link, meta, area, base, col, embed, param, source, track, wbr"
+      examples:
+        - "<br />"
+        - "<img src='logo.png' alt='Logo' />"
+        - "<input type='text' name='username' />"
+
+    attributes:
+      static:
+        description: "Static attribute values"
+        example: "<div class='container' id='main'>"
+      dynamic:
+        description: "Dynamic values using databinding"
+        example: "<div class='{className}' style='color: {textColor}'>"
+
+    mixed_content:
+      description: "HTML mixed with Quantum control structures"
+      example: |
+        <div>
+          <q:if condition="{isLoggedIn}">
+            <p>Welcome back, {userName}!</p>
+          </q:if>
+          <q:loop from="1" to="5" index="i">
+            <p>Item {i}</p>
+          </q:loop>
+        </div>
+
+  structure:
+    basic_html: |
+      <q:component name="SimplePage">
+        <html>
+          <head>
+            <title>My Page</title>
+          </head>
+          <body>
+            <h1>Welcome</h1>
+            <p>This is a simple page.</p>
+          </body>
+        </html>
+      </q:component>
+
+    with_databinding: |
+      <q:component name="UserProfile">
+        <q:set name="userName" value="Daniel" />
+        <q:set name="userEmail" value="daniel@example.com" />
+
+        <div class="profile">
+          <h2>{userName}</h2>
+          <p>Email: {userEmail}</p>
+        </div>
+      </q:component>
+
+    with_conditionals: |
+      <q:component name="Dashboard">
+        <q:set name="isAdmin" value="true" />
+
+        <div>
+          <h1>Dashboard</h1>
+          <q:if condition="{isAdmin} == true">
+            <div class="admin-panel">
+              <h2>Admin Controls</h2>
+              <button>Manage Users</button>
+            </div>
+          </q:if>
+        </div>
+      </q:component>
+
+    with_loops: |
+      <q:component name="ProductList">
+        <q:set name="products" value="['Laptop', 'Mouse', 'Keyboard']" />
+
+        <ul>
+          <q:loop collection="{products}" item="product">
+            <li>{product}</li>
+          </q:loop>
+        </ul>
+      </q:component>
+
+  examples:
+    - title: "Simple HTML Page"
+      quantum_code: |
+        <q:component name="HomePage">
+          <div class="container">
+            <h1>Welcome to Quantum</h1>
+            <p>Server-side rendering made easy.</p>
+          </div>
+        </q:component>
+      output: |
+        <div class="container">
+          <h1>Welcome to Quantum</h1>
+          <p>Server-side rendering made easy.</p>
+        </div>
+
+    - title: "Form with Void Elements"
+      quantum_code: |
+        <q:component name="LoginForm">
+          <form action="/login" method="post">
+            <input type="text" name="username" placeholder="Username" />
+            <br />
+            <input type="password" name="password" placeholder="Password" />
+            <hr />
+            <button type="submit">Login</button>
+          </form>
+        </q:component>
+      output: |
+        <form action="/login" method="post">
+          <input type="text" name="username" placeholder="Username" />
+          <br />
+          <input type="password" name="password" placeholder="Password" />
+          <hr />
+          <button type="submit">Login</button>
+        </form>
+
+    - title: "Databinding in Attributes and Content"
+      quantum_code: |
+        <q:component name="StyledBox">
+          <q:set name="bgColor" value="blue" />
+          <q:set name="message" value="Hello, World!" />
+
+          <div class="box box-{bgColor}">
+            {message}
+          </div>
+        </q:component>
+      output: |
+        <div class="box box-blue">
+          Hello, World!
+        </div>
+
+    - title: "Mixed HTML and Control Flow"
+      quantum_code: |
+        <q:component name="ConditionalList">
+          <q:set name="showList" value="true" />
+          <q:set name="items" value="['Apple', 'Banana', 'Cherry']" />
+
+          <div>
+            <h2>Fruit List</h2>
+            <q:if condition="{showList} == true">
+              <ul>
+                <q:loop collection="{items}" item="fruit">
+                  <li>{fruit}</li>
+                </q:loop>
+              </ul>
+            </q:if>
+          </div>
+        </q:component>
+      output: |
+        <div>
+          <h2>Fruit List</h2>
+          <ul>
+            <li>Apple</li>
+            <li>Banana</li>
+            <li>Cherry</li>
+          </ul>
+        </div>
+
+    - title: "Nested HTML Structure"
+      quantum_code: |
+        <q:component name="Card">
+          <q:set name="title" value="Product Card" />
+          <q:set name="price" value="$99.99" />
+
+          <div class="card">
+            <div class="card-header">
+              <h3>{title}</h3>
+            </div>
+            <div class="card-body">
+              <p>Price: {price}</p>
+              <button class="btn btn-primary">Add to Cart</button>
+            </div>
+            <div class="card-footer">
+              <small>Free shipping</small>
+            </div>
+          </div>
+        </q:component>
+      output: |
+        <div class="card">
+          <div class="card-header">
+            <h3>Product Card</h3>
+          </div>
+          <div class="card-body">
+            <p>Price: $99.99</p>
+            <button class="btn btn-primary">Add to Cart</button>
+          </div>
+          <div class="card-footer">
+            <small>Free shipping</small>
+          </div>
+        </div>
+
+  use_cases:
+    - "Landing pages"
+    - "Admin dashboards"
+    - "Forms and input pages"
+    - "Email templates"
+    - "Static website generation"
+    - "Server-rendered web applications"
+    - "Content-heavy pages (blogs, documentation)"
+
+  implementation_notes:
+    - "HTML elements detected by lowercase tag names"
+    - "Uppercase tags treated as component calls (Phase 2)"
+    - "q: prefix reserved for Quantum tags"
+    - "Void elements auto-detected from HTML_VOID_ELEMENTS list"
+    - "Attributes passed as dictionary to HTMLNode"
+    - "Text content wrapped in TextNode for databinding"
+    - "XML parser requires well-formed markup"
+    - "Magic namespace injection handles xmlns:q automatically"
+
+  validation:
+    - "HTML tags must be properly nested and closed"
+    - "Void elements should be self-closing in XML mode"
+    - "Attribute values must be quoted"
+    - "No unclosed tags allowed"
+    - "DOCTYPE not supported (use meta tags instead)"
+
+  related_features:
+    - "databinding" # Variable interpolation in HTML
+    - "state_management" # Variables used in HTML content
+    - "component_composition" # Components rendered as HTML
+    - "conditionals" # q:if controls HTML rendering
+    - "loops" # q:loop generates repeated HTML

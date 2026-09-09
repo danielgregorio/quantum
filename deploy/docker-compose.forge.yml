@@ -1,0 +1,68 @@
+# Quantum Deploy Infrastructure - Forge VM Setup
+# docker-compose -f docker-compose.forge.yml up -d
+
+version: '3.8'
+
+services:
+  # Deploy Service - manages app deployments
+  quantum-deploy:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.deploy-service
+    container_name: quantum-deploy-service
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      - QUANTUM_API_KEY=${QUANTUM_API_KEY}
+      - QUANTUM_BASE_URL=${QUANTUM_BASE_URL:-https://forge.domain.com}
+      - QUANTUM_APPS_DIR=/data/quantum/apps
+      - QUANTUM_NGINX_DIR=/data/quantum/nginx
+      - QUANTUM_REGISTRY_DIR=/data/quantum/registry
+      - QUANTUM_DOCKER_NETWORK=quantum-net
+    volumes:
+      # Docker socket for container management
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persistent data
+      - quantum-apps:/data/quantum/apps
+      - quantum-registry:/data/quantum/registry
+      - quantum-nginx:/data/quantum/nginx
+      # Quantum source for building images
+      - ../src:/app/quantum-src:ro
+      - ../requirements.txt:/app/quantum-requirements.txt:ro
+    networks:
+      - quantum-net
+    labels:
+      - "quantum.service=deploy"
+      - "quantum.managed=true"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  quantum-net:
+    driver: bridge
+    name: quantum-net
+
+volumes:
+  quantum-apps:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/quantum/apps
+  quantum-registry:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/quantum/registry
+  quantum-nginx:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/quantum/nginx

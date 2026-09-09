@@ -1,0 +1,36 @@
+server:
+  port: 8080
+  host: 0.0.0.0
+  reload: false
+  debug: true
+
+paths:
+  components: ./components
+  static: ./static
+  logs: ./logs
+
+defaults:
+  component_type: pure
+  interactive: false
+  charset: utf-8
+  timeout: 30
+
+performance:
+  cache_templates: true
+  cache_ttl: 300
+  cache_max_size: 100
+
+security:
+  xss_protection: true
+  max_content_length: 16777216
+
+logging:
+  level: DEBUG
+  console: true
+  file: false
+  filename: quantum.log
+
+llm:
+  base_url: http://10.10.1.40:11434
+  default_model: phi3
+  timeout: 60

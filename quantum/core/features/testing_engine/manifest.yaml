@@ -1,0 +1,34 @@
+feature:
+  name: "testing_engine"
+  display_name: "Testing Engine (qtest: namespace)"
+  version: "1.0.0"
+  status: "experimental"
+  migration_type: "option_c"
+
+description: |
+  Testing engine for Quantum Framework.
+  Compiles declarative XML (qtest: namespace) to standalone pytest test files
+  with Playwright browser testing support.
+  Tests run via pytest - no custom test runner needed.
+
+tags:
+  - "testing"
+  - "pytest"
+  - "playwright"
+  - "e2e"
+  - "browser"
+  - "assertions"
+
+maintainers:
+  - "Daniel"
+  - "Claude"
+
+api:
+  ast_nodes: "src/core/features/testing_engine/src/ast_nodes.py"
+  parser: "src/core/features/testing_engine/src/parser.py"
+  code_generator: "src/runtime/testing_code_generator.py"
+  builder: "src/runtime/testing_builder.py"
+
+testing:
+  integration_tests: 2
+  coverage: 80

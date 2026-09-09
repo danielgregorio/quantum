@@ -1,0 +1,143 @@
+{
+  "dataset_type": "positive",
+  "feature": "html_rendering",
+  "category": "void_elements",
+  "description": "Valid examples of self-closing HTML void elements",
+  "examples": [
+    {
+      "id": "void-001",
+      "intent": "Render line break",
+      "input": {
+        "natural_language": "Add br tag for line break",
+        "context": {
+          "element": "br"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"Text\">\n  <p>Line 1<br />Line 2</p>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "HTMLNode",
+              "tag": "p",
+              "children": [
+                {
+                  "type": "TextNode",
+                  "content": "Line 1"
+                },
+                {
+                  "type": "HTMLNode",
+                  "tag": "br",
+                  "self_closing": true
+                },
+                {
+                  "type": "TextNode",
+                  "content": "Line 2"
+                }
+              ]
+            }
+          ]
+        },
+        "rendered_html": "<p>Line 1<br />Line 2</p>",
+        "runtime_behavior": "Renders self-closing br tag"
+      },
+      "tags": ["void_element", "br", "line_break"]
+    },
+    {
+      "id": "void-002",
+      "intent": "Render image tag",
+      "input": {
+        "natural_language": "Add image with src and alt",
+        "context": {
+          "element": "img"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"Image\">\n  <img src=\"logo.png\" alt=\"Company Logo\" />\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "HTMLNode",
+              "tag": "img",
+              "attributes": {
+                "src": "logo.png",
+                "alt": "Company Logo"
+              },
+              "self_closing": true
+            }
+          ]
+        },
+        "rendered_html": "<img src=\"logo.png\" alt=\"Company Logo\" />",
+        "runtime_behavior": "Renders self-closing img tag with attributes"
+      },
+      "tags": ["void_element", "img", "attributes"]
+    },
+    {
+      "id": "void-003",
+      "intent": "Render input field",
+      "input": {
+        "natural_language": "Create text input field",
+        "context": {
+          "element": "input"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"Form\">\n  <input type=\"text\" name=\"username\" placeholder=\"Username\" />\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "HTMLNode",
+              "tag": "input",
+              "attributes": {
+                "type": "text",
+                "name": "username",
+                "placeholder": "Username"
+              },
+              "self_closing": true
+            }
+          ]
+        },
+        "rendered_html": "<input type=\"text\" name=\"username\" placeholder=\"Username\" />",
+        "runtime_behavior": "Renders self-closing input tag with multiple attributes"
+      },
+      "tags": ["void_element", "input", "form", "multiple_attributes"]
+    },
+    {
+      "id": "void-004",
+      "intent": "Render horizontal rule",
+      "input": {
+        "natural_language": "Add hr separator",
+        "context": {
+          "element": "hr"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:component name=\"Section\">\n  <p>Section 1</p>\n  <hr />\n  <p>Section 2</p>\n</q:component>",
+        "ast": {
+          "type": "ComponentNode",
+          "statements": [
+            {
+              "type": "HTMLNode",
+              "tag": "p"
+            },
+            {
+              "type": "HTMLNode",
+              "tag": "hr",
+              "self_closing": true
+            },
+            {
+              "type": "HTMLNode",
+              "tag": "p"
+            }
+          ]
+        },
+        "rendered_html": "<p>Section 1</p>\n<hr />\n<p>Section 2</p>",
+        "runtime_behavior": "Renders hr as void element between paragraphs"
+      },
+      "tags": ["void_element", "hr", "separator"]
+    }
+  ]
+}

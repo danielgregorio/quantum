@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009"
+               xmlns:s="library://ns.adobe.com/flex/spark"
+               xmlns:mx="library://ns.adobe.com/flex/mx"
+               width="900" height="800"
+               title="FASE 2 Demo - Advanced Inputs and Validation">
+
+    <fx:Script>
+        <![CDATA[
+            // Data properties
+            [Bindable] public var quantity:Number = 5;
+            [Bindable] public var volume:Number = 50;
+            [Bindable] public var brightness:Number = 75;
+            [Bindable] public var comments:String = "";
+            [Bindable] public var username:String = "";
+            [Bindable] public var email:String = "";
+            [Bindable] public var age:Number = 25;
+            [Bindable] public var price:Number = 0;
+
+            // State management
+            [Bindable] public var currentView:String = "default";
+            [Bindable] public var isSubmitting:Boolean = false;
+
+            // Event handlers
+            public function handleQuantityChange(event:Object):void {
+                trace("Quantity changed to: " + quantity);
+            }
+
+            public function handleVolumeChange(event:Object):void {
+                trace("Volume: " + volume + "%");
+            }
+
+            public function handleBrightnessChange(event:Object):void {
+                trace("Brightness: " + brightness + "%");
+            }
+
+            public function handleCommentsChange(event:Object):void {
+                trace("Comments length: " + comments.length);
+            }
+
+            public function switchToForm():void {
+                currentState = "formView";
+                trace("Switched to form view");
+            }
+
+            public function switchToSettings():void {
+                currentState = "settingsView";
+                trace("Switched to settings view");
+            }
+
+            public function switchToDefault():void {
+                currentState = "default";
+                trace("Switched to default view");
+            }
+
+            public function validateUsername(event:Object):void {
+                if (event.valid) {
+                    trace("Username is valid!");
+                } else {
+                    trace("Username error: " + event.message);
+                }
+            }
+
+            public function validateEmail(event:Object):void {
+                if (event.valid) {
+                    trace("Email is valid!");
+                } else {
+                    trace("Email error: " + event.message);
+                }
+            }
+
+            public function validateAge(event:Object):void {
+                if (event.valid) {
+                    trace("Age is valid!");
+                } else {
+                    trace("Age error: " + event.message);
+                }
+            }
+
+            public function submitForm():void {
+                trace("=== Form Submission ===");
+                trace("Username: " + username);
+                trace("Email: " + email);
+                trace("Age: " + age);
+                trace("Comments: " + comments);
+
+                // Validate all fields
+                const usernameValid = usernameValidator.validate();
+                const emailValid = emailValidator.validate();
+                const ageValid = ageValidator.validate();
+
+                if (usernameValid.valid && emailValid.valid && ageValid.valid) {
+                    Alert.show(
+                        "Form submitted successfully!\n\nUsername: " + username + "\nEmail: " + email + "\nAge: " + age,
+                        "Success",
+                        Alert.OK,
+                        null,
+                        null,
+                        Alert.INFO
+                    );
+                } else {
+                    Alert.show(
+                        "Please fix the validation errors before submitting.",
+                        "Validation Error",
+                        Alert.OK,
+                        null,
+                        null,
+                        Alert.ERROR
+                    );
+                }
+            }
+
+            public function resetForm():void {
+                username = "";
+                email = "";
+                age = 18;
+                comments = "";
+                trace("Form reset");
+            }
+        ]]>
+    </fx:Script>
+
+    <!-- States definition -->
+    <s:states>
+        <s:State name="default" />
+        <s:State name="formView" />
+        <s:State name="settingsView" />
+    </s:states>
+
+    <!-- Validators -->
+    <mx:StringValidator id="usernameValidator"
+                        source="{usernameInput}"
+                        property="text"
+                        minLength="3"
+                        maxLength="20"
+                        required="true"
+                        tooShortError="Username must be at least 3 characters"
+                        tooLongError="Username cannot exceed 20 characters"
+                        requiredFieldError="Username is required"
+                        trigger="blur"
+                        invalid="validateUsername(event)"
+                        valid="validateUsername(event)" />
+
+    <mx:EmailValidator id="emailValidator"
+                       source="{emailInput}"
+                       property="text"
+                       required="true"
+                       requiredFieldError="Email is required"
+                       invalidCharError="Please enter a valid email address"
+                       trigger="blur"
+                       invalid="validateEmail(event)"
+                       valid="validateEmail(event)" />
+
+    <mx:NumberValidator id="ageValidator"
+                        source="{ageInput}"
+                        property="value"
+                        minValue="18"
+                        maxValue="120"
+                        domain="int"
+                        required="true"
+                        lowerThanMinError="You must be at least 18 years old"
+                        exceedsMaxError="Please enter a valid age"
+                        integerError="Age must be a whole number"
+                        trigger="blur"
+                        invalid="validateAge(event)"
+                        valid="validateAge(event)" />
+
+    <mx:NumberValidator id="priceValidator"
+                        source="{priceInput}"
+                        property="value"
+                        minValue="0"
+                        allowNegative="false"
+                        required="false"
+                        negativeError="Price cannot be negative"
+                        trigger="blur" />
+
+    <s:VBox width="100%" height="100%" padding="20" gap="20">
+
+        <!-- Header -->
+        <s:Panel width="100%" title="FASE 2 Components Demo">
+            <s:VBox padding="15" gap="10" width="100%">
+                <s:Label text="Advanced Input Controls and Validation System" fontSize="14" fontWeight="bold" />
+                <s:Label text="Demonstrates: NumericStepper, Sliders, TextArea, States, and Validators" fontSize="11" />
+
+                <!-- State navigation buttons -->
+                <s:HBox gap="10" width="100%">
+                    <s:Button label="Main Demo" click="switchToDefault()" />
+                    <s:Button label="Form with Validation" click="switchToForm()" />
+                    <s:Button label="Settings Panel" click="switchToSettings()" />
+                </s:HBox>
+            </s:VBox>
+        </s:Panel>
+
+        <!-- DEFAULT STATE: Component Showcase -->
+        <s:VBox width="100%" gap="15" includeIn="default">
+
+            <!-- NumericStepper Demo -->
+            <s:Panel width="100%" title="NumericStepper Component">
+                <s:VBox padding="15" gap="12" width="100%">
+                    <s:Label text="Quantity selector with increment/decrement buttons:" fontSize="12" />
+
+                    <s:HBox gap="15" verticalAlign="middle">
+                        <s:Label text="Quantity:" width="100" />
+                        <s:NumericStepper id="quantityInput"
+                                         value="{quantity}"
+                                         minimum="1"
+                                         maximum="100"
+                                         stepSize="1"
+                                         width="120"
+                                         change="handleQuantityChange(event)" />
+                        <s:Label text="{quantity} items selected" fontSize="11" color="#666666" />
+                    </s:HBox>
+
+                    <s:HBox gap="15" verticalAlign="middle">
+                        <s:Label text="Price ($):" width="100" />
+                        <s:NumericStepper id="priceInput"
+                                         value="{price}"
+                                         minimum="0"
+                                         maximum="9999"
+                                         stepSize="0.50"
+                                         width="120" />
+                        <s:Label text="$${price.toFixed(2)}" fontSize="11" color="#2ecc71" fontWeight="bold" />
+                    </s:HBox>
+                </s:VBox>
+            </s:Panel>
+
+            <!-- Slider Demo -->
+            <s:Panel width="100%" title="Slider Components (HSlider and VSlider)">
+                <s:HBox padding="15" gap="30" width="100%">
+
+                    <!-- Horizontal Sliders -->
+                    <s:VBox gap="15" width="60%">
+                        <s:Label text="Horizontal Sliders:" fontSize="12" fontWeight="bold" />
+
+                        <s:HBox gap="10" verticalAlign="middle">
+                            <s:Label text="Volume:" width="80" />
+                            <s:HSlider id="volumeSlider"
+                                      value="{volume}"
+                                      minimum="0"
+                                      maximum="100"
+                                      snapInterval="1"
+                                      liveDragging="true"
+                                      width="250"
+                                      change="handleVolumeChange(event)" />
+                            <s:Label text="{Math.round(volume)}%" width="50" fontSize="11" />
+                        </s:HBox>
+
+                        <s:HBox gap="10" verticalAlign="middle">
+                            <s:Label text="Brightness:" width="80" />
+                            <s:HSlider id="brightnessSlider"
+                                      value="{brightness}"
+                                      minimum="0"
+                                      maximum="100"
+                                      snapInterval="5"
+                                      liveDragging="true"
+                                      width="250"
+                                      change="handleBrightnessChange(event)" />
+                            <s:Label text="{Math.round(brightness)}%" width="50" fontSize="11" />
+                        </s:HBox>
+
+                        <!-- Visual brightness demo -->
+                        <s:HBox gap="10" verticalAlign="middle">
+                            <s:Label text="Preview:" width="80" />
+                            <s:Panel width="250" height="50"
+                                    backgroundColor="#{Math.floor(brightness * 2.55).toString(16).padStart(2, '0') + Math.floor(brightness * 2.55).toString(16).padStart(2, '0') + Math.floor(brightness * 2.55).toString(16).padStart(2, '0')}" />
+                        </s:HBox>
+                    </s:VBox>
+
+                    <!-- Vertical Slider -->
+                    <s:VBox gap="10" horizontalAlign="center">
+                        <s:Label text="Vertical Slider:" fontSize="12" fontWeight="bold" />
+                        <s:VSlider id="verticalSlider"
+                                  value="50"
+                                  minimum="0"
+                                  maximum="100"
+                                  snapInterval="10"
+                                  liveDragging="true"
+                                  height="180" />
+                        <s:Label text="Value: 50" fontSize="11" />
+                    </s:VBox>
+                </s:HBox>
+            </s:Panel>
+
+            <!-- TextArea Demo -->
+            <s:Panel width="100%" title="TextArea Component">
+                <s:VBox padding="15" gap="12" width="100%">
+                    <s:Label text="Multi-line text input with character limit:" fontSize="12" />
+
+                    <s:TextArea id="commentsArea"
+                               text="{comments}"
+                               width="100%"
+                               height="120"
+                               maxChars="500"
+                               wordWrap="true"
+                               change="handleCommentsChange(event)" />
+
+                    <s:Label text="Tips: Try typing more than 500 characters to see the limit in action." fontSize="10" color="#999999" />
+                </s:VBox>
+            </s:Panel>
+
+        </s:VBox>
+
+        <!-- FORM STATE: Registration Form with Validation -->
+        <s:Panel width="100%" title="User Registration Form" includeIn="formView">
+            <s:Form width="100%" padding="20">
+
+                <s:FormHeading label="Personal Information" />
+
+                <s:FormItem label="Username" required="true">
+                    <s:TextInput id="usernameInput" text="{username}" width="100%" />
+                </s:FormItem>
+
+                <s:FormItem label="Email" required="true">
+                    <s:TextInput id="emailInput" text="{email}" width="100%" />
+                </s:FormItem>
+
+                <s:FormItem label="Age" required="true">
+                    <s:NumericStepper id="ageInput"
+                                     value="{age}"
+                                     minimum="18"
+                                     maximum="120"
+                                     stepSize="1"
+                                     width="120" />
+                </s:FormItem>
+
+                <s:FormHeading label="Additional Details" />
+
+                <s:FormItem label="Comments" direction="vertical">
+                    <s:TextArea text="{comments}"
+                               width="100%"
+                               height="100"
+                               maxChars="500"
+                               wordWrap="true" />
+                </s:FormItem>
+
+                <s:FormItem>
+                    <s:HBox gap="10">
+                        <s:Button label="Submit Form" click="submitForm()" />
+                        <s:Button label="Reset" click="resetForm()" />
+                        <s:Button label="Back" click="switchToDefault()" />
+                    </s:HBox>
+                </s:FormItem>
+
+            </s:Form>
+        </s:Panel>
+
+        <!-- SETTINGS STATE: Settings Panel -->
+        <s:VBox width="100%" gap="15" includeIn="settingsView">
+
+            <s:Panel width="100%" title="Audio Settings">
+                <s:VBox padding="20" gap="15" width="100%">
+                    <s:HBox gap="10" verticalAlign="middle" width="100%">
+                        <s:Label text="Master Volume:" width="120" />
+                        <s:HSlider value="{volume}"
+                                  minimum="0"
+                                  maximum="100"
+                                  snapInterval="1"
+                                  liveDragging="true"
+                                  width="300" />
+                        <s:Label text="{Math.round(volume)}%" width="50" />
+                    </s:HBox>
+
+                    <s:HBox gap="10" verticalAlign="middle" width="100%">
+                        <s:Label text="Effect Volume:" width="120" />
+                        <s:HSlider value="75"
+                                  minimum="0"
+                                  maximum="100"
+                                  snapInterval="1"
+                                  liveDragging="true"
+                                  width="300" />
+                        <s:Label text="75%" width="50" />
+                    </s:HBox>
+                </s:VBox>
+            </s:Panel>
+
+            <s:Panel width="100%" title="Display Settings">
+                <s:VBox padding="20" gap="15" width="100%">
+                    <s:HBox gap="10" verticalAlign="middle" width="100%">
+                        <s:Label text="Brightness:" width="120" />
+                        <s:HSlider value="{brightness}"
+                                  minimum="0"
+                                  maximum="100"
+                                  snapInterval="5"
+                                  liveDragging="true"
+                                  width="300" />
+                        <s:Label text="{Math.round(brightness)}%" width="50" />
+                    </s:HBox>
+
+                    <s:HBox gap="10" verticalAlign="middle" width="100%">
+                        <s:Label text="Contrast:" width="120" />
+                        <s:HSlider value="50"
+                                  minimum="0"
+                                  maximum="100"
+                                  snapInterval="5"
+                                  liveDragging="true"
+                                  width="300" />
+                        <s:Label text="50%" width="50" />
+                    </s:HBox>
+                </s:VBox>
+            </s:Panel>
+
+            <s:HBox gap="10">
+                <s:Button label="Apply Settings" click="trace('Settings applied')" />
+                <s:Button label="Back to Main" click="switchToDefault()" />
+            </s:HBox>
+
+        </s:VBox>
+
+        <!-- Footer with current state info -->
+        <s:Panel width="100%" title="Debug Info">
+            <s:VBox padding="10" gap="5" width="100%">
+                <s:Label text="Current State: {currentState}" fontSize="11" />
+                <s:Label text="Quantity: {quantity} | Volume: {Math.round(volume)}% | Brightness: {Math.round(brightness)}%" fontSize="10" color="#666666" />
+            </s:VBox>
+        </s:Panel>
+
+    </s:VBox>
+
+</s:Application>

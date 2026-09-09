@@ -1,0 +1,3020 @@
+[
+  {
+    "expr": "!calculator_result.success",
+    "origin": "examples\\agent_demo.q",
+    "result": "'{!calculator_result.success}'",
+    "status": "ok"
+  },
+  {
+    "expr": "!connected",
+    "origin": "examples\\websocket-chat.q",
+    "result": "'{!connected}'",
+    "status": "ok"
+  },
+  {
+    "expr": "!ollamaAgent_result.success",
+    "origin": "examples\\agent_multi_provider.q",
+    "result": "'{!ollamaAgent_result.success}'",
+    "status": "ok"
+  },
+  {
+    "expr": "!self.blocking",
+    "origin": "examples\\fighter.q",
+    "result": "'{!self.blocking}'",
+    "status": "ok"
+  },
+  {
+    "expr": "0",
+    "origin": "examples\\kenney_platformer.q",
+    "result": "'{0}'",
+    "status": "ok"
+  },
+  {
+    "expr": "10,11",
+    "origin": "examples\\form_validation.q",
+    "result": "'{10,11}'",
+    "status": "ok"
+  },
+  {
+    "expr": "2,",
+    "origin": "examples\\python-scripting.q",
+    "result": "'{2,}'",
+    "status": "ok"
+  },
+  {
+    "expr": "3",
+    "origin": "examples\\kenney_platformer.q",
+    "result": "'{3}'",
+    "status": "ok"
+  },
+  {
+    "expr": "300",
+    "origin": "examples\\smw_world1.q",
+    "result": "'{300}'",
+    "status": "ok"
+  },
+  {
+    "expr": "384",
+    "origin": "examples\\smw_world1.q",
+    "result": "'{384}'",
+    "status": "ok"
+  },
+  {
+    "expr": "4",
+    "origin": "examples\\test-validation-complete.q",
+    "result": "'{4}'",
+    "status": "ok"
+  },
+  {
+    "expr": "40",
+    "origin": "examples\\smw_world1.q",
+    "result": "'{40}'",
+    "status": "ok"
+  },
+  {
+    "expr": "5",
+    "origin": "examples\\smw_world1.q",
+    "result": "'{5}'",
+    "status": "ok"
+  },
+  {
+    "expr": "5 + waveNumber * 2",
+    "origin": "examples\\tower_defense.q",
+    "result": "'{5 + waveNumber * 2}'",
+    "status": "ok"
+  },
+  {
+    "expr": "8,",
+    "origin": "examples\\form_validation.q",
+    "result": "'{8,}'",
+    "status": "ok"
+  },
+  {
+    "expr": "JSON.stringify(message.body)",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{JSON.stringify(message.body)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "String(coins).padStart(2, '0')",
+    "origin": "examples\\smw\\smw.q",
+    "result": "\"{String(coins).padStart(2, '0')}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "String(score).padStart(7, '0')",
+    "origin": "examples\\smw\\smw.q",
+    "result": "\"{String(score).padStart(7, '0')}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "['passable','block','platform'][collisionData[r][c]]",
+    "origin": "examples\\progressive\\20_collision_editor.q",
+    "result": "\"{['passable','block','platform'][collisionData[r][c]]}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "a",
+    "origin": "examples\\python-scripting.q",
+    "result": "17",
+    "status": "ok"
+  },
+  {
+    "expr": "a * b",
+    "origin": "examples\\agent_demo.q",
+    "result": "425",
+    "status": "ok"
+  },
+  {
+    "expr": "a + b",
+    "origin": "examples\\agent_demo.q",
+    "result": "42",
+    "status": "ok"
+  },
+  {
+    "expr": "a - b",
+    "origin": "examples\\test-databinding-complete.q",
+    "result": "-8",
+    "status": "ok"
+  },
+  {
+    "expr": "a / b",
+    "origin": "examples\\test-databinding-complete.q",
+    "result": "0.68",
+    "status": "ok"
+  },
+  {
+    "expr": "action.args",
+    "origin": "examples\\agent_demo.q",
+    "result": "'{action.args}'",
+    "status": "ok"
+  },
+  {
+    "expr": "action.result",
+    "origin": "examples\\agent_demo.q",
+    "result": "'{action.result}'",
+    "status": "ok"
+  },
+  {
+    "expr": "action.tool",
+    "origin": "examples\\agent_demo.q",
+    "result": "'{action.tool}'",
+    "status": "ok"
+  },
+  {
+    "expr": "activateUser_result.affectedRows",
+    "origin": "examples\\test-query-metadata.q",
+    "result": "'{activateUser_result.affectedRows}'",
+    "status": "ok"
+  },
+  {
+    "expr": "active",
+    "origin": "examples\\test-data-transform-filter.q",
+    "result": "'{active}'",
+    "status": "ok"
+  },
+  {
+    "expr": "activeCount.total",
+    "origin": "examples\\test-query-of-queries.q",
+    "result": "'{activeCount.total}'",
+    "status": "ok"
+  },
+  {
+    "expr": "activeUsers",
+    "origin": "examples\\test-data-transform-filter.q",
+    "result": "'{activeUsers}'",
+    "status": "ok"
+  },
+  {
+    "expr": "activeUsers.email",
+    "origin": "examples\\test-query-loop.q",
+    "result": "'{activeUsers.email}'",
+    "status": "ok"
+  },
+  {
+    "expr": "activeUsers.name",
+    "origin": "examples\\test-query-loop.q",
+    "result": "'{activeUsers.name}'",
+    "status": "ok"
+  },
+  {
+    "expr": "activeUsers.recordCount",
+    "origin": "examples\\test-query-cache.q",
+    "result": "'{activeUsers.recordCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "activeUsers_result.executionTime",
+    "origin": "examples\\test-query-of-queries.q",
+    "result": "'{activeUsers_result.executionTime}'",
+    "status": "ok"
+  },
+  {
+    "expr": "add(10, 5)",
+    "origin": "examples\\test-function-complete.q",
+    "result": "'{add(10, 5)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "add(5, 3)",
+    "origin": "examples\\test-function-simple.q",
+    "result": "'{add(5, 3)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "age",
+    "origin": "examples\\test-dump-basic.q",
+    "result": "'{age}'",
+    "status": "ok"
+  },
+  {
+    "expr": "allUsers.name",
+    "origin": "examples\\test-query-complete.q",
+    "result": "'{allUsers.name}'",
+    "status": "ok"
+  },
+  {
+    "expr": "allUsers_result.recordCount",
+    "origin": "examples\\test-query-complete.q",
+    "result": "'{allUsers_result.recordCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "answer.answer",
+    "origin": "examples\\quantum-assistant.q",
+    "result": "'{answer.answer}'",
+    "status": "ok"
+  },
+  {
+    "expr": "answer.confidence",
+    "origin": "examples\\quantum-assistant.q",
+    "result": "'{answer.confidence}'",
+    "status": "ok"
+  },
+  {
+    "expr": "answer.sources",
+    "origin": "examples\\quantum-assistant.q",
+    "result": "'{answer.sources}'",
+    "status": "ok"
+  },
+  {
+    "expr": "application.appName",
+    "origin": "examples\\test-set-all-scopes.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "application.chatMessages",
+    "origin": "examples\\chat-messages.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "application.chatMessages.length",
+    "origin": "examples\\chat-messages.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "application.onlineUsers",
+    "origin": "examples\\chat.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "application.startTime",
+    "origin": "examples\\test-application-scope.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "application.totalVisits",
+    "origin": "examples\\test-application-scope.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "application.totalVisits + 1",
+    "origin": "examples\\test-application-scope.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "application.version",
+    "origin": "examples\\test-application-scope.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "audience",
+    "origin": "examples\\llm_demo.q",
+    "result": "'{audience}'",
+    "status": "ok"
+  },
+  {
+    "expr": "authToken",
+    "origin": "examples\\fetch-example.q",
+    "result": "'{authToken}'",
+    "status": "ok"
+  },
+  {
+    "expr": "avatar",
+    "origin": "examples\\test-upload-validation.q",
+    "result": "'{avatar}'",
+    "status": "ok"
+  },
+  {
+    "expr": "avg_price",
+    "origin": "examples\\python-data-processing.q",
+    "result": "'{avg_price}'",
+    "status": "ok"
+  },
+  {
+    "expr": "b",
+    "origin": "examples\\python-scripting.q",
+    "result": "25",
+    "status": "ok"
+  },
+  {
+    "expr": "b.h",
+    "origin": "examples\\progressive\\20_collision_editor.q",
+    "result": "'{b.h}'",
+    "status": "ok"
+  },
+  {
+    "expr": "b.w",
+    "origin": "examples\\progressive\\20_collision_editor.q",
+    "result": "'{b.w}'",
+    "status": "ok"
+  },
+  {
+    "expr": "b.x + b.w/2",
+    "origin": "examples\\progressive\\20_collision_editor.q",
+    "result": "'{b.x + b.w/2}'",
+    "status": "ok"
+  },
+  {
+    "expr": "b.y + b.h/2",
+    "origin": "examples\\progressive\\20_collision_editor.q",
+    "result": "'{b.y + b.h/2}'",
+    "status": "ok"
+  },
+  {
+    "expr": "b0=v",
+    "origin": "examples\\tictactoe.q",
+    "result": "'{b0=v}'",
+    "status": "ok"
+  },
+  {
+    "expr": "b1=v",
+    "origin": "examples\\tictactoe.q",
+    "result": "'{b1=v}'",
+    "status": "ok"
+  },
+  {
+    "expr": "b2=v",
+    "origin": "examples\\tictactoe.q",
+    "result": "'{b2=v}'",
+    "status": "ok"
+  },
+  {
+    "expr": "b3=v",
+    "origin": "examples\\tictactoe.q",
+    "result": "'{b3=v}'",
+    "status": "ok"
+  },
+  {
+    "expr": "b4=v",
+    "origin": "examples\\tictactoe.q",
+    "result": "'{b4=v}'",
+    "status": "ok"
+  },
+  {
+    "expr": "b5=v",
+    "origin": "examples\\tictactoe.q",
+    "result": "'{b5=v}'",
+    "status": "ok"
+  },
+  {
+    "expr": "b6=v",
+    "origin": "examples\\tictactoe.q",
+    "result": "'{b6=v}'",
+    "status": "ok"
+  },
+  {
+    "expr": "b7=v",
+    "origin": "examples\\tictactoe.q",
+    "result": "'{b7=v}'",
+    "status": "ok"
+  },
+  {
+    "expr": "b8=v",
+    "origin": "examples\\tictactoe.q",
+    "result": "'{b8=v}'",
+    "status": "ok"
+  },
+  {
+    "expr": "basicGet.name",
+    "origin": "examples\\test-invoke-complete.q",
+    "result": "'{basicGet.name}'",
+    "status": "ok"
+  },
+  {
+    "expr": "body",
+    "origin": "examples\\job_execution_demo.q",
+    "result": "'{body}'",
+    "status": "ok"
+  },
+  {
+    "expr": "bonusText",
+    "origin": "examples\\test-conditionals-complete.q",
+    "result": "'{bonusText}'",
+    "status": "ok"
+  },
+  {
+    "expr": "book.author",
+    "origin": "examples\\test-data-xml-simple.q",
+    "result": "'{book.author}'",
+    "status": "ok"
+  },
+  {
+    "expr": "book.id",
+    "origin": "examples\\test-data-xml-simple.q",
+    "result": "'{book.id}'",
+    "status": "ok"
+  },
+  {
+    "expr": "book.price",
+    "origin": "examples\\test-data-xml-simple.q",
+    "result": "'{book.price}'",
+    "status": "ok"
+  },
+  {
+    "expr": "book.title",
+    "origin": "examples\\test-data-xml-simple.q",
+    "result": "'{book.title}'",
+    "status": "ok"
+  },
+  {
+    "expr": "book.year",
+    "origin": "examples\\test-data-xml-simple.q",
+    "result": "'{book.year}'",
+    "status": "ok"
+  },
+  {
+    "expr": "books",
+    "origin": "examples\\test-data-xml-simple.q",
+    "result": "'{books}'",
+    "status": "ok"
+  },
+  {
+    "expr": "c",
+    "origin": "examples\\progressive\\20_collision_editor.q",
+    "result": "'{c}'",
+    "status": "ok"
+  },
+  {
+    "expr": "calcRequest",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{calcRequest}'",
+    "status": "ok"
+  },
+  {
+    "expr": "calcResponse.data.result",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{calcResponse.data.result}'",
+    "status": "ok"
+  },
+  {
+    "expr": "calcResponse.success",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{calcResponse.success}'",
+    "status": "ok"
+  },
+  {
+    "expr": "calc_history",
+    "origin": "examples\\python-scripting.q",
+    "result": "'{calc_history}'",
+    "status": "ok"
+  },
+  {
+    "expr": "calculateDiscount(100, 10)",
+    "origin": "examples\\test-function-pure.q",
+    "result": "'{calculateDiscount(100, 10)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "calculateDiscount(200, 15)",
+    "origin": "examples\\test-function-pure.q",
+    "result": "'{calculateDiscount(200, 15)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "calculateTotal(100, 3, 0.15)",
+    "origin": "examples\\test-function-local-vars.q",
+    "result": "'{calculateTotal(100, 3, 0.15)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "calculator",
+    "origin": "examples\\agent_demo.q",
+    "result": "'{calculator}'",
+    "status": "ok"
+  },
+  {
+    "expr": "calculator_result.actionCount",
+    "origin": "examples\\agent_demo.q",
+    "result": "'{calculator_result.actionCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "calculator_result.actionCount > 0",
+    "origin": "examples\\agent_demo.q",
+    "result": "'{calculator_result.actionCount > 0}'",
+    "status": "ok"
+  },
+  {
+    "expr": "calculator_result.actions",
+    "origin": "examples\\agent_demo.q",
+    "result": "'{calculator_result.actions}'",
+    "status": "ok"
+  },
+  {
+    "expr": "calculator_result.error.message",
+    "origin": "examples\\agent_demo.q",
+    "result": "'{calculator_result.error.message}'",
+    "status": "ok"
+  },
+  {
+    "expr": "calculator_result.executionTime",
+    "origin": "examples\\agent_demo.q",
+    "result": "'{calculator_result.executionTime}'",
+    "status": "ok"
+  },
+  {
+    "expr": "calculator_result.iterations",
+    "origin": "examples\\agent_demo.q",
+    "result": "'{calculator_result.iterations}'",
+    "status": "ok"
+  },
+  {
+    "expr": "calculator_result.success",
+    "origin": "examples\\agent_demo.q",
+    "result": "'{calculator_result.success}'",
+    "status": "ok"
+  },
+  {
+    "expr": "cart.items",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{cart.items}'",
+    "status": "ok"
+  },
+  {
+    "expr": "cart.totalWeight",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{cart.totalWeight}'",
+    "status": "ok"
+  },
+  {
+    "expr": "cartItems.length",
+    "origin": "examples\\state_persistence_demo.q",
+    "result": "'{cartItems.length}'",
+    "status": "ok"
+  },
+  {
+    "expr": "chat",
+    "origin": "examples\\llm_demo.q",
+    "result": "'{chat}'",
+    "status": "ok"
+  },
+  {
+    "expr": "checkNumber(-3)",
+    "origin": "examples\\test-function-if-logic.q",
+    "result": "'{checkNumber(-3)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "checkNumber(0)",
+    "origin": "examples\\test-function-if-logic.q",
+    "result": "'{checkNumber(0)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "checkNumber(5)",
+    "origin": "examples\\test-function-if-logic.q",
+    "result": "'{checkNumber(5)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "circle_area",
+    "origin": "examples\\python-scripting.q",
+    "result": "'{circle_area}'",
+    "status": "ok"
+  },
+  {
+    "expr": "cleanupTime",
+    "origin": "examples\\job_execution_demo.q",
+    "result": "'{cleanupTime}'",
+    "status": "ok"
+  },
+  {
+    "expr": "coins",
+    "origin": "examples\\kenney_platformer.q",
+    "result": "'{coins}'",
+    "status": "ok"
+  },
+  {
+    "expr": "coins+1",
+    "origin": "examples\\mario\\scenes\\yoshi_island_1.q",
+    "result": "'{coins+1}'",
+    "status": "ok"
+  },
+  {
+    "expr": "collisionData[r][c]",
+    "origin": "examples\\progressive\\20_collision_editor.q",
+    "result": "'{collisionData[r][c]}'",
+    "status": "ok"
+  },
+  {
+    "expr": "color",
+    "origin": "examples\\test-databinding-list.q",
+    "result": "'{color}'",
+    "status": "ok"
+  },
+  {
+    "expr": "colors[0]",
+    "origin": "examples\\test-databinding-complete.q",
+    "result": "'{colors[0]}'",
+    "status": "ok"
+  },
+  {
+    "expr": "colors[2]",
+    "origin": "examples\\test-databinding-complete.q",
+    "result": "'{colors[2]}'",
+    "status": "ok"
+  },
+  {
+    "expr": "comparison",
+    "origin": "examples\\test-conditionals-complete.q",
+    "result": "'{comparison}'",
+    "status": "ok"
+  },
+  {
+    "expr": "completedCount",
+    "origin": "examples\\task-manager-desktop.q",
+    "result": "'{completedCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "completedCount + 1",
+    "origin": "examples\\task-manager-desktop.q",
+    "result": "'{completedCount + 1}'",
+    "status": "ok"
+  },
+  {
+    "expr": "concat(firstName, lastName)",
+    "origin": "examples\\test-function-string-ops.q",
+    "result": "'{concat(firstName, lastName)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "connected",
+    "origin": "examples\\websocket-chat.q",
+    "result": "'{connected}'",
+    "status": "ok"
+  },
+  {
+    "expr": "connectionStatus",
+    "origin": "examples\\websocket-chat.q",
+    "result": "'{connectionStatus}'",
+    "status": "ok"
+  },
+  {
+    "expr": "content",
+    "origin": "examples\\quantum-assistant.q",
+    "result": "'{content}'",
+    "status": "ok"
+  },
+  {
+    "expr": "count",
+    "origin": "examples\\counter.q",
+    "result": "3",
+    "status": "ok"
+  },
+  {
+    "expr": "count + 1",
+    "origin": "examples\\counter.q",
+    "result": "4",
+    "status": "ok"
+  },
+  {
+    "expr": "countElements(myArray)",
+    "origin": "examples\\test-function-with-array.q",
+    "result": "'{countElements(myArray)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "counter",
+    "origin": "examples\\test-htmx-partial.q",
+    "result": "'{counter}'",
+    "status": "ok"
+  },
+  {
+    "expr": "cpf",
+    "origin": "examples\\test-set-validation-cpf.q",
+    "result": "'{cpf}'",
+    "status": "ok"
+  },
+  {
+    "expr": "cpu",
+    "origin": "examples\\dashboard-ui.q",
+    "result": "'{cpu}'",
+    "status": "ok"
+  },
+  {
+    "expr": "cpu_pct",
+    "origin": "examples\\dashboard.q",
+    "result": "'{cpu_pct}'",
+    "status": "ok"
+  },
+  {
+    "expr": "currentFilter",
+    "origin": "examples\\task-manager-desktop.q",
+    "result": "'{currentFilter}'",
+    "status": "ok"
+  },
+  {
+    "expr": "current_time",
+    "origin": "examples\\python-scripting.q",
+    "result": "'{current_time}'",
+    "status": "ok"
+  },
+  {
+    "expr": "customerEmail",
+    "origin": "examples\\job_execution_demo.q",
+    "result": "'{customerEmail}'",
+    "status": "ok"
+  },
+  {
+    "expr": "customerId",
+    "origin": "examples\\job_execution_demo.q",
+    "result": "'{customerId}'",
+    "status": "ok"
+  },
+  {
+    "expr": "customerName",
+    "origin": "examples\\test-email-html.q",
+    "result": "'{customerName}'",
+    "status": "ok"
+  },
+  {
+    "expr": "darkMode",
+    "origin": "examples\\task-manager-desktop.q",
+    "result": "'{darkMode}'",
+    "status": "ok"
+  },
+  {
+    "expr": "data",
+    "origin": "examples\\test-dump-conditional.q",
+    "result": "'{data}'",
+    "status": "ok"
+  },
+  {
+    "expr": "dateRange.end",
+    "origin": "examples\\test-ui-components-new.q",
+    "result": "'{dateRange.end}'",
+    "status": "ok"
+  },
+  {
+    "expr": "dateRange.start",
+    "origin": "examples\\test-ui-components-new.q",
+    "result": "'{dateRange.start}'",
+    "status": "ok"
+  },
+  {
+    "expr": "datetime.now()",
+    "origin": "examples\\agent_demo.q",
+    "result": "'{datetime.now()}'",
+    "status": "ok"
+  },
+  {
+    "expr": "debug",
+    "origin": "examples\\test-dump-conditional.q",
+    "result": "'{debug}'",
+    "status": "ok"
+  },
+  {
+    "expr": "defaultText",
+    "origin": "examples\\test-island-events.q",
+    "result": "'{defaultText}'",
+    "status": "ok"
+  },
+  {
+    "expr": "deleteUser_result.affectedRows",
+    "origin": "examples\\test-query-metadata.q",
+    "result": "'{deleteUser_result.affectedRows}'",
+    "status": "ok"
+  },
+  {
+    "expr": "diff",
+    "origin": "examples\\test-databinding-complete.q",
+    "result": "'{diff}'",
+    "status": "ok"
+  },
+  {
+    "expr": "discountedProducts",
+    "origin": "examples\\test-data-transform-compute.q",
+    "result": "'{discountedProducts}'",
+    "status": "ok"
+  },
+  {
+    "expr": "dispatched_job_processOrder.job_id",
+    "origin": "examples\\job_execution_demo.q",
+    "result": "'{dispatched_job_processOrder.job_id}'",
+    "status": "ok"
+  },
+  {
+    "expr": "dispatched_job_sendEmail.job_id",
+    "origin": "examples\\job_execution_demo.q",
+    "result": "'{dispatched_job_sendEmail.job_id}'",
+    "status": "ok"
+  },
+  {
+    "expr": "document",
+    "origin": "examples\\test-upload-basic.q",
+    "result": "'{document}'",
+    "status": "ok"
+  },
+  {
+    "expr": "dragonCoins",
+    "origin": "examples\\smw_world1.q",
+    "result": "'{dragonCoins}'",
+    "status": "ok"
+  },
+  {
+    "expr": "e['product']",
+    "origin": "examples\\python-data-processing.q",
+    "result": "\"{e['product']}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "electronics_count",
+    "origin": "examples\\python-data-processing.q",
+    "result": "'{electronics_count}'",
+    "status": "ok"
+  },
+  {
+    "expr": "email",
+    "origin": "examples\\test-auth-login.q",
+    "result": "'{email}'",
+    "status": "ok"
+  },
+  {
+    "expr": "emailList",
+    "origin": "examples\\test-query-loop.q",
+    "result": "'{emailList}'",
+    "status": "ok"
+  },
+  {
+    "expr": "emailTask",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{emailTask}'",
+    "status": "ok"
+  },
+  {
+    "expr": "emailsSent",
+    "origin": "examples\\job_execution_demo.q",
+    "result": "'{emailsSent}'",
+    "status": "ok"
+  },
+  {
+    "expr": "env.ANTHROPIC_API_KEY",
+    "origin": "examples\\agent_multi_provider.q",
+    "result": "'{env.ANTHROPIC_API_KEY}'",
+    "status": "ok"
+  },
+  {
+    "expr": "env.OPENAI_API_KEY",
+    "origin": "examples\\agent_multi_provider.q",
+    "result": "'{env.OPENAI_API_KEY}'",
+    "status": "ok"
+  },
+  {
+    "expr": "error",
+    "origin": "examples\\job-thread-example.q",
+    "result": "'{error}'",
+    "status": "ok"
+  },
+  {
+    "expr": "error.message",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{error.message}'",
+    "status": "ok"
+  },
+  {
+    "expr": "errorMessage",
+    "origin": "examples\\websocket-chat.q",
+    "result": "'{errorMessage}'",
+    "status": "ok"
+  },
+  {
+    "expr": "errorOccurred",
+    "origin": "examples\\test-log-conditional.q",
+    "result": "'{errorOccurred}'",
+    "status": "ok"
+  },
+  {
+    "expr": "examples.recordCount",
+    "origin": "examples\\quantum-assistant.q",
+    "result": "'{examples.recordCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "extracted",
+    "origin": "examples\\llm_demo.q",
+    "result": "'{extracted}'",
+    "status": "ok"
+  },
+  {
+    "expr": "fact5",
+    "origin": "examples\\test-function-recursion.q",
+    "result": "'{fact5}'",
+    "status": "ok"
+  },
+  {
+    "expr": "factorial(5)",
+    "origin": "examples\\test-function-recursion.q",
+    "result": "'{factorial(5)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "factorial(nMinus1)",
+    "origin": "examples\\test-function-recursion.q",
+    "result": "'{factorial(nMinus1)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "false",
+    "origin": "examples\\kenney_platformer.q",
+    "result": "'{false}'",
+    "status": "ok"
+  },
+  {
+    "expr": "file",
+    "origin": "examples\\test-upload-naming.q",
+    "result": "'{file}'",
+    "status": "ok"
+  },
+  {
+    "expr": "filteredUsers.name",
+    "origin": "examples\\test-query-params.q",
+    "result": "'{filteredUsers.name}'",
+    "status": "ok"
+  },
+  {
+    "expr": "filteredUsers.status",
+    "origin": "examples\\test-query-params.q",
+    "result": "'{filteredUsers.status}'",
+    "status": "ok"
+  },
+  {
+    "expr": "filteredUsers_result.executionTime",
+    "origin": "examples\\test-query-params.q",
+    "result": "'{filteredUsers_result.executionTime}'",
+    "status": "ok"
+  },
+  {
+    "expr": "filteredUsers_result.recordCount",
+    "origin": "examples\\test-query-params.q",
+    "result": "'{filteredUsers_result.recordCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "finalPrice",
+    "origin": "examples\\test-function-pure.q",
+    "result": "'{finalPrice}'",
+    "status": "ok"
+  },
+  {
+    "expr": "first",
+    "origin": "examples\\test-function-string-ops.q",
+    "result": "'{first}'",
+    "status": "ok"
+  },
+  {
+    "expr": "firstColor",
+    "origin": "examples\\test-databinding-complete.q",
+    "result": "'{firstColor}'",
+    "status": "ok"
+  },
+  {
+    "expr": "firstName",
+    "origin": "examples\\test-databinding-complete.q",
+    "result": "'{firstName}'",
+    "status": "ok"
+  },
+  {
+    "expr": "form.action_type",
+    "origin": "examples\\chat.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "form.address",
+    "origin": "examples\\message-queue-example.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "form.amount",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "form.customerId",
+    "origin": "examples\\job-queue-example.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "form.dimensions",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "form.items",
+    "origin": "examples\\job-queue-example.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "form.message",
+    "origin": "examples\\chat.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "form.method",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "form.orderId",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "form.question",
+    "origin": "examples\\quantum-assistant.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "form.title",
+    "origin": "examples\\message-queue-example.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "form.total",
+    "origin": "examples\\job-queue-example.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "form.userId",
+    "origin": "examples\\message-queue-example.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "form.username",
+    "origin": "examples\\chat.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "form.weight",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "form.zipCode",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "formatDate(now(), 'yyyy-MM-dd')",
+    "origin": "examples\\job-schedule-example.q",
+    "result": "\"{formatDate(now(), 'yyyy-MM-dd')}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "formatName('John', 'Doe')",
+    "origin": "examples\\test-function-string-ops.q",
+    "result": "\"{formatName('John', 'Doe')}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "formatNumber(stats.revenue, '0.00')",
+    "origin": "examples\\job-schedule-example.q",
+    "result": "\"{formatNumber(stats.revenue, '0.00')}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "fruit",
+    "origin": "examples\\test-databinding-array.q",
+    "result": "'{fruit}'",
+    "status": "ok"
+  },
+  {
+    "expr": "fruits",
+    "origin": "examples\\test-set-all-operations.q",
+    "result": "'{fruits}'",
+    "status": "ok"
+  },
+  {
+    "expr": "fullName",
+    "origin": "examples\\test-function-string-ops.q",
+    "result": "'{fullName}'",
+    "status": "ok"
+  },
+  {
+    "expr": "gold",
+    "origin": "examples\\tower_defense.q",
+    "result": "'{gold}'",
+    "status": "ok"
+  },
+  {
+    "expr": "grade",
+    "origin": "examples\\test-conditionals-complete.q",
+    "result": "'{grade}'",
+    "status": "ok"
+  },
+  {
+    "expr": "greet('Alice', 'Hi')",
+    "origin": "examples\\test-function-params.q",
+    "result": "\"{greet('Alice', 'Hi')}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "greet('Bob')",
+    "origin": "examples\\test-function-params.q",
+    "result": "\"{greet('Bob')}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "greet('John', 'Welcome')",
+    "origin": "examples\\test-function-complete.q",
+    "result": "\"{greet('John', 'Welcome')}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "greet('World')",
+    "origin": "examples\\test-function-complete.q",
+    "result": "\"{greet('World')}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "greeting",
+    "origin": "examples\\llm_demo.q",
+    "result": "'{greeting}'",
+    "status": "ok"
+  },
+  {
+    "expr": "handoff.fromAgent",
+    "origin": "examples\\multi_agent_support.q",
+    "result": "'{handoff.fromAgent}'",
+    "status": "ok"
+  },
+  {
+    "expr": "handoff.message",
+    "origin": "examples\\multi_agent_support.q",
+    "result": "'{handoff.message}'",
+    "status": "ok"
+  },
+  {
+    "expr": "handoff.toAgent",
+    "origin": "examples\\multi_agent_support.q",
+    "result": "'{handoff.toAgent}'",
+    "status": "ok"
+  },
+  {
+    "expr": "hasQuestion",
+    "origin": "examples\\rag.q",
+    "result": "'{hasQuestion}'",
+    "status": "ok"
+  },
+  {
+    "expr": "high_value_products",
+    "origin": "examples\\python-data-processing.q",
+    "result": "'{high_value_products}'",
+    "status": "ok"
+  },
+  {
+    "expr": "hp",
+    "origin": "examples\\adventure.q",
+    "result": "100",
+    "status": "ok"
+  },
+  {
+    "expr": "i",
+    "origin": "examples\\counter.q",
+    "result": "1",
+    "status": "ok"
+  },
+  {
+    "expr": "i + 1",
+    "origin": "examples\\test-databinding-arithmetic.q",
+    "result": "2",
+    "status": "ok"
+  },
+  {
+    "expr": "idx",
+    "origin": "examples\\test-databinding-array.q",
+    "result": "'{idx}'",
+    "status": "ok"
+  },
+  {
+    "expr": "idx + 1",
+    "origin": "examples\\test-query-loop.q",
+    "result": "'{idx + 1}'",
+    "status": "ok"
+  },
+  {
+    "expr": "initialCount",
+    "origin": "examples\\test-island-interactive.q",
+    "result": "'{initialCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "insertResult.id",
+    "origin": "examples\\test-query-insert.q",
+    "result": "'{insertResult.id}'",
+    "status": "ok"
+  },
+  {
+    "expr": "insertResult.name",
+    "origin": "examples\\test-query-insert.q",
+    "result": "'{insertResult.name}'",
+    "status": "ok"
+  },
+  {
+    "expr": "insertResult_result.executionTime",
+    "origin": "examples\\test-query-insert.q",
+    "result": "'{insertResult_result.executionTime}'",
+    "status": "ok"
+  },
+  {
+    "expr": "insertUser.id",
+    "origin": "examples\\test-query-metadata.q",
+    "result": "'{insertUser.id}'",
+    "status": "ok"
+  },
+  {
+    "expr": "invalid_users",
+    "origin": "examples\\python-scripting.q",
+    "result": "'{invalid_users}'",
+    "status": "ok"
+  },
+  {
+    "expr": "invoiceData",
+    "origin": "examples\\multi_agent_support.q",
+    "result": "'{invoiceData}'",
+    "status": "ok"
+  },
+  {
+    "expr": "item",
+    "origin": "examples\\python-data-processing.q",
+    "result": "'{item}'",
+    "status": "ok"
+  },
+  {
+    "expr": "itemCount",
+    "origin": "examples\\test-function-with-array.q",
+    "result": "'{itemCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "itemId",
+    "origin": "examples\\test-action-redirect.q",
+    "result": "'{itemId}'",
+    "status": "ok"
+  },
+  {
+    "expr": "items",
+    "origin": "examples\\test-dump-array.q",
+    "result": "[1, 2, 3]",
+    "status": "ok"
+  },
+  {
+    "expr": "kbResults",
+    "origin": "examples\\multi_agent_support.q",
+    "result": "'{kbResults}'",
+    "status": "ok"
+  },
+  {
+    "expr": "key",
+    "origin": "examples\\python-data-processing.q",
+    "result": "'{key}'",
+    "status": "ok"
+  },
+  {
+    "expr": "lastName",
+    "origin": "examples\\test-databinding-complete.q",
+    "result": "'{lastName}'",
+    "status": "ok"
+  },
+  {
+    "expr": "lastOrderId",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{lastOrderId}'",
+    "status": "ok"
+  },
+  {
+    "expr": "len(data)",
+    "origin": "examples\\python-data-processing.q",
+    "result": "'{len(data)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "len(valid_users)",
+    "origin": "examples\\python-scripting.q",
+    "result": "'{len(valid_users)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "limitedUsers",
+    "origin": "examples\\test-data-transform-limit.q",
+    "result": "'{limitedUsers}'",
+    "status": "ok"
+  },
+  {
+    "expr": "list",
+    "origin": "examples\\test-set-array.q",
+    "result": "'{list}'",
+    "status": "ok"
+  },
+  {
+    "expr": "lives",
+    "origin": "examples\\kenney_platformer.q",
+    "result": "'{lives}'",
+    "status": "ok"
+  },
+  {
+    "expr": "llmModel",
+    "origin": "examples\\agent_multi_provider.q",
+    "result": "'{llmModel}'",
+    "status": "ok"
+  },
+  {
+    "expr": "llmProvider",
+    "origin": "examples\\agent_multi_provider.q",
+    "result": "'{llmProvider}'",
+    "status": "ok"
+  },
+  {
+    "expr": "localVar",
+    "origin": "examples\\test-set-all-scopes.q",
+    "result": "'{localVar}'",
+    "status": "ok"
+  },
+  {
+    "expr": "lower",
+    "origin": "examples\\test-function-multiple.q",
+    "result": "'{lower}'",
+    "status": "ok"
+  },
+  {
+    "expr": "memory",
+    "origin": "examples\\dashboard-ui.q",
+    "result": "'{memory}'",
+    "status": "ok"
+  },
+  {
+    "expr": "message",
+    "origin": "examples\\job-queue-example.q",
+    "result": "'{message}'",
+    "status": "ok"
+  },
+  {
+    "expr": "message.body",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{message.body}'",
+    "status": "ok"
+  },
+  {
+    "expr": "message.body.items",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{message.body.items}'",
+    "status": "ok"
+  },
+  {
+    "expr": "message.body.message",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{message.body.message}'",
+    "status": "ok"
+  },
+  {
+    "expr": "message.body.orderId",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{message.body.orderId}'",
+    "status": "ok"
+  },
+  {
+    "expr": "message.body.title",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{message.body.title}'",
+    "status": "ok"
+  },
+  {
+    "expr": "message.body.userId",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{message.body.userId}'",
+    "status": "ok"
+  },
+  {
+    "expr": "message.topic",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{message.topic}'",
+    "status": "ok"
+  },
+  {
+    "expr": "message1",
+    "origin": "examples\\test-function-params.q",
+    "result": "'{message1}'",
+    "status": "ok"
+  },
+  {
+    "expr": "message2",
+    "origin": "examples\\test-function-params.q",
+    "result": "'{message2}'",
+    "status": "ok"
+  },
+  {
+    "expr": "messages",
+    "origin": "examples\\websocket-chat.q",
+    "result": "'{messages}'",
+    "status": "ok"
+  },
+  {
+    "expr": "msg",
+    "origin": "examples\\chat-messages.q",
+    "result": "'{msg}'",
+    "status": "ok"
+  },
+  {
+    "expr": "msg.style.display = 'none'",
+    "origin": "examples\\progressive\\19_checkpoints.q",
+    "result": "\"{msg.style.display = 'none'}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "msg1",
+    "origin": "examples\\test-function-complete.q",
+    "result": "'{msg1}'",
+    "status": "ok"
+  },
+  {
+    "expr": "msg2",
+    "origin": "examples\\test-function-complete.q",
+    "result": "'{msg2}'",
+    "status": "ok"
+  },
+  {
+    "expr": "mul_result",
+    "origin": "examples\\python-scripting.q",
+    "result": "'{mul_result}'",
+    "status": "ok"
+  },
+  {
+    "expr": "multiply(10, 5)",
+    "origin": "examples\\test-function-complete.q",
+    "result": "'{multiply(10, 5)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "multiply(add(2, 3), 4)",
+    "origin": "examples\\test-function-nested.q",
+    "result": "'{multiply(add(2, 3), 4)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "n",
+    "origin": "examples\\test-function-recursion.q",
+    "result": "2",
+    "status": "ok"
+  },
+  {
+    "expr": "n * n",
+    "origin": "examples\\test-function-multiple.q",
+    "result": "4",
+    "status": "ok"
+  },
+  {
+    "expr": "n * recursiveResult",
+    "origin": "examples\\test-function-recursion.q",
+    "result": "'{n * recursiveResult}'",
+    "status": "ok"
+  },
+  {
+    "expr": "name",
+    "origin": "examples\\test-databinding-complete.q",
+    "result": "'Alice'",
+    "status": "ok"
+  },
+  {
+    "expr": "newOrder.insertId",
+    "origin": "examples\\job-queue-example.q",
+    "result": "'{newOrder.insertId}'",
+    "status": "ok"
+  },
+  {
+    "expr": "newPost.data",
+    "origin": "examples\\fetch-example.q",
+    "result": "'{newPost.data}'",
+    "status": "ok"
+  },
+  {
+    "expr": "newPost.data.id",
+    "origin": "examples\\fetch-example.q",
+    "result": "'{newPost.data.id}'",
+    "status": "ok"
+  },
+  {
+    "expr": "newPost.id",
+    "origin": "examples\\test-invoke-http-post.q",
+    "result": "'{newPost.id}'",
+    "status": "ok"
+  },
+  {
+    "expr": "newPost.title",
+    "origin": "examples\\test-invoke-http-post.q",
+    "result": "'{newPost.title}'",
+    "status": "ok"
+  },
+  {
+    "expr": "newUserEmail",
+    "origin": "examples\\test-query-insert.q",
+    "result": "'{newUserEmail}'",
+    "status": "ok"
+  },
+  {
+    "expr": "newUserName",
+    "origin": "examples\\test-query-insert.q",
+    "result": "'{newUserName}'",
+    "status": "ok"
+  },
+  {
+    "expr": "newUserPassword",
+    "origin": "examples\\test-query-insert.q",
+    "result": "'{newUserPassword}'",
+    "status": "ok"
+  },
+  {
+    "expr": "notificationCount",
+    "origin": "examples\\state_persistence_demo.q",
+    "result": "'{notificationCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "notifications",
+    "origin": "examples\\task-manager-desktop.q",
+    "result": "'{notifications}'",
+    "status": "ok"
+  },
+  {
+    "expr": "notificationsQueue.consumerCount",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{notificationsQueue.consumerCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "notificationsQueue.messageCount",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{notificationsQueue.messageCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "now",
+    "origin": "examples\\agent_demo.q",
+    "result": "'{now}'",
+    "status": "ok"
+  },
+  {
+    "expr": "now()",
+    "origin": "examples\\job_execution_demo.q",
+    "result": "'{now()}'",
+    "status": "ok"
+  },
+  {
+    "expr": "num",
+    "origin": "examples\\test-function-with-array.q",
+    "result": "'{num}'",
+    "status": "ok"
+  },
+  {
+    "expr": "num > 0",
+    "origin": "examples\\test-function-if-logic.q",
+    "result": "'{num > 0}'",
+    "status": "ok"
+  },
+  {
+    "expr": "numbers",
+    "origin": "examples\\test-function-complete.q",
+    "result": "'{numbers}'",
+    "status": "ok"
+  },
+  {
+    "expr": "ollamaAgent",
+    "origin": "examples\\agent_multi_provider.q",
+    "result": "'{ollamaAgent}'",
+    "status": "ok"
+  },
+  {
+    "expr": "ollamaAgent_result.actionCount",
+    "origin": "examples\\agent_multi_provider.q",
+    "result": "'{ollamaAgent_result.actionCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "ollamaAgent_result.error.message",
+    "origin": "examples\\agent_multi_provider.q",
+    "result": "'{ollamaAgent_result.error.message}'",
+    "status": "ok"
+  },
+  {
+    "expr": "ollamaAgent_result.executionTime",
+    "origin": "examples\\agent_multi_provider.q",
+    "result": "'{ollamaAgent_result.executionTime}'",
+    "status": "ok"
+  },
+  {
+    "expr": "ollamaAgent_result.iterations",
+    "origin": "examples\\agent_multi_provider.q",
+    "result": "'{ollamaAgent_result.iterations}'",
+    "status": "ok"
+  },
+  {
+    "expr": "ollamaAgent_result.success",
+    "origin": "examples\\agent_multi_provider.q",
+    "result": "'{ollamaAgent_result.success}'",
+    "status": "ok"
+  },
+  {
+    "expr": "order",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{order}'",
+    "status": "ok"
+  },
+  {
+    "expr": "order.customer_email",
+    "origin": "examples\\job-queue-example.q",
+    "result": "'{order.customer_email}'",
+    "status": "ok"
+  },
+  {
+    "expr": "order.id",
+    "origin": "examples\\job-queue-example.q",
+    "result": "'{order.id}'",
+    "status": "ok"
+  },
+  {
+    "expr": "order.insertId",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{order.insertId}'",
+    "status": "ok"
+  },
+  {
+    "expr": "order.recordCount == 0",
+    "origin": "examples\\job-queue-example.q",
+    "result": "'{order.recordCount == 0}'",
+    "status": "ok"
+  },
+  {
+    "expr": "order.total",
+    "origin": "examples\\job-queue-example.q",
+    "result": "'{order.total}'",
+    "status": "ok"
+  },
+  {
+    "expr": "orderBody",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{orderBody}'",
+    "status": "ok"
+  },
+  {
+    "expr": "orderCount",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{orderCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "orderData",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{orderData}'",
+    "status": "ok"
+  },
+  {
+    "expr": "orderId",
+    "origin": "examples\\job-queue-example.q",
+    "result": "'{orderId}'",
+    "status": "ok"
+  },
+  {
+    "expr": "orderNumber",
+    "origin": "examples\\test-email-html.q",
+    "result": "'{orderNumber}'",
+    "status": "ok"
+  },
+  {
+    "expr": "orderTotal",
+    "origin": "examples\\test-function-local-vars.q",
+    "result": "'{orderTotal}'",
+    "status": "ok"
+  },
+  {
+    "expr": "ordersQueue.consumerCount",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{ordersQueue.consumerCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "ordersQueue.messageCount",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{ordersQueue.messageCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "output",
+    "origin": "examples\\test-loop-all-types.q",
+    "result": "'{output}'",
+    "status": "ok"
+  },
+  {
+    "expr": "paginatedUsers_result.pagination.currentPage",
+    "origin": "examples\\test-query-pagination.q",
+    "result": "'{paginatedUsers_result.pagination.currentPage}'",
+    "status": "ok"
+  },
+  {
+    "expr": "paginatedUsers_result.pagination.endRecord",
+    "origin": "examples\\test-query-pagination.q",
+    "result": "'{paginatedUsers_result.pagination.endRecord}'",
+    "status": "ok"
+  },
+  {
+    "expr": "paginatedUsers_result.pagination.hasNextPage",
+    "origin": "examples\\test-query-pagination.q",
+    "result": "'{paginatedUsers_result.pagination.hasNextPage}'",
+    "status": "ok"
+  },
+  {
+    "expr": "paginatedUsers_result.pagination.startRecord",
+    "origin": "examples\\test-query-pagination.q",
+    "result": "'{paginatedUsers_result.pagination.startRecord}'",
+    "status": "ok"
+  },
+  {
+    "expr": "paginatedUsers_result.pagination.totalPages",
+    "origin": "examples\\test-query-pagination.q",
+    "result": "'{paginatedUsers_result.pagination.totalPages}'",
+    "status": "ok"
+  },
+  {
+    "expr": "paginatedUsers_result.pagination.totalRecords",
+    "origin": "examples\\test-query-pagination.q",
+    "result": "'{paginatedUsers_result.pagination.totalRecords}'",
+    "status": "ok"
+  },
+  {
+    "expr": "payment.error",
+    "origin": "examples\\job-queue-example.q",
+    "result": "'{payment.error}'",
+    "status": "ok"
+  },
+  {
+    "expr": "payment.success",
+    "origin": "examples\\job-queue-example.q",
+    "result": "'{payment.success}'",
+    "status": "ok"
+  },
+  {
+    "expr": "payment.transactionId",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{payment.transactionId}'",
+    "status": "ok"
+  },
+  {
+    "expr": "paymentsQueue.consumerCount",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{paymentsQueue.consumerCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "paymentsQueue.messageCount",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{paymentsQueue.messageCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "player1.health",
+    "origin": "examples\\fighter.q",
+    "result": "'{player1.health}'",
+    "status": "ok"
+  },
+  {
+    "expr": "player2.health",
+    "origin": "examples\\fighter.q",
+    "result": "'{player2.health}'",
+    "status": "ok"
+  },
+  {
+    "expr": "postData",
+    "origin": "examples\\fetch-example.q",
+    "result": "'{postData}'",
+    "status": "ok"
+  },
+  {
+    "expr": "posts[0].title",
+    "origin": "examples\\test-invoke-http-get.q",
+    "result": "'{posts[0].title}'",
+    "status": "ok"
+  },
+  {
+    "expr": "price",
+    "origin": "examples\\test-data-transform-compute.q",
+    "result": "9.5",
+    "status": "ok"
+  },
+  {
+    "expr": "price * discountPercent / 100",
+    "origin": "examples\\test-function-pure.q",
+    "result": "'{price * discountPercent / 100}'",
+    "status": "ok"
+  },
+  {
+    "expr": "price * quantity",
+    "origin": "examples\\test-function-local-vars.q",
+    "result": "'{price * quantity}'",
+    "status": "ok"
+  },
+  {
+    "expr": "price - discount",
+    "origin": "examples\\test-function-pure.q",
+    "result": "'{price - discount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "price1",
+    "origin": "examples\\test-function-pure.q",
+    "result": "'{price1}'",
+    "status": "ok"
+  },
+  {
+    "expr": "price2",
+    "origin": "examples\\test-function-pure.q",
+    "result": "'{price2}'",
+    "status": "ok"
+  },
+  {
+    "expr": "price3",
+    "origin": "examples\\test-function-pure.q",
+    "result": "'{price3}'",
+    "status": "ok"
+  },
+  {
+    "expr": "price_stats.max",
+    "origin": "examples\\python-data-processing.q",
+    "result": "'{price_stats.max}'",
+    "status": "ok"
+  },
+  {
+    "expr": "price_stats.mean",
+    "origin": "examples\\python-data-processing.q",
+    "result": "'{price_stats.mean}'",
+    "status": "ok"
+  },
+  {
+    "expr": "price_stats.median",
+    "origin": "examples\\python-data-processing.q",
+    "result": "'{price_stats.median}'",
+    "status": "ok"
+  },
+  {
+    "expr": "price_stats.min",
+    "origin": "examples\\python-data-processing.q",
+    "result": "'{price_stats.min}'",
+    "status": "ok"
+  },
+  {
+    "expr": "price_stats.stdev",
+    "origin": "examples\\python-data-processing.q",
+    "result": "'{price_stats.stdev}'",
+    "status": "ok"
+  },
+  {
+    "expr": "privateHelper(input)",
+    "origin": "examples\\test-function-scope.q",
+    "result": "'{privateHelper(input)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "processed",
+    "origin": "examples\\test-function-scope.q",
+    "result": "'{processed}'",
+    "status": "ok"
+  },
+  {
+    "expr": "processedCount",
+    "origin": "examples\\job-thread-example.q",
+    "result": "'{processedCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "processes",
+    "origin": "examples\\dashboard-ui.q",
+    "result": "'{processes}'",
+    "status": "ok"
+  },
+  {
+    "expr": "processingStatus",
+    "origin": "examples\\job-thread-example.q",
+    "result": "'{processingStatus}'",
+    "status": "ok"
+  },
+  {
+    "expr": "processingSuccess",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{processingSuccess}'",
+    "status": "ok"
+  },
+  {
+    "expr": "product",
+    "origin": "examples\\llm_demo.q",
+    "result": "'{product}'",
+    "status": "ok"
+  },
+  {
+    "expr": "product.category",
+    "origin": "examples\\test-data-json-simple.q",
+    "result": "'{product.category}'",
+    "status": "ok"
+  },
+  {
+    "expr": "product.discountedPrice",
+    "origin": "examples\\test-data-transform-compute.q",
+    "result": "'{product.discountedPrice}'",
+    "status": "ok"
+  },
+  {
+    "expr": "product.id",
+    "origin": "examples\\test-data-json-simple.q",
+    "result": "'{product.id}'",
+    "status": "ok"
+  },
+  {
+    "expr": "product.name",
+    "origin": "examples\\test-data-json-simple.q",
+    "result": "'{product.name}'",
+    "status": "ok"
+  },
+  {
+    "expr": "product.price",
+    "origin": "examples\\test-data-json-simple.q",
+    "result": "'{product.price}'",
+    "status": "ok"
+  },
+  {
+    "expr": "product1",
+    "origin": "examples\\test-invoke-function.q",
+    "result": "'{product1}'",
+    "status": "ok"
+  },
+  {
+    "expr": "product2",
+    "origin": "examples\\test-invoke-function.q",
+    "result": "'{product2}'",
+    "status": "ok"
+  },
+  {
+    "expr": "products",
+    "origin": "examples\\test-data-json-simple.q",
+    "result": "'{products}'",
+    "status": "ok"
+  },
+  {
+    "expr": "profile.data",
+    "origin": "examples\\fetch-example.q",
+    "result": "'{profile.data}'",
+    "status": "ok"
+  },
+  {
+    "expr": "profile.data.name",
+    "origin": "examples\\fetch-example.q",
+    "result": "'{profile.data.name}'",
+    "status": "ok"
+  },
+  {
+    "expr": "projectName",
+    "origin": "examples\\test-email-recipients.q",
+    "result": "'{projectName}'",
+    "status": "ok"
+  },
+  {
+    "expr": "publicAPI('test')",
+    "origin": "examples\\test-function-scope.q",
+    "result": "\"{publicAPI('test')}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "publishResult.success",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{publishResult.success}'",
+    "status": "ok"
+  },
+  {
+    "expr": "purgeResult",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{purgeResult}'",
+    "status": "ok"
+  },
+  {
+    "expr": "push.success",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{push.success}'",
+    "status": "ok"
+  },
+  {
+    "expr": "queueInfo.consumerCount",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{queueInfo.consumerCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "queueInfo.consumer_count",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{queueInfo.consumer_count}'",
+    "status": "ok"
+  },
+  {
+    "expr": "queueInfo.messageCount",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{queueInfo.messageCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "queueInfo.message_count",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{queueInfo.message_count}'",
+    "status": "ok"
+  },
+  {
+    "expr": "quotient",
+    "origin": "examples\\test-databinding-complete.q",
+    "result": "'{quotient}'",
+    "status": "ok"
+  },
+  {
+    "expr": "r",
+    "origin": "examples\\progressive\\20_collision_editor.q",
+    "result": "'{r}'",
+    "status": "ok"
+  },
+  {
+    "expr": "readData.name",
+    "origin": "examples\\test-transaction-isolation.q",
+    "result": "'{readData.name}'",
+    "status": "ok"
+  },
+  {
+    "expr": "recipientEmail",
+    "origin": "examples\\test-email-basic.q",
+    "result": "'{recipientEmail}'",
+    "status": "ok"
+  },
+  {
+    "expr": "recordCount",
+    "origin": "examples\\test-query-complete.q",
+    "result": "'{recordCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "regional_summary",
+    "origin": "examples\\python-data-processing.q",
+    "result": "'{regional_summary}'",
+    "status": "ok"
+  },
+  {
+    "expr": "registerUser('john@example.com', 25, 'user')",
+    "origin": "examples\\test-function-validation.q",
+    "result": "\"{registerUser('john@example.com', 25, 'user')}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "relevance",
+    "origin": "examples\\quantum-assistant.q",
+    "result": "'{relevance}'",
+    "status": "ok"
+  },
+  {
+    "expr": "request.method",
+    "origin": "examples\\test-request-scope.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "request.path",
+    "origin": "examples\\test-request-scope.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "request.processedAt",
+    "origin": "examples\\test-request-scope.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "request.requestId",
+    "origin": "examples\\test-set-all-scopes.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "request.user_agent",
+    "origin": "examples\\test-request-scope.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "result",
+    "origin": "examples\\agent_demo.q",
+    "result": "{'success': True, 'count': 2, 'data': [1, 2]}",
+    "status": "ok"
+  },
+  {
+    "expr": "result1",
+    "origin": "examples\\test-function-if-logic.q",
+    "result": "'{result1}'",
+    "status": "ok"
+  },
+  {
+    "expr": "result2",
+    "origin": "examples\\test-function-if-logic.q",
+    "result": "'{result2}'",
+    "status": "ok"
+  },
+  {
+    "expr": "result3",
+    "origin": "examples\\test-function-if-logic.q",
+    "result": "'{result3}'",
+    "status": "ok"
+  },
+  {
+    "expr": "resultLimit",
+    "origin": "examples\\test-query-params.q",
+    "result": "'{resultLimit}'",
+    "status": "ok"
+  },
+  {
+    "expr": "role",
+    "origin": "examples\\test-function-validation.q",
+    "result": "'{role}'",
+    "status": "ok"
+  },
+  {
+    "expr": "sample_json",
+    "origin": "examples\\python-scripting.q",
+    "result": "'{sample_json}'",
+    "status": "ok"
+  },
+  {
+    "expr": "saved",
+    "origin": "examples\\test-action-complete.q",
+    "result": "'{saved}'",
+    "status": "ok"
+  },
+  {
+    "expr": "sayHello('Alice')",
+    "origin": "examples\\test-function-rest-api.q",
+    "result": "\"{sayHello('Alice')}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "schedule_dailyCleanup.trigger_info",
+    "origin": "examples\\job_execution_demo.q",
+    "result": "'{schedule_dailyCleanup.trigger_info}'",
+    "status": "ok"
+  },
+  {
+    "expr": "schedule_hourlyStats.trigger_info",
+    "origin": "examples\\job_execution_demo.q",
+    "result": "'{schedule_hourlyStats.trigger_info}'",
+    "status": "ok"
+  },
+  {
+    "expr": "schedule_newYearGreeting.trigger_info",
+    "origin": "examples\\job_execution_demo.q",
+    "result": "'{schedule_newYearGreeting.trigger_info}'",
+    "status": "ok"
+  },
+  {
+    "expr": "score",
+    "origin": "examples\\kenney_platformer.q",
+    "result": "'{score}'",
+    "status": "ok"
+  },
+  {
+    "expr": "score + self.value",
+    "origin": "examples\\platformer.q",
+    "result": "'{score + self.value}'",
+    "status": "ok"
+  },
+  {
+    "expr": "searchResults.content",
+    "origin": "examples\\rag.q",
+    "result": "'{searchResults.content}'",
+    "status": "ok"
+  },
+  {
+    "expr": "searchResults.relevance",
+    "origin": "examples\\rag.q",
+    "result": "'{searchResults.relevance}'",
+    "status": "ok"
+  },
+  {
+    "expr": "searchResults.source",
+    "origin": "examples\\rag.q",
+    "result": "'{searchResults.source}'",
+    "status": "ok"
+  },
+  {
+    "expr": "searchStatus",
+    "origin": "examples\\test-query-params.q",
+    "result": "'{searchStatus}'",
+    "status": "ok"
+  },
+  {
+    "expr": "second",
+    "origin": "examples\\test-function-string-ops.q",
+    "result": "'{second}'",
+    "status": "ok"
+  },
+  {
+    "expr": "selectedDate",
+    "origin": "examples\\test-ui-components-new.q",
+    "result": "'{selectedDate}'",
+    "status": "ok"
+  },
+  {
+    "expr": "self.blocking",
+    "origin": "examples\\fighter.q",
+    "result": "'{self.blocking}'",
+    "status": "ok"
+  },
+  {
+    "expr": "self.health - 1",
+    "origin": "examples\\platformer.q",
+    "result": "'{self.health - 1}'",
+    "status": "ok"
+  },
+  {
+    "expr": "self.health - info.attackPower",
+    "origin": "examples\\fighter.q",
+    "result": "'{self.health - info.attackPower}'",
+    "status": "ok"
+  },
+  {
+    "expr": "self.x + self.speed",
+    "origin": "examples\\platformer.q",
+    "result": "'{self.x + self.speed}'",
+    "status": "ok"
+  },
+  {
+    "expr": "self.x - self.speed",
+    "origin": "examples\\platformer.q",
+    "result": "'{self.x - self.speed}'",
+    "status": "ok"
+  },
+  {
+    "expr": "sendResult.message_id",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{sendResult.message_id}'",
+    "status": "ok"
+  },
+  {
+    "expr": "sendResult.success",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{sendResult.success}'",
+    "status": "ok"
+  },
+  {
+    "expr": "separator",
+    "origin": "examples\\test-function-string-ops.q",
+    "result": "'{separator}'",
+    "status": "ok"
+  },
+  {
+    "expr": "session.chatUser",
+    "origin": "examples\\chat.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "session.lastVisit",
+    "origin": "examples\\test-session-scope.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "session.userEmail",
+    "origin": "examples\\test-auth-protected.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "session.userId",
+    "origin": "examples\\job-queue-example.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "session.userName",
+    "origin": "examples\\test-session-scope.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "session.userRole",
+    "origin": "examples\\test-auth-role.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "session.username",
+    "origin": "examples\\test-set-all-scopes.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "session.visitCount",
+    "origin": "examples\\test-session-scope.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "session.visitCount + 1",
+    "origin": "examples\\test-session-scope.q",
+    "result": "''",
+    "status": "ok"
+  },
+  {
+    "expr": "shippingQuote",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{shippingQuote}'",
+    "status": "ok"
+  },
+  {
+    "expr": "shippingQuote.carrier",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{shippingQuote.carrier}'",
+    "status": "ok"
+  },
+  {
+    "expr": "shippingQuote.cost",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{shippingQuote.cost}'",
+    "status": "ok"
+  },
+  {
+    "expr": "shippingQuote.days",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{shippingQuote.days}'",
+    "status": "ok"
+  },
+  {
+    "expr": "shippingResult",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{shippingResult}'",
+    "status": "ok"
+  },
+  {
+    "expr": "shippingResult.cost",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{shippingResult.cost}'",
+    "status": "ok"
+  },
+  {
+    "expr": "shippingResult.estimatedDays",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{shippingResult.estimatedDays}'",
+    "status": "ok"
+  },
+  {
+    "expr": "sortedProducts",
+    "origin": "examples\\test-data-transform-sort.q",
+    "result": "'{sortedProducts}'",
+    "status": "ok"
+  },
+  {
+    "expr": "source",
+    "origin": "examples\\quantum-assistant.q",
+    "result": "'{source}'",
+    "status": "ok"
+  },
+  {
+    "expr": "sqrt_result",
+    "origin": "examples\\python-scripting.q",
+    "result": "'{sqrt_result}'",
+    "status": "ok"
+  },
+  {
+    "expr": "square(5)",
+    "origin": "examples\\test-function-multiple.q",
+    "result": "'{square(5)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "squared",
+    "origin": "examples\\test-function-multiple.q",
+    "result": "'{squared}'",
+    "status": "ok"
+  },
+  {
+    "expr": "stats.total_orders",
+    "origin": "examples\\job-schedule-example.q",
+    "result": "'{stats.total_orders}'",
+    "status": "ok"
+  },
+  {
+    "expr": "status",
+    "origin": "examples\\test-conditionals-complete.q",
+    "result": "'{status}'",
+    "status": "ok"
+  },
+  {
+    "expr": "sub.email",
+    "origin": "examples\\job-thread-example.q",
+    "result": "'{sub.email}'",
+    "status": "ok"
+  },
+  {
+    "expr": "sub.name",
+    "origin": "examples\\job-thread-example.q",
+    "result": "'{sub.name}'",
+    "status": "ok"
+  },
+  {
+    "expr": "subject",
+    "origin": "examples\\job_execution_demo.q",
+    "result": "'{subject}'",
+    "status": "ok"
+  },
+  {
+    "expr": "subscribers",
+    "origin": "examples\\job-thread-example.q",
+    "result": "'{subscribers}'",
+    "status": "ok"
+  },
+  {
+    "expr": "subtotal * taxRate",
+    "origin": "examples\\test-function-local-vars.q",
+    "result": "'{subtotal * taxRate}'",
+    "status": "ok"
+  },
+  {
+    "expr": "subtotal + tax",
+    "origin": "examples\\test-function-local-vars.q",
+    "result": "'{subtotal + tax}'",
+    "status": "ok"
+  },
+  {
+    "expr": "subtract(10, 5)",
+    "origin": "examples\\test-function-complete.q",
+    "result": "'{subtract(10, 5)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "sum",
+    "origin": "examples\\test-databinding-complete.q",
+    "result": "'{sum}'",
+    "status": "ok"
+  },
+  {
+    "expr": "sum1",
+    "origin": "examples\\test-invoke-function.q",
+    "result": "'{sum1}'",
+    "status": "ok"
+  },
+  {
+    "expr": "sumNumbers(myNumbers)",
+    "origin": "examples\\test-function-with-array.q",
+    "result": "'{sumNumbers(myNumbers)}'",
+    "status": "ok"
+  },
+  {
+    "expr": "sum_result",
+    "origin": "examples\\python-scripting.q",
+    "result": "'{sum_result}'",
+    "status": "ok"
+  },
+  {
+    "expr": "summary",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{summary}'",
+    "status": "ok"
+  },
+  {
+    "expr": "support",
+    "origin": "examples\\multi_agent_support.q",
+    "result": "'{support}'",
+    "status": "ok"
+  },
+  {
+    "expr": "support_result.executionTime",
+    "origin": "examples\\multi_agent_support.q",
+    "result": "'{support_result.executionTime}'",
+    "status": "ok"
+  },
+  {
+    "expr": "support_result.finalAgent",
+    "origin": "examples\\multi_agent_support.q",
+    "result": "'{support_result.finalAgent}'",
+    "status": "ok"
+  },
+  {
+    "expr": "support_result.handoffs",
+    "origin": "examples\\multi_agent_support.q",
+    "result": "'{support_result.handoffs}'",
+    "status": "ok"
+  },
+  {
+    "expr": "support_result.handoffs.length > 0",
+    "origin": "examples\\multi_agent_support.q",
+    "result": "'{support_result.handoffs.length > 0}'",
+    "status": "ok"
+  },
+  {
+    "expr": "support_result.totalIterations",
+    "origin": "examples\\multi_agent_support.q",
+    "result": "'{support_result.totalIterations}'",
+    "status": "ok"
+  },
+  {
+    "expr": "tagline",
+    "origin": "examples\\llm_demo.q",
+    "result": "'{tagline}'",
+    "status": "ok"
+  },
+  {
+    "expr": "task.orderId",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{task.orderId}'",
+    "status": "ok"
+  },
+  {
+    "expr": "task.subject",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{task.subject}'",
+    "status": "ok"
+  },
+  {
+    "expr": "task.to",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{task.to}'",
+    "status": "ok"
+  },
+  {
+    "expr": "task.type",
+    "origin": "examples\\message_queue_demo.q",
+    "result": "'{task.type}'",
+    "status": "ok"
+  },
+  {
+    "expr": "taskCount",
+    "origin": "examples\\task-manager-desktop.q",
+    "result": "'{taskCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "taskCount + 1",
+    "origin": "examples\\task-manager-desktop.q",
+    "result": "'{taskCount + 1}'",
+    "status": "ok"
+  },
+  {
+    "expr": "testUserEmail",
+    "origin": "examples\\test-query-metadata.q",
+    "result": "'{testUserEmail}'",
+    "status": "ok"
+  },
+  {
+    "expr": "testUserName",
+    "origin": "examples\\test-query-metadata.q",
+    "result": "'{testUserName}'",
+    "status": "ok"
+  },
+  {
+    "expr": "text",
+    "origin": "examples\\test-function-multiple.q",
+    "result": "'{text}'",
+    "status": "ok"
+  },
+  {
+    "expr": "textUpper",
+    "origin": "examples\\test-set-all-operations.q",
+    "result": "'{textUpper}'",
+    "status": "ok"
+  },
+  {
+    "expr": "theme",
+    "origin": "examples\\test-action-flash.q",
+    "result": "'{theme}'",
+    "status": "ok"
+  },
+  {
+    "expr": "thread_emailSender.status",
+    "origin": "examples\\job_execution_demo.q",
+    "result": "'{thread_emailSender.status}'",
+    "status": "ok"
+  },
+  {
+    "expr": "thread_imageProcessor.status",
+    "origin": "examples\\job_execution_demo.q",
+    "result": "'{thread_imageProcessor.status}'",
+    "status": "ok"
+  },
+  {
+    "expr": "time_left",
+    "origin": "examples\\mario\\scenes\\yoshi_island_1.q",
+    "result": "'{time_left}'",
+    "status": "ok"
+  },
+  {
+    "expr": "timer",
+    "origin": "examples\\smw_world1.q",
+    "result": "'{timer}'",
+    "status": "ok"
+  },
+  {
+    "expr": "timestamp",
+    "origin": "examples\\test-htmx-trigger.q",
+    "result": "'{timestamp}'",
+    "status": "ok"
+  },
+  {
+    "expr": "title",
+    "origin": "examples\\python-scripting.q",
+    "result": "'Docs'",
+    "status": "ok"
+  },
+  {
+    "expr": "to",
+    "origin": "examples\\job_execution_demo.q",
+    "result": "'{to}'",
+    "status": "ok"
+  },
+  {
+    "expr": "toLowerCase('WORLD')",
+    "origin": "examples\\test-function-multiple.q",
+    "result": "\"{toLowerCase('WORLD')}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "toUpperCase('hello')",
+    "origin": "examples\\test-function-multiple.q",
+    "result": "\"{toUpperCase('hello')}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "todos.title",
+    "origin": "examples\\test-invoke-http-get.q",
+    "result": "'{todos.title}'",
+    "status": "ok"
+  },
+  {
+    "expr": "top_electronics",
+    "origin": "examples\\python-data-processing.q",
+    "result": "'{top_electronics}'",
+    "status": "ok"
+  },
+  {
+    "expr": "total",
+    "origin": "examples\\test-function-complete.q",
+    "result": "100",
+    "status": "ok"
+  },
+  {
+    "expr": "total + num",
+    "origin": "examples\\test-function-complete.q",
+    "result": "'{total + num}'",
+    "status": "ok"
+  },
+  {
+    "expr": "totalAmount",
+    "origin": "examples\\test-email-html.q",
+    "result": "'{totalAmount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "total_revenue",
+    "origin": "examples\\python-data-processing.q",
+    "result": "'{total_revenue}'",
+    "status": "ok"
+  },
+  {
+    "expr": "towerCost",
+    "origin": "examples\\tower_defense.q",
+    "result": "'{towerCost}'",
+    "status": "ok"
+  },
+  {
+    "expr": "type",
+    "origin": "examples\\job-queue-example.q",
+    "result": "'{type}'",
+    "status": "ok"
+  },
+  {
+    "expr": "uploadResult.filename",
+    "origin": "examples\\test-upload-basic.q",
+    "result": "'{uploadResult.filename}'",
+    "status": "ok"
+  },
+  {
+    "expr": "upper",
+    "origin": "examples\\test-function-multiple.q",
+    "result": "'{upper}'",
+    "status": "ok"
+  },
+  {
+    "expr": "user",
+    "origin": "examples\\test-log-complete.q",
+    "result": "{'name': 'Ann', 'age': 30, 'email': 'a@b.c'}",
+    "status": "ok"
+  },
+  {
+    "expr": "user.active",
+    "origin": "examples\\test-data-csv-simple.q",
+    "result": "'{user.active}'",
+    "status": "ok"
+  },
+  {
+    "expr": "user.address.city",
+    "origin": "examples\\test-databinding-complete.q",
+    "result": "'{user.address.city}'",
+    "status": "ok"
+  },
+  {
+    "expr": "user.age",
+    "origin": "examples\\test-data-csv-simple.q",
+    "result": "30",
+    "status": "ok"
+  },
+  {
+    "expr": "user.company.name",
+    "origin": "examples\\fetch-example.q",
+    "result": "'{user.company.name}'",
+    "status": "ok"
+  },
+  {
+    "expr": "user.email",
+    "origin": "examples\\fetch-example.q",
+    "result": "'a@b.c'",
+    "status": "ok"
+  },
+  {
+    "expr": "user.id",
+    "origin": "examples\\job-queue-example.q",
+    "result": "'{user.id}'",
+    "status": "ok"
+  },
+  {
+    "expr": "user.name",
+    "origin": "examples\\fetch-example.q",
+    "result": "'Ann'",
+    "status": "ok"
+  },
+  {
+    "expr": "user.push_token",
+    "origin": "examples\\job-queue-example.q",
+    "result": "'{user.push_token}'",
+    "status": "ok"
+  },
+  {
+    "expr": "user.recordCount > 0",
+    "origin": "examples\\message-queue-example.q",
+    "result": "'{user.recordCount > 0}'",
+    "status": "ok"
+  },
+  {
+    "expr": "userCity",
+    "origin": "examples\\test-databinding-complete.q",
+    "result": "'{userCity}'",
+    "status": "ok"
+  },
+  {
+    "expr": "userCount",
+    "origin": "examples\\test-query-loop.q",
+    "result": "'{userCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "userCount.total",
+    "origin": "examples\\test-query-multiple.q",
+    "result": "'{userCount.total}'",
+    "status": "ok"
+  },
+  {
+    "expr": "userEmail",
+    "origin": "examples\\test-auth-protected.q",
+    "result": "'{userEmail}'",
+    "status": "ok"
+  },
+  {
+    "expr": "userId",
+    "origin": "examples\\job-queue-example.q",
+    "result": "'{userId}'",
+    "status": "ok"
+  },
+  {
+    "expr": "userInput",
+    "origin": "examples\\websocket-chat.q",
+    "result": "'{userInput}'",
+    "status": "ok"
+  },
+  {
+    "expr": "userList",
+    "origin": "examples\\test-query-complete.q",
+    "result": "'{userList}'",
+    "status": "ok"
+  },
+  {
+    "expr": "userName",
+    "origin": "examples\\test-email-basic.q",
+    "result": "'{userName}'",
+    "status": "ok"
+  },
+  {
+    "expr": "userQuestion",
+    "origin": "examples\\agent_demo.q",
+    "result": "'{userQuestion}'",
+    "status": "ok"
+  },
+  {
+    "expr": "username",
+    "origin": "examples\\task-manager-desktop.q",
+    "result": "'{username}'",
+    "status": "ok"
+  },
+  {
+    "expr": "users",
+    "origin": "examples\\job-queue-example.q",
+    "result": "[{'name': 'Ann'}, {'name': 'Bo'}]",
+    "status": "ok"
+  },
+  {
+    "expr": "users.data",
+    "origin": "examples\\fetch-example.q",
+    "result": "'{users.data}'",
+    "status": "ok"
+  },
+  {
+    "expr": "users.data.length",
+    "origin": "examples\\fetch-example.q",
+    "result": "'{users.data.length}'",
+    "status": "ok"
+  },
+  {
+    "expr": "users.email",
+    "origin": "examples\\test-query-basic.q",
+    "result": "'{users.email}'",
+    "status": "ok"
+  },
+  {
+    "expr": "users.error",
+    "origin": "examples\\fetch-example.q",
+    "result": "'{users.error}'",
+    "status": "ok"
+  },
+  {
+    "expr": "users.isLoading",
+    "origin": "examples\\fetch-example.q",
+    "result": "'{users.isLoading}'",
+    "status": "ok"
+  },
+  {
+    "expr": "users.name",
+    "origin": "examples\\test-invoke-http-get.q",
+    "result": "'{users.name}'",
+    "status": "ok"
+  },
+  {
+    "expr": "users.recordCount",
+    "origin": "examples\\job-queue-example.q",
+    "result": "'{users.recordCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "users_result.executionTime",
+    "origin": "examples\\test-query-basic.q",
+    "result": "'{users_result.executionTime}'",
+    "status": "ok"
+  },
+  {
+    "expr": "users_result.recordCount",
+    "origin": "examples\\test-query-basic.q",
+    "result": "'{users_result.recordCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "utilityFunction('global')",
+    "origin": "examples\\test-function-scope.q",
+    "result": "\"{utilityFunction('global')}\"",
+    "status": "ok"
+  },
+  {
+    "expr": "uuid()",
+    "origin": "examples\\rabbitmq\\order_system.q",
+    "result": "'{uuid()}'",
+    "status": "ok"
+  },
+  {
+    "expr": "valid_users",
+    "origin": "examples\\python-scripting.q",
+    "result": "'{valid_users}'",
+    "status": "ok"
+  },
+  {
+    "expr": "validate.recordCount",
+    "origin": "examples\\test-transaction-rollback.q",
+    "result": "'{validate.recordCount}'",
+    "status": "ok"
+  },
+  {
+    "expr": "value",
+    "origin": "examples\\python-data-processing.q",
+    "result": "'{value}'",
+    "status": "ok"
+  },
+  {
+    "expr": "waveNumber",
+    "origin": "examples\\tower_defense.q",
+    "result": "'{waveNumber}'",
+    "status": "ok"
+  },
+  {
+    "expr": "waveNumber + 1",
+    "origin": "examples\\tower_defense.q",
+    "result": "'{waveNumber + 1}'",
+    "status": "ok"
+  },
+  {
+    "expr": "withHeaders.title",
+    "origin": "examples\\test-invoke-complete.q",
+    "result": "'{withHeaders.title}'",
+    "status": "ok"
+  },
+  {
+    "expr": "withParams[0].title",
+    "origin": "examples\\test-invoke-complete.q",
+    "result": "'{withParams[0].title}'",
+    "status": "ok"
+  },
+  {
+    "expr": "x",
+    "origin": "examples\\test-invoke-function.q",
+    "result": "10",
+    "status": "ok"
+  },
+  {
+    "expr": "x1, y1, x2, y2",
+    "origin": "examples\\progressive\\18_enemies.q",
+    "result": "'{x1, y1, x2, y2}'",
+    "status": "ok"
+  },
+  {
+    "expr": "y",
+    "origin": "examples\\test-invoke-function.q",
+    "result": "'{y}'",
+    "status": "ok"
+  },
+  {
+    "expr": "yoshi_coins",
+    "origin": "examples\\mario\\scenes\\yoshi_island_1.q",
+    "result": "'{yoshi_coins}'",
+    "status": "ok"
+  },
+  {
+    "expr": "yoshi_coins+1",
+    "origin": "examples\\mario\\scenes\\yoshi_island_1.q",
+    "result": "'{yoshi_coins+1}'",
+    "status": "ok"
+  }
+]

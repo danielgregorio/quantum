@@ -1,0 +1,186 @@
+name: Deploy to Forge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'examples/**'
+      - 'quantum_admin/**'
+      - 'projects/mario/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build docs
+        run: |
+          npm ci
+          npm run docs:build
+
+      - name: Deploy docs to web directory
+        run: |
+          sudo mkdir -p /var/www/quantum.sargas.cloud
+          sudo rm -rf /var/www/quantum.sargas.cloud/*.html /var/www/quantum.sargas.cloud/assets 2>/dev/null || true
+          sudo cp -r docs/.vitepress/dist/* /var/www/quantum.sargas.cloud/
+          sudo chown -R www-data:www-data /var/www/quantum.sargas.cloud/
+          echo "Docs deployed!"
+
+      - name: Deploy Quantum Admin
+        run: |
+          # Create admin directory
+          sudo mkdir -p /var/www/quantum-admin
+
+          # Copy admin files
+          sudo rm -rf /var/www/quantum-admin/* 2>/dev/null || true
+          sudo cp -r quantum_admin/* /var/www/quantum-admin/
+
+          # Setup Python virtual environment
+          cd /var/www/quantum-admin
+          sudo python3 -m venv venv
+          sudo ./venv/bin/pip install --upgrade pip
+          sudo ./venv/bin/pip install -r backend/requirements.txt
+
+          # Set ownership
+          sudo chown -R www-data:www-data /var/www/quantum-admin/
+
+          # Verify static files exist
+          echo "Checking static files..."
+          ls -la /var/www/quantum-admin/static/ || echo "Static directory missing!"
+
+          echo "Admin files deployed!"
+
+      - name: Deploy Mario Game
+        run: |
+          # Create mario directory
+          sudo mkdir -p /var/www/quantum.sargas.cloud/mario
+
+          # Copy mario static files (game.html and assets)
+          sudo rm -rf /var/www/quantum.sargas.cloud/mario/* 2>/dev/null || true
+          sudo cp projects/mario/static/game.html /var/www/quantum.sargas.cloud/mario/index.html
+          sudo cp -r projects/mario/static/assets /var/www/quantum.sargas.cloud/mario/
+
+          # Set ownership
+          sudo chown -R www-data:www-data /var/www/quantum.sargas.cloud/mario/
+
+          echo "Mario game deployed!"
+
+      - name: Setup Quantum Admin systemd service
+        run: |
+          sudo tee /etc/systemd/system/quantum-admin.service > /dev/null << 'SERVICE'
+          [Unit]
+          Description=Quantum Admin FastAPI Service
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=www-data
+          Group=www-data
+          WorkingDirectory=/var/www/quantum-admin
+          Environment="PATH=/var/www/quantum-admin/venv/bin"
+          Environment="ROOT_PATH=/admin"
+          ExecStart=/var/www/quantum-admin/venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8001 --root-path /admin
+          Restart=always
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+          SERVICE
+
+          sudo systemctl daemon-reload
+          sudo systemctl enable quantum-admin
+          sudo systemctl restart quantum-admin
+
+          # Wait for service to start
+          sleep 3
+          sudo systemctl status quantum-admin --no-pager || true
+
+      - name: Configure nginx
+        run: |
+          sudo tee /etc/nginx/sites-available/quantum.sargas.cloud > /dev/null << 'NGINX'
+          # Quantum Documentation Site + Admin
+          server {
+              listen 80 default_server;
+              listen [::]:80 default_server;
+              server_name quantum.sargas.cloud localhost _;
+
+              root /var/www/quantum.sargas.cloud;
+              index index.html;
+
+              # Redirect /admin to /admin/
+              location = /admin {
+                  return 301 /admin/;
+              }
+
+              # Quantum Admin - FastAPI app
+              location /admin/ {
+                  proxy_pass http://127.0.0.1:8001/;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_read_timeout 86400;
+              }
+
+              # Admin static files - serve directly from filesystem
+              # ^~ makes this preferential prefix (beats regex matches)
+              location ^~ /admin/static/ {
+                  alias /var/www/quantum-admin/static/;
+                  expires 30d;
+                  add_header Cache-Control "public, immutable";
+              }
+
+              # VitePress docs (default)
+              location / {
+                  try_files $uri $uri/ =404;
+              }
+
+              # Cache static assets
+              location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+                  expires 30d;
+                  add_header Cache-Control "public, immutable";
+              }
+
+              error_page 404 /404.html;
+          }
+          NGINX
+
+          # Ensure symlink exists
+          sudo ln -sf /etc/nginx/sites-available/quantum.sargas.cloud /etc/nginx/sites-enabled/quantum.sargas.cloud
+
+          # Test nginx config
+          sudo nginx -t
+
+          # Stop any Docker container on port 80
+          sudo docker ps --filter "publish=80" -q | xargs -r sudo docker stop || true
+          sleep 1
+
+          # Restart nginx
+          sudo systemctl restart nginx
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying docs deployment..."
+          curl -s http://localhost/ | head -1
+
+          echo "Verifying admin deployment..."
+          curl -s http://localhost/admin/ | head -5 || echo "Admin check failed"
+
+          echo "Verifying static files..."
+          curl -sI http://localhost/admin/static/quantum-admin.css | head -5
+
+          echo "Deployment complete!"

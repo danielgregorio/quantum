@@ -1,0 +1,80 @@
+{
+  "dataset_type": "positive",
+  "feature": "conditionals",
+  "category": "simple_if",
+  "description": "Valid examples of basic if statements",
+  "examples": [
+    {
+      "id": "if-simple-001",
+      "intent": "Check if user is adult",
+      "input": {
+        "natural_language": "Show message if age is 18 or older",
+        "context": {
+          "available_vars": ["age"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{age} >= 18\">\n  You are an adult.\n</q:if>",
+        "ast": {
+          "type": "IfNode",
+          "attributes": {
+            "condition": "{age} >= 18",
+            "has_elseif": false,
+            "has_else": false
+          }
+        },
+        "runtime_behavior": "Displays message only if age >= 18"
+      },
+      "tags": ["simple", "numeric_comparison", "greater_equal"]
+    },
+    {
+      "id": "if-simple-002",
+      "intent": "Check string equality",
+      "input": {
+        "natural_language": "Show welcome message if user status is active",
+        "context": {
+          "available_vars": ["status"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{status} == 'active'\">\n  Welcome back!\n</q:if>",
+        "ast": {
+          "type": "IfNode",
+          "attributes": {
+            "condition": "{status} == 'active'",
+            "has_elseif": false,
+            "has_else": false
+          }
+        },
+        "runtime_behavior": "Displays welcome only if status equals 'active'"
+      },
+      "tags": ["simple", "string_comparison", "equality"]
+    },
+    {
+      "id": "if-simple-003",
+      "intent": "Boolean variable check",
+      "input": {
+        "natural_language": "Show admin panel if user has admin flag",
+        "context": {
+          "available_vars": ["isAdmin"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:if condition=\"{isAdmin} == true\">\n  <admin-panel />\n</q:if>",
+        "ast": {
+          "type": "IfNode",
+          "attributes": {
+            "condition": "{isAdmin} == true",
+            "has_elseif": false,
+            "has_else": false
+          }
+        },
+        "runtime_behavior": "Renders admin panel only if isAdmin is true"
+      },
+      "tags": ["simple", "boolean", "component_rendering"]
+    }
+  ]
+}

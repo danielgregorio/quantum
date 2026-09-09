@@ -1,0 +1,265 @@
+intention:
+  name: "Database Query Edge Cases"
+  version: "1.0.0"
+  category: "database"
+
+  description: |
+    Edge cases, boundary conditions, and error scenarios for q:query.
+    Understanding these cases helps build robust database applications.
+
+  edge_cases:
+    - case: "Empty result set"
+      scenario: "Query returns no rows"
+      code: |
+        <q:query name="users" datasource="db">
+            SELECT * FROM users WHERE status = 'deleted'
+        </q:query>
+
+        <!-- users array is empty, but not null -->
+        <q:if condition="{users_result.recordCount} === 0">
+            <p>No users found</p>
+        </q:if>
+
+        <!-- Loop won't execute if empty -->
+        <q:loop items="{users}" var="user">
+            <p>{user.name}</p>
+        </q:loop>
+
+    - case: "NULL values in results"
+      scenario: "Database columns contain NULL"
+      code: |
+        <q:query name="users" datasource="db">
+            SELECT id, name, email, phone FROM users
+        </q:query>
+
+        <q:loop items="{users}" var="user">
+            <p>Name: {user.name}</p>
+            <!-- phone might be NULL -->
+            <q:if condition="{user.phone}">
+                <p>Phone: {user.phone}</p>
+            </q:if>
+        </q:loop>
+
+    - case: "Special characters in parameter values"
+      scenario: "Parameter contains quotes, SQL keywords, etc."
+      code: |
+        <!-- Safe - parameterized query handles it -->
+        <q:query name="users" datasource="db">
+            SELECT * FROM users WHERE name = :name
+            <q:param name="name" value="O'Brien" type="string" />
+        </q:query>
+
+        <!-- Also safe - injection attempt blocked -->
+        <q:query name="users" datasource="db">
+            SELECT * FROM users WHERE name = :name
+            <q:param name="name" value="'; DROP TABLE users; --" type="string" />
+        </q:query>
+
+    - case: "Very large result sets"
+      scenario: "Query returns millions of rows"
+      code: |
+        <!-- Use LIMIT to prevent memory issues -->
+        <q:query name="users" datasource="db" maxrows="1000">
+            SELECT * FROM users
+            ORDER BY created_at DESC
+            LIMIT 1000
+        </q:query>
+
+        <!-- Or use pagination -->
+        <q:query name="users" datasource="db">
+            SELECT * FROM users
+            ORDER BY id
+            LIMIT :pageSize OFFSET :offset
+
+            <q:param name="pageSize" value="100" type="integer" />
+            <q:param name="offset" value="{page * 100}" type="integer" />
+        </q:query>
+
+    - case: "Slow queries / Timeout"
+      scenario: "Query takes too long to execute"
+      code: |
+        <!-- Set timeout to prevent hanging -->
+        <q:query name="analytics" datasource="db" timeout="30">
+            SELECT /* complex aggregation */
+                user_id, COUNT(*) as actions
+            FROM activity_log
+            WHERE created_at > NOW() - INTERVAL '1 year'
+            GROUP BY user_id
+            HAVING COUNT(*) > 1000
+        </q:query>
+
+    - case: "INSERT with no RETURNING clause"
+      scenario: "INSERT doesn't return the new ID"
+      code: |
+        <!-- PostgreSQL/MariaDB - RETURNING works -->
+        <q:query name="newUser" datasource="postgres-db">
+            INSERT INTO users (name, email)
+            VALUES (:name, :email)
+            RETURNING id
+
+            <q:param name="name" value="John" type="string" />
+            <q:param name="email" value="john@example.com" type="string" />
+        </q:query>
+
+        <!-- MySQL - no RETURNING, use separate query -->
+        <q:query name="insertUser" datasource="mysql-db">
+            INSERT INTO users (name, email)
+            VALUES (:name, :email)
+
+            <q:param name="name" value="John" type="string" />
+            <q:param name="email" value="john@example.com" type="string" />
+        </q:query>
+
+        <q:query name="lastId" datasource="mysql-db">
+            SELECT LAST_INSERT_ID() as id
+        </q:query>
+
+    - case: "UPDATE/DELETE affects zero rows"
+      scenario: "Modification query changes nothing"
+      code: |
+        <q:query name="updateUser" datasource="db">
+            UPDATE users
+            SET name = :name
+            WHERE id = :userId
+
+            <q:param name="name" value="New Name" type="string" />
+            <q:param name="userId" value="99999" type="integer" />
+        </q:query>
+
+        <!-- Check if row was found -->
+        <q:if condition="{updateUser_result.recordCount} === 0">
+            <p>User not found</p>
+        </q:if>
+
+    - case: "Datasource not available"
+      scenario: "Database is down or datasource doesn't exist"
+      code: |
+        <q:try>
+            <q:query name="users" datasource="unavailable-db">
+                SELECT * FROM users
+            </q:query>
+
+            <q:catch type="database">
+                <p>Database unavailable: {error.message}</p>
+            </q:catch>
+        </q:try>
+
+    - case: "SQL syntax error"
+      scenario: "Invalid SQL in query"
+      code: |
+        <q:try>
+            <q:query name="users" datasource="db">
+                SELET * FROM users  <!-- typo: SELET -->
+            </q:query>
+
+            <q:catch type="database">
+                <p>SQL error: {error.message}</p>
+            </q:catch>
+        </q:try>
+
+    - case: "Type mismatch in parameters"
+      scenario: "Parameter value doesn't match declared type"
+      code: |
+        <!-- Will fail - validation error -->
+        <q:query name="users" datasource="db">
+            SELECT * FROM users WHERE id = :userId
+            <q:param name="userId" value="not-a-number" type="integer" />
+        </q:query>
+
+    - case: "Missing parameter"
+      scenario: "SQL references parameter not declared"
+      code: |
+        <!-- Will fail - parameter 'status' not declared -->
+        <q:query name="users" datasource="db">
+            SELECT * FROM users WHERE status = :status
+            <!-- Missing: <q:param name="status" ... /> -->
+        </q:query>
+
+    - case: "Array parameter for IN clause"
+      scenario: "Passing array of values"
+      code: |
+        <q:query name="users" datasource="db">
+            SELECT * FROM users
+            WHERE id IN :userIds
+
+            <q:param name="userIds" value="[1, 2, 3, 4, 5]" type="array" />
+        </q:query>
+
+    - case: "JSON parameter"
+      scenario: "Storing JSON data"
+      code: |
+        <q:query name="saveSettings" datasource="db">
+            UPDATE users
+            SET preferences = :prefs
+            WHERE id = :userId
+
+            <q:param name="prefs" value='{"theme":"dark","lang":"en"}' type="json" />
+            <q:param name="userId" value="{session.userId}" type="integer" />
+        </q:query>
+
+    - case: "Empty string vs NULL"
+      scenario: "Distinguish between empty and NULL"
+      code: |
+        <!-- Empty string -->
+        <q:query name="users" datasource="db">
+            SELECT * FROM users WHERE bio = :bio
+            <q:param name="bio" value="" type="string" />
+        </q:query>
+
+        <!-- NULL value -->
+        <q:query name="users" datasource="db">
+            SELECT * FROM users WHERE bio IS NULL
+        </q:query>
+
+    - case: "Date/Time formats"
+      scenario: "Different date formats"
+      code: |
+        <!-- ISO 8601 format (recommended) -->
+        <q:query name="events" datasource="db">
+            SELECT * FROM events WHERE event_date > :since
+            <q:param name="since" value="2024-01-01" type="date" />
+        </q:query>
+
+        <!-- With time -->
+        <q:query name="events" datasource="db">
+            SELECT * FROM events WHERE created_at > :since
+            <q:param name="since" value="2024-01-01T00:00:00Z" type="datetime" />
+        </q:query>
+
+    - case: "Decimal precision"
+      scenario: "Financial calculations with exact precision"
+      code: |
+        <q:query name="payment" datasource="db">
+            INSERT INTO payments (amount, user_id)
+            VALUES (:amount, :userId)
+
+            <!-- Use decimal, not number, for money -->
+            <q:param name="amount" value="99.99" type="decimal" scale="2" />
+            <q:param name="userId" value="{session.userId}" type="integer" />
+        </q:query>
+
+  common_mistakes:
+    - mistake: "Not checking for empty result sets"
+      fix: "Always check recordCount before accessing data"
+
+    - mistake: "String concatenation in SQL"
+      fix: "Use parameterized queries with <q:param>"
+
+    - mistake: "Not handling NULL values"
+      fix: "Use <q:if> to check before accessing nullable fields"
+
+    - mistake: "Fetching all rows when you only need a few"
+      fix: "Use LIMIT or pagination"
+
+    - mistake: "Using number type for money"
+      fix: "Use decimal type with scale for financial data"
+
+    - mistake: "Not setting query timeout"
+      fix: "Set timeout attribute for complex queries"
+
+  debugging_tips:
+    - "Check {queryName_result.sql} in debug mode to see executed SQL"
+    - "Check {queryName_result.executionTime} to identify slow queries"
+    - "Use <q:try>/<q:catch> to handle database errors gracefully"
+    - "Test queries in database client first before using in Quantum"
+    - "Use EXPLAIN ANALYZE in PostgreSQL to understand query performance"

@@ -1,0 +1,81 @@
+{
+  "dataset_type": "positive",
+  "feature": "loops",
+  "category": "array_iteration",
+  "description": "Valid examples of array-based loops",
+  "examples": [
+    {
+      "id": "loop-array-001",
+      "intent": "Simple array iteration",
+      "input": {
+        "natural_language": "Loop through an array of fruits and display each one",
+        "context": {
+          "available_vars": ["fruits"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"fruits\" type=\"array\" value=\"['apple', 'banana', 'cherry']\" />\n<q:loop type=\"array\" var=\"fruit\" items=\"{fruits}\">\n  {fruit}\n</q:loop>",
+        "ast": {
+          "type": "LoopNode",
+          "attributes": {
+            "loop_type": "array",
+            "var_name": "fruit",
+            "items": "{fruits}"
+          }
+        },
+        "runtime_behavior": "Iterates over fruits array, outputting each fruit name"
+      },
+      "tags": ["array", "basic", "strings"]
+    },
+    {
+      "id": "loop-array-002",
+      "intent": "Array loop with index tracking",
+      "input": {
+        "natural_language": "Loop through colors with index numbers",
+        "context": {
+          "available_vars": ["colors"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"colors\" type=\"array\" value=\"['red', 'green', 'blue']\" />\n<q:loop type=\"array\" var=\"color\" index=\"idx\" items=\"{colors}\">\n  {idx}: {color}\n</q:loop>",
+        "ast": {
+          "type": "LoopNode",
+          "attributes": {
+            "loop_type": "array",
+            "var_name": "color",
+            "index_name": "idx",
+            "items": "{colors}"
+          }
+        },
+        "runtime_behavior": "Iterates with index: '0: red', '1: green', '2: blue'"
+      },
+      "tags": ["array", "index", "enumeration"]
+    },
+    {
+      "id": "loop-array-003",
+      "intent": "Loop over numeric array",
+      "input": {
+        "natural_language": "Sum numbers in an array",
+        "context": {
+          "available_vars": ["numbers"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"numbers\" type=\"array\" value=\"[10, 20, 30, 40]\" />\n<q:set name=\"sum\" type=\"number\" value=\"0\" />\n<q:loop type=\"array\" var=\"num\" items=\"{numbers}\">\n  <q:set name=\"sum\" operation=\"add\" value=\"{num}\" />\n</q:loop>\nTotal: {sum}",
+        "ast": {
+          "type": "LoopNode",
+          "attributes": {
+            "loop_type": "array",
+            "var_name": "num",
+            "items": "{numbers}"
+          }
+        },
+        "runtime_behavior": "Accumulates sum of array elements (100)"
+      },
+      "tags": ["array", "numbers", "accumulator"]
+    }
+  ]
+}

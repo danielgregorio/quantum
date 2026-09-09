@@ -1,0 +1,22 @@
+{
+  "example_id": "db_error_002",
+  "category": "database_backend",
+  "tags": ["error", "validation", "transaction"],
+  "input": {
+    "component": "<q:component name=\"EmptyTransaction\">\n  <q:action name=\"process\" method=\"POST\">\n    <!-- Transaction with no statements -->\n    <q:transaction isolationLevel=\"SERIALIZABLE\">\n      <!-- Empty transaction body -->\n    </q:transaction>\n    \n    <q:redirect url=\"/success\" />\n  </q:action>\n</q:component>",
+    "context": {
+      "phase": "D",
+      "feature": "database_backend"
+    }
+  },
+  "expected_behavior": "Should fail validation - transaction must contain at least one statement",
+  "error": {
+    "type": "ValidationError",
+    "message": "Transaction must contain at least one statement"
+  },
+  "validation": {
+    "should_fail": true,
+    "validation_error": true,
+    "empty_transaction": true
+  }
+}

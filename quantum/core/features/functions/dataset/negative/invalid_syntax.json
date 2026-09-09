@@ -1,0 +1,104 @@
+{
+  "dataset_type": "negative",
+  "feature": "functions",
+  "category": "syntax_errors",
+  "description": "Invalid function syntax that should be rejected",
+  "examples": [
+    {
+      "id": "func-invalid-001",
+      "intent": "Missing function name",
+      "input": {
+        "natural_language": "Function without name attribute",
+        "quantum_code": "<q:function>\n  <q:param name=\"x\" />\n  <q:return value=\"{x}\" />\n</q:function>"
+      },
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Function name is required",
+        "location": "FunctionNode validation"
+      },
+      "why_invalid": "name attribute is mandatory for all functions",
+      "correction": "Add name=\"myFunction\"",
+      "tags": ["missing_attribute", "name"]
+    },
+    {
+      "id": "func-invalid-002",
+      "intent": "Invalid function name",
+      "input": {
+        "natural_language": "Function name with invalid characters",
+        "quantum_code": "<q:function name=\"my-function\">\n  <q:return value=\"test\" />\n</q:function>"
+      },
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Invalid function name: must match ^[a-zA-Z_][a-zA-Z0-9_]*$",
+        "location": "Parser/FunctionNode validation"
+      },
+      "why_invalid": "Function names cannot contain hyphens",
+      "correction": "Use name=\"my_function\" or name=\"myFunction\"",
+      "tags": ["invalid_name", "naming_convention"]
+    },
+    {
+      "id": "func-invalid-003",
+      "intent": "Function with no return statement",
+      "input": {
+        "natural_language": "Function that doesn't return anything",
+        "quantum_code": "<q:function name=\"doNothing\">\n  <q:param name=\"x\" />\n  <!-- no return -->\n</q:function>"
+      },
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Function must have at least one q:return statement",
+        "location": "FunctionNode validation"
+      },
+      "why_invalid": "Functions must explicitly return a value",
+      "correction": "Add <q:return value=\"...\" />",
+      "tags": ["missing_return", "incomplete_function"]
+    },
+    {
+      "id": "func-invalid-004",
+      "intent": "Duplicate parameter names",
+      "input": {
+        "natural_language": "Function with two params having same name",
+        "quantum_code": "<q:function name=\"test\">\n  <q:param name=\"x\" type=\"number\" />\n  <q:param name=\"x\" type=\"string\" />\n  <q:return value=\"{x}\" />\n</q:function>"
+      },
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Duplicate parameter name: x",
+        "location": "FunctionNode validation"
+      },
+      "why_invalid": "Parameter names must be unique within function",
+      "correction": "Rename second param to different name",
+      "tags": ["duplicate_param", "name_conflict"]
+    },
+    {
+      "id": "func-invalid-005",
+      "intent": "Invalid return type",
+      "input": {
+        "natural_language": "Function with unsupported return type",
+        "quantum_code": "<q:function name=\"test\" return-type=\"list\">\n  <q:return value=\"data\" />\n</q:function>"
+      },
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "Invalid return-type: list. Must be one of: any, string, number, boolean, array, object",
+        "location": "FunctionNode validation"
+      },
+      "why_invalid": "return-type must be from allowed set",
+      "correction": "Use return-type=\"array\" instead",
+      "tags": ["invalid_type", "return_type"]
+    },
+    {
+      "id": "func-invalid-006",
+      "intent": "REST function missing endpoint",
+      "input": {
+        "natural_language": "REST function without endpoint path",
+        "quantum_code": "<q:function name=\"getUser\" rest-method=\"GET\">\n  <q:return value=\"user data\" />\n</q:function>"
+      },
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "REST endpoint is required when REST is enabled",
+        "location": "FunctionNode validation"
+      },
+      "why_invalid": "rest-method requires rest-endpoint",
+      "correction": "Add rest-endpoint=\"/api/users\"",
+      "tags": ["rest_api", "missing_endpoint"]
+    }
+  ]
+}

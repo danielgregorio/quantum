@@ -1,0 +1,226 @@
+# Quantum Configuration File
+# Simple, magical configuration - ColdFusion style! 🪄
+
+# ==========================================
+# SERVER CONFIGURATION
+# ==========================================
+server:
+  # Port to listen on
+  port: 8080
+
+  # Host to bind to. Defaults to loopback: the server is reachable only from
+  # this machine. Set 0.0.0.0 to expose it on the network — but read the debug
+  # note below first, and put a real WSGI server (gunicorn) in front for
+  # anything beyond local development.
+  host: 127.0.0.1
+
+  # Auto-reload when .q files change (development mode)
+  reload: true
+
+  # Werkzeug's debug mode includes an INTERACTIVE CONSOLE that evaluates
+  # arbitrary Python. On a non-loopback host that is remote code execution for
+  # anyone who can reach the port, so the server refuses to run the debugger
+  # unless host is loopback. Keep this false in production regardless.
+  debug: false
+
+# ==========================================
+# PATHS CONFIGURATION
+# ==========================================
+paths:
+  # Where your .q component files are located
+  components: ./components
+
+  # Where static files (CSS, JS, images) are located
+  static: ./static
+
+  # Root for q:file. Every upload, read and delete is confined to this
+  # directory — a databound path that escapes it is refused rather than
+  # followed, so a form field cannot reach the rest of the disk.
+  uploads: ./uploads
+
+  # Where logs should be written
+  logs: ./logs
+
+# ==========================================
+# DEFAULTS
+# ==========================================
+defaults:
+  # Default component type if not specified
+  component_type: pure
+
+  # Enable client-side interactivity by default (Phase 3 feature)
+  interactive: false
+
+  # Default charset for responses
+  charset: utf-8
+
+  # Default timeout for component execution (seconds)
+  timeout: 30
+
+# ==========================================
+# DATASOURCES
+# ==========================================
+# Declare datasources here and q:query works with no other process running.
+# This is the default path. The Quantum Admin API (below) is the optional,
+# advanced path for centrally managed datasources.
+datasources:
+  # Used by the examples/test-query-*.q files.
+  # Create it with: python -c "import test_database; test_database.TestDatabase().setup()"
+  test-sqlite:
+    driver: sqlite
+    database: ./test_data/quantum_test.db
+
+  # The Quantum Admin project listing, rewritten in .q (FRAMEWORK_PLAN Fase 4).
+  # components/admin/projects.q reads this.
+  admin:
+    driver: sqlite
+    database: ./quantum_admin/quantum_admin.db
+
+  # A typical app datasource:
+  # db:
+  #   driver: sqlite
+  #   database: ./data/app.db
+  #
+  # PostgreSQL / MySQL follow the same shape:
+  # db:
+  #   driver: postgresql
+  #   host: localhost
+  #   port: 5432
+  #   database: myapp
+  #   username: postgres
+  #   password: ${DB_PASSWORD}
+
+# ==========================================
+# DATABASE (QUANTUM ADMIN INTEGRATION — OPTIONAL)
+# ==========================================
+database:
+  # Only consulted for datasources NOT declared above.
+  admin_api: http://localhost:8000/api
+
+# ==========================================
+# LLM (Ollama Backend)
+# ==========================================
+llm:
+  # Ollama API base URL
+  base_url: http://10.10.1.40:11434
+
+  # Default model to use when not specified in q:llm
+  default_model: phi3
+
+  # Default timeout in seconds for LLM requests
+  timeout: 60
+
+# ==========================================
+# PERFORMANCE
+# ==========================================
+performance:
+  # Cache parsed templates (AST cache)
+  cache_templates: false
+
+  # Cache TTL in seconds (0 = cache forever, -1 = no cache)
+  cache_ttl: 300
+
+  # Maximum number of cached templates
+  cache_max_size: 100
+
+# ==========================================
+# SECURITY
+# ==========================================
+security:
+  # Enable CORS (Cross-Origin Resource Sharing)
+  cors_enabled: false
+
+  # Allowed origins for CORS (if enabled)
+  cors_origins:
+    - http://localhost:3000
+    - http://localhost:8080
+
+  # Enable XSS protection (HTML escaping)
+  xss_protection: true
+
+  # Allow q:python / q:pyclass / q:pyimport to execute.
+  # These run arbitrary Python in the server process with NO sandbox (full
+  # filesystem, network and os access).
+  #
+  # DESLIGADO por padrao desde a inversao: um default precisa ser seguro para
+  # quem nao leu a documentacao, e executar um .q que voce nao escreveu nao
+  # pode significar executar o Python dele. Quem usa q:python leu — teve de
+  # escrever a tag.
+  #
+  # Este repositorio liga porque os proprios exemplos usam q:python.
+  # Desligue antes de deixar rodar qualquer template gerado por LLM ou
+  # enviado por terceiros. Ver SECURITY.md.
+  python_scripting: true
+
+  # Maximum request body size (bytes)
+  max_content_length: 16777216  # 16 MB
+
+# ==========================================
+# LOGGING
+# ==========================================
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: INFO
+
+  # Log format
+  format: "[%(levelname)s] %(asctime)s - %(message)s"
+
+  # Log to console
+  console: true
+
+  # Log to file
+  file: true
+
+  # Log file name
+  filename: quantum.log
+
+# ==========================================
+# DEVELOPMENT
+# ==========================================
+development:
+  # Show detailed error pages
+  show_errors: true
+
+  # Enable profiler
+  profiler: false
+
+  # Enable debug toolbar (Flask debug toolbar)
+  debug_toolbar: false
+
+# ==========================================
+# DEPLOYMENT
+# ==========================================
+deploy:
+  # Deployment targets configuration
+  # Each target needs a URL and optionally an API key
+  targets:
+    forge:
+      # URL of the deploy service
+      url: http://10.10.1.40:9000
+      # API key — DO NOT commit secrets here.
+      # Set it via the QUANTUM_API_KEY (or QUANTUM_DEPLOY_FORGE_KEY) env var instead.
+      # api_key: ${QUANTUM_API_KEY}
+
+    # Example: Add more targets
+    # staging:
+    #   url: https://staging.example.com:9000
+    #   api_key: staging-key
+    #
+    # production:
+    #   url: https://prod.example.com:9000
+    #   api_key: prod-key
+
+  # Files/directories to exclude from deployment packages
+  exclude:
+    - .git
+    - .gitignore
+    - __pycache__
+    - "*.pyc"
+    - .env
+    - .env.local
+    - node_modules
+    - .venv
+    - venv
+    - "*.log"
+    - tests
+    - "test_*.py"

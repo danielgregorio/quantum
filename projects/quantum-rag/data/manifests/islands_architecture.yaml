@@ -1,0 +1,50 @@
+feature:
+  name: "islands_architecture"
+  display_name: "Islands Architecture (Client-Side Reactivity)"
+  version: "1.0.0"
+  status: "planned"
+  phase: E
+  category: "reactivity"
+
+  description: |
+    Islands of interactivity in a sea of static HTML. Client-side reactive
+    components with q:state, event handlers, two-way binding, and hydration.
+    Full SPA-like experience where needed, static where possible.
+
+capabilities:
+  - "q:state for reactive state management"
+  - "q:click, q:change, q:input event handlers"
+  - "q:model for two-way data binding"
+  - "q:show, q:if for conditional rendering (client-side)"
+  - "Component hydration (server render + client activate)"
+  - "JavaScript bundling and minification"
+  - "Virtual DOM (optional)"
+  - "Interactive='true' components"
+
+examples:
+  reactive_component: |
+    <q:component name="SearchFilter" interactive="true">
+      <q:state name="query" value="" />
+      <q:state name="results" value="[]" />
+
+      <input q:model="query" q:change="search" placeholder="Search..." />
+
+      <div q:show="{results.length > 0}">
+        <q:loop items="{results}" var="item">
+          <div>{item.name}</div>
+        </q:loop>
+      </div>
+    </q:component>
+
+  event_handlers: |
+    <button q:click="handleClick">
+      Clicks: {count}
+    </button>
+
+  two_way_binding: |
+    <input q:model="username" />
+    <p>Hello, {username}!</p>
+
+production_ready: false
+planned_for: "2026-Q1"
+complexity: "Very High"

@@ -1,0 +1,244 @@
+intention:
+  name: "Forms & Actions - Server-Side Form Handling"
+  version: "1.0.0"
+  category: "forms"
+  goal: |
+    Enable developers to handle form submissions with server-side actions
+    that automatically bind form data, validate parameters, execute queries,
+    and redirect with flash messages. Zero-ceremony ColdFusion-style forms.
+
+  capabilities:
+    - "Define actions with q:action name='...' method='POST'"
+    - "Automatic form data binding from request"
+    - "Server-side validation with q:param rules"
+    - "Flash messages that persist across redirects"
+    - "Redirect after POST pattern with q:redirect"
+    - "CSRF protection (automatic)"
+    - "Rate limiting (optional)"
+    - "Authentication checks (optional)"
+
+  syntax:
+    action_definition:
+      description: "Define server-side action handler"
+      format: "<q:action name='actionName' method='POST|PUT|DELETE|PATCH'>"
+      attributes:
+        name: "Action identifier (required)"
+        method: "HTTP method (default: POST)"
+        csrf: "Enable CSRF protection (default: true)"
+        rate_limit: "Rate limit (e.g., '10/minute')"
+        require_auth: "Require authentication (default: false)"
+
+    param_validation:
+      description: "Validate form parameters"
+      format: "<q:param name='...' type='...' required='true|false' />"
+      types:
+        - "string"
+        - "email"
+        - "url"
+        - "integer"
+        - "decimal"
+        - "boolean"
+        - "date"
+        - "datetime"
+      validation_rules:
+        - "required (true|false)"
+        - "minlength / maxlength (for strings)"
+        - "min / max (for numbers)"
+        - "pattern (regex)"
+        - "enum (comma-separated values)"
+
+    redirect:
+      description: "Redirect after action completes"
+      format: "<q:redirect url='/path' flash='message' status='302' />"
+      attributes:
+        url: "Target URL (can include {variables})"
+        flash: "Flash message to show"
+        status: "HTTP status (301, 302, 303, 307, 308)"
+
+    flash_message:
+      description: "Set flash message manually"
+      format: "<q:flash type='info|success|warning|error' message='...' />"
+      types:
+        - "info (default)"
+        - "success"
+        - "warning"
+        - "error"
+
+  structure:
+    basic_action: |
+      <q:action name="submitForm" method="POST">
+        <q:param name="email" type="email" required="true" />
+        <q:query datasource="db">
+          INSERT INTO submissions (email) VALUES (:email)
+        </q:query>
+        <q:redirect url="/thank-you" flash="Form submitted!" />
+      </q:action>
+
+    with_validation: |
+      <q:action name="createUser" method="POST">
+        <q:param name="username" type="string" minlength="3" maxlength="20" required="true" />
+        <q:param name="email" type="email" required="true" />
+        <q:param name="password" type="string" minlength="8" required="true" />
+        <q:param name="age" type="integer" min="18" />
+
+        <q:query datasource="db">
+          INSERT INTO users (username, email, password, age)
+          VALUES (:username, :email, :password, :age)
+        </q:query>
+
+        <q:redirect url="/users" flash="User created successfully!" />
+      </q:action>
+
+    with_conditional_logic: |
+      <q:action name="updateStatus" method="POST">
+        <q:param name="status" type="string" enum="pending,approved,rejected" required="true" />
+        <q:param name="reason" type="string" />
+
+        <q:query datasource="db">
+          UPDATE requests SET status=:status WHERE id=:requestId
+        </q:query>
+
+        <q:if condition="{status} == 'rejected'">
+          <q:if condition="{reason} == ''">
+            <q:flash type="error" message="Reason is required for rejection" />
+            <q:redirect url="/requests/{requestId}" />
+          </q:if>
+        </q:if>
+
+        <q:redirect url="/requests" flash="Status updated to {status}" />
+      </q:action>
+
+    form_html: |
+      <form method="POST" action="/createUser">
+        <input name="username" type="text" placeholder="Username" required />
+        <input name="email" type="email" placeholder="Email" required />
+        <input name="password" type="password" placeholder="Password" required />
+        <input name="age" type="number" min="18" />
+        <button type="submit">Create User</button>
+      </form>
+
+  examples:
+    - title: "Simple Contact Form"
+      quantum_code: |
+        <q:component name="ContactForm">
+          <q:action name="submitContact" method="POST">
+            <q:param name="name" type="string" required="true" />
+            <q:param name="email" type="email" required="true" />
+            <q:param name="message" type="string" minlength="10" required="true" />
+
+            <q:query datasource="db">
+              INSERT INTO contacts (name, email, message, created_at)
+              VALUES (:name, :email, :message, NOW())
+            </q:query>
+
+            <q:redirect url="/thank-you" flash="Message sent successfully!" />
+          </q:action>
+
+          <form method="POST" action="/submitContact">
+            <input name="name" type="text" placeholder="Your Name" />
+            <input name="email" type="email" placeholder="Your Email" />
+            <textarea name="message" placeholder="Your Message"></textarea>
+            <button type="submit">Send Message</button>
+          </form>
+        </q:component>
+
+    - title: "Product Creation with Validation"
+      quantum_code: |
+        <q:action name="createProduct" method="POST">
+          <q:param name="name" type="string" minlength="3" maxlength="100" required="true" />
+          <q:param name="price" type="decimal" min="0.01" required="true" />
+          <q:param name="stock" type="integer" min="0" required="true" />
+          <q:param name="category" type="string" enum="electronics,clothing,food" required="true" />
+
+          <q:query datasource="db">
+            INSERT INTO products (name, price, stock, category)
+            VALUES (:name, :price, :stock, :category)
+          </q:query>
+
+          <q:redirect url="/products" flash="Product '{name}' created!" />
+        </q:action>
+
+    - title: "Delete with Confirmation"
+      quantum_code: |
+        <q:action name="deleteProduct" method="DELETE">
+          <q:param name="id" type="integer" required="true" />
+          <q:param name="confirm" type="boolean" required="true" />
+
+          <q:if condition="{confirm} != true">
+            <q:flash type="error" message="Please confirm deletion" />
+            <q:redirect url="/products/{id}" />
+          </q:if>
+
+          <q:query datasource="db">
+            DELETE FROM products WHERE id = :id
+          </q:query>
+
+          <q:redirect url="/products" flash="Product deleted successfully" />
+        </q:action>
+
+    - title: "Flash Message Display"
+      quantum_code: |
+        <q:component name="Layout">
+          <q:param name="flash" type="string" default="" />
+          <q:param name="flashType" type="string" default="info" />
+
+          <html>
+          <body>
+            <q:if condition="{flash} != ''">
+              <div class="alert alert-{flashType}">
+                {flash}
+              </div>
+            </q:if>
+
+            <q:slot />
+          </body>
+          </html>
+        </q:component>
+
+    - title: "Rate Limited Action"
+      quantum_code: |
+        <q:action name="sendEmail" method="POST" rate_limit="5/hour">
+          <q:param name="to" type="email" required="true" />
+          <q:param name="subject" type="string" required="true" />
+          <q:param name="body" type="string" required="true" />
+
+          <!-- Send email logic here -->
+
+          <q:redirect url="/inbox" flash="Email sent!" />
+        </q:action>
+
+  use_cases:
+    - "Contact forms"
+    - "User registration and login"
+    - "Product/content creation (CRUD)"
+    - "Comment submissions"
+    - "Profile updates"
+    - "File uploads"
+    - "Search forms"
+    - "Admin actions (delete, approve, etc.)"
+
+  implementation_notes:
+    - "Actions detected by q:action tag"
+    - "Form data automatically bound to params"
+    - "Validation runs before action body executes"
+    - "Flash messages stored in session"
+    - "Flash cleared after first display"
+    - "CSRF tokens generated and validated automatically"
+    - "Rate limiting uses in-memory or Redis store"
+    - "Redirect preserves flash message in session"
+
+  validation:
+    - "Action name must be unique in component"
+    - "Method must be POST, PUT, DELETE, or PATCH"
+    - "Required params must be present in form data"
+    - "Type validation enforced (email format, integer parsing, etc.)"
+    - "Min/max/minlength/maxlength rules enforced"
+    - "Pattern (regex) validation supported"
+    - "Enum validation (allowed values list)"
+
+  related_features:
+    - "state_management" # Flash messages in session
+    - "databinding" # {variable} in redirect URLs
+    - "query" # Database operations in actions
+    - "conditionals" # Conditional redirects/flashes
+    - "html_rendering" # Forms rendered as HTML

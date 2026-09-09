@@ -1,0 +1,347 @@
+[gd_scene load_steps=33 format=3]
+
+[ext_resource type="Script" path="res://scripts/scene_yoshi_island_1.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/qblock_used.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/mario_death.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/sprites/yoshi-island-1.png" id="4"]
+[ext_resource type="Script" path="res://scripts/player_controller.gd" id="5"]
+[ext_resource type="Texture2D" path="res://assets/sprites/mario_small.png" id="6"]
+[ext_resource type="TileSet" path="res://assets/collision_tileset.tres" id="7"]
+[ext_resource type="Script" path="res://scripts/tilemap_loader.gd" id="8"]
+[ext_resource type="Script" path="res://scripts/camera_follow.gd" id="9"]
+[ext_resource type="AudioStream" path="res://assets/sounds/smw_jump.wav" id="10"]
+[ext_resource type="AudioStream" path="res://assets/sounds/smw_coin.wav" id="11"]
+[ext_resource type="AudioStream" path="res://assets/sounds/smw_stomp.wav" id="12"]
+[ext_resource type="AudioStream" path="res://assets/sounds/smw_lost_a_life.wav" id="13"]
+[ext_resource type="AudioStream" path="res://assets/sounds/smw_course_clear.wav" id="14"]
+[ext_resource type="AudioStream" path="res://assets/sounds/smw_message_block.wav" id="15"]
+[ext_resource type="AudioStream" path="res://assets/sounds/smw_power-up.wav" id="16"]
+[ext_resource type="AudioStream" path="res://assets/sounds/smw_banzai_launch.wav" id="17"]
+[ext_resource type="AudioStream" path="res://assets/sounds/music/music-map1.wav" id="18"]
+[ext_resource type="Script" path="res://scripts/hud_manager.gd" id="19"]
+[ext_resource type="PackedScene" path="res://prefabs/qblock.tscn" id="20"]
+[ext_resource type="PackedScene" path="res://prefabs/rotating_block.tscn" id="21"]
+[ext_resource type="PackedScene" path="res://prefabs/coin.tscn" id="22"]
+[ext_resource type="PackedScene" path="res://prefabs/rex.tscn" id="23"]
+[ext_resource type="PackedScene" path="res://prefabs/banzai_bill.tscn" id="24"]
+[ext_resource type="PackedScene" path="res://prefabs/piranha_plant.tscn" id="25"]
+[ext_resource type="PackedScene" path="res://prefabs/flying_qblock.tscn" id="26"]
+[ext_resource type="PackedScene" path="res://prefabs/yoshi_coin.tscn" id="27"]
+[ext_resource type="PackedScene" path="res://prefabs/checkpoint.tscn" id="28"]
+
+[sub_resource type="RectangleShape2D" id="1"]
+size = Vector2(16, 80)
+
+[sub_resource type="RectangleShape2D" id="2"]
+size = Vector2(16, 24)
+
+[sub_resource type="RectangleShape2D" id="3"]
+size = Vector2(16, 24)
+
+[sub_resource type="RectangleShape2D" id="4"]
+size = Vector2(5120, 16)
+
+[node name="YoshiIsland1" type="Node2D"]
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+offset_right = 5120
+offset_bottom = 432
+color = Color(0.361, 0.580, 0.988, 1.0)
+
+[node name="_preload_used" type="Sprite2D" parent="."]
+position = Vector2(-100, -100)
+texture = ExtResource("2")
+visible = false
+
+[node name="_preload_death" type="Sprite2D" parent="."]
+position = Vector2(-100, -100)
+texture = ExtResource("3")
+visible = false
+
+[node name="level-bg" type="Sprite2D" parent="."]
+position = Vector2(2560, 216)
+texture = ExtResource("4")
+
+[node name="goal" type="Area2D" parent="."]
+position = Vector2(4950, 344)
+metadata/tag = "goal"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="goal"]
+shape = SubResource("1")
+
+[node name="mario" type="CharacterBody2D" parent="."]
+position = Vector2(80, 350)
+metadata/tag = "player"
+script = ExtResource("5")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="mario"]
+shape = SubResource("2")
+
+[node name="Sprite2D" type="Sprite2D" parent="mario"]
+texture = ExtResource("6")
+hframes = 5
+vframes = 1
+
+[node name="mario_area" type="Area2D" parent="mario"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="mario/mario_area"]
+shape = SubResource("3")
+
+[node name="deathzone" type="Area2D" parent="."]
+position = Vector2(2560, 480)
+metadata/tag = "death"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="deathzone"]
+shape = SubResource("4")
+
+[node name="terrain_terrain" type="TileMapLayer" parent="."]
+collision_enabled = true
+z_index = -1
+tile_set = ExtResource("7")
+script = ExtResource("8")
+
+[node name="Camera2D" type="Camera2D" parent="mario"]
+zoom = Vector2(1, 1)
+offset = Vector2(0, -37.3333)
+script = ExtResource("9")
+
+[node name="Sounds" type="Node" parent="."]
+
+[node name="sfx-jump" type="AudioStreamPlayer" parent="Sounds"]
+stream = ExtResource("10")
+
+[node name="sfx-coin" type="AudioStreamPlayer" parent="Sounds"]
+stream = ExtResource("11")
+
+[node name="sfx-stomp" type="AudioStreamPlayer" parent="Sounds"]
+stream = ExtResource("12")
+
+[node name="sfx-death" type="AudioStreamPlayer" parent="Sounds"]
+stream = ExtResource("13")
+
+[node name="sfx-clear" type="AudioStreamPlayer" parent="Sounds"]
+stream = ExtResource("14")
+
+[node name="sfx-block" type="AudioStreamPlayer" parent="Sounds"]
+stream = ExtResource("15")
+
+[node name="sfx-powerup" type="AudioStreamPlayer" parent="Sounds"]
+stream = ExtResource("16")
+
+[node name="sfx-banzai" type="AudioStreamPlayer" parent="Sounds"]
+stream = ExtResource("17")
+
+[node name="bgm-level" type="AudioStreamPlayer" parent="Sounds"]
+volume_db = -6.0206
+stream = ExtResource("18")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("19")
+
+[node name="qb1" instance=ExtResource("20") parent="."]
+position = Vector2(1927, 327)
+
+[node name="qb2" instance=ExtResource("20") parent="."]
+position = Vector2(1943, 327)
+
+[node name="qb3" instance=ExtResource("20") parent="."]
+position = Vector2(2503, 327)
+
+[node name="qb4" instance=ExtResource("20") parent="."]
+position = Vector2(3351, 247)
+
+[node name="rb16" instance=ExtResource("21") parent="."]
+position = Vector2(3415, 391)
+
+[node name="rb17" instance=ExtResource("21") parent="."]
+position = Vector2(3431, 391)
+
+[node name="rb18" instance=ExtResource("21") parent="."]
+position = Vector2(3655, 391)
+
+[node name="rb19" instance=ExtResource("21") parent="."]
+position = Vector2(3671, 391)
+
+[node name="qb9" instance=ExtResource("20") parent="."]
+position = Vector2(3831, 327)
+
+[node name="qb10" instance=ExtResource("20") parent="."]
+position = Vector2(3895, 279)
+
+[node name="qb11" instance=ExtResource("20") parent="."]
+position = Vector2(3895, 343)
+
+[node name="qb12" instance=ExtResource("20") parent="."]
+position = Vector2(3959, 327)
+
+[node name="coin1" instance=ExtResource("22") parent="."]
+position = Vector2(160, 288)
+
+[node name="coin2" instance=ExtResource("22") parent="."]
+position = Vector2(528, 224)
+
+[node name="coin3" instance=ExtResource("22") parent="."]
+position = Vector2(560, 224)
+
+[node name="coin4" instance=ExtResource("22") parent="."]
+position = Vector2(1600, 288)
+
+[node name="coin5" instance=ExtResource("22") parent="."]
+position = Vector2(2656, 176)
+
+[node name="coin6" instance=ExtResource("22") parent="."]
+position = Vector2(2672, 176)
+
+[node name="coin7" instance=ExtResource("22") parent="."]
+position = Vector2(2688, 176)
+
+[node name="coin8" instance=ExtResource("22") parent="."]
+position = Vector2(2704, 176)
+
+[node name="coin9" instance=ExtResource("22") parent="."]
+position = Vector2(2720, 176)
+
+[node name="coin10" instance=ExtResource("22") parent="."]
+position = Vector2(3600, 272)
+
+[node name="coin11" instance=ExtResource("22") parent="."]
+position = Vector2(3616, 272)
+
+[node name="coin12" instance=ExtResource("22") parent="."]
+position = Vector2(4080, 288)
+
+[node name="coin13" instance=ExtResource("22") parent="."]
+position = Vector2(4096, 288)
+
+[node name="coin14" instance=ExtResource("22") parent="."]
+position = Vector2(4112, 288)
+
+[node name="rex1" instance=ExtResource("23") parent="."]
+position = Vector2(416, 370)
+
+[node name="rex2" instance=ExtResource("23") parent="."]
+position = Vector2(560, 370)
+
+[node name="rex3" instance=ExtResource("23") parent="."]
+position = Vector2(672, 370)
+
+[node name="rex4" instance=ExtResource("23") parent="."]
+position = Vector2(768, 370)
+
+[node name="rex5" instance=ExtResource("23") parent="."]
+position = Vector2(880, 370)
+
+[node name="rex6" instance=ExtResource("23") parent="."]
+position = Vector2(944, 370)
+
+[node name="rex7" instance=ExtResource("23") parent="."]
+position = Vector2(1088, 370)
+
+[node name="rex8" instance=ExtResource("23") parent="."]
+position = Vector2(1312, 370)
+
+[node name="rex9" instance=ExtResource("23") parent="."]
+position = Vector2(1488, 370)
+
+[node name="rex10" instance=ExtResource("23") parent="."]
+position = Vector2(1728, 370)
+
+[node name="rex11" instance=ExtResource("23") parent="."]
+position = Vector2(1840, 370)
+
+[node name="rex12" instance=ExtResource("23") parent="."]
+position = Vector2(1904, 370)
+
+[node name="rex13" instance=ExtResource("23") parent="."]
+position = Vector2(1968, 370)
+
+[node name="rex14" instance=ExtResource("23") parent="."]
+position = Vector2(2240, 370)
+
+[node name="rex15" instance=ExtResource("23") parent="."]
+position = Vector2(2400, 370)
+
+[node name="rex16" instance=ExtResource("23") parent="."]
+position = Vector2(2528, 370)
+
+[node name="rex17" instance=ExtResource("23") parent="."]
+position = Vector2(2880, 370)
+
+[node name="rex18" instance=ExtResource("23") parent="."]
+position = Vector2(3040, 370)
+
+[node name="bb1" instance=ExtResource("24") parent="."]
+position = Vector2(2000, 280)
+
+[node name="bb2" instance=ExtResource("24") parent="."]
+position = Vector2(3400, 300)
+
+[node name="pp1" instance=ExtResource("25") parent="."]
+position = Vector2(3408, 376)
+
+[node name="pp2" instance=ExtResource("25") parent="."]
+position = Vector2(3648, 376)
+
+[node name="fqb1" instance=ExtResource("26") parent="."]
+position = Vector2(1200, 200)
+
+[node name="rb1" instance=ExtResource("21") parent="."]
+position = Vector2(3384, 264)
+
+[node name="rb2" instance=ExtResource("21") parent="."]
+position = Vector2(3400, 264)
+
+[node name="rb3" instance=ExtResource("21") parent="."]
+position = Vector2(3416, 264)
+
+[node name="rb4" instance=ExtResource("21") parent="."]
+position = Vector2(3432, 264)
+
+[node name="rb5" instance=ExtResource("21") parent="."]
+position = Vector2(3448, 264)
+
+[node name="rb6" instance=ExtResource("21") parent="."]
+position = Vector2(3464, 264)
+
+[node name="rb7" instance=ExtResource("21") parent="."]
+position = Vector2(3480, 264)
+
+[node name="rb8" instance=ExtResource("21") parent="."]
+position = Vector2(3496, 264)
+
+[node name="rb9" instance=ExtResource("21") parent="."]
+position = Vector2(3512, 264)
+
+[node name="rb10" instance=ExtResource("21") parent="."]
+position = Vector2(3528, 264)
+
+[node name="rb11" instance=ExtResource("21") parent="."]
+position = Vector2(3544, 264)
+
+[node name="rb12" instance=ExtResource("21") parent="."]
+position = Vector2(3560, 264)
+
+[node name="rb13" instance=ExtResource("21") parent="."]
+position = Vector2(3576, 264)
+
+[node name="rb14" instance=ExtResource("21") parent="."]
+position = Vector2(3592, 264)
+
+[node name="rb15" instance=ExtResource("21") parent="."]
+position = Vector2(3608, 264)
+
+[node name="ycoin1" instance=ExtResource("27") parent="."]
+position = Vector2(279, 271)
+
+[node name="ycoin2" instance=ExtResource("27") parent="."]
+position = Vector2(1415, 271)
+
+[node name="ycoin3" instance=ExtResource("27") parent="."]
+position = Vector2(2871, 239)
+
+[node name="ycoin4" instance=ExtResource("27") parent="."]
+position = Vector2(4615, 271)
+
+[node name="checkpoint1" instance=ExtResource("28") parent="."]
+position = Vector2(2400, 350)

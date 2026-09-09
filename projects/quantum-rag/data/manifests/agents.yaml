@@ -1,0 +1,91 @@
+feature:
+  name: agents
+  display_name: q:agent
+  version: 1.0.0
+  status: planned
+  category: ai
+
+description:
+  short: Autonomous AI agents with tool use for complex, multi-step tasks
+  long: |
+    q:agent enables AI agents that can autonomously complete complex tasks by using
+    provided tools (functions, queries, APIs). Agents reason about which tools to use,
+    call them in the correct order, and synthesize results into coherent responses.
+
+components:
+  ast:
+    - AgentNode
+    - AgentInstructionNode
+    - AgentToolNode
+    - AgentExecuteNode
+  parser:
+    - parse_agent
+    - parse_agent_instruction
+    - parse_agent_tool
+    - parse_agent_execute
+  runtime:
+    - execute_agent
+    - agent_reasoning_loop
+    - call_agent_tool
+    - log_agent_action
+    - synthesize_agent_response
+
+dependencies:
+  internal:
+    - llm_integration  # For agent reasoning
+    - functions  # For tool execution
+    - execution_context
+  external:
+    - requests  # For LLM API calls
+    - json
+
+capabilities:
+  phase_1:
+    - Agent reasoning loop (think → act → observe)
+    - Tool definition
+    - Function tools (q:function)
+    - Query tools (q:query)
+    - System instructions
+    - Action logging
+    - Safety limits (max_iterations, timeout)
+    - Result objects with action history
+  phase_2:
+    - Invoke tools (q:invoke)
+    - LLM tools (q:llm)
+    - Data tools (q:data)
+    - Tool approval flow
+    - Parallel tool execution
+  phase_3:
+    - Multi-agent systems
+    - Agent memory/context persistence
+    - Agent chaining
+    - Hierarchical agents
+
+attributes:
+  required:
+    - name
+    - model
+    - endpoint
+  optional:
+    - max_iterations  # Safety limit (default: 10)
+    - timeout  # Total timeout in ms (default: 60000)
+
+child_elements:
+  - q:instruction  # System prompt for agent
+  - q:tool  # Tool definition with name, description, params, function
+  - q:execute  # Run agent with specific task
+
+result_object:
+  fields:
+    - success
+    - result  # Agent's final response
+    - error
+    - executionTime
+    - iterations  # Number of reasoning loops
+    - actionCount  # Total tools called
+    - actions  # Array of {tool, args, result}
+    - tokenUsage
+
+priority: medium
+estimated_effort: 3-4 weeks
+target_release: Q3 2025

@@ -1,0 +1,92 @@
+{
+  "timestamp": "20260214_085605",
+  "dependencies": {
+    "flask": true,
+    "django": false,
+    "node": true,
+    "php": false,
+    "ruby": false
+  },
+  "results": [
+    {
+      "framework": "Quantum (Flask)",
+      "test_name": "Hello World",
+      "requests_total": 500,
+      "duration_sec": 4.482421400025487,
+      "requests_per_sec": 111.54685277853551,
+      "avg_latency_ms": 8.964842800050974,
+      "success": true,
+      "error": ""
+    },
+    {
+      "framework": "Flask",
+      "test_name": "Hello World",
+      "requests_total": 500,
+      "duration_sec": 4.414286899991566,
+      "requests_per_sec": 113.26857798956277,
+      "avg_latency_ms": 8.828573799983133,
+      "success": true,
+      "error": ""
+    },
+    {
+      "framework": "Python http.server",
+      "test_name": "Hello World",
+      "requests_total": 500,
+      "duration_sec": 1.7541450999851804,
+      "requests_per_sec": 285.0391338802156,
+      "avg_latency_ms": 3.508290199970361,
+      "success": true,
+      "error": ""
+    },
+    {
+      "framework": "Node.js Express",
+      "test_name": "Hello World",
+      "requests_total": 0,
+      "duration_sec": 0,
+      "requests_per_sec": 0,
+      "avg_latency_ms": 0,
+      "success": false,
+      "error": "Server failed to start"
+    },
+    {
+      "framework": "Quantum (Flask)",
+      "test_name": "JSON Response",
+      "requests_total": 500,
+      "duration_sec": 4.858777099987492,
+      "requests_per_sec": 102.90655235064953,
+      "avg_latency_ms": 9.717554199974984,
+      "success": true,
+      "error": ""
+    },
+    {
+      "framework": "Flask",
+      "test_name": "JSON Response",
+      "requests_total": 500,
+      "duration_sec": 4.246055600000545,
+      "requests_per_sec": 117.7563477972205,
+      "avg_latency_ms": 8.49211120000109,
+      "success": true,
+      "error": ""
+    },
+    {
+      "framework": "Python http.server",
+      "test_name": "JSON Response",
+      "requests_total": 500,
+      "duration_sec": 3.357767799985595,
+      "requests_per_sec": 148.9084504301176,
+      "avg_latency_ms": 6.71553559997119,
+      "success": true,
+      "error": ""
+    },
+    {
+      "framework": "Node.js Express",
+      "test_name": "JSON Response",
+      "requests_total": 0,
+      "duration_sec": 0,
+      "requests_per_sec": 0,
+      "avg_latency_ms": 0,
+      "success": false,
+      "error": "Server failed to start"
+    }
+  ]
+}

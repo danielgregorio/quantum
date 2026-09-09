@@ -1,0 +1,12 @@
+server:
+  port: 8080
+  host: 0.0.0.0
+  reload: false
+  debug: false
+
+paths:
+  components: ./components
+  static: ./static
+
+defaults:
+  title: Super Mario - Yoshi's Island 1

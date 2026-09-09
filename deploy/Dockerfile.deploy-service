@@ -1,0 +1,54 @@
+# Quantum Deploy Service
+# FastAPI service for managing Quantum app deployments
+FROM python:3.12-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEPLOY_PORT=9000
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    docker.io \
+    nginx \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app user
+RUN useradd --create-home --shell /bin/bash deployer && \
+    usermod -aG docker deployer
+
+# Set working directory
+WORKDIR /app
+
+# Install Python dependencies
+COPY deploy/service/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy service code
+COPY deploy/service/ .
+
+# Copy Quantum Dockerfile for building apps
+COPY deploy/Dockerfile /app/deploy/Dockerfile
+COPY deploy/.dockerignore /app/deploy/.dockerignore
+
+# Copy Quantum source (needed for building app images)
+COPY src/ /app/quantum-src/
+COPY requirements.txt /app/quantum-requirements.txt
+
+# Create data directories
+RUN mkdir -p /data/quantum/{apps,registry,nginx} && \
+    chown -R deployer:deployer /data/quantum
+
+# Expose port
+EXPOSE 9000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:9000/health || exit 1
+
+# Run as deployer user (but needs docker socket access)
+USER deployer
+
+# Start service
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "9000"]

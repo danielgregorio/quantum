@@ -1,0 +1,121 @@
+{
+  "feature": "functions",
+  "version": "2.0.0",
+  "description": "Comprehensive training dataset for function declarations (q:function)",
+  "created": "2025-01-02",
+  "updated": "2025-01-02",
+  "maintainers": ["Daniel", "Claude"],
+
+  "statistics": {
+    "total_examples": 47,
+    "positive_examples": 41,
+    "negative_examples": 6,
+    "categories": {
+      "simple_functions": 3,
+      "arithmetic_functions": 3,
+      "recursive_functions": 3,
+      "rest_api_functions": 7,
+      "cached_functions": 6,
+      "async_functions": 5,
+      "functions_with_integration": 6,
+      "validation_functions": 7,
+      "syntax_errors": 6
+    }
+  },
+
+  "coverage": {
+    "function_types": {
+      "simple_functions": "✅ Fully covered (3 basic + usage in complex examples)",
+      "arithmetic_functions": "✅ Fully covered (3 examples)",
+      "recursive_functions": "✅ Fully covered (3 examples: factorial, fibonacci, sum)",
+      "rest_api_functions": "✅ ADDED (7 examples: GET, POST, PUT, DELETE, query params, pagination, nested)",
+      "cached_functions": "✅ ADDED (6 examples: basic, parameterized, short/long TTL, conditional, per-user)",
+      "async_functions": "✅ ADDED (5 examples: basic, parallel, sequential, error handling, timeout)"
+    },
+    "parameter_features": {
+      "required_params": "✅ Covered (multiple examples)",
+      "optional_params": "✅ Covered (default values)",
+      "default_values": "✅ Covered (pagination example)",
+      "typed_params": "✅ Covered (string, number, array, boolean)",
+      "param_validation": "✅ ADDED (7 examples: email, range, CPF, CNPJ, URL, password, multiple)",
+      "param_constraints": "✅ Covered (min/max, range)"
+    },
+    "return_features": {
+      "simple_return": "✅ Covered",
+      "typed_return": "✅ Covered",
+      "expression_return": "✅ Covered",
+      "conditional_return": "✅ Covered (recursion, integration)",
+      "query_return": "✅ ADDED (REST API examples)",
+      "composite_return": "✅ ADDED (async parallel operations)"
+    },
+    "advanced_features": {
+      "recursion": "✅ Covered (3 examples)",
+      "function_composition": "✅ ADDED (6 examples: calling other functions, nesting, chaining)",
+      "scope_management": "✅ ADDED (integration examples with state)",
+      "caching": "✅ ADDED (6 examples with TTL and cache keys)",
+      "memoization": "✅ ADDED (cache with parameterized keys)",
+      "rest_api": "✅ ADDED (7 examples: full CRUD + pagination + nested)",
+      "async_operations": "✅ ADDED (5 examples: promises, parallel, sequential)",
+      "validation": "✅ ADDED (7 examples: built-in validators)"
+    },
+    "integration_patterns": {
+      "functions_with_loops": "✅ ADDED (sumArray, filterEven examples)",
+      "functions_with_conditionals": "✅ ADDED (discount logic, filtering)",
+      "functions_with_state": "✅ ADDED (accumulation, array building)",
+      "function_chaining": "✅ ADDED (nested calls, composition)",
+      "multiple_dependencies": "✅ ADDED (order total calculation)"
+    },
+    "error_cases": {
+      "missing_name": "✅ Covered",
+      "invalid_name": "✅ Covered",
+      "missing_return": "✅ Covered",
+      "duplicate_params": "✅ Covered",
+      "invalid_return_type": "✅ Covered",
+      "rest_missing_endpoint": "✅ Covered"
+    }
+  },
+
+  "training_readiness": {
+    "status": "ready_for_production_training",
+    "confidence": "high",
+    "notes": "Comprehensive coverage of function patterns with 41 positive examples showing multiple implementation styles. Covers basic functions, REST APIs, caching, async operations, validation, and complex integrations with loops/conditionals/state. Demonstrates function composition and real-world API patterns.",
+    "recommended_additions": [
+      "GraphQL function examples (if feature is implemented)",
+      "WebSocket function examples (if supported)",
+      "Higher-order function examples (map, filter, reduce patterns)",
+      "Pure vs impure function examples",
+      "Function middleware/interceptor patterns",
+      "Rate limiting examples",
+      "Authentication/authorization integration"
+    ]
+  },
+
+  "file_manifest": {
+    "positive": [
+      "positive/simple_functions.json (3 examples) - Basic function declarations",
+      "positive/arithmetic_functions.json (3 examples) - Math operations",
+      "positive/recursive_functions.json (3 examples) - Recursive patterns",
+      "positive/rest_api_functions.json (7 examples) - REST CRUD operations",
+      "positive/cached_functions.json (6 examples) - Caching and memoization",
+      "positive/async_functions.json (5 examples) - Async/await patterns",
+      "positive/functions_with_integration.json (6 examples) - Integration with loops/conditionals",
+      "positive/validation_functions.json (7 examples) - Parameter validation"
+    ],
+    "negative": [
+      "negative/invalid_syntax.json (6 examples) - Common errors and validation"
+    ]
+  },
+
+  "usage_instructions": {
+    "for_llm_training": "Use positive examples for function generation training. Show LLM multiple ways to solve same problem (e.g., data fetching via simple REST vs cached vs async). REST API examples show full CRUD patterns. Validation examples demonstrate built-in validators. Negative examples teach error detection.",
+    "for_developers": "Reference these examples when creating functions. See REST API examples for backend integration. See caching examples for performance optimization. See validation examples for data integrity.",
+    "for_testing": "Automated tests should mirror these examples. Each example represents a valid test case covering parameters, return values, and side effects."
+  },
+
+  "example_diversity": {
+    "implementation_styles": "Shows 3-7 different approaches per pattern type",
+    "complexity_levels": "Basic (9) -> Intermediate (15) -> Advanced (17)",
+    "use_cases": "REST APIs, caching, async operations, validation, composition, recursion, data processing",
+    "multiple_solutions": "Same problem solved different ways (e.g., data aggregation via loops vs recursion vs SQL)"
+  }
+}

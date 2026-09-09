@@ -1,0 +1,261 @@
+intention:
+  name: "Functions with q:function"
+  version: "1.0.0"
+  category: "functions"
+  goal: |
+    Enable developers to declare reusable functions with parameters, return values,
+    validation, caching, and optional REST API exposure for microservices architecture.
+
+  capabilities:
+    - "Function declaration with typed parameters"
+    - "Return values with type specification"
+    - "Function calls with argument passing"
+    - "Recursive function support"
+    - "Parameter validation (auto-validate)"
+    - "Performance optimization (cache, memoize, pure)"
+    - "REST API exposure (optional)"
+    - "Scoped variables (function-local state)"
+    - "Nested and higher-order functions"
+
+  syntax:
+    tag: "q:function"
+    core_attributes:
+      - name: "name"
+        type: "string"
+        required: true
+        description: "Function name (must be unique in scope)"
+        pattern: "^[a-zA-Z_][a-zA-Z0-9_]*$"
+
+      - name: "return-type"
+        type: "string"
+        required: false
+        default: "any"
+        values: ["any", "string", "number", "boolean", "array", "object"]
+        description: "Expected return type"
+
+      - name: "scope"
+        type: "string"
+        required: false
+        default: "component"
+        values: ["component", "global", "api"]
+        description: "Function visibility scope"
+
+      - name: "access"
+        type: "string"
+        required: false
+        default: "public"
+        values: ["public", "private", "protected"]
+        description: "Access control"
+
+    documentation_attributes:
+      - name: "description"
+        type: "string"
+        required: false
+        description: "Human-readable function description"
+
+      - name: "hint"
+        type: "string"
+        required: false
+        description: "Usage hint for developers"
+
+    validation_attributes:
+      - name: "validate-params"
+        type: "boolean"
+        required: false
+        default: false
+        description: "Auto-validate parameters against rules"
+
+    performance_attributes:
+      - name: "cache"
+        type: "boolean"
+        required: false
+        default: false
+        description: "Cache function results"
+
+      - name: "cache-ttl"
+        type: "number"
+        required: false
+        description: "Cache time-to-live in seconds"
+
+      - name: "memoize"
+        type: "boolean"
+        required: false
+        default: false
+        description: "Memoize results (cache based on args)"
+
+      - name: "pure"
+        type: "boolean"
+        required: false
+        default: false
+        description: "Mark function as pure (no side effects)"
+
+    behavior_attributes:
+      - name: "async"
+        type: "boolean"
+        required: false
+        default: false
+        description: "Async function execution"
+
+      - name: "retry"
+        type: "number"
+        required: false
+        default: 0
+        description: "Retry count on failure"
+
+      - name: "timeout"
+        type: "number"
+        required: false
+        description: "Execution timeout in seconds"
+
+    rest_api_attributes:
+      - name: "rest-endpoint"
+        type: "string"
+        required: false
+        description: "HTTP endpoint path (enables REST API)"
+
+      - name: "rest-method"
+        type: "string"
+        required: false
+        default: "GET"
+        values: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+        description: "HTTP method"
+
+      - name: "rest-auth"
+        type: "string"
+        required: false
+        values: ["bearer", "basic", "apikey", null]
+        description: "Authentication type"
+
+      - name: "rest-status"
+        type: "number"
+        required: false
+        default: 200
+        description: "Default HTTP status code"
+
+  child_tags:
+    - tag: "q:param"
+      description: "Function parameter declaration"
+      attributes:
+        - name: "name"
+          type: "string"
+          required: true
+        - name: "type"
+          type: "string"
+          default: "string"
+        - name: "required"
+          type: "boolean"
+          default: false
+        - name: "default"
+          type: "string"
+          required: false
+
+    - tag: "q:return"
+      description: "Return value from function"
+      attributes:
+        - name: "value"
+          type: "string"
+          required: true
+        - name: "type"
+          type: "string"
+          default: "string"
+
+  examples:
+    - title: "Simple Function"
+      quantum_code: |
+        <q:function name="greet">
+          <q:param name="name" type="string" />
+          <q:return value="Hello, {name}!" />
+        </q:function>
+
+        <q:call function="greet" name="Alice" />
+      output: "Hello, Alice!"
+
+    - title: "Function with Multiple Parameters"
+      quantum_code: |
+        <q:function name="add" return-type="number">
+          <q:param name="a" type="number" required="true" />
+          <q:param name="b" type="number" required="true" />
+          <q:return value="{a} + {b}" />
+        </q:function>
+
+        <q:call function="add" a="5" b="3" />
+      output: "8"
+
+    - title: "Recursive Function"
+      quantum_code: |
+        <q:function name="factorial" return-type="number">
+          <q:param name="n" type="number" />
+          <q:if condition="{n} <= 1">
+            <q:return value="1" />
+          </q:if>
+          <q:set name="prev" value="{factorial(n - 1)}" />
+          <q:return value="{n} * {prev}" />
+        </q:function>
+
+        <q:call function="factorial" n="5" />
+      output: "120"
+
+    - title: "Function with Validation"
+      quantum_code: |
+        <q:function name="setAge" validate-params="true">
+          <q:param name="age" type="number" required="true" min="0" max="150" />
+          <q:return value="Age set to {age}" />
+        </q:function>
+
+        <q:call function="setAge" age="25" />
+      output: "Age set to 25"
+
+    - title: "REST API Function"
+      quantum_code: |
+        <q:function
+          name="getUser"
+          return-type="object"
+          rest-endpoint="/api/users/{id}"
+          rest-method="GET"
+          rest-auth="bearer">
+          <q:param name="id" type="string" source="path" />
+          <q:return value="{getUserFromDB(id)}" />
+        </q:function>
+      rest_exposure: "GET /api/users/{id} with bearer auth"
+
+    - title: "Cached Function"
+      quantum_code: |
+        <q:function name="expensiveCalculation" cache="true" cache-ttl="300">
+          <q:param name="input" type="number" />
+          <!-- expensive computation -->
+          <q:return value="{result}" />
+        </q:function>
+      behavior: "Results cached for 5 minutes"
+
+  use_cases:
+    - "Reusable business logic"
+    - "Data transformation and formatting"
+    - "Mathematical computations"
+    - "REST API endpoints"
+    - "Validation helpers"
+    - "Database query wrappers"
+    - "Recursive algorithms"
+    - "Pure functions for testing"
+
+  implementation_notes:
+    - "Functions are stored in FunctionRegistry"
+    - "Function scope managed by ExecutionContext"
+    - "Parameters validated if validate-params=true"
+    - "Return values automatically typed and validated"
+    - "REST exposure creates HTTP endpoints automatically"
+    - "Caching uses in-memory cache with TTL"
+    - "Recursive calls supported with proper scope management"
+
+  validation:
+    - "Function name is required and must be unique"
+    - "Parameter names must be valid identifiers"
+    - "Return type must match declared return-type"
+    - "REST endpoint must start with /"
+    - "Cache-ttl requires cache=true"
+    - "Private functions (access=private) not exposed to REST"
+
+  related_features:
+    - "state_management" # Functions can use q:set for local vars
+    - "conditionals" # Functions often contain q:if logic
+    - "loops" # Functions can iterate with q:loop
+    - "databinding" # Parameters and variables via {syntax}

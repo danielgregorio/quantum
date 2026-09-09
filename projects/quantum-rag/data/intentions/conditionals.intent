@@ -1,0 +1,166 @@
+intention:
+  name: "Conditional Logic with q:if/q:else/q:elseif"
+  version: "1.0.0"
+  category: "control-flow"
+  goal: |
+    Enable developers to implement conditional branching logic with support
+    for if, else if, and else blocks for controlling program flow based on
+    boolean expressions.
+
+  capabilities:
+    - "Simple if statements with condition evaluation"
+    - "If-else branching (two-way decisions)"
+    - "Multiple conditions with elseif chains"
+    - "Complex boolean expressions (AND, OR, comparisons)"
+    - "Nested conditionals for complex logic"
+    - "Variable and expression evaluation in conditions"
+
+  syntax:
+    primary_tag: "q:if"
+    attributes:
+      - name: "condition"
+        type: "string"
+        required: true
+        description: "Boolean expression to evaluate"
+        examples:
+          - "{age} > 18"
+          - "{status} == 'active'"
+          - "{score} >= 90 AND {score} <= 100"
+          - "{user} != null"
+
+    related_tags:
+      - tag: "q:elseif"
+        attributes:
+          - name: "condition"
+            type: "string"
+            required: true
+            description: "Alternative condition to check if previous conditions failed"
+
+      - tag: "q:else"
+        attributes: []
+        description: "Fallback block when all conditions are false"
+
+  structure:
+    basic_pattern: |
+      <q:if condition="EXPRESSION">
+        <!-- code executed if true -->
+      </q:if>
+
+    if_else_pattern: |
+      <q:if condition="EXPRESSION">
+        <!-- code if true -->
+      <q:else/>
+        <!-- code if false -->
+      </q:if>
+
+    if_elseif_else_pattern: |
+      <q:if condition="EXPRESSION1">
+        <!-- code if EXPRESSION1 true -->
+      <q:elseif condition="EXPRESSION2"/>
+        <!-- code if EXPRESSION2 true -->
+      <q:elseif condition="EXPRESSION3"/>
+        <!-- code if EXPRESSION3 true -->
+      <q:else/>
+        <!-- code if all false -->
+      </q:if>
+
+  examples:
+    - title: "Simple If"
+      quantum_code: |
+        <q:set name="age" type="number" value="25" />
+        <q:if condition="{age} >= 18">
+          You are an adult.
+        </q:if>
+      output: "You are an adult."
+      condition_result: true
+
+    - title: "If-Else"
+      quantum_code: |
+        <q:set name="temperature" type="number" value="15" />
+        <q:if condition="{temperature} > 20">
+          It's warm.
+        <q:else/>
+          It's cold.
+        </q:if>
+      output: "It's cold."
+      condition_result: false
+
+    - title: "If-ElseIf-Else Chain"
+      quantum_code: |
+        <q:set name="score" type="number" value="85" />
+        <q:if condition="{score} >= 90">
+          Grade: A
+        <q:elseif condition="{score} >= 80"/>
+          Grade: B
+        <q:elseif condition="{score} >= 70"/>
+          Grade: C
+        <q:else/>
+          Grade: F
+        </q:if>
+      output: "Grade: B"
+      condition_result: "elseif 1 matched"
+
+    - title: "String Comparison"
+      quantum_code: |
+        <q:set name="status" value="active" />
+        <q:if condition="{status} == 'active'">
+          Status is active!
+        </q:if>
+      output: "Status is active!"
+
+    - title: "Nested Conditionals"
+      quantum_code: |
+        <q:set name="age" type="number" value="25" />
+        <q:set name="hasLicense" type="boolean" value="true" />
+        <q:if condition="{age} >= 18">
+          <q:if condition="{hasLicense} == true">
+            You can drive.
+          <q:else/>
+            Get a license first.
+          </q:if>
+        <q:else/>
+          You're too young to drive.
+        </q:if>
+      output: "You can drive."
+
+  operators:
+    comparison:
+      - "==" # Equal
+      - "!=" # Not equal
+      - ">" # Greater than
+      - "<" # Less than
+      - ">=" # Greater or equal
+      - "<=" # Less or equal
+
+    logical:
+      - "AND" # Logical and
+      - "OR" # Logical or
+      - "NOT" # Logical not
+
+  use_cases:
+    - "Form validation and error handling"
+    - "User authentication and authorization checks"
+    - "Dynamic content display based on user roles"
+    - "Feature flags and A/B testing"
+    - "Business logic implementation"
+    - "Data validation and processing"
+
+  implementation_notes:
+    - "Conditions are evaluated as Python expressions"
+    - "Variables must be enclosed in {braces}"
+    - "Short-circuit evaluation: if true, elseif/else not evaluated"
+    - "Supports nested conditionals to any depth"
+    - "Condition evaluation happens at runtime"
+
+  validation:
+    - "condition attribute is required for q:if and q:elseif"
+    - "Condition must be valid boolean expression"
+    - "q:else must not have condition attribute"
+    - "q:elseif and q:else must be inside q:if block"
+    - "Only one q:else allowed per q:if block"
+
+  related_features:
+    - "state_management" # Variables used in conditions
+    - "databinding" # Variable interpolation in conditions
+    - "loops" # Conditionals often used inside loops
+    - "functions" # Conditionals in function logic

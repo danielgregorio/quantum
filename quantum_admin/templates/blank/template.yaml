@@ -1,0 +1,8 @@
+name: Blank Project
+description: Empty project with minimal configuration
+icon: "&#128196;"
+category: starter
+features:
+  - Minimal setup
+  - Ready for customization
+options: []

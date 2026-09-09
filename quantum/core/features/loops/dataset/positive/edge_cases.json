@@ -1,0 +1,120 @@
+{
+  "dataset_type": "positive",
+  "feature": "loops",
+  "category": "edge_cases",
+  "description": "Edge cases and boundary conditions for loops",
+  "examples": [
+    {
+      "id": "loop-edge-001",
+      "intent": "Empty array",
+      "input": {
+        "natural_language": "Loop over empty array (should not execute body)",
+        "context": {
+          "available_vars": ["empty"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"empty\" type=\"array\" value=\"[]\" />\nBefore loop\n<q:loop type=\"array\" var=\"item\" items=\"{empty}\">\n  This should not appear\n</q:loop>\nAfter loop",
+        "runtime_behavior": "Outputs: Before loop\\nAfter loop (body never executes)"
+      },
+      "tags": ["edge_case", "empty_array", "no_iteration"]
+    },
+    {
+      "id": "loop-edge-002",
+      "intent": "Single item array",
+      "input": {
+        "natural_language": "Loop with only one element",
+        "context": {
+          "available_vars": ["single"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"single\" type=\"array\" value=\"['only']\" />\n<q:loop type=\"array\" var=\"item\" items=\"{single}\">\n  Item: {item}\n</q:loop>",
+        "runtime_behavior": "Outputs: Item: only (executes once)"
+      },
+      "tags": ["edge_case", "single_item"]
+    },
+    {
+      "id": "loop-edge-003",
+      "intent": "Zero iterations range",
+      "input": {
+        "natural_language": "Range loop where from > to (no iterations)",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "Before\n<q:loop type=\"range\" var=\"i\" from=\"10\" to=\"5\">\n  This won't execute\n</q:loop>\nAfter",
+        "runtime_behavior": "Outputs: Before\\nAfter (no iteration when from > to)"
+      },
+      "tags": ["edge_case", "invalid_range", "no_iteration"]
+    },
+    {
+      "id": "loop-edge-004",
+      "intent": "Single iteration range",
+      "input": {
+        "natural_language": "Range from 5 to 5 (one iteration)",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:loop type=\"range\" var=\"i\" from=\"5\" to=\"5\">\n  Value: {i}\n</q:loop>",
+        "runtime_behavior": "Outputs: Value: 5 (executes once)"
+      },
+      "tags": ["edge_case", "single_iteration"]
+    },
+    {
+      "id": "loop-edge-005",
+      "intent": "Empty string list",
+      "input": {
+        "natural_language": "List loop with empty string (single empty item)",
+        "context": {
+          "available_vars": ["emptyStr"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"emptyStr\" value=\"\" />\n<q:loop type=\"list\" var=\"item\" items=\"{emptyStr}\">\n  Item: [{item}]\n</q:loop>",
+        "runtime_behavior": "Outputs: Item: [] (one iteration with empty string)"
+      },
+      "tags": ["edge_case", "empty_string", "list"]
+    },
+    {
+      "id": "loop-edge-006",
+      "intent": "Large range performance",
+      "input": {
+        "natural_language": "Loop with large range (1 to 1000)",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"count\" type=\"number\" value=\"0\" />\n<q:loop type=\"range\" var=\"i\" from=\"1\" to=\"1000\">\n  <q:set name=\"count\" operation=\"increment\" />\n</q:loop>\nProcessed: {count} items",
+        "runtime_behavior": "Outputs: Processed: 1000 items"
+      },
+      "tags": ["edge_case", "large_range", "performance"]
+    },
+    {
+      "id": "loop-edge-007",
+      "intent": "Negative range with negative step",
+      "input": {
+        "natural_language": "Count down from -5 to -10",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:loop type=\"range\" var=\"i\" from=\"-5\" to=\"-10\" step=\"-1\">\n  {i}\n</q:loop>",
+        "runtime_behavior": "Outputs: -5, -6, -7, -8, -9, -10"
+      },
+      "tags": ["edge_case", "negative_numbers", "countdown"]
+    }
+  ]
+}

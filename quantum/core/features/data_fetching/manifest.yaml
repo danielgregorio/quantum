@@ -1,0 +1,126 @@
+feature:
+  name: data_fetching
+  display_name: q:fetch
+  version: 1.0.0
+  status: active
+  category: data
+
+description:
+  short: Declarative data fetching with loading/error/success states
+  long: |
+    q:fetch provides declarative data fetching with automatic state management,
+    caching with TTL, polling support, loading/error/success states, and
+    cross-target support for HTML, Desktop, and Mobile.
+
+components:
+  ast:
+    - FetchNode
+    - FetchLoadingNode
+    - FetchErrorNode
+    - FetchSuccessNode
+    - FetchHeaderNode
+  parser:
+    - parse_fetch
+    - parse_fetch_loading
+    - parse_fetch_error
+    - parse_fetch_success
+  runtime:
+    - execute_fetch
+    - html_adapter_fetch
+    - desktop_adapter_fetch
+  targets:
+    - html: JavaScript fetch() with state management
+    - desktop: Python requests library
+    - mobile: React Native fetch
+
+dependencies:
+  internal:
+    - state_management  # For reactive state
+    - ui_engine  # For loading/error/success components
+    - execution_context  # For variable scope
+  external:
+    - requests  # Python HTTP (Desktop target)
+
+capabilities:
+  phase_1:
+    - HTTP methods (GET, POST, PUT, DELETE, PATCH)
+    - Headers support
+    - JSON request body
+    - Caching with TTL
+    - Loading/error/success states
+    - Automatic state management
+    - Transform response
+    - Result variable binding
+  phase_2:
+    - Polling with interval
+    - Automatic refetch on interval
+    - Abort on unmount
+    - Retry with backoff
+    - Optimistic updates
+    - Dependent fetches
+  phase_3:
+    - WebSocket subscriptions
+    - Server-sent events
+    - GraphQL queries
+    - Offline cache
+
+attributes:
+  required:
+    - name  # Result variable name
+    - url   # Fetch URL
+  optional:
+    - method  # HTTP method (default: GET)
+    - cache  # Cache TTL (e.g., "5m", "1h", "30s")
+    - interval  # Polling interval
+    - headers  # HTTP headers (JSON format)
+    - body  # Request body
+    - transform  # Transform expression
+    - timeout  # Request timeout
+    - retry  # Retry attempts
+    - on_success  # Success callback
+    - on_error  # Error callback
+
+child_elements:
+  - q:loading  # Loading state content
+  - q:error  # Error state content
+  - q:success  # Success state content
+  - q:header  # HTTP headers
+
+result_object:
+  fields:
+    - data  # Response data
+    - loading  # boolean
+    - error  # Error message or null
+    - status  # HTTP status code
+    - refetch  # Function to refetch
+    - abort  # Function to abort
+
+documentation:
+  readme: docs/README.md
+  api_reference: docs/api.md
+  examples: docs/examples.md
+
+testing:
+  unit_tests: tests/test_data_fetching.py
+  example_files:
+    - dataset/positive/fetch-basic-get.q
+    - dataset/positive/fetch-post-json.q
+    - dataset/positive/fetch-with-cache.q
+    - dataset/positive/fetch-loading-states.q
+    - dataset/positive/fetch-with-headers.q
+    - dataset/positive/fetch-transform.q
+    - dataset/positive/fetch-polling.q
+
+dataset:
+  positive_examples: 20-30
+  negative_examples: 5-10
+  categories:
+    - basic_patterns
+    - caching_patterns
+    - error_handling
+    - polling_patterns
+    - real_world_patterns
+
+priority: high
+estimated_effort: 1-2 weeks
+target_release: Q1 2025

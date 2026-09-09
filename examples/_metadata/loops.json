@@ -1,0 +1,200 @@
+{
+  "category": "loops",
+  "name": "Loops",
+  "description": "Iteration with q:loop - arrays, ranges, and lists",
+  "icon": "🔄",
+  "docsPath": "/guide/loops",
+  "exampleCount": 8,
+  "examples": [
+    {
+      "file": "counter.q",
+      "title": "Counter",
+      "description": "Example demonstrating Counter",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "q:loop",
+        "q:set",
+        "arrays",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:loop",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 22,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<q:component name=\"Counter\">\n  <q:set name=\"count\" value=\"0\" type=\"number\" />\n\n  <html>\n    <head>\n      <title>Counter Example</title>\n    </head>\n    <body>\n      <h1>Counter: {count}</h1>\n      <p>This is a simple counter example.</p>\n\n      <q:set name=\"count\" value=\"{count + 1}\" />\n      <p>After increment: {count}</p>\n\n      <q:loop var=\"i\" from=\"1\" to=\"5\">\n        <p>Loop iteration: {i}</p>\n      </q:loop>\n    </body>\n  </html>\n</q:component>\n"
+    },
+    {
+      "file": "test-loop-all-types.q",
+      "title": "Loop All Types",
+      "description": "Example demonstrating Loop All Types",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "q:loop",
+        "q:set",
+        "q:return",
+        "arrays",
+        "databinding"
+      ],
+      "features": [
+        "databinding",
+        "q:loop",
+        "q:return",
+        "q:set"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 39,
+      "output": "[\n  \"Range loop:\",\n  \"  i = 1\",\n  \"  i = 2\",\n  \"  i = 3\",\n  \"Range with step:\",\n  \"  n = 0\",\n  \"  n = 2\",\n  \"  n = 4\",\n  \"  n = 6\",\n  \"  n = 8\",\n  \"  n = 10\",\n  \"Array loop:\",\n  \"  fruit = apple\",\n  \"  fruit = banana\",\n  \"  fruit = cherry\",\n  \"List loop:\",\n  \"  color = red\",\n  \"  color = green\",\n  \"  color = blue\",\n  \"List with delimiter:\",\n  \"  item = one\",\n  \"  item = two\",\n  \"  item = three\"\n]",
+      "outputType": "json",
+      "sourceCode": "<!-- Test Loop All Types -->\n<!-- Demonstrates all q:loop types -->\n<q:component name=\"TestLoopAllTypes\" xmlns:q=\"https://quantum.lang/ns\">\n\n  <q:set name=\"output\" type=\"array\" value=\"[]\" />\n\n  <!-- Range loop: from/to -->\n  <q:set name=\"output\" operation=\"append\" value=\"Range loop:\" />\n  <q:loop type=\"range\" var=\"i\" from=\"1\" to=\"3\">\n    <q:set name=\"output\" operation=\"append\" value=\"  i = {i}\" />\n  </q:loop>\n\n  <!-- Range loop with step -->\n  <q:set name=\"output\" operation=\"append\" value=\"Range with step:\" />\n  <q:loop type=\"range\" var=\"n\" from=\"0\" to=\"10\" step=\"2\">\n    <q:set name=\"output\" operation=\"append\" value=\"  n = {n}\" />\n  </q:loop>\n\n  <!-- Array loop: iterating over array -->\n  <q:set name=\"output\" operation=\"append\" value=\"Array loop:\" />\n  <q:loop type=\"array\" var=\"fruit\" items='[\"apple\", \"banana\", \"cherry\"]'>\n    <q:set name=\"output\" operation=\"append\" value=\"  fruit = {fruit}\" />\n  </q:loop>\n\n  <!-- List loop: comma-separated string -->\n  <q:set name=\"output\" operation=\"append\" value=\"List loop:\" />\n  <q:loop type=\"list\" var=\"color\" items=\"red,green,blue\">\n    <q:set name=\"output\" operation=\"append\" value=\"  color = {color}\" />\n  </q:loop>\n\n  <!-- List loop with custom delimiter -->\n  <q:set name=\"output\" operation=\"append\" value=\"List with delimiter:\" />\n  <q:loop type=\"list\" var=\"item\" items=\"one|two|three\" delimiter=\"|\">\n    <q:set name=\"output\" operation=\"append\" value=\"  item = {item}\" />\n  </q:loop>\n\n  <q:return value=\"{output}\" />\n</q:component>\n"
+    },
+    {
+      "file": "test-loop-array-index.q",
+      "title": "Loop Array Index",
+      "description": "Example demonstrating Loop Array Index",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "arrays",
+        "q:loop",
+        "q:return"
+      ],
+      "features": [
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 6,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Array Loop with Index -->\n<q:component name=\"TestArrayLoopIndex\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:loop type=\"array\" var=\"fruit\" index=\"idx\" items='[\"apple\", \"banana\", \"orange\"]'>\n    <q:return value=\"Item\" />\n  </q:loop>\n</q:component>"
+    },
+    {
+      "file": "test-loop-array.q",
+      "title": "Loop Array",
+      "description": "Example demonstrating Loop Array",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "arrays",
+        "q:loop",
+        "q:return"
+      ],
+      "features": [
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 6,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Array Loop -->\n<q:component name=\"TestArrayLoop\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:loop type=\"array\" var=\"fruit\" items='[\"apple\", \"banana\", \"orange\"]'>\n    <q:return value=\"Fruit\" />\n  </q:loop>\n</q:component>"
+    },
+    {
+      "file": "test-loop-list-delimiter.q",
+      "title": "Loop List Delimiter",
+      "description": "Example demonstrating Loop List Delimiter",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "arrays",
+        "q:loop",
+        "q:return"
+      ],
+      "features": [
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 6,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<!-- Test List Loop with Custom Delimiter -->\n<q:component name=\"TestListLoopDelimiter\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:loop type=\"list\" var=\"name\" items=\"João|Maria|Pedro\" delimiter=\"|\">\n    <q:return value=\"Name\" />\n  </q:loop>\n</q:component>"
+    },
+    {
+      "file": "test-loop-list.q",
+      "title": "Loop List",
+      "description": "Example demonstrating Loop List",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "arrays",
+        "q:loop",
+        "q:return"
+      ],
+      "features": [
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 6,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<!-- Test List Loop -->\n<q:component name=\"TestListLoop\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:loop type=\"list\" var=\"color\" items=\"red,green,blue\">\n    <q:return value=\"Color\" />\n  </q:loop>\n</q:component>"
+    },
+    {
+      "file": "test-loop-range-step.q",
+      "title": "Loop Range Step",
+      "description": "Example demonstrating Loop Range Step",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "arrays",
+        "q:loop",
+        "q:return"
+      ],
+      "features": [
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 6,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Range Loop with Step -->\n<q:component name=\"TestRangeLoopStep\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:loop type=\"range\" var=\"i\" from=\"1\" to=\"10\" step=\"2\">\n    <q:return value=\"Odd number\" />\n  </q:loop>\n</q:component>"
+    },
+    {
+      "file": "test-loop-range.q",
+      "title": "Loop Range",
+      "description": "Example demonstrating Loop Range",
+      "complexity": "beginner",
+      "tags": [
+        "iteration",
+        "arrays",
+        "q:loop",
+        "q:return"
+      ],
+      "features": [
+        "q:loop",
+        "q:return"
+      ],
+      "relatedDocs": [
+        "/guide/loops"
+      ],
+      "lineCount": 6,
+      "output": "(no output)",
+      "outputType": "text",
+      "sourceCode": "<!-- Test Range Loop -->\n<q:component name=\"TestRangeLoop\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:loop type=\"range\" var=\"i\" from=\"1\" to=\"3\">\n    <q:return value=\"Number\" />\n  </q:loop>\n</q:component>"
+    }
+  ]
+}
