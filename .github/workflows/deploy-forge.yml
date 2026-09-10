@@ -23,6 +23,10 @@ jobs:
           python-version: '3.12'
 
       - name: Build docs
+        env:
+          # Servido na raiz de quantum.sargas.cloud; o padrao da config e
+          # /quantum/, que e o caminho do GitHub Pages.
+          DOCS_BASE: /
         run: |
           npm ci
           npm run docs:build

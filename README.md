@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/danielgregorio/quantum/actions/workflows/ci.yml/badge.svg)](https://github.com/danielgregorio/quantum/actions/workflows/ci.yml)
 [![Docker](https://github.com/danielgregorio/quantum/actions/workflows/docker.yml/badge.svg)](https://github.com/danielgregorio/quantum/actions/workflows/docker.yml)
-[![Docs](https://img.shields.io/badge/docs-quantum.sargas.cloud-blue)](https://quantum.sargas.cloud)
+[![Docs](https://img.shields.io/badge/docs-github.io-blue)](https://danielgregorio.github.io/quantum/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **Declarative web apps in XML, with AI and RAG built into the language.
@@ -139,7 +139,7 @@ datasources:
 
 ## Documentation
 
-Full docs (VitePress) at **[quantum.sargas.cloud](https://quantum.sargas.cloud)** and in
+Full docs (VitePress) at **[danielgregorio.github.io/quantum](https://danielgregorio.github.io/quantum/)** and in
 [`docs/`](docs/):
 
 - [Getting Started](docs/guide/getting-started.md) · [Installation](docs/guide/installation.md) · [Quick Start](docs/guide/quick-start.md)
