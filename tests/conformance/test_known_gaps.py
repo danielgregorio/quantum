@@ -76,6 +76,15 @@ class TestErrosDeExpressao:
         with pytest.raises(Exception, match="nada"):
             executar('<q:return value="x{nada}y"/>')
 
+    @lacuna("G15: variável de escopo ausente numa conta vira '' e a conversão "
+            "falha com texto interno do Python. O contador clássico "
+            "{session.visitas + 1} quebra na primeira visita; hoje só "
+            "operation=\"increment\" funciona.")
+    def test_contador_de_sessao_na_primeira_visita(self):
+        assert executar(
+            '<q:set name="session.visitas" value="{session.visitas + 1}" type="number"/>'
+            '<q:return value="{session.visitas}"/>') == 1
+
     @lacuna("G14: erro de avaliação é engolido e as chaves cruas vão para a "
             "saída. Hoje {10 / z} com z=0 devolve '{10 / z}'.")
     def test_divisao_por_zero_e_erro(self):
@@ -181,15 +190,54 @@ class TestAcoes:
         assert 'VISTO=ana' in cliente.get('/eco').get_data(as_text=True)
 
 
-class TestAutenticacao:
-    @lacuna("AUTH-1: autenticação é Core (D4), mas um .q não tem como verificar "
-            "uma senha contra um hash bcrypt sem q:python. Os exemplos de login "
-            "gravam session.authenticated=true sem checar credencial nenhuma. "
-            "Proposta: uma forma declarada de verificar credencial.")
-    def test_existe_forma_declarada_de_verificar_senha(self):
+class TestAplicacaoHtml:
+    @lacuna("G17: `quantum run app.q` com q:application type=\"html\" e q:route "
+            "falha na hora: QuantumWebServer.__init__() got an unexpected keyword "
+            "argument 'port', e a linha seguinte chama configure_from_ast, que "
+            "não existe. O modelo que funciona é components/ + quantum start. "
+            "Decidir: implementar as rotas declaradas ou remover o tipo.")
+    def test_aplicacao_html_sobe_o_servidor(self, tmp_path):
+        app = tmp_path / 'app.q'
+        app.write_text(
+            '<q:application id="app" type="html" xmlns:q="https://quantum.lang/ns">'
+            '<q:route path="/" method="GET"><h1>oi</h1></q:route></q:application>',
+            encoding='utf-8')
+        try:
+            saida = subprocess.run(
+                [sys.executable, '-m', 'quantum.cli.runner', 'run', str(app)],
+                capture_output=True, text=True, cwd=tmp_path, timeout=10,
+                env=dict(os.environ, PYTHONPATH=str(REPO)))
+        except subprocess.TimeoutExpired:
+            return      # continuou de pé servindo: é o comportamento esperado
+        assert saida.returncode == 0, (saida.stdout + saida.stderr)[-300:]
+
+
+class TestAplicacaoApi:
+    @lacuna("G18: o servidor de q:application type=\"api\" não executa o corpo "
+            "da rota — devolve o texto literal do primeiro q:return como JSON "
+            "(ou {}), ignorando q:set, q:loop e q:query. E sobe em 0.0.0.0.")
+    def test_rota_executa_o_corpo(self):
         from quantum.core.parser import QuantumParser
-        registradas = set(getattr(QuantumParser()._parser_registry, '_parsers', {}))
-        assert registradas & {'auth', 'login', 'authenticate', 'verify-password'}
+        from quantum.runtime.api_server import QuantumAPIServer
+        app = QuantumParser().parse(
+            '<q:application id="api" type="api" xmlns:q="https://quantum.lang/ns">'
+            '<q:route path="/n" method="GET"><q:set name="n" value="41" type="number"/>'
+            '<q:return value="{n + 1}"/></q:route></q:application>')
+        server = QuantumAPIServer(port=0)
+        server.configure_from_ast(app)
+        resposta = server.app.test_client().get('/n')
+        assert resposta.get_json() == 42
+
+
+class TestImportDeDados:
+    @lacuna("G16: q:data com arquivo inexistente devolve None em silêncio; o "
+            "motivo só aparece em {nome_result.error}. Proposta: erro por "
+            "padrão, nomeando o arquivo, com opt-in explícito para seguir.")
+    def test_arquivo_inexistente_e_erro(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        with pytest.raises(Exception, match="naoexiste.csv"):
+            executar('<q:data name="x" source="naoexiste.csv" type="csv"/>'
+                     '<q:return value="{x}"/>')
 
 
 class TestConfig:

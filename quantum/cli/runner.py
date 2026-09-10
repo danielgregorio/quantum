@@ -175,6 +175,9 @@ class QuantumRunner:
             for route in app.routes:
                 print(f"     {route.method} {route.path}")
 
+        from quantum.core.tiers import warn_app_type
+        warn_app_type(app.app_type)
+
         if app.app_type == 'game':
             return self._build_game(app, debug)
         elif app.app_type == 'terminal':

@@ -1,6 +1,9 @@
 # Quantum — Níveis de suporte
 
-> Decisão da Fase 0 do `FRAMEWORK_PLAN.md`, tomada em 2026-09-07 com base na auditoria
+> Revisado em 2026-09-10 pelas decisões do plano *Núcleo impecável* (autenticação no Core;
+> jogos e AS4 ficam no repo como Laboratório).
+>
+> Decisão original da Fase 0 do `FRAMEWORK_PLAN.md`, tomada em 2026-09-07 com base na auditoria
 > funcional (`FULL_AUDIT_2026-09.md`) e nas correções das Fases 1-7 do
 > `AUDIT_FIX_PLAN.md`.
 >
@@ -46,6 +49,7 @@ linha no `FEATURE_STATUS.md`.
 | `q:invoke` | Chamada de função, componente ou HTTP |
 | `q:data` | Import e transformação de CSV/JSON/XML |
 | `q:import` / `q:slot` | Composição de componentes |
+| `require_auth` / `require_role` | Autenticação e autorização por componente, sobre o escopo `session` (decisão D4, 2026-09-10). Lacuna aberta: um `.q` ainda não verifica senha sem `q:python` — `AUTH-1` em `tests/conformance/test_known_gaps.py` |
 
 ### Diferencial — a razão de existir
 
@@ -73,15 +77,18 @@ exemplo + teste de integração + doc + linha no status.
 | Eventos | `q:dispatchEvent` |
 | UI / alvos alternativos | namespace `ui:*`, alvo terminal (`qt:`), htmx, islands |
 
-### Parked — sai do repo do framework
+### Laboratório — fica no repo, fora da promessa
 
-Projetos legítimos, com ritmo próprio. O problema nunca foi existirem; foi estarem na mesma
-frase de apresentação.
+Decisão D1/D2 (2026-09-10): estes projetos **ficam no repositório** porque pressionam a
+linguagem — é jogando que aparecem features e bugs que o núcleo precisa. Não entram no
+pitch nem têm promessa de estabilidade, e o runtime avisa uma vez ao rodar um deles
+(`quantum/core/tiers.py`). Os testes deles continuam na suíte principal: uma mudança no
+núcleo que quebre um jogo aparece no CI.
 
-| Área | Destino | Nota |
-|---|---|---|
-| Game engine 2D (`qg:`), codegen Godot, projeto Mario | Repo próprio, consumindo `quantum` como dependência | A regra do `CLAUDE.md` (codegen é a fonte da verdade, nunca editar o output gerado) continua valendo lá, intocada |
-| `quantum-as4` (compilador MXML/AS4 → JS) | Repo próprio | É um produto inteiro e separado; hoje tem regressão aberta em `test_transpiler_comprehensive.py` |
+| Área | Nota |
+|---|---|
+| Game engine 2D (`qg:`), codegen Godot, projeto Mario | A regra do `CLAUDE.md` (codegen é a fonte da verdade, nunca editar o output gerado) continua valendo. Mudanças de linguagem que quebrem o Mario migram os fontes `.q` na mesma mudança. |
+| `quantum-as4` (compilador MXML/AS4 → JS) | Tem regressão aberta em `test_transpiler_comprehensive.py` |
 
 ### Sem nível — decisão pendente
 

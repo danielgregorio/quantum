@@ -38,6 +38,28 @@ EXPERIMENTAL = frozenset({
 
 SUPPORTED = CORE | DIFERENCIAL
 
+# Authentication is Core too (decision D4, 2026-09-10), but it is not a tag:
+# it is the require_auth / require_role attributes of q:component plus the
+# session scope. Listed here so the surface is complete in one place.
+CORE_ATTRIBUTES = frozenset({"require_auth", "require_role"})
+
+# Application types, by tier. A q:application's type decides which engine
+# runs it, so the tier of the type is the tier of the whole app.
+#
+# LABORATORIO (decision D1/D2): the 2D game engine (qg:, including the Godot
+# codegen) stays in the repository on purpose — games press on the language
+# and surface features and bugs the core needs — but it carries no stability
+# promise and is not part of the pitch. Its tests run in the main suite, so a
+# core change that breaks a game shows up in CI.
+LAB_APP_TYPES = frozenset({"game"})
+# "html" and "api" are experimental too, measured 2026-09-10: `quantum run` on a
+# type="html" application fails at once (gap G17), and the type="api" server
+# never executes a route's body — it serves the literal text of the first
+# q:return (gap G18). The supported way to build a web app is pages in
+# components/ served by `quantum start`, which runs no q:application at all.
+EXPERIMENTAL_APP_TYPES = frozenset({"terminal", "ui", "testing", "microservices",
+                                    "html", "api"})
+
 
 def tier_of(tag_name: str) -> str:
     """'core' | 'diferencial' | 'experimental' | 'unknown'."""
@@ -75,6 +97,36 @@ def warn_if_unsupported(tag_name: str) -> None:
         "(SUPPORT_TIERS.md). It may change or break without notice; do not rely "
         "on it in production.", tag_name
     )
+
+
+def app_tier_of(app_type: str) -> str:
+    """'laboratorio' | 'experimental' | 'supported' for a q:application type."""
+    if app_type in LAB_APP_TYPES:
+        return "laboratorio"
+    if app_type in EXPERIMENTAL_APP_TYPES:
+        return "experimental"
+    return "supported"
+
+
+def warn_app_type(app_type: str) -> None:
+    """One-time warning when an application of a non-supported type runs."""
+    tier = app_tier_of(app_type)
+    key = f"application:{app_type}"
+    if tier == "supported" or key in _warned:
+        return
+    _warned.add(key)
+    if tier == "laboratorio":
+        logger.warning(
+            "q:application type=%r is LABORATÓRIO — it exists to press on the "
+            "language, with no stability promise (SUPPORT_TIERS.md). It may "
+            "change or break without notice.", app_type
+        )
+    else:
+        logger.warning(
+            "q:application type=%r is EXPERIMENTAL — not covered by the "
+            "supported surface (SUPPORT_TIERS.md). It may change or break "
+            "without notice; do not rely on it in production.", app_type
+        )
 
 
 def reset_warnings() -> None:
