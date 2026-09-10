@@ -4,10 +4,10 @@ Login de verdade em .q: buscar o usuário, verificar a senha, abrir a sessão.
 Autenticação entrou no Core (decisão D4), e dois defeitos impediam um login
 honesto escrito na linguagem:
 
-1. AUTH-1 — não havia como verificar uma senha contra um hash sem q:python.
+1. Não havia como verificar uma senha contra um hash sem q:python.
    Todo exemplo de login gravava session.authenticated=true para quem
    enviasse o formulário. Agora `hashPassword()` e `verifyPassword()` fazem
-   parte da biblioteca padrão de expressões.
+   parte da biblioteca padrão de expressões (regra AUTH-3 do SPEC.md).
 
 2. Todo q:query dentro de q:action falhava. O ActionHandler criava o seu
    ComponentRuntime SEM a config do servidor, então os datasources de

@@ -200,6 +200,7 @@ class TestConhecimento:
 
 class TestAgente:
     def test_chama_a_tool_e_usa_o_resultado(self):
+        # IA-4
         v = executar(
             f'<q:agent name="calc" model="{MODELO}" max_iterations="4">'
             '<q:instruction>Use the add tool, then answer with the number.</q:instruction>'

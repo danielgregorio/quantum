@@ -41,34 +41,6 @@ def lacuna(reason):
     return pytest.mark.xfail(strict=True, reason=reason)
 
 
-class TestRetorno:
-    @lacuna("G1: o q:return de topo é avaliado só no fim; um q:if verdadeiro "
-            "depois dele vence. Hoje devolve 'B'.")
-    def test_primeiro_return_em_ordem_de_documento_vence(self):
-        assert executar(
-            '<q:return value="A"/><q:set name="n" value="1"/>'
-            '<q:if condition="n == 1"><q:return value="B"/></q:if>') == 'A'
-
-
-class TestTiposDaInterpolacao:
-    @lacuna("G2: interpolação com texto literal vira número. Hoje '{i}.{j}' "
-            "devolve 1.2 (float).")
-    def test_interpolacao_com_texto_e_texto(self):
-        assert executar('<q:set name="i" value="1"/><q:set name="j" value="2"/>'
-                        '<q:return value="{i}.{j}"/>') == '1.2'
-
-    @lacuna("G2b: literal que parece número perde o formato. Hoje '007' "
-            "devolve 7 — um CEP '01310' viraria 1310.")
-    def test_literal_nao_e_convertido(self):
-        assert executar('<q:return value="007"/>') == '007'
-
-    def test_expressao_unica_mantem_o_tipo(self):
-        # Não é lacuna: '{i}' sozinho devolve o valor com o tipo dele. Fica
-        # aqui para que a correção das duas acima não quebre este caso.
-        assert executar('<q:set name="i" value="7" type="number"/>'
-                        '<q:return value="{i}"/>') == 7
-
-
 class TestErrosDeExpressao:
     @lacuna("G12: variável inexistente fica literal na saída, em silêncio. "
             "Hoje devolve 'x{nada}y'.")

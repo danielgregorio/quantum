@@ -17,27 +17,27 @@ Core e IA; alvos interativos e tags experimentais não são executados).
 
 | Tag | Exemplos | Parseia | Executa | Testes | Docs |
 |---|---|---|---|---|---|
-| `q:action` | 29 | sim | 12/12 (17 não executados) | 10 | 5 |
-| `q:data` | 7 | sim | 7/7 | 3 | 3 |
-| `q:flash` | 6 | sim | 3/3 (3 não executados) | 0 | 3 |
-| `q:function` | 66 | sim | **24/48** (18 não executados) | 12 | 27 |
-| `q:if` | 54 | sim | **26/27** (27 não executados) | 14 | 31 |
+| `q:action` | 29 | sim | 12/12 (17 não executados) | 11 | 9 |
+| `q:data` | 7 | sim | 7/7 | 5 | 4 |
+| `q:flash` | 6 | sim | 3/3 (3 não executados) | 1 | 5 |
+| `q:function` | 66 | sim | **24/48** (18 não executados) | 13 | 28 |
+| `q:if` | 54 | sim | **26/27** (27 não executados) | 16 | 35 |
 | `q:import` | 2 | sim | 2/2 | 1 | 3 |
 | `q:invoke` | 9 | sim | **4/5** (4 não executados) | 5 | 3 |
-| `q:loop` | 55 | sim | **30/31** (24 não executados) | 8 | 27 |
-| `q:query` | 22 | sim | **9/10** (12 não executados) | 9 | 17 |
-| `q:redirect` | 17 | sim | 7/7 (10 não executados) | 3 | 5 |
-| `q:set` | 145 | sim | **83/109** (36 não executados) | 29 | 34 |
+| `q:loop` | 55 | sim | **30/31** (24 não executados) | 10 | 29 |
+| `q:query` | 22 | sim | **9/10** (12 não executados) | 12 | 18 |
+| `q:redirect` | 17 | sim | 7/7 (10 não executados) | 4 | 8 |
+| `q:set` | 145 | sim | **83/109** (36 não executados) | 32 | 38 |
 | `q:slot` | 2 | sim | — (2 não executados) | 1 | 2 |
 
 ## Diferencial (4 tags)
 
 | Tag | Exemplos | Parseia | Executa | Testes | Docs |
 |---|---|---|---|---|---|
-| `q:agent` | 4 | sim | — (4 não executados) | 8 | 3 |
-| `q:knowledge` | 2 | sim | — (2 não executados) | 2 | 2 |
-| `q:llm` | 1 | sim | — (1 não executados) | 4 | 2 |
-| `q:team` | 2 | sim | — (2 não executados) | 4 | 1 |
+| `q:agent` | 4 | sim | — (4 não executados) | 9 | 4 |
+| `q:knowledge` | 2 | sim | — (2 não executados) | 3 | 3 |
+| `q:llm` | 1 | sim | — (1 não executados) | 5 | 3 |
+| `q:team` | 2 | sim | — (2 não executados) | 4 | 2 |
 
 ## Experimental (24 tags)
 
@@ -51,7 +51,7 @@ Core e IA; alvos interativos e tags experimentais não são executados).
 | `q:job` | 2 | sim | 6 | 3 |
 | `q:log` | 13 | sim | 4 | 3 |
 | `q:mail` | 10 | sim | 1 | 3 |
-| `q:message` | 4 | sim | 3 | 1 |
+| `q:message` | 4 | sim | 4 | 2 |
 | `q:messageAck` | 2 | sim | 2 | 0 |
 | `q:messageNack` | 2 | sim | 2 | 0 |
 | `q:persist` | 1 | sim | 1 | 2 |
@@ -96,7 +96,7 @@ Core e IA; alvos interativos e tags experimentais não são executados).
 | `examples/smw_polished.q` | erro | [ERROR] Validation errors: - Invalid type: float. Must be one of ['string', 'number', 'integer', 'decimal', 'boolean', 'date', 'datetime', 'array', 'object', 'j |
 | `examples/smw_world1.q` | erro | [ERROR] Validation errors: - Invalid type: float. Must be one of ['string', 'number', 'integer', 'decimal', 'boolean', 'date', 'datetime', 'array', 'object', 'j |
 | `examples/snake.q` | erro | [ERROR] Validation errors: - Sprite id is required |
-| `examples/test-invoke-function.q` | erro | 2026-09-10 14:11:15 [ERROR] q:invoke function='calculateSum' failed |
+| `examples/test-invoke-function.q` | erro | 2026-09-10 15:45:57 [ERROR] q:invoke function='calculateSum' failed |
 | `examples/test-query-insert.q` | erro | [ERROR] Execution error: Execution error: Query execution error in 'insertResult': Query execution failed: UNIQUE constraint failed: users.email |
 
 ## Não executados, e por quê
@@ -111,30 +111,6 @@ Core e IA; alvos interativos e tags experimentais não são executados).
 - 1 arquivo(s): alvo interativo (microservices)
 - 1 arquivo(s): alvo interativo (html)
 - 1 arquivo(s): fragmento, não é arquivo raiz (qg:scene)
-
-## Cobertura dos módulos do núcleo
-
-Linhas cobertas pela suíte (`pytest --cov=quantum --cov-report=json`).
-
-| Módulo | Cobertura | Linhas |
-|---|---|---|
-| `quantum/runtime/component.py` | 65% | 277/428 |
-| `quantum/core/expressions.py` | 92% | 262/285 |
-| `quantum/runtime/execution_context.py` | 75% | 116/155 |
-| `quantum/runtime/renderer.py` | 84% | 215/257 |
-| `quantum/core/parser.py` | 84% | 549/656 |
-| `quantum/runtime/executors/control_flow/` | 92% | 424/461 |
-| `quantum/runtime/executors/data/` | 99% | 277/281 |
-| `quantum/runtime/executors/ai/` | 89% | 228/257 |
-| `quantum/core/parsers/control_flow/` | 98% | 121/123 |
-| `quantum/core/parsers/data/` | 95% | 301/318 |
-| `quantum/core/parsers/ai/` | 92% | 137/149 |
-| `quantum/runtime/llm_service.py` | 16% | 18/113 |
-| `quantum/runtime/knowledge_service.py` | 11% | 24/225 |
-| `quantum/runtime/agent_service.py` | 80% | 341/428 |
-| **núcleo inteiro** | **80%** | 3290/4136 |
-
-**Meta para o 1.0: 90%.** Módulos abaixo dela: `quantum/runtime/component.py`, `quantum/runtime/execution_context.py`, `quantum/runtime/renderer.py`, `quantum/core/parser.py`, `quantum/runtime/executors/ai/`, `quantum/runtime/llm_service.py`, `quantum/runtime/knowledge_service.py`, `quantum/runtime/agent_service.py`.
 
 ## Lacunas que esta medição expõe
 

@@ -287,6 +287,13 @@ class ComponentRuntime:
         try:
             # Execute control flow statements first
             for statement in component.statements:
+                # RET-1: the first q:return executed, in document order, ends
+                # the component. A top-level q:return used to be evaluated and
+                # discarded here, and only returns[0] was evaluated after every
+                # statement ran — so a q:if further down could override it.
+                if isinstance(statement, QuantumReturn):
+                    return self._process_return_value(
+                        statement.value, self.execution_context.get_all_variables())
                 result = self._execute_statement(statement, self.execution_context)
                 # Only a q:if whose branch ran a q:return, or a q:loop that
                 # collected at least one, ends the component here. q:set,
@@ -384,30 +391,12 @@ class ComponentRuntime:
         if not isinstance(processed_value, str):
             return processed_value
 
-        # Remove quotes if it's a string literal (after databinding)
-        if processed_value.startswith('"') and processed_value.endswith('"'):
-            return processed_value[1:-1]
-        if processed_value.startswith("'") and processed_value.endswith("'"):
-            return processed_value[1:-1]
-        
-        # Try to parse JSON
-        if processed_value.startswith('{') or processed_value.startswith('['):
-            try:
-                import json
-                return json.loads(processed_value)
-            except:
-                pass
-
-        # Try to parse as number
-        try:
-            # Try int first
-            if '.' not in processed_value:
-                return int(processed_value)
-            else:
-                return float(processed_value)
-        except (ValueError, AttributeError):
-            # Not a number, return as string
-            return processed_value
+        # RET-2: anything that is not a single {expression} is TEXT. The
+        # result used to be re-parsed after interpolation — as JSON when it
+        # started with { or [, as a number when it looked like one — so
+        # "{i}.{j}" came back as the float 1.2 and a literal "007" as 7 (a
+        # postcode "01310" would lose its zero).
+        return processed_value
     
     def _execute_statement(self, statement, context):
         """Execute a control flow statement"""
