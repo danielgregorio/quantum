@@ -1,239 +1,195 @@
-# Variable Databinding
+# Expressions & Databinding
 
-Quantum's variable databinding system enables dynamic content substitution using `{variable}` syntax. This powerful feature transforms static components into dynamic, data-driven applications.
+Anything between curly braces is an expression: `{total * 2}`. Quantum evaluates
+it against the variables in scope and puts the result in place.
 
-## Basic Syntax
+Every example on this page runs as shown — `tests/docs` executes each block and
+compares it with the **Output** below it.
 
-Variable databinding uses curly braces to reference variables in scope:
+## A value, or text with values in it
+
+When an attribute is **exactly one expression**, you get the value with its
+type. When there is anything else around it, you get text:
 
 ```xml
-<q:component name="BasicBinding" xmlns:q="https://quantum.lang/ns">
-  <q:loop type="range" var="i" from="1" to="3">
-    <q:return value="Item number {i}" />
-  </q:loop>
+<q:component name="Pedido" xmlns:q="https://quantum.lang/ns">
+  <q:set name="preco" value="9.5" type="number" />
+  <q:set name="qtd" value="3" type="number" />
+  <q:return value="{preco * qtd}" />
 </q:component>
 ```
 
-**Output:** `["Item number 1", "Item number 2", "Item number 3"]`
-
-## Arithmetic Expressions
-
-Databinding supports mathematical expressions within curly braces:
+**Output:** `28.5`
 
 ```xml
-<q:loop type="range" var="i" from="1" to="3">
-  <q:return value="Number: {i}, Double: {i * 2}, Next: {i + 1}" />
-</q:loop>
-```
-
-**Output:** `["Number: 1, Double: 2, Next: 2", "Number: 2, Double: 4, Next: 3", "Number: 3, Double: 6, Next: 4"]`
-
-### Supported Operators
-
-- **Addition**: `{i + 5}`
-- **Subtraction**: `{i - 2}`
-- **Multiplication**: `{i * 3}`
-- **Division**: `{i / 2}`
-- **Modulo**: `{i % 2}`
-- **Parentheses**: `{(i + 1) * 2}`
-
-## Variable Scope
-
-Variables are available within their defining scope and nested scopes:
-
-### Loop Variables
-
-```xml
-<q:loop type="range" var="x" from="1" to="2">
-  <q:loop type="range" var="y" from="1" to="2">
-    <q:return value="Point ({x}, {y})" />
-  </q:loop>
-</q:loop>
-```
-
-**Output:** `["Point (1, 1)", "Point (1, 2)", "Point (2, 1)", "Point (2, 2)"]`
-
-### Index Variables
-
-Array and list loops can provide index variables:
-
-```xml
-<q:loop type="array" var="fruit" index="idx" items='["apple", "banana"]'>
-  <q:return value="Item {idx}: {fruit}" />
-</q:loop>
-```
-
-**Output:** `["Item 0: apple", "Item 1: banana"]`
-
-## Advanced Patterns
-
-### Complex Expressions
-
-Combine multiple variables and operations:
-
-```xml
-<q:loop type="range" var="i" from="1" to="3">
-  <q:loop type="range" var="j" from="1" to="2">
-    <q:return value="Sum: {i + j}, Product: {i * j}" />
-  </q:loop>
-</q:loop>
-```
-
-### Conditional Expressions
-
-Use databinding with conditional logic:
-
-```xml
-<q:loop type="range" var="i" from="1" to="5">
-  <q:if condition="i % 2 == 0">
-    <q:return value="Even: {i}, Half: {i / 2}" />
-  <q:else>
-    <q:return value="Odd: {i}, Squared: {i * i}" />
-  </q:else>
-  </q:if>
-</q:loop>
-```
-
-## Data Types
-
-Databinding works with different data types:
-
-### Strings
-
-```xml
-<q:loop type="list" var="name" items="Alice,Bob,Charlie">
-  <q:return value="Hello, {name}!" />
-</q:loop>
-```
-
-### Numbers
-
-```xml
-<q:loop type="array" var="price" items="[10.99, 25.50, 15.75]">
-  <q:return value="Price: ${price}, Tax: ${price * 0.1}" />
-</q:loop>
-```
-
-## Error Handling
-
-Quantum provides helpful error handling for databinding issues:
-
-### Missing Variables
-
-```xml
-<!-- This will show an error if 'undefined_var' is not in scope -->
-<q:return value="Value: {undefined_var}" />
-```
-
-**Error:** `NameError: name 'undefined_var' is not defined in expression: undefined_var`
-
-### Invalid Expressions
-
-```xml
-<!-- This will show an error for invalid syntax -->
-<q:return value="Invalid: {i +}" />
-```
-
-**Error:** `SyntaxError: invalid syntax in expression: i +`
-
-### Safe Fallback
-
-When an expression fails, Quantum provides contextual error information while continuing execution where possible.
-
-## Performance Considerations
-
-- **Expression Evaluation**: Complex expressions are evaluated for each use
-- **Variable Lookup**: Variable resolution is optimized for nested scopes
-- **String Interpolation**: Multiple variables in one string are processed efficiently
-
-## Best Practices
-
-### Clear Variable Names
-
-```xml
-<!-- Good -->
-<q:loop type="range" var="userIndex" from="1" to="10">
-  <q:return value="User {userIndex}" />
-</q:loop>
-
-<!-- Less clear -->
-<q:loop type="range" var="i" from="1" to="10">
-  <q:return value="User {i}" />
-</q:loop>
-```
-
-### Avoid Complex Expressions
-
-```xml
-<!-- Good - clear and readable -->
-<q:loop type="range" var="i" from="1" to="5">
-  <q:return value="Number: {i}, Double: {i * 2}" />
-</q:loop>
-
-<!-- Harder to read -->
-<q:loop type="range" var="i" from="1" to="5">
-  <q:return value="Complex: {((i + 1) * 2) - (i / 2)}" />
-</q:loop>
-```
-
-### Consistent Spacing
-
-```xml
-<!-- Consistent spacing makes expressions more readable -->
-<q:return value="Result: {i + 1}, Total: {i * factor}" />
-```
-
-## Integration Examples
-
-### With Conditionals
-
-```xml
-<q:loop type="range" var="score" from="1" to="100" step="25">
-  <q:if condition="score >= 90">
-    <q:return value="Score {score}: Excellent!" />
-  <q:elseif condition="score >= 70">
-    <q:return value="Score {score}: Good" />
-  <q:else>
-    <q:return value="Score {score}: Needs improvement" />
-  </q:else>
-  </q:if>
-</q:loop>
-```
-
-### With Multiple Loop Types
-
-```xml
-<q:component name="DataMatrix" xmlns:q="https://quantum.lang/ns">
-  <q:loop type="array" var="row" index="r" items='[["A", "B"], ["C", "D"]]'>
-    <q:loop type="array" var="cell" index="c" items="{row}">
-      <q:return value="Cell[{r}][{c}]: {cell}" />
-    </q:loop>
-  </q:loop>
+<q:component name="Resumo" xmlns:q="https://quantum.lang/ns">
+  <q:set name="preco" value="9.5" type="number" />
+  <q:set name="qtd" value="3" type="number" />
+  <q:return value="{qtd} items, total {preco * qtd}" />
 </q:component>
 ```
 
-## Syntax Reference
+**Output:** `"3 items, total 28.5"`
 
-### Basic Pattern
-- `{variable}` - Simple variable substitution
-- `{expression}` - Arithmetic expression evaluation
+## Operators
 
-### Supported in Expressions
-- Variables from current scope
-- Basic arithmetic operators (`+`, `-`, `*`, `/`, `%`)
-- Parentheses for grouping
-- Numeric literals
+| Kind | Operators |
+|------|-----------|
+| Arithmetic | `+` `-` `*` `/` `//` (integer division) `%` `**` |
+| Comparison | `==` `!=` `<` `<=` `>` `>=` `in` `not in` |
+| Logic | `and` `or` `not` — or `&&` `\|\|` `!` |
+| Choice | `value if condition else other` |
 
-### Error Handling
-- Missing variables: `NameError` with variable name
-- Invalid syntax: `SyntaxError` with expression details
-- Graceful degradation when possible
+Values that arrive as text — a form field, a query parameter, a tool argument
+from an LLM — are treated as numbers when they look like numbers, so `+` adds:
 
-## Coming Soon
+```xml
+<q:component name="Soma" xmlns:q="https://quantum.lang/ns">
+  <q:set name="a" value="17" />
+  <q:set name="b" value="25" />
+  <q:return value="{a + b}" />
+</q:component>
+```
 
-Future databinding enhancements:
+**Output:** `42`
 
-- **String Functions**: `{string.upper()}`, `{string.length}`
-- **Date/Time**: `{date.format()}`, `{time.now}`
-- **Conditional Operators**: `{condition ? value1 : value2}`
-- **Array Access**: `{array[index]}`, `{object.property}`
+```xml
+<q:component name="Idade" xmlns:q="https://quantum.lang/ns">
+  <q:set name="idade" value="20" type="number" />
+  <q:set name="convite" value="false" type="boolean" />
+  <q:return value="{'entra' if idade >= 18 && !convite else 'fila'}" />
+</q:component>
+```
+
+**Output:** `"entra"`
+
+## Reading lists and records
+
+```xml
+<q:component name="Leitura" xmlns:q="https://quantum.lang/ns">
+  <q:set name="user" type="object" value='{"name": "Ana", "tags": ["admin", "dev"]}' />
+  <q:return value="{user.name} has {user.tags.length} tags, first {user.tags[0]}, last {user.tags[-1]}" />
+</q:component>
+```
+
+**Output:** `"Ana has 2 tags, first admin, last dev"`
+
+`true`, `false` and `null` are literals. Strings use single quotes inside a
+double-quoted attribute: `{status == 'ativo'}`.
+
+## Functions
+
+| Function | Example | Result |
+|----------|---------|--------|
+| `upper(s)`, `lower(s)`, `trim(s)` | `upper('ana')` | `ANA` |
+| `replace(s, old, new)` | `replace('a-b', '-', '+')` | `a+b` |
+| `split(s, sep=',')` | `split('a,b')` | `['a', 'b']` |
+| `contains(s, part)` | `contains('quantum', 'ant')` | `true` |
+| `len(x)`, `first(x)`, `last(x)` | `len(itens)` | number of items |
+| `join(list, sep=', ')`, `sort(list)` | `join(sort(tags), ' / ')` | text |
+| `round(n, digits=0)`, `abs`, `min`, `max` | `round(2.567, 2)` | `2.57` |
+| `int(x)`, `float(x)`, `str(x)` | `int('42')` | `42` |
+| `now()` | `now()` | current date and time |
+| `dateAdd(unit, n, start=now)` | `dateAdd('d', 7)` | a week from now |
+| `dateDiff(unit, start, end)` | `dateDiff('h', a, b)` | whole hours |
+| `dateFormat(date, pattern)` | `dateFormat(now(), '%d/%m/%Y')` | `10/09/2026` |
+| `hashPassword(s)`, `verifyPassword(s, hash)` | see [Authentication](/guide/authentication) | |
+
+Units for the date functions: `s`, `n` (minutes), `h`, `d`, `w`. A
+`q:function` declared in the component is called the same way: `{dobro(preco)}`.
+
+```xml
+<q:component name="Funcoes" xmlns:q="https://quantum.lang/ns">
+  <q:function name="dobro">
+    <q:param name="x" type="number" />
+    <q:return value="{x * 2}" />
+  </q:function>
+  <q:set name="tags" value='["dev", "admin"]' type="array" />
+  <q:return value="{upper(join(sort(tags), ' / '))} {dobro(21)}" />
+</q:component>
+```
+
+**Output:** `"ADMIN / DEV 42"`
+
+## Scoped variables
+
+`session.`, `application.`, `request.`, `form.`, `query.` and `cookie.` read
+from their scope. A page often renders before the value exists — before login,
+say — so reading one that is not set gives empty text:
+
+```xml
+<q:component name="Ola" xmlns:q="https://quantum.lang/ns">
+  <q:return value="[{session.nome}]" />
+</q:component>
+```
+
+**Output:** `"[]"`
+
+Doing arithmetic with a value that is not set is an error, not an empty
+result. For a counter, use `operation="increment"`, which starts from zero:
+
+```xml
+<q:component name="Visitas" xmlns:q="https://quantum.lang/ns">
+  <q:set name="session.visitas" operation="increment" />
+  <q:return value="{session.visitas}" />
+</q:component>
+```
+
+**Output:** `1`
+
+## When an expression fails
+
+In a `q:` attribute, an expression that cannot be evaluated stops the component
+with an error that names it — nothing is silently replaced:
+
+```xml
+<q:component name="Erro" xmlns:q="https://quantum.lang/ns">
+  <q:set name="total" value="3" type="number" />
+  <q:return value="{totl + 1}" />
+</q:component>
+```
+
+**Error:** `{totl + 1} could not be evaluated: variable 'totl' is not defined, did you mean 'total'?`
+
+The same holds for a failed evaluation (`{10 / zero}`) and for arithmetic on a
+scoped value that is not set.
+
+Two places are deliberately more forgiving:
+
+- **Conditions test for presence.** A name, key or attribute that does not
+  exist makes a `condition` false, so `<q:if condition="flash">` works before
+  there is a flash message. Anything else — a syntax error, a function that
+  does not exist — is still an error.
+- **HTML content keeps the text.** An expression in page content that does not
+  resolve is rendered as written and logged once. Page content also holds code
+  samples and stray braces, and those must not break the page.
+
+```xml
+<q:component name="Presenca" xmlns:q="https://quantum.lang/ns">
+  <q:if condition="flash">
+    <q:return value="tem" />
+  </q:if>
+  <q:return value="nao tem" />
+</q:component>
+```
+
+**Output:** `"nao tem"`
+
+## Braces that are not expressions
+
+A JSON object and a regular-expression quantifier are left alone:
+
+```xml
+<q:component name="Literais" xmlns:q="https://quantum.lang/ns">
+  <q:set name="padrao" value="[0-9]{10,11}" />
+  <q:set name="dados" value='[{"a": 1}, {"b": 2}]' type="array" />
+  <q:return value="{padrao} {len(dados)}" />
+</q:component>
+```
+
+**Output:** `"[0-9]{10,11} 2"`
+
+## Reference
+
+The rules on this page are `EXPR-1` to `EXPR-5` in
+[SPEC.md](https://github.com/danielgregorio/quantum/blob/main/SPEC.md).

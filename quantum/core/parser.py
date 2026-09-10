@@ -369,6 +369,7 @@ class QuantumParser:
             content = normalise_html(source)
             content = self._inject_namespace(content)
             root = ET.fromstring(content)
+            self._nest_else_siblings(root)
             return self._parse_root_element(root, Path("<string>"))
         except ET.ParseError as e:
             raise QuantumParseError(_explain_xml_error(e, source))
@@ -432,6 +433,47 @@ class QuantumParser:
         else:
             raise QuantumParseError(f"Unknown root element: {root_type}")
     
+    def _nest_else_siblings(self, root: ET.Element) -> None:
+        """Move each `<q:else>` / `<q:elseif>` written right after `</q:if>`
+        into that if, so both spellings reach IfParser as the nested form.
+
+        The sibling form used to be paired only in the component body and in
+        BaseTagParser.parse_statements. Every other body — q:loop, q:function,
+        q:transaction, HTML elements and a dozen more — walks its children one
+        by one, so there the else was dropped without a word:
+        `<q:loop>...<q:if>..</q:if><q:else>..</q:else></q:loop>` never ran the
+        else, and a q:function with a sibling q:elseif returned None. Doing it
+        once on the XML tree covers every parser, including future ones.
+
+        A direct else child of a q:if is already the nested form and stays
+        where it is. An else with no q:if right before it is an error.
+        """
+        for parent in list(root.iter()):
+            if self._get_element_name(parent) == 'if':
+                continue
+            anterior = None
+            for child in list(parent):
+                if not isinstance(child.tag, str):
+                    continue                      # comments, processing instructions
+                nome = self._get_element_name(child)
+                if nome in ('else', 'elseif') and self._is_quantum_tag(child):
+                    if anterior is None:
+                        raise QuantumParseError(
+                            f"<q:{nome}> has no matching <q:if> before it. "
+                            f"Put it inside the if, or right after it: "
+                            f"<q:if ...>...</q:if> <q:{nome}>...</q:{nome}>"
+                        )
+                    parent.remove(child)
+                    anterior.tail = (anterior.tail or '') + (child.tail or '')
+                    child.tail = None
+                    anterior.append(child)
+                    continue
+                anterior = child if nome == 'if' and self._is_quantum_tag(child) else None
+
+    @staticmethod
+    def _is_quantum_tag(element: ET.Element) -> bool:
+        return element.tag.startswith('{https://quantum.lang/ns}') or element.tag.startswith('q:')
+
     def _get_element_name(self, element: ET.Element) -> str:
         """Extract element name removing namespace"""
         return element.tag.split('}')[-1] if '}' in element.tag else element.tag.split(':')[-1]

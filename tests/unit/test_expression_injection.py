@@ -184,8 +184,11 @@ class TestPayloadsWrittenIntoTemplatesAreRefused:
             ExpressionEvaluator().evaluate(payload, {})
 
     @pytest.mark.parametrize("payload", PAYLOADS)
-    def test_a_condition_written_as_the_payload_is_false(self, runtime, payload):
-        assert runtime._evaluate_condition('{' + payload + '}', {}) is False
+    def test_a_condition_written_as_the_payload_is_refused(self, runtime, payload):
+        # It used to be read as false; since EXPR-5 only a missing name reads
+        # as false, and this is refused with an error. Never true, never run.
+        with pytest.raises(ExpressionError):
+            runtime._evaluate_condition('{' + payload + '}', {})
 
     def test_databinding_refuses_the_payload(self, runtime):
         # It used to be handed back as text; since EXPR-1 it is refused with

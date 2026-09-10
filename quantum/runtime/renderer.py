@@ -21,7 +21,7 @@ from quantum.core.ast_nodes import (
 )
 from quantum.core.expression_diagnostics import is_absent_scope, report_unresolved
 from quantum.core.expressions import (
-    ExpressionEvaluator, ExpressionError, is_regex_quantifier,
+    ExpressionEvaluator, ExpressionError, UndefinedError, is_regex_quantifier,
 )
 from quantum.core.features.conditionals.src.ast_node import IfNode
 from quantum.core.features.loops.src.ast_node import LoopNode
@@ -422,8 +422,10 @@ class HTMLRenderer:
             return bool(self._expressions.evaluate(
                 stripped, self.context.get_all_variables()
             ))
-        except ExpressionError:
-            # A condition that could not be evaluated is FALSE, not true.
+        except UndefinedError:
+            # EXPR-5: a missing name, key or attribute makes a condition FALSE,
+            # not true. Other failures raise (see ComponentRuntime).
+            #
             #
             # This used to fall through to _apply_databinding, which hands back
             # the literal placeholder '{session.user.is_admin}' — a non-empty
@@ -438,6 +440,8 @@ class HTMLRenderer:
                 f"condition {condition!r} could not be evaluated; treated as false"
             ))
             return False
+        except ExpressionError as exc:
+            raise ExpressionError(f"condition {condition!r} could not be evaluated: {exc}") from exc
 
     def _render_comment(self, node: CommentNode) -> str:
         """

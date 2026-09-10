@@ -76,10 +76,33 @@ class TestExpressoes:
         # EXPR-4
         assert executar(f"<q:return value='{valor}'/>") == valor
 
-    def test_condicao_que_nao_avalia_e_falsa(self, executar):
+    @pytest.mark.parametrize('condicao', ['flash', 'session.user.is_admin', 'user.admin', 'itens[3]'])
+    def test_condicao_com_nome_ausente_e_falsa(self, executar, condicao):
         # EXPR-5: <q:if condition="flash"> antes de existir flash
-        assert executar('<q:if condition="{flash}"><q:return value="sim"/></q:if>'
+        assert executar('<q:set name="user" type="object" value=\'{"nome": "a"}\'/>'
+                        '<q:set name="itens" type="array" value="[1]"/>'
+                        f'<q:if condition="{condicao}"><q:return value="sim"/></q:if>'
                         '<q:return value="nao"/>') == 'nao'
+
+    @pytest.mark.parametrize('condicao,esperado', [
+        ('idade >= 18 && ok', 'sim'), ('idade < 18 || ok', 'sim'),
+        ('!ok || idade > 30', 'nao'), ("nome != 'x' && !(idade == 3)", 'sim'),
+        # dentro de string nao traduz: traduzido seria ' and ' in 'x&&y', falso
+        ("'&&' in 'x&&y'", 'sim')])
+    def test_operadores_estilo_javascript(self, executar, condicao, esperado):
+        # EXPR-6 (antes: && e || nao parseavam e a condicao era falsa sempre)
+        assert executar('<q:set name="idade" value="20" type="number"/>'
+                        '<q:set name="ok" value="true" type="boolean"/>'
+                        '<q:set name="nome" value="ana"/>'
+                        f'<q:if condition="{condicao}"><q:return value="sim"/></q:if>'
+                        '<q:return value="nao"/>') == esperado
+
+    @pytest.mark.parametrize('condicao', ['idade === 18', 'maior(idade)'])
+    def test_condicao_com_outro_erro_e_erro(self, executar, condicao):
+        # EXPR-5: so ausencia vira falso; sintaxe ou funcao inexistente e erro
+        with pytest.raises(Exception, match='could not be evaluated'):
+            executar('<q:set name="idade" value="20" type="number"/>'
+                     f'<q:if condition="{condicao}"><q:return value="sim"/></q:if>')
 
 
 class _Api(http.server.BaseHTTPRequestHandler):

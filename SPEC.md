@@ -42,6 +42,14 @@ execução seguir.
 **LOOP-3** — Os `q:return` de um loop aninhado entram soltos, em ordem, na lista
 do loop externo. Um valor que por acaso é uma lista entra como um item.
 
+## 2a. Condicionais
+
+**IF-1** — `q:elseif` e `q:else` podem ser escritos dentro do `q:if` ou logo
+depois de `</q:if>`, com o mesmo significado, em qualquer corpo: componente,
+`q:loop`, `q:function`, `q:action`, elementos HTML. Um `q:elseif`/`q:else` sem
+um `q:if` imediatamente antes é erro de parse. Dentro de um `q:if`, um `q:else`
+filho direto pertence a esse `q:if`.
+
 ## 3. Ações e formulários
 
 **ACT-1** — Numa página com várias `q:action`, a action executada é a nomeada pelo
@@ -123,9 +131,15 @@ literal e é registrada no log uma vez por expressão distinta. Em qualquer luga
 um objeto JSON (`{"a": 1}`) e um quantificador de regex (`\d{10,11}`) não são
 expressões e passam intactos.
 
-**EXPR-5** — Uma `condition` que não pode ser avaliada é falsa, e é registrada
-no log uma vez. `<q:if condition="{flash}">` antes de existir `flash` não
-executa o ramo.
+**EXPR-5** — Uma `condition` é um teste de presença: um nome, chave, atributo ou
+índice que não existe a torna falsa, registrado no log uma vez.
+`<q:if condition="flash">` antes de existir `flash` não executa o ramo. Qualquer
+outra falha (sintaxe inválida, função que não existe) é erro, como em EXPR-2.
+Nunca uma falha torna uma condição verdadeira.
+
+**EXPR-6** — Além da sintaxe de Python (`and`, `or`, `not`), as expressões aceitam
+`&&`, `||` e `!` com o mesmo significado. `!=` continua sendo diferença, e nada
+dentro de uma string é traduzido.
 
 ## 7. Invocação
 

@@ -26,7 +26,7 @@ from quantum.core.expression_diagnostics import (
     is_absent_scope, looks_like_json_object, report_unresolved, root_scope,
 )
 from quantum.core.expressions import (
-    ExpressionEvaluator, ExpressionError, is_regex_quantifier,
+    ExpressionEvaluator, ExpressionError, UndefinedError, is_regex_quantifier,
 )
 from quantum.core.features.conditionals.src.ast_node import IfNode
 from quantum.core.features.loops.src.ast_node import LoopNode
@@ -486,8 +486,13 @@ class ComponentRuntime:
 
         try:
             return bool(self._expressions.evaluate(stripped, context or {}))
-        except ExpressionError:
-            # A condition that could not be evaluated is FALSE.
+        except UndefinedError:
+            # EXPR-5: a condition is a presence test. A name, key or attribute
+            # that does not exist makes it FALSE (never true, see below).
+            # Anything else — a syntax error, a function that does not exist —
+            # propagates as an error: reading those as false is how
+            # `age >= 18 && ok` took the else branch for every input.
+            #
             #
             # It used to fall through to a chain that interpolated the variable
             # VALUES into the text and took the truthiness of the result. For a
@@ -506,6 +511,8 @@ class ComponentRuntime:
                 f"condition {condition!r} could not be evaluated; treated as false"
             ))
             return False
+        except ExpressionError as exc:
+            raise ExpressionError(f"condition {condition!r} could not be evaluated: {exc}") from exc
 
     def _apply_databinding(self, text: str, context: Dict[str, Any]) -> Any:
         """Apply variable databinding to text using {variable} syntax.

@@ -35,6 +35,15 @@ class ExpressionError(Exception):
     """Raised when an expression cannot be evaluated."""
 
 
+class UndefinedError(ExpressionError):
+    """A name, key or attribute that does not exist.
+
+    Kept apart from the other failures because a condition is a presence test
+    (EXPR-5): `<q:if condition="flash">` is false before there is a flash, but
+    `a === b` or a misspelled function is still an error.
+    """
+
+
 # `{n}`, `{n,}` and `{n,m}` are regex quantifiers, not Quantum expressions.
 # They occur for real: examples/form_validation.q has pattern="\d{10,11}" and
 # examples/python-scripting.q has r'[a-zA-Z]{2,}'. The old evaluator left them
@@ -210,14 +219,18 @@ def _both_numeric(left: Any, right: Any) -> bool:
 
 
 
-def _normalise_not(source: str) -> str:
-    """Rewrite JavaScript-style `!x` negation into Python's `not x`.
+def _normalise_js_operators(source: str) -> str:
+    """Rewrite JavaScript-style `!x`, `a && b` and `a || b` into Python's
+    `not`, `and` and `or`.
 
-    Real .q files use it ({!result.success} appears across the examples), so it
-    is part of the language surface whether or not it was ever specified. `!=`
-    is left alone, and `!` inside a string literal is not touched.
+    Real .q files use them ({!result.success} appears across the examples, and
+    docs/guide/conditionals.md teaches `age >= 18 && hasLicense`), so they are
+    part of the language surface. `&&` and `||` were never translated: the
+    condition failed to parse and, read as false, took the else branch for
+    every input. `!=` is left alone, and nothing inside a string literal is
+    touched.
     """
-    if '!' not in source:
+    if '!' not in source and '&&' not in source and '||' not in source:
         return source
 
     out = []
@@ -239,6 +252,10 @@ def _normalise_not(source: str) -> str:
         if ch == '!' and i + 1 < len(source) and source[i + 1] != '=':
             out.append('not ')
             i += 1
+            continue
+        if source[i:i + 2] in ('&&', '||'):
+            out.append(' and ' if ch == '&' else ' or ')
+            i += 2
             continue
         out.append(ch)
         i += 1
@@ -281,7 +298,7 @@ class ExpressionEvaluator:
         if len(source) > self.max_length:
             raise ExpressionError(f"expression exceeds {self.max_length} characters")
 
-        source = _normalise_not(source)
+        source = _normalise_js_operators(source)
 
         try:
             tree = ast.parse(source, mode='eval')
@@ -467,7 +484,9 @@ class ExpressionEvaluator:
                 if isinstance(target, dict):
                     return target.get(key)
                 return target[key]
-            except (IndexError, KeyError, TypeError) as exc:
+            except (IndexError, KeyError) as exc:
+                raise UndefinedError(f"cannot index: {exc}") from exc
+            except TypeError as exc:
                 raise ExpressionError(f"cannot index: {exc}") from exc
 
         if isinstance(node, ast.Dict):
@@ -513,7 +532,7 @@ class ExpressionEvaluator:
             return False
         if name == 'null':
             return None
-        raise ExpressionError(
+        raise UndefinedError(
             f"variable {name!r} is not defined{_suggest(name, ctx)}"
         )
 
@@ -521,7 +540,7 @@ class ExpressionEvaluator:
         if isinstance(target, dict):
             if attr in target:
                 return target[attr]
-            raise ExpressionError(
+            raise UndefinedError(
                 f"key {attr!r} not found{_suggest(attr, target)}"
             )
         if isinstance(target, (list, tuple, str)) and attr == 'length':
@@ -560,7 +579,7 @@ class ExpressionEvaluator:
                 f"{attr!r}; use .length for the count, or the query's "
                 f"<name>_result for its metadata"
             )
-        raise ExpressionError(
+        raise UndefinedError(
             f"attribute {attr!r} not found on {type(target).__name__}"
             f"{_suggest(attr, target)}"
         )

@@ -1,412 +1,173 @@
 # Conditionals (q:if, q:elseif, q:else)
 
-Quantum provides a comprehensive conditional system that allows you to control the flow of your components based on runtime conditions. The syntax is intuitive and closely mirrors traditional programming constructs.
+`q:if` runs its body when its `condition` is true. `q:elseif` and `q:else` add
+alternatives. Every example on this page with an **Output** is executed by the
+test suite.
 
-## Basic Syntax
-
-### Simple If Statement
-
-The most basic conditional uses `q:if` with a `condition` attribute:
+## If, elseif, else
 
 ```xml
-<q:component name="AgeCheck" xmlns:q="https://quantum.lang/ns">
-  <q:param name="age" type="number" required="true" />
-
-  <q:if condition="age >= 18">
-    <q:return value="You are an adult" />
-  </q:if>
-</q:component>
-```
-
-### If-Else Statement
-
-Add an alternative branch with `q:else`:
-
-```xml
-<q:component name="AccessControl" xmlns:q="https://quantum.lang/ns">
-  <q:param name="age" type="number" required="true" />
-
-  <q:if condition="age >= 18">
-    <q:return value="Access granted" />
-  </q:if>
-  <q:else>
-    <q:return value="Access denied - must be 18 or older" />
-  </q:else>
-</q:component>
-```
-
-### If-ElseIf-Else Chain
-
-For multiple conditions, use `q:elseif`:
-
-```xml
-<q:component name="GradeCalculator" xmlns:q="https://quantum.lang/ns">
-  <q:param name="score" type="number" required="true" />
+<q:component name="Nota" xmlns:q="https://quantum.lang/ns">
+  <q:param name="score" type="number" default="85" />
 
   <q:if condition="score >= 90">
-    <q:return value="Grade: A" />
+    <q:return value="A" />
   </q:if>
   <q:elseif condition="score >= 80">
-    <q:return value="Grade: B" />
-  </q:elseif>
-  <q:elseif condition="score >= 70">
-    <q:return value="Grade: C" />
-  </q:elseif>
-  <q:elseif condition="score >= 60">
-    <q:return value="Grade: D" />
+    <q:return value="B" />
   </q:elseif>
   <q:else>
-    <q:return value="Grade: F" />
+    <q:return value="C" />
   </q:else>
 </q:component>
 ```
 
-## Condition Expressions
+**Output:** `"B"`
 
-### Comparison Operators
-
-| Operator | Description | Example |
-|----------|-------------|---------|
-| `==` | Equal to | `condition="status == 'active'"` |
-| `!=` | Not equal to | `condition="role != 'guest'"` |
-| `>` | Greater than | `condition="count > 0"` |
-| `<` | Less than | `condition="age < 18"` |
-| `>=` | Greater than or equal | `condition="score >= 60"` |
-| `<=` | Less than or equal | `condition="quantity <= 100"` |
-
-### Logical Operators
-
-Combine conditions with logical operators:
+`q:elseif` and `q:else` can also be written **inside** the `q:if`, after its
+body. Both spellings mean the same thing, anywhere — in a component, a loop, a
+function, an action or an HTML template:
 
 ```xml
-<!-- AND operator -->
-<q:if condition="age >= 18 && hasLicense == true">
-  <q:return value="Can drive" />
-</q:if>
-
-<!-- OR operator -->
-<q:if condition="role == 'admin' || role == 'moderator'">
-  <q:return value="Has elevated permissions" />
-</q:if>
-
-<!-- NOT operator -->
-<q:if condition="!isBlocked">
-  <q:return value="User is not blocked" />
-</q:if>
-
-<!-- Combined -->
-<q:if condition="(age >= 21 || hasParentConsent) && !isBanned">
-  <q:return value="Access allowed" />
-</q:if>
-```
-
-### Boolean Values
-
-Check boolean variables directly:
-
-```xml
-<q:set name="isActive" type="boolean" value="true" />
-
-<q:if condition="isActive">
-  <q:return value="Active user" />
-</q:if>
-
-<q:if condition="!isActive">
-  <q:return value="Inactive user" />
-</q:if>
-```
-
-### String Comparisons
-
-Compare string values:
-
-```xml
-<q:set name="status" value="pending" />
-
-<q:if condition="status == 'pending'">
-  <q:return value="Awaiting approval" />
-</q:if>
-<q:elseif condition="status == 'approved'">
-  <q:return value="Request approved" />
-</q:elseif>
-<q:elseif condition="status == 'rejected'">
-  <q:return value="Request denied" />
-</q:elseif>
-</q:component>
-```
-
-### Arithmetic in Conditions
-
-Perform calculations within conditions:
-
-```xml
-<q:set name="price" value="100" />
-<q:set name="discount" value="20" />
-
-<q:if condition="price - discount > 50">
-  <q:return value="Final price is above $50" />
-</q:if>
-
-<q:if condition="price * 0.9 <= 90">
-  <q:return value="10% discount brings price to $90 or less" />
-</q:if>
-```
-
-### Modulo Operations
-
-Check for even/odd numbers or patterns:
-
-```xml
-<q:loop type="range" var="i" from="1" to="10">
-  <q:if condition="i % 2 == 0">
-    <q:return value="{i} is even" />
-  </q:if>
-  <q:else>
-    <q:return value="{i} is odd" />
-  </q:else>
-</q:loop>
-```
-
-## Nested Conditionals
-
-Conditionals can be nested for complex logic:
-
-```xml
-<q:component name="UserAccess" xmlns:q="https://quantum.lang/ns">
-  <q:param name="userType" type="string" required="true" />
-  <q:param name="subscriptionLevel" type="string" default="free" />
-  <q:param name="age" type="number" required="true" />
-
-  <q:if condition="userType == 'admin'">
-    <q:return value="Full access granted" />
-  </q:if>
-  <q:elseif condition="userType == 'member'">
-    <q:if condition="subscriptionLevel == 'premium'">
-      <q:return value="Premium member access" />
-    </q:if>
-    <q:elseif condition="subscriptionLevel == 'basic'">
-      <q:if condition="age >= 18">
-        <q:return value="Basic adult member access" />
-      </q:if>
+<q:component name="ParImpar" xmlns:q="https://quantum.lang/ns">
+  <q:loop type="range" var="i" from="1" to="4">
+    <q:if condition="i % 2 == 0">
+      <q:return value="{i} even" />
       <q:else>
-        <q:return value="Basic youth member access" />
+        <q:return value="{i} odd" />
       </q:else>
-    </q:elseif>
-    <q:else>
-      <q:return value="Free member access" />
-    </q:else>
-  </q:elseif>
-  <q:else>
-    <q:return value="Guest access only" />
-  </q:else>
-</q:component>
-```
-
-## Conditionals with Loops
-
-Combine conditionals with loops for powerful data processing:
-
-```xml
-<q:component name="FilteredList" xmlns:q="https://quantum.lang/ns">
-  <q:set name="items" value='[
-    {"name": "Apple", "type": "fruit", "price": 1.50},
-    {"name": "Carrot", "type": "vegetable", "price": 0.75},
-    {"name": "Banana", "type": "fruit", "price": 0.50}
-  ]' />
-
-  <q:return value="Fruits under $1.00:" />
-
-  <q:loop type="array" var="item" items="{items}">
-    <q:if condition="item.type == 'fruit' && item.price < 1.00">
-      <q:return value="- {item.name}: ${item.price}" />
     </q:if>
   </q:loop>
 </q:component>
 ```
 
-**Output:**
-```
-["Fruits under $1.00:", "- Banana: $0.50"]
-```
+**Output:** `["1 odd", "2 even", "3 odd", "4 even"]`
 
-## Conditionals in Functions
+A `q:else` or `q:elseif` with no `q:if` right before it is a parse error.
 
-Use conditionals to implement function logic:
+## Writing conditions
+
+A condition is an [expression](/guide/databinding), with or without braces:
+`condition="age >= 18"` and `condition="{age >= 18}"` are the same.
+
+| | |
+|---|---|
+| Comparison | `==` `!=` `<` `<=` `>` `>=` `in` |
+| Logic | `and` `or` `not`, or `&&` `\|\|` `!` |
+| Text | `status == 'active'` — single quotes inside the attribute |
 
 ```xml
-<q:component name="DiscountCalculator" xmlns:q="https://quantum.lang/ns">
-  <q:function name="calculateDiscount" returnType="number">
-    <q:param name="total" type="number" required="true" />
-    <q:param name="customerType" type="string" default="regular" />
+<q:component name="Filtro" xmlns:q="https://quantum.lang/ns">
+  <q:set name="items" type="array" value='[
+    {"name": "Apple", "type": "fruit", "price": 1.50},
+    {"name": "Carrot", "type": "vegetable", "price": 0.75},
+    {"name": "Banana", "type": "fruit", "price": 0.45}
+  ]' />
 
-    <q:if condition="customerType == 'vip'">
-      <q:return value="{total * 0.20}" />
+  <q:loop type="array" var="item" items="{items}">
+    <q:if condition="item.type == 'fruit' && item.price < 1.00">
+      <q:return value="{item.name}: {item.price}" />
     </q:if>
-    <q:elseif condition="customerType == 'member'">
-      <q:return value="{total * 0.10}" />
-    </q:elseif>
-    <q:elseif condition="total > 100">
-      <q:return value="{total * 0.05}" />
-    </q:elseif>
-    <q:else>
-      <q:return value="0" />
-    </q:else>
+  </q:loop>
+</q:component>
+```
+
+**Output:** `["Banana: 0.45"]`
+
+### True and false
+
+`false`, `0`, empty text, an empty list and `null` are false; everything else is
+true. The **text** `"false"` is not empty, so it is true — declare booleans with
+`type="boolean"`:
+
+```xml
+<q:component name="Booleanos" xmlns:q="https://quantum.lang/ns">
+  <q:set name="texto" value="false" />
+  <q:set name="booleano" value="false" type="boolean" />
+  <q:set name="r" value="" />
+  <q:if condition="texto"><q:set name="r" value="{r}texto " /></q:if>
+  <q:if condition="booleano"><q:set name="r" value="{r}booleano" /></q:if>
+  <q:return value="[{r}]" />
+</q:component>
+```
+
+**Output:** `"[texto ]"`
+
+### A condition is a presence test
+
+A name, key or attribute that does not exist makes the condition **false** —
+this is what lets a page check for a value that only sometimes exists, like a
+flash message:
+
+```xml
+<q:component name="Aviso" xmlns:q="https://quantum.lang/ns">
+  <q:if condition="flash">
+    <q:return value="{flash}" />
+  </q:if>
+  <q:return value="no message" />
+</q:component>
+```
+
+**Output:** `"no message"`
+
+Any other failure is an error, never a silent false — an unfinished condition
+stops the component:
+
+```xml
+<q:component name="Incompleta" xmlns:q="https://quantum.lang/ns">
+  <q:set name="age" value="20" type="number" />
+  <q:if condition="age >">
+    <q:return value="adult" />
+  </q:if>
+</q:component>
+```
+
+**Error:** `condition 'age >' could not be evaluated`
+
+## Returning early
+
+The first `q:return` that runs ends the component or function, so a chain of
+checks does not need nesting:
+
+```xml
+<q:component name="Pedido" xmlns:q="https://quantum.lang/ns">
+  <q:function name="processar">
+    <q:param name="pedido" type="string" default="" />
+    <q:if condition="!pedido">
+      <q:return value="order id required" />
+    </q:if>
+    <q:return value="order {pedido} processed" />
   </q:function>
 
-  <q:set name="discount" value="{calculateDiscount(150, 'vip')}" />
-  <q:return value="Your discount: ${discount}" />
+  <q:return value="{processar()} / {processar('A7')}" />
 </q:component>
 ```
 
-## Conditionals with Database Queries
+**Output:** `"order id required / order A7 processed"`
 
-Check query results conditionally:
+## In a page
+
+In HTML, `q:if` decides what is rendered:
 
 ```xml
-<q:component name="UserDashboard" xmlns:q="https://quantum.lang/ns">
-  <q:query name="user" datasource="db">
-    SELECT * FROM users WHERE id = :userId
-    <q:param name="userId" value="{session.userId}" type="integer" />
-  </q:query>
-
-  <q:if condition="user_result.recordCount == 0">
-    <q:return value="User not found" />
-  </q:if>
-  <q:else>
-    <q:if condition="user.role == 'admin'">
-      <q:return value="Welcome, Administrator {user.name}!" />
+<q:component name="menu" xmlns:q="https://quantum.lang/ns">
+  <nav>
+    <q:if condition="session.authenticated">
+      <span>Hello, {session.userName}</span>
+      <a href="/logout">Logout</a>
     </q:if>
     <q:else>
-      <q:return value="Welcome, {user.name}!" />
+      <a href="/login">Login</a>
     </q:else>
-  </q:else>
+  </nav>
 </q:component>
 ```
 
-## Conditionals in HTML Output
+Before login, `session.authenticated` does not exist, so the page shows the
+Login link. See [Authentication](/guide/authentication) for the login itself.
 
-Use conditionals within HTML templates:
+## Related
 
-```xml
-<q:application id="myapp" type="html" xmlns:q="https://quantum.lang/ns">
-  <q:route path="/" method="GET">
-    <q:set name="isLoggedIn" value="true" />
-    <q:set name="userName" value="Alice" />
-
-    <html>
-    <body>
-      <nav>
-        <q:if condition="isLoggedIn">
-          <span>Welcome, {userName}!</span>
-          <a href="/logout">Logout</a>
-        </q:if>
-        <q:else>
-          <a href="/login">Login</a>
-          <a href="/register">Register</a>
-        </q:else>
-      </nav>
-    </body>
-    </html>
-  </q:route>
-</q:application>
-```
-
-## Best Practices
-
-### 1. Keep Conditions Simple
-
-Break complex conditions into multiple checks or use variables:
-
-```xml
-<!-- Good: Clear and readable -->
-<q:set name="isEligible" value="{age >= 18 && hasConsent}" />
-<q:if condition="isEligible">
-  ...
-</q:if>
-
-<!-- Avoid: Overly complex inline conditions -->
-<q:if condition="((age >= 18 || (age >= 16 && hasParentConsent)) && !isBanned && (country == 'US' || country == 'CA'))">
-  ...
-</q:if>
-```
-
-### 2. Use Early Returns
-
-For validation, use early returns to reduce nesting:
-
-```xml
-<q:function name="processOrder">
-  <q:param name="orderId" type="string" required="true" />
-
-  <q:if condition="!orderId">
-    <q:return value="Error: Order ID required" />
-  </q:if>
-
-  <q:if condition="!session.authenticated">
-    <q:return value="Error: Must be logged in" />
-  </q:if>
-
-  <!-- Main logic here with less nesting -->
-  <q:return value="Order processed" />
-</q:function>
-```
-
-### 3. Consider Readability
-
-Use meaningful variable names for conditions:
-
-```xml
-<q:set name="canPurchaseAlcohol" value="{age >= 21}" />
-<q:set name="hasValidId" value="{idStatus == 'verified'}" />
-
-<q:if condition="canPurchaseAlcohol && hasValidId">
-  <q:return value="Purchase approved" />
-</q:if>
-```
-
-### 4. Handle All Cases
-
-Always consider the else case:
-
-```xml
-<q:if condition="status == 'active'">
-  <q:return value="Active" />
-</q:if>
-<q:elseif condition="status == 'pending'">
-  <q:return value="Pending" />
-</q:elseif>
-<q:else>
-  <!-- Handle unknown status -->
-  <q:return value="Unknown status: {status}" />
-</q:else>
-```
-
-## Error Handling
-
-### Invalid Condition Syntax
-
-Quantum provides clear error messages for invalid conditions:
-
-```
-[ERROR] Component 'MyComponent' at line 5:
-  Invalid condition syntax: 'age >'
-  Expected value after operator '>'
-```
-
-### Undefined Variables
-
-Referencing undefined variables in conditions produces errors:
-
-```xml
-<!-- Error: 'unknownVar' is not defined -->
-<q:if condition="unknownVar == true">
-  ...
-</q:if>
-```
-
-## Related Documentation
-
-- [State Management (q:set)](/guide/state-management) - Variable declarations
-- [Loops (q:loop)](/guide/loops) - Iteration patterns
-- [Functions (q:function)](/guide/functions) - Reusable logic blocks
-- [Databinding](/guide/databinding) - Expression syntax
+- [Expressions & Databinding](/guide/databinding) — everything a condition can use
+- [Loops](/guide/loops)
+- [Functions](/guide/functions)

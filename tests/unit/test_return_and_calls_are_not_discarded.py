@@ -163,33 +163,8 @@ class TestReturnDentroDeLoop:
         assert coletados == []
 
 
-def _exemplos_do_guia_de_loops():
-    import json
-    import re
-    guia = pathlib.Path(__file__).resolve().parents[2] / 'docs/guide/loops.md'
-    blocos = re.findall(r'```xml\n(.*?)```\s*\n\*\*Output:\*\* `(.*?)`',
-                        guia.read_text(encoding='utf-8'), re.S)
-    return [pytest.param(xml, json.loads(saida), id=saida[:40])
-            for xml, saida in blocos]
-
-
-@pytest.mark.parametrize('xml,esperado', _exemplos_do_guia_de_loops())
-def test_cada_output_do_guia_de_loops_e_o_que_o_runtime_produz(xml, esperado):
-    # Os outputs de docs/guide/loops.md eram fabricados: nenhum saia do
-    # runtime. Este teste mantem guia e codigo juntos.
-    if '<q:component' in xml:
-        caminho = pathlib.Path(tempfile.mkdtemp()) / 'c.q'
-        caminho.write_text(xml, encoding='utf-8')
-        node = QuantumParser().parse_file(str(caminho))
-        assert ComponentRuntime().execute_component(node, {}) == esperado
-    else:
-        assert executar(xml) == esperado
-
-
-def test_o_guia_de_loops_ainda_tem_exemplos():
-    # Se o formato do markdown mudar, o parametrize acima vira zero casos e
-    # passa em silencio.
-    assert len(_exemplos_do_guia_de_loops()) >= 8
+# Os outputs de docs/guide/loops.md (que eram fabricados) sao conferidos por
+# tests/docs/test_guide_examples_run.py, junto com os das outras paginas.
 
 
 class TestChamadaDeFuncaoEmExpressao:

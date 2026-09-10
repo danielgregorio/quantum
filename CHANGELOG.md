@@ -3,6 +3,48 @@
 Quantum is pre-1.0: minor versions may break compatibility. Every change that
 can alter the behaviour of an existing app is listed under **Breaking**.
 
+## 0.11.0
+
+The release that writes the language down: `SPEC.md` states what a program
+means, rule by rule, and every rule is pinned by a test that cites it.
+
+### Breaking
+
+- **An expression that fails in a `q:` attribute is an error** that names it,
+  with a suggestion when a similar name exists (EXPR-1, EXPR-2). It used to be
+  left as literal text — `value="x{nada}y"` produced `"x{nada}y"`, and
+  `{10 / zero}` produced its own braces. HTML content is still forgiving: an
+  unresolved expression there is rendered as written and logged once (EXPR-4).
+- **Arithmetic on a session/application value that is not set is an error**
+  (EXPR-3). `{session.visitas + 1}` used to become `''` and fail later with
+  "could not convert string to float". Reading the value alone still gives
+  `''`; for counters use `operation="increment"`.
+- **Only a missing name makes a `condition` false** (EXPR-5). A syntax error or
+  an unknown function in a condition is now an error instead of a silent false.
+- **The first top-level `q:return` ends the component** (RET-1), and a `value`
+  that mixes text and expressions is always text: `"007"` stays `"007"` (RET-2).
+- **A POST whose `action` field is missing or names no action is refused with
+  400** on pages with more than one `q:action` (ACT-5). It used to run the first
+  action.
+
+### Fixed
+
+- `&&` and `||` did not parse, so any condition using them was false for every
+  input — including the examples in the conditionals guide (EXPR-6).
+- A `q:else`/`q:elseif` written after `</q:if>` was dropped inside `q:loop`,
+  `q:function`, HTML elements and most other bodies; it only worked at the top of
+  a component (IF-1).
+- `q:invoke url=` never worked without an explicit `timeout`, and its
+  `q:param`s were sent empty (INV-1).
+- `form.<field>` was empty inside `q:action` (ACT-6).
+
+### Added
+
+- `SPEC.md`, with conformance tests in `tests/conformance/`, and known gaps kept
+  as strict expected failures until decided.
+- The guide examples that show an **Output** are executed by the test suite;
+  the expressions and conditionals pages were rewritten from what runs.
+
 ## 0.10.0
 
 The release that narrows what Quantum promises to the core language plus AI,
