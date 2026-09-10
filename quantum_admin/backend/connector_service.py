@@ -20,6 +20,10 @@ SETTINGS_DIR = Path(__file__).parent.parent / "settings"
 CONNECTORS_FILE = SETTINGS_DIR / "connectors.yaml"
 
 
+class ConnectorFileError(RuntimeError):
+    """connectors.yaml could not be loaded; nothing may be written over it."""
+
+
 class ConnectorType(str, Enum):
     DATABASE = "database"
     MESSAGE_QUEUE = "mq"
@@ -249,8 +253,10 @@ class ConnectorService:
         try:
             return self._get_secret_manager().encrypt(password)
         except Exception as e:
+            # Fail closed. This returned the plain password, which was then
+            # written to connectors.yaml as if it were encrypted.
             logger.error(f"Failed to encrypt password: {e}")
-            return password
+            raise ValueError(f"could not encrypt the connector password: {e}") from e
 
     def _decrypt_password(self, encrypted: str) -> str:
         """Decrypt password from storage"""
@@ -709,8 +715,21 @@ class ConnectorService:
                         return {"success": True, "models": models[:10]}
 
                 elif connector.provider == "anthropic":
-                    self._update_status(connector.id, ConnectorStatus.CONNECTED)
-                    return {"success": True, "models": ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"]}
+                    # This used to mark the connector CONNECTED and return a
+                    # fixed model list without sending any request — a missing
+                    # or revoked key "tested" green. It now asks the API.
+                    if not password:
+                        self._update_status(connector.id, ConnectorStatus.ERROR)
+                        return {"success": False, "error": "No API key configured"}
+                    base = connector.options.get("endpoint") or "https://api.anthropic.com/v1"
+                    resp = await client.get(f"{base.rstrip('/')}/models",
+                                            headers={"x-api-key": password, "anthropic-version": "2023-06-01"})
+                    if resp.status_code == 200:
+                        models = [m.get("id") for m in resp.json().get("data", [])]
+                        self._update_status(connector.id, ConnectorStatus.CONNECTED)
+                        return {"success": True, "models": models[:10]}
+                    self._update_status(connector.id, ConnectorStatus.ERROR)
+                    return {"success": False, "error": f"HTTP {resp.status_code} from {base}"}
 
                 elif connector.provider in ["openai", "openrouter"]:
                     headers = {"Authorization": f"Bearer {password}"} if password else {}
@@ -896,13 +915,19 @@ class ConnectorService:
             with open(CONNECTORS_FILE, 'r', encoding='utf-8') as f:
                 data = yaml.safe_load(f) or []
 
+            # Fail closed on anything that does not load. An entry that failed
+            # used to be skipped with a log line — and the next save rewrote
+            # the file without it, deleting the connector. Same for an
+            # unreadable file: it returned [] and the next save emptied it.
             connectors = []
-            for item in data:
+            for posicao, item in enumerate(data):
                 try:
-                    conn = Connector(**item)
-                    connectors.append(conn)
+                    connectors.append(Connector(**item))
                 except Exception as e:
-                    logger.error(f"Failed to load connector: {e}")
+                    nome = item.get("name") if isinstance(item, dict) else item
+                    raise ConnectorFileError(
+                        f"{CONNECTORS_FILE}: entry {posicao} ({nome!r}) could not be loaded: {e}. "
+                        f"Fix the file; nothing was changed.") from e
 
             # Update cache
             self._connectors_cache = connectors
@@ -910,17 +935,22 @@ class ConnectorService:
 
             return connectors
 
+        except ConnectorFileError:
+            raise
         except Exception as e:
             logger.error(f"Error loading connectors: {e}")
-            return []
+            raise ConnectorFileError(f"{CONNECTORS_FILE} could not be read: {e}. Nothing was changed.") from e
 
     def _save_connectors(self, connectors: List[Connector]):
         """Save connectors to YAML file"""
         try:
             data = [asdict(c) for c in connectors]
 
-            with open(CONNECTORS_FILE, 'w', encoding='utf-8') as f:
+            # Atomic: a crash mid-write must not leave half a file.
+            temporario = CONNECTORS_FILE.with_suffix(".yaml.tmp")
+            with open(temporario, 'w', encoding='utf-8') as f:
                 yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
+            os.replace(temporario, CONNECTORS_FILE)
 
             # Invalidate cache
             self._connectors_cache = None
