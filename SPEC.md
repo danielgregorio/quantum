@@ -15,6 +15,13 @@
 
 ---
 
+## 0. Parse
+
+**PARSE-1** — Uma tag do namespace `q:` que a linguagem não conhece é erro de
+parse, em qualquer lugar do arquivo, e a mensagem sugere a tag de nome parecido
+quando há (`<q:sett>` → `<q:set>`). Elementos HTML e tags de outros namespaces
+não são afetados.
+
 ## 1. Retorno
 
 **RET-1** — O primeiro `q:return` executado, em ordem de documento, encerra o
@@ -126,6 +133,32 @@ sintaxe de condição que `q:if`, com os campos do registro como variáveis),
 **DATA-4** — Uma importação que falha (fonte inexistente, conteúdo inválido) é erro
 que cita o nome, a fonte e o motivo. Com `onerror="continue"` a execução segue e o
 motivo fica em `<nome>_result.error.message`, como em INV-2.
+
+## 5a. Banco de dados
+
+**DB-1** — `q:query` executa o SQL no datasource declarado em
+`quantum.config.yaml`. Cada `:nome` no SQL é ligado a um `q:param` — nunca
+interpolado — e um `:nome` sem `q:param` é erro de parse. `<nome>` é a lista de
+registros; `<nome>_result` tem `success`, `recordCount`, `columnList`,
+`executionTime` e, em escritas, `affectedRows` e `lastInsertId` (`result=` dá
+outro nome a esse objeto). Quando o resultado tem uma única linha, seus campos
+também ficam em `<nome>.<campo>`.
+
+**DB-2** — Com `paginate="true"`, `page` e `page_size`, a consulta devolve só a
+página pedida, e `<nome>_result.pagination` tem `totalRecords`, `totalPages`,
+`currentPage`, `pageSize`, `hasNextPage`, `hasPreviousPage`, `startRecord` e
+`endRecord`.
+
+**DB-3** — `q:query source="outra"` executa o SQL em memória sobre o resultado
+de uma consulta anterior, que aparece como tabela com o nome dela.
+
+**DB-4** — Dentro de `q:transaction datasource="…"`, as consultas usam esse
+datasource quando não declaram um. Se qualquer comando falhar, tudo é desfeito e
+a transação é erro que diz isso.
+
+**DB-5** — `q:query` não aceita `cache`, `ttl`, `reactive`, `interval`,
+`timeout`, `maxrows` e `batch`, que eram aceitos e nunca fizeram nada: são erro
+de parse.
 
 ## 6. Expressões
 

@@ -1,4 +1,7 @@
 <q:component name="PostView" type="page">
+  <q:import component="Styles" from="shared" />
+  <q:import component="Header" from="shared" />
+  <q:import component="Footer" from="shared" />
   <!--
     Quantum Blog - Single Post View
     Features:
@@ -18,7 +21,7 @@
   <q:set name="postSlug" value="{path.slug}" default="{query.slug}" />
 
   <!-- Query: Get the post by slug (cached 2 min) -->
-  <q:query name="post" datasource="blog-db" cache="120">
+  <q:query name="post" datasource="blog-db">
     SELECT
       p.id,
       p.title,
@@ -58,7 +61,7 @@
   </q:if>
 
   <!-- Query: Get related posts by same tag (cached 5 min) -->
-  <q:query name="relatedPosts" datasource="blog-db" cache="300">
+  <q:query name="relatedPosts" datasource="blog-db">
     SELECT
       p.title,
       p.slug,
@@ -145,12 +148,12 @@
     <meta name="twitter:description" content="{post.excerpt}" />
 
     <!-- Include shared styles -->
-    <q:include component="shared/styles" />
+    <Styles />
   </head>
   <body>
 
     <!-- Header -->
-    <q:include component="shared/header" />
+    <Header />
 
     <main class="article-container">
 
@@ -238,8 +241,8 @@
 
           <!-- Comment Form -->
           <q:action name="addComment" method="POST">
-            <q:validate field="author_name" required="true" minLength="2" maxLength="100" />
-            <q:validate field="content" required="true" minLength="10" maxLength="2000" />
+            <q:param name="author_name" required="true" minlength="2" maxlength="100"/>
+            <q:param name="content" required="true" minlength="10" maxlength="2000"/>
 
             <q:query name="insertComment" datasource="blog-db" type="execute">
               INSERT INTO comments (post_id, author_name, author_email, content)
@@ -314,7 +317,7 @@
     </main>
 
     <!-- Footer -->
-    <q:include component="shared/footer" />
+    <Footer />
 
   </body>
   </html>

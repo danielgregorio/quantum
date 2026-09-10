@@ -60,13 +60,38 @@ def exemplos():
 TODOS = list(exemplos())
 
 
+# O banco que docs/guide/query.md descreve em "The example database". Um bloco
+# com datasource="db" roda contra uma copia nova dele.
+ESQUEMA = """
+create table users (id integer primary key, name text, email text, status text);
+insert into users (name, email, status) values
+  ('Ana', 'ana@example.com', 'active'),
+  ('Bruno', 'bruno@example.com', 'active'),
+  ('Carla', 'carla@example.com', 'inactive');
+create table products (id integer primary key, name text, price real, stock integer);
+insert into products (name, price, stock) values
+  ('Notebook', 3500.0, 5), ('Mouse', 80.0, 40), ('Monitor', 1200.0, 0);
+create table orders (id integer primary key, user_id integer, total real);
+"""
+
+
 def executar(xml):
     if '<q:component' not in xml:
         xml = f'<q:component name="Doc" xmlns:q="https://quantum.lang/ns">{xml}</q:component>'
-    caminho = pathlib.Path(tempfile.mkdtemp()) / 'doc.q'
+    pasta = pathlib.Path(tempfile.mkdtemp())
+    caminho = pasta / 'doc.q'
     caminho.write_text(xml, encoding='utf-8')
+    config = {}
+    if 'datasource="db"' in xml:
+        import sqlite3
+        banco = pasta / 'app.db'
+        conexao = sqlite3.connect(banco)
+        conexao.executescript(ESQUEMA)
+        conexao.commit()
+        conexao.close()
+        config = {'datasources': {'db': {'driver': 'sqlite', 'database': str(banco)}}}
     with contextlib.redirect_stdout(io.StringIO()):
-        return ComponentRuntime(config={}).execute_component(
+        return ComponentRuntime(config=config).execute_component(
             QuantumParser().parse_file(str(caminho)), {})
 
 
@@ -92,5 +117,7 @@ def test_a_extracao_encontra_os_exemplos():
     for p in TODOS:
         pagina = p.id.split(':')[0]
         por_pagina[pagina] = por_pagina.get(pagina, 0) + 1
-    assert por_pagina.get('loops.md', 0) >= 8
-    assert por_pagina.get('databinding.md', 0) >= 8
+    minimos = {'loops.md': 8, 'databinding.md': 8, 'conditionals.md': 6, 'functions.md': 6,
+               'query.md': 9, 'state-management.md': 10, 'components.md': 4}
+    faltando = {p: (por_pagina.get(p, 0), n) for p, n in minimos.items() if por_pagina.get(p, 0) < n}
+    assert not faltando, f"paginas com menos exemplos executados que o esperado: {faltando}"

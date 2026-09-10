@@ -5,6 +5,7 @@
       db:
         password: ${DB_PASSWORD}
         host: ${DB_HOST:-localhost}
+        port: ${DB_PORT:5432}      # ':' works as well as ':-'
 
 A config file is the place people put secrets by reference, and every loader
 used to read `${DB_PASSWORD}` as the literal password. There were four loaders
@@ -16,7 +17,7 @@ import os
 import re
 from typing import Any
 
-_REFERENCE = re.compile(r'\$\$|\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}')
+_REFERENCE = re.compile(r'\$\$|\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-?([^}]*))?\}')
 
 
 class ConfigEnvError(ValueError):

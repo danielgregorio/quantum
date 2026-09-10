@@ -33,6 +33,15 @@ means, rule by rule, and every rule is pinned by a test that cites it.
 - **`q:set` types are checked** (ERR-1). `type="number"` keeps fractions —
   `{5 / 2}` used to store `2`; `type="integer"` refuses `3.5` instead of
   truncating it; `type="boolean"` refuses anything but true/false/1/0/yes/no.
+- **An unknown `q:` tag is a parse error**, with a suggestion (PARSE-1).
+  `<q:sett>`, `<q:retrun>` or a tag the docs promised but never existed
+  (`q:try`, `q:storedproc`, `q:fetch`, `q:include`, `q:throw`) used to be
+  dropped silently, and the program ran without it.
+- **`q:query` refuses `cache`, `ttl`, `reactive`, `interval`, `timeout`,
+  `maxrows` and `batch`** (DB-5): they never did anything.
+- **The `q:fetch` data-fetching feature was removed.** Its parser was never
+  registered, so `q:fetch` never ran in a `.q` file; its guide page, example
+  and module are gone.
 - **`q:function` parameters are always converted and checked** against their
   `q:param` rules, like actions (FN-1). `validate="true"` was needed before, and
   even then `type="email"` and `min`/`max` were not checked.
@@ -70,6 +79,10 @@ means, rule by rule, and every rule is pinned by a test that cites it.
   has one instance per runtime.
 - A component's `q:function` could not be called from its HTML: `<p>{f(2)}</p>`
   rendered the literal text (FN-3).
+- A `q:query` inside `q:transaction datasource="…"` had to repeat the
+  datasource or the file did not parse (DB-4).
+- `${NAME:default}` (with `:` only) is accepted in `quantum.config.yaml` as well
+  as `${NAME:-default}`.
 
 ### Added
 

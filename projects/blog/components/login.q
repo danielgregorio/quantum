@@ -21,8 +21,8 @@
 
   <!-- Handle login action -->
   <q:action name="login" method="POST">
-    <q:validate field="username" required="true" minLength="2" maxLength="100" />
-    <q:validate field="password" required="true" minLength="4" maxLength="255" />
+    <q:param name="username" required="true" minlength="2" maxlength="100"/>
+    <q:param name="password" required="true" minlength="4" maxlength="255"/>
 
     <!-- Query user from database -->
     <q:query name="authUser" datasource="blog-db">

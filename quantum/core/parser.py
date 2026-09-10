@@ -185,6 +185,9 @@ def _create_parser_registry(parser: 'QuantumParser') -> ParserRegistry:
     return registry
 
 
+from quantum.core.parsers.base import ParserError  # noqa: E402
+
+
 class QuantumParseError(Exception):
     """Quantum parsing error"""
     pass
@@ -375,6 +378,10 @@ class QuantumParser:
             raise QuantumParseError(_explain_xml_error(e, source))
         except QuantumParseError:
             raise
+        except ParserError as e:
+            # A tag parser's own error is a parse error with a message meant
+            # for the author, not an "Unexpected error".
+            raise QuantumParseError(str(e)) from e
         except Exception as e:
             raise QuantumParseError(f"Unexpected error: {e}")
 
@@ -408,6 +415,10 @@ class QuantumParser:
             return self.parse(source)
         except QuantumParseError:
             raise
+        except ParserError as e:
+            # A tag parser's own error is a parse error with a message meant
+            # for the author, not an "Unexpected error".
+            raise QuantumParseError(str(e)) from e
         except Exception as e:
             raise QuantumParseError(f"Unexpected error: {e}")
 
@@ -469,6 +480,17 @@ class QuantumParser:
                     anterior.append(child)
                     continue
                 anterior = child if nome == 'if' and self._is_quantum_tag(child) else None
+
+    def _unknown_tag_message(self, name: str) -> str:
+        import difflib
+        # Only Quantum tags: the registry also holds the HTML tag names, which
+        # made <q:try> suggest <q:tr>.
+        conhecidas = {tag for tag in self._parser_registry.registered_tags
+                      if type(self._parser_registry.get_parser(tag)).__name__ != 'HTMLParser'}
+        conhecidas |= {'return', 'else', 'elseif'}
+        parecidas = difflib.get_close_matches(name, sorted(conhecidas), n=3, cutoff=0.6)
+        dica = (" Did you mean " + " or ".join(f"<q:{p}>" for p in parecidas) + "?") if parecidas else ""
+        return f"<q:{name}> is not a Quantum tag.{dica}"
 
     @staticmethod
     def _is_quantum_tag(element: ET.Element) -> bool:
@@ -603,6 +625,10 @@ class QuantumParser:
         for child in parent:
             child_type = self._get_element_name(child)
 
+            # Collected by _parse_component above, not statements.
+            if child_type in ('param', 'onEvent', 'script') and self._is_quantum_tag(child):
+                continue
+
             # Special case: inline job definition (needs path parameter)
             if child_type == 'job':
                 from pathlib import Path as PathLib
@@ -680,7 +706,12 @@ class QuantumParser:
                 if self._parser_registry.html_parser.can_parse(element_type):
                     return self._parser_registry.html_parser.parse(element)
 
-            # No parser found - this is unexpected
+            # PARSE-1: a q: tag nobody parses is an error. It used to return
+            # None here and vanish — <q:sett>, <q:retrun> and <q:iff> ran as if
+            # they were not there, and so did tags the documentation described
+            # but that never existed (q:try/q:catch, q:storedproc).
+            if self._is_quantum_tag(element):
+                raise QuantumParseError(self._unknown_tag_message(element_type))
             return None
 
         # If modular parsers are disabled, raise an error

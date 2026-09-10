@@ -1,4 +1,7 @@
 <q:component name="BlogHome" type="page">
+  <q:import component="Styles" from="shared" />
+  <q:import component="Header" from="shared" />
+  <q:import component="Footer" from="shared" />
   <!--
     Quantum Blog - Home Page
     Features:
@@ -24,7 +27,7 @@
   <q:set name="tagFilter" value="{query.tag}" default="" />
 
   <!-- Query: Get total post count (cached 5 min) -->
-  <q:query name="postStats" datasource="blog-db" cache="300">
+  <q:query name="postStats" datasource="blog-db">
     SELECT
       COUNT(*) FILTER (WHERE is_published = TRUE) as total_posts,
       COUNT(DISTINCT author_id) as total_authors,
@@ -33,7 +36,7 @@
   </q:query>
 
   <!-- Query: Get all tags for filter (cached 10 min) -->
-  <q:query name="allTags" datasource="blog-db" cache="600">
+  <q:query name="allTags" datasource="blog-db">
     SELECT id, name, slug, color, post_count
     FROM tags
     WHERE post_count > 0
@@ -41,7 +44,7 @@
   </q:query>
 
   <!-- Query: Get published posts with pagination -->
-  <q:query name="posts" datasource="blog-db" cache="60">
+  <q:query name="posts" datasource="blog-db">
     SELECT
       p.id,
       p.title,
@@ -71,7 +74,7 @@
   </q:query>
 
   <!-- Query: Get featured posts for hero (cached 5 min) -->
-  <q:query name="featuredPosts" datasource="blog-db" cache="300">
+  <q:query name="featuredPosts" datasource="blog-db">
     SELECT p.title, p.slug, p.excerpt
     FROM posts p
     WHERE p.is_published = TRUE AND p.is_featured = TRUE
@@ -97,12 +100,12 @@
     <meta property="og:url" content="{application.basePath}/" />
 
     <!-- Include shared styles -->
-    <q:include component="shared/styles" />
+    <Styles />
   </head>
   <body>
 
     <!-- Header -->
-    <q:include component="shared/header" />
+    <Header />
 
     <!-- Hero Section -->
     <section class="hero">
@@ -215,7 +218,7 @@
     </main>
 
     <!-- Footer -->
-    <q:include component="shared/footer" />
+    <Footer />
 
   </body>
   </html>

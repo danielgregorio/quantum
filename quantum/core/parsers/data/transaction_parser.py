@@ -52,6 +52,15 @@ class TransactionParser(BaseTagParser):
             or self.get_attr(element, 'isolation')
         )
 
+        # DB-4: a q:query inside a transaction with datasource= uses it. Every
+        # query had to repeat it, or parsing failed with "Query requires
+        # either 'datasource' or 'source' attribute" — the guide's own
+        # transaction example did not parse.
+        for child in element:
+            if datasource and self.get_element_name(child) == 'query' \
+                    and not child.get('datasource') and not child.get('source'):
+                child.set('datasource', datasource)
+
         # Parse child statements
         for child in element:
             statement = self.parse_statement(child)

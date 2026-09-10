@@ -15,7 +15,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"greet\">\n  <q:param name=\"name\" type=\"string\" />\n  <q:return value=\"Hello, {name}!\" />\n</q:function>\n\n<q:call function=\"greet\" name=\"Alice\" />",
+        "quantum_code": "<q:function name=\"greet\">\n  <q:param name=\"name\" type=\"string\" />\n  <q:return value=\"Hello, {name}!\" />\n</q:function>\n\n<q:return value=\"{greet(name='Alice')}\" />",
         "ast": {
           "type": "FunctionNode",
           "attributes": {
@@ -28,7 +28,11 @@
         },
         "runtime_behavior": "Outputs 'Hello, Alice!'"
       },
-      "tags": ["simple", "string_return", "single_param"]
+      "tags": [
+        "simple",
+        "string_return",
+        "single_param"
+      ]
     },
     {
       "id": "func-simple-002",
@@ -41,7 +45,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"getMessage\">\n  <q:return value=\"Welcome to Quantum!\" />\n</q:function>\n\n<q:call function=\"getMessage\" />",
+        "quantum_code": "<q:function name=\"getMessage\">\n  <q:return value=\"Welcome to Quantum!\" />\n</q:function>\n\n<q:return value=\"{getMessage()}\" />",
         "ast": {
           "type": "FunctionNode",
           "attributes": {
@@ -52,7 +56,11 @@
         },
         "runtime_behavior": "Returns constant string"
       },
-      "tags": ["simple", "no_params", "constant"]
+      "tags": [
+        "simple",
+        "no_params",
+        "constant"
+      ]
     },
     {
       "id": "func-simple-003",
@@ -65,7 +73,7 @@
         }
       },
       "expected_output": {
-        "quantum_code": "<q:function name=\"greet\">\n  <q:param name=\"name\" type=\"string\" default=\"Guest\" />\n  <q:return value=\"Hello, {name}!\" />\n</q:function>\n\n<q:call function=\"greet\" />",
+        "quantum_code": "<q:function name=\"greet\">\n  <q:param name=\"name\" type=\"string\" default=\"Guest\" />\n  <q:return value=\"Hello, {name}!\" />\n</q:function>\n\n<q:return value=\"{greet()}\" />",
         "ast": {
           "type": "FunctionNode",
           "attributes": {
@@ -81,7 +89,10 @@
         },
         "runtime_behavior": "Outputs 'Hello, Guest!' when called without args"
       },
-      "tags": ["default_param", "optional_param"]
+      "tags": [
+        "default_param",
+        "optional_param"
+      ]
     }
   ]
 }

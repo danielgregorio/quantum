@@ -19,7 +19,7 @@ Demonstrates job queue for batch processing with retries
         </q:query>
 
         <q:if condition="{order.recordCount == 0}">
-            <q:throw message="Order not found: {orderId}" />
+            <q:log level="error">Order not found: {orderId}</q:log>
         </q:if>
 
         <!-- Process payment -->
@@ -54,7 +54,7 @@ Demonstrates job queue for batch processing with retries
             <q:log level="info">Order {orderId} processed successfully</q:log>
         </q:if>
         <q:else>
-            <q:throw message="Payment failed: {payment.error}" />
+            <q:log level="error">Payment failed: {payment.error}</q:log>
         </q:else>
     </q:job>
 
@@ -121,12 +121,12 @@ Demonstrates job queue for batch processing with retries
             SELECT id FROM users WHERE notifications_enabled = true
         </q:query>
 
-        <q:job name="send-notification" action="batch">
-            <q:loop type="query" var="user" items="{users}">
+        <q:loop type="array" var="user" items="{users}">
+            <q:job name="send-notification" action="dispatch">
                 <q:param name="userId" value="{user.id}" />
                 <q:param name="message" value="{form.message}" />
-            </q:loop>
-        </q:job>
+            </q:job>
+        </q:loop>
 
         <p>Scheduled {users.recordCount} notifications</p>
     </q:action>

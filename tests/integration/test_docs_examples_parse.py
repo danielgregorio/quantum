@@ -106,6 +106,8 @@ class TestASintaxeNaturalEAceita:
 
     def test_o_maior_que_continua_funcionando(self):
         # Ja era tolerado; a mudanca do `<` nao pode ter mexido nisso.
+        # (usava <q:validator>, que nunca foi uma tag: o parser a descartava
+        # calado, e o teste passava sem parsear expressao nenhuma — PARSE-1)
         self.parse('<q:component name="C">'
-                   '<q:validator expression="parseInt(value) >= 18" />'
+                   '<q:set name="adulto" value="{idade >= 18}" />'
                    '</q:component>')

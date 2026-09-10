@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "generated": true,
-  "totalExamples": 165,
+  "totalExamples": 160,
   "categories": [
     {
       "id": "state-management",
@@ -92,7 +92,7 @@
       "description": "Reusable logic with q:function and q:invoke",
       "icon": "⚡",
       "docsPath": "/guide/functions",
-      "exampleCount": 18,
+      "exampleCount": 17,
       "examples": [
         "test-function-complete.q",
         "test-function-if-logic.q",
@@ -102,7 +102,6 @@
         "test-function-params.q",
         "test-function-pure.q",
         "test-function-recursion.q",
-        "test-function-rest-api.q",
         "test-function-scope.q",
         "test-function-simple.q",
         "test-function-string-ops.q",
@@ -120,14 +119,13 @@
       "description": "Database operations with q:query and transactions",
       "icon": "🗄️",
       "docsPath": "/guide/query",
-      "exampleCount": 17,
+      "exampleCount": 16,
       "examples": [
         "job-queue-example.q",
         "job-schedule-example.q",
         "job-thread-example.q",
         "message-queue-example.q",
         "test-query-basic.q",
-        "test-query-cache.q",
         "test-query-complete.q",
         "test-query-insert.q",
         "test-query-loop.q",
@@ -252,17 +250,15 @@
       "description": "Complex examples combining multiple features",
       "icon": "🚀",
       "docsPath": "/architecture/",
-      "exampleCount": 32,
+      "exampleCount": 29,
       "examples": [
         "api-tests.q",
-        "api.q",
         "basic-tests.q",
         "browser-tests.q",
         "chat-messages.q",
         "chat-tui.q",
         "chat.q",
         "complete-test.q",
-        "fetch-example.q",
         "filebrowser.q",
         "hello.q",
         "job_execution_demo.q",
@@ -284,7 +280,6 @@
         "test-log-databinding.q",
         "test-log-with-loop.q",
         "test-mobile.q",
-        "webapp.q",
         "websocket-chat.q"
       ]
     }

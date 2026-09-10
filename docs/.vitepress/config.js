@@ -81,7 +81,6 @@ export default defineConfig({
           text: 'Data & Backend',
           items: [
             { text: 'Database Queries (q:query)', link: '/guide/query' },
-            { text: 'Data Fetching (q:fetch)', link: '/guide/data-fetching' },
             { text: 'Data Import', link: '/guide/data-import' },
             { text: 'Authentication', link: '/guide/authentication' },
             { text: 'Sessions & Scopes', link: '/guide/sessions' }

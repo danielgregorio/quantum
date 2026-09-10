@@ -1,4 +1,7 @@
 <q:component name="SearchPage" type="page">
+  <q:import component="Styles" from="shared" />
+  <q:import component="Header" from="shared" />
+  <q:import component="Footer" from="shared" />
   <!--
     Quantum Blog - Search Page
     Features:
@@ -19,7 +22,7 @@
 
   <!-- Full-text search query (cached 1 min) -->
   <q:if condition="{searchQuery != ''}">
-    <q:query name="searchResults" datasource="blog-db" cache="60">
+    <q:query name="searchResults" datasource="blog-db">
       SELECT
         p.id,
         p.title,
@@ -52,7 +55,7 @@
     </q:query>
 
     <!-- Get total count for pagination -->
-    <q:query name="searchCount" datasource="blog-db" cache="60">
+    <q:query name="searchCount" datasource="blog-db">
       SELECT COUNT(*) as total
       FROM posts p
       WHERE p.is_published = TRUE
@@ -67,7 +70,7 @@
   </q:if>
 
   <!-- Popular searches (for empty state) -->
-  <q:query name="popularTags" datasource="blog-db" cache="600">
+  <q:query name="popularTags" datasource="blog-db">
     SELECT name, slug, color, post_count
     FROM tags
     WHERE post_count > 0
@@ -76,7 +79,7 @@
   </q:query>
 
   <!-- Recent posts (for empty state) -->
-  <q:query name="recentPosts" datasource="blog-db" cache="300">
+  <q:query name="recentPosts" datasource="blog-db">
     SELECT title, slug
     FROM posts
     WHERE is_published = TRUE
@@ -98,7 +101,7 @@
     <meta name="robots" content="noindex" />
 
     <!-- Include shared styles -->
-    <q:include component="shared/styles" />
+    <Styles />
 
     <style>
       /* Search-specific styles */
@@ -192,7 +195,7 @@
   <body>
 
     <!-- Header -->
-    <q:include component="shared/header" />
+    <Header />
 
     <!-- Search Hero -->
     <section class="search-hero">
@@ -311,7 +314,7 @@
     </div>
 
     <!-- Footer -->
-    <q:include component="shared/footer" />
+    <Footer />
 
   </body>
   </html>

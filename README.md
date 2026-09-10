@@ -173,7 +173,7 @@ Full docs at **[danielgregorio.github.io/quantum](https://danielgregorio.github.
 
 - [Getting Started](https://danielgregorio.github.io/quantum/guide/getting-started) · [Installation](https://danielgregorio.github.io/quantum/guide/installation) · [Quick Start](https://danielgregorio.github.io/quantum/guide/quick-start)
 - [Components](https://danielgregorio.github.io/quantum/guide/components) · [State](https://danielgregorio.github.io/quantum/guide/state-management) · [Loops](https://danielgregorio.github.io/quantum/guide/loops) · [Conditionals](https://danielgregorio.github.io/quantum/guide/conditionals)
-- [Queries](https://danielgregorio.github.io/quantum/guide/query) · [Functions](https://danielgregorio.github.io/quantum/guide/functions) · [Data fetching](https://danielgregorio.github.io/quantum/guide/data-fetching)
+- [Queries](https://danielgregorio.github.io/quantum/guide/query) · [Functions](https://danielgregorio.github.io/quantum/guide/functions)
 
 Releases and their notes are on the [GitHub Releases](https://github.com/danielgregorio/quantum/releases) page.
 

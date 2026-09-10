@@ -103,15 +103,13 @@ Use `q:set` for internal variables:
 
 ```xml
 <q:set name="email"
-       type="email"
        value="user@example.com"
-       validate="true" />
+       validate="email" />
 
 <q:set name="age"
        type="number"
        value="25"
-       min="0"
-       max="150" />
+       range="0..150" />
 
 <q:set name="status"
        type="string"
@@ -249,12 +247,16 @@ Use `{expression}` for dynamic values:
 <q:return value="Hello, {name}!" />
 ```
 
+**Output:** `"Hello, Alice!"`
+
 ### Object Properties
 
 ```xml
-<q:set name="user" value='{"name": "Bob", "age": 30}' />
+<q:set name="user" type="object" value='{"name": "Bob", "age": 30}' />
 <q:return value="{user.name} is {user.age} years old" />
 ```
+
+**Output:** `"Bob is 30 years old"`
 
 ### Expressions
 
@@ -264,12 +266,19 @@ Use `{expression}` for dynamic values:
 <q:return value="Total: ${price * quantity}" />
 ```
 
+**Output:** `"Total: $500"`
+
 ### String Functions
+
+Functions are called with the value as an argument — see the
+[function list](/guide/databinding#functions):
 
 ```xml
 <q:set name="text" value="hello world" />
-<q:return value="{text.toUpperCase()}" />
+<q:return value="{upper(text)}" />
 ```
+
+**Output:** `"HELLO WORLD"`
 
 ## Nested Components
 

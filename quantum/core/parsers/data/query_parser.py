@@ -11,6 +11,9 @@ from quantum.core.parsers.base import BaseTagParser, ParserError
 from quantum.core.ast_nodes import QueryNode, QueryParamNode
 
 
+_NEVER_IMPLEMENTED = ('cache', 'ttl', 'reactive', 'interval', 'timeout', 'maxrows', 'batch')
+
+
 class QueryParser(BaseTagParser):
     """
     Parser for q:query statements.
@@ -49,6 +52,14 @@ class QueryParser(BaseTagParser):
         if not datasource and not source:
             raise ParserError("Query requires either 'datasource' or 'source' attribute")
 
+        # DB-5: attributes that were read into the AST and never used. The
+        # guide sold cache="true" ttl="3600" and reactive="true" as features.
+        for attr in _NEVER_IMPLEMENTED:
+            if element.get(attr) is not None:
+                raise ParserError(
+                    f'<q:query name="{name}"> {attr}= is not supported: it was accepted '
+                    f'and never did anything, and was removed in Quantum 0.11')
+
         # Extract SQL content
         sql_parts = []
         if element.text:
@@ -65,10 +76,6 @@ class QueryParser(BaseTagParser):
 
         # Parse attributes
         query_node.source = source
-        query_node.cache = self.get_bool_attr(element, 'cache', False)
-        query_node.ttl = self.get_int_attr(element, 'ttl', 0) or None
-        query_node.reactive = self.get_bool_attr(element, 'reactive', False)
-        query_node.interval = self.get_int_attr(element, 'interval', 0) or None
         query_node.paginate = self.get_bool_attr(element, 'paginate', False)
         query_node.page = self.get_int_attr(element, 'page', 0) or None
         # Accept both spellings: the codebase convention is camelCase, but
@@ -80,8 +87,6 @@ class QueryParser(BaseTagParser):
             or self.get_int_attr(element, 'page_size', 0)
             or None
         )
-        query_node.timeout = self.get_int_attr(element, 'timeout', 0) or None
-        query_node.maxrows = self.get_int_attr(element, 'maxrows', 0) or None
         query_node.result = self.get_attr(element, 'result')
 
         # RAG/Knowledge attributes

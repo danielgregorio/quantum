@@ -4,7 +4,7 @@
   "description": "Complex examples combining multiple features",
   "icon": "🚀",
   "docsPath": "/architecture/",
-  "exampleCount": 32,
+  "exampleCount": 29,
   "examples": [
     {
       "file": "api-tests.q",
@@ -28,33 +28,6 @@
       "output": "Error: AttributeError: 'ApplicationNode' object has no attribute 'name'",
       "outputType": "error",
       "sourceCode": "<q:application id=\"api-tests\" type=\"testing\">\n\n    <qtest:browser-config engine=\"chromium\" headless=\"true\" base-url=\"http://localhost:8080\" />\n\n    <qtest:fixture name=\"api_data\">\n        {\"token\": \"test-jwt-token-123\", \"user_id\": 42}\n    </qtest:fixture>\n\n    <qtest:suite name=\"APIContracts\" browser=\"true\">\n\n        <qtest:case name=\"GET /api/users returns list\" browser=\"true\">\n            <qtest:intercept url=\"**/api/users\" method=\"GET\">\n                <qtest:respond status=\"200\" content-type=\"application/json\">\n                    [{\"id\": 1, \"name\": \"Alice\"}, {\"id\": 2, \"name\": \"Bob\"}]\n                </qtest:respond>\n            </qtest:intercept>\n            <qtest:navigate to=\"/users\" />\n            <qtest:expect selector=\".user-item\" count=\"2\" />\n        </qtest:case>\n\n        <qtest:case name=\"POST /api/users creates user\" browser=\"true\">\n            <qtest:intercept url=\"**/api/users\" method=\"POST\">\n                <qtest:respond status=\"201\" content-type=\"application/json\">\n                    {\"id\": 3, \"name\": \"Charlie\"}\n                </qtest:respond>\n            </qtest:intercept>\n            <qtest:navigate to=\"/users/new\" />\n            <qtest:fill selector=\"#name\" value=\"Charlie\" />\n            <qtest:click selector=\"button[type=submit]\" />\n            <qtest:wait-for selector=\".success\" state=\"visible\" />\n        </qtest:case>\n\n        <qtest:case name=\"handles API errors gracefully\" browser=\"true\">\n            <qtest:intercept url=\"**/api/users\" method=\"GET\">\n                <qtest:respond status=\"500\" content-type=\"application/json\">\n                    {\"error\": \"Internal Server Error\"}\n                </qtest:respond>\n            </qtest:intercept>\n            <qtest:navigate to=\"/users\" />\n            <qtest:expect selector=\".error-state\" visible=\"true\" />\n            <qtest:expect selector=\".error-state\" text-contains=\"error\" />\n        </qtest:case>\n\n        <qtest:case name=\"handles slow responses\" browser=\"true\">\n            <qtest:intercept url=\"**/api/data\" method=\"GET\" delay=\"3000\">\n                <qtest:respond status=\"200\" content-type=\"application/json\">\n                    {\"data\": \"loaded\"}\n                </qtest:respond>\n            </qtest:intercept>\n            <qtest:navigate to=\"/data\" />\n            <qtest:expect selector=\".loading-spinner\" visible=\"true\" />\n            <qtest:wait-for selector=\".data-content\" state=\"visible\" timeout=\"5000\" />\n        </qtest:case>\n    </qtest:suite>\n\n    <qtest:suite name=\"NetworkSpying\" browser=\"true\">\n        <qtest:case name=\"tracks API calls\" browser=\"true\">\n            <qtest:intercept url=\"**/api/analytics\" spy=\"true\" />\n            <qtest:navigate to=\"/\" />\n            <qtest:click text=\"Track Event\" />\n        </qtest:case>\n    </qtest:suite>\n\n</q:application>\n"
-    },
-    {
-      "file": "api.q",
-      "title": "Api",
-      "description": "API Example",
-      "complexity": "advanced",
-      "tags": [
-        "q:route",
-        "q:application",
-        "multi-feature",
-        "q:return",
-        "databinding",
-        "advanced"
-      ],
-      "features": [
-        "databinding",
-        "q:application",
-        "q:return",
-        "q:route"
-      ],
-      "relatedDocs": [
-        "/architecture/"
-      ],
-      "lineCount": 7,
-      "output": "Error: AttributeError: 'ApplicationNode' object has no attribute 'name'",
-      "outputType": "error",
-      "sourceCode": "<!-- API Example -->\n<q:application id=\"api\" type=\"microservices\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:route path=\"/users\" method=\"GET\">\n    <q:return value='[{\"name\": \"João\", \"email\": \"joao@test.com\"}]' />\n  </q:route>\n</q:application>\n"
     },
     {
       "file": "basic-tests.q",
@@ -208,37 +181,6 @@
       "output": "Test 1: Simple condition works!",
       "outputType": "text",
       "sourceCode": "<!-- Complete Conditional Test -->\n<q:component name=\"CompleteTest\" xmlns:q=\"https://quantum.lang/ns\">\n  \n  <!-- Test 1: Simple true condition -->\n  <q:if condition=\"3 > 1\">\n    <q:return value=\"Test 1: Simple condition works!\" />\n  </q:if>\n  \n</q:component>\n"
-    },
-    {
-      "file": "fetch-example.q",
-      "title": "Fetch Example",
-      "description": "Basic GET request with loading states",
-      "complexity": "intermediate",
-      "tags": [
-        "q:fetch",
-        "q:function",
-        "q:invoke",
-        "multi-feature",
-        "q:if",
-        "databinding",
-        "advanced"
-      ],
-      "features": [
-        "databinding",
-        "q:fetch",
-        "q:function",
-        "q:if",
-        "q:invoke",
-        "q:loop",
-        "q:set"
-      ],
-      "relatedDocs": [
-        "/architecture/"
-      ],
-      "lineCount": 126,
-      "output": "Parse Error: Invoke requires 'name' attribute",
-      "outputType": "error",
-      "sourceCode": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!--\nExample: Data Fetching with q:fetch\nDemonstrates loading states, error handling, and data display\n-->\n<q:component xmlns:q=\"https://quantum.lang/ns\" name=\"FetchExample\">\n    <!-- Basic GET request with loading states -->\n    <q:fetch name=\"users\"\n             url=\"https://jsonplaceholder.typicode.com/users\"\n             method=\"GET\" />\n\n    <!-- POST request with headers -->\n    <q:fetch name=\"newPost\"\n             url=\"https://jsonplaceholder.typicode.com/posts\"\n             method=\"POST\"\n             auto=\"false\">\n        <q:header name=\"Content-Type\" value=\"application/json\" />\n        <q:body>{postData}</q:body>\n    </q:fetch>\n\n    <!-- Fetch with polling (refresh every 30 seconds) -->\n    <q:fetch name=\"liveData\"\n             url=\"https://api.example.com/live\"\n             method=\"GET\"\n             poll=\"30000\" />\n\n    <!-- Fetch with cache -->\n    <q:fetch name=\"cachedData\"\n             url=\"https://api.example.com/static\"\n             method=\"GET\"\n             cache=\"300\" />\n\n    <div class=\"container\">\n        <h1>Data Fetching Examples</h1>\n\n        <!-- Example 1: Basic fetch with loading states -->\n        <section>\n            <h2>Users List</h2>\n\n            <q:if condition=\"{users.isLoading}\">\n                <div class=\"loading\">\n                    <span class=\"spinner\"></span>\n                    Loading users...\n                </div>\n            </q:if>\n\n            <q:if condition=\"{users.error}\">\n                <div class=\"error\">\n                    Error loading users: {users.error}\n                </div>\n            </q:if>\n\n            <q:if condition=\"{users.data}\">\n                <table>\n                    <thead>\n                        <tr>\n                            <th>Name</th>\n                            <th>Email</th>\n                            <th>Company</th>\n                        </tr>\n                    </thead>\n                    <tbody>\n                        <q:loop type=\"array\" var=\"user\" items=\"{users.data}\">\n                            <tr>\n                                <td>{user.name}</td>\n                                <td>{user.email}</td>\n                                <td>{user.company.name}</td>\n                            </tr>\n                        </q:loop>\n                    </tbody>\n                </table>\n                <p>Total: {users.data.length} users</p>\n            </q:if>\n        </section>\n\n        <!-- Example 2: Conditional fetch (POST) -->\n        <section>\n            <h2>Create Post</h2>\n\n            <form>\n                <input type=\"text\" name=\"title\" placeholder=\"Title\" />\n                <textarea name=\"body\" placeholder=\"Content\"></textarea>\n                <button type=\"button\" onclick=\"submitPost()\">\n                    Create Post\n                </button>\n            </form>\n\n            <q:if condition=\"{newPost.data}\">\n                <div class=\"success\">\n                    Post created with ID: {newPost.data.id}\n                </div>\n            </q:if>\n        </section>\n\n        <!-- Example 3: Fetch with authentication -->\n        <section>\n            <h2>Authenticated Request</h2>\n\n            <q:fetch name=\"profile\"\n                     url=\"https://api.example.com/me\"\n                     method=\"GET\">\n                <q:header name=\"Authorization\" value=\"Bearer {authToken}\" />\n            </q:fetch>\n\n            <q:if condition=\"{profile.data}\">\n                <p>Welcome, {profile.data.name}!</p>\n            </q:if>\n        </section>\n    </div>\n\n    <!-- State for POST request -->\n    <q:set name=\"postData\" value=\"{}\" />\n    <q:set name=\"authToken\" value=\"\" />\n\n    <!-- Function to handle form submission -->\n    <q:function name=\"submitPost\">\n        <q:set name=\"postData\" value=\"{\n            'title': form.title,\n            'body': form.body,\n            'userId': 1\n        }\" />\n        <!-- Trigger the fetch -->\n        <q:invoke function=\"newPost.execute\" />\n    </q:function>\n</q:component>\n"
     },
     {
       "file": "filebrowser.q",
@@ -801,31 +743,6 @@
       "output": "Error: AttributeError: 'ApplicationNode' object has no attribute 'name'",
       "outputType": "error",
       "sourceCode": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<q:application id=\"MobileDemo\" type=\"ui\">\n  <ui:window title=\"Mobile Demo\">\n    <ui:vbox padding=\"md\" gap=\"md\">\n      <ui:text size=\"xl\" weight=\"bold\">Mobile App</ui:text>\n\n      <ui:card>\n        <ui:card-body>\n          <ui:text>Card content goes here</ui:text>\n        </ui:card-body>\n      </ui:card>\n\n      <ui:alert variant=\"info\" title=\"Information\">\n        This is a mobile app built with Quantum.\n      </ui:alert>\n\n      <ui:button variant=\"primary\" on-click=\"handleClick()\">\n        Press Me\n      </ui:button>\n\n      <ui:text>{message}</ui:text>\n    </ui:vbox>\n  </ui:window>\n\n  <q:function name=\"handleClick\">\n    <q:set name=\"message\" value=\"Button pressed!\" />\n  </q:function>\n\n  <q:set name=\"message\" value=\"\" />\n</q:application>\n"
-    },
-    {
-      "file": "webapp.q",
-      "title": "Webapp",
-      "description": "Web Application Example",
-      "complexity": "advanced",
-      "tags": [
-        "q:route",
-        "q:application",
-        "multi-feature",
-        "q:return",
-        "advanced"
-      ],
-      "features": [
-        "q:application",
-        "q:return",
-        "q:route"
-      ],
-      "relatedDocs": [
-        "/architecture/"
-      ],
-      "lineCount": 7,
-      "output": "Error: AttributeError: 'ApplicationNode' object has no attribute 'name'",
-      "outputType": "error",
-      "sourceCode": "<!-- Web Application Example -->\n<q:application id=\"webapp\" type=\"html\" xmlns:q=\"https://quantum.lang/ns\">\n  <q:route path=\"/hello\" method=\"GET\">\n    <q:return value=\"Hello from Web App!\" />\n  </q:route>\n</q:application>\n"
     },
     {
       "file": "websocket-chat.q",

@@ -29,7 +29,7 @@
   <q:set name="editPostId" value="{query.edit}" default="" />
 
   <!-- Get all tags for dropdown (cached) -->
-  <q:query name="allTags" datasource="blog-db" cache="300">
+  <q:query name="allTags" datasource="blog-db">
     SELECT id, name, slug, color
     FROM tags
     ORDER BY name
@@ -52,10 +52,10 @@
 
   <!-- Action: Create new post -->
   <q:action name="createPost" method="POST">
-    <q:validate field="title" required="true" minLength="3" maxLength="255" />
-    <q:validate field="excerpt" required="true" minLength="10" maxLength="500" />
-    <q:validate field="content" required="true" minLength="20" />
-    <q:validate field="tag_id" required="true" />
+    <q:param name="title" required="true" minlength="3" maxlength="255"/>
+    <q:param name="excerpt" required="true" minlength="10" maxlength="500"/>
+    <q:param name="content" required="true" minlength="20"/>
+    <q:param name="tag_id" required="true"/>
 
     <!-- Generate slug from title -->
     <q:set name="postSlug" value="{slugify(form.title)}" />
@@ -111,10 +111,10 @@
 
   <!-- Action: Update existing post -->
   <q:action name="updatePost" method="POST">
-    <q:validate field="post_id" required="true" />
-    <q:validate field="title" required="true" minLength="3" maxLength="255" />
-    <q:validate field="excerpt" required="true" minLength="10" maxLength="500" />
-    <q:validate field="content" required="true" minLength="20" />
+    <q:param name="post_id" required="true"/>
+    <q:param name="title" required="true" minlength="3" maxlength="255"/>
+    <q:param name="excerpt" required="true" minlength="10" maxlength="500"/>
+    <q:param name="content" required="true" minlength="20"/>
 
     <!-- Calculate reading time -->
     <q:set name="wordCount" value="{form.content.split(' ').length}" />
@@ -156,7 +156,7 @@
 
   <!-- Action: Delete post -->
   <q:action name="deletePost" method="POST">
-    <q:validate field="post_id" required="true" />
+    <q:param name="post_id" required="true"/>
 
     <!-- Get tag_id before delete for count update -->
     <q:query name="postToDelete" datasource="blog-db">
@@ -197,7 +197,7 @@
 
   <!-- Action: Toggle publish status -->
   <q:action name="togglePublish" method="POST">
-    <q:validate field="post_id" required="true" />
+    <q:param name="post_id" required="true"/>
 
     <q:query name="togglePub" datasource="blog-db" type="execute">
       UPDATE posts SET

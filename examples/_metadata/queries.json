@@ -4,7 +4,7 @@
   "description": "Database operations with q:query and transactions",
   "icon": "🗄️",
   "docsPath": "/guide/query",
-  "exampleCount": 17,
+  "exampleCount": 16,
   "examples": [
     {
       "file": "job-queue-example.q",
@@ -158,26 +158,6 @@
         "/guide/query"
       ],
       "lineCount": 23
-    },
-    {
-      "file": "test-query-cache.q",
-      "title": "Query Cache",
-      "description": "Example demonstrating Query Cache",
-      "complexity": "beginner",
-      "tags": [
-        "q:query",
-        "databinding",
-        "database",
-        "SQL"
-      ],
-      "features": [
-        "databinding",
-        "q:query"
-      ],
-      "relatedDocs": [
-        "/guide/query"
-      ],
-      "lineCount": 11
     },
     {
       "file": "test-query-complete.q",
