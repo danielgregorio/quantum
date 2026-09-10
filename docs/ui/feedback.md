@@ -138,21 +138,6 @@ Components for providing user feedback, including alerts, loading states, progre
 </ui:button>
 ```
 
-### Loading with Fetch
-
-```xml
-<q:fetch name="data" url="/api/data">
-  <q:loading>
-    <ui:vbox align="center" padding="xl">
-      <ui:loading size="lg">Loading data...</ui:loading>
-    </ui:vbox>
-  </q:loading>
-  <q:success>
-    <!-- Display data -->
-  </q:success>
-</q:fetch>
-```
-
 ## Progress
 
 `ui:progress` displays a progress bar.
@@ -381,31 +366,6 @@ Components for providing user feedback, including alerts, loading states, progre
 <ui:skeleton type="table" rows="5" columns="4" />
 ```
 
-### Conditional Skeleton
-
-```xml
-<q:fetch name="user" url="/api/user/{userId}">
-  <q:loading>
-    <ui:hbox gap="md">
-      <ui:skeleton type="circle" width="64px" height="64px" />
-      <ui:vbox gap="sm">
-        <ui:skeleton type="text" width="200px" />
-        <ui:skeleton type="text" width="150px" />
-      </ui:vbox>
-    </ui:hbox>
-  </q:loading>
-  <q:success>
-    <ui:hbox gap="md">
-      <ui:avatar src="{user.data.avatar}" size="lg" />
-      <ui:vbox>
-        <ui:text weight="bold">{user.data.name}</ui:text>
-        <ui:text color="muted">{user.data.email}</ui:text>
-      </ui:vbox>
-    </ui:hbox>
-  </q:success>
-</q:fetch>
-```
-
 ## Toast (Notifications)
 
 `ui:toast` displays temporary notification messages.
@@ -573,5 +533,4 @@ Components for providing user feedback, including alerts, loading states, progre
 ## Related Documentation
 
 - [Form Components](/ui/forms) - Form input handling
-- [Data Fetching](/guide/data-fetching) - Loading states with fetch
 - [Layout Components](/ui/layout) - Container components

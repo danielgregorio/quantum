@@ -258,16 +258,10 @@ When no image is provided, initials are shown:
 ### Chart with Dynamic Data
 
 ```xml
-<q:fetch name="stats" url="/api/stats">
-  <q:loading>
-    <ui:skeleton type="rect" height="300px" />
-  </q:loading>
-  <q:success>
-    <ui:chart type="bar" title="Sales by Region">
-      <ui:data>{stats.data.regions}</ui:data>
-    </ui:chart>
-  </q:success>
-</q:fetch>
+<q:invoke name="stats" url="/api/stats" />
+<ui:chart type="bar" title="Sales by Region">
+  <ui:data>{stats.regions}</ui:data>
+</ui:chart>
 ```
 
 ### Colored Bars
@@ -456,8 +450,8 @@ When no image is provided, initials are shown:
 <q:application id="advanced-demo" type="ui" xmlns:q="https://quantum.lang/ns"
                xmlns:ui="https://quantum.lang/ui">
 
-  <q:fetch name="users" url="/api/users" />
-  <q:fetch name="stats" url="/api/dashboard/stats" />
+  <q:invoke name="users" url="/api/users" />
+  <q:invoke name="stats" url="/api/dashboard/stats" />
 
   <ui:window title="Advanced Components Demo">
     <ui:vbox padding="lg" gap="lg">
@@ -524,7 +518,7 @@ When no image is provided, initials are shown:
           </q:if>
           <q:if condition="!stats.loading && stats.data">
             <ui:chart type="bar" height="300px">
-              <ui:data>{stats.data.monthly}</ui:data>
+              <ui:data>{stats.monthly}</ui:data>
             </ui:chart>
           </q:if>
         </ui:cardbody>
@@ -537,7 +531,7 @@ When no image is provided, initials are shown:
             <ui:text weight="bold">Team Members</ui:text>
             <ui:avatargroup max="4">
               <q:if condition="!users.loading">
-                <q:loop type="array" var="user" items="{users.data}">
+                <q:loop type="array" var="user" items="{users}">
                   <ui:avatar src="{user.avatar}" name="{user.name}" />
                 </q:loop>
               </q:if>
@@ -560,7 +554,7 @@ When no image is provided, initials are shown:
           </q:if>
           <q:if condition="!users.loading">
             <ui:vbox gap="md">
-              <q:loop type="array" var="user" items="{users.data}">
+              <q:loop type="array" var="user" items="{users}">
                 <ui:hbox gap="md" align="center">
                   <ui:avatar src="{user.avatar}" name="{user.name}" status="{user.status}" />
                   <ui:vbox gap="xs">

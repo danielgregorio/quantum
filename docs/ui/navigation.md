@@ -274,19 +274,16 @@ Components for navigating through applications, including tabs, breadcrumbs, pag
 <q:set name="page" value="1" />
 <q:set name="pageSize" value="20" />
 
-<q:fetch name="items" url="/api/items?page={page}&limit={pageSize}">
-  <q:success>
-    <ui:table data="{items.data.records}" />
+<q:invoke name="items" url="/api/items?page={page}&limit={pageSize}" />
+<ui:table data="{items.records}" />
 
-    <ui:pagination
-      current="{page}"
-      total="{items.data.pagination.totalPages}"
-      totalItems="{items.data.pagination.totalRecords}"
-      pageSize="{pageSize}"
-      on-change="handlePageChange"
-    />
-  </q:success>
-</q:fetch>
+<ui:pagination
+  current="{page}"
+  total="{items.pagination.totalPages}"
+  totalItems="{items.pagination.totalRecords}"
+  pageSize="{pageSize}"
+  on-change="handlePageChange"
+/>
 
 <q:function name="handlePageChange">
   <q:param name="newPage" type="number" />

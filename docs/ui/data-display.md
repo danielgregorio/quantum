@@ -356,13 +356,10 @@ Components for displaying data in tables, lists, trees, and other structured for
 ### Dynamic Chart Data
 
 ```xml
-<q:fetch name="stats" url="/api/stats">
-  <q:success>
-    <ui:chart type="bar" title="Revenue by Region">
-      <ui:data>{stats.data.regions}</ui:data>
-    </ui:chart>
-  </q:success>
-</q:fetch>
+<q:invoke name="stats" url="/api/stats" />
+<ui:chart type="bar" title="Revenue by Region">
+  <ui:data>{stats.regions}</ui:data>
+</ui:chart>
 ```
 
 ### Multiple Data Series
@@ -451,7 +448,7 @@ Components for displaying data in tables, lists, trees, and other structured for
 <q:application id="dashboard" type="ui" xmlns:q="https://quantum.lang/ns"
                xmlns:ui="https://quantum.lang/ui">
 
-  <q:fetch name="users" url="/api/users" />
+  <q:invoke name="users" url="/api/users" />
 
   <ui:window title="User Management">
     <ui:vbox padding="lg" gap="lg">
@@ -473,7 +470,7 @@ Components for displaying data in tables, lists, trees, and other structured for
 
       <q:if condition="!users.loading && !users.error">
         <ui:table
-          data="{users.data}"
+          data="{users}"
           sortable="true"
           pagination="true"
           pageSize="10"
