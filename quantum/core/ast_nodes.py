@@ -112,6 +112,7 @@ class ComponentNode(QuantumNode):
         # Phase G: Authentication & Security
         self.require_auth = False  # Require authentication to access component
         self.require_role = None   # Required role(s) to access (comma-separated: "admin,editor")
+        self.login_url = None      # AUTH-4: overrides security.login_url for this component
         self.require_permission = None  # Required permission(s)
 
         # HTML rendering & interactivity (Phase 1 & future Phase 3)

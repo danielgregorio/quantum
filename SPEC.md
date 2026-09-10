@@ -144,8 +144,9 @@ contrário a resposta é `403`.
 hash; para senha vazia, hash ausente ou malformado devolve falso, nunca erro.
 
 **AUTH-4** — `security.login_url` no `quantum.config.yaml` diz para onde AUTH-1
-redireciona (padrão `/login`). Só um caminho do próprio servidor é aceito; outro
-valor é erro ao subir.
+redireciona (padrão `/login`); o atributo `login_url` de um componente vale só para
+ele. Só um caminho do próprio servidor é aceito; outro valor é erro ao subir (config)
+ou ao ler o arquivo (atributo).
 
 ## 5. Importação de dados
 

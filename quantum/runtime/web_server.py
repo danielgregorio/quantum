@@ -524,14 +524,14 @@ class QuantumWebServer:
                 if not AuthService.is_authenticated(session_data):
                     # Not authenticated - redirect to login
                     session['redirect_after_login'] = request.path
-                    return redirect(self._login_url())
+                    return redirect(getattr(ast, 'login_url', None) or self._login_url())
 
                 # Check session expiry
                 if AuthService.is_session_expired(session_data):
                     # Session expired - logout and redirect to login
                     AuthService.logout(session_data)
                     session.modified = True
-                    return redirect(self._login_url() + '?expired=true')
+                    return redirect((getattr(ast, 'login_url', None) or self._login_url()) + '?expired=true')
 
                 # Check role requirement
                 if ast.require_role:

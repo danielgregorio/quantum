@@ -156,6 +156,21 @@ class TestAutenticacao:
         r = c.get('/aberta')
         assert r.status_code == 302 and r.headers['Location'].endswith('/admin/login')
 
+    def test_login_url_por_componente(self, servidor):
+        # AUTH-4: o componente pode apontar outro login sem mudar a config
+        c = servidor(admin=('<q:component name="admin" require_auth="true" login_url="/admin/login" '
+                            'xmlns:q="https://quantum.lang/ns"><p>x</p></q:component>'),
+                     aberta=PAGINA.format(nome='aberta', extra=''))
+        assert c.get('/admin').headers['Location'].endswith('/admin/login')
+        assert c.get('/aberta').headers['Location'].endswith('/login')
+
+    def test_login_url_de_componente_externo_e_erro_de_parse(self):
+        # AUTH-4
+        from quantum.core.parser import QuantumParser, QuantumParseError
+        with pytest.raises(QuantumParseError, match='login_url'):
+            QuantumParser().parse('<q:component name="x" require_auth="true" login_url="https://mal.example" '
+                                  'xmlns:q="https://quantum.lang/ns"/>')
+
     @pytest.mark.parametrize('url', ['https://mal.example/login', '//mal.example/login', 'login'])
     def test_login_url_so_aceita_caminho_local(self, servidor, url):
         # AUTH-4: uma URL completa faria de toda pagina protegida um redirecionamento aberto

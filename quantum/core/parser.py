@@ -584,6 +584,13 @@ class QuantumParser:
         require_auth_attr = root.get('require_auth', 'false').lower()
         component.require_auth = require_auth_attr in ['true', '1', 'yes']
         component.require_role = root.get('require_role')
+        # AUTH-4: where this component sends a visitor without a session.
+        component.login_url = root.get('login_url')
+        if component.login_url is not None and (not component.login_url.startswith('/')
+                                                or component.login_url.startswith('//')):
+            raise QuantumParseError(
+                f'<q:component name="{component.name}"> login_url must be a path on this server, '
+                f'like /login; got {component.login_url!r}')
         component.require_permission = root.get('require_permission')
 
         # HTML rendering & interactivity (Phase 1 & future Phase 3)
