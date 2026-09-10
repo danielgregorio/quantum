@@ -125,12 +125,15 @@ class DataParser(BaseTagParser):
     def _parse_field(self, element: ET.Element) -> FieldNode:
         """Parse q:field for JSON/XML."""
         name = self.get_attr(element, 'name')
-        path = self.get_attr(element, 'path')
+        # `xpath` is the attribute every example and the reference use; only
+        # `path` was read, so `xpath="@id"` became the name "id" and `type` was
+        # dropped — attributes came back None and numbers came back as text.
+        path = self.get_attr(element, 'xpath') or self.get_attr(element, 'path')
 
         if not name:
             raise ParserError("Field requires 'name' attribute")
 
-        return FieldNode(name, path or name)
+        return FieldNode(name, path or name, self.get_attr(element, 'type') or 'string')
 
     def _parse_transform(self, element: ET.Element) -> TransformNode:
         """Parse q:transform — a container of operations.

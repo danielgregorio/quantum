@@ -241,7 +241,7 @@ class DataImportService:
                 data.append(record)
 
             return DataResult(
-                success=False,
+                success=True,     # was False: every XML import "failed", so no transform ran on it
                 data=data,
                 recordCount=len(data),
                 source=source
@@ -385,7 +385,7 @@ class DataImportService:
         """Compute derived field"""
         field = compute_op.get('field')
         expression = compute_op.get('expression')
-        comp_type = compute_op.get('type', 'string')
+        comp_type = compute_op.get('comp_type', 'string')
 
         if not field or not expression:
             return data
@@ -482,23 +482,18 @@ class DataImportService:
         if xpath == 'text()':
             return node.text
 
-        # Handle child element
-        child = node.find(xpath)
-        if child is not None:
-            if xpath.endswith('/text()'):
-                return child.text
-            elif xpath.endswith('/@'):
-                # Extract attribute from child
-                parts = xpath.rsplit('/@', 1)
-                if len(parts) == 2:
-                    child_path, attr = parts
-                    child_elem = node.find(child_path)
-                    if child_elem is not None:
-                        return child_elem.get(attr)
-            else:
-                return child.text
+        # child/@attr — ElementTree's find() does not understand the @ step.
+        if '/@' in xpath:
+            child_path, attr = xpath.rsplit('/@', 1)
+            child = node.find(child_path)
+            return child.get(attr) if child is not None else None
 
-        return None
+        # child/text() — nor text(); it raised SyntaxError on every such field.
+        if xpath.endswith('/text()'):
+            xpath = xpath[:-len('/text()')]
+
+        child = node.find(xpath)
+        return child.text if child is not None else None
 
     def _evaluate_condition(self, condition: str, record: Dict[str, Any], context: Any) -> bool:
         """Evaluate a q:data filter condition against one imported record.

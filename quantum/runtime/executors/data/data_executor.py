@@ -119,7 +119,10 @@ class DataExecutor(BaseExecutor):
                 elif hasattr(operation, 'field'):
                     op_dict['field'] = operation.field
                     op_dict['expression'] = operation.expression
-                    op_dict['type'] = operation.comp_type
+                    # Not 'type': that key names the operation ('compute').
+                    # Writing the result type over it made every q:compute
+                    # unrecognised, and the transformation was skipped.
+                    op_dict['comp_type'] = operation.comp_type
 
                 params['transforms'].append(op_dict)
 
