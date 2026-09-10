@@ -224,3 +224,19 @@ deploy:
     - "*.log"
     - tests
     - "test_*.py"
+
+# ==========================================
+# DECLARED SERVICES
+# ==========================================
+# Python modules whose @service functions the pages call with
+# <q:invoke service="...">. These are the Quantum Admin's (components/admin):
+# its screens hold no Python, only calls to these services.
+services:
+  - quantum_admin.services.auth
+  - quantum_admin.services.projects
+  - quantum_admin.services.yaml_import
+  - quantum_admin.services.connectors
+  - quantum_admin.services.settings
+  - quantum_admin.services.components
+  - quantum_admin.services.apps
+  - quantum_admin.services.repository

@@ -126,7 +126,8 @@ página e colocado no `q:slot` padrão do componente. O conteúdo de uma
 renderização nunca aparece em outra.
 
 **COMP-4** — O componente chamado executa com a mesma configuração da página
-(datasources, serviços).
+(datasources, serviços) e vê os mesmos escopos `session`, `application` e
+`request`.
 
 ## 4. Autenticação
 

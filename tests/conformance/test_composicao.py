@@ -79,3 +79,13 @@ class TestComposicao:
                  p=pagina("p", '<q:import component="Linha" from="partes"/><div><Linha/></div>'))
         r = c.get("/p")
         assert r.status_code == 200 and "DO BANCO" in r.get_data(as_text=True)
+
+    def test_filho_ve_a_sessao_da_pagina(self, site, tmp_path):
+        # COMP-4 (antes: o filho recebia uma sessao vazia — o layout nao mostrava o usuario)
+        (tmp_path / "components" / "partes").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "components" / "partes" / "Usuario.q").write_text(
+            pagina("Usuario", '<span>USUARIO={session.nome}</span>'), encoding="utf-8")
+        c = site(p=pagina("p", '<q:import component="Usuario" from="partes"/>'
+                               '<q:set name="session.nome" value="ana"/><div><Usuario/></div>'))
+        c.get("/p")
+        assert "USUARIO=ana" in c.get("/p").get_data(as_text=True)

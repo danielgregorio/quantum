@@ -62,6 +62,19 @@ class TestAcoes:
         assert 'Salvo Bia' in texto(cliente.get('/form'))
         assert 'Salvo Bia' not in texto(cliente.get('/form'))
 
+    def test_flash_e_redirect_aceitam_expressoes(self, servidor):
+        # ACT-3 (antes: so nome simples; {r.msg} dava 500 "not found in any scope")
+        cliente = servidor(ex=('<q:component name="ex" xmlns:q="https://quantum.lang/ns">'
+                               '<q:action name="a" method="POST">'
+                               '<q:set name="r" type="object" value=\'{"msg": "ok", "n": 3}\'/>'
+                               '<q:set name="itens" type="array" value="[1, 2]"/>'
+                               '<q:flash type="error" message="{r.msg}: {len(itens)} itens"/>'
+                               '<q:redirect url="/ex?n={r.n + 1}"/></q:action>'
+                               '<p>[{flash}]</p></q:component>'))
+        r = cliente.post('/ex', data={})
+        assert r.status_code == 302 and r.headers['Location'].endswith('/ex?n=4')
+        assert '[ok: 2 itens]' in texto(cliente.get('/ex'))
+
     def test_flash_existe_vazio_sem_mensagem(self, servidor):
         # ACT-3: sempre definido, '' sem mensagem
         cliente = servidor(v=('<q:component name="v" xmlns:q="https://quantum.lang/ns">'

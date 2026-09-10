@@ -60,6 +60,12 @@ class ComponentComposer:
             raise ComponentCompositionError(f"<{call.component_name}>: {exc}") from exc
 
         props = self._props(child, call, parent)
+        # COMP-4: the same configuration and the same session, application and
+        # request scopes as the page — a layout showing {session.userName}
+        # used to see an empty session.
+        props.update(_session_scope=parent.context.session_vars,
+                     _application_scope=parent.context.application_vars,
+                     _request_scope=parent.context.request_vars)
         runtime = ComponentRuntime(config=parent.config)
         runtime.execute_component(child, props)
 

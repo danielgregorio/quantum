@@ -419,18 +419,17 @@ class ActionHandler:
             context.set_variable(key, value, scope="component")
 
     def _resolve_databinding(self, text: str, context: ExecutionContext) -> str:
-        """Resolve {variable} databinding in text"""
+        """Resolve {expressions} in a redirect URL or flash message (ACT-3).
+
+        This looked each {name} up with get_variable, so anything but a plain
+        name failed — `flash="{result.error}"` or `{len(itens)} saved` ended
+        the action with "Variable 'result.error' not found in any scope" and a
+        500. It now goes through the same evaluator as every q: attribute.
+        """
         if not text or '{' not in text:
             return text
-
-        import re
-
-        def replace_var(match):
-            var_name = match.group(1)
-            value = context.get_variable(var_name)
-            return str(value) if value is not None else ''
-
-        return re.sub(r'\{([^}]+)\}', replace_var, text)
+        valor = self.component_runtime._apply_databinding(text, context.get_all_variables())
+        return '' if valor is None else str(valor)
 
     def _set_flash_message(self, message: str, flash_type: str = 'info'):
         """Set flash message in session"""
