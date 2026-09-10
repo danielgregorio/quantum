@@ -179,7 +179,8 @@ Demonstrates pub/sub and queue-based messaging
         <h2>Message Queue Demo</h2>
 
         <h3>Create Order</h3>
-        <form action="createOrder" method="POST">
+        <form method="POST">
+            <input type="hidden" name="action" value="createOrder" />
             <input type="number" name="customerId" placeholder="Customer ID" />
             <textarea name="items" placeholder="Items JSON"></textarea>
             <input type="number" name="total" placeholder="Total" step="0.01" />
@@ -187,7 +188,8 @@ Demonstrates pub/sub and queue-based messaging
         </form>
 
         <h3>Send Notification</h3>
-        <form action="sendNotification" method="POST">
+        <form method="POST">
+            <input type="hidden" name="action" value="sendNotification" />
             <input type="number" name="userId" placeholder="User ID" />
             <input type="text" name="title" placeholder="Title" />
             <textarea name="message" placeholder="Message"></textarea>

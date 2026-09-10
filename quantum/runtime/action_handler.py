@@ -88,6 +88,15 @@ class ActionHandler:
                 if key == 'files' or param_validation.is_uploaded_file(value):
                     context.set_variable(key, value)
 
+            # ACT-6: the submitted fields as `form`, raw, like the page render
+            # gets them. {form.campo} inside an action used to evaluate to
+            # empty — only declared q:params reached the action — while the
+            # docs (data-fetching.md) and pages (rag.q) use {form.campo}.
+            context.set_variable('form', {
+                key: value for key, value in form_data.items()
+                if key != 'files' and not param_validation.is_uploaded_file(value)
+            })
+
             # 4. Execute action body
             redirect_info = self._execute_action_body(action, context)
 

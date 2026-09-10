@@ -135,7 +135,8 @@ Demonstrates job queue for batch processing with retries
     <div>
         <h2>Order Processing</h2>
 
-        <form action="submitOrder" method="POST">
+        <form method="POST">
+            <input type="hidden" name="action" value="submitOrder" />
             <input type="hidden" name="customerId" value="{session.userId}" />
             <input type="text" name="items" placeholder="Items JSON" />
             <input type="number" name="total" placeholder="Total" />
@@ -143,7 +144,8 @@ Demonstrates job queue for batch processing with retries
         </form>
 
         <h3>Bulk Notification</h3>
-        <form action="notifyAllUsers" method="POST">
+        <form method="POST">
+            <input type="hidden" name="action" value="notifyAllUsers" />
             <textarea name="message" placeholder="Message to all users"></textarea>
             <button type="submit">Send to All</button>
         </form>

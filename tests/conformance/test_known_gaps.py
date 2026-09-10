@@ -131,37 +131,6 @@ DUAS_ACOES = (
     '<p>x</p></q:component>')
 
 
-class TestAcoes:
-    def test_o_campo_action_escolhe_a_action(self, servidor):
-        # Não é lacuna: com o campo `action` no corpo, a escolha funciona.
-        cliente = servidor(acoes=DUAS_ACOES)
-        r = cliente.post('/acoes', data={'action': 'excluir'})
-        assert r.headers['Location'].endswith('/excluido')
-
-    @lacuna("G6: com várias q:action, um nome inexistente (ou ausente) cai em "
-            "silêncio na PRIMEIRA action. Um POST para 'excluir' com erro de "
-            "digitação executa 'criar'.")
-    def test_action_inexistente_nao_executa_outra(self, servidor):
-        cliente = servidor(acoes=DUAS_ACOES)
-        r = cliente.post('/acoes', data={'action': 'exclir'})
-        assert r.status_code == 400
-        assert 'exclir' in r.get_data(as_text=True)
-
-    @lacuna("G7: dentro de q:action, {form.campo} sai vazio sem aviso — só "
-            "campos declarados com q:param chegam, e a doc (data-fetching.md) "
-            "ensina {form.name}. Proposta: ou o escopo form existe, ou usá-lo "
-            "é erro que manda declarar o q:param.")
-    def test_escopo_form_dentro_da_action(self, servidor):
-        cliente = servidor(
-            eco=('<q:component name="eco" xmlns:q="https://quantum.lang/ns">'
-                 '<q:action name="salvar" method="POST">'
-                 '<q:set name="session.visto" value="{form.nome}"/>'
-                 '<q:redirect url="/eco"/></q:action>'
-                 '<p>VISTO={session.visto}</p></q:component>'))
-        cliente.post('/eco', data={'action': 'salvar', 'nome': 'ana'})
-        assert 'VISTO=ana' in cliente.get('/eco').get_data(as_text=True)
-
-
 class TestAplicacaoHtml:
     @lacuna("G17: `quantum run app.q` com q:application type=\"html\" e q:route "
             "falha na hora: QuantumWebServer.__init__() got an unexpected keyword "

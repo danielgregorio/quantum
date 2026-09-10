@@ -298,7 +298,8 @@ To run:
                 <div class="card mb-4">
                     <div class="card-header">Create Order</div>
                     <div class="card-body">
-                        <form action="createOrder" method="POST">
+                        <form method="POST">
+                            <input type="hidden" name="action" value="createOrder" />
                             <div class="mb-3">
                                 <label class="form-label">Customer ID</label>
                                 <input type="text" name="customerId" class="form-control"
@@ -328,7 +329,8 @@ To run:
                 <div class="card mb-4">
                     <div class="card-header">Process Payment</div>
                     <div class="card-body">
-                        <form action="processPayment" method="POST">
+                        <form method="POST">
+                            <input type="hidden" name="action" value="processPayment" />
                             <div class="mb-3">
                                 <label class="form-label">Order ID</label>
                                 <input type="text" name="orderId" class="form-control"
@@ -360,7 +362,8 @@ To run:
         <div class="card mb-4">
             <div class="card-header">Shipping Quote (RPC)</div>
             <div class="card-body">
-                <form action="getShippingQuote" method="POST" class="row g-3">
+                <form method="POST" class="row g-3">
+                    <input type="hidden" name="action" value="getShippingQuote" />
                     <div class="col-md-4">
                         <input type="text" name="address" class="form-control"
                                placeholder="Street Address" required />

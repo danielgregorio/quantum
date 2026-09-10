@@ -62,6 +62,33 @@ class TestAcoes:
         assert 'Salvo Bia' in texto(cliente.get('/form'))
         assert 'Salvo Bia' not in texto(cliente.get('/form'))
 
+    def test_action_inexistente_e_400_e_nao_executa_outra(self, servidor):
+        # ACT-5 (era G6: caia em silencio na primeira action)
+        cliente = servidor(acoes=DUAS_ACOES)
+        r = cliente.post('/acoes', data={'action': 'exclir'})
+        assert r.status_code == 400
+        corpo = r.get_data(as_text=True)
+        assert 'exclir' in corpo and 'criar' in corpo and 'excluir' in corpo
+
+    def test_campo_action_ausente_com_varias_actions_e_400(self, servidor):
+        # ACT-5
+        assert servidor(acoes=DUAS_ACOES).post('/acoes', data={}).status_code == 400
+
+    def test_uma_action_so_nao_exige_o_campo(self, servidor):
+        # ACT-5
+        cliente = servidor(form=FORM)
+        assert cliente.post('/form', data={'nome': 'Caio', 'idade': '40'}).status_code == 302
+
+    def test_form_dentro_da_action(self, servidor):
+        # ACT-6 (era G7: {form.campo} saia vazio dentro da action)
+        cliente = servidor(eco=('<q:component name="eco" xmlns:q="https://quantum.lang/ns">'
+                                '<q:action name="salvar" method="POST">'
+                                '<q:set name="session.visto" value="{form.nome}"/>'
+                                '<q:redirect url="/eco"/></q:action>'
+                                '<p>VISTO={session.visto}</p></q:component>'))
+        cliente.post('/eco', data={'nome': 'ana'})
+        assert 'VISTO=ana' in texto(cliente.get('/eco'))
+
     def test_query_em_action_usa_datasource_da_config(self, servidor, tmp_path):
         # ACT-4
         banco = tmp_path / 'app.db'

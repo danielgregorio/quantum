@@ -6,6 +6,7 @@ ColdFusion-style simplicity: Just run `quantum start` and it works! 🪄
 
 import sys
 import os
+from html import escape as html_escape
 import re
 import signal
 import socket
@@ -48,6 +49,10 @@ class DynamicRoute:
     param_names: List[str]
     static_segment_count: int
 
+
+
+class UnknownActionError(Exception):
+    """A POST named no q:action, or one that does not exist on the page."""
 
 
 class ConfigError(Exception):
@@ -544,7 +549,11 @@ class QuantumWebServer:
             # Check if this is an action request (POST/PUT/DELETE)
             if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
                 # Look for q:action in component
-                action_node = self._find_action_in_component(ast)
+                try:
+                    action_node = self._find_action_in_component(ast)
+                except UnknownActionError as e:
+                    return Response(f"<h1>400 Bad Request</h1><p>{html_escape(str(e))}</p>",
+                                    status=400, mimetype='text/html')
 
                 if action_node:
                     # Handle action
@@ -1498,15 +1507,22 @@ class QuantumWebServer:
         if len(action_nodes) == 1:
             return action_nodes[0]
 
-        # Multiple actions: match by 'action' form field
+        # Multiple actions: match by 'action' form field (ACT-1)
         requested_action = request.form.get('action', '')
-        if requested_action:
-            for node in action_nodes:
-                if getattr(node, 'name', '') == requested_action:
-                    return node
+        for node in action_nodes:
+            if requested_action and getattr(node, 'name', '') == requested_action:
+                return node
 
-        # Fallback to first action
-        return action_nodes[0]
+        # ACT-5: no silent fallback. This used to run the FIRST action when the
+        # name was missing or matched nothing — a POST meant for "excluir" with
+        # a typo ran "criar".
+        available = ', '.join(getattr(n, 'name', '?') for n in action_nodes)
+        if requested_action:
+            raise UnknownActionError(
+                f"No q:action named '{requested_action}' on this page. Available: {available}.")
+        raise UnknownActionError(
+            f"This page has several q:action ({available}); the form must say which one "
+            f"with a field named 'action'.")
 
 
     def _count_component_files(self) -> int:

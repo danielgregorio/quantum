@@ -37,8 +37,8 @@ What happens:
 
 ## Declaring fields with `q:param`
 
-Only the fields declared with `q:param` reach the action, already converted to
-the declared type. Rules:
+Each field declared with `q:param` becomes a variable in the action, already
+validated and converted to the declared type. Rules:
 
 | Attribute | Checks |
 |-----------|--------|
@@ -52,13 +52,8 @@ When a rule fails, the action does **not** run: the browser goes back to the
 page it came from, and `flash` carries the reason with `flashType="error"` —
 for example `Parameter 'nome' must be at least 2 characters`.
 
-::: warning Undeclared fields
-Inside a `q:action`, a field you did not declare is not available — and
-`{form.campo}` there currently evaluates to empty instead of failing. Declare
-every field you use. This is a known gap (`G7` in
-`tests/conformance/test_known_gaps.py`) that the language specification will
-close.
-:::
+The raw submitted values are also available as `form.<campo>` — as text, not
+validated. Use them for display; use `q:param` for anything you store or compute.
 
 ## Several actions on one page
 
@@ -91,11 +86,9 @@ With more than one action, the form says which one it wants in a field named
 </q:component>
 ```
 
-::: warning A misspelled action name
-If `action` names no action (or is missing), the **first** action on the page
-runs. Check the names carefully. This is known gap `G6`; the specification will
-turn it into an error.
-:::
+If `action` is missing, or names no action on the page, the request is refused
+with `400 Bad Request`, naming what was asked for and the actions that exist —
+no other action runs in its place.
 
 ## Redirects and flash messages
 

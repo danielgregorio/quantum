@@ -47,8 +47,8 @@ do loop externo. Um valor que por acaso é uma lista entra como um item.
 **ACT-1** — Numa página com várias `q:action`, a action executada é a nomeada pelo
 campo `action` do corpo da requisição.
 
-**ACT-2** — Só os campos declarados com `q:param` chegam à action, já convertidos
-para o tipo declarado. Se uma regra de validação falhar (`required`, `type`,
+**ACT-2** — Cada campo declarado com `q:param` vira uma variável da action, já
+validado e convertido para o tipo declarado. Se uma regra de validação falhar (`required`, `type`,
 `minlength`, `maxlength`, `min`, `max`, `pattern`), a action não executa: a
 resposta redireciona para a página de origem com `flash` contendo o motivo e
 `flashType="error"`.
@@ -59,6 +59,15 @@ renderizada, uma única vez.
 
 **ACT-4** — `q:query` dentro de `q:action` usa os mesmos datasources declarados em
 `quantum.config.yaml` que a página.
+
+**ACT-5** — Numa página com mais de uma `q:action`, uma requisição cujo campo
+`action` falta ou não nomeia nenhuma action da página responde `400`, citando o
+nome pedido e as actions disponíveis. Nenhuma action é executada no lugar. Com
+uma única action na página, o campo é opcional.
+
+**ACT-6** — Dentro de `q:action`, como na renderização da página, `form.<campo>`
+contém o valor enviado, como texto e sem validação. `q:param` continua sendo o
+caminho validado e tipado (ACT-2).
 
 ## 4. Autenticação
 
@@ -120,8 +129,6 @@ arquivo.
 | G3 | Mensagem de conversão para número (`"{a} + {b}"`) |
 | G4 | `${VAR}` em `quantum.config.yaml` |
 | G5 | Traceback exibido em falha de `q:invoke` |
-| G6 | Nome de action inexistente cai na primeira action |
-| G7 | `{form.campo}` dentro de `q:action` |
 | G12 | Variável inexistente fica literal na saída |
 | G13 | Mensagem de array com aspas simples |
 | G14 | Erro de avaliação devolve as chaves cruas |
