@@ -60,8 +60,9 @@ websocket = [
 quantum = "quantum.cli.runner:main"
 
 [project.urls]
-Homepage = "https://quantum.sargas.cloud"
-Documentation = "https://quantum.sargas.cloud"
+Homepage = "https://github.com/danielgregorio/quantum"
+Documentation = "https://danielgregorio.github.io/quantum/"
+Changelog = "https://github.com/danielgregorio/quantum/releases"
 Repository = "https://github.com/danielgregorio/quantum"
 
 [tool.setuptools.packages.find]

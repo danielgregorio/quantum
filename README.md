@@ -1,9 +1,10 @@
 # Quantum
 
 [![CI](https://github.com/danielgregorio/quantum/actions/workflows/ci.yml/badge.svg)](https://github.com/danielgregorio/quantum/actions/workflows/ci.yml)
-[![Docker](https://github.com/danielgregorio/quantum/actions/workflows/docker.yml/badge.svg)](https://github.com/danielgregorio/quantum/actions/workflows/docker.yml)
+[![PyPI](https://img.shields.io/pypi/v/quantum-framework)](https://pypi.org/project/quantum-framework/)
+[![Python](https://img.shields.io/pypi/pyversions/quantum-framework)](https://pypi.org/project/quantum-framework/)
 [![Docs](https://img.shields.io/badge/docs-github.io-blue)](https://danielgregorio.github.io/quantum/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/danielgregorio/quantum/blob/main/LICENSE)
 
 > **Declarative web apps in XML, with AI and RAG built into the language.
 > No build chain, no JavaScript, no frontend framework.**
@@ -81,6 +82,9 @@ coercion of the model's arguments are the runtime's job.
 </q:component>
 ```
 
+Save it as `components/orders.q`, run `quantum start`, and it is served at
+`http://localhost:8080/orders`.
+
 `q:query` refuses to run SQL with an undeclared `:param` — parameterised queries are
 enforced by the parser, not by discipline.
 
@@ -92,14 +96,22 @@ Also core: `q:set` with `session.` / `application.` / `request.` scopes, `q:if`,
 
 ## Quick start
 
-**Requirements:** Python 3.11+ and `pip`.
+**Requirements:** Python 3.12+ and `pip`.
 
 ```bash
-git clone https://github.com/danielgregorio/quantum.git
-cd quantum
-pip install -e ".[dev]"
+pip install quantum-framework
+```
 
-quantum run examples/hello.q
+Create `hello.q`:
+
+```xml
+<q:component name="HelloWorld" xmlns:q="https://quantum.lang/ns">
+  <q:return value="Hello World!" />
+</q:component>
+```
+
+```bash
+quantum run hello.q
 ```
 
 ```
@@ -107,17 +119,21 @@ quantum run examples/hello.q
 [SUCCESS] Result: Hello World!
 ```
 
+For a web app, put `.q` files in `components/` and run `quantum start`
+(`components/index.q` is served at `/`). `quantum stop` stops it.
+
 For the AI examples you also need an [Ollama](https://ollama.com) server and the RAG
 extra:
 
 ```bash
-pip install -e ".[rag]"
+pip install "quantum-framework[rag]"
 ollama pull phi3 && ollama pull nomic-embed-text
 export QUANTUM_LLM_BASE_URL=http://localhost:11434
 ```
 
-Declare datasources in `quantum.config.yaml` and `q:query` works with nothing else
-running:
+Declare datasources in `quantum.config.yaml` (next to `components/`) and `q:query` works
+with nothing else running — SQLite needs no extra; PostgreSQL and MySQL drivers come with
+`pip install "quantum-framework[db]"`:
 
 ```yaml
 datasources:
@@ -131,26 +147,41 @@ datasources:
 | Command | What it does |
 |---------|--------------|
 | `run <file.q>` | Execute a component, app, or API |
-| `start` | Start the web server |
-| `deploy <dir>` | Deploy an application |
+| `start` | Start the web server (port 8080 by default; `--port` to change) |
+| `stop` | Stop the server started by `start` |
+| `deploy [path]` · `apps` | Deploy an application, manage deployed ones |
 | `pkg` · `jobs` · `mq` · `migrate` | Packages, jobs, message queues, migrations |
+
+### From source
+
+To work on Quantum itself:
+
+```bash
+git clone https://github.com/danielgregorio/quantum.git
+cd quantum
+pip install -e ".[dev]"
+quantum run examples/hello.q
+```
+
+See [CONTRIBUTING.md](https://github.com/danielgregorio/quantum/blob/main/CONTRIBUTING.md) for the test suite and the architecture.
 
 ---
 
 ## Documentation
 
-Full docs (VitePress) at **[danielgregorio.github.io/quantum](https://danielgregorio.github.io/quantum/)** and in
-[`docs/`](docs/):
+Full docs at **[danielgregorio.github.io/quantum](https://danielgregorio.github.io/quantum/)**:
 
-- [Getting Started](docs/guide/getting-started.md) · [Installation](docs/guide/installation.md) · [Quick Start](docs/guide/quick-start.md)
-- [Components](docs/guide/components.md) · [State](docs/guide/state-management.md) · [Loops](docs/guide/loops.md) · [Conditionals](docs/guide/conditionals.md)
-- [Queries](docs/guide/query.md) · [Functions](docs/guide/functions.md) · [Data fetching](docs/guide/data-fetching.md)
+- [Getting Started](https://danielgregorio.github.io/quantum/guide/getting-started) · [Installation](https://danielgregorio.github.io/quantum/guide/installation) · [Quick Start](https://danielgregorio.github.io/quantum/guide/quick-start)
+- [Components](https://danielgregorio.github.io/quantum/guide/components) · [State](https://danielgregorio.github.io/quantum/guide/state-management) · [Loops](https://danielgregorio.github.io/quantum/guide/loops) · [Conditionals](https://danielgregorio.github.io/quantum/guide/conditionals)
+- [Queries](https://danielgregorio.github.io/quantum/guide/query) · [Functions](https://danielgregorio.github.io/quantum/guide/functions) · [Data fetching](https://danielgregorio.github.io/quantum/guide/data-fetching)
+
+Releases and their notes are on the [GitHub Releases](https://github.com/danielgregorio/quantum/releases) page.
 
 ---
 
 ## Stability
 
-Support levels are defined in **[SUPPORT_TIERS.md](SUPPORT_TIERS.md)**. Short version:
+Support levels are defined in **[SUPPORT_TIERS.md](https://github.com/danielgregorio/quantum/blob/main/SUPPORT_TIERS.md)**. Short version:
 
 | Surface | Status |
 |---------|--------|
@@ -158,13 +189,11 @@ Support levels are defined in **[SUPPORT_TIERS.md](SUPPORT_TIERS.md)**. Short ve
 | AI — `q:llm`, `q:knowledge`, `q:agent` | **Beta** — validated end-to-end against a live Ollama server |
 | `q:team` (multi-agent handoff) | Beta, less exercised |
 | Jobs, messaging, websockets, mail, file uploads, `ui:*`, terminal target | **Experimental** — they run, but no API stability promise |
-| Python scripting (`q:python`, `q:pyclass`, `q:pyimport`) | Experimental, and a full-trust escape hatch — see [SECURITY.md](SECURITY.md) |
+| Python scripting (`q:python`, `q:pyclass`, `q:pyimport`) | Experimental, and a full-trust escape hatch — see [SECURITY.md](https://github.com/danielgregorio/quantum/blob/main/SECURITY.md) |
 
 A functional audit in 2026-09 found that several of these surfaces had never been run
-end-to-end despite being documented as complete. The findings and the fixes are in
-[`FULL_AUDIT_2026-09.md`](FULL_AUDIT_2026-09.md) and
-[`AUDIT_FIX_PLAN.md`](AUDIT_FIX_PLAN.md). Feature status is now verified by execution
-rather than asserted by hand.
+end-to-end despite being documented as complete. They were fixed or re-labelled, and
+feature status is now verified by execution rather than asserted by hand.
 
 Pre-1.0: APIs may change between minor versions.
 
@@ -179,24 +208,24 @@ quantum/
 │   ├── runtime/     # Execution engine, web server, renderer
 │   └── cli/         # Command-line entry point
 ├── examples/        # runnable .q examples
-├── tests/           # pytest suite (~2.4k tests)
+├── tests/           # pytest suite (~3.8k tests)
 ├── scripts/         # dev tools
 └── docs/            # VitePress documentation
 ```
 
 Adding a tag is one parser + one executor + a registry entry — see
-[CONTRIBUTING.md](CONTRIBUTING.md).
+[CONTRIBUTING.md](https://github.com/danielgregorio/quantum/blob/main/CONTRIBUTING.md).
 
 ---
 
 ## Contributing
 
-Read **[CONTRIBUTING.md](CONTRIBUTING.md)** for dev setup and how the modular
+Read **[CONTRIBUTING.md](https://github.com/danielgregorio/quantum/blob/main/CONTRIBUTING.md)** for dev setup and how the modular
 parser/executor architecture works. By participating you agree to the
-[Code of Conduct](CODE_OF_CONDUCT.md).
+[Code of Conduct](https://github.com/danielgregorio/quantum/blob/main/CODE_OF_CONDUCT.md).
 
-Found a security issue? Follow [SECURITY.md](SECURITY.md) — **do not** open a public issue.
+Found a security issue? Follow [SECURITY.md](https://github.com/danielgregorio/quantum/blob/main/SECURITY.md) — **do not** open a public issue.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](https://github.com/danielgregorio/quantum/blob/main/LICENSE).

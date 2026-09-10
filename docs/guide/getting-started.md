@@ -15,47 +15,18 @@ Quantum is a **full-stack declarative framework** that uses XML syntax to create
 
 ## Prerequisites
 
-- **Python 3.8+** - Required for the runtime
-- **pip** - Python package manager
-- **Git** - For cloning the repository
+- **Python 3.12+**
+- **pip**
 
 ## Installation
 
-### 1. Clone the Repository
-
 ```bash
-git clone https://github.com/danielgregorio/quantum.git
-cd quantum
+pip install quantum-framework
+quantum --version
 ```
 
-### 2. Install Dependencies
-
-```bash
-# Core dependencies
-pip install flask
-
-# Optional: For desktop apps
-pip install pywebview
-
-# Optional: For terminal apps
-pip install textual
-
-# Optional: For database support
-pip install sqlalchemy
-```
-
-### 3. Verify Installation
-
-```bash
-quantum run examples/hello.q
-```
-
-You should see:
-
-```
-[EXEC] Executing component: HelloWorld
-[SUCCESS] Result: Hello World!
-```
+Optional extras (PostgreSQL/MySQL, RAG, jobs, websockets) and the desktop
+target's extra dependency are listed in [Installation](/guide/installation).
 
 ## Your First Component
 

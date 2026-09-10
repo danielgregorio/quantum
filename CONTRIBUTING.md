@@ -11,7 +11,7 @@ By participating you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ## 1. Dev setup
 
-**Requirements:** Python 3.11+ and `pip`.
+**Requirements:** Python 3.12+ and `pip`.
 
 ```bash
 git clone https://github.com/danielgregorio/quantum.git
@@ -19,14 +19,18 @@ cd quantum
 python -m venv .venv
 # Windows:  .venv\Scripts\activate
 # Linux/Mac: source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[dev,db,jobs,websocket]" -r quantum_admin/backend/requirements.txt
 ```
+
+That is the same install CI uses. `.[dev]` alone is enough to work on the
+language, but not to run the whole suite: the admin tests and a few runtime
+tests need the other extras and the admin's requirements.
 
 Verify everything works:
 
 ```bash
 quantum run examples/hello.q   # should print "Hello World!"
-pytest tests/ -q                                 # the suite should pass
+pytest -q                      # the suite should pass
 ```
 
 ---
@@ -121,7 +125,7 @@ Then write a test (see below) and you're done. Larger features should follow the
 Tests live in `tests/`, mirroring `quantum/`, and use pytest.
 
 ```bash
-pytest tests/ -q                      # full suite
+pytest -q                             # full suite
 pytest tests/test_expression_cache.py # a single file
 pytest tests/ -k "greet"             # by keyword
 ```
@@ -145,7 +149,7 @@ it, and asserts the output. Fixtures live in `tests/conftest.py`.
 
 1. **Fork** and create a branch: `git checkout -b feat/my-feature` (or `fix/`, `docs/`).
 2. Make your change **with tests**.
-3. Run `pytest tests/ -q` and `ruff check quantum/ tests/` — both green.
+3. Run `pytest -q` and `ruff check quantum/ tests/` — both green.
 4. Use clear, conventional commit messages (`feat:`, `fix:`, `docs:`, `chore:`, `test:`).
 5. Open a PR using the template; link any related issue and describe the *why*.
 
