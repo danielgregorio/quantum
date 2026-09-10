@@ -1,15 +1,12 @@
-"""admin.import.*: os YAML antigos das telas .q entram no banco sem perder nada."""
+"""admin.import.*: os projetos do YAML antigo das telas .q entram no banco sem perder nada."""
 
 import hashlib
 
 import pytest
 import yaml
-from cryptography.fernet import Fernet
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from quantum_admin.backend import database, models
-from quantum_admin.backend.secret_manager import SecretManager
+from quantum_admin.backend import models
 from quantum_admin.services import _base
 from quantum_admin.services import projects, yaml_import
 
@@ -20,77 +17,54 @@ PROJETOS = [
     {"id": "uuid-rag", "name": "quantum-rag", "description": "", "status": "archived",
      "source_path": "projects\\quantum-rag", "created_at": "2026-01-01T00:00:00"},
 ]
-
-
-def connectors(token_estrangeiro):
-    return [
-        {"id": "c-redis", "name": "cache", "type": "cache", "provider": "redis", "host": "localhost",
-         "port": 6379, "password": "", "options": {"db": 0}, "scope": "public"},
-        {"id": "c-pg", "name": "pg do blog", "type": "database", "provider": "postgres", "port": 5432,
-         "password": "segredo-em-texto-puro", "scope": "application", "application_id": "uuid-blog"},
-        {"id": "c-mq", "name": "fila", "type": "mq", "provider": "rabbitmq", "password": token_estrangeiro},
-    ]
+CONNECTORS = [
+    {"id": "c-redis", "name": "cache", "type": "cache", "provider": "redis", "scope": "public"},
+    {"id": "c-pg", "name": "pg do blog", "type": "database", "provider": "postgres",
+     "scope": "application", "application_id": "uuid-blog"},
+]
 
 
 @pytest.fixture(autouse=True)
-def isolado(tmp_path, monkeypatch):
-    engine = create_engine(f"sqlite:///{(tmp_path / 'admin.db').as_posix()}",
-                           connect_args={"check_same_thread": False})
-    monkeypatch.setattr(database, "engine", engine)
-    monkeypatch.setattr(database, "SessionLocal", sessionmaker(bind=engine, autoflush=False))
-    monkeypatch.setattr(_base, "_iniciado", False)
-    monkeypatch.setenv("QUANTUM_ADMIN_ROOT", str(tmp_path))
-    pasta = tmp_path / "quantum_admin" / "settings"
-    pasta.mkdir(parents=True)
-    estrangeiro = Fernet(Fernet.generate_key()).encrypt(b"outra-chave").decode()
+def isolado(admin_isolado):
+    pasta = admin_isolado / "quantum_admin" / "settings"
     (pasta / "projects.yaml").write_text(yaml.safe_dump(PROJETOS), encoding="utf-8")
-    (pasta / "connectors.yaml").write_text(yaml.safe_dump(connectors(estrangeiro)), encoding="utf-8")
-    yield tmp_path
-    engine.dispose()
+    (pasta / "connectors.yaml").write_text(yaml.safe_dump(CONNECTORS), encoding="utf-8")
+    return admin_isolado
 
 
 def _hash(pasta):
     return {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(pasta.glob("*.yaml"))}
 
 
-def test_pendente_lista_o_que_falta():
-    projects.create_project("blog")          # ja existe no banco (outra caixa nao importa)
-    assert yaml_import.pending() == {"projects": ["quantum-rag"], "connectors": ["cache", "pg do blog", "fila"]}
+def test_pendente_lista_projetos_que_faltam_e_connectors_presos_a_id_antigo():
+    projects.create_project("Blog")          # ja existe no banco (caixa diferente conta como igual)
+    assert yaml_import.pending() == {"projects": ["quantum-rag"],
+                                     "connectors_to_review": ["pg do blog (project blog)"]}
 
 
-def test_importa_preservando_campos_e_dono(isolado):
+def test_importa_preservando_campos():
     r = yaml_import.run()
     assert r["projects"] == ["blog", "quantum-rag"]
-    assert r["connectors"] == ["cache", "pg do blog", "fila"]
     with _base.sessao() as db:
         blog = db.query(models.Project).filter_by(name="blog").one()
         rag = db.query(models.Project).filter_by(name="quantum-rag").one()
         assert (blog.description, blog.created_at.isoformat(), rag.status, rag.source_path) == \
             ("o blog", "2026-01-02T03:04:05", "archived", "projects/quantum-rag")
-        pg = db.query(models.Connector).filter_by(id="c-pg").one()
-        assert pg.owner_project_id == blog.id and pg.visibility == "private"
-        assert db.query(models.Connector).filter_by(id="c-redis").one().options_json == '{"db": 0}'
 
 
-def test_senha_em_texto_puro_e_cifrada_e_nunca_devolvida(isolado):
-    r = yaml_import.run()
-    assert "segredo-em-texto-puro" not in str(r)
+def test_connectors_nao_vao_para_o_banco():
+    # a tabela connectors do banco nao e usada pelo backend; eles ficam no YAML
+    yaml_import.run()
     with _base.sessao() as db:
-        cifrada = db.query(models.Connector).filter_by(id="c-pg").one().password_encrypted
-    assert cifrada != "segredo-em-texto-puro"
-    assert SecretManager().decrypt(cifrada) == "segredo-em-texto-puro"
-
-
-def test_senha_cifrada_com_outra_chave_e_mantida_e_avisada():
-    r = yaml_import.run()
-    assert any("fila" in n and "cannot open" in n for n in r["notes"])
+        assert db.query(models.Connector).count() == 0
+    assert len(_base.connectors().list_connectors()) == 2
 
 
 def test_backup_antes_e_yaml_intacto(isolado):
     projects.create_project("existente")     # o banco ja tem dado: o backup precisa conte-lo
     antes = _hash(isolado / "quantum_admin" / "settings")
     r = yaml_import.run()
-    assert r["backup"] and (isolado / "quantum_admin" / "backups").is_dir()
+    assert r["backup"]
     copia = create_engine(f"sqlite:///{r['backup']}")
     with copia.connect() as conexao:
         nomes = [linha[0] for linha in conexao.exec_driver_sql("select name from projects")]
@@ -102,5 +76,5 @@ def test_backup_antes_e_yaml_intacto(isolado):
 def test_idempotente():
     yaml_import.run()
     segunda = yaml_import.run()
-    assert segunda == {"backup": None, "projects": [], "connectors": [], "notes": []}
+    assert segunda["backup"] is None and segunda["projects"] == []
     assert len(projects.list_projects()) == 2

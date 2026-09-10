@@ -10,24 +10,13 @@ import os
 
 import pytest
 import yaml
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from quantum_admin.backend import database, models
 from quantum_admin.services import _base
 from quantum_admin.services import projects as svc
 
 
 @pytest.fixture(autouse=True)
-def isolado(tmp_path, monkeypatch):
-    engine = create_engine(f"sqlite:///{(tmp_path / 'admin.db').as_posix()}",
-                           connect_args={"check_same_thread": False})
-    monkeypatch.setattr(database, "engine", engine)
-    monkeypatch.setattr(database, "SessionLocal", sessionmaker(bind=engine, autoflush=False))
-    monkeypatch.setattr(_base, "_iniciado", False)
-    monkeypatch.setenv("QUANTUM_ADMIN_ROOT", str(tmp_path))
-    yield tmp_path
-    engine.dispose()
+def isolado(admin_isolado):
+    return admin_isolado
 
 
 class TestCriar:
@@ -92,13 +81,16 @@ class TestListar:
         assert estado == {"rodando": True, "parado": False}
         assert not (pids / "parado.pid").exists()      # pid de processo morto e limpo
 
-    def test_conta_connectors_do_projeto(self):
+    def test_conta_connectors_do_projeto(self, isolado):
+        # connectors vivem em settings/connectors.yaml, via connector_service
         p = svc.create_project("loja")
-        with _base.sessao() as db:
-            db.add(models.Connector(id="c1", name="pg", type="database", provider="postgres",
-                                    owner_project_id=p["id"]))
+        servico = _base.connectors()
+        servico.create_connector({"name": "pg da loja", "type": "database", "provider": "postgres",
+                                  "scope": "application", "application_id": p["id"]})
+        servico.create_connector({"name": "cache geral", "type": "cache", "provider": "redis"})
         assert svc.list_projects()[0]["connector_count"] == 1
-        assert svc.summary()["connectors"] == 1
+        assert svc.summary()["connectors"] == 2
+        assert (isolado / "quantum_admin" / "settings" / "connectors.yaml").is_file()
 
 
 class TestRemoverESincronizar:

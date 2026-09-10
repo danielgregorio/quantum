@@ -26,7 +26,7 @@ from pathlib import Path
 import yaml
 
 from quantum.services import service
-from quantum_admin.services._base import raiz, sessao, status_do_processo
+from quantum_admin.services._base import connectors, raiz, sessao, status_do_processo
 
 CONFIG_PADRAO = {
     "server": {"port": 8080, "host": "127.0.0.1", "debug": False},
@@ -76,7 +76,9 @@ def _registro(projeto, models, db) -> dict:
             if pasta and pasta.is_dir() else None
     except OSError:
         modificado = None
-    connectors = db.query(models.Connector).filter(models.Connector.owner_project_id == projeto.id).count()
+    # Connectors vivem em settings/connectors.yaml (connector_service); a
+    # tabela `connectors` do banco não é usada por nada no backend.
+    do_projeto = len(connectors().list_connectors(application_id=projeto.id, include_public=False))
     return {
         "id": projeto.id,
         "name": projeto.name,
@@ -91,7 +93,7 @@ def _registro(projeto, models, db) -> dict:
         "debug": servidor.get("debug"),
         "has_config": bool(pasta and (pasta / "quantum.config.yaml").is_file()),
         "component_count": componentes,
-        "connector_count": connectors,
+        "connector_count": do_projeto,
         "last_modified": modificado,
         "initial": (projeto.name or "?")[0].upper(),
     }
@@ -112,15 +114,12 @@ def list_projects(search: str = ""):
 def summary():
     """Totais do cabeçalho da tela de aplicações."""
     projetos = list_projects()
-    _, models = _crud()
-    with sessao() as db:
-        connectors = db.query(models.Connector).count()
     return {
         "total": len(projetos),
         "active": sum(1 for p in projetos if p["status"] == "active"),
         "running": sum(1 for p in projetos if p["running"]),
         "with_config": sum(1 for p in projetos if p["has_config"]),
-        "connectors": connectors,
+        "connectors": len(connectors().list_connectors()),
     }
 
 

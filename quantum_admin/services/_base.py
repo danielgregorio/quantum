@@ -44,8 +44,24 @@ def raiz() -> Path:
 
 
 def pasta_de_configuracao() -> Path:
-    """quantum_admin/settings, onde ficam PIDs, logs e os YAML antigos."""
-    return raiz() / "quantum_admin" / "settings"
+    """quantum_admin/settings: PIDs, logs, connectors.yaml, global.yaml.
+
+    A mesma pasta que a biblioteca do backend usa (connector_service,
+    settings_service resolvem relativa ao próprio arquivo). As telas antigas
+    usavam os.getcwd()/quantum_admin/settings — igual quando `quantum start`
+    roda na raiz do repositório, diferente em qualquer outro lugar.
+    QUANTUM_ADMIN_SETTINGS_DIR permite apontar outra (testes).
+    """
+    if os.environ.get("QUANTUM_ADMIN_SETTINGS_DIR"):
+        return Path(os.environ["QUANTUM_ADMIN_SETTINGS_DIR"])
+    from quantum_admin.backend import connector_service
+    return Path(connector_service.SETTINGS_DIR)
+
+
+def connectors():
+    """O ConnectorService do backend (persiste em settings/connectors.yaml)."""
+    from quantum_admin.backend.connector_service import get_connector_service
+    return get_connector_service()
 
 
 def status_do_processo(nome_projeto: str) -> dict:

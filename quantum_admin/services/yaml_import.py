@@ -1,22 +1,25 @@
-"""Importa os YAML antigos das telas .q para o banco do admin (admin.import.*).
+"""Importa os projetos do YAML antigo das telas .q para o banco (admin.import.*).
 
-As telas .q gravavam projetos e connectors em quantum_admin/settings/*.yaml;
-o FastAPI, no banco. Medido em 2026-09-10: nenhum projeto em comum — os reais
-estavam no YAML, e o banco só tinha os três projetos de demonstração do
-seed_db. Os serviços do admin usam o banco; esta importação traz o YAML para lá.
+As telas .q gravavam projetos em quantum_admin/settings/projects.yaml; o
+FastAPI (crud), no banco. Medido em 2026-09-10: nenhum projeto em comum — os
+14 reais estavam no YAML, e o banco só tinha os três de demonstração do
+seed_db. O serviço admin.projects usa o banco; esta importação traz os
+projetos para lá.
+
+Connectors NÃO são importados: a biblioteca do backend (connector_service)
+os mantém em settings/connectors.yaml, o mesmo arquivo das telas — não há
+divisão. A tabela `connectors` do banco não é usada por nada. O que a
+importação faz com connectors é só apontar os que estão presos a um projeto
+pelo id antigo do YAML (um uuid), que connector_service não reconhece.
 
 Garantias (os dados são do dono, não são recriáveis):
   - antes de gravar, copia o arquivo do banco para quantum_admin/backups/;
   - nunca altera nem apaga os YAML;
   - idempotente: projeto já existente (mesmo nome, sem diferenciar
-    maiúsculas) e connector já existente (mesmo id) são pulados;
-  - senha em texto puro é cifrada com o secret_manager; senha já cifrada é
-    mantida como está, e o relatório diz se a chave atual consegue abri-la;
-  - nenhum valor de senha aparece no retorno.
+    maiúsculas) é pulado.
 """
 
 import datetime
-import json
 import shutil
 from pathlib import Path
 
@@ -50,16 +53,25 @@ def _models():
 
 @service("admin.import.pending")
 def pending():
-    """O que os YAML têm e o banco ainda não (nomes e ids, sem segredos)."""
+    """Projetos do YAML que o banco ainda não tem, e connectors presos a ids antigos."""
     models = _models()
-    projetos, connectors = _ler_yaml("projects.yaml"), _ler_yaml("connectors.yaml")
+    projetos = _ler_yaml("projects.yaml")
     with sessao() as db:
         nomes = {(p.name or "").lower() for p in db.query(models.Project).all()}
-        ids = {c.id for c in db.query(models.Connector).all()}
     return {
         "projects": [p.get("name") for p in projetos if p.get("name") and p["name"].lower() not in nomes],
-        "connectors": [c.get("name") for c in connectors if c.get("id") and str(c["id"]) not in ids],
+        "connectors_to_review": _connectors_com_id_antigo(projetos),
     }
+
+
+def _connectors_com_id_antigo(projetos):
+    ids_yaml = {str(p.get("id")): p.get("name") for p in projetos if p.get("id")}
+    revisar = []
+    for c in _ler_yaml("connectors.yaml"):
+        dono = c.get("application_id")
+        if dono is not None and str(dono) in ids_yaml:
+            revisar.append(f"{c.get('name')} (project {ids_yaml[str(dono)]})")
+    return revisar
 
 
 def _backup():
@@ -75,81 +87,32 @@ def _backup():
     return str(copia)
 
 
-def _senha(valor):
-    """(senha_para_o_banco, observação) — sem nunca devolver o valor."""
-    from quantum_admin.backend.secret_manager import SecretManager, encrypt_value
-    texto = str(valor or "")
-    if not texto:
-        return "", None
-    if texto.startswith("gAAAA"):
-        try:
-            SecretManager().decrypt(texto)
-            return texto, None
-        except ValueError:
-            return texto, "password kept encrypted, but the current QUANTUM_ENCRYPTION_KEY cannot open it"
-    return encrypt_value(texto), "plain-text password was encrypted"
-
-
 @service("admin.import.run")
 def run():
-    """Importa o que falta; devolve o relatório. Não mexe nos YAML."""
+    """Importa os projetos que faltam; devolve o relatório. Não mexe nos YAML."""
     models = _models()
-    projetos, connectors = _ler_yaml("projects.yaml"), _ler_yaml("connectors.yaml")
+    projetos = _ler_yaml("projects.yaml")
     faltando = pending()
-    relatorio = {"backup": None, "projects": [], "connectors": [], "notes": []}
-    if not faltando["projects"] and not faltando["connectors"]:
+    relatorio = {"backup": None, "projects": [], "connectors_to_review": faltando["connectors_to_review"]}
+    if not faltando["projects"]:
         return relatorio
     relatorio["backup"] = _backup()
-
     with sessao() as db:
-        nomes = {(p.name or "").lower(): p for p in db.query(models.Project).all()}
-        id_novo = {}                         # id do projeto no YAML -> id no banco
+        nomes = {(p.name or "").lower() for p in db.query(models.Project).all()}
         for item in projetos:
             nome = (item.get("name") or "").strip()
-            if not nome:
+            if not nome or nome.lower() in nomes:
                 continue
-            existente = nomes.get(nome.lower())
-            if existente is None:
-                existente = models.Project(
-                    name=nome, description=item.get("description") or "",
-                    status=item.get("status") or "active",
-                    source_path=(item.get("source_path") or "").replace("\\", "/"))
-                criado, alterado = _data(item.get("created_at")), _data(item.get("updated_at"))
-                if criado:
-                    existente.created_at = criado
-                if alterado:
-                    existente.updated_at = alterado
-                db.add(existente)
-                db.flush()
-                nomes[nome.lower()] = existente
-                relatorio["projects"].append(nome)
-            if item.get("id"):
-                id_novo[str(item["id"])] = existente.id
-
-        ids = {c.id for c in db.query(models.Connector).all()}
-        for item in connectors:
-            cid = str(item.get("id") or "")
-            if not cid or cid in ids:
-                continue
-            senha, nota = _senha(item.get("password"))
-            if nota:
-                relatorio["notes"].append(f"{item.get('name')}: {nota}")
-            dono = id_novo.get(str(item.get("application_id") or "")) if item.get("application_id") else None
-            conector = models.Connector(
-                id=cid, name=item.get("name") or cid, type=item.get("type") or "",
-                provider=item.get("provider") or "", host=item.get("host") or "localhost",
-                port=int(item.get("port") or 0), username=item.get("username") or "",
-                password_encrypted=senha, database=item.get("database") or "",
-                options_json=json.dumps(item.get("options") or {}),
-                is_default=bool(item.get("is_default")), docker_auto=bool(item.get("docker_auto")),
-                docker_image=item.get("docker_image") or "",
-                docker_container_id=item.get("docker_container_id") or "",
-                status=item.get("status") or "unknown", last_tested=_data(item.get("last_tested")),
-                visibility="private" if item.get("scope") == "application" else "public",
-                owner_project_id=dono)
-            criado = _data(item.get("created_at"))
+            projeto = models.Project(
+                name=nome, description=item.get("description") or "",
+                status=item.get("status") or "active",
+                source_path=(item.get("source_path") or "").replace("\\", "/"))
+            criado, alterado = _data(item.get("created_at")), _data(item.get("updated_at"))
             if criado:
-                conector.created_at = criado
-            db.add(conector)
-            relatorio["connectors"].append(item.get("name") or cid)
+                projeto.created_at = criado
+            if alterado:
+                projeto.updated_at = alterado
+            db.add(projeto)
+            nomes.add(nome.lower())
+            relatorio["projects"].append(nome)
     return relatorio
