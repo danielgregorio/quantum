@@ -58,6 +58,10 @@ def token(client):
     r = client.post("/auth/login",
                     params={"username": "admin", "password": PASSWORD})
     assert r.status_code == 200, r.text
+    # The login also sets the session cookie, and TestClient keeps cookies.
+    # Left in the jar, every "no token" request below would quietly be
+    # authenticated. Tests that want the cookie log in on their own client.
+    client.cookies.clear()
     return r.json()["access_token"]
 
 
@@ -91,6 +95,126 @@ class TestTheApiIsClosedByDefault:
             and client.get(re.sub(r"\{[^}]+\}", "1", p)).status_code != 401
         ]
         assert leaks == [], f"{len(leaks)} API routes answer with no token"
+
+    def test_no_data_route_outside_api_answers_without_a_token(self, app, client):
+        # The gate treated every GET outside /api as an HTML shell page. 18 of
+        # the 90 JSON routes out there had no per-route check and answered 200
+        # anonymously — /projects/{id}/environment-variables,
+        # /projects/{id}/configuration/history, /datasources/{id}/logs...
+        # Only routes that really serve HTML, plus an explicit public list,
+        # stay open now.
+        # Pages are closed too: an anonymous page request is redirected to the
+        # login, a JSON route answers 401. Nothing else is acceptable.
+        leaks = []
+        for p in get_routes(app):
+            if p.startswith("/api") or p in app.PUBLIC_GET_PATHS:
+                continue
+            if p.endswith(app.PUBLIC_GET_SUFFIXES):
+                continue
+            url = re.sub(r"\{[^}]+\}", "1", p)
+            r = client.get(url, follow_redirects=False)
+            redirected_to_login = (r.status_code == 303
+                                   and r.headers.get("location", "").endswith("/login"))
+            if r.status_code != 401 and not redirected_to_login:
+                leaks.append(f"{p} -> {r.status_code}")
+        assert leaks == [], f"{len(leaks)} routes answer with no login: {leaks[:8]}"
+
+    def test_the_routes_that_leaked_are_closed(self, client):
+        for url in ("/projects/1/environment-variables",
+                    "/projects/1/configuration/history",
+                    "/datasources/1/logs"):
+            assert client.get(url).status_code == 401, url
+
+    def test_no_page_renders_data_to_an_anonymous_visitor(self, app, client, auth):
+        # Three pages rendered data server-side with no login — the project
+        # detail page put the project's name in its title. Seed markers and
+        # look for them in every page an anonymous visitor can reach.
+        import uuid
+        from fastapi.responses import HTMLResponse
+
+        marker = f"segredo{uuid.uuid4().hex[:10]}"
+        project = client.post("/projects", json={"name": f"proj-{marker}",
+                                                 "description": marker},
+                              headers=auth)
+        assert project.status_code == 201, project.text
+        project_id = project.json()["id"]
+        try:
+            client.post(f"/projects/{project_id}/environment-variables",
+                        json={"key": f"KEY_{marker}", "value": marker,
+                              "is_secret": True}, headers=auth)
+            leaking = []
+            for route in app.app.router.routes:
+                rc = getattr(route, "response_class", None)
+                if not (isinstance(rc, type) and issubclass(rc, HTMLResponse)):
+                    continue
+                if "GET" not in (getattr(route, "methods", None) or ()):
+                    continue
+                url = re.sub(r"\{[^}]+\}", str(project_id), route.path)
+                r = client.get(url)          # follows the redirect to /login
+                if marker in r.text:
+                    leaking.append(route.path)
+            assert leaking == [], f"pages render data with no login: {leaking}"
+        finally:
+            client.delete(f"/projects/{project_id}", headers=auth)
+
+    def test_the_public_get_list_still_opens(self, client):
+        assert client.get("/health").status_code != 401
+        assert client.get("/openapi.json").status_code == 200
+        assert client.get("/login").status_code == 200
+        assert client.get("/health/system").status_code == 401
+
+
+def test_the_suite_never_touches_the_real_admin_database(app):
+    # The database path was fixed at quantum_admin/quantum_admin.db, so every
+    # test here created and deleted rows in the file the admin really serves.
+    # tests/conftest.py points QUANTUM_ADMIN_DATABASE_URL at a temp file.
+    from backend import database
+    real = (ADMIN / "quantum_admin.db").resolve()
+    assert str(real) not in database.DATABASE_URL, database.DATABASE_URL
+    assert "quantum-admin-tests-" in database.DATABASE_URL
+
+
+class TestTheSessionCookie:
+    """Pages are opened by navigation, which cannot send the Bearer token the
+    UI keeps in localStorage. The login sets the same token as a cookie."""
+
+    @pytest.fixture
+    def browser(self, app):
+        # A client of its own: the shared one must stay anonymous.
+        with TestClient(app.app, raise_server_exceptions=False) as c:
+            yield c
+
+    def test_login_sets_an_httponly_strict_cookie(self, browser):
+        r = browser.post("/auth/login",
+                         params={"username": "admin", "password": PASSWORD})
+        assert r.status_code == 200
+        set_cookie = r.headers.get("set-cookie", "").lower()
+        assert "token=" in set_cookie
+        assert "httponly" in set_cookie
+        assert "samesite=strict" in set_cookie
+
+    def test_the_cookie_opens_a_page(self, browser):
+        browser.post("/auth/login", params={"username": "admin", "password": PASSWORD})
+        r = browser.get("/projects", follow_redirects=False)
+        assert r.status_code == 200
+
+    def test_without_it_a_page_redirects_to_login(self, client):
+        r = client.get("/projects", follow_redirects=False)
+        assert r.status_code == 303
+        assert r.headers["location"].endswith("/login")
+
+    def test_the_cookie_alone_cannot_write(self, browser):
+        # Reads only. A write needs the header, which another site cannot
+        # make the browser send — so the cookie cannot forge one (CSRF).
+        browser.post("/auth/login", params={"username": "admin", "password": PASSWORD})
+        r = browser.post("/projects", json={"name": "csrf-attempt", "description": ""})
+        assert r.status_code == 401
+
+    def test_logout_clears_it(self, browser):
+        browser.post("/auth/login", params={"username": "admin", "password": PASSWORD})
+        browser.get("/logout")
+        r = browser.get("/projects", follow_redirects=False)
+        assert r.status_code == 303
 
     def test_a_token_opens_them(self, app, client, auth):
         r = client.get("/api/projects", headers=auth)

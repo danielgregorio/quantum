@@ -10,12 +10,16 @@ from .models import Base
 # SQLite database file location - use absolute path relative to quantum_admin folder
 _QUANTUM_ADMIN_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _DB_PATH = os.path.join(_QUANTUM_ADMIN_DIR, "quantum_admin.db")
-DATABASE_URL = f"sqlite:///{_DB_PATH}"
+
+# QUANTUM_ADMIN_DATABASE_URL overrides the location. The path used to be fixed,
+# so the admin test suite created and deleted rows in the same database the
+# admin serves — every `pytest` run wrote into the developer's real data.
+DATABASE_URL = os.environ.get("QUANTUM_ADMIN_DATABASE_URL") or f"sqlite:///{_DB_PATH}"
 
 # Create engine with SQLite-specific settings
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},  # Needed for SQLite
+    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
     echo=False  # Set to True for SQL query logging during development
 )
 

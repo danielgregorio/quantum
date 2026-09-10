@@ -4,13 +4,20 @@ Pytest Configuration and Fixtures
 Shared fixtures for all tests.
 """
 
+import os
 import pytest
 import sys
 import sqlite3
 import tempfile
 from pathlib import Path
 
-# Add src to path
+# The admin's database defaults to quantum_admin/quantum_admin.db — the file the
+# admin really serves. Set here, before any test imports the admin backend, so
+# no test run writes into it. setdefault: an explicit value still wins.
+os.environ.setdefault(
+    "QUANTUM_ADMIN_DATABASE_URL",
+    "sqlite:///" + str(Path(tempfile.mkdtemp(prefix="quantum-admin-tests-")) / "admin.db"),
+)
 
 
 @pytest.fixture

@@ -2,10 +2,11 @@
 Quantum Admin - FastAPI Backend
 Main application entry point
 """
-from fastapi import FastAPI, Depends, HTTPException, status, Header, Request
+from fastapi import FastAPI, Depends, HTTPException, status, Header, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, HTMLResponse
+from starlette.routing import Match
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
@@ -147,6 +148,44 @@ PUBLIC_WRITE_PREFIXES = ("/webhooks/", "/health")
 WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 
+# GETs that stay reachable without a login. Everything else needs one — pages
+# included (a browser sends the HttpOnly cookie set at login).
+#
+# The gate used to leave every GET outside /api open, on the theory that those
+# were HTML shell pages whose panels load data from /api. Measured: 18 of the
+# 90 JSON routes out there answered 200 anonymously
+# (/projects/{id}/environment-variables, /configuration/history,
+# /datasources/{id}/logs...), and three pages rendered data server-side — the
+# project detail page put the project's name in its title. Open by default is
+# how both happened, so it is closed by default now.
+#
+# - login/logout: a gate that blocks the login is a locked door with no key.
+# - API docs: structure only, no data; /docs fetches /openapi.json itself.
+# - /static: the login page's own CSS.
+# - /health: the orchestrator's probe. /health/system and /health/database
+#   describe the host, so they are NOT public.
+# - */badge.svg: meant for <img src> embedded elsewhere.
+PUBLIC_GET_PATHS = frozenset({"/login", "/admin/login", "/logout", "/admin/logout",
+                              "/health", "/docs", "/docs/oauth2-redirect",
+                              "/redoc", "/openapi.json"})
+PUBLIC_GET_PREFIXES = ("/static/", "/frontend/")
+PUBLIC_GET_SUFFIXES = ("/badge.svg",)
+
+
+def _serves_html_page(scope) -> bool:
+    """Does the route Starlette will pick for this request declare HTMLResponse?
+
+    Only used to answer an anonymous request the right way: a page redirects to
+    the login, a JSON route answers 401.
+    """
+    for route in app.router.routes:
+        match, _ = route.matches(scope)
+        if match == Match.FULL:
+            response_class = getattr(route, "response_class", None)
+            return isinstance(response_class, type) and issubclass(response_class, HTMLResponse)
+    return False
+
+
 def _api_requires_auth(path: str, method: str = "GET") -> bool:
     """Este portao cobria SO `/api`, e a API real do admin vive na raiz.
 
@@ -156,10 +195,8 @@ def _api_requires_auth(path: str, method: str = "GET") -> bool:
     token nenhum.
 
     Agora toda escrita exige token, em qualquer caminho, com uma lista
-    publica explicita. GET fora de `/api` continua aberto de proposito: sao
-    as paginas HTML do shell, cujos paineis (esses sim, `/api`) e que
-    carregam os dados — e uma pagina que nao carrega nada manda o visitante
-    para o login.
+    publica explicita. Leitura fora de `/api` tambem: so a lista publica de
+    GET fica aberta (ver PUBLIC_GET_PATHS).
     """
     if method.upper() in WRITE_METHODS:
         if path in PUBLIC_WRITE_PATHS:
@@ -169,7 +206,11 @@ def _api_requires_auth(path: str, method: str = "GET") -> bool:
         return True
 
     if not path.startswith("/api"):
-        return False        # the HTML shell itself; its panels are /api
+        if path in PUBLIC_GET_PATHS:
+            return False
+        if path.startswith(PUBLIC_GET_PREFIXES) or path.endswith(PUBLIC_GET_SUFFIXES):
+            return False
+        return True
     if path in PUBLIC_API_PATHS:
         return False
     return not path.startswith(PUBLIC_API_PREFIXES)
@@ -225,11 +266,17 @@ async def require_api_auth(request: Request, call_next):
             logger.warning(
                 "QUANTUM_ADMIN_ALLOW_ANONYMOUS: serving %s with no token", path)
         else:
+            reading = request.method in ("GET", "HEAD")
             header = request.headers.get("authorization", "")
             token = header[7:].strip() if header.lower().startswith("bearer ") else ""
-            if not token:
+            if not token and reading:
+                # The login cookie counts for reads only. A write must carry
+                # the header, which another site cannot make a browser send —
+                # so the cookie cannot be used to forge one (CSRF).
                 token = request.cookies.get("token", "")
             if not token or not get_auth_service().get_current_user(token):
+                if reading and not path.startswith("/api") and _serves_html_page(request.scope):
+                    return RedirectResponse(url=f"{URL_PREFIX}/login", status_code=303)
                 from fastapi.responses import JSONResponse
                 return JSONResponse(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -4342,7 +4389,7 @@ def require_admin(user: User = Depends(require_auth)) -> User:
 
 
 @app.post("/auth/login", tags=["Auth"])
-def login(username: str, password: str):
+def login(username: str, password: str, request: Request, response: Response):
     """
     Authenticate and get JWT token
 
@@ -4357,6 +4404,18 @@ def login(username: str, password: str):
             detail="Invalid username or password"
         )
 
+    # The same token as a cookie. Opening a page is a browser navigation, which
+    # cannot send the Bearer token the UI keeps in localStorage — so pages that
+    # render data had to be served to anyone. HttpOnly keeps scripts from
+    # reading it; the gate accepts it only for GET/HEAD, so it cannot be used to
+    # forge a write from another site.
+    response.set_cookie(
+        "token", result["access_token"],
+        max_age=result.get("expires_in"),
+        httponly=True, samesite="strict",
+        secure=request.url.scheme == "https",
+        path=(URL_PREFIX or "") + "/",
+    )
     return result
 
 
