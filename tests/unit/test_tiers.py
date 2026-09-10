@@ -47,14 +47,14 @@ class TestApplicationTypes:
         assert tiers.app_tier_of("game") == "laboratorio"
 
     def test_alternative_targets_are_experimental(self):
-        for app_type in ("terminal", "ui", "microservices"):
+        for app_type in ("terminal", "ui", "testing"):
             assert tiers.app_tier_of(app_type) == "experimental"
 
-    def test_declared_web_applications_are_experimental(self):
-        # G17/G18: q:application type html does not start, and type api does
-        # not execute route bodies. Web apps are pages in components/.
-        assert tiers.app_tier_of("html") == "experimental"
-        assert tiers.app_tier_of("api") == "experimental"
+    def test_declared_web_applications_were_removed(self):
+        # APP-1 (G17/G18): they never ran their routes. Web apps are pages in
+        # components/, and the parser refuses these types with directions.
+        assert {"html", "api", "microservices"} == tiers.REMOVED_APP_TYPES
+        assert not tiers.REMOVED_APP_TYPES & (tiers.EXPERIMENTAL_APP_TYPES | tiers.LAB_APP_TYPES)
 
     def test_an_unknown_type_is_not_flagged_here(self):
         assert tiers.app_tier_of("job") == "supported"

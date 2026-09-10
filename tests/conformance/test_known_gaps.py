@@ -14,10 +14,7 @@ lacuna sumir sem ninguém decidir.
 Todos os casos foram reproduzidos por execução em 2026-09-10.
 """
 
-import os
 import pathlib
-import subprocess
-import sys
 import tempfile
 
 import pytest
@@ -41,69 +38,5 @@ def lacuna(reason):
     return pytest.mark.xfail(strict=True, reason=reason)
 
 
-@pytest.fixture
-def servidor(tmp_path):
-    """Servidor web real, em processo, com os componentes que o teste escrever."""
-    from quantum.runtime.web_server import QuantumWebServer
-    componentes = tmp_path / 'components'
-    componentes.mkdir()
-    config = tmp_path / 'config.yaml'
-    config.write_text(
-        f"server:\n  debug: true\npaths:\n  components: {componentes.as_posix()}\n"
-        "  static: ./static\n  logs: ./logs\n"
-        "logging:\n  level: ERROR\n  console: false\n  file: false\n",
-        encoding='utf-8')
-
-    def montar(**arquivos):
-        for nome, conteudo in arquivos.items():
-            (componentes / f'{nome}.q').write_text(conteudo, encoding='utf-8')
-        server = QuantumWebServer(str(config))
-        server.app.config['TESTING'] = True
-        return server.app.test_client()
-    return montar
-
-
-DUAS_ACOES = (
-    '<q:component name="acoes" xmlns:q="https://quantum.lang/ns">'
-    '<q:action name="criar" method="POST"><q:redirect url="/criado"/></q:action>'
-    '<q:action name="excluir" method="POST"><q:redirect url="/excluido"/></q:action>'
-    '<p>x</p></q:component>')
-
-
-class TestAplicacaoHtml:
-    @lacuna("G17: `quantum run app.q` com q:application type=\"html\" e q:route "
-            "falha na hora: QuantumWebServer.__init__() got an unexpected keyword "
-            "argument 'port', e a linha seguinte chama configure_from_ast, que "
-            "não existe. O modelo que funciona é components/ + quantum start. "
-            "Decidir: implementar as rotas declaradas ou remover o tipo.")
-    def test_aplicacao_html_sobe_o_servidor(self, tmp_path):
-        app = tmp_path / 'app.q'
-        app.write_text(
-            '<q:application id="app" type="html" xmlns:q="https://quantum.lang/ns">'
-            '<q:route path="/" method="GET"><h1>oi</h1></q:route></q:application>',
-            encoding='utf-8')
-        try:
-            saida = subprocess.run(
-                [sys.executable, '-m', 'quantum.cli.runner', 'run', str(app)],
-                capture_output=True, text=True, cwd=tmp_path, timeout=10,
-                env=dict(os.environ, PYTHONPATH=str(REPO)))
-        except subprocess.TimeoutExpired:
-            return      # continuou de pé servindo: é o comportamento esperado
-        assert saida.returncode == 0, (saida.stdout + saida.stderr)[-300:]
-
-
-class TestAplicacaoApi:
-    @lacuna("G18: o servidor de q:application type=\"api\" não executa o corpo "
-            "da rota — devolve o texto literal do primeiro q:return como JSON "
-            "(ou {}), ignorando q:set, q:loop e q:query. E sobe em 0.0.0.0.")
-    def test_rota_executa_o_corpo(self):
-        from quantum.core.parser import QuantumParser
-        from quantum.runtime.api_server import QuantumAPIServer
-        app = QuantumParser().parse(
-            '<q:application id="api" type="api" xmlns:q="https://quantum.lang/ns">'
-            '<q:route path="/n" method="GET"><q:set name="n" value="41" type="number"/>'
-            '<q:return value="{n + 1}"/></q:route></q:application>')
-        server = QuantumAPIServer(port=0)
-        server.configure_from_ast(app)
-        resposta = server.app.test_client().get('/n')
-        assert resposta.get_json() == 42
+# Nenhuma lacuna aberta. A proxima entra aqui, com o comportamento proposto e
+# @lacuna("Gnn: ...").

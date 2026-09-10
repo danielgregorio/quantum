@@ -32,83 +32,6 @@ Complex examples combining multiple features - real-world applications.
 
 ## Application Types
 
-### Web Application
-
-A complete web app with routing, database, and authentication:
-
-```xml
-<q:application id="webapp" type="html" port="8080">
-  <q:route path="/" method="GET">
-    <q:if condition="{!session.userId}">
-      <q:redirect url="/login" />
-    </q:if>
-    <!-- Dashboard content -->
-  </q:route>
-
-  <q:route path="/login" method="GET">
-    <!-- Login form -->
-  </q:route>
-
-  <q:route path="/api/users" method="GET">
-    <q:query name="users">SELECT * FROM users</q:query>
-    <q:return type="json" value="{users}" />
-  </q:route>
-</q:application>
-```
-
-### REST API
-
-Build a complete REST API:
-
-```xml
-<q:application id="api" type="api">
-  <q:route path="/api/products" method="GET">
-    <q:query name="products">SELECT * FROM products</q:query>
-    <q:return type="json" value="{products}" />
-  </q:route>
-
-  <q:route path="/api/products/:id" method="GET">
-    <q:query name="product">
-      SELECT * FROM products WHERE id = :id
-      <q:param name="id" value="{route.params.id}" />
-    </q:query>
-    <q:return type="json" value="{product[0]}" />
-  </q:route>
-
-  <q:route path="/api/products" method="POST">
-    <q:query name="insert" type="insert">
-      INSERT INTO products (name, price) VALUES (:name, :price)
-      <q:param name="name" value="{body.name}" />
-      <q:param name="price" value="{body.price}" />
-    </q:query>
-    <q:return type="json" value='{"id": {insert.insertId}}' />
-  </q:route>
-</q:application>
-```
-
-### Chat Application
-
-Real-time chat with WebSockets:
-
-```xml
-<q:application id="chat" type="html">
-  <q:websocket path="/ws/chat">
-    <q:on event="message">
-      <q:broadcast channel="chat" data="{message}" />
-    </q:on>
-  </q:websocket>
-
-  <div id="messages"></div>
-
-  <q:island type="htmx">
-    <form hx-ws="send:message">
-      <input name="text" placeholder="Type message..." />
-      <button>Send</button>
-    </form>
-  </q:island>
-</q:application>
-```
-
 ### Desktop Application
 
 Build cross-platform desktop apps:
@@ -163,8 +86,6 @@ Call Python code from Quantum:
 
 | Application | Description |
 |-------------|-------------|
-| [webapp.q](https://github.com/danielgregorio/quantum/blob/main/examples/webapp.q) | Full web application template |
-| [api.q](https://github.com/danielgregorio/quantum/blob/main/examples/api.q) | REST API with CRUD operations |
 | [chat.q](https://github.com/danielgregorio/quantum/blob/main/examples/chat.q) | Real-time chat application |
 | [task-manager-desktop.q](https://github.com/danielgregorio/quantum/blob/main/examples/task-manager-desktop.q) | Desktop task management app |
 | [filebrowser.q](https://github.com/danielgregorio/quantum/blob/main/examples/filebrowser.q) | File browser interface |

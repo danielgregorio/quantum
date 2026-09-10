@@ -22,7 +22,4 @@ def __getattr__(name):
     if name == 'QuantumWebServer':
         from .web_server import QuantumWebServer
         return QuantumWebServer
-    if name == 'QuantumAPIServer':
-        from .api_server import QuantumAPIServer
-        return QuantumAPIServer
     raise AttributeError(f"module 'runtime' has no attribute {name!r}")

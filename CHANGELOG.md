@@ -10,6 +10,10 @@ means, rule by rule, and every rule is pinned by a test that cites it.
 
 ### Breaking
 
+- **`q:application type="html"`, `type="api"` and `type="microservices"` were
+  removed** (APP-1). They never ran their routes. `q:application` without a
+  `type` meant `html` and is refused too; the parse error explains how to move
+  to pages in `components/` served by `quantum start`.
 - **An expression that fails in a `q:` attribute is an error** that names it,
   with a suggestion when a similar name exists (EXPR-1, EXPR-2). It used to be
   left as literal text — `value="x{nada}y"` produced `"x{nada}y"`, and

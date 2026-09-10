@@ -691,6 +691,10 @@ class QuantumParser:
         app_id = root.get('id', path.stem)
         app_type = root.get('type', 'html')
 
+        from quantum.core.tiers import REMOVED_APP_TYPES, removed_app_type_message
+        if app_type in REMOVED_APP_TYPES:
+            raise QuantumParseError(removed_app_type_message(app_type, 'type' in root.attrib))
+
         app = ApplicationNode(app_id, app_type)
         app.engine = root.get('engine')
 

@@ -52,13 +52,24 @@ CORE_ATTRIBUTES = frozenset({"require_auth", "require_role"})
 # promise and is not part of the pitch. Its tests run in the main suite, so a
 # core change that breaks a game shows up in CI.
 LAB_APP_TYPES = frozenset({"game"})
-# "html" and "api" are experimental too, measured 2026-09-10: `quantum run` on a
-# type="html" application fails at once (gap G17), and the type="api" server
-# never executes a route's body — it serves the literal text of the first
-# q:return (gap G18). The supported way to build a web app is pages in
-# components/ served by `quantum start`, which runs no q:application at all.
-EXPERIMENTAL_APP_TYPES = frozenset({"terminal", "ui", "testing", "microservices",
-                                    "html", "api"})
+EXPERIMENTAL_APP_TYPES = frozenset({"terminal", "ui", "testing"})
+
+# Removed in 0.11 (APP-1), because they never worked: `quantum run` on a
+# type="html" application failed at once (gap G17), and the type="api" server —
+# also behind "microservices" — never executed a route's body, serving the
+# literal text of the first q:return (gap G18). A web app is pages in
+# components/ served by `quantum start`. "html" was also the default when
+# type= was left out.
+REMOVED_APP_TYPES = frozenset({"html", "api", "microservices"})
+
+
+def removed_app_type_message(app_type: str, declared: bool) -> str:
+    what = f'type="{app_type}"' if declared else 'with no type= (it meant type="html")'
+    return (
+        f"<q:application> {what} was removed in Quantum 0.11: it never ran its "
+        f"routes. Build a web app as pages in components/ (components/index.q is "
+        f"/) and run `quantum start`. See "
+        f"https://danielgregorio.github.io/quantum/guide/getting-started")
 
 
 def tier_of(tag_name: str) -> str:

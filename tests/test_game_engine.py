@@ -158,10 +158,10 @@ class TestApplicationType:
         assert len(ast.scenes) == 1
 
     def test_non_game_app_unchanged(self, parser):
-        src = '''<q:application id="web" type="html">
+        src = '''<q:application id="tui" type="terminal">
         </q:application>'''
         ast = parser.parse(src)
-        assert ast.app_type == 'html'
+        assert ast.app_type == 'terminal'
         assert len(ast.scenes) == 0
 
 

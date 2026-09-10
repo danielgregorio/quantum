@@ -205,6 +205,14 @@ compartilhada por todas as tags.
 `<nome>_result` de `q:invoke` — aparece como mensagem, nunca como traceback do
 Python.
 
+## 9a. `q:application`
+
+**APP-1** — Uma aplicação web são páginas em `components/` servidas por
+`quantum start`. `q:application` com `type="html"`, `type="api"`,
+`type="microservices"` ou sem `type` é erro de parse, que diz para usar
+`components/` e `quantum start`. Os tipos `game`, `terminal`, `ui` e `testing`
+existem, fora do Core (Laboratório e Experimental), e não são especificados.
+
 ---
 
 ## Em aberto
@@ -214,7 +222,4 @@ Lacunas medidas e ainda não decididas. Cada uma é um teste
 comportamento proposto; quando decidida, vira regra acima e o teste muda de
 arquivo.
 
-| Lacuna | Tema |
-|---|---|
-| G17 | `q:application type="html"` não inicia |
-| G18 | `q:application type="api"` não executa as rotas |
+Nenhuma lacuna aberta: G1–G18 foram decididas e viraram as regras acima.

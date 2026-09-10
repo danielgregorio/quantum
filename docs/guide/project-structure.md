@@ -39,17 +39,16 @@ Components are self-contained units of functionality:
 </q:component>
 ```
 
-### Application Files (.q)
+### Pages (components/*.q)
 
-Applications define web servers or UI apps:
+Each file in `components/` is a page, served by `quantum start` at its name —
+`components/index.q` at `/`:
 
 ```xml
-<!-- src/app.q -->
-<q:application id="myapp" type="html" xmlns:q="https://quantum.lang/ns">
-  <q:route path="/" method="GET">
-    <h1>Welcome</h1>
-  </q:route>
-</q:application>
+<!-- components/index.q -->
+<q:component name="index" xmlns:q="https://quantum.lang/ns">
+  <h1>Welcome</h1>
+</q:component>
 ```
 
 ### Configuration (quantum.yaml)

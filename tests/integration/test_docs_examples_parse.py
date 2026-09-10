@@ -42,8 +42,10 @@ def exemplos():
     """Cada bloco cercado que contem um componente ou aplicacao completa."""
     for doc in sorted(GUIDE.glob("*.md")):
         texto = doc.read_text(encoding="utf-8", errors="replace")
-        for i, bloco in enumerate(
-                re.findall(FENCE + r"[a-z]*\n(.*?)" + FENCE, texto, re.S)):
+        for i, (lingua, bloco) in enumerate(
+                re.findall(FENCE + r"([a-z]*)\n(.*?)" + FENCE, texto, re.S)):
+            if lingua == "text":        # saida de terminal, nao codigo
+                continue
             if "<q:component" not in bloco and "<q:application" not in bloco:
                 continue
             yield doc.name, i, bloco

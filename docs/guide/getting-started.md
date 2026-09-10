@@ -120,9 +120,9 @@ Open `http://localhost:8080`. The [Quick Start](/guide/quick-start) continues
 with a database and a form.
 
 ::: warning `q:application type="html"`
-Older pages describe web apps as a `q:application type="html"` with
-`q:route` blocks, run with `quantum run app.q`. That form does not work today —
-it fails as soon as it starts (known gap `G17`). Use `components/` as above.
+Older pages describe web apps as a `q:application type="html"` with `q:route`
+blocks. That form never ran its routes and was removed in 0.11 — use
+`components/` as above. See [q:application](/guide/applications).
 :::
 
 ## Debug Mode

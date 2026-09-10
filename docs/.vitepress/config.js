@@ -91,7 +91,7 @@ export default defineConfig({
           text: 'Web Applications',
           items: [
             { text: 'Actions & Forms', link: '/guide/actions' },
-            { text: 'Applications (experimental)', link: '/guide/applications' }
+            { text: 'q:application (not for web)', link: '/guide/applications' }
           ]
         }
       ],
