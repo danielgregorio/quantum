@@ -73,7 +73,13 @@ def load(modules: Iterable[str], project_dir: str = None) -> None:
         if module in _loaded_modules:
             continue
         try:
-            importlib.import_module(module)
+            ja_importado = module in sys.modules
+            modulo = importlib.import_module(module)
+            if ja_importado and not any(f.__module__ == module for f in _registry.values()):
+                # Imported before the registry was cleared (or before it
+                # existed): its @service decorators already ran and would not
+                # run again on a plain import.
+                importlib.reload(modulo)
         except ImportError as exc:
             raise ServiceError(
                 f"quantum.config.yaml lists service module '{module}', which could not "
