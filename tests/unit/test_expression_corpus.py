@@ -101,6 +101,11 @@ def test_corpus_results_are_stable(runtime, corpus):
     for entry in corpus:
         if entry['expr'] in DELIBERATE_CHANGES:
             continue
+        if entry['expr'].isdigit():
+            # EXPR-7: a whole value `{3}` is the number 3, no longer the
+            # literal text '{3}' (it was read as a regex quantifier).
+            assert runtime._apply_databinding('{' + entry['expr'] + '}', {}) == int(entry['expr'])
+            continue
         try:
             got = repr(runtime._apply_databinding('{' + entry['expr'] + '}', dict(CONTEXT)))
         except ExpressionError:

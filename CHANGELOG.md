@@ -33,6 +33,17 @@ means, rule by rule, and every rule is pinned by a test that cites it.
 - **`q:set` types are checked** (ERR-1). `type="number"` keeps fractions —
   `{5 / 2}` used to store `2`; `type="integer"` refuses `3.5` instead of
   truncating it; `type="boolean"` refuses anything but true/false/1/0/yes/no.
+- **`q:function` parameters are always converted and checked** against their
+  `q:param` rules, like actions (FN-1). `validate="true"` was needed before, and
+  even then `type="email"` and `min`/`max` were not checked.
+- **`q:function` refuses attributes that never did anything** (FN-2): `cache`,
+  `memoize`, `pure`, `async`, `retry`, `timeout`, `access`, `scope`,
+  `validate`, `endpoint` and the REST attributes.
+- **Arithmetic operators other than `+` need numbers** (EXPR-7): `'-' * 40`
+  and `'%s' % x` are errors instead of Python's repetition and formatting. An
+  attribute that is only `{3}` is the number 3, no longer the text `{3}`.
+- **`q:param type="number"` keeps whole numbers whole**: `"30"` is `30`, not
+  `30.0` (`decimal` is still a float).
 - **A failed `q:data` or `q:invoke` stops the component** with an error naming
   the source and the reason, like `q:query` already did (DATA-4, INV-2). They
   used to leave the variable empty and carry on. Add `onerror="continue"` to
@@ -57,6 +68,8 @@ means, rule by rule, and every rule is pinned by a test that cites it.
   (RUN-1, RUN-2).
 - `q:job` and `q:schedule` ran on two different job executors; every service now
   has one instance per runtime.
+- A component's `q:function` could not be called from its HTML: `<p>{f(2)}</p>`
+  rendered the literal text (FN-3).
 
 ### Added
 

@@ -60,9 +60,9 @@ _REGEX_QUANTIFIER = re.compile(r'^\d+\s*(,\s*\d*)?$')
 def is_regex_quantifier(content: str) -> bool:
     """True when a `{...}` group should be left as literal text.
 
-    Note this also catches a bare `{5}` meant as the number 5 — ambiguous by
-    construction, and resolved in favour of not corrupting regexes. It matches
-    what the engine already did, so nothing changes for existing templates.
+    A q: attribute that is ONLY `{5}` is the number 5 (EXPR-7) — the runtime
+    checks that case before calling this. Inside other text, `\d{3}` stays a
+    quantifier.
     """
     return bool(_REGEX_QUANTIFIER.match(content.strip()))
 
@@ -157,14 +157,12 @@ def _suggest(wanted: str, target: Any, limit: int = 3) -> str:
 #
 #   {9**9**9}          -> does not return
 #   {10**100000000}    -> does not return
-#   {'a' * 999999999}  -> allocates ~1 GB and returns
+#   ({'a' * 999999999} allocated ~1 GB; since EXPR-7 `*` needs numbers.)
 #
 # No dunder, no escape, no attacker — a typo in a template is enough, and there
 # is no timeout anywhere above this to catch it. The caps are far above any
-# real expression: 4096 bits is a 1233-digit number, and 10 MB of repeated
-# string is already absurd for a page.
+# real expression: 4096 bits is a 1233-digit number.
 _MAX_POW_BITS = 4096
-_MAX_REPEAT = 10_000_000
 
 
 def _guard_pow(left: Any, right: Any) -> None:
@@ -200,17 +198,6 @@ def _guard_pow(left: Any, right: Any) -> None:
             f"{left}**{right} is too large to compute "
             f"(over {_MAX_POW_BITS} bits); this would hang the request"
         )
-
-
-def _guard_repeat(left: Any, right: Any) -> None:
-    for seq, count in ((left, right), (right, left)):
-        if isinstance(seq, (str, bytes, list, tuple)) and isinstance(count, int) \
-                and not isinstance(count, bool):
-            if len(seq) * max(count, 0) > _MAX_REPEAT:
-                raise ExpressionError(
-                    f"repeating a {len(seq)}-item sequence {count} times "
-                    f"exceeds {_MAX_REPEAT}; this would exhaust memory"
-                )
 
 
 def _both_numeric(left: Any, right: Any) -> bool:
@@ -391,12 +378,19 @@ class ExpressionEvaluator:
             cl, cr = coerce_number(left), coerce_number(right)
             if _both_numeric(cl, cr):
                 left, right = cl, cr
+            elif not isinstance(node.op, ast.Add):
+                # EXPR-7: arithmetic is on numbers. Python would repeat text
+                # ('ab' * 3), format it ('%s' % x) or fail with its own
+                # message; `n * factorial(n - 1)` whose base case returned the
+                # text '{1}' produced '{1}{1}{1}{1}{1}' and no error.
+                simbolo = {ast.Sub: '-', ast.Mult: '*', ast.Div: '/', ast.FloorDiv: '//',
+                           ast.Mod: '%', ast.Pow: '**'}[type(node.op)]
+                raise ExpressionError(
+                    f"'{simbolo}' needs two numbers, got {left!r} and {right!r}")
 
             # Refuse what would not finish, before attempting it.
             if isinstance(node.op, ast.Pow):
                 _guard_pow(left, right)
-            elif isinstance(node.op, ast.Mult):
-                _guard_repeat(left, right)
 
             try:
                 return op(left, right)

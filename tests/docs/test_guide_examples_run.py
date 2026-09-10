@@ -17,6 +17,9 @@ Formato reconhecido, logo depois de um bloco ```xml:
 
     **Error:** `trecho da mensagem de erro`
 
+**Resultado:** e **Erro:** (páginas em português) valem o mesmo. Um resultado
+que não é JSON é comparado com o texto do valor.
+
 Um bloco sem `<q:component>` é executado como corpo de um componente.
 `q:application` é experimental (SUPPORT_TIERS.md) e fica de fora.
 """
@@ -38,7 +41,7 @@ F = '`' * 3
 
 EXEMPLO = re.compile(
     F + r'xml\n(?P<xml>(?:(?!' + F + r').)*)' + F + r'\s*\n'
-    r'\*\*(?P<tipo>Output|Error):\*\*[ \t]*'
+    r'\*\*(?P<tipo>Output|Error|Resultado|Erro):\*\*[ \t]*'
     r'(?:`(?P<inline>[^`\n]+)`|\n' + F + r'[a-z]*\n(?P<bloco>.*?)' + F + r')',
     re.S)
 
@@ -69,12 +72,17 @@ def executar(xml):
 
 @pytest.mark.parametrize('xml,tipo,esperado', TODOS)
 def test_o_exemplo_produz_o_que_a_doc_mostra(xml, tipo, esperado):
-    if tipo == 'Error':
+    if tipo in ('Error', 'Erro'):
         with pytest.raises(Exception) as erro:
             executar(xml)
         assert esperado in str(erro.value)
-    else:
-        assert executar(xml) == json.loads(esperado)
+        return
+    resultado = executar(xml)
+    try:
+        assert resultado == json.loads(esperado)
+    except json.JSONDecodeError:
+        # **Resultado:** `x = 10` — o texto como aparece, sem aspas de JSON
+        assert str(resultado) == esperado
 
 
 def test_a_extracao_encontra_os_exemplos():

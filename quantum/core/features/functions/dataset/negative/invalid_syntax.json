@@ -18,7 +18,10 @@
       },
       "why_invalid": "name attribute is mandatory for all functions",
       "correction": "Add name=\"myFunction\"",
-      "tags": ["missing_attribute", "name"]
+      "tags": [
+        "missing_attribute",
+        "name"
+      ]
     },
     {
       "id": "func-invalid-002",
@@ -34,7 +37,10 @@
       },
       "why_invalid": "Function names cannot contain hyphens",
       "correction": "Use name=\"my_function\" or name=\"myFunction\"",
-      "tags": ["invalid_name", "naming_convention"]
+      "tags": [
+        "invalid_name",
+        "naming_convention"
+      ]
     },
     {
       "id": "func-invalid-003",
@@ -50,7 +56,10 @@
       },
       "why_invalid": "Functions must explicitly return a value",
       "correction": "Add <q:return value=\"...\" />",
-      "tags": ["missing_return", "incomplete_function"]
+      "tags": [
+        "missing_return",
+        "incomplete_function"
+      ]
     },
     {
       "id": "func-invalid-004",
@@ -66,7 +75,10 @@
       },
       "why_invalid": "Parameter names must be unique within function",
       "correction": "Rename second param to different name",
-      "tags": ["duplicate_param", "name_conflict"]
+      "tags": [
+        "duplicate_param",
+        "name_conflict"
+      ]
     },
     {
       "id": "func-invalid-005",
@@ -82,23 +94,10 @@
       },
       "why_invalid": "return-type must be from allowed set",
       "correction": "Use return-type=\"array\" instead",
-      "tags": ["invalid_type", "return_type"]
-    },
-    {
-      "id": "func-invalid-006",
-      "intent": "REST function missing endpoint",
-      "input": {
-        "natural_language": "REST function without endpoint path",
-        "quantum_code": "<q:function name=\"getUser\" rest-method=\"GET\">\n  <q:return value=\"user data\" />\n</q:function>"
-      },
-      "expected_error": {
-        "type": "ValidationError",
-        "message": "REST endpoint is required when REST is enabled",
-        "location": "FunctionNode validation"
-      },
-      "why_invalid": "rest-method requires rest-endpoint",
-      "correction": "Add rest-endpoint=\"/api/users\"",
-      "tags": ["rest_api", "missing_endpoint"]
+      "tags": [
+        "invalid_type",
+        "return_type"
+      ]
     }
   ]
 }

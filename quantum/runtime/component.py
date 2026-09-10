@@ -510,6 +510,12 @@ class ComponentRuntime:
         if full_match:
             # Pure expression - return the actual value (not converted to string)
             var_expr = full_match.group(1).strip()
+            # EXPR-7: an attribute that is only `{1}` is the number 1. The
+            # regex-quantifier exception exists for `\d{10,11}`; a quantifier
+            # with nothing before it quantifies nothing, and reading it as text
+            # made `<q:return value="{1}"/>` return the string '{1}'.
+            if var_expr.isdigit() and text.strip() == full_match.group(0):
+                return int(var_expr)
             try:
                 return self._evaluate_databinding_expression(var_expr, context)
             except Exception as exc:
@@ -752,10 +758,6 @@ class ComponentRuntime:
     def _execute_function(self, func_node: FunctionNode, args: Dict[str, Any]) -> Any:
         """Execute function with given arguments"""
 
-        # Validate function parameters if requested
-        if func_node.validate_params:
-            self._validate_function_args(func_node, args)
-
         # Create function execution context (child of current context)
         func_context = self.execution_context.create_child_context()
 
@@ -770,6 +772,17 @@ class ComponentRuntime:
             # Check required
             if param.required and value is None:
                 raise ComponentExecutionError(f"Required parameter '{param.name}' not provided")
+
+            # FN-1: the same q:param as q:action and the component — converted
+            # to its type and checked against its rules, on every call. This
+            # used to run only with validate="true", and even then checked
+            # neither type="email" nor min/max: f(150) passed max="100".
+            if value is not None:
+                value, erro = param_validation.coerce(param, value)
+                erros = [erro] if erro else param_validation.check_rules(param, value)
+                if erros:
+                    raise ComponentExecutionError('; '.join(erros))
+                self._validate_function_args(func_node, {param.name: value}, only=param)
 
             # Set in function context
             func_context.set_variable(param.name, value, scope="local")
@@ -803,9 +816,9 @@ class ComponentRuntime:
 
         return as_return_value(result)
 
-    def _validate_function_args(self, func_node: FunctionNode, args: Dict[str, Any]):
-        """Validate function arguments against parameter definitions"""
-        for param in func_node.params:
+    def _validate_function_args(self, func_node: FunctionNode, args: Dict[str, Any], only=None):
+        """validate=/range=/enum= rules of the q:param (QuantumValidators)."""
+        for param in ([only] if only is not None else func_node.params):
             value = args.get(param.name)
 
             # Check required

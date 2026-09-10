@@ -1,7 +1,7 @@
 <!-- Test Function Parameter Validation -->
 <q:component name="TestFunctionValidation" xmlns:q="https://quantum.lang/ns">
-  <!-- Function with parameter validation -->
-  <q:function name="registerUser" returnType="string" validate="true">
+  <!-- Parameters are always checked against their rules (FN-1) -->
+  <q:function name="registerUser" returnType="string">
     <q:param name="email" type="string" required="true" validate="email" />
     <q:param name="age" type="number" required="true" min="18" max="100" />
     <q:param name="role" type="string" required="true" enum="admin,user,guest" />

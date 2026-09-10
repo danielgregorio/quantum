@@ -77,7 +77,8 @@ class ComponentComposer:
         )
 
         # 5. Render child component
-        renderer = HTMLRenderer(runtime.execution_context)
+        renderer = HTMLRenderer(runtime.execution_context,
+                                function_resolver=runtime._resolve_expression_function)
         html = renderer.render(processed_ast)
 
         return html

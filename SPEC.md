@@ -50,6 +50,23 @@ depois de `</q:if>`, com o mesmo significado, em qualquer corpo: componente,
 um `q:if` imediatamente antes é erro de parse. Dentro de um `q:if`, um `q:else`
 filho direto pertence a esse `q:if`.
 
+## 2b. Funções
+
+**FN-1** — Numa chamada de `q:function`, os argumentos se ligam aos `q:param` por
+posição ou por nome; o `default` vale para o que faltar. Cada argumento é
+convertido para o `type` do `q:param` e checado contra suas regras (`required`,
+`email`, `url`, `min`, `max`, `minlength`, `maxlength`, `pattern`, `enum`) — as
+mesmas de `q:action` (ACT-2) — em toda chamada. Um argumento que não passa é
+erro que cita o parâmetro.
+
+**FN-2** — `q:function` aceita `name`, `returnType`, `description` e `hint`. Os
+atributos que eram aceitos e nunca fizeram nada (`cache`, `memoize`, `pure`,
+`async`, `retry`, `timeout`, `access`, `scope`, `validate`, `endpoint` e os de
+REST) são erro de parse que diz isso.
+
+**FN-3** — Uma `q:function` do componente pode ser chamada em qualquer expressão
+dele: atributos `q:` e conteúdo HTML.
+
 ## 3. Ações e formulários
 
 **ACT-1** — Numa página com várias `q:action`, a action executada é a nomeada pelo
@@ -144,6 +161,12 @@ Nunca uma falha torna uma condição verdadeira.
 **EXPR-6** — Além da sintaxe de Python (`and`, `or`, `not`), as expressões aceitam
 `&&`, `||` e `!` com o mesmo significado. `!=` continua sendo diferença, e nada
 dentro de uma string é traduzido.
+
+**EXPR-7** — `-`, `*`, `/`, `//`, `%` e `**` operam sobre números (texto que
+parece número conta como número); com qualquer outro operando são erro. `+` soma
+números, ou junta dois textos ou duas listas. Um atributo `q:` que é só `{3}` é o
+número 3; dentro de outro texto, `\d{3}` continua um quantificador de regex
+(EXPR-4).
 
 ## 6a. Tipos em `q:set`
 

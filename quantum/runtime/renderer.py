@@ -48,13 +48,17 @@ class HTMLRenderer:
     # Tags whose text content should NOT be processed by databinding or HTML-escaped
     RAW_CONTENT_TAGS = {'style', 'script'}
 
-    def __init__(self, context: ExecutionContext, components_dir: str = "./components"):
+    def __init__(self, context: ExecutionContext, components_dir: str = "./components",
+                 function_resolver=None):
         """
         Initialize renderer with execution context.
 
         Args:
             context: ExecutionContext with all variables and query results
             components_dir: Directory where component files are located (Phase 2)
+            function_resolver: the runtime's lookup for the component's
+                q:functions (FN-3). Without it `<p>{dobro(2)}</p>` rendered
+                the literal text: only q: attributes could call a function.
         """
         self.context = context
         self.components_dir = components_dir
@@ -62,7 +66,7 @@ class HTMLRenderer:
         # Shared with ComponentRuntime: one evaluator, one grammar, so a
         # {expression} means the same thing in the execute pass and the
         # render pass. They used to be two hand-rolled implementations.
-        self._expressions = ExpressionEvaluator()
+        self._expressions = ExpressionEvaluator(function_resolver=function_resolver)
 
         # Lazy-load composer (Phase 2)
         self._composer = None

@@ -631,7 +631,8 @@ class QuantumWebServer:
                 debug_logger.debug(f"app_vars keys: {list(runtime.execution_context.application_vars.keys())}")
 
             # Render to HTML using runtime's execution context
-            renderer = HTMLRenderer(runtime.execution_context)
+            renderer = HTMLRenderer(runtime.execution_context,
+                                    function_resolver=runtime._resolve_expression_function)
             html = renderer.render(ast)
 
             # Phase B: For partial requests, return only component HTML

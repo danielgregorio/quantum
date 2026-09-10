@@ -54,10 +54,10 @@ O `q:set` é a tag fundamental para gerenciamento de estado no Quantum, permitin
 
 ```xml
 <!-- Array -->
-<q:set name="fruits" type="array" value="['apple','banana','orange']" />
+<q:set name="fruits" type="array" value='["apple", "banana", "orange"]' />
 
 <!-- Object -->
-<q:set name="user" type="object" value="{'name':'Daniel','age':30}" />
+<q:set name="user" type="object" value='{"name": "Daniel", "age": 30}' />
 
 <!-- JSON -->
 <q:set name="config" type="json" value='{"debug":true,"port":8080}' />
@@ -111,6 +111,7 @@ O `q:set` é a tag fundamental para gerenciamento de estado no Quantum, permitin
 ```xml
 <q:set name="counter" value="0" />
 <q:set name="counter" operation="increment" step="5" />
+<q:return value="counter = {counter}" />
 ```
 
 **Resultado:** `counter = 5`
@@ -157,7 +158,7 @@ O `q:set` é a tag fundamental para gerenciamento de estado no Quantum, permitin
 ### Remove/RemoveAt
 
 ```xml
-<q:set name="list" type="array" value="['a','b','c','d']" />
+<q:set name="list" type="array" value='["a", "b", "c", "d"]' />
 
 <!-- Remove por valor -->
 <q:set name="list" operation="remove" value="b" />
@@ -367,6 +368,7 @@ O `q:set` é a tag fundamental para gerenciamento de estado no Quantum, permitin
   <q:set
     name="password"
     type="string"
+    value="Segura123"
     required="true"
     minlength="8"
     pattern="^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)"
@@ -496,13 +498,13 @@ Quando uma validação falha, o Quantum lança um erro descritivo:
 <q:set name="email" value="invalid" validate="email" />
 ```
 
-**Erro:** `Validation error for 'email': Invalid email format`
+**Erro:** `Set execution error for 'email': Invalid email format`
 
 ```xml
 <q:set name="age" type="number" value="15" range="18..120" />
 ```
 
-**Erro:** `Validation error for 'age': Value must be between 18 and 120`
+**Erro:** `Set execution error for 'age': Value must be between 18 and 120`
 
 ## 📋 Resumo de Operações
 

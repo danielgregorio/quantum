@@ -255,9 +255,13 @@ class TestItCannotHangTheRequest:
     @pytest.mark.parametrize("expr,ctx", [
         ("'a' * 999999999", {}),        # allocated ~1 GB and returned
         ("items * 999999999", {'items': [1, 2, 3]}),
+        ("'-' * 40", {}),               # EXPR-7: no repetition at any size
+        ('items * 3', {'items': [1, 2]}),
     ])
-    def test_huge_repetition_is_refused(self, ev, expr, ctx):
-        with pytest.raises(ExpressionError, match="exhaust memory"):
+    def test_repetition_is_refused(self, ev, expr, ctx):
+        # Refused before allocating anything: since EXPR-7 `*` needs numbers,
+        # which also closed the memory-exhaustion case this test was written for.
+        with pytest.raises(ExpressionError, match="needs two numbers"):
             ev.evaluate(expr, ctx)
 
     @pytest.mark.parametrize("expr,ctx,expected", [
@@ -265,8 +269,8 @@ class TestItCannotHangTheRequest:
         ('price ** 2', {'price': 9}, 81),
         ('2 ** -1', {}, 0.5),
         ('1 ** 999999999', {}, 1),      # cheap regardless of the exponent
-        ("'-' * 40", {}, '-' * 40),
-        ('items * 3', {'items': [1, 2]}, [1, 2, 1, 2, 1, 2]),
+        ("'ab' + 'cd'", {}, 'abcd'),
+        ('items + [3]', {'items': [1, 2]}, [1, 2, 3]),
     ])
     def test_real_arithmetic_is_untouched(self, ev, expr, ctx, expected):
         assert ev.evaluate(expr, ctx) == expected

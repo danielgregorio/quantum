@@ -6,12 +6,10 @@ feature:
   migration_type: "option_c"
 
 description: |
-  Function declaration and execution with REST API support, caching, validation, and more.
+  Function declaration and execution, with typed and validated parameters (SPEC FN-1).
 
 tags:
   - "functions"
-  - "rest-api"
-  - "microservices"
 
 maintainers:
   - "Daniel"

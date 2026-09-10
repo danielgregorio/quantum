@@ -34,6 +34,8 @@ import logging
 import re
 from typing import Any, List, Optional, Tuple
 
+from quantum.core.expressions import coerce_number
+
 logger = logging.getLogger('quantum.param')
 
 INT_TYPES = ('integer', 'int', 'long')
@@ -89,12 +91,12 @@ def coerce(param_def, value: Any) -> Tuple[Any, Optional[str]]:
     if ptype in FLOAT_TYPES:
         if isinstance(value, bool):
             return value, f"Parameter '{name}' must be a number"
-        if isinstance(value, (int, float)):
-            return value, None
-        try:
-            return float(str(value).strip()), None
-        except (TypeError, ValueError):
-            return value, f"Parameter '{name}' must be a number, got {value!r}"
+        # Same rule as q:set type="number" (ERR-1): "30" is 30, "2.5" is 2.5.
+        # float() made every form number a float, so "30" displayed as 30.0.
+        numero = coerce_number(value) if isinstance(value, str) else value
+        if isinstance(numero, (int, float)) and not isinstance(numero, bool):
+            return (float(numero) if ptype in ('decimal', 'float', 'double') else numero), None
+        return value, f"Parameter '{name}' must be a number, got {value!r}"
 
     if ptype == 'boolean':
         if isinstance(value, bool):

@@ -105,6 +105,32 @@ class TestExpressoes:
                      f'<q:if condition="{condicao}"><q:return value="sim"/></q:if>')
 
 
+class TestAritmetica:
+    @pytest.mark.parametrize('expressao', ["{'-' * 40}", "{nome * 2}", "{nome - 1}", "{'%s' % nome}"])
+    def test_operador_aritmetico_em_texto_e_erro(self, executar, expressao):
+        # EXPR-7 (antes: '-' * 40 repetia, '%s' % x formatava)
+        with pytest.raises(Exception, match='needs two numbers'):
+            executar(f'<q:set name="nome" value="ana"/><q:return value="{expressao}"/>')
+
+    @pytest.mark.parametrize('expressao,esperado', [
+        ("{'ab' + 'cd'}", 'abcd'), ('{n + 1}', 42), ('{t * 2}', 84), ('{7 // 2}', 3)])
+    def test_o_que_continua(self, executar, expressao, esperado):
+        # EXPR-7
+        assert executar('<q:set name="n" value="41" type="number"/><q:set name="t" value="42"/>'
+                        f'<q:return value="{expressao}"/>') == esperado
+
+    def test_valor_so_com_digitos_e_numero(self, executar):
+        # EXPR-7 (antes: {1} voltava como o texto '{1}', e n * '{1}' repetia)
+        assert executar('<q:function name="fat"><q:param name="n" type="number"/>'
+                        '<q:if condition="n <= 1"><q:return value="{1}"/></q:if>'
+                        '<q:return value="{n * fat(n - 1)}"/></q:function>'
+                        '<q:return value="{fat(5)}"/>') == 120
+
+    def test_quantificador_dentro_de_texto_continua(self, executar):
+        # EXPR-7 / EXPR-4
+        assert executar('<q:return value="[0-9]{3}"/>') == '[0-9]{3}'
+
+
 class _Api(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         url = urllib.parse.urlparse(self.path)
