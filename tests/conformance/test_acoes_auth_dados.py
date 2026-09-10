@@ -149,6 +149,21 @@ class TestAutenticacao:
         assert cliente.get('/admin').status_code == 403
         assert 'DENTRO' in texto(cliente.get('/equipe'))
 
+    def test_login_url_configuravel(self, servidor):
+        # AUTH-4
+        c = servidor(datasources_yaml="security:\n  login_url: /admin/login\n",
+                     aberta=PAGINA.format(nome='aberta', extra=''))
+        r = c.get('/aberta')
+        assert r.status_code == 302 and r.headers['Location'].endswith('/admin/login')
+
+    @pytest.mark.parametrize('url', ['https://mal.example/login', '//mal.example/login', 'login'])
+    def test_login_url_so_aceita_caminho_local(self, servidor, url):
+        # AUTH-4: uma URL completa faria de toda pagina protegida um redirecionamento aberto
+        from quantum.runtime.web_server import ConfigError
+        with pytest.raises(ConfigError, match='login_url'):
+            servidor(datasources_yaml=f"security:\n  login_url: '{url}'\n",
+                     aberta=PAGINA.format(nome='aberta', extra=''))
+
     @pytest.mark.parametrize('senha,hash_', [('', 'x'), ('s', None), ('s', 'lixo')])
     def test_verificacao_de_senha_e_fail_closed(self, senha, hash_):
         # AUTH-3

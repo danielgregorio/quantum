@@ -64,7 +64,7 @@ class ConfigError(Exception):
 _KNOWN_SECTIONS = {
     'server', 'paths', 'defaults', 'datasources', 'database', 'llm',
     'performance', 'security', 'logging', 'development', 'deploy',
-    'components', 'jobs', 'messaging',
+    'components', 'jobs', 'messaging', 'services',
 }
 
 # (section, key) -> expected python type(s)
@@ -115,6 +115,12 @@ def _validate_config(config: dict, source: str) -> None:
             )
         if not ds.get('database'):
             problems.append(f"datasources.{name}: missing 'database'")
+
+    login_url = (config.get('security') or {}).get('login_url')
+    if login_url is not None and (not isinstance(login_url, str) or not login_url.startswith('/')
+                                  or login_url.startswith('//')):
+        # A full URL would make every require_auth page an open redirect (AUTH-4).
+        problems.append(f"security.login_url: must be a path on this server, like /login; got {login_url!r}")
 
     if problems:
         bullet = "\n  - "
@@ -518,14 +524,14 @@ class QuantumWebServer:
                 if not AuthService.is_authenticated(session_data):
                     # Not authenticated - redirect to login
                     session['redirect_after_login'] = request.path
-                    return redirect('/login')
+                    return redirect(self._login_url())
 
                 # Check session expiry
                 if AuthService.is_session_expired(session_data):
                     # Session expired - logout and redirect to login
                     AuthService.logout(session_data)
                     session.modified = True
-                    return redirect('/login?expired=true')
+                    return redirect(self._login_url() + '?expired=true')
 
                 # Check role requirement
                 if ast.require_role:
@@ -1600,6 +1606,11 @@ class QuantumWebServer:
                 return result != 0  # 0 means connection succeeded → port in use
         except OSError:
             return True  # If we can't connect, assume port is free
+
+    def _login_url(self) -> str:
+        """AUTH-4: where require_auth sends a visitor (security.login_url, default /login)."""
+        # Validated at startup by _validate_config (a local path only).
+        return ((self.config.get('security') or {}).get('login_url') or '/login').strip()
 
     def _write_pid_file(self, is_reloader_child: bool = False):
         """Write .quantum.pid: this process, plus the parent under the reloader.
