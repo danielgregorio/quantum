@@ -176,6 +176,10 @@ class QuantumWebServer:
             'QUANTUM_SECRET_KEY',
             self.config.get('security', {}).get('secret_key', secrets.token_hex(32))
         )
+        # AUTH-5: the session cookie carries the login. HttpOnly keeps it from
+        # page scripts; SameSite=Lax keeps another site from submitting a form
+        # (a q:action) with it. Left to the browser's default before.
+        self.app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax')
 
         self.parser = QuantumParser()
         self.template_cache: Dict[str, Any] = {}  # AST cache
@@ -594,10 +598,12 @@ class QuantumWebServer:
                 params['form'] = form_data
 
             # Get flash message if present
+            # ACT-3: always defined — '' when there is no message — so a page can
+            # pass {flash} to a layout component without failing when there is
+            # none (a missing name in a prop is an error, COMP-2).
             flash_data = self.action_handler.get_flash_message()
-            if flash_data:
-                params['flash'] = flash_data['message']
-                params['flashType'] = flash_data['type']
+            params['flash'] = flash_data['message'] if flash_data else ''
+            params['flashType'] = flash_data['type'] if flash_data else ''
 
             # Phase F: Setup scopes for ExecutionContext
             # Session scope - user-specific, persistent (from Flask session)

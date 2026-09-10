@@ -62,6 +62,13 @@ class TestAcoes:
         assert 'Salvo Bia' in texto(cliente.get('/form'))
         assert 'Salvo Bia' not in texto(cliente.get('/form'))
 
+    def test_flash_existe_vazio_sem_mensagem(self, servidor):
+        # ACT-3: sempre definido, '' sem mensagem
+        cliente = servidor(v=('<q:component name="v" xmlns:q="https://quantum.lang/ns">'
+                              '<p>[{flash}|{flashType}]</p><q:if condition="flash"><p>TEM</p></q:if></q:component>'))
+        corpo = texto(cliente.get('/v'))
+        assert '[|]' in corpo and 'TEM' not in corpo
+
     def test_action_inexistente_e_400_e_nao_executa_outra(self, servidor):
         # ACT-5 (era G6: caia em silencio na primeira action)
         cliente = servidor(acoes=DUAS_ACOES)
@@ -148,6 +155,13 @@ class TestAutenticacao:
         cliente.post('/entrar', data={'papel': 'editor', 'horas': '1'})
         assert cliente.get('/admin').status_code == 403
         assert 'DENTRO' in texto(cliente.get('/equipe'))
+
+    def test_cookie_de_sessao_httponly_e_samesite_lax(self, servidor):
+        # AUTH-5: sem SameSite, outro site poderia enviar um formulario (q:action) com a sessao
+        cliente = self.paginas(servidor)
+        r = cliente.post('/entrar', data={'papel': 'user', 'horas': '1'})
+        cookie = r.headers.get('Set-Cookie', '')
+        assert 'HttpOnly' in cookie and 'SameSite=Lax' in cookie
 
     def test_login_url_configuravel(self, servidor):
         # AUTH-4

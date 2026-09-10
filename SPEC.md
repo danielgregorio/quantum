@@ -87,7 +87,7 @@ resposta redireciona para a página de origem com `flash` contendo o motivo e
 
 **ACT-3** — `q:redirect` encerra a action. Seu `flash` aceita expressões e fica
 disponível como `flash` (e o tipo como `flashType`) na próxima página
-renderizada, uma única vez.
+renderizada, uma única vez. Sem mensagem, os dois existem e valem `''`.
 
 **ACT-4** — `q:query` dentro de `q:action` usa os mesmos datasources declarados em
 `quantum.config.yaml` que a página.
@@ -147,6 +147,9 @@ hash; para senha vazia, hash ausente ou malformado devolve falso, nunca erro.
 redireciona (padrão `/login`); o atributo `login_url` de um componente vale só para
 ele. Só um caminho do próprio servidor é aceito; outro valor é erro ao subir (config)
 ou ao ler o arquivo (atributo).
+
+**AUTH-5** — O cookie de sessão é `HttpOnly` e `SameSite=Lax`: scripts da página
+não o leem, e um formulário enviado a partir de outro site não leva a sessão.
 
 ## 5. Importação de dados
 
