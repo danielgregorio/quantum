@@ -862,20 +862,18 @@ class ResourceDiscovery:
 
         return sorted(ports, key=lambda x: x["port"])
 
-    def _scan_ports_socket(self, host: str, port_range: tuple = (1, 10000)) -> List[Dict]:
-        """Fallback port scanning using sockets (slower)"""
-        ports = []
-        for port in range(port_range[0], min(port_range[1], 10000)):
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(0.1)
-                result = s.connect_ex((host, port))
-                if result == 0:
-                    ports.append({
-                        "port": port,
-                        "host": host,
-                        "status": "LISTEN"
-                    })
-        return ports
+    def _scan_ports_socket(self, host: str) -> List[Dict]:
+        """Without psutil there is no port list, and no scan either.
+
+        This used to connect_ex to ports 1-9999 one at a time with a 0.1s
+        timeout. On Linux a closed localhost port refuses at once, so nobody
+        noticed; on Windows each attempt waits out the timeout — measured at
+        ~109 ms a port, about 18 MINUTES for a single /api/resources/overview
+        request. It hung the admin test suite on any machine without psutil,
+        and it was a port scan of the host besides. psutil is declared in
+        backend/requirements.txt; without it, the overview reports no ports.
+        """
+        return []
 
     def detect_quantum_processes(self) -> List[Dict]:
         """Detect running Quantum framework processes"""

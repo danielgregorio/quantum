@@ -5,6 +5,8 @@ These tests verify that the compatibility layer works correctly
 on both CPython and PyPy implementations.
 """
 
+import sys
+
 import pytest
 import platform
 from unittest.mock import patch, MagicMock
@@ -173,6 +175,14 @@ class TestQuantumPyPyAdapter:
     """Tests for QuantumPyPyAdapter"""
 
     def test_get_memory_usage(self):
+        memory = QuantumPyPyAdapter.get_memory_usage()
+        assert isinstance(memory, float)
+        assert memory >= 0
+
+    def test_get_memory_usage_sem_psutil(self, monkeypatch):
+        # O fallback importava `resource` fora do try; `resource` so existe
+        # em POSIX, entao sem psutil a funcao quebrava no Windows.
+        monkeypatch.setitem(sys.modules, 'psutil', None)
         memory = QuantumPyPyAdapter.get_memory_usage()
         assert isinstance(memory, float)
         assert memory >= 0

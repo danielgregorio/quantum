@@ -237,11 +237,13 @@ class QuantumPyPyAdapter:
             process = psutil.Process()
             return process.memory_info().rss / 1024 / 1024
         except ImportError:
-            # Fallback for when psutil is not available
-            import resource
+            # Fallback for when psutil is not available. `resource` is
+            # POSIX-only: importing it outside the try crashed this on Windows
+            # instead of falling back.
             try:
+                import resource
                 return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
-            except:
+            except (ImportError, OSError, ValueError):
                 return 0.0
 
     @staticmethod

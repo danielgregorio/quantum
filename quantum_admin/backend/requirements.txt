@@ -4,6 +4,8 @@ sqlalchemy==2.0.25
 alembic==1.13.1
 python-dotenv==1.0.0
 docker==7.0.0
+# ResourceDiscovery (portas em uso, processos). Era usado sem estar declarado.
+psutil==7.2.2
 cryptography==42.0.0
 pydantic==2.5.3
 pydantic-settings==2.1.0
