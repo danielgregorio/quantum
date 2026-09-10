@@ -4,7 +4,7 @@
 > `python scripts/generate-feature-status.py`, medindo o motor.
 > Tabelas de status escritas à mão apodrecem.
 
-**40 tags `q:` registradas · 29 executores · 157 exemplos executados · IA ao vivo: não.**
+**40 tags `q:` registradas · 29 executores · 154 exemplos executados · IA ao vivo: não.**
 
 Colunas: **tier** vem de `quantum/core/tiers.py`. **exemplos**: arquivos em
 `examples/` e `components/` que usam a tag. **parseia**: pelo menos um deles
@@ -18,16 +18,16 @@ Core e IA; alvos interativos e tags experimentais não são executados).
 | Tag | Exemplos | Parseia | Executa | Testes | Docs |
 |---|---|---|---|---|---|
 | `q:action` | 29 | sim | 12/12 (17 não executados) | 11 | 9 |
-| `q:data` | 7 | sim | 7/7 | 5 | 4 |
+| `q:data` | 7 | sim | 7/7 | 5 | 5 |
 | `q:flash` | 6 | sim | 3/3 (3 não executados) | 1 | 5 |
-| `q:function` | 66 | sim | **24/48** (18 não executados) | 13 | 28 |
-| `q:if` | 54 | sim | **26/27** (27 não executados) | 16 | 35 |
-| `q:import` | 2 | sim | 2/2 | 1 | 3 |
-| `q:invoke` | 9 | sim | **4/5** (4 não executados) | 5 | 3 |
-| `q:loop` | 55 | sim | **30/31** (24 não executados) | 10 | 29 |
-| `q:query` | 22 | sim | **9/10** (12 não executados) | 12 | 18 |
-| `q:redirect` | 17 | sim | 7/7 (10 não executados) | 4 | 8 |
-| `q:set` | 145 | sim | **83/109** (36 não executados) | 32 | 38 |
+| `q:function` | 64 | sim | **23/46** (18 não executados) | 16 | 27 |
+| `q:if` | 52 | sim | 25/25 (27 não executados) | 19 | 31 |
+| `q:import` | 2 | sim | 2/2 | 1 | 4 |
+| `q:invoke` | 8 | sim | 4/4 (4 não executados) | 7 | 6 |
+| `q:loop` | 54 | sim | 30/30 (24 não executados) | 12 | 26 |
+| `q:query` | 21 | sim | **8/9** (12 não executados) | 14 | 17 |
+| `q:redirect` | 17 | sim | 7/7 (10 não executados) | 4 | 7 |
+| `q:set` | 143 | sim | **83/107** (36 não executados) | 39 | 37 |
 | `q:slot` | 2 | sim | — (2 não executados) | 1 | 2 |
 
 ## Diferencial (4 tags)
@@ -45,10 +45,10 @@ Core e IA; alvos interativos e tags experimentais não são executados).
 |---|---|---|---|---|
 | `q:class` | 2 | sim | 2 | 0 |
 | `q:decorator` | 1 | sim | 1 | 0 |
-| `q:dispatchEvent` | 0 | — sem exemplo | 0 | 2 |
+| `q:dispatchEvent` | 0 | — sem exemplo | 0 | 1 |
 | `q:dump` | 6 | sim | 1 | 1 |
 | `q:file` | 4 | sim | 4 | 2 |
-| `q:job` | 2 | sim | 6 | 3 |
+| `q:job` | 2 | sim | 7 | 2 |
 | `q:log` | 13 | sim | 4 | 3 |
 | `q:mail` | 10 | sim | 1 | 3 |
 | `q:message` | 4 | sim | 4 | 2 |
@@ -60,11 +60,11 @@ Core e IA; alvos interativos e tags experimentais não são executados).
 | `q:pyimport` | 2 | sim | 2 | 0 |
 | `q:python` | 15 | sim | 7 | 1 |
 | `q:queue` | 3 | sim | 3 | 0 |
-| `q:schedule` | 2 | sim | 3 | 1 |
+| `q:schedule` | 2 | sim | 4 | 1 |
 | `q:subscribe` | 3 | sim | 3 | 0 |
 | `q:thread` | 2 | sim | 3 | 0 |
-| `q:transaction` | 4 | sim | 2 | 4 |
-| `q:websocket` | 1 | sim | 5 | 2 |
+| `q:transaction` | 4 | sim | 3 | 4 |
+| `q:websocket` | 1 | sim | 5 | 1 |
 | `q:websocket-close` | 1 | sim | 1 | 0 |
 | `q:websocket-send` | 1 | sim | 1 | 0 |
 
@@ -72,7 +72,6 @@ Core e IA; alvos interativos e tags experimentais não são executados).
 
 | Arquivo | Resultado | Primeira linha de erro |
 |---|---|---|
-| `components/products.q` | erro | [ERROR] Execution error: Execution error: Set execution error for 'products': Type conversion error to 'array': Expecting property name enclosed in double quote |
 | `components/smw_polished.q` | erro | [ERROR] Validation errors: - Invalid type: float. Must be one of ['string', 'number', 'integer', 'decimal', 'boolean', 'date', 'datetime', 'array', 'object', 'j |
 | `components/snake.q` | erro | [ERROR] Validation errors: - Sprite id is required |
 | `examples/mario.q` | erro | [ERROR] Validation errors: - Invalid type: float. Must be one of ['string', 'number', 'integer', 'decimal', 'boolean', 'date', 'datetime', 'array', 'object', 'j |
@@ -96,7 +95,6 @@ Core e IA; alvos interativos e tags experimentais não são executados).
 | `examples/smw_polished.q` | erro | [ERROR] Validation errors: - Invalid type: float. Must be one of ['string', 'number', 'integer', 'decimal', 'boolean', 'date', 'datetime', 'array', 'object', 'j |
 | `examples/smw_world1.q` | erro | [ERROR] Validation errors: - Invalid type: float. Must be one of ['string', 'number', 'integer', 'decimal', 'boolean', 'date', 'datetime', 'array', 'object', 'j |
 | `examples/snake.q` | erro | [ERROR] Validation errors: - Sprite id is required |
-| `examples/test-invoke-function.q` | erro | 2026-09-10 15:45:57 [ERROR] q:invoke function='calculateSum' failed |
 | `examples/test-query-insert.q` | erro | [ERROR] Execution error: Execution error: Query execution error in 'insertResult': Query execution failed: UNIQUE constraint failed: users.email |
 
 ## Não executados, e por quê
@@ -108,12 +106,10 @@ Core e IA; alvos interativos e tags experimentais não são executados).
 - 4 arquivo(s): componente exige parâmetros
 - 3 arquivo(s): alvo interativo (terminal)
 - 2 arquivo(s): precisa do banco do admin
-- 1 arquivo(s): alvo interativo (microservices)
-- 1 arquivo(s): alvo interativo (html)
 - 1 arquivo(s): fragmento, não é arquivo raiz (qg:scene)
 
 ## Lacunas que esta medição expõe
 
 - **3 tags sem nenhum exemplo**: `q:dispatchEvent`, `q:pyclass`, `q:pydecorator`.
 - **0 tags cujos exemplos não parseiam**: nenhuma.
-- **26 exemplos Core/IA que não executam** (tabela acima).
+- **24 exemplos Core/IA que não executam** (tabela acima).

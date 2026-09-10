@@ -61,7 +61,7 @@ def is_regex_quantifier(content: str) -> bool:
     """True when a `{...}` group should be left as literal text.
 
     A q: attribute that is ONLY `{5}` is the number 5 (EXPR-7) — the runtime
-    checks that case before calling this. Inside other text, `\d{3}` stays a
+    checks that case before calling this. Inside other text, `[0-9]{3}` stays a
     quantifier.
     """
     return bool(_REGEX_QUANTIFIER.match(content.strip()))
@@ -378,6 +378,14 @@ class ExpressionEvaluator:
             cl, cr = coerce_number(left), coerce_number(right)
             if _both_numeric(cl, cr):
                 left, right = cl, cr
+            elif isinstance(node.op, ast.Add) and not (
+                    (isinstance(left, str) and isinstance(right, str))
+                    or (isinstance(left, list) and isinstance(right, list))):
+                # EXPR-7: '+' adds numbers or joins two texts / two lists. The
+                # mixed case used to surface Python's "can only concatenate
+                # str (not "int") to str".
+                raise ExpressionError(
+                    f"'+' needs two numbers, two texts or two lists, got {left!r} and {right!r}")
             elif not isinstance(node.op, ast.Add):
                 # EXPR-7: arithmetic is on numbers. Python would repeat text
                 # ('ab' * 3), format it ('%s' % x) or fail with its own

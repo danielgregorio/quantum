@@ -89,6 +89,14 @@ class SetExecutor(BaseExecutor):
         # Process databinding
         processed_value = self.apply_databinding(value_expr, context)
 
+        # SET-1: default= is what to store when value= resolves to nothing.
+        # It was only read when value= was ABSENT from the tag, so
+        # <q:set name="clicks" value="{session.click_count}" default="0"/>
+        # stored '' on the first visit and the next {clicks + 1} failed.
+        if (processed_value is None or processed_value == '') and node.value is not None \
+                and node.default is not None:
+            processed_value = self.apply_databinding(node.default, context)
+
         # Convert to appropriate type
         return self._convert_to_type(processed_value, node.type, source=value_expr)
 

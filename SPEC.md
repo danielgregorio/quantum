@@ -11,7 +11,7 @@
 > O que ainda não foi decidido está em [Em aberto](#em-aberto), cada item com um
 > teste `xfail(strict=True)` em `tests/conformance/test_known_gaps.py`.
 >
-> Versão da especificação: acompanha `quantum-framework` 0.11 (em construção).
+> Versão da especificação: acompanha `quantum-framework` 0.11.
 
 ---
 
@@ -225,6 +225,10 @@ indica `round()`); `decimal` é número com casas; `boolean` aceita `true`/`fals
 valor que não converte é erro que mostra o valor. Quando o valor é texto com
 expressões (`"{a} + {b}"`), a mensagem mostra a forma que calcula
 (`"{a + b}"`); quando é JSON com aspas simples, diz para usar aspas duplas.
+
+**SET-1** — Em `q:set`, `default` é o valor guardado quando `value` resolve para
+nada: ausente, `null` ou texto vazio. `value="{session.cliques}" default="0"` guarda
+`0` na primeira visita.
 
 ## 7. Invocação
 

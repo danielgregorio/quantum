@@ -53,6 +53,20 @@ class TestConversaoDeTipos:
             executar('<q:set name="b" value="flase" type="boolean"/>')
 
 
+class TestDefault:
+    @pytest.mark.parametrize('valor,esperado', [('{session.cliques}', 0), ('{nada_vazio}', 0), ('7', 7)])
+    def test_default_quando_value_resolve_vazio(self, executar, valor, esperado):
+        # SET-1 (antes: value="{session.x}" default="0" guardava '')
+        assert executar('<q:set name="nada_vazio" value=""/>'
+                        f'<q:set name="c" value="{valor}" default="0" type="number"/>'
+                        '<q:return value="{c}"/>') == esperado
+
+    def test_soma_de_texto_com_numero_explica(self, executar):
+        # EXPR-7 (antes: "can only concatenate str (not \"int\") to str")
+        with pytest.raises(Exception, match="'\+' needs two numbers, two texts or two lists"):
+            executar('<q:set name="t" value="abc"/><q:return value="{t + 1}"/>')
+
+
 def rodar(tmp_path, fonte):
     arquivo = tmp_path / 'app.q'
     arquivo.write_text(fonte, encoding='utf-8')

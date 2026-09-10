@@ -1,8 +1,7 @@
 <q:component name="HTMXCounter">
   <!-- Phase B: HTMX Partial - Auto-updating counter -->
 
-  <q:set name="counter" value="{application.htmx_counter}" default="0" />
-  <q:set name="application.htmx_counter" value="{counter + 1}" />
+  <q:set name="application.htmx_counter" operation="increment" />
 
   <div>
     <p style="font-size: 3rem; color: #2ecc71; font-weight: bold;">{application.htmx_counter}</p>

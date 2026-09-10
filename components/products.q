@@ -5,13 +5,13 @@
   <q:set name="tagline" value="Buy amazing products powered by Quantum!" />
 
   <!-- Note: In real app, this would come from q:query -->
-  <q:set name="products" type="array" value="[
-    {'id': 1, 'name': 'Quantum T-Shirt', 'price': 29.99, 'stock': 15, 'image': '👕'},
-    {'id': 2, 'name': 'Magic Mug', 'price': 12.99, 'stock': 30, 'image': '☕'},
-    {'id': 3, 'name': 'Code Notebook', 'price': 9.99, 'stock': 0, 'image': '📓'},
-    {'id': 4, 'name': 'Pixel Stickers', 'price': 4.99, 'stock': 100, 'image': '✨'},
-    {'id': 5, 'name': 'Developer Hoodie', 'price': 49.99, 'stock': 8, 'image': '🧥'}
-  ]" />
+  <q:set name="products" type="array" value='[
+    {"id": 1, "name": "Quantum T-Shirt", "price": 29.99, "stock": 15, "image": "👕"},
+    {"id": 2, "name": "Magic Mug", "price": 12.99, "stock": 30, "image": "☕"},
+    {"id": 3, "name": "Code Notebook", "price": 9.99, "stock": 0, "image": "📓"},
+    {"id": 4, "name": "Pixel Stickers", "price": 4.99, "stock": 100, "image": "✨"},
+    {"id": 5, "name": "Developer Hoodie", "price": 49.99, "stock": 8, "image": "🧥"}
+  ]' />
 
   <html lang="en">
   <head>

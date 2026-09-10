@@ -1,18 +1,9 @@
 <q:component name="SessionDemo">
   <!-- Phase F: Session Management Demo -->
 
-  <!-- Initialize session variables if not set -->
-  <q:if condition="{session.visitCount} == ''">
-    <q:set name="session.visitCount" value="0" />
-  </q:if>
-
-  <q:if condition="{application.totalVisits} == ''">
-    <q:set name="application.totalVisits" value="0" />
-  </q:if>
-
-  <!-- Increment counters -->
-  <q:set name="session.visitCount" value="{session.visitCount + 1}" />
-  <q:set name="application.totalVisits" value="{application.totalVisits + 1}" />
+  <!-- Count visits: increment starts from 0 when the value is not set yet -->
+  <q:set name="session.visitCount" operation="increment" />
+  <q:set name="application.totalVisits" operation="increment" />
 
   <!-- Store user info in session -->
   <q:set name="session.userName" value="Daniel" />
@@ -103,7 +94,7 @@
         <p><strong>User name:</strong> <span class="value">{session.userName}</span></p>
         <p><strong>Last visit:</strong> <span class="value">{session.lastVisit}</span></p>
         <p><em>These values persist across YOUR requests only (stored in Flask session)</em></p>
-        <p><code>&lt;q:set name="session.visitCount" value="{session.visitCount + 1}" /&gt;</code></p>
+        <p><code>&lt;q:set name="session.visitCount" operation="increment" /&gt;</code></p>
       </div>
 
       <!-- Application Scope Demo -->

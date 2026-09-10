@@ -57,6 +57,9 @@ means, rule by rule, and every rule is pinned by a test that cites it.
 - **Arithmetic operators other than `+` need numbers** (EXPR-7): `'-' * 40`
   and `'%s' % x` are errors instead of Python's repetition and formatting. An
   attribute that is only `{3}` is the number 3, no longer the text `{3}`.
+- **`default` on `q:set` applies when `value` resolves to nothing** (SET-1):
+  `value="{session.clicks}" default="0"` stores `0` on the first visit instead
+  of `''`.
 - **`q:param type="number"` keeps whole numbers whole**: `"30"` is `30`, not
   `30.0` (`decimal` is still a float).
 - **A failed `q:data` or `q:invoke` stops the component** with an error naming
