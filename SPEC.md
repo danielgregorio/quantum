@@ -110,6 +110,24 @@ qualquer valor e o entrega como o parâmetro `nome` (`components/loja/[id].q`
 em `/loja/41`). Sem arquivo correspondente, ou fora de `components/`, a
 resposta é `404`.
 
+## 3b. Composição de componentes
+
+**COMP-1** — `<Nome/>` usa o componente importado com `q:import component="Nome"`,
+procurado em `paths.components` do `quantum.config.yaml` (na subpasta `from`,
+quando declarada). Um componente que não é encontrado, ou que falha, é erro da
+página — nunca uma seção que some.
+
+**COMP-2** — Cada atributo da chamada é uma prop, avaliada como expressão no
+escopo da página (um valor que é só `{expr}` mantém o tipo). Uma prop obrigatória
+que falta, ou uma expressão que falha, é erro.
+
+**COMP-3** — O conteúdo entre `<Nome>` e `</Nome>` é renderizado no escopo da
+página e colocado no `q:slot` padrão do componente. O conteúdo de uma
+renderização nunca aparece em outra.
+
+**COMP-4** — O componente chamado executa com a mesma configuração da página
+(datasources, serviços).
+
 ## 4. Autenticação
 
 **AUTH-1** — Um componente com `require_auth="true"` só é servido a uma sessão

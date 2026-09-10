@@ -632,7 +632,9 @@ class QuantumWebServer:
 
             # Render to HTML using runtime's execution context
             renderer = HTMLRenderer(runtime.execution_context,
-                                    function_resolver=runtime._resolve_expression_function)
+                                    components_dir=self.config['paths']['components'],
+                                    function_resolver=runtime._resolve_expression_function,
+                                    config=self.config)
             html = renderer.render(ast)
 
             # Phase B: For partial requests, return only component HTML

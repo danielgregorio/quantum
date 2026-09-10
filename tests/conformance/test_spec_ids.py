@@ -14,7 +14,7 @@ import pathlib
 import re
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-ID = re.compile(r'\b(PARSE|RET|LOOP|IF|FN|ACT|ROUTE|DB|SET|AUTH|DATA|IA|EXPR|INV|RUN|SCOPE|ERR|CFG|APP|SVC)-(\d+)\b')
+ID = re.compile(r'\b(PARSE|RET|LOOP|IF|FN|ACT|ROUTE|COMP|DB|SET|AUTH|DATA|IA|EXPR|INV|RUN|SCOPE|ERR|CFG|APP|SVC)-(\d+)\b')
 
 
 def ids_da_spec():

@@ -14,9 +14,29 @@ can alter the behaviour of an existing app is listed under **Breaking**.
   since the first version and failed with "Unsupported invocation type".
   See the new guide page *Declared Services*.
 
+### Security
+
+- **A layout's slot content leaked between requests.** Filling a `q:slot`
+  mutated the component held in the resolver cache, so after the first request
+  every later page rendered with that component showed the first page's slot
+  content. Composition no longer mutates cached components (COMP-3).
+
+### Fixed
+
+- Component composition (COMP-1..4): components are found under
+  `paths.components` and the `from=` of `q:import` (they were searched in
+  `./components` of the process's working directory); slot content is
+  rendered in the page's scope, so loops and conditions over the page's data
+  work inside a layout; child components run with the page's configuration
+  (datasources, services); props are expressions; a missing or failing
+  component is an error instead of an HTML comment on a 200 page.
+
 ### Breaking
 
 - `q:invoke endpoint=` is refused by the parser; it never did anything.
+- A component call that cannot be resolved or fails now makes the page fail.
+- Inside a layout, slot content no longer sees the layout's own variables — it
+  renders with the page's.
 
 ## 0.11.0
 

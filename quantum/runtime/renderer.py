@@ -49,7 +49,7 @@ class HTMLRenderer:
     RAW_CONTENT_TAGS = {'style', 'script'}
 
     def __init__(self, context: ExecutionContext, components_dir: str = "./components",
-                 function_resolver=None):
+                 function_resolver=None, config=None):
         """
         Initialize renderer with execution context.
 
@@ -62,6 +62,11 @@ class HTMLRenderer:
         """
         self.context = context
         self.components_dir = components_dir
+        # COMP-4: child components run with the page's configuration
+        # (datasources, services); None means no configuration.
+        self.config = config
+        # q:import of the component being rendered: name -> (component, from)
+        self.imports = {}
         self._raw_mode = False
         # Shared with ComponentRuntime: one evaluator, one grammar, so a
         # {expression} means the same thing in the execute pass and the
@@ -97,6 +102,11 @@ class HTMLRenderer:
             return self._render_comment(node)
 
         elif isinstance(node, ComponentNode):
+            self.imports = {
+                imp.alias or imp.component: (imp.component, imp.from_path)
+                for imp in node.statements
+                if isinstance(imp, ImportNode) and imp.component
+            }
             return self._render_component(node)
 
         # Component Composition (Phase 2)
@@ -106,6 +116,10 @@ class HTMLRenderer:
         elif isinstance(node, ImportNode):
             # Imports are processed at component load time, not render time
             return ''
+
+        elif type(node).__name__ == "RenderedHTML":
+            # Slot content the parent already rendered (component_composer)
+            return node.html
 
         elif isinstance(node, LoopNode):
             return self._render_loop(node)
@@ -719,23 +733,8 @@ class HTMLRenderer:
             Rendered HTML from child component
         """
 
-        try:
-            composer = self._get_composer()
-            html = composer.compose(node, self.context)
-            return html
-
-        except Exception as e:
-            # A child component that fails becomes an HTML COMMENT, so the
-            # page still returns 200 with that section simply missing — the
-            # database being down looked like a page with no results.
-            #
-            # The comment stays (removing it would blank the section with no
-            # trace at all in the markup), but the failure is now LOGGED with
-            # its traceback, so it exists somewhere a person will look. It
-            # also carries the component name, which is what you need to find
-            # it among a page full of children.
-            logger.exception(
-                "component <%s> failed to render and was replaced by a comment: %s",
-                node.component_name, e
-            )
-            return f'<!-- Component Error ({node.component_name}): {e} -->'
+        # COMP-1: a component that is not found, or fails, is an error. It
+        # used to become an HTML comment and the page answered 200 with the
+        # section silently missing — the database being down looked like a
+        # page with no results.
+        return self._get_composer().compose(node, self)
