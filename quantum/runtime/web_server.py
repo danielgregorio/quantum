@@ -168,7 +168,12 @@ class QuantumWebServer:
 
         self.parser = QuantumParser()
         self.template_cache: Dict[str, Any] = {}  # AST cache
-        self.action_handler = ActionHandler()
+        # The runtime that executes q:action bodies needs the same config as
+        # the page render. Built with no config, it could not see the
+        # datasources declared in quantum.config.yaml: every q:query inside a
+        # q:action failed with "Datasource 'db' is not declared locally" —
+        # a form that writes to the database did not work at all.
+        self.action_handler = ActionHandler(ComponentRuntime(config=self.config))
 
         # Phase F: Application scope (global state shared across all users)
         self.application_scope: Dict[str, Any] = {}

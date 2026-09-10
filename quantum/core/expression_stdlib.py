@@ -118,7 +118,41 @@ def _round(v: Any, digits: int = 0) -> Any:
     return int(result) if digits == 0 else result
 
 
+# -- passwords ---------------------------------------------------------------
+#
+# Authentication is Core (decision D4), and a login is "look the user up, then
+# check the password". Without these, a .q could not check a password against
+# a stored hash without q:python — so every login example just set
+# session.authenticated=true for whoever submitted the form (gap AUTH-1).
+
+def hash_password(password: Any) -> str:
+    """bcrypt hash of a password, for storing. Never store the password itself."""
+    import bcrypt
+    if password is None or password == '':
+        raise ValueError("hashPassword: the password is empty")
+    return bcrypt.hashpw(str(password).encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+
+def verify_password(password: Any, hashed: Any) -> bool:
+    """True when `password` matches a hash made by hashPassword.
+
+    Fail-closed: an empty password, a missing hash or a malformed hash is
+    False, never an error — so `q:if condition="verifyPassword(senha, h)"`
+    cannot be tricked into the true branch by bad data.
+    """
+    import bcrypt
+    if not password or not hashed or not isinstance(hashed, str):
+        return False
+    try:
+        return bcrypt.checkpw(str(password).encode('utf-8'), hashed.encode('utf-8'))
+    except (ValueError, TypeError):
+        return False
+
+
 STDLIB = {
+    # passwords
+    'hashPassword': hash_password,
+    'verifyPassword': verify_password,
     # dates
     'now': now,
     'dateAdd': date_add,
