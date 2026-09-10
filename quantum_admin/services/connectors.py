@@ -101,6 +101,15 @@ def update_connector(connector_id: str, name: str = None, type: str = None, prov
     return _publico(conector)
 
 
+@service("admin.connectors.detach")
+def detach_connector(connector_id: str):
+    """Desliga o connector da aplicação: ele passa a ser público (a tela chamava de detach)."""
+    conector = _servico().update_connector(str(connector_id), {"application_id": None, "scope": "public"})
+    if conector is None:
+        raise ConnectorError(f"no connector with id {connector_id!r}")
+    return _publico(conector)
+
+
 @service("admin.connectors.delete")
 def delete_connector(connector_id: str):
     if not _servico().delete_connector(str(connector_id)):
