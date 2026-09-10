@@ -18,7 +18,7 @@ quantum --version
 ```
 
 ```
-quantum 0.9.0
+quantum 0.9.1
 ```
 
 ::: tip Use a virtual environment
