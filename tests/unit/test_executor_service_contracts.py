@@ -47,6 +47,12 @@ SERVICE_CLASSES = {
     "function_registry": "quantum.runtime.function_registry.FunctionRegistry",
 }
 
+# ServiceContainer properties that return plain data, not a service. The
+# method is still checked against the real type (config.get -> dict.get).
+DATA_PROPERTIES = {
+    "config": dict,
+}
+
 # Sub-services reached through a facade (instance attributes, so they are not
 # visible via hasattr on the class).
 SUB_SERVICES = {
@@ -121,6 +127,10 @@ def test_executor_service_calls_exist(executor_path):
             target, label = _load(dotted), f"quantum.runtime.{attr}"
         else:
             service, method = rest[0], rest[-1]
+            if service in DATA_PROPERTIES and len(rest) == 2:
+                if not hasattr(DATA_PROPERTIES[service], method):
+                    problems.append(f"line {lineno}: services.{service}.{method} does not exist")
+                continue
             if service not in SERVICE_CLASSES:
                 problems.append(
                     f"line {lineno}: services.{service} is not a known "

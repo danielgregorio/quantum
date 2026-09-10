@@ -83,7 +83,8 @@ export default defineConfig({
             { text: 'Database Queries (q:query)', link: '/guide/query' },
             { text: 'Data Import', link: '/guide/data-import' },
             { text: 'Authentication', link: '/guide/authentication' },
-            { text: 'Sessions & Scopes', link: '/guide/sessions' }
+            { text: 'Sessions & Scopes', link: '/guide/sessions' },
+            { text: 'Declared Services', link: '/guide/services' }
           ]
         },
         {

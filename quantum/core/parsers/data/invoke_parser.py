@@ -46,7 +46,10 @@ class InvokeParser(BaseTagParser):
         invoke_node.function = self.get_attr(element, 'function')
         invoke_node.component = self.get_attr(element, 'component')
         invoke_node.url = self.get_attr(element, 'url')
-        invoke_node.endpoint = self.get_attr(element, 'endpoint')
+        if self.get_attr(element, 'endpoint') is not None:
+            raise ParserError(
+                f'<q:invoke name="{name}"> endpoint= is not supported: it was accepted and never '
+                f'did anything, and was removed in Quantum 0.12. Use url= or service=.')
         invoke_node.service = self.get_attr(element, 'service')
 
         # HTTP attributes

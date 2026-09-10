@@ -243,6 +243,19 @@ que levanta erro) é erro que cita o nome e o motivo, como `q:query`. Com
 `<nome>_result.error.message` diz o motivo. `onerror` só aceita `fail` (padrão) e
 `continue`.
 
+## 7a. Serviços declarados
+
+**SVC-1** — `@service("nome")` (de `quantum.services`) registra uma função Python
+sob esse nome. Registrar outra função com um nome já usado é erro.
+
+**SVC-2** — Um módulo de serviços só é importado quando listado em `services:` no
+`quantum.config.yaml`. Um módulo listado que não importa é erro que o nomeia.
+
+**SVC-3** — `<q:invoke name="x" service="nome">` chama a função registrada com os
+`q:param` como argumentos nomeados, convertidos pelo `type` de cada um; o valor
+devolvido vira `x`. Uma exceção da função é falha de invocação (INV-2). Um nome
+não registrado é erro que lista os registrados. `endpoint=` não é aceito.
+
 ## 8. IA
 
 **IA-1** — Todas as tags de IA usam o mesmo servidor de modelos:

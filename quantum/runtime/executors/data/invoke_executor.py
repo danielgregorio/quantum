@@ -43,7 +43,7 @@ class InvokeExecutor(BaseExecutor):
 
             if invocation_type == "unknown":
                 raise ExecutorError(
-                    f"Invoke '{node.name}' requires one of: function, component, url, endpoint, or service"
+                    f"Invoke '{node.name}' requires one of: function, component, url or service"
                 )
 
             # Build parameters based on type
@@ -53,31 +53,38 @@ class InvokeExecutor(BaseExecutor):
                 params = self._build_component_params(node, context)
             elif invocation_type == "http":
                 params = self._build_http_params(node, context)
+            elif invocation_type == "service":
+                result = self._invoke_service(node, context)
+                self._store_result(node, result, exec_context)
+                params = None
             else:
                 raise ExecutorError(f"Unsupported invocation type: {invocation_type}")
 
             # Check cache
-            if node.cache:
+            if params is None:
+                pass
+            elif node.cache:
                 cache_key = f"invoke_{node.name}_{hash(str(params))}"
                 cached = self.services.invocation.get_from_cache(cache_key)
                 if cached is not None:
                     self._store_result(node, cached, exec_context)
                     return
 
-            # Execute invocation
-            result = self.services.invocation.invoke(
-                invocation_type,
-                params,
-                context=self.runtime
-            )
+            if params is not None:
+                # Execute invocation
+                result = self.services.invocation.invoke(
+                    invocation_type,
+                    params,
+                    context=self.runtime
+                )
 
-            # Cache result
-            if node.cache and result.success:
-                cache_key = f"invoke_{node.name}_{hash(str(params))}"
-                self.services.invocation.put_in_cache(cache_key, result, node.ttl)
+                # Cache result
+                if node.cache and result.success:
+                    cache_key = f"invoke_{node.name}_{hash(str(params))}"
+                    self.services.invocation.put_in_cache(cache_key, result, node.ttl)
 
-            # Store result
-            self._store_result(node, result, exec_context)
+                # Store result
+                self._store_result(node, result, exec_context)
 
         except Exception as e:
             raise ExecutorError(f"Invoke execution error in '{node.name}': {e}")
@@ -85,10 +92,48 @@ class InvokeExecutor(BaseExecutor):
         # INV-2: same rule as q:data and q:query — a failure stops the
         # component, unless onerror="continue" says the program handles it.
         if not result.success and getattr(node, 'on_error', 'fail') != 'continue':
-            motivo = (result.error or {}).get('message', 'unknown error')                 if isinstance(result.error, dict) else str(result.error)
+            erro = result.error
+            motivo = erro.get('message', 'unknown error') if isinstance(erro, dict) else str(erro)
             raise ExecutorError(
                 f"q:invoke '{node.name}' failed: {motivo}. "
                 f"Add onerror=\"continue\" to handle it with {node.name}_result instead.")
+
+    def _invoke_service(self, node: InvokeNode, context: Dict[str, Any]):
+        """q:invoke service="name" (SVC-3): call a function declared with @service.
+
+        The q:param children are the keyword arguments, converted by their
+        type= like any other q:param. It was parsed since the first version
+        ("Service discovery (Phase 2)") and failed at runtime with
+        "Unsupported invocation type: service".
+        """
+        import time
+        from quantum import services
+        from quantum.core.features.invocation.src.runtime import InvocationResult
+        from quantum.runtime import param_validation
+
+        services.load(self.services.config.get('services') or [])
+        func = services.get(node.service)
+
+        args = self._param_args(node, context)
+        for param in node.params:
+            if param.name in args and getattr(param, 'type', None):
+                valor, erro = param_validation.coerce(param, args[param.name])
+                if erro:
+                    raise ExecutorError(erro)
+                args[param.name] = valor
+
+        inicio = time.time()
+        try:
+            data = func(**args)
+        except TypeError as exc:
+            return InvocationResult(success=False, invocation_type='service',
+                                    error={'message': f"service '{node.service}': {exc}"})
+        except Exception as exc:  # noqa: BLE001 — the service's own failure (INV-2)
+            return InvocationResult(success=False, invocation_type='service',
+                                    error={'message': f"service '{node.service}' failed: {exc}",
+                                           'type': type(exc).__name__})
+        return InvocationResult(success=True, data=data, invocation_type='service',
+                                execution_time=(time.time() - inicio) * 1000)
 
     def _param_args(self, node: InvokeNode, context: Dict[str, Any]) -> Dict[str, Any]:
         """Resolve <q:param> children into call arguments.

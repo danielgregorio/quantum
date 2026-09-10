@@ -3,6 +3,21 @@
 Quantum is pre-1.0: minor versions may break compatibility. Every change that
 can alter the behaviour of an existing app is listed under **Breaking**.
 
+## 0.12.0
+
+### Added
+
+- **Declared services** (SVC-1..3): a Python function registered with
+  `@service("name")`, in a module listed under `services:` in
+  `quantum.config.yaml`, is called from a page with
+  `<q:invoke name="x" service="name">`. `q:invoke service=` had been parsed
+  since the first version and failed with "Unsupported invocation type".
+  See the new guide page *Declared Services*.
+
+### Breaking
+
+- `q:invoke endpoint=` is refused by the parser; it never did anything.
+
 ## 0.11.0
 
 The release that writes the language down: `SPEC.md` states what a program
