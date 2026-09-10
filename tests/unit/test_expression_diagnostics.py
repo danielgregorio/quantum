@@ -41,12 +41,13 @@ class TestTheTwoFailuresThatCostTheMostTime:
         """<q:loop query="projects" var="p"> discarded var=, so `p` did not
         exist and every {p.field} rendered as literal text. Naming what IS in
         scope makes the cause obvious in one line."""
-        with caplog.at_level(logging.WARNING, logger='quantum.databinding'):
+        # EXPR-1: the diagnosis travels in the raised error, not a log line.
+        with pytest.raises(ExpressionError) as erro:
             runtime._apply_databinding(
                 '{p.name}',
                 {'projects': [1, 2, 3], 'projects_result': {}, 'total': 3},
             )
-        message = caplog.text
+        message = str(erro.value)
         assert '{p.name}' in message
         assert "'p' is not defined" in message
         assert 'projects' in message and 'total' in message
@@ -54,11 +55,11 @@ class TestTheTwoFailuresThatCostTheMostTime:
     def test_recordcount_on_the_rows_says_where_it_actually_lives(self, runtime, caplog):
         """q:query publishes `projects` (rows) and `projects_result`
         (metadata). {projects.recordCount} is the natural first guess."""
-        with caplog.at_level(logging.WARNING, logger='quantum.databinding'):
+        with pytest.raises(ExpressionError) as erro:
             runtime._apply_databinding(
                 '{projects.recordCount}', {'projects': [{'a': 1}, {'a': 2}]}
             )
-        message = caplog.text
+        message = str(erro.value)
         assert '.length' in message
         assert '_result' in message
 
@@ -89,12 +90,14 @@ class TestSuggestions:
 
 
 class TestItDoesNotFloodOrCryWolf:
-    def test_one_report_per_distinct_problem(self, runtime, caplog):
-        """A q:loop over 1,000 rows evaluates the same broken expression
-        1,000 times. One line is a diagnosis; a thousand is noise."""
+    def test_one_report_per_distinct_problem(self, caplog):
+        """A q:loop over 1,000 rows renders the same broken expression 1,000
+        times. One line is a diagnosis; a thousand is noise. (EXPR-4: HTML
+        content logs; a q: attribute raises instead, so it cannot flood.)"""
+        renderer = HTMLRenderer(ExecutionContext())
         with caplog.at_level(logging.WARNING, logger='quantum.databinding'):
             for _ in range(1000):
-                runtime._apply_databinding('{nope}', {'a': 1})
+                renderer._apply_databinding('{nope}')
         assert len(caplog.records) == 1
 
     @pytest.mark.parametrize("expr", [
@@ -109,9 +112,12 @@ class TestItDoesNotFloodOrCryWolf:
         assert not caplog.records
 
     def test_a_real_failure_is_still_reported(self, runtime, caplog):
+        # EXPR-4: in HTML content, logged. EXPR-1: in a q: attribute, raised.
         with caplog.at_level(logging.WARNING, logger='quantum.databinding'):
-            runtime._apply_databinding('{nope}', {})
+            HTMLRenderer(ExecutionContext())._apply_databinding('{nope}')
         assert len(caplog.records) == 1
+        with pytest.raises(ExpressionError, match="nope"):
+            runtime._apply_databinding('{nope}', {})
 
 
 class TestOneRepresentationForOneFailure:
@@ -134,7 +140,6 @@ class TestOneRepresentationForOneFailure:
         assert 'ERROR' not in renderer._apply_databinding('id #{nope} here')
 
     @pytest.mark.parametrize("text", [
-        '{nope}', 'id #{nope} here', '{user.missing}', '{items[9]}',
         # The scoped roots are what actually diverged: the runtime honoured
         # the resolve-to-'' contract and the renderer did not, so the same
         # {form.email} rendered as '' in the execute pass and as literal text
@@ -144,8 +149,21 @@ class TestOneRepresentationForOneFailure:
         '{form.email}', '{query.page}', '{cookie.token}',
     ])
     def test_the_runtime_agrees_with_the_renderer(self, runtime, renderer, text):
+        # EXPR-3
         assert runtime._apply_databinding(text, {}) == \
             renderer._apply_databinding(text)
+
+    @pytest.mark.parametrize("text", [
+        '{nope}', 'id #{nope} here', '{user.missing}', '{items[9]}',
+    ])
+    def test_undefined_names_raise_in_attributes_and_stay_literal_in_content(
+            self, runtime, renderer, text):
+        # EXPR-1 vs EXPR-4, deliberately different: a q: attribute is always
+        # an expression, so failing there is an error; HTML content also holds
+        # code samples and stray braces, so it renders the text and logs.
+        with pytest.raises(ExpressionError):
+            runtime._apply_databinding(text, {})
+        assert renderer._apply_databinding(text) == text
 
 
 class TestJsonLiteralsAreNotExpressions:

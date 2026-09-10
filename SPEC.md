@@ -98,7 +98,46 @@ declaradas vêm como texto.
 sintaxe de condição que `q:if`, com os campos do registro como variáveis),
 `q:sort`, `q:limit` e `q:compute` (acrescenta um campo calculado).
 
-## 6. IA
+## 6. Expressões
+
+Uma expressão é o que está entre chaves: `{total * 2}`. Ela aparece em dois
+lugares com regras diferentes, de propósito: **atributos de tags `q:`**
+(`value`, `condition`, `url`…), que são sempre código, e **conteúdo HTML**, que
+também carrega exemplos de código e chaves soltas.
+
+**EXPR-1** — Num atributo `q:`, um nome que não existe é erro. A mensagem cita a
+expressão e o nome, e sugere um nome parecido quando há. `"x{nada}y"` não produz
+`"x{nada}y"`.
+
+**EXPR-2** — Num atributo `q:`, uma expressão que falha ao avaliar (divisão por
+zero, índice fora da lista, chave ausente) é erro que cita a expressão.
+
+**EXPR-3** — Uma referência a escopo (`session.`, `application.`, `request.`,
+`form.`, `query.`, `cookie.`) cujo valor não existe produz `''` quando a
+expressão é só a referência (`{session.nome}`): uma página renderiza antes do
+login. Numa operação (`{session.visitas + 1}`) é erro, que diz que o valor não
+existe e indica `q:if` ou `operation="increment"`.
+
+**EXPR-4** — No conteúdo HTML, uma expressão que não resolve fica como texto
+literal e é registrada no log uma vez por expressão distinta. Em qualquer lugar,
+um objeto JSON (`{"a": 1}`) e um quantificador de regex (`\d{10,11}`) não são
+expressões e passam intactos.
+
+**EXPR-5** — Uma `condition` que não pode ser avaliada é falsa, e é registrada
+no log uma vez. `<q:if condition="{flash}">` antes de existir `flash` não
+executa o ramo.
+
+## 7. Invocação
+
+**INV-1** — `q:invoke url=` faz a requisição com o método declarado (padrão
+`GET`) e timeout de 30 segundos quando `timeout` não é declarado. Cada `q:param`
+vira um parâmetro da query string com o seu `value`. Uma resposta JSON vira o
+valor de `<nome>`.
+
+**INV-2** — Uma resposta fora de 2xx, ou falha de conexão, não é erro da página:
+`<nome>_result.success` é falso e `<nome>_result.error.message` diz o motivo.
+
+## 8. IA
 
 **IA-1** — Todas as tags de IA usam o mesmo servidor de modelos:
 `QUANTUM_LLM_BASE_URL`, senão `llm.base_url` de `quantum.config.yaml`, senão
@@ -129,10 +168,7 @@ arquivo.
 | G3 | Mensagem de conversão para número (`"{a} + {b}"`) |
 | G4 | `${VAR}` em `quantum.config.yaml` |
 | G5 | Traceback exibido em falha de `q:invoke` |
-| G12 | Variável inexistente fica literal na saída |
 | G13 | Mensagem de array com aspas simples |
-| G14 | Erro de avaliação devolve as chaves cruas |
-| G15 | Conta com variável de escopo ausente |
 | G16 | `q:data` que falha é silencioso |
 | G17 | `q:application type="html"` não inicia |
 | G18 | `q:application type="api"` não executa as rotas |

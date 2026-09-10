@@ -47,6 +47,30 @@ _PREFIX_TO_FEATURE = {
 # The framework does reject it, correctly — the harness just did not know
 # this was a negative test, so a working validator was counted as a failing
 # test. That is worse than a missing test: it trains you to ignore the list.
+# Examples that call a public HTTP API. They are skipped when that API is not
+# reachable, instead of failing — and they used to PASS offline for the wrong
+# reason: q:invoke raised before sending any request, and the unresolved
+# {users.name} was handed back as literal text, which counted as success.
+_NEEDS_NETWORK = {
+    "test-invoke-http-get.q",
+    "test-invoke-http-post.q",
+    "test-invoke-complete.q",
+}
+_network_ok = None
+
+
+def _network_available() -> bool:
+    global _network_ok
+    if _network_ok is None:
+        import socket
+        try:
+            socket.create_connection(("jsonplaceholder.typicode.com", 443), timeout=3).close()
+            _network_ok = True
+        except OSError:
+            _network_ok = False
+    return _network_ok
+
+
 _EXPECTED_FAILURES = {
     "test-conditionals.q",
     "test-set-validation-email-invalid.q",
@@ -89,6 +113,8 @@ class QuantumQItem(pytest.Item):
         self._expected_failure = name in _EXPECTED_FAILURES
 
     def runtest(self):
+        if self.name in _NEEDS_NETWORK and not _network_available():
+            pytest.skip("needs internet access (calls jsonplaceholder.typicode.com)")
         from quantum.core.parser import QuantumParser
         from quantum.core.ast_nodes import ApplicationNode
         from quantum.runtime.component import ComponentRuntime

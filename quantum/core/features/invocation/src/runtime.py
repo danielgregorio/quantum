@@ -138,9 +138,14 @@ class InvocationService:
         query_params = params.get('params', {})
         body = params.get('body')
         auth_type = params.get('auth_type')
-        timeout_ms = params.get('timeout', 30000)
-        retry = params.get('retry', 0)
-        retry_delay = params.get('retry_delay', 1000)
+        # `or`, not a get() default: the executor always passes these keys,
+        # with None when the attribute is absent — so get('timeout', 30000)
+        # returned None and `None / 1000` raised TypeError before any request
+        # was made. Every q:invoke url= without an explicit timeout failed
+        # with "unsupported operand type(s) for /: 'NoneType' and 'int'".
+        timeout_ms = params.get('timeout') or 30000
+        retry = params.get('retry') or 0
+        retry_delay = params.get('retry_delay') or 1000
         response_format = params.get('response_format', 'auto')
 
         if not url:

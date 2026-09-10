@@ -1,7 +1,7 @@
 <q:component name="TestSessionScope">
   <!-- Test: Session-scoped variables (user-specific) -->
 
-  <q:set name="session.visitCount" value="{session.visitCount + 1}" />
+  <q:set name="session.visitCount" operation="increment" />
   <q:set name="session.userName" value="John Doe" />
   <q:set name="session.lastVisit" value="2025-11-05" />
 

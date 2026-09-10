@@ -22,7 +22,9 @@ from quantum.core.ast_nodes import (
     ActionNode, RedirectNode, FlashNode, CommentNode, ImportNode, SlotNode,
     ComponentCallNode,
 )
-from quantum.core.expression_diagnostics import is_absent_scope, report_unresolved
+from quantum.core.expression_diagnostics import (
+    is_absent_scope, looks_like_json_object, report_unresolved, root_scope,
+)
 from quantum.core.expressions import (
     ExpressionEvaluator, ExpressionError, is_regex_quantifier,
 )
@@ -68,6 +70,9 @@ from quantum.runtime.executors.control_flow.loop_executor import (
 from quantum.runtime.service_container import ServiceContainer
 import re
 import logging
+
+# `session.userId`, `form.email` — a scoped reference, as opposed to an operation on one.
+_PLAIN_REFERENCE = re.compile(r'^[A-Za-z_]\w*(\.\w+)*$')
 
 logger = logging.getLogger(__name__)
 
@@ -526,9 +531,7 @@ class ComponentRuntime:
             try:
                 return self._evaluate_databinding_expression(var_expr, context)
             except Exception as exc:
-                report_unresolved(var_expr, exc)
-                # If evaluation fails, return original placeholder
-                return text
+                return self._unresolved(var_expr, exc, text)
 
         # Mixed content (text + expressions) - need string interpolation
         def replace_variable(match):
@@ -537,14 +540,30 @@ class ComponentRuntime:
                 result = self._evaluate_databinding_expression(var_expr, context)
                 return str(result)
             except Exception as exc:
-                report_unresolved(var_expr, exc)
-                # If evaluation fails, return original placeholder
-                return match.group(0)
+                return self._unresolved(var_expr, exc, match.group(0))
 
         # Replace all {variable} patterns using pre-compiled pattern
         result = pattern.sub(replace_variable, text)
         return result
     
+    def _unresolved(self, expr: str, exc: BaseException, literal: str) -> Any:
+        """An expression in a q: attribute that could not be evaluated.
+
+        EXPR-1/EXPR-2: an undefined name or a failed evaluation is an error
+        that names the expression. It used to be logged once and replaced by
+        the literal placeholder — `x{nada}y` came back as 'x{nada}y' and
+        `{10 / z}` with z=0 as '{10 / z}', so the failure surfaced, if at all,
+        as stray braces on a page or in a database row.
+
+        Two things are not expressions and keep their text: the inside of a
+        JSON object written in a value, and a regex quantifier like {10,11} —
+        Quantum has no escape for a literal brace.
+        """
+        if looks_like_json_object(expr) or is_regex_quantifier(expr):
+            report_unresolved(expr, exc)
+            return literal
+        raise ExpressionError(f"{{{expr}}} could not be evaluated: {exc}") from exc
+
     def _evaluate_databinding_expression(self, expr: str, context: Dict[str, Any]) -> Any:
         """Evaluate a databinding expression like 'variable' or 'user.name' or 'functionName(args)' or 'result[0].id'
 
@@ -554,11 +573,11 @@ class ComponentRuntime:
         - `q:function` calls, which need the FunctionRegistry, named-argument
           mapping and nested component resolution the legacy path implements.
         - Scoped variables (session., application., request., form., ...),
-          whose contract is to resolve to '' when absent rather than to fail.
+          whose contract is to resolve to '' when absent rather than to fail
+          (EXPR-3).
 
         Anything the evaluator refuses raises, and _apply_databinding turns
-        that into the original placeholder — the same failure mode the engine
-        always had.
+        that into an ExpressionError naming the expression (EXPR-1/EXPR-2).
 
         There was a fallback chain here during the migration. It was measured
         rather than judged: across pytest's declared testpaths it took 863
@@ -595,8 +614,18 @@ class ComponentRuntime:
             # Scoped variables resolve to '' when absent, matching
             # get_variable()'s default: templates render before login. Shared
             # with HTMLRenderer so both passes agree.
+            # EXPR-3: an absent scoped value reads as '' only when the
+            # expression IS the reference. Inside an operation it is an error:
+            # {session.visitas + 1} used to evaluate to '' on the first visit,
+            # and the failure surfaced later as "could not convert string to
+            # float: ''" in a q:set with type="number".
             if is_absent_scope(expr):
-                return ''
+                if _PLAIN_REFERENCE.match(expr):
+                    return ''
+                raise ExpressionError(
+                    f"{root_scope(expr)} value used in {expr!r} is not set. "
+                    f"Check it with q:if first, or for a counter use "
+                    f"<q:set operation=\"increment\">.") from exc
             raise ValueError(str(exc)) from exc
 
     def _evaluate_function_call(self, expr: str, context: Dict[str, Any]) -> Any:

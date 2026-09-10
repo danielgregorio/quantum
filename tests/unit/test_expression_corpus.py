@@ -22,6 +22,7 @@ import pathlib
 
 import pytest
 
+from quantum.core.expressions import ExpressionError
 from quantum.runtime.component import ComponentRuntime
 
 CORPUS_PATH = pathlib.Path(__file__).resolve().parent.parent / "fixtures" / "expression_corpus.json"
@@ -55,16 +56,23 @@ def test_corpus_is_present_and_substantial(corpus):
     )
 
 
-def test_no_expression_raises(runtime, corpus):
-    """Whatever else it does, the evaluator must not blow up on real input."""
+def test_no_expression_crashes(runtime, corpus):
+    """Whatever else it does, the evaluator must not blow up on real input.
+
+    Since EXPR-1/EXPR-2 an expression that cannot be evaluated raises
+    ExpressionError, the declared failure naming the expression. Anything else
+    (TypeError, KeyError...) is a crash inside the evaluator.
+    """
     failures = []
     for entry in corpus:
         try:
             runtime._apply_databinding('{' + entry['expr'] + '}', dict(CONTEXT))
+        except ExpressionError:
+            pass
         except Exception as exc:  # noqa: BLE001
             failures.append(f"{entry['expr']!r}: {type(exc).__name__}: {exc}")
 
-    assert not failures, "expressions raised:\n  " + "\n  ".join(failures[:20])
+    assert not failures, "expressions crashed:\n  " + "\n  ".join(failures[:20])
 
 
 # The only expressions whose behaviour the Fase 2.1 migration deliberately
@@ -93,7 +101,15 @@ def test_corpus_results_are_stable(runtime, corpus):
     for entry in corpus:
         if entry['expr'] in DELIBERATE_CHANGES:
             continue
-        got = repr(runtime._apply_databinding('{' + entry['expr'] + '}', dict(CONTEXT)))
+        try:
+            got = repr(runtime._apply_databinding('{' + entry['expr'] + '}', dict(CONTEXT)))
+        except ExpressionError:
+            # EXPR-1/2/3: what used to come back as the placeholder (or as ''
+            # for arithmetic on an absent scope value) is now an error. That is
+            # the one deliberate change; every other result must be identical.
+            if entry['result'] in (repr('{' + entry['expr'] + '}'), repr('')):
+                continue
+            got = 'an error'
         if got != entry['result']:
             drifted.append(f"{entry['expr']!r}: baseline {entry['result']} -> now {got}")
 
@@ -142,18 +158,25 @@ class TestFixedByTheMigration:
         assert runtime._apply_databinding('{true}', {}) is True
 
 
-class TestUnchangedContracts:
-    """Behaviour the migration deliberately preserved, wrong or not."""
+class TestContractsDecidedAfterTheMigration:
+    """The migration preserved these on purpose and left each as its own
+    decision. Both were decided in SPEC.md (EXPR-1, EXPR-3)."""
 
-    def test_missing_scoped_variable_still_becomes_empty_string(self, runtime):
-        """A missing session./application. variable resolves to '' rather than
-        raising. Arguably wrong — arithmetic on it silently yields '' — but
-        templates rely on it (rendering a page before login), so changing it is
-        its own decision, not a side effect of swapping evaluators."""
-        assert runtime._apply_databinding('{session.missingCounter + 1}', {}) == ''
+    def test_missing_scoped_reference_becomes_empty_string(self, runtime):
+        """EXPR-3. Templates render before login on purpose, so reading an
+        absent session./application. value is ''."""
+        assert runtime._apply_databinding('{session.missingCounter}', {}) == ''
 
-    def test_unresolvable_expression_still_returns_the_placeholder(self, runtime):
-        """The old evaluator's failure mode was to hand the text back. Keeping
-        it means no template that rendered before renders differently now."""
-        assert runtime._apply_databinding('{nosuchvar}', {}) == '{nosuchvar}'
-        assert runtime._apply_databinding('{JSON.stringify(x)}', {}) == '{JSON.stringify(x)}'
+    def test_arithmetic_on_a_missing_scoped_value_is_an_error(self, runtime):
+        """EXPR-3. This used to pin '' for {session.missingCounter + 1}, called
+        "arguably wrong". The '' surfaced later, far from the cause."""
+        with pytest.raises(ExpressionError, match="session"):
+            runtime._apply_databinding('{session.missingCounter + 1}', {})
+
+    def test_unresolvable_expression_is_an_error_that_names_it(self, runtime):
+        """EXPR-1. Handing the text back put literal braces on the page or in a
+        database row, with nothing pointing at the typo."""
+        with pytest.raises(ExpressionError, match="nosuchvar"):
+            runtime._apply_databinding('{nosuchvar}', {})
+        with pytest.raises(ExpressionError, match="JSON"):
+            runtime._apply_databinding('{JSON.stringify(x)}', {})

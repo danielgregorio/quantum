@@ -41,30 +41,6 @@ def lacuna(reason):
     return pytest.mark.xfail(strict=True, reason=reason)
 
 
-class TestErrosDeExpressao:
-    @lacuna("G12: variável inexistente fica literal na saída, em silêncio. "
-            "Hoje devolve 'x{nada}y'.")
-    def test_variavel_inexistente_e_erro_que_nomeia_a_variavel(self):
-        with pytest.raises(Exception, match="nada"):
-            executar('<q:return value="x{nada}y"/>')
-
-    @lacuna("G15: variável de escopo ausente numa conta vira '' e a conversão "
-            "falha com texto interno do Python. O contador clássico "
-            "{session.visitas + 1} quebra na primeira visita; hoje só "
-            "operation=\"increment\" funciona.")
-    def test_contador_de_sessao_na_primeira_visita(self):
-        assert executar(
-            '<q:set name="session.visitas" value="{session.visitas + 1}" type="number"/>'
-            '<q:return value="{session.visitas}"/>') == 1
-
-    @lacuna("G14: erro de avaliação é engolido e as chaves cruas vão para a "
-            "saída. Hoje {10 / z} com z=0 devolve '{10 / z}'.")
-    def test_divisao_por_zero_e_erro(self):
-        with pytest.raises(Exception):
-            executar('<q:set name="z" value="0" type="number"/>'
-                     '<q:return value="{10 / z}"/>')
-
-
 class TestMensagensDeErro:
     @lacuna("G3: '{a} + {b}' é interpolação ('10 + 20'), e a conversão para "
             "número falha com mensagem interna do Python ('could not convert "

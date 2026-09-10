@@ -187,9 +187,11 @@ class TestPayloadsWrittenIntoTemplatesAreRefused:
     def test_a_condition_written_as_the_payload_is_false(self, runtime, payload):
         assert runtime._evaluate_condition('{' + payload + '}', {}) is False
 
-    def test_databinding_hands_the_payload_back_as_text(self, runtime):
-        out = runtime._apply_databinding('{' + MRO_WALK + '}', {})
-        assert out == '{' + MRO_WALK + '}'
+    def test_databinding_refuses_the_payload(self, runtime):
+        # It used to be handed back as text; since EXPR-1 it is refused with
+        # an error. Either way it never reaches the object graph.
+        with pytest.raises(ExpressionError):
+            runtime._apply_databinding('{' + MRO_WALK + '}', {})
 
     def test_dunder_access_on_a_context_object_is_refused(self):
         """Attribute access on real objects stays allowed — query rows need it

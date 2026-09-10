@@ -126,10 +126,9 @@ class InvokeExecutor(BaseExecutor):
         if 'Content-Type' not in headers and 'content-type' not in headers:
             headers['Content-Type'] = node.content_type
 
-        query_params = {}
-        for param in node.params:
-            param_value = self.apply_databinding(param.default if param.default else "", context)
-            query_params[param.name] = param_value
+        # Same value=/default fallback as function and component calls: this
+        # read only `default`, so <q:param name="q" value="x"/> sent q=''.
+        query_params = self._param_args(node, context)
 
         body = None
         if node.body:
