@@ -95,4 +95,4 @@ class TestTheBridgeItself:
         rt = _run(COMPONENT.format(invoke=""))
         out = rt.execute_function("naoexiste", {})
         assert out["success"] is False
-        assert "not found" in out["error"]
+        assert "not found" in out["error"]["message"]

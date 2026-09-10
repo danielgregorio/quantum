@@ -193,42 +193,17 @@ class ComponentRuntime:
 
         # === LEGACY: Direct service references for backward compatibility ===
         # Database service for query execution - pass local datasources from config
-        local_ds = {}
-        if config and 'datasources' in config:
-            local_ds = config['datasources']
-        self.database_service = DatabaseService(local_datasources=local_ds)
-        # Invocation service for q:invoke
-        self.invocation_service = InvocationService()
-        # Data import service for q:data
-        self.data_import_service = DataImportService()
-        # Logging service for q:log
-        self.logging_service = LoggingService()
-        # Dump service for q:dump
-        self.dump_service = DumpService()
-        # File upload service for q:file (Phase H)
-        self.file_upload_service = FileUploadService()
-        # Email service for q:mail (Phase I)
-        self.email_service = EmailService()
-        # LLM service for q:llm (Ollama backend)
-        self.llm_service = LLMService()
-        # Knowledge service for q:knowledge (RAG with ChromaDB)
-        self.knowledge_service = KnowledgeService(self.llm_service)
-        # Message queue service for q:message, q:subscribe, q:queue
-        mq_config = {}
-        if config and 'message_queue' in config:
-            mq_config = config['message_queue']
-        self.message_queue_service = MessageQueueService(mq_config)
-        # Job executor for q:schedule, q:thread, q:job
-        job_db_path = "quantum_jobs.db"
-        if config and 'job_db_path' in config:
-            job_db_path = config['job_db_path']
-        max_thread_workers = 10
-        if config and 'max_thread_workers' in config:
-            max_thread_workers = config['max_thread_workers']
-        self.job_executor = JobExecutor(
-            max_thread_workers=max_thread_workers,
-            job_db_path=job_db_path
-        )
+        # The services (database_service, job_executor, llm_service...) are
+        # properties over self._services, defined below the class body.
+        #
+        # They used to be built here, eagerly, as a SECOND copy of what the
+        # ServiceContainer builds lazily. So every ComponentRuntime — every
+        # `quantum run hello.q` — created ./logs/ and ./quantum_jobs.db in the
+        # user's directory and started a thread pool, for a program that used
+        # none of them; and q:job (runtime.job_executor) and q:schedule
+        # (services.job_executor) ran on two different JobExecutors, while
+        # runtime.llm_service ignored llm.base_url (IA-1).
+        #
         # The one expression evaluator (FRAMEWORK_PLAN.md Fase 2.1). Nothing
         # else in this class compiles or executes an expression any more —
         # ExpressionCache's compile()+eval() is no longer reachable from the
@@ -762,12 +737,17 @@ class ComponentRuntime:
         """Execute a q:function by name. Returns the service's result shape."""
         func_node = self.get_function(name)
         if not func_node:
-            return {'success': False, 'error': f"Function '{name}' not found"}
+            return {'success': False, 'error': {'message': f"Function '{name}' not found"}}
         try:
             return {'success': True, 'data': self._execute_function(func_node, args or {})}
         except Exception as exc:  # noqa: BLE001
-            logger.exception("q:invoke function=%r failed", name)
-            return {'success': False, 'error': str(exc)}
+            # INV-2: the failure is reported in <name>_result, with the same
+            # {message} shape as an HTTP failure. This used to be
+            # logger.exception, which printed a Python traceback to the person
+            # running `quantum run` for what is an ordinary, handled failure.
+            logger.warning("q:invoke function=%r failed: %s", name, exc)
+            logger.debug("q:invoke function=%r traceback", name, exc_info=True)
+            return {'success': False, 'error': {'message': str(exc)}}
 
     def _execute_function(self, func_node: FunctionNode, args: Dict[str, Any]) -> Any:
         """Execute function with given arguments"""
@@ -1013,3 +993,35 @@ class ComponentRuntime:
 
     # ============================================
     # JOB EXECUTION SYSTEM (q:schedule, q:thread, q:job)
+
+
+def _delegate_to_container(attribute: str, service: str) -> property:
+    """runtime.<attribute> is services.<service>: one lazy instance per runtime.
+
+    Assigning still works (tests replace a service with a double), and the
+    replacement is what every executor sees, through either name.
+    """
+    def get(self):
+        return getattr(self._services, service)
+
+    def set_(self, value):
+        self._services._services[service] = value
+
+    return property(get, set_, doc=f"Same instance as services.{service}.")
+
+
+for _attribute, _service in (
+    ('database_service', 'database'),
+    ('invocation_service', 'invocation'),
+    ('data_import_service', 'data_import'),
+    ('logging_service', 'logging'),
+    ('dump_service', 'dump'),
+    ('file_upload_service', 'file_upload'),
+    ('email_service', 'email'),
+    ('llm_service', 'llm'),
+    ('knowledge_service', 'knowledge'),
+    ('message_queue_service', 'message_queue'),
+    ('job_executor', 'job_executor'),
+):
+    setattr(ComponentRuntime, _attribute, _delegate_to_container(_attribute, _service))
+del _attribute, _service

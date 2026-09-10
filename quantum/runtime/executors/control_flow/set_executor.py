@@ -11,6 +11,7 @@ Handles variable assignment and all operations:
 
 from typing import Any, List, Dict, Type
 import json
+import re
 from quantum.runtime.executors.base import BaseExecutor, ExecutorError
 from quantum.core.features.state_management.src.ast_node import SetNode
 from quantum.core.expressions import coerce_number
@@ -89,7 +90,7 @@ class SetExecutor(BaseExecutor):
         processed_value = self.apply_databinding(value_expr, context)
 
         # Convert to appropriate type
-        return self._convert_to_type(processed_value, node.type)
+        return self._convert_to_type(processed_value, node.type, source=value_expr)
 
     def _numeric_or_fail(self, value: Any, op: str, where: str) -> Any:
         """Coerce a numeric-looking value, or fail loudly.
@@ -281,49 +282,92 @@ class SetExecutor(BaseExecutor):
 
         return value_str
 
-    def _convert_to_type(self, value: Any, target_type: str) -> Any:
-        """Convert value to target type"""
+    def _convert_to_type(self, value: Any, target_type: str, source: str = None) -> Any:
+        """Convert value to target type.
+
+        ERR-1: a value that does not convert is an error that shows the value
+        and how to write it. The messages used to be Python's own — "could not
+        convert string to float: '10 + 20'" for value="{a} + {b}", and
+        "Expecting property name enclosed in double quotes" for an array
+        written with single quotes — neither of which says what to change.
+        """
         if value is None:
             return None
 
-        try:
-            if target_type == "string":
-                return str(value)
-            elif target_type in ("integer", "number"):
-                try:
-                    return int(value)
-                except (ValueError, TypeError):
-                    return float(value)
-            elif target_type == "decimal":
-                return float(value)
-            elif target_type == "boolean":
-                if isinstance(value, bool):
-                    return value
-                if isinstance(value, str):
-                    return value.lower() in ['true', '1', 'yes']
-                return bool(value)
-            elif target_type == "array":
-                if isinstance(value, list):
-                    return value
-                if isinstance(value, str):
-                    return json.loads(value)
-                return [value]
-            elif target_type == "object":
-                if isinstance(value, dict):
-                    return value
-                if isinstance(value, str):
-                    return json.loads(value)
-                return {}
-            elif target_type == "json":
-                if isinstance(value, (dict, list)):
-                    return value
-                if isinstance(value, str):
-                    return json.loads(value)
+        if target_type in ("integer", "number", "decimal"):
+            if isinstance(value, bool):
+                raise ExecutorError(f"{value!r} is a boolean, not a number")
+            numero = coerce_number(value)
+            if not isinstance(numero, (int, float)):
+                raise ExecutorError(self._not_a_number(value, source))
+            if target_type == "decimal":
+                return float(numero)
+            if target_type == "integer":
+                # It used to be int(value): {7 / 2} became 3, silently.
+                if isinstance(numero, float):
+                    if not numero.is_integer():
+                        raise ExecutorError(
+                            f"{numero!r} is not a whole number; use round() in the "
+                            f"expression, or type=\"number\"")
+                    return int(numero)
+                return numero
+            # type="number" also went through int() first: {5 / 2} stored 2.
+            return numero
+
+        if target_type == "boolean":
+            if isinstance(value, bool):
                 return value
-            else:
+            if isinstance(value, str):
+                texto = value.strip().lower()
+                if texto in ('true', '1', 'yes'):
+                    return True
+                if texto in ('false', '0', 'no', ''):
+                    return False
+                raise ExecutorError(
+                    f"{value!r} is not a boolean; use true or false")
+            return bool(value)
+
+        if target_type in ("array", "object", "json"):
+            vazio = {"array": [value], "object": {}, "json": value}[target_type]
+            if isinstance(value, (dict, list)):
+                if target_type == "array" and not isinstance(value, list):
+                    raise ExecutorError(f"expected an array, got an object")
+                if target_type == "object" and not isinstance(value, dict):
+                    raise ExecutorError(f"expected an object, got an array")
                 return value
-        except Exception as e:
-            raise ExecutorError(f"Type conversion error to '{target_type}': {e}")
+            if not isinstance(value, str):
+                return vazio
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError as exc:
+                raise ExecutorError(self._not_json(value, target_type, exc)) from None
+
+        if target_type == "string":
+            return str(value)
+        return value
+
+    @staticmethod
+    def _not_a_number(value: Any, source: str) -> str:
+        mensagem = f"{value!r} is not a number"
+        # value="{a} + {b}": each pair of braces is evaluated alone and the
+        # text between them is kept, so the result is the text '10 + 20'.
+        if source and '{' in source and not re.fullmatch(r'\s*\{[^{}]*\}\s*', source):
+            junto = '{' + re.sub(r'\{([^{}]*)\}', r'\1', source).strip() + '}'
+            mensagem += (f". Only what is inside one pair of braces is calculated: "
+                         f"write value=\"{junto}\" instead of value=\"{source}\"")
+        return mensagem
+
+    @staticmethod
+    def _not_json(value: str, target_type: str, exc: json.JSONDecodeError) -> str:
+        trecho = value.strip()
+        if len(trecho) > 60:
+            trecho = trecho[:57] + '...'
+        mensagem = (f"value is not a valid {target_type} (JSON): {trecho!r}, "
+                    f"problem at character {exc.pos + 1}")
+        if "'" in value:
+            mensagem += ('. JSON uses double quotes for text and keys: '
+                         'value=\'[{"name": "Ana"}]\' — put the attribute itself in single quotes')
+        return mensagem
 
     def _validate_value(self, node: SetNode, value: Any):
         """Validate value against set_node rules"""

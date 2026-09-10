@@ -141,6 +141,16 @@ Nunca uma falha torna uma condição verdadeira.
 `&&`, `||` e `!` com o mesmo significado. `!=` continua sendo diferença, e nada
 dentro de uma string é traduzido.
 
+## 6a. Tipos em `q:set`
+
+**ERR-1** — O `type` de `q:set` converte o valor assim: `number` mantém o número
+(`{5 / 2}` é `2.5`); `integer` aceita só número inteiro (`{7 / 2}` é erro, que
+indica `round()`); `decimal` é número com casas; `boolean` aceita `true`/`false`,
+`1`/`0`, `yes`/`no` e vazio (falso); `array`, `object` e `json` leem JSON. Um
+valor que não converte é erro que mostra o valor. Quando o valor é texto com
+expressões (`"{a} + {b}"`), a mensagem mostra a forma que calcula
+(`"{a + b}"`); quando é JSON com aspas simples, diz para usar aspas duplas.
+
 ## 7. Invocação
 
 **INV-1** — `q:invoke url=` faz a requisição com o método declarado (padrão
@@ -168,6 +178,17 @@ consulta falha com erro; a falha nunca é devolvida como resposta.
 para os tipos dos `q:param` da tool, e expõe em `<nome>_result` o `success`, as
 `actions` (tool, argumentos, resultado) e, na falha, `error.message`.
 
+## 9. Execução (`quantum run`)
+
+**RUN-1** — Executar um componente não cria arquivos nem inicia serviços que o
+programa não usa, e a saída não traz o log interno do framework. Cada serviço
+(banco, jobs, IA, filas…) existe numa única instância por execução,
+compartilhada por todas as tags.
+
+**RUN-2** — Uma falha tratada — que a linguagem entrega ao programa, como
+`<nome>_result` de `q:invoke` — aparece como mensagem, nunca como traceback do
+Python.
+
 ---
 
 ## Em aberto
@@ -179,10 +200,7 @@ arquivo.
 
 | Lacuna | Tema |
 |---|---|
-| G3 | Mensagem de conversão para número (`"{a} + {b}"`) |
 | G4 | `${VAR}` em `quantum.config.yaml` |
-| G5 | Traceback exibido em falha de `q:invoke` |
-| G13 | Mensagem de array com aspas simples |
 | G16 | `q:data` que falha é silencioso |
 | G17 | `q:application type="html"` não inicia |
 | G18 | `q:application type="api"` não executa as rotas |

@@ -41,43 +41,6 @@ def lacuna(reason):
     return pytest.mark.xfail(strict=True, reason=reason)
 
 
-class TestMensagensDeErro:
-    @lacuna("G3: '{a} + {b}' é interpolação ('10 + 20'), e a conversão para "
-            "número falha com mensagem interna do Python ('could not convert "
-            "string to float'), sem dizer como escrever a soma.")
-    def test_conversao_para_numero_ensina_a_sintaxe_da_expressao(self):
-        with pytest.raises(Exception) as erro:
-            executar('<q:set name="a" value="10"/><q:set name="b" value="20"/>'
-                     '<q:set name="r" value="{a} + {b}" type="number"/>')
-        assert '{a + b}' in str(erro.value)
-        assert 'float' not in str(erro.value)
-
-    @lacuna("G13: array com aspas simples falha com o texto do parser JSON "
-            "('Expecting property name enclosed in double quotes').")
-    def test_array_invalido_diz_para_usar_aspas_duplas(self):
-        with pytest.raises(Exception) as erro:
-            executar('''<q:set name="a" type="array" value="[{'x': 1}]"/>''')
-        assert 'aspas duplas' in str(erro.value) or 'double quotes' in str(erro.value)
-        assert 'Expecting property name' not in str(erro.value)
-
-    @lacuna("G5: falha em q:invoke imprime traceback do Python para o usuário.")
-    def test_falha_de_invoke_nao_mostra_traceback(self, tmp_path):
-        arquivo = tmp_path / 'invoke.q'
-        arquivo.write_text(
-            '<q:component name="I" xmlns:q="https://quantum.lang/ns">'
-            '<q:function name="soma"><q:param name="a" type="number" required="true"/>'
-            '<q:set name="r" value="{a} + 1" type="number"/><q:return value="{r}"/>'
-            '</q:function>'
-            '<q:invoke name="x" function="soma"><q:param name="a" default="1"/></q:invoke>'
-            '<q:return value="{x}"/></q:component>', encoding='utf-8')
-        saida = subprocess.run(
-            [sys.executable, '-m', 'quantum.cli.runner', 'run', str(arquivo)],
-            capture_output=True, text=True, cwd=tmp_path, timeout=120,
-            env=dict(os.environ, PYTHONPATH=str(REPO)))
-        texto = saida.stdout + saida.stderr
-        assert 'Traceback (most recent call last)' not in texto
-
-
 @pytest.fixture
 def servidor(tmp_path):
     """Servidor web real, em processo, com os componentes que o teste escrever."""

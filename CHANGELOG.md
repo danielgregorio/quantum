@@ -26,6 +26,11 @@ means, rule by rule, and every rule is pinned by a test that cites it.
 - **A POST whose `action` field is missing or names no action is refused with
   400** on pages with more than one `q:action` (ACT-5). It used to run the first
   action.
+- **`q:set` types are checked** (ERR-1). `type="number"` keeps fractions —
+  `{5 / 2}` used to store `2`; `type="integer"` refuses `3.5` instead of
+  truncating it; `type="boolean"` refuses anything but true/false/1/0/yes/no.
+- **`q:invoke function=` failures report `error.message`**, the same shape as
+  HTTP failures; `error` used to be a plain string.
 
 ### Fixed
 
@@ -37,6 +42,14 @@ means, rule by rule, and every rule is pinned by a test that cites it.
 - `q:invoke url=` never worked without an explicit `timeout`, and its
   `q:param`s were sent empty (INV-1).
 - `form.<field>` was empty inside `q:action` (ACT-6).
+- Conversion errors in `q:set` say what to write: `value="{a} + {b}"` points to
+  `{a + b}`, and JSON with single quotes asks for double quotes, instead of
+  Python's "could not convert string to float" (ERR-1).
+- `quantum run` printed a Python traceback for a failed `q:invoke`, and created
+  `./logs/` and `./quantum_jobs.db` in the current directory for any program
+  (RUN-1, RUN-2).
+- `q:job` and `q:schedule` ran on two different job executors; every service now
+  has one instance per runtime.
 
 ### Added
 
