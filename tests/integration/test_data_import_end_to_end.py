@@ -109,10 +109,10 @@ class TestCsvEFiltro:
 
 class TestFalha:
     def test_arquivo_ausente_fica_no_resultado(self, pasta):
-        # A falha não interrompe a página: o motivo fica em {nome_result}.
-        # (Se isso deve virar erro é decisão da spec — G16.)
+        # Com onerror="continue" a falha não interrompe a página: o motivo fica
+        # em {nome_result}. Sem ele, é erro (DATA-4, decidido a partir de G16).
         mensagem = executar(pasta,
-            '<q:data name="x" source="data/naoexiste.csv" type="csv"/>'
+            '<q:data name="x" source="data/naoexiste.csv" type="csv" onerror="continue"/>'
             '<q:if condition="x_result.success"><q:return value="ok"/></q:if>'
             '<q:return value="{x_result.error.message}"/>')
         assert 'naoexiste.csv' in str(mensagem)

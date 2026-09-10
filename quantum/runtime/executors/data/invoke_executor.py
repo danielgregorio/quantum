@@ -82,6 +82,14 @@ class InvokeExecutor(BaseExecutor):
         except Exception as e:
             raise ExecutorError(f"Invoke execution error in '{node.name}': {e}")
 
+        # INV-2: same rule as q:data and q:query — a failure stops the
+        # component, unless onerror="continue" says the program handles it.
+        if not result.success and getattr(node, 'on_error', 'fail') != 'continue':
+            motivo = (result.error or {}).get('message', 'unknown error')                 if isinstance(result.error, dict) else str(result.error)
+            raise ExecutorError(
+                f"q:invoke '{node.name}' failed: {motivo}. "
+                f"Add onerror=\"continue\" to handle it with {node.name}_result instead.")
+
     def _param_args(self, node: InvokeNode, context: Dict[str, Any]) -> Dict[str, Any]:
         """Resolve <q:param> children into call arguments.
 

@@ -143,8 +143,18 @@ class TestInvocacao:
         assert executar(f'<q:invoke name="u" url="{api}/u"><q:param name="q" value="x y"/></q:invoke>'
                         '<q:return value="{u.query.q}"/>') == 'x y'
 
-    def test_falha_http_fica_em_nome_result(self, executar, api):
+    def test_falha_http_e_erro(self, executar, api):
         # INV-2
-        r = executar(f'<q:invoke name="u" url="{api}/falha"/>'
+        with pytest.raises(Exception, match='q:invoke .u. failed: HTTP 503.*onerror="continue"'):
+            executar(f'<q:invoke name="u" url="{api}/falha"/><q:return value="nao chega"/>')
+
+    def test_falha_http_com_continue_fica_em_nome_result(self, executar, api):
+        # INV-2
+        r = executar(f'<q:invoke name="u" url="{api}/falha" onerror="continue"/>'
                      '<q:return value="{u_result}"/>')
         assert r['success'] is False and '503' in r['error']['message']
+
+    def test_onerror_invalido_e_erro_de_parse(self, executar, api):
+        # INV-2
+        with pytest.raises(Exception, match='onerror must be'):
+            executar(f'<q:invoke name="u" url="{api}/u" onerror="ignore"/>')

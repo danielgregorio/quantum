@@ -107,28 +107,3 @@ class TestAplicacaoApi:
         server.configure_from_ast(app)
         resposta = server.app.test_client().get('/n')
         assert resposta.get_json() == 42
-
-
-class TestImportDeDados:
-    @lacuna("G16: q:data com arquivo inexistente devolve None em silêncio; o "
-            "motivo só aparece em {nome_result.error}. Proposta: erro por "
-            "padrão, nomeando o arquivo, com opt-in explícito para seguir.")
-    def test_arquivo_inexistente_e_erro(self, tmp_path, monkeypatch):
-        monkeypatch.chdir(tmp_path)
-        with pytest.raises(Exception, match="naoexiste.csv"):
-            executar('<q:data name="x" source="naoexiste.csv" type="csv"/>'
-                     '<q:return value="{x}"/>')
-
-
-class TestConfig:
-    @lacuna("G4: ${VAR} em quantum.config.yaml é lido literalmente. A proposta "
-            "é substituir pela variável de ambiente, ou recusar com erro que "
-            "nomeie a variável ausente.")
-    def test_variavel_de_ambiente_na_config_e_substituida(self, tmp_path, monkeypatch):
-        from quantum.cli.runner import load_config
-        (tmp_path / 'quantum.config.yaml').write_text(
-            'datasources:\n  db:\n    driver: sqlite\n    database: ${QUANTUM_GAP_DB}\n',
-            encoding='utf-8')
-        monkeypatch.setenv('QUANTUM_GAP_DB', './data/app.db')
-        config = load_config(str(tmp_path / 'quantum.config.yaml'))
-        assert config['datasources']['db']['database'] == './data/app.db'

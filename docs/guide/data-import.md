@@ -114,20 +114,21 @@ Operations inside `q:transform` run in order:
 
 ## When the import fails
 
-A missing file or invalid content does **not** stop the page. The variable is
-empty, and `{nome_result}` says what happened:
+A missing file or invalid content **stops the component** with an error that
+names the import, the source and the reason:
+
+```
+q:data 'clientes' could not read 'data/clientes.csv': CSV import failed: [Errno 2] No such file or directory
+```
+
+When a failure is expected and the page should handle it, say so with
+`onerror="continue"`. The page goes on, and `{nome_result}` says what happened:
 
 ```xml
-<q:data name="clientes" source="data/clientes.csv" type="csv" />
+<q:data name="clientes" source="data/clientes.csv" type="csv" onerror="continue" />
 
 <q:if condition="clientes_result.success">
   <p>{clientes_result.recordCount} clientes</p>
   <q:else><p>Não foi possível ler: {clientes_result.error.message}</p></q:else>
 </q:if>
 ```
-
-::: warning
-A failed import is silent unless you check `_result`. Whether it should be an
-error by default is an open decision of the language specification (known gap
-`G16`).
-:::

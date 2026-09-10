@@ -78,8 +78,9 @@ class DatabaseConnection:
 
         try:
             import yaml
-            with open(config_path) as f:
-                config = yaml.safe_load(f) or {}
+            from quantum.core.config_env import expand_env
+            with open(config_path, encoding='utf-8') as f:
+                config = expand_env(yaml.safe_load(f) or {})
             return config.get('database', {})
         except Exception as e:
             logger.warning(f"Could not load config: {e}")

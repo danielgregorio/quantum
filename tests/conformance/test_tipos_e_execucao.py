@@ -70,7 +70,7 @@ class TestQuantumRun:
                       '<q:function name="soma"><q:param name="a" type="number" required="true"/>'
                       '<q:set name="r" value="{a} + 1" type="number"/><q:return value="{r}"/>'
                       '</q:function>'
-                      '<q:invoke name="x" function="soma"><q:param name="a" default="1"/></q:invoke>'
+                      '<q:invoke name="x" function="soma" onerror="continue"><q:param name="a" default="1"/></q:invoke>'
                       '<q:return value="{x_result.error.message}"/></q:component>')
         texto = saida.stdout + saida.stderr
         assert 'Traceback (most recent call last)' not in texto

@@ -100,10 +100,19 @@ datasources:
     database: ./data/app.db
 ```
 
-::: warning
-Values in `quantum.config.yaml` are read literally: `${VAR}` is **not**
-replaced by an environment variable.
-:::
+Keep secrets out of the file by referencing environment variables.
+`${NAME:-default}` falls back to a default, and `$$` is a literal `$`:
+
+```yaml
+datasources:
+  db:
+    driver: postgres
+    host: ${DB_HOST:-localhost}
+    password: ${DB_PASSWORD}
+```
+
+If `DB_PASSWORD` is not set, Quantum refuses to start and says which variable
+and which setting.
 
 ## From source
 

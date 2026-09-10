@@ -38,6 +38,7 @@ class DataNode(QuantumNode):
 
         # Result metadata
         self.result = None            # Variable name for metadata
+        self.on_error = 'fail'        # DATA-4: 'fail' or 'continue'
 
     def add_column(self, column: 'ColumnNode'):
         """Add CSV column definition"""

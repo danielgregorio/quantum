@@ -248,8 +248,9 @@ class QuantumWebServer:
         config_file = Path(config_path)
         if config_file.exists():
             try:
-                with open(config_file, 'r') as f:
-                    user_config = yaml.safe_load(f) or {}
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    from quantum.core.config_env import expand_env
+                    user_config = expand_env(yaml.safe_load(f) or {})
                     # Deep merge user config with defaults
                     for key, value in user_config.items():
                         if key in default_config and isinstance(default_config[key], dict) and isinstance(value, dict):

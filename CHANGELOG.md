@@ -29,8 +29,11 @@ means, rule by rule, and every rule is pinned by a test that cites it.
 - **`q:set` types are checked** (ERR-1). `type="number"` keeps fractions —
   `{5 / 2}` used to store `2`; `type="integer"` refuses `3.5` instead of
   truncating it; `type="boolean"` refuses anything but true/false/1/0/yes/no.
-- **`q:invoke function=` failures report `error.message`**, the same shape as
-  HTTP failures; `error` used to be a plain string.
+- **A failed `q:data` or `q:invoke` stops the component** with an error naming
+  the source and the reason, like `q:query` already did (DATA-4, INV-2). They
+  used to leave the variable empty and carry on. Add `onerror="continue"` to
+  handle the failure through `<name>_result`, whose `error` is now always
+  `{message}`.
 
 ### Fixed
 
@@ -53,6 +56,8 @@ means, rule by rule, and every rule is pinned by a test that cites it.
 
 ### Added
 
+- `${VAR}` and `${VAR:-default}` in `quantum.config.yaml` read environment
+  variables; a missing one stops startup naming the variable (CFG-1).
 - `SPEC.md`, with conformance tests in `tests/conformance/`, and known gaps kept
   as strict expected failures until decided.
 - The guide examples that show an **Output** are executed by the test suite;

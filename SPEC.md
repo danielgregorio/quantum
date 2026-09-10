@@ -106,6 +106,10 @@ declaradas vêm como texto.
 sintaxe de condição que `q:if`, com os campos do registro como variáveis),
 `q:sort`, `q:limit` e `q:compute` (acrescenta um campo calculado).
 
+**DATA-4** — Uma importação que falha (fonte inexistente, conteúdo inválido) é erro
+que cita o nome, a fonte e o motivo. Com `onerror="continue"` a execução segue e o
+motivo fica em `<nome>_result.error.message`, como em INV-2.
+
 ## 6. Expressões
 
 Uma expressão é o que está entre chaves: `{total * 2}`. Ela aparece em dois
@@ -158,8 +162,11 @@ expressões (`"{a} + {b}"`), a mensagem mostra a forma que calcula
 vira um parâmetro da query string com o seu `value`. Uma resposta JSON vira o
 valor de `<nome>`.
 
-**INV-2** — Uma resposta fora de 2xx, ou falha de conexão, não é erro da página:
-`<nome>_result.success` é falso e `<nome>_result.error.message` diz o motivo.
+**INV-2** — Uma invocação que falha (resposta fora de 2xx, falha de conexão, função
+que levanta erro) é erro que cita o nome e o motivo, como `q:query`. Com
+`onerror="continue"` a execução segue: `<nome>_result.success` é falso e
+`<nome>_result.error.message` diz o motivo. `onerror` só aceita `fail` (padrão) e
+`continue`.
 
 ## 8. IA
 
@@ -177,6 +184,15 @@ consulta falha com erro; a falha nunca é devolvida como resposta.
 **IA-4** — `q:agent` executa as tools declaradas com os argumentos convertidos
 para os tipos dos `q:param` da tool, e expõe em `<nome>_result` o `success`, as
 `actions` (tool, argumentos, resultado) e, na falha, `error.message`.
+
+## 8a. Configuração
+
+**CFG-1** — Em `quantum.config.yaml`, `${NOME}` em qualquer valor é substituído
+pela variável de ambiente `NOME`, e `${NOME:-padrão}` usa o padrão quando ela não
+existe; `$$` é um `$` literal. Uma variável ausente sem padrão é erro ao carregar a
+configuração, citando a variável e a chave — o programa não roda com a
+configuração pela metade. Vale para `quantum run`, `quantum start` e todos os
+serviços.
 
 ## 9. Execução (`quantum run`)
 
@@ -200,7 +216,5 @@ arquivo.
 
 | Lacuna | Tema |
 |---|---|
-| G4 | `${VAR}` em `quantum.config.yaml` |
-| G16 | `q:data` que falha é silencioso |
 | G17 | `q:application type="html"` não inicia |
 | G18 | `q:application type="api"` não executa as rotas |

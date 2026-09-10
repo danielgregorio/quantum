@@ -6,7 +6,7 @@
         <q:param name="a" type="number" required="true" />
         <q:param name="b" type="number" required="true" />
 
-        <q:set name="result" value="{a} + {b}" type="number" />
+        <q:set name="result" value="{a + b}" type="number" />
 
         <q:return value="{result}" />
     </q:function>
@@ -16,7 +16,7 @@
         <q:param name="x" type="number" required="true" />
         <q:param name="y" type="number" required="true" />
 
-        <q:set name="product" value="{x} * {y}" type="number" />
+        <q:set name="product" value="{x * y}" type="number" />
 
         <q:return value="{product}" />
     </q:function>

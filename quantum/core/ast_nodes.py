@@ -1919,6 +1919,7 @@ class DataNode(QuantumNode):
 
         # Result metadata
         self.result: Optional[str] = None
+        self.on_error: str = 'fail'   # DATA-4: 'fail' or 'continue'
 
         # Child elements
         self.columns: List[ColumnNode] = []

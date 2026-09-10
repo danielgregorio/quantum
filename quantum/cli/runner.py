@@ -77,12 +77,15 @@ def load_config(config_path: str = 'quantum.config.yaml') -> dict:
     so `datasources:` declared in quantum.config.yaml were never seen and
     every q:query fell through to the optional Quantum Admin API.
     """
+    from quantum.core.config_env import ConfigEnvError, expand_env
     try:
         import yaml
         path = Path(config_path)
         if path.exists():
             with open(path, 'r', encoding='utf-8') as fh:
-                return yaml.safe_load(fh) or {}
+                return expand_env(yaml.safe_load(fh) or {})
+    except ConfigEnvError:
+        raise                   # CFG-1: never run with a half-read config
     except Exception as exc:
         print(f"[WARN] Could not read {config_path}: {exc}")
     return {}

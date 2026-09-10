@@ -47,6 +47,7 @@ class InvokeNode(QuantumNode):
         self.cache = False
         self.ttl = None
         self.result = None       # Variable name for metadata
+        self.on_error = 'fail'   # INV-2: 'fail' or 'continue'
 
     def add_header(self, header: 'InvokeHeaderNode'):
         """Add HTTP header"""

@@ -67,6 +67,15 @@ class DataParser(BaseTagParser):
         # Result
         data_node.result = self.get_attr(element, 'result')
 
+        # DATA-4 / INV-2: a failure stops the component unless the program says
+        # it will look at <name>_result.
+        data_node.on_error = self.get_attr(element, 'onerror', 'fail')
+        if data_node.on_error not in ('fail', 'continue'):
+            from quantum.core.parser import QuantumParseError
+            raise QuantumParseError(
+                f"<q:data name=\"{data_node.name}\"> onerror must be \"fail\" or "
+                f"\"continue\", not \"{data_node.on_error}\"")
+
         # Parse child elements
         for child in element:
             child_type = self.get_element_name(child)

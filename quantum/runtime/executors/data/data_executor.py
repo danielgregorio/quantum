@@ -59,6 +59,14 @@ class DataExecutor(BaseExecutor):
         except Exception as e:
             raise ExecutorError(f"Data import error in '{node.name}': {e}")
 
+        # DATA-4: a failed import used to leave the variable None and carry on,
+        # so the page rendered empty with the reason tucked into _result.
+        if not result.success and getattr(node, 'on_error', 'fail') != 'continue':
+            motivo = (result.error or {}).get('message', 'unknown error')
+            raise ExecutorError(
+                f"q:data '{node.name}' could not read {source!r}: {motivo}. "
+                f"Add onerror=\"continue\" to handle it with {node.name}_result instead.")
+
     def _build_params(self, node: DataNode, context: Dict[str, Any]) -> Dict[str, Any]:
         """Build parameters for data import"""
         params = {

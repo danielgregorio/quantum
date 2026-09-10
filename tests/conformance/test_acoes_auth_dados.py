@@ -185,6 +185,17 @@ class TestDados:
                      '<q:field name="t2" xpath="t"/></q:data><q:return value="{l}"/>')
         assert r == [{'id': 1, 't': 'A', 's': 'X', 't2': 'A'}, {'id': 2, 't': 'B', 's': 'Y', 't2': 'B'}]
 
+    def test_arquivo_inexistente_e_erro_que_nomeia_a_fonte(self, executar):
+        # DATA-4 (era G16: devolvia None em silencio)
+        with pytest.raises(Exception, match="q:data 'x' could not read 'naoexiste.csv'.*onerror"):
+            executar('<q:data name="x" source="naoexiste.csv" type="csv"/><q:return value="nao chega"/>')
+
+    def test_com_continue_a_falha_fica_no_resultado(self, executar):
+        # DATA-4
+        r = executar('<q:data name="x" source="naoexiste.csv" type="csv" onerror="continue"/>'
+                     '<q:return value="{x_result}"/>')
+        assert r['success'] is False and 'naoexiste.csv' in r['error']['message']
+
     def test_transformacoes_em_ordem(self, executar):
         # DATA-3
         r = executar('<q:data name="p" source="p.json" type="json"><q:transform>'

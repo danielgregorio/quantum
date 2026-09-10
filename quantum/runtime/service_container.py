@@ -11,6 +11,8 @@ from typing import Any, Dict, Optional, TYPE_CHECKING
 import logging
 import os
 
+from quantum.core.config_env import ConfigEnvError, expand_env
+
 if TYPE_CHECKING:
     from quantum.runtime.database_service import DatabaseService
     from quantum.runtime.llm_service import LLMService
@@ -71,6 +73,9 @@ def load_project_config(config_path: str = _DEFAULT_CONFIG_FILE) -> Dict[str, An
             logger.warning("%s does not contain a mapping; ignoring it",
                            config_path)
             loaded = {}
+        loaded = expand_env(loaded)
+    except ConfigEnvError:
+        raise
     except Exception as exc:
         logger.warning("could not read %s: %s", config_path, exc)
         return {}
