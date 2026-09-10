@@ -25,7 +25,6 @@ from quantum.core.parser import QuantumParser, QuantumParseError
 from quantum.core.ast_nodes import ComponentNode, ApplicationNode, JobNode
 from quantum.runtime.component import ComponentRuntime, ComponentExecutionError
 from quantum.runtime.web_server import QuantumWebServer
-from quantum.runtime.api_server import QuantumAPIServer
 
 # Import deploy commands (lazy load to avoid import errors if requests not installed)
 def _get_deploy_module():
@@ -190,10 +189,6 @@ class QuantumRunner:
         elif app.app_type == 'ui':
             target = getattr(self, '_ui_target', 'html')
             return self._build_ui(app, target, debug)
-        elif app.app_type == 'html':
-            return self._start_web_server(app)
-        elif app.app_type in ('microservices', 'api'):
-            return self._start_api_server(app)
         else:
             print(f"[ERROR] Application type '{app.app_type}' not supported")
             return 1
@@ -274,32 +269,6 @@ class QuantumRunner:
         # TODO: Implement real job execution
         print("[SUCCESS] Job executed successfully")
         return 0
-    
-    def _start_web_server(self, app: ApplicationNode) -> int:
-        """Start web server"""
-        try:
-            server = QuantumWebServer(port=8080)
-            server.configure_from_ast(app)
-            # Propagate the server's exit code: it returns non-zero when the
-            # port is taken or the bind fails, and swallowing that made
-            # `quantum run` report success with nothing listening.
-            return server.start() or 0
-        except Exception as e:
-            print(f"[ERROR] Web server error: {e}")
-            return 1
-    
-    def _start_api_server(self, app: ApplicationNode) -> int:
-        """Start API server"""
-        try:
-            server = QuantumAPIServer(port=8080)
-            server.configure_from_ast(app)
-            # Propagate the server's exit code: it returns non-zero when the
-            # port is taken or the bind fails, and swallowing that made
-            # `quantum run` report success with nothing listening.
-            return server.start() or 0
-        except Exception as e:
-            print(f"[ERROR] API server error: {e}")
-            return 1
 
 
 def main():
@@ -311,8 +280,6 @@ def main():
 Examples:
   quantum start                    # Start web server (magic!)
   quantum run hello.q              # Execute component
-  quantum run webapp.q             # Start web server from .q file
-  quantum run api.q                # Start API server
   quantum run game.q --engine godot # Build Godot 4 project
   quantum run backup-job.q         # Execute job
   quantum deploy ./my-app          # Deploy application
