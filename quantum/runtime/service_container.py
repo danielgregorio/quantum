@@ -9,6 +9,7 @@ across ComponentRuntime.__init__.
 import copy
 from typing import Any, Dict, Optional, TYPE_CHECKING
 import logging
+import os
 
 if TYPE_CHECKING:
     from quantum.runtime.database_service import DatabaseService
@@ -180,7 +181,7 @@ class ServiceContainer:
             from quantum.runtime.llm_service import LLMService
             llm_cfg = self._config.get('llm', {}) or {}
             self._services['llm'] = LLMService(
-                base_url=llm_cfg.get('base_url'),
+                base_url=self._llm_base_url(),
                 default_model=llm_cfg.get('default_model'),
                 timeout=llm_cfg.get('timeout', 60),
             )
@@ -196,21 +197,41 @@ class ServiceContainer:
             logger.debug("Initialized KnowledgeService")
         return self._services['knowledge']
 
+    def _llm_base_url(self):
+        """Where the model server is: QUANTUM_LLM_BASE_URL, then llm.base_url, then the default.
+
+        One answer for every AI tag. They disagreed: q:llm read llm.base_url from
+        quantum.config.yaml, while q:agent and q:team built their own service
+        with no config and read only the environment. Measured with the repo's
+        config (localhost) and QUANTUM_LLM_BASE_URL pointing at another host,
+        in one program: q:llm went to the local Ollama and failed with "model
+        'phi3' not found", q:agent went to the other host and answered.
+
+        The environment wins over the file, so an operator can point a
+        deployment at another server without editing the project.
+        """
+        llm_cfg = self._config.get('llm', {}) or {}
+        return os.environ.get('QUANTUM_LLM_BASE_URL') or llm_cfg.get('base_url')
+
     @property
     def agent(self):
-        """Agent service for q:agent"""
+        """Agent service for q:agent — on this container's model server."""
         if 'agent' not in self._services:
-            from quantum.runtime.agent_service import get_agent_service
-            self._services['agent'] = get_agent_service()
+            from quantum.runtime.agent_service import AgentService
+            service = AgentService(self.llm)
+            # Built by the global get_agent_service() it made its own
+            # MultiProviderLLMService with no config; share this container's.
+            service._multi_llm_service = self.multi_llm
+            self._services['agent'] = service
             logger.debug("Initialized AgentService")
         return self._services['agent']
 
     @property
     def multi_agent(self):
-        """Multi-agent service for q:team"""
+        """Multi-agent service for q:team — on the same agent service."""
         if 'multi_agent' not in self._services:
-            from quantum.runtime.agent_service import get_multi_agent_service
-            self._services['multi_agent'] = get_multi_agent_service()
+            from quantum.runtime.agent_service import MultiAgentService
+            self._services['multi_agent'] = MultiAgentService(self.agent)
             logger.debug("Initialized MultiAgentService")
         return self._services['multi_agent']
 
@@ -239,7 +260,7 @@ class ServiceContainer:
             from quantum.runtime.llm_providers import MultiProviderLLMService
             llm_cfg = self._config.get('llm', {}) or {}
             self._services['multi_llm'] = MultiProviderLLMService(
-                default_endpoint=llm_cfg.get('base_url'),
+                default_endpoint=self._llm_base_url(),
                 default_model=llm_cfg.get('default_model'),
                 timeout=llm_cfg.get('timeout', 60),
             )

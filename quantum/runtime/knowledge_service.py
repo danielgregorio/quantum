@@ -57,6 +57,31 @@ class KnowledgeService:
 
         return self._client
 
+    @staticmethod
+    def _collection_name(name: str) -> str:
+        """A ChromaDB collection name for any q:knowledge name.
+
+        ChromaDB accepts 3-512 characters from [a-zA-Z0-9._-], starting and
+        ending alphanumeric. `<q:knowledge name="kb">` failed with ChromaDB's
+        own validation message. The prefix makes every name long enough and
+        keeps Quantum's collections recognisable in a shared store.
+        """
+        safe = re.sub(r'[^a-zA-Z0-9._-]', '-', str(name)).strip('._-') or 'base'
+        return f"quantum-{safe}"[:512]
+
+    @staticmethod
+    def _fingerprint(all_texts, embed_model, chunk_size, chunk_overlap) -> str:
+        """What the index was built from: texts, their sources, and chunking."""
+        digest = hashlib.sha256()
+        digest.update(f"{embed_model}|{chunk_size}|{chunk_overlap}".encode())
+        for item in all_texts:
+            digest.update(str(item.get('source', '')).encode())
+            digest.update(b'\x00')
+            digest.update(str(item.get('text', '')).encode())
+            digest.update(b'\x00')
+            digest.update(f"{item.get('chunk_size')}|{item.get('chunk_overlap')}".encode())
+        return digest.hexdigest()
+
     def index_knowledge(
         self,
         name: str,
@@ -87,31 +112,48 @@ class KnowledgeService:
         """
         client = self._get_client(persist, persist_path)
 
-        # Get or create collection
-        if rebuild:
-            try:
-                client.delete_collection(name)
-            except Exception:
-                pass
-
-        collection = client.get_or_create_collection(
-            name=name,
-            metadata={"hnsw:space": "cosine"}
-        )
-
-        # If collection already has documents and not rebuilding, skip
-        if collection.count() > 0 and not rebuild:
-            self._collections[name] = collection
-            logger.info(f"Knowledge base '{name}' already indexed ({collection.count()} chunks)")
-            return
-
-        # Extract text from all sources
+        # Extract text first: whether the stored index is still valid depends
+        # on what the sources say NOW. Reading them is cheap; embedding is the
+        # expensive part, and that is what an unchanged fingerprint skips.
         all_texts = []
         for source in sources:
             texts = self._extract_source_text(
                 source, database_service, exec_context
             )
             all_texts.extend(texts)
+
+        fingerprint = self._fingerprint(all_texts, embed_model, chunk_size, chunk_overlap)
+
+        # Knowledge bases persist by default (./.quantum/knowledge). The stored
+        # collection used to be reused whenever it had any chunks — so a base
+        # named "docs" indexed last week answered from last week's text, and
+        # changing the q:source did nothing. Measured: inline sources declared
+        # in a new file came back as chunks of docs/index.md from an earlier
+        # run. Reuse only when the fingerprint matches.
+        if not rebuild:
+            try:
+                existing = client.get_collection(self._collection_name(name))
+            except Exception:
+                existing = None
+            if existing is not None:
+                if (existing.count() > 0
+                        and (existing.metadata or {}).get("quantum_fingerprint") == fingerprint):
+                    self._collections[name] = existing
+                    logger.info(f"Knowledge base '{name}' already indexed ({existing.count()} chunks)")
+                    return
+                logger.info(f"Knowledge base '{name}': sources changed, reindexing")
+                rebuild = True
+
+        if rebuild:
+            try:
+                client.delete_collection(self._collection_name(name))
+            except Exception:
+                pass
+
+        collection = client.get_or_create_collection(
+            name=self._collection_name(name),
+            metadata={"hnsw:space": "cosine", "quantum_fingerprint": fingerprint}
+        )
 
         if not all_texts:
             logger.warning(f"Knowledge base '{name}': no text extracted from sources")
@@ -481,20 +523,24 @@ class KnowledgeService:
 
             answer = llm_result.get("data", "")
             success = llm_result.get("success", False)
-
-            # Calculate confidence based on search relevance
-            avg_relevance = sum(r['relevance'] for r in search_results) / len(search_results) if search_results else 0.0
-
-            return {
-                "answer": answer.strip() if answer else "Failed to generate answer.",
-                "sources": sources,
-                "confidence": round(avg_relevance, 4),
-            }
-
         except Exception as e:
             logger.error(f"RAG query failed for '{name}': {e}")
-            return {
-                "answer": f"Error generating answer: {e}",
-                "sources": sources,
-                "confidence": 0.0,
-            }
+            # Raised, not returned. This used to come back as the ANSWER —
+            # "Error generating answer: LLM request timed out after 60s", with
+            # confidence 0 — so a page rendered the failure as if the model
+            # had said it.
+            raise KnowledgeError(f"RAG answer for '{name}' failed: {e}") from e
+
+        if not success or not answer:
+            raise KnowledgeError(
+                f"RAG answer for '{name}' failed: "
+                f"{llm_result.get('error') or 'the model returned no answer'}")
+
+        # Calculate confidence based on search relevance
+        avg_relevance = sum(r['relevance'] for r in search_results) / len(search_results) if search_results else 0.0
+
+        return {
+            "answer": answer.strip(),
+            "sources": sources,
+            "confidence": round(avg_relevance, 4),
+        }
