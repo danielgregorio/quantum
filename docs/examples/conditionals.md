@@ -23,8 +23,8 @@ onMounted(async () => {
 Conditional logic with `q:if`, `q:else`, and `q:elseif`.
 
 <div class="related-links">
-  <a href="/guide/conditionals" class="related-link">Documentation</a>
-  <a href="/api/tags-reference#q-if" class="related-link">API Reference</a>
+  <a href="../guide/conditionals" class="related-link">Documentation</a>
+  <a href="../api/tags-reference#q-if" class="related-link">API Reference</a>
 </div>
 
 ## All Examples

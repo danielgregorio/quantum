@@ -23,8 +23,8 @@ onMounted(async () => {
 Iteration with `q:loop` - arrays, ranges, and lists.
 
 <div class="related-links">
-  <a href="/guide/loops" class="related-link">Documentation</a>
-  <a href="/api/tags-reference#q-loop" class="related-link">API Reference</a>
+  <a href="../guide/loops" class="related-link">Documentation</a>
+  <a href="../api/tags-reference#q-loop" class="related-link">API Reference</a>
 </div>
 
 ## All Examples

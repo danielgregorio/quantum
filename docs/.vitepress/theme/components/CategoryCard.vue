@@ -1,4 +1,6 @@
 <script setup>
+import { withBase } from 'vitepress'
+
 defineProps({
   id: { type: String, required: true },
   name: { type: String, required: true },
@@ -10,7 +12,7 @@ defineProps({
 </script>
 
 <template>
-  <a :href="`/examples/${id}`" class="category-card">
+  <a :href="withBase(`/examples/${id}`)" class="category-card">
     <div class="card-icon">{{ icon }}</div>
     <div class="card-content">
       <h3 class="card-title">{{ name }}</h3>

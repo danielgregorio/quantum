@@ -23,8 +23,8 @@ onMounted(async () => {
 Login, logout, roles, and protected routes.
 
 <div class="related-links">
-  <a href="/guide/authentication" class="related-link">Documentation</a>
-  <a href="/api/tags-reference#q-auth" class="related-link">API Reference</a>
+  <a href="../guide/authentication" class="related-link">Documentation</a>
+  <a href="../api/tags-reference#q-auth" class="related-link">API Reference</a>
 </div>
 
 ## All Examples

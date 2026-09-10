@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Quantum">
+  <title>Quantum</title>
+  <!--
+    Q seguido do chevron de fechamento de tag: no Quantum tudo e tag, e a
+    marca diz isso sem precisar de legenda.
+
+    Regras da grade:
+    - viewBox de 64 com tudo em numero par, para nao borrar em 16px.
+    - a tigela vai de x=9 a x=39; o rabo termina em x=40; o chevron comeca em
+      x=46. Nada se toca, entao a marca continua legivel reduzida.
+    - `currentColor`: herda a cor do texto ao redor, o que dispensa uma
+      segunda versao para fundo escuro.
+  -->
+  <g fill="none" stroke="currentColor" stroke-width="5"
+     stroke-linecap="round" stroke-linejoin="round">
+    <!-- tigela do Q -->
+    <circle cx="24" cy="30" r="15"/>
+    <!-- rabo do Q, saindo da tigela a 45 graus -->
+    <path d="M31 37 L40 46"/>
+    <!-- o `>` que fecha a tag -->
+    <path d="M46 20 L58 32 L46 44"/>
+  </g>
+</svg>

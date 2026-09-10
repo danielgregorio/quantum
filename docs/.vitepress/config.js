@@ -1,6 +1,15 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
+  // Publicado no GitHub Pages como site de projeto:
+  // https://danielgregorio.github.io/quantum/ — tudo vive sob /quantum/.
+  base: '/quantum/',
+
+  // docs/archive guarda notas internas antigas (planos, relatorios de
+  // sessao). Nao sao documentacao, e uma delas tem HTML malformado que
+  // derrubava o build inteiro.
+  srcExclude: ['archive/**'],
+
   title: 'Quantum Framework',
   description: 'Full-stack declarative framework for building web, desktop, and mobile applications',
 

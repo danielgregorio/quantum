@@ -25,8 +25,8 @@ onMounted(async () => {
 Learn how to manage state with `q:set`, data binding, and variable operations.
 
 <div class="related-links">
-  <a href="/guide/state-management" class="related-link">Documentation</a>
-  <a href="/api/tags-reference#q-set" class="related-link">API Reference</a>
+  <a href="../guide/state-management" class="related-link">Documentation</a>
+  <a href="../api/tags-reference#q-set" class="related-link">API Reference</a>
 </div>
 
 ## All Examples

@@ -23,8 +23,8 @@ onMounted(async () => {
 UI components, themes, and animations.
 
 <div class="related-links">
-  <a href="/ui/overview" class="related-link">UI Documentation</a>
-  <a href="/features/theming" class="related-link">Theming Guide</a>
+  <a href="../ui/overview" class="related-link">UI Documentation</a>
+  <a href="../features/theming" class="related-link">Theming Guide</a>
 </div>
 
 ## All Examples

@@ -23,7 +23,7 @@ onMounted(async () => {
 Complex examples combining multiple features - real-world applications.
 
 <div class="related-links">
-  <a href="/architecture/" class="related-link">Architecture Guide</a>
+  <a href="../architecture/" class="related-link">Architecture Guide</a>
 </div>
 
 ## All Examples
