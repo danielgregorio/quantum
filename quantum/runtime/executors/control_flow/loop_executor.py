@@ -30,6 +30,35 @@ _RENDER_ONLY_NODE_TYPES = (
 )
 
 
+class LoopReturns(list):
+    """Os valores dos q:return executados dentro de um q:loop, em ordem.
+
+    Um tipo proprio, e nao `list`, porque o resultado de um loop antes
+    misturava qualquer coisa nao-None que o corpo produzisse — linhas de um
+    q:query, por exemplo — e por isso quem chamava nao tinha como tratar o
+    loop como return e simplesmente jogava o resultado fora. Era assim que
+    `<q:loop ...><q:return value="{x}"/></q:loop>` num componente devolvia
+    None, contra o que getting-started.md documenta.
+    """
+
+
+def produced_return(statement, result) -> bool:
+    """O statement executado deve encerrar o corpo que o contem?
+
+    Vale para um q:if cujo ramo executou um q:return, e para um q:loop que
+    coletou pelo menos um. Um loop que nao coletou nada — so q:set, ou um
+    filtro que nao casou — deixa a execucao seguir, como um q:if falso.
+    """
+    if isinstance(result, LoopReturns):
+        return len(result) > 0
+    return result is not None and isinstance(statement, IfNode)
+
+
+def as_return_value(result):
+    """Entrega um LoopReturns como lista comum para quem esta fora do runtime."""
+    return list(result) if isinstance(result, LoopReturns) else result
+
+
 class LoopExecutor(BaseExecutor):
     """
     Executor for q:loop statements.
@@ -69,7 +98,7 @@ class LoopExecutor(BaseExecutor):
 
     def _execute_range(self, node: LoopNode, exec_context) -> List:
         """Execute range loop (from/to/step)"""
-        results = []
+        results = LoopReturns()
         context = self.get_all_variables()
 
         try:
@@ -86,8 +115,7 @@ class LoopExecutor(BaseExecutor):
                 # Execute body
                 for statement in node.body:
                     result = self._execute_body_statement(statement, loop_context, exec_context)
-                    if result is not None:
-                        results.append(result)
+                    self._collect(results, statement, result)
 
             return results
 
@@ -96,7 +124,7 @@ class LoopExecutor(BaseExecutor):
 
     def _execute_array(self, node: LoopNode, exec_context) -> List:
         """Execute array loop"""
-        results = []
+        results = LoopReturns()
         context = self.get_all_variables()
 
         try:
@@ -112,8 +140,7 @@ class LoopExecutor(BaseExecutor):
 
                 for statement in node.body:
                     result = self._execute_body_statement(statement, loop_context, exec_context)
-                    if result is not None:
-                        results.append(result)
+                    self._collect(results, statement, result)
                     loop_context = exec_context.get_all_variables()
 
             return results
@@ -123,7 +150,7 @@ class LoopExecutor(BaseExecutor):
 
     def _execute_list(self, node: LoopNode, exec_context) -> List:
         """Execute list loop (delimited string)"""
-        results = []
+        results = LoopReturns()
         context = self.get_all_variables()
 
         try:
@@ -140,8 +167,7 @@ class LoopExecutor(BaseExecutor):
 
                 for statement in node.body:
                     result = self._execute_body_statement(statement, loop_context, exec_context)
-                    if result is not None:
-                        results.append(result)
+                    self._collect(results, statement, result)
 
             return results
 
@@ -150,7 +176,7 @@ class LoopExecutor(BaseExecutor):
 
     def _execute_query(self, node: LoopNode, exec_context) -> List:
         """Execute query loop - iterate over query result rows"""
-        results = []
+        results = LoopReturns()
         context = self.get_all_variables()
 
         try:
@@ -187,13 +213,32 @@ class LoopExecutor(BaseExecutor):
 
                 for statement in node.body:
                     result = self._execute_body_statement(statement, loop_context, exec_context)
-                    if result is not None:
-                        results.append(result)
+                    self._collect(results, statement, result)
 
             return results
 
         except Exception as e:
             raise ExecutorError(f"Query loop error: {e}")
+
+    @staticmethod
+    def _collect(results: LoopReturns, statement, result) -> None:
+        """Guarda em `results` o que o statement retornou, e so isso.
+
+        Cada q:return executado vira um item — inclusive os de um loop
+        aninhado, que entram soltos, na ordem (docs/guide/loops.md, "Nested
+        Loops"). Um q:if cujo ramo retornou vira um item. O resto (linhas de
+        q:query, valores de q:set etc.) nao e return e nao entra.
+
+        So LoopReturns e achatado: `<q:return value="{lista}"/>` continua
+        sendo UM item, mesmo sendo uma lista.
+        """
+        if isinstance(statement, QuantumReturn):
+            if result is not None:
+                results.append(result)
+        elif isinstance(result, LoopReturns):
+            results.extend(result)
+        elif produced_return(statement, result):
+            results.append(result)
 
     def _execute_body_statement(self, statement, context: Dict[str, Any], exec_context) -> Any:
         """Execute a statement inside a loop body"""

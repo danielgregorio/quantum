@@ -6,6 +6,7 @@ Handles conditional execution with elseif and else blocks.
 
 from typing import Any, List, Dict, Type
 from quantum.runtime.executors.base import BaseExecutor, ExecutorError
+from quantum.runtime.executors.control_flow.loop_executor import produced_return
 from quantum.core.features.conditionals.src.ast_node import IfNode
 from quantum.core.ast_nodes import (
     QuantumReturn,
@@ -84,8 +85,9 @@ class IfExecutor(BaseExecutor):
             else:
                 # Use registry to execute child statements
                 result = self.execute_child(statement)
-                # If child is an IfNode and returns something, propagate it
-                if result is not None and isinstance(statement, IfNode):
+                # A nested q:if that returned, or a q:loop that collected
+                # returns, ends this branch with that value.
+                if produced_return(statement, result):
                     return result
 
         return None

@@ -40,21 +40,22 @@ Create `todo-list.q`:
   <!-- Define tasks as an array -->
   <q:set name="tasks" value='["Buy groceries", "Walk the dog", "Write code"]' />
 
-  <q:return value="My Todo List:" />
-
-  <!-- Loop through tasks -->
+  <!-- Loop through tasks: each q:return adds one item to the result -->
   <q:loop type="array" var="task" items="{tasks}">
     <q:return value="- {task}" />
   </q:loop>
-
-  <q:return value="Total: {tasks.length} tasks" />
 </q:component>
 ```
 
 Output:
 ```
-["My Todo List:", "- Buy groceries", "- Walk the dog", "- Write code", "Total: 3 tasks"]
+["- Buy groceries", "- Walk the dog", "- Write code"]
 ```
+
+A `q:return` inside a loop does not stop the loop: every value is collected,
+and when the loop ends the component returns the list — the same way a
+`q:return` inside `q:if` ends the component. A loop that runs no `q:return`
+lets execution continue to what comes after it.
 
 ## Step 3: Add Conditionals
 

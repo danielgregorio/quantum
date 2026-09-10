@@ -62,6 +62,9 @@ from quantum.runtime.job_executor import (
 )
 from quantum.runtime.expression_cache import get_databinding_cache, DataBindingCache
 from quantum.runtime.executor_registry import ExecutorRegistry
+from quantum.runtime.executors.control_flow.loop_executor import (
+    as_return_value, produced_return,
+)
 from quantum.runtime.service_container import ServiceContainer
 import re
 import logging
@@ -285,11 +288,14 @@ class ComponentRuntime:
             # Execute control flow statements first
             for statement in component.statements:
                 result = self._execute_statement(statement, self.execution_context)
-                # Only return if the statement explicitly returns a value (not just executing)
-                # SetNode returns None, LoopNode returns a list but shouldn't cause early return
-                if result is not None and isinstance(statement, (IfNode,)):
-                    # Only IfNode with a return statement should cause early return
-                    return result
+                # Only a q:if whose branch ran a q:return, or a q:loop that
+                # collected at least one, ends the component here. q:set,
+                # q:query etc. produce values too, but those are not returns.
+                # The loop case used to be dropped: every q:return inside a
+                # q:loop was evaluated and thrown away, and the component
+                # returned None.
+                if produced_return(statement, result):
+                    return as_return_value(result)
 
             # For now, simple execution based on q:return
             if component.returns:
@@ -464,8 +470,8 @@ class ComponentRuntime:
                 # Delegate to _execute_statement for all other types
                 # (SetNode, IfNode, LoopNode, QueryNode, etc.)
                 result = self._execute_statement(statement, self.execution_context)
-                if result is not None and isinstance(statement, IfNode):
-                    return result
+                if produced_return(statement, result):
+                    return as_return_value(result)
         return None
     
     def _evaluate_condition(self, condition: str, context: Dict[str, Any]) -> bool:
@@ -785,12 +791,12 @@ class ComponentRuntime:
                 else:
                     # Delegate all other statements to the executor registry
                     result = self._execute_statement(statement, func_context)
-                    if result is not None and isinstance(statement, IfNode):
+                    if produced_return(statement, result):
                         break
         finally:
             self.execution_context = previous_context
 
-        return result
+        return as_return_value(result)
 
     def _validate_function_args(self, func_node: FunctionNode, args: Dict[str, Any]):
         """Validate function arguments against parameter definitions"""
