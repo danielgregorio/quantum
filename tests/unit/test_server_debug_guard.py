@@ -29,7 +29,7 @@ class TestStartDropsDebuggerOffLoopback:
         captured = {}
         s.app.run = lambda **kw: captured.update(kw)  # type: ignore
         s._register_signal_handlers = lambda: None      # avoid main-thread req
-        s._write_pid_file = lambda: None
+        s._write_pid_file = lambda *a: None
         s._print_banner = lambda: None
         s._check_port_available = lambda h, p: True
         s.start()

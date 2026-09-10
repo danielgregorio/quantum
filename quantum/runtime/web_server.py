@@ -1576,15 +1576,30 @@ class QuantumWebServer:
         except OSError:
             return True  # If we can't connect, assume port is free
 
-    def _write_pid_file(self):
-        """Write current process PID to .quantum.pid."""
+    def _write_pid_file(self, is_reloader_child: bool = False):
+        """Write .quantum.pid: this process, plus the parent under the reloader.
+
+        With `reload: true` Werkzeug serves from a CHILD process. Recording
+        only the parent meant `quantum stop` killed the parent and left the
+        child listening on the port. `quantum stop` reads every line.
+        """
+        pids = [os.getppid(), os.getpid()] if is_reloader_child else [os.getpid()]
         try:
-            Path(self.PID_FILE).write_text(str(os.getpid()), encoding='utf-8')
+            Path(self.PID_FILE).write_text(
+                '\n'.join(map(str, pids)) + '\n', encoding='utf-8')
         except OSError as e:
             self.logger.warning(f"Could not write PID file: {e}")
 
     def _remove_pid_file(self):
-        """Remove .quantum.pid if it exists."""
+        """Remove .quantum.pid if it exists.
+
+        Only the process that started the server owns the file. The reloader
+        child exits with code 3 on EVERY code change to be restarted, and its
+        cleanup used to delete the file — so after the first hot reload
+        `quantum stop` reported "No running server found" while it was up.
+        """
+        if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+            return
         try:
             Path(self.PID_FILE).unlink(missing_ok=True)
         except OSError:
@@ -1646,8 +1661,7 @@ class QuantumWebServer:
             # None, so the CLI exited 0 while nothing was listening.
             return 1
 
-        if not is_reloader_child:
-            self._write_pid_file()
+        self._write_pid_file(is_reloader_child)
         self._register_signal_handlers()
         self._print_banner()
 

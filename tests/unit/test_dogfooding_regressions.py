@@ -116,7 +116,7 @@ class TestServerStartReportsFailure:
         monkeypatch.delenv('WERKZEUG_RUN_MAIN', raising=False)
         monkeypatch.setattr(server, '_check_port_available', lambda h, p: True)
         monkeypatch.setattr(server, '_print_banner', lambda: None)
-        monkeypatch.setattr(server, '_write_pid_file', lambda: None)
+        monkeypatch.setattr(server, '_write_pid_file', lambda *a: None)
 
         def boom(**kw):
             raise OSError('address already in use')

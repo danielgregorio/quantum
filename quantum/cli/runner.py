@@ -420,37 +420,8 @@ Examples:
 
     # Handle 'stop' command
     elif args.command == 'stop':
-        pid_file = Path('.quantum.pid')
-        if not pid_file.exists():
-            print("No running server found (.quantum.pid not found)")
-            sys.exit(1)
-
-        try:
-            pid_text = pid_file.read_text(encoding='utf-8').strip()
-            pid = int(pid_text)
-        except (ValueError, OSError) as e:
-            print(f"Invalid PID file: {e}")
-            pid_file.unlink(missing_ok=True)
-            sys.exit(1)
-
-        try:
-            if os.name == 'nt':
-                import subprocess
-                subprocess.run(
-                    ['taskkill', '/F', '/PID', str(pid)],
-                    check=True, capture_output=True
-                )
-            else:
-                import signal
-                os.kill(pid, signal.SIGTERM)
-            print(f"Server stopped (PID {pid})")
-        except (ProcessLookupError, OSError):
-            print(f"Process {pid} not found (server may have already stopped)")
-        except subprocess.CalledProcessError:
-            print(f"Could not stop process {pid} (server may have already stopped)")
-
-        pid_file.unlink(missing_ok=True)
-        sys.exit(0)
+        from quantum.cli.server_process import stop_server
+        sys.exit(stop_server())
 
     # Handle 'run' command
     elif args.command == 'run':
