@@ -113,3 +113,32 @@ class TestConsultas:
         # DB-5
         with pytest.raises(QuantumParseError, match='is not supported'):
             parse(f'<q:query name="x" datasource="db" {atributo}>SELECT 1</q:query>')
+
+
+class TestMigracoes:
+    def projeto(self, tmp_path, config):
+        (tmp_path / 'quantum.config.yaml').write_text(config, encoding='utf-8')
+        (tmp_path / 'migrations').mkdir()
+        (tmp_path / 'migrations' / 'V001_users.sql').write_text(
+            'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);', encoding='utf-8')
+        return tmp_path
+
+    def test_aplica_no_datasource_declarado(self, tmp_path):
+        # DB-6 (antes: ia para ./data/quantum.db, ou um PostgreSQL local qualquer)
+        from quantum.cli.commands.migrate import MigrationRunner
+        projeto = self.projeto(tmp_path, 'datasources:\n  db:\n    driver: sqlite\n    database: ./data/app.db\n')
+        MigrationRunner(project_path=projeto).up()
+        tabelas = sqlite3.connect(projeto / 'data' / 'app.db').execute(
+            "select name from sqlite_master where type='table'").fetchall()
+        assert ('users',) in tabelas
+        assert not (projeto / 'data' / 'quantum.db').exists()
+
+    def test_varios_datasources_exigem_escolha(self, tmp_path):
+        # DB-6
+        from quantum.cli.commands.migrate import MigrationError, MigrationRunner
+        projeto = self.projeto(tmp_path, 'datasources:\n  a:\n    driver: sqlite\n    database: a.db\n'
+                                         '  b:\n    driver: sqlite\n    database: b.db\n')
+        with pytest.raises(MigrationError, match='--datasource'):
+            MigrationRunner(project_path=projeto).up()
+        MigrationRunner(project_path=projeto, datasource='b').up()
+        assert (projeto / 'b.db').exists() and not (projeto / 'a.db').exists()

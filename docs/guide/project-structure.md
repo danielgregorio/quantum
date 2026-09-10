@@ -1,294 +1,96 @@
 # Project Structure
 
-Understanding how to organize your Quantum projects.
+A Quantum web app is a folder. `quantum start`, run inside it, serves it.
 
-## Basic Structure
-
-A typical Quantum project looks like this:
-
-```
-my-project/
-├── quantum.yaml          # Configuration file
-├── quantum/
-│   ├── components/       # Reusable .q components
-│   │   ├── user-card.q
-│   │   └── nav-menu.q
-│   ├── pages/            # Page components
-│   │   ├── home.q
-│   │   └── about.q
-│   └── app.q             # Main application
-├── data/
-│   └── app.db            # SQLite database
-├── static/
-│   ├── css/
-│   └── images/
-└── dist/                 # Build output
+```text
+my-app/
+├── quantum.config.yaml     datasources and server settings
+├── components/             one .q file per page (and reusable components)
+│   ├── index.q             /
+│   ├── about.q             /about
+│   └── shop/
+│       ├── index.q         /shop
+│       └── [id].q          /shop/41  (id = 41)
+├── static/                 served as-is under /static/
+├── migrations/             V001_create_users.sql, applied by `quantum migrate up`
+└── data/                   your SQLite files, CSV/JSON for q:data
 ```
 
-## File Types
+Only `components/` is required. Everything on this page is checked by the
+conformance tests (`ROUTE-1`, `DB-6`, `CFG-1` in `SPEC.md`).
 
-### Component Files (.q)
+## Pages and URLs
 
-Components are self-contained units of functionality:
+Each `.q` file in `components/` is served at its path:
+
+| File | URL |
+|------|-----|
+| `components/index.q` | `/` |
+| `components/about.q` | `/about` |
+| `components/shop/index.q` | `/shop` |
+| `components/shop/[id].q` | `/shop/<anything>` |
+
+A `[name]` segment matches any value and hands it to the page as the parameter
+`name`:
 
 ```xml
-<!-- src/components/greeting.q -->
-<q:component name="Greeting" xmlns:q="https://quantum.lang/ns">
-  <q:param name="name" type="string" default="World" />
-  <q:return value="Hello, {name}!" />
+<!-- components/shop/[id].q -->
+<q:component name="product" xmlns:q="https://quantum.lang/ns">
+  <q:param name="id" type="integer" />
+  <q:query name="product" datasource="db">
+    SELECT name, price FROM products WHERE id = :id
+    <q:param name="id" value="{id}" type="integer" />
+  </q:query>
+  <h1>{product.name}</h1>
 </q:component>
 ```
 
-### Pages (components/*.q)
+A URL with no matching file answers `404`.
 
-Each file in `components/` is a page, served by `quantum start` at its name —
-`components/index.q` at `/`:
-
-```xml
-<!-- components/index.q -->
-<q:component name="index" xmlns:q="https://quantum.lang/ns">
-  <h1>Welcome</h1>
-</q:component>
-```
-
-### Configuration (quantum.yaml)
+## quantum.config.yaml
 
 ```yaml
-# quantum.yaml
-app:
-  name: My Quantum App
-  version: 1.0.0
-
 server:
-  host: 0.0.0.0
-  port: 5000
-  debug: false
+  port: 8080
+  host: 127.0.0.1
 
 datasources:
-  default:
+  db:
     driver: sqlite
     database: ./data/app.db
-
-  postgres:
-    driver: postgresql
-    host: ${DB_HOST}
-    port: 5432
-    database: ${DB_NAME}
-    username: ${DB_USER}
-    password: ${DB_PASS}
-
-paths:
-  components: ./src/components
-  static: ./static
-  output: ./dist
 ```
 
-## Component Organization
+Values can come from environment variables: `password: ${DB_PASSWORD}`. See
+[Installation](/guide/installation#configuration) and
+[Database Queries](/guide/query).
 
-### By Feature
+## Migrations
 
-Organize components by feature or domain:
-
-```
-src/
-├── auth/
-│   ├── login-form.q
-│   ├── register-form.q
-│   └── auth-guard.q
-├── users/
-│   ├── user-list.q
-│   ├── user-card.q
-│   └── user-profile.q
-└── products/
-    ├── product-grid.q
-    ├── product-card.q
-    └── cart.q
+```bash
+quantum migrate create create_users   # writes migrations/V001_create_users.sql and .down.sql
+quantum migrate up                    # applies pending migrations
+quantum migrate status
+quantum migrate down                  # rolls back the last one
 ```
 
-### By Type
+Migrations are applied to the datasource declared in `quantum.config.yaml` —
+the same database the pages query. With more than one datasource, choose it:
+`quantum migrate --datasource db up`.
 
-Organize by component type:
+## Reusable components
 
-```
-src/
-├── layouts/
-│   ├── main-layout.q
-│   └── sidebar-layout.q
-├── forms/
-│   ├── contact-form.q
-│   └── search-form.q
-├── widgets/
-│   ├── stat-card.q
-│   └── chart-widget.q
-└── pages/
-    ├── home.q
-    └── dashboard.q
-```
-
-## Importing Components
-
-### Basic Import
+A component used inside pages is a `.q` file too. Import it and use it as a tag:
 
 ```xml
-<q:component name="Dashboard" xmlns:q="https://quantum.lang/ns">
-  <!-- Import a component -->
-  <q:import component="UserCard" from="./components/user-card.q" />
-
-  <!-- Use the imported component -->
-  <UserCard name="John" email="john@example.com" />
+<q:component name="index" xmlns:q="https://quantum.lang/ns">
+  <q:import component="Card" />
+  <Card title="Welcome" />
 </q:component>
 ```
 
-### Multiple Imports
+See [Components](/guide/components).
 
-```xml
-<q:component name="App" xmlns:q="https://quantum.lang/ns">
-  <q:import component="Header" from="./layouts/header.q" />
-  <q:import component="Sidebar" from="./layouts/sidebar.q" />
-  <q:import component="Footer" from="./layouts/footer.q" />
+## Next steps
 
-  <Header title="My App" />
-  <Sidebar />
-  <Footer copyright="2024" />
-</q:component>
-```
-
-## Feature Modules
-
-For advanced features, Quantum uses the feature module system:
-
-```
-src/core/features/{feature_name}/
-├── manifest.yaml          # Feature metadata
-├── quantum/
-│   ├── __init__.py
-│   └── ast_node.py        # AST node class
-├── intentions/
-│   └── primary.intent     # Semantic specification
-└── dataset/
-    ├── metadata.json
-    ├── positive/          # Valid examples
-    └── negative/          # Invalid examples
-```
-
-### Feature Manifest
-
-```yaml
-# manifest.yaml
-name: my_feature
-version: 1.0.0
-description: My custom feature
-
-dependencies:
-  - state_management
-  - conditionals
-
-tags:
-  - my:feature
-
-provides:
-  ast_node: MyFeatureNode
-  runtime_method: _execute_my_feature
-```
-
-## Build Output
-
-### HTML Target
-
-```
-dist/
-├── index.html
-├── styles.css
-└── app.js
-```
-
-### Desktop Target
-
-```
-dist/
-├── app.py              # Main pywebview app
-└── requirements.txt
-```
-
-### Mobile Target
-
-```
-dist/
-├── App.js              # React Native entry
-├── package.json
-└── app.json
-```
-
-### Terminal Target
-
-```
-dist/
-├── app.py              # Textual TUI app
-└── requirements.txt
-```
-
-## Best Practices
-
-### 1. Keep Components Small
-
-Each component should do one thing well:
-
-```xml
-<!-- Good: Focused component -->
-<q:component name="UserAvatar" xmlns:q="https://quantum.lang/ns">
-  <q:param name="src" type="string" required="true" />
-  <q:param name="size" type="string" default="md" />
-  <!-- Just renders an avatar -->
-</q:component>
-```
-
-### 2. Use Clear Naming
-
-- **Components**: PascalCase (`UserCard`, `NavMenu`)
-- **Variables**: camelCase (`userName`, `isActive`)
-- **Files**: kebab-case (`user-card.q`, `nav-menu.q`)
-
-### 3. Organize by Domain
-
-Group related components together:
-
-```
-src/
-├── auth/           # Authentication related
-├── dashboard/      # Dashboard features
-├── settings/       # Settings pages
-└── shared/         # Shared utilities
-```
-
-### 4. Separate Concerns
-
-- **Components** - Reusable UI pieces
-- **Pages** - Full page layouts
-- **Layouts** - Page structure templates
-- **Services** - Data fetching logic
-
-### 5. Document Your Components
-
-```xml
-<!--
-  UserCard Component
-
-  Displays a user's information in a card format.
-
-  @param name - User's display name (required)
-  @param email - User's email address
-  @param avatar - URL to avatar image
-
-  @example
-  <UserCard name="John" email="john@example.com" />
--->
-<q:component name="UserCard" xmlns:q="https://quantum.lang/ns">
-  ...
-</q:component>
-```
-
-## Next Steps
-
-- [Components](/guide/components) - Deep dive into components
-- [State Management](/guide/state-management) - Managing application state
-- [UI Engine](/ui/overview) - Building user interfaces
+- [Quick Start](/guide/quick-start) — a page with a database and a form
+- [Actions & Forms](/guide/actions)

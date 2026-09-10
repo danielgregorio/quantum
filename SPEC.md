@@ -101,6 +101,15 @@ uma única action na página, o campo é opcional.
 contém o valor enviado, como texto e sem validação. `q:param` continua sendo o
 caminho validado e tipado (ACT-2).
 
+## 3a. Páginas e rotas
+
+**ROUTE-1** — `quantum start` serve cada arquivo de `components/` numa URL com o
+caminho dele: `components/sobre.q` em `/sobre`, `components/index.q` em `/`, e
+`components/loja/index.q` em `/loja`. Um segmento `[nome]` no caminho casa com
+qualquer valor e o entrega como o parâmetro `nome` (`components/loja/[id].q`
+em `/loja/41`). Sem arquivo correspondente, ou fora de `components/`, a
+resposta é `404`.
+
 ## 4. Autenticação
 
 **AUTH-1** — Um componente com `require_auth="true"` só é servido a uma sessão
@@ -159,6 +168,12 @@ a transação é erro que diz isso.
 **DB-5** — `q:query` não aceita `cache`, `ttl`, `reactive`, `interval`,
 `timeout`, `maxrows` e `batch`, que eram aceitos e nunca fizeram nada: são erro
 de parse.
+
+**DB-6** — `quantum migrate` aplica os arquivos `migrations/V<nnn>_<nome>.sql` ao
+datasource declarado em `quantum.config.yaml` — o mesmo que as páginas usam:
+o indicado com `--datasource`, ou o único declarado. Com mais de um e sem
+`--datasource`, ou sem nenhum, é erro que diz como resolver. Não há conexão de
+reserva.
 
 ## 6. Expressões
 

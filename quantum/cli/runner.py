@@ -357,6 +357,7 @@ Examples:
 
     # Migration commands
     migrate_parser = subparsers.add_parser('migrate', help='Database migration commands')
+    migrate_parser.add_argument('--datasource', help='Datasource from quantum.config.yaml (default: the only one declared)')
     migrate_subparsers = migrate_parser.add_subparsers(dest='migrate_command')
 
     migrate_subparsers.add_parser('status', help='Show migration status')
@@ -461,7 +462,7 @@ Examples:
         MigrationRunner = result
 
         try:
-            runner = MigrationRunner()
+            runner = MigrationRunner(datasource=getattr(args, 'datasource', None))
 
             if args.migrate_command == 'status':
                 import json

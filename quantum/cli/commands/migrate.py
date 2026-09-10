@@ -1,6 +1,6 @@
 """
 Quantum CLI - Database Migration Commands
-Handles database migrations with automatic PostgreSQL/SQLite failover
+Applies migrations to a datasource declared in quantum.config.yaml (DB-6)
 """
 import os
 import sys
@@ -44,96 +44,76 @@ class Migration:
 
 
 class DatabaseConnection:
-    """Database connection with automatic failover"""
+    """Connection to the datasource the migrations are for (DB-6).
 
-    def __init__(self, project_path: Path = None):
+    It used to read a separate `database:` section that nothing else uses and,
+    without one, try a PostgreSQL at localhost/quantum with user postgres before
+    falling back to ./data/quantum.db. A project whose pages query
+    datasources.db (./data/app.db) had its migrations applied to a different
+    file — or to whatever local PostgreSQL answered.
+    """
+
+    def __init__(self, project_path: Path = None, datasource: str = None):
         self.project_path = project_path or Path.cwd()
+        self.datasource = datasource
         self._conn = None
         self._db_type = None
 
     def connect(self) -> Any:
-        """
-        Connect to database with automatic failover.
-        Tries PostgreSQL first, falls back to SQLite.
-        """
-        # Try to load database config from quantum.config.yaml
-        config = self._load_config()
-
-        # Try PostgreSQL
-        if self._try_postgres(config):
+        nome, config = self._datasource_config()
+        driver = str(config.get('driver', '')).lower()
+        if driver == 'sqlite':
+            import sqlite3
+            caminho = Path(config.get('database') or '')
+            if not config.get('database'):
+                raise MigrationError(f"datasource '{nome}' (sqlite) has no database: path")
+            if not caminho.is_absolute():
+                caminho = self.project_path / caminho
+            caminho.parent.mkdir(parents=True, exist_ok=True)
+            self._conn = sqlite3.connect(str(caminho))
+            self._db_type = 'sqlite'
+            logger.info("Migrating datasource %s (SQLite at %s)", nome, caminho)
             return self._conn
-
-        # Fallback to SQLite
-        logger.warning("PostgreSQL unavailable, falling back to SQLite")
-        if self._try_sqlite(config):
+        if driver in ('postgres', 'postgresql'):
+            try:
+                import psycopg2
+            except ImportError as exc:
+                raise MigrationError("datasource '%s' is PostgreSQL: pip install psycopg2-binary" % nome) from exc
+            self._conn = psycopg2.connect(
+                host=config.get('host', 'localhost'), port=int(config.get('port', 5432)),
+                dbname=config.get('database'), user=config.get('username') or config.get('user'),
+                password=config.get('password', ''), connect_timeout=5)
+            self._db_type = 'postgres'
+            logger.info("Migrating datasource %s (PostgreSQL %s)", nome, config.get('database'))
             return self._conn
+        raise MigrationError(f"datasource '{nome}': driver {driver!r} is not supported by quantum migrate "
+                             f"(use sqlite or postgres)")
 
-        raise MigrationError("Could not connect to any database")
-
-    def _load_config(self) -> Dict:
-        """Load database configuration from quantum.config.yaml"""
+    def _datasource_config(self):
         config_path = self.project_path / "quantum.config.yaml"
-        if not config_path.exists():
-            return {}
-
-        try:
+        datasources = {}
+        if config_path.exists():
             import yaml
             from quantum.core.config_env import expand_env
             with open(config_path, encoding='utf-8') as f:
-                config = expand_env(yaml.safe_load(f) or {})
-            return config.get('database', {})
-        except Exception as e:
-            logger.warning(f"Could not load config: {e}")
-            return {}
+                datasources = (expand_env(yaml.safe_load(f) or {}).get('datasources') or {})
+        if not datasources:
+            raise MigrationError(
+                "quantum.config.yaml declares no datasources. Add one, for example:\n"
+                "  datasources:\n    db:\n      driver: sqlite\n      database: ./data/app.db")
+        if self.datasource:
+            if self.datasource not in datasources:
+                raise MigrationError(f"no datasource '{self.datasource}'; declared: {', '.join(datasources)}")
+            return self.datasource, datasources[self.datasource]
+        if len(datasources) > 1:
+            raise MigrationError(f"several datasources are declared ({', '.join(datasources)}); "
+                                 f"choose one with --datasource")
+        nome = next(iter(datasources))
+        return nome, datasources[nome]
 
-    def _try_postgres(self, config: Dict) -> bool:
-        """Try to connect to PostgreSQL"""
-        try:
-            import psycopg2
-
-            # Get connection params from config or environment
-            host = config.get('host') or os.environ.get('QUANTUM_DB_HOST', 'localhost')
-            port = config.get('port') or os.environ.get('QUANTUM_DB_PORT', '5432')
-            database = config.get('database') or os.environ.get('QUANTUM_DB_NAME', 'quantum')
-            user = config.get('user') or os.environ.get('QUANTUM_DB_USER', 'postgres')
-            password = config.get('password') or os.environ.get('QUANTUM_DB_PASSWORD', '')
-
-            self._conn = psycopg2.connect(
-                host=host,
-                port=int(port),
-                database=database,
-                user=user,
-                password=password,
-                connect_timeout=5
-            )
-            self._db_type = 'postgres'
-            logger.info(f"Connected to PostgreSQL at {host}:{port}/{database}")
-            return True
-
-        except ImportError:
-            logger.debug("psycopg2 not installed")
-            return False
-        except Exception as e:
-            logger.debug(f"PostgreSQL connection failed: {e}")
-            return False
-
-    def _try_sqlite(self, config: Dict) -> bool:
-        """Try to connect to SQLite"""
-        try:
-            import sqlite3
-
-            db_path = config.get('sqlite_path') or self.project_path / "data" / "quantum.db"
-            db_path = Path(db_path)
-            db_path.parent.mkdir(parents=True, exist_ok=True)
-
-            self._conn = sqlite3.connect(str(db_path))
-            self._db_type = 'sqlite'
-            logger.info(f"Connected to SQLite at {db_path}")
-            return True
-
-        except Exception as e:
-            logger.error(f"SQLite connection failed: {e}")
-            return False
+    def _ensure_connected(self):
+        if self._conn is None:
+            self.connect()
 
     @property
     def db_type(self) -> str:
@@ -164,10 +144,10 @@ class MigrationRunner:
 
     MIGRATIONS_TABLE = "_migrations"
 
-    def __init__(self, project_path: Path = None):
+    def __init__(self, project_path: Path = None, datasource: str = None):
         self.project_path = project_path or Path.cwd()
         self.migrations_dir = self.project_path / "migrations"
-        self.db = DatabaseConnection(self.project_path)
+        self.db = DatabaseConnection(self.project_path, datasource)
 
     def _ensure_migrations_table(self):
         """Create migrations tracking table if it doesn't exist"""

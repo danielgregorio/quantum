@@ -39,6 +39,12 @@ means, rule by rule, and every rule is pinned by a test that cites it.
   dropped silently, and the program ran without it.
 - **`q:query` refuses `cache`, `ttl`, `reactive`, `interval`, `timeout`,
   `maxrows` and `batch`** (DB-5): they never did anything.
+- **`quantum migrate` applies migrations to the datasource in
+  `quantum.config.yaml`** (DB-6) — the one the pages use — chosen with
+  `--datasource` when there are several. It used to read a separate `database:`
+  section and, without one, try a local PostgreSQL named `quantum` before
+  falling back to `./data/quantum.db`: the migrations landed in a different
+  database than the app queried.
 - **The `q:fetch` data-fetching feature was removed.** Its parser was never
   registered, so `q:fetch` never ran in a `.q` file; its guide page, example
   and module are gone.
