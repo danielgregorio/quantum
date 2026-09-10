@@ -1,6 +1,6 @@
 name: Release
 
-# Dispara ao empurrar uma tag v* (ex.: git tag v1.0.0 && git push --tags).
+# Dispara ao empurrar uma tag v* (ex.: git tag v0.9.0 && git push --tags).
 # Ordem: test -> build -> publish (PyPI) -> github-release.
 # NADA e publicado se os testes nao passarem: `build` depende de `test`.
 on:
@@ -42,7 +42,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Tag must match the version in pyproject.toml
-        # Impede publicar v2.0.0 enquanto o pyproject diz 1.0.0.
+        # Impede publicar v1.0.0 enquanto o pyproject diz 0.9.0.
         run: |
           TAG="${GITHUB_REF_NAME#v}"
           PROJ=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")

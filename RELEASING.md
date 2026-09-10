@@ -27,27 +27,27 @@ publisher** (PyPI supports configuring one before the project exists):
 
 ## Cutting a release
 
-1. Bump `project.version` in `pyproject.toml` (e.g. `1.0.1`). The workflow
+1. Bump `project.version` in `pyproject.toml` (e.g. `0.9.1`). The workflow
    **refuses to publish if the tag does not match this value.**
 2. Commit the bump.
 3. Tag and push:
 
    ```bash
-   git tag v1.0.1
-   git push origin v1.0.1
+   git tag v0.9.1
+   git push origin v0.9.1
    ```
 
 That triggers, in order:
 
 | Job              | What it does                                              |
 |------------------|-----------------------------------------------------------|
-| `test`           | Full declared suite on Python 3.11 and 3.12 — the gate.   |
+| `test`           | Full declared suite on Python 3.12 — the gate.             |
 | `build`          | Checks the tag matches `pyproject`, builds sdist + wheel, `twine check`. |
 | `publish`        | Uploads to PyPI via OIDC (only if `test` and `build` passed). |
 | `github-release` | Creates a GitHub Release with generated notes + the artifacts. |
 
 If tests fail, the tag is still there but nothing is published — fix, delete
-the tag (`git push --delete origin v1.0.1`), and re-tag.
+the tag (`git push --delete origin v0.9.1`), and re-tag.
 
 ## After the first publish
 

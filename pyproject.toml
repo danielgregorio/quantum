@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quantum-framework"
-version = "1.0.0"
+version = "0.9.0"
 description = "Full-stack declarative framework for building web, desktop, and mobile applications"
 readme = "README.md"
 license = {text = "MIT"}
