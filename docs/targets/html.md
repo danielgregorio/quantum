@@ -370,4 +370,4 @@ Generates theme CSS with color overrides and optional auto-switching based on sy
 - [Desktop Target](/targets/desktop) - Native desktop apps
 - [Mobile Target](/targets/mobile) - React Native apps
 - [Terminal Target](/targets/terminal) - TUI applications
-- [Design Tokens](/ui-engine/design-tokens) - Token reference
+- [Design Tokens](/features/theming) - Token reference

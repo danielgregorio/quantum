@@ -515,4 +515,4 @@ Quantum supports a natural evolution from monolith to microservices:
 - [State Management (q:set)](./state-management.md)
 - [Functions (q:function)](./functions.md)
 - [Loops (q:loop)](./loops.md)
-- [Quantum Admin - Datasource Management](../admin/datasources.md)
+- [Installation — configuration](./installation.md#configuration)

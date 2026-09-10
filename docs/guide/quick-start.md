@@ -80,145 +80,117 @@ Create `weather.q`:
 </q:component>
 ```
 
-## Step 4: Create a Web Application
+## Step 4: Serve a Web Page
 
-Create `webapp.q`:
-
-> No `<!DOCTYPE html>` in the file: a `.q` is XML, and a DOCTYPE is only
-> valid before the root element — which here is `<q:application>`. The server
-> adds the DOCTYPE to the response. This example used to carry the line, and
-> did not parse.
-
+Pages live in a `components/` folder; the file name is the URL. Create
+`components/index.q`:
 
 ```xml
-<q:application id="webapp" type="html" xmlns:q="https://quantum.lang/ns">
+<q:component name="index" xmlns:q="https://quantum.lang/ns">
+  <q:set name="items" value='["Apple", "Banana", "Cherry"]' />
+  <q:set name="a" value="10" type="number" />
+  <q:set name="b" value="5" type="number" />
 
-  <q:route path="/" method="GET">
-    <html>
-    <head>
-      <title>My Quantum App</title>
-      <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .card { border: 1px solid #ddd; padding: 20px; margin: 10px 0; border-radius: 8px; }
-      </style>
-    </head>
-    <body>
-      <h1>Welcome to Quantum</h1>
-
-      <div class="card">
-        <h2>Quick Stats</h2>
-        <q:set name="items" value='["Apple", "Banana", "Cherry"]' />
-        <ul>
-          <q:loop type="array" var="item" items="{items}">
-            <li>{item}</li>
-          </q:loop>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h2>Calculator</h2>
-        <q:set name="a" value="10" />
-        <q:set name="b" value="5" />
-        <p>{a} + {b} = {a + b}</p>
-        <p>{a} - {b} = {a - b}</p>
-        <p>{a} * {b} = {a * b}</p>
-      </div>
-    </body>
-    </html>
-  </q:route>
-
-</q:application>
+  <html>
+  <head><title>My Quantum App</title></head>
+  <body>
+    <h1>Welcome to Quantum</h1>
+    <ul>
+      <q:loop type="array" var="item" items="{items}">
+        <li>{item}</li>
+      </q:loop>
+    </ul>
+    <p>{a} + {b} = {a + b}</p>
+  </body>
+  </html>
+</q:component>
 ```
 
-Start the server:
+Start the server from the folder that contains `components/`:
+
 ```bash
-quantum start webapp.q
+quantum start
 ```
 
-Visit `http://localhost:5000` in your browser.
+Open `http://localhost:8080`. `components/about.q` would be served at
+`/about`. Stop the server with `quantum stop`.
 
-## Step 5: Build a UI Application
+> No `<!DOCTYPE html>` in the file: a `.q` is XML, and a DOCTYPE is only valid
+> before the root element. The server adds it to the response.
 
-Create `myapp.q`:
+## Step 5: Read from a Database
+
+Create a SQLite database with one table (any Python works — Quantum already
+needs it):
+
+```bash
+python -c "import sqlite3, os; os.makedirs('data', exist_ok=True); c = sqlite3.connect('data/app.db'); c.execute('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)'); c.executemany('INSERT INTO users (name, email) VALUES (?, ?)', [('Ana', 'ana@example.com'), ('Bruno', 'bruno@example.com')]); c.commit()"
+```
+
+Declare it in `quantum.config.yaml`, next to `components/`:
+
+```yaml
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/app.db
+```
+
+Create `components/users.q`:
 
 ```xml
-<q:application id="myapp" type="ui" xmlns:q="https://quantum.lang/ns"
-               xmlns:ui="https://quantum.lang/ui">
-
-  <q:set name="userName" value="" />
-  <q:set name="greeting" value="Welcome!" />
-
-  <q:function name="updateGreeting">
-    <q:set name="greeting" value="Hello, {userName}!" />
-  </q:function>
-
-  <ui:window title="My First App">
-    <ui:vbox padding="lg" gap="md">
-
-      <ui:header>
-        <ui:text size="2xl" weight="bold">Quantum UI Demo</ui:text>
-      </ui:header>
-
-      <ui:panel title="User Form">
-        <ui:form>
-          <ui:formitem label="Your Name">
-            <ui:input bind="userName" placeholder="Enter your name" />
-          </ui:formitem>
-          <ui:button variant="primary" on-click="updateGreeting">
-            Say Hello
-          </ui:button>
-        </ui:form>
-      </ui:panel>
-
-      <ui:card>
-        <ui:text size="lg">{greeting}</ui:text>
-      </ui:card>
-
-      <ui:hbox gap="sm">
-        <ui:badge variant="success">Online</ui:badge>
-        <ui:badge variant="primary">v1.0</ui:badge>
-      </ui:hbox>
-
-    </ui:vbox>
-  </ui:window>
-
-</q:application>
-```
-
-Build for HTML:
-```bash
-quantum build myapp.q --target html -o myapp.html
-```
-
-Build for Desktop:
-```bash
-quantum build myapp.q --target desktop -o myapp.py
-python myapp.py  # Run the desktop app
-```
-
-## Step 6: Add Database
-
-Create `users.q`:
-
-```xml
-<q:component name="UserManager" xmlns:q="https://quantum.lang/ns">
-  <!-- Query users from database -->
-  <q:query name="users" datasource="mydb">
-    SELECT id, name, email, created_at
-    FROM users
-    WHERE active = 1
-    ORDER BY created_at DESC
-    LIMIT 10
+<q:component name="users" xmlns:q="https://quantum.lang/ns">
+  <q:query name="users" datasource="db">
+    SELECT id, name, email FROM users ORDER BY name
   </q:query>
 
-  <q:return value="Active Users:" />
+  <html><body>
+    <h1>{users_result.recordCount} users</h1>
+    <table>
+      <q:loop query="users">
+        <tr><td>{users.name}</td><td>{users.email}</td></tr>
+      </q:loop>
+    </table>
+  </body></html>
+</q:component>
+```
 
-  <!-- Loop through query results -->
-  <q:loop query="users">
-    <q:return value="- {users.name} ({users.email})" />
-  </q:loop>
+Restart the server and open `http://localhost:8080/users`.
 
-  <q:return value="Found {users_result.recordCount} users" />
+## Step 6: Handle a Form
+
+Add a form and a `q:action` that inserts a row — the parameter is declared, so
+the SQL never sees raw input. Replace `components/users.q` with:
+
+```xml
+<q:component name="users" xmlns:q="https://quantum.lang/ns">
+  <q:action name="add" method="POST">
+    <q:param name="name" required="true" minlength="2" />
+    <q:param name="email" type="email" required="true" />
+    <q:query name="inserted" datasource="db">
+      INSERT INTO users (name, email) VALUES (:name, :email)
+      <q:param name="name" value="{name}" type="string" />
+      <q:param name="email" value="{email}" type="string" />
+    </q:query>
+    <q:redirect url="/users" flash="Added {name}" />
+  </q:action>
+
+  <q:query name="users" datasource="db">
+    SELECT id, name, email FROM users ORDER BY name
+  </q:query>
+
+  <html><body>
+    <q:if condition="flash"><p>{flash}</p></q:if>
+    <table>
+      <q:loop query="users">
+        <tr><td>{users.name}</td><td>{users.email}</td></tr>
+      </q:loop>
+    </table>
+    <form method="POST" action="/users">
+      <input name="name" /> <input name="email" type="email" />
+      <button>Add</button>
+    </form>
+  </body></html>
 </q:component>
 ```
 
@@ -226,8 +198,10 @@ Create `users.q`:
 
 You've learned the basics! Now explore:
 
+- [Actions & Forms](/guide/actions) - Validation, redirects, several actions
+- [Authentication](/guide/authentication) - Login with password checks
 - [Components](/guide/components) - Deep dive into the component system
 - [State Management](/guide/state-management) - Advanced variable handling
-- [UI Engine](/ui-engine/overview) - Build rich user interfaces
+- [AI](/guide/ai) - LLM calls, RAG and agents as tags
 - [Database Queries](/guide/query) - SQL and data operations
 - [Examples](/examples/) - More real-world examples

@@ -23,7 +23,6 @@ onMounted(async () => {
 Game development with `qg:scene`, sprites, and physics.
 
 <div class="related-links">
-  <a href="../features/game-engine" class="related-link">Game Engine Docs</a>
 </div>
 
 ## All Examples

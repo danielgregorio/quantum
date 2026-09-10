@@ -12,7 +12,7 @@ export default defineConfig({
   srcExclude: ['archive/**'],
 
   title: 'Quantum Framework',
-  description: 'Full-stack declarative framework for building web, desktop, and mobile applications',
+  description: 'Declarative web applications in XML, with AI and RAG built into the language',
 
   head: [
     ['script', { async: '', src: 'https://www.googletagmanager.com/gtag/js?id=G-7GDMZJJWW0' }],
@@ -31,13 +31,21 @@ export default defineConfig({
 
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
-      { text: 'UI Engine', link: '/ui/overview' },
-      { text: 'Features', link: '/features/theming' },
-      { text: 'Targets', link: '/targets/html' },
+      { text: 'AI', link: '/guide/ai' },
       { text: 'API Reference', link: '/api/tags-reference' },
-      { text: 'Extensibility', link: '/extensibility/plugins' },
       { text: 'Tools', link: '/tools/cli' },
       { text: 'Examples', link: '/examples/' },
+      {
+        // Experimental: exists and runs, with no stability promise
+        // (SUPPORT_TIERS.md). Kept out of the main path on purpose.
+        text: 'Experimental',
+        items: [
+          { text: 'UI Engine (ui:)', link: '/ui/overview' },
+          { text: 'UI Features', link: '/features/theming' },
+          { text: 'Build Targets', link: '/targets/html' },
+          { text: 'Extensibility', link: '/extensibility/plugins' }
+        ]
+      },
       { text: 'GitHub', link: 'https://github.com/danielgregorio/quantum' }
     ],
 
@@ -64,6 +72,12 @@ export default defineConfig({
           ]
         },
         {
+          text: 'AI',
+          items: [
+            { text: 'LLM, RAG & Agents', link: '/guide/ai' }
+          ]
+        },
+        {
           text: 'Data & Backend',
           items: [
             { text: 'Database Queries (q:query)', link: '/guide/query' },
@@ -76,9 +90,8 @@ export default defineConfig({
         {
           text: 'Web Applications',
           items: [
-            { text: 'Applications', link: '/guide/applications' },
             { text: 'Actions & Forms', link: '/guide/actions' },
-            { text: 'Email (q:mail)', link: '/guide/email' }
+            { text: 'Applications (experimental)', link: '/guide/applications' }
           ]
         }
       ],

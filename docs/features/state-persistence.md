@@ -490,4 +490,4 @@ Handle storage quota errors:
 
 - [State Management](/guide/state-management) - Variables and `q:set`
 - [Form Validation](/features/form-validation) - Form handling
-- [Desktop Target](/ui-engine/targets/desktop) - Desktop app persistence
+- [Desktop Target](/targets/desktop) - Desktop app persistence

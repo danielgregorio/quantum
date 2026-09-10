@@ -4,14 +4,14 @@ Welcome to Quantum! This guide will help you get up and running with the Quantum
 
 ## What is Quantum?
 
-Quantum is a **full-stack declarative framework** that uses XML syntax to create web applications, desktop apps, and mobile apps. It's designed with the philosophy of "simplicity over configuration" - making complex tasks simple while keeping the language clean and readable.
+Quantum is a **full-stack declarative framework** for web applications written in XML. It's designed with the philosophy of "simplicity over configuration" - making complex tasks simple while keeping the language clean and readable.
 
 ### Key Benefits
 
 - **No JavaScript Required** - Build interactive apps using only XML and SQL
-- **Multi-Target** - Write once, deploy to HTML, Desktop, Mobile, or Terminal
-- **Full-Stack** - Database queries, authentication, email, and more built-in
-- **Type Safe** - Optional type checking and validation
+- **AI as tags** - Model calls, RAG and agents with tools, without Python glue
+- **Full-Stack** - Database queries, forms, sessions and authentication built in
+- **Validated input** - Declared parameters are type-checked before your code runs
 
 ## Prerequisites
 
@@ -98,76 +98,39 @@ Let's make it more interesting with variables and loops:
 
 ## Web Applications
 
-Create a web server with routes:
+Pages are components in a `components/` folder, and the file name is the URL.
+Create `components/index.q`:
 
 ```xml
-<q:application id="myapp" type="html" xmlns:q="https://quantum.lang/ns">
-  <q:route path="/" method="GET">
+<q:component name="index" xmlns:q="https://quantum.lang/ns">
+  <html><body>
     <h1>Welcome to My App</h1>
-    <p>Current time: {now()}</p>
-  </q:route>
-
-  <q:route path="/users" method="GET">
-    <q:query name="users" datasource="mydb">
-      SELECT name, email FROM users
-    </q:query>
-    <ul>
-      <q:loop query="users">
-        <li>{users.name} - {users.email}</li>
-      </q:loop>
-    </ul>
-  </q:route>
-</q:application>
+    <p>Now: {dateFormat(now(), '%H:%M')}</p>
+  </body></html>
+</q:component>
 ```
 
-Start the server:
+Start the server from the folder that contains `components/`:
 
 ```bash
-quantum start myapp.q
+quantum start
 ```
 
-## UI Applications
+Open `http://localhost:8080`. The [Quick Start](/guide/quick-start) continues
+with a database and a form.
 
-Build cross-platform UI with the UI engine:
-
-```xml
-<q:application id="myui" type="ui" xmlns:q="https://quantum.lang/ns">
-  <ui:window title="My App">
-    <ui:vbox padding="md" gap="sm">
-      <ui:text size="xl" weight="bold">Welcome!</ui:text>
-
-      <ui:form on-submit="handleSubmit">
-        <ui:formitem label="Name">
-          <ui:input bind="userName" placeholder="Enter your name" />
-        </ui:formitem>
-        <ui:button variant="primary">Submit</ui:button>
-      </ui:form>
-
-      <ui:text>Hello, {userName}!</ui:text>
-    </ui:vbox>
-  </ui:window>
-</q:application>
-```
-
-Build for different targets:
-
-```bash
-# HTML output
-quantum build myui.q --target html
-
-# Desktop app
-quantum build myui.q --target desktop
-
-# Terminal app
-quantum build myui.q --target textual
-```
+::: warning `q:application type="html"`
+Older pages describe web apps as a `q:application type="html"` with
+`q:route` blocks, run with `quantum run app.q`. That form does not work today —
+it fails as soon as it starts (known gap `G17`). Use `components/` as above.
+:::
 
 ## Debug Mode
 
 For detailed execution information:
 
 ```bash
-quantum run examples/hello.q --debug
+quantum run hello.q --debug
 ```
 
 This shows:
@@ -181,5 +144,5 @@ This shows:
 - [Installation Details](/guide/installation) - Complete setup guide
 - [Project Structure](/guide/project-structure) - How to organize your code
 - [Components](/guide/components) - Deep dive into components
-- [UI Engine](/ui-engine/overview) - Build cross-platform UIs
+- [AI](/guide/ai) - LLM calls, RAG and agents as tags
 - [Examples](/examples/) - Real-world examples

@@ -2,6 +2,19 @@
 
 Quantum applications are deployable services that can serve web pages, APIs, or handle background jobs. They extend the component system to create fully functional applications.
 
+::: danger Experimental — use `components/` for web apps
+The declared web applications on this page are **experimental** and do not
+work as described today:
+
+- `type="html"` fails as soon as `quantum run` starts it (known gap `G17`).
+- `type="api"` starts a server, but it never runs a route's body: it returns
+  the literal text of the first `q:return` (known gap `G18`).
+
+The supported way to build a web app is pages in `components/` served by
+`quantum start` — see the [Quick Start](/guide/quick-start). The language
+specification will decide whether these types are implemented or removed.
+:::
+
 ## Application Types
 
 Quantum supports three main application types:

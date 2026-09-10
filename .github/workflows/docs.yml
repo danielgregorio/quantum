@@ -26,6 +26,14 @@ jobs:
       - run: npm ci
       - run: npm run docs:build
 
+      # ignoreDeadLinks is on in the VitePress config, so the build never
+      # reports a link to a page that does not exist. This crawls the built
+      # site and fails the deploy on any.
+      - name: No link to a page that does not exist
+        run: |
+          npx vitepress preview docs --port 4173 &
+          python3 scripts/check-docs-links.py http://localhost:4173/quantum/
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs/.vitepress/dist
