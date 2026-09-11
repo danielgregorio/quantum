@@ -1695,7 +1695,7 @@ hr.qa-my-4 {
    ============================================================================ */
 
 .qa-type-database { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
-.qa-type-message_queue { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+.qa-type-message_queue, .qa-type-mq { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
 .qa-type-cache { background: rgba(234, 179, 8, 0.15); color: #facc15; }
 .qa-type-storage { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
 .qa-type-ai { background: rgba(236, 72, 153, 0.15); color: #f472b6; }

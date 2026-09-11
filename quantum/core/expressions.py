@@ -423,18 +423,18 @@ class ExpressionEvaluator:
             return op(operand)
 
         if isinstance(node, ast.BoolOp):
-            values = [self._eval(v, ctx) for v in node.values]
-            if isinstance(node.op, ast.And):
-                result = True
-                for v in values:
-                    if not v:
-                        return v
-                    result = v
-                return result
-            for v in values:
-                if v:
-                    return v
-            return values[-1] if values else False
+            # EXPR-6: short-circuit, as in Python. Every operand used to be
+            # evaluated first, so `user and user.name` failed with "variable
+            # 'user' is not defined"-style errors exactly when the left side
+            # was there to guard the right.
+            valor = False
+            for operando in node.values:
+                valor = self._eval(operando, ctx)
+                if isinstance(node.op, ast.And) and not valor:
+                    return valor
+                if isinstance(node.op, ast.Or) and valor:
+                    return valor
+            return valor
 
         if isinstance(node, ast.Compare):
             left = self._eval(node.left, ctx)

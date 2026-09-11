@@ -43,6 +43,8 @@ can alter the behaviour of an existing app is listed under **Breaking**.
 - `flash` and the `url` of `q:redirect` evaluate expressions (ACT-3):
   `flash="{result.error}"` ended the action with a 500. `flash` and
   `flashType` always exist on a rendered page (`''` without a message).
+- `and` / `or` short-circuit (EXPR-6): `user and user.name` failed when
+  `user` did not exist, because both sides were evaluated first.
 
 ### Breaking
 

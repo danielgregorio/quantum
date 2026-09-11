@@ -97,6 +97,16 @@ class TestExpressoes:
                         f'<q:if condition="{condicao}"><q:return value="sim"/></q:if>'
                         '<q:return value="nao"/>') == esperado
 
+    @pytest.mark.parametrize('expressao,esperado', [
+        ("{ok and itens[5]}", 'False'), ("{nome or itens[5]}", 'ana'),
+        ("{ok && nada.campo}", 'False'), ("{len(itens) > 0 and itens[0]}", 'False')])
+    def test_and_e_or_param_no_valor_que_decide(self, executar, expressao, esperado):
+        # EXPR-6 (antes: avaliava os dois lados — `a and a.b` falhava sem `a`)
+        assert str(executar('<q:set name="ok" value="false" type="boolean"/>'
+                            '<q:set name="nome" value="ana"/>'
+                            '<q:set name="itens" type="array" value="[]"/>'
+                            f'<q:return value="{expressao}"/>')) == esperado
+
     @pytest.mark.parametrize('condicao', ['idade === 18', 'maior(idade)'])
     def test_condicao_com_outro_erro_e_erro(self, executar, condicao):
         # EXPR-5: so ausencia vira falso; sintaxe ou funcao inexistente e erro

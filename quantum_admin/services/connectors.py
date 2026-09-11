@@ -20,6 +20,18 @@ from quantum.services import service
 from quantum_admin.services._base import connectors as _servico
 
 
+NOMES_DE_PROVIDER = {
+    "postgres": "PostgreSQL", "mysql": "MySQL", "mariadb": "MariaDB", "mongodb": "MongoDB", "sqlite": "SQLite",
+    "influxdb": "InfluxDB", "rabbitmq": "RabbitMQ", "redis_queue": "Redis Queue", "kafka": "Kafka",
+    "redis": "Redis", "memcached": "Memcached", "s3": "Amazon S3", "minio": "MinIO", "local": "Local filesystem",
+    "ollama": "Ollama", "lmstudio": "LM Studio", "anthropic": "Anthropic", "openai": "OpenAI",
+    "openrouter": "OpenRouter",
+}
+# Na ordem em que a tela mostra os tipos.
+TIPOS = (("database", "Database"), ("mq", "Message Queue"), ("cache", "Cache"), ("storage", "Storage"),
+         ("ai", "AI"))
+
+
 class ConnectorError(ValueError):
     """Pedido inválido para a área Connectors."""
 
@@ -28,6 +40,8 @@ def _publico(conector) -> dict:
     dados = conector.to_safe_dict()
     dados.pop("password_masked", None)       # vinha dos 4 últimos caracteres do texto CIFRADO
     dados["has_password"] = bool(conector.password)
+    dados["provider_name"] = NOMES_DE_PROVIDER.get(conector.provider, conector.provider)
+    dados["type_label"] = dict(TIPOS).get(conector.type, conector.type)
     return dados
 
 
@@ -43,7 +57,8 @@ def providers():
     """Providers conhecidos, para o formulário: tipo, porta padrão, imagem Docker."""
     from quantum_admin.backend.connector_service import PROVIDER_CONFIGS
     return [{"provider": nome, "type": getattr(cfg["type"], "value", cfg["type"]),
-             "default_port": cfg.get("default_port", 0), "docker_image": cfg.get("docker_image", "")}
+             "default_port": cfg.get("default_port", 0), "docker_image": cfg.get("docker_image", ""),
+             "name": NOMES_DE_PROVIDER.get(nome, nome)}
             for nome, cfg in sorted(PROVIDER_CONFIGS.items())]
 
 
@@ -53,6 +68,21 @@ def list_connectors(type: str = "", application_id: int = None):
     lista = _servico().list_connectors(connector_type=type or None,
                                        application_id=int(application_id) if application_id else None)
     return [_publico(c) for c in sorted(lista, key=lambda c: (c.type, c.name.lower()))]
+
+
+@service("admin.connectors.overview")
+def overview():
+    """A tela de Connectors inteira: por tipo, com os connectors e os providers de cada um."""
+    todos = list_connectors()
+    todos_providers = providers()
+    return {
+        "total": len(todos),
+        "connected": sum(1 for c in todos if c["status"] == "connected"),
+        "errors": sum(1 for c in todos if c["status"] == "error"),
+        "types": [{"type": tipo, "label": rotulo,
+                   "connectors": [c for c in todos if c["type"] == tipo],
+                   "providers": [p for p in todos_providers if p["type"] == tipo]} for tipo, rotulo in TIPOS],
+    }
 
 
 @service("admin.connectors.get")

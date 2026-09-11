@@ -239,7 +239,9 @@ Nunca uma falha torna uma condição verdadeira.
 
 **EXPR-6** — Além da sintaxe de Python (`and`, `or`, `not`), as expressões aceitam
 `&&`, `||` e `!` com o mesmo significado. `!=` continua sendo diferença, e nada
-dentro de uma string é traduzido.
+dentro de uma string é traduzido. `and` e `or` avaliam da esquerda para a direita
+e param no primeiro valor que decide o resultado: em `a and a.b`, sem `a`, `a.b`
+não é avaliado.
 
 **EXPR-7** — `-`, `*`, `/`, `//`, `%` e `**` operam sobre números (texto que
 parece número conta como número); com qualquer outro operando são erro. `+` soma

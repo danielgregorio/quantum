@@ -5,6 +5,7 @@ As telas vêm do repositório; banco, settings e raiz são temporários
 tela de login, como uma pessoa.
 """
 
+import html as html_lib
 import logging
 import pathlib
 import re
@@ -24,7 +25,7 @@ def texto(resposta):
     html = resposta.get_data(as_text=True)
     # <pre> mostra conteúdo de arquivo (código, saída do pytest), que pode ter chaves.
     html = re.sub(r"<(style|script|pre)\b.*?</\1>", "", html, flags=re.S)
-    pagina = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html))
+    pagina = html_lib.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html)))
     # Uma expressão que falha no conteúdo HTML fica como texto (EXPR-4): numa
     # tela do admin isso é sempre um defeito da tela. Vale para texto e atributos.
     cruas = re.findall(r"\{[^{}]*\}", pagina) + re.findall(r'="[^"]*(\{[^"{}]*\})[^"]*"', html)
@@ -127,7 +128,7 @@ class TestAplicacoes:
 
 TELAS = ["/admin", "/admin/dashboard", "/admin/features", "/admin/agents", "/admin/database",
          "/admin/jobs", "/admin/source?file=README.md", "/admin/components", "/admin/tests",
-         "/admin/component/components/loja.q"]
+         "/admin/component/components/loja.q", "/admin/settings", "/admin/connectors"]
 
 
 @pytest.mark.parametrize("url", TELAS)
@@ -273,3 +274,109 @@ class TestComponentesETestes:
         entrar(admin)
         admin.post("/admin/component/components/sub/b.q", data={"action": "runTests"})
         assert "there is no test file to run" in texto(admin.get("/admin/component/components/sub/b.q"))
+
+
+class TestConfiguracoes:
+    @pytest.fixture
+    def config(self, admin, admin_isolado):
+        arquivo = admin_isolado / "quantum.config.yaml"
+        dados = yaml.safe_load(arquivo.read_text(encoding="utf-8"))
+        dados["server"].update(port=8123, host="127.0.0.1", reload=True)
+        arquivo.write_text("# AVISO: nao exponha o servidor\n" + yaml.safe_dump(dados), encoding="utf-8")
+        return arquivo
+
+    def test_formulario_vem_com_o_que_esta_no_arquivo(self, admin, config):
+        entrar(admin)
+        html = admin.get("/admin/settings").get_data(as_text=True)
+        texto(admin.get("/admin/settings"))
+        assert 'value="8123"' in html
+        assert re.search(r'<input[^>]*name="reload"[^>]*checked', html)
+        assert not re.search(r'<input[^>]*name="debug"[^>]*checked', html)
+        assert re.search(r'<option value="ERROR" selected', html)  # logging.level da fixture
+
+    def test_salvar_muda_so_os_valores(self, admin, config):
+        entrar(admin)
+        r = admin.post("/admin/settings", data={"action": "saveSettings", "port": "9090", "host": "127.0.0.1",
+                                                "debug": "true", "log_level": "ERROR", "cache_ttl": "0"})
+        assert r.status_code == 302
+        assert "Saved" in texto(admin.get("/admin/settings"))
+        conteudo = config.read_text(encoding="utf-8")
+        salvo = yaml.safe_load(conteudo)
+        assert conteudo.startswith("# AVISO: nao exponha o servidor")
+        assert salvo["server"]["port"] == 9090 and salvo["server"]["debug"] is True
+        assert salvo["server"]["reload"] is False  # checkbox desmarcado
+
+    def test_debug_com_host_publico_e_recusado(self, admin, config):
+        entrar(admin)
+        antes = config.read_text(encoding="utf-8")
+        admin.post("/admin/settings", data={"action": "saveSettings", "port": "9090", "host": "0.0.0.0",
+                                            "debug": "true", "log_level": "INFO"})
+        assert "debug cannot be on with host 0.0.0.0" in texto(admin.get("/admin/settings"))
+        assert config.read_text(encoding="utf-8") == antes
+
+
+
+class TestConnectors:
+    def _criar(self, admin, **campos):
+        dados = {"action": "createConnector", "name": "lite", "conn_type": "database", "provider": "sqlite"}
+        dados.update(campos)
+        return admin.post("/admin/connectors", data=dados)
+
+    def test_criar_com_senha_cifrada_e_nunca_mostrada(self, admin, admin_isolado):
+        entrar(admin)
+        pagina = texto(admin.get("/admin/connectors"))
+        assert "0 registered" in pagina and "New Connector" in pagina
+        assert self._criar(admin, name="principal", provider="postgres", conn_type="database",
+                           username="app", password="senha-NAO-MOSTRAR").status_code == 302
+        html = admin.get("/admin/connectors").get_data(as_text=True)
+        assert "Connector principal created" in texto(admin.get("/admin/connectors?x=1")) or "principal" in html
+        pagina = texto(admin.get("/admin/connectors"))
+        assert "principal" in pagina and "PostgreSQL" in pagina and "localhost:5432" in pagina
+        arquivo = (admin_isolado / "quantum_admin" / "settings" / "connectors.yaml").read_text(encoding="utf-8")
+        assert "senha-NAO-MOSTRAR" not in arquivo and "senha-NAO-MOSTRAR" not in html
+
+    def test_obrigatorios_e_provider_desconhecido(self, admin):
+        entrar(admin)
+        self._criar(admin, provider="banco-magico")
+        assert "unknown provider" in texto(admin.get("/admin/connectors"))
+
+    def test_editar_mantem_a_senha_e_testar(self, admin, admin_isolado):
+        import sqlite3
+        from quantum_admin.services import connectors as svc
+        banco = admin_isolado / "dados.db"
+        sqlite3.connect(banco).close()
+        entrar(admin)
+        self._criar(admin, database=str(banco), password="guardada")
+        [c] = svc.list_connectors()
+
+        html = admin.get(f"/admin/connectors?edit={c['id']}").get_data(as_text=True)
+        pagina = texto(admin.get(f"/admin/connectors?edit={c['id']}"))
+        assert "Edit lite" in pagina and "saved — leave blank to keep" in html
+        assert re.search(r'<option value="sqlite" selected', html)
+
+        admin.post("/admin/connectors", data={"action": "updateConnector", "connector_id": c["id"], "name": "lite2",
+                                              "conn_type": "database", "provider": "sqlite", "password": ""})
+        assert "Connector lite2 updated" in texto(admin.get("/admin/connectors"))
+        assert svc.get_connector(c["id"])["has_password"] is True
+
+        admin.post("/admin/connectors", data={"action": "testConnector", "connector_id": c["id"]})
+        assert "Connection OK" in texto(admin.get("/admin/connectors"))
+        assert svc.get_connector(c["id"])["status"] == "connected"
+
+    def test_teste_que_falha_mostra_o_motivo(self, admin):
+        from quantum_admin.services import connectors as svc
+        entrar(admin)
+        self._criar(admin, name="claude", conn_type="ai", provider="anthropic")
+        [c] = svc.list_connectors()
+        admin.post("/admin/connectors", data={"action": "testConnector", "connector_id": c["id"]})
+        assert "Connection failed: No API key" in texto(admin.get("/admin/connectors"))
+
+    def test_editar_inexistente_e_remover(self, admin):
+        from quantum_admin.services import connectors as svc
+        entrar(admin)
+        assert "no connector with id 'fantasma'" in texto(admin.get("/admin/connectors?edit=fantasma"))
+        self._criar(admin)
+        [c] = svc.list_connectors()
+        admin.post("/admin/connectors", data={"action": "deleteConnector", "connector_id": c["id"]})
+        assert "Connector deleted" in texto(admin.get("/admin/connectors"))
+        assert svc.list_connectors() == []
