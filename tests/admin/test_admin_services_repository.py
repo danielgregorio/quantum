@@ -90,5 +90,5 @@ def test_fila_de_jobs(raiz):
     conexao.commit()
     conexao.close()
     r = svc.list_jobs(limit=2)
-    assert r["counts"] == {"pending": 2, "failed": 1} and r["total"] == 3
+    assert r["counts"] == {"pending": 2, "running": 0, "completed": 0, "failed": 1} and r["total"] == 3
     assert [j["name"] for j in r["jobs"]] == ["c", "b"]

@@ -122,3 +122,87 @@ class TestAplicacoes:
         pagina = texto(admin.get("/admin/applications"))
         assert "1 application(s) imported" in pagina and "antigo" in pagina
         assert "exist only in the old" not in pagina
+
+
+TELAS = ["/admin", "/admin/dashboard", "/admin/features", "/admin/agents", "/admin/database",
+         "/admin/jobs", "/admin/source?file=README.md"]
+
+
+@pytest.mark.parametrize("url", TELAS)
+def test_toda_tela_pede_login(admin, url):
+    r = admin.get(url)
+    assert r.status_code == 302 and r.headers["Location"].endswith("/admin/login")
+
+
+class TestTelasDeLeitura:
+    def test_admin_leva_as_aplicacoes(self, admin):
+        entrar(admin)
+        assert 'url=/admin/applications' in admin.get("/admin").get_data(as_text=True)
+
+    def test_dashboard(self, admin, admin_isolado):
+        (admin_isolado / "components").mkdir()
+        (admin_isolado / "components" / "loja.q").write_text('<q:component name="Loja"/>', encoding="utf-8")
+        entrar(admin)
+        pagina = texto(admin.get("/admin/dashboard"))
+        assert "loja.q" in pagina and "Tags with a parser" in pagina
+
+    def test_features(self, admin):
+        entrar(admin)
+        pagina = texto(admin.get("/admin/features"))
+        assert "conditionals" in pagina and "loops" in pagina
+
+    def test_agentes_e_llm_sem_a_chave(self, admin, admin_isolado):
+        (admin_isolado / "components").mkdir()
+        (admin_isolado / "components" / "a.q").write_text(
+            '<q:component name="A"><q:agent name="ajudante" model="phi3" provider="ollama"/></q:component>',
+            encoding="utf-8")
+        config = admin_isolado / "quantum.config.yaml"
+        dados = yaml.safe_load(config.read_text(encoding="utf-8"))
+        dados["llm"] = {"base_url": "http://localhost:11434", "default_model": "phi3", "api_key": "sk-NAO-MOSTRAR"}
+        config.write_text(yaml.safe_dump(dados), encoding="utf-8")
+        entrar(admin)
+        html = admin.get("/admin/agents").get_data(as_text=True)
+        pagina = texto(admin.get("/admin/agents"))
+        assert "ajudante" in pagina and "http://localhost:11434" in pagina and "components/a.q" in pagina
+        assert "sk-NAO-MOSTRAR" not in html
+
+    def test_bancos_e_datasources_sem_credenciais(self, admin, admin_isolado):
+        import sqlite3
+        conexao = sqlite3.connect(admin_isolado / "loja.db")
+        conexao.executescript("create table pedidos (id integer); insert into pedidos values (1), (2), (3);")
+        conexao.close()
+        config = admin_isolado / "quantum.config.yaml"
+        dados = yaml.safe_load(config.read_text(encoding="utf-8"))
+        dados["datasources"] = {"vendas": {"driver": "postgres", "database": "vendas", "password": "senha-NAO-MOSTRAR"}}
+        config.write_text(yaml.safe_dump(dados), encoding="utf-8")
+        entrar(admin)
+        html = admin.get("/admin/database").get_data(as_text=True)
+        pagina = texto(admin.get("/admin/database"))
+        assert "loja.db" in pagina and "pedidos" in pagina and "vendas" in pagina and "postgres" in pagina
+        assert "senha-NAO-MOSTRAR" not in html
+
+    def test_jobs(self, admin, admin_isolado):
+        entrar(admin)
+        assert "No Job Queue Yet" in texto(admin.get("/admin/jobs"))
+        import sqlite3
+        conexao = sqlite3.connect(admin_isolado / "quantum_jobs.db")
+        conexao.executescript(
+            "create table quantum_jobs (id integer primary key autoincrement, name text, queue text, status text,"
+            " attempts integer, max_attempts integer, created_at text, error text);"
+            "insert into quantum_jobs (name, queue, status, attempts, max_attempts, error) values"
+            " ('enviar-email','mail','failed',3,3,'SMTP recusou'), ('relatorio',null,'pending',0,3,null);")
+        conexao.close()
+        pagina = texto(admin.get("/admin/jobs"))
+        assert "enviar-email" in pagina and "SMTP recusou" in pagina and "3/3" in pagina and "relatorio" in pagina
+
+    def test_leitor_de_codigo(self, admin, admin_isolado):
+        (admin_isolado / "LEIAME.txt").write_text("primeira linha\nsegunda linha\n", encoding="utf-8")
+        (admin_isolado / ".env").write_text("SENHA=segredo-NAO-MOSTRAR\n", encoding="utf-8")
+        entrar(admin)
+        pagina = texto(admin.get("/admin/source?file=LEIAME.txt"))
+        assert "segunda linha" in pagina and "3 lines" in pagina
+        html = admin.get("/admin/source?file=.env").get_data(as_text=True)
+        assert "may contain credentials" in texto(admin.get("/admin/source?file=.env"))
+        assert "segredo-NAO-MOSTRAR" not in html
+        assert "outside the project root" in texto(admin.get("/admin/source?file=../x.txt"))
+        assert "a file path is required" in texto(admin.get("/admin/source"))

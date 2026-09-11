@@ -70,12 +70,6 @@ datasources:
     driver: sqlite
     database: ./test_data/quantum_test.db
 
-  # The Quantum Admin project listing, rewritten in .q (FRAMEWORK_PLAN Fase 4).
-  # components/admin/projects.q reads this.
-  admin:
-    driver: sqlite
-    database: ./quantum_admin/quantum_admin.db
-
   # A typical app datasource:
   # db:
   #   driver: sqlite

@@ -34,6 +34,7 @@ from quantum_admin.services._base import raiz
 PULAR = {".git", "__pycache__", "node_modules", ".venv", "venv", ".claude", "build", "dist"}
 TIPOS = {".q": "Quantum", ".py": "Python", ".yaml": "YAML", ".yml": "YAML", ".json": "JSON", ".html": "HTML",
          ".css": "CSS", ".js": "JavaScript", ".md": "Markdown", ".txt": "Text"}
+ESTADOS_DE_JOB = ("pending", "running", "completed", "failed")
 SENSIVEIS_NOMES = re.compile(r"(^\.env(\..*)?$|\.pem$|\.key$|^id_(rsa|ed25519|ecdsa)|\.db$|\.sqlite3?$)", re.I)
 
 
@@ -63,6 +64,14 @@ def _registros():
     return tags, ComponentRuntime(config={})._executor_registry.executor_count
 
 
+def _config_da_raiz() -> dict:
+    """quantum.config.yaml da raiz, ou {} se não houver ou não abrir."""
+    try:
+        return yaml.safe_load((raiz() / "quantum.config.yaml").read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return {}
+
+
 def _pasta_de_features():
     import quantum
     return Path(quantum.__file__).resolve().parent / "core" / "features"
@@ -86,8 +95,11 @@ def dashboard_stats():
 def list_features():
     """Features de quantum/core/features, pelo manifest.yaml de cada uma."""
     features = []
+    base = raiz()
     for manifesto in sorted(_pasta_de_features().glob("*/manifest.yaml")):
         pasta = manifesto.parent.name
+        # Só dá para abrir no leitor de código quando o pacote está dentro da raiz.
+        fonte = manifesto.relative_to(base).as_posix() if base in manifesto.parents else None
         try:
             dados = yaml.safe_load(manifesto.read_text(encoding="utf-8")) or {}
             feature = dados.get("feature") or {}
@@ -95,14 +107,16 @@ def list_features():
             curta = descricao.get("short") if isinstance(descricao, dict) else (descricao or "").strip().split("\n")[0]
             features.append({"name": feature.get("name", pasta), "display_name": feature.get("display_name", pasta),
                              "version": feature.get("version"), "status": feature.get("status", "unknown"),
-                             "category": feature.get("category"), "short_desc": curta or ""})
+                             "category": feature.get("category"), "short_desc": curta or "", "source": fonte})
         except (OSError, yaml.YAMLError, AttributeError) as exc:
             features.append({"name": pasta, "display_name": pasta, "version": None, "status": "error",
-                             "category": None, "short_desc": f"manifest could not be read: {exc}"})
+                             "category": None, "short_desc": f"manifest could not be read: {exc}", "source": fonte})
     contagem = {}
     for f in features:
         contagem[f["status"]] = contagem.get(f["status"], 0) + 1
-    return {"features": features, "by_status": contagem}
+    ativas, planejadas = contagem.get("active", 0), contagem.get("planned", 0)
+    return {"features": features, "by_status": contagem,
+            "summary": {"active": ativas, "planned": planejadas, "other": len(features) - ativas - planejadas}}
 
 
 @service("admin.agents.list")
@@ -122,8 +136,13 @@ def list_agents():
             for m in re.finditer(r"<q:team\s+([^>]*?)/?>", texto, re.S):
                 a = dict(atributos.findall(m.group(1)))
                 times.append({"name": a.get("name"), "supervisor": a.get("supervisor"), "source": origem})
+    llm = _config_da_raiz().get("llm")
     return {"agents": agentes, "teams": times,
-            "sources": sorted({a["source"] for a in agentes} | {t["source"] for t in times})}
+            "sources": sorted({a["source"] for a in agentes} | {t["source"] for t in times}),
+            "providers": sorted({a["provider"] for a in agentes if a["provider"]}),
+            # Só estes três campos: a seção llm pode ter api_key.
+            "llm": {"base_url": llm.get("base_url"), "default_model": llm.get("default_model"),
+                    "timeout": llm.get("timeout", 60)} if isinstance(llm, dict) else None}
 
 
 @service("admin.source.read")
@@ -171,22 +190,29 @@ def list_databases():
         bancos.append({"path": arquivo.relative_to(base).as_posix(), "size": _tamanho(estado.st_size),
                        "modified": datetime.datetime.fromtimestamp(estado.st_mtime).strftime("%Y-%m-%d %H:%M"),
                        "tables": tabelas, "error": erro})
-    return {"databases": bancos, "total_tables": sum(len(b["tables"]) for b in bancos)}
+    fontes = _config_da_raiz().get("datasources") or {}
+    # Nome, driver e banco — host, usuário e senha ficam de fora.
+    declaradas = [{"name": nome, "driver": (cfg or {}).get("driver") or (cfg or {}).get("type"),
+                   "database": (cfg or {}).get("database")} for nome, cfg in sorted(fontes.items())
+                  if isinstance(cfg, dict)] if isinstance(fontes, dict) else []
+    return {"databases": bancos, "total_tables": sum(len(b["tables"]) for b in bancos), "datasources": declaradas}
 
 
 @service("admin.jobs.list")
 def list_jobs(limit: int = 50):
     """Fila de q:job (quantum_jobs.db na raiz), somente leitura."""
     arquivo = raiz() / "quantum_jobs.db"
-    vazio = {"found": False, "counts": {}, "total": 0, "jobs": []}
+    # Os quatro estados da fila sempre presentes, para a tela não testar chave.
+    vazio = {"found": False, "counts": dict.fromkeys(ESTADOS_DE_JOB, 0), "total": 0, "jobs": []}
     if not arquivo.is_file():
         return vazio
     try:
         conexao = sqlite3.connect(f"{arquivo.resolve().as_uri()}?mode=ro", uri=True, timeout=2)
         conexao.row_factory = sqlite3.Row
         try:
-            contagem = {r["status"]: r["cnt"] for r in
-                        conexao.execute("SELECT status, COUNT(*) AS cnt FROM quantum_jobs GROUP BY status")}
+            contagem = dict.fromkeys(ESTADOS_DE_JOB, 0)
+            contagem.update({r["status"]: r["cnt"] for r in
+                        conexao.execute("SELECT status, COUNT(*) AS cnt FROM quantum_jobs GROUP BY status")})
             jobs = [dict(r) for r in conexao.execute(
                 "SELECT id, name, queue, status, attempts, max_attempts, created_at, error "
                 "FROM quantum_jobs ORDER BY id DESC LIMIT ?", (int(limit),))]
