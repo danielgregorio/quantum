@@ -46,7 +46,8 @@ class ActionHandler:
     def handle_action(
         self,
         action: ActionNode,
-        context: Optional[ExecutionContext] = None
+        context: Optional[ExecutionContext] = None,
+        route_params: Optional[Dict[str, str]] = None
     ) -> Tuple[Optional[str], int]:
         """
         Handle action execution.
@@ -96,6 +97,14 @@ class ActionHandler:
                 key: value for key, value in form_data.items()
                 if key != 'files' and not param_validation.is_uploaded_file(value)
             })
+
+            # ROUTE-2: the page's route segments ([nome], [...caminho]) are
+            # variables of the action too, set last so a form field with the
+            # same name cannot replace them. A POST to /admin/app/loja used to
+            # run without `name`, so every form had to repeat it in a hidden
+            # field — one the browser can change.
+            for key, value in (route_params or {}).items():
+                context.set_variable(key, value)
 
             # 4. Execute action body
             redirect_info = self._execute_action_body(action, context)

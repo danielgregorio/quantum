@@ -568,7 +568,7 @@ class QuantumWebServer:
 
                 if action_node:
                     # Handle action
-                    redirect_url, status_code = self.action_handler.handle_action(action_node)
+                    redirect_url, status_code = self.action_handler.handle_action(action_node, route_params=path_params)
 
                     if redirect_url:
                         return redirect(redirect_url, code=status_code)

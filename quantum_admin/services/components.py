@@ -90,6 +90,7 @@ def get_component(path: str):
     nome = re.search(r'<q:component\s+name="([^"]+)"', conteudo)
     teste = _arquivo_de_teste(relativo)
     arquivo_teste = raiz() / teste
+    ultimo = _ultimo_resultado(teste)
     funcoes = re.findall(r"^\s*def (test_\w+)", arquivo_teste.read_text(encoding="utf-8", errors="ignore"),
                          re.M) if arquivo_teste.is_file() else []
     return {
@@ -104,8 +105,20 @@ def get_component(path: str):
         "feature_tags": _tags(conteudo),
         "test_file": teste if arquivo_teste.is_file() else None,
         "test_functions": funcoes,
-        "last_run": _ultimo_resultado(teste),
+        "last_run": ultimo,
+        # Cada função do arquivo com o estado da última execução ("not run"
+        # sem execução). Um teste parametrizado conta como falho se qualquer
+        # caso falhou.
+        "test_status": [{"name": f, "status": _estado(f, ultimo)} for f in funcoes],
     }
+
+
+def _estado(funcao: str, ultimo) -> str:
+    casos = [t["status"] for t in (ultimo or {}).get("tests", []) if t["name"].split("[")[0] == funcao]
+    for pior in ("ERROR", "FAILED", "PASSED", "XFAIL", "XPASS", "SKIPPED"):
+        if pior in casos:
+            return pior
+    return "not run"
 
 
 @service("admin.tests.list")
@@ -137,6 +150,8 @@ def _ultimo_resultado(test_file: str = None):
 def run_tests(test_file: str, timeout: int = 120):
     """pytest num test_*.py de <raiz>/tests; guarda e devolve o resultado."""
     relativo = (test_file or "").strip().replace("\\", "/")
+    if not relativo:
+        raise ComponentError("there is no test file to run; generate one first")
     arquivo = _dentro(relativo, "tests")
     if not (arquivo.is_file() and arquivo.name.startswith("test_") and arquivo.suffix == ".py"):
         raise ComponentError(f"not a test file under tests/: {relativo!r}")
@@ -158,9 +173,10 @@ def run_tests(test_file: str, timeout: int = 120):
     testes = [{"id": m.group(1), "name": m.group(2), "status": m.group(3)}
               for m in re.finditer(r"^(.+?::(\S+))\s+(PASSED|FAILED|ERROR|SKIPPED|XFAIL|XPASS)\b",
                                    processo.stdout, re.M)]
-    resumo = {chave: int(m.group(1)) for chave, padrao in (("passed", r"(\d+) passed"), ("failed", r"(\d+) failed"),
+    resumo = {"passed": 0, "failed": 0, "errors": 0, "skipped": 0}
+    resumo.update({chave: int(m.group(1)) for chave, padrao in (("passed", r"(\d+) passed"), ("failed", r"(\d+) failed"),
                                                            ("errors", r"(\d+) errors?"), ("skipped", r"(\d+) skipped"))
-              if (m := re.search(padrao, saida))}
+              if (m := re.search(padrao, saida))})
     duracao = re.search(r"in ([\d.]+)s", saida)
     resultado = {"test_file": relativo, "passed": processo.returncode == 0, "returncode": processo.returncode,
                  "tests": testes, "summary": {**resumo, "duration": duracao.group(1) if duracao else None},
@@ -176,6 +192,10 @@ def generate_tests(comp_path: str, overwrite: bool = False):
     """Gera tests/test_<componente>.py a partir da estrutura do .q."""
     from quantum_admin.services._component_test_generator import ComponentTestGenerator
     relativo = (comp_path or "").strip().replace("\\", "/")
+    # Como em get_component: a URL /admin/component/components/loja.q chega
+    # sem o .q (o servidor tira a extensão do caminho).
+    if relativo and not Path(relativo).suffix:
+        relativo += ".q"
     arquivo = _dentro(relativo, "components")
     if not (arquivo.is_file() and arquivo.suffix == ".q"):
         raise ComponentError(f"not a .q component under components/: {relativo!r}")

@@ -107,8 +107,12 @@ caminho validado e tipado (ACT-2).
 caminho dele: `components/sobre.q` em `/sobre`, `components/index.q` em `/`, e
 `components/loja/index.q` em `/loja`. Um segmento `[nome]` no caminho casa com
 qualquer valor e o entrega como o parâmetro `nome` (`components/loja/[id].q`
-em `/loja/41`). Sem arquivo correspondente, ou fora de `components/`, a
-resposta é `404`.
+em `/loja/41`); um segmento `[...nome]` casa com o resto do caminho, barras
+incluídas (`components/docs/[...caminho].q` em `/docs/guia/rotas.md`). Sem
+arquivo correspondente, ou fora de `components/`, a resposta é `404`.
+
+**ROUTE-2** — Os segmentos da rota também são variáveis dentro de `q:action`.
+Um campo do formulário com o mesmo nome não troca o valor que veio da URL.
 
 ## 3b. Composição de componentes
 

@@ -58,7 +58,7 @@
         <div class="qa-card-body" style="max-height: 360px; overflow-y: auto;">
           <q:loop type="array" var="comp" items="{stats.component_list}">
             <div class="qa-activity-item">
-              <a class="qa-text-sm qa-font-medium qa-font-mono" href="/admin/component/{comp}">{comp}</a>
+              <a class="qa-text-sm qa-font-medium qa-font-mono" href="/admin/component/components/{comp}">{comp}</a>
             </div>
           </q:loop>
         </div>

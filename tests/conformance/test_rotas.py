@@ -32,3 +32,34 @@ class TestRotas:
     def test_fora_de_components_e_404(self, site):
         # ROUTE-1
         assert site.get('/../quantum.config.yaml').status_code == 404
+
+    def test_segmento_pega_o_resto_do_caminho(self, servidor, tmp_path):
+        # ROUTE-1: [...caminho]
+        (tmp_path / 'components' / 'docs').mkdir(parents=True)
+        (tmp_path / 'components' / 'docs' / '[...caminho].q').write_text(
+            pagina('doc', '<p>DOC={caminho}</p>'), encoding='utf-8')
+        c = servidor()
+        assert 'DOC=guia/rotas.md' in c.get('/docs/guia/rotas.md').get_data(as_text=True)
+
+
+class TestRotaNaAction:
+    FONTE = pagina('item', '<q:action name="salvar" method="POST"><q:param name="nota" type="string"/>'
+                           '<q:redirect url="/fim" flash="{nome}:{nota}"/></q:action>'
+                           '<p>F={flash}</p>')
+
+    def test_action_ve_o_segmento_da_rota(self, servidor, tmp_path):
+        # ROUTE-2 (antes: "Variable 'nome' not found" e 500)
+        (tmp_path / 'components' / 'item').mkdir(parents=True)
+        (tmp_path / 'components' / 'item' / '[nome].q').write_text(self.FONTE, encoding='utf-8')
+        c = servidor(fim=pagina('fim', '<p>F={flash}</p>'))
+        r = c.post('/item/loja', data={'action': 'salvar', 'nota': 'ok'})
+        assert r.status_code == 302
+        assert 'F=loja:ok' in c.get('/fim').get_data(as_text=True)
+
+    def test_campo_do_formulario_nao_troca_o_segmento(self, servidor, tmp_path):
+        # ROUTE-2
+        (tmp_path / 'components' / 'item').mkdir(parents=True)
+        (tmp_path / 'components' / 'item' / '[nome].q').write_text(self.FONTE, encoding='utf-8')
+        c = servidor(fim=pagina('fim', '<p>F={flash}</p>'))
+        c.post('/item/loja', data={'action': 'salvar', 'nota': 'ok', 'nome': 'outra'})
+        assert 'F=loja:ok' in c.get('/fim').get_data(as_text=True)

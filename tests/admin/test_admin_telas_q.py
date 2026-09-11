@@ -22,7 +22,8 @@ MODULOS = ["quantum_admin.services.projects", "quantum_admin.services.yaml_impor
 
 def texto(resposta):
     html = resposta.get_data(as_text=True)
-    html = re.sub(r"<(style|script)\b.*?</\1>", "", html, flags=re.S)
+    # <pre> mostra conteúdo de arquivo (código, saída do pytest), que pode ter chaves.
+    html = re.sub(r"<(style|script|pre)\b.*?</\1>", "", html, flags=re.S)
     pagina = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html))
     # Uma expressão que falha no conteúdo HTML fica como texto (EXPR-4): numa
     # tela do admin isso é sempre um defeito da tela. Vale para texto e atributos.
@@ -125,7 +126,8 @@ class TestAplicacoes:
 
 
 TELAS = ["/admin", "/admin/dashboard", "/admin/features", "/admin/agents", "/admin/database",
-         "/admin/jobs", "/admin/source?file=README.md"]
+         "/admin/jobs", "/admin/source?file=README.md", "/admin/components", "/admin/tests",
+         "/admin/component/components/loja.q"]
 
 
 @pytest.mark.parametrize("url", TELAS)
@@ -200,9 +202,74 @@ class TestTelasDeLeitura:
         (admin_isolado / ".env").write_text("SENHA=segredo-NAO-MOSTRAR\n", encoding="utf-8")
         entrar(admin)
         pagina = texto(admin.get("/admin/source?file=LEIAME.txt"))
-        assert "segunda linha" in pagina and "3 lines" in pagina
+        assert "3 lines" in pagina
+        assert "segunda linha" in admin.get("/admin/source?file=LEIAME.txt").get_data(as_text=True)
         html = admin.get("/admin/source?file=.env").get_data(as_text=True)
         assert "may contain credentials" in texto(admin.get("/admin/source?file=.env"))
         assert "segredo-NAO-MOSTRAR" not in html
         assert "outside the project root" in texto(admin.get("/admin/source?file=../x.txt"))
         assert "a file path is required" in texto(admin.get("/admin/source"))
+
+
+COMPONENTE = ('<q:component name="Loja" xmlns:q="https://quantum.lang/ns">'
+              '<q:action name="comprar" method="POST"><q:param name="item" required="true"/>'
+              '<q:redirect url="/loja"/></q:action><p>vitrine</p></q:component>\n')
+
+
+class TestComponentesETestes:
+    @pytest.fixture
+    def projeto(self, admin_isolado):
+        (admin_isolado / "components" / "sub").mkdir(parents=True)
+        (admin_isolado / "components" / "loja.q").write_text(COMPONENTE, encoding="utf-8")
+        (admin_isolado / "components" / "sub" / "b.q").write_text('<q:component name="B"/>', encoding="utf-8")
+        (admin_isolado / "tests").mkdir()
+        (admin_isolado / "tests" / "test_ok.py").write_text("def test_um():\n    assert True\n", encoding="utf-8")
+        return admin_isolado
+
+    def test_listas(self, admin, projeto):
+        entrar(admin)
+        pagina = texto(admin.get("/admin/components"))
+        assert "loja.q" in pagina and "sub/b.q" in pagina and "action, redirect" in pagina
+        assert 'href="/admin/component/components/loja.q"' in admin.get("/admin/components").get_data(as_text=True)
+        pagina = texto(admin.get("/admin/tests"))
+        assert "test_ok.py" in pagina
+
+    def test_detalhe(self, admin, projeto):
+        entrar(admin)
+        pagina = texto(admin.get("/admin/component/components/loja.q"))
+        assert "Loja" in pagina and "comprar" in pagina and "no test file yet" in pagina
+
+    def test_fora_da_raiz_e_inexistente(self, admin, projeto):
+        entrar(admin)
+        # O servidor já barra o ".." na URL (404); o serviço barra o que passar.
+        assert admin.get("/admin/component/components/../../fora.q").status_code == 404
+        assert "file not found" in texto(admin.get("/admin/component/components/nao-existe.q"))
+
+    def test_gerar_nao_sobrescreve_e_rodar(self, admin, projeto):
+        entrar(admin)
+        url = "/admin/component/components/loja.q"
+        r = admin.post(url, data={"action": "generateTests"})
+        assert r.status_code == 302 and r.headers["Location"].endswith("?tab=tests")
+        gerado = projeto / "tests" / "test_components_loja.py"
+        pagina = texto(admin.get(url + "?tab=tests"))
+        assert "tests/test_components_loja.py created" in pagina and gerado.is_file()
+
+        gerado.write_text("def test_feito_a_mao():\n    assert True\n\ndef test_quebrado():\n    assert False\n",
+                          encoding="utf-8")
+        admin.post(url, data={"action": "generateTests"})  # sem overwrite: recusa
+        assert "already exists" in texto(admin.get(url))
+        assert "test_feito_a_mao" in gerado.read_text(encoding="utf-8")
+
+        admin.post(url, data={"action": "runTests"})
+        pagina = texto(admin.get(url + "?tab=tests"))
+        assert "1 failed, 0 errors, 1 passed" in pagina
+        assert "PASSED test_feito_a_mao" in pagina and "FAILED test_quebrado" in pagina
+
+        admin.post(url, data={"action": "generateTests", "overwrite": "true"})
+        assert "regenerated" in texto(admin.get(url))
+        assert "test_feito_a_mao" not in gerado.read_text(encoding="utf-8")
+
+    def test_rodar_sem_arquivo_de_teste(self, admin, projeto):
+        entrar(admin)
+        admin.post("/admin/component/components/sub/b.q", data={"action": "runTests"})
+        assert "there is no test file to run" in texto(admin.get("/admin/component/components/sub/b.q"))

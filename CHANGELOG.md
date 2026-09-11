@@ -13,6 +13,13 @@ can alter the behaviour of an existing app is listed under **Breaking**.
   `<q:invoke name="x" service="name">`. `q:invoke service=` had been parsed
   since the first version and failed with "Unsupported invocation type".
   See the new guide page *Declared Services*.
+- `login_url` (AUTH-4): where `require_auth` sends a visitor without a
+  session — `security.login_url` in `quantum.config.yaml`, or `login_url=` on
+  the component. It was always `/login`. Only local paths are accepted.
+- Route segments inside `q:action` (ROUTE-2): a POST to
+  `components/app/[name].q` has `name` in the action, as the page render
+  does; a form field with the same name does not replace it. `[...path]`
+  catch-all segments are now documented (ROUTE-1).
 
 ### Security
 
@@ -20,6 +27,8 @@ can alter the behaviour of an existing app is listed under **Breaking**.
   mutated the component held in the resolver cache, so after the first request
   every later page rendered with that component showed the first page's slot
   content. Composition no longer mutates cached components (COMP-3).
+- The session cookie is sent with `SameSite=Lax` and `HttpOnly` (AUTH-5), so a
+  form on another site cannot post to a `q:action` with the visitor's session.
 
 ### Fixed
 
@@ -29,7 +38,11 @@ can alter the behaviour of an existing app is listed under **Breaking**.
   rendered in the page's scope, so loops and conditions over the page's data
   work inside a layout; child components run with the page's configuration
   (datasources, services); props are expressions; a missing or failing
-  component is an error instead of an HTML comment on a 200 page.
+  component is an error instead of an HTML comment on a 200 page. A child
+  component sees the page's `session`, `application` and `request` scopes.
+- `flash` and the `url` of `q:redirect` evaluate expressions (ACT-3):
+  `flash="{result.error}"` ended the action with a 500. `flash` and
+  `flashType` always exist on a rendered page (`''` without a message).
 
 ### Breaking
 
