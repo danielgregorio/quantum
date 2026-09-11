@@ -163,6 +163,10 @@ def medir_app(rotas):
     """Sombreamento pelo roteador real e status dos GETs sem parâmetro."""
     tmp = pathlib.Path(tempfile.mkdtemp())
     os.environ["QUANTUM_ADMIN_DATABASE_URL"] = f"sqlite:///{(tmp / 'admin.db').as_posix()}"
+    # Os GETs medidos criam settings/global.yaml quando ele não existe: numa
+    # pasta temporária, não na do dono.
+    (tmp / "settings").mkdir()
+    os.environ["QUANTUM_ADMIN_SETTINGS_DIR"] = str(tmp / "settings")
     os.environ["ADMIN_PASSWORD"] = "inventario-senha-suficientemente-longa"
     os.environ["JWT_SECRET_KEY"] = "i" * 64
     for p in (str(REPO), str(REPO / "quantum_admin"), str(BACKEND)):

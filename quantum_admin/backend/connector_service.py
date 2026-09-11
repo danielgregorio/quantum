@@ -16,7 +16,10 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 # Base paths
-SETTINGS_DIR = Path(__file__).parent.parent / "settings"
+# QUANTUM_ADMIN_SETTINGS_DIR moves these files, as QUANTUM_ADMIN_DATABASE_URL
+# moves the database: the test suite points both at a temporary directory
+# before importing the backend, so no test run writes the owner's settings.
+SETTINGS_DIR = Path(os.environ.get("QUANTUM_ADMIN_SETTINGS_DIR") or Path(__file__).parent.parent / "settings")
 CONNECTORS_FILE = SETTINGS_DIR / "connectors.yaml"
 
 

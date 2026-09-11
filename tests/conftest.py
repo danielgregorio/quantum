@@ -18,6 +18,14 @@ os.environ.setdefault(
     "QUANTUM_ADMIN_DATABASE_URL",
     "sqlite:///" + str(Path(tempfile.mkdtemp(prefix="quantum-admin-tests-")) / "admin.db"),
 )
+# The same for quantum_admin/settings (connectors.yaml, global.yaml). A fresh
+# clone has no global.yaml, and the first test that reached settings_service
+# created one in the real directory — the guard in tests/admin/conftest.py
+# caught it on CI.
+os.environ.setdefault(
+    "QUANTUM_ADMIN_SETTINGS_DIR",
+    str(Path(tempfile.mkdtemp(prefix="quantum-admin-settings-tests-"))),
+)
 
 
 @pytest.fixture
