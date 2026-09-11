@@ -128,13 +128,19 @@ class TestAplicacoes:
 
 TELAS = ["/admin", "/admin/dashboard", "/admin/features", "/admin/agents", "/admin/database",
          "/admin/jobs", "/admin/source?file=README.md", "/admin/components", "/admin/tests",
-         "/admin/component/components/loja.q", "/admin/settings", "/admin/connectors"]
+         "/admin/component/components/loja.q", "/admin/settings", "/admin/connectors", "/admin/app/loja"]
 
 
 @pytest.mark.parametrize("url", TELAS)
 def test_toda_tela_pede_login(admin, url):
     r = admin.get(url)
     assert r.status_code == 302 and r.headers["Location"].endswith("/admin/login")
+
+
+def test_layout_nao_e_uma_pagina(admin):
+    entrar(admin)
+    assert admin.get("/admin/_layout/AdminShell").status_code == 404
+    assert admin.get("/admin/AdminShell").status_code == 404
 
 
 class TestTelasDeLeitura:
@@ -328,8 +334,8 @@ class TestConnectors:
         assert "0 registered" in pagina and "New Connector" in pagina
         assert self._criar(admin, name="principal", provider="postgres", conn_type="database",
                            username="app", password="senha-NAO-MOSTRAR").status_code == 302
+        assert "Connector principal created" in texto(admin.get("/admin/connectors"))
         html = admin.get("/admin/connectors").get_data(as_text=True)
-        assert "Connector principal created" in texto(admin.get("/admin/connectors?x=1")) or "principal" in html
         pagina = texto(admin.get("/admin/connectors"))
         assert "principal" in pagina and "PostgreSQL" in pagina and "localhost:5432" in pagina
         arquivo = (admin_isolado / "quantum_admin" / "settings" / "connectors.yaml").read_text(encoding="utf-8")
@@ -380,3 +386,88 @@ class TestConnectors:
         admin.post("/admin/connectors", data={"action": "deleteConnector", "connector_id": c["id"]})
         assert "Connector deleted" in texto(admin.get("/admin/connectors"))
         assert svc.list_connectors() == []
+
+
+
+class TestAplicacao:
+    @pytest.fixture
+    def loja(self, admin):
+        from quantum_admin.services import projects
+        entrar(admin)
+        return projects.create_project("loja", "vende coisas")
+
+    def test_inexistente(self, admin):
+        entrar(admin)
+        assert "no project named 'fantasma'" in texto(admin.get("/admin/app/fantasma"))
+
+    def test_geral_e_editar(self, admin, loja):
+        pagina = texto(admin.get("/admin/app/loja"))
+        assert "projects/loja" in pagina
+        assert 'value="vende coisas"' in admin.get("/admin/app/loja").get_data(as_text=True)
+        r = admin.post("/admin/app/loja", data={"action": "updateProject", "new_name": "loja-nova",
+                                                "description": "outra", "status": "archived"})
+        assert r.headers["Location"].endswith("/admin/app/loja-nova")
+        assert "Application updated" in texto(admin.get("/admin/app/loja-nova"))
+        html = admin.get("/admin/app/loja-nova").get_data(as_text=True)
+        assert 'value="outra"' in html and re.search(r'<option value="archived" selected', html)
+
+    def test_action_usa_o_projeto_da_url_e_nao_um_campo_escondido(self, admin, loja):
+        from quantum_admin.services import projects
+        blog = projects.create_project("blog")
+        admin.post("/admin/app/loja", data={"action": "updateProject", "project_id": str(blog["id"]),
+                                            "new_name": "loja", "description": "mudou", "status": "active"})
+        assert projects.get_project(loja["id"])["description"] == "mudou"
+        assert projects.get_project(blog["id"])["description"] == ""
+
+    def test_connectors_da_aplicacao(self, admin, loja):
+        from quantum_admin.services import connectors
+        r = admin.post("/admin/app/loja", data={"action": "createProjectConnector", "conn_name": "cache",
+                                                "conn_type": "cache", "provider": "redis",
+                                                "password": "senha-NAO-MOSTRAR"})
+        assert r.headers["Location"].endswith("?tab=connectors")
+        html = admin.get("/admin/app/loja?tab=connectors").get_data(as_text=True)
+        assert re.search(r'id="tab-connectors"[^>]*checked', html) and "senha-NAO-MOSTRAR" not in html
+        [c] = connectors.list_connectors()
+        assert c["application_id"] == loja["id"] and c["scope"] == "application"
+        assert "this application" in texto(admin.get("/admin/app/loja"))
+        admin.post("/admin/app/loja", data={"action": "detachConnector", "connector_id": c["id"]})
+        assert "Connector cache is now public" in texto(admin.get("/admin/app/loja"))
+        assert connectors.get_connector(c["id"])["application_id"] is None
+
+    def test_config(self, admin, loja, admin_isolado):
+        arquivo = admin_isolado / "projects" / "loja" / "quantum.config.yaml"
+        novo = "# comentario mantido\nserver:\n  port: 9111\n"
+        admin.post("/admin/app/loja", data={"action": "saveProjectConfig", "config_yaml": novo})
+        assert "Configuration saved" in texto(admin.get("/admin/app/loja"))
+        assert arquivo.read_text(encoding="utf-8") == novo
+        admin.post("/admin/app/loja", data={"action": "saveProjectConfig", "config_yaml": "server: [aberto"})
+        assert "invalid YAML" in texto(admin.get("/admin/app/loja"))
+        assert arquivo.read_text(encoding="utf-8") == novo
+
+    def test_ambientes(self, admin, loja):
+        from quantum_admin.services import apps
+        admin.post("/admin/app/loja", data={"action": "createDefaultEnvironments"})
+        assert "3 environment(s) created" in texto(admin.get("/admin/app/loja"))
+        admin.post("/admin/app/loja", data={"action": "createEnvironment", "env_name": "Demo"})
+        pagina = texto(admin.get("/admin/app/loja?tab=environments"))
+        assert "Environment demo created" in pagina
+        demo = next(e for e in apps.list_environments(loja["id"]) if e["name"] == "demo")
+        admin.post("/admin/app/loja", data={"action": "updateEnvironment", "environment_id": str(demo["id"]),
+                                            "variables": "DB=loja\nMODO=teste", "port": "8201", "branch": "main"})
+        assert "Environment demo saved" in texto(admin.get("/admin/app/loja"))
+        demo = next(e for e in apps.list_environments(loja["id"]) if e["name"] == "demo")
+        assert demo["variables"] == {"DB": "loja", "MODO": "teste"} and demo["port"] == 8201
+        admin.post("/admin/app/loja", data={"action": "updateEnvironment", "environment_id": str(demo["id"]),
+                                            "variables": "linha sem igual"})
+        assert "NAME=value" in texto(admin.get("/admin/app/loja"))
+        admin.post("/admin/app/loja", data={"action": "deleteEnvironment", "environment_id": str(demo["id"])})
+        assert "Environment deleted" in texto(admin.get("/admin/app/loja"))
+        assert len(apps.list_environments(loja["id"])) == 3
+
+    def test_componentes_e_runtime(self, admin, loja, admin_isolado):
+        pasta = admin_isolado / "projects" / "loja" / "components"
+        (pasta / "produtos").mkdir(parents=True, exist_ok=True)
+        (pasta / "produtos" / "[id].q").write_text('<q:component name="Produto"/>', encoding="utf-8")
+        pagina = texto(admin.get("/admin/app/loja"))
+        assert "/produtos/[id]" in pagina and "Produto" in pagina and "dynamic" in pagina
+        assert "Start Server" in pagina and "Nothing logged yet" in pagina

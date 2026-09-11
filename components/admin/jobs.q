@@ -1,6 +1,6 @@
 <q:component name="AdminJobs" require_auth="true" require_role="admin" login_url="/admin/login">
   <!-- Fila de q:job em quantum_jobs.db, somente leitura (admin.jobs.list). -->
-  <q:import component="AdminShell" from="admin" />
+  <q:import component="AdminShell" from="admin/_layout" />
 
   <q:invoke name="fila" service="admin.jobs.list" />
 

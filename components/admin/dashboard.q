@@ -4,7 +4,7 @@
     (quantum_admin/services/repository.py). A versão anterior procurava
     src/core/... e mostrava 0 features, 0 parsers e 0 executores.
   -->
-  <q:import component="AdminShell" from="admin" />
+  <q:import component="AdminShell" from="admin/_layout" />
 
   <q:invoke name="stats" service="admin.dashboard.stats" />
   <q:invoke name="catalogo" service="admin.features.list" />

@@ -476,6 +476,12 @@ class QuantumWebServer:
         if not self._is_within_components(component_path):
             abort(404)
 
+        # ROUTE-3: a file or folder whose name starts with `_` exists to be
+        # imported, not visited. A layout like admin/AdminShell.q was served
+        # at /admin/AdminShell and answered 500 (its required props missing).
+        if any(parte.startswith('_') for parte in component_path.replace('\\', '/').split('/')):
+            abort(404)
+
         file_path = Path(components_dir) / f'{component_path}.q'
         path_params = {}
 

@@ -104,7 +104,8 @@ def create_connector(name: str, type: str, provider: str, host: str = "", port: 
         "name": name.strip(), "type": type.strip(), "provider": provider,
         "host": (host or "").strip() or "localhost", "port": int(port or config.get("default_port", 0)),
         "database": (database or "").strip(), "username": (username or "").strip(),
-        "password": password or "", "scope": scope or "public",
+        # Um connector com aplicação é dela: `scope` segue o application_id.
+        "password": password or "", "scope": "application" if application_id else (scope or "public"),
         "application_id": int(application_id) if application_id else None,
         "is_default": bool(is_default), "docker_image": config.get("docker_image", ""),
     })

@@ -7,7 +7,7 @@
     debug desligado, log INFO e TTL 300, e salvar trocava esses valores sem
     ninguém ter mexido neles.
   -->
-  <q:import component="AdminShell" from="admin" />
+  <q:import component="AdminShell" from="admin/_layout" />
 
   <q:action name="saveSettings" method="POST">
     <q:param name="port" type="integer" required="true" />

@@ -139,3 +139,27 @@ class TestServidor:
         (isolado / "projects" / "quebrado" / "quantum.config.yaml").write_text("server: [aberto", encoding="utf-8")
         with pytest.raises(proj.ProjectError, match="exited with code"):
             apps.start_server(p["id"], wait=30)
+
+
+def test_projeto_pelo_nome(loja):
+    assert apps.project_by_name("LOJA")["id"] == loja["id"]
+    with pytest.raises(proj.ProjectError, match="no project named 'fantasma'"):
+        apps.project_by_name("fantasma")
+
+
+def test_arquivos_e_rotas_do_projeto(loja, isolado):
+    pasta = isolado / "projects" / "loja" / "components"
+    (pasta / "produtos").mkdir(parents=True)
+    (pasta / "index.q").write_text('<q:component name="Inicio"><q:set name="x" value="1"/></q:component>', encoding="utf-8")
+    (pasta / "produtos" / "[id].q").write_text('<q:component name="Produto"/>', encoding="utf-8")
+    (isolado / "projects" / "loja" / "static" / "app.css").write_text("body{}", encoding="utf-8")
+    r = apps.project_files(loja["id"])
+    assert [(c["name"], c["route"], c["dynamic"]) for c in r["components"]] == \
+        [("Inicio", "/", False), ("Produto", "/produtos/[id]", True)]
+    assert r["components"][0]["tags"] == ["set"] and r["components"][0]["source"] == "projects/loja/components/index.q"
+    assert r["static_files"] == 1
+
+
+def test_connector_com_aplicacao_e_da_aplicacao(loja):
+    c = connectors.create_connector(name="pg", type="database", provider="postgres", application_id=loja["id"])
+    assert c["scope"] == "application"

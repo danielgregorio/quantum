@@ -4,7 +4,7 @@
     (admin.projects.*); esta tela só chama os serviços e mostra o resultado.
     Os dados ficam no banco do admin — antes, em settings/projects.yaml.
   -->
-  <q:import component="AdminShell" from="admin" />
+  <q:import component="AdminShell" from="admin/_layout" />
 
   <q:action name="createProject" method="POST">
     <q:param name="name" type="string" required="true" minlength="2" />

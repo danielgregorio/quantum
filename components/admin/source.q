@@ -4,7 +4,7 @@
     raiz e arquivos que podem ter credenciais (.env, chaves, bancos, os YAML
     de settings) — a versão anterior mostrava todos eles.
   -->
-  <q:import component="AdminShell" from="admin" />
+  <q:import component="AdminShell" from="admin/_layout" />
 
   <q:set name="arquivo" value="{query.file}" />
   <q:invoke name="fonte" service="admin.source.read" onerror="continue">

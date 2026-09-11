@@ -20,6 +20,8 @@ can alter the behaviour of an existing app is listed under **Breaking**.
   `components/app/[name].q` has `name` in the action, as the page render
   does; a form field with the same name does not replace it. `[...path]`
   catch-all segments are now documented (ROUTE-1).
+- Private components (ROUTE-3): a file or folder under `components/` whose name
+  starts with `_` is not served; it exists to be imported, like a layout.
 
 ### Security
 
@@ -49,6 +51,8 @@ can alter the behaviour of an existing app is listed under **Breaking**.
 ### Breaking
 
 - `q:invoke endpoint=` is refused by the parser; it never did anything.
+- `components/_anything.q` and everything under a `_folder/` answer 404
+  (ROUTE-3). Rename a page that starts with `_`.
 - A component call that cannot be resolved or fails now makes the page fail.
 - Inside a layout, slot content no longer sees the layout's own variables — it
   renders with the page's.

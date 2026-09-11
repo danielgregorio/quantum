@@ -7,7 +7,7 @@
     tests/ (a versão anterior rodava pytest em qualquer caminho absoluto), e
     gerar não sobrescreve um teste existente sem o botão Regenerate.
   -->
-  <q:import component="AdminShell" from="admin" />
+  <q:import component="AdminShell" from="admin/_layout" />
 
   <q:action name="generateTests" method="POST">
     <q:param name="overwrite" type="boolean" default="false" />

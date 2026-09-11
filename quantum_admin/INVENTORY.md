@@ -2,7 +2,7 @@
 
 > **Gerado** por `python scripts/admin-inventory.py` — não editar à mão. Medido, não declarado: rotas lidas da AST de `quantum_admin/backend/main.py`, sombreamento perguntado ao roteador real, status de cada GET autenticado contra um banco temporário, telas `.q` servidas de uma cópia temporária. Rotas de escrita não são executadas.
 
-**268 rotas FastAPI** em 33 áreas · 63 páginas HTML · 8 sombreadas (nunca alcançadas) · GET sem parâmetro medidos: 83/87 respondem sem erro · **23 módulos de serviço** · **16 telas `.q`**, 16 sem `require_auth`, 36 blocos `q:python`.
+**268 rotas FastAPI** em 33 áreas · 63 páginas HTML · 8 sombreadas (nunca alcançadas) · GET sem parâmetro medidos: 83/87 respondem sem erro · **23 módulos de serviço** · **17 telas `.q`**, 2 sem `require_auth`, 0 blocos `q:python`.
 
 A interface do admin (HTML e JS gerados dentro de `main.py`) faz **143 chamadas** com URL legível (7 usam uma variável e não entram na conta). **17 não chegam a rota nenhuma**. **135 rotas de API não são chamadas pela interface** — candidatas a sair se também não servirem a nada fora dela (A2).
 
@@ -99,7 +99,7 @@ O que o plano (A1) preserva como biblioteca. **Rotas** = rotas cujo handler usa 
 | Módulo | Linhas | Públicos | Rotas | Telas .q | Testes |
 |---|---:|---:|---:|---|---|
 | `resource_manager` | 1118 | 7 | 31 | — | `test_resource_discovery_without_psutil.py` |
-| `connector_service` | 983 | 5 | 12 | — | **nenhum** |
+| `connector_service` | 1013 | 6 | 12 | sim | `conftest.py`, `test_admin_services_connectors.py`, `test_admin_services_projects.py` |
 | `pipeline_service` | 812 | 6 | 6 | — | **nenhum** |
 | `test_generator` | 782 | 5 | 5 | — | **nenhum** |
 | `component_discovery` | 766 | 8 | 7 | — | `test_html_tolerance_everywhere.py` |
@@ -107,11 +107,11 @@ O que o plano (A1) preserva como biblioteca. **Rotas** = rotas cujo handler usa 
 | `deploy_service` | 698 | 6 | 6 | — | `test_deploy_build_is_real.py`, `test_deploy_package_and_status.py`, `test_deploy_steps_do_not_lie.py` |
 | `config_generator` | 586 | 2 | 5 | — | **nenhum** |
 | `crud` | 557 | 29 | 78 | — | `test_admin_smoke.py`, `test_delete_project_leaves_nothing_behind.py` |
-| `settings_service` | 485 | 12 | 11 | — | **nenhum** |
+| `settings_service` | 485 | 12 | 11 | — | `conftest.py` |
 | `webhook_service` | 454 | 2 | 10 | — | `test_webhooks_fail_closed.py` |
 | `docker_service` | 422 | 1 | 1 | — | **nenhum** |
 | `environment_service` | 418 | 2 | 10 | — | **nenhum** |
-| `auth_service` | 394 | 5 | 103 | — | `test_admin_has_no_default_credentials.py`, `test_admin_smoke.py`, `test_auth_and_action_logging.py` |
+| `auth_service` | 394 | 5 | 103 | — | `test_admin_has_no_default_credentials.py`, `test_admin_services_auth.py`, `test_admin_smoke.py` +2 |
 | `health_service` | 390 | 10 | 9 | — | **nenhum** |
 | `git_service` | 370 | 3 | 0 | — | **nenhum** |
 | `test_execution_service` | 364 | 1 | 3 | — | **nenhum** |
@@ -124,26 +124,27 @@ O que o plano (A1) preserva como biblioteca. **Rotas** = rotas cujo handler usa 
 
 ## Telas `.q` (components/admin)
 
-Fonte de dados: **banco** = datasource `admin` (o mesmo SQLite do FastAPI); **yaml** = arquivo em `quantum_admin/settings/` via `_lib.py`. As duas não se falam.
+Cada tela chama os serviços declarados (`q:invoke service=`, `quantum_admin/services/`); **Status** é a resposta a um GET sem sessão — 302 para `/admin/login` numa tela protegida.
 
-| Tela | Rota | Auth | Status | Actions | q:python (linhas) | Efeitos do Python | Fonte de dados |
-|---|---|---|---|---|---|---|---|
-| `agents.q` | `/admin/agents` | **não** | 200 | — | 1 (97) | lê arquivos | — |
-| `app/[name].q` | `/admin/app/[name]` | **não** | 200 | updateProject, createProjectConnector, testConnector, detachConnector, saveProjectConfig, runComponentTests, generateComponentTests, createEnvironment, updateEnvironment, deleteEnvironment, startServer, stopServer | 13 (728) | processos, escreve arquivo, lê arquivos, rede | yaml (connectors.yaml), yaml (projects.yaml) |
-| `applications.q` | `/admin/applications` | **não** | 200 | createProject, deleteProject, syncProjects | 4 (227) | escreve arquivo, lê arquivos | yaml (connectors.yaml), yaml (projects.yaml) |
-| `component/[...path].q` | `/admin/component/[...path]` | **não** | 200 | runTests, generateTests | 3 (361) | processos, escreve arquivo, lê arquivos | — |
-| `components.q` | `/admin/components` | **não** | 200 | — | 1 (61) | lê arquivos | — |
-| `connectors.q` | `/admin/connectors` | **não** | 200 | createConnector, deleteConnector, testConnector, updateConnector, testAll | 6 (378) | escreve arquivo, lê arquivos, rede | yaml (connectors.yaml) |
-| `dashboard.q` | `/admin/dashboard` | **não** | 200 | — | 1 (64) | lê arquivos | — |
-| `database.q` | `/admin/database` | **não** | 200 | — | 1 (91) | lê arquivos | — |
-| `datasources.q` | `/admin/datasources` | **não** | 200 | — | 0 (0) | — | banco (admin) |
-| `features.q` | `/admin/features` | **não** | 200 | — | 1 (61) | lê arquivos | — |
-| `index.q` | `/admin` | **não** | 200 | — | 0 (0) | — | — |
-| `jobs.q` | `/admin/jobs` | **não** | 200 | — | 1 (90) | — | — |
-| `projects.q` | `/admin/projects` | **não** | 200 | — | 0 (0) | — | banco (admin) |
-| `settings.q` | `/admin/settings` | **não** | 200 | saveSettings | 2 (195) | escreve arquivo, lê arquivos | — |
-| `source.q` | `/admin/source` | **não** | 200 | — | 1 (86) | lê arquivos | — |
-| `tests.q` | `/admin/tests` | **não** | 200 | — | 1 (59) | lê arquivos | — |
+| Tela | Rota | Auth | Status | Actions | Serviços | q:python (linhas) | Efeitos do Python | Fonte de dados |
+|---|---|---|---|---|---:|---|---|---|
+| `AdminShell.q` | `/admin/AdminShell` | sim | 302 | — | 0 | 0 (0) | — | — |
+| `agents.q` | `/admin/agents` | sim | 302 | — | 1 | 0 (0) | — | — |
+| `app/[name].q` | `/admin/app/[name]` | sim | 302 | updateProject, createProjectConnector, testConnector, detachConnector, saveProjectConfig, createEnvironment, createDefaultEnvironments, updateEnvironment, deleteEnvironment, startServer, stopServer | 19 | 0 (0) | — | — |
+| `applications.q` | `/admin/applications` | sim | 302 | createProject, deleteProject, syncProjects, importYaml | 7 | 0 (0) | — | — |
+| `component/[...path].q` | `/admin/component/[...path]` | sim | 302 | generateTests, runTests | 3 | 0 (0) | — | — |
+| `components.q` | `/admin/components` | sim | 302 | — | 1 | 0 (0) | — | — |
+| `connectors.q` | `/admin/connectors` | sim | 302 | createConnector, updateConnector, deleteConnector, testConnector, testAll | 7 | 0 (0) | — | — |
+| `dashboard.q` | `/admin/dashboard` | sim | 302 | — | 2 | 0 (0) | — | — |
+| `database.q` | `/admin/database` | sim | 302 | — | 1 | 0 (0) | — | — |
+| `features.q` | `/admin/features` | sim | 302 | — | 1 | 0 (0) | — | — |
+| `index.q` | `/admin` | sim | 302 | — | 0 | 0 (0) | — | — |
+| `jobs.q` | `/admin/jobs` | sim | 302 | — | 1 | 0 (0) | — | — |
+| `login.q` | `/admin/login` | **não** | 200 | signIn | 1 | 0 (0) | — | — |
+| `logout.q` | `/admin/logout` | **não** | 200 | signOut | 0 | 0 (0) | — | — |
+| `settings.q` | `/admin/settings` | sim | 302 | saveSettings | 3 | 0 (0) | — | — |
+| `source.q` | `/admin/source` | sim | 302 | — | 1 | 0 (0) | — | — |
+| `tests.q` | `/admin/tests` | sim | 302 | — | 1 | 0 (0) | — | — |
 
 ## Rotas
 

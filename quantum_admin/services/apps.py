@@ -1,6 +1,6 @@
 """Serviços da tela de uma aplicação (components/admin/app/[name].q).
 
-admin.projects.update / config / save_config
+admin.projects.by_name / files / update / config / save_config
 admin.environments.list / create / update / delete / create_defaults
 admin.servers.status / start / stop / log
 
@@ -103,13 +103,62 @@ def save_project_config(project_id: int, config_yaml: str):
     return project_config(project_id)
 
 
+@service("admin.projects.by_name")
+def project_by_name(name: str):
+    """O projeto da URL /admin/app/<nome> (nome sem diferença de maiúsculas)."""
+    from quantum_admin.backend import models
+    with sessao() as db:
+        projeto = db.query(models.Project).filter(models.Project.name.ilike((name or "").strip())).first()
+        if projeto is None:
+            raise ProjectError(f"no project named {name!r}")
+        project_id = projeto.id
+    return get_project(project_id)
+
+
+def _rota(relativo: str) -> str:
+    """components/loja/index.q -> /loja (ROUTE-1)."""
+    partes = relativo[:-2].split("/")
+    if partes[-1] == "index":
+        partes = partes[:-1]
+    return "/" + "/".join(partes)
+
+
+@service("admin.projects.files")
+def project_files(project_id: int):
+    """Componentes, rotas, estáticos e tamanho em disco da pasta do projeto."""
+    import re
+    with sessao() as db:
+        caminho = _projeto(db, project_id).source_path
+    pasta = _pasta(caminho)
+    componentes = []
+    pasta_componentes = pasta / "components"
+    for arquivo in sorted(pasta_componentes.rglob("*.q")) if pasta_componentes.is_dir() else []:
+        relativo = arquivo.relative_to(pasta_componentes).as_posix()
+        conteudo = arquivo.read_text(encoding="utf-8", errors="ignore")
+        nome = re.search(r'<q:component\s+name="([^"]+)"', conteudo)
+        componentes.append({
+            "name": nome.group(1) if nome else arquivo.stem, "path": relativo,
+            "source": arquivo.relative_to(raiz()).as_posix(), "lines": conteudo.count("\n") + 1,
+            "size": arquivo.stat().st_size, "route": _rota(relativo), "dynamic": "[" in relativo,
+            "tags": sorted(set(re.findall(r"<q:(\w+)", conteudo)) - {"component", "param"}),
+        })
+    estaticos = pasta / "static"
+    tamanho = sum(f.stat().st_size for f in pasta.rglob("*") if f.is_file()) if pasta.is_dir() else 0
+    return {"components": componentes,
+            "static_files": sum(1 for f in estaticos.rglob("*") if f.is_file()) if estaticos.is_dir() else 0,
+            "disk_size": f"{tamanho / 1048576:.1f} MB" if tamanho >= 1048576 else f"{tamanho / 1024:.1f} KB"}
+
+
 # --------------------------------------------------------------------------- ambientes
 
 def _ambiente_publico(env) -> dict:
+    variaveis = json.loads(env.env_vars_json) if env.env_vars_json else {}
     return {"id": env.id, "project_id": env.project_id, "name": env.name, "display_name": env.display_name,
             "order": env.order, "port": env.port, "branch": env.branch, "health_url": env.health_url,
             "requires_approval": bool(env.requires_approval), "is_active": bool(env.is_active),
-            "variables": json.loads(env.env_vars_json) if env.env_vars_json else {}}
+            "variables": variaveis,
+            # O mesmo formato que create/update aceitam: NOME=valor por linha.
+            "variables_text": "\n".join(f"{k}={v}" for k, v in variaveis.items())}
 
 
 def _variaveis(texto_ou_dict):

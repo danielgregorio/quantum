@@ -2,7 +2,7 @@
   <!--
     Moldura das telas do admin: barra lateral, cabeçalho e mensagens.
     Uso numa tela:
-      <q:import component="AdminShell" from="admin" />
+      <q:import component="AdminShell" from="admin/_layout" />
       <AdminShell title="Applications" active="applications" flash="{flash}" flashType="{flashType}">
         ...conteúdo da tela...
       </AdminShell>

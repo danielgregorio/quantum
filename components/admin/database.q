@@ -4,7 +4,7 @@
     Os bancos são abertos somente leitura — a versão anterior abria em modo
     escrita, inclusive bancos de aplicações rodando.
   -->
-  <q:import component="AdminShell" from="admin" />
+  <q:import component="AdminShell" from="admin/_layout" />
 
   <q:invoke name="dados" service="admin.databases.list" />
 

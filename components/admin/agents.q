@@ -4,7 +4,7 @@
     (admin.agents.list). A contagem de providers é a dos que as declarações
     usam — antes somava ollama/openai/anthropic mesmo sem nenhum agente.
   -->
-  <q:import component="AdminShell" from="admin" />
+  <q:import component="AdminShell" from="admin/_layout" />
 
   <q:invoke name="ia" service="admin.agents.list" />
 

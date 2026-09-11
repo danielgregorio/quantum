@@ -278,6 +278,7 @@ def telas_q():
             "efeitos": [nome for nome, padrao in EFEITOS_PY.items() if re.search(padrao, codigo)],
             "datasource": sorted(set(re.findall(r"datasource=\"([^\"]+)\"", fonte))),
             "yaml": sorted(set(re.findall(r"(?:load_yaml|save_yaml)\(\s*['\"]([^'\"]+)['\"]", codigo))),
+            "servicos": sorted(set(re.findall(r"service=\"([^\"]+)\"", fonte))),
         })
     return telas
 
@@ -298,7 +299,7 @@ def medir_telas(telas):
         from quantum.runtime.web_server import QuantumWebServer
         cliente = QuantumWebServer("quantum.config.yaml").app.test_client()
         for tela in telas:
-            url = tela["url"].replace("[name]", "blog").replace("[...path]", "admin/dashboard.q")
+            url = tela["url"].replace("[name]", "blog").replace("[...path]", "components/admin/dashboard.q")
             tela["status"] = cliente.get(url).status_code
     finally:
         os.chdir(anterior)
@@ -398,15 +399,15 @@ def escrever(rotas, modulos, telas, ui):
     w("")
     w("## Telas `.q` (components/admin)")
     w("")
-    w("Fonte de dados: **banco** = datasource `admin` (o mesmo SQLite do FastAPI); **yaml** = "
-      "arquivo em `quantum_admin/settings/` via `_lib.py`. As duas não se falam.")
+    w("Cada tela chama os serviços declarados (`q:invoke service=`, `quantum_admin/services/`); "
+      "**Status** é a resposta a um GET sem sessão — 302 para `/admin/login` numa tela protegida.")
     w("")
-    w("| Tela | Rota | Auth | Status | Actions | q:python (linhas) | Efeitos do Python | Fonte de dados |")
-    w("|---|---|---|---|---|---|---|---|")
+    w("| Tela | Rota | Auth | Status | Actions | Serviços | q:python (linhas) | Efeitos do Python | Fonte de dados |")
+    w("|---|---|---|---|---|---:|---|---|---|")
     for t in telas:
         w(f"| `{t['arquivo'].split('components/admin/')[-1]}` | `{t['url']}` | "
           f"{'sim' if t['auth'] else '**não**'} | {t.get('status', '—')} | "
-          f"{', '.join(t['acoes']) or '—'} | {t['python']} ({t['linhas_python']}) | "
+          f"{', '.join(t['acoes']) or '—'} | {len(t['servicos'])} | {t['python']} ({t['linhas_python']}) | "
           f"{', '.join(t['efeitos']) or '—'} | "
           f"{', '.join([f'banco ({d})' for d in t['datasource']] + [f'yaml ({y})' for y in t['yaml']]) or '—'} |")
     w("")

@@ -6,7 +6,7 @@
     connector_service cifra, e nenhuma resposta traz a senha de volta.
     Aqui se criam connectors públicos; os de uma aplicação ficam na tela dela.
   -->
-  <q:import component="AdminShell" from="admin" />
+  <q:import component="AdminShell" from="admin/_layout" />
 
   <q:action name="createConnector" method="POST">
     <q:param name="name" type="string" required="true" />

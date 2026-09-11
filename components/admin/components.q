@@ -1,6 +1,6 @@
 <q:component name="AdminComponents" require_auth="true" require_role="admin" login_url="/admin/login">
   <!-- Os .q de components/ (admin.components.list). -->
-  <q:import component="AdminShell" from="admin" />
+  <q:import component="AdminShell" from="admin/_layout" />
 
   <q:invoke name="lista" service="admin.components.list" />
 

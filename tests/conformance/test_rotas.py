@@ -63,3 +63,17 @@ class TestRotaNaAction:
         c = servidor(fim=pagina('fim', '<p>F={flash}</p>'))
         c.post('/item/loja', data={'action': 'salvar', 'nota': 'ok', 'nome': 'outra'})
         assert 'F=loja:ok' in c.get('/fim').get_data(as_text=True)
+
+
+class TestPrivados:
+    @pytest.mark.parametrize('url', ['/_layout/Moldura', '/loja/_parte', '/_layout/Moldura.q'])
+    def test_nome_com_sublinhado_nao_e_servido(self, servidor, tmp_path, url):
+        # ROUTE-3 (antes: o layout respondia na URL dele, com 500 por faltar a prop)
+        (tmp_path / 'components' / '_layout').mkdir(parents=True)
+        (tmp_path / 'components' / 'loja').mkdir(parents=True)
+        (tmp_path / 'components' / '_layout' / 'Moldura.q').write_text(
+            pagina('Moldura', '<q:param name="titulo" required="true"/><h1>{titulo}</h1>'), encoding='utf-8')
+        (tmp_path / 'components' / 'loja' / '_parte.q').write_text(pagina('parte', '<p>PARTE</p>'), encoding='utf-8')
+        c = servidor(p=pagina('p', '<q:import component="Moldura" from="_layout"/><Moldura titulo="USADO"/>'))
+        assert c.get(url).status_code == 404
+        assert 'USADO' in c.get('/p').get_data(as_text=True)

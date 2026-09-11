@@ -1,6 +1,6 @@
 <q:component name="AdminTests" require_auth="true" require_role="admin" login_url="/admin/login">
   <!-- Os test_*.py de tests/ (admin.tests.list). Rodar fica no detalhe do componente. -->
-  <q:import component="AdminShell" from="admin" />
+  <q:import component="AdminShell" from="admin/_layout" />
 
   <q:invoke name="suite" service="admin.tests.list" />
 

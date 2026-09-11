@@ -4,7 +4,7 @@
     (admin.features.list). A versão anterior lia src/core/features, que não
     existe mais, e a tabela vinha vazia.
   -->
-  <q:import component="AdminShell" from="admin" />
+  <q:import component="AdminShell" from="admin/_layout" />
 
   <q:invoke name="catalogo" service="admin.features.list" />
 

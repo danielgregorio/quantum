@@ -114,6 +114,9 @@ arquivo correspondente, ou fora de `components/`, a resposta é `404`.
 **ROUTE-2** — Os segmentos da rota também são variáveis dentro de `q:action`.
 Um campo do formulário com o mesmo nome não troca o valor que veio da URL.
 
+**ROUTE-3** — Um arquivo ou pasta de `components/` cujo nome começa com `_` não
+é servido (`404`): existe para ser importado (`q:import`), como um layout.
+
 ## 3b. Composição de componentes
 
 **COMP-1** — `<Nome/>` usa o componente importado com `q:import component="Nome"`,
