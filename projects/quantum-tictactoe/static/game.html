@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>tictactoe</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #111; display: flex; justify-content: center; align-items: center; width: 100vw; height: 100vh; }
+    canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; transform: scale(3); transform-origin: center center; }
+    .qg-hud { position: absolute; pointer-events: none; padding: 8px; font-family: sans-serif; z-index: 10; }
+    .qg-hud-top-left { top: 0; left: 0; }
+    .qg-hud-top-right { top: 0; right: 0; }
+    .qg-hud-top-center { top: 0; left: 50%; transform: translateX(-50%); }
+    .qg-hud-bottom-left { bottom: 0; left: 0; }
+    .qg-hud-bottom-right { bottom: 0; right: 0; }
+    .qg-hud-bottom-center { bottom: 0; left: 50%; transform: translateX(-50%); }
+    .qg-hud-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+    /* Source Code Viewer */
+    #qg-source-btn {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    #qg-source-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.9);
+    }
+    #qg-source-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.92);
+      z-index: 999;
+      overflow: auto;
+    }
+    #qg-source-modal.visible {
+      display: flex;
+      flex-direction: column;
+    }
+    #qg-source-close {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 13px;
+      z-index: 1001;
+    }
+    #qg-source-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    #qg-source-content {
+      flex: 1;
+      overflow: auto;
+      padding: 48px 24px 24px;
+    }
+    #qg-source-content pre {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 24px;
+      border-radius: 12px;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre;
+      tab-size: 2;
+      border: 1px solid #313244;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="qg-hud qg-hud-top-center" id="qg-hud-0"></div>
+  <div class="qg-hud qg-hud-bottom-center" id="qg-hud-1"></div>
+  <button id="qg-source-btn" onclick="toggleSource()">source</button>
+  <div id="qg-source-modal">
+    <button id="qg-source-close" onclick="toggleSource()">ESC</button>
+    <div id="qg-source-content">
+      <pre id="qg-source-code">No source code available</pre>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20/build/matter.min.js"></script>
+  <script>
+function toggleSource() {
+  var modal = document.getElementById('qg-source-modal');
+  modal.classList.toggle('visible');
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.getElementById('qg-source-modal').classList.remove('visible');
+  }
+});
+(async function() {
+
+  // === PIXI APP ===
+  const app = new PIXI.Application();
+  await app.init({ width: 400, height: 480, background: "#2c3e50" });
+  document.body.appendChild(app.canvas);
+  // World size: 400x480, Viewport: 400x480
+
+  // === MATTER.JS ENGINE ===
+  const mEngine = Matter.Engine.create();
+  mEngine.gravity.x = 0;
+  mEngine.gravity.y = 0;
+  // Increase solver iterations for tighter collision resolution
+  mEngine.positionIterations = 10;
+  mEngine.velocityIterations = 8;
+  const mWorld = mEngine.world;
+
+  // === EVENT BUS ===
+  // Event Bus
+  const _gameEvents = { _listeners: {} };
+  _gameEvents.on = function(event, cb) {
+    if (!this._listeners[event]) {
+      this._listeners[event] = [];
+    }
+    this._listeners[event].push(cb);
+  };
+  _gameEvents.off = function(event, cb) {
+    if (this._listeners[event]) {
+      this._listeners[event] = this._listeners[event].filter(fn => fn !== cb);
+    }
+  };
+  _gameEvents.emit = function(event, data) {
+    if (this._listeners[event]) {
+      for (const cb of this._listeners[event]) {
+        cb(data);
+      }
+    }
+  };
+
+  // === GAME STATE ===
+  let moves = 0;
+  let currentTurn = "X";
+  let turnLabel = "X's turn";
+  let resultText = "";
+
+  // === ASSET LOADING ===
+  // No assets to preload
+
+  // === ANIMATION SYSTEM ===
+  // Animation System
+  const _animatedSprites = {};
+
+  function _parseFrames(spec) {
+    if (spec.includes('-')) {
+      const parts = spec.split('-').map(Number);
+      const result = [];
+      for (let i = parts[0]; i <= parts[1]; i += 1) {
+        result.push(i);
+      }
+      return result;
+    }
+    return spec.split(',').map(s => parseInt(s.trim(), 10));
+  }
+
+  function _registerAnimation(spriteId, texture, frameW, frameH, anims) {
+    if (!texture || !frameW || !frameH) {
+      return;
+    }
+    // PIXI v8: get texture source and dimensions
+    const baseTexture = texture.source || texture.baseTexture || texture;
+    const texW = texture.width || baseTexture.width || (texture.frame && texture.frame.width) || 0;
+    const texH = texture.height || baseTexture.height || (texture.frame && texture.frame.height) || 0;
+    if (!texW || !texH) {
+      console.warn('Animation failed for', spriteId, '- texture dimensions not found');
+      return;
+    }
+    const cols = Math.floor(texW / frameW);
+    const rows = Math.floor(texH / frameH);
+    const totalFrames = cols * rows;
+
+    // Build frame textures
+    const frameTextures = [];
+    for (let i = 0; i <= totalFrames - 1; i += 1) {
+      const fx = i % cols;
+      const fy = Math.floor(i / cols);
+      const rect = new PIXI.Rectangle(fx * frameW, fy * frameH, frameW, frameH);
+      const frameTex = new PIXI.Texture({ source: baseTexture, frame: rect });
+      frameTextures.push(frameTex);
+    }
+
+    // Parse named animations
+    const animDefs = {};
+    let defaultAnim = null;
+    for (const [name, cfg] of Object.entries(anims)) {
+      const frames = _parseFrames(cfg.frames);
+      const textures = frames.filter(f => f < frameTextures.length).map(f => frameTextures[f]);
+      if (textures.length > 0) {
+        animDefs[name] = { textures: textures, speed: cfg.speed || 0.1, loop: cfg.loop !== false };
+        if (cfg.autoPlay) {
+          defaultAnim = name;
+        }
+      }
+    }
+
+    if (Object.keys(animDefs).length === 0) {
+      return;
+    }
+
+    if (!defaultAnim) {
+      defaultAnim = Object.keys(animDefs)[0];
+    }
+
+    // Create animated sprite
+    const firstAnim = animDefs[defaultAnim];
+    const animSprite = new PIXI.AnimatedSprite(firstAnim.textures);
+    animSprite.animationSpeed = firstAnim.speed;
+    if (firstAnim.loop !== false) {
+      animSprite.loop = true;
+    }
+    animSprite.play();
+
+    // Copy transform from static sprite
+    const info = _sprites[spriteId];
+    if (info) {
+      const oldSprite = info.sprite;
+      animSprite.x = oldSprite.x;
+      animSprite.y = oldSprite.y;
+      animSprite.anchor.x = oldSprite.anchor ? oldSprite.anchor.x : 0.5;
+      animSprite.anchor.y = oldSprite.anchor ? oldSprite.anchor.y : 0.5;
+      animSprite.alpha = oldSprite.alpha;
+      animSprite.visible = oldSprite.visible;
+
+      // Replace in container
+      const parent = oldSprite.parent;
+      if (parent) {
+        const idx = parent.getChildIndex(oldSprite);
+        parent.removeChild(oldSprite);
+        parent.addChildAt(animSprite, idx);
+      }
+      info.sprite = animSprite;
+      _animatedSprites[spriteId] = { anims: animDefs, current: defaultAnim, sprite: animSprite };
+    }
+  }
+
+  function _switchAnimation(spriteId, animName) {
+    const entry = _animatedSprites[spriteId];
+    if (!entry || entry.current === animName || !entry.anims[animName]) {
+      return;
+    }
+    const anim = entry.anims[animName];
+    entry.sprite.textures = anim.textures;
+    entry.sprite.animationSpeed = anim.speed;
+    entry.sprite.loop = anim.loop !== false;
+    entry.sprite.gotoAndPlay(0);
+    entry.current = animName;
+  }
+
+  function _updateAnimatedSprites(ticker) {
+    for (const [spriteId, entry] of Object.entries(_animatedSprites)) {
+      if (entry.sprite && entry.sprite.playing) {
+        // PIXI v8: manually update animation using deltaMS
+        entry.sprite.update(ticker);
+      }
+    }
+  }
+
+  function _updateControlAnimations() {
+    for (const [spriteId, ctrl] of Object.entries(_controlledSprites)) {
+      const entry = _animatedSprites[spriteId];
+      if (!entry) {
+        continue;
+      }
+      const info = _sprites[spriteId];
+      if (!info || !info.body) {
+        continue;
+      }
+      const vx = Math.abs(info.body.velocity.x);
+      const vy = info.body.velocity.y;
+
+      // Priority: jump > walk > idle
+      if (Math.abs(vy) > 5 && entry.anims['jump']) {
+        _switchAnimation(spriteId, 'jump');
+      } else if (vx > 0.1 && _keys[ctrl.right] && entry.anims['walk-right']) {
+        _switchAnimation(spriteId, 'walk-right');
+      } else if (vx > 0.1 && _keys[ctrl.left] && entry.anims['walk-left']) {
+        _switchAnimation(spriteId, 'walk-left');
+      } else if (vx > 0.1 && (entry.anims['walk'] || entry.anims['walk-right'])) {
+        _switchAnimation(spriteId, entry.anims['walk'] ? 'walk' : 'walk-right');
+      } else if (entry.anims['idle']) {
+        _switchAnimation(spriteId, 'idle');
+      }
+    }
+  }
+
+  // === BEHAVIORS ===
+  class Cell {
+    constructor(owner, overrides) {
+      this.owner = owner;
+      this.mark = "";
+      if (overrides) Object.assign(this, overrides);
+    }
+    get x() { return this.owner.sprite.x; }
+    set x(v) { this.owner.sprite.x = v; }
+    get y() { return this.owner.sprite.y; }
+    set y(v) { this.owner.sprite.y = v; }
+    get rotation() { return this.owner.sprite.rotation; }
+    set rotation(v) { this.owner.sprite.rotation = v; }
+    get alpha() { return this.owner.sprite.alpha; }
+    set alpha(v) { this.owner.sprite.alpha = v; }
+    get visible() { return this.owner.sprite.visible; }
+    set visible(v) { this.owner.sprite.visible = v; }
+    onCellClick() {
+      if (this.mark === '' && currentTurn === 'X') {
+        this.mark = "X";
+        moves = moves + 1;
+        currentTurn = "O";
+        turnLabel = "O's turn";
+      }
+      if (this.mark === '' && currentTurn === 'O') {
+        this.mark = "O";
+        moves = moves + 1;
+        currentTurn = "X";
+        turnLabel = "X's turn";
+      }
+    }
+  }
+
+
+  // === CAMERA ===
+  const _cameraContainer = new PIXI.Container();
+  app.stage.addChild(_cameraContainer);
+  function updateCamera() {
+  }
+
+  // === VISUAL TILEMAPS ===
+  // No visual tile layers
+
+  // === SPRITES & BODIES ===
+  const _sprites = {};
+  const _bodyToSprite = {};
+  const _spr_c0 = new PIXI.Graphics();
+  _spr_c0.rect(-50.0, -50.0, 100.0, 100.0);
+  _spr_c0.fill({ color: 0x4a9eff });
+  _spr_c0.x = 50;
+  _spr_c0.y = 70;
+  _cameraContainer.addChild(_spr_c0);
+  _spr_c0.eventMode = 'static';
+  _spr_c0.cursor = "pointer";
+  _spr_c0.on('pointerdown', (e) => {
+    const _info = _sprites["c0"];
+    // Try behavior method first, then global function
+    let _handled = false;
+    if (_info && _info.behaviors) {
+      for (const _b of _info.behaviors) {
+        if (typeof _b.onCellClick === 'function') {
+          _b.onCellClick(e);
+          _handled = true;
+        }
+      }
+    }
+    if (!_handled && typeof onCellClick === 'function') {
+      onCellClick(_info, e);
+    }
+  });
+  _sprites["c0"] = { id: "c0", sprite: _spr_c0, body: null, tag: "cell", collisionHandlers: [], behaviors: [] };
+
+  const _spr_c1 = new PIXI.Graphics();
+  _spr_c1.rect(-50.0, -50.0, 100.0, 100.0);
+  _spr_c1.fill({ color: 0x4a9eff });
+  _spr_c1.x = 150;
+  _spr_c1.y = 70;
+  _cameraContainer.addChild(_spr_c1);
+  _spr_c1.eventMode = 'static';
+  _spr_c1.cursor = "pointer";
+  _spr_c1.on('pointerdown', (e) => {
+    const _info = _sprites["c1"];
+    // Try behavior method first, then global function
+    let _handled = false;
+    if (_info && _info.behaviors) {
+      for (const _b of _info.behaviors) {
+        if (typeof _b.onCellClick === 'function') {
+          _b.onCellClick(e);
+          _handled = true;
+        }
+      }
+    }
+    if (!_handled && typeof onCellClick === 'function') {
+      onCellClick(_info, e);
+    }
+  });
+  _sprites["c1"] = { id: "c1", sprite: _spr_c1, body: null, tag: "cell", collisionHandlers: [], behaviors: [] };
+
+  const _spr_c2 = new PIXI.Graphics();
+  _spr_c2.rect(-50.0, -50.0, 100.0, 100.0);
+  _spr_c2.fill({ color: 0x4a9eff });
+  _spr_c2.x = 250;
+  _spr_c2.y = 70;
+  _cameraContainer.addChild(_spr_c2);
+  _spr_c2.eventMode = 'static';
+  _spr_c2.cursor = "pointer";
+  _spr_c2.on('pointerdown', (e) => {
+    const _info = _sprites["c2"];
+    // Try behavior method first, then global function
+    let _handled = false;
+    if (_info && _info.behaviors) {
+      for (const _b of _info.behaviors) {
+        if (typeof _b.onCellClick === 'function') {
+          _b.onCellClick(e);
+          _handled = true;
+        }
+      }
+    }
+    if (!_handled && typeof onCellClick === 'function') {
+      onCellClick(_info, e);
+    }
+  });
+  _sprites["c2"] = { id: "c2", sprite: _spr_c2, body: null, tag: "cell", collisionHandlers: [], behaviors: [] };
+
+  const _spr_c3 = new PIXI.Graphics();
+  _spr_c3.rect(-50.0, -50.0, 100.0, 100.0);
+  _spr_c3.fill({ color: 0x4a9eff });
+  _spr_c3.x = 50;
+  _spr_c3.y = 170;
+  _cameraContainer.addChild(_spr_c3);
+  _spr_c3.eventMode = 'static';
+  _spr_c3.cursor = "pointer";
+  _spr_c3.on('pointerdown', (e) => {
+    const _info = _sprites["c3"];
+    // Try behavior method first, then global function
+    let _handled = false;
+    if (_info && _info.behaviors) {
+      for (const _b of _info.behaviors) {
+        if (typeof _b.onCellClick === 'function') {
+          _b.onCellClick(e);
+          _handled = true;
+        }
+      }
+    }
+    if (!_handled && typeof onCellClick === 'function') {
+      onCellClick(_info, e);
+    }
+  });
+  _sprites["c3"] = { id: "c3", sprite: _spr_c3, body: null, tag: "cell", collisionHandlers: [], behaviors: [] };
+
+  const _spr_c4 = new PIXI.Graphics();
+  _spr_c4.rect(-50.0, -50.0, 100.0, 100.0);
+  _spr_c4.fill({ color: 0x4a9eff });
+  _spr_c4.x = 150;
+  _spr_c4.y = 170;
+  _cameraContainer.addChild(_spr_c4);
+  _spr_c4.eventMode = 'static';
+  _spr_c4.cursor = "pointer";
+  _spr_c4.on('pointerdown', (e) => {
+    const _info = _sprites["c4"];
+    // Try behavior method first, then global function
+    let _handled = false;
+    if (_info && _info.behaviors) {
+      for (const _b of _info.behaviors) {
+        if (typeof _b.onCellClick === 'function') {
+          _b.onCellClick(e);
+          _handled = true;
+        }
+      }
+    }
+    if (!_handled && typeof onCellClick === 'function') {
+      onCellClick(_info, e);
+    }
+  });
+  _sprites["c4"] = { id: "c4", sprite: _spr_c4, body: null, tag: "cell", collisionHandlers: [], behaviors: [] };
+
+  const _spr_c5 = new PIXI.Graphics();
+  _spr_c5.rect(-50.0, -50.0, 100.0, 100.0);
+  _spr_c5.fill({ color: 0x4a9eff });
+  _spr_c5.x = 250;
+  _spr_c5.y = 170;
+  _cameraContainer.addChild(_spr_c5);
+  _spr_c5.eventMode = 'static';
+  _spr_c5.cursor = "pointer";
+  _spr_c5.on('pointerdown', (e) => {
+    const _info = _sprites["c5"];
+    // Try behavior method first, then global function
+    let _handled = false;
+    if (_info && _info.behaviors) {
+      for (const _b of _info.behaviors) {
+        if (typeof _b.onCellClick === 'function') {
+          _b.onCellClick(e);
+          _handled = true;
+        }
+      }
+    }
+    if (!_handled && typeof onCellClick === 'function') {
+      onCellClick(_info, e);
+    }
+  });
+  _sprites["c5"] = { id: "c5", sprite: _spr_c5, body: null, tag: "cell", collisionHandlers: [], behaviors: [] };
+
+  const _spr_c6 = new PIXI.Graphics();
+  _spr_c6.rect(-50.0, -50.0, 100.0, 100.0);
+  _spr_c6.fill({ color: 0x4a9eff });
+  _spr_c6.x = 50;
+  _spr_c6.y = 270;
+  _cameraContainer.addChild(_spr_c6);
+  _spr_c6.eventMode = 'static';
+  _spr_c6.cursor = "pointer";
+  _spr_c6.on('pointerdown', (e) => {
+    const _info = _sprites["c6"];
+    // Try behavior method first, then global function
+    let _handled = false;
+    if (_info && _info.behaviors) {
+      for (const _b of _info.behaviors) {
+        if (typeof _b.onCellClick === 'function') {
+          _b.onCellClick(e);
+          _handled = true;
+        }
+      }
+    }
+    if (!_handled && typeof onCellClick === 'function') {
+      onCellClick(_info, e);
+    }
+  });
+  _sprites["c6"] = { id: "c6", sprite: _spr_c6, body: null, tag: "cell", collisionHandlers: [], behaviors: [] };
+
+  const _spr_c7 = new PIXI.Graphics();
+  _spr_c7.rect(-50.0, -50.0, 100.0, 100.0);
+  _spr_c7.fill({ color: 0x4a9eff });
+  _spr_c7.x = 150;
+  _spr_c7.y = 270;
+  _cameraContainer.addChild(_spr_c7);
+  _spr_c7.eventMode = 'static';
+  _spr_c7.cursor = "pointer";
+  _spr_c7.on('pointerdown', (e) => {
+    const _info = _sprites["c7"];
+    // Try behavior method first, then global function
+    let _handled = false;
+    if (_info && _info.behaviors) {
+      for (const _b of _info.behaviors) {
+        if (typeof _b.onCellClick === 'function') {
+          _b.onCellClick(e);
+          _handled = true;
+        }
+      }
+    }
+    if (!_handled && typeof onCellClick === 'function') {
+      onCellClick(_info, e);
+    }
+  });
+  _sprites["c7"] = { id: "c7", sprite: _spr_c7, body: null, tag: "cell", collisionHandlers: [], behaviors: [] };
+
+  const _spr_c8 = new PIXI.Graphics();
+  _spr_c8.rect(-50.0, -50.0, 100.0, 100.0);
+  _spr_c8.fill({ color: 0x4a9eff });
+  _spr_c8.x = 250;
+  _spr_c8.y = 270;
+  _cameraContainer.addChild(_spr_c8);
+  _spr_c8.eventMode = 'static';
+  _spr_c8.cursor = "pointer";
+  _spr_c8.on('pointerdown', (e) => {
+    const _info = _sprites["c8"];
+    // Try behavior method first, then global function
+    let _handled = false;
+    if (_info && _info.behaviors) {
+      for (const _b of _info.behaviors) {
+        if (typeof _b.onCellClick === 'function') {
+          _b.onCellClick(e);
+          _handled = true;
+        }
+      }
+    }
+    if (!_handled && typeof onCellClick === 'function') {
+      onCellClick(_info, e);
+    }
+  });
+  _sprites["c8"] = { id: "c8", sprite: _spr_c8, body: null, tag: "cell", collisionHandlers: [], behaviors: [] };
+
+
+  function syncPhysics() {
+    for (const [id, info] of Object.entries(_sprites)) {
+      if (info.body && !info.body.isStatic) {
+        info.sprite.x = info.body.position.x;
+        info.sprite.y = info.body.position.y;
+        info.sprite.rotation = info.body.angle;
+      }
+    }
+  }
+
+  // === TILEMAP COLLISION ===
+  // Tilemap Collision System
+  const _collisionGrids = [];
+
+  function _resolveTilemapCollisions() {
+    for (const cg of _collisionGrids) {
+      const grid = cg.grid, tw = cg.tw, th = cg.th;
+      for (const [id, info] of Object.entries(_sprites)) {
+        if (!info.body || info.body.isStatic) continue;
+        const body = info.body;
+        const bw = body.bounds.max.x - body.bounds.min.x;
+        const bh = body.bounds.max.y - body.bounds.min.y;
+        const hw = bw / 2, hh = bh / 2;
+        let bx = body.position.x, by = body.position.y;
+  
+        // Vertical resolution first (landing/ceiling)
+        const vy = body.velocity.y;
+        const minCol = Math.floor((bx - hw + 2) / tw);
+        const maxCol = Math.floor((bx + hw - 2) / tw);
+  
+        if (vy >= 0) {
+          // Falling or on ground — check below
+          const footRow = Math.floor((by + hh) / th);
+          if (footRow >= 0 && footRow < grid.length) {
+            for (let c = minCol; c <= maxCol; c++) {
+              if (c >= 0 && c < (grid[footRow] || []).length && grid[footRow][c]) {
+                const tileTop = footRow * th;
+                if (by + hh > tileTop && by + hh < tileTop + th) {
+                  by = tileTop - hh;
+                  Matter.Body.setPosition(body, { x: bx, y: by });
+                  Matter.Body.setVelocity(body, { x: body.velocity.x, y: 0 });
+                  body._onGround = true;
+                  break;
+                }
+              }
+            }
+          }
+        } else {
+          // Rising — check above
+          const headRow = Math.floor((by - hh) / th);
+          if (headRow >= 0 && headRow < grid.length) {
+            for (let c = minCol; c <= maxCol; c++) {
+              if (c >= 0 && c < (grid[headRow] || []).length && grid[headRow][c]) {
+                const tileBottom = (headRow + 1) * th;
+                if (by - hh < tileBottom && by - hh > tileBottom - th) {
+                  by = tileBottom + hh;
+                  Matter.Body.setPosition(body, { x: bx, y: by });
+                  Matter.Body.setVelocity(body, { x: body.velocity.x, y: 0 });
+                  break;
+                }
+              }
+            }
+          }
+        }
+  
+        // Horizontal resolution (walls) with step-up support
+        const vx = body.velocity.x;
+        if (Math.abs(vx) > 0.1) {
+          // Check the column the body is moving into
+          const frontX = vx > 0 ? bx + hw : bx - hw;
+          const frontCol = Math.floor(frontX / tw);
+          const topRow = Math.floor((by - hh + 2) / th);
+          const botRow = Math.floor((by + hh - 2) / th);
+  
+          let blocked = false;
+          for (let r = topRow; r <= botRow; r++) {
+            if (r >= 0 && r < grid.length && frontCol >= 0 && frontCol < (grid[r] || []).length && grid[r][frontCol]) {
+              blocked = true;
+              break;
+            }
+          }
+  
+          if (blocked) {
+            // Check for step-up: is the tile just at foot level?
+            // If only the bottom row is blocked and the row above is clear, step up
+            const stepRow = botRow;
+            const aboveRow = stepRow - 1;
+            const onlyFootBlocked = (
+              stepRow >= 0 && stepRow < grid.length && frontCol >= 0 &&
+              grid[stepRow] && grid[stepRow][frontCol] &&
+              (aboveRow < 0 || !grid[aboveRow] || !grid[aboveRow][frontCol])
+            );
+  
+            if (onlyFootBlocked) {
+              // Step up: move body to top of the blocking tile
+              const stepTop = stepRow * th;
+              const newY = stepTop - hh;
+              if (by - newY <= th) { // Only step up one tile height max
+                Matter.Body.setPosition(body, { x: bx, y: newY });
+                by = newY;
+              }
+            } else {
+              // Full wall — block horizontal movement
+              if (vx > 0) {
+                Matter.Body.setPosition(body, { x: frontCol * tw - hw, y: by });
+              } else {
+                Matter.Body.setPosition(body, { x: (frontCol + 1) * tw + hw, y: by });
+              }
+              Matter.Body.setVelocity(body, { x: 0, y: body.velocity.y });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // No tilemap collision grids
+
+  // === GAME API ===
+  // Game API
+  const game = { camera: {} };
+
+  game.destroy = function(info) {
+    if (!info) {
+      return;
+    }
+    // Find sprite id
+    let spriteId = null;
+    for (const [id, entry] of Object.entries(_sprites)) {
+      if (entry === info || entry.sprite === info) {
+        spriteId = id;
+        break;
+      }
+    }
+    if (!spriteId) {
+      return;
+    }
+    const entry = _sprites[spriteId];
+    if (entry.sprite && entry.sprite.parent) {
+      entry.sprite.parent.removeChild(entry.sprite);
+    }
+    if (entry.body) {
+      Matter.Composite.remove(mWorld, entry.body);
+    }
+    delete _sprites[spriteId];
+  };
+
+  game.play = function(soundId, opts) {
+    if (typeof _playSound === 'function') {
+      return _playSound(soundId, opts);
+    }
+  };
+
+  game.stop = function(soundId) {
+    if (typeof _stopSound === 'function') {
+      _stopSound(soundId);
+    }
+  };
+
+  game.emit = function(info, event) {
+    _gameEvents.emit(event, info);
+    if (info && info.tag) {
+      _gameEvents.emit(info.tag + '.' + event, info);
+    }
+  };
+
+  game.loadScene = function(name) {
+    if (typeof _loadScene === 'function') {
+      _loadScene(name);
+    }
+  };
+
+  game.respawn = function(id, x, y) {
+    const info = _sprites[id];
+    if (!info) {
+      return;
+    }
+    if (info.sprite) {
+      info.sprite.x = x;
+      info.sprite.y = y;
+      info.sprite.visible = true;
+    }
+    if (info.body) {
+      Matter.Body.setPosition(info.body, { x: x, y: y });
+      Matter.Body.setVelocity(info.body, { x: 0, y: 0 });
+    }
+  };
+
+  game.destroyGroup = function(groupName) {
+    const toRemove = [];
+    for (const [id, info] of Object.entries(_sprites)) {
+      if (info.group === groupName) {
+        toRemove.push(info);
+      }
+    }
+    for (const info of toRemove) {
+      game.destroy(info);
+    }
+  };
+
+  game.moveX = function(info, dx) {
+    if (info && info.body) {
+      Matter.Body.setVelocity(info.body, { x: dx, y: info.body.velocity.y });
+    }
+  };
+
+  game.moveToward = function(info, targetId, speed) {
+    if (!info || !info.body) {
+      return;
+    }
+    const target = _sprites[targetId];
+    if (!target) {
+      return;
+    }
+    const dx = target.sprite.x - info.sprite.x;
+    const dy = target.sprite.y - info.sprite.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 1) {
+      return;
+    }
+    Matter.Body.setVelocity(info.body, { x: (dx / dist) * speed, y: (dy / dist) * speed });
+  };
+
+  game.patrol = function(info, speed) {
+    game.moveX(info, speed);
+  };
+
+  game.camera.shake = function(intensity, duration) {
+    let _shakeFrames = Math.floor((duration || 0.3) * 60);
+    const _shakeIntensity = intensity || 5;
+    const origX = _cameraContainer.x;
+    const origY = _cameraContainer.y;
+    const _shakeTick = () => {
+      if (_shakeFrames <= 0) {
+        _cameraContainer.x = origX;
+        _cameraContainer.y = origY;
+        return;
+      }
+      _cameraContainer.x = origX + (Math.random() - 0.5) * _shakeIntensity * 2;
+      _cameraContainer.y = origY + (Math.random() - 0.5) * _shakeIntensity * 2;
+      _shakeFrames--;
+      requestAnimationFrame(_shakeTick);
+    };
+    _shakeTick();
+  };
+
+  game.spawn = function(id) {
+    if (typeof _spawn === 'function') {
+      _spawn(id);
+    }
+  };
+
+  game.hitBlock = function(blockInfo, usedTextureSrc, coinTextureSrc, frameW, frameH) {
+    if (!blockInfo || blockInfo._blockUsed) {
+      return;
+    }
+    blockInfo._blockUsed = true;
+
+    // Change block texture to used
+    if (blockInfo.sprite && usedTextureSrc) {
+      const usedTex = PIXI.Assets.get(usedTextureSrc);
+      if (usedTex) {
+        // Stop animation if playing
+        if (blockInfo.sprite.stop) {
+          blockInfo.sprite.stop();
+        }
+        // Get first frame of used texture
+        const fw = frameW || 16;
+        const fh = frameH || 16;
+        const src = usedTex.source || usedTex.baseTexture || usedTex;
+        const rect = new PIXI.Rectangle(0, 0, fw, fh);
+        const frameTex = new PIXI.Texture({ source: src, frame: rect });
+        // Replace with static sprite
+        const newSprite = new PIXI.Sprite(frameTex);
+        newSprite.anchor.set(0.5);
+        newSprite.x = blockInfo.sprite.x;
+        newSprite.y = blockInfo.sprite.y;
+        const parent = blockInfo.sprite.parent;
+        if (parent) {
+          parent.removeChild(blockInfo.sprite);
+          parent.addChild(newSprite);
+        }
+        blockInfo.sprite = newSprite;
+      }
+    }
+
+    // Spawn coin effect above block
+    if (coinTextureSrc) {
+      const coinTex = PIXI.Assets.get(coinTextureSrc);
+      if (coinTex) {
+        const cfw = frameW || 16;
+        const cfh = frameH || 16;
+        const csrc = coinTex.source || coinTex.baseTexture || coinTex;
+        // Create animated coin with 4 frames
+        const coinFrames = [];
+        for (let i = 0; i < 4; i++) {
+          const crect = new PIXI.Rectangle(i * cfw, 0, cfw, cfh);
+          coinFrames.push(new PIXI.Texture({ source: csrc, frame: crect }));
+        }
+        const coinSprite = new PIXI.AnimatedSprite(coinFrames);
+        coinSprite.anchor.set(0.5);
+        coinSprite.x = blockInfo.sprite.x;
+        coinSprite.y = blockInfo.sprite.y - 20;
+        coinSprite.animationSpeed = 0.15;
+        coinSprite.play();
+        _cameraContainer.addChild(coinSprite);
+
+        // Animate coin going up and fading
+        let coinY = coinSprite.y;
+        let coinFrame = 0;
+        const coinAnim = () => {;
+          coinFrame++;
+          coinY = coinY - 2;
+          coinSprite.y = coinY;
+          coinSprite.alpha = 1 - (coinFrame / 30);
+          if (coinFrame < 30) {
+            requestAnimationFrame(coinAnim);
+          } else {
+            coinSprite.destroy();
+          }
+        };
+        coinAnim();
+      }
+    }
+  };
+
+  game.spawnPowerUp = function(blockInfo, textureSrc, moveSpeed) {
+    if (!blockInfo || !blockInfo.sprite) {
+      return;
+    }
+    const tex = PIXI.Assets.get(textureSrc);
+    if (!tex) {
+      console.warn('PowerUp texture not loaded:', textureSrc);
+      return;
+    }
+
+    // Create mushroom sprite
+    const mushSprite = new PIXI.Sprite(tex);
+    mushSprite.anchor.set(0.5);
+    mushSprite.x = blockInfo.sprite.x;
+    mushSprite.y = blockInfo.sprite.y - 16;
+    _cameraContainer.addChild(mushSprite);
+
+    // Create physics body for mushroom (no rotation)
+    const mushBody = Matter.Bodies.rectangle(mushSprite.x, mushSprite.y, 14, 14, { friction: 0, frictionAir: 0, restitution: 0, inertia: Infinity, label: 'mushroom' });
+    Matter.Composite.add(mWorld, mushBody);
+
+    // Register mushroom in sprites
+    const mushId = 'powerup_' + Date.now();
+    const mushInfo = { id: mushId, sprite: mushSprite, body: mushBody, tag: "powerup", _isPowerUp: true, behaviors: [], collisionHandlers: [] };
+    _sprites[mushId] = mushInfo;
+    _bodyToSprite[mushBody.id] = mushId;
+
+    // Start mushroom rising animation then walking
+    let riseFrames = 0;
+    const spd = moveSpeed || 1.5;
+    const riseAnim = () => {;
+      riseFrames++;
+      if (riseFrames < 16) {
+        // Rising from block
+        mushSprite.y = mushSprite.y - 1;
+        Matter.Body.setPosition(mushBody, { x: mushSprite.x, y: mushSprite.y });
+        requestAnimationFrame(riseAnim);
+      } else {
+        // Start walking
+        Matter.Body.setVelocity(mushBody, { x: spd, y: 0 });
+      }
+    };
+    riseAnim();
+  };
+
+  game.powerUpPlayer = function(playerId, bigSpriteSrc, frameW, frameH) {
+    const playerInfo = _sprites[playerId];
+    if (!playerInfo || playerInfo._isBig) {
+      return;
+    }
+    playerInfo._isBig = true;
+
+    const bigTex = PIXI.Assets.get(bigSpriteSrc);
+    if (!bigTex) {
+      console.warn('Big sprite not loaded:', bigSpriteSrc);
+      return;
+    }
+
+    // Extract frame textures from spritesheet
+    const fw = frameW || 16;
+    const fh = frameH || 32;
+    const src = bigTex.source || bigTex.baseTexture || bigTex;
+
+    // Create textures for each frame
+    const allFrames = [];
+    for (let i = 0; i < 5; i++) {
+      const rect = new PIXI.Rectangle(i * fw, 0, fw, fh);
+      allFrames.push(new PIXI.Texture({ source: src, frame: rect }));
+    }
+
+    // Create animation sets: idle(0), walk(1-3), jump(4)
+    const idleFrames = [allFrames[0]];
+    const walkFrames = [allFrames[1], allFrames[2], allFrames[3]];
+    const jumpFrames = [allFrames[4]];
+
+    // Create animated sprite starting with idle
+    const bigSprite = new PIXI.AnimatedSprite(idleFrames);
+    bigSprite.anchor.set(0.5);
+    bigSprite.x = playerInfo.sprite.x;
+    bigSprite.y = playerInfo.sprite.y - 4;
+    bigSprite.scale.x = playerInfo.sprite.scale.x;
+    bigSprite.animationSpeed = 0.15;
+    bigSprite.loop = true;
+    bigSprite.play();
+
+    // Replace sprite in scene
+    const parent = playerInfo.sprite.parent;
+    if (parent) {
+      parent.removeChild(playerInfo.sprite);
+      parent.addChild(bigSprite);
+    }
+    playerInfo.sprite = bigSprite;
+
+    // Update physics body size for big player
+    if (playerInfo.body) {
+      const pos = playerInfo.body.position;
+      Matter.Composite.remove(mWorld, playerInfo.body);
+      const newBody = Matter.Bodies.rectangle(pos.x, pos.y - 4, 14, 30, { friction: 0, frictionAir: 0, inertia: Infinity, label: 'player' });
+      Matter.Composite.add(mWorld, newBody);
+      delete _bodyToSprite[playerInfo.body.id];
+      playerInfo.body = newBody;
+      _bodyToSprite[newBody.id] = playerId;
+    }
+
+    // Register animations in the animation system
+    _animatedSprites[playerId] = {
+      sprite: bigSprite,
+      current: 'idle',
+      anims: {
+        idle: { textures: idleFrames, speed: 0.1, loop: true },
+        walk: { textures: walkFrames, speed: 0.18, loop: true },
+        jump: { textures: jumpFrames, speed: 0.1, loop: false }
+      }
+    };
+  };
+
+  game.setPatrolAI = function(patrollerId, speed) {
+    const info = _sprites[patrollerId];
+    if (!info || !info.body) {
+      return;
+    }
+
+    // Store the movement speed
+    info._patrolSpeed = speed;
+    info._patrolDir = speed < 0 ? -1 : 1;
+
+    // Add update behavior for patroller AI
+    if (!info.behaviors) {
+      info.behaviors = [];
+    }
+    info.behaviors.push({
+      update: function() {
+        // Skip if game is paused
+        if (game._paused) return;
+        const gInfo = _sprites[patrollerId];
+        if (!gInfo || !gInfo.body) return;
+
+        // Apply constant horizontal velocity
+        const currentSpeed = Math.abs(gInfo._patrolSpeed) * gInfo._patrolDir;
+        Matter.Body.setVelocity(gInfo.body, { x: currentSpeed, y: gInfo.body.velocity.y });
+
+        // Flip sprite based on direction
+        if (gInfo.sprite) {
+          gInfo.sprite.scale.x = gInfo._patrolDir > 0 ? -1 : 1;
+        }
+      }
+    });
+
+    // Listen for collisions to change direction (lateral only)
+    if (!info.collisionHandlers) {
+      info.collisionHandlers = [];
+    }
+    info.collisionHandlers.push(function(self, other) {
+      const gInfo = _sprites[patrollerId];
+      if (!gInfo || !gInfo.body || !other.body) return;
+
+      // Only react to terrain/walls, not players or other enemies
+      const isWall = other.tag === 'terrain' || other.tag === 'tilemap-collision' || other.tag === 'wall' || other.tag === 'item_block';
+      if (!isWall) return;
+
+      // Use body bounds to detect lateral vs vertical contact
+      const gb = gInfo.body.bounds;
+      const ob = other.body.bounds;
+      const overlapX = Math.min(gb.max.x, ob.max.x) - Math.max(gb.min.x, ob.min.x);
+      const overlapY = Math.min(gb.max.y, ob.max.y) - Math.max(gb.min.y, ob.min.y);
+      // Lateral collision: small horizontal overlap, larger vertical overlap
+      if (overlapX > 0 && overlapY > 0 && overlapX < overlapY) {
+        // Cooldown to prevent rapid flipping
+        const now = Date.now();
+        if (!gInfo._lastFlipTime || now - gInfo._lastFlipTime > 200) {
+          gInfo._patrolDir *= -1;
+          gInfo._lastFlipTime = now;
+        }
+      }
+    });
+  };
+
+
+  game.destroySprite = function(spriteId) {
+    const info = _sprites[spriteId];
+    if (!info) {
+      return;
+    }
+
+    // Remove physics body
+    if (info.body) {
+      Matter.Composite.remove(mWorld, info.body);
+      delete _bodyToSprite[info.body.id];
+    }
+
+    // Remove sprite from display
+    if (info.sprite && info.sprite.parent) {
+      info.sprite.parent.removeChild(info.sprite);
+    }
+
+    // Remove from animated sprites
+    delete _animatedSprites[spriteId];
+
+    // Remove from sprites registry
+    delete _sprites[spriteId];
+  };
+
+  game.pause = function() {
+    game._paused = true;
+    // Stop physics engine
+    mEngine.timing.timeScale = 0;
+    // Stop all animated sprites
+    for (const id in _animatedSprites) {
+      const anim = _animatedSprites[id];
+      if (anim && anim.sprite && anim.sprite.stop) anim.sprite.stop();
+    }
+    // Store velocities and stop all bodies
+    game._savedVelocities = {};
+    for (const id in _sprites) {
+      const info = _sprites[id];
+      if (info.body) {
+        game._savedVelocities[id] = { x: info.body.velocity.x, y: info.body.velocity.y };
+        Matter.Body.setVelocity(info.body, { x: 0, y: 0 });
+      }
+    }
+  };
+
+  game.resume = function() {
+    game._paused = false;
+    // Resume physics engine
+    mEngine.timing.timeScale = 1;
+    // Resume all animated sprites
+    for (const id in _animatedSprites) {
+      const anim = _animatedSprites[id];
+      if (anim && anim.sprite && anim.sprite.play) anim.sprite.play();
+    }
+    // Restore velocities
+    if (game._savedVelocities) {
+      for (const id in game._savedVelocities) {
+        const info = _sprites[id];
+        if (info && info.body) {
+          Matter.Body.setVelocity(info.body, game._savedVelocities[id]);
+        }
+      }
+    }
+  };
+
+  game.playSound = function(soundId, opts) {
+    _playSound(soundId, opts || {});
+  };
+
+  game.stopSound = function(soundId) {
+    if (_activeSources[soundId]) {
+      _activeSources[soundId].stop();
+      delete _activeSources[soundId];
+    }
+  };
+
+  game.stopAllSounds = function() {
+    for (const id in _activeSources) {
+      _activeSources[id].stop();
+      delete _activeSources[id];
+    }
+  };
+
+  game.irisIn = function(callback, duration) {
+    duration = duration || 30;
+    const overlay = new PIXI.Graphics();
+    overlay.zIndex = 9999;
+    app.stage.addChild(overlay);
+    app.stage.sortChildren();
+    let frame = 0;
+    const centerX = app.screen.width / 2;
+    const centerY = app.screen.height / 2;
+    const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY) + 50;
+    const animate = () => {
+      frame++;
+      const t = frame / duration;
+      const radius = maxRadius * t;
+      overlay.clear();
+      overlay.rect(0, 0, app.screen.width, app.screen.height);
+      overlay.fill(0x000000);
+      overlay.circle(centerX, centerY, radius);
+      overlay.cut();
+      if (frame < duration) {
+        requestAnimationFrame(animate);
+      } else {
+        app.stage.removeChild(overlay);
+        if (callback) callback();
+      }
+    };
+    animate();
+  };
+
+  game.irisOut = function(callback, duration) {
+    duration = duration || 30;
+    const overlay = new PIXI.Graphics();
+    overlay.zIndex = 9999;
+    app.stage.addChild(overlay);
+    app.stage.sortChildren();
+    let frame = 0;
+    const centerX = app.screen.width / 2;
+    const centerY = app.screen.height / 2;
+    const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY) + 50;
+    const animate = () => {
+      frame++;
+      const t = 1 - (frame / duration);
+      const radius = maxRadius * t;
+      overlay.clear();
+      overlay.rect(0, 0, app.screen.width, app.screen.height);
+      overlay.fill(0x000000);
+      if (radius > 0) {
+        overlay.circle(centerX, centerY, radius);
+        overlay.cut();
+      }
+      if (frame < duration) {
+        requestAnimationFrame(animate);
+      } else {
+        if (callback) callback();
+      }
+    };
+    animate();
+  };
+
+  game.killPlayer = function(playerId, deathSpriteSrc) {
+    const info = _sprites[playerId];
+    if (!info || info._isDying) {
+      return;
+    }
+    info._isDying = true;
+
+    // Pause game and stop background music
+    game.pause();
+    game.stopSound('bgm-level');
+
+    // Swap to death sprite if provided
+    const deathSrc = deathSpriteSrc || 'assets/classic/sprites/hero_death.png';
+    const deathTex = PIXI.Assets.get(deathSrc);
+    if (deathTex) {
+      // Store original sprite and create death sprite
+      info._originalSprite = info.sprite;
+      const deathSprite = PIXI.Sprite.from(deathTex);
+      deathSprite.anchor.set(0.5);
+      deathSprite.x = info.sprite.x;
+      deathSprite.y = info.sprite.y;
+      const parent = info.sprite.parent;
+      if (parent) {
+        parent.removeChild(info.sprite);
+        parent.addChild(deathSprite);
+      }
+      info.sprite = deathSprite;
+    }
+
+    // Remove Hero from physics (so he can do death animation)
+    if (info.body) {
+      Matter.Composite.remove(mWorld, info.body);
+      delete _bodyToSprite[info.body.id];
+      info._deathBody = info.body;
+      info.body = null;
+    }
+
+    // Death animation - Hero jumps up then falls (slower, wait for sound)
+    let deathY = info.sprite.y;
+    let deathVelY = -4;
+    let deathFrame = 0;
+    let waitFrames = 0;
+    const deathAnim = () => {;
+      deathFrame++;
+
+      // First phase: jump up and fall
+      if (deathY < 600) {
+        deathVelY += 0.15;
+        deathY += deathVelY;
+        info.sprite.y = deathY;
+        requestAnimationFrame(deathAnim);
+      } else {
+        // Second phase: wait for death sound to finish (~4 seconds = 240 frames)
+        waitFrames++;
+        if (waitFrames < 240) {
+          requestAnimationFrame(deathAnim);
+        } else {
+          // Death animation complete - emit event
+          _gameEvents.emit('death-animation-complete', { playerId: playerId });
+        }
+      }
+    };
+    requestAnimationFrame(deathAnim);
+  };
+
+  // === BEHAVIOR ATTACHMENTS ===
+  _sprites["c0"].behaviors.push(new Cell(_sprites["c0"], {}));
+  _sprites["c1"].behaviors.push(new Cell(_sprites["c1"], {}));
+  _sprites["c2"].behaviors.push(new Cell(_sprites["c2"], {}));
+  _sprites["c3"].behaviors.push(new Cell(_sprites["c3"], {}));
+  _sprites["c4"].behaviors.push(new Cell(_sprites["c4"], {}));
+  _sprites["c5"].behaviors.push(new Cell(_sprites["c5"], {}));
+  _sprites["c6"].behaviors.push(new Cell(_sprites["c6"], {}));
+  _sprites["c7"].behaviors.push(new Cell(_sprites["c7"], {}));
+  _sprites["c8"].behaviors.push(new Cell(_sprites["c8"], {}));
+  // Init state machines
+  for (const [_id, _info] of Object.entries(_sprites)) {
+    for (const b of _info.behaviors) {
+      if (b._smInit) {
+        b._smInit();
+      }
+    }
+  }
+
+  // === SEMANTIC BEHAVIORS ===
+  // no semantic behaviors
+
+  // === ANIMATION REGISTRATION ===
+  // no animations to register
+
+  // === INPUT ===
+  const _keys = {};
+  const _justPressed = {};
+  window.addEventListener('keydown', (e) => {
+    if (!_keys[e.key]) _justPressed[e.key] = true;
+    _keys[e.key] = true;
+  });
+  window.addEventListener('keyup', (e) => {
+    _keys[e.key] = false;
+  });
+  function _clearJustPressed() {
+    for (const k in _justPressed) delete _justPressed[k];
+  }
+  const _controlledSprites = {};
+
+  // === MOUSE ===
+  // Mouse System
+  let _mouseX = 0;
+  let _mouseY = 0;
+  let _mouseWorldX = 0;
+  let _mouseWorldY = 0;
+  app.canvas.addEventListener('pointermove', (e) => {
+    const rect = app.canvas.getBoundingClientRect();
+    _mouseX = e.clientX - rect.left;
+    _mouseY = e.clientY - rect.top;
+    // Convert to world coordinates (accounting for camera)
+    _mouseWorldX = _mouseX - _cameraContainer.x;
+    _mouseWorldY = _mouseY - _cameraContainer.y;
+  });
+
+  // === FUNCTIONS ===
+  // no functions
+
+  // === COLLISIONS ===
+  // no collision handlers
+
+  // === SOUNDS ===
+  // No sounds
+
+  // === PARTICLES ===
+  // Particle System
+  const _particleSystems = {};
+
+  function _createParticleSystem(config) {
+    const ps = {
+      id: config.id,
+      follow: config.follow || null,
+      trigger: config.trigger || null,
+      count: config.count || 20,
+      emitRate: config.emitRate || 10,
+      lifetime: config.lifetime || 1,
+      speedMin: config.speedMin || 1,
+      speedMax: config.speedMax || 3,
+      angleMin: (config.angleMin || 0) * Math.PI / 180,
+      angleMax: (config.angleMax || 360) * Math.PI / 180,
+      alphaStart: config.alphaStart !== undefined ? config.alphaStart : 1,
+      alphaEnd: config.alphaEnd !== undefined ? config.alphaEnd : 0,
+      active: false,
+      emitTimer: 0,
+      pool: [],
+      container: new PIXI.Container(),
+    };
+
+    // Pre-allocate particle pool
+    for (let i = 0; i <= ps.count - 1; i += 1) {
+      const p = new PIXI.Graphics();
+      p.circle(0, 0, 3);
+      p.fill({ color: 0xffffff });
+      p.visible = false;
+      p._life = 0; p._maxLife = 0; p._vx = 0; p._vy = 0;
+      p._alphaStart = 1; p._alphaEnd = 0;
+      ps.container.addChild(p);
+      ps.pool.push(p);
+    }
+
+    _cameraContainer.addChild(ps.container);
+    _particleSystems[config.id] = ps;
+    return ps;
+  }
+
+  function _emitParticle(ps, x, y) {
+    for (const p of ps.pool) {
+      if (!p.visible) {
+        p.x = x;
+        p.y = y;
+        const angle = ps.angleMin + Math.random() * (ps.angleMax - ps.angleMin);
+        const speed = ps.speedMin + Math.random() * (ps.speedMax - ps.speedMin);
+        p._vx = Math.cos(angle) * speed;
+        p._vy = Math.sin(angle) * speed;
+        p._life = 0;
+        p._maxLife = ps.lifetime;
+        p._alphaStart = ps.alphaStart;
+        p._alphaEnd = ps.alphaEnd;
+        p.alpha = ps.alphaStart;
+        p.visible = true;
+        return;
+      }
+    }
+  }
+
+  function _activateParticles(psId) {
+    const ps = _particleSystems[psId];
+    if (ps) {
+      ps.active = true;
+    }
+  }
+
+  function _deactivateParticles(psId) {
+    const ps = _particleSystems[psId];
+    if (ps) {
+      ps.active = false;
+    }
+  }
+
+  function _updateParticles(dt) {
+    for (const [id, ps] of Object.entries(_particleSystems)) {
+      // Emit new particles if active
+      if (ps.active) {
+        ps.emitTimer += dt / 60;
+        const interval = 1 / ps.emitRate;
+        while (ps.emitTimer >= interval) {
+          ps.emitTimer -= interval;
+          let ex = 0;
+          let ey = 0;
+          if (ps.follow) {
+            const info = _sprites[ps.follow];
+            if (info) {
+              ex = info.sprite.x;
+              ey = info.sprite.y;
+            }
+          }
+          _emitParticle(ps, ex, ey);
+        }
+      }
+
+      // Update living particles
+      for (const p of ps.pool) {
+        if (!p.visible) {
+          continue;
+        }
+        p._life += dt / 60;
+        if (p._life >= p._maxLife) {
+          p.visible = false;
+          continue;
+        }
+        const lifeT = p._life / p._maxLife;
+        p.x = p.x + p._vx;
+        p.y = p.y + p._vy;
+        p.alpha = p._alphaStart + (p._alphaEnd - p._alphaStart) * lifeT;
+      }
+    }
+  }
+  // No particle instances
+
+  // === TIMERS ===
+  // Timer System
+  const _timers = {};
+  const _timerActions = {};
+
+  function _createTimer(id, interval, repeat, autoStart, actionFn) {
+    _timers[id] = { elapsed: 0, interval: interval, repeat: repeat, count: 0, active: autoStart };
+    _timerActions[id] = actionFn;
+  }
+
+  function _updateTimers(dt) {
+    for (const [tid, t] of Object.entries(_timers)) {
+      if (!t.active) {
+        continue;
+      }
+      t.elapsed += dt / 60;
+      if (t.elapsed >= t.interval) {
+        t.elapsed = 0;
+        if (_timerActions[tid]) {
+          _timerActions[tid]();
+        }
+        t.count++;
+        if (t.repeat >= 0 && t.count >= t.repeat) {
+          t.active = false;
+        }
+      }
+    }
+  }
+  // No timer instances
+
+  // === TWEENS ===
+  // Easing Functions
+  const _easing = {
+    linear: t => t,
+    easeIn: t => t * t,
+    easeOut: t => t * (2 - t),
+    easeInOut: t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+    easeInCubic: t => t * t * t,
+    easeOutCubic: t => (--t) * t * t + 1,
+    easeInOutCubic: t => t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1,
+    easeInQuart: t => t * t * t * t,
+    easeOutQuart: t => 1 - (--t) * t * t * t,
+    easeInOutQuart: t => t < 0.5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t,
+    easeOutBounce: t => {
+      if (t < 1/2.75) return 7.5625 * t * t;
+      if (t < 2/2.75) return 7.5625 * (t -= 1.5/2.75) * t + 0.75;
+      if (t < 2.5/2.75) return 7.5625 * (t -= 2.25/2.75) * t + 0.9375;
+      return 7.5625 * (t -= 2.625/2.75) * t + 0.984375;
+    },
+    easeInBounce: t => 1 - _easing.easeOutBounce(1 - t),
+    easeOutElastic: t => {
+      if (t === 0 || t === 1) return t;
+      return Math.pow(2, -10 * t) * Math.sin((t - 0.075) * (2 * Math.PI) / 0.3) + 1;
+    },
+    easeInElastic: t => {
+      if (t === 0 || t === 1) return t;
+      return -Math.pow(2, 10 * (t - 1)) * Math.sin((t - 1.075) * (2 * Math.PI) / 0.3);
+    },
+  };
+
+  const _tweens = {};
+  let _tweenIdCounter = 0;
+
+  function _createTween(config) {
+    const id = config.id || ('tween_' + _tweenIdCounter++);
+    _tweens[id] = {
+      target: config.target,
+      prop: config.prop,
+      from: null,
+      to: config.to,
+      duration: config.duration || 1,
+      easing: config.easing || 'linear',
+      loop: !!config.loop,
+      yoyo: !!config.yoyo,
+      delay: config.delay || 0,
+      elapsed: 0,
+      delayElapsed: 0,
+      active: config.active !== false,
+      started: false,
+    };
+    return id;
+  }
+
+  function _updateTweens(dt) {
+    for (const [tid, tw] of Object.entries(_tweens)) {
+      if (!tw.active) {
+        continue;
+      }
+      // Handle delay
+      if (tw.delayElapsed < tw.delay) {
+        tw.delayElapsed += dt / 60;
+        continue;
+      }
+      // Init start value on first frame
+      if (!tw.started) {
+        const info = _sprites[tw.target];
+        if (!info) {
+          continue;
+        }
+        tw.from = info.sprite[tw.prop];
+        tw.started = true;
+      }
+      tw.elapsed += dt / 60;
+      const rawT = Math.min(tw.elapsed / tw.duration, 1);
+      const easeFn = _easing[tw.easing] || _easing.linear;
+      const t = easeFn(rawT);
+      const info = _sprites[tw.target];
+      if (info) {
+        info.sprite[tw.prop] = tw.from + (tw.to - tw.from) * t;
+      }
+      if (rawT >= 1) {
+        if (tw.loop) {
+          tw.elapsed = 0;
+          if (tw.yoyo) {
+            const tmp = tw.from;
+            tw.from = tw.to;
+            tw.to = tmp;
+          }
+        } else {
+          tw.active = false;
+        }
+      }
+    }
+  }
+  // No tween instances
+
+  // === SPAWNERS ===
+  // No spawners
+
+  // === HUD UPDATE ===
+  const _hudElements = [];
+  _hudElements.push(document.getElementById('qg-hud-0'));
+  _hudElements.push(document.getElementById('qg-hud-1'));
+  function _updateHUD() {
+  }
+
+  // === GAME LOOP ===
+  app.ticker.add((ticker) => {
+    const dt = ticker.deltaTime;
+    // Sub-step physics with velocity clamping to prevent tunneling
+    const _fixedDt = 16.67;
+    const _maxSteps = 3;
+    const _maxVel = 12;
+    const _steps = Math.min(Math.ceil(dt), _maxSteps);
+    for (let _i = 0; _i <= _steps; _i += 1) {
+      // Clamp velocities BEFORE physics step
+      for (const [_sid, _sinfo] of Object.entries(_sprites)) {
+        if (_sinfo.body && !_sinfo.body.isStatic) {
+          const _bv = _sinfo.body.velocity;
+          if (Math.abs(_bv.x) > _maxVel || Math.abs(_bv.y) > _maxVel) {
+            Matter.Body.setVelocity(_sinfo.body, {
+              x: Math.max(-_maxVel, Math.min(_maxVel, _bv.x)),
+              y: Math.max(-_maxVel, Math.min(_maxVel, _bv.y))
+            });
+          }
+        }
+      }
+      Matter.Engine.update(mEngine, _fixedDt);
+    }
+    syncPhysics();
+    // Input handling
+    if (_justPressed["r"] && typeof restartGame === 'function') {
+      restartGame();
+    }
+    _clearJustPressed();
+    updateCamera();
+    _updateControlAnimations();
+    _updateAnimatedSprites(ticker);
+    // Behaviors update
+    for (const [_id, _info] of Object.entries(_sprites)) {
+      if (_info.behaviors) {
+        for (const b of _info.behaviors) {
+          if (b._smUpdate) {
+            b._smUpdate();
+          }
+          if (b.update) {
+            b.update();
+          }
+        }
+      }
+    }
+    _updateHUD();
+  });
+
+  // === SCENE START ===
+  _gameEvents.emit('game-init', {});
+
+  // === DEBUG EXPORTS ===
+  Object.assign(window, { app, mEngine, _sprites, _bodyToSprite, _cameraContainer, _gameEvents });
+})();
+  </script>
+</body>
+</html>

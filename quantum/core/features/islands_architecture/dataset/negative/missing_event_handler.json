@@ -1,0 +1,24 @@
+{
+  "example_id": "islands_error_002",
+  "category": "islands_architecture",
+  "tags": ["error", "handler", "undefined"],
+  "input": {
+    "component": "<q:component name=\"BrokenButton\" interactive=\"true\">\n  <button onclick=\"nonExistentFunction()\">Click</button>\n</q:component>",
+    "context": {
+      "phase": "E",
+      "feature": "islands_architecture",
+      "missing_function": "nonExistentFunction"
+    }
+  },
+  "expected_behavior": "Button clicks throw JavaScript error - function not defined",
+  "error": {
+    "type": "ReferenceError",
+    "message": "nonExistentFunction is not defined"
+  },
+  "validation": {
+    "should_render": true,
+    "click_throws_error": true,
+    "console_error": true,
+    "function_undefined": true
+  }
+}

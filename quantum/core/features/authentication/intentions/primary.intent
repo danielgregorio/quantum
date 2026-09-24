@@ -1,0 +1,5 @@
+intention:
+  name: "Authentication & Security"
+  version: "1.0.0"
+  goal: "Built-in auth with login/logout, RBAC, and route protection"
+  status: "Phase G - Planned"

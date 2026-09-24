@@ -1,0 +1,28 @@
+{
+  "dataset_type": "positive",
+  "feature": "native_testing",
+  "category": "test_files",
+  "description": "Valid *.test.q files",
+  "examples": [
+    {
+      "id": "test-001",
+      "intent": "Submit an action and check the redirect, the flash and the row",
+      "code": "<q:test name=\"create a task\" page=\"/\">\n  <test:submit action=\"create\" title=\"Buy bread\" />\n  <test:expect redirect=\"/\" flash=\"Created: Buy bread\" />\n  <test:expect table=\"tasks\" count=\"1\" where=\"title = 'Buy bread'\" />\n</q:test>"
+    },
+    {
+      "id": "test-002",
+      "intent": "A refused field",
+      "code": "<q:test name=\"title too short\" page=\"/\">\n  <test:submit action=\"create\" title=\"x\" />\n  <test:expect error=\"title\" message=\"Must be at least 3 characters\" />\n</q:test>"
+    },
+    {
+      "id": "test-003",
+      "intent": "A row given, a user signed in, a page visited",
+      "code": "<q:test name=\"the admin sees drafts\" page=\"/admin\">\n  <test:given table=\"posts\" title=\"Draft\" is_published=\"0\" />\n  <test:as user=\"Ana\" role=\"admin\" id=\"1\" />\n  <test:visit />\n  <test:expect text=\"Draft\" />\n  <test:expect queries=\"at most 3\" />\n</q:test>"
+    },
+    {
+      "id": "test-004",
+      "intent": "Several tests in a file, with comments",
+      "code": "<!-- tasks -->\n<q:test name=\"a\"><test:visit filter=\"open\" /><test:expect var=\"filter\" value=\"open\" /></q:test>\n<q:test name=\"b\"><test:expect history=\"tasks\" action=\"create\" op=\"insert\" count=\"0\" /></q:test>"
+    }
+  ]
+}

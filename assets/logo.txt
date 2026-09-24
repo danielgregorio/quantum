@@ -1,0 +1,24 @@
+Quantum's mark in text, for the terminal and README.
+
+The same concept as assets/logo.svg: Q followed by the chevron that closes a tag.
+
+Compact (one line, for prompts and messages):
+
+    Q/>
+
+Signature (two lines, for a CLI banner):
+
+     ___
+    / _ \ ／>
+    \_\_\/
+
+Block (for README and splash screens):
+
+     ██████    ╱▔▔▔
+    ██    ██  ╱      Q U A N T U M
+    ██  ▄ ██  ╲
+     ██████ ▀  ╲▁▁▁
+
+Rule: the compact version is the only one safe in any terminal — the others
+use box-drawing characters that depend on the console font. Where the output
+may go to a log, a file or an old terminal, use `Q/>`.

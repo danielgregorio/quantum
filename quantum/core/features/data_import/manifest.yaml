@@ -1,0 +1,154 @@
+feature:
+  name: data_import
+  display_name: q:data
+  version: 1.0.0
+  status: planned
+  category: data
+
+description:
+  short: ETL component for importing and transforming CSV, JSON, XML data
+  long: |
+    q:data provides declarative data import and transformation capabilities for external
+    data sources. It handles CSV, JSON, and XML parsing with automatic type conversion,
+    and supports data transformation operations like filter, sort, group, and compute.
+
+components:
+  ast:
+    - DataNode
+    - DataColumnNode
+    - DataFieldNode
+    - DataTransformNode
+    - DataFilterNode
+    - DataSortNode
+    - DataComputeNode
+    - DataGroupNode
+  parser:
+    - parse_data
+    - parse_data_column
+    - parse_data_field
+    - parse_data_transform
+  runtime:
+    - execute_data_import
+    - parse_csv
+    - parse_json
+    - parse_xml
+    - execute_transform
+    - execute_filter
+    - execute_sort
+    - execute_compute
+    - execute_group
+
+dependencies:
+  internal:
+    - validators  # For type conversion and validation
+    - execution_context  # For variable storage
+  external:
+    - csv  # Python CSV module
+    - json  # Python JSON module
+    - xml.etree.ElementTree  # XML parsing
+    - requests  # For URL sources
+    - pandas  # For advanced transformations (Phase 2)
+
+capabilities:
+  phase_1:
+    - CSV import (files and URLs)
+    - JSON import (files and URLs)
+    - XML import with XPath (files and URLs)
+    - Type conversion (string, integer, decimal, boolean, date, datetime)
+    - Basic transformations (filter, sort, limit)
+    - Result objects with metadata
+    - Caching with TTL
+  phase_2:
+    - Compute (derived fields)
+    - Group and aggregate (sum, avg, count, min, max)
+    - Rename fields
+    - Map (extract single field)
+    - Join operations
+    - Pivot/unpivot
+  phase_3:
+    - Streaming for large files
+    - Chunked processing
+    - Parallel transformations
+    - Memory optimization
+
+attributes:
+  required:
+    - name  # Result variable name
+    - source  # File path, URL, or variable reference
+    - type  # csv, json, xml, transform
+  optional:
+    - cache  # Enable caching (default: true)
+    - ttl  # Cache TTL in seconds (default: 300)
+    # CSV-specific
+    - delimiter  # Field delimiter (default: ',')
+    - quote  # Quote character (default: '"')
+    - header  # First row is header (default: true)
+    - encoding  # File encoding (default: 'utf-8')
+    - skip_rows  # Rows to skip (default: 0)
+    # XML-specific
+    - xpath  # XPath expression
+    - namespace  # XML namespace URI
+
+child_elements:
+  - q:column  # CSV column definition with type
+  - q:field  # XML field mapping with XPath
+  - q:transform  # Container for transformation operations
+  - q:filter  # Filter data by condition
+  - q:sort  # Sort data by field
+  - q:compute  # Compute derived fields
+  - q:group  # Group and aggregate
+  - q:rename  # Rename fields
+  - q:map  # Extract single field
+  - q:limit  # Limit number of records
+  - q:header  # HTTP headers (for URL sources)
+
+result_object:
+  fields:
+    - success  # boolean
+    - data  # array of objects
+    - error  # object (message, code, details)
+    - recordCount  # integer
+    - loadTime  # decimal (milliseconds)
+    - cached  # boolean
+    - source  # string (original source)
+
+documentation:
+  readme: docs/README.md
+  api_reference: docs/api.md
+  examples: docs/examples.md
+  guide: ../../../../docs/guide/data-import.md
+
+testing:
+  unit_tests: tests/test_parser.py, tests/test_runtime.py
+  integration_tests: tests/test_integration.py
+  example_files:
+    - examples/test-data-csv.q
+    - examples/test-data-json.q
+    - examples/test-data-xml.q
+    - examples/test-data-transform-filter.q
+    - examples/test-data-transform-sort.q
+    - examples/test-data-transform-compute.q
+    - examples/test-data-transform-chain.q
+    - examples/test-data-url-source.q
+
+dataset:
+  positive_examples: 30-50
+  negative_examples: 5-10
+  categories:
+    - basic_patterns
+    - integration_patterns
+    - edge_cases
+    - real_world_patterns
+    - complex_scenarios
+
+training:
+  status: planned
+  readiness: not_started
+
+migration:
+  breaking_changes: false
+  migration_guide: N/A (new feature)
+
+priority: high
+estimated_effort: 2-3 weeks
+target_release: Q1 2025

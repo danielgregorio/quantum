@@ -1,0 +1,24 @@
+{
+  "example_id": "rbac_role_001",
+  "category": "authentication",
+  "tags": ["rbac", "role", "authorization"],
+  "input": {
+    "component": "<q:component name=\"AdminPanel\" require_auth=\"true\" require_role=\"admin\">\n  <h1>Admin Panel</h1>\n  <p>Only administrators can see this page.</p>\n</q:component>",
+    "context": {
+      "phase": "G",
+      "feature": "authentication",
+      "session": {
+        "authenticated": true,
+        "userId": 1,
+        "userRole": "admin"
+      }
+    }
+  },
+  "expected_behavior": "Component requires authentication and admin role. Users without admin role get 403 Forbidden",
+  "validation": {
+    "require_auth": true,
+    "require_role": true,
+    "role_checking": true,
+    "forbidden_response": true
+  }
+}

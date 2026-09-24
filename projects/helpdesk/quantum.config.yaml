@@ -1,0 +1,32 @@
+# Helpdesk — open a ticket with an attachment; the support team and the
+# requester are told by e-mail.
+#
+#   quantum migrate up     # creates data/helpdesk.db
+#   quantum start          # http://127.0.0.1:8080
+#
+# The mail server comes from the environment (CFG-1). In development,
+# SMTP_HOST=log writes each message to the log instead of sending it.
+
+server:
+  port: 8080
+  host: 127.0.0.1
+  reload: false
+  debug: false
+
+paths:
+  components: ./components
+  migrations: ./migrations
+  uploads: ./data/attachments      # never served as static files: /attachment/<id> checks the ticket
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/helpdesk.db
+
+mail:
+  host: ${SMTP_HOST:-log}
+  port: ${SMTP_PORT:-587}
+  username: ${SMTP_USER:-}
+  password: ${SMTP_PASSWORD:-}
+  tls: ${SMTP_TLS:-true}
+  from: ${HELPDESK_FROM:-helpdesk@example.com}

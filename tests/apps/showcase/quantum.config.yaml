@@ -1,0 +1,11 @@
+# Showcase: the Core set of ui:* (UI-7) on one page — the app of the parity
+# test (tests/apps/test_ui_parity_script.py): the same script in the browser
+# and in the console.
+server:
+  port: 8080
+  host: 127.0.0.1
+  reload: false
+  debug: false
+
+paths:
+  components: ./components

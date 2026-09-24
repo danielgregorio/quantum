@@ -1,0 +1,22 @@
+{
+  "example_id": "file_error_002",
+  "category": "file_uploads",
+  "tags": ["error", "validation", "type"],
+  "input": {
+    "component": "<q:component name=\"UploadImage\">\n  <q:action name=\"upload\" method=\"POST\">\n    <q:param name=\"image\" type=\"file\" accept=\"image/*\" />\n    <q:file action=\"upload\" file=\"{image}\" destination=\"./uploads/\" />\n  </q:action>\n</q:component>",
+    "context": {
+      "phase": "H",
+      "feature": "file_uploads",
+      "file_type": "application/pdf"
+    }
+  },
+  "expected_behavior": "Should fail when uploading non-image file (PDF) to image-only field",
+  "error": {
+    "type": "FileUploadError",
+    "message": "File MIME type not allowed. Allowed: image/*"
+  },
+  "validation": {
+    "should_fail": true,
+    "type_validation": true
+  }
+}

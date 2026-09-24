@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Framework - Online Playground</title>
+    <link rel="stylesheet" href="playground.css">
+    <!-- CodeMirror 6 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+</head>
+<body>
+    <div class="playground-container">
+        <!-- Header -->
+        <header class="playground-header">
+            <div class="header-left">
+                <h1 class="logo">
+                    <span class="logo-icon">Q</span>
+                    <span class="logo-text">Quantum Playground</span>
+                </h1>
+            </div>
+            <div class="header-center">
+                <select id="example-selector" class="example-select">
+                    <option value="">-- Select Example --</option>
+                    <option value="hello">Hello World</option>
+                    <option value="variables">Variables & Databinding</option>
+                    <option value="loop">Loop (Range)</option>
+                    <option value="loop-array">Loop (Array)</option>
+                    <option value="conditional">Conditionals</option>
+                    <option value="html-elements">HTML Elements</option>
+                    <option value="counter">Counter App</option>
+                    <option value="todo">Todo List</option>
+                </select>
+            </div>
+            <div class="header-right">
+                <button id="run-btn" class="btn btn-primary" disabled>
+                    <span class="btn-icon">&#9654;</span>
+                    Run
+                </button>
+                <button id="share-btn" class="btn btn-secondary">
+                    <span class="btn-icon">&#128279;</span>
+                    Share
+                </button>
+                <button id="download-btn" class="btn btn-secondary">
+                    <span class="btn-icon">&#128190;</span>
+                    Download HTML
+                </button>
+            </div>
+        </header>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Loading Pyodide...</div>
+                <div class="loading-subtext">This may take a moment on first load</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="playground-main">
+            <!-- Editor Panel -->
+            <div class="panel editor-panel">
+                <div class="panel-header">
+                    <span class="panel-title">Editor (.q file)</span>
+                    <span class="panel-info" id="cursor-position">Ln 1, Col 1</span>
+                </div>
+                <div class="panel-content">
+                    <textarea id="editor"></textarea>
+                </div>
+            </div>
+
+            <!-- Resize Handle -->
+            <div class="resize-handle" id="resize-handle"></div>
+
+            <!-- Right Side: Preview + Console -->
+            <div class="right-panels">
+                <!-- Preview Panel -->
+                <div class="panel preview-panel">
+                    <div class="panel-header">
+                        <span class="panel-title">Preview</span>
+                        <div class="panel-actions">
+                            <button id="toggle-preview-mode" class="btn-small">HTML Source</button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <iframe id="preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+                        <pre id="preview-source" class="hidden"></pre>
+                    </div>
+                </div>
+
+                <!-- Console Panel -->
+                <div class="panel console-panel">
+                    <div class="panel-header">
+                        <span class="panel-title">Console</span>
+                        <button id="clear-console" class="btn-small">Clear</button>
+                    </div>
+                    <div class="panel-content">
+                        <div id="console-output"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="playground-footer">
+            <div class="footer-left">
+                <span id="status-indicator" class="status-indicator status-loading"></span>
+                <span id="status-text">Initializing...</span>
+            </div>
+            <div class="footer-right">
+                <a href="https://github.com/nicholaskajoh/quantum" target="_blank" rel="noopener">GitHub</a>
+                <span class="separator">|</span>
+                <a href="/docs" target="_blank">Documentation</a>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Quantum Parser Code (bundled for Pyodide) -->
+    <script id="quantum-parser-code" type="text/python">
+# Quantum Parser - Browser version for Pyodide
+# Simplified version of the full parser for playground use
+
+import re
+from xml.etree import ElementTree as ET
+from dataclasses import dataclass
+from typing import List, Dict, Any, Optional
+
+# AST Nodes (simplified)
+
+class QuantumNode:
+    def to_dict(self) -> Dict[str, Any]:
+        return {}
+
+@dataclass
+class TextNode(QuantumNode):
+    content: str
+    has_databinding: bool = False
+
+    def __post_init__(self):
+        self.has_databinding = '{' in self.content and '}' in self.content
+
+    def to_dict(self):
+        return {"type": "text", "content": self.content}
+
+@dataclass
+class HTMLNode(QuantumNode):
+    tag: str
+    attributes: Dict[str, str]
+    children: List[QuantumNode]
+    self_closing: bool = False
+
+    def to_dict(self):
+        return {
+            "type": "html",
+            "tag": self.tag,
+            "attributes": self.attributes,
+            "children": [c.to_dict() for c in self.children]
+        }
+
+@dataclass
+class SetNode(QuantumNode):
+    name: str
+    value: Optional[str] = None
+    var_type: str = "string"
+    default: Optional[str] = None
+
+    def to_dict(self):
+        return {"type": "set", "name": self.name, "value": self.value}
+
+@dataclass
+class LoopNode(QuantumNode):
+    loop_type: str
+    var_name: str
+    body: List[QuantumNode] = None
+    # Range loop
+    from_value: Optional[str] = None
+    to_value: Optional[str] = None
+    step_value: int = 1
+    # Array/list loop
+    items: Optional[str] = None
+    delimiter: str = ","
+    index_name: Optional[str] = None
+
+    def __post_init__(self):
+        if self.body is None:
+            self.body = []
+
+    def to_dict(self):
+        return {
+            "type": "loop",
+            "loop_type": self.loop_type,
+            "var_name": self.var_name,
+            "from": self.from_value,
+            "to": self.to_value,
+            "items": self.items,
+            "body": [s.to_dict() for s in self.body]
+        }
+
+@dataclass
+class IfNode(QuantumNode):
+    condition: str
+    if_body: List[QuantumNode] = None
+    elseif_blocks: List[tuple] = None
+    else_body: List[QuantumNode] = None
+
+    def __post_init__(self):
+        if self.if_body is None:
+            self.if_body = []
+        if self.elseif_blocks is None:
+            self.elseif_blocks = []
+        if self.else_body is None:
+            self.else_body = []
+
+    def to_dict(self):
+        return {
+            "type": "if",
+            "condition": self.condition,
+            "if_body": [s.to_dict() for s in self.if_body],
+            "else_body": [s.to_dict() for s in self.else_body]
+        }
+
+@dataclass
+class ReturnNode(QuantumNode):
+    value: str
+
+    def to_dict(self):
+        return {"type": "return", "value": self.value}
+
+@dataclass
+class ComponentNode(QuantumNode):
+    name: str
+    statements: List[QuantumNode] = None
+    has_html: bool = False
+
+    def __post_init__(self):
+        if self.statements is None:
+            self.statements = []
+
+    def to_dict(self):
+        return {
+            "type": "component",
+            "name": self.name,
+            "statements": [s.to_dict() for s in self.statements]
+        }
+
+# Void HTML elements (self-closing)
+HTML_VOID_ELEMENTS = {
+    'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+    'link', 'meta', 'param', 'source', 'track', 'wbr'
+}
+
+class QuantumParseError(Exception):
+    pass
+
+class QuantumParser:
+    """Parser for .q files - browser version"""
+
+    def __init__(self):
+        self.quantum_ns = {'q': 'https://quantum.lang/ns'}
+
+    def _inject_namespace(self, content: str) -> str:
+        """Inject XML namespace if missing"""
+        if 'xmlns:q' in content:
+            return content
+
+        pattern = r'<(q:component|q:application)(\s+[^>]*)?>'
+
+        def add_namespace(match):
+            tag = match.group(1)
+            attrs = match.group(2) or ''
+            return f'<{tag}{attrs} xmlns:q="https://quantum.lang/ns">'
+
+        return re.sub(pattern, add_namespace, content, count=1)
+
+    def parse(self, source: str) -> QuantumNode:
+        """Parse Quantum XML from string"""
+        try:
+            content = self._inject_namespace(source)
+            root = ET.fromstring(content)
+            return self._parse_root(root)
+        except ET.ParseError as e:
+            raise QuantumParseError(f"XML parse error: {e}")
+        except Exception as e:
+            raise QuantumParseError(f"Parse error: {e}")
+
+    def _get_name(self, element: ET.Element) -> str:
+        """Get element name without namespace"""
+        tag = element.tag
+        if '}' in tag:
+            return tag.split('}')[-1]
+        if ':' in tag:
+            return tag.split(':')[-1]
+        return tag
+
+    def _parse_root(self, root: ET.Element) -> QuantumNode:
+        """Parse root element"""
+        name = self._get_name(root)
+
+        if name == 'component':
+            return self._parse_component(root)
+        else:
+            raise QuantumParseError(f"Unknown root: {name}")
+
+    def _parse_component(self, elem: ET.Element) -> ComponentNode:
+        """Parse q:component"""
+        name = elem.get('name', 'Unnamed')
+        comp = ComponentNode(name=name)
+
+        # Parse children
+        for child in elem:
+            stmt = self._parse_statement(child)
+            if stmt:
+                comp.statements.append(stmt)
+                if isinstance(stmt, HTMLNode):
+                    comp.has_html = True
+
+        return comp
+
+    def _parse_statement(self, elem: ET.Element) -> Optional[QuantumNode]:
+        """Parse a statement element"""
+        name = self._get_name(elem)
+
+        if name == 'set':
+            return self._parse_set(elem)
+        elif name == 'loop':
+            return self._parse_loop(elem)
+        elif name == 'if':
+            return self._parse_if(elem)
+        elif name == 'return':
+            return self._parse_return(elem)
+        elif name in ('param', 'function'):
+            return None  # Skip for now
+        elif self._is_html(elem):
+            return self._parse_html(elem)
+        return None
+
+    def _parse_set(self, elem: ET.Element) -> SetNode:
+        """Parse q:set"""
+        return SetNode(
+            name=elem.get('name', ''),
+            value=elem.get('value'),
+            var_type=elem.get('type', 'string'),
+            default=elem.get('default')
+        )
+
+    def _parse_loop(self, elem: ET.Element) -> LoopNode:
+        """Parse q:loop"""
+        loop_type = elem.get('type', 'range')
+        var_name = elem.get('var', 'item')
+
+        loop = LoopNode(
+            loop_type=loop_type,
+            var_name=var_name
+        )
+
+        if loop_type == 'range':
+            loop.from_value = elem.get('from', '1')
+            loop.to_value = elem.get('to', '10')
+            step = elem.get('step', '1')
+            try:
+                loop.step_value = int(step)
+            except:
+                loop.step_value = 1
+        elif loop_type in ('array', 'list'):
+            loop.items = elem.get('items')
+            loop.delimiter = elem.get('delimiter', ',')
+            loop.index_name = elem.get('index')
+
+        # Parse body
+        if elem.text and elem.text.strip():
+            loop.body.append(TextNode(content=elem.text))
+
+        for child in elem:
+            stmt = self._parse_statement(child)
+            if stmt:
+                loop.body.append(stmt)
+            if child.tail and child.tail.strip():
+                loop.body.append(TextNode(content=child.tail))
+
+        return loop
+
+    def _parse_if(self, elem: ET.Element) -> IfNode:
+        """Parse q:if"""
+        condition = elem.get('condition', 'true')
+        if_node = IfNode(condition=condition)
+
+        for child in elem:
+            child_name = self._get_name(child)
+
+            if child_name == 'elseif':
+                elseif_cond = child.get('condition', 'true')
+                elseif_body = []
+                for gc in child:
+                    stmt = self._parse_statement(gc)
+                    if stmt:
+                        elseif_body.append(stmt)
+                if_node.elseif_blocks.append((elseif_cond, elseif_body))
+
+            elif child_name == 'else':
+                for gc in child:
+                    stmt = self._parse_statement(gc)
+                    if stmt:
+                        if_node.else_body.append(stmt)
+
+            else:
+                stmt = self._parse_statement(child)
+                if stmt:
+                    if_node.if_body.append(stmt)
+
+        return if_node
+
+    def _parse_return(self, elem: ET.Element) -> ReturnNode:
+        """Parse q:return"""
+        return ReturnNode(value=elem.get('value', ''))
+
+    def _is_html(self, elem: ET.Element) -> bool:
+        """Check if element is HTML"""
+        tag = elem.tag
+        if '{https://quantum.lang/ns}' in tag:
+            return False
+        if tag.startswith('q:'):
+            return False
+        return True
+
+    def _parse_html(self, elem: ET.Element) -> HTMLNode:
+        """Parse HTML element"""
+        tag = self._get_name(elem)
+        attrs = dict(elem.attrib)
+        children = []
+
+        # Text before children
+        if elem.text and elem.text.strip():
+            children.append(TextNode(content=elem.text))
+
+        # Parse children
+        for child in elem:
+            stmt = self._parse_statement(child)
+            if stmt:
+                children.append(stmt)
+            if child.tail and child.tail.strip():
+                children.append(TextNode(content=child.tail))
+
+        return HTMLNode(
+            tag=tag,
+            attributes=attrs,
+            children=children,
+            self_closing=tag.lower() in HTML_VOID_ELEMENTS
+        )
+
+
+# Simple HTML Generator
+
+class HTMLGenerator:
+    """Generate HTML from Quantum AST"""
+
+    def __init__(self):
+        self.variables = {}
+
+    def generate(self, ast: QuantumNode) -> str:
+        """Generate HTML from AST"""
+        if isinstance(ast, ComponentNode):
+            return self._gen_component(ast)
+        return ""
+
+    def _gen_component(self, comp: ComponentNode) -> str:
+        """Generate component HTML"""
+        parts = []
+
+        for stmt in comp.statements:
+            html = self._gen_statement(stmt)
+            if html:
+                parts.append(html)
+
+        return '\n'.join(parts)
+
+    def _gen_statement(self, stmt: QuantumNode) -> str:
+        """Generate statement HTML"""
+        if isinstance(stmt, SetNode):
+            # Store variable
+            value = stmt.value or stmt.default or ''
+            value = self._apply_binding(value)
+            # Type conversion
+            if stmt.var_type == 'number':
+                try:
+                    value = float(value) if '.' in str(value) else int(value)
+                except:
+                    value = 0
+            elif stmt.var_type == 'boolean':
+                value = str(value).lower() in ('true', '1', 'yes')
+            elif stmt.var_type == 'array':
+                if isinstance(value, str):
+                    value = [v.strip() for v in value.split(',')]
+            self.variables[stmt.name] = value
+            return ""
+
+        elif isinstance(stmt, LoopNode):
+            return self._gen_loop(stmt)
+
+        elif isinstance(stmt, IfNode):
+            return self._gen_if(stmt)
+
+        elif isinstance(stmt, ReturnNode):
+            value = self._apply_binding(stmt.value)
+            return f"<!-- return: {value} -->"
+
+        elif isinstance(stmt, HTMLNode):
+            return self._gen_html(stmt)
+
+        elif isinstance(stmt, TextNode):
+            return self._apply_binding(stmt.content)
+
+        return ""
+
+    def _gen_loop(self, loop: LoopNode) -> str:
+        """Generate loop HTML"""
+        parts = []
+
+        if loop.loop_type == 'range':
+            try:
+                start = int(self._apply_binding(loop.from_value or '1'))
+                end = int(self._apply_binding(loop.to_value or '10'))
+                step = loop.step_value or 1
+
+                for i in range(start, end + 1, step):
+                    self.variables[loop.var_name] = i
+                    for stmt in loop.body:
+                        html = self._gen_statement(stmt)
+                        if html:
+                            parts.append(html)
+            except ValueError:
+                pass
+
+        elif loop.loop_type in ('array', 'list'):
+            items_str = self._apply_binding(loop.items or '')
+            if isinstance(items_str, list):
+                items = items_str
+            else:
+                items = [i.strip() for i in str(items_str).split(loop.delimiter)]
+
+            for idx, item in enumerate(items):
+                self.variables[loop.var_name] = item
+                if loop.index_name:
+                    self.variables[loop.index_name] = idx
+                for stmt in loop.body:
+                    html = self._gen_statement(stmt)
+                    if html:
+                        parts.append(html)
+
+        return '\n'.join(parts)
+
+    def _gen_if(self, if_node: IfNode) -> str:
+        """Generate conditional HTML"""
+        # Evaluate condition
+        if self._eval_condition(if_node.condition):
+            parts = []
+            for stmt in if_node.if_body:
+                html = self._gen_statement(stmt)
+                if html:
+                    parts.append(html)
+            return '\n'.join(parts)
+
+        # Check elseif blocks
+        for cond, body in if_node.elseif_blocks:
+            if self._eval_condition(cond):
+                parts = []
+                for stmt in body:
+                    html = self._gen_statement(stmt)
+                    if html:
+                        parts.append(html)
+                return '\n'.join(parts)
+
+        # Else block
+        if if_node.else_body:
+            parts = []
+            for stmt in if_node.else_body:
+                html = self._gen_statement(stmt)
+                if html:
+                    parts.append(html)
+            return '\n'.join(parts)
+
+        return ""
+
+    def _gen_html(self, node: HTMLNode) -> str:
+        """Generate HTML element"""
+        # Opening tag
+        attrs_str = ''
+        if node.attributes:
+            attr_parts = []
+            for k, v in node.attributes.items():
+                v = self._apply_binding(v)
+                attr_parts.append(f'{k}="{self._escape(str(v))}"')
+            if attr_parts:
+                attrs_str = ' ' + ' '.join(attr_parts)
+
+        if node.self_closing:
+            return f'<{node.tag}{attrs_str} />'
+
+        # Children
+        children_html = ''
+        for child in node.children:
+            children_html += self._gen_statement(child)
+
+        return f'<{node.tag}{attrs_str}>{children_html}</{node.tag}>'
+
+    def _apply_binding(self, text: str) -> Any:
+        """Apply databinding {var} to text"""
+        if not text or not isinstance(text, str):
+            return text
+
+        if '{' not in text:
+            return text
+
+        def replace_var(match):
+            expr = match.group(1).strip()
+
+            # Simple variable
+            if expr in self.variables:
+                return str(self.variables[expr])
+
+            # Dot notation (e.g., item.name)
+            if '.' in expr:
+                parts = expr.split('.')
+                value = self.variables.get(parts[0])
+                for part in parts[1:]:
+                    if isinstance(value, dict):
+                        value = value.get(part, '')
+                    else:
+                        value = ''
+                        break
+                return str(value)
+
+            # Array index (e.g., items[0])
+            if '[' in expr and ']' in expr:
+                match_arr = re.match(r'(\w+)\[(\d+)\]', expr)
+                if match_arr:
+                    arr_name, idx = match_arr.groups()
+                    arr = self.variables.get(arr_name, [])
+                    if isinstance(arr, list) and int(idx) < len(arr):
+                        return str(arr[int(idx)])
+
+            # Simple arithmetic
+            try:
+                # Replace variables in expression
+                eval_expr = expr
+                for var_name, var_val in self.variables.items():
+                    if var_name in eval_expr and isinstance(var_val, (int, float)):
+                        eval_expr = re.sub(r'\b' + var_name + r'\b', str(var_val), eval_expr)
+
+                # Safe eval for simple arithmetic
+                if re.match(r'^[\d\s\+\-\*\/\(\)\.]+$', eval_expr):
+                    result = eval(eval_expr)
+                    return str(result)
+            except:
+                pass
+
+            return '{' + expr + '}'
+
+        return re.sub(r'\{([^}]+)\}', replace_var, text)
+
+    def _eval_condition(self, condition: str) -> bool:
+        """Evaluate a condition expression"""
+        try:
+            # Replace variables
+            expr = condition
+            for var_name, var_val in self.variables.items():
+                if var_name in expr:
+                    if isinstance(var_val, str):
+                        expr = re.sub(r'\b' + var_name + r'\b', f'"{var_val}"', expr)
+                    else:
+                        expr = re.sub(r'\b' + var_name + r'\b', str(var_val), expr)
+
+            # Handle string comparisons
+            expr = expr.replace('==', '==').replace('!=', '!=')
+            expr = expr.replace('>=', '>=').replace('<=', '<=')
+            expr = expr.replace(' and ', ' and ').replace(' or ', ' or ')
+            expr = expr.replace(' AND ', ' and ').replace(' OR ', ' or ')
+
+            # Safe eval
+            return bool(eval(expr))
+        except:
+            return False
+
+    def _escape(self, text: str) -> str:
+        """Escape HTML"""
+        return (text
+            .replace('&', '&amp;')
+            .replace('<', '&lt;')
+            .replace('>', '&gt;')
+            .replace('"', '&quot;')
+            .replace("'", '&#39;'))
+
+
+# Main function for Pyodide
+def compile_quantum(source: str) -> dict:
+    """Compile Quantum source to HTML"""
+    try:
+        parser = QuantumParser()
+        ast = parser.parse(source)
+
+        generator = HTMLGenerator()
+        html = generator.generate(ast)
+
+        return {
+            "success": True,
+            "html": html,
+            "ast": ast.to_dict()
+        }
+    except QuantumParseError as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "html": ""
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Unexpected error: {e}",
+            "html": ""
+        }
+    </script>
+
+    <script src="playground.js"></script>
+</body>
+</html>

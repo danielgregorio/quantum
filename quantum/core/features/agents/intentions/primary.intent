@@ -1,0 +1,41 @@
+# Primary Intention: q:agent
+
+## What the user wants to accomplish
+The user wants an AI agent to autonomously complete complex, multi-step tasks by using available tools (functions, queries, APIs).
+
+## User's mental model
+"I want to give AI a goal and let it figure out the steps, using the tools I provide."
+
+## Natural language expressions
+- "Create an agent that can help customers with their orders"
+- "Build an agent to analyze sales data and generate insights"
+- "Make an AI assistant that can look up information and take actions"
+- "Let the agent decide which tools to use to solve this problem"
+
+## Core user needs
+1. Define autonomous agents with clear instructions
+2. Give agents access to tools (functions, queries, APIs)
+3. Execute agents with specific tasks
+4. See what actions the agent took and why
+5. Get structured results with action logs
+6. Set safety limits (max iterations, timeout)
+
+## Expected outcomes
+- Agent completes the task autonomously
+- Agent uses appropriate tools in correct order
+- User sees final answer plus action log
+- Errors are handled gracefully
+- Agent doesn't exceed iteration or time limits
+
+## Emotional context
+- Users want **automation** - agents handle complex workflows
+- Users want **transparency** - see what agent did
+- Users want **control** - explicit tool permissions
+- Users feel **empowered** when agents augment their applications
+
+## Success criteria
+- Agent can reason about which tools to use
+- Tools are called correctly with proper arguments
+- Agent synthesizes results into coherent response
+- Action log shows all tool calls
+- Safety limits prevent runaway execution

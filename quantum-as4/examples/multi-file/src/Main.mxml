@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<!--
+  Main Application Entry Point
+
+  Demonstrates:
+  - Namespace imports (xmlns:components, xmlns:screens)
+  - Using custom components
+  - Screen navigation
+-->
+<Application
+    xmlns:fx="http://ns.adobe.com/mxml/2009"
+    xmlns:s="library://ns.adobe.com/flex/spark"
+    xmlns:components="components.*"
+    xmlns:screens="screens.*"
+    title="User Management">
+
+    <fx:Script>
+        <![CDATA[
+            import services.UserService;
+
+            [Bindable]
+            private var currentScreen:String = "dashboard";
+
+            [Bindable]
+            private var userName:String = "Admin";
+
+            private function navigateTo(screen:String):void {
+                currentScreen = screen;
+            }
+        ]]>
+    </fx:Script>
+
+    <fx:Style>
+        .app {
+            background-color: #f0f0f0;
+        }
+    </fx:Style>
+
+    <s:VBox width="100%" height="100%" styleName="app">
+        <!-- Header with navigation -->
+        <components:Header
+            userName="{userName}"
+            onNavigate="navigateTo"/>
+
+        <!-- Main content area -->
+        <s:VBox flex="1" padding="20">
+            <!-- Dashboard Screen -->
+            <screens:Dashboard visible="{currentScreen == 'dashboard'}"/>
+
+            <!-- Settings Screen -->
+            <screens:Settings visible="{currentScreen == 'settings'}"/>
+        </s:VBox>
+
+        <!-- Footer -->
+        <components:Footer/>
+    </s:VBox>
+
+</Application>

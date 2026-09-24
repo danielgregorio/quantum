@@ -1,0 +1,28 @@
+# Shop agent — ask questions about a small shop's SQLite database.
+#
+#   quantum migrate up     # creates data/shop.db with products, customers, orders
+#   quantum start          # http://127.0.0.1:8080
+#   quantum console        # the same app in the terminal
+#
+# A q:agent answers by calling tools the page declares: read-only queries with
+# parameters. The model never writes SQL, and every tool call it made is shown
+# next to the answer. Needs a model server (Ollama) with phi3;
+# QUANTUM_LLM_BASE_URL points at it when it is not this machine.
+
+server:
+  port: 8080
+  host: 127.0.0.1
+  reload: false
+  debug: false
+
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/shop.db
+
+llm:
+  base_url: http://localhost:11434

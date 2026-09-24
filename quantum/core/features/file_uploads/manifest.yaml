@@ -1,0 +1,32 @@
+feature:
+  name: "file_uploads"
+  display_name: "File Uploads (q:file)"
+  version: "1.0.0"
+  status: "planned"
+  phase: H
+  category: "files"
+
+  description: "ColdFusion-style file upload handling with validation"
+
+capabilities:
+  - "q:param type='file' for file inputs"
+  - "q:file action='upload' for processing"
+  - "File size validation"
+  - "File type validation (accept)"
+  - "Auto-generate unique filenames"
+  - "Organize uploads by user/date"
+
+examples:
+  upload: |
+    <q:action name="uploadAvatar" method="POST">
+      <q:param name="avatar" type="file" maxsize="5MB" accept="image/*" required="true" />
+
+      <q:file action="upload"
+              file="{avatar}"
+              destination="./uploads/avatars/"
+              name_conflict="makeUnique" />
+
+      <q:redirect url="/profile" flash="Avatar uploaded!" />
+    </q:action>
+
+production_ready: false

@@ -1,0 +1,21 @@
+{
+  "example_id": "email_error_002",
+  "category": "email_sending",
+  "tags": ["error", "validation", "subject"],
+  "input": {
+    "component": "<q:component name=\"NoSubject\">\n  <q:action name=\"send\" method=\"POST\">\n    <q:mail to=\"user@example.com\">\n      <p>Email body without subject</p>\n    </q:mail>\n  </q:action>\n</q:component>",
+    "context": {
+      "phase": "I",
+      "feature": "email_sending"
+    }
+  },
+  "expected_behavior": "Should fail - missing required 'subject' attribute",
+  "error": {
+    "type": "ValidationError",
+    "message": "Email subject is required"
+  },
+  "validation": {
+    "should_fail": true,
+    "validation_error": true
+  }
+}

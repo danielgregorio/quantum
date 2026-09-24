@@ -1,0 +1,13 @@
+intention:
+  name: "Session Management - ColdFusion-style scopes"
+  version: "1.0.0"
+  goal: "Provide session, application, and request scopes for state management"
+
+  planned_features:
+    - "session.var - persistent user-specific state"
+    - "application.var - shared global state"
+    - "request.var - request-scoped state"
+    - "cookie.var - browser cookies"
+    - "Session timeout and invalidation"
+
+  status: "Phase F - Planned"

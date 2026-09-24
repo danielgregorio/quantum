@@ -1,0 +1,5 @@
+intention:
+  name: "Email Sending"
+  version: "1.0.0"
+  goal: "Send emails with q:mail tag"
+  status: "Phase I - Planned"

@@ -1,0 +1,26 @@
+{
+  "dataset_type": "positive",
+  "feature": "forms_actions",
+  "category": "simple_actions",
+  "description": "Valid examples of basic action definitions",
+  "examples": [
+    {
+      "id": "action-simple-001",
+      "intent": "Simple contact form action",
+      "quantum_code": "<q:action name=\"submitContact\" method=\"POST\">\n  <q:param name=\"email\" type=\"email\" required=\"true\" />\n  <q:query datasource=\"db\">\n    INSERT INTO contacts (email) VALUES (:email)\n  </q:query>\n  <q:redirect url=\"/thank-you\" />\n</q:action>",
+      "tags": ["simple", "post", "redirect"]
+    },
+    {
+      "id": "action-simple-002",
+      "intent": "Delete action",
+      "quantum_code": "<q:action name=\"deleteProduct\" method=\"DELETE\">\n  <q:param name=\"id\" type=\"integer\" required=\"true\" />\n  <q:query datasource=\"db\">\n    DELETE FROM products WHERE id = :id\n  </q:query>\n  <q:redirect url=\"/products\" flash=\"Product deleted!\" />\n</q:action>",
+      "tags": ["delete", "flash", "redirect"]
+    },
+    {
+      "id": "action-simple-003",
+      "intent": "Update action with validation",
+      "quantum_code": "<q:action name=\"updateProfile\" method=\"PUT\">\n  <q:param name=\"username\" type=\"string\" minlength=\"3\" maxlength=\"20\" required=\"true\" />\n  <q:param name=\"age\" type=\"integer\" min=\"18\" max=\"120\" />\n  <q:query datasource=\"db\">\n    UPDATE users SET username=:username, age=:age WHERE id=:userId\n  </q:query>\n  <q:redirect url=\"/profile\" flash=\"Profile updated!\" />\n</q:action>",
+      "tags": ["update", "validation", "minmax"]
+    }
+  ]
+}

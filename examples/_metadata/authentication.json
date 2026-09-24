@@ -1,0 +1,104 @@
+{
+  "category": "authentication",
+  "name": "Authentication",
+  "description": "Login, logout, roles, and protected routes",
+  "icon": "🔐",
+  "docsPath": "/guide/authentication",
+  "exampleCount": 4,
+  "examples": [
+    {
+      "file": "test-auth-login.q",
+      "title": "Auth Login",
+      "description": "Example demonstrating Auth Login",
+      "complexity": "intermediate",
+      "tags": [
+        "authentication",
+        "q:action",
+        "session",
+        "q:set",
+        "q:auth",
+        "databinding",
+        "security",
+        "q:param"
+      ],
+      "features": [
+        "databinding",
+        "q:action",
+        "q:param",
+        "q:set",
+        "session"
+      ],
+      "relatedDocs": [
+        "/guide/authentication"
+      ],
+      "lineCount": 20
+    },
+    {
+      "file": "test-auth-logout.q",
+      "title": "Auth Logout",
+      "description": "Example demonstrating Auth Logout",
+      "complexity": "beginner",
+      "tags": [
+        "authentication",
+        "q:action",
+        "session",
+        "q:set",
+        "q:auth",
+        "security"
+      ],
+      "features": [
+        "q:action",
+        "q:set",
+        "session"
+      ],
+      "relatedDocs": [
+        "/guide/authentication"
+      ],
+      "lineCount": 17
+    },
+    {
+      "file": "test-auth-protected.q",
+      "title": "Auth Protected",
+      "description": "Example demonstrating Auth Protected",
+      "complexity": "beginner",
+      "tags": [
+        "authentication",
+        "session",
+        "q:set",
+        "q:auth",
+        "databinding",
+        "security"
+      ],
+      "features": [
+        "databinding",
+        "q:set",
+        "session"
+      ],
+      "relatedDocs": [
+        "/guide/authentication"
+      ],
+      "lineCount": 10
+    },
+    {
+      "file": "test-auth-role.q",
+      "title": "Auth Role",
+      "description": "Example demonstrating Auth Role",
+      "complexity": "beginner",
+      "tags": [
+        "authentication",
+        "session",
+        "q:auth",
+        "databinding",
+        "security"
+      ],
+      "features": [
+        "databinding",
+        "session"
+      ],
+      "relatedDocs": [
+        "/guide/authentication"
+      ],
+      "lineCount": 9
+    }
+  ]
+}

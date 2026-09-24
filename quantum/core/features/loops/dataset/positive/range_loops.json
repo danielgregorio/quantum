@@ -1,0 +1,86 @@
+{
+  "dataset_type": "positive",
+  "feature": "loops",
+  "category": "range_iteration",
+  "description": "Valid examples of range-based loops",
+  "examples": [
+    {
+      "id": "loop-range-001",
+      "intent": "Simple range loop from 1 to 5",
+      "input": {
+        "natural_language": "Loop from 1 to 5 and print each number",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:loop type=\"range\" var=\"i\" from=\"1\" to=\"5\">\n  {i}\n</q:loop>",
+        "ast": {
+          "type": "LoopNode",
+          "attributes": {
+            "loop_type": "range",
+            "var_name": "i",
+            "from_value": "1",
+            "to_value": "5",
+            "step_value": 1
+          }
+        },
+        "runtime_behavior": "Iterates i from 1 to 5, printing each value"
+      },
+      "tags": ["range", "basic", "integers"]
+    },
+    {
+      "id": "loop-range-002",
+      "intent": "Range loop with custom step",
+      "input": {
+        "natural_language": "Count from 0 to 10 by 2s (even numbers)",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:loop type=\"range\" var=\"i\" from=\"0\" to=\"10\" step=\"2\">\n  {i}\n</q:loop>",
+        "ast": {
+          "type": "LoopNode",
+          "attributes": {
+            "loop_type": "range",
+            "var_name": "i",
+            "from_value": "0",
+            "to_value": "10",
+            "step_value": 2
+          }
+        },
+        "runtime_behavior": "Iterates i from 0 to 10 with step 2 (0, 2, 4, 6, 8, 10)"
+      },
+      "tags": ["range", "step", "even_numbers"]
+    },
+    {
+      "id": "loop-range-003",
+      "intent": "Countdown loop with negative step",
+      "input": {
+        "natural_language": "Count down from 10 to 1",
+        "context": {
+          "available_vars": [],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:loop type=\"range\" var=\"i\" from=\"10\" to=\"1\" step=\"-1\">\n  {i}\n</q:loop>",
+        "ast": {
+          "type": "LoopNode",
+          "attributes": {
+            "loop_type": "range",
+            "var_name": "i",
+            "from_value": "10",
+            "to_value": "1",
+            "step_value": -1
+          }
+        },
+        "runtime_behavior": "Iterates i from 10 down to 1 (10, 9, 8, ..., 1)"
+      },
+      "tags": ["range", "countdown", "negative_step"]
+    }
+  ]
+}

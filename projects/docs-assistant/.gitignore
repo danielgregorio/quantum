@@ -1,0 +1,4 @@
+# written by the server at run time
+static/scripts-*.js
+static/styles-*.css
+logs/

@@ -1,0 +1,2565 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>kenney_platformer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #111; display: flex; justify-content: center; align-items: center; width: 100vw; height: 100vh; }
+    canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; transform: scale(3); transform-origin: center center; }
+    .qg-hud { position: absolute; pointer-events: none; padding: 8px; font-family: sans-serif; z-index: 10; }
+    .qg-hud-top-left { top: 0; left: 0; }
+    .qg-hud-top-right { top: 0; right: 0; }
+    .qg-hud-top-center { top: 0; left: 50%; transform: translateX(-50%); }
+    .qg-hud-bottom-left { bottom: 0; left: 0; }
+    .qg-hud-bottom-right { bottom: 0; right: 0; }
+    .qg-hud-bottom-center { bottom: 0; left: 50%; transform: translateX(-50%); }
+    .qg-hud-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+    /* Source Code Viewer */
+    #qg-source-btn {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    #qg-source-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.9);
+    }
+    #qg-source-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.92);
+      z-index: 999;
+      overflow: auto;
+    }
+    #qg-source-modal.visible {
+      display: flex;
+      flex-direction: column;
+    }
+    #qg-source-close {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 13px;
+      z-index: 1001;
+    }
+    #qg-source-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    #qg-source-content {
+      flex: 1;
+      overflow: auto;
+      padding: 48px 24px 24px;
+    }
+    #qg-source-content pre {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 24px;
+      border-radius: 12px;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre;
+      tab-size: 2;
+      border: 1px solid #313244;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="qg-hud qg-hud-top-left" id="qg-hud-0"></div>
+  <div class="qg-hud qg-hud-top-center" id="qg-hud-1"></div>
+  <div class="qg-hud qg-hud-top-right" id="qg-hud-2"></div>
+  <div class="qg-hud qg-hud-center" id="qg-hud-3"></div>
+  <button id="qg-source-btn" onclick="toggleSource()">source</button>
+  <div id="qg-source-modal">
+    <button id="qg-source-close" onclick="toggleSource()">ESC</button>
+    <div id="qg-source-content">
+      <pre id="qg-source-code">No source code available</pre>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@8/dist/pixi.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20/build/matter.min.js"></script>
+  <script>
+function toggleSource() {
+  var modal = document.getElementById('qg-source-modal');
+  modal.classList.toggle('visible');
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.getElementById('qg-source-modal').classList.remove('visible');
+  }
+});
+(async function() {
+
+  // === PIXI APP ===
+  const app = new PIXI.Application();
+  await app.init({ width: 800, height: 450, background: "#92CDDB" });
+  document.body.appendChild(app.canvas);
+  // World size: 3600x450, Viewport: 800x450
+
+  // === MATTER.JS ENGINE ===
+  const mEngine = Matter.Engine.create();
+  mEngine.gravity.x = 0;
+  mEngine.gravity.y = 9.8;
+  // Increase solver iterations for tighter collision resolution
+  mEngine.positionIterations = 10;
+  mEngine.velocityIterations = 8;
+  const mWorld = mEngine.world;
+
+  // === EVENT BUS ===
+  // Event Bus
+  const _gameEvents = { _listeners: {} };
+  _gameEvents.on = function(event, cb) {
+    if (!this._listeners[event]) {
+      this._listeners[event] = [];
+    }
+    this._listeners[event].push(cb);
+  };
+  _gameEvents.off = function(event, cb) {
+    if (this._listeners[event]) {
+      this._listeners[event] = this._listeners[event].filter(fn => fn !== cb);
+    }
+  };
+  _gameEvents.emit = function(event, data) {
+    if (this._listeners[event]) {
+      for (const cb of this._listeners[event]) {
+        cb(data);
+      }
+    }
+  };
+
+  // === GAME STATE ===
+  let score = 0;
+  let coins = 0;
+  let lives = 3;
+  let gameOver = false;
+  let won = false;
+
+  // === ASSET LOADING ===
+  await PIXI.Assets.load(["assets/kenney/audio/block.ogg", "assets/kenney/audio/coin.ogg", "assets/kenney/audio/hurt.ogg", "assets/kenney/audio/jump.ogg", "assets/kenney/audio/powerup.ogg", "assets/kenney/audio/stomp.ogg", "assets/kenney/audio/win.ogg", "assets/kenney/tilemap-characters_packed.png", "assets/kenney/tilemap_packed.png"]);
+
+  // === ANIMATION SYSTEM ===
+  // Animation System
+  const _animatedSprites = {};
+
+  function _parseFrames(spec) {
+    if (spec.includes('-')) {
+      const parts = spec.split('-').map(Number);
+      const result = [];
+      for (let i = parts[0]; i <= parts[1]; i += 1) {
+        result.push(i);
+      }
+      return result;
+    }
+    return spec.split(',').map(s => parseInt(s.trim(), 10));
+  }
+
+  function _registerAnimation(spriteId, texture, frameW, frameH, anims) {
+    if (!texture || !frameW || !frameH) {
+      return;
+    }
+    // PIXI v8: get texture source and dimensions
+    const baseTexture = texture.source || texture.baseTexture || texture;
+    const texW = texture.width || baseTexture.width || (texture.frame && texture.frame.width) || 0;
+    const texH = texture.height || baseTexture.height || (texture.frame && texture.frame.height) || 0;
+    if (!texW || !texH) {
+      console.warn('Animation failed for', spriteId, '- texture dimensions not found');
+      return;
+    }
+    const cols = Math.floor(texW / frameW);
+    const rows = Math.floor(texH / frameH);
+    const totalFrames = cols * rows;
+
+    // Build frame textures
+    const frameTextures = [];
+    for (let i = 0; i <= totalFrames - 1; i += 1) {
+      const fx = i % cols;
+      const fy = Math.floor(i / cols);
+      const rect = new PIXI.Rectangle(fx * frameW, fy * frameH, frameW, frameH);
+      const frameTex = new PIXI.Texture({ source: baseTexture, frame: rect });
+      frameTextures.push(frameTex);
+    }
+
+    // Parse named animations
+    const animDefs = {};
+    let defaultAnim = null;
+    for (const [name, cfg] of Object.entries(anims)) {
+      const frames = _parseFrames(cfg.frames);
+      const textures = frames.filter(f => f < frameTextures.length).map(f => frameTextures[f]);
+      if (textures.length > 0) {
+        animDefs[name] = { textures: textures, speed: cfg.speed || 0.1, loop: cfg.loop !== false };
+        if (cfg.autoPlay) {
+          defaultAnim = name;
+        }
+      }
+    }
+
+    if (Object.keys(animDefs).length === 0) {
+      return;
+    }
+
+    if (!defaultAnim) {
+      defaultAnim = Object.keys(animDefs)[0];
+    }
+
+    // Create animated sprite
+    const firstAnim = animDefs[defaultAnim];
+    const animSprite = new PIXI.AnimatedSprite(firstAnim.textures);
+    animSprite.animationSpeed = firstAnim.speed;
+    if (firstAnim.loop !== false) {
+      animSprite.loop = true;
+    }
+    animSprite.play();
+
+    // Copy transform from static sprite
+    const info = _sprites[spriteId];
+    if (info) {
+      const oldSprite = info.sprite;
+      animSprite.x = oldSprite.x;
+      animSprite.y = oldSprite.y;
+      animSprite.anchor.x = oldSprite.anchor ? oldSprite.anchor.x : 0.5;
+      animSprite.anchor.y = oldSprite.anchor ? oldSprite.anchor.y : 0.5;
+      animSprite.alpha = oldSprite.alpha;
+      animSprite.visible = oldSprite.visible;
+
+      // Replace in container
+      const parent = oldSprite.parent;
+      if (parent) {
+        const idx = parent.getChildIndex(oldSprite);
+        parent.removeChild(oldSprite);
+        parent.addChildAt(animSprite, idx);
+      }
+      info.sprite = animSprite;
+      _animatedSprites[spriteId] = { anims: animDefs, current: defaultAnim, sprite: animSprite };
+    }
+  }
+
+  function _switchAnimation(spriteId, animName) {
+    const entry = _animatedSprites[spriteId];
+    if (!entry || entry.current === animName || !entry.anims[animName]) {
+      return;
+    }
+    const anim = entry.anims[animName];
+    entry.sprite.textures = anim.textures;
+    entry.sprite.animationSpeed = anim.speed;
+    entry.sprite.loop = anim.loop !== false;
+    entry.sprite.gotoAndPlay(0);
+    entry.current = animName;
+  }
+
+  function _updateAnimatedSprites(ticker) {
+    for (const [spriteId, entry] of Object.entries(_animatedSprites)) {
+      if (entry.sprite && entry.sprite.playing) {
+        // PIXI v8: manually update animation using deltaMS
+        entry.sprite.update(ticker);
+      }
+    }
+  }
+
+  function _updateControlAnimations() {
+    for (const [spriteId, ctrl] of Object.entries(_controlledSprites)) {
+      const entry = _animatedSprites[spriteId];
+      if (!entry) {
+        continue;
+      }
+      const info = _sprites[spriteId];
+      if (!info || !info.body) {
+        continue;
+      }
+      const vx = Math.abs(info.body.velocity.x);
+      const vy = info.body.velocity.y;
+
+      // Priority: jump > walk > idle
+      if (Math.abs(vy) > 5 && entry.anims['jump']) {
+        _switchAnimation(spriteId, 'jump');
+      } else if (vx > 0.1 && _keys[ctrl.right] && entry.anims['walk-right']) {
+        _switchAnimation(spriteId, 'walk-right');
+      } else if (vx > 0.1 && _keys[ctrl.left] && entry.anims['walk-left']) {
+        _switchAnimation(spriteId, 'walk-left');
+      } else if (vx > 0.1 && (entry.anims['walk'] || entry.anims['walk-right'])) {
+        _switchAnimation(spriteId, entry.anims['walk'] ? 'walk' : 'walk-right');
+      } else if (entry.anims['idle']) {
+        _switchAnimation(spriteId, 'idle');
+      }
+    }
+  }
+
+  // === BEHAVIORS ===
+  class PlayerBehavior {
+    constructor(owner, overrides) {
+      this.owner = owner;
+      this.invulnFrames = 0;
+      this.checkpointX = 36;
+      this.checkpointY = 348;
+      if (overrides) Object.assign(this, overrides);
+    }
+    get x() { return this.owner.sprite.x; }
+    set x(v) { this.owner.sprite.x = v; }
+    get y() { return this.owner.sprite.y; }
+    set y(v) { this.owner.sprite.y = v; }
+    get rotation() { return this.owner.sprite.rotation; }
+    set rotation(v) { this.owner.sprite.rotation = v; }
+    get alpha() { return this.owner.sprite.alpha; }
+    set alpha(v) { this.owner.sprite.alpha = v; }
+    get visible() { return this.owner.sprite.visible; }
+    set visible(v) { this.owner.sprite.visible = v; }
+    onEnemyHit() {
+      var other = this._other;
+      var myBody = this.owner.body;
+      var enemyBody = other ? other.body : null;
+      if (this.invulnFrames > 0) return;
+      var stomped = false;
+      if (myBody && enemyBody) {
+      var myBottom = myBody.position.y + 12;
+      var enemyCenter = enemyBody.position.y;
+      stomped = (myBottom < enemyCenter + 4) && (myBody.velocity.y > 0);
+      }
+      if (stomped) {
+      Matter.Body.setVelocity(myBody, {x: myBody.velocity.x, y: -10});
+      game.destroy(other);
+      score += 100;
+      game.play('stomp_sfx');
+      _updateHUD();
+      } else {
+      lives--;
+      this.invulnFrames = 120;
+      game.play('hurt_sfx');
+      if (lives <= 0) {
+      gameOver = true;
+      } else {
+      game.respawn("player", this.checkpointX, this.checkpointY);
+      }
+      _updateHUD();
+      }
+    }
+    onCoinGet() {
+      var other = this._other;
+      coins++;
+      score += 50;
+      game.destroy(other);
+      game.play('coin_sfx');
+      if (coins >= 100) {
+      coins = 0;
+      lives++;
+      }
+      _updateHUD();
+    }
+    onGemGet() {
+      var other = this._other;
+      score += 500;
+      game.destroy(other);
+      game.play('powerup_sfx');
+      _updateHUD();
+    }
+    onBlockHit() {
+      var other = this._other;
+      var myBody = this.owner.body;
+      if (myBody && other && other.body) {
+      var myY = myBody.position.y;
+      var blockY = other.body.position.y;
+      if (myY > blockY + 4 && myBody.velocity.y < 0) {
+      coins++;
+      score += 50;
+      game.play('block_sfx');
+      Matter.Body.setVelocity(myBody, {x: myBody.velocity.x, y: 2});
+      var spr = other.sprite;
+      if (spr) {
+      var origY = spr.y;
+      spr.y -= 6;
+      setTimeout(function() { spr.y = origY; }, 150);
+      }
+      _updateHUD();
+      }
+      }
+    }
+    onFlagGet() {
+      if (!won) {
+      won = true;
+      score += 5000;
+      game.play('win_sfx');
+      _updateHUD();
+      var myBody = _sprites["player"].body;
+      if (myBody) {
+      Matter.Body.setStatic(myBody, true);
+      Matter.Body.setVelocity(myBody, {x: 0, y: 0});
+      }
+      }
+    }
+    onCheckpoint() {
+      this.checkpointX = this.owner.body ? this.owner.body.position.x : this.checkpointX;
+      this.checkpointY = this.owner.body ? this.owner.body.position.y : this.checkpointY;
+    }
+    onDeath() {
+      lives--;
+      if (lives <= 0) {
+      gameOver = true;
+      } else {
+      game.respawn("player", this.checkpointX, this.checkpointY);
+      }
+      _updateHUD();
+    }
+    update() {
+      if (this.invulnFrames > 0) {
+      this.invulnFrames--;
+      var spr = this.owner.sprite;
+      if (spr) {
+      spr.alpha = (this.invulnFrames % 8 < 4) ? 0.3 : 1.0;
+      }
+      if (this.invulnFrames === 0 && spr) {
+      spr.alpha = 1.0;
+      }
+      }
+    }
+  }
+
+  class PatrolAI {
+    constructor(owner, overrides) {
+      this.owner = owner;
+      this.dir = -1;
+      this.spd = 1.0;
+      if (overrides) Object.assign(this, overrides);
+    }
+    get x() { return this.owner.sprite.x; }
+    set x(v) { this.owner.sprite.x = v; }
+    get y() { return this.owner.sprite.y; }
+    set y(v) { this.owner.sprite.y = v; }
+    get rotation() { return this.owner.sprite.rotation; }
+    set rotation(v) { this.owner.sprite.rotation = v; }
+    get alpha() { return this.owner.sprite.alpha; }
+    set alpha(v) { this.owner.sprite.alpha = v; }
+    get visible() { return this.owner.sprite.visible; }
+    set visible(v) { this.owner.sprite.visible = v; }
+    update() {
+      var b = this.owner.body;
+      if (b) Matter.Body.setVelocity(b, {x: this.dir * this.spd, y: b.velocity.y});
+    }
+    onWall() {
+      this.dir *= -1;
+    }
+  }
+
+  class SmartPatrolAI {
+    constructor(owner, overrides) {
+      this.owner = owner;
+      this.dir = -1;
+      this.spd = 0.8;
+      if (overrides) Object.assign(this, overrides);
+    }
+    get x() { return this.owner.sprite.x; }
+    set x(v) { this.owner.sprite.x = v; }
+    get y() { return this.owner.sprite.y; }
+    set y(v) { this.owner.sprite.y = v; }
+    get rotation() { return this.owner.sprite.rotation; }
+    set rotation(v) { this.owner.sprite.rotation = v; }
+    get alpha() { return this.owner.sprite.alpha; }
+    set alpha(v) { this.owner.sprite.alpha = v; }
+    get visible() { return this.owner.sprite.visible; }
+    set visible(v) { this.owner.sprite.visible = v; }
+    update() {
+      var b = this.owner.body;
+      if (b) Matter.Body.setVelocity(b, {x: this.dir * this.spd, y: b.velocity.y});
+    }
+    onWall() {
+      this.dir *= -1;
+    }
+    onEdge() {
+      this.dir *= -1;
+    }
+  }
+
+  class FloatingCoin {
+    constructor(owner, overrides) {
+      this.owner = owner;
+      this.timer = 0;
+      this.baseY = 0;
+      this.initialized = false;
+      if (overrides) Object.assign(this, overrides);
+    }
+    get x() { return this.owner.sprite.x; }
+    set x(v) { this.owner.sprite.x = v; }
+    get y() { return this.owner.sprite.y; }
+    set y(v) { this.owner.sprite.y = v; }
+    get rotation() { return this.owner.sprite.rotation; }
+    set rotation(v) { this.owner.sprite.rotation = v; }
+    get alpha() { return this.owner.sprite.alpha; }
+    set alpha(v) { this.owner.sprite.alpha = v; }
+    get visible() { return this.owner.sprite.visible; }
+    set visible(v) { this.owner.sprite.visible = v; }
+    update() {
+      if (!this.initialized) {
+      this.baseY = this.owner.sprite ? this.owner.sprite.y : 0;
+      this.initialized = true;
+      }
+      this.timer += 0.05;
+      var spr = this.owner.sprite;
+      if (spr) {
+      spr.y = this.baseY + Math.sin(this.timer) * 3;
+      }
+    }
+  }
+
+  class ItemBlockBehavior {
+    constructor(owner, overrides) {
+      this.owner = owner;
+      this.active = true;
+      if (overrides) Object.assign(this, overrides);
+    }
+    get x() { return this.owner.sprite.x; }
+    set x(v) { this.owner.sprite.x = v; }
+    get y() { return this.owner.sprite.y; }
+    set y(v) { this.owner.sprite.y = v; }
+    get rotation() { return this.owner.sprite.rotation; }
+    set rotation(v) { this.owner.sprite.rotation = v; }
+    get alpha() { return this.owner.sprite.alpha; }
+    set alpha(v) { this.owner.sprite.alpha = v; }
+    get visible() { return this.owner.sprite.visible; }
+    set visible(v) { this.owner.sprite.visible = v; }
+    onHit() {
+      if (!this.active) return;
+      var other = this._other;
+      if (!other || !other.body) return;
+      var playerY = other.body.position.y;
+      var blockY = this.owner.body ? this.owner.body.position.y : this.owner.sprite.y;
+      if (playerY > blockY + 4) {
+      this.active = false;
+      coins++;
+      score += 50;
+      game.play('block_sfx');
+      _updateHUD();
+      var spr = this.owner.sprite;
+      if (spr) {
+      var origY = spr.y;
+      spr.y -= 6;
+      setTimeout(function() { spr.y = origY; }, 150);
+      }
+      }
+    }
+  }
+
+
+  // === CAMERA ===
+  const _cameraContainer = new PIXI.Container();
+  app.stage.addChild(_cameraContainer);
+  const _camera = { targetId: "player", lerp: 0.08 };
+
+  function updateCamera() {
+    const info = _sprites[_camera.targetId];
+    if (!info) {
+      return;
+    }
+    const tx = app.screen.width / 2 - info.sprite.x;
+    const ty = app.screen.height / 2 - info.sprite.y;
+    _cameraContainer.x += (tx - _cameraContainer.x) * _camera.lerp;
+    _cameraContainer.y += (ty - _cameraContainer.y) * _camera.lerp;
+    _cameraContainer.x = Math.min(0, Math.max(app.screen.width - 3600, _cameraContainer.x));
+    _cameraContainer.y = Math.min(0, Math.max(app.screen.height - 450, _cameraContainer.y));
+  }
+
+  // === VISUAL TILEMAPS ===
+  const _tileData_level_terrain_visual = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,44,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,151,0,151,0,151,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,11,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,68,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,151,0,0,0,151,0,0,0,0,151,0,0,0,0,151,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,68,0,0,0,0,0,0,0,0,0,0,0,0,0,0,68,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,151,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,151,151,151,0,0,0,0,0,0,0,0,0,0,0,0,0,151,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,151,0,151,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,44,0,0,0,0,0,0,0,0,0,0,0,0,151,0,0,0,0,0,151,0,0,0,0,0,0,0,0,0,151,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,151,151,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,10,10,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,151,151,151,0,0,0,0,11,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,42,43,42,44,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,11,0,0,0,0,12,0,0,0,0,11,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,42,44,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,10,10,10,10,10,10,10,10,0,0,0,0,12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,22,23,23,23,23,23,23,23,23,23,23,23,23,23,24,0,151,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,44,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,10,10,10,10,10,10,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,38,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,41,44,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,41,44,0,0,0,0,0,0,0,0,0,0,0,0,113,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,10,10,10,10,10,10,10,10,10,10,10,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,113,0,0,0,0,0,0,0,0,0],[0,0,0,58,58,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,58,0,0,0,0,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,58,58,0,0,0,0,0,0,38,0,25,25,5,5,5,5,5,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,64,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,64,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,110,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,0,0,0,0,0,0,0,0,0,58,58,0,0,0,110,0,0,0,0,58,0,0,0,0],[22,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,24,0,0,0,22,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,22,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,0,0,0,22,23,23,23,23,23,23,0,0,0,0,22,23,23,23,23,23,0,0,0,0,22,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23],[25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25],[25,25,5,5,5,5,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25],[25,25,25,25,25,25,25,25,25,25,6,6,6,6,6,6,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,49,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25]];
+  const _tileset_level = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _tsSource_level = _tileset_level.source || _tileset_level.baseTexture || _tileset_level;
+  const _tsCols_level = Math.floor((_tsSource_level.width || _tileset_level.width || 256) / 18);
+  // Create tiles for layer terrain_visual
+  function _getTileTex_level(tileId) {
+    const col = tileId % _tsCols_level;
+    const row = Math.floor(tileId / _tsCols_level);
+    const rect = new PIXI.Rectangle(col * 18, row * 18, 18, 18);
+    return new PIXI.Texture({ source: _tsSource_level, frame: rect });
+  }
+  for (let _ty = 0; _ty <= _tileData_level_terrain_visual.length - 1; _ty += 1) {
+    for (let _tx = 0; _tx <= _tileData_level_terrain_visual[_ty].length - 1; _tx += 1) {
+      const _tileId = _tileData_level_terrain_visual[_ty][_tx];
+      if (_tileId > 0) {
+        const _tileSpr = new PIXI.Sprite(_getTileTex_level(_tileId));
+        _tileSpr.x = _tx * 18;
+        _tileSpr.y = _ty * 18;
+        _cameraContainer.addChild(_tileSpr);
+      }
+    }
+  }
+
+  const _tileData_level_terrain = [[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,42,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,42,42,42,42,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,42,42,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,42,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,42,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,42,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25],[25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25],[25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25],[25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25]];
+  // Create tiles for layer terrain
+  function _getTileTex_level(tileId) {
+    const col = tileId % _tsCols_level;
+    const row = Math.floor(tileId / _tsCols_level);
+    const rect = new PIXI.Rectangle(col * 18, row * 18, 18, 18);
+    return new PIXI.Texture({ source: _tsSource_level, frame: rect });
+  }
+  for (let _ty = 0; _ty <= _tileData_level_terrain.length - 1; _ty += 1) {
+    for (let _tx = 0; _tx <= _tileData_level_terrain[_ty].length - 1; _tx += 1) {
+      const _tileId = _tileData_level_terrain[_ty][_tx];
+      if (_tileId > 0) {
+        const _tileSpr = new PIXI.Sprite(_getTileTex_level(_tileId));
+        _tileSpr.x = _tx * 18;
+        _tileSpr.y = _ty * 18;
+        _cameraContainer.addChild(_tileSpr);
+      }
+    }
+  }
+
+
+  // === SPRITES & BODIES ===
+  const _sprites = {};
+  const _bodyToSprite = {};
+  const _player_baseTex = PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png");
+  const _player_src = _player_baseTex.source || _player_baseTex.baseTexture || _player_baseTex;
+  const _player_rect = new PIXI.Rectangle(0, 0, 24, 24);
+  const _player_frameTex = new PIXI.Texture({ source: _player_src, frame: _player_rect });
+  const _spr_player = new PIXI.Sprite(_player_frameTex);
+  _spr_player.x = 36;
+  _spr_player.y = 348;
+  _spr_player.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_player);
+  const _body_player = Matter.Bodies.rectangle(36, 348, 24, 24, { isStatic: false, restitution: 0, friction: 0.8, slop: 0.01, inertia: Infinity, chamfer: { radius: 6 } });
+  _bodyToSprite[_body_player.id] = "player";
+  _sprites["player"] = { id: "player", sprite: _spr_player, body: _body_player, tag: "player", collisionHandlers: [], behaviors: [] };
+
+  const _enemy1_baseTex = PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png");
+  const _enemy1_src = _enemy1_baseTex.source || _enemy1_baseTex.baseTexture || _enemy1_baseTex;
+  const _enemy1_rect = new PIXI.Rectangle(0, 0, 24, 24);
+  const _enemy1_frameTex = new PIXI.Texture({ source: _enemy1_src, frame: _enemy1_rect });
+  const _spr_enemy1 = new PIXI.Sprite(_enemy1_frameTex);
+  _spr_enemy1.x = 756;
+  _spr_enemy1.y = 348;
+  _spr_enemy1.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_enemy1);
+  const _body_enemy1 = Matter.Bodies.rectangle(756, 348, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy1.id] = "enemy1";
+  _sprites["enemy1"] = { id: "enemy1", sprite: _spr_enemy1, body: _body_enemy1, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _enemy2_baseTex = PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png");
+  const _enemy2_src = _enemy2_baseTex.source || _enemy2_baseTex.baseTexture || _enemy2_baseTex;
+  const _enemy2_rect = new PIXI.Rectangle(0, 0, 24, 24);
+  const _enemy2_frameTex = new PIXI.Texture({ source: _enemy2_src, frame: _enemy2_rect });
+  const _spr_enemy2 = new PIXI.Sprite(_enemy2_frameTex);
+  _spr_enemy2.x = 864;
+  _spr_enemy2.y = 348;
+  _spr_enemy2.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_enemy2);
+  const _body_enemy2 = Matter.Bodies.rectangle(864, 348, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy2.id] = "enemy2";
+  _sprites["enemy2"] = { id: "enemy2", sprite: _spr_enemy2, body: _body_enemy2, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _enemy3_baseTex = PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png");
+  const _enemy3_src = _enemy3_baseTex.source || _enemy3_baseTex.baseTexture || _enemy3_baseTex;
+  const _enemy3_rect = new PIXI.Rectangle(0, 0, 24, 24);
+  const _enemy3_frameTex = new PIXI.Texture({ source: _enemy3_src, frame: _enemy3_rect });
+  const _spr_enemy3 = new PIXI.Sprite(_enemy3_frameTex);
+  _spr_enemy3.x = 1152;
+  _spr_enemy3.y = 294;
+  _spr_enemy3.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_enemy3);
+  const _body_enemy3 = Matter.Bodies.rectangle(1152, 294, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy3.id] = "enemy3";
+  _sprites["enemy3"] = { id: "enemy3", sprite: _spr_enemy3, body: _body_enemy3, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _enemy4_baseTex = PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png");
+  const _enemy4_src = _enemy4_baseTex.source || _enemy4_baseTex.baseTexture || _enemy4_baseTex;
+  const _enemy4_rect = new PIXI.Rectangle(0, 0, 24, 24);
+  const _enemy4_frameTex = new PIXI.Texture({ source: _enemy4_src, frame: _enemy4_rect });
+  const _spr_enemy4 = new PIXI.Sprite(_enemy4_frameTex);
+  _spr_enemy4.x = 1260;
+  _spr_enemy4.y = 294;
+  _spr_enemy4.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_enemy4);
+  const _body_enemy4 = Matter.Bodies.rectangle(1260, 294, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy4.id] = "enemy4";
+  _sprites["enemy4"] = { id: "enemy4", sprite: _spr_enemy4, body: _body_enemy4, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _enemy5_baseTex = PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png");
+  const _enemy5_src = _enemy5_baseTex.source || _enemy5_baseTex.baseTexture || _enemy5_baseTex;
+  const _enemy5_rect = new PIXI.Rectangle(0, 0, 24, 24);
+  const _enemy5_frameTex = new PIXI.Texture({ source: _enemy5_src, frame: _enemy5_rect });
+  const _spr_enemy5 = new PIXI.Sprite(_enemy5_frameTex);
+  _spr_enemy5.x = 1728;
+  _spr_enemy5.y = 348;
+  _spr_enemy5.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_enemy5);
+  const _body_enemy5 = Matter.Bodies.rectangle(1728, 348, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy5.id] = "enemy5";
+  _sprites["enemy5"] = { id: "enemy5", sprite: _spr_enemy5, body: _body_enemy5, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _enemy6_baseTex = PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png");
+  const _enemy6_src = _enemy6_baseTex.source || _enemy6_baseTex.baseTexture || _enemy6_baseTex;
+  const _enemy6_rect = new PIXI.Rectangle(0, 0, 24, 24);
+  const _enemy6_frameTex = new PIXI.Texture({ source: _enemy6_src, frame: _enemy6_rect });
+  const _spr_enemy6 = new PIXI.Sprite(_enemy6_frameTex);
+  _spr_enemy6.x = 1854;
+  _spr_enemy6.y = 348;
+  _spr_enemy6.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_enemy6);
+  const _body_enemy6 = Matter.Bodies.rectangle(1854, 348, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy6.id] = "enemy6";
+  _sprites["enemy6"] = { id: "enemy6", sprite: _spr_enemy6, body: _body_enemy6, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _enemy7_baseTex = PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png");
+  const _enemy7_src = _enemy7_baseTex.source || _enemy7_baseTex.baseTexture || _enemy7_baseTex;
+  const _enemy7_rect = new PIXI.Rectangle(0, 0, 24, 24);
+  const _enemy7_frameTex = new PIXI.Texture({ source: _enemy7_src, frame: _enemy7_rect });
+  const _spr_enemy7 = new PIXI.Sprite(_enemy7_frameTex);
+  _spr_enemy7.x = 2340;
+  _spr_enemy7.y = 348;
+  _spr_enemy7.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_enemy7);
+  const _body_enemy7 = Matter.Bodies.rectangle(2340, 348, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy7.id] = "enemy7";
+  _sprites["enemy7"] = { id: "enemy7", sprite: _spr_enemy7, body: _body_enemy7, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _enemy8_baseTex = PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png");
+  const _enemy8_src = _enemy8_baseTex.source || _enemy8_baseTex.baseTexture || _enemy8_baseTex;
+  const _enemy8_rect = new PIXI.Rectangle(0, 0, 24, 24);
+  const _enemy8_frameTex = new PIXI.Texture({ source: _enemy8_src, frame: _enemy8_rect });
+  const _spr_enemy8 = new PIXI.Sprite(_enemy8_frameTex);
+  _spr_enemy8.x = 2970;
+  _spr_enemy8.y = 294;
+  _spr_enemy8.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_enemy8);
+  const _body_enemy8 = Matter.Bodies.rectangle(2970, 294, 24, 24, { isStatic: false, restitution: 0, friction: 0.3, slop: 0.01, inertia: Infinity });
+  _bodyToSprite[_body_enemy8.id] = "enemy8";
+  _sprites["enemy8"] = { id: "enemy8", sprite: _spr_enemy8, body: _body_enemy8, tag: "enemy", collisionHandlers: [], behaviors: [] };
+
+  const _coin1_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin1_src = _coin1_baseTex.source || _coin1_baseTex.baseTexture || _coin1_baseTex;
+  const _coin1_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin1_frameTex = new PIXI.Texture({ source: _coin1_src, frame: _coin1_rect });
+  const _spr_coin1 = new PIXI.Sprite(_coin1_frameTex);
+  _spr_coin1.x = 153;
+  _spr_coin1.y = 315;
+  _spr_coin1.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin1);
+  const _body_coin1 = Matter.Bodies.rectangle(153, 315, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin1.id] = "coin1";
+  _sprites["coin1"] = { id: "coin1", sprite: _spr_coin1, body: _body_coin1, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin2_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin2_src = _coin2_baseTex.source || _coin2_baseTex.baseTexture || _coin2_baseTex;
+  const _coin2_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin2_frameTex = new PIXI.Texture({ source: _coin2_src, frame: _coin2_rect });
+  const _spr_coin2 = new PIXI.Sprite(_coin2_frameTex);
+  _spr_coin2.x = 171;
+  _spr_coin2.y = 315;
+  _spr_coin2.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin2);
+  const _body_coin2 = Matter.Bodies.rectangle(171, 315, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin2.id] = "coin2";
+  _sprites["coin2"] = { id: "coin2", sprite: _spr_coin2, body: _body_coin2, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin3_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin3_src = _coin3_baseTex.source || _coin3_baseTex.baseTexture || _coin3_baseTex;
+  const _coin3_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin3_frameTex = new PIXI.Texture({ source: _coin3_src, frame: _coin3_rect });
+  const _spr_coin3 = new PIXI.Sprite(_coin3_frameTex);
+  _spr_coin3.x = 189;
+  _spr_coin3.y = 315;
+  _spr_coin3.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin3);
+  const _body_coin3 = Matter.Bodies.rectangle(189, 315, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin3.id] = "coin3";
+  _sprites["coin3"] = { id: "coin3", sprite: _spr_coin3, body: _body_coin3, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin4_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin4_src = _coin4_baseTex.source || _coin4_baseTex.baseTexture || _coin4_baseTex;
+  const _coin4_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin4_frameTex = new PIXI.Texture({ source: _coin4_src, frame: _coin4_rect });
+  const _spr_coin4 = new PIXI.Sprite(_coin4_frameTex);
+  _spr_coin4.x = 639;
+  _spr_coin4.y = 297;
+  _spr_coin4.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin4);
+  const _body_coin4 = Matter.Bodies.rectangle(639, 297, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin4.id] = "coin4";
+  _sprites["coin4"] = { id: "coin4", sprite: _spr_coin4, body: _body_coin4, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin5_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin5_src = _coin5_baseTex.source || _coin5_baseTex.baseTexture || _coin5_baseTex;
+  const _coin5_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin5_frameTex = new PIXI.Texture({ source: _coin5_src, frame: _coin5_rect });
+  const _spr_coin5 = new PIXI.Sprite(_coin5_frameTex);
+  _spr_coin5.x = 657;
+  _spr_coin5.y = 279;
+  _spr_coin5.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin5);
+  const _body_coin5 = Matter.Bodies.rectangle(657, 279, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin5.id] = "coin5";
+  _sprites["coin5"] = { id: "coin5", sprite: _spr_coin5, body: _body_coin5, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin6_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin6_src = _coin6_baseTex.source || _coin6_baseTex.baseTexture || _coin6_baseTex;
+  const _coin6_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin6_frameTex = new PIXI.Texture({ source: _coin6_src, frame: _coin6_rect });
+  const _spr_coin6 = new PIXI.Sprite(_coin6_frameTex);
+  _spr_coin6.x = 675;
+  _spr_coin6.y = 297;
+  _spr_coin6.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin6);
+  const _body_coin6 = Matter.Bodies.rectangle(675, 297, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin6.id] = "coin6";
+  _sprites["coin6"] = { id: "coin6", sprite: _spr_coin6, body: _body_coin6, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin7_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin7_src = _coin7_baseTex.source || _coin7_baseTex.baseTexture || _coin7_baseTex;
+  const _coin7_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin7_frameTex = new PIXI.Texture({ source: _coin7_src, frame: _coin7_rect });
+  const _spr_coin7 = new PIXI.Sprite(_coin7_frameTex);
+  _spr_coin7.x = 1125;
+  _spr_coin7.y = 279;
+  _spr_coin7.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin7);
+  const _body_coin7 = Matter.Bodies.rectangle(1125, 279, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin7.id] = "coin7";
+  _sprites["coin7"] = { id: "coin7", sprite: _spr_coin7, body: _body_coin7, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin8_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin8_src = _coin8_baseTex.source || _coin8_baseTex.baseTexture || _coin8_baseTex;
+  const _coin8_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin8_frameTex = new PIXI.Texture({ source: _coin8_src, frame: _coin8_rect });
+  const _spr_coin8 = new PIXI.Sprite(_coin8_frameTex);
+  _spr_coin8.x = 1143;
+  _spr_coin8.y = 279;
+  _spr_coin8.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin8);
+  const _body_coin8 = Matter.Bodies.rectangle(1143, 279, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin8.id] = "coin8";
+  _sprites["coin8"] = { id: "coin8", sprite: _spr_coin8, body: _body_coin8, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin9_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin9_src = _coin9_baseTex.source || _coin9_baseTex.baseTexture || _coin9_baseTex;
+  const _coin9_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin9_frameTex = new PIXI.Texture({ source: _coin9_src, frame: _coin9_rect });
+  const _spr_coin9 = new PIXI.Sprite(_coin9_frameTex);
+  _spr_coin9.x = 1161;
+  _spr_coin9.y = 279;
+  _spr_coin9.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin9);
+  const _body_coin9 = Matter.Bodies.rectangle(1161, 279, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin9.id] = "coin9";
+  _sprites["coin9"] = { id: "coin9", sprite: _spr_coin9, body: _body_coin9, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin10_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin10_src = _coin10_baseTex.source || _coin10_baseTex.baseTexture || _coin10_baseTex;
+  const _coin10_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin10_frameTex = new PIXI.Texture({ source: _coin10_src, frame: _coin10_rect });
+  const _spr_coin10 = new PIXI.Sprite(_coin10_frameTex);
+  _spr_coin10.x = 1377;
+  _spr_coin10.y = 333;
+  _spr_coin10.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin10);
+  const _body_coin10 = Matter.Bodies.rectangle(1377, 333, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin10.id] = "coin10";
+  _sprites["coin10"] = { id: "coin10", sprite: _spr_coin10, body: _body_coin10, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin11_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin11_src = _coin11_baseTex.source || _coin11_baseTex.baseTexture || _coin11_baseTex;
+  const _coin11_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin11_frameTex = new PIXI.Texture({ source: _coin11_src, frame: _coin11_rect });
+  const _spr_coin11 = new PIXI.Sprite(_coin11_frameTex);
+  _spr_coin11.x = 1413;
+  _spr_coin11.y = 279;
+  _spr_coin11.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin11);
+  const _body_coin11 = Matter.Bodies.rectangle(1413, 279, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin11.id] = "coin11";
+  _sprites["coin11"] = { id: "coin11", sprite: _spr_coin11, body: _body_coin11, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin12_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin12_src = _coin12_baseTex.source || _coin12_baseTex.baseTexture || _coin12_baseTex;
+  const _coin12_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin12_frameTex = new PIXI.Texture({ source: _coin12_src, frame: _coin12_rect });
+  const _spr_coin12 = new PIXI.Sprite(_coin12_frameTex);
+  _spr_coin12.x = 1683;
+  _spr_coin12.y = 261;
+  _spr_coin12.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin12);
+  const _body_coin12 = Matter.Bodies.rectangle(1683, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin12.id] = "coin12";
+  _sprites["coin12"] = { id: "coin12", sprite: _spr_coin12, body: _body_coin12, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin13_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin13_src = _coin13_baseTex.source || _coin13_baseTex.baseTexture || _coin13_baseTex;
+  const _coin13_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin13_frameTex = new PIXI.Texture({ source: _coin13_src, frame: _coin13_rect });
+  const _spr_coin13 = new PIXI.Sprite(_coin13_frameTex);
+  _spr_coin13.x = 1755;
+  _spr_coin13.y = 261;
+  _spr_coin13.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin13);
+  const _body_coin13 = Matter.Bodies.rectangle(1755, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin13.id] = "coin13";
+  _sprites["coin13"] = { id: "coin13", sprite: _spr_coin13, body: _body_coin13, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin14_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin14_src = _coin14_baseTex.source || _coin14_baseTex.baseTexture || _coin14_baseTex;
+  const _coin14_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin14_frameTex = new PIXI.Texture({ source: _coin14_src, frame: _coin14_rect });
+  const _spr_coin14 = new PIXI.Sprite(_coin14_frameTex);
+  _spr_coin14.x = 1845;
+  _spr_coin14.y = 261;
+  _spr_coin14.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin14);
+  const _body_coin14 = Matter.Bodies.rectangle(1845, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin14.id] = "coin14";
+  _sprites["coin14"] = { id: "coin14", sprite: _spr_coin14, body: _body_coin14, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin15_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin15_src = _coin15_baseTex.source || _coin15_baseTex.baseTexture || _coin15_baseTex;
+  const _coin15_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin15_frameTex = new PIXI.Texture({ source: _coin15_src, frame: _coin15_rect });
+  const _spr_coin15 = new PIXI.Sprite(_coin15_frameTex);
+  _spr_coin15.x = 1935;
+  _spr_coin15.y = 261;
+  _spr_coin15.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin15);
+  const _body_coin15 = Matter.Bodies.rectangle(1935, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin15.id] = "coin15";
+  _sprites["coin15"] = { id: "coin15", sprite: _spr_coin15, body: _body_coin15, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin16_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin16_src = _coin16_baseTex.source || _coin16_baseTex.baseTexture || _coin16_baseTex;
+  const _coin16_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin16_frameTex = new PIXI.Texture({ source: _coin16_src, frame: _coin16_rect });
+  const _spr_coin16 = new PIXI.Sprite(_coin16_frameTex);
+  _spr_coin16.x = 1665;
+  _spr_coin16.y = 297;
+  _spr_coin16.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin16);
+  const _body_coin16 = Matter.Bodies.rectangle(1665, 297, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin16.id] = "coin16";
+  _sprites["coin16"] = { id: "coin16", sprite: _spr_coin16, body: _body_coin16, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin17_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin17_src = _coin17_baseTex.source || _coin17_baseTex.baseTexture || _coin17_baseTex;
+  const _coin17_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin17_frameTex = new PIXI.Texture({ source: _coin17_src, frame: _coin17_rect });
+  const _spr_coin17 = new PIXI.Sprite(_coin17_frameTex);
+  _spr_coin17.x = 1773;
+  _spr_coin17.y = 297;
+  _spr_coin17.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin17);
+  const _body_coin17 = Matter.Bodies.rectangle(1773, 297, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin17.id] = "coin17";
+  _sprites["coin17"] = { id: "coin17", sprite: _spr_coin17, body: _body_coin17, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin18_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin18_src = _coin18_baseTex.source || _coin18_baseTex.baseTexture || _coin18_baseTex;
+  const _coin18_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin18_frameTex = new PIXI.Texture({ source: _coin18_src, frame: _coin18_rect });
+  const _spr_coin18 = new PIXI.Sprite(_coin18_frameTex);
+  _spr_coin18.x = 1953;
+  _spr_coin18.y = 297;
+  _spr_coin18.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin18);
+  const _body_coin18 = Matter.Bodies.rectangle(1953, 297, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin18.id] = "coin18";
+  _sprites["coin18"] = { id: "coin18", sprite: _spr_coin18, body: _body_coin18, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin19_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin19_src = _coin19_baseTex.source || _coin19_baseTex.baseTexture || _coin19_baseTex;
+  const _coin19_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin19_frameTex = new PIXI.Texture({ source: _coin19_src, frame: _coin19_rect });
+  const _spr_coin19 = new PIXI.Sprite(_coin19_frameTex);
+  _spr_coin19.x = 3213;
+  _spr_coin19.y = 225;
+  _spr_coin19.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin19);
+  const _body_coin19 = Matter.Bodies.rectangle(3213, 225, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin19.id] = "coin19";
+  _sprites["coin19"] = { id: "coin19", sprite: _spr_coin19, body: _body_coin19, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _coin20_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _coin20_src = _coin20_baseTex.source || _coin20_baseTex.baseTexture || _coin20_baseTex;
+  const _coin20_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _coin20_frameTex = new PIXI.Texture({ source: _coin20_src, frame: _coin20_rect });
+  const _spr_coin20 = new PIXI.Sprite(_coin20_frameTex);
+  _spr_coin20.x = 3249;
+  _spr_coin20.y = 225;
+  _spr_coin20.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_coin20);
+  const _body_coin20 = Matter.Bodies.rectangle(3249, 225, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_coin20.id] = "coin20";
+  _sprites["coin20"] = { id: "coin20", sprite: _spr_coin20, body: _body_coin20, tag: "coin", collisionHandlers: [], behaviors: [] };
+
+  const _gem1_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _gem1_src = _gem1_baseTex.source || _gem1_baseTex.baseTexture || _gem1_baseTex;
+  const _gem1_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _gem1_frameTex = new PIXI.Texture({ source: _gem1_src, frame: _gem1_rect });
+  const _spr_gem1 = new PIXI.Sprite(_gem1_frameTex);
+  _spr_gem1.x = 1179;
+  _spr_gem1.y = 261;
+  _spr_gem1.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_gem1);
+  const _body_gem1 = Matter.Bodies.rectangle(1179, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_gem1.id] = "gem1";
+  _sprites["gem1"] = { id: "gem1", sprite: _spr_gem1, body: _body_gem1, tag: "gem", collisionHandlers: [], behaviors: [] };
+
+  const _gem2_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _gem2_src = _gem2_baseTex.source || _gem2_baseTex.baseTexture || _gem2_baseTex;
+  const _gem2_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _gem2_frameTex = new PIXI.Texture({ source: _gem2_src, frame: _gem2_rect });
+  const _spr_gem2 = new PIXI.Sprite(_gem2_frameTex);
+  _spr_gem2.x = 2475;
+  _spr_gem2.y = 261;
+  _spr_gem2.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_gem2);
+  const _body_gem2 = Matter.Bodies.rectangle(2475, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_gem2.id] = "gem2";
+  _sprites["gem2"] = { id: "gem2", sprite: _spr_gem2, body: _body_gem2, tag: "gem", collisionHandlers: [], behaviors: [] };
+
+  const _gem3_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _gem3_src = _gem3_baseTex.source || _gem3_baseTex.baseTexture || _gem3_baseTex;
+  const _gem3_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _gem3_frameTex = new PIXI.Texture({ source: _gem3_src, frame: _gem3_rect });
+  const _spr_gem3 = new PIXI.Sprite(_gem3_frameTex);
+  _spr_gem3.x = 2745;
+  _spr_gem3.y = 261;
+  _spr_gem3.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_gem3);
+  const _body_gem3 = Matter.Bodies.rectangle(2745, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_gem3.id] = "gem3";
+  _sprites["gem3"] = { id: "gem3", sprite: _spr_gem3, body: _body_gem3, tag: "gem", collisionHandlers: [], behaviors: [] };
+
+  const _item_block1_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _item_block1_src = _item_block1_baseTex.source || _item_block1_baseTex.baseTexture || _item_block1_baseTex;
+  const _item_block1_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _item_block1_frameTex = new PIXI.Texture({ source: _item_block1_src, frame: _item_block1_rect });
+  const _spr_item_block1 = new PIXI.Sprite(_item_block1_frameTex);
+  _spr_item_block1.x = 279;
+  _spr_item_block1.y = 315;
+  _spr_item_block1.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_item_block1);
+  const _body_item_block1 = Matter.Bodies.rectangle(279, 315, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_item_block1.id] = "item_block1";
+  _sprites["item_block1"] = { id: "item_block1", sprite: _spr_item_block1, body: _body_item_block1, tag: "item_block", collisionHandlers: [], behaviors: [] };
+
+  const _item_block2_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _item_block2_src = _item_block2_baseTex.source || _item_block2_baseTex.baseTexture || _item_block2_baseTex;
+  const _item_block2_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _item_block2_frameTex = new PIXI.Texture({ source: _item_block2_src, frame: _item_block2_rect });
+  const _spr_item_block2 = new PIXI.Sprite(_item_block2_frameTex);
+  _spr_item_block2.x = 819;
+  _spr_item_block2.y = 261;
+  _spr_item_block2.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_item_block2);
+  const _body_item_block2 = Matter.Bodies.rectangle(819, 261, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_item_block2.id] = "item_block2";
+  _sprites["item_block2"] = { id: "item_block2", sprite: _spr_item_block2, body: _body_item_block2, tag: "item_block", collisionHandlers: [], behaviors: [] };
+
+  const _item_block3_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _item_block3_src = _item_block3_baseTex.source || _item_block3_baseTex.baseTexture || _item_block3_baseTex;
+  const _item_block3_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _item_block3_frameTex = new PIXI.Texture({ source: _item_block3_src, frame: _item_block3_rect });
+  const _spr_item_block3 = new PIXI.Sprite(_item_block3_frameTex);
+  _spr_item_block3.x = 1719;
+  _spr_item_block3.y = 315;
+  _spr_item_block3.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_item_block3);
+  const _body_item_block3 = Matter.Bodies.rectangle(1719, 315, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_item_block3.id] = "item_block3";
+  _sprites["item_block3"] = { id: "item_block3", sprite: _spr_item_block3, body: _body_item_block3, tag: "item_block", collisionHandlers: [], behaviors: [] };
+
+  const _item_block4_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _item_block4_src = _item_block4_baseTex.source || _item_block4_baseTex.baseTexture || _item_block4_baseTex;
+  const _item_block4_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _item_block4_frameTex = new PIXI.Texture({ source: _item_block4_src, frame: _item_block4_rect });
+  const _spr_item_block4 = new PIXI.Sprite(_item_block4_frameTex);
+  _spr_item_block4.x = 1809;
+  _spr_item_block4.y = 315;
+  _spr_item_block4.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_item_block4);
+  const _body_item_block4 = Matter.Bodies.rectangle(1809, 315, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_item_block4.id] = "item_block4";
+  _sprites["item_block4"] = { id: "item_block4", sprite: _spr_item_block4, body: _body_item_block4, tag: "item_block", collisionHandlers: [], behaviors: [] };
+
+  const _item_block5_baseTex = PIXI.Assets.get("assets/kenney/tilemap_packed.png");
+  const _item_block5_src = _item_block5_baseTex.source || _item_block5_baseTex.baseTexture || _item_block5_baseTex;
+  const _item_block5_rect = new PIXI.Rectangle(0, 0, 18, 18);
+  const _item_block5_frameTex = new PIXI.Texture({ source: _item_block5_src, frame: _item_block5_rect });
+  const _spr_item_block5 = new PIXI.Sprite(_item_block5_frameTex);
+  _spr_item_block5.x = 1899;
+  _spr_item_block5.y = 315;
+  _spr_item_block5.anchor.set(0.5, 0.5);
+  _cameraContainer.addChild(_spr_item_block5);
+  const _body_item_block5 = Matter.Bodies.rectangle(1899, 315, 18, 18, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01 });
+  _bodyToSprite[_body_item_block5.id] = "item_block5";
+  _sprites["item_block5"] = { id: "item_block5", sprite: _spr_item_block5, body: _body_item_block5, tag: "item_block", collisionHandlers: [], behaviors: [] };
+
+  const _spr_goal_flag = new PIXI.Graphics();
+  _spr_goal_flag.rect(-2.0, -36.0, 4.0, 72.0);
+  _spr_goal_flag.fill({ color: 0xFF4444 });
+  _spr_goal_flag.x = 3429;
+  _spr_goal_flag.y = 324;
+  _cameraContainer.addChild(_spr_goal_flag);
+  const _body_goal_flag = Matter.Bodies.rectangle(3429, 324, 4, 72, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_goal_flag.id] = "goal_flag";
+  _sprites["goal_flag"] = { id: "goal_flag", sprite: _spr_goal_flag, body: _body_goal_flag, tag: "flagpole", collisionHandlers: [], behaviors: [] };
+
+  const _spr_checkpoint1 = new PIXI.Graphics();
+  _spr_checkpoint1.rect(-9.0, -18.0, 18.0, 36.0);
+  _spr_checkpoint1.fill({ color: 0x00000000 });
+  _spr_checkpoint1.x = 2529;
+  _spr_checkpoint1.y = 342;
+  _spr_checkpoint1.visible = false;
+  _cameraContainer.addChild(_spr_checkpoint1);
+  const _body_checkpoint1 = Matter.Bodies.rectangle(2529, 342, 18, 36, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_checkpoint1.id] = "checkpoint1";
+  _sprites["checkpoint1"] = { id: "checkpoint1", sprite: _spr_checkpoint1, body: _body_checkpoint1, tag: "checkpoint", collisionHandlers: [], behaviors: [] };
+
+  const _spr_deathzone = new PIXI.Graphics();
+  _spr_deathzone.rect(-1800.0, -16.0, 3600.0, 32.0);
+  _spr_deathzone.fill({ color: 0x000000 });
+  _spr_deathzone.x = 1800;
+  _spr_deathzone.y = 470;
+  _spr_deathzone.visible = false;
+  _cameraContainer.addChild(_spr_deathzone);
+  const _body_deathzone = Matter.Bodies.rectangle(1800, 470, 3600, 32, { isStatic: true, restitution: 0.1, friction: 0.1, slop: 0.01, isSensor: true });
+  _bodyToSprite[_body_deathzone.id] = "deathzone";
+  _sprites["deathzone"] = { id: "deathzone", sprite: _spr_deathzone, body: _body_deathzone, tag: "deathzone", collisionHandlers: [], behaviors: [] };
+
+  Matter.Composite.add(mWorld, [_body_player, _body_enemy1, _body_enemy2, _body_enemy3, _body_enemy4, _body_enemy5, _body_enemy6, _body_enemy7, _body_enemy8, _body_coin1, _body_coin2, _body_coin3, _body_coin4, _body_coin5, _body_coin6, _body_coin7, _body_coin8, _body_coin9, _body_coin10, _body_coin11, _body_coin12, _body_coin13, _body_coin14, _body_coin15, _body_coin16, _body_coin17, _body_coin18, _body_coin19, _body_coin20, _body_gem1, _body_gem2, _body_gem3, _body_item_block1, _body_item_block2, _body_item_block3, _body_item_block4, _body_item_block5, _body_goal_flag, _body_checkpoint1, _body_deathzone]);
+
+  function syncPhysics() {
+    for (const [id, info] of Object.entries(_sprites)) {
+      if (info.body && !info.body.isStatic) {
+        info.sprite.x = info.body.position.x;
+        info.sprite.y = info.body.position.y;
+        info.sprite.rotation = info.body.angle;
+      }
+    }
+  }
+
+  // === TILEMAP COLLISION ===
+  // Tilemap Collision System
+  const _collisionGrids = [];
+
+  function _resolveTilemapCollisions() {
+    for (const cg of _collisionGrids) {
+      const grid = cg.grid, tw = cg.tw, th = cg.th;
+      for (const [id, info] of Object.entries(_sprites)) {
+        if (!info.body || info.body.isStatic) continue;
+        const body = info.body;
+        const bw = body.bounds.max.x - body.bounds.min.x;
+        const bh = body.bounds.max.y - body.bounds.min.y;
+        const hw = bw / 2, hh = bh / 2;
+        let bx = body.position.x, by = body.position.y;
+  
+        // Vertical resolution first (landing/ceiling)
+        const vy = body.velocity.y;
+        const minCol = Math.floor((bx - hw + 2) / tw);
+        const maxCol = Math.floor((bx + hw - 2) / tw);
+  
+        if (vy >= 0) {
+          // Falling or on ground — check below
+          const footRow = Math.floor((by + hh) / th);
+          if (footRow >= 0 && footRow < grid.length) {
+            for (let c = minCol; c <= maxCol; c++) {
+              if (c >= 0 && c < (grid[footRow] || []).length && grid[footRow][c]) {
+                const tileTop = footRow * th;
+                if (by + hh > tileTop && by + hh < tileTop + th) {
+                  by = tileTop - hh;
+                  Matter.Body.setPosition(body, { x: bx, y: by });
+                  Matter.Body.setVelocity(body, { x: body.velocity.x, y: 0 });
+                  body._onGround = true;
+                  break;
+                }
+              }
+            }
+          }
+        } else {
+          // Rising — check above
+          const headRow = Math.floor((by - hh) / th);
+          if (headRow >= 0 && headRow < grid.length) {
+            for (let c = minCol; c <= maxCol; c++) {
+              if (c >= 0 && c < (grid[headRow] || []).length && grid[headRow][c]) {
+                const tileBottom = (headRow + 1) * th;
+                if (by - hh < tileBottom && by - hh > tileBottom - th) {
+                  by = tileBottom + hh;
+                  Matter.Body.setPosition(body, { x: bx, y: by });
+                  Matter.Body.setVelocity(body, { x: body.velocity.x, y: 0 });
+                  break;
+                }
+              }
+            }
+          }
+        }
+  
+        // Horizontal resolution (walls) with step-up support
+        const vx = body.velocity.x;
+        if (Math.abs(vx) > 0.1) {
+          // Check the column the body is moving into
+          const frontX = vx > 0 ? bx + hw : bx - hw;
+          const frontCol = Math.floor(frontX / tw);
+          const topRow = Math.floor((by - hh + 2) / th);
+          const botRow = Math.floor((by + hh - 2) / th);
+  
+          let blocked = false;
+          for (let r = topRow; r <= botRow; r++) {
+            if (r >= 0 && r < grid.length && frontCol >= 0 && frontCol < (grid[r] || []).length && grid[r][frontCol]) {
+              blocked = true;
+              break;
+            }
+          }
+  
+          if (blocked) {
+            // Check for step-up: is the tile just at foot level?
+            // If only the bottom row is blocked and the row above is clear, step up
+            const stepRow = botRow;
+            const aboveRow = stepRow - 1;
+            const onlyFootBlocked = (
+              stepRow >= 0 && stepRow < grid.length && frontCol >= 0 &&
+              grid[stepRow] && grid[stepRow][frontCol] &&
+              (aboveRow < 0 || !grid[aboveRow] || !grid[aboveRow][frontCol])
+            );
+  
+            if (onlyFootBlocked) {
+              // Step up: move body to top of the blocking tile
+              const stepTop = stepRow * th;
+              const newY = stepTop - hh;
+              if (by - newY <= th) { // Only step up one tile height max
+                Matter.Body.setPosition(body, { x: bx, y: newY });
+                by = newY;
+              }
+            } else {
+              // Full wall — block horizontal movement
+              if (vx > 0) {
+                Matter.Body.setPosition(body, { x: frontCol * tw - hw, y: by });
+              } else {
+                Matter.Body.setPosition(body, { x: (frontCol + 1) * tw + hw, y: by });
+              }
+              Matter.Body.setVelocity(body, { x: 0, y: body.velocity.y });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  _collisionGrids.push({ grid: [null,null,null,null,null,null,null,null,null,null,[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],null,null,[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,42,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,42,42,42,42,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,42,42,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,42,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,42,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,42,42,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25],[25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25],[25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25],[25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,0,0,0,0,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25]], tw: 18, th: 18 });
+
+
+  // === GAME API ===
+  // Game API
+  const game = { camera: {} };
+
+  game.destroy = function(info) {
+    if (!info) {
+      return;
+    }
+    // Find sprite id
+    let spriteId = null;
+    for (const [id, entry] of Object.entries(_sprites)) {
+      if (entry === info || entry.sprite === info) {
+        spriteId = id;
+        break;
+      }
+    }
+    if (!spriteId) {
+      return;
+    }
+    const entry = _sprites[spriteId];
+    if (entry.sprite && entry.sprite.parent) {
+      entry.sprite.parent.removeChild(entry.sprite);
+    }
+    if (entry.body) {
+      Matter.Composite.remove(mWorld, entry.body);
+    }
+    delete _sprites[spriteId];
+  };
+
+  game.play = function(soundId, opts) {
+    if (typeof _playSound === 'function') {
+      return _playSound(soundId, opts);
+    }
+  };
+
+  game.stop = function(soundId) {
+    if (typeof _stopSound === 'function') {
+      _stopSound(soundId);
+    }
+  };
+
+  game.emit = function(info, event) {
+    _gameEvents.emit(event, info);
+    if (info && info.tag) {
+      _gameEvents.emit(info.tag + '.' + event, info);
+    }
+  };
+
+  game.loadScene = function(name) {
+    if (typeof _loadScene === 'function') {
+      _loadScene(name);
+    }
+  };
+
+  game.respawn = function(id, x, y) {
+    const info = _sprites[id];
+    if (!info) {
+      return;
+    }
+    if (info.sprite) {
+      info.sprite.x = x;
+      info.sprite.y = y;
+      info.sprite.visible = true;
+    }
+    if (info.body) {
+      Matter.Body.setPosition(info.body, { x: x, y: y });
+      Matter.Body.setVelocity(info.body, { x: 0, y: 0 });
+    }
+  };
+
+  game.destroyGroup = function(groupName) {
+    const toRemove = [];
+    for (const [id, info] of Object.entries(_sprites)) {
+      if (info.group === groupName) {
+        toRemove.push(info);
+      }
+    }
+    for (const info of toRemove) {
+      game.destroy(info);
+    }
+  };
+
+  game.moveX = function(info, dx) {
+    if (info && info.body) {
+      Matter.Body.setVelocity(info.body, { x: dx, y: info.body.velocity.y });
+    }
+  };
+
+  game.moveToward = function(info, targetId, speed) {
+    if (!info || !info.body) {
+      return;
+    }
+    const target = _sprites[targetId];
+    if (!target) {
+      return;
+    }
+    const dx = target.sprite.x - info.sprite.x;
+    const dy = target.sprite.y - info.sprite.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 1) {
+      return;
+    }
+    Matter.Body.setVelocity(info.body, { x: (dx / dist) * speed, y: (dy / dist) * speed });
+  };
+
+  game.patrol = function(info, speed) {
+    game.moveX(info, speed);
+  };
+
+  game.camera.shake = function(intensity, duration) {
+    let _shakeFrames = Math.floor((duration || 0.3) * 60);
+    const _shakeIntensity = intensity || 5;
+    const origX = _cameraContainer.x;
+    const origY = _cameraContainer.y;
+    const _shakeTick = () => {
+      if (_shakeFrames <= 0) {
+        _cameraContainer.x = origX;
+        _cameraContainer.y = origY;
+        return;
+      }
+      _cameraContainer.x = origX + (Math.random() - 0.5) * _shakeIntensity * 2;
+      _cameraContainer.y = origY + (Math.random() - 0.5) * _shakeIntensity * 2;
+      _shakeFrames--;
+      requestAnimationFrame(_shakeTick);
+    };
+    _shakeTick();
+  };
+
+  game.spawn = function(id) {
+    if (typeof _spawn === 'function') {
+      _spawn(id);
+    }
+  };
+
+  game.hitBlock = function(blockInfo, usedTextureSrc, coinTextureSrc, frameW, frameH) {
+    if (!blockInfo || blockInfo._blockUsed) {
+      return;
+    }
+    blockInfo._blockUsed = true;
+
+    // Change block texture to used
+    if (blockInfo.sprite && usedTextureSrc) {
+      const usedTex = PIXI.Assets.get(usedTextureSrc);
+      if (usedTex) {
+        // Stop animation if playing
+        if (blockInfo.sprite.stop) {
+          blockInfo.sprite.stop();
+        }
+        // Get first frame of used texture
+        const fw = frameW || 16;
+        const fh = frameH || 16;
+        const src = usedTex.source || usedTex.baseTexture || usedTex;
+        const rect = new PIXI.Rectangle(0, 0, fw, fh);
+        const frameTex = new PIXI.Texture({ source: src, frame: rect });
+        // Replace with static sprite
+        const newSprite = new PIXI.Sprite(frameTex);
+        newSprite.anchor.set(0.5);
+        newSprite.x = blockInfo.sprite.x;
+        newSprite.y = blockInfo.sprite.y;
+        const parent = blockInfo.sprite.parent;
+        if (parent) {
+          parent.removeChild(blockInfo.sprite);
+          parent.addChild(newSprite);
+        }
+        blockInfo.sprite = newSprite;
+      }
+    }
+
+    // Spawn coin effect above block
+    if (coinTextureSrc) {
+      const coinTex = PIXI.Assets.get(coinTextureSrc);
+      if (coinTex) {
+        const cfw = frameW || 16;
+        const cfh = frameH || 16;
+        const csrc = coinTex.source || coinTex.baseTexture || coinTex;
+        // Create animated coin with 4 frames
+        const coinFrames = [];
+        for (let i = 0; i < 4; i++) {
+          const crect = new PIXI.Rectangle(i * cfw, 0, cfw, cfh);
+          coinFrames.push(new PIXI.Texture({ source: csrc, frame: crect }));
+        }
+        const coinSprite = new PIXI.AnimatedSprite(coinFrames);
+        coinSprite.anchor.set(0.5);
+        coinSprite.x = blockInfo.sprite.x;
+        coinSprite.y = blockInfo.sprite.y - 20;
+        coinSprite.animationSpeed = 0.15;
+        coinSprite.play();
+        _cameraContainer.addChild(coinSprite);
+
+        // Animate coin going up and fading
+        let coinY = coinSprite.y;
+        let coinFrame = 0;
+        const coinAnim = () => {;
+          coinFrame++;
+          coinY = coinY - 2;
+          coinSprite.y = coinY;
+          coinSprite.alpha = 1 - (coinFrame / 30);
+          if (coinFrame < 30) {
+            requestAnimationFrame(coinAnim);
+          } else {
+            coinSprite.destroy();
+          }
+        };
+        coinAnim();
+      }
+    }
+  };
+
+  game.spawnPowerUp = function(blockInfo, textureSrc, moveSpeed) {
+    if (!blockInfo || !blockInfo.sprite) {
+      return;
+    }
+    const tex = PIXI.Assets.get(textureSrc);
+    if (!tex) {
+      console.warn('PowerUp texture not loaded:', textureSrc);
+      return;
+    }
+
+    // Create mushroom sprite
+    const mushSprite = new PIXI.Sprite(tex);
+    mushSprite.anchor.set(0.5);
+    mushSprite.x = blockInfo.sprite.x;
+    mushSprite.y = blockInfo.sprite.y - 16;
+    _cameraContainer.addChild(mushSprite);
+
+    // Create physics body for mushroom (no rotation)
+    const mushBody = Matter.Bodies.rectangle(mushSprite.x, mushSprite.y, 14, 14, { friction: 0, frictionAir: 0, restitution: 0, inertia: Infinity, label: 'mushroom' });
+    Matter.Composite.add(mWorld, mushBody);
+
+    // Register mushroom in sprites
+    const mushId = 'powerup_' + Date.now();
+    const mushInfo = { id: mushId, sprite: mushSprite, body: mushBody, tag: "powerup", _isPowerUp: true, behaviors: [], collisionHandlers: [] };
+    _sprites[mushId] = mushInfo;
+    _bodyToSprite[mushBody.id] = mushId;
+
+    // Start mushroom rising animation then walking
+    let riseFrames = 0;
+    const spd = moveSpeed || 1.5;
+    const riseAnim = () => {;
+      riseFrames++;
+      if (riseFrames < 16) {
+        // Rising from block
+        mushSprite.y = mushSprite.y - 1;
+        Matter.Body.setPosition(mushBody, { x: mushSprite.x, y: mushSprite.y });
+        requestAnimationFrame(riseAnim);
+      } else {
+        // Start walking
+        Matter.Body.setVelocity(mushBody, { x: spd, y: 0 });
+      }
+    };
+    riseAnim();
+  };
+
+  game.powerUpPlayer = function(playerId, bigSpriteSrc, frameW, frameH) {
+    const playerInfo = _sprites[playerId];
+    if (!playerInfo || playerInfo._isBig) {
+      return;
+    }
+    playerInfo._isBig = true;
+
+    const bigTex = PIXI.Assets.get(bigSpriteSrc);
+    if (!bigTex) {
+      console.warn('Big sprite not loaded:', bigSpriteSrc);
+      return;
+    }
+
+    // Extract frame textures from spritesheet
+    const fw = frameW || 16;
+    const fh = frameH || 32;
+    const src = bigTex.source || bigTex.baseTexture || bigTex;
+
+    // Create textures for each frame
+    const allFrames = [];
+    for (let i = 0; i < 5; i++) {
+      const rect = new PIXI.Rectangle(i * fw, 0, fw, fh);
+      allFrames.push(new PIXI.Texture({ source: src, frame: rect }));
+    }
+
+    // Create animation sets: idle(0), walk(1-3), jump(4)
+    const idleFrames = [allFrames[0]];
+    const walkFrames = [allFrames[1], allFrames[2], allFrames[3]];
+    const jumpFrames = [allFrames[4]];
+
+    // Create animated sprite starting with idle
+    const bigSprite = new PIXI.AnimatedSprite(idleFrames);
+    bigSprite.anchor.set(0.5);
+    bigSprite.x = playerInfo.sprite.x;
+    bigSprite.y = playerInfo.sprite.y - 4;
+    bigSprite.scale.x = playerInfo.sprite.scale.x;
+    bigSprite.animationSpeed = 0.15;
+    bigSprite.loop = true;
+    bigSprite.play();
+
+    // Replace sprite in scene
+    const parent = playerInfo.sprite.parent;
+    if (parent) {
+      parent.removeChild(playerInfo.sprite);
+      parent.addChild(bigSprite);
+    }
+    playerInfo.sprite = bigSprite;
+
+    // Update physics body size for big player
+    if (playerInfo.body) {
+      const pos = playerInfo.body.position;
+      Matter.Composite.remove(mWorld, playerInfo.body);
+      const newBody = Matter.Bodies.rectangle(pos.x, pos.y - 4, 14, 30, { friction: 0, frictionAir: 0, inertia: Infinity, label: 'player' });
+      Matter.Composite.add(mWorld, newBody);
+      delete _bodyToSprite[playerInfo.body.id];
+      playerInfo.body = newBody;
+      _bodyToSprite[newBody.id] = playerId;
+    }
+
+    // Register animations in the animation system
+    _animatedSprites[playerId] = {
+      sprite: bigSprite,
+      current: 'idle',
+      anims: {
+        idle: { textures: idleFrames, speed: 0.1, loop: true },
+        walk: { textures: walkFrames, speed: 0.18, loop: true },
+        jump: { textures: jumpFrames, speed: 0.1, loop: false }
+      }
+    };
+  };
+
+  game.setPatrolAI = function(patrollerId, speed) {
+    const info = _sprites[patrollerId];
+    if (!info || !info.body) {
+      return;
+    }
+
+    // Store the movement speed
+    info._patrolSpeed = speed;
+    info._patrolDir = speed < 0 ? -1 : 1;
+
+    // Add update behavior for patroller AI
+    if (!info.behaviors) {
+      info.behaviors = [];
+    }
+    info.behaviors.push({
+      update: function() {
+        // Skip if game is paused
+        if (game._paused) return;
+        const gInfo = _sprites[patrollerId];
+        if (!gInfo || !gInfo.body) return;
+
+        // Apply constant horizontal velocity
+        const currentSpeed = Math.abs(gInfo._patrolSpeed) * gInfo._patrolDir;
+        Matter.Body.setVelocity(gInfo.body, { x: currentSpeed, y: gInfo.body.velocity.y });
+
+        // Flip sprite based on direction
+        if (gInfo.sprite) {
+          gInfo.sprite.scale.x = gInfo._patrolDir > 0 ? -1 : 1;
+        }
+      }
+    });
+
+    // Listen for collisions to change direction (lateral only)
+    if (!info.collisionHandlers) {
+      info.collisionHandlers = [];
+    }
+    info.collisionHandlers.push(function(self, other) {
+      const gInfo = _sprites[patrollerId];
+      if (!gInfo || !gInfo.body || !other.body) return;
+
+      // Only react to terrain/walls, not players or other enemies
+      const isWall = other.tag === 'terrain' || other.tag === 'tilemap-collision' || other.tag === 'wall' || other.tag === 'item_block';
+      if (!isWall) return;
+
+      // Use body bounds to detect lateral vs vertical contact
+      const gb = gInfo.body.bounds;
+      const ob = other.body.bounds;
+      const overlapX = Math.min(gb.max.x, ob.max.x) - Math.max(gb.min.x, ob.min.x);
+      const overlapY = Math.min(gb.max.y, ob.max.y) - Math.max(gb.min.y, ob.min.y);
+      // Lateral collision: small horizontal overlap, larger vertical overlap
+      if (overlapX > 0 && overlapY > 0 && overlapX < overlapY) {
+        // Cooldown to prevent rapid flipping
+        const now = Date.now();
+        if (!gInfo._lastFlipTime || now - gInfo._lastFlipTime > 200) {
+          gInfo._patrolDir *= -1;
+          gInfo._lastFlipTime = now;
+        }
+      }
+    });
+  };
+
+
+  game.destroySprite = function(spriteId) {
+    const info = _sprites[spriteId];
+    if (!info) {
+      return;
+    }
+
+    // Remove physics body
+    if (info.body) {
+      Matter.Composite.remove(mWorld, info.body);
+      delete _bodyToSprite[info.body.id];
+    }
+
+    // Remove sprite from display
+    if (info.sprite && info.sprite.parent) {
+      info.sprite.parent.removeChild(info.sprite);
+    }
+
+    // Remove from animated sprites
+    delete _animatedSprites[spriteId];
+
+    // Remove from sprites registry
+    delete _sprites[spriteId];
+  };
+
+  game.pause = function() {
+    game._paused = true;
+    // Stop physics engine
+    mEngine.timing.timeScale = 0;
+    // Stop all animated sprites
+    for (const id in _animatedSprites) {
+      const anim = _animatedSprites[id];
+      if (anim && anim.sprite && anim.sprite.stop) anim.sprite.stop();
+    }
+    // Store velocities and stop all bodies
+    game._savedVelocities = {};
+    for (const id in _sprites) {
+      const info = _sprites[id];
+      if (info.body) {
+        game._savedVelocities[id] = { x: info.body.velocity.x, y: info.body.velocity.y };
+        Matter.Body.setVelocity(info.body, { x: 0, y: 0 });
+      }
+    }
+  };
+
+  game.resume = function() {
+    game._paused = false;
+    // Resume physics engine
+    mEngine.timing.timeScale = 1;
+    // Resume all animated sprites
+    for (const id in _animatedSprites) {
+      const anim = _animatedSprites[id];
+      if (anim && anim.sprite && anim.sprite.play) anim.sprite.play();
+    }
+    // Restore velocities
+    if (game._savedVelocities) {
+      for (const id in game._savedVelocities) {
+        const info = _sprites[id];
+        if (info && info.body) {
+          Matter.Body.setVelocity(info.body, game._savedVelocities[id]);
+        }
+      }
+    }
+  };
+
+  game.playSound = function(soundId, opts) {
+    _playSound(soundId, opts || {});
+  };
+
+  game.stopSound = function(soundId) {
+    if (_activeSources[soundId]) {
+      _activeSources[soundId].stop();
+      delete _activeSources[soundId];
+    }
+  };
+
+  game.stopAllSounds = function() {
+    for (const id in _activeSources) {
+      _activeSources[id].stop();
+      delete _activeSources[id];
+    }
+  };
+
+  game.irisIn = function(callback, duration) {
+    duration = duration || 30;
+    const overlay = new PIXI.Graphics();
+    overlay.zIndex = 9999;
+    app.stage.addChild(overlay);
+    app.stage.sortChildren();
+    let frame = 0;
+    const centerX = app.screen.width / 2;
+    const centerY = app.screen.height / 2;
+    const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY) + 50;
+    const animate = () => {
+      frame++;
+      const t = frame / duration;
+      const radius = maxRadius * t;
+      overlay.clear();
+      overlay.rect(0, 0, app.screen.width, app.screen.height);
+      overlay.fill(0x000000);
+      overlay.circle(centerX, centerY, radius);
+      overlay.cut();
+      if (frame < duration) {
+        requestAnimationFrame(animate);
+      } else {
+        app.stage.removeChild(overlay);
+        if (callback) callback();
+      }
+    };
+    animate();
+  };
+
+  game.irisOut = function(callback, duration) {
+    duration = duration || 30;
+    const overlay = new PIXI.Graphics();
+    overlay.zIndex = 9999;
+    app.stage.addChild(overlay);
+    app.stage.sortChildren();
+    let frame = 0;
+    const centerX = app.screen.width / 2;
+    const centerY = app.screen.height / 2;
+    const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY) + 50;
+    const animate = () => {
+      frame++;
+      const t = 1 - (frame / duration);
+      const radius = maxRadius * t;
+      overlay.clear();
+      overlay.rect(0, 0, app.screen.width, app.screen.height);
+      overlay.fill(0x000000);
+      if (radius > 0) {
+        overlay.circle(centerX, centerY, radius);
+        overlay.cut();
+      }
+      if (frame < duration) {
+        requestAnimationFrame(animate);
+      } else {
+        if (callback) callback();
+      }
+    };
+    animate();
+  };
+
+  game.killPlayer = function(playerId, deathSpriteSrc) {
+    const info = _sprites[playerId];
+    if (!info || info._isDying) {
+      return;
+    }
+    info._isDying = true;
+
+    // Pause game and stop background music
+    game.pause();
+    game.stopSound('bgm-level');
+
+    // Swap to death sprite if provided
+    const deathSrc = deathSpriteSrc || 'assets/classic/sprites/hero_death.png';
+    const deathTex = PIXI.Assets.get(deathSrc);
+    if (deathTex) {
+      // Store original sprite and create death sprite
+      info._originalSprite = info.sprite;
+      const deathSprite = PIXI.Sprite.from(deathTex);
+      deathSprite.anchor.set(0.5);
+      deathSprite.x = info.sprite.x;
+      deathSprite.y = info.sprite.y;
+      const parent = info.sprite.parent;
+      if (parent) {
+        parent.removeChild(info.sprite);
+        parent.addChild(deathSprite);
+      }
+      info.sprite = deathSprite;
+    }
+
+    // Remove Hero from physics (so he can do death animation)
+    if (info.body) {
+      Matter.Composite.remove(mWorld, info.body);
+      delete _bodyToSprite[info.body.id];
+      info._deathBody = info.body;
+      info.body = null;
+    }
+
+    // Death animation - Hero jumps up then falls (slower, wait for sound)
+    let deathY = info.sprite.y;
+    let deathVelY = -4;
+    let deathFrame = 0;
+    let waitFrames = 0;
+    const deathAnim = () => {;
+      deathFrame++;
+
+      // First phase: jump up and fall
+      if (deathY < 600) {
+        deathVelY += 0.15;
+        deathY += deathVelY;
+        info.sprite.y = deathY;
+        requestAnimationFrame(deathAnim);
+      } else {
+        // Second phase: wait for death sound to finish (~4 seconds = 240 frames)
+        waitFrames++;
+        if (waitFrames < 240) {
+          requestAnimationFrame(deathAnim);
+        } else {
+          // Death animation complete - emit event
+          _gameEvents.emit('death-animation-complete', { playerId: playerId });
+        }
+      }
+    };
+    requestAnimationFrame(deathAnim);
+  };
+
+  // === BEHAVIOR ATTACHMENTS ===
+  _sprites["player"].behaviors.push(new PlayerBehavior(_sprites["player"], {}));
+  _sprites["player"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "enemy") return;
+    const b = self.behaviors.find(b => b instanceof PlayerBehavior);
+    if (b && b.onEnemyHit) { b._other = other; b.onEnemyHit(other); }
+  });
+  _sprites["player"].behaviors.push(new PlayerBehavior(_sprites["player"], {}));
+  _sprites["player"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "coin") return;
+    const b = self.behaviors.find(b => b instanceof PlayerBehavior);
+    if (b && b.onCoinGet) { b._other = other; b.onCoinGet(other); }
+  });
+  _sprites["player"].behaviors.push(new PlayerBehavior(_sprites["player"], {}));
+  _sprites["player"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "gem") return;
+    const b = self.behaviors.find(b => b instanceof PlayerBehavior);
+    if (b && b.onGemGet) { b._other = other; b.onGemGet(other); }
+  });
+  _sprites["player"].behaviors.push(new PlayerBehavior(_sprites["player"], {}));
+  _sprites["player"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "item_block") return;
+    const b = self.behaviors.find(b => b instanceof PlayerBehavior);
+    if (b && b.onBlockHit) { b._other = other; b.onBlockHit(other); }
+  });
+  _sprites["player"].behaviors.push(new PlayerBehavior(_sprites["player"], {}));
+  _sprites["player"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "flagpole") return;
+    const b = self.behaviors.find(b => b instanceof PlayerBehavior);
+    if (b && b.onFlagGet) { b._other = other; b.onFlagGet(other); }
+  });
+  _sprites["player"].behaviors.push(new PlayerBehavior(_sprites["player"], {}));
+  _sprites["player"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "checkpoint") return;
+    const b = self.behaviors.find(b => b instanceof PlayerBehavior);
+    if (b && b.onCheckpoint) { b._other = other; b.onCheckpoint(other); }
+  });
+  _sprites["player"].behaviors.push(new PlayerBehavior(_sprites["player"], {}));
+  _sprites["player"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "deathzone") return;
+    const b = self.behaviors.find(b => b instanceof PlayerBehavior);
+    if (b && b.onDeath) { b._other = other; b.onDeath(other); }
+  });
+  _sprites["enemy1"].behaviors.push(new PatrolAI(_sprites["enemy1"], {}));
+  _sprites["enemy1"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof PatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["enemy2"].behaviors.push(new PatrolAI(_sprites["enemy2"], {}));
+  _sprites["enemy2"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof PatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["enemy3"].behaviors.push(new SmartPatrolAI(_sprites["enemy3"], {}));
+  _sprites["enemy3"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof SmartPatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["enemy4"].behaviors.push(new SmartPatrolAI(_sprites["enemy4"], {}));
+  _sprites["enemy4"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof SmartPatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["enemy5"].behaviors.push(new PatrolAI(_sprites["enemy5"], {}));
+  _sprites["enemy5"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof PatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["enemy6"].behaviors.push(new PatrolAI(_sprites["enemy6"], {}));
+  _sprites["enemy6"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof PatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["enemy7"].behaviors.push(new SmartPatrolAI(_sprites["enemy7"], {}));
+  _sprites["enemy7"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof SmartPatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["enemy8"].behaviors.push(new PatrolAI(_sprites["enemy8"], {}));
+  _sprites["enemy8"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "tilemap-collision") return;
+    const b = self.behaviors.find(b => b instanceof PatrolAI);
+    if (b && b.onWall) { b._other = other; b.onWall(other); }
+  });
+  _sprites["coin1"].behaviors.push(new FloatingCoin(_sprites["coin1"], {}));
+  _sprites["coin2"].behaviors.push(new FloatingCoin(_sprites["coin2"], {}));
+  _sprites["coin3"].behaviors.push(new FloatingCoin(_sprites["coin3"], {}));
+  _sprites["coin4"].behaviors.push(new FloatingCoin(_sprites["coin4"], {}));
+  _sprites["coin5"].behaviors.push(new FloatingCoin(_sprites["coin5"], {}));
+  _sprites["coin6"].behaviors.push(new FloatingCoin(_sprites["coin6"], {}));
+  _sprites["coin7"].behaviors.push(new FloatingCoin(_sprites["coin7"], {}));
+  _sprites["coin8"].behaviors.push(new FloatingCoin(_sprites["coin8"], {}));
+  _sprites["coin9"].behaviors.push(new FloatingCoin(_sprites["coin9"], {}));
+  _sprites["coin10"].behaviors.push(new FloatingCoin(_sprites["coin10"], {}));
+  _sprites["coin11"].behaviors.push(new FloatingCoin(_sprites["coin11"], {}));
+  _sprites["coin12"].behaviors.push(new FloatingCoin(_sprites["coin12"], {}));
+  _sprites["coin13"].behaviors.push(new FloatingCoin(_sprites["coin13"], {}));
+  _sprites["coin14"].behaviors.push(new FloatingCoin(_sprites["coin14"], {}));
+  _sprites["coin15"].behaviors.push(new FloatingCoin(_sprites["coin15"], {}));
+  _sprites["coin16"].behaviors.push(new FloatingCoin(_sprites["coin16"], {}));
+  _sprites["coin17"].behaviors.push(new FloatingCoin(_sprites["coin17"], {}));
+  _sprites["coin18"].behaviors.push(new FloatingCoin(_sprites["coin18"], {}));
+  _sprites["coin19"].behaviors.push(new FloatingCoin(_sprites["coin19"], {}));
+  _sprites["coin20"].behaviors.push(new FloatingCoin(_sprites["coin20"], {}));
+  _sprites["gem1"].behaviors.push(new FloatingCoin(_sprites["gem1"], {}));
+  _sprites["gem2"].behaviors.push(new FloatingCoin(_sprites["gem2"], {}));
+  _sprites["gem3"].behaviors.push(new FloatingCoin(_sprites["gem3"], {}));
+  _sprites["item_block1"].behaviors.push(new ItemBlockBehavior(_sprites["item_block1"], {}));
+  _sprites["item_block1"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "player") return;
+    const b = self.behaviors.find(b => b instanceof ItemBlockBehavior);
+    if (b && b.onHit) { b._other = other; b.onHit(other); }
+  });
+  _sprites["item_block2"].behaviors.push(new ItemBlockBehavior(_sprites["item_block2"], {}));
+  _sprites["item_block2"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "player") return;
+    const b = self.behaviors.find(b => b instanceof ItemBlockBehavior);
+    if (b && b.onHit) { b._other = other; b.onHit(other); }
+  });
+  _sprites["item_block3"].behaviors.push(new ItemBlockBehavior(_sprites["item_block3"], {}));
+  _sprites["item_block3"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "player") return;
+    const b = self.behaviors.find(b => b instanceof ItemBlockBehavior);
+    if (b && b.onHit) { b._other = other; b.onHit(other); }
+  });
+  _sprites["item_block4"].behaviors.push(new ItemBlockBehavior(_sprites["item_block4"], {}));
+  _sprites["item_block4"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "player") return;
+    const b = self.behaviors.find(b => b instanceof ItemBlockBehavior);
+    if (b && b.onHit) { b._other = other; b.onHit(other); }
+  });
+  _sprites["item_block5"].behaviors.push(new ItemBlockBehavior(_sprites["item_block5"], {}));
+  _sprites["item_block5"].collisionHandlers.push((self, other) => {
+    if (other.tag !== "player") return;
+    const b = self.behaviors.find(b => b instanceof ItemBlockBehavior);
+    if (b && b.onHit) { b._other = other; b.onHit(other); }
+  });
+  // Init state machines
+  for (const [_id, _info] of Object.entries(_sprites)) {
+    for (const b of _info.behaviors) {
+      if (b._smInit) {
+        b._smInit();
+      }
+    }
+  }
+
+  // === SEMANTIC BEHAVIORS ===
+  // no semantic behaviors
+
+  // === ANIMATION REGISTRATION ===
+  _registerAnimation("player", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "idle": { frames: "0", speed: 0.1, loop: true, autoPlay: true }, "walk": { frames: "1,2", speed: 0.15, loop: true, autoPlay: false } });
+  _registerAnimation("enemy1", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "18,19,20", speed: 0.2, loop: true, autoPlay: true } });
+  _registerAnimation("enemy2", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "18,19,20", speed: 0.2, loop: true, autoPlay: true } });
+  _registerAnimation("enemy3", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "24,25,26", speed: 0.2, loop: true, autoPlay: true } });
+  _registerAnimation("enemy4", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "18,19,20", speed: 0.2, loop: true, autoPlay: true } });
+  _registerAnimation("enemy5", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "24,25,26", speed: 0.2, loop: true, autoPlay: true } });
+  _registerAnimation("enemy6", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "18,19,20", speed: 0.2, loop: true, autoPlay: true } });
+  _registerAnimation("enemy7", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "24,25,26", speed: 0.2, loop: true, autoPlay: true } });
+  _registerAnimation("enemy8", PIXI.Assets.get("assets/kenney/tilemap-characters_packed.png"), 24, 24, { "walk": { frames: "18,19,20", speed: 0.2, loop: true, autoPlay: true } });
+
+  // === INPUT ===
+  const _keys = {};
+  const _justPressed = {};
+  window.addEventListener('keydown', (e) => {
+    if (!_keys[e.key]) _justPressed[e.key] = true;
+    _keys[e.key] = true;
+  });
+  window.addEventListener('keyup', (e) => {
+    _keys[e.key] = false;
+  });
+  function _clearJustPressed() {
+    for (const k in _justPressed) delete _justPressed[k];
+  }
+  const _controlledSprites = {};
+  _controlledSprites["player"] = { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', jump: 'ArrowUp', left2: 'a', right2: 'd', up2: 'w', jump2: 'w' };
+
+  // === MOUSE ===
+  // Mouse System
+  let _mouseX = 0;
+  let _mouseY = 0;
+  let _mouseWorldX = 0;
+  let _mouseWorldY = 0;
+  app.canvas.addEventListener('pointermove', (e) => {
+    const rect = app.canvas.getBoundingClientRect();
+    _mouseX = e.clientX - rect.left;
+    _mouseY = e.clientY - rect.top;
+    // Convert to world coordinates (accounting for camera)
+    _mouseWorldX = _mouseX - _cameraContainer.x;
+    _mouseWorldY = _mouseY - _cameraContainer.y;
+  });
+
+  // === FUNCTIONS ===
+  function restart() {
+    game.respawn("player", 36, 348);
+    score = 0;
+    coins = 0;
+    lives = 3;
+    gameOver = false;
+    won = false;
+    _updateHUD();
+  }
+
+
+  // === COLLISIONS ===
+  Matter.Events.on(mEngine, 'collisionStart', (event) => {
+    for (const pair of event.pairs) {
+      const a = _bodyToSprite[pair.bodyA.id];
+      const b = _bodyToSprite[pair.bodyB.id];
+      if (a && b) {
+        _handleCollision(a, b);
+        _handleCollision(b, a);
+      }
+    }
+  });
+
+  function _handleCollision(selfId, otherId) {
+    const selfInfo = _sprites[selfId];
+    const otherInfo = _sprites[otherId];
+    if (!selfInfo || !otherInfo) {
+      return;
+    }
+    if (selfInfo.collisionHandlers) {
+      for (const handler of selfInfo.collisionHandlers) {
+        handler(selfInfo, otherInfo);
+      }
+    }
+  }
+
+  // === SOUNDS ===
+  // Audio System
+  const _sounds = {};
+  let _audioCtx = null;
+  let _audioUnlocked = false;
+  const _pendingSounds = [];
+
+  function _initAudio() {
+    if (_audioCtx) {
+      return;
+    }
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Unlock audio on any user interaction
+    const unlockEvents = ['click', 'keydown', 'touchstart', 'pointerdown'];
+    function _unlock() {
+      if (_audioUnlocked) {
+        return;
+      }
+      if (_audioCtx.state === 'suspended') {
+        _audioCtx.resume().then(() => {
+          _audioUnlocked = true;
+          // Play any queued sounds
+          while (_pendingSounds.length > 0) {
+            const pending = _pendingSounds.shift();
+            const _psrc = _doPlaySound(pending.id, pending.opts);
+            if (_psrc) {
+              _activeSources[pending.id] = _psrc;
+              _psrc.onended = function() { if (_activeSources[pending.id] === _psrc) delete _activeSources[pending.id]; };
+            }
+          }
+        });
+      } else {
+        _audioUnlocked = true;
+      }
+      for (const evt of unlockEvents) {
+        document.removeEventListener(evt, _unlock);
+      }
+    }
+
+    for (const evt of unlockEvents) {
+      document.addEventListener(evt, _unlock, { once: false });
+    }
+  }
+
+  async function _loadSound(id, url) {
+    _initAudio();
+    try {
+      const resp = await fetch(url);
+      const buf = await resp.arrayBuffer();
+      _sounds[id] = await _audioCtx.decodeAudioData(buf);
+    }
+    catch(e) {
+      console.warn('Sound load failed:', id, e);
+    }
+  }
+
+  function _doPlaySound(id, opts) {
+    opts = opts || {};
+    const buf = _sounds[id];
+    if (!buf) {
+      return;
+    }
+    const src = _audioCtx.createBufferSource();
+    src.buffer = buf;
+    const gain = _audioCtx.createGain();
+    gain.gain.value = opts.volume !== undefined ? opts.volume : 1;
+    src.connect(gain).connect(_audioCtx.destination);
+    src.loop = !!opts.loop;
+    src.start(0);
+    return src;
+  }
+
+  const _activeSources = {};
+
+  function _playSound(id, opts) {
+    if (!_audioUnlocked) {
+      _pendingSounds.push({ id: id, opts: opts });
+      return;
+    }
+    const src = _doPlaySound(id, opts);
+    if (src) {
+      _activeSources[id] = src;
+      src.onended = function() { if (_activeSources[id] === src) delete _activeSources[id]; };
+    }
+    return src;
+  }
+
+  function _stopSound(id) {
+    const src = _activeSources[id];
+    if (src) {
+      try {
+        src.stop();
+      }
+      catch(e) {
+      }
+      delete _activeSources[id];
+    }
+  }
+  await _loadSound("jump_sfx", "assets/kenney/audio/jump.ogg");
+  await _loadSound("coin_sfx", "assets/kenney/audio/coin.ogg");
+  await _loadSound("powerup_sfx", "assets/kenney/audio/powerup.ogg");
+  await _loadSound("stomp_sfx", "assets/kenney/audio/stomp.ogg");
+  await _loadSound("hurt_sfx", "assets/kenney/audio/hurt.ogg");
+  await _loadSound("win_sfx", "assets/kenney/audio/win.ogg");
+  await _loadSound("block_sfx", "assets/kenney/audio/block.ogg");
+
+  // === PARTICLES ===
+  // Particle System
+  const _particleSystems = {};
+
+  function _createParticleSystem(config) {
+    const ps = {
+      id: config.id,
+      follow: config.follow || null,
+      trigger: config.trigger || null,
+      count: config.count || 20,
+      emitRate: config.emitRate || 10,
+      lifetime: config.lifetime || 1,
+      speedMin: config.speedMin || 1,
+      speedMax: config.speedMax || 3,
+      angleMin: (config.angleMin || 0) * Math.PI / 180,
+      angleMax: (config.angleMax || 360) * Math.PI / 180,
+      alphaStart: config.alphaStart !== undefined ? config.alphaStart : 1,
+      alphaEnd: config.alphaEnd !== undefined ? config.alphaEnd : 0,
+      active: false,
+      emitTimer: 0,
+      pool: [],
+      container: new PIXI.Container(),
+    };
+
+    // Pre-allocate particle pool
+    for (let i = 0; i <= ps.count - 1; i += 1) {
+      const p = new PIXI.Graphics();
+      p.circle(0, 0, 3);
+      p.fill({ color: 0xffffff });
+      p.visible = false;
+      p._life = 0; p._maxLife = 0; p._vx = 0; p._vy = 0;
+      p._alphaStart = 1; p._alphaEnd = 0;
+      ps.container.addChild(p);
+      ps.pool.push(p);
+    }
+
+    _cameraContainer.addChild(ps.container);
+    _particleSystems[config.id] = ps;
+    return ps;
+  }
+
+  function _emitParticle(ps, x, y) {
+    for (const p of ps.pool) {
+      if (!p.visible) {
+        p.x = x;
+        p.y = y;
+        const angle = ps.angleMin + Math.random() * (ps.angleMax - ps.angleMin);
+        const speed = ps.speedMin + Math.random() * (ps.speedMax - ps.speedMin);
+        p._vx = Math.cos(angle) * speed;
+        p._vy = Math.sin(angle) * speed;
+        p._life = 0;
+        p._maxLife = ps.lifetime;
+        p._alphaStart = ps.alphaStart;
+        p._alphaEnd = ps.alphaEnd;
+        p.alpha = ps.alphaStart;
+        p.visible = true;
+        return;
+      }
+    }
+  }
+
+  function _activateParticles(psId) {
+    const ps = _particleSystems[psId];
+    if (ps) {
+      ps.active = true;
+    }
+  }
+
+  function _deactivateParticles(psId) {
+    const ps = _particleSystems[psId];
+    if (ps) {
+      ps.active = false;
+    }
+  }
+
+  function _updateParticles(dt) {
+    for (const [id, ps] of Object.entries(_particleSystems)) {
+      // Emit new particles if active
+      if (ps.active) {
+        ps.emitTimer += dt / 60;
+        const interval = 1 / ps.emitRate;
+        while (ps.emitTimer >= interval) {
+          ps.emitTimer -= interval;
+          let ex = 0;
+          let ey = 0;
+          if (ps.follow) {
+            const info = _sprites[ps.follow];
+            if (info) {
+              ex = info.sprite.x;
+              ey = info.sprite.y;
+            }
+          }
+          _emitParticle(ps, ex, ey);
+        }
+      }
+
+      // Update living particles
+      for (const p of ps.pool) {
+        if (!p.visible) {
+          continue;
+        }
+        p._life += dt / 60;
+        if (p._life >= p._maxLife) {
+          p.visible = false;
+          continue;
+        }
+        const lifeT = p._life / p._maxLife;
+        p.x = p.x + p._vx;
+        p.y = p.y + p._vy;
+        p.alpha = p._alphaStart + (p._alphaEnd - p._alphaStart) * lifeT;
+      }
+    }
+  }
+  // No particle instances
+
+  // === TIMERS ===
+  // Timer System
+  const _timers = {};
+  const _timerActions = {};
+
+  function _createTimer(id, interval, repeat, autoStart, actionFn) {
+    _timers[id] = { elapsed: 0, interval: interval, repeat: repeat, count: 0, active: autoStart };
+    _timerActions[id] = actionFn;
+  }
+
+  function _updateTimers(dt) {
+    for (const [tid, t] of Object.entries(_timers)) {
+      if (!t.active) {
+        continue;
+      }
+      t.elapsed += dt / 60;
+      if (t.elapsed >= t.interval) {
+        t.elapsed = 0;
+        if (_timerActions[tid]) {
+          _timerActions[tid]();
+        }
+        t.count++;
+        if (t.repeat >= 0 && t.count >= t.repeat) {
+          t.active = false;
+        }
+      }
+    }
+  }
+  // No timer instances
+
+  // === TWEENS ===
+  // Easing Functions
+  const _easing = {
+    linear: t => t,
+    easeIn: t => t * t,
+    easeOut: t => t * (2 - t),
+    easeInOut: t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t,
+    easeInCubic: t => t * t * t,
+    easeOutCubic: t => (--t) * t * t + 1,
+    easeInOutCubic: t => t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1,
+    easeInQuart: t => t * t * t * t,
+    easeOutQuart: t => 1 - (--t) * t * t * t,
+    easeInOutQuart: t => t < 0.5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t,
+    easeOutBounce: t => {
+      if (t < 1/2.75) return 7.5625 * t * t;
+      if (t < 2/2.75) return 7.5625 * (t -= 1.5/2.75) * t + 0.75;
+      if (t < 2.5/2.75) return 7.5625 * (t -= 2.25/2.75) * t + 0.9375;
+      return 7.5625 * (t -= 2.625/2.75) * t + 0.984375;
+    },
+    easeInBounce: t => 1 - _easing.easeOutBounce(1 - t),
+    easeOutElastic: t => {
+      if (t === 0 || t === 1) return t;
+      return Math.pow(2, -10 * t) * Math.sin((t - 0.075) * (2 * Math.PI) / 0.3) + 1;
+    },
+    easeInElastic: t => {
+      if (t === 0 || t === 1) return t;
+      return -Math.pow(2, 10 * (t - 1)) * Math.sin((t - 1.075) * (2 * Math.PI) / 0.3);
+    },
+  };
+
+  const _tweens = {};
+  let _tweenIdCounter = 0;
+
+  function _createTween(config) {
+    const id = config.id || ('tween_' + _tweenIdCounter++);
+    _tweens[id] = {
+      target: config.target,
+      prop: config.prop,
+      from: null,
+      to: config.to,
+      duration: config.duration || 1,
+      easing: config.easing || 'linear',
+      loop: !!config.loop,
+      yoyo: !!config.yoyo,
+      delay: config.delay || 0,
+      elapsed: 0,
+      delayElapsed: 0,
+      active: config.active !== false,
+      started: false,
+    };
+    return id;
+  }
+
+  function _updateTweens(dt) {
+    for (const [tid, tw] of Object.entries(_tweens)) {
+      if (!tw.active) {
+        continue;
+      }
+      // Handle delay
+      if (tw.delayElapsed < tw.delay) {
+        tw.delayElapsed += dt / 60;
+        continue;
+      }
+      // Init start value on first frame
+      if (!tw.started) {
+        const info = _sprites[tw.target];
+        if (!info) {
+          continue;
+        }
+        tw.from = info.sprite[tw.prop];
+        tw.started = true;
+      }
+      tw.elapsed += dt / 60;
+      const rawT = Math.min(tw.elapsed / tw.duration, 1);
+      const easeFn = _easing[tw.easing] || _easing.linear;
+      const t = easeFn(rawT);
+      const info = _sprites[tw.target];
+      if (info) {
+        info.sprite[tw.prop] = tw.from + (tw.to - tw.from) * t;
+      }
+      if (rawT >= 1) {
+        if (tw.loop) {
+          tw.elapsed = 0;
+          if (tw.yoyo) {
+            const tmp = tw.from;
+            tw.from = tw.to;
+            tw.to = tmp;
+          }
+        } else {
+          tw.active = false;
+        }
+      }
+    }
+  }
+  // No tween instances
+
+  // === SPAWNERS ===
+  // No spawners
+
+  // === HUD UPDATE ===
+  const _hudElements = [];
+  _hudElements.push(document.getElementById('qg-hud-0'));
+  _hudElements.push(document.getElementById('qg-hud-1'));
+  _hudElements.push(document.getElementById('qg-hud-2'));
+  _hudElements.push(document.getElementById('qg-hud-3'));
+  function _updateHUD() {
+  }
+
+  // === GAME LOOP ===
+  app.ticker.add((ticker) => {
+    const dt = ticker.deltaTime;
+    // Sub-step physics with velocity clamping to prevent tunneling
+    const _fixedDt = 16.67;
+    const _maxSteps = 3;
+    const _maxVel = 12;
+    const _steps = Math.min(Math.ceil(dt), _maxSteps);
+    for (let _i = 0; _i <= _steps; _i += 1) {
+      // Clamp velocities BEFORE physics step
+      for (const [_sid, _sinfo] of Object.entries(_sprites)) {
+        if (_sinfo.body && !_sinfo.body.isStatic) {
+          const _bv = _sinfo.body.velocity;
+          if (Math.abs(_bv.x) > _maxVel || Math.abs(_bv.y) > _maxVel) {
+            Matter.Body.setVelocity(_sinfo.body, {
+              x: Math.max(-_maxVel, Math.min(_maxVel, _bv.x)),
+              y: Math.max(-_maxVel, Math.min(_maxVel, _bv.y))
+            });
+          }
+        }
+      }
+      Matter.Engine.update(mEngine, _fixedDt);
+    }
+    syncPhysics();
+    _resolveTilemapCollisions();
+    syncPhysics();
+    // Input handling
+    const _ctrl_player = _controlledSprites["player"];
+    // Movement with dual key support (arrows + WASD)
+    const _leftPressed_player = _keys[_ctrl_player.left] || (_keys[_ctrl_player.left2] || false);
+    const _rightPressed_player = _keys[_ctrl_player.right] || (_keys[_ctrl_player.right2] || false);
+    const _jumpPressed_player = _keys[_ctrl_player.jump] || (_keys[_ctrl_player.jump2] || false);
+    const _jumpJust_player = _justPressed[_ctrl_player.jump] || (_justPressed[_ctrl_player.jump2] || false);
+    if (_leftPressed_player && _sprites["player"].body) {
+      Matter.Body.setVelocity(_sprites["player"].body, { x: -4, y: _sprites["player"].body.velocity.y });
+      _sprites["player"].sprite.scale.x = Math.abs(_sprites["player"].sprite.scale.x);
+    }
+    if (_rightPressed_player && _sprites["player"].body) {
+      Matter.Body.setVelocity(_sprites["player"].body, { x: 4, y: _sprites["player"].body.velocity.y });
+      _sprites["player"].sprite.scale.x = -Math.abs(_sprites["player"].sprite.scale.x);
+    }
+    // classic-style jump: coyote time, variable height, asymmetric gravity
+    if (_sprites["player"]._coyoteFrames === undefined) {
+      _sprites["player"]._coyoteFrames = 0;
+      _sprites["player"]._jumpHeld = false;
+      _sprites["player"]._wasGrounded = false;
+      _sprites["player"]._jumpCooldown = 0;
+    }
+    if (_sprites["player"]._jumpCooldown > 0) {
+      _sprites["player"]._jumpCooldown--;
+    }
+    const _isGrounded_player = _sprites["player"].body && Math.abs(_sprites["player"].body.velocity.y) < 0.5;
+    if (_isGrounded_player) {
+      _sprites["player"]._coyoteFrames = 6;
+      _sprites["player"]._wasGrounded = true;
+    } else if (_sprites["player"]._coyoteFrames > 0) {
+      _sprites["player"]._coyoteFrames--;
+    }
+    const _canJump_player = (_isGrounded_player || _sprites["player"]._coyoteFrames > 0) && _sprites["player"]._jumpCooldown === 0;
+    if (_jumpJust_player && _sprites["player"].body && _canJump_player) {
+      Matter.Body.setVelocity(_sprites["player"].body, { x: _sprites["player"].body.velocity.x, y: -14 });
+      _sprites["player"]._jumpHeld = true;
+      _sprites["player"]._coyoteFrames = 0;
+      _sprites["player"]._jumpCooldown = 8;
+      _gameEvents.emit('player.jump', _sprites["player"]);
+    }
+    if (_jumpPressed_player && _sprites["player"].body && _sprites["player"]._jumpHeld && _sprites["player"].body.velocity.y < 0) {
+      Matter.Body.setVelocity(_sprites["player"].body, { x: _sprites["player"].body.velocity.x, y: _sprites["player"].body.velocity.y - 0.4 });
+    }
+    if (!_jumpPressed_player) {
+      _sprites["player"]._jumpHeld = false;
+    }
+    if (_sprites["player"].body && _sprites["player"].body.velocity.y > 15) {
+      Matter.Body.setVelocity(_sprites["player"].body, { x: _sprites["player"].body.velocity.x, y: 15 });
+    }
+    if (!_leftPressed_player && !_rightPressed_player && _sprites["player"].body) {
+      Matter.Body.setVelocity(_sprites["player"].body, { x: 0, y: _sprites["player"].body.velocity.y });
+      _gameEvents.emit('player.stop', _sprites["player"]);
+    } else {
+      _gameEvents.emit('player.walk', _sprites["player"]);
+    }
+    if (_justPressed["r"] && typeof restart === 'function') {
+      restart();
+    }
+    _clearJustPressed();
+    updateCamera();
+    _updateControlAnimations();
+    _updateAnimatedSprites(ticker);
+    // Behaviors update
+    for (const [_id, _info] of Object.entries(_sprites)) {
+      if (_info.behaviors) {
+        for (const b of _info.behaviors) {
+          if (b._smUpdate) {
+            b._smUpdate();
+          }
+          if (b.update) {
+            b.update();
+          }
+        }
+      }
+    }
+    _updateHUD();
+  });
+
+  // === SCENE START ===
+  _gameEvents.on("player.jump", () => _playSound("jump_sfx", { volume: 1, loop: false }));
+  _gameEvents.emit('game-init', {});
+
+  // === DEBUG EXPORTS ===
+  Object.assign(window, { app, mEngine, _sprites, _bodyToSprite, _cameraContainer, _gameEvents });
+})();
+  </script>
+</body>
+</html>

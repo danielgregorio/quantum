@@ -1,0 +1,22 @@
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+sqlalchemy==2.0.25
+alembic==1.13.1
+python-dotenv==1.0.0
+docker==7.0.0
+# ResourceDiscovery (ports in use, processes). It was used without being declared.
+psutil==7.2.2
+cryptography==42.0.0
+pydantic==2.13.5
+pydantic-settings==2.15.0
+psycopg2-binary==2.9.9
+pymysql==1.1.0
+pymongo==4.6.1
+bcrypt==4.1.2
+PyJWT==2.8.0
+gitpython==3.1.40
+websockets==16.0
+httpx==0.28.1
+# Starlette 1.x's TestClient (the admin tests) uses httpx2; with only httpx it
+# warns that httpx is deprecated there. The admin itself calls httpx.
+httpx2==2.13.1

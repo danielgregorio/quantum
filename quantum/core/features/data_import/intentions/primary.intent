@@ -1,0 +1,69 @@
+# Primary Intention: q:data
+
+## What the user wants to accomplish
+The user wants to import data from external sources (CSV, JSON, XML files or URLs) and optionally transform that data before using it in their components.
+
+## User's mental model
+"I need to load data from a file/URL and maybe filter/sort/transform it before displaying."
+
+## Natural language expressions users might use
+- "Load products from this CSV file"
+- "Import configuration from JSON"
+- "Parse this XML file and extract orders"
+- "Get data from this API and filter active users"
+- "Transform query results - only show users over 18"
+- "Sort products by price"
+- "Group sales by region"
+- "Calculate total from this dataset"
+
+## Core user needs
+1. Import CSV files with type conversion
+2. Import JSON from files or URLs
+3. Parse XML documents with XPath
+4. Transform existing data (from queries, API calls, other data sources)
+5. Filter data based on conditions
+6. Sort data by fields
+7. Compute derived fields
+8. Group and aggregate data
+9. Rename fields for consistency
+10. Cache parsed data to avoid re-parsing
+
+## Expected outcomes
+- Data is loaded and available in a variable
+- Type conversion happens automatically
+- Transformations are applied in order
+- Result is an array of objects
+- Metadata is available (recordCount, loadTime, etc.)
+- Errors are captured in result object
+
+## Emotional context
+- Users want **simplicity** - declarative data loading, not imperative code
+- Users want **flexibility** - same tool for files, URLs, and transformations
+- Users feel **productive** when they can chain transformations
+- Users feel **confident** when types are validated automatically
+- Users feel **empowered** when they can combine data from multiple sources
+
+## Common patterns
+1. **Static Data Import**: Load configuration, lookup tables, seed data
+2. **File Uploads**: Parse user-uploaded CSV/JSON/XML files
+3. **API Response Processing**: Transform data from q:invoke before display
+4. **Query Enhancement**: Filter/sort/transform database query results
+5. **Data Migration**: Import legacy data from old systems
+6. **Analytics**: Group and aggregate data for dashboards
+
+## Success criteria
+- User can load CSV/JSON/XML with minimal syntax
+- Type conversion works automatically
+- Transformations are chainable and intuitive
+- Errors provide clear messages about what went wrong
+- Performance is good even for moderately large files
+- Caching prevents redundant parsing
+
+## Anti-patterns to avoid
+- Imperative parsing code
+- Manual type conversion
+- Multiple tags for different formats
+- Complex transformation syntax
+- Inability to chain operations
+- No error handling
+- No caching (re-parse on every render)

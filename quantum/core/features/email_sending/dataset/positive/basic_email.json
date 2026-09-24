@@ -1,0 +1,18 @@
+{
+  "example_id": "email_basic_001",
+  "category": "email_sending",
+  "tags": ["email", "html", "basic"],
+  "input": {
+    "component": "<q:component name=\"WelcomeEmail\">\n  <q:action name=\"sendWelcome\" method=\"POST\">\n    <q:param name=\"email\" type=\"email\" required=\"true\" />\n    <q:param name=\"name\" type=\"string\" required=\"true\" />\n    \n    <q:mail to=\"{email}\"\n            from=\"noreply@myapp.com\"\n            subject=\"Welcome to Our App!\">\n      <h1>Welcome {name}!</h1>\n      <p>Thanks for joining us.</p>\n    </q:mail>\n    \n    <q:redirect url=\"/dashboard\" flash=\"Welcome email sent!\" />\n  </q:action>\n</q:component>",
+    "context": {
+      "phase": "I",
+      "feature": "email_sending"
+    }
+  },
+  "expected_behavior": "Sends HTML welcome email with databinding",
+  "validation": {
+    "email_sending": true,
+    "html_body": true,
+    "databinding": true
+  }
+}

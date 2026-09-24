@@ -1,0 +1,38 @@
+{
+  "dataset_type": "negative",
+  "feature": "native_testing",
+  "category": "syntax_errors",
+  "description": "Test files that must be refused with a parse error (TEST-4, PARSE-3)",
+  "examples": [
+    {
+      "id": "test-invalid-001",
+      "intent": "A step that is not in the vocabulary",
+      "code": "<q:test name=\"a\"><test:click text=\"Save\" /></q:test>",
+      "error": "is not a test step"
+    },
+    {
+      "id": "test-invalid-002",
+      "intent": "An assertion that does not exist",
+      "code": "<q:test name=\"a\"><test:visit /><test:expect title=\"Home\" /></q:test>",
+      "error": "has no assertion title"
+    },
+    {
+      "id": "test-invalid-003",
+      "intent": "A detail without its assertion",
+      "code": "<q:test name=\"a\"><test:expect count=\"2\" /></q:test>",
+      "error": "belongs to table or history"
+    },
+    {
+      "id": "test-invalid-004",
+      "intent": "A submit without the action",
+      "code": "<q:test name=\"a\"><test:submit title=\"x\" /></q:test>",
+      "error": "needs action"
+    },
+    {
+      "id": "test-invalid-005",
+      "intent": "Two tests with the same name",
+      "code": "<q:test name=\"a\"><test:visit /></q:test><q:test name=\"a\"><test:visit /></q:test>",
+      "error": "two tests are called"
+    }
+  ]
+}

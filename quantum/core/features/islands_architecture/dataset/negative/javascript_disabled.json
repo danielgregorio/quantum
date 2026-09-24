@@ -1,0 +1,24 @@
+{
+  "example_id": "islands_error_001",
+  "category": "islands_architecture",
+  "tags": ["error", "javascript", "fallback"],
+  "input": {
+    "component": "<q:component name=\"Counter\" interactive=\"true\">\n  <button onclick=\"increment()\">+</button>\n</q:component>",
+    "context": {
+      "phase": "E",
+      "feature": "islands_architecture",
+      "javascript_enabled": false
+    }
+  },
+  "expected_behavior": "Component renders but interactivity doesn't work without JavaScript - shows fallback message",
+  "error": {
+    "type": "JavaScriptDisabled",
+    "message": "Interactive features require JavaScript"
+  },
+  "validation": {
+    "should_render": true,
+    "interactivity_fails": true,
+    "progressive_enhancement": true,
+    "graceful_degradation": true
+  }
+}

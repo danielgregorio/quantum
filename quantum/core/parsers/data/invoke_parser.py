@@ -1,0 +1,150 @@
+"""
+Invoke Parser - Parse q:invoke statements
+
+Handles function, component, and HTTP invocations.
+"""
+
+from typing import List
+from xml.etree import ElementTree as ET
+from quantum.core.parsers.base import BaseTagParser, ParserError
+from quantum.core.features.invocation.src.ast_node import InvokeNode, InvokeHeaderNode
+from quantum.core.ast_nodes import QuantumParam
+
+
+class InvokeParser(BaseTagParser):
+    """
+    Parser for q:invoke statements.
+
+    Supports:
+    - Function invocation
+    - Component invocation
+    - HTTP requests (REST APIs)
+    - Service invocation
+    - Authentication (bearer, basic, custom)
+    """
+
+    @property
+    def tag_names(self) -> List[str]:
+        return ['invoke']
+
+    def parse(self, element: ET.Element) -> InvokeNode:
+        """
+        Parse q:invoke statement.
+
+        Args:
+            element: XML element for q:invoke
+
+        Returns:
+            InvokeNode AST node
+        """
+        name = self.get_attr(element, 'name')
+        # Fire-and-forget invocation (no result to bind) is legitimate — the
+        # job/thread examples all use it — so name is optional.
+        invoke_node = InvokeNode(name or '')
+
+        # Parse invocation target
+        invoke_node.function = self.get_attr(element, 'function')
+        invoke_node.component = self.get_attr(element, 'component')
+        invoke_node.url = self.get_attr(element, 'url')
+        if self.get_attr(element, 'endpoint') is not None:
+            raise ParserError(
+                f'<q:invoke name="{name}"> endpoint= is not supported: it was accepted and never '
+                f'did anything, and was removed in Quantum 0.12. Use url= or service=.')
+        invoke_node.service = self.get_attr(element, 'service')
+
+        # HTTP attributes
+        invoke_node.method = self.get_attr(element, 'method', 'GET').upper()
+        invoke_node.content_type = self.get_attr(element, 'contentType', 'application/json')
+
+        # PARSE-5: a method or authType the HTTP call does not know is a parse
+        # error. An unknown authType sent the request with no credentials at
+        # all; an unknown method failed only when the request ran.
+        if invoke_node.method not in HTTP_METHODS:
+            raise ParserError(f'<q:invoke name="{invoke_node.name}"> method="{invoke_node.method}" does not '
+                              f'exist; method is one of: {", ".join(HTTP_METHODS)}')
+
+        # Authentication
+        invoke_node.auth_type = self.get_attr(element, 'authType')
+        if invoke_node.auth_type is not None and invoke_node.auth_type not in AUTH_TYPES:
+            raise ParserError(f'<q:invoke name="{invoke_node.name}"> authType="{invoke_node.auth_type}" '
+                              f'does not exist; authType is one of: {", ".join(AUTH_TYPES)} (INV-1)')
+        invoke_node.auth_token = self.get_attr(element, 'authToken')
+        invoke_node.auth_header = self.get_attr(element, 'authHeader')
+        invoke_node.auth_username = self.get_attr(element, 'authUsername')
+        invoke_node.auth_password = self.get_attr(element, 'authPassword')
+
+        # Timeouts and retries
+        invoke_node.timeout = self.get_int_attr(element, 'timeout', 0) or None
+        invoke_node.retry = self.get_int_attr(element, 'retry', 0) or None
+        invoke_node.retry_delay = self.get_int_attr(element, 'retryDelay', 0) or None
+
+        # Response handling
+        invoke_node.response_format = self.get_attr(element, 'responseFormat', 'auto')
+        if element.get('transform') is not None:
+            # A2: accepted and never applied.
+            from quantum.core.parser import QuantumParseError
+            raise QuantumParseError(
+                f'<q:invoke name="{invoke_node.name}"> transform= is not supported: it was '
+                f'accepted and never did anything. Transform the result with q:set.')
+        invoke_node.cache = self.get_bool_attr(element, 'cache', False)
+        invoke_node.ttl = self.get_int_attr(element, 'ttl', 0) or None
+        invoke_node.result = self.get_attr(element, 'result')
+
+        # DATA-4 / INV-2: a failure stops the component unless the program says
+        # it will look at <name>_result.
+        invoke_node.on_error = self.get_attr(element, 'onerror', 'fail')
+        if invoke_node.on_error not in ('fail', 'continue'):
+            from quantum.core.parser import QuantumParseError
+            raise QuantumParseError(
+                f"<q:invoke name=\"{invoke_node.name}\"> onerror must be \"fail\" or "
+                f"\"continue\", not \"{invoke_node.on_error}\"")
+
+        # Parse child elements
+        for child in element:
+            child_type = self.get_element_name(child)
+
+            if child_type == 'header':
+                header = self._parse_header(child)
+                invoke_node.add_header(header)
+            elif child_type == 'param':
+                param = self._parse_param(child)
+                invoke_node.add_param(param)
+            elif child_type == 'body':
+                invoke_node.body = child.text or ""
+
+        return invoke_node
+
+    def _parse_header(self, element: ET.Element) -> InvokeHeaderNode:
+        """Parse q:header within q:invoke."""
+        name = self.get_attr(element, 'name')
+        value = self.get_attr(element, 'value')
+
+        if not name:
+            raise ParserError("Invoke header requires 'name' attribute")
+        if value is None:
+            raise ParserError(f"Invoke header '{name}' requires 'value' attribute")
+
+        return InvokeHeaderNode(name, value)
+
+    def _parse_param(self, element: ET.Element) -> QuantumParam:
+        """Parse q:param within q:invoke."""
+        name = self.get_attr(element, 'name')
+        value = self.get_attr(element, 'value')
+        param_type = self.get_attr(element, 'type', 'string')
+
+        if not name:
+            raise ParserError("Param requires 'name' attribute")
+
+        from quantum.runtime.param_validation import check_param_type
+        check_param_type(f'<q:invoke> <q:param name="{name}">', param_type, element=element)
+        param = QuantumParam(name, param_type)
+        param.value = value
+        param.required = self.get_bool_attr(element, 'required', False)
+        param.default = self.get_attr(element, 'default')
+
+        return param
+
+
+# PARSE-5: what q:invoke url= sends (INV-1).
+HTTP_METHODS = ('GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS')
+AUTH_TYPES = ('bearer', 'apikey', 'basic')

@@ -1,0 +1,18 @@
+{
+  "example_id": "protected_component_001",
+  "category": "authentication",
+  "tags": ["require_auth", "protected", "authorization"],
+  "input": {
+    "component": "<q:component name=\"Dashboard\" require_auth=\"true\">\n  <h1>Welcome, {session.userName}!</h1>\n  <p>Your role: {session.userRole}</p>\n  <p>User ID: {session.userId}</p>\n</q:component>",
+    "context": {
+      "phase": "G",
+      "feature": "authentication"
+    }
+  },
+  "expected_behavior": "Component requires authentication. Unauthenticated users are redirected to /login",
+  "validation": {
+    "require_auth": true,
+    "redirect_unauthenticated": true,
+    "session_access": true
+  }
+}

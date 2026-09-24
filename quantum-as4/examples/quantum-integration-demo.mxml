@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009"
+               xmlns:s="library://ns.adobe.com/flex/spark"
+               xmlns:mx="library://ns.adobe.com/flex/mx"
+               width="1000" height="900"
+               title="Quantum Integration Demo">
+
+    <fx:Script>
+        <![CDATA[
+            // Service URLs
+            [Bindable] public var quantumServerUrl:String = "http://localhost:8080";
+
+            // Data properties
+            [Bindable] public var productsData:Object = null;
+            [Bindable] public var statusMessage:String = "Ready";
+            [Bindable] public var isLoading:Boolean = false;
+
+            // Bridge message data
+            [Bindable] public var lastMessage:String = "";
+            [Bindable] public var messageLog:Array = [];
+
+            // QuantumService handlers
+            public function handleProductsResult(event:Object):void {
+                trace("Products loaded successfully!");
+                productsData = event.result;
+                statusMessage = "Products loaded successfully!";
+                isLoading = false;
+
+                // Log the response
+                trace("Status Code: " + event.statusCode);
+                trace("URL: " + event.url);
+
+                if (event.result.data) {
+                    trace("Data: " + JSON.stringify(event.result.data));
+                }
+
+                if (event.result.html) {
+                    trace("HTML length: " + event.result.html.length);
+                }
+
+                Alert.show(
+                    "Loaded data from Quantum server!",
+                    "Success",
+                    Alert.OK,
+                    null,
+                    null,
+                    Alert.INFO
+                );
+            }
+
+            public function handleProductsFault(event:Object):void {
+                trace("Error loading products: " + event.error);
+                statusMessage = "Error: " + event.error;
+                isLoading = false;
+
+                Alert.show(
+                    "Failed to load data from Quantum server.\n\nMake sure the Quantum server is running at " + quantumServerUrl,
+                    "Connection Error",
+                    Alert.OK,
+                    null,
+                    null,
+                    Alert.ERROR
+                );
+            }
+
+            // Manual service call
+            public function loadProducts():void {
+                if (isLoading) return;
+
+                isLoading = true;
+                statusMessage = "Loading products from Quantum server...";
+                productsService.send();
+                trace("Requesting products from: " + quantumServerUrl + "/products");
+            }
+
+            public function loadHelloComponent():void {
+                statusMessage = "Loading Hello component...";
+                helloService.send();
+            }
+
+            public function handleHelloResult(event:Object):void {
+                trace("Hello component loaded!");
+                statusMessage = "Hello component data loaded";
+
+                if (event.result.title) {
+                    trace("Title: " + event.result.title);
+                }
+            }
+
+            public function handleHelloFault(event:Object):void {
+                trace("Error loading hello: " + event.error);
+                statusMessage = "Error loading hello component";
+            }
+
+            // QuantumComponent handlers
+            public function handleComponentLoad(event:Object):void {
+                trace("Quantum component embedded successfully!");
+                statusMessage = "Quantum component embedded";
+            }
+
+            public function handleComponentError(event:Object):void {
+                trace("Error embedding component: " + event.error);
+                statusMessage = "Error embedding component";
+            }
+
+            public function handleComponentMessage(event:Object):void {
+                trace("Message from Quantum component: " + JSON.stringify(event.data));
+                lastMessage = JSON.stringify(event.data);
+                messageLog.push({
+                    timestamp: new Date().toLocaleTimeString(),
+                    data: event.data,
+                    origin: event.origin
+                });
+            }
+
+            // Send message to embedded component
+            public function sendMessageToComponent():void {
+                if (quantumComponent) {
+                    quantumComponent.postMessage({
+                        type: 'greeting',
+                        message: 'Hello from MXML!',
+                        timestamp: Date.now()
+                    });
+                    statusMessage = "Message sent to Quantum component";
+                }
+            }
+
+            // QuantumBridge handlers
+            public function setupBridge():void {
+                if (quantumBridge) {
+                    // Register handler for messages from Quantum
+                    quantumBridge.on('quantum:data', function(data) {
+                        trace("Bridge received data: " + JSON.stringify(data));
+                        lastMessage = "Bridge: " + JSON.stringify(data);
+                    });
+
+                    quantumBridge.on('quantum:event', function(data) {
+                        trace("Bridge received event: " + JSON.stringify(data));
+                        lastMessage = "Event: " + data.eventType;
+                    });
+
+                    statusMessage = "Bridge initialized";
+                }
+            }
+
+            public function sendViaBridge():void {
+                if (quantumBridge) {
+                    quantumBridge.send('mxml:message', {
+                        from: 'MXML Application',
+                        message: 'Testing bridge communication',
+                        timestamp: Date.now()
+                    });
+                    statusMessage = "Message sent via bridge";
+                }
+            }
+
+            public function callQuantumMethod():void {
+                if (quantumBridge) {
+                    statusMessage = "Calling Quantum method...";
+
+                    quantumBridge.call('getServerInfo', {})
+                        .then(function(result) {
+                            trace("RPC result: " + JSON.stringify(result));
+                            statusMessage = "RPC call succeeded";
+                            Alert.show(
+                                "Server responded: " + JSON.stringify(result),
+                                "RPC Success",
+                                Alert.OK,
+                                null,
+                                null,
+                                Alert.INFO
+                            );
+                        })
+                        .catch(function(error) {
+                            trace("RPC error: " + error.message);
+                            statusMessage = "RPC call failed: " + error.message;
+                            Alert.show(
+                                "RPC call failed: " + error.message,
+                                "RPC Error",
+                                Alert.OK,
+                                null,
+                                null,
+                                Alert.WARNING
+                            );
+                        });
+                }
+            }
+
+            public function refreshStatus():void {
+                const now = new Date().toLocaleTimeString();
+                statusMessage = "Status refreshed at " + now;
+            }
+        ]]>
+    </fx:Script>
+
+    <!-- Quantum Integration Components -->
+
+    <!-- QuantumService: HTTP client for Quantum endpoints -->
+    <mx:QuantumService id="productsService"
+                       url="{quantumServerUrl + '/products'}"
+                       method="GET"
+                       result="handleProductsResult(event)"
+                       fault="handleProductsFault(event)"
+                       extractData="true" />
+
+    <mx:QuantumService id="helloService"
+                       url="{quantumServerUrl + '/hello'}"
+                       method="GET"
+                       result="handleHelloResult(event)"
+                       fault="handleHelloFault(event)" />
+
+    <!-- QuantumComponent: Embeds Quantum component via iframe -->
+    <mx:QuantumComponent id="quantumComponent"
+                         url="{quantumServerUrl + '/hello'}"
+                         width="800"
+                         height="300"
+                         autoResize="true"
+                         load="handleComponentLoad(event)"
+                         error="handleComponentError(event)"
+                         message="handleComponentMessage(event)"
+                         includeIn="embedView" />
+
+    <!-- QuantumBridge: Bidirectional communication bridge -->
+    <mx:QuantumBridge id="quantumBridge"
+                      targetOrigin="{quantumServerUrl}" />
+
+    <!-- States -->
+    <s:states>
+        <s:State name="default" />
+        <s:State name="serviceView" />
+        <s:State name="embedView" />
+        <s:State name="bridgeView" />
+    </s:states>
+
+    <s:VBox width="100%" height="100%" padding="20" gap="20">
+
+        <!-- Header -->
+        <s:Panel width="100%" title="Quantum Integration Demo">
+            <s:VBox padding="15" gap="10" width="100%">
+                <s:Label text="Integration between MXML and Quantum Language" fontSize="14" fontWeight="bold" />
+                <s:Label text="Demonstrates: QuantumService (HTTP), QuantumComponent (iframe), QuantumBridge (PostMessage)" fontSize="11" />
+
+                <!-- Navigation -->
+                <s:HBox gap="10" width="100%">
+                    <s:Button label="HTTP Service" click="currentState = 'serviceView'" />
+                    <s:Button label="Embed Component" click="currentState = 'embedView'" />
+                    <s:Button label="Bridge Communication" click="currentState = 'bridgeView'" />
+                    <s:Button label="Overview" click="currentState = 'default'" />
+                </s:HBox>
+            </s:VBox>
+        </s:Panel>
+
+        <!-- Status Bar -->
+        <s:Panel width="100%" title="Status">
+            <s:HBox padding="10" gap="10" width="100%" verticalAlign="middle">
+                <s:Label text="📡" fontSize="16" />
+                <s:Label text="{statusMessage}" fontSize="12" color="#2c3e50" />
+                <s:Spacer />
+                <s:Label text="Server: {quantumServerUrl}" fontSize="11" color="#7f8c8d" />
+            </s:HBox>
+        </s:Panel>
+
+        <!-- DEFAULT VIEW: Overview -->
+        <s:VBox width="100%" gap="15" includeIn="default">
+
+            <s:Panel width="100%" title="🔌 QuantumService - HTTP Client">
+                <s:VBox padding="20" gap="12" width="100%">
+                    <s:Label text="Call Quantum endpoints and retrieve data" fontSize="12" />
+                    <s:Label text="Features: GET/POST/PUT/DELETE, auto-retry, data extraction from HTML, timeout handling" fontSize="11" color="#666666" />
+
+                    <s:HBox gap="10">
+                        <s:Button label="Try QuantumService" click="currentState = 'serviceView'" />
+                    </s:HBox>
+
+                    <s:Label text="Example usage:" fontSize="11" fontWeight="bold" />
+                    <s:Panel width="100%" backgroundColor="#f8f9fa">
+                        <s:VBox padding="10" gap="5">
+                            <s:Label text='&lt;mx:QuantumService id="service"' fontSize="10" fontFamily="monospace" />
+                            <s:Label text='    url="http://localhost:8080/products"' fontSize="10" fontFamily="monospace" />
+                            <s:Label text='    method="GET"' fontSize="10" fontFamily="monospace" />
+                            <s:Label text='    result="handleResult(event)"' fontSize="10" fontFamily="monospace" />
+                            <s:Label text='    fault="handleFault(event)" /&gt;' fontSize="10" fontFamily="monospace" />
+                        </s:VBox>
+                    </s:Panel>
+                </s:VBox>
+            </s:Panel>
+
+            <s:Panel width="100%" title="📺 QuantumComponent - iframe Embedding">
+                <s:VBox padding="20" gap="12" width="100%">
+                    <s:Label text="Embed Quantum .q components inside MXML UI" fontSize="12" />
+                    <s:Label text="Features: iframe sandbox, auto-resize, loading states, PostMessage communication" fontSize="11" color="#666666" />
+
+                    <s:HBox gap="10">
+                        <s:Button label="Try QuantumComponent" click="currentState = 'embedView'" />
+                    </s:HBox>
+
+                    <s:Label text="Example usage:" fontSize="11" fontWeight="bold" />
+                    <s:Panel width="100%" backgroundColor="#f8f9fa">
+                        <s:VBox padding="10" gap="5">
+                            <s:Label text='&lt;mx:QuantumComponent' fontSize="10" fontFamily="monospace" />
+                            <s:Label text='    url="http://localhost:8080/hello"' fontSize="10" fontFamily="monospace" />
+                            <s:Label text='    width="600" height="400"' fontSize="10" fontFamily="monospace" />
+                            <s:Label text='    autoResize="true" /&gt;' fontSize="10" fontFamily="monospace" />
+                        </s:VBox>
+                    </s:Panel>
+                </s:VBox>
+            </s:Panel>
+
+            <s:Panel width="100%" title="🌉 QuantumBridge - Bidirectional Communication">
+                <s:VBox padding="20" gap="12" width="100%">
+                    <s:Label text="PostMessage-based bridge for real-time communication" fontSize="12" />
+                    <s:Label text="Features: event handlers, RPC-style method calls, message routing, timeout handling" fontSize="11" color="#666666" />
+
+                    <s:HBox gap="10">
+                        <s:Button label="Try QuantumBridge" click="currentState = 'bridgeView'" />
+                    </s:HBox>
+
+                    <s:Label text="Example usage:" fontSize="11" fontWeight="bold" />
+                    <s:Panel width="100%" backgroundColor="#f8f9fa">
+                        <s:VBox padding="10" gap="5">
+                            <s:Label text='bridge.on("quantum:data", handler);' fontSize="10" fontFamily="monospace" />
+                            <s:Label text='bridge.send("mxml:event", {data});' fontSize="10" fontFamily="monospace" />
+                            <s:Label text='bridge.call("method", {params}).then(...);' fontSize="10" fontFamily="monospace" />
+                        </s:VBox>
+                    </s:Panel>
+                </s:VBox>
+            </s:Panel>
+
+        </s:VBox>
+
+        <!-- SERVICE VIEW: HTTP Client Demo -->
+        <s:Panel width="100%" title="QuantumService Demo" includeIn="serviceView">
+            <s:VBox padding="20" gap="15" width="100%">
+
+                <s:Label text="HTTP Client for Quantum Endpoints" fontSize="14" fontWeight="bold" />
+
+                <s:HBox gap="10">
+                    <s:Button label="Load /products" click="loadProducts()" enabled="{!isLoading}" />
+                    <s:Button label="Load /hello" click="loadHelloComponent()" enabled="{!isLoading}" />
+                    <s:Button label="Refresh Status" click="refreshStatus()" />
+                    <s:Button label="Back" click="currentState = 'default'" />
+                </s:HBox>
+
+                <s:Panel width="100%" title="Response Data">
+                    <s:VBox padding="15" gap="10" width="100%">
+                        <s:HBox gap="10">
+                            <s:Label text="Status:" fontWeight="bold" width="80" />
+                            <s:Label text="{isLoading ? '⏳ Loading...' : '✅ Ready'}" />
+                        </s:HBox>
+
+                        <s:HBox gap="10">
+                            <s:Label text="Data:" fontWeight="bold" width="80" />
+                            <s:Label text="{productsData ? JSON.stringify(productsData).substring(0, 100) + '...' : 'No data loaded'}" />
+                        </s:HBox>
+                    </s:VBox>
+                </s:Panel>
+
+                <s:Label text="Note: Make sure Quantum server is running at {quantumServerUrl}" fontSize="11" color="#e74c3c" />
+
+            </s:VBox>
+        </s:Panel>
+
+        <!-- EMBED VIEW: Component Embedding Demo -->
+        <s:Panel width="100%" title="QuantumComponent Demo" includeIn="embedView">
+            <s:VBox padding="20" gap="15" width="100%">
+
+                <s:Label text="Embedded Quantum Component" fontSize="14" fontWeight="bold" />
+
+                <s:HBox gap="10">
+                    <s:Button label="Send Message" click="sendMessageToComponent()" />
+                    <s:Button label="Back" click="currentState = 'default'" />
+                </s:HBox>
+
+                <s:Panel width="100%" title="Embedded Component Preview">
+                    <s:VBox padding="10" gap="10" width="100%">
+                        <!-- The QuantumComponent will render here (defined in root declarations) -->
+                        <s:Label text="The Quantum component from /hello endpoint will appear below:" fontSize="11" />
+                    </s:VBox>
+                </s:Panel>
+
+                <s:Panel width="100%" title="Messages">
+                    <s:VBox padding="10" gap="5" width="100%">
+                        <s:Label text="Last Message: {lastMessage}" fontSize="11" />
+                    </s:VBox>
+                </s:Panel>
+
+            </s:VBox>
+        </s:Panel>
+
+        <!-- BRIDGE VIEW: Bidirectional Communication Demo -->
+        <s:Panel width="100%" title="QuantumBridge Demo" includeIn="bridgeView">
+            <s:VBox padding="20" gap="15" width="100%">
+
+                <s:Label text="Bidirectional PostMessage Communication" fontSize="14" fontWeight="bold" />
+
+                <s:HBox gap="10">
+                    <s:Button label="Initialize Bridge" click="setupBridge()" />
+                    <s:Button label="Send Message" click="sendViaBridge()" />
+                    <s:Button label="Call RPC Method" click="callQuantumMethod()" />
+                    <s:Button label="Back" click="currentState = 'default'" />
+                </s:HBox>
+
+                <s:Panel width="100%" title="Bridge Status">
+                    <s:VBox padding="15" gap="10" width="100%">
+                        <s:Label text="Target Origin: {quantumServerUrl}" fontSize="11" />
+                        <s:Label text="Last Message: {lastMessage}" fontSize="11" />
+                    </s:VBox>
+                </s:Panel>
+
+                <s:Panel width="100%" title="Available Methods">
+                    <s:VBox padding="15" gap="8" width="100%">
+                        <s:Label text="• bridge.on(type, handler) - Register message handler" fontSize="11" fontFamily="monospace" />
+                        <s:Label text="• bridge.send(type, data) - Send message to Quantum" fontSize="11" fontFamily="monospace" />
+                        <s:Label text="• bridge.call(method, params) - RPC-style method call" fontSize="11" fontFamily="monospace" />
+                    </s:VBox>
+                </s:Panel>
+
+            </s:VBox>
+        </s:Panel>
+
+        <!-- Footer -->
+        <s:Panel width="100%" title="Info">
+            <s:VBox padding="10" gap="5" width="100%">
+                <s:Label text="Current State: {currentState}" fontSize="11" />
+                <s:Label text="This demo requires a running Quantum server at {quantumServerUrl}" fontSize="10" color="#666666" />
+            </s:VBox>
+        </s:Panel>
+
+    </s:VBox>
+
+</s:Application>

@@ -1,0 +1,1917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Benchmark Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.6;
+            padding: 2rem;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { color: #94a3b8; margin-bottom: 2rem; }
+        .system-info {
+            background: #1e293b;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .system-info-item { }
+        .system-info-label { color: #94a3b8; font-size: 0.875rem; }
+        .system-info-value { color: #f1f5f9; font-weight: 600; }
+        .category {
+            background: #1e293b;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .category-title {
+            font-size: 1.25rem;
+            color: #3b82f6;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+        th {
+            color: #94a3b8;
+            font-weight: 500;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        td { color: #e2e8f0; }
+        .number { text-align: right; font-family: monospace; }
+        .fast { color: #22c55e; }
+        .medium { color: #f59e0b; }
+        .slow { color: #ef4444; }
+        .chart-container {
+            height: 300px;
+            margin-top: 1rem;
+        }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .summary-card {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .summary-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #3b82f6;
+        }
+        .summary-label { color: #94a3b8; font-size: 0.875rem; }
+        footer {
+            text-align: center;
+            color: #64748b;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #334155;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Quantum Framework Benchmarks</h1>
+        <p class="subtitle">Performance analysis report - 2026-02-08 18:01:41</p>
+
+        <div class="system-info">
+            <div class="system-info-item">
+                <div class="system-info-label">Platform</div>
+                <div class="system-info-value">Windows 11</div>
+            </div>
+            <div class="system-info-item">
+                <div class="system-info-label">Python Version</div>
+                <div class="system-info-value">3.12.7</div>
+            </div>
+            <div class="system-info-item">
+                <div class="system-info-label">CPU Cores</div>
+                <div class="system-info-value">16</div>
+            </div>
+            <div class="system-info-item">
+                <div class="system-info-label">Memory</div>
+                <div class="system-info-value">24.0 GB</div>
+            </div>
+        </div>
+
+        <div class="summary">
+            <div class="summary-card">
+                <div class="summary-value">92</div>
+                <div class="summary-label">Total Benchmarks</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value">15</div>
+                <div class="summary-label">Categories</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value">969,100</div>
+                <div class="summary-label">Total Iterations</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value">17.4s</div>
+                <div class="summary-label">Total Time</div>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">baseline</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benchmark</th>
+                        <th class="number">Iterations</th>
+                        <th class="number">Avg (ms)</th>
+                        <th class="number">Min (ms)</th>
+                        <th class="number">Max (ms)</th>
+                        <th class="number">Ops/sec</th>
+                        <th class="number">Memory (MB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td>baseline_variable_assign</td>
+                        <td class="number">100,000</td>
+                        <td class="number fast">0.0001</td>
+                        <td class="number">0.0000</td>
+                        <td class="number">0.0039</td>
+                        <td class="number">10,512,594</td>
+                        <td class="number">+1.29</td>
+                    </tr>
+
+                    <tr>
+                        <td>baseline_function_call</td>
+                        <td class="number">50,000</td>
+                        <td class="number fast">0.0001</td>
+                        <td class="number">0.0001</td>
+                        <td class="number">0.0077</td>
+                        <td class="number">8,663,709</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>baseline_arithmetic</td>
+                        <td class="number">100,000</td>
+                        <td class="number fast">0.0001</td>
+                        <td class="number">0.0001</td>
+                        <td class="number">0.0114</td>
+                        <td class="number">8,550,882</td>
+                        <td class="number">+0.95</td>
+                    </tr>
+
+                    <tr>
+                        <td>baseline_json_parse</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0011</td>
+                        <td class="number">0.0010</td>
+                        <td class="number">0.0085</td>
+                        <td class="number">883,174</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>baseline_json_serialize</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0013</td>
+                        <td class="number">0.0011</td>
+                        <td class="number">0.0316</td>
+                        <td class="number">794,521</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>baseline_list_comprehension</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0029</td>
+                        <td class="number">0.0027</td>
+                        <td class="number">0.0172</td>
+                        <td class="number">342,888</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>baseline_class_instantiation</td>
+                        <td class="number">10,000</td>
+                        <td class="number fast">0.0030</td>
+                        <td class="number">0.0022</td>
+                        <td class="number">0.0799</td>
+                        <td class="number">337,994</td>
+                        <td class="number">+0.09</td>
+                    </tr>
+
+                    <tr>
+                        <td>baseline_dict_operations</td>
+                        <td class="number">10,000</td>
+                        <td class="number fast">0.0153</td>
+                        <td class="number">0.0144</td>
+                        <td class="number">0.2779</td>
+                        <td class="number">65,222</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>baseline_loop_1000</td>
+                        <td class="number">1,000</td>
+                        <td class="number fast">0.0173</td>
+                        <td class="number">0.0161</td>
+                        <td class="number">0.1798</td>
+                        <td class="number">57,960</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>baseline_sqlite_query</td>
+                        <td class="number">1,000</td>
+                        <td class="number fast">0.0338</td>
+                        <td class="number">0.0270</td>
+                        <td class="number">0.2868</td>
+                        <td class="number">29,574</td>
+                        <td class="number">-1.79</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="chart-baseline"></canvas>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">baseline_python</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benchmark</th>
+                        <th class="number">Iterations</th>
+                        <th class="number">Avg (ms)</th>
+                        <th class="number">Min (ms)</th>
+                        <th class="number">Max (ms)</th>
+                        <th class="number">Ops/sec</th>
+                        <th class="number">Memory (MB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td>pure_python_conditional</td>
+                        <td class="number">100,000</td>
+                        <td class="number fast">0.0001</td>
+                        <td class="number">0.0000</td>
+                        <td class="number">0.0129</td>
+                        <td class="number">11,920,798</td>
+                        <td class="number">+0.78</td>
+                    </tr>
+
+                    <tr>
+                        <td>pure_python_assign</td>
+                        <td class="number">100,000</td>
+                        <td class="number fast">0.0001</td>
+                        <td class="number">0.0000</td>
+                        <td class="number">0.0076</td>
+                        <td class="number">10,882,459</td>
+                        <td class="number">+0.74</td>
+                    </tr>
+
+                    <tr>
+                        <td>pure_python_expression</td>
+                        <td class="number">100,000</td>
+                        <td class="number fast">0.0001</td>
+                        <td class="number">0.0001</td>
+                        <td class="number">0.0122</td>
+                        <td class="number">8,500,004</td>
+                        <td class="number">+0.73</td>
+                    </tr>
+
+                    <tr>
+                        <td>pure_python_list_comp</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0024</td>
+                        <td class="number">0.0023</td>
+                        <td class="number">0.0229</td>
+                        <td class="number">408,687</td>
+                        <td class="number">+0.10</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="chart-baseline_python"></canvas>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">collections</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benchmark</th>
+                        <th class="number">Iterations</th>
+                        <th class="number">Avg (ms)</th>
+                        <th class="number">Min (ms)</th>
+                        <th class="number">Max (ms)</th>
+                        <th class="number">Ops/sec</th>
+                        <th class="number">Memory (MB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td>list_create_100</td>
+                        <td class="number">10,000</td>
+                        <td class="number fast">0.0010</td>
+                        <td class="number">0.0009</td>
+                        <td class="number">0.0091</td>
+                        <td class="number">1,030,121</td>
+                        <td class="number">+0.01</td>
+                    </tr>
+
+                    <tr>
+                        <td>dict_create</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0074</td>
+                        <td class="number">0.0068</td>
+                        <td class="number">0.1659</td>
+                        <td class="number">135,367</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>list_reduce</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0086</td>
+                        <td class="number">0.0081</td>
+                        <td class="number">0.2733</td>
+                        <td class="number">116,135</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>list_create_1000</td>
+                        <td class="number">1,000</td>
+                        <td class="number fast">0.0114</td>
+                        <td class="number">0.0107</td>
+                        <td class="number">0.2424</td>
+                        <td class="number">88,003</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>dict_access</td>
+                        <td class="number">10,000</td>
+                        <td class="number fast">0.0156</td>
+                        <td class="number">0.0137</td>
+                        <td class="number">0.2723</td>
+                        <td class="number">64,032</td>
+                        <td class="number">+0.04</td>
+                    </tr>
+
+                    <tr>
+                        <td>dict_update</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0166</td>
+                        <td class="number">0.0138</td>
+                        <td class="number">0.2752</td>
+                        <td class="number">60,314</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>list_map</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0211</td>
+                        <td class="number">0.0200</td>
+                        <td class="number">0.2773</td>
+                        <td class="number">47,311</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>list_filter</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0236</td>
+                        <td class="number">0.0222</td>
+                        <td class="number">0.2857</td>
+                        <td class="number">42,305</td>
+                        <td class="number">+0.05</td>
+                    </tr>
+
+                    <tr>
+                        <td>list_sort</td>
+                        <td class="number">1,000</td>
+                        <td class="number medium">0.2628</td>
+                        <td class="number">0.2438</td>
+                        <td class="number">0.5892</td>
+                        <td class="number">3,806</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="chart-collections"></canvas>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">comparison</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benchmark</th>
+                        <th class="number">Iterations</th>
+                        <th class="number">Avg (ms)</th>
+                        <th class="number">Min (ms)</th>
+                        <th class="number">Max (ms)</th>
+                        <th class="number">Ops/sec</th>
+                        <th class="number">Memory (MB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td>pure_python_function</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0001</td>
+                        <td class="number">0.0001</td>
+                        <td class="number">0.0009</td>
+                        <td class="number">8,358,409</td>
+                        <td class="number">+0.02</td>
+                    </tr>
+
+                    <tr>
+                        <td>pure_python_class</td>
+                        <td class="number">2,000</td>
+                        <td class="number fast">0.0030</td>
+                        <td class="number">0.0023</td>
+                        <td class="number">0.0688</td>
+                        <td class="number">337,821</td>
+                        <td class="number">+0.05</td>
+                    </tr>
+
+                    <tr>
+                        <td>pure_python_loop</td>
+                        <td class="number">1,000</td>
+                        <td class="number fast">0.0180</td>
+                        <td class="number">0.0158</td>
+                        <td class="number">0.0431</td>
+                        <td class="number">55,578</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="chart-comparison"></canvas>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">database</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benchmark</th>
+                        <th class="number">Iterations</th>
+                        <th class="number">Avg (ms)</th>
+                        <th class="number">Min (ms)</th>
+                        <th class="number">Max (ms)</th>
+                        <th class="number">Ops/sec</th>
+                        <th class="number">Memory (MB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td>query_insert</td>
+                        <td class="number">500</td>
+                        <td class="number fast">0.0270</td>
+                        <td class="number">0.0252</td>
+                        <td class="number">0.1230</td>
+                        <td class="number">37,100</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>query_update</td>
+                        <td class="number">500</td>
+                        <td class="number fast">0.0282</td>
+                        <td class="number">0.0268</td>
+                        <td class="number">0.0726</td>
+                        <td class="number">35,496</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>query_simple_select</td>
+                        <td class="number">500</td>
+                        <td class="number medium">0.1809</td>
+                        <td class="number">0.1608</td>
+                        <td class="number">0.4404</td>
+                        <td class="number">5,528</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>query_with_join</td>
+                        <td class="number">200</td>
+                        <td class="number medium">0.2431</td>
+                        <td class="number">0.2189</td>
+                        <td class="number">0.5432</td>
+                        <td class="number">4,114</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>query_aggregate</td>
+                        <td class="number">500</td>
+                        <td class="number medium">0.3155</td>
+                        <td class="number">0.2858</td>
+                        <td class="number">0.5954</td>
+                        <td class="number">3,169</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>query_with_where</td>
+                        <td class="number">500</td>
+                        <td class="number medium">0.6324</td>
+                        <td class="number">0.5771</td>
+                        <td class="number">0.9751</td>
+                        <td class="number">1,581</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>query_subquery</td>
+                        <td class="number">200</td>
+                        <td class="number medium">0.9113</td>
+                        <td class="number">0.8131</td>
+                        <td class="number">6.9768</td>
+                        <td class="number">1,097</td>
+                        <td class="number">+0.05</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="chart-database"></canvas>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">expression</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benchmark</th>
+                        <th class="number">Iterations</th>
+                        <th class="number">Avg (ms)</th>
+                        <th class="number">Min (ms)</th>
+                        <th class="number">Max (ms)</th>
+                        <th class="number">Ops/sec</th>
+                        <th class="number">Memory (MB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td>eval_string_expression</td>
+                        <td class="number">10,000</td>
+                        <td class="number medium">0.2882</td>
+                        <td class="number">0.2498</td>
+                        <td class="number">7.3258</td>
+                        <td class="number">3,470</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>eval_list_expression</td>
+                        <td class="number">5,000</td>
+                        <td class="number medium">0.2903</td>
+                        <td class="number">0.2513</td>
+                        <td class="number">0.9960</td>
+                        <td class="number">3,445</td>
+                        <td class="number">-0.86</td>
+                    </tr>
+
+                    <tr>
+                        <td>eval_dict_expression</td>
+                        <td class="number">5,000</td>
+                        <td class="number medium">0.2908</td>
+                        <td class="number">0.2507</td>
+                        <td class="number">7.0847</td>
+                        <td class="number">3,439</td>
+                        <td class="number">-0.46</td>
+                    </tr>
+
+                    <tr>
+                        <td>eval_complex_expression</td>
+                        <td class="number">5,000</td>
+                        <td class="number medium">0.2944</td>
+                        <td class="number">0.2512</td>
+                        <td class="number">7.3156</td>
+                        <td class="number">3,396</td>
+                        <td class="number">+0.02</td>
+                    </tr>
+
+                    <tr>
+                        <td>eval_simple_expression</td>
+                        <td class="number">10,000</td>
+                        <td class="number medium">0.3070</td>
+                        <td class="number">0.2513</td>
+                        <td class="number">7.0084</td>
+                        <td class="number">3,257</td>
+                        <td class="number">+0.30</td>
+                    </tr>
+
+                    <tr>
+                        <td>eval_conditional_expression</td>
+                        <td class="number">10,000</td>
+                        <td class="number medium">0.3383</td>
+                        <td class="number">0.2913</td>
+                        <td class="number">7.0822</td>
+                        <td class="number">2,956</td>
+                        <td class="number">-0.28</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="chart-expression"></canvas>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">fastapi_style</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benchmark</th>
+                        <th class="number">Iterations</th>
+                        <th class="number">Avg (ms)</th>
+                        <th class="number">Min (ms)</th>
+                        <th class="number">Max (ms)</th>
+                        <th class="number">Ops/sec</th>
+                        <th class="number">Memory (MB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td>fastapi_dependency_injection</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0002</td>
+                        <td class="number">0.0002</td>
+                        <td class="number">0.0043</td>
+                        <td class="number">4,504,099</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>fastapi_model_validation</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0003</td>
+                        <td class="number">0.0002</td>
+                        <td class="number">0.0043</td>
+                        <td class="number">3,052,689</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>fastapi_json_response</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0076</td>
+                        <td class="number">0.0072</td>
+                        <td class="number">0.2185</td>
+                        <td class="number">131,637</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="chart-fastapi_style"></canvas>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">flask_style</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benchmark</th>
+                        <th class="number">Iterations</th>
+                        <th class="number">Avg (ms)</th>
+                        <th class="number">Min (ms)</th>
+                        <th class="number">Max (ms)</th>
+                        <th class="number">Ops/sec</th>
+                        <th class="number">Memory (MB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td>flask_form_processing</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0004</td>
+                        <td class="number">0.0003</td>
+                        <td class="number">0.0056</td>
+                        <td class="number">2,362,949</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>flask_request_handling</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0014</td>
+                        <td class="number">0.0012</td>
+                        <td class="number">0.0102</td>
+                        <td class="number">727,654</td>
+                        <td class="number">+0.02</td>
+                    </tr>
+
+                    <tr>
+                        <td>flask_template_render</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0014</td>
+                        <td class="number">0.0013</td>
+                        <td class="number">0.0104</td>
+                        <td class="number">690,865</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>flask_json_api</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0057</td>
+                        <td class="number">0.0051</td>
+                        <td class="number">0.0309</td>
+                        <td class="number">174,519</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="chart-flask_style"></canvas>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">json</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benchmark</th>
+                        <th class="number">Iterations</th>
+                        <th class="number">Avg (ms)</th>
+                        <th class="number">Min (ms)</th>
+                        <th class="number">Max (ms)</th>
+                        <th class="number">Ops/sec</th>
+                        <th class="number">Memory (MB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td>json_parse_small</td>
+                        <td class="number">10,000</td>
+                        <td class="number fast">0.0009</td>
+                        <td class="number">0.0008</td>
+                        <td class="number">0.0080</td>
+                        <td class="number">1,089,265</td>
+                        <td class="number">-0.63</td>
+                    </tr>
+
+                    <tr>
+                        <td>json_serialize_small</td>
+                        <td class="number">10,000</td>
+                        <td class="number fast">0.0011</td>
+                        <td class="number">0.0010</td>
+                        <td class="number">0.2732</td>
+                        <td class="number">917,574</td>
+                        <td class="number">+0.02</td>
+                    </tr>
+
+                    <tr>
+                        <td>json_parse_medium</td>
+                        <td class="number">1,000</td>
+                        <td class="number fast">0.0259</td>
+                        <td class="number">0.0240</td>
+                        <td class="number">0.2111</td>
+                        <td class="number">38,608</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>json_serialize_medium</td>
+                        <td class="number">1,000</td>
+                        <td class="number fast">0.0365</td>
+                        <td class="number">0.0352</td>
+                        <td class="number">0.0667</td>
+                        <td class="number">27,412</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>json_serialize_large</td>
+                        <td class="number">100</td>
+                        <td class="number medium">0.3989</td>
+                        <td class="number">0.3858</td>
+                        <td class="number">0.4934</td>
+                        <td class="number">2,507</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>json_parse_large</td>
+                        <td class="number">100</td>
+                        <td class="number medium">0.7247</td>
+                        <td class="number">0.6551</td>
+                        <td class="number">1.1677</td>
+                        <td class="number">1,380</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="chart-json"></canvas>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">orm_style</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benchmark</th>
+                        <th class="number">Iterations</th>
+                        <th class="number">Avg (ms)</th>
+                        <th class="number">Min (ms)</th>
+                        <th class="number">Max (ms)</th>
+                        <th class="number">Ops/sec</th>
+                        <th class="number">Memory (MB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td>orm_model_create</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0008</td>
+                        <td class="number">0.0007</td>
+                        <td class="number">0.0060</td>
+                        <td class="number">1,284,819</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>orm_query_filtered</td>
+                        <td class="number">2,000</td>
+                        <td class="number fast">0.0057</td>
+                        <td class="number">0.0054</td>
+                        <td class="number">0.0121</td>
+                        <td class="number">176,919</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>orm_query_simple</td>
+                        <td class="number">2,000</td>
+                        <td class="number fast">0.0057</td>
+                        <td class="number">0.0053</td>
+                        <td class="number">0.0143</td>
+                        <td class="number">175,222</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="chart-orm_style"></canvas>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">parsing</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benchmark</th>
+                        <th class="number">Iterations</th>
+                        <th class="number">Avg (ms)</th>
+                        <th class="number">Min (ms)</th>
+                        <th class="number">Max (ms)</th>
+                        <th class="number">Ops/sec</th>
+                        <th class="number">Memory (MB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td>parse_minimal</td>
+                        <td class="number">2,000</td>
+                        <td class="number fast">0.0171</td>
+                        <td class="number">0.0156</td>
+                        <td class="number">0.0683</td>
+                        <td class="number">58,412</td>
+                        <td class="number">+0.14</td>
+                    </tr>
+
+                    <tr>
+                        <td>parse_simple</td>
+                        <td class="number">1,000</td>
+                        <td class="number fast">0.0211</td>
+                        <td class="number">0.0196</td>
+                        <td class="number">0.0818</td>
+                        <td class="number">47,410</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>parse_with_function</td>
+                        <td class="number">500</td>
+                        <td class="number fast">0.0231</td>
+                        <td class="number">0.0203</td>
+                        <td class="number">0.0750</td>
+                        <td class="number">43,214</td>
+                        <td class="number">+0.02</td>
+                    </tr>
+
+                    <tr>
+                        <td>parse_with_loop</td>
+                        <td class="number">500</td>
+                        <td class="number fast">0.0235</td>
+                        <td class="number">0.0216</td>
+                        <td class="number">0.0714</td>
+                        <td class="number">42,499</td>
+                        <td class="number">+0.01</td>
+                    </tr>
+
+                    <tr>
+                        <td>parse_with_conditionals</td>
+                        <td class="number">500</td>
+                        <td class="number fast">0.0266</td>
+                        <td class="number">0.0244</td>
+                        <td class="number">0.0746</td>
+                        <td class="number">37,529</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>parse_python_scripting</td>
+                        <td class="number">500</td>
+                        <td class="number fast">0.0270</td>
+                        <td class="number">0.0256</td>
+                        <td class="number">0.0691</td>
+                        <td class="number">37,046</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>parse_with_html</td>
+                        <td class="number">500</td>
+                        <td class="number fast">0.0334</td>
+                        <td class="number">0.0301</td>
+                        <td class="number">0.0879</td>
+                        <td class="number">29,942</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>parse_complex</td>
+                        <td class="number">200</td>
+                        <td class="number fast">0.0559</td>
+                        <td class="number">0.0497</td>
+                        <td class="number">0.1426</td>
+                        <td class="number">17,883</td>
+                        <td class="number">+0.07</td>
+                    </tr>
+
+                    <tr>
+                        <td>parse_ui_component</td>
+                        <td class="number">300</td>
+                        <td class="number fast">0.0708</td>
+                        <td class="number">0.0640</td>
+                        <td class="number">0.1646</td>
+                        <td class="number">14,115</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="chart-parsing"></canvas>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">python</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benchmark</th>
+                        <th class="number">Iterations</th>
+                        <th class="number">Avg (ms)</th>
+                        <th class="number">Min (ms)</th>
+                        <th class="number">Max (ms)</th>
+                        <th class="number">Ops/sec</th>
+                        <th class="number">Memory (MB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td>bridge_create</td>
+                        <td class="number">10,000</td>
+                        <td class="number fast">0.0009</td>
+                        <td class="number">0.0008</td>
+                        <td class="number">0.0121</td>
+                        <td class="number">1,157,555</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>bridge_set_variable</td>
+                        <td class="number">50,000</td>
+                        <td class="number fast">0.0010</td>
+                        <td class="number">0.0009</td>
+                        <td class="number">0.0189</td>
+                        <td class="number">995,451</td>
+                        <td class="number">+1.10</td>
+                    </tr>
+
+                    <tr>
+                        <td>bridge_export</td>
+                        <td class="number">10,000</td>
+                        <td class="number fast">0.0011</td>
+                        <td class="number">0.0010</td>
+                        <td class="number">0.0057</td>
+                        <td class="number">928,195</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>bridge_get_variable</td>
+                        <td class="number">50,000</td>
+                        <td class="number fast">0.0011</td>
+                        <td class="number">0.0010</td>
+                        <td class="number">0.2623</td>
+                        <td class="number">895,419</td>
+                        <td class="number">+1.30</td>
+                    </tr>
+
+                    <tr>
+                        <td>bridge_get_nested</td>
+                        <td class="number">10,000</td>
+                        <td class="number fast">0.0011</td>
+                        <td class="number">0.0010</td>
+                        <td class="number">0.0110</td>
+                        <td class="number">881,438</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>exec_simple</td>
+                        <td class="number">10,000</td>
+                        <td class="number fast">0.0056</td>
+                        <td class="number">0.0051</td>
+                        <td class="number">0.1942</td>
+                        <td class="number">178,580</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>exec_arithmetic</td>
+                        <td class="number">10,000</td>
+                        <td class="number fast">0.0120</td>
+                        <td class="number">0.0109</td>
+                        <td class="number">0.3012</td>
+                        <td class="number">83,392</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>exec_function_def</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0133</td>
+                        <td class="number">0.0120</td>
+                        <td class="number">0.2700</td>
+                        <td class="number">75,003</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>exec_exception_handling</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0134</td>
+                        <td class="number">0.0120</td>
+                        <td class="number">0.2641</td>
+                        <td class="number">74,435</td>
+                        <td class="number">+0.09</td>
+                    </tr>
+
+                    <tr>
+                        <td>exec_loop_100</td>
+                        <td class="number">1,000</td>
+                        <td class="number fast">0.0138</td>
+                        <td class="number">0.0131</td>
+                        <td class="number">0.0592</td>
+                        <td class="number">72,274</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>exec_with_imports</td>
+                        <td class="number">500</td>
+                        <td class="number fast">0.0157</td>
+                        <td class="number">0.0144</td>
+                        <td class="number">0.0648</td>
+                        <td class="number">63,625</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>exec_list_comprehension</td>
+                        <td class="number">1,000</td>
+                        <td class="number fast">0.0164</td>
+                        <td class="number">0.0152</td>
+                        <td class="number">0.0897</td>
+                        <td class="number">61,011</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>exec_recursive_function</td>
+                        <td class="number">1,000</td>
+                        <td class="number fast">0.0171</td>
+                        <td class="number">0.0153</td>
+                        <td class="number">0.0735</td>
+                        <td class="number">58,472</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>exec_class_def</td>
+                        <td class="number">2,000</td>
+                        <td class="number fast">0.0473</td>
+                        <td class="number">0.0417</td>
+                        <td class="number">0.3102</td>
+                        <td class="number">21,158</td>
+                        <td class="number">-0.73</td>
+                    </tr>
+
+                    <tr>
+                        <td>exec_loop_1000</td>
+                        <td class="number">500</td>
+                        <td class="number fast">0.0524</td>
+                        <td class="number">0.0441</td>
+                        <td class="number">0.3478</td>
+                        <td class="number">19,084</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="chart-python"></canvas>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">python_data</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benchmark</th>
+                        <th class="number">Iterations</th>
+                        <th class="number">Avg (ms)</th>
+                        <th class="number">Min (ms)</th>
+                        <th class="number">Max (ms)</th>
+                        <th class="number">Ops/sec</th>
+                        <th class="number">Memory (MB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td>py_regex_processing</td>
+                        <td class="number">500</td>
+                        <td class="number fast">0.0120</td>
+                        <td class="number">0.0113</td>
+                        <td class="number">0.0631</td>
+                        <td class="number">83,486</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>py_json_processing</td>
+                        <td class="number">500</td>
+                        <td class="number fast">0.0236</td>
+                        <td class="number">0.0215</td>
+                        <td class="number">0.0940</td>
+                        <td class="number">42,438</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>py_string_processing</td>
+                        <td class="number">1,000</td>
+                        <td class="number fast">0.0278</td>
+                        <td class="number">0.0255</td>
+                        <td class="number">0.2823</td>
+                        <td class="number">35,983</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>py_filter_map</td>
+                        <td class="number">500</td>
+                        <td class="number fast">0.0606</td>
+                        <td class="number">0.0552</td>
+                        <td class="number">0.1516</td>
+                        <td class="number">16,508</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>py_dict_processing</td>
+                        <td class="number">500</td>
+                        <td class="number fast">0.0743</td>
+                        <td class="number">0.0595</td>
+                        <td class="number">0.3302</td>
+                        <td class="number">13,459</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="chart-python_data"></canvas>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">transform</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benchmark</th>
+                        <th class="number">Iterations</th>
+                        <th class="number">Avg (ms)</th>
+                        <th class="number">Min (ms)</th>
+                        <th class="number">Max (ms)</th>
+                        <th class="number">Ops/sec</th>
+                        <th class="number">Memory (MB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td>transform_normalize</td>
+                        <td class="number">1,000</td>
+                        <td class="number fast">0.0394</td>
+                        <td class="number">0.0364</td>
+                        <td class="number">0.2936</td>
+                        <td class="number">25,364</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>transform_flatten</td>
+                        <td class="number">1,000</td>
+                        <td class="number fast">0.0626</td>
+                        <td class="number">0.0575</td>
+                        <td class="number">0.3304</td>
+                        <td class="number">15,978</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>transform_join</td>
+                        <td class="number">500</td>
+                        <td class="number fast">0.0857</td>
+                        <td class="number">0.0799</td>
+                        <td class="number">0.1855</td>
+                        <td class="number">11,675</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>transform_aggregate</td>
+                        <td class="number">500</td>
+                        <td class="number medium">0.2029</td>
+                        <td class="number">0.1895</td>
+                        <td class="number">0.4991</td>
+                        <td class="number">4,928</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="chart-transform"></canvas>
+            </div>
+        </div>
+
+        <div class="category">
+            <h2 class="category-title">utilities</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Benchmark</th>
+                        <th class="number">Iterations</th>
+                        <th class="number">Avg (ms)</th>
+                        <th class="number">Min (ms)</th>
+                        <th class="number">Max (ms)</th>
+                        <th class="number">Ops/sec</th>
+                        <th class="number">Memory (MB)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td>bridge_now</td>
+                        <td class="number">10,000</td>
+                        <td class="number fast">0.0011</td>
+                        <td class="number">0.0010</td>
+                        <td class="number">0.0090</td>
+                        <td class="number">920,615</td>
+                        <td class="number">+0.01</td>
+                    </tr>
+
+                    <tr>
+                        <td>bridge_uuid</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0022</td>
+                        <td class="number">0.0019</td>
+                        <td class="number">0.0161</td>
+                        <td class="number">459,783</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>bridge_json</td>
+                        <td class="number">5,000</td>
+                        <td class="number fast">0.0023</td>
+                        <td class="number">0.0021</td>
+                        <td class="number">0.0202</td>
+                        <td class="number">427,789</td>
+                        <td class="number">+0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>bridge_log</td>
+                        <td class="number">10,000</td>
+                        <td class="number fast">0.0178</td>
+                        <td class="number">0.0157</td>
+                        <td class="number">0.3430</td>
+                        <td class="number">56,137</td>
+                        <td class="number">+0.03</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="chart-utilities"></canvas>
+            </div>
+        </div>
+
+        <footer>
+            <p>Generated by Quantum Benchmark Suite</p>
+        </footer>
+    </div>
+
+    <script>
+
+        new Chart(document.getElementById('chart-baseline'), {
+            type: 'bar',
+            data: {
+                labels: ["baseline_variable_assign", "baseline_function_call", "baseline_arithmetic", "baseline_json_parse", "baseline_json_serialize", "baseline_list_comprehension", "baseline_class_instantiation", "baseline_dict_operations", "baseline_loop_1000", "baseline_sqlite_query"],
+                datasets: [{
+                    label: 'Operations per second',
+                    data: [10512594.087717084, 8663709.453839755, 8550882.023480723, 883173.7732716289, 794520.9832991689, 342888.49266218627, 337994.2743769921, 65222.29715539473, 57959.92650681319, 29573.811798176477],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('chart-baseline_python'), {
+            type: 'bar',
+            data: {
+                labels: ["pure_python_conditional", "pure_python_assign", "pure_python_expression", "pure_python_list_comp"],
+                datasets: [{
+                    label: 'Operations per second',
+                    data: [11920798.216648586, 10882458.565039013, 8500004.250002125, 408687.0519768193],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('chart-collections'), {
+            type: 'bar',
+            data: {
+                labels: ["list_create_100", "dict_create", "list_reduce", "list_create_1000", "dict_access", "dict_update", "list_map", "list_filter", "list_sort"],
+                datasets: [{
+                    label: 'Operations per second',
+                    data: [1030120.7301495735, 135367.08847051434, 116134.8464929599, 88003.37932976626, 64032.00575775796, 60314.14016764918, 47311.34365162197, 42305.479405692626, 3805.60512356229],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('chart-comparison'), {
+            type: 'bar',
+            data: {
+                labels: ["pure_python_function", "pure_python_class", "pure_python_loop"],
+                datasets: [{
+                    label: 'Operations per second',
+                    data: [8358408.559010364, 337820.71854466834, 55577.78667022364],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('chart-database'), {
+            type: 'bar',
+            data: {
+                labels: ["query_insert", "query_update", "query_simple_select", "query_with_join", "query_aggregate", "query_with_where", "query_subquery"],
+                datasets: [{
+                    label: 'Operations per second',
+                    data: [37099.69429851898, 35495.9854040508, 5528.3682689352145, 4114.1173881114355, 3169.337044415723, 1581.2511681493004, 1097.3804431441706],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('chart-expression'), {
+            type: 'bar',
+            data: {
+                labels: ["eval_string_expression", "eval_list_expression", "eval_dict_expression", "eval_complex_expression", "eval_simple_expression", "eval_conditional_expression"],
+                datasets: [{
+                    label: 'Operations per second',
+                    data: [3470.2850079141585, 3444.8272336466475, 3439.237309231525, 3396.302364104942, 3257.366869054471, 2956.042670002975],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('chart-fastapi_style'), {
+            type: 'bar',
+            data: {
+                labels: ["fastapi_dependency_injection", "fastapi_model_validation", "fastapi_json_response"],
+                datasets: [{
+                    label: 'Operations per second',
+                    data: [4504098.7298441585, 3052689.4193784725, 131637.4914106537],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('chart-flask_style'), {
+            type: 'bar',
+            data: {
+                labels: ["flask_form_processing", "flask_request_handling", "flask_template_render", "flask_json_api"],
+                datasets: [{
+                    label: 'Operations per second',
+                    data: [2362948.960302457, 727653.7532380592, 690865.3779724482, 174519.46066505878],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('chart-json'), {
+            type: 'bar',
+            data: {
+                labels: ["json_parse_small", "json_serialize_small", "json_parse_medium", "json_serialize_medium", "json_serialize_large", "json_parse_large"],
+                datasets: [{
+                    label: 'Operations per second',
+                    data: [1089265.2905615163, 917574.3005789894, 38608.24981081958, 27412.355845273698, 2506.586054859142, 1379.974636066189],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('chart-orm_style'), {
+            type: 'bar',
+            data: {
+                labels: ["orm_model_create", "orm_query_filtered", "orm_query_simple"],
+                datasets: [{
+                    label: 'Operations per second',
+                    data: [1284818.5836159934, 176919.1302655556, 175221.8746988374],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('chart-parsing'), {
+            type: 'bar',
+            data: {
+                labels: ["parse_minimal", "parse_simple", "parse_with_function", "parse_with_loop", "parse_with_conditionals", "parse_python_scripting", "parse_with_html", "parse_complex", "parse_ui_component"],
+                datasets: [{
+                    label: 'Operations per second',
+                    data: [58412.409132196044, 47409.54259273307, 43214.46474563966, 42498.93752656184, 37529.36672946581, 37046.0927485978, 29941.733386829226, 17882.84945323188, 14115.1893552652],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('chart-python'), {
+            type: 'bar',
+            data: {
+                labels: ["bridge_create", "bridge_set_variable", "bridge_export", "bridge_get_variable", "bridge_get_nested", "exec_simple", "exec_arithmetic", "exec_function_def", "exec_exception_handling", "exec_loop_100", "exec_with_imports", "exec_list_comprehension", "exec_recursive_function", "exec_class_def", "exec_loop_1000"],
+                datasets: [{
+                    label: 'Operations per second',
+                    data: [1157554.7812800242, 995450.7898902018, 928194.8466622112, 895418.6798663319, 881437.8013415483, 178579.71977270374, 83392.33340922036, 75002.88761117302, 74434.89031274563, 72274.17932669375, 63625.37379907108, 61010.57923443925, 58472.351348664786, 21157.90887923383, 19083.678111784553],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('chart-python_data'), {
+            type: 'bar',
+            data: {
+                labels: ["py_regex_processing", "py_json_processing", "py_string_processing", "py_filter_map", "py_dict_processing"],
+                datasets: [{
+                    label: 'Operations per second',
+                    data: [83486.39171814994, 42437.61670344593, 35983.001630029976, 16507.91554550407, 13458.587924954914],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('chart-transform'), {
+            type: 'bar',
+            data: {
+                labels: ["transform_normalize", "transform_flatten", "transform_join", "transform_aggregate"],
+                datasets: [{
+                    label: 'Operations per second',
+                    data: [25363.71568289268, 15978.03978212345, 11674.796216432043, 4927.759052293379],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('chart-utilities'), {
+            type: 'bar',
+            data: {
+                labels: ["bridge_now", "bridge_uuid", "bridge_json", "bridge_log"],
+                datasets: [{
+                    label: 'Operations per second',
+                    data: [920615.3392927832, 459782.7986059386, 427789.1854893908, 56137.07326000335],
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0' }
+                    }
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>

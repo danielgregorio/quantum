@@ -1,0 +1,145 @@
+{
+  "timestamp": "2026-02-14T22:50:05.224512",
+  "results": [
+    {
+      "language": "Python 3.12",
+      "test": "loop_100k",
+      "time_ms": 92.94370000134222,
+      "iterations": 50,
+      "ops_per_sec": 537.9600768990039
+    },
+    {
+      "language": "Quantum Interpreted",
+      "test": "loop_100k",
+      "time_ms": 39678.342500003055,
+      "iterations": 50,
+      "ops_per_sec": 1.2601332830371166
+    },
+    {
+      "language": "Quantum Transpiled",
+      "test": "loop_100k",
+      "time_ms": 94.94090001680888,
+      "iterations": 50,
+      "ops_per_sec": 526.6434170220391
+    },
+    {
+      "language": "Node.js 24",
+      "test": "loop_100k",
+      "time_ms": 4.544,
+      "iterations": 50,
+      "ops_per_sec": 11003.521126760565
+    },
+    {
+      "language": "PHP 8.4",
+      "test": "loop_100k",
+      "time_ms": 43.1848,
+      "iterations": 50,
+      "ops_per_sec": 1157.8147866842037
+    },
+    {
+      "language": "Ruby 3.3",
+      "test": "loop_100k",
+      "time_ms": 206.97139998083003,
+      "iterations": 50,
+      "ops_per_sec": 241.57927136131403
+    },
+    {
+      "language": "Python 3.12",
+      "test": "string_build",
+      "time_ms": 0.3916000132448971,
+      "iterations": 50,
+      "ops_per_sec": 127681.30313808548
+    },
+    {
+      "language": "Quantum Interpreted",
+      "test": "string_build",
+      "time_ms": 24.996499996632338,
+      "iterations": 50,
+      "ops_per_sec": 2000.2800394749772
+    },
+    {
+      "language": "Quantum Transpiled",
+      "test": "string_build",
+      "time_ms": 0.03179998020641506,
+      "iterations": 50,
+      "ops_per_sec": 1572328.0227046628
+    },
+    {
+      "language": "Node.js 24",
+      "test": "string_build",
+      "time_ms": 0.3023,
+      "iterations": 50,
+      "ops_per_sec": 165398.61065167052
+    },
+    {
+      "language": "PHP 8.4",
+      "test": "string_build",
+      "time_ms": 1.1854,
+      "iterations": 50,
+      "ops_per_sec": 42179.854901299135
+    },
+    {
+      "language": "Ruby 3.3",
+      "test": "string_build",
+      "time_ms": 0.8339000050909817,
+      "iterations": 50,
+      "ops_per_sec": 59959.22735909422
+    },
+    {
+      "language": "Python 3.12",
+      "test": "fibonacci_25",
+      "time_ms": 286.03769998881035,
+      "iterations": 50,
+      "ops_per_sec": 174.80213273269914
+    },
+    {
+      "language": "Node.js 24",
+      "test": "fibonacci_25",
+      "time_ms": 24.125,
+      "iterations": 50,
+      "ops_per_sec": 2072.5388601036266
+    },
+    {
+      "language": "PHP 8.4",
+      "test": "fibonacci_25",
+      "time_ms": 279.7435,
+      "iterations": 50,
+      "ops_per_sec": 178.73516274730244
+    },
+    {
+      "language": "Ruby 3.3",
+      "test": "fibonacci_25",
+      "time_ms": 175.9197000064887,
+      "iterations": 50,
+      "ops_per_sec": 284.22058472221005
+    },
+    {
+      "language": "Python 3.12",
+      "test": "dict_ops",
+      "time_ms": 9.157099993899465,
+      "iterations": 50,
+      "ops_per_sec": 5460.243967337958
+    },
+    {
+      "language": "Node.js 24",
+      "test": "dict_ops",
+      "time_ms": 5.7501,
+      "iterations": 50,
+      "ops_per_sec": 8695.500947809604
+    },
+    {
+      "language": "PHP 8.4",
+      "test": "dict_ops",
+      "time_ms": 7.18,
+      "iterations": 50,
+      "ops_per_sec": 6963.788300835655
+    },
+    {
+      "language": "Ruby 3.3",
+      "test": "dict_ops",
+      "time_ms": 14.33750000433065,
+      "iterations": 50,
+      "ops_per_sec": 3487.358325014645
+    }
+  ]
+}

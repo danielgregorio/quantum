@@ -1,0 +1,74 @@
+{
+  "feature": "forms_actions",
+  "version": "1.0.0",
+  "description": "Comprehensive training dataset for forms and server-side actions",
+  "created": "2025-11-05",
+  "updated": "2025-11-05",
+  "maintainers": ["Daniel", "Claude"],
+
+  "statistics": {
+    "total_examples": 14,
+    "positive_examples": 10,
+    "negative_examples": 4,
+    "categories": {
+      "simple_actions": 3,
+      "validation_rules": 4,
+      "flash_messages": 3,
+      "syntax_errors": 4
+    }
+  },
+
+  "coverage": {
+    "action_types": {
+      "POST": "✅ Covered",
+      "PUT": "✅ Covered",
+      "DELETE": "✅ Covered",
+      "PATCH": "⚠️ Not yet covered (similar to PUT)"
+    },
+    "validation_types": {
+      "email": "✅ Covered",
+      "string_length": "✅ Covered",
+      "numeric_range": "✅ Covered",
+      "enum": "✅ Covered",
+      "url": "⚠️ Not yet covered",
+      "pattern_regex": "⚠️ Not yet covered"
+    },
+    "flash_features": {
+      "success_message": "✅ Covered",
+      "error_message": "✅ Covered",
+      "databinding_in_flash": "✅ Covered",
+      "flash_in_redirect": "✅ Covered"
+    },
+    "error_cases": {
+      "missing_action_name": "✅ Covered",
+      "invalid_http_method": "✅ Covered",
+      "missing_redirect_url": "✅ Covered",
+      "invalid_flash_type": "✅ Covered"
+    }
+  },
+
+  "training_readiness": {
+    "status": "ready_for_training",
+    "confidence": "high",
+    "notes": "Good coverage of basic action patterns, validation, and flash messages. Additional examples for URL validation, pattern matching, and PATCH method would improve completeness."
+  },
+
+  "file_manifest": {
+    "positive": [
+      "positive/simple_actions.json (3 examples)",
+      "positive/validation_rules.json (4 examples)",
+      "positive/flash_messages.json (3 examples)"
+    ],
+    "negative": [
+      "negative/invalid_syntax.json (4 examples)"
+    ]
+  },
+
+  "integration_with_other_features": {
+    "state_management": "Flash messages stored in session",
+    "databinding": "Variables in redirect URLs and flash messages",
+    "query": "Database operations in action body",
+    "conditionals": "Conditional redirects and flashes",
+    "html_rendering": "Forms rendered to HTML"
+  }
+}

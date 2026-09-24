@@ -1,0 +1,45 @@
+name: 🐛 Bug report
+description: Report something that isn't working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug! A **minimal `.q` file that reproduces
+        the problem** is the single most helpful thing you can include.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+      placeholder: When I run ... I expected ... but got ...
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: The smallest `.q` snippet (and command) that reproduces the issue.
+      render: xml
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output / traceback
+      description: Paste the full error output (run with `--debug` if relevant).
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Quantum version / commit
+      placeholder: "e.g. 1.0.0 or git commit hash"
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "OS, Python version (e.g. Windows 11, Python 3.12)"
+    validations:
+      required: true

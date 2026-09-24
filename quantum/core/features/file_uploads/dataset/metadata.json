@@ -1,0 +1,32 @@
+{
+  "feature": "file_uploads",
+  "version": "1.0.0",
+  "status": "implemented",
+  "phase": "H",
+  "created": "2025-11-05",
+  "updated": "2025-11-05",
+  "statistics": {
+    "total_examples": 4,
+    "positive_examples": 2,
+    "negative_examples": 2,
+    "categories": {
+      "basic_upload": 1,
+      "validation": 1,
+      "errors": 2
+    }
+  },
+  "coverage": {
+    "file_node_ast": true,
+    "file_upload_service": true,
+    "parser_integration": true,
+    "component_execution": true,
+    "file_validation": true,
+    "size_validation": true,
+    "type_validation": true,
+    "name_conflict_handling": true,
+    "unique_naming": true,
+    "test_component": true
+  },
+  "test_components": ["components/upload_demo.q"],
+  "documentation": "docs/features/file_uploads.md"
+}

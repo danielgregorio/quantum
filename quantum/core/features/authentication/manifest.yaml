@@ -1,0 +1,64 @@
+feature:
+  name: "authentication"
+  display_name: "Authentication & Security (Login/Logout/Permissions)"
+  version: "1.0.0"
+  # 2026-09-07: was "planned", but ROADMAP.md separately claimed "100% Complete
+  # (JWT, RBAC)" for the same feature — neither was accurate. As of this date:
+  # require_auth/require_role/require_permission gates and session-based login
+  # via plain q:set work and are covered by tests/integration/test_action_auth.py
+  # (this depended on a q:action fix, see AUDIT_FIX_PLAN.md Fase 1). There is
+  # still no q:auth/q:login tag and no JWT support — login is hand-rolled with
+  # q:set, and the example below needs type="boolean" on session.authenticated
+  # and an explicit session.sessionExpiry to actually work (no declarative
+  # relative-date helper exists yet). "experimental" reflects that gap, not a
+  # regression from "planned".
+  status: "experimental"
+  phase: G
+  category: "security"
+
+  description: |
+    Built-in authentication system with login/logout, password hashing,
+    role-based access control (RBAC), and route protection.
+
+capabilities:
+  - "Login action with credential validation"
+  - "Logout action with session cleanup"
+  - "Password hashing (bcrypt)"
+  - "Role-based access control (RBAC)"
+  - "require_auth attribute on components"
+  - "Permission checking"
+  - "Remember me functionality"
+
+examples:
+  login: |
+    <q:action name="login" method="POST">
+      <q:param name="email" type="email" required="true" />
+      <q:param name="password" type="string" required="true" />
+
+      <q:query name="user" datasource="db">
+        SELECT id, name, role FROM users
+        WHERE email=:email AND password=SHA2(:password, 256)
+      </q:query>
+
+      <q:if condition="{user.recordCount} > 0">
+        <q:set name="session.userId" value="{user.id}" />
+        <q:set name="session.userName" value="{user.name}" />
+        <q:set name="session.authenticated" value="true" type="boolean" />
+        <!-- AuthService.is_session_expired() requires session.sessionExpiry
+             (ISO datetime string) or it treats the session as expired. There is
+             no built-in relative-date function (no dateAdd/now()) in databinding
+             expressions yet — compute it in a q:function, or hardcode for a demo. -->
+        <q:set name="session.sessionExpiry" value="{expiryTimestamp}" />
+        <q:redirect url="/dashboard" flash="Welcome back!" />
+      <q:else />
+        <q:flash type="error" message="Invalid credentials" />
+        <q:redirect url="/login" />
+      </q:if>
+    </q:action>
+
+  protected_route: |
+    <q:component name="Dashboard" require_auth="true">
+      <h1>Welcome, {session.userName}!</h1>
+    </q:component>
+
+production_ready: false

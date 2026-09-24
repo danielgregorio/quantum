@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-02-14T09:58:41.306725",
+  "iterations": 200,
+  "results": [
+    {
+      "name": "loop_1000",
+      "interpreted_ms": 1723.3063000021502,
+      "transpiled_ms": 3.4374000097159296,
+      "native_ms": 3.358899994054809,
+      "speedup_vs_interpreted": 501.34005211240054,
+      "speedup_vs_native": 0.9771629675221861
+    },
+    {
+      "name": "html_render",
+      "interpreted_ms": 101.77910001948476,
+      "transpiled_ms": 0.7953000022098422,
+      "native_ms": 0.09169999975711107,
+      "speedup_vs_interpreted": 127.97573209691762,
+      "speedup_vs_native": 0.11530240098366774
+    },
+    {
+      "name": "expression_chain",
+      "interpreted_ms": 114.73309999564663,
+      "transpiled_ms": 0.04570002784021199,
+      "native_ms": 0.015199999324977398,
+      "speedup_vs_interpreted": 2510.5695864520158,
+      "speedup_vs_native": 0.33260372133959054
+    }
+  ]
+}

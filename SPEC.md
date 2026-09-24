@@ -1,0 +1,1069 @@
+# Quantum — Language Specification
+
+> **Normative.** This document says what a Quantum program means. Each rule has
+> an ID (`RET-1`, `LOOP-2`…) and at least one test that cites it by ID;
+> `tests/conformance/test_spec_ids.py` fails if a rule has no test or a test
+> cites an ID that does not exist here.
+>
+> It covers the **Core** and **AI** (see `SUPPORT_TIERS.md`). Experimental and
+> Laboratory tags are not specified.
+>
+> What is still undecided is under [Open questions](#open-questions), each item
+> with an `xfail(strict=True)` test in `tests/conformance/test_known_gaps.py`.
+>
+> Specification version: **1.0, frozen.** From 1.0, a rule of the Core or the AI
+> changes its meaning only in a new major version (2.0). A 1.x release may add
+> rules — for behaviour that was not specified, or that was an error — and may
+> clarify wording, but a program that follows these rules keeps its meaning
+> across 1.x.
+
+---
+
+## 0. Parse
+
+**PARSE-1** — A tag in the `q:` namespace that the language does not know is a
+parse error, anywhere in the file, and the message suggests the tag with a
+similar name when there is one (`<q:sett>` → `<q:set>`). An HTML element name
+with the prefix (`<q:html>`, `<q:div>`) is also an error; `<q:script>` is the
+exception, and it is a language tag (client-side JavaScript). HTML elements and
+tags of other namespaces are not affected.
+
+**PARSE-2** — Statements (`q:set`, `q:query`, `q:invoke`, `q:action`…) run
+before the page is rendered, and markup is only rendered. So it is a parse
+error to put a statement inside an HTML element or the content of a component
+call, where it would never run; and, in a `q:loop` that renders markup, a
+statement whose `name` the loop's own rows read, because every row would show
+the value of the last iteration. A value accumulated in the loop and read
+after it still works.
+
+**PARSE-3** — Nothing is accepted without effect: every attribute the language
+accepts is applied. Those that were accepted and never did anything are parse
+errors that say so (`mask` and `unique` on `q:set`, `transform` on `q:invoke`,
+`validation` on `q:param`, `basePath`/`health`/`metrics`/`trace` on
+`q:component`, `model` on `q:knowledge` (IA-2), every attribute of `q:column`
+but `name` and `type` (DATA-1), plus those of FN-2, DB-5 and AUTH-7). A test walks the Core nodes and fails if a
+field stored from the XML is not read by the code that runs that node.
+
+**PARSE-4** — A `.q` file is XML, but it accepts the HTML people write: a
+boolean attribute (`<input required>`), a bare `&` (`Forms & Actions`,
+`href="/x?a=1&b=2"`), a void element left open (`<br>`, `<meta ...>`), a `<`
+inside a quoted attribute value (`condition="n < 0"`, `value="{a < b}"`) and
+the named HTML entities (`&nbsp;`, `&copy;`). The body of `<script>`,
+`<style>`, `q:python` and `q:pyclass` reaches its consumer unchanged. A
+PascalCase tag is a component, never a void element. An entity name that does
+not exist is an error.
+
+**PARSE-5** — An attribute that takes one of a list of values is a parse error
+with the element's line when its value is not in the list, which the message
+names: `type` (ERR-1), `operation`, `scope` and `validate` of `q:set` (SET-3,
+SET-4 — a `validate` may also be a regular expression starting with `^`); `type` of
+`q:loop` (`range`, `array`, `list`, `query`); `type` of `q:param` — `integer`,
+`int`, `long`, `number`, `numeric`, `decimal`, `float`, `double`, `file`,
+`binary`, `upload`, `string`, `text`, `array`, `object`, `any`, `json`,
+`boolean`, `email`, `url` and `date`, and inside `q:query` `string`, `integer`,
+`decimal`, `boolean`, `datetime`, `date`, `time`, `array` and `json`; `method`
+(`GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`) and `authType`
+(`bearer`, `apikey`, `basic`) of `q:invoke`.
+
+## 1. Return
+
+**RET-1** — The first `q:return` executed, in document order, ends the
+component with its value. A top-level `q:return` is not deferred until after
+the other statements.
+
+**RET-2** — A `value` that is exactly one expression (`"{x}"`) produces the
+expression's value, with its type. Any other `value` — literal text, or text
+mixed with expressions — produces **text**: `"{i}.{j}"` is `"1.2"`, and `"007"`
+is `"007"`.
+
+**RET-3** — A `q:return` inside `q:if` ends the body that contains the `q:if`
+when the branch runs. When no branch runs a `q:return`, execution goes on.
+
+## 2. Loops
+
+**LOOP-1** — A `q:return` inside `q:loop` does not end the loop: each
+`q:return` executed adds an item to a list.
+
+**LOOP-2** — A `q:loop` that executed at least one `q:return` ends the body
+that contains it with the list (like RET-3). A loop that executed none lets
+execution go on.
+
+**LOOP-3** — The `q:return`s of a nested loop go into the outer loop's list
+one by one, in order. A value that happens to be a list goes in as one item.
+
+**LOOP-4** — `q:loop query="name"` over a query that returned no rows runs its
+body zero times, wherever the loop is; a `name` that was never set is an error.
+
+**LOOP-5** — `type="range"` counts from `from` to `to`, both included, by `step`
+(1 by default); with `from` above `to` the body runs zero times. `type="array"`
+goes over `items` (an expression or a JSON list), and `index="k"` names the
+position, from 0. `type="list"` goes over the text of `items` split by
+`delimiter` (a comma by default), each item without the spaces around it. A loop
+without `type` is an array loop when it has `items` and a range loop otherwise.
+The variable of the loop is `var`. Any other `type` is a parse error (PARSE-5).
+
+**LOOP-6** — `type="array"` goes over a list: an expression whose value is a
+list, a JSON array written in `items`, or text that is a JSON array. Anything
+else — a number, text, an object, a value that does not exist yet — is an
+error that says what it got, in a statement and in markup alike, like a
+`ui:table` source (UI-5). Before a value exists, give it one:
+`<q:set name="session.cart" type="array" value="{session.cart}" default="[]"/>`.
+
+## 2a. Conditionals
+
+**IF-1** — `q:elseif` and `q:else` can be written inside the `q:if` or right
+after `</q:if>`, with the same meaning, in any body: component, `q:loop`,
+`q:function`, `q:action`, HTML elements. A `q:elseif`/`q:else` without a `q:if`
+right before it is a parse error. Inside a `q:if`, a direct `q:else` child
+belongs to that `q:if`.
+
+**IF-2** — The condition is an expression, and the result counts by the
+value's truth, the same in statements and in markup: `condition="1"` and
+`condition="{1}"` are true, `condition="0"` is false.
+
+**IF-3** — Text written directly in a branch of `q:if`, `q:elseif` or `q:else`
+is content of the branch, as in a `q:loop` or an HTML element:
+`<h2><q:if condition="tag">Posts about {tag}</q:if><q:else>All</q:else></h2>`.
+
+**IF-4** — Inside a `q:if`, a `q:elseif`/`q:else` written right after an inner
+`</q:if>` is a parse error with its line: by IF-1 it would belong to the outer
+`q:if`, but it reads as the inner one's. The inner branch goes inside the inner
+`q:if`; the outer one goes before the inner `q:if`.
+
+## 2b. Functions
+
+**FN-1** — In a call to a `q:function`, arguments bind to the `q:param`s by
+position or by name; `default` applies to what is missing. Each argument is
+converted to the `q:param`'s `type` and checked against its rules (`required`,
+`type="email"`, `type="url"`, `min`, `max`, `minlength`, `maxlength`,
+`pattern`, `enum`, `range="a..b"`) — the same as `q:action`'s (ACT-2) — on every
+call. An
+argument that does not pass is an error that names the parameter.
+
+**FN-2** — `q:function` accepts `name`, `returnType` (FN-4), `description` and
+`hint`. The attributes that were accepted and never did anything (`cache`,
+`memoize`, `pure`, `async`, `retry`, `timeout`, `access`, `scope`, `validate`,
+`endpoint` and the REST ones) are parse errors that say so.
+
+**FN-3** — A component's `q:function` can be called in any of its expressions:
+`q:` attributes and HTML content.
+
+**FN-4** — `returnType` is checked on every return, with FN-1's conversions: the
+value is converted to the type, and a value that is not of the type is an
+error that names the function. `any` (the default) accepts any value; `void`
+requires that nothing is returned. A type that does not exist is a parse
+error.
+
+## 3. Actions and forms
+
+**ACT-1** — On a page with several `q:action`s, the action executed is the one
+named by the `action` field of the request body.
+
+**ACT-2** — Each field declared with `q:param` becomes a variable of the action,
+already validated and converted to the declared type. If a validation rule
+fails (`required`, `type`, `minlength`, `maxlength`, `min`, `max`, `pattern`,
+`enum`, `range`),
+the action does not run: the response redirects to the page it came from, with
+a `flash` holding the reason and `flashType="error"`.
+
+**ACT-3** — `q:redirect` ends the action. Its `flash` accepts expressions and is
+available as `flash` (and its type as `flashType`, `success`) on the next page
+rendered, once. Without a message, both exist and are `''`. Inside a
+`q:action`, `<q:flash type="…" message="…"/>` (or the message as its text; `type`
+is `info` by default) sets them for a flash of another kind; a `flash=` on the
+`q:redirect` after it replaces both. A `q:flash` outside a `q:action` is a parse
+error that says so.
+
+**ACT-4** — A `q:query` inside a `q:action` uses the same datasources declared
+in `quantum.config.yaml` as the page.
+
+**ACT-5** — On a page with more than one `q:action`, a request whose `action`
+field is missing or names no action of the page answers `400`, citing the name
+asked for and the actions available. No action runs in its place. With a
+single action on the page, the field is optional.
+
+**ACT-6** — Inside a `q:action`, as when rendering the page, `form.<field>`
+holds the value sent, as text and not validated. `q:param` remains the
+validated, typed way (ACT-2).
+
+**ACT-7** — Outside a `q:action` (in the page's statements, in a `q:function`,
+in a called component), `q:redirect` ends the page: nothing after it runs and
+the response is the redirect, with the `flash` for the next page (ACT-3). What
+the page wrote to the session before it stays written — a logout page clears
+the session and redirects.
+
+**ACT-8** — Statements inside a `q:action` see the action's variables,
+including a `q:loop`'s variable and the `q:set`s made in it, at any level of
+nesting.
+
+**ACT-9** — A `q:action` does not run the page's statements: only its own and
+the guards (AUTH-6). What it uses from the page — a record, a total — it
+queries or computes itself. A name that does not exist in it is an error that
+says so.
+
+**ACT-10** — Each request runs in its own runtime, which knows the page's
+component: inside a `q:action`, the page's `q:function`s can be called (FN-3),
+and simultaneous requests — of different pages, in different threads — never
+see each other's state.
+
+**ACT-11** — `accept` on a `q:param type="file"` restricts the upload like the
+HTML attribute (`image/*`, `.pdf`, `application/pdf`, comma-separated). A type
+pattern is checked against the type the file NAME implies, besides the one the
+browser declares: an `.exe` sent as `image/png` does not pass. Outside what is
+accepted, the action does not run and returns with the reason (ACT-2).
+
+## 3a. Pages and routes
+
+**ROUTE-1** — `quantum start` serves each file of `components/` at a URL with
+its path: `components/about.q` at `/about`, `components/index.q` at `/`, and
+`components/shop/index.q` at `/shop`. A `[name]` path segment matches any value
+and hands it over as the parameter `name` (`components/shop/[id].q` at
+`/shop/41`); a `[...name]` segment matches the rest of the path, slashes
+included (`components/docs/[...path].q` at `/docs/guide/routes.md`). With no
+matching file, or outside `components/`, the answer is `404`.
+
+**ROUTE-2** — The route's segments are also variables inside a `q:action`. A
+form field with the same name does not replace the value that came from the
+URL.
+
+**ROUTE-3** — A file or folder of `components/` whose name starts with `_` is
+not served (`404`): it exists to be imported (`q:import`), like a layout.
+
+**ROUTE-4** — A `*.test.q` file (a test suite, TEST-1) is never a page: next
+to the pages in `components/` it is not served (`404`) and creates no route;
+`quantum check` reads it as a test file and reports it if it does not parse.
+
+## 3b. Component composition
+
+**COMP-1** — `<Name/>` uses the component imported with
+`q:import component="Name"`, looked up in `paths.components` of
+`quantum.config.yaml` (in the `from` subfolder, when declared). A component
+that is not found, or that fails, is an error of the page — never a section
+that disappears.
+
+**COMP-2** — Each attribute of the call is a prop, evaluated as an expression
+in the page's scope (a value that is only `{expr}` keeps its type). A missing
+required prop, or an expression that fails, is an error.
+
+**COMP-3** — The content between `<Name>` and `</Name>` is rendered in the
+page's scope and placed in the component's default `q:slot`. The content of one
+render never appears in another.
+
+**COMP-4** — The called component runs with the same configuration as the page
+(datasources, services) and sees the same `session`, `application` and
+`request` scopes.
+
+## 3c. How a page runs
+
+**EXEC-1** — A GET of a page follows this order: the route picks the component
+(ROUTE-1); `require_auth`/`require_role` decide whether it opens (AUTH-1,
+AUTH-2); the guards run (AUTH-6); the page's statements run top to bottom
+(`q:set`, `q:query`, `q:invoke`…); finally the markup is rendered with the
+variables they left — expressions, `q:loop` and `q:if` in markup, `ui:*`
+elements and called components. Markup is only rendered: a statement inside it
+is an error (PARSE-2). The page's `q:function`s work in the whole page and in
+its actions, before or after where they are written.
+
+**EXEC-2** — A POST with the `action` field goes through the same first three
+steps and then runs only the named `q:action` (ACT-1, ACT-9). Ending in
+`q:redirect`, the answer is the redirect and the browser asks for the page with
+a GET (EXEC-1). Without `q:redirect`, the page is rendered after the action,
+with the page's statements running as in a GET, and the answer is 200 —
+reloading would send the form again, which is why an action ends in
+`q:redirect`.
+
+**EXEC-3** — A page variable lives for one request: each request runs in its
+own runtime (ACT-10). `session.x` lives between requests of the same visitor,
+in the session's signed cookie. `application.x` is shared by all visitors — pages
+and their `q:action`s read and write the same one — while the server process is
+up: it is gone after a restart and, with several
+processes (`gunicorn --workers 4`), each process has its own. `flash` applies
+to the next page, once (ACT-3). The messages of the traps of this order
+(PARSE-2, ACT-9, AUTH-6) point to the guide's "How a page runs" page.
+
+## 4. Authentication
+
+**AUTH-1** — A component with `require_auth="true"` is only served to a session
+with `session.authenticated` true and `session.sessionExpiry` in the future.
+Without a session, the answer redirects to `/login`; with the session expired,
+to `/login?expired=true`. A missing `sessionExpiry` counts as expired.
+
+**AUTH-2** — With `require_role`, the authenticated session must have
+`session.userRole` equal to one of the listed roles (comma-separated);
+otherwise the answer is `403`.
+
+**AUTH-3** — `hashPassword(password)` returns a bcrypt hash with its own salt.
+`verifyPassword(password, hash)` returns true only when the password matches
+the hash; for an empty password, a missing or malformed hash it returns false,
+never an error.
+
+**AUTH-4** — `security.login_url` in `quantum.config.yaml` says where AUTH-1
+redirects (`/login` by default); a component's `login_url` attribute applies to
+it only. Only a path on the same server is accepted; any other value is an
+error at startup (config) or when the file is read (attribute).
+
+**AUTH-5** — The session cookie is `HttpOnly` and `SameSite=Lax`: the page's
+scripts cannot read it, and a form sent from another site does not carry the
+session.
+
+**AUTH-6** — A top-level `q:if` of the page whose branch contains `q:redirect`
+is a guard. Guards run before the page and also before each of its
+`q:action`s, which do not run the page's other statements: a guard that
+redirects prevents the action. On a page with a `q:action`, a guard condition
+that reads a variable the page defines is a parse error (in the action it
+would not exist). In a guard, a condition that cannot be evaluated is an
+error, not false: the page fails closed. `require_auth` and `require_role`
+(AUTH-1, AUTH-2) remain the declared way to protect a page.
+
+**AUTH-7** — `q:action` does not accept `require_auth`, `csrf` or `rate_limit`:
+they were read and never applied, and are parse errors that say so. An action
+is protected through its page (AUTH-1, AUTH-6).
+
+## 5. Data import
+
+**DATA-1** — `q:data type="csv"` (the default; `json` and `xml` are the other
+types) produces a list of records; the columns declared with `q:column` are
+converted to the declared type, and undeclared ones come as text; a `q:column`
+takes only `name` and `type`. `encoding` (UTF-8) reads the file (or response),
+`skip_rows="n"` skips the first `n` lines, before the header, and `delimiter` (a
+comma) and `quote` (`"`) split it; with `header="false"` the first line read is
+data and the fields are named `0`, `1`…
+
+**DATA-2** — In `type="xml"`, the `xpath` of `q:data` selects the records and
+each `q:field` extracts a value relative to the record, accepting `@attribute`,
+`child/text()`, `child/@attribute` and `child`; the field's `type` is applied.
+
+**DATA-3** — The operations of `q:transform` run in order: `q:filter` (the same
+condition syntax as `q:if`, with the record's fields as variables), `q:sort`,
+`q:limit` and `q:compute` (adds a computed field).
+
+**DATA-4** — An import that fails (a source that does not exist, invalid
+content) is an error that names the import, the source and the reason. With
+`onerror="continue"` execution goes on and the reason is in
+`<name>_result.error.message`, as in INV-2.
+
+## 5a. Database
+
+**DB-1** — `q:query` runs the SQL on the datasource declared in
+`quantum.config.yaml`. Each `:name` in the SQL is bound to a `q:param` — never
+interpolated — and a `:name` without a `q:param` is a parse error. The
+`q:param`'s `type` converts the value before it is bound (`string`, `integer`,
+`decimal`, `boolean`, `date`, `datetime`, `time`, `array`, `json`; `maxLength`
+limits a text, `scale` rounds a decimal); a value that does not convert, or a
+type that does not exist, is an error that names the parameter. `<name>` is
+the list of records; `<name>_result` has `success`, `recordCount`,
+`columnList`, `executionTime` and, for writes, `affectedRows` and
+`lastInsertId` (`result=` gives this object another name). When the result has
+a single row, its fields are also in `<name>.<field>`.
+
+**DB-2** — With `paginate="true"`, `page` and `page_size`, the query returns
+only the page asked for, and `<name>_result.pagination` has `totalRecords`,
+`totalPages`, `currentPage`, `pageSize`, `hasNextPage`, `hasPreviousPage`,
+`startRecord` and `endRecord`.
+
+**DB-3** — `q:query source="other"` runs the SQL in memory over the result of
+an earlier query, which appears as a table with that query's name.
+
+**DB-4** — Inside `q:transaction datasource="…"`, queries use that datasource
+when they do not declare one. If any statement fails, everything is rolled
+back and the transaction is an error that says so. `isolationLevel` (or
+`isolation`) is `READ_UNCOMMITTED`, `READ_COMMITTED` (the default),
+`REPEATABLE_READ` or `SERIALIZABLE`; anything else is a parse error.
+
+**DB-5** — `q:query` does not accept `cache`, `ttl`, `reactive`, `interval`,
+`timeout`, `maxrows` and `batch`, which were accepted and never did anything:
+they are parse errors.
+
+**DB-6** — `quantum migrate` applies the files `migrations/V<nnn>_<name>.sql`
+to the datasource declared in `quantum.config.yaml` — the same one the pages
+use: the one given with `--datasource`, or the only one declared. With more
+than one and no `--datasource`, or with none, it is an error that says how to
+resolve it. There is no fallback connection.
+
+**DB-7** — A datasource exists if it is under `datasources:` in
+`quantum.config.yaml`; any other name is an error that lists the declared ones.
+A SQLite `database` that does not exist is an error that points to
+`quantum migrate up` — never an empty database created without a word. A
+relative path is relative to the folder where the server runs. A datasource key
+the engine does not read is warned about when the configuration is loaded.
+
+**DB-8** — A migration file can hold several SQL statements. Each file is
+applied in one transaction, together with the record that it was applied: if a
+statement fails, nothing of the file stays in the database. The file is read
+as UTF-8, on any system.
+
+**DB-9** — The `page` of a paginated query is an expression, resolved when the
+query runs (`page="{query.p}"`); without `page`, it is the URL's `page`
+parameter. A value that is not a positive number — `?page=abc`, `?page=-2` —
+is page 1, not an error. A literal `page` that is not a number is a parse
+error.
+
+**DB-10** — `quantum migrate plan` compares `schema.sql` (the tables as they
+should be) with the schema the migrations produce — both built in in-memory
+SQLite, never the development database — and lists the steps: a new table; a
+new column that is nullable or has a default (`ADD COLUMN`); any other change
+to a table as a rebuild that copies the rows both versions share; a dropped
+table; created and dropped indexes. Steps that lose data (a dropped table or
+column, a changed type) are marked, and `--write` refuses them without
+`--allow-data-loss`; a new NOT NULL column without a default is flagged.
+`--write NAME` asks before saving `V00N_NAME.sql` and its `.down.sql` (`--yes`
+skips the question; without a terminal it is required). A plan is checked
+before it is written: applied to the migrations' schema, it must reproduce
+schema.sql's.
+
+**DB-11** — With `history: true` on a SQLite datasource, every write an action
+makes to it — `q:query` INSERT, UPDATE or DELETE in a `q:action`, and the cells
+of an editable table (UI-13) — records, in a `quantum_history` table of that
+database, on the same connection and before the commit: when, the session's
+user (`userName`, else `userId`), the action, the table, the row's key, the
+operation and the row before and after as JSON. A write rolled back leaves no
+history. Writes outside actions are not recorded. A write that is not a
+single-table INSERT/UPDATE/DELETE is recorded with its SQL, without before and
+after. `<ui:history table key datasource [limit]>` lists a row's history,
+newest first — when, who, action, and for an update each changed column as
+`old → new` — in the browser and the console; on a datasource without history
+it is an error.
+
+## 6. Expressions
+
+An expression is what is between braces: `{total * 2}`. It appears in two
+places with different rules, on purpose: **attributes of `q:` tags** (`value`,
+`condition`, `url`…), which are always code, and **HTML content**, which also
+carries code samples and stray braces.
+
+**EXPR-1** — In a `q:` attribute, a name that does not exist is an error. The
+message cites the expression and the name, and suggests a similar name when
+there is one. `"x{nothing}y"` does not produce `"x{nothing}y"`.
+
+**EXPR-2** — In a `q:` attribute, an expression that fails to evaluate
+(division by zero, index out of the list, missing key) is an error that cites
+the expression.
+
+**EXPR-3** — A scope reference (`session.`, `application.`, `request.`,
+`form.`, `query.`, `cookie.`) whose value does not exist produces `''` when the
+expression is only the reference (`{session.name}`): a page renders before
+login. In an operation (`{session.visits + 1}`) it is an error, which says the
+value does not exist and points to `q:if` or `operation="increment"`.
+
+**EXPR-4** — In HTML content, an expression that does not resolve stays as
+literal text and is logged once per distinct expression. Anywhere, a JSON
+object (`{"a": 1}`) and a regex quantifier (`\d{10,11}`) are not expressions
+and pass through untouched.
+
+**EXPR-5** — A `condition` is a presence test: a name, key, attribute or index
+that does not exist makes it false, logged once. `<q:if condition="flash">`
+before `flash` exists does not run the branch. Any other failure (invalid
+syntax, a function that does not exist) is an error, as in EXPR-2. A failure
+never makes a condition true.
+
+**EXPR-6** — Besides Python's syntax (`and`, `or`, `not`), expressions accept
+`&&`, `||` and `!` with the same meaning. `!=` is still inequality, and nothing
+inside a string is translated. `and` and `or` evaluate left to right and stop
+at the first value that decides the result: in `a and a.b`, without `a`, `a.b`
+is not evaluated.
+
+**EXPR-7** — `-`, `*`, `/`, `//`, `%` and `**` work on numbers (text that looks
+like a number counts as a number); with any other operand they are an error.
+`+` adds numbers, or joins two texts or two lists. A `q:` attribute that is
+only `{3}` is the number 3; inside other text, `\d{3}` is still a regex
+quantifier (EXPR-4).
+
+**EXPR-8** — In a `condition`, a key the scope does not have (`session.x`,
+`application.x`, `request.x`, `form.x`, `query.x`, `cookie.x`) is `None`: it is
+absence, not failure, and EXPR-5 does not apply to it.
+`not session.authenticated` is true for someone who has not logged in;
+`session.role == 'admin'` is false. An attribute of something that does not
+exist (`session.user.is_admin` without `session.user`) is still a failure
+(EXPR-5).
+
+**EXPR-9** — `round(x, places=0)` rounds half away from zero (`round(2.5)` is
+`3`, `round(0.125, 2)` is `0.13`); `ceil(x)` and `floor(x)` round up and down.
+Text is split with `split(text, sep)`, and `slugify(text)` makes an address
+from a title (`'Olá, Mundo!'` → `'ola-mundo'`).
+
+**EXPR-10** — Functions are called by name (`split(t, ' ')`), not as methods
+(`t.split(' ')`). A JavaScript habit (`Math.ceil`, `Date.now`, `.split`,
+`.toUpperCase`, `parseInt`) is an error that says the equivalent.
+
+**EXPR-11** — A scope variable is read only with its prefix: `session.role`,
+`request.path`. The bare name (`role`, `path`) is not the scope variable. The
+prefixed name is read the same way everywhere an expression is — in `q:`
+attributes, conditions, HTML text and attributes, and `ui:*` attributes — for
+every scope (`session`, `application`, `request`, `cookie`, `form`, `query`),
+alone or inside a larger expression: `{session.visits + 1}`,
+`{session.user.name}`.
+
+**EXPR-12** — `urlencode(v)` makes a value safe inside a URL (spaces become `+`,
+`&`, `?`, `/` and the rest are escaped): `q:redirect url="/?q={urlencode(q)}"`.
+
+**EXPR-13** — `x[a:b]` slices a list or a text (negative bounds count from
+the end). A slice with a step (`x[::-1]`, `x[0:10:2]`) is an error.
+
+**EXPR-14** — `a in x` compares like `==` (EXPR-7): in a list, `'5' in [5]`
+and `5 in ['5']` are true; in an object it looks for a key; in a text, for a
+piece of text. `not in` is its opposite. Anything else on the right is an
+error.
+
+**EXPR-15** — `random()` is a number from 0 up to 1; `random(a, b)` an integer
+from `a` to `b`, both included; `chance(p)` is true with probability `p` (0 to
+1); `pick(list)` one element of the list. A first bound larger than the
+second, a probability outside 0–1 and an empty list are errors.
+
+**EXPR-16** — `d['k']` on an object without the key `k` is the same error as
+`d.k` (EXPR-1), with the same suggestion of a similar key. An optional key is
+read with `get(d, 'k', default)` (`default` is `null` when left out), which
+also takes a list and an index, or tested with `'k' in d`.
+
+## 6a. Types in `q:set`
+
+**ERR-1** — The `type` of `q:set` converts the value like this: `number` keeps
+the number (`{5 / 2}` is `2.5`); `integer` accepts only a whole number
+(`{7 / 2}` is an error, which points to `round()`); `decimal` is a number with
+decimals; `boolean` accepts `true`/`false`, `1`/`0`, `yes`/`no` and empty
+(false); `array`, `object` and `json` read JSON. A value that does not convert
+is an error that shows the value. When the value is text with expressions
+(`"{a} + {b}"`), the message shows the form that computes (`"{a + b}"`); when
+it is JSON with single quotes, it says to use double quotes. `string` is text.
+The names `q:param` also accepts convert like the type they name: `text` like
+`string`, `int` and `long` like `integer`, `numeric` like `number`, `float` and
+`double` like `decimal`. Any other `type` is a parse error (PARSE-5). Without
+`type`, SET-5.
+
+**SET-1** — In `q:set`, `default` is the value stored when `value` resolves to
+nothing: missing, `null` or empty text. `value="{session.clicks}" default="0"`
+stores `0` on the first visit.
+
+**SET-2** — A page's variables live on the server, for one request.
+`persist`, `persistKey`, `persistTtl` and `persistEncrypt` on `q:set`, and the
+`q:persist` tag, were removed (they stored in the browser and never ran in a
+page): they are errors that say where to store instead — `session.x` (per
+user) or the database.
+
+**SET-3** — `operation` (`assign` by default) changes the variable in place:
+`increment` and `decrement` by `step` (1 by default; a variable that does not
+exist starts at 0); `add` and `multiply` by `value`, on a number; on a list,
+`append`, `prepend`, `remove` (the first equal item), `removeAt` (`index`),
+`clear`, `sort`, `reverse` and `unique` (`append` to a variable that does not
+exist starts a list); on an object, `merge` (`value`), `setProperty` and
+`deleteProperty` (`key`, `value`); `clone` stores a copy of the variable named
+by `source`; on text, `uppercase`, `lowercase`, `trim` and `format` (`value`,
+with its expressions). An operation on a value of the wrong kind is an error
+that names the variable. `scope` is `local` (the default), `function`,
+`component`, `session`, `application` or `request`. An operation or a scope
+that does not exist is a parse error (PARSE-5).
+
+**SET-4** — `q:set` checks the value it stores: `required` (empty is an error),
+`nullable="false"`, `validate` (`email`, `url`, `phone`, `cep`, `cpf`, `cnpj`,
+`uuid`, `creditcard`, `ipv4`, `ipv6`), `pattern`, `range="a..b"`, `enum`, `min`,
+`max`, and `minlength`/`maxlength` on text. A value that does not pass is an
+error that names the variable and says why. A `validate` that is none of those,
+nor a regular expression starting with `^`, is a parse error (PARSE-5).
+
+**SET-5** — Without `type`, a `value` that is exactly one expression keeps the
+type of what it computes, like `q:return` (RET-2) and props (COMP-2):
+`value="{[1, 2]}"` stores the list and `value="{len(x)}"` the number. Any other
+`value` — literal text, or text mixed with expressions — is text. With `type`,
+the value is converted as ERR-1 says. A date kept in `session` comes back the
+same date on the next request.
+
+## 7. Invocation
+
+**INV-1** — `q:invoke url=` makes the request with the declared method (`GET`
+by default) and a 30-second timeout when `timeout` is not declared. Each
+`q:param` becomes a query string parameter with its `value`; each `q:header` a
+header; `q:body` (with its expressions) is the body, sent as `contentType`
+(`application/json` by default). `authType="bearer"` sends `authToken` as a
+bearer token, `apikey` sends it in the header `authHeader`, and `basic` sends
+`authUsername` and `authPassword`. `retry="n"` makes up to `n` more attempts,
+`retryDelay` ms apart (1000), when the request times out or cannot connect — an
+HTTP error status is not retried. A JSON response becomes the value of
+`<name>`; any other response, its text.
+
+**INV-2** — An invocation that fails (a response outside 2xx, a connection
+failure, a function that raises) is an error that cites the name and the
+reason, like `q:query`. With `onerror="continue"` execution goes on:
+`<name>_result.success` is false and `<name>_result.error.message` says why.
+`onerror` accepts only `fail` (the default) and `continue`. With
+`responseFormat="json"`, a response that is not JSON is such a failure: the
+message says the response is not JSON, with its `Content-Type` and the start of
+the body; the request is not repeated.
+
+## 7a. Declared services
+
+**SVC-1** — `@service("name")` (from `quantum.services`) registers a Python
+function under that name. Registering another function under a name already in
+use is an error.
+
+**SVC-2** — A services module is imported only when listed under `services:`
+in `quantum.config.yaml`. A listed module that does not import is an error that
+names it.
+
+**SVC-3** — `<q:invoke name="x" service="name">` calls the registered function
+with the `q:param`s as keyword arguments, converted by each one's `type`; the
+value returned becomes `x`. An exception from the function is an invocation
+failure (INV-2). A name that is not registered is an error that lists the
+registered ones. `endpoint=` is not accepted.
+
+## 7b. Files and mail
+
+**FILE-1** — `<q:file action="upload" file="{param}">` saves an uploaded file
+under `paths.uploads` (`./uploads` by default), in `destination` when given (a
+folder inside it), with a safe name. On a clash, `nameConflict` decides:
+`makeUnique` (the default) adds a suffix, `overwrite` replaces the file, `skip`
+keeps the one there, and `error` makes the upload an error. The
+result (`result="x"`, and `<param>_upload`) has `filename` (as stored),
+`original_filename`, `size`, `mimetype` and `filepath`. A `q:param type="file"`
+checks `accept` (ACT-11) and `maxsize` (`500KB`, `5MB`, `1GB`) like any other
+rule: over the size, the action does not run and the form shows the reason next
+to the field (ACT-2). `maxsize` that is not a size, and `maxSize`, are parse
+errors.
+
+**FILE-2** — `<q:file action="send" file="{stored}" name="{shown}">` ends the
+page (or action, or guard) with that file as a download (`Content-Disposition:
+attachment`, type from `name`). The path is inside `paths.uploads` — anything
+outside it is an error — and a file that is not there answers 404. Uploads are
+never served as static files: a page that sends one decides who may have it.
+`q:file action` is `upload`, `delete` or `send`.
+
+**MAIL-1** — `q:mail` sends through `mail:` in `quantum.config.yaml` (`host`,
+`port` 587, `username`, `password`, `tls` true, `from`, `timeout` 30). Without
+it, sending is an error that says what to configure; `host: log` writes each
+message to the log (`quantum.mail`) instead of sending it, and the result has
+`logged: true`. A message needs a sender (`from=` or `mail.from`) and a
+recipient: `to` and `subject` are required (a parse error otherwise). The body
+is the tag's content (or `body=`), HTML unless `type="text"`; `cc`, `bcc` and
+`replyTo` are addresses, and the `bcc` ones receive the message without being
+named in it. `to`, `subject` and the body accept expressions.
+
+**MAIL-2** — A message the server does not take — unreachable, refused
+recipients (all, or some) — stops the page or action with the server's reason,
+and says how to handle it. With `onerror="continue"` the page goes on:
+`<name>_result` (`name` defaults to `mail`) has `success` false and
+`error.message`. An expression in the message that cannot be evaluated is the
+page's error, never a mail failure. `onerror` takes `fail` or `continue`.
+
+## 8. AI
+
+**IA-1** — All AI tags use the same model server: `QUANTUM_LLM_BASE_URL`, else
+`llm.base_url` of `quantum.config.yaml`, else `http://localhost:11434`. A
+`q:llm` or `q:agent` without `model=` uses `QUANTUM_LLM_DEFAULT_MODEL`, else
+`llm.model` (`llm.default_model`, the older spelling, is also read); with
+neither it fails (IA-5) with an error that says what to configure — there is no
+built-in model name. `model=`, `endpoint=` and `apiKey=` take expressions;
+`endpoint=` sends that one tag to another server.
+`temperature` and `maxTokens` reach the model as declared, and
+`responseFormat="json"` asks it for JSON: the value is the parsed object.
+
+**IA-2** — A `q:knowledge` base is split into chunks of `chunkSize` characters
+(500) that overlap by `chunkOverlap` (50), embedded with `embedModel`
+(`nomic-embed-text`) and kept in `persistPath` (`./.quantum/knowledge`);
+`persist="false"` keeps it in memory. A relative `persistPath` is relative to
+the working directory when the base is indexed: bases indexed from two
+directories are two stores, and each base follows its own `persist`. A base
+only embeds: `model=` on `q:knowledge` is a parse error that points to
+`q:llm model="…" knowledge="…"` (IA-6). A persisted base is reused only when
+the sources' text, the embedding model and the chunking are the same as when
+it was indexed; otherwise it is indexed again. Any `name` is accepted.
+
+**IA-3** — An answer from a knowledge base is `q:llm knowledge=` (IA-6).
+`q:query mode="rag"` is a parse error that points to it; a `q:query` on
+`datasource="knowledge:<name>"` searches the chunks (`SELECT … WHERE content
+SIMILAR TO :param LIMIT n`) and returns them with their `relevance`.
+
+**IA-4** — `q:agent` works on the `task` of its `q:execute` (with `context`,
+extra text for the model, when given) and runs the declared tools with the
+arguments converted to the types of the tool's `q:param`s (an argument the model
+leaves out takes the param's `default`), and
+the types of the tool's `q:param`s, and exposes in `<name>_result` its
+`success`, the `actions` (tool, arguments, `call` — the call written out,
+`low_stock(below=5)` —, result) and, on failure, `error.message`.
+
+**IA-5** — An AI failure — the model server unreachable, a timeout, a model
+that does not exist, a knowledge base that cannot be built, an agent that does
+not finish — stops the page with an error that names the server and the cause,
+and says how to handle it. With `onerror="continue"` on `q:llm`, `q:knowledge`,
+`q:agent` or `q:query` (any datasource), the page goes on instead:
+`<name>_result.success` (for `q:knowledge`, `<name>_info.success`) is false and
+`error.message` says why; a `q:llm` or `q:agent` value is `''` and a query has
+no rows. A query on a knowledge base that could not be built fails with that
+base's reason — never an answer standing in for one. `onerror` takes `fail`
+(the default) or `continue`. `q:agent`'s attribute is `maxIterations`;
+`max_iterations` is a parse error.
+
+**IA-6** — `q:llm knowledge="base" [top="n"]` answers from a `q:knowledge` of
+the page: the question — the last user message, or the prompt — retrieves the
+top `n` chunks (default 4), which reach the model numbered, with the
+instruction to answer only from them and cite them by number. The result has
+`found`, `sources` (`n`, `source`, `name` — the file name —, `text`,
+`relevance`, in retrieval order) and `cited` (the source numbers the answer
+contains). When nothing is retrieved the model is not called: the value is
+`''` and `found` is false. A base that is not on the page, or that could not be
+built, is an error (IA-5).
+
+**IA-7** — `q:llm stream="true"` in a web request does not wait for the model:
+the page renders at once and `<name>_result.stream` holds `/_stream/<token>`;
+`<ui:stream for="name">` shows the answer there as the model writes it (the
+browser through the framework's script, the console through its own reader;
+without JavaScript, a link). A token is used once, expires in ten minutes and
+only the session that asked can read it (404 otherwise). A failure while
+streaming ends the text with an error the renderers show as an error, never as
+part of the answer. Providers that cannot stream send the answer whole. Outside
+a web request (`quantum run`) the `q:llm` waits for the answer as usual.
+`<ui:stream>` on a finished answer shows its value; for a `q:llm` that is not
+on the page it is an error.
+
+**IA-8** — A `q:knowledge` source is read whole or the base is not built
+(IA-5): a missing file or folder, a folder where no file matches the pattern,
+an unreadable file and a failing `type="query"` are errors that name the
+source. `q:source type` is `text`, `file`, `directory` or `query`; anything
+else (`url` included) is a parse error. `q:llm timeout=` is the number of
+seconds to wait for the model (60 when not declared); `q:agent timeout=`, in
+milliseconds, is the whole run's budget, and each model call gets what is
+left. A `type="query"` source is shared by every user of the application: any
+user's question can retrieve any of its rows — there is no per-user filter yet.
+
+**IA-9** — `q:llm knowledge=` takes `minRelevance` (0 to 1, 0 when not
+declared; anything else is a parse error): a chunk less relevant than it is not
+retrieved, and when none remains `found` is false and the model is not called
+(IA-6). The result has `grounded`: true when the answer cites at least one
+source, false when it cites none or nothing was found, and empty while a
+streamed answer (IA-7) is still being written.
+
+## 8a. Configuration
+
+**CFG-1** — In `quantum.config.yaml`, `${NAME}` in any value is replaced by the
+environment variable `NAME`, and `${NAME:-default}` uses the default when it
+does not exist; `$$` is a literal `$`. A missing variable without a default is
+an error when the configuration is loaded, citing the variable and the key — the
+program does not run with half a configuration. This applies to `quantum run`,
+`quantum start` and every service.
+
+**CFG-2** — `security.max_content_length` (16 MB by default) limits a request's
+body: above it the answer is `413`. In `security` and `performance`, a key the
+engine does not implement (`csrf_protection`, `rate_limiting`, `cors_*`…) is
+warned about in the log when the configuration is loaded, with the key's name.
+
+**CFG-3** — The keys of `server` (`port`, `host`, `debug`, `reload`), `paths`
+(`components`, `static`, `logs`, `uploads`, `migrations`), `logging` (`level`,
+`format`, `console`, `file`, `filename`) and `mail` (MAIL-1) have effect:
+`logging.format` is the format of log lines, and `paths.migrations` is the
+folder `quantum migrate` uses. A key outside these lists is warned about when
+the configuration is loaded, as in CFG-2.
+
+## 9. Running (`quantum run`)
+
+**RUN-1** — Running a component does not create files or start services the
+program does not use, and the output does not carry the framework's internal
+log. Each service (database, jobs, AI, queues…) exists in a single instance per
+run, shared by all tags.
+
+**RUN-2** — A handled failure — one the language hands to the program, like
+`q:invoke`'s `<name>_result` — appears as a message, never as a Python
+traceback.
+
+**RUN-3** — `quantum stop` stops only the server that wrote `.quantum.pid`.
+The file records each server process's PID and start time; a live PID whose
+process started at another time (the number was reused), or a line without a
+start time, is not killed: the stale file is removed, the command says so and
+exits with 1. It reports "Server stopped" and exits with 0 only when every
+process it stopped has ended.
+
+## 9a. `q:application`
+
+**APP-1** — A web application is pages in `components/` served by
+`quantum start`. `q:application` with `type="html"`, `type="api"`,
+`type="microservices"` or without `type` is a parse error, which says to use
+`components/` and `quantum start`. The types `game`, `terminal` and `ui`
+exist, outside the Core (Laboratory and Experimental), and are not specified.
+
+**APP-2** — The `qtest:` testing engine was removed in 0.22.
+`q:application` with `type="testing"`, and a `qtest:` tag anywhere in a file,
+is a parse error that says the engine was removed in 0.22 and names its
+replacement, `quantum test`. A `qtest:` tag reports its own line.
+
+---
+
+## 10. UI (`ui:*`)
+
+**UI-0** — Building a UI (`quantum run app.q --target html|textual`) requires
+`<q:application type="ui">`; any other file is an error that says how to fix
+it. Each target writes its own file: `<id>.html`, `<id>_console.py`.
+
+**UI-1** — Inside a served page, `ui:*` elements are drawn with the page's
+runtime: `{expressions}` resolved by it — and escaped —, `q:loop`, `q:if` and
+plain HTML between them. An event is a `q:action` of the page:
+`<ui:button on-click="save" with="id={t.id}">` sends the form of the action
+`save` with the field `id`; `<ui:form on-submit="create">` sends its fields
+(`<ui:input bind="title">` is the field `title`). An event that does not name a
+`q:action` of the page is an error, and a `ui:` tag that does not exist is an
+error with a suggestion. A statement inside `ui:*` is an error, as inside HTML
+(PARSE-2). The direct text of a `ui:*` container is content
+(`<ui:card-header>Summary</ui:card-header>`).
+
+**UI-2** — The responsive layout is declared on the `ui:*` elements, with three
+breakpoints: `sm` (below 640 px), `md` (768 px) and `lg` (1024 px).
+`stack-below="md"` on a `ui:hbox` stacks its children below the breakpoint
+(and their fixed widths stop applying); `hide-below` and `hide-above` hide the
+element; `grow="true"` makes the element take what is left of the row;
+`<ui:grid columns="1 sm:2 lg:3">` has one column, two from `sm` and three from
+`lg`. A breakpoint or column count outside this is an error. It applies equally
+to the served app and to the HTML generated by `quantum run --target html`.
+
+**UI-3** — A renderer that is not the browser asks for the page with
+`Accept: application/vnd.quantum.view+json` and receives the view tree: the
+`ui:*` elements with their properties already resolved by the runtime (not
+escaped — whoever draws escapes), `q:loop` and `q:if` already expanded, and on
+each button or form the event with the action and the fields.
+`quantum console` opens the application's pages in the terminal this way: it
+starts the application's server and sends the same actions the browser sends,
+with a session — login, validation, flash and redirects are the web's. In the
+terminal, UI-2's breakpoints count columns (`sm` 80, `md` 96, `lg` 128) and a
+width in px is px/8 columns.
+
+**UI-4** — `quantum desktop` opens the application in a system window
+(pywebview, extra `[desktop]`): it starts the application's server on a free
+port of `127.0.0.1` and opens the window on it, at the page asked for (`/` if
+none). The window is a browser without a toolbar: pages, actions, session and
+UI-2 are the web's, and the server stops when the window closes. Without
+pywebview installed, the command exits with an error that says what to install.
+A page's title is the same in every renderer: the `title` of the page's first
+`ui:window` (with its expressions resolved), else the component's name.
+
+**UI-5** — `<ui:table source="{rows}">` draws one row per item of the list (a
+`q:query` or an array), with the row variable set as `q:loop` sets it (`as=`,
+`row` by default; `row.field` for dictionary rows). `<ui:column key="name">`
+shows the field, escaped; a column with content draws it once per row
+(`<ui:button on-click="delete" with="id={row.id}">`).
+`<ui:list source="{items}" as="item">` repeats its content per item (`item` by
+default). A `source` that does not resolve to a list is an error, and a `key`
+the row does not have is an error that lists the fields — never an empty
+table. Without any `ui:column`, the table shows one column per field of its
+rows, in the order the query returns them, with the field name as the header
+(`opened_on` → "Opened on").
+
+**UI-6** — Form fields open with a value: `value=` on `ui:input`, `ui:select`
+and `ui:radio` (the option with that value is chosen) and `checked=` on
+`ui:checkbox` and `ui:switch` (`true`, `1`, `on`, `yes` or an expression that
+resolves to one of them). When sent, a checked box goes as `on` and an
+unchecked one does not go, as in the browser — use `<q:param default="off">`
+in the action.
+
+**UI-7** — The Core set of `ui:*` is drawn with the same meaning by every
+renderer (browser, console, desktop): `window`, `hbox`, `vbox`, `grid`,
+`panel`, `section`, `scrollbox`, `spacer`, `rule`, `header`, `footer`, `card`
+(`card-header`, `card-body`, `card-footer`), `tabpanel`/`tab`, `text`, `badge`,
+`alert`, `link`, `image`, `progress`, `table`/`column`, `list`/`item`, `form`,
+`formitem`, `input`, `checkbox`, `switch`, `radio`, `select`/`option`,
+`button`, `pager` (UI-11), `history` (DB-11) and `stream` (IA-7). The same
+script (look, fill in, check, choose, click) passes the same in the browser and
+in the console. `ui:section` is a titled group, always open; the title of a
+`ui:card` shows even next to a `ui:card-header`. The other `ui:*` tags work
+only in the browser (Experimental), and the console shows that it does not draw
+them instead of drawing something else in their place.
+
+**UI-8** — `q:application type="ui"` compiles a standalone file with the layout
+only: `--target html` (one page) and `--target textual` (a Textual app). Logic
+inside it (`q:set`, `q:function`, any statement) is an error that says to write
+the screen as a page — logic runs in the page's runtime. `--target desktop` was
+removed (it translated the logic to a JavaScript bridge of its own); the
+desktop is `quantum desktop` (UI-4). `--target mobile` (React Native) is
+Laboratory: it warns once and keeps translating the logic, with no promise.
+
+**UI-9** — A `<ui:form on-submit="x">` takes each field's rules from action
+`x`'s `q:param`s: `required`, `minlength`, `maxlength`, `min`, `max`, the type
+(`integer`/`number`/`decimal` → `type="number"`, `email`, `url`, `date`, `file`),
+the `pattern` when it is anchored (`^…$`, which means the same in the browser
+and on the server) and, on a `ui:select`/`ui:radio` without options, the
+`enum`. An attribute written on the field wins; `rules="off"` on the form turns
+it off. The server always validates (ACT-2), checking every field: when it
+fails, the next render of that form — in the browser and in the console —
+shows the values sent (never of a password or file field) and each field's
+error next to it, once, like the flash. A box comes back as it was sent:
+checked if it came, unchecked if not.
+
+**UI-10** — `<q:action table="t" datasource="d">` takes its `q:param`s from the
+table's schema, read from the database (and read again when the database file
+changes): each column but the primary key, in the table's order — or only
+those of `columns="a,b"`, in that order. NOT NULL without a default becomes
+`required`; `CHECK (c IN (...))`, `enum`; `VARCHAR(n)`, `maxlength`; the
+column's type, the param's type (`INTEGER` → `integer`, `REAL`/`NUMERIC` →
+`decimal`, `BOOLEAN` → `boolean`, `DATE` → `date`); a column that accepts NULL,
+left blank, reaches the action as `None`; and a foreign key must name an
+existing row. A `q:param` written in the action wins over the schema's. A
+`<ui:form on-submit>` without fields of its own draws one field per param (with
+a label taken from the name: `author_id` → "Author"): `boolean` becomes a box,
+`enum` a selection, a foreign key a selection with the rows of the referenced
+table (label: the first text column, preferring `name`, `title`...), and a
+button (`submit=` gives its text). `values="{row}"` opens the form with the
+values of a row (a one-row query works). `table` without `datasource`, and a
+table or column that does not exist, are errors; `quantum check` (DEV-3)
+checks the table and the columns.
+
+**UI-11** — `<ui:pager for="query">` draws, over a paginated query (DB-2), the
+previous page, the numbers around the current page (`window`, 2 by default, on
+each side; the first and the last always; `…` where it skips) and the next, as
+links to the same page with the `page` parameter (or `param=`'s) replaced and
+the URL's other parameters kept. At the ends, previous and next are not links;
+the current page is marked (`aria-current`). With a single page, nothing is
+drawn. In the console, the same items as links. A query that does not exist or
+is not paginated is an error; `for` is required.
+
+**UI-12** — `<ui:input bind="q" search="target">` is search as you type: a GET
+form to the page itself (Enter searches without JavaScript), with the URL's
+other parameters kept and `page` dropped (a new search starts on page 1); with
+htmx, each pause of `delay` ms (300 by default) asks for the page with `?q=`
+and swaps only the element with `id="target"`, putting the search in the URL.
+The field opens with the URL's value. In the console, the same search after
+the pause, and the field keeps the focus and the text typed so far, with the
+cursor at the end — what is typed next adds to it. A `search` without `bind`, a `delay`
+that is not a number, a search field inside a `ui:form` and a target that is
+not on the page are errors.
+
+**UI-13** — `<ui:table source="{query}" sort="true">` puts links on the headers
+of the columns with a `key` that change `?sort=` and `?dir=` (asc/desc; the
+current one marked ▲/▼; the other parameters kept, `page` dropped); the query
+needs `sortable="true"`, which sorts in SQL — before pagination — by a column
+it returns, checked with `LIMIT 0`; a column from the URL that does not exist
+is ignored, never turned into SQL. `<ui:table edit="t" datasource="d">` makes
+each shown column of table `t` (but the primary key and those with
+`edit="false"`) a form in the cell, which posts to the generated action
+`__edit`: the server accepts only a table and column the page declares
+editable, runs the page's guards (AUTH-6), validates the value with the
+column's rules (UI-10) and updates one row by its key; a refused value comes
+back in the cell, with the error. The rows must carry the primary key. What it
+runs shows in `/_dev`. In the console, headers are links and cells are fields
+that save on Enter.
+
+**UI-14** — `<ui:input rows="n">` (n ≥ 2) is a multi-line field: a `<textarea>`
+in the browser, whose value is escaped, and a text area in the console. A
+`ui:form` whose action takes a `q:param type="file"`, or that has a `ui:input
+type="file"`, posts `multipart/form-data`; the field for a file param is a file
+input with the param's `accept`. A file is never filled back into the form. In
+the console a file field is a note (a terminal has no file picker) and the form
+posts without it. `submit="…"` adds that button to a form that has none, also
+when the form has fields of its own.
+
+## 11. Development
+
+**DEV-1** — With `server.debug: true`, the server records the process's last 30
+requests and `/_dev` shows them: component, `q:action`, each query
+(datasource, SQL, parameters, rows or the database's error, time), the action's
+or the page's variables and the `session` and `application` scopes, the
+redirect and the flash — all escaped. `/_dev/<n>` shows request `n`. With
+`debug: false` nothing is recorded and `/_dev` does not exist; and it only
+answers requests from the same machine (`127.0.0.1`, `::1`) — from another
+address it is 404. `quantum start` prints the panel's address.
+
+**DEV-2** — An error says where it is: a parse error carries `line` and the
+message ends in `at line N: <the line>`; an execution or rendering error points
+to the innermost statement or element that failed, in its own file (inside a
+called component, the component's file, not the call). With `debug: true`, the
+error page shows the lines around the one that failed, marked, the message,
+links to the rules it cites and the Python traceback folded; with
+`debug: false`, nothing of the source. Everything on the error page is escaped.
+With `debug: true` and no `secret_key` configured, the session key is kept in
+`.quantum/dev-secret-key`, next to the config, and the session survives a
+reload.
+
+**DEV-3** — `quantum check` reads the project as the server does and points
+out, with file and line: a page that does not parse; a `q:query` whose SQL does
+not compile against the datasource's database, with the database's message
+(queries in `q:agent` tools included); a datasource that is not declared; and
+each `{query.field}` the page reads — directly, through a `q:loop` over the
+query, through `ui:table`/`ui:list` with `source`, or `<ui:column key>` — that
+the query does not return. Nothing runs: the SQL is compiled (`EXPLAIN`), the
+columns of a SELECT come from it with `LIMIT 0`, and the database is opened
+read-only. A datasource that does not open (missing file, unsupported driver)
+is a note, not a silent OK. The command exits with 1 if there is a problem.
+
+**DEV-4** — `quantum start --hot-reload` watches the `paths.components` and
+`paths.static` folders, and every page it serves opens a WebSocket to it
+(port 35729, or `--hot-reload-port`). When a `.q`, `.html`, `.js`, `.yaml` or
+`.yml` file there changes, the open pages reload, keeping what was typed in
+their forms; when only `.css` changes, the stylesheets are fetched again
+without reloading. A changed `.q` that no longer parses is not reloaded: the
+page shows the file and the parse error over it until the file is fixed.
+Without `--hot-reload` nothing is watched and no script is added to the pages.
+
+## 12. Tests
+
+An app is tested in its own language: a `*.test.q` file holds `q:test`
+elements, each a list of `test:` steps, and `quantum test` runs them against
+the app.
+
+**TEST-1** — `quantum test [path…]` finds the `*.test.q` files under each path
+(default `.`; a path may also be one test file) — next to the pages in
+`components/` and anywhere else in the app, such as `tests/` — and each one
+belongs to the app of the nearest `quantum.config.yaml` above it. Each `q:test`
+runs in a world of its own: a new temporary SQLite database per datasource,
+built by the app's migrations (`paths.migrations`, DB-10); a new server and a
+new session; uploads, logs and extracted assets in a temporary folder — nothing
+is written to the app's folder or its databases. The steps run in order,
+in-process, through the same server `quantum start` serves (ACT-10), with no
+port opened. A step that does not hold ends the test, and the report shows the
+test file and line of that step; when the failure comes from a request that
+failed, it also shows the page's file and line (DEV-2). A `test:visit` or
+`test:submit` whose request answers `400` or more fails at that step, with the
+page's error — unless the next step is a `test:expect status="…"`. The command
+exits with 0 when every test passed and with 1 otherwise, including when a file
+does not parse, a path does not exist, or no test is found. Only `sqlite`
+datasources are supported; with several datasources and migrations, which one
+the migrations build is ambiguous, and the test fails saying so.
+
+**TEST-2** — `<test:given table="…" col="value" …/>` inserts one row, checked
+against the schema of the test's database: an unknown table or column, a value
+outside a `CHECK … IN` list, a non-integer in an `INTEGER` column, a non-number
+in a numeric one, a foreign key with no row to point at, or any constraint the
+database refuses is a failure of that step, never a silent insert. A `NOT
+NULL` column with no default that the step does not give gets a generated
+value: the first value of its `CHECK … IN` list, the first row of the table a
+foreign key references, a number for a numeric column, or `"<column> <n>"`
+for text. `datasource="…"` chooses the datasource when there are several.
+
+**TEST-3** — The test starts on `page` (`/` by default). `<test:visit/>` GETs
+the page (or `path="…"`), with its other attributes as the query string.
+`<test:submit action="…" field="value" …/>` posts the action with the other
+attributes as the form's fields to the page the test is on, like a form on
+that page, with the page as the `Referer` — the same path a browser's post
+takes: the page's guards, `require_auth`, the action's `q:param` rules
+(ACT-2, UI-9), history (DB-11), the redirect and the flash. A page with a
+single `q:action` runs it whatever name is posted (ACT-1); when the page ran
+another action than the one the step names, the step fails. Both follow
+redirects like a browser, and the test is then on the page it ended at.
+`<test:as user="…" role="…" id="…"/>` signs the session in as that user
+(`userName`, `userRole`, `userId`, as `AuthService.login` sets them) without a
+password; its other attributes are set as `session` variables.
+
+**TEST-4** — `<test:expect …/>` asserts on the last `test:visit` or
+`test:submit`; each attribute is one assertion and all of them must hold:
+`status="302"` — the response to the request itself, before any redirect was
+followed; `redirect="/path"` — its `Location`, path, query and `#fragment`;
+`flash="…"` — the flash message the request set, exactly (or, when there was
+none to carry, the one the page showed); `text="…"` / `no-text="…"` — the page
+the test is on shows (or does not show) the text, with tags removed and
+spaces collapsed; `error="field"` (with `message="…"`) — the submit was refused
+with an error on that field (UI-9); `var="name" value="…"` — the variable of
+the page (or of the action) ended with that value, compared as text;
+`queries="N"` or `queries="at most N"` — the queries the request itself ran,
+as the `/_dev` recorder counts them (DEV-1); `table="…"` (with `where="…"`,
+`count="N"`) — the rows of the test's database, at least one without `count`;
+`history="table"` (with `action`, `op`, `user`, `where`, `count`) — the
+entries `history: true` recorded for that table (DB-11). An assertion about a
+request made before any `test:visit` or `test:submit` fails and says so. A
+`test:expect` with no assertion, with an attribute that is not one, with
+`table` and `history` together, or with a detail (`message`, `value`, `where`,
+`count`, `action`, `op`, `user`, `datasource`) and not its assertion, is a
+parse error; so are a tag other than `q:test`, `test:given`, `test:as`,
+`test:visit`, `test:submit` and `test:expect`, an attribute of `q:test` other
+than `name` and `page`, text or elements inside a step, and two tests with the
+same name. Parse errors name the file and line (PARSE-3, DEV-2).
+
+## Open questions
+
+Measured gaps not yet decided. Each is an `xfail(strict=True)` test in
+`tests/conformance/test_known_gaps.py`, with the proposed behavior; once
+decided, it becomes a rule above and the test moves.
+
+None open.
+
+G1–G19 were decided and became the rules above.

@@ -1,0 +1,228 @@
+"""
+Invoke Executor - Execute q:invoke statements
+
+Handles function, component, and HTTP invocations with caching.
+"""
+
+from typing import Any, List, Dict, Type
+import json
+from quantum.runtime.executors.base import BaseExecutor, ExecutorError
+from quantum.core.features.invocation.src.ast_node import InvokeNode
+
+
+class InvokeExecutor(BaseExecutor):
+    """
+    Executor for q:invoke statements.
+
+    Supports:
+    - Function invocation (local functions)
+    - Component invocation (other .q components)
+    - HTTP invocation (REST APIs)
+    - Response caching with TTL
+    """
+
+    @property
+    def handles(self) -> List[Type]:
+        return [InvokeNode]
+
+    def execute(self, node: InvokeNode, exec_context) -> Any:
+        """
+        Execute invocation.
+
+        Args:
+            node: InvokeNode with invocation configuration
+            exec_context: Execution context
+
+        Returns:
+            None (stores result in context)
+        """
+        try:
+            context = exec_context.get_all_variables()
+
+            invocation_type = node.get_invocation_type()
+
+            if invocation_type == "unknown":
+                raise ExecutorError(
+                    f"Invoke '{node.name}' requires one of: function, component, url or service"
+                )
+
+            # Build parameters based on type
+            if invocation_type == "function":
+                params = self._build_function_params(node, context)
+            elif invocation_type == "component":
+                params = self._build_component_params(node, context)
+            elif invocation_type == "http":
+                params = self._build_http_params(node, context)
+            elif invocation_type == "service":
+                result = self._invoke_service(node, context)
+                self._store_result(node, result, exec_context)
+                params = None
+            else:
+                raise ExecutorError(f"Unsupported invocation type: {invocation_type}")
+
+            # Check cache
+            if params is None:
+                pass
+            elif node.cache:
+                cache_key = f"invoke_{node.name}_{hash(str(params))}"
+                cached = self.services.invocation.get_from_cache(cache_key)
+                if cached is not None:
+                    self._store_result(node, cached, exec_context)
+                    return
+
+            if params is not None:
+                # Execute invocation
+                result = self.services.invocation.invoke(
+                    invocation_type,
+                    params,
+                    context=self.runtime
+                )
+
+                # Cache result
+                if node.cache and result.success:
+                    cache_key = f"invoke_{node.name}_{hash(str(params))}"
+                    self.services.invocation.put_in_cache(cache_key, result, node.ttl)
+
+                # Store result
+                self._store_result(node, result, exec_context)
+
+        except Exception as e:
+            raise ExecutorError(f"Invoke execution error in '{node.name}': {e}")
+
+        # INV-2: same rule as q:data and q:query — a failure stops the
+        # component, unless onerror="continue" says the program handles it.
+        if not result.success and getattr(node, 'on_error', 'fail') != 'continue':
+            err = result.error
+            reason = err.get('message', 'unknown error') if isinstance(err, dict) else str(err)
+            raise ExecutorError(
+                f"q:invoke '{node.name}' failed: {reason}. "
+                f"Add onerror=\"continue\" to handle it with {node.name}_result instead.")
+
+    def _invoke_service(self, node: InvokeNode, context: Dict[str, Any]):
+        """q:invoke service="name" (SVC-3): call a function declared with @service.
+
+        The q:param children are the keyword arguments, converted by their
+        type= like any other q:param. It was parsed since the first version
+        ("Service discovery (Phase 2)") and failed at runtime with
+        "Unsupported invocation type: service".
+        """
+        import time
+        from quantum import services
+        from quantum.core.features.invocation.src.runtime import InvocationResult
+        from quantum.runtime import param_validation
+
+        services.load(self.services.config.get('services') or [])
+        func = services.get(node.service)
+
+        args = self._param_args(node, context)
+        for param in node.params:
+            if param.name in args and getattr(param, 'type', None):
+                coerced, err = param_validation.coerce(param, args[param.name])
+                if err:
+                    raise ExecutorError(err)
+                args[param.name] = coerced
+
+        started = time.time()
+        try:
+            data = func(**args)
+        except TypeError as exc:
+            return InvocationResult(success=False, invocation_type='service',
+                                    error={'message': f"service '{node.service}': {exc}"})
+        except Exception as exc:  # noqa: BLE001 — the service's own failure (INV-2)
+            return InvocationResult(success=False, invocation_type='service',
+                                    error={'message': f"service '{node.service}' failed: {exc}",
+                                           'type': type(exc).__name__})
+        return InvocationResult(success=True, data=data, invocation_type='service',
+                                execution_time=(time.time() - started) * 1000)
+
+    def _param_args(self, node: InvokeNode, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Resolve <q:param> children into call arguments.
+
+        This used to read `param.default`, but the invoke parser stores the
+        value= attribute on `param.value` — `default` is only the fallback.
+        So every argument arrived as the empty string and
+        <q:param name="n" value="21" /> passed ''.
+        """
+        args = {}
+        for param in node.params:
+            raw = getattr(param, 'value', None)
+            if raw is None:
+                raw = param.default
+            args[param.name] = self.apply_databinding(raw if raw is not None else "", context)
+        return args
+
+    def _build_function_params(self, node: InvokeNode, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Build parameters for function invocation"""
+        args = self._param_args(node, context)
+        return {
+            'function': node.function,
+            'args': args
+        }
+
+    def _build_component_params(self, node: InvokeNode, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Build parameters for component invocation"""
+        args = self._param_args(node, context)
+        return {
+            'component': node.component,
+            'args': args
+        }
+
+    def _build_http_params(self, node: InvokeNode, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Build parameters for HTTP invocation"""
+        url = self.apply_databinding(node.url, context)
+
+        headers = {}
+        for header_node in node.headers:
+            header_value = self.apply_databinding(header_node.value, context)
+            headers[header_node.name] = header_value
+
+        if 'Content-Type' not in headers and 'content-type' not in headers:
+            headers['Content-Type'] = node.content_type
+
+        # Same value=/default fallback as function and component calls: this
+        # read only `default`, so <q:param name="q" value="x"/> sent q=''.
+        query_params = self._param_args(node, context)
+
+        body = None
+        if node.body:
+            body = self.apply_databinding(node.body, context)
+            if isinstance(body, str) and 'json' in node.content_type.lower():
+                try:
+                    body = json.loads(body)
+                except Exception:
+                    pass
+
+        return {
+            'url': url,
+            'method': node.method,
+            'headers': headers,
+            'params': query_params,
+            'body': body,
+            'auth_type': node.auth_type,
+            'auth_token': self.apply_databinding(node.auth_token, context) if node.auth_token else None,
+            'auth_header': node.auth_header,
+            'auth_username': self.apply_databinding(node.auth_username, context) if node.auth_username else None,
+            'auth_password': self.apply_databinding(node.auth_password, context) if node.auth_password else None,
+            'timeout': node.timeout,
+            'retry': node.retry,
+            'retry_delay': node.retry_delay,
+            'response_format': node.response_format
+        }
+
+    def _store_result(self, node: InvokeNode, result, exec_context):
+        """Store invocation result in context"""
+        exec_context.set_variable(node.name, result.data, scope="component")
+
+        result_dict = {
+            'success': result.success,
+            'data': result.data,
+            'error': result.error,
+            'executionTime': result.execution_time,
+            'invocationType': result.invocation_type,
+            'metadata': result.metadata
+        }
+
+        exec_context.set_variable(f"{node.name}_result", result_dict, scope="component")
+
+        if node.result:
+            exec_context.set_variable(node.result, result_dict, scope="component")

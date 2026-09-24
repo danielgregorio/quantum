@@ -1,0 +1,628 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009"
+               xmlns:s="library://ns.adobe.com/flex/spark"
+               xmlns:mx="library://ns.adobe.com/flex/mx"
+               width="1400" height="900"
+               title="E-Commerce Admin Dashboard">
+
+    <fx:Script>
+        <![CDATA[
+            // ========== DATA MODELS ==========
+
+            [Bindable] public var currentView:String = "dashboard";
+
+            // Dashboard Stats
+            [Bindable] public var totalRevenue:Number = 45280.50;
+            [Bindable] public var totalOrders:Number = 1247;
+            [Bindable] public var totalCustomers:Number = 892;
+            [Bindable] public var totalProducts:Number = 234;
+
+            // Products Data
+            [Bindable] public var products:Array = [
+                {id: 1, name: "Laptop Pro 15\"", category: "Electronics", price: 1299.99, stock: 45, status: "Active"},
+                {id: 2, name: "Wireless Mouse", category: "Electronics", price: 29.99, stock: 156, status: "Active"},
+                {id: 3, name: "USB-C Hub", category: "Electronics", price: 49.99, stock: 89, status: "Active"},
+                {id: 4, name: "Mechanical Keyboard", category: "Electronics", price: 159.99, stock: 23, status: "Active"},
+                {id: 5, name: "4K Monitor 27\"", category: "Electronics", price: 449.99, stock: 12, status: "Low Stock"},
+                {id: 6, name: "Webcam HD", category: "Electronics", price: 79.99, stock: 67, status: "Active"},
+                {id: 7, name: "Desk Lamp LED", category: "Office", price: 34.99, stock: 145, status: "Active"},
+                {id: 8, name: "Office Chair", category: "Furniture", price: 299.99, stock: 8, status: "Low Stock"},
+                {id: 9, name: "Standing Desk", category: "Furniture", price: 599.99, stock: 15, status: "Active"},
+                {id: 10, name: "Noise Cancelling Headphones", category: "Electronics", price: 249.99, stock: 0, status: "Out of Stock"}
+            ];
+
+            [Bindable] public var selectedProduct:Object = null;
+            [Bindable] public var productSearchQuery:String = "";
+
+            // Orders Data
+            [Bindable] public var orders:Array = [
+                {id: "ORD-1001", customer: "John Smith", date: "2025-11-07", total: 1329.98, status: "Pending", items: 2},
+                {id: "ORD-1002", customer: "Sarah Johnson", date: "2025-11-07", total: 79.99, status: "Processing", items: 1},
+                {id: "ORD-1003", customer: "Mike Brown", date: "2025-11-06", total: 649.98, status: "Shipped", items: 3},
+                {id: "ORD-1004", customer: "Emily Davis", date: "2025-11-06", total: 249.99, status: "Delivered", items: 1},
+                {id: "ORD-1005", customer: "David Wilson", date: "2025-11-05", total: 1849.95, status: "Delivered", items: 5},
+                {id: "ORD-1006", customer: "Lisa Anderson", date: "2025-11-05", total: 299.99, status: "Cancelled", items: 1},
+                {id: "ORD-1007", customer: "Tom Martinez", date: "2025-11-04", total: 529.98, status: "Delivered", items: 2},
+                {id: "ORD-1008", customer: "Anna Lee", date: "2025-11-04", total: 159.99, status: "Delivered", items: 1}
+            ];
+
+            [Bindable] public var selectedOrder:Object = null;
+            [Bindable] public var orderStatusFilter:String = "All";
+
+            // Customers Data
+            [Bindable] public var customers:Array = [
+                {id: 1, name: "John Smith", email: "john.smith@email.com", orders: 15, totalSpent: 4523.85, joined: "2024-03-15"},
+                {id: 2, name: "Sarah Johnson", email: "sarah.j@email.com", orders: 8, totalSpent: 2156.40, joined: "2024-05-22"},
+                {id: 3, name: "Mike Brown", email: "mike.brown@email.com", orders: 23, totalSpent: 8934.50, joined: "2023-11-10"},
+                {id: 4, name: "Emily Davis", email: "emily.d@email.com", orders: 12, totalSpent: 3421.75, joined: "2024-01-08"},
+                {id: 5, name: "David Wilson", email: "d.wilson@email.com", orders: 31, totalSpent: 12456.20, joined: "2023-08-20"}
+            ];
+
+            // Product Form
+            [Bindable] public var editingProduct:Boolean = false;
+            [Bindable] public var formProductName:String = "";
+            [Bindable] public var formProductPrice:Number = 0;
+            [Bindable] public var formProductStock:Number = 0;
+            [Bindable] public var formProductCategory:String = "Electronics";
+
+            // ========== NAVIGATION ==========
+
+            public function showDashboard():void {
+                currentView = "dashboard";
+            }
+
+            public function showProducts():void {
+                currentView = "products";
+            }
+
+            public function showOrders():void {
+                currentView = "orders";
+            }
+
+            public function showCustomers():void {
+                currentView = "customers";
+            }
+
+            // ========== PRODUCTS ==========
+
+            public function searchProducts():void {
+                trace("Searching products: " + productSearchQuery);
+                // In real app, would filter products array
+            }
+
+            public function addProduct():void {
+                editingProduct = true;
+                formProductName = "";
+                formProductPrice = 0;
+                formProductStock = 0;
+                formProductCategory = "Electronics";
+            }
+
+            public function editProduct():void {
+                if (selectedProduct != null) {
+                    editingProduct = true;
+                    formProductName = selectedProduct.name;
+                    formProductPrice = selectedProduct.price;
+                    formProductStock = selectedProduct.stock;
+                    formProductCategory = selectedProduct.category;
+                }
+            }
+
+            public function saveProduct():void {
+                if (selectedProduct != null) {
+                    // Update existing product
+                    selectedProduct.name = formProductName;
+                    selectedProduct.price = formProductPrice;
+                    selectedProduct.stock = formProductStock;
+                    selectedProduct.category = formProductCategory;
+
+                    Alert.show("Product updated successfully!", "Success", Alert.OK, null, null, Alert.INFO);
+                } else {
+                    // Add new product
+                    var newId = products.length + 1;
+                    var newProduct = {
+                        id: newId,
+                        name: formProductName,
+                        category: formProductCategory,
+                        price: formProductPrice,
+                        stock: formProductStock,
+                        status: formProductStock > 20 ? "Active" : "Low Stock"
+                    };
+                    products.push(newProduct);
+
+                    Alert.show("Product added successfully!", "Success", Alert.OK, null, null, Alert.INFO);
+                }
+
+                editingProduct = false;
+                selectedProduct = null;
+            }
+
+            public function cancelEdit():void {
+                editingProduct = false;
+                selectedProduct = null;
+            }
+
+            public function deleteProduct():void {
+                if (selectedProduct != null) {
+                    Alert.show("Product deleted: " + selectedProduct.name, "Deleted", Alert.OK, null, null, Alert.WARNING);
+                    // In real app, would remove from array
+                    selectedProduct = null;
+                }
+            }
+
+            // ========== ORDERS ==========
+
+            public function filterOrders():void {
+                trace("Filtering orders by status: " + orderStatusFilter);
+                // In real app, would filter orders array
+            }
+
+            public function updateOrderStatus():void {
+                if (selectedOrder != null) {
+                    var currentStatus = selectedOrder.status;
+                    var newStatus = "";
+
+                    if (currentStatus == "Pending") {
+                        newStatus = "Processing";
+                    } else if (currentStatus == "Processing") {
+                        newStatus = "Shipped";
+                    } else if (currentStatus == "Shipped") {
+                        newStatus = "Delivered";
+                    } else {
+                        newStatus = currentStatus;
+                    }
+
+                    selectedOrder.status = newStatus;
+                    Alert.show("Order status updated to: " + newStatus, "Updated", Alert.OK, null, null, Alert.INFO);
+                }
+            }
+
+            public function cancelOrder():void {
+                if (selectedOrder != null) {
+                    selectedOrder.status = "Cancelled";
+                    Alert.show("Order cancelled: " + selectedOrder.id, "Cancelled", Alert.OK, null, null, Alert.WARNING);
+                }
+            }
+
+            // ========== DASHBOARD ==========
+
+            public function refreshDashboard():void {
+                Alert.show("Dashboard data refreshed!", "Refreshed", Alert.OK, null, null, Alert.INFO);
+            }
+        ]]>
+    </fx:Script>
+
+    <!-- ========== MAIN LAYOUT ========== -->
+
+    <s:HBox width="100%" height="100%" gap="0">
+
+        <!-- Sidebar Navigation -->
+        <s:VBox width="250" height="100%" backgroundColor="#2c3e50" padding="0">
+
+            <!-- Logo/Header -->
+            <s:VBox width="100%" padding="20" backgroundColor="#1a252f">
+                <s:Label text="⚡ ShopAdmin" fontSize="24" fontWeight="bold" color="#ecf0f1" />
+                <s:Label text="E-Commerce Dashboard" fontSize="11" color="#95a5a6" />
+            </s:VBox>
+
+            <!-- Navigation Menu -->
+            <s:VBox width="100%" gap="5" padding="15">
+
+                <s:Button label="📊 Dashboard" width="100%"
+                          click="showDashboard()"
+                          styleName="{currentView == 'dashboard' ? 'nav-active' : 'nav-button'}" />
+
+                <s:Button label="📦 Products" width="100%"
+                          click="showProducts()"
+                          styleName="{currentView == 'products' ? 'nav-active' : 'nav-button'}" />
+
+                <s:Button label="🛍️ Orders" width="100%"
+                          click="showOrders()"
+                          styleName="{currentView == 'orders' ? 'nav-active' : 'nav-button'}" />
+
+                <s:Button label="👥 Customers" width="100%"
+                          click="showCustomers()"
+                          styleName="{currentView == 'customers' ? 'nav-active' : 'nav-button'}" />
+
+                <s:Spacer height="20" />
+
+                <s:Button label="⚙️ Settings" width="100%" styleName="nav-button" />
+                <s:Button label="🚪 Logout" width="100%" styleName="nav-button" />
+            </s:VBox>
+
+        </s:VBox>
+
+        <!-- Main Content Area -->
+        <s:VBox width="100%" height="100%" padding="0" backgroundColor="#ecf0f1">
+
+            <!-- ========== DASHBOARD VIEW ========== -->
+            <s:VBox width="100%" height="100%" padding="30" gap="20" includeIn="dashboard">
+
+                <s:Label text="Dashboard" fontSize="28" fontWeight="bold" color="#2c3e50" />
+
+                <!-- KPI Cards -->
+                <s:HBox width="100%" gap="20">
+
+                    <!-- Revenue Card -->
+                    <s:Panel width="25%" title="💰 Total Revenue" backgroundColor="#3498db">
+                        <s:VBox padding="20" gap="10">
+                            <s:Label text="${totalRevenue}" fontSize="32" fontWeight="bold" color="#ffffff" />
+                            <s:Label text="+12.5% from last month" fontSize="12" color="#ecf0f1" />
+                        </s:VBox>
+                    </s:Panel>
+
+                    <!-- Orders Card -->
+                    <s:Panel width="25%" title="📋 Total Orders" backgroundColor="#2ecc71">
+                        <s:VBox padding="20" gap="10">
+                            <s:Label text="{totalOrders}" fontSize="32" fontWeight="bold" color="#ffffff" />
+                            <s:Label text="+8.3% from last month" fontSize="12" color="#ecf0f1" />
+                        </s:VBox>
+                    </s:Panel>
+
+                    <!-- Customers Card -->
+                    <s:Panel width="25%" title="👥 Customers" backgroundColor="#9b59b6">
+                        <s:VBox padding="20" gap="10">
+                            <s:Label text="{totalCustomers}" fontSize="32" fontWeight="bold" color="#ffffff" />
+                            <s:Label text="+15.2% from last month" fontSize="12" color="#ecf0f1" />
+                        </s:VBox>
+                    </s:Panel>
+
+                    <!-- Products Card -->
+                    <s:Panel width="25%" title="📦 Products" backgroundColor="#e74c3c">
+                        <s:VBox padding="20" gap="10">
+                            <s:Label text="{totalProducts}" fontSize="32" fontWeight="bold" color="#ffffff" />
+                            <s:Label text="10 low stock items" fontSize="12" color="#ecf0f1" />
+                        </s:VBox>
+                    </s:Panel>
+
+                </s:HBox>
+
+                <!-- Recent Orders -->
+                <s:Panel width="100%" title="📋 Recent Orders">
+                    <s:VBox padding="15" gap="10" width="100%">
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="Order ID" width="15%" fontWeight="bold" />
+                            <s:Label text="Customer" width="25%" fontWeight="bold" />
+                            <s:Label text="Date" width="20%" fontWeight="bold" />
+                            <s:Label text="Total" width="20%" fontWeight="bold" />
+                            <s:Label text="Status" width="20%" fontWeight="bold" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="ORD-1001" width="15%" />
+                            <s:Label text="John Smith" width="25%" />
+                            <s:Label text="2025-11-07" width="20%" />
+                            <s:Label text="$1,329.98" width="20%" />
+                            <s:Label text="Pending" width="20%" color="#f39c12" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="ORD-1002" width="15%" />
+                            <s:Label text="Sarah Johnson" width="25%" />
+                            <s:Label text="2025-11-07" width="20%" />
+                            <s:Label text="$79.99" width="20%" />
+                            <s:Label text="Processing" width="20%" color="#3498db" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="ORD-1003" width="15%" />
+                            <s:Label text="Mike Brown" width="25%" />
+                            <s:Label text="2025-11-06" width="20%" />
+                            <s:Label text="$649.98" width="20%" />
+                            <s:Label text="Shipped" width="20%" color="#9b59b6" />
+                        </s:HBox>
+
+                        <s:Button label="View All Orders →" click="showOrders()" />
+                    </s:VBox>
+                </s:Panel>
+
+                <s:Button label="🔄 Refresh Dashboard" click="refreshDashboard()" />
+
+            </s:VBox>
+
+            <!-- ========== PRODUCTS VIEW ========== -->
+            <s:VBox width="100%" height="100%" padding="30" gap="20" includeIn="products">
+
+                <s:HBox width="100%" verticalAlign="middle" gap="20">
+                    <s:Label text="Products" fontSize="28" fontWeight="bold" color="#2c3e50" />
+                    <s:Spacer />
+                    <s:Button label="➕ Add Product" click="addProduct()" />
+                </s:HBox>
+
+                <!-- Search Bar -->
+                <s:HBox width="100%" gap="10">
+                    <s:TextInput text="{productSearchQuery}" placeholder="Search products..." width="300" />
+                    <s:Button label="🔍 Search" click="searchProducts()" />
+                </s:HBox>
+
+                <!-- Products Table -->
+                <s:Panel width="100%" title="Product List">
+                    <s:VBox padding="15" gap="10" width="100%">
+                        <!-- Header -->
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="ID" width="8%" fontWeight="bold" />
+                            <s:Label text="Product Name" width="30%" fontWeight="bold" />
+                            <s:Label text="Category" width="15%" fontWeight="bold" />
+                            <s:Label text="Price" width="15%" fontWeight="bold" />
+                            <s:Label text="Stock" width="12%" fontWeight="bold" />
+                            <s:Label text="Status" width="20%" fontWeight="bold" />
+                        </s:HBox>
+
+                        <!-- Sample Rows (first 5 products) -->
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="1" width="8%" />
+                            <s:Label text="Laptop Pro 15&quot;" width="30%" />
+                            <s:Label text="Electronics" width="15%" />
+                            <s:Label text="$1,299.99" width="15%" />
+                            <s:Label text="45" width="12%" />
+                            <s:Label text="Active" width="20%" color="#2ecc71" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="2" width="8%" />
+                            <s:Label text="Wireless Mouse" width="30%" />
+                            <s:Label text="Electronics" width="15%" />
+                            <s:Label text="$29.99" width="15%" />
+                            <s:Label text="156" width="12%" />
+                            <s:Label text="Active" width="20%" color="#2ecc71" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="5" width="8%" />
+                            <s:Label text="4K Monitor 27&quot;" width="30%" />
+                            <s:Label text="Electronics" width="15%" />
+                            <s:Label text="$449.99" width="15%" />
+                            <s:Label text="12" width="12%" />
+                            <s:Label text="Low Stock" width="20%" color="#f39c12" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="8" width="8%" />
+                            <s:Label text="Office Chair" width="30%" />
+                            <s:Label text="Furniture" width="15%" />
+                            <s:Label text="$299.99" width="15%" />
+                            <s:Label text="8" width="12%" />
+                            <s:Label text="Low Stock" width="20%" color="#f39c12" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="10" width="8%" />
+                            <s:Label text="Noise Cancelling Headphones" width="30%" />
+                            <s:Label text="Electronics" width="15%" />
+                            <s:Label text="$249.99" width="15%" />
+                            <s:Label text="0" width="12%" />
+                            <s:Label text="Out of Stock" width="20%" color="#e74c3c" />
+                        </s:HBox>
+
+                        <s:Label text="Showing 5 of 234 products" fontSize="11" color="#7f8c8d" />
+                    </s:VBox>
+                </s:Panel>
+
+                <!-- Actions -->
+                <s:HBox gap="10">
+                    <s:Button label="✏️ Edit Selected" click="editProduct()" />
+                    <s:Button label="🗑️ Delete Selected" click="deleteProduct()" />
+                </s:HBox>
+
+                <!-- Product Form (shown when adding/editing) -->
+                <s:Panel width="600" title="{selectedProduct ? 'Edit Product' : 'Add New Product'}" includeIn="editing">
+                    <s:VBox padding="20" gap="15" width="100%">
+
+                        <s:HBox gap="10" width="100%">
+                            <s:Label text="Name:" width="120" />
+                            <s:TextInput text="{formProductName}" width="400" />
+                        </s:HBox>
+
+                        <s:HBox gap="10" width="100%">
+                            <s:Label text="Category:" width="120" />
+                            <s:TextInput text="{formProductCategory}" width="400" />
+                        </s:HBox>
+
+                        <s:HBox gap="10" width="100%">
+                            <s:Label text="Price:" width="120" />
+                            <mx:NumericStepper value="{formProductPrice}" minimum="0" maximum="10000" stepSize="0.01" width="200" />
+                        </s:HBox>
+
+                        <s:HBox gap="10" width="100%">
+                            <s:Label text="Stock:" width="120" />
+                            <mx:NumericStepper value="{formProductStock}" minimum="0" maximum="1000" stepSize="1" width="200" />
+                        </s:HBox>
+
+                        <s:HBox gap="10">
+                            <s:Button label="💾 Save" click="saveProduct()" />
+                            <s:Button label="❌ Cancel" click="cancelEdit()" />
+                        </s:HBox>
+
+                    </s:VBox>
+                </s:Panel>
+
+            </s:VBox>
+
+            <!-- ========== ORDERS VIEW ========== -->
+            <s:VBox width="100%" height="100%" padding="30" gap="20" includeIn="orders">
+
+                <s:Label text="Orders" fontSize="28" fontWeight="bold" color="#2c3e50" />
+
+                <!-- Filter Bar -->
+                <s:HBox width="100%" gap="10" verticalAlign="middle">
+                    <s:Label text="Filter by Status:" />
+                    <s:Button label="All" click="orderStatusFilter = 'All'; filterOrders()" />
+                    <s:Button label="Pending" click="orderStatusFilter = 'Pending'; filterOrders()" />
+                    <s:Button label="Processing" click="orderStatusFilter = 'Processing'; filterOrders()" />
+                    <s:Button label="Shipped" click="orderStatusFilter = 'Shipped'; filterOrders()" />
+                    <s:Button label="Delivered" click="orderStatusFilter = 'Delivered'; filterOrders()" />
+                </s:HBox>
+
+                <!-- Orders Table -->
+                <s:Panel width="100%" title="Order List">
+                    <s:VBox padding="15" gap="10" width="100%">
+                        <!-- Header -->
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="Order ID" width="15%" fontWeight="bold" />
+                            <s:Label text="Customer" width="25%" fontWeight="bold" />
+                            <s:Label text="Date" width="15%" fontWeight="bold" />
+                            <s:Label text="Items" width="10%" fontWeight="bold" />
+                            <s:Label text="Total" width="15%" fontWeight="bold" />
+                            <s:Label text="Status" width="20%" fontWeight="bold" />
+                        </s:HBox>
+
+                        <!-- Order Rows -->
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="ORD-1001" width="15%" />
+                            <s:Label text="John Smith" width="25%" />
+                            <s:Label text="2025-11-07" width="15%" />
+                            <s:Label text="2" width="10%" />
+                            <s:Label text="$1,329.98" width="15%" />
+                            <s:Label text="Pending" width="20%" color="#f39c12" fontWeight="bold" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="ORD-1002" width="15%" />
+                            <s:Label text="Sarah Johnson" width="25%" />
+                            <s:Label text="2025-11-07" width="15%" />
+                            <s:Label text="1" width="10%" />
+                            <s:Label text="$79.99" width="15%" />
+                            <s:Label text="Processing" width="20%" color="#3498db" fontWeight="bold" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="ORD-1003" width="15%" />
+                            <s:Label text="Mike Brown" width="25%" />
+                            <s:Label text="2025-11-06" width="15%" />
+                            <s:Label text="3" width="10%" />
+                            <s:Label text="$649.98" width="15%" />
+                            <s:Label text="Shipped" width="20%" color="#9b59b6" fontWeight="bold" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="ORD-1004" width="15%" />
+                            <s:Label text="Emily Davis" width="25%" />
+                            <s:Label text="2025-11-06" width="15%" />
+                            <s:Label text="1" width="10%" />
+                            <s:Label text="$249.99" width="15%" />
+                            <s:Label text="Delivered" width="20%" color="#2ecc71" fontWeight="bold" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="ORD-1005" width="15%" />
+                            <s:Label text="David Wilson" width="25%" />
+                            <s:Label text="2025-11-05" width="15%" />
+                            <s:Label text="5" width="10%" />
+                            <s:Label text="$1,849.95" width="15%" />
+                            <s:Label text="Delivered" width="20%" color="#2ecc71" fontWeight="bold" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="ORD-1006" width="15%" />
+                            <s:Label text="Lisa Anderson" width="25%" />
+                            <s:Label text="2025-11-05" width="15%" />
+                            <s:Label text="1" width="10%" />
+                            <s:Label text="$299.99" width="15%" />
+                            <s:Label text="Cancelled" width="20%" color="#e74c3c" fontWeight="bold" />
+                        </s:HBox>
+
+                        <s:Label text="Showing 6 of 1,247 orders" fontSize="11" color="#7f8c8d" />
+                    </s:VBox>
+                </s:Panel>
+
+                <!-- Actions -->
+                <s:HBox gap="10">
+                    <s:Button label="✅ Update Status" click="updateOrderStatus()" />
+                    <s:Button label="❌ Cancel Order" click="cancelOrder()" />
+                    <s:Button label="📄 View Details" />
+                    <s:Button label="🖨️ Print Invoice" />
+                </s:HBox>
+
+            </s:VBox>
+
+            <!-- ========== CUSTOMERS VIEW ========== -->
+            <s:VBox width="100%" height="100%" padding="30" gap="20" includeIn="customers">
+
+                <s:Label text="Customers" fontSize="28" fontWeight="bold" color="#2c3e50" />
+
+                <!-- Customers Table -->
+                <s:Panel width="100%" title="Customer List">
+                    <s:VBox padding="15" gap="10" width="100%">
+                        <!-- Header -->
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="ID" width="8%" fontWeight="bold" />
+                            <s:Label text="Name" width="25%" fontWeight="bold" />
+                            <s:Label text="Email" width="30%" fontWeight="bold" />
+                            <s:Label text="Orders" width="12%" fontWeight="bold" />
+                            <s:Label text="Total Spent" width="15%" fontWeight="bold" />
+                            <s:Label text="Joined" width="15%" fontWeight="bold" />
+                        </s:HBox>
+
+                        <!-- Customer Rows -->
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="1" width="8%" />
+                            <s:Label text="John Smith" width="25%" />
+                            <s:Label text="john.smith@email.com" width="30%" />
+                            <s:Label text="15" width="12%" />
+                            <s:Label text="$4,523.85" width="15%" />
+                            <s:Label text="2024-03-15" width="15%" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="2" width="8%" />
+                            <s:Label text="Sarah Johnson" width="25%" />
+                            <s:Label text="sarah.j@email.com" width="30%" />
+                            <s:Label text="8" width="12%" />
+                            <s:Label text="$2,156.40" width="15%" />
+                            <s:Label text="2024-05-22" width="15%" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="3" width="8%" />
+                            <s:Label text="Mike Brown" width="25%" />
+                            <s:Label text="mike.brown@email.com" width="30%" />
+                            <s:Label text="23" width="12%" />
+                            <s:Label text="$8,934.50" width="15%" fontWeight="bold" />
+                            <s:Label text="2023-11-10" width="15%" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="4" width="8%" />
+                            <s:Label text="Emily Davis" width="25%" />
+                            <s:Label text="emily.d@email.com" width="30%" />
+                            <s:Label text="12" width="12%" />
+                            <s:Label text="$3,421.75" width="15%" />
+                            <s:Label text="2024-01-08" width="15%" />
+                        </s:HBox>
+
+                        <s:HBox width="100%" gap="10">
+                            <s:Label text="5" width="8%" />
+                            <s:Label text="David Wilson" width="25%" />
+                            <s:Label text="d.wilson@email.com" width="30%" />
+                            <s:Label text="31" width="12%" fontWeight="bold" />
+                            <s:Label text="$12,456.20" width="15%" fontWeight="bold" />
+                            <s:Label text="2023-08-20" width="15%" />
+                        </s:HBox>
+
+                        <s:Label text="Showing 5 of 892 customers" fontSize="11" color="#7f8c8d" />
+                    </s:VBox>
+                </s:Panel>
+
+                <!-- Actions -->
+                <s:HBox gap="10">
+                    <s:Button label="👤 View Profile" />
+                    <s:Button label="📧 Send Email" />
+                    <s:Button label="📊 View Orders" />
+                </s:HBox>
+
+            </s:VBox>
+
+        </s:VBox>
+
+    </s:HBox>
+
+    <!-- States for different views -->
+    <s:states>
+        <s:State name="dashboard" />
+        <s:State name="products" />
+        <s:State name="orders" />
+        <s:State name="customers" />
+        <s:State name="editing" basedOn="products" />
+    </s:states>
+
+</s:Application>

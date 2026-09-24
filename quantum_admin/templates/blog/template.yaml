@@ -1,0 +1,23 @@
+name: Blog
+description: Full-featured blog with posts, comments, and admin
+icon: "&#128221;"
+category: content
+features:
+  - Posts management
+  - Comments
+  - Categories/Tags
+  - User authentication
+  - Admin panel
+options:
+  - name: include_auth
+    label: Include Authentication
+    type: boolean
+    default: true
+  - name: include_comments
+    label: Enable Comments
+    type: boolean
+    default: true
+  - name: sample_data
+    label: Include Sample Posts
+    type: boolean
+    default: true

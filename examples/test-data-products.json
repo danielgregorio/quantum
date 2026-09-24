@@ -1,0 +1,30 @@
+[
+  {
+    "id": 101,
+    "name": "Laptop",
+    "price": 899.99,
+    "category": "Electronics",
+    "inStock": true
+  },
+  {
+    "id": 102,
+    "name": "Mouse",
+    "price": 25.50,
+    "category": "Electronics",
+    "inStock": true
+  },
+  {
+    "id": 103,
+    "name": "Keyboard",
+    "price": 75.00,
+    "category": "Electronics",
+    "inStock": false
+  },
+  {
+    "id": 104,
+    "name": "Monitor",
+    "price": 299.99,
+    "category": "Electronics",
+    "inStock": true
+  }
+]

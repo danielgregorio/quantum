@@ -1,0 +1,59 @@
+name: example-plugin
+version: 1.0.0
+quantum: ">=1.0.0"
+description: Example plugin demonstrating Quantum plugin architecture
+author: Quantum Framework Team
+license: MIT
+repository: https://github.com/quantum-framework/example-plugin
+
+# Custom tags
+tags:
+  - prefix: "ex"
+    handler: "src.tags:ExampleTagHandler"
+    tags:
+      - hello
+      - counter
+      - timestamp
+
+# Lifecycle hooks
+hooks:
+  - hook_type: before_parse
+    handler: "src.hooks:on_before_parse"
+    priority: 100
+
+  - hook_type: after_render
+    handler: "src.hooks:on_after_render"
+    priority: 100
+
+  - hook_type: on_init
+    handler: "src.hooks:on_plugin_init"
+    priority: 1
+
+# Custom AST nodes
+nodes:
+  - name: HelloNode
+    handler: "src.nodes:HelloNode"
+    base: QuantumNode
+
+  - name: CounterNode
+    handler: "src.nodes:CounterNode"
+    base: QuantumNode
+
+  - name: TimestampNode
+    handler: "src.nodes:TimestampNode"
+    base: QuantumNode
+
+# CLI commands
+cli:
+  - name: greet
+    handler: "src.cli:greet_command"
+    help: "Display a greeting message"
+    aliases:
+      - hello
+
+  - name: plugin-info
+    handler: "src.cli:plugin_info_command"
+    help: "Show plugin information"
+
+# Dependencies (other plugins)
+dependencies: []

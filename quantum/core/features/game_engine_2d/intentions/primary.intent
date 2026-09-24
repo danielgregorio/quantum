@@ -1,0 +1,23 @@
+INTENT: Game Engine 2D
+
+WHEN the developer writes <q:application type="game" engine="2d">
+  containing <qg:scene>, <qg:sprite>, <qg:behavior>, <qg:prefab>, etc.
+THEN the Quantum parser recognises the qg: namespace,
+  builds a Game AST (SceneNode, SpriteNode, BehaviorNode, ...),
+  and the GameCodeGenerator compiles it to a standalone HTML file
+  that uses PixiJS for rendering and Matter.js for physics.
+  The game runs entirely in the browser with no server dependency.
+
+MAGIC:
+  - Auto game loop (PixiJS ticker)
+  - Auto physics sync (Matter.js ↔ PixiJS)
+  - Auto input handling (controls="wasd" → keyboard handlers)
+  - Auto camera follow with lerp
+  - Auto collision dispatch to behavior functions
+  - Auto spritesheet animations
+  - Auto sound triggers on game events
+  - Behaviors compose on sprites (Unity-style MonoBehaviour)
+  - Prefabs instantiate complete game objects
+  - FSM state machines auto-dispatch enter/update/exit
+
+NAMESPACE: qg: for game objects, q: for logic/control flow.

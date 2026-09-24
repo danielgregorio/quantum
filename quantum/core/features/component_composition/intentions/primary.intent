@@ -1,0 +1,226 @@
+intention:
+  name: "Component Composition with q:import and q:slot"
+  version: "2.0.0"
+  category: "component-architecture"
+  goal: |
+    Enable developers to create reusable components that can be composed together
+    using imports, props passing, and content projection (slots). Supports
+    server-side rendering with full databinding integration.
+
+  capabilities:
+    - "Import external components via q:import"
+    - "Pass props from parent to child components"
+    - "Content projection with q:slot"
+    - "Named slots for multiple injection points"
+    - "Parent context databinding in slot content"
+    - "Component auto-resolution by name"
+    - "PascalCase to snake_case conversion"
+    - "Component caching for performance"
+    - "Uppercase tag convention for component calls"
+
+  syntax:
+    primary_tags:
+      - name: "q:import"
+        attributes:
+          - name: "component"
+            type: "string"
+            required: true
+            description: "Name of component to import"
+            examples:
+              - "Button"
+              - "Card"
+              - "Layout"
+          - name: "from"
+            type: "string"
+            required: false
+            description: "Path to component directory"
+            examples:
+              - "./ui"
+              - "../shared"
+          - name: "as"
+            type: "string"
+            required: false
+            description: "Alias for component"
+            examples:
+              - "AdminLayout"
+
+      - name: "q:slot"
+        attributes:
+          - name: "name"
+            type: "string"
+            required: false
+            default: "default"
+            description: "Name of slot for multiple injection points"
+            examples:
+              - "header"
+              - "footer"
+              - "sidebar"
+
+      - name: "ComponentCall"
+        description: "Uppercase tag to call imported component"
+        convention: "PascalCase naming"
+        examples:
+          - "<Button label='Save' />"
+          - "<Card title='Welcome'>Content</Card>"
+
+  structure:
+    import_pattern: |
+      <q:component name="Parent">
+        <q:import component="Button" />
+        <q:import component="Card" from="./ui" />
+
+        <Button label="Click me" color="blue" />
+      </q:component>
+
+    props_pattern: |
+      <q:component name="Button">
+        <q:param name="label" type="string" required="true" />
+        <q:param name="color" type="string" default="blue" />
+
+        <button class="btn btn-{color}">
+          {label}
+        </button>
+      </q:component>
+
+    slot_pattern: |
+      <q:component name="Card">
+        <q:param name="title" type="string" required="true" />
+
+        <div class="card">
+          <h3>{title}</h3>
+          <div class="card-body">
+            <q:slot />
+          </div>
+        </div>
+      </q:component>
+
+    named_slots_pattern: |
+      <q:component name="Layout">
+        <header>
+          <q:slot name="header" />
+        </header>
+        <main>
+          <q:slot />
+        </main>
+        <footer>
+          <q:slot name="footer" />
+        </footer>
+      </q:component>
+
+  examples:
+    - title: "Simple Component Import"
+      quantum_code: |
+        <q:component name="Page">
+          <q:import component="Button" />
+
+          <Button label="Save" color="green" />
+        </q:component>
+      output: |
+        <button class="btn btn-green">Save</button>
+
+    - title: "Props Passing"
+      quantum_code: |
+        <q:component name="Greeting">
+          <q:import component="WelcomeCard" />
+          <q:set name="userName" value="Daniel" />
+
+          <WelcomeCard name="{userName}" role="Admin" />
+        </q:component>
+      output: |
+        <div class="welcome">
+          <h1>Hello, Daniel!</h1>
+          <p>Role: Admin</p>
+        </div>
+
+    - title: "Content Projection with Slot"
+      quantum_code: |
+        <q:component name="Page">
+          <q:import component="Card" />
+
+          <Card title="User Info">
+            <p>Name: John Doe</p>
+            <p>Email: john@example.com</p>
+          </Card>
+        </q:component>
+      output: |
+        <div class="card">
+          <h3>User Info</h3>
+          <div class="card-body">
+            <p>Name: John Doe</p>
+            <p>Email: john@example.com</p>
+          </div>
+        </div>
+
+    - title: "Named Slots"
+      quantum_code: |
+        <q:component name="Page">
+          <q:import component="Layout" />
+
+          <Layout>
+            <template slot="header">
+              <h1>My Site</h1>
+            </template>
+
+            <p>Main content here</p>
+
+            <template slot="footer">
+              <p>© 2025</p>
+            </template>
+          </Layout>
+        </q:component>
+      output: |
+        <header>
+          <h1>My Site</h1>
+        </header>
+        <main>
+          <p>Main content here</p>
+        </main>
+        <footer>
+          <p>© 2025</p>
+        </footer>
+
+    - title: "Nested Components"
+      quantum_code: |
+        <q:component name="Dashboard">
+          <q:import component="Layout" />
+          <q:import component="Card" />
+          <q:import component="Button" />
+
+          <Layout title="Dashboard">
+            <Card title="Stats">
+              <p>Users: 1000</p>
+              <Button label="View Details" />
+            </Card>
+          </Layout>
+        </q:component>
+      output: "Fully composed nested structure"
+
+  use_cases:
+    - "Reusable UI components (buttons, cards, modals)"
+    - "Layout templates (header, sidebar, footer)"
+    - "Form components (inputs, selects, validation)"
+    - "Design system implementation"
+    - "Component libraries"
+    - "Admin dashboards"
+    - "Landing pages with repeated sections"
+
+  implementation_notes:
+    - "Components are resolved from ./components directory by default"
+    - "PascalCase component names convert to snake_case files"
+    - "Props are passed as string attributes"
+    - "Databinding in props uses {variable} syntax"
+    - "Slot content inherits parent execution context"
+    - "Components are cached after first parse"
+    - "Uppercase tags trigger component resolution"
+
+  validation:
+    - "q:import requires 'component' attribute"
+    - "Component files must exist in components directory"
+    - "Required props must be provided in component calls"
+    - "Slot names must be unique within component"
+    - "Component names must start with uppercase letter"
+
+  related_features:
+    - "html_rendering" # Renders component output
+    - "state_management" # Props and variables
+    - "databinding" # Variable interpolation

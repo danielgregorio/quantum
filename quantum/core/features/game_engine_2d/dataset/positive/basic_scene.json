@@ -1,0 +1,11 @@
+{
+  "name": "basic_scene",
+  "description": "Basic game scene with sprites",
+  "input": "<q:application id=\"basic-game\" type=\"game\" engine=\"2d\">\n  <qg:scene name=\"main\" width=\"800\" height=\"600\" background=\"#87CEEB\">\n    <qg:physics gravity-y=\"9.8\" bounds=\"canvas\" />\n    <qg:sprite id=\"player\" src=\"player.png\" x=\"100\" y=\"300\" body=\"dynamic\" controls=\"wasd\" speed=\"5\" />\n    <qg:sprite id=\"ground\" src=\"ground.png\" x=\"400\" y=\"580\" width=\"800\" height=\"40\" body=\"static\" tag=\"solid\" />\n  </qg:scene>\n</q:application>",
+  "expected": {
+    "type": "application",
+    "app_type": "game",
+    "scenes": 1,
+    "sprites": 2
+  }
+}

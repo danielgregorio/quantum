@@ -1,0 +1,112 @@
+{
+  "feature": "html_rendering",
+  "version": "1.0.0",
+  "description": "Comprehensive training dataset for HTML rendering with template mixing",
+  "created": "2025-01-05",
+  "updated": "2025-01-05",
+  "maintainers": ["Daniel", "Claude"],
+
+  "statistics": {
+    "total_examples": 19,
+    "positive_examples": 14,
+    "negative_examples": 5,
+    "categories": {
+      "simple_html": 3,
+      "void_elements": 4,
+      "databinding_in_html": 4,
+      "mixed_content": 3,
+      "syntax_errors": 5
+    }
+  },
+
+  "coverage": {
+    "html_elements": {
+      "basic_tags": "✅ Fully covered (div, p, h1, span)",
+      "void_elements": "✅ Fully covered (br, hr, img, input)",
+      "nested_structure": "✅ Covered (multi-level nesting)",
+      "text_content": "✅ Covered (TextNode in HTML)",
+      "attributes": "✅ Covered (static and dynamic)"
+    },
+    "databinding": {
+      "text_content": "✅ Covered ({variable} in text)",
+      "attributes": "✅ Covered ({variable} in attrs)",
+      "class_attribute": "✅ Covered (CSS classes)",
+      "style_attribute": "✅ Covered (inline styles)",
+      "multiple_vars": "✅ Covered (multiple {var} in same element)"
+    },
+    "void_elements": {
+      "br": "✅ Covered (line break)",
+      "hr": "✅ Covered (horizontal rule)",
+      "img": "✅ Covered (image with src/alt)",
+      "input": "✅ Covered (form input with type/name/placeholder)",
+      "self_closing_detection": "✅ Covered (HTML_VOID_ELEMENTS list)"
+    },
+    "template_mixing": {
+      "html_with_q:if": "✅ Covered (conditional HTML rendering)",
+      "html_with_q:loop": "✅ Covered (list generation)",
+      "complex_mixing": "✅ Covered (table with loop + conditional)",
+      "nested_control_flow": "✅ Covered (q:if inside q:loop)"
+    },
+    "error_cases": {
+      "unclosed_tags": "✅ Covered",
+      "unquoted_attributes": "✅ Covered",
+      "doctype_declaration": "✅ Covered",
+      "nested_unclosed_tags": "✅ Covered",
+      "self_closing_non_void": "✅ Covered"
+    }
+  },
+
+  "training_readiness": {
+    "status": "ready_for_production_training",
+    "confidence": "high",
+    "notes": "Comprehensive coverage of HTML rendering patterns with 14 positive examples showing progression from basic elements to complex template mixing. Covers void elements, databinding in both content and attributes, and integration with control flow. 5 negative examples teach XML compliance and common errors.",
+    "recommended_additions": [
+      "More complex nested structures (5+ levels)",
+      "Special HTML entities (&nbsp;, &lt;, etc.)",
+      "Style tag with CSS content",
+      "Script tag handling (if supported)",
+      "SVG element rendering"
+    ]
+  },
+
+  "file_manifest": {
+    "positive": [
+      "positive/simple_html.json (3 examples) - Basic HTML rendering",
+      "positive/void_elements.json (4 examples) - Self-closing elements",
+      "positive/databinding_in_html.json (4 examples) - Dynamic content and attributes",
+      "positive/mixed_content.json (3 examples) - HTML + control structures"
+    ],
+    "negative": [
+      "negative/invalid_syntax.json (5 examples) - XML compliance errors"
+    ]
+  },
+
+  "usage_instructions": {
+    "for_llm_training": "Use positive examples to teach HTML generation within Quantum components. Show progression from simple static HTML to complex dynamic templates with databinding and control flow. Negative examples teach XML compliance requirements.",
+    "for_developers": "Reference these examples when learning HTML rendering. Start with simple_html, progress to void_elements, then databinding, finally mixed_content for full template mixing.",
+    "for_testing": "Each positive example represents a valid test case. Negative examples define expected parser errors."
+  },
+
+  "example_diversity": {
+    "implementation_styles": "Shows 3-4 different approaches per pattern type",
+    "complexity_levels": "Basic (7) -> Intermediate (4) -> Advanced (3)",
+    "use_cases": "Static pages, forms, dynamic content, lists, tables, conditional rendering",
+    "multiple_solutions": "Same output achievable via different approaches (static vs dynamic, nested vs flat)"
+  },
+
+  "integration_with_other_features": {
+    "databinding": "Variables resolved in HTML content and attributes",
+    "conditionals": "q:if controls HTML element rendering",
+    "loops": "q:loop generates repeated HTML structures",
+    "state_management": "HTML accesses component-scoped variables",
+    "component_composition": "Components render to HTML output"
+  },
+
+  "rendering_pipeline": {
+    "parse": "HTML elements parsed to HTMLNode/TextNode AST",
+    "validate": "XML compliance checked during parsing",
+    "execute": "Control flow determines which HTML nodes render",
+    "databind": "Variables resolved in TextNode content and attributes",
+    "render": "HTMLNode rendered to HTML string output"
+  }
+}

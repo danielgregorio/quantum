@@ -1,0 +1,19 @@
+{
+  "example_id": "login_action_001",
+  "category": "authentication",
+  "tags": ["login", "authentication", "session"],
+  "input": {
+    "component": "<q:component name=\"Login\">\n  <q:action name=\"login\" method=\"POST\">\n    <q:param name=\"email\" type=\"email\" required=\"true\" />\n    <q:param name=\"password\" type=\"string\" required=\"true\" />\n    \n    <!-- Query database for user -->\n    <q:query name=\"user\" datasource=\"db\">\n      SELECT id, name, role FROM users \n      WHERE email=:email AND password=SHA2(:password, 256)\n      <q:queryparam name=\"email\" value=\"{email}\" type=\"varchar\" />\n      <q:queryparam name=\"password\" value=\"{password}\" type=\"varchar\" />\n    </q:query>\n    \n    <q:if condition=\"{user.recordCount} > 0\">\n      <q:set name=\"session.authenticated\" value=\"true\" />\n      <q:set name=\"session.userId\" value=\"{user[0].id}\" />\n      <q:set name=\"session.userName\" value=\"{user[0].name}\" />\n      <q:set name=\"session.userRole\" value=\"{user[0].role}\" />\n      <q:redirect url=\"/dashboard\" flash=\"Welcome back!\" />\n    <q:else />\n      <q:redirect url=\"/login\" flash=\"Invalid credentials\" flashType=\"error\" />\n    </q:if>\n  </q:action>\n</q:component>",
+    "context": {
+      "phase": "G",
+      "feature": "authentication"
+    }
+  },
+  "expected_behavior": "Login action validates credentials, sets session variables, and redirects appropriately",
+  "validation": {
+    "session_management": true,
+    "credential_validation": true,
+    "flash_messages": true,
+    "redirect": true
+  }
+}

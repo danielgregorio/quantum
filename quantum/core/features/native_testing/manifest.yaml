@@ -1,0 +1,43 @@
+feature:
+  name: "native_testing"
+  display_name: "Native testing (quantum test, *.test.q)"
+  version: "1.0.0"
+  status: "stable"
+  migration_type: "option_c"
+  phase: T1
+  category: "testing"
+
+description: |
+  Test an app in its own language. A *.test.q file holds q:test elements whose
+  steps (test:given, test:as, test:visit, test:submit, test:expect) run in order
+  against the app, in-process, through the same server `quantum start` serves,
+  each test with a fresh SQLite database built by the app's migrations.
+  Replaces the removed qtest: engine (it compiled to pytest + Playwright and
+  addressed CSS selectors). SPEC section 12, TEST-1..TEST-4, and ROUTE-4.
+
+tags:
+  - "testing"
+  - "cli"
+
+maintainers:
+  - "Daniel"
+  - "Claude"
+
+api:
+  ast_nodes: "quantum/core/features/native_testing/src/ast_node.py"
+  parser: "quantum/core/features/native_testing/src/parser.py"
+  runtime: "quantum/runtime/app_testing.py::run_tests"
+  cli: "quantum/cli/runner.py (quantum test)"
+
+spec:
+  rules: ["TEST-1", "TEST-2", "TEST-3", "TEST-4", "ROUTE-4"]
+  tests: "tests/conformance/test_app_tests.py"
+
+not_yet:
+  # proposals/NATIVE_TESTING_PROPOSAL.md, phases T2–T4
+  - "test:click, test:fill, test:search and screens= parity (TEST-5)"
+  - "derived contract tests from q:param rules, --list (TEST-6)"
+  - "AI cassette (TEST-7)"
+  - "coverage in pages/actions/branches, watch mode (TEST-8)"
+  - "test:mock"
+  - "datasources other than sqlite"

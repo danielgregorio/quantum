@@ -1,0 +1,40 @@
+{
+  "feature": "authentication",
+  "version": "1.0.0",
+  "status": "implemented",
+  "phase": "G",
+  "created": "2025-11-05",
+  "updated": "2025-11-05",
+  "statistics": {
+    "total_examples": 5,
+    "positive_examples": 3,
+    "negative_examples": 2,
+    "categories": {
+      "login": 1,
+      "protected_routes": 1,
+      "rbac": 1,
+      "authorization_errors": 2
+    }
+  },
+  "coverage": {
+    "login_action": true,
+    "logout_action": true,
+    "require_auth": true,
+    "require_role": true,
+    "require_permission": true,
+    "password_hashing": true,
+    "session_management": true,
+    "rbac": true,
+    "flash_messages": true,
+    "redirect_unauthenticated": true,
+    "session_expiry": true
+  },
+  "test_components": [
+    "components/login.q",
+    "components/dashboard.q",
+    "components/logout.q",
+    "components/admin_panel.q",
+    "components/editor_panel.q"
+  ],
+  "documentation": "docs/features/authentication.md"
+}

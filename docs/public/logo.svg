@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Quantum">
+  <title>Quantum</title>
+  <!--
+    A Q followed by a tag's closing chevron: in Quantum everything is a tag,
+    and the mark says so without a caption.
+
+    Grid rules:
+    - a 64 viewBox with every number even, so it does not blur at 16px.
+    - the bowl runs from x=9 to x=39; the tail ends at x=40; the chevron
+      starts at x=46. Nothing touches, so the mark stays readable when small.
+    - `currentColor`: it inherits the surrounding text colour, which spares a
+      second version for dark backgrounds.
+  -->
+  <g fill="none" stroke="currentColor" stroke-width="5"
+     stroke-linecap="round" stroke-linejoin="round">
+    <!-- tigela do Q -->
+    <circle cx="24" cy="30" r="15"/>
+    <!-- rabo do Q, saindo da tigela a 45 graus -->
+    <path d="M31 37 L40 46"/>
+    <!-- o `>` que fecha a tag -->
+    <path d="M46 20 L58 32 L46 44"/>
+  </g>
+</svg>

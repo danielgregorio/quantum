@@ -1,0 +1,38 @@
+intention:
+  name: "Native testing - quantum test and *.test.q"
+  version: "1.0.0"
+  category: "testing"
+  goal: |
+    Let whoever writes a Quantum app test it without Python or internals, in
+    the concepts the app already declares: pages, actions, tables, the
+    session, flash messages and field errors. The platform runs the tests
+    against the real server, each with a fresh database, and points at the
+    line that failed.
+
+  capabilities:
+    - "Find *.test.q next to the pages and in the app's tests/ (TEST-1)"
+    - "A fresh SQLite database per test, built by the app's migrations (TEST-1)"
+    - "Rows checked against the schema, required columns filled in (TEST-2)"
+    - "Visit pages and submit actions through the browser's path (TEST-3)"
+    - "Sign in as a user or role without a password (TEST-3)"
+    - "Assert on redirect, flash, status, page text, field errors, variables, query count, rows and history (TEST-4)"
+    - "Exit code 1 on any failure; the report shows the test line and the page line"
+
+  syntax:
+    test:
+      format: "<q:test name='…' page='/path'> steps </q:test>"
+    given:
+      format: "<test:given table='…' column='value' … />"
+    as:
+      format: "<test:as user='…' role='…' id='…' sessionVar='…' />"
+    visit:
+      format: "<test:visit path='/…' queryParam='…' />"
+    submit:
+      format: "<test:submit action='…' field='value' … />"
+    expect:
+      format: "<test:expect redirect|flash|status|text|no-text|error|var|queries|table|history='…' />"
+
+  constraints:
+    - "Only the tags above; anything else is a parse error (PARSE-3)"
+    - "A *.test.q is never served as a page (ROUTE-4)"
+    - "Only sqlite datasources"

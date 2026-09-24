@@ -1,0 +1,6 @@
+{
+  "name": "missing_scene",
+  "description": "Game application with no scenes should fail build",
+  "input": "<q:application id=\"no-scene\" type=\"game\" engine=\"2d\">\n  <qg:behavior name=\"Empty\">\n    <q:set name=\"x\" value=\"0\" />\n  </qg:behavior>\n</q:application>",
+  "expected_error": "No scenes found in game application"
+}

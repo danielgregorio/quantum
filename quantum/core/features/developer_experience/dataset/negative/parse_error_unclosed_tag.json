@@ -1,0 +1,26 @@
+{
+  "example_id": "dx_error_003",
+  "category": "developer_experience",
+  "tags": ["error", "parse", "xml"],
+  "input": {
+    "component": "<q:component name=\"BrokenComponent\">\n  <div>\n    <h1>Hello\n  </div>\n</q:component>",
+    "context": {
+      "phase": "C",
+      "feature": "developer_experience",
+      "error_line": 3
+    }
+  },
+  "expected_behavior": "Enhanced parse error showing unclosed <h1> tag with line number, code context, and suggestion",
+  "error": {
+    "type": "QuantumParseError",
+    "message": "Parse error: unclosed tag",
+    "line": 3
+  },
+  "validation": {
+    "should_fail": true,
+    "shows_line_number": true,
+    "shows_code_context": true,
+    "provides_suggestion": "Check your XML syntax",
+    "provides_hint": "Make sure all tags are properly closed"
+  }
+}

@@ -1,0 +1,22 @@
+name: Dashboard
+description: Admin dashboard with charts, tables, and data visualization
+icon: "&#128202;"
+category: admin
+features:
+  - Charts & Graphs
+  - Data tables
+  - Real-time updates
+  - User management
+options:
+  - name: include_auth
+    label: Include Authentication
+    type: boolean
+    default: true
+  - name: include_charts
+    label: Include Chart Components
+    type: boolean
+    default: true
+  - name: sample_data
+    label: Include Sample Data
+    type: boolean
+    default: true

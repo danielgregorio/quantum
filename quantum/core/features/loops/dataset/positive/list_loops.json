@@ -1,0 +1,83 @@
+{
+  "dataset_type": "positive",
+  "feature": "loops",
+  "category": "list_iteration",
+  "description": "Valid examples of list-based loops with delimiters",
+  "examples": [
+    {
+      "id": "loop-list-001",
+      "intent": "Simple comma-delimited list",
+      "input": {
+        "natural_language": "Loop through a comma-separated list of names",
+        "context": {
+          "available_vars": ["names"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"names\" value=\"Alice,Bob,Charlie\" />\n<q:loop type=\"list\" var=\"name\" items=\"{names}\">\n  Hello, {name}!\n</q:loop>",
+        "ast": {
+          "type": "LoopNode",
+          "attributes": {
+            "loop_type": "list",
+            "var_name": "name",
+            "items": "{names}",
+            "delimiter": ","
+          }
+        },
+        "runtime_behavior": "Splits by comma, outputs greeting for each name"
+      },
+      "tags": ["list", "comma", "strings"]
+    },
+    {
+      "id": "loop-list-002",
+      "intent": "Semicolon-delimited list",
+      "input": {
+        "natural_language": "Loop through semicolon-separated cities",
+        "context": {
+          "available_vars": ["cities"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"cities\" value=\"Paris;London;Tokyo\" />\n<q:loop type=\"list\" var=\"city\" items=\"{cities}\" delimiter=\";\">\n  Visit {city}\n</q:loop>",
+        "ast": {
+          "type": "LoopNode",
+          "attributes": {
+            "loop_type": "list",
+            "var_name": "city",
+            "items": "{cities}",
+            "delimiter": ";"
+          }
+        },
+        "runtime_behavior": "Splits by semicolon, outputs each city"
+      },
+      "tags": ["list", "semicolon", "custom_delimiter"]
+    },
+    {
+      "id": "loop-list-003",
+      "intent": "Pipe-delimited list",
+      "input": {
+        "natural_language": "Process pipe-separated tags",
+        "context": {
+          "available_vars": ["tags"],
+          "scope": "component"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:set name=\"tags\" value=\"python|javascript|rust\" />\n<q:loop type=\"list\" var=\"tag\" items=\"{tags}\" delimiter=\"|\">\n  ##{tag}\n</q:loop>",
+        "ast": {
+          "type": "LoopNode",
+          "attributes": {
+            "loop_type": "list",
+            "var_name": "tag",
+            "items": "{tags}",
+            "delimiter": "|"
+          }
+        },
+        "runtime_behavior": "Splits by pipe, formats each tag with ##"
+      },
+      "tags": ["list", "pipe", "custom_delimiter"]
+    }
+  ]
+}

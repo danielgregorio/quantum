@@ -1,0 +1,27 @@
+feature:
+  name: "conditionals"
+  display_name: "Conditionals (q:if/q:else/q:elseif)"
+  version: "1.0.0"
+  status: "stable"
+  migration_type: "option_c"
+
+description: |
+  Conditional logic and branching support.
+
+tags:
+  - "conditionals"
+  - "branching"
+  - "control-flow"
+
+maintainers:
+  - "Daniel"
+  - "Claude"
+
+api:
+  ast_node: "IfNode"
+  parser: "src/core/parser.py::_parse_if"
+  runtime: "src/runtime/component.py::_execute_if"
+
+testing:
+  integration_tests: 7
+  coverage: 100

@@ -1,0 +1,135 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quantum-framework"
+version = "1.0.0"
+description = "Declarative web applications in XML, with AI and RAG built into the language"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Daniel Gregorio", email = "danielgregorio2611@gmail.com"}
+]
+keywords = ["framework", "declarative", "xml", "web", "llm", "rag"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Framework :: Flask",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.12"
+dependencies = [
+    "flask>=3.0.0",
+    "pyyaml>=6.0",
+    "sqlparse>=0.4.4",
+    "gunicorn>=21.0.0",
+    "textual>=0.80.0",
+    "requests>=2.31.0",
+    "bcrypt>=4.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.1",
+    "pytest-xdist>=3.5",
+    # Pinned to a minor version: `ruff check` blocks CI, and a new release
+    # that adds checks must not turn main red with no change to the code.
+    "ruff>=0.16,<0.17",
+]
+db = [
+    "psycopg2-binary>=2.9.9",
+    "pymysql>=1.1.0",
+]
+rag = [
+    "chromadb>=0.5.0",
+]
+jobs = [
+    # Required by ScheduleService (q:schedule) — was undeclared, so
+    # q:schedule failed on any clean install.
+    "apscheduler>=3.10.0",
+]
+admin = [
+    # `quantum admin`: the admin database (SQLAlchemy), its login tokens
+    # (PyJWT) and encrypted connector secrets (cryptography).
+    "sqlalchemy>=2.0",
+    "PyJWT>=2.8",
+    "cryptography>=42.0",
+]
+desktop = [
+    # `quantum desktop`: the native window around the application's server.
+    "pywebview>=5.0",
+]
+websocket = [
+    # The transport behind q:websocket. Without it the tag registers a
+    # connection and opens nothing — and says so, rather than pretending.
+    "websockets>=12.0",
+]
+
+[project.scripts]
+quantum = "quantum.cli.runner:main"
+
+[project.urls]
+Homepage = "https://github.com/danielgregorio/quantum"
+Documentation = "https://danielgregorio.github.io/quantum/"
+Changelog = "https://github.com/danielgregorio/quantum/releases"
+Repository = "https://github.com/danielgregorio/quantum"
+
+[tool.setuptools.packages.find]
+# Only the `quantum` package and its subpackages. The old glob `quantum*` also
+# swept in `quantum_admin` (a separate FastAPI app, with deps of its own that
+# are not the core's), and the `quantum-as4`/`quantum-lsp` folders (sibling
+# projects, hyphenated and not even importable) — 91 files of dead weight in
+# the wheel. The dot in `quantum.*` matches subpackages; without it,
+# `quantum_admin` does not get in.
+include = ["quantum", "quantum.*",
+           # The admin (`quantum admin`, extra [admin]): its screens, its
+           # services and the library they use (quantum_admin.core). The old
+           # FastAPI backend (quantum_admin/backend) is not shipped (A4.2).
+           "quantum_admin", "quantum_admin.services", "quantum_admin.core"]
+
+[tool.setuptools.package-data]
+quantum_admin = ["components/**/*.q", "assets/*"]
+
+[tool.setuptools.exclude-package-data]
+# Without this, setuptools ships every folder under quantum_admin as "data".
+quantum_admin = ["backend/*", "backend/**/*", "templates/**/*", "static/**/*", "projects/**/*",
+                 "settings/**/*", "*.db"]
+
+
+[tool.ruff]
+line-length = 100
+
+# `ruff check quantum tests` is clean and blocking in CI. Each rule left out
+# says why; anything else it finds is a finding to fix.
+[tool.ruff.lint]
+# "I" (import sorting) is not selected: sorting the imports of ~400 files is
+# churn with no bug behind it, and it would conflict with every open branch.
+select = ["E", "F", "W"]
+ignore = [
+    # Line length: templates, SQL and user-facing messages read better whole;
+    # length is left to review.
+    "E501",
+    # Ambiguous names (`l`, `O`, `I`): 13 short-lived loop variables; renaming
+    # them fixes nothing.
+    "E741",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# A package __init__ re-exports names on purpose (and quantum.core re-exports
+# the AST with `*`).
+"**/__init__.py" = ["F401", "F403"]
+# The feature modules import QuantumNode from ast_nodes, so their node classes
+# can only be imported after QuantumNode is defined, mid-module.
+"quantum/core/ast_nodes.py" = ["E402"]
+# A pytest fixture imported into a test module and requested as a parameter
+# reads as a redefinition.
+"tests/**" = ["F811"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"

@@ -1,0 +1,120 @@
+{
+  "dataset_type": "negative",
+  "feature": "component_composition",
+  "category": "syntax_errors",
+  "description": "Invalid component composition syntax that should be rejected",
+  "examples": [
+    {
+      "id": "comp-invalid-001",
+      "intent": "Missing component attribute in q:import",
+      "input": {
+        "natural_language": "q:import without component name",
+        "quantum_code": "<q:component name=\"Page\">\n  <q:import />\n</q:component>"
+      },
+      "expected_error": {
+        "type": "ValidationError",
+        "message": "q:import requires 'component' attribute",
+        "location": "ImportNode validation"
+      },
+      "why_invalid": "q:import must specify which component to import",
+      "correction": "Add component=\"Button\" attribute",
+      "tags": ["missing_attribute", "import"]
+    },
+    {
+      "id": "comp-invalid-002",
+      "intent": "Component not found",
+      "input": {
+        "natural_language": "Import component that doesn't exist",
+        "quantum_code": "<q:component name=\"Page\">\n  <q:import component=\"NonExistentComponent\" />\n  <NonExistentComponent />\n</q:component>"
+      },
+      "expected_error": {
+        "type": "ComponentNotFoundError",
+        "message": "Component 'NonExistentComponent' not found in ./components directory",
+        "location": "ComponentResolver"
+      },
+      "why_invalid": "Component file non_existent_component.q doesn't exist",
+      "correction": "Create components/non_existent_component.q or import existing component",
+      "tags": ["component_not_found", "resolution_error"]
+    },
+    {
+      "id": "comp-invalid-003",
+      "intent": "Missing required prop",
+      "input": {
+        "natural_language": "Call component without required prop",
+        "quantum_code": "<q:component name=\"Page\">\n  <q:import component=\"Button\" />\n  <Button color=\"blue\" />\n</q:component>"
+      },
+      "expected_error": {
+        "type": "PropValidationError",
+        "message": "Required prop 'label' not provided for component 'Button'",
+        "location": "ComponentComposer prop validation"
+      },
+      "why_invalid": "Button component has q:param name='label' required='true'",
+      "correction": "Add label=\"Click me\" attribute",
+      "tags": ["missing_prop", "required_prop"]
+    },
+    {
+      "id": "comp-invalid-004",
+      "intent": "Component call without import",
+      "input": {
+        "natural_language": "Use component without importing it first",
+        "quantum_code": "<q:component name=\"Page\">\n  <Button label=\"Save\" />\n</q:component>"
+      },
+      "expected_error": {
+        "type": "ComponentNotImportedError",
+        "message": "Component 'Button' used but not imported. Add <q:import component='Button' />",
+        "location": "ComponentComposer"
+      },
+      "why_invalid": "Components must be imported before use (explicit is better than implicit)",
+      "correction": "Add <q:import component='Button' /> before using <Button />",
+      "tags": ["not_imported", "missing_import"]
+    },
+    {
+      "id": "comp-invalid-005",
+      "intent": "Duplicate slot names",
+      "input": {
+        "natural_language": "Define same slot name twice in component",
+        "quantum_code": "<q:component name=\"Layout\">\n  <header>\n    <q:slot name=\"header\" />\n  </header>\n  <div>\n    <q:slot name=\"header\" />\n  </div>\n</q:component>"
+      },
+      "expected_error": {
+        "type": "SlotValidationError",
+        "message": "Duplicate slot name 'header'. Slot names must be unique within a component.",
+        "location": "SlotNode validation"
+      },
+      "why_invalid": "Each slot must have a unique name for content distribution",
+      "correction": "Rename second slot to 'content' or 'body'",
+      "tags": ["duplicate_slot", "slot_validation"]
+    },
+    {
+      "id": "comp-invalid-006",
+      "intent": "Invalid prop type",
+      "input": {
+        "natural_language": "Pass incompatible value type for prop",
+        "quantum_code": "<q:component name=\"Page\">\n  <q:import component=\"Counter\" />\n  <Counter count=\"not_a_number\" />\n</q:component>"
+      },
+      "expected_error": {
+        "type": "PropTypeError",
+        "message": "Prop 'count' expects type 'number' but received 'string'",
+        "location": "ComponentComposer type validation"
+      },
+      "why_invalid": "Counter component defines q:param name='count' type='number'",
+      "correction": "Pass numeric value like count='0' or count='{numericVar}'",
+      "tags": ["type_mismatch", "prop_validation"]
+    },
+    {
+      "id": "comp-invalid-007",
+      "intent": "Lowercase component tag without import",
+      "input": {
+        "natural_language": "Use lowercase tag that looks like component",
+        "quantum_code": "<q:component name=\"Page\">\n  <button-component label=\"Save\" />\n</q:component>"
+      },
+      "expected_error": {
+        "type": "ParseWarning",
+        "message": "Tag 'button-component' looks like a component but starts with lowercase. Did you mean 'ButtonComponent'?",
+        "location": "Parser"
+      },
+      "why_invalid": "Component tags must start with uppercase letter (PascalCase convention)",
+      "correction": "Rename to <ButtonComponent /> or use lowercase for HTML elements",
+      "tags": ["naming_convention", "case_sensitivity"]
+    }
+  ]
+}

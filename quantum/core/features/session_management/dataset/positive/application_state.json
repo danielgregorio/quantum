@@ -1,0 +1,18 @@
+{
+  "example_id": "application_state_001",
+  "category": "session_management",
+  "tags": ["application", "global", "shared"],
+  "input": {
+    "component": "<q:component name=\"GlobalCounter\">\n  <q:if condition=\"{application.totalVisits} == ''\">\n    <q:set name=\"application.totalVisits\" value=\"0\" />\n  </q:if>\n  <q:set name=\"application.totalVisits\" value=\"{application.totalVisits + 1}\" />\n  <p>Total site visits: {application.totalVisits}</p>\n</q:component>",
+    "context": {
+      "phase": "F",
+      "feature": "session_management"
+    }
+  },
+  "expected_behavior": "Increments global counter shared across all users",
+  "validation": {
+    "global_scope": true,
+    "shared_across_users": true,
+    "persistent_state": true
+  }
+}

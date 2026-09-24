@@ -1,0 +1,7 @@
+{
+  "feature": "terminal_engine",
+  "version": "1.0.0",
+  "positive_count": 2,
+  "negative_count": 1,
+  "description": "Test dataset for terminal engine parsing and code generation"
+}

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="vertical">
+
+ <mx:Panel title="Login Form" width="400" height="300">
+   <mx:VBox padding="20" gap="15">
+     <mx:HBox>
+       <mx:Label text="Username:" width="100"/>
+       <mx:TextInput id="txtUsername" width="200"/>
+     </mx:HBox>
+     <mx:HBox>
+       <mx:Label text="Password:" width="100"/>
+       <mx:TextInput id="txtPassword" width="200" displayAsPassword="true"/>
+     </mx:HBox>
+     <mx:HBox horizontalAlign="right">
+       <mx:Button label="Cancel"/>
+       <mx:Button label="Login"/>
+     </mx:HBox>
+   </mx:VBox>
+ </mx:Panel>
+
+</mx:Application>

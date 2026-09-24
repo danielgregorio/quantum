@@ -1,0 +1,83 @@
+# Theming System - Primary Intention
+
+## Purpose
+Enable visual customization of Quantum UI applications through a declarative
+theming system that supports dark/light modes, custom color schemes, and
+runtime theme switching.
+
+## Core Concepts
+
+### Theme Presets
+- `light`: Default light color scheme with white background
+- `dark`: Dark color scheme with slate background
+- Presets provide all necessary CSS variables for the UI engine
+
+### Custom Themes
+- Extend preset themes with custom colors
+- Define any CSS color value (hex, rgb, hsl, etc.)
+- Override specific tokens while keeping others from preset
+
+### Runtime Switching
+- JavaScript API for theme switching
+- Persist preference in localStorage
+- Respect system preference (prefers-color-scheme)
+
+## Syntax Examples
+
+### Using a Preset Theme
+```xml
+<q:application id="MyApp" type="ui" theme="dark">
+  <ui:window title="Dark App">
+    <ui:text>Content styled with dark theme</ui:text>
+  </ui:window>
+</q:application>
+```
+
+### Using ui:theme Tag
+```xml
+<q:application id="MyApp" type="ui">
+  <ui:theme preset="dark" />
+  <ui:window>...</ui:window>
+</q:application>
+```
+
+### Custom Theme
+```xml
+<ui:theme name="ocean" preset="light">
+  <ui:color name="primary" value="#0ea5e9" />
+  <ui:color name="secondary" value="#06b6d4" />
+  <ui:color name="background" value="#f0f9ff" />
+</ui:theme>
+```
+
+### Auto-Switching Theme
+```xml
+<ui:theme preset="light" auto-switch="true" />
+```
+
+## Color Tokens
+- primary: Main brand color for buttons, links
+- secondary: Secondary/muted actions
+- success: Positive actions, success states
+- danger: Destructive actions, errors
+- warning: Warnings, cautions
+- info: Informational elements
+- light: Light background variant
+- dark: Dark background variant
+- background: Page/window background
+- text: Main text color
+- border: Border color
+- muted: Muted/disabled text
+
+## Integration Points
+- Parser: Extracts theme attribute from q:application
+- HTML Adapter: Injects theme CSS variables
+- Design Tokens: Consumes CSS variables for styling
+- Runtime: JavaScript functions for theme switching
+
+## Generated Output
+Theme configuration generates:
+1. CSS with :root variables
+2. data-theme attribute selectors
+3. Optional prefers-color-scheme media query
+4. JavaScript for runtime switching

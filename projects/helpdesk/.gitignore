@@ -1,0 +1,5 @@
+# written at run time
+data/
+static/scripts-*.js
+static/styles-*.css
+logs/

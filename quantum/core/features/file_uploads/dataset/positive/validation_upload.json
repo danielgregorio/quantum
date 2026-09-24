@@ -1,0 +1,19 @@
+{
+  "example_id": "file_validation_001",
+  "category": "file_uploads",
+  "tags": ["upload", "validation", "size", "type"],
+  "input": {
+    "component": "<q:component name=\"UploadDocument\">\n  <q:action name=\"uploadDoc\" method=\"POST\">\n    <q:param name=\"document\" type=\"file\" required=\"true\" maxsize=\"5MB\" accept=\"application/pdf\" />\n    \n    <q:file action=\"upload\"\n            file=\"{document}\"\n            destination=\"./uploads/documents/\"\n            nameConflict=\"makeUnique\"\n            result=\"uploadResult\" />\n    \n    <q:redirect url=\"/documents\" flash=\"Document {uploadResult.filename} uploaded!\" />\n  </q:action>\n</q:component>",
+    "context": {
+      "phase": "H",
+      "feature": "file_uploads"
+    }
+  },
+  "expected_behavior": "Validates file size (max 5MB) and type (PDF only) before upload",
+  "validation": {
+    "file_validation": true,
+    "size_check": true,
+    "type_check": true,
+    "result_variable": true
+  }
+}

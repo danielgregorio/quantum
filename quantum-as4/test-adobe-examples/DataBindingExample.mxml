@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="vertical">
+
+ <mx:Script>
+ <![CDATA[
+   [Bindable]
+   private var username:String = "John Doe";
+
+   [Bindable]
+   private var count:int = 0;
+
+   private function incrementCount():void {
+     count++;
+   }
+ ]]>
+ </mx:Script>
+
+ <mx:VBox padding="20" gap="10">
+   <mx:Label text="Data Binding Example" fontSize="18" fontWeight="bold"/>
+   <mx:Label text="Welcome, {username}!"/>
+   <mx:Label text="Count: {count}"/>
+   <mx:Button label="Increment" click="incrementCount()"/>
+ </mx:VBox>
+
+</mx:Application>

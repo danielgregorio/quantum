@@ -1,0 +1,23 @@
+{
+  "example_id": "dx_error_002",
+  "category": "developer_experience",
+  "tags": ["error", "cli", "duplicate"],
+  "input": {
+    "command": "quantum create component HomePage",
+    "context": {
+      "phase": "C",
+      "feature": "developer_experience",
+      "existing_file": "components/HomePage.q"
+    }
+  },
+  "expected_behavior": "Should fail with error - component already exists",
+  "error": {
+    "type": "FileExistsError",
+    "message": "Component 'HomePage' already exists"
+  },
+  "validation": {
+    "should_fail": true,
+    "file_not_overwritten": true,
+    "error_message_shown": true
+  }
+}

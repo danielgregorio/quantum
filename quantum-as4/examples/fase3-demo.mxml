@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009"
+               xmlns:s="library://ns.adobe.com/flex/spark"
+               xmlns:mx="library://ns.adobe.com/flex/mx"
+               width="900" height="900"
+               title="FASE 3 Demo - Effects and Formatters">
+
+    <fx:Script>
+        <![CDATA[
+            // Data properties
+            [Bindable] public var currentDate:Date = new Date();
+            [Bindable] public var price:Number = 1234.56;
+            [Bindable] public var population:Number = 7900000000;
+            [Bindable] public var phoneNumber:String = "5551234567";
+            [Bindable] public var zipCode:String = "123456789";
+
+            // Effect targets
+            [Bindable] public var showEffectBox:Boolean = true;
+
+            // Event handlers
+            public function playFadeIn():void {
+                fadeIn.play(fadeBox);
+                trace("Fade In effect started");
+            }
+
+            public function playFadeOut():void {
+                fadeOut.play(fadeBox);
+                trace("Fade Out effect started");
+            }
+
+            public function playMove():void {
+                moveRight.play(moveBox);
+                trace("Move effect started");
+            }
+
+            public function playResize():void {
+                resizeEffect.play(resizeBox);
+                trace("Resize effect started");
+            }
+
+            public function playGlow():void {
+                glowEffect.play(glowBox);
+                trace("Glow effect started");
+            }
+
+            public function updateDate():void {
+                currentDate = new Date();
+                trace("Date updated: " + currentDate);
+            }
+
+            public function handleEffectEnd():void {
+                trace("Effect completed!");
+            }
+        ]]>
+    </fx:Script>
+
+    <!-- Effects definitions -->
+    <mx:Fade id="fadeIn" alphaFrom="0" alphaTo="1" duration="1000" />
+    <mx:Fade id="fadeOut" alphaFrom="1" alphaTo="0" duration="1000" />
+    <mx:Move id="moveRight" xBy="200" yBy="0" duration="1000" />
+    <mx:Resize id="resizeEffect" widthBy="100" heightBy="50" duration="1000" />
+    <mx:Glow id="glowEffect" color="#3498db" alphaFrom="0" alphaTo="1" blurXTo="20" duration="1000" />
+
+    <!-- Formatters definitions -->
+    <mx:DateFormatter id="dateFormatter1" formatString="MM/DD/YYYY" />
+    <mx:DateFormatter id="dateFormatter2" formatString="EEEE, MMMM D, YYYY" />
+    <mx:DateFormatter id="dateFormatter3" formatString="HH:mm:ss" />
+    <mx:DateFormatter id="dateFormatter4" formatString="MMM DD, YYYY HH:mm A" />
+
+    <mx:NumberFormatter id="numberFormatter"
+                        precision="2"
+                        useThousandsSeparator="true"
+                        decimalSeparator="."
+                        thousandsSeparator="," />
+
+    <mx:CurrencyFormatter id="currencyFormatter"
+                         precision="2"
+                         currencySymbol="$"
+                         alignSymbol="left"
+                         useThousandsSeparator="true" />
+
+    <mx:CurrencyFormatter id="euroFormatter"
+                         precision="2"
+                         currencySymbol="€"
+                         alignSymbol="right"
+                         useThousandsSeparator="true"
+                         decimalSeparator=","
+                         thousandsSeparator="." />
+
+    <mx:PhoneFormatter id="phoneFormatter" formatString="(###) ###-####" />
+    <mx:ZipCodeFormatter id="zipFormatter" />
+
+    <s:VBox width="100%" height="100%" padding="20" gap="20">
+
+        <!-- Header -->
+        <s:Panel width="100%" title="FASE 3 Components Demo">
+            <s:VBox padding="15" gap="10" width="100%">
+                <s:Label text="Effects and Formatters System" fontSize="14" fontWeight="bold" />
+                <s:Label text="Demonstrates: Visual Effects (Fade, Move, Resize, Glow) and Data Formatters (Date, Number, Currency, Phone)" fontSize="11" />
+            </s:VBox>
+        </s:Panel>
+
+        <s:HBox width="100%" gap="20">
+
+            <!-- Left Column: Effects Demo -->
+            <s:VBox width="50%" gap="15">
+
+                <!-- Fade Effect -->
+                <s:Panel width="100%" title="Fade Effect">
+                    <s:VBox padding="15" gap="12" width="100%">
+                        <s:Label text="Animate opacity (alpha) transitions:" fontSize="12" />
+
+                        <s:Panel id="fadeBox"
+                                width="200"
+                                height="100"
+                                backgroundColor="#3498db"
+                                title="Fade Target">
+                            <s:VBox padding="10" horizontalAlign="center" verticalAlign="middle" width="100%" height="100%">
+                                <s:Label text="Watch me fade!" color="#ffffff" fontWeight="bold" />
+                            </s:VBox>
+                        </s:Panel>
+
+                        <s:HBox gap="10">
+                            <s:Button label="Fade In" click="playFadeIn()" />
+                            <s:Button label="Fade Out" click="playFadeOut()" />
+                        </s:HBox>
+                    </s:VBox>
+                </s:Panel>
+
+                <!-- Move Effect -->
+                <s:Panel width="100%" title="Move Effect">
+                    <s:VBox padding="15" gap="12" width="100%">
+                        <s:Label text="Animate position changes:" fontSize="12" />
+
+                        <s:Panel id="moveBox"
+                                width="150"
+                                height="80"
+                                backgroundColor="#2ecc71"
+                                title="Move Target">
+                            <s:VBox padding="10" horizontalAlign="center" verticalAlign="middle" width="100%" height="100%">
+                                <s:Label text="I can move!" color="#ffffff" fontWeight="bold" />
+                            </s:VBox>
+                        </s:Panel>
+
+                        <s:Button label="Move Right" click="playMove()" />
+                    </s:VBox>
+                </s:Panel>
+
+                <!-- Resize Effect -->
+                <s:Panel width="100%" title="Resize Effect">
+                    <s:VBox padding="15" gap="12" width="100%">
+                        <s:Label text="Animate size changes:" fontSize="12" />
+
+                        <s:Panel id="resizeBox"
+                                width="150"
+                                height="80"
+                                backgroundColor="#e74c3c"
+                                title="Resize Target">
+                            <s:VBox padding="10" horizontalAlign="center" verticalAlign="middle" width="100%" height="100%">
+                                <s:Label text="Watch me grow!" color="#ffffff" fontWeight="bold" />
+                            </s:VBox>
+                        </s:Panel>
+
+                        <s:Button label="Resize" click="playResize()" />
+                    </s:VBox>
+                </s:Panel>
+
+                <!-- Glow Effect -->
+                <s:Panel width="100%" title="Glow Effect">
+                    <s:VBox padding="15" gap="12" width="100%">
+                        <s:Label text="Add drop shadow glow:" fontSize="12" />
+
+                        <s:Panel id="glowBox"
+                                width="150"
+                                height="80"
+                                backgroundColor="#9b59b6"
+                                title="Glow Target">
+                            <s:VBox padding="10" horizontalAlign="center" verticalAlign="middle" width="100%" height="100%">
+                                <s:Label text="I can glow!" color="#ffffff" fontWeight="bold" />
+                            </s:VBox>
+                        </s:Panel>
+
+                        <s:Button label="Glow" click="playGlow()" />
+                    </s:VBox>
+                </s:Panel>
+
+            </s:VBox>
+
+            <!-- Right Column: Formatters Demo -->
+            <s:VBox width="50%" gap="15">
+
+                <!-- Date Formatter -->
+                <s:Panel width="100%" title="Date Formatter">
+                    <s:VBox padding="15" gap="12" width="100%">
+                        <s:Label text="Format dates with various patterns:" fontSize="12" />
+
+                        <s:VBox gap="8" width="100%">
+                            <s:HBox gap="10" width="100%">
+                                <s:Label text="MM/DD/YYYY:" width="150" fontWeight="bold" />
+                                <s:Label text="{dateFormatter1.format(currentDate)}" />
+                            </s:HBox>
+
+                            <s:HBox gap="10" width="100%">
+                                <s:Label text="Full Date:" width="150" fontWeight="bold" />
+                                <s:Label text="{dateFormatter2.format(currentDate)}" />
+                            </s:HBox>
+
+                            <s:HBox gap="10" width="100%">
+                                <s:Label text="Time:" width="150" fontWeight="bold" />
+                                <s:Label text="{dateFormatter3.format(currentDate)}" />
+                            </s:HBox>
+
+                            <s:HBox gap="10" width="100%">
+                                <s:Label text="Date and Time:" width="150" fontWeight="bold" />
+                                <s:Label text="{dateFormatter4.format(currentDate)}" />
+                            </s:HBox>
+                        </s:VBox>
+
+                        <s:Button label="Update Date" click="updateDate()" />
+                    </s:VBox>
+                </s:Panel>
+
+                <!-- Number Formatter -->
+                <s:Panel width="100%" title="Number Formatter">
+                    <s:VBox padding="15" gap="12" width="100%">
+                        <s:Label text="Format numbers with precision and separators:" fontSize="12" />
+
+                        <s:VBox gap="8" width="100%">
+                            <s:HBox gap="10" width="100%">
+                                <s:Label text="Price:" width="150" fontWeight="bold" />
+                                <s:Label text="{numberFormatter.format(price)}" />
+                            </s:HBox>
+
+                            <s:HBox gap="10" width="100%">
+                                <s:Label text="Population:" width="150" fontWeight="bold" />
+                                <s:Label text="{numberFormatter.format(population)}" />
+                            </s:HBox>
+
+                            <s:HBox gap="10" width="100%">
+                                <s:Label text="Pi:" width="150" fontWeight="bold" />
+                                <s:Label text="{numberFormatter.format(3.14159265359)}" />
+                            </s:HBox>
+                        </s:VBox>
+                    </s:VBox>
+                </s:Panel>
+
+                <!-- Currency Formatter -->
+                <s:Panel width="100%" title="Currency Formatter">
+                    <s:VBox padding="15" gap="12" width="100%">
+                        <s:Label text="Format currency values with symbols:" fontSize="12" />
+
+                        <s:VBox gap="8" width="100%">
+                            <s:HBox gap="10" width="100%">
+                                <s:Label text="USD:" width="150" fontWeight="bold" />
+                                <s:Label text="{currencyFormatter.format(price)}" />
+                            </s:HBox>
+
+                            <s:HBox gap="10" width="100%">
+                                <s:Label text="EUR:" width="150" fontWeight="bold" />
+                                <s:Label text="{euroFormatter.format(price)}" />
+                            </s:HBox>
+
+                            <s:HBox gap="10" width="100%">
+                                <s:Label text="Salary:" width="150" fontWeight="bold" />
+                                <s:Label text="{currencyFormatter.format(75000)}" />
+                            </s:HBox>
+
+                            <s:HBox gap="10" width="100%">
+                                <s:Label text="Negative:" width="150" fontWeight="bold" />
+                                <s:Label text="{currencyFormatter.format(-99.99)}" />
+                            </s:HBox>
+                        </s:VBox>
+                    </s:VBox>
+                </s:Panel>
+
+                <!-- Phone & Zip Formatters -->
+                <s:Panel width="100%" title="Phone and Zip Code Formatters">
+                    <s:VBox padding="15" gap="12" width="100%">
+                        <s:Label text="Format phone numbers and zip codes:" fontSize="12" />
+
+                        <s:VBox gap="8" width="100%">
+                            <s:HBox gap="10" width="100%">
+                                <s:Label text="Phone:" width="150" fontWeight="bold" />
+                                <s:Label text="{phoneFormatter.format(phoneNumber)}" />
+                            </s:HBox>
+
+                            <s:HBox gap="10" width="100%">
+                                <s:Label text="Zip Code:" width="150" fontWeight="bold" />
+                                <s:Label text="{zipFormatter.format(zipCode)}" />
+                            </s:HBox>
+                        </s:VBox>
+                    </s:VBox>
+                </s:Panel>
+
+            </s:VBox>
+
+        </s:HBox>
+
+        <!-- Footer with info -->
+        <s:Panel width="100%" title="Effect and Formatter Features">
+            <s:VBox padding="15" gap="8" width="100%">
+                <s:Label text="Effects:" fontWeight="bold" />
+                <s:Label text="• Fade: Animate opacity transitions (alphaFrom, alphaTo, duration)" fontSize="11" />
+                <s:Label text="• Move: Animate position (xBy, yBy, xFrom, yFrom, xTo, yTo, duration)" fontSize="11" />
+                <s:Label text="• Resize: Animate size (widthBy, heightBy, widthFrom, heightFrom, widthTo, heightTo)" fontSize="11" />
+                <s:Label text="• Glow: Add drop shadow effects (color, alphaFrom, alphaTo, blurXFrom, blurXTo)" fontSize="11" />
+
+                <s:Spacer height="10" />
+
+                <s:Label text="Formatters:" fontWeight="bold" />
+                <s:Label text="• DateFormatter: Format dates (MM/DD/YYYY, EEEE MMMM D, HH:mm:ss, etc.)" fontSize="11" />
+                <s:Label text="• NumberFormatter: Format numbers (precision, thousands separator, decimal separator)" fontSize="11" />
+                <s:Label text="• CurrencyFormatter: Format currency (symbol, position, precision)" fontSize="11" />
+                <s:Label text="• PhoneFormatter: Format phone numbers with patterns" fontSize="11" />
+                <s:Label text="• ZipCodeFormatter: Format ZIP codes (5-digit or 9-digit)" fontSize="11" />
+            </s:VBox>
+        </s:Panel>
+
+    </s:VBox>
+
+</s:Application>
