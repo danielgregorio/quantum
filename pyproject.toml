@@ -61,7 +61,7 @@ admin = [
 ]
 desktop = [
     # `quantum desktop`: the native window around the application's server.
-    "pywebview>=5.0",
+    "pywebview>=6.2.1",
 ]
 websocket = [
     # The transport behind q:websocket. Without it the tag registers a
