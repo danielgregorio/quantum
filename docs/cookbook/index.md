@@ -22,3 +22,9 @@ Short recipes for one task each. Every recipe is a small app in `examples/cookbo
 - [A page for one role only](./login-and-permissions/page-for-one-role.md) — require_role keeps a page to the admins: a member gets 403, and a visitor who is not signed in is sent to sign in.
 - [A guard that redirects](./login-and-permissions/guard-that-redirects.md) — A top-level q:if with q:redirect protects a page and every action on it: a post without a session writes nothing.
 - [Sign out](./login-and-permissions/sign-out.md) — A logout page that clears the session and redirects; the protected pages are closed again.
+
+## Forms & actions
+
+- [Show each error on its field](./forms-and-actions/field-errors.md) — Write the rules once on the action's q:param; the form reads them and shows every refusal next to its field.
+- [A refused form keeps what was typed](./forms-and-actions/keep-typed-values.md) — After a refusal, the form comes back filled with the values sent, once, so nobody types a long message twice.
+- [Redirect and say what happened](./forms-and-actions/redirect-and-flash.md) — End an action with q:redirect and a flash; q:flash for a warning; the message shows once on the next page.

@@ -1,0 +1,9 @@
+# Recipe: a refused form comes back with what was typed, not empty.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/messages.db

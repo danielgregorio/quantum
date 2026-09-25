@@ -1,0 +1,9 @@
+# Recipe: after a POST, send the browser to a page and tell it what happened.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/notes.db

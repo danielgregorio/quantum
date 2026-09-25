@@ -26,6 +26,9 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- Cookbook, "Forms & actions": each error on its field, a refused form that
+  keeps what was typed, and redirect with a flash (`q:flash` for a warning);
+  tested recipes.
 - Cookbook, "Login & permissions": log in with a hashed password, sign up and
   store a hash, a page for one role only, a guard that redirects (and stops the
   page's actions), and sign out; five tested recipes.

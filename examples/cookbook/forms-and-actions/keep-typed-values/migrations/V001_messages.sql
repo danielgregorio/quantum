@@ -1,0 +1,5 @@
+CREATE TABLE messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    body TEXT NOT NULL
+);

@@ -1,0 +1,5 @@
+tests/contact.test.q
+  PASS  a refused message comes back as it was typed
+  PASS  the values come back once: the next visit is empty
+  PASS  a valid message is saved
+3 passed, 0 failed

@@ -1,0 +1,9 @@
+# Recipe: the rules live on the action; the form shows each refusal on its field.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/guests.db

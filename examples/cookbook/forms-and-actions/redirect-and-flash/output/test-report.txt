@@ -1,0 +1,6 @@
+tests/notes.test.q
+  PASS  adding a note redirects back with a success flash
+  PASS  the flash shows once
+  PASS  clearing sends the browser to another page
+  PASS  nothing to clear is a warning, on the same page
+4 passed, 0 failed

@@ -1,0 +1,5 @@
+tests/guests.test.q
+  PASS  a valid guest is added
+  PASS  every broken field gets its own message
+  PASS  a missing field is refused as Required
+3 passed, 0 failed
