@@ -10,6 +10,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- Every `xml` example on the site is checked by the real parser in CI
+  (tests/docs/test_docs_xml_blocks.py); the guide's examples with a result
+  are also run. 121 of 607 failed: the guide's are fixed, the editor
+  illustrations are plain text, and 22 hand-written pages that document tags
+  that do not exist (the `ui:` component pages, UI features, some example and
+  target pages) say "Under review" at the top until tested examples replace
+  them.
 - The site has a changelog (one page per version, with stable anchors), a
   status page ("what really works today", from FEATURE_STATUS.md), a blog
   with an RSS feed and the "Quantum 1.0" post, a support page and a community

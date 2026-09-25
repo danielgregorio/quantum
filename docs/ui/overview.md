@@ -1,5 +1,12 @@
 # UI Engine Overview
 
+::: danger Under review
+The examples on this page have not been checked against the language, and some
+of them use tags or attributes that do not exist. The page is being replaced by
+tested examples. Until then, trust the [Guide](/guide/getting-started) and the
+[Reference](/reference/), whose examples are checked on every change.
+:::
+
 ::: tip Start with the guide
 The way to build screens is a **page** with `ui:*` elements, opened with
 `quantum start`, `quantum console` or `quantum desktop` — see

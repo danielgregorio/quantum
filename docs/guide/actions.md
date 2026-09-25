@@ -98,7 +98,7 @@ no other action runs in its place.
 `q:redirect` ends the action. `flash` is optional and accepts databinding.
 For a flash of another kind, use `q:flash` before the redirect:
 
-```xml
+```xml fragment=action
 <q:flash type="error" message="Invalid credentials" />
 <q:redirect url="/login" />
 ```

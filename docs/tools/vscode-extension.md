@@ -51,12 +51,12 @@ Context-aware code completion:
 - Variable references
 - Function calls
 
-```xml
+```text
 <ui:bu|
       ^-- Suggests: ui:button, ui:badge
 ```
 
-```xml
+```text
 <ui:button variant="|"
                     ^-- Suggests: primary, secondary, danger, success
 ```

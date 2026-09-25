@@ -20,6 +20,13 @@ onMounted(async () => {
 
 # Conditional Examples
 
+::: danger Under review
+The examples on this page have not been checked against the language, and some
+of them use tags or attributes that do not exist. The page is being replaced by
+tested examples. Until then, trust the [Guide](/guide/getting-started) and the
+[Reference](/reference/), whose examples are checked on every change.
+:::
+
 Conditional logic with `q:if`, `q:else`, and `q:elseif`.
 
 <div class="related-links">

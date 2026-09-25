@@ -1,5 +1,12 @@
 # Mobile Target (React Native)
 
+::: danger Under review
+The examples on this page have not been checked against the language, and some
+of them use tags or attributes that do not exist. The page is being replaced by
+tested examples. Until then, trust the [Guide](/guide/getting-started) and the
+[Reference](/reference/), whose examples are checked on every change.
+:::
+
 ::: danger Laboratory
 `--target mobile` (React Native) is **Laboratory**: it translates `q:set` and
 `q:function` to JavaScript on its own, with no stability promise, and it warns

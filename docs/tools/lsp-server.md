@@ -277,7 +277,7 @@ Provides suggestions for:
 - Component references
 - Function names
 
-```xml
+```text
 <ui:button variant="|"
            ^-- CompletionList:
                - primary

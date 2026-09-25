@@ -392,13 +392,8 @@ Each component should have one clear purpose:
 
 ### 2. Use Descriptive Names
 
-```xml
-<!-- Good -->
-<q:component name="ProductPriceFormatter" xmlns:q="https://quantum.lang/ns">
-
-<!-- Avoid -->
-<q:component name="PF" xmlns:q="https://quantum.lang/ns">
-```
+Prefer `<q:component name="ProductPriceFormatter">` to
+`<q:component name="PF">`: the name is what a page that uses it reads.
 
 ### 3. Document Parameters
 

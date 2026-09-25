@@ -296,9 +296,12 @@ CREATE TABLE tasks (
 
 ```xml
 <q:action name="save" method="POST" table="tasks" datasource="db" columns="title,priority">
+  <q:param name="id" type="integer" required="true" />
   <q:query name="updated" datasource="db">
     UPDATE tasks SET title = :title, priority = :priority WHERE id = :id
-    <!-- q:params of the query, as usual -->
+    <q:param name="title" value="{title}" type="string" />
+    <q:param name="priority" value="{priority}" type="string" />
+    <q:param name="id" value="{id}" type="integer" />
   </q:query>
   <q:redirect url="/" flash="Saved: {title}" />
 </q:action>
