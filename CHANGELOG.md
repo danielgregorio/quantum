@@ -19,6 +19,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- Pages that described what does not work are gone: the plugin system
+  (nothing loads plugins), the package manager page (pages cannot import a
+  component from an installed package; `q:import from=` is a folder under
+  `paths.components`), and the HTML, terminal and mobile target pages (what
+  is true about them is in the guide's "Standalone builds"). The VS Code
+  extension page is generated from its manifest and says how to run it from
+  source — it is not on the Marketplace.
 - A Stability page (/stability/), generated from SUPPORT_TIERS.md: what 1.0
   promises, tag by tag, and the semver promise for Core and AI.
 - Simplified Chinese (zh-CN) for Why Quantum, Installation, Quick start,

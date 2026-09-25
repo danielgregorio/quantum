@@ -7,6 +7,7 @@
   an index. Headings carry explicit anchors ({#added}), so a link to a
   version's "Breaking" section stays valid when the text around it changes.
 - docs/stability/index.md: SUPPORT_TIERS.md, the promise of 1.0.
+- docs/tools/vscode-extension.md: what vscode-quantum/package.json declares.
 - docs/status/index.md: FEATURE_STATUS.md ("what really works today"), which
   scripts/generate-feature-status.py measures by running the examples.
 - docs/blog/index.md and docs/public/blog/feed.xml: the post list and its RSS
@@ -138,6 +139,63 @@ def stability_page(text: str) -> str:
             '## ' + body.rstrip() + '\n')
 
 
+# -- VS Code extension -------------------------------------------------------
+
+def vscode_page() -> str:
+    """docs/tools/vscode-extension.md from vscode-quantum/package.json and its snippets.
+
+    The hand-written page described a Marketplace listing that does not exist
+    and features nobody had checked; this one lists what the extension's
+    manifest declares, so it changes when the extension does.
+    """
+    import json
+    ext = REPO / 'vscode-quantum'
+    manifest = json.loads((ext / 'package.json').read_text(encoding='utf-8'))
+    contributes = manifest.get('contributes', {})
+
+    def cell(text):
+        return str(text).replace('|', '\\|').replace('\n', ' ')
+
+    lines = [GENERATED.format(source='vscode-quantum/package.json'),
+             '# VS Code extension\n',
+             'The extension lives in the repository, in `vscode-quantum/`. It is **not '
+             'published** on the Visual Studio Marketplace; to use it, build it and run it '
+             'from source (it needs Node.js):\n',
+             '```bash\ncd vscode-quantum\nnpm install\nnpm run compile\n```\n',
+             'Then open the `vscode-quantum` folder in VS Code and press **F5**: a second VS '
+             'Code window (the Extension Development Host) opens with the extension '
+             'loaded, and `.q` files get the language features below.\n',
+             f'Requires VS Code {manifest.get("engines", {}).get("vscode", "")}. '
+             'Features that run Quantum use the `quantum` found through the settings below.\n',
+             '## Commands\n', '| Command | Title |', '|---|---|']
+    for c in contributes.get('commands', []):
+        lines.append(f'| `{c["command"]}` | {cell(c.get("title", ""))} |')
+    keys = contributes.get('keybindings', [])
+    if keys:
+        lines += ['', '## Keyboard shortcuts\n', '| Keys | Command |', '|---|---|']
+        for k in keys:
+            lines.append(f'| `{k.get("key", "")}` | `{k.get("command", "")}` |')
+    props = (contributes.get('configuration', {}) or {}).get('properties', {})
+    if props:
+        lines += ['', '## Settings\n', '| Setting | Default | Description |', '|---|---|---|']
+        for name, spec in props.items():
+            default = json.dumps(spec.get('default')) if 'default' in spec else ''
+            lines.append(f'| `{name}` | `{cell(default)}` | {cell(spec.get("description", ""))} |')
+    snippets = []
+    for entry in contributes.get('snippets', []):
+        data = json.loads((ext / entry['path']).read_text(encoding='utf-8'))
+        snippets += [(s['prefix'], s.get('description', name)) for name, s in data.items()]
+    if snippets:
+        lines += ['', '## Snippets\n', 'Type the prefix in a `.q` file and accept the suggestion.\n',
+                  '| Prefix | Inserts |', '|---|---|']
+        for prefix, description in sorted(snippets):
+            prefixes = prefix if isinstance(prefix, list) else [prefix]
+            lines.append(f'| {", ".join(f"`{p}`" for p in prefixes)} | {cell(description)} |')
+    lines += ['', 'The language server behind completion and diagnostics is also usable from '
+              'other editors: see [LSP server](./lsp-server.md).', '']
+    return '\n'.join(lines)
+
+
 # -- blog --------------------------------------------------------------------
 
 def front_matter(text: str) -> dict:
@@ -219,6 +277,7 @@ def pages() -> dict:
     out.update(changelog_pages((REPO / 'CHANGELOG.md').read_text(encoding='utf-8')))
     out['status/index.md'] = status_page((REPO / 'FEATURE_STATUS.md').read_text(encoding='utf-8'))
     out['stability/index.md'] = stability_page((REPO / 'SUPPORT_TIERS.md').read_text(encoding='utf-8'))
+    out['tools/vscode-extension.md'] = vscode_page()
     out.update(blog_pages())
     return out
 

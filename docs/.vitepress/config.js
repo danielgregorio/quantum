@@ -170,15 +170,6 @@ export default defineConfig({
         }
       ],
       // END Reference
-      '/extensibility/': [
-        {
-          text: 'Extensibility',
-          items: [
-            { text: 'Plugin System', link: '/extensibility/plugins' },
-            { text: 'Package Manager', link: '/extensibility/packages' }
-          ]
-        }
-      ],
       '/examples/': [
         {
           text: 'Examples Gallery',
@@ -209,10 +200,7 @@ export default defineConfig({
         {
           text: 'Build Targets',
           items: [
-            { text: 'HTML Target', link: '/targets/html' },
-            { text: 'Desktop (quantum desktop)', link: '/targets/desktop' },
-            { text: 'Mobile (Laboratório)', link: '/targets/mobile' },
-            { text: 'Terminal (Textual)', link: '/targets/terminal' }
+            { text: 'Desktop (quantum desktop)', link: '/targets/desktop' }
           ]
         }
       ],

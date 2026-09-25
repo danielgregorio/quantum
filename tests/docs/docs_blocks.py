@@ -39,12 +39,9 @@ UNDER_REVIEW = {
     'features/animations.md', 'features/theming.md', 'features/form-validation.md',
     'examples/advanced.md', 'examples/agents.md', 'examples/conditionals.md',
     'examples/forms-actions.md', 'examples/games.md', 'examples/queries.md', 'examples/ui-theming.md',
-    'targets/html.md', 'targets/mobile.md', 'targets/terminal.md',
-    'extensibility/plugins.md',
     # Hand-written catalogs of snippets that nothing runs; the Cookbook replaces them.
     'examples/authentication.md', 'examples/data-import.md', 'examples/functions.md',
-    'examples/loops.md', 'examples/state-management.md', 'extensibility/packages.md',
-    'tools/vscode-extension.md',
+    'examples/loops.md', 'examples/state-management.md',
 }
 NOTICE = '::: danger Under review'
 
