@@ -1,7 +1,7 @@
 # Sessions & Scopes
 
-A plain `q:set` lives for one page render. Three prefixed scopes keep values
-longer, or expose the request itself:
+A plain `q:set` lives for one request (SET-2). Three prefixed scopes keep
+values longer, or expose the request itself:
 
 | Scope | Lives | Shared with |
 |-------|-------|-------------|
@@ -14,7 +14,11 @@ under `gunicorn --workers 4` each worker has its own. Keep what must last in the
 database — see [How a Page Runs](/guide/how-a-page-runs).
 
 Sessions are kept in a signed cookie by the web server, so they work with
-`quantum start` out of the box.
+`quantum start` out of the box. When you deploy, set `QUANTUM_SECRET_KEY` (or
+`security.secret_key` in the config): without it each process signs with a key
+of its own, and a restart logs everyone out.
+
+The examples on this page run in CI (`tests/docs/test_guide_sessions.py`).
 
 ## Counting visits
 
@@ -33,7 +37,7 @@ Save as `components/visits.q`:
 </q:component>
 ```
 
-Two visitors opening the page one after the other see:
+Two visitors opening `/visits` one after the other see:
 
 | Request | `session.mine` | `application.everyone` |
 |---------|------------------|---------------------|
@@ -41,27 +45,53 @@ Two visitors opening the page one after the other see:
 | visitor A, 2nd | 2 | 2 |
 | visitor B, 1st | 1 | 3 |
 
-`operation="increment"` starts from zero when the variable does not exist yet.
+and the last line says `GET /visits`. `operation="increment"` starts from zero
+when the variable does not exist yet (SET-3).
 
-::: warning Arithmetic on a missing session value
-`value="{session.mine + 1}"` does **not** work on the first visit: a missing
-scope value evaluates to an empty string, and converting that to a number
-fails. Use `operation="increment"` (or `operation="add"` with a `value`) for
-counters. Known gap `G15`, to be settled by the language specification.
-:::
+## A value that does not exist yet
 
-## Reading a scope that was never set
-
-Reading `session.something` or `request.something` that does not exist is not an error:
-it renders empty, and in a condition it is false. That makes "is the visitor
-logged in?" a one-liner:
+Arithmetic on a session value that was never set is an error that says so and
+points to the fix (EXPR-3):
 
 ```xml
-<q:if condition="session.authenticated">
-  <p>Welcome back!</p>
-  <q:else><a href="/login">Sign in</a></q:else>
-</q:if>
+<q:set name="session.visits" value="{session.visits + 1}" />
 ```
+
+**Error:** `session value used in 'session.visits + 1' is not set`
+
+Use `operation="increment"` for a counter, or give the value a `default`
+(SET-1):
+
+```xml
+<q:set name="session.visits" operation="increment" />
+<q:return value="Visits: {session.visits}" />
+```
+
+**Output:** `Visits: 1`
+
+The reference alone is not an error: `{session.name}` that does not exist
+renders empty (a page renders before login), and in a condition it is false:
+
+```xml
+<q:return value="Hello, {session.name}!" />
+```
+
+**Output:** `Hello, !`
+
+That makes "is the visitor logged in?" a one-liner. Save as
+`components/welcome.q`:
+
+```xml
+<q:component name="welcome" xmlns:q="https://quantum.lang/ns">
+  <q:if condition="session.authenticated">
+    <p>Welcome back!</p>
+    <q:else><a href="/login">Sign in</a></q:else>
+  </q:if>
+</q:component>
+```
+
+A new visitor sees **Sign in**; once an action has set
+`session.authenticated`, the same page says **Welcome back!**
 
 ## Writing from an action
 
@@ -75,4 +105,7 @@ redirect — see [Actions & Forms](/guide/actions) and
 |----------|----------|
 | `request.method` | `GET`, `POST`… |
 | `request.path` | the path, without the query string |
-| `request.user_agent` | the browser's `User-Agent` header |
+| `request.url` | the whole URL, with the query string |
+
+The query string itself is in `query.` (`{query.page}`), and a submitted form
+in `form.`.
