@@ -163,7 +163,9 @@ error.
 named by the `action` field of the request body.
 
 **ACT-2** — Each field declared with `q:param` becomes a variable of the action,
-already validated and converted to the declared type. If a validation rule
+already validated and converted to the declared type (a `date` is a day that
+exists, written `YYYY-MM-DD`, and stays text). A `default` stands for a field
+left out or blank and is converted the same way. If a validation rule
 fails (`required`, `type`, `minlength`, `maxlength`, `min`, `max`, `pattern`,
 `enum`, `range`),
 the action does not run: the response redirects to the page it came from, with

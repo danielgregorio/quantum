@@ -30,6 +30,7 @@ This module is the union of the two: the component's coercion plus the
 turned into text.
 """
 
+import datetime
 import logging
 import re
 from typing import Any, List, Optional, Tuple
@@ -70,6 +71,7 @@ def check_param_type(where: str, ptype, allowed=PARAM_TYPES, exact: bool = False
 
 _EMAIL = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 _URL = re.compile(r'^https?://', re.IGNORECASE)
+_DATE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 
 
 def is_uploaded_file(value: Any) -> bool:
@@ -141,6 +143,18 @@ def coerce(param_def, value: Any) -> Tuple[Any, Optional[str]]:
         text = str(value)
         if not _URL.match(text):
             return value, f"Parameter '{name}' must be a valid URL"
+        return text, None
+
+    if ptype == 'date':
+        # ACT-2: the form draws <input type="date">, which sends YYYY-MM-DD;
+        # the server took any text, 2026-02-30 included. It stays text.
+        text = str(value).strip()
+        try:
+            if not _DATE.match(text):
+                raise ValueError
+            datetime.date.fromisoformat(text)
+        except ValueError:
+            return value, f"Parameter '{name}' must be a date (YYYY-MM-DD), got {value!r}"
         return text, None
 
     return value, None

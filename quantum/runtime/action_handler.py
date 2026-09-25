@@ -272,13 +272,15 @@ class ActionHandler:
                 if param.required and (value is None or value == ''):
                     raise ValidationError(f"Parameter '{param.name}' is required")
 
-                # Skip validation if optional and not provided
+                # Optional and not provided: the default, converted like a
+                # value sent (ACT-2). It was used as text, so type="boolean"
+                # default="false" was the string "false", which is true.
                 if value is None or value == '':
-                    if param.default is not None:
-                        validated[param.name] = param.default
-                    elif getattr(param, 'nullable', False):
-                        validated[param.name] = None      # UI-10: a NULL column left blank
-                    continue
+                    if param.default is None:
+                        if getattr(param, 'nullable', False):
+                            validated[param.name] = None      # UI-10: a NULL column left blank
+                        continue
+                    value = param.default
 
                 # Type validation and conversion
                 validated_value = self._validate_type(param, value)

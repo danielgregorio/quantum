@@ -432,6 +432,33 @@ def test_enum_email_and_range_on_an_action_param(serve_pages, param, value):
     assert '[|error]' in text(c.get('/f'))
 
 
+@pytest.mark.parametrize('value,shown', [('2026-09-20', '[2026-09-20|success]'),
+                                         ('2026-02-30', '[|error]'),
+                                         ('20/09/2026', '[|error]'),
+                                         ('tomorrow', '[|error]')])
+def test_a_date_param_is_checked_on_the_server(serve_pages, value, shown):
+    # ACT-2: type="date" drew <input type="date"> and the server took any text
+    c = serve_pages(f=(f'<q:component name="f" {NS}><q:action name="a" method="POST">'
+                       '<q:param name="d" type="date"/>'
+                       '<q:set name="session.d" value="{d}"/><q:redirect url="/f" flash="ok"/></q:action>'
+                       '<p>[{session.d}|{flashType}]</p></q:component>'))
+    c.post('/f', data={'d': value}, headers={'Referer': 'http://localhost/f'})
+    assert shown in text(c.get('/f'))
+
+
+def test_a_default_has_the_param_type(serve_pages):
+    # ACT-2: the default was used as text, so an unchecked box with
+    # default="false" read as true ("false" is a non-empty string)
+    c = serve_pages(f=(f'<q:component name="f" {NS}><q:action name="a" method="POST">'
+                       '<q:param name="box" type="boolean" default="false"/>'
+                       '<q:param name="n" type="integer" default="2"/>'
+                       '<q:set name="session.r" value="{\'yes\' if box else \'no\'} {n + 1}"/>'
+                       '<q:redirect url="/f"/></q:action>'
+                       '<p>[{session.r}]</p></q:component>'))
+    c.post('/f', data={})
+    assert '[no 3]' in text(c.get('/f'))
+
+
 def test_q_flash_sets_a_flash_of_another_kind(serve_pages):
     # ACT-3
     c = serve_pages(f=(f'<q:component name="f" {NS}>'

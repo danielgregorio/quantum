@@ -126,6 +126,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
   "{count}" — an error in a statement, zero rows in markup — and `step="{n}"`
   became 1. A bound that is not a whole number is now an error that names it,
   in markup too, where it used to draw zero rows.
+- `q:param type="date"` on an action is checked on the server: `2026-02-30`
+  or `tomorrow` is refused on its field (ACT-2). Only the browser's date
+  input checked it before, and any text reached the action.
+- A `q:param` `default=` on an action has the param's type (ACT-2). It was
+  used as text, so `type="boolean" default="false"` gave `"false"`, which is
+  true: an unchecked box read as checked.
 - `quantum run --target desktop` is no longer offered: the command line says
   the target was removed and points to `quantum desktop` (UI-8). It used to
   accept the choice and fail later, in the build.
