@@ -210,6 +210,10 @@ class SetExecutor(BaseExecutor):
             current_value = exec_context.get_variable(node.name)
         except Exception:
             current_value = []
+        # SET-3: a scope key that does not exist reads as '' (session.x), not
+        # as an error; like increment's 0, it starts an empty list.
+        if current_value is None or current_value == '':
+            current_value = []
 
         if not isinstance(current_value, list):
             raise ExecutorError(f"Cannot perform array operation on non-array: {type(current_value)}")

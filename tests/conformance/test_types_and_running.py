@@ -167,6 +167,20 @@ def test_an_operation_on_the_wrong_kind_or_unknown_is_an_error(run_body, body, m
         run_body(body + '<q:return value="{c}"/>')
 
 
+@pytest.mark.parametrize('name', ['session.c', 'application.c', 'request.c'])
+def test_append_to_a_scope_key_that_does_not_exist_starts_a_list(run_body, name):
+    # SET-3: a missing scope key read as '' and append refused it as "non-array"
+    assert run_body(f'<q:set name="{name}" operation="append" value="a"/>'
+                    f'<q:set name="{name}" operation="append" value="b"/><q:return value="{{{name}}}"/>') == ['a', 'b']
+
+
+def test_a_bare_name_never_writes_the_scope_key_of_the_same_name(run_body):
+    # SET-3, EXPR-11: q:set name="c" is local. With a session.c already there,
+    # it used to overwrite session.c and leave c undefined
+    assert run_body('<q:set name="session.c" value="kept"/><q:set name="c" value="local"/>'
+                    '<q:return value="{session.c} {c}"/>') == 'kept local'
+
+
 @pytest.mark.parametrize('scope,read', [('component', 'c'), ('session', 'session.c'),
                                         ('application', 'application.c'), ('request', 'request.c')])
 def test_the_scopes(run_body, scope, read):

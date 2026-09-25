@@ -122,10 +122,9 @@ class ExecutionContext:
                 return
             ctx = ctx.parent
 
-        # Check session scope
-        if name in self.session_vars:
-            self.session_vars[name] = value
-            return
+        # A bare name is never a scope key (EXPR-11): it used to fall through
+        # to session_vars, so q:set name="cart" next to a session.cart
+        # overwrote the session and left `cart` undefined (SET-3).
 
         # Variable doesn't exist - create in local scope
         self.local_vars[name] = value

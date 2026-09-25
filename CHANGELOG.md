@@ -159,6 +159,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 - A `q:query` inside a `q:loop` or a `q:if` of a `q:transaction datasource="…"`
   takes the transaction's datasource, like one directly inside it (DB-4); it
   had to repeat `datasource=`, or the page did not parse.
+- `q:set name="cart"` is local even when the session has a `cart` (SET-3,
+  EXPR-11). It used to overwrite `session.cart` and leave `cart` undefined, so
+  the page showed `{len(cart)}` as written.
+- `q:set name="session.cart" operation="append"` starts a list when the key
+  does not exist yet (SET-3). It was refused as "non-array": a missing scope
+  key reads as `''`.
 - A page's extracted stylesheet and script (`static/styles-<hash>.css`) are
   written whole or not at all. Written in place, a second request during the
   write linked the file while it was still empty or partial, and its browser

@@ -555,8 +555,10 @@ exist starts a list); on an object, `merge` (`value`), `setProperty` and
 by `source`; on text, `uppercase`, `lowercase`, `trim` and `format` (`value`,
 with its expressions). An operation on a value of the wrong kind is an error
 that names the variable. `scope` is `local` (the default), `function`,
-`component`, `session`, `application` or `request`. An operation or a scope
-that does not exist is a parse error (PARSE-5).
+`component`, `session`, `application` or `request`; a bare name never writes
+the scope key of the same name (`name="cart"` leaves `session.cart` alone,
+EXPR-11), and `append` to a scope key that does not exist starts a list. An
+operation or a scope that does not exist is a parse error (PARSE-5).
 
 **SET-4** — `q:set` checks the value it stores: `required` (empty is an error),
 `nullable="false"`, `validate` (`email`, `url`, `phone`, `cep`, `cpf`, `cnpj`,
