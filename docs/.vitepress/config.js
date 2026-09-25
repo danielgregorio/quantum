@@ -70,6 +70,12 @@ export default defineConfig({
     'examples/functions.md', 'examples/games.md', 'examples/loops.md',
     'examples/queries.md', 'examples/state-management.md', 'examples/ui-theming.md',
     'features/animations.md', 'features/form-validation.md', 'features/theming.md',
+    // Old notes linked from no menu, that the site presented as current: a
+    // benchmark nothing reproduces ("faster than PHP and Python"), the q:query
+    // implementation plan (src/ paths, attributes since removed) and the
+    // performance-phase notes (caches, "fully compatible with PyPy", untested).
+    'benchmarks/performance-comparison.md', 'architecture/query-implementation.md',
+    'internals/ast-cache.md', 'internals/expression-cache.md', 'internals/pypy-compatibility.md',
   ],
 
   title: 'Quantum Framework',

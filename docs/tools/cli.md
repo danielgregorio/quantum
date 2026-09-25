@@ -1,9 +1,5 @@
 # CLI Commands
 
-The Quantum CLI provides commands for developing, building, and deploying Quantum applications.
-
-## Installation
-
 `pip install quantum-framework` installs the `quantum` command.
 
 ```bash
@@ -11,145 +7,93 @@ quantum <command>
 python -m quantum.cli.runner <command>   # the same, without the script on PATH
 ```
 
+Every command takes `-h` / `--help`. This page is about the everyday ones;
+the [command-line reference](/reference/cli), generated from the code, lists
+every command and option.
+
 ## Commands Overview
 
 | Command | Description |
 |---------|-------------|
-| `run` | Execute a .q file |
-| `start` | Start web server |
+| `run` | Execute a `.q` file |
+| `start` | Serve the application's pages |
+| `stop` | Stop the server `quantum start` started |
 | `console` | The application's pages in the terminal |
 | `desktop` | The application's pages in a desktop window |
 | `check` | Pages parse, SQL compiles, query fields exist |
-| `pkg` | Package management |
+| `test` | Run the app's `*.test.q` tests |
+| `migrate` | Apply, roll back and plan database migrations |
 
 ## quantum run
 
-Execute a Quantum file (.q).
+Execute a Quantum file (`.q`).
 
 ```bash
 quantum run <file.q> [options]
 ```
 
-### Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `file` | Path to .q file to execute |
-
-### Options
-
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--debug` | Enable debug output | false |
-| `--config` | Path to config file | quantum.config.yaml |
-| `--target` | Standalone UI build (`type="ui"`): html, textual (layout only), mobile (Laboratory) | html |
-
-### Examples
+| `--debug` | Print what is parsed and run | off |
+| `--config` | Path to config file | `quantum.config.yaml` |
+| `--target` | Standalone UI build (`type="ui"`): `html`, `textual` (layout only), `mobile` (Laboratory) | `html` |
 
 ```bash
-# Run a component
-quantum run examples/hello.q
+$ quantum run hello.q
+[EXEC] Executing component: HelloWorld
+[SUCCESS] Result: Hello World!
 
-# Run with debug output
-quantum run examples/hello.q --debug
-
-# Standalone layout build of a type="ui" application
-quantum run myapp.q --target textual
-
-# Run with custom config
-quantum run myapp.q --config production.yaml
-```
-
-### Behavior by Application Type
-
-The `run` command behaves differently based on the application type:
-
-| Type | Behavior |
-|------|----------|
-| `q:component` | Executes and prints result |
-| `q:application type="ui"` | Builds to target output |
-| `q:application type="game"` | Builds HTML game file |
-| `q:application type="terminal"` | Builds TUI app |
-| `q:job` | Executes job |
-
-A web app is not a `q:application`: it is pages in `components/`, served by
-`quantum start` (APP-1).
-
-### Debug Output
-
-With `--debug`, you see:
-- File parsing details
-- AST generation info
-- Validation steps
-- Execution flow
-
-```bash
 $ quantum run hello.q --debug
 [DEBUG] Parsing file: hello.q
 [DEBUG] AST generated: ComponentNode
 [DEBUG] Validating AST...
 [EXEC] Executing component: HelloWorld
+   Type: pure
+   Params: 0
+   Returns: 1
 [SUCCESS] Result: Hello World!
 ```
 
+What `run` does depends on the file:
+
+| File | Behavior |
+|------|----------|
+| `q:component` | Executes it and prints the result |
+| `q:application type="ui"` | Builds the standalone UI (Experimental) |
+| `q:application type="terminal"` | Builds the terminal app (Experimental) |
+| `q:application type="game"` | Builds the game (Laboratory) |
+| `q:job` | Runs the job (Experimental) |
+
+A web app is not a `q:application`: it is pages in `components/`, served by
+`quantum start` (APP-1).
+
+A file that does not exist, does not parse or fails exits with `1`.
+
 ## quantum start
 
-Start the Quantum web server.
+Serve the pages in `components/` on the port in `quantum.config.yaml`
+(8080 by default).
 
 ```bash
-quantum start [options]
-```
-
-### Options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--port` | Server port | 8080 |
-| `--config` | Config file | quantum.config.yaml |
-| `--debug` | Debug mode | false |
-| `--hot-reload` | Reload the open pages when a component or static file changes ([Hot Reload](/tools/hot-reload)) | off |
-| `--hot-reload-port` | WebSocket port for `--hot-reload` | 35729 |
-
-### Examples
-
-```bash
-# Start with default settings
-quantum start
-
-# Start on custom port
+quantum start                  # in the application's folder
 quantum start --port 3000
-
-# Start in debug mode
-quantum start --debug
-
-# Reload the browser on every save
-quantum start --hot-reload
+quantum start --hot-reload     # reload the open pages on every save
 ```
 
-### Configuration File
+Debug mode — the [/_dev panel](/tools/dev-panel) and detailed
+[error pages](/tools/error-pages) — is `server.debug: true` in
+`quantum.config.yaml`. The `--debug` flag only prints the traceback when the
+server fails to start. See also [Hot Reload](/tools/hot-reload).
 
-The server reads settings from `quantum.config.yaml`:
+## quantum stop
 
-```yaml
-server:
-  host: "0.0.0.0"
-  port: 8080
-  debug: false
-
-datasources:
-  db:
-    driver: sqlite
-    database: ./data/app.db
-
-security:
-  secret_key: ${SECRET_KEY}
-```
+Stops the server that `quantum start` started from this folder (it records its
+process in `.quantum.pid`). A process it cannot be sure is that server is not
+killed: the command says so and exits with `1` (RUN-3).
 
 ## quantum console
 
-Open the application's pages in the terminal. It starts the application's
-server and draws each page with Textual; buttons and forms send the page's
-`q:action`s, with a session, so login, validation and flash are the web's.
+The same pages in the terminal:
 
 ```bash
 quantum console              # the home page
@@ -159,143 +103,54 @@ quantum console --config other.config.yaml
 
 ## quantum desktop
 
-Open the application's pages in a native window (pywebview). It needs the
-`[desktop]` extra. See [Desktop](/targets/desktop).
+The same pages in a desktop window ([Desktop](/targets/desktop)):
 
 ```bash
-pip install "quantum-framework[desktop]"
 quantum desktop
 quantum desktop /reports --width 800 --height 600
 ```
 
-Both render the same pages as `quantum start` — see
-[One App, Many Screens](/guide/ui).
-
 ## quantum check
 
-Check every page against the database: pages parse, each `q:query` compiles,
-each `{query.field}` a page reads is a column the query returns. Exit code 1
-on any problem. See [quantum check](/tools/check).
+Parses every page and compiles every query against the database, without
+running them ([quantum check](/tools/check)):
 
 ```bash
 quantum check
 quantum check --config other.config.yaml
 ```
 
-## quantum pkg
+## quantum test
 
-Package management for Quantum components.
-
-```bash
-quantum pkg <subcommand> [options]
-```
-
-### Subcommands
-
-| Subcommand | Description |
-|------------|-------------|
-| `init <path>` | Initialize new package |
-| `install <path>` | Install package |
-| `list` | List installed packages |
-| `uninstall <name>` | Uninstall package |
-| `publish` | Publish package |
-
-### pkg init
-
-Create a new Quantum package:
+Runs the `*.test.q` files of the app ([Testing an App](/guide/testing)):
 
 ```bash
-quantum pkg init ./my-component
+quantum test                   # every *.test.q under the current folder
+quantum test tests/            # a folder, or files
 ```
 
-Creates this structure:
+It exits with `1` when a test fails, so it fits in CI.
 
-```
-my-component/
-  package.yaml       # Package manifest
-  src/
-    component.q      # Main component
-  tests/
-    test_component.q # Test file
-  README.md          # Documentation
-```
+## quantum migrate
 
-### pkg install
-
-Install a package:
+Database migrations in `migrations/` ([Database Queries](/guide/query)):
 
 ```bash
-# Install from local path
-quantum pkg install ./my-package
-
-# Install from URL (future)
-quantum pkg install https://github.com/user/quantum-pkg
+quantum migrate status
+quantum migrate up
+quantum migrate down           # the last one
+quantum migrate create add_due_date
+quantum migrate plan           # compare schema.sql with the migrations
 ```
 
-Packages are installed to `components/` directory.
+## Other commands
 
-### pkg list
-
-List installed packages:
-
-```bash
-$ quantum pkg list
-
-Installed Packages:
-  - form-validator@1.0.0
-  - data-grid@2.1.0
-  - chart-components@1.2.0
-```
-
-### pkg uninstall
-
-Remove a package:
-
-```bash
-quantum pkg uninstall form-validator
-```
-
-### Package Manifest
-
-`package.yaml` format:
-
-```yaml
-name: my-component
-version: 1.0.0
-description: A useful Quantum component
-author: Your Name
-license: MIT
-
-# Component entry point
-main: src/component.q
-
-# Dependencies
-dependencies:
-  - utils@^1.0.0
-
-# Keywords for discovery
-keywords:
-  - ui
-  - form
-  - validation
-```
-
-## Exit Codes
-
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | Error (parse, validation, execution) |
-| 2 | Configuration error |
-| 3 | File not found |
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `QUANTUM_CONFIG` | Config file path | quantum.config.yaml |
-| `QUANTUM_DEBUG` | Enable debug mode | false |
-| `QUANTUM_PORT` | Default server port | 8080 |
+`quantum admin` starts the [Quantum Admin](/guide/admin). `quantum jobs` and
+`quantum mq` belong to jobs and messaging, which are Experimental (see
+[Stability](/stability/)). `quantum pkg` packs and installs component
+folders, but a page cannot import a component from an installed package yet:
+`q:import from=` is a folder under `paths.components`. Their options are in
+the [command-line reference](/reference/cli).
 
 ## Related
 

@@ -312,7 +312,9 @@ Examples:
     start_parser = subparsers.add_parser('start', help='Start web server')
     start_parser.add_argument('--port', type=int, help='Port (overrides config)')
     start_parser.add_argument('--config', default='quantum.config.yaml', help='Config file')
-    start_parser.add_argument('--debug', action='store_true', help='Debug mode')
+    start_parser.add_argument('--debug', action='store_true',
+                              help='Print the traceback when the server fails to start '
+                                   '(debug mode is server.debug in the config)')
     start_parser.add_argument('--hot-reload', action='store_true',
                               help='Reload the open pages when a component or static file changes')
     start_parser.add_argument('--hot-reload-port', type=int, default=None,

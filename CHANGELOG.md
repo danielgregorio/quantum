@@ -36,6 +36,14 @@ alter the behaviour of an existing app is listed under **Breaking**.
   (`scripts/generate-cookbook.py`); before a release, against a real one
   (`tests/live_ai/test_cookbook_ai.py`). Their tests check structure, never the
   model's words.
+- The CLI and LSP server pages say what exists. The CLI page taught exit
+  codes, environment variables and a `quantum pkg uninstall` that do not
+  exist, and `quantum start --debug` as debug mode; the LSP page, a
+  `pip install quantum-lsp` (it is not on PyPI), rename, code actions,
+  options and editor packages the server does not have. The VS Code page no
+  longer implies the extension runs the language server. Five old notes
+  linked from no menu leave the site: a benchmark nothing reproduces, the
+  `q:query` implementation plan and the performance-phase notes.
 - The essential pages in Brazilian Portuguese (/pt/): why Quantum,
   installation, quick start, the tutorial, stability, sponsor, the roadmap and
   the 1.0 post, machine-translated until a native speaker reviews them, with a
@@ -143,6 +151,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- `python -m quantum.cli.runner` — the installation guide's way to run
+  `quantum` without the script on `PATH` — no longer prints a
+  `RuntimeWarning` before every command. `quantum start --debug` says what it
+  does: it prints the traceback when the server fails to start; debug mode is
+  `server.debug` in `quantum.config.yaml`.
 - A page's extracted stylesheet and script (`static/styles-<hash>.css`) are
   written whole or not at all. Written in place, a second request during the
   write linked the file while it was still empty or partial, and its browser

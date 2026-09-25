@@ -191,8 +191,9 @@ def vscode_page() -> str:
         for prefix, description in sorted(snippets):
             prefixes = prefix if isinstance(prefix, list) else [prefix]
             lines.append(f'| {", ".join(f"`{p}`" for p in prefixes)} | {cell(description)} |')
-    lines += ['', 'The language server behind completion and diagnostics is also usable from '
-              'other editors: see [LSP server](./lsp-server.md).', '']
+    lines += ['', 'The extension has its own completion, hover, definitions and diagnostics, '
+              'built from the same tag schema as the language server. For other editors, '
+              'see [LSP server](./lsp-server.md).', '']
     return '\n'.join(lines)
 
 

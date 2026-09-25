@@ -138,4 +138,4 @@ Type the prefix in a `.q` file and accept the suggestion.
 | `uivbox` | Vertical flex container |
 | `uiwin` | UI Window container |
 
-The language server behind completion and diagnostics is also usable from other editors: see [LSP server](./lsp-server.md).
+The extension has its own completion, hover, definitions and diagnostics, built from the same tag schema as the language server. For other editors, see [LSP server](./lsp-server.md).

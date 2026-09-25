@@ -42,7 +42,7 @@ Start web server.
 |---|---|---|---|
 | `--port` | Port (overrides config) |  |  |
 | `--config` | Config file | `quantum.config.yaml` |  |
-| `--debug` | Debug mode |  |  |
+| `--debug` | Print the traceback when the server fails to start (debug mode is server.debug in the config) |  |  |
 | `--hot-reload` | Reload the open pages when a component or static file changes |  |  |
 | `--hot-reload-port` | WebSocket port for --hot-reload (default 35729) |  |  |
 
