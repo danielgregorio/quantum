@@ -1,0 +1,18 @@
+# Recipe: an order is saved even when the confirmation e-mail cannot be sent.
+# The mail server here is deliberately unreachable (nothing listens on port 9),
+# so every q:mail fails — as it does when the real server is down.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/orders.db
+
+mail:
+  host: 127.0.0.1
+  port: 9
+  tls: false
+  timeout: 2
+  from: shop@example.com

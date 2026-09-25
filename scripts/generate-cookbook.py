@@ -101,12 +101,13 @@ def index_page():
              'its page is imported from the tested files, and what it shows as a '
              'result was produced by running it.\n']
     for topic, title in TOPICS.items():
-        pages = sorted((PAGES / topic).glob('*.md'))
+        # A page's `order:` (front matter) sets its place in the topic; then the file name.
+        pages = [(page, front_matter(page.read_text(encoding='utf-8'))) for page in (PAGES / topic).glob('*.md')]
+        pages.sort(key=lambda pm: (int(pm[1].get('order') or 99), pm[0].stem))
         if not pages:
             continue
         lines.append(f'## {title}\n')
-        for page in pages:
-            meta = front_matter(page.read_text(encoding='utf-8'))
+        for page, meta in pages:
             if not meta.get('title') or not meta.get('description'):
                 raise SystemExit(f'{page.relative_to(REPO)}: front matter needs title: and description:')
             lines.append(f'- [{meta["title"]}](./{topic}/{page.stem}.md) — {meta["description"]}')

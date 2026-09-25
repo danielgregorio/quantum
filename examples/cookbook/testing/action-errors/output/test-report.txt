@@ -1,0 +1,6 @@
+tests/signup.test.q
+  PASS  a short name is refused on its field, with the rule's message
+  PASS  an address that is not an e-mail is refused on its field
+  PASS  an address that is already a member is refused with a flash
+  PASS  a new member is welcomed
+4 passed, 0 failed

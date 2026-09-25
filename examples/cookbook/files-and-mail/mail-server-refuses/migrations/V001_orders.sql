@@ -1,0 +1,5 @@
+CREATE TABLE orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    item TEXT NOT NULL
+);

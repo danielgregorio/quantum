@@ -1,4 +1,5 @@
 ---
+order: 1
 title: A first test with quantum test
 description: "Test a page and its action in Quantum itself — visit, submit, check the flash, the table and the field error."
 ---

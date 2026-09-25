@@ -1,0 +1,5 @@
+tests/tasks.test.q
+  PASS  a user sees only their own open tasks
+  PASS  a user with nothing open is told so
+  PASS  the page needs a signed-in user
+3 passed, 0 failed

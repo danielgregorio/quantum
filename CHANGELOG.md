@@ -19,6 +19,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- Cookbook recipes: "When the mail server says no" (`onerror="continue"`),
+  "Test data with test:given" (and `test:as`) and "Testing what an action
+  refuses" (`error=`, `message=`, `flash=`, `table=`). Recipes in a topic
+  keep an order (`order:` in the page's front matter).
 - Pages that described what does not work are gone: the plugin system
   (nothing loads plugins), the package manager page (pages cannot import a
   component from an installed package; `q:import from=` is a folder under

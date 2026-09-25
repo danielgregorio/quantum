@@ -7,7 +7,10 @@ Short recipes for one task each. Every recipe is a small app in `examples/cookbo
 ## Testing the app
 
 - [A first test with quantum test](./testing/first-test.md) — Test a page and its action in Quantum itself — visit, submit, check the flash, the table and the field error.
+- [Test data with test:given](./testing/test-data.md) — Put the rows a test needs in its fresh database with test:given, and sign a user in with test:as.
+- [Testing what an action refuses](./testing/action-errors.md) — Test the field errors, the business rule and the success of an action — error=, message=, flash= and the table.
 
 ## Files & mail
 
 - [Mail in development](./files-and-mail/mail-in-development.md) — Send mail from an action without a mail server while you develop — host: log writes each message to the log.
+- [When the mail server says no](./files-and-mail/mail-server-refuses.md) — Keep an order even when its confirmation e-mail cannot be sent — onerror=continue, and tell the visitor.

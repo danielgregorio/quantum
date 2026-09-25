@@ -1,0 +1,3 @@
+tests/order.test.q
+  PASS  the order is saved and the visitor told the e-mail failed
+1 passed, 0 failed

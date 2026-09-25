@@ -1,0 +1,9 @@
+# Recipe: testing what an action refuses — field rules and a business rule.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/signup.db

@@ -1,4 +1,5 @@
 ---
+order: 1
 title: Mail in development
 description: "Send mail from an action without a mail server while you develop — host: log writes each message to the log."
 ---

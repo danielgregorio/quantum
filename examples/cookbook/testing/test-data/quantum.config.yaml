@@ -1,0 +1,9 @@
+# Recipe: test data with test:given, and a signed-in user with test:as.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/tasks.db
