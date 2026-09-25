@@ -294,6 +294,36 @@ LANGS = {
                        '[feed RSS](/blog/feed.xml){target="_self"} (em inglês).'),
         'english': ' (em inglês)',
     },
+    'es': {
+        'notice': ('::: info Traducción automática\nEsta página se tradujo automáticamente del '
+                   'inglés y todavía no la revisó un\nhablante nativo; las correcciones son '
+                   'bienvenidas en GitHub. Si algo no\ncoincide, vale el [original en inglés]({url}).\n:::\n'),
+        'status_title': 'Lo que de verdad funciona hoy',
+        'status_intro': ('Esta página se mide, no se escribe: `scripts/generate-feature-status.py` '
+                         'ejecuta cada ejemplo y cuenta lo que pasa el analizador y lo que se '
+                         'ejecuta, y el sitio se vuelve a generar a partir del resultado. Donde '
+                         'no coincida con el resto de la documentación, esta es la página que se '
+                         'ejecutó. Las tablas quedan en inglés, como las escribe el script.\n\n'
+                         'La promesa — qué es Núcleo (Core), IA, Experimental o Laboratorio — '
+                         'está en [Estabilidad](/es/stability/).'),
+        'blog_intro': ('Noticias de Quantum: versiones, qué cambió y por qué. Suscríbete con el '
+                       '[feed RSS](/blog/feed.xml){target="_self"} (en inglés).'),
+        'english': ' (en inglés)',
+    },
+    'zh': {
+        'notice': ('::: info 机器翻译\n本页由英文原文机器翻译而来，尚未经过母语审校，欢迎在 GitHub 上提出修改。'
+                   '内容如有出入，以[英文原文]({url})为准。\n:::\n'),
+        'status_title': '今天真正能用的功能',
+        'status_intro': ('本页是测量出来的，不是写出来的：`scripts/generate-feature-status.py` '
+                         '运行每个示例，统计哪些能通过解析、哪些能执行，网站再根据结果重新生成。'
+                         '如果它与文档的其他部分不一致，以这一页为准——它是实际运行的结果。'
+                         '表格保持英文，与脚本输出一致。\n\n'
+                         '承诺——哪些属于核心层（Core）、AI 层、实验层或实验室——见'
+                         '[稳定性](/zh/stability/)。'),
+        'blog_intro': ('Quantum 的新闻：版本发布、改了什么以及为什么。可通过 '
+                       '[RSS 订阅](/blog/feed.xml){target="_self"}（英文）。'),
+        'english': '（英文）',
+    },
 }
 
 
