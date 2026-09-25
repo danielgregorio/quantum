@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitepress'
-import { LANGUAGES, locales, searchLocales } from './locales.js'
+import { LANGUAGES, guideSidebar, locales, searchLocales } from './locales.js'
 import { tokenize } from './search-tokenize.js'
 import { markStaleTranslation } from './translations.js'
 
@@ -117,57 +117,8 @@ export default defineConfig({
     i18nRouting: false,
 
     sidebar: {
-      '/guide/': [
-        {
-          text: 'Getting Started',
-          items: [
-            { text: 'Introduction', link: '/guide/getting-started' },
-            { text: 'Why Quantum', link: '/guide/why-quantum' },
-            { text: 'Installation', link: '/guide/installation' },
-            { text: 'Quick Start', link: '/guide/quick-start' },
-            { text: 'Project Structure', link: '/guide/project-structure' }
-          ]
-        },
-        {
-          text: 'Core Concepts',
-          items: [
-            { text: 'Components (.q files)', link: '/guide/components' },
-            { text: 'How a Page Runs', link: '/guide/how-a-page-runs' },
-            { text: 'State Management (q:set)', link: '/guide/state-management' },
-            { text: 'Loops (q:loop)', link: '/guide/loops' },
-            { text: 'Conditionals (q:if/q:else)', link: '/guide/conditionals' },
-            { text: 'Functions (q:function)', link: '/guide/functions' },
-            { text: 'Data Binding', link: '/guide/databinding' }
-          ]
-        },
-        {
-          text: 'AI',
-          items: [
-            { text: 'LLM, RAG & Agents', link: '/guide/ai' }
-          ]
-        },
-        {
-          text: 'Data & Backend',
-          items: [
-            { text: 'Database Queries (q:query)', link: '/guide/query' },
-            { text: 'Data Import', link: '/guide/data-import' },
-            { text: 'Files and Mail', link: '/guide/files-and-mail' },
-            { text: 'Authentication', link: '/guide/authentication' },
-            { text: 'Sessions & Scopes', link: '/guide/sessions' },
-            { text: 'Declared Services', link: '/guide/services' },
-            { text: 'Quantum Admin', link: '/guide/admin' }
-          ]
-        },
-        {
-          text: 'Web Applications',
-          items: [
-            { text: 'Actions & Forms', link: '/guide/actions' },
-            { text: 'Testing an App (quantum test)', link: '/guide/testing' },
-            { text: 'One App, Many Screens (ui:)', link: '/guide/ui' },
-            { text: 'q:application (not for web)', link: '/guide/applications' }
-          ]
-        }
-      ],
+      // One table for every language (docs/.vitepress/locales.js).
+      '/guide/': guideSidebar('root'),
       // BEGIN Reference (generated pages: scripts/generate-reference.py)
       '/reference/': [
         {

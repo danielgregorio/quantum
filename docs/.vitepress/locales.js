@@ -98,6 +98,83 @@ function link(key, path) {
   return (TRANSLATED[key] || []).includes(path) ? LANGUAGES[key].prefix + path.slice(1) : path
 }
 
+// The guide's sidebar, the same for every language: [label key, path]. Each
+// item links to the translated page when TRANSLATED lists it (link()), and to
+// the English page otherwise. Labels come from GUIDE_TEXT[lang], else English.
+const GUIDE_SIDEBAR = [
+  ['gettingStarted', [
+    ['introduction', '/guide/getting-started'], ['whyQuantum', '/guide/why-quantum'],
+    ['installation', '/guide/installation'], ['quickStart', '/guide/quick-start'],
+    ['projectStructure', '/guide/project-structure'],
+  ]],
+  ['coreConcepts', [
+    ['components', '/guide/components'], ['howAPageRuns', '/guide/how-a-page-runs'],
+    ['stateManagement', '/guide/state-management'], ['loops', '/guide/loops'],
+    ['conditionals', '/guide/conditionals'], ['functions', '/guide/functions'],
+    ['dataBinding', '/guide/databinding'],
+  ]],
+  ['ai', [['llmRagAgents', '/guide/ai']]],
+  ['dataBackend', [
+    ['queries', '/guide/query'], ['dataImport', '/guide/data-import'],
+    ['filesAndMail', '/guide/files-and-mail'], ['authentication', '/guide/authentication'],
+    ['sessions', '/guide/sessions'], ['services', '/guide/services'], ['admin', '/guide/admin'],
+  ]],
+  ['webApplications', [
+    ['actions', '/guide/actions'], ['testing', '/guide/testing'],
+    ['ui', '/guide/ui'], ['applications', '/guide/applications'],
+  ]],
+]
+
+const GUIDE_TEXT = {
+  root: {
+    gettingStarted: 'Getting Started', introduction: 'Introduction', whyQuantum: 'Why Quantum',
+    installation: 'Installation', quickStart: 'Quick Start', projectStructure: 'Project Structure',
+    coreConcepts: 'Core Concepts', components: 'Components (.q files)', howAPageRuns: 'How a Page Runs',
+    stateManagement: 'State Management (q:set)', loops: 'Loops (q:loop)',
+    conditionals: 'Conditionals (q:if/q:else)', functions: 'Functions (q:function)', dataBinding: 'Data Binding',
+    ai: 'AI', llmRagAgents: 'LLM, RAG & Agents',
+    dataBackend: 'Data & Backend', queries: 'Database Queries (q:query)', dataImport: 'Data Import',
+    filesAndMail: 'Files and Mail', authentication: 'Authentication', sessions: 'Sessions & Scopes',
+    services: 'Declared Services', admin: 'Quantum Admin',
+    webApplications: 'Web Applications', actions: 'Actions & Forms', testing: 'Testing an App (quantum test)',
+    ui: 'One App, Many Screens (ui:)', applications: 'q:application (not for web)',
+  },
+  es: {
+    gettingStarted: 'Primeros pasos', introduction: 'Introducción', whyQuantum: 'Por qué Quantum',
+    installation: 'Instalación', quickStart: 'Inicio rápido', projectStructure: 'Estructura del proyecto',
+    coreConcepts: 'Conceptos básicos', components: 'Componentes (archivos .q)', howAPageRuns: 'Cómo se ejecuta una página',
+    stateManagement: 'Manejo de estado (q:set)', loops: 'Bucles (q:loop)',
+    conditionals: 'Condicionales (q:if/q:else)', functions: 'Funciones (q:function)', dataBinding: 'Enlace de datos',
+    ai: 'IA', llmRagAgents: 'LLM, RAG y agentes',
+    dataBackend: 'Datos y backend', queries: 'Consultas a la base de datos (q:query)', dataImport: 'Importación de datos',
+    filesAndMail: 'Archivos y correo', authentication: 'Autenticación', sessions: 'Sesiones y ámbitos',
+    services: 'Servicios declarados', admin: 'Quantum Admin',
+    webApplications: 'Aplicaciones web', actions: 'Acciones y formularios', testing: 'Probar una aplicación (quantum test)',
+    ui: 'Una aplicación, varias pantallas (ui:)', applications: 'q:application (no para la web)',
+  },
+  zh: {
+    gettingStarted: '入门', introduction: '简介', whyQuantum: '为什么选择 Quantum',
+    installation: '安装', quickStart: '快速开始', projectStructure: '项目结构',
+    coreConcepts: '核心概念', components: '组件（.q 文件）', howAPageRuns: '页面如何运行',
+    stateManagement: '状态管理（q:set）', loops: '循环（q:loop）',
+    conditionals: '条件（q:if/q:else）', functions: '函数（q:function）', dataBinding: '数据绑定',
+    ai: 'AI', llmRagAgents: 'LLM、RAG 与智能体',
+    dataBackend: '数据与后端', queries: '数据库查询（q:query）', dataImport: '数据导入',
+    filesAndMail: '文件和邮件', authentication: '身份认证', sessions: '会话与作用域',
+    services: '声明式服务', admin: 'Quantum Admin',
+    webApplications: 'Web 应用', actions: '动作与表单', testing: '测试应用（quantum test）',
+    ui: '一个应用，多种界面（ui:）', applications: 'q:application（非 Web）',
+  },
+}
+
+export function guideSidebar(key) {
+  const t = { ...GUIDE_TEXT.root, ...(GUIDE_TEXT[key] || {}) }
+  return GUIDE_SIDEBAR.map(([group, items]) => ({
+    text: t[group],
+    items: items.map(([label, path]) => ({ text: t[label], link: key === 'root' ? path : link(key, path) })),
+  }))
+}
+
 // The top nav: Home · Docs (Guide, Tutorial, Reference, SPEC) · Showcase · Blog ·
 // Changelog · Status · Sponsor · GitHub. Only the home is per language today.
 function nav(key) {
@@ -128,6 +205,7 @@ function chrome(key) {
   const t = TEXT[key]
   return {
     nav: nav(key),
+    ...(key === 'root' ? {} : { sidebar: { [`${LANGUAGES[key].prefix}guide/`]: guideSidebar(key) } }),
     editLink: { pattern: `${GITHUB}/edit/main/docs/:path`, text: t.editLink },
     lastUpdated: { text: t.lastUpdated },
     outline: { label: t.outline },
