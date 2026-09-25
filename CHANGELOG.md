@@ -26,6 +26,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- Every `quantum …` command in a published page's shell block (all four
+  languages) is parsed by the real command line in CI
+  (`tests/docs/test_docs_commands.py`); the homes, the Sponsor page, the blog
+  posts and the Roadmap may hold only imports of tested Cookbook files and
+  such commands; the theme's example components may appear only on
+  unpublished pages.
 - The Blog index and Status page in Spanish and Simplified Chinese, generated
   like the Portuguese ones (`LANGS` in `scripts/generate-site-pages.py`).
 - The docs' deprecated-content check caught a removed value only as written
