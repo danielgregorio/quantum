@@ -28,6 +28,7 @@ class KnowledgeService:
     def __init__(self, llm_service=None):
         self.llm_service = llm_service
         self._collections: Dict[str, Any] = {}  # name -> ChromaDB collection
+        self._chunks: Dict[str, int] = {}  # name -> how many chunks the index was built with
         self._clients: Dict[Optional[str], Any] = {}  # absolute persist path (None: memory) -> client
         self._ollama_base_url = os.getenv(
             'QUANTUM_LLM_BASE_URL', 'http://localhost:11434'
@@ -136,6 +137,15 @@ class KnowledgeService:
         client = self._get_client(persist, persist_path)
 
         fingerprint = self._fingerprint(all_texts, embed_model, chunk_size, chunk_overlap)
+        # IA-2: in memory, every base of the process shares one store, by
+        # collection name. Two pages (or two apps) with a base "docs" built from
+        # different sources deleted each other's index — the other page's search
+        # then failed, or found nothing and read as "I don't know" (IA-9). An
+        # in-memory base is named after its fingerprint too: different sources
+        # never meet, the same sources are shared and reused across requests,
+        # and two first requests write the same rows (the ids come from the text).
+        collection_name = (self._collection_name(name) if persist
+                           else self._collection_name(f"{name}-{fingerprint[:16]}"))
 
         # Knowledge bases persist by default (./.quantum/knowledge). The stored
         # collection used to be reused whenever it had any chunks — so a base
@@ -145,13 +155,14 @@ class KnowledgeService:
         # run. Reuse only when the fingerprint matches.
         if not rebuild:
             try:
-                existing = client.get_collection(self._collection_name(name))
+                existing = client.get_collection(collection_name)
             except Exception:
                 existing = None
             if existing is not None:
                 if (existing.count() > 0
                         and (existing.metadata or {}).get("quantum_fingerprint") == fingerprint):
                     self._collections[name] = existing
+                    self._chunks[name] = existing.count()
                     logger.info(f"Knowledge base '{name}' already indexed ({existing.count()} chunks)")
                     return
                 logger.info(f"Knowledge base '{name}': sources changed, reindexing")
@@ -159,18 +170,19 @@ class KnowledgeService:
 
         if rebuild:
             try:
-                client.delete_collection(self._collection_name(name))
+                client.delete_collection(collection_name)
             except Exception:
                 pass
 
         collection = client.get_or_create_collection(
-            name=self._collection_name(name),
+            name=collection_name,
             metadata={"hnsw:space": "cosine", "quantum_fingerprint": fingerprint}
         )
 
         if not all_texts:
             logger.warning(f"Knowledge base '{name}': no text extracted from sources")
             self._collections[name] = collection
+            self._chunks[name] = 0
             return
 
         # Chunk all extracted texts
@@ -193,6 +205,7 @@ class KnowledgeService:
 
         if not all_chunks:
             self._collections[name] = collection
+            self._chunks[name] = 0
             return
 
         # Generate embeddings via Ollama
@@ -216,6 +229,7 @@ class KnowledgeService:
             )
 
         self._collections[name] = collection
+        self._chunks[name] = len(all_chunks)
         logger.info(f"Knowledge base '{name}' indexed: {len(all_chunks)} chunks from {len(all_texts)} text segments")
 
     def _extract_source_text(
@@ -432,7 +446,18 @@ class KnowledgeService:
         if collection is None:
             raise KnowledgeError(f"Knowledge base '{name}' not found. Define it with <q:knowledge> first.")
 
-        if collection.count() == 0:
+        # IA-6 / IA-9: an empty result means "nothing in this base is relevant".
+        # A base that was built with chunks and has none now lost its index;
+        # answering "found nothing" would pass that off as an honest "I don't know".
+        try:
+            count = collection.count()
+        except Exception as e:
+            raise KnowledgeError(f"Knowledge base '{name}' lost its index: {e}")
+        if count == 0:
+            if self._chunks.get(name, 0) > 0:
+                raise KnowledgeError(
+                    f"Knowledge base '{name}' lost its index: it was built with "
+                    f"{self._chunks[name]} chunks and has none now")
             return []
 
         # Generate query embedding
@@ -443,7 +468,7 @@ class KnowledgeService:
         # Search ChromaDB
         results = collection.query(
             query_embeddings=query_embedding,
-            n_results=min(n_results, collection.count()),
+            n_results=min(n_results, count),
             include=["documents", "metadatas", "distances"],
         )
 

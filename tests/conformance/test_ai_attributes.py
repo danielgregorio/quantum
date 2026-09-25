@@ -117,3 +117,40 @@ def test_each_base_follows_its_own_persist(ollama, tmp_path):
     run('<q:knowledge name="mem" persist="false"><q:source type="text">in memory</q:source></q:knowledge>'
         '<q:knowledge name="disk"><q:source type="text">on disk</q:source></q:knowledge>')
     assert (tmp_path / '.quantum' / 'knowledge' / 'chroma.sqlite3').is_file()
+
+
+@pytest.mark.skipif(importlib.util.find_spec('chromadb') is None, reason='the [rag] extra is not installed')
+def test_two_pages_with_a_base_of_the_same_name_keep_their_own_index(ollama):
+    # IA-2: in-memory bases live in one store per process, by name. A page whose
+    # base "docs" had other sources deleted the index another page was about to
+    # search: its search failed with chromadb's "Collection [...] does not
+    # exist" — or, caught at the wrong moment, found nothing, which reads as an
+    # honest "I don't know" (IA-9).
+    def page(text):
+        return QuantumParser(use_cache=False).parse(
+            f'<q:component name="c" {NS}><q:knowledge name="docs" persist="false">'
+            f'<q:source type="text">{text}</q:source></q:knowledge><q:return value="ok"/></q:component>')
+    first, second = ComponentRuntime(config={}), ComponentRuntime(config={})
+    first.execute_component(page('Returns are accepted within 30 days.'), {})
+    second.execute_component(page('The store opens at nine.'), {})
+    hits = first.knowledge_service.search('docs', 'returns within days', 2)
+    assert [h['content'] for h in hits] == ['Returns are accepted within 30 days.']
+    hits = second.knowledge_service.search('docs', 'store opens', 2)
+    assert [h['content'] for h in hits] == ['The store opens at nine.']
+
+
+@pytest.mark.skipif(importlib.util.find_spec('chromadb') is None, reason='the [rag] extra is not installed')
+def test_a_base_whose_index_vanished_is_an_error_not_an_empty_answer(ollama):
+    # IA-6 / IA-9: found=false means the base has nothing relevant. A base that
+    # indexed chunks and finds none at search time lost its index: an error.
+    runtime = ComponentRuntime(config={})
+    runtime.execute_component(QuantumParser(use_cache=False).parse(
+        f'<q:component name="c" {NS}><q:knowledge name="kb" persist="false">'
+        '<q:source type="text">Shipping is free above 200.</q:source></q:knowledge>'
+        '<q:return value="ok"/></q:component>'), {})
+    service = runtime.knowledge_service
+    collection = service._collections['kb']
+    collection.delete(ids=collection.get()['ids'])          # the index is gone behind the page's back
+    from quantum.runtime.knowledge_service import KnowledgeError
+    with pytest.raises(KnowledgeError, match="lost its index"):
+        service.search('kb', 'is shipping free', 2)

@@ -665,7 +665,8 @@ built-in model name. `model=`, `endpoint=` and `apiKey=` take expressions;
 **IA-2** — A `q:knowledge` base is split into chunks of `chunkSize` characters
 (500) that overlap by `chunkOverlap` (50), embedded with `embedModel`
 (`nomic-embed-text`) and kept in `persistPath` (`./.quantum/knowledge`);
-`persist="false"` keeps it in memory. A relative `persistPath` is relative to
+`persist="false"` keeps it in memory, where bases with the same name and
+different sources are separate indexes (the same sources share one). A relative `persistPath` is relative to
 the working directory when the base is indexed: bases indexed from two
 directories are two stores, and each base follows its own `persist`. A base
 only embeds: `model=` on `q:knowledge` is a parse error that points to
@@ -705,7 +706,8 @@ instruction to answer only from them and cite them by number. The result has
 `found`, `sources` (`n`, `source`, `name` — the file name —, `text`,
 `relevance`, in retrieval order) and `cited` (the source numbers the answer
 contains). When nothing is retrieved the model is not called: the value is
-`''` and `found` is false. A base that is not on the page, or that could not be
+`''` and `found` is false. A base built with chunks that has none when it is
+searched lost its index: an error (IA-5), never `found` false. A base that is not on the page, or that could not be
 built, is an error (IA-5).
 
 **IA-7** — `q:llm stream="true"` in a web request does not wait for the model:

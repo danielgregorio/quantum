@@ -171,6 +171,14 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- Two pages with an in-memory `q:knowledge` of the same name and different
+  sources deleted each other's index: the other page's search failed with
+  chromadb's "Collection [...] does not exist", or — at the wrong moment —
+  found nothing, which reads as an honest "I don't know". In-memory bases are
+  now separate by sources as well as name (IA-2), and a base that was built
+  with chunks and has none when searched is an error, never `found` false
+  (IA-6).
+
 - `python -m quantum.cli.runner` — the installation guide's way to run
   `quantum` without the script on `PATH` — no longer prints a
   `RuntimeWarning` before every command. `quantum start --debug` says what it
