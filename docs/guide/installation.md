@@ -60,6 +60,8 @@ Create `hello.q`:
 </q:component>
 ```
 
+**Output:** `Hello World!`
+
 ```bash
 quantum run hello.q
 ```

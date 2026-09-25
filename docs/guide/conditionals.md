@@ -163,6 +163,8 @@ In HTML, `q:if` decides what is rendered:
 </q:component>
 ```
 
+**Shows:** `Login`
+
 Before login, `session.authenticated` does not exist, so the page shows the
 Login link. See [Authentication](/guide/authentication) for the login itself.
 

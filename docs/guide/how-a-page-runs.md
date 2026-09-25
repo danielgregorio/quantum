@@ -75,20 +75,25 @@ sets does not exist there:
 
 ```xml
 <q:component name="Order">
-  <q:query name="order" datasource="db">SELECT * FROM orders WHERE id = 7</q:query>
+  <q:set name="total" value="42" type="number" />
 
   <q:action name="pay" method="POST">
-    <!-- {order} does not exist here: the page's q:query did not run. -->
-    <q:query name="order" datasource="db">SELECT * FROM orders WHERE id = 7</q:query>
-    <q:query name="paid" datasource="db">UPDATE orders SET paid = 1 WHERE id = {order.id}</q:query>
-    <q:redirect url="/order" flash="Paid." />
+    <!-- {total} does not exist here: the page's q:set did not run. -->
+    <q:redirect url="/order" flash="Paid {total}." />
   </q:action>
-  ...
+
+  <p>Total: {total}</p>
 </q:component>
 ```
 
-The action queries or computes what it needs itself. Using a page variable in
-an action is an error whose message says exactly this.
+The page shows `Total: 42`; posting `pay` is an error, and its message says
+exactly this:
+
+```text
+q:action 'pay' failed: {total} could not be evaluated: variable 'total' is not defined (in scope: form). A q:action does not run the page's statements (ACT-9): query or compute what it needs inside the action.
+```
+
+The action queries or computes what it needs itself.
 
 Guards are the exception: they run before the page **and** before each of its
 actions, so a guard that redirects also stops the action. That is also why a

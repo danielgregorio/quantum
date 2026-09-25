@@ -38,6 +38,8 @@ Create a file called `hello.q`:
 </q:component>
 ```
 
+**Output:** `Hello World!`
+
 Run it:
 
 ```bash
@@ -80,6 +82,8 @@ Let's make it more interesting with variables and loops:
 </q:component>
 ```
 
+**Output:** `You are an adult`
+
 ## Creating Functions
 
 ```xml
@@ -96,6 +100,8 @@ Let's make it more interesting with variables and loops:
 </q:component>
 ```
 
+**Output:** `5 + 3 = 8`
+
 ## Web Applications
 
 Pages are components in a `components/` folder, and the file name is the URL.
@@ -109,6 +115,8 @@ Create `components/index.q`:
   </body></html>
 </q:component>
 ```
+
+**Shows:** `Welcome to My App`
 
 Start the server from the folder that contains `components/`:
 
