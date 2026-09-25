@@ -19,7 +19,7 @@ form shows why next to the field.
     <q:file action="upload" file="{attachment}" result="saved" />
     <!-- saved.filename, saved.original_filename, saved.size, saved.mimetype -->
   </q:if>
-  ...
+  <q:redirect url="/" flash="Ticket opened: {title}" />
 </q:action>
 
 <ui:form on-submit="open" submit="Open ticket">
@@ -55,7 +55,7 @@ them. A page sends one, and decides who may have it:
 <!-- components/attachment/[id].q -->
 <q:component name="Attachment">
   <q:query name="ticket" datasource="db">
-    SELECT attachment, attachment_name FROM tickets WHERE id = :id
+    SELECT attachment, attachment_name FROM tickets WHERE id = :id AND attachment IS NOT NULL
     <q:param name="id" value="{id}" type="integer" />
   </q:query>
   <q:if condition="ticket_result.recordCount == 1">
@@ -73,23 +73,13 @@ get it.
 
 ## Sending mail
 
-```xml
-<q:mail to="{email}" subject="We received your ticket #{id}" type="text">
-Hello, your ticket "{title}" was opened as #{id}.
-</q:mail>
-```
+An action sends a message with `q:mail`; the server is the `mail:` section of
+`quantum.config.yaml`. From the recipe [Mail in development](../cookbook/files-and-mail/mail-in-development.md),
+tested as shown:
 
-The server is in `quantum.config.yaml`:
+<<< @/../examples/cookbook/files-and-mail/mail-in-development/components/index.q{xml}
 
-```yaml
-mail:
-  host: ${SMTP_HOST:-log}
-  port: ${SMTP_PORT:-587}
-  username: ${SMTP_USER:-}
-  password: ${SMTP_PASSWORD:-}
-  tls: true
-  from: helpdesk@example.com
-```
+<<< @/../examples/cookbook/files-and-mail/mail-in-development/quantum.config.yaml{yaml}
 
 `host: log` writes each message to the log instead of sending it — use it in
 development. Without a `mail:` section, `q:mail` is an error that says so;
@@ -104,17 +94,15 @@ it never pretends to send:
 ### When the server says no
 
 A message the server does not take stops the action with the server's reason.
-When the rest of the action must happen anyway, handle it:
+When the rest of the action must happen anyway, say `onerror="continue"` and
+check `<name>_result.success` — from the recipe
+[When the mail server says no](../cookbook/files-and-mail/mail-server-refuses.md),
+where the order is saved even when its confirmation cannot be sent:
 
-```xml
-<q:mail name="confirmation" to="{email}" subject="..." onerror="continue">...</q:mail>
-<q:if condition="not confirmation_result.success">
-  <!-- confirmation_result.error.message says why -->
-</q:if>
-```
+<<< @/../examples/cookbook/files-and-mail/mail-server-refuses/components/index.q{xml}
 
-The helpdesk saves the ticket first and says, in its message, when a mail
-could not be sent.
+The helpdesk (`projects/helpdesk`) does the same: it saves the ticket first and
+says, in its message, when a mail could not be sent.
 
 ## Rules
 

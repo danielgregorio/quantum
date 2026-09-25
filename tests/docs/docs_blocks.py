@@ -57,8 +57,7 @@ NOTICE = '::: danger Under review'
 #      is shown (the tutorial, step by step);
 # or its page says "Under review". Anything else fails CI.
 PARSE_ONLY_PAGES = {
-    'guide/actions.md', 'guide/ai.md', 'guide/authentication.md', 'guide/components.md',
-    'guide/data-import.md', 'guide/files-and-mail.md', 'guide/quick-start.md',
+    'guide/ai.md', 'guide/authentication.md', 'guide/components.md', 'guide/quick-start.md',
     'guide/ui.md',
     # The home page's example: to become an import of a recipe with the home rewrite.
     'index.md',
@@ -75,6 +74,9 @@ RUN_BY_TEST = {
     'guide/project-structure.md': 'tests/docs/test_guide_project_structure.py',
     'guide/query.md': 'tests/docs/test_guide_query_history.py',
     'guide/how-a-page-runs.md': 'tests/docs/test_guide_how_a_page_runs.py',
+    'guide/actions.md': 'tests/docs/test_guide_actions.py',
+    'guide/data-import.md': 'tests/docs/test_guide_data_import.py',
+    'guide/files-and-mail.md': 'tests/docs/test_guide_files_and_mail.py',
 }
 
 # fragment=<name>: the context a fragment is parsed in. {body} is the block.
