@@ -28,6 +28,15 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 - The Blog index and Status page in Spanish and Simplified Chinese, generated
   like the Portuguese ones (`LANGS` in `scripts/generate-site-pages.py`).
+- The docs' deprecated-content check caught a removed value only as written
+  in code: the q:application page listed `testing` in its table of types and
+  `desktop` in a list of targets, and both slipped past. It now also reads
+  table rows and lists of values, has patterns for more of the changelog's
+  removals (attributes of `q:column`, `q:set`, `q:param`, `q:query` and
+  `q:function`, a slice step, the mail mock, upload URLs, removed projects,
+  the admin's deploy feature), and each pattern proves it catches a sample.
+  `tests/docs/test_quoted_messages.py` checks that a message the site quotes
+  in a text block uses only words Quantum prints.
 - More of the guide in Simplified Chinese: AI, files and mail, data import,
   services, sessions, the admin, project structure and `q:application`,
   machine-translated, with the English heading anchors.

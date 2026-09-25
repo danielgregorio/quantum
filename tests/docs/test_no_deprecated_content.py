@@ -30,7 +30,10 @@ HISTORY = ('changelog/', 'blog/')
 DEPRECATED = [
     # 0.22 — the qtest: engine and type="testing"
     ('qtest', r'<qtest:|\bqtest:', '`quantum test` and `*.test.q` files (TEST-1)'),
-    ('type-testing', r'type="testing"', '`quantum test` (APP-2)'),
+    # A removed value is also presented as current when a table or a list names
+    # it: the q:application page listed `testing` in its table of types, and
+    # "(`--target html`, `desktop` or `mobile`)", and both slipped past.
+    ('type-testing', r'type="testing"|^\|\s*`testing`\s*\|', '`quantum test` (APP-2)'),
     # 0.22 — RAG through q:query
     ('mode-rag', r'mode="rag"', '`q:llm knowledge="..."` (IA-3)'),
     # 0.22 — the phi3 default; llm.default_model as the spelling
@@ -46,7 +49,7 @@ DEPRECATED = [
      'the commands in `quantum --help`: run, start, stop, console, check, test, desktop, '
      'admin, pkg, jobs, mq, migrate'),
     # 0.16 — the desktop target and browser persistence
-    ('target-desktop', r'--target desktop', '`quantum desktop` (UI-8)'),
+    ('target-desktop', r'--target desktop|--target[^\n|]{0,60}`desktop`', '`quantum desktop` (UI-8)'),
     ('persist', r'<q:persist\b|<q:set\b[^>]*\bpersist(Key|Ttl|Encrypt)?=|`persist="local"`',
      '`session.x` or the database (SET-2)'),
     # 0.14 / 0.20 / 1.0 — attributes that never did anything, or were renamed
@@ -54,9 +57,9 @@ DEPRECATED = [
     ('knowledge-model', r'<q:knowledge\b[^>]*\bmodel=', '`model=` on the `q:llm` that reads it (IA-2)'),
     ('max-iterations', r'\bmax_iterations=', '`maxIterations=`'),
     ('source-url', r'<q:source\b[^>]*type="url"', 'a file, directory or query source (IA-8)'),
-    ('query-attrs', r'<q:query\b[^>]*\b(cache|ttl|reactive|interval|maxrows|batch)=',
+    ('query-attrs', r'<q:query\b[^>]*\b(cache|ttl|reactive|interval|timeout|maxrows|batch)=',
      'nothing: these never did anything (DB-5)'),
-    ('function-attrs', r'<q:function\b[^>]*\b(cache|memoize|pure|async|retry|access|validate|endpoint)=',
+    ('function-attrs', r'<q:function\b[^>]*\b(cache|memoize|pure|async|retry|timeout|access|scope|validate|endpoint)=',
      'nothing: these never did anything (FN-2)'),
     ('invoke-attrs', r'<q:invoke\b[^>]*\b(endpoint|transform)=', '`url=` and `q:param` (INV-1)'),
     ('action-attrs', r'<q:action\b[^>]*\b(require_auth|csrf|rate_limit)=', 'a guard on the page (AUTH-7)'),
@@ -67,7 +70,25 @@ DEPRECATED = [
     ('hand-pagination', r'\(page\s*-\s*1\)\s*\*|OFFSET\s*\(',
      '`paginate="true"` on the q:query and a `ui:pager` (UI-11)'),
     # 0.11 — q:application types
-    ('app-types', r'<q:application\b[^>]*type="(html|api|microservices)"', 'pages in `components/` (APP-1)'),
+    ('app-types', r'<q:application\b[^>]*type="(html|api|microservices)"|^\|\s*`(api|microservices)`\s*\|',
+     'pages in `components/` (APP-1)'),
+    # 1.0 / 0.14 / 0.11 — more attributes that never did anything (PARSE-3, PARSE-5)
+    ('column-attrs', r'<q:column\b[^>]*\b(required|default|validate|pattern|min|max|minlength|maxlength|range|enum)=',
+     '`q:transform` to filter rows; `q:column` takes only `name` and `type` (PARSE-3)'),
+    ('set-types', r'<q:set\b[^>]*\btype="(date|datetime|struct|null)"', 'a `q:set` type from the Reference (PARSE-5)'),
+    ('set-mask', r'<q:set\b[^>]*\bmask=', 'nothing: it never did anything (PARSE-3)'),
+    ('param-validation', r'<q:param\b[^>]*\bvalidation=', 'the `q:param` rules (PARSE-3)'),
+    # 0.22 — a slice with a step is an error (EXPR-13)
+    ('slice-step', r'\{[^}\n]*\[[^\]\n]*:[^\]\n]*:[^\]\n]*\][^}\n]*\}', 'a slice without a step (EXPR-13)'),
+    # 0.21 — mail that pretended to send; an upload URL that was never served
+    ('mail-mock', r'\[MOCK\] Email sent', '`host: log` in the `mail:` section (MAIL-1)'),
+    ('uploads-url', r'(href|src)="/uploads/|_result\.url\b', 'a page that sends the file (`q:file action="send"`, FILE-2)'),
+    # 1.0 — projects that were removed, and the admin's deploy feature
+    ('removed-projects', r'projects/(quantum-landing|llm-demo|quantum-rag|quantum-fighter|quantum-tower)\b|tower_defense\.q',
+     'the apps in the Showcase'),
+    ('admin-deploy', r'\bDeployService\b|\bauto-deploy\b|one-command deploy', '`quantum start` behind your own server'),
+    # 0.10 — an AI failure is an error, not the text of the answer
+    ('rag-error-text', r'Error generating answer', 'an error the page can handle with `onerror` (IA-5)'),
     # tiers, renamed for 1.0
     ('tier-names', r'\bDiferencial\b', 'the tiers Core, AI, Experimental, Laboratory'),
     ('tier-laboratorio', r'\bLaboratório\b', 'the tiers Core, AI, Experimental, Laboratory'),
@@ -163,7 +184,7 @@ def hits():
         for pid, pattern, instead in DEPRECATED:
             if (rel, pid) in ALLOWED or any(rel.startswith(lang) and pid == rule for lang, rule in NATIVE):
                 continue
-            for m in re.finditer(pattern, text):
+            for m in re.finditer(pattern, text, re.M):
                 block = fenced_context(text, m.start())
                 if block is not None and (ERROR_MARK.search(block) or PAST.search(block)):
                     continue
@@ -198,3 +219,31 @@ def test_the_allowlist_only_shrinks():
         text = (REPO / rel[1:] if rel.startswith('/') else DOCS / rel).read_text(encoding='utf-8')
         pattern = next(p for i, p, _ in DEPRECATED if i == pid)
         assert re.search(pattern, text), f'{rel}: no {pid} left — take it off ALLOWED'
+
+
+# What each pattern must catch, as a page once wrote it — a pattern that
+# matches nothing (a missing flag, a typo) would pass every page in silence.
+SAMPLES = {
+    'type-testing': ['| `testing` | Experimental | generates browser tests |', '<q:application type="testing">'],
+    'target-desktop': ['(`--target html`, `desktop` or `mobile`)', 'quantum run app.q --target desktop'],
+    'app-types': ['| `api` | Experimental |', '<q:application id="x" type="api">'],
+    'query-attrs': ['<q:query name="q" datasource="db" timeout="30">'],
+    'function-attrs': ['<q:function name="f" scope="global">'],
+    'column-attrs': ['<q:column name="age" type="integer" min="0" />'],
+    'set-types': ['<q:set name="d" type="date" value="2026-01-01" />'],
+    'set-mask': ['<q:set name="p" value="123" mask="###" />'],
+    'param-validation': ['<q:param name="x" validation="email" />'],
+    'slice-step': ['<q:return value="{items[::-1]}" />'],
+    'mail-mock': ['[MOCK] Email sent to ana@example.com'],
+    'uploads-url': ['<a href="/uploads/{saved.filename}">', '{saved_result.url}'],
+    'removed-projects': ['projects/quantum-landing', 'examples/tower_defense.q'],
+    'admin-deploy': ['one-command deploy to the cloud'],
+    'rag-error-text': ['Error generating answer: timeout'],
+}
+
+
+def test_each_pattern_catches_what_it_is_for():
+    patterns = {pid: pattern for pid, pattern, _ in DEPRECATED}
+    for pid, samples in SAMPLES.items():
+        for sample in samples:
+            assert re.search(patterns[pid], sample, re.M), f'{pid} does not catch {sample!r}'
