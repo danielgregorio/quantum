@@ -182,7 +182,8 @@ alter the behaviour of an existing app is listed under **Breaking**.
   found nothing, which reads as an honest "I don't know". In-memory bases are
   now separate by sources as well as name (IA-2), and a base that was built
   with chunks and has none when searched is an error, never `found` false
-  (IA-6).
+  (IA-6). The three most recently built in-memory versions of each base are
+  kept; older ones are dropped.
 
 - `python -m quantum.cli.runner` — the installation guide's way to run
   `quantum` without the script on `PATH` — no longer prints a

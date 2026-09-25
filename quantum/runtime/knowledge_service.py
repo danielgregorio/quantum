@@ -9,6 +9,8 @@ import os
 import re
 import hashlib
 import logging
+import threading
+from collections import OrderedDict
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -20,6 +22,30 @@ logger = logging.getLogger(__name__)
 class KnowledgeError(Exception):
     """Raised when knowledge base operations fail."""
     pass
+
+
+# IA-2: in-memory versions of each base kept by the process, newest last:
+# base name -> collection names. Every in-memory base shares one store, and a
+# base is named after its sources (see index_knowledge), so editing a base's
+# sources leaves the old version behind; only the most recent few are kept. A
+# page indexes on every request, which makes its version the newest again.
+IN_MEMORY_VERSIONS = 3
+_versions: 'OrderedDict[str, OrderedDict[str, None]]' = OrderedDict()
+_versions_lock = threading.Lock()
+
+
+def _touch_version(client, name: str, collection_name: str) -> None:
+    """Mark collection_name as the newest version of `name`; drop the oldest beyond the bound."""
+    with _versions_lock:
+        kept = _versions.setdefault(name, OrderedDict())
+        kept.pop(collection_name, None)
+        kept[collection_name] = None
+        while len(kept) > IN_MEMORY_VERSIONS:
+            stale, _ = kept.popitem(last=False)
+            try:
+                client.delete_collection(stale)
+            except Exception:
+                pass
 
 
 class KnowledgeService:
@@ -146,6 +172,8 @@ class KnowledgeService:
         # and two first requests write the same rows (the ids come from the text).
         collection_name = (self._collection_name(name) if persist
                            else self._collection_name(f"{name}-{fingerprint[:16]}"))
+        if not persist:
+            _touch_version(client, name, collection_name)
 
         # Knowledge bases persist by default (./.quantum/knowledge). The stored
         # collection used to be reused whenever it had any chunks — so a base

@@ -154,3 +154,28 @@ def test_a_base_whose_index_vanished_is_an_error_not_an_empty_answer(ollama):
     from quantum.runtime.knowledge_service import KnowledgeError
     with pytest.raises(KnowledgeError, match="lost its index"):
         service.search('kb', 'is shipping free', 2)
+
+
+@pytest.mark.skipif(importlib.util.find_spec('chromadb') is None, reason='the [rag] extra is not installed')
+def test_old_in_memory_versions_of_a_base_do_not_pile_up(ollama):
+    # IA-2: an in-memory base is named after its sources, so each edit of them
+    # made a new collection; the old ones stayed until the process ended. Only
+    # the newest IN_MEMORY_VERSIONS of each base are kept.
+    from quantum.runtime import knowledge_service as ks
+    bound = getattr(ks, 'IN_MEMORY_VERSIONS', 3)
+
+    def build(text):
+        runtime = ComponentRuntime(config={})
+        runtime.execute_component(QuantumParser(use_cache=False).parse(
+            f'<q:component name="c" {NS}><q:knowledge name="edited" persist="false">'
+            f'<q:source type="text">{text}</q:source></q:knowledge><q:return value="ok"/></q:component>'), {})
+        return runtime.knowledge_service
+
+    for n in range(bound + 2):
+        service = build(f'Version {n} of the policy.')
+    client = service._get_client(False)
+    kept = [c.name if hasattr(c, 'name') else c for c in client.list_collections()]
+    kept = [c for c in kept if c.startswith('quantum-edited-')]
+    assert len(kept) == bound, kept
+    hits = service.search('edited', f'Version {bound + 1} policy', 1)
+    assert hits[0]['content'] == f'Version {bound + 1} of the policy.'

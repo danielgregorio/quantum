@@ -666,7 +666,8 @@ built-in model name. `model=`, `endpoint=` and `apiKey=` take expressions;
 (500) that overlap by `chunkOverlap` (50), embedded with `embedModel`
 (`nomic-embed-text`) and kept in `persistPath` (`./.quantum/knowledge`);
 `persist="false"` keeps it in memory, where bases with the same name and
-different sources are separate indexes (the same sources share one). A relative `persistPath` is relative to
+different sources are separate indexes (the same sources share one); the
+three most recently built versions of each base are kept. A relative `persistPath` is relative to
 the working directory when the base is indexed: bases indexed from two
 directories are two stores, and each base follows its own `persist`. A base
 only embeds: `model=` on `q:knowledge` is a parse error that points to
