@@ -221,10 +221,12 @@ function nav(key) {
         { text: t.stability, link: link(key, '/stability/') },
       ],
     },
-    { text: t.showcase, link: '/showcase/' },
+    { text: t.showcase, link: link(key, '/showcase/') },
     { text: t.blog, link: link(key, '/blog/') },
     { text: t.changelog, link: '/changelog/' },
     { text: t.status, link: link(key, '/status/') },
+    { text: t.roadmap, link: link(key, '/roadmap/') },
+    { text: t.community, link: link(key, '/community/') },
     { text: t.sponsor, link: link(key, '/sponsor/') },
   ]
 }
