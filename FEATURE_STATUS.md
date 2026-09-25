@@ -17,55 +17,55 @@ Core and AI; interactive targets and experimental tags are not executed).
 
 | Tag | Examples | Parses | Executes | Tests | Docs |
 |---|---|---|---|---|---|
-| `q:action` | 25 | yes | 19/19 (6 not executed) | 32 | 17 |
-| `q:data` | 7 | yes | 7/7 | 8 | 5 |
-| `q:file` | 4 | yes | 4/4 | 6 | 3 |
-| `q:flash` | 6 | yes | 6/6 | 4 | 5 |
-| `q:function` | 59 | yes | 16/16 (43 not executed) | 23 | 30 |
-| `q:if` | 42 | yes | 30/30 (12 not executed) | 27 | 37 |
-| `q:import` | 2 | yes | 1/1 (1 not executed) | 6 | 5 |
-| `q:invoke` | 8 | yes | 4/4 (4 not executed) | 12 | 7 |
-| `q:loop` | 40 | yes | 31/31 (9 not executed) | 20 | 30 |
-| `q:mail` | 10 | yes | 5/5 (5 not executed) | 4 | 4 |
-| `q:query` | 18 | yes | 12/12 (6 not executed) | 30 | 24 |
-| `q:redirect` | 13 | yes | 11/11 (2 not executed) | 22 | 12 |
-| `q:set` | 137 | yes | 83/83 (54 not executed) | 52 | 40 |
-| `q:slot` | 2 | yes | — (2 not executed) | 3 | 3 |
-| `q:transaction` | 3 | yes | 3/3 | 5 | 4 |
+| `q:action` | 47 | yes | 19/19 (28 not executed) | 37 | 52 |
+| `q:data` | 10 | yes | 7/7 (3 not executed) | 9 | 23 |
+| `q:file` | 4 | yes | 4/4 | 6 | 11 |
+| `q:flash` | 7 | yes | 6/6 (1 not executed) | 5 | 16 |
+| `q:function` | 31 | yes | 16/16 (15 not executed) | 26 | 45 |
+| `q:if` | 80 | yes | 30/30 (50 not executed) | 28 | 62 |
+| `q:import` | 2 | yes | 1/1 (1 not executed) | 6 | 16 |
+| `q:invoke` | 8 | yes | 4/4 (4 not executed) | 15 | 19 |
+| `q:loop` | 57 | yes | 31/31 (26 not executed) | 22 | 55 |
+| `q:mail` | 12 | yes | 5/5 (7 not executed) | 4 | 19 |
+| `q:query` | 48 | yes | 12/12 (36 not executed) | 32 | 59 |
+| `q:redirect` | 36 | yes | 11/11 (25 not executed) | 23 | 40 |
+| `q:set` | 129 | yes | 84/84 (45 not executed) | 60 | 62 |
+| `q:slot` | 3 | yes | — (3 not executed) | 3 | 12 |
+| `q:transaction` | 5 | yes | 3/3 (2 not executed) | 5 | 24 |
 
 ## AI (3 tags)
 
 | Tag | Examples | Parses | Executes | Tests | Docs |
 |---|---|---|---|---|---|
-| `q:agent` | 3 | yes | 2/2 (1 not executed) | 16 | 6 |
-| `q:knowledge` | 2 | yes | — (2 not executed) | 10 | 5 |
-| `q:llm` | 3 | yes | — (3 not executed) | 13 | 5 |
+| `q:agent` | 4 | yes | 2/2 (2 not executed) | 18 | 43 |
+| `q:knowledge` | 6 | yes | — (6 not executed) | 13 | 41 |
+| `q:llm` | 9 | yes | — (9 not executed) | 16 | 44 |
 
 ## Experimental (21 tags)
 
 | Tag | Examples | Parses | Tests | Docs |
 |---|---|---|---|---|
-| `q:class` | 2 | yes | 2 | 0 |
-| `q:decorator` | 1 | yes | 1 | 0 |
-| `q:dispatchEvent` | 0 | — no example | 0 | 1 |
-| `q:dump` | 6 | yes | 1 | 1 |
-| `q:job` | 2 | yes | 7 | 2 |
-| `q:log` | 13 | yes | 4 | 2 |
-| `q:message` | 6 | yes | 8 | 2 |
-| `q:messageAck` | 2 | yes | 2 | 0 |
-| `q:messageNack` | 2 | yes | 2 | 0 |
-| `q:pyclass` | 0 | — no example | 1 | 0 |
-| `q:pydecorator` | 0 | — no example | 0 | 0 |
-| `q:pyimport` | 2 | yes | 2 | 0 |
-| `q:python` | 2 | yes | 8 | 2 |
-| `q:queue` | 3 | yes | 3 | 0 |
-| `q:schedule` | 2 | yes | 4 | 1 |
-| `q:subscribe` | 3 | yes | 3 | 0 |
-| `q:team` | 1 | yes | 6 | 2 |
-| `q:thread` | 2 | yes | 3 | 0 |
-| `q:websocket` | 1 | yes | 5 | 1 |
-| `q:websocket-close` | 1 | yes | 1 | 0 |
-| `q:websocket-send` | 1 | yes | 1 | 0 |
+| `q:class` | 2 | yes | 2 | 2 |
+| `q:decorator` | 1 | yes | 1 | 6 |
+| `q:dispatchEvent` | 0 | — no example | 0 | 6 |
+| `q:dump` | 6 | yes | 1 | 6 |
+| `q:job` | 2 | yes | 10 | 10 |
+| `q:log` | 13 | yes | 4 | 7 |
+| `q:message` | 10 | yes | 8 | 9 |
+| `q:messageAck` | 2 | yes | 2 | 6 |
+| `q:messageNack` | 2 | yes | 2 | 6 |
+| `q:pyclass` | 0 | — no example | 1 | 7 |
+| `q:pydecorator` | 0 | — no example | 0 | 6 |
+| `q:pyimport` | 2 | yes | 2 | 6 |
+| `q:python` | 2 | yes | 8 | 10 |
+| `q:queue` | 3 | yes | 3 | 6 |
+| `q:schedule` | 2 | yes | 5 | 12 |
+| `q:subscribe` | 3 | yes | 3 | 6 |
+| `q:team` | 1 | yes | 6 | 13 |
+| `q:thread` | 2 | yes | 4 | 7 |
+| `q:websocket` | 1 | yes | 5 | 10 |
+| `q:websocket-close` | 1 | yes | 1 | 6 |
+| `q:websocket-send` | 1 | yes | 1 | 6 |
 
 ## Core/AI examples that do not execute
 
@@ -73,12 +73,11 @@ None.
 
 ## Not executed, and why
 
-- 32 file(s): Laboratory (game)
+- 61 file(s): Cookbook recipe: runs as its app, in tests/docs/test_cookbook.py
 - 25 file(s): uses an experimental tag
-- 5 file(s): fragment, not a root file (q:behavior)
+- 6 file(s): Laboratory (game)
 - 4 file(s): component requires parameters
 - 3 file(s): interactive target (terminal)
-- 1 file(s): fragment, not a root file (qg:scene)
 - 1 file(s): interactive target (ui)
 
 ## Gaps this measurement exposes

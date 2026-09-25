@@ -167,6 +167,14 @@ def make_sandbox():
             shutil.copytree(REPO / name, root / name,
                             ignore=shutil.ignore_patterns('__pycache__', 'node_modules'))
     shutil.copy2(REPO / 'quantum.config.yaml', root / 'quantum.config.yaml')
+    # The examples' `test-sqlite` datasource (./test_data/quantum_test.db). No
+    # longer left in the checkout by the test suite, so built here, in the copy,
+    # the way the tests build it (test_database.py).
+    if str(REPO) not in sys.path:
+        sys.path.insert(0, str(REPO))
+    from test_database import TestDatabase
+    (root / 'test_data').mkdir(exist_ok=True)
+    TestDatabase(str(root / 'test_data' / 'quantum_test.db')).setup()
     (root / 'quantum_admin').mkdir()     # the `admin` datasource lands here, empty
     return root
 
@@ -256,6 +264,11 @@ def main():
             root = re.search(r'<(q:[A-Za-z]+|[A-Za-z]+:[A-Za-z]+)', re.sub(r'<!--.*?-->', '', text, flags=re.S))
             if root and root.group(1) not in ('q:component', 'q:application'):
                 skipped[f] = f'fragment, not a root file ({root.group(1)})'
+            elif 'cookbook' in f.relative_to(REPO).parts:
+                # A recipe's page is part of an app (its config, datasource,
+                # migrations, URL): it runs as that app, by its own quantum test
+                # suite (tests/docs/test_cookbook.py) — not as a lone file.
+                skipped[f] = 'Cookbook recipe: runs as its app, in tests/docs/test_cookbook.py'
             elif tiers.app_tier_of(kind or '') == 'laboratory':
                 # A game uses q:set and q:function, but it is Laboratory
                 # (SUPPORT_TIERS.md): its failures are not Core failures.
