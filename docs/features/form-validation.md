@@ -588,6 +588,6 @@ Quantum's validation system includes accessibility features:
 
 ## Related Documentation
 
-- [Form Components](/ui/forms) - UI form components
+- [UI tags](/reference/ui) - Every ui: tag and its attributes
 - [State Management](/guide/state-management) - `q:set` validation attributes
 - [Actions](/guide/actions) - Form submission handling

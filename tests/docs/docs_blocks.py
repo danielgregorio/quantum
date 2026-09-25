@@ -36,8 +36,6 @@ F = '`' * 3
 # list can only shrink: test_docs_xml_blocks.py fails if a page gains the
 # notice without being listed, or keeps it after leaving the list.
 UNDER_REVIEW = {
-    'ui/overview.md', 'ui/layout.md', 'ui/forms.md', 'ui/data-display.md', 'ui/feedback.md',
-    'ui/navigation.md', 'ui/overlays.md', 'ui/advanced-components.md',
     'features/animations.md', 'features/theming.md', 'features/form-validation.md',
     'examples/advanced.md', 'examples/agents.md', 'examples/conditionals.md',
     'examples/forms-actions.md', 'examples/games.md', 'examples/queries.md', 'examples/ui-theming.md',

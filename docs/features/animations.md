@@ -515,6 +515,6 @@ Complex animations like slide, rotate, and scale are not available in terminal m
 
 ## Related Documentation
 
-- [UI Engine Overview](/ui/overview) - Component basics
+- [UI tags](/reference/ui) - Every ui: tag and its attributes
 - [Theming](/features/theming) - Visual customization
 - [State Management](/guide/state-management) - Animation triggers

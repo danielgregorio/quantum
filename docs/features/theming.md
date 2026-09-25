@@ -481,5 +481,5 @@ app.theme = "dark"  # Uses Textual dark theme
 
 ## Related Documentation
 
-- [UI Engine Overview](/ui/overview) - Component styling
-- [Design Tokens](/ui/overview#design-tokens) - Spacing and sizing
+- [UI tags](/reference/ui) - Every ui: tag and its attributes
+- [Layout attributes](/reference/ui#layout-attributes) - Spacing and sizing

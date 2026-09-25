@@ -19,6 +19,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- The hand-written `ui:` component pages (docs/ui/) are gone: they taught
+  components that do not exist. The generated [UI tags](/reference/ui)
+  reference and the "One App, Many Screens" guide replace them. The Cookbook
+  is in the Docs menu in all four languages.
 - The Cookbook: short recipes for one task each. A recipe is a small app in
   `examples/cookbook/` with a `quantum test` suite; its page imports the tested
   files, and what it shows as a result is written by running it

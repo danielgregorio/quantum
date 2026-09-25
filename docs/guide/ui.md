@@ -369,7 +369,7 @@ unchanged in a real browser and in the console:
 
 Every other `ui:*` element — charts, modals, toasts, date pickers, menus… —
 works in the browser only and is **Experimental** (see the
-[component reference](/ui/overview)). In the console, such an element shows
+[UI tags reference](/reference/ui)). In the console, such an element shows
 `[ui:chart is not drawn in the console]` instead of something else in its
 place.
 

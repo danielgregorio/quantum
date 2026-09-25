@@ -143,21 +143,6 @@ export default defineConfig({
           ]
         }
       ],
-      '/ui/': [
-        {
-          text: 'UI Engine',
-          items: [
-            { text: 'Overview', link: '/ui/overview' },
-            { text: 'Layout', link: '/ui/layout' },
-            { text: 'Forms', link: '/ui/forms' },
-            { text: 'Data Display', link: '/ui/data-display' },
-            { text: 'Feedback', link: '/ui/feedback' },
-            { text: 'Navigation', link: '/ui/navigation' },
-            { text: 'Overlays', link: '/ui/overlays' },
-            { text: 'Advanced Components', link: '/ui/advanced-components' }
-          ]
-        }
-      ],
       '/features/': [
         {
           text: 'Features',

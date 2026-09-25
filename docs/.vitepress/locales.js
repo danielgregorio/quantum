@@ -16,7 +16,7 @@ export const LANGUAGES = {
 const TEXT = {
   root: {
     description: 'Declarative web applications in XML, with AI and RAG built into the language',
-    home: 'Home', docs: 'Docs', guide: 'Guide', tutorial: 'Tutorial', reference: 'Reference',
+    home: 'Home', docs: 'Docs', guide: 'Guide', tutorial: 'Tutorial', cookbook: 'Cookbook', reference: 'Reference',
     spec: 'Specification (SPEC)', showcase: 'Showcase', blog: 'Blog', changelog: 'Changelog',
     status: 'Status', sponsor: 'Sponsor',
     editLink: 'Edit this page on GitHub', lastUpdated: 'Last updated', outline: 'On this page',
@@ -33,7 +33,7 @@ const TEXT = {
   },
   pt: {
     description: 'Aplicações web declarativas em XML, com IA e RAG na própria linguagem',
-    home: 'Início', docs: 'Documentação', guide: 'Guia', tutorial: 'Tutorial', reference: 'Referência',
+    home: 'Início', docs: 'Documentação', guide: 'Guia', tutorial: 'Tutorial', cookbook: 'Receitas', reference: 'Referência',
     spec: 'Especificação (SPEC)', showcase: 'Vitrine', blog: 'Blog', changelog: 'Mudanças',
     status: 'Status', sponsor: 'Apoie',
     editLink: 'Editar esta página no GitHub', lastUpdated: 'Atualizado em', outline: 'Nesta página',
@@ -50,7 +50,7 @@ const TEXT = {
   },
   es: {
     description: 'Aplicaciones web declarativas en XML, con IA y RAG en el propio lenguaje',
-    home: 'Inicio', docs: 'Documentación', guide: 'Guía', tutorial: 'Tutorial', reference: 'Referencia',
+    home: 'Inicio', docs: 'Documentación', guide: 'Guía', tutorial: 'Tutorial', cookbook: 'Recetario', reference: 'Referencia',
     spec: 'Especificación (SPEC)', showcase: 'Escaparate', blog: 'Blog', changelog: 'Cambios',
     status: 'Estado', sponsor: 'Patrocinar',
     editLink: 'Editar esta página en GitHub', lastUpdated: 'Actualizado', outline: 'En esta página',
@@ -67,7 +67,7 @@ const TEXT = {
   },
   zh: {
     description: '用 XML 编写的声明式 Web 应用，语言内置 AI 与 RAG',
-    home: '首页', docs: '文档', guide: '指南', tutorial: '教程', reference: '参考',
+    home: '首页', docs: '文档', guide: '指南', tutorial: '教程', cookbook: '实用示例', reference: '参考',
     spec: '规范 (SPEC)', showcase: '案例', blog: '博客', changelog: '更新日志',
     status: '状态', sponsor: '赞助',
     editLink: '在 GitHub 上编辑此页', lastUpdated: '最后更新', outline: '本页内容',
@@ -98,6 +98,7 @@ function nav(key) {
       items: [
         { text: t.guide, link: '/guide/getting-started' },
         { text: t.tutorial, link: '/tutorial/' },
+        { text: t.cookbook, link: '/cookbook/' },
         { text: t.reference, link: '/reference/' },
         { text: t.spec, link: '/reference/spec' },
       ],
