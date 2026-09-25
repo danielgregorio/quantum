@@ -27,10 +27,10 @@ Execute a .q file.
 | `file` | .q file to execute |  |  |
 | `--debug` | Debug mode |  |  |
 | `--config` | Config file | `quantum.config.yaml` |  |
-| `--target` | UI target (for type="ui" apps): html, textual, desktop, or mobile | `html` | `html`, `textual`, `desktop`, `mobile` |
+| `--target` | UI target (for type="ui" apps): html, textual, or mobile | `html` | `html`, `textual`, `mobile` |
 | `--engine` | Game engine backend: pixi (default, HTML5) or godot (Godot 4 project) | `pixi` | `pixi`, `godot` |
 
-Specified by: [IA-7](./spec#IA-7) · [CFG-1](./spec#CFG-1) · [UI-0](./spec#UI-0) · [UI-2](./spec#UI-2)
+Specified by: [IA-7](./spec#IA-7) · [CFG-1](./spec#CFG-1) · [UI-0](./spec#UI-0) · [UI-2](./spec#UI-2) · [UI-8](./spec#UI-8)
 
 <a id="cli-start"></a>
 
