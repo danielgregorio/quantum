@@ -1,0 +1,9 @@
+# Recipe: a table the reader filters with links and sorts by its headers.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/tasks.db

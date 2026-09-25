@@ -1,0 +1,3 @@
+tests/cart.test.q
+  PASS  each item with its subtotal, largest first
+1 passed, 0 failed

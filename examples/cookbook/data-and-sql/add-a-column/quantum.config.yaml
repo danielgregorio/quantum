@@ -1,0 +1,9 @@
+# Recipe: change the schema with a new migration, never by editing an old one.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/shop.db

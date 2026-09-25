@@ -1,0 +1,3 @@
+# Recipe: read a JSON file and add a computed field to each record.
+paths:
+  components: ./components

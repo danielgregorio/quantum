@@ -1,0 +1,5 @@
+tests/posts.test.q
+  PASS  the first page
+  PASS  the last page
+  PASS  a page that is not a number is page 1
+3 passed, 0 failed

@@ -1,0 +1,3 @@
+tests/stock.test.q
+  PASS  both migrations ran, in order
+1 passed, 0 failed

@@ -1,0 +1,5 @@
+tests/transfer.test.q
+  PASS  a transfer moves the money and logs it
+  PASS  the page refuses what the account cannot pay
+  PASS  when the last write fails, the first two are undone
+3 passed, 0 failed

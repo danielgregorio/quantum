@@ -1,0 +1,5 @@
+tests/products.test.q
+  PASS  without a filter, every product
+  PASS  the value from the URL filters
+  PASS  SQL in the URL is only text to search for
+3 passed, 0 failed

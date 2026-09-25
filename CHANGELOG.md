@@ -31,6 +31,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the 1.0 post, machine-translated until a native speaker reviews them, with a
   glossary (`docs/.vitepress/i18n/glossary.pt.md`) that keeps the terms the same
   on every page.
+- Cookbook, "Data & SQL": a query with parameters, a paginated list, search
+  as you type, filter and sort, writes that happen together (a transaction
+  rolled back when its last write fails), change history, adding a column
+  with a migration, reading CSV and JSON, loading a CSV into a table in one
+  transaction, and totals computed over a query's result; eleven tested
+  recipes.
 - Cookbook, "Forms & actions": each error on its field, a refused form that
   keeps what was typed, redirect with a flash (`q:flash` for a warning),
   several forms on one page, a form from the table, edit a row, confirm

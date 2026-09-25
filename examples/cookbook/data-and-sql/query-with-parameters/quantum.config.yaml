@@ -1,0 +1,9 @@
+# Recipe: a query that takes a value from the URL, bound as a parameter.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/shop.db

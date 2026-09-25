@@ -1,0 +1,9 @@
+# Recipe: one query to the database, and totals computed from its result.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/sales.db

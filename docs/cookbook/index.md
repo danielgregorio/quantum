@@ -34,3 +34,17 @@ Short recipes for one task each. Every recipe is a small app in `examples/cookbo
 - [Confirm before deleting](./forms-and-actions/confirm-before-delete.md) — A page that asks first, reached by a link, and the delete as a POST from its button; no JavaScript.
 - [Numbers and dates](./forms-and-actions/numbers-and-dates.md) — type=integer, decimal and date on q:param: the action gets checked numbers and real dates, with min and max.
 - [A choice from a list](./forms-and-actions/choices.md) — enum on q:param gives ui:select and ui:radio their options and refuses anything else; a box is a boolean.
+
+## Data & SQL
+
+- [A query with parameters](./data-and-sql/query-with-parameters.md) — Filter by a value from the URL, bound as a q:param — the value never becomes SQL.
+- [A paginated list](./data-and-sql/paginated-list.md) — One page of a long list at a time, with ui:pager drawing the links to the others.
+- [Search as you type](./data-and-sql/search-as-you-type.md) — A field that refreshes the results after each pause in typing — the page's own query does the search.
+- [Filter and sort a table](./data-and-sql/filter-and-sort.md) — Links that filter the rows and headers that sort them — both in SQL, both in the URL.
+- [Writes that happen together](./data-and-sql/transaction.md) — A q:transaction: the debit, the credit and the log line commit together, or none of them does.
+- [Change history](./data-and-sql/change-history.md) — history: true records who changed which row, and how; ui:history shows it on the page.
+- [Add a column with a migration](./data-and-sql/add-a-column.md) — Change the schema with a new migration file; the old one stays as it was.
+- [Read a CSV file](./data-and-sql/read-a-csv.md) — q:data turns a CSV file into typed records, filtered and sorted — no database needed.
+- [Load a CSV file into a table](./data-and-sql/load-a-csv-into-a-table.md) — Insert every row of a file in one transaction — a row that fails leaves nothing behind.
+- [Read a JSON file](./data-and-sql/read-json.md) — A JSON array as a list of records, with a computed field on each.
+- [Totals from one query](./data-and-sql/query-a-result.md) — SQL over a query's result, in memory — the database is asked once.

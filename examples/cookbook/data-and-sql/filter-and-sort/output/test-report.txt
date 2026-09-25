@@ -1,0 +1,6 @@
+tests/tasks.test.q
+  PASS  open tasks by default
+  PASS  the links filter
+  PASS  a header sorts in SQL
+  PASS  a column the query does not return is ignored
+4 passed, 0 failed

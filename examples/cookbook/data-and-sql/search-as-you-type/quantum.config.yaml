@@ -1,0 +1,9 @@
+# Recipe: a search field that refreshes the results while you type.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/library.db

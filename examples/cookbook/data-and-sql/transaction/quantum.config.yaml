@@ -1,0 +1,9 @@
+# Recipe: several writes that happen together or not at all.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/bank.db

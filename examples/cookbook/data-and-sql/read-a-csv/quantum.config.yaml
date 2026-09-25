@@ -1,0 +1,3 @@
+# Recipe: read a CSV file, typed, filtered and sorted — no database.
+paths:
+  components: ./components

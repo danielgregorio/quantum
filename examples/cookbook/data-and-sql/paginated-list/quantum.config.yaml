@@ -1,0 +1,9 @@
+# Recipe: a long list, one page at a time, with the links to the others.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/blog.db

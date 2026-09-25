@@ -1,0 +1,4 @@
+tests/history.test.q
+  PASS  an edit is recorded with who made it
+  PASS  a refused edit leaves no history
+2 passed, 0 failed

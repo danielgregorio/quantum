@@ -1,0 +1,10 @@
+# Recipe: who changed what, and when — recorded by every action's writes.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/wiki.db
+    history: true

@@ -1,0 +1,3 @@
+tests/totals.test.q
+  PASS  totals by region, from one query
+1 passed, 0 failed

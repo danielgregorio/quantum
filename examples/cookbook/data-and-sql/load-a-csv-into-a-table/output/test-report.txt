@@ -1,0 +1,4 @@
+tests/load.test.q
+  PASS  the file's rows land in the table
+  PASS  a file that fails halfway leaves nothing behind
+2 passed, 0 failed

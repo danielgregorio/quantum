@@ -1,0 +1,5 @@
+tests/search.test.q
+  PASS  every book before a search
+  PASS  a title or an author
+  PASS  nothing found
+3 passed, 0 failed
