@@ -381,7 +381,7 @@ sesiones están en [Sesiones](/guide/sessions).
 
 ## Ver también {#see-also}
 
-- [Bucles (`q:loop`)](/guide/loops)
-- [Enlace de datos](/guide/databinding)
+- [Bucles (`q:loop`)](/es/guide/loops)
+- [Enlace de datos](/es/guide/databinding)
 - [Componentes (`q:component`)](/es/guide/components)
 - [`q:set` en la Referencia](/reference/tags#q-set)

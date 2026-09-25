@@ -178,7 +178,7 @@ source_hash: 1a0d2d913b73
 
 **Output:** `"5 + 3 = 8, 4 * 7 = 28"`
 
-更多内容见[函数](/guide/functions)。
+更多内容见[函数](/zh/guide/functions)。
 
 ## 组件中的循环 {#loops-in-components}
 
@@ -317,7 +317,7 @@ source_hash: 1a0d2d913b73
 
 ### 字符串函数 {#string-functions}
 
-函数以值作为参数来调用——参见[函数列表](/guide/databinding#functions)：
+函数以值作为参数来调用——参见[函数列表](/zh/guide/databinding#functions)：
 
 ```xml
 <q:set name="text" value="hello world" />
@@ -471,6 +471,6 @@ source_hash: 1a0d2d913b73
 ## 下一步 {#next-steps}
 
 - [状态管理](/zh/guide/state-management) - 更进一步的变量处理
-- [函数](/guide/functions) - 创建可复用的逻辑
-- [循环](/guide/loops) - 迭代模式
-- [条件](/guide/conditionals) - 控制流
+- [函数](/zh/guide/functions) - 创建可复用的逻辑
+- [循环](/zh/guide/loops) - 迭代模式
+- [条件](/zh/guide/conditionals) - 控制流

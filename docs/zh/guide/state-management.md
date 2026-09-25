@@ -373,7 +373,7 @@ source_hash: abd4da66d07f
 
 ## 另请参见 {#see-also}
 
-- [循环（`q:loop`）](/guide/loops)
-- [数据绑定](/guide/databinding)
+- [循环（`q:loop`）](/zh/guide/loops)
+- [数据绑定](/zh/guide/databinding)
 - [组件（`q:component`）](/zh/guide/components)
 - [参考手册中的 `q:set`](/reference/tags#q-set)

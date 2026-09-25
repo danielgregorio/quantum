@@ -186,7 +186,7 @@ Define lógica reutilizable con `q:function`, y llámala en una expresión:
 
 **Output:** `"5 + 3 = 8, 4 * 7 = 28"`
 
-Más en [Funciones](/guide/functions).
+Más en [Funciones](/es/guide/functions).
 
 ## Bucles en componentes {#loops-in-components}
 
@@ -327,7 +327,7 @@ Usa `{expression}` para los valores dinámicos:
 ### Funciones de texto {#string-functions}
 
 Las funciones se llaman con el valor como argumento — ver la
-[lista de funciones](/guide/databinding#functions):
+[lista de funciones](/es/guide/databinding#functions):
 
 ```xml
 <q:set name="text" value="hello world" />
@@ -486,6 +486,6 @@ Con `count` = `3` devuelve `"3 item(s)"`; con `-1`,
 ## Próximos pasos {#next-steps}
 
 - [Manejo de estado](/es/guide/state-management) - Manejo avanzado de variables
-- [Funciones](/guide/functions) - Crear lógica reutilizable
-- [Bucles](/guide/loops) - Patrones de iteración
-- [Condicionales](/guide/conditionals) - Flujo de control
+- [Funciones](/es/guide/functions) - Crear lógica reutilizable
+- [Bucles](/es/guide/loops) - Patrones de iteración
+- [Condicionales](/es/guide/conditionals) - Flujo de control
