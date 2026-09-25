@@ -27,12 +27,12 @@ Receitas curtas, uma tarefa cada. Cada receita é uma pequena aplicação em `ex
 
 ## Telas
 
-- [A layout that fits the screen](/cookbook/screens/responsive-layout) (em inglês) — ui:hbox side by side on a wide screen, stacked on a narrow one, with grow, width and hide-below.
-- [A table you edit in place](/cookbook/screens/editable-table) (em inglês) — ui:table edit= turns each cell into a small form checked against the table's schema; no action to write.
-- [Tabs](/cookbook/screens/tabs) (em inglês) — ui:tabpanel with one ui:tab per section of a page.
-- [Cards](/cookbook/screens/cards) (em inglês) — ui:card with a header, a body and a footer, in a ui:grid; or a card with just a title.
-- [Every kind of field](/cookbook/screens/form-fields) (em inglês) — ui:form with ui:formitem labels: text, number, a select with options, a switch, radios and a multi-line field.
-- [The same page in a terminal](/cookbook/screens/browser-and-console) (em inglês) — One ui:* page, served to the browser by quantum start and drawn in a terminal by quantum console.
+- [Um layout que cabe na tela](./screens/responsive-layout.md) — ui:hbox lado a lado numa tela larga, empilhado numa estreita, com grow, width e hide-below.
+- [Uma tabela editada no lugar](./screens/editable-table.md) — ui:table edit= transforma cada célula num pequeno formulário verificado contra o esquema da tabela; nenhuma ação a escrever.
+- [Abas](./screens/tabs.md) — ui:tabpanel com uma ui:tab por seção de uma página.
+- [Cards](./screens/cards.md) — ui:card com cabeçalho, corpo e rodapé, num ui:grid; ou um card só com título.
+- [Todo tipo de campo](./screens/form-fields.md) — ui:form com rótulos ui:formitem: texto, número, uma seleção com opções, um switch, radios e um campo de várias linhas.
+- [A mesma página num terminal](./screens/browser-and-console.md) — Uma página ui:*, servida ao navegador pelo quantum start e desenhada num terminal pelo quantum console.
 
 ## Testando a aplicação
 
@@ -42,8 +42,8 @@ Receitas curtas, uma tarefa cada. Cada receita é uma pequena aplicação em `ex
 
 ## Arquivos e e-mail
 
-- [Mail in development](/cookbook/files-and-mail/mail-in-development) (em inglês) — Send mail from an action without a mail server while you develop — host: log writes each message to the log.
-- [When the mail server says no](/cookbook/files-and-mail/mail-server-refuses) (em inglês) — Keep an order even when its confirmation e-mail cannot be sent — onerror=continue, and tell the visitor.
+- [E-mail em desenvolvimento](./files-and-mail/mail-in-development.md) — Envie e-mail de uma ação sem servidor de e-mail enquanto desenvolve — host: log grava cada mensagem no log.
+- [Quando o servidor de e-mail diz não](./files-and-mail/mail-server-refuses.md) — Mantenha um pedido mesmo quando o e-mail de confirmação não pode ser enviado — onerror=continue, e avise o visitante.
 
 ## Login e permissões
 
@@ -67,24 +67,24 @@ Receitas curtas, uma tarefa cada. Cada receita é uma pequena aplicação em `ex
 
 ## Dados e SQL
 
-- [A query with parameters](/cookbook/data-and-sql/query-with-parameters) (em inglês) — Filter by a value from the URL, bound as a q:param — the value never becomes SQL.
-- [A paginated list](/cookbook/data-and-sql/paginated-list) (em inglês) — One page of a long list at a time, with ui:pager drawing the links to the others.
-- [Search as you type](/cookbook/data-and-sql/search-as-you-type) (em inglês) — A field that refreshes the results after each pause in typing — the page's own query does the search.
-- [Filter and sort a table](/cookbook/data-and-sql/filter-and-sort) (em inglês) — Links that filter the rows and headers that sort them — both in SQL, both in the URL.
-- [Writes that happen together](/cookbook/data-and-sql/transaction) (em inglês) — A q:transaction: the debit, the credit and the log line commit together, or none of them does.
-- [Change history](/cookbook/data-and-sql/change-history) (em inglês) — history: true records who changed which row, and how; ui:history shows it on the page.
-- [Add a column with a migration](/cookbook/data-and-sql/add-a-column) (em inglês) — Change the schema with a new migration file; the old one stays as it was.
-- [Read a CSV file](/cookbook/data-and-sql/read-a-csv) (em inglês) — q:data turns a CSV file into typed records, filtered and sorted — no database needed.
-- [Load a CSV file into a table](/cookbook/data-and-sql/load-a-csv-into-a-table) (em inglês) — Insert every row of a file in one transaction — a row that fails leaves nothing behind.
-- [Read a JSON file](/cookbook/data-and-sql/read-json) (em inglês) — A JSON array as a list of records, with a computed field on each.
-- [Totals from one query](/cookbook/data-and-sql/query-a-result) (em inglês) — SQL over a query's result, in memory — the database is asked once.
+- [Uma consulta com parâmetros](./data-and-sql/query-with-parameters.md) — Filtre por um valor da URL, ligado como um q:param — o valor nunca vira SQL.
+- [Uma lista paginada](./data-and-sql/paginated-list.md) — Uma página de uma lista longa por vez, com o ui:pager desenhando os links para as outras.
+- [Busca enquanto você digita](./data-and-sql/search-as-you-type.md) — Um campo que atualiza os resultados a cada pausa na digitação — a própria consulta da página faz a busca.
+- [Filtrar e ordenar uma tabela](./data-and-sql/filter-and-sort.md) — Links que filtram as linhas e cabeçalhos que as ordenam — os dois no SQL, os dois na URL.
+- [Escritas que acontecem juntas](./data-and-sql/transaction.md) — Uma q:transaction: o débito, o crédito e a linha de registro são confirmados juntos, ou nenhum deles é.
+- [Histórico de mudanças](./data-and-sql/change-history.md) — history: true registra quem mudou qual linha, e como; ui:history mostra isso na página.
+- [Acrescentar uma coluna com uma migração](./data-and-sql/add-a-column.md) — Mude o esquema com um novo arquivo de migração; o antigo fica como estava.
+- [Ler um arquivo CSV](./data-and-sql/read-a-csv.md) — q:data transforma um CSV em registros tipados, filtrados e ordenados — sem banco de dados.
+- [Carregar um CSV numa tabela](./data-and-sql/load-a-csv-into-a-table.md) — Insira cada linha de um arquivo numa transação — uma linha que falha não deixa nada para trás.
+- [Ler um arquivo JSON](./data-and-sql/read-json.md) — Um array JSON como uma lista de registros, com um campo calculado em cada um.
+- [Totais a partir de uma consulta](./data-and-sql/query-a-result.md) — SQL sobre o resultado de uma consulta, em memória — o banco é consultado uma vez.
 
 ## IA
 
-- [Answers with their sources](/cookbook/ai/answer-with-sources) (em inglês) — Answer questions from your own documents with q:knowledge and q:llm knowledge=, and list the sources.
-- [When the documents do not know](/cookbook/ai/honest-i-dont-know) (em inglês) — minRelevance keeps unrelated chunks out; with nothing left, the model is not asked and the page says so.
-- [Stream an answer](/cookbook/ai/stream-an-answer) (em inglês) — A streamed q:llm and ui:stream: the page renders at once, the answer appears as it is written.
-- [An agent over your database](/cookbook/ai/agent-over-your-database) (em inglês) — q:agent with a read-only query tool: the model picks the tool and its arguments, never the SQL.
-- [When the model fails](/cookbook/ai/when-the-model-fails) (em inglês) — onerror on q:llm: a model that is down or too slow does not take the page down with it.
-- [Sort messages with JSON answers](/cookbook/ai/sort-tickets-with-json) (em inglês) — responseFormat json: the model's answer is an object whose fields you check and store.
-- [Answers from a table](/cookbook/ai/knowledge-from-a-table) (em inglês) — A q:knowledge source that is a query: the rows of your FAQ table, retrieved like documents.
+- [Respostas com as suas fontes](./ai/answer-with-sources.md) — Responda perguntas a partir dos seus próprios documentos com q:knowledge e q:llm knowledge=, e liste as fontes.
+- [Quando os documentos não sabem](./ai/honest-i-dont-know.md) — minRelevance deixa de fora os trechos que não têm relação; sem nenhum, o modelo não é chamado e a página diz isso.
+- [Transmitir uma resposta](./ai/stream-an-answer.md) — Um q:llm transmitido e ui:stream: a página aparece na hora, e a resposta surge enquanto é escrita.
+- [Um agente sobre o seu banco de dados](./ai/agent-over-your-database.md) — q:agent com uma ferramenta de consulta só de leitura: o modelo escolhe a ferramenta e os argumentos, nunca o SQL.
+- [Quando o modelo falha](./ai/when-the-model-fails.md) — onerror no q:llm: um modelo fora do ar ou lento demais não derruba a página junto.
+- [Classificar mensagens com respostas em JSON](./ai/sort-tickets-with-json.md) — responseFormat json: a resposta do modelo é um objeto cujos campos você verifica e guarda.
+- [Respostas a partir de uma tabela](./ai/knowledge-from-a-table.md) — Uma fonte de q:knowledge que é uma consulta: as linhas da sua tabela de perguntas frequentes, recuperadas como documentos.

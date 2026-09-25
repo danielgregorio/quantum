@@ -41,7 +41,8 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the code and the results are the same files the English imports. The
   generator writes each language's Cookbook index (`LANGS` in
   `scripts/generate-cookbook.py`), linking the English page where a recipe is
-  not translated yet.
+  not translated yet. All 51 recipes are translated; a test checks that every
+  translated page imports the same files as its English page, in order.
 - Cookbook, "Screens": a layout that fits the screen, a table edited in
   place, tabs, cards, every kind of field, and the same page in a terminal;
   six tested recipes, two of them also checked in the console

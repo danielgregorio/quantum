@@ -49,6 +49,19 @@ def test_every_translated_page_names_its_english_source():
         assert re.fullmatch(r'[0-9a-f]{12}', status.field(status.read(path), 'source_hash') or ''), page
 
 
+def test_a_translated_page_imports_the_same_files_as_its_english_page():
+    # The code and the results a page shows are imported (<<< @/...), never
+    # retyped: a translation imports the same files, in the same order.
+    for lang, path in PAGES:
+        page, source, state = status.status(lang, path)
+        if state in ('no-source', 'missing-source'):
+            continue
+        english = status.read(DOCS / source)
+        wanted = [line for line in english.splitlines() if line.startswith('<<< ')]
+        got = [line for line in status.read(path).splitlines() if line.startswith('<<< ')]
+        assert got == wanted, f'docs/{page}: its imports differ from docs/{source}'
+
+
 def test_every_translated_page_is_in_its_language_nav_and_every_entry_has_its_page():
     listed = translated_routes()
     for lang, path in PAGES:
