@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Quantum blog</title>
+    <link>https://danielgregorio.github.io/quantum/blog/</link>
+    <description>News about Quantum: releases, what changed and why.</description>
+    <language>en</language>
+    <lastBuildDate>Fri, 25 Sep 2026 00:00:00 +0000</lastBuildDate>
+    <item>
+      <title>Quantum 1.0</title>
+      <link>https://danielgregorio.github.io/quantum/blog/posts/quantum-1-0</link>
+      <guid isPermaLink="true">https://danielgregorio.github.io/quantum/blog/posts/quantum-1-0</guid>
+      <pubDate>Fri, 25 Sep 2026 00:00:00 +0000</pubDate>
+      <description>Declarative web applications in XML, with AI and RAG in the language — what 1.0 promises, how it was checked, and what comes next.</description>
+      <category>release</category>
+      <category>1.0</category>
+    </item>
+  </channel>
+</rss>

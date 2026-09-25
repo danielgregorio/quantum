@@ -6,6 +6,16 @@ Experimental and Laboratory may change in any release (`SUPPORT_TIERS.md`).
 Before 1.0, minor versions could break compatibility. Every change that can
 alter the behaviour of an existing app is listed under **Breaking**.
 
+## Unreleased
+
+### Documented
+
+- The site has a changelog (one page per version, with stable anchors), a
+  status page ("what really works today", from FEATURE_STATUS.md), a blog
+  with an RSS feed and the "Quantum 1.0" post, a support page and a community
+  page. `scripts/generate-site-pages.py` builds the derived pages, and CI fails
+  if they are stale.
+
 ## 1.0.0
 
 Quantum 1.0: **declarative web applications in XML, with AI and RAG built into
