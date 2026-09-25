@@ -8,6 +8,15 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ## Unreleased
 
+### Added
+
+- The site speaks four languages: English, and /pt/ (pt-BR), /es/ and
+  /zh/ (zh-CN), with a language switcher and each language's interface text;
+  the pages are translated next. The top nav is Home · Docs (Guide, Tutorial,
+  Reference, SPEC) · Showcase · Blog · Changelog · Status · Sponsor. Search
+  splits Chinese into words (it found nothing inside a Chinese sentence), and
+  each page carries hreflang alternates and Open Graph tags.
+
 ### Documented
 
 - Every `xml` example on the site is checked by the real parser in CI

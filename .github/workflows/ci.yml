@@ -109,6 +109,8 @@ jobs:
 
       - name: Build the docs
         run: npm run docs:build
+      - name: Search splits Chinese words (and still finds ui:pager's "pager")
+        run: node docs/.vitepress/search-tokenize.check.mjs
 
       - name: No link to a page that does not exist
         run: |
