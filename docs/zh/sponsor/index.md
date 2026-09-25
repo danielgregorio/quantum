@@ -1,6 +1,6 @@
 ---
 source: sponsor/index.md
-source_hash: 53384d3cea79
+source_hash: 9cb095721595
 ---
 
 # 支持 Quantum
@@ -22,4 +22,6 @@ Quantum 是免费的开源软件（MIT 许可证），并且会一直如此。�
 - **使用它，并告诉我们哪里坏了。** 在 [GitHub Issue](https://github.com/danielgregorio/quantum/issues)
   中附上一个能复现问题的最小 `.q` 文件，比任何称赞都更有价值。
 - **参与贡献**——见[社区](/community/)。
-- **赞助**——尚未开放。
+- **赞助**——在 [Patreon](https://patreon.com/gregoriodaniel) 上按月支持，用于支付上面这些开销。
+
+<a class="sponsor-button" href="https://patreon.com/gregoriodaniel" target="_blank" rel="noopener">在 Patreon 上支持</a>

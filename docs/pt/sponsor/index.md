@@ -1,6 +1,6 @@
 ---
 source: sponsor/index.md
-source_hash: 53384d3cea79
+source_hash: 9cb095721595
 ---
 
 # Apoie o Quantum
@@ -29,4 +29,6 @@ no ar:
   numa [issue no GitHub](https://github.com/danielgregorio/quantum/issues), vale
   mais do que qualquer elogio.
 - **Contribua** — veja [Comunidade](/pt/community/).
-- **Patrocine** — ainda não está aberto.
+- **Patrocine** — o apoio mensal no [Patreon](https://patreon.com/gregoriodaniel) paga os itens acima.
+
+<a class="sponsor-button" href="https://patreon.com/gregoriodaniel" target="_blank" rel="noopener">Apoie no Patreon</a>

@@ -208,3 +208,19 @@
 .output-highlight-keyword {
   color: var(--vp-c-warning-1);
 }
+
+/* The Support page's call to action (docs/sponsor/). */
+.vp-doc a.sponsor-button {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 10px 20px;
+  border-radius: 20px;
+  background: var(--vp-c-brand-1);
+  color: var(--vp-c-white);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.vp-doc a.sponsor-button:hover {
+  background: var(--vp-c-brand-2);
+}

@@ -1,6 +1,6 @@
 ---
 source: sponsor/index.md
-source_hash: 53384d3cea79
+source_hash: 9cb095721595
 ---
 
 # Apoya a Quantum
@@ -30,4 +30,6 @@ disponible:
   bug, en un [issue de GitHub](https://github.com/danielgregorio/quantum/issues),
   vale más que cualquier elogio.
 - **Contribuye**: ver [Comunidad](/community/).
-- **Patrocina**: todavía no está abierto.
+- **Patrocina**: el apoyo mensual en [Patreon](https://patreon.com/gregoriodaniel) paga lo de arriba.
+
+<a class="sponsor-button" href="https://patreon.com/gregoriodaniel" target="_blank" rel="noopener">Apoya en Patreon</a>
