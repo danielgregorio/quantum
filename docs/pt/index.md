@@ -7,11 +7,11 @@ hero:
   tagline: Banco de dados, formulários, sessões e IA na linguagem. Sem cadeia de build, sem JavaScript, sem framework de front-end.
   actions:
     - theme: brand
-      text: Começar (em inglês)
-      link: /guide/getting-started
+      text: Começar
+      link: /pt/guide/quick-start
     - theme: alt
-      text: Por que Quantum (em inglês)
-      link: /guide/why-quantum
+      text: Por que Quantum
+      link: /pt/guide/why-quantum
     - theme: alt
       text: Ver no GitHub
       link: https://github.com/danielgregorio/quantum
@@ -42,7 +42,8 @@ source_hash: 15bee710f3f5
 ::: info Tradução automática
 Esta página foi traduzida automaticamente do inglês e ainda não foi revisada;
 correções são bem-vindas no GitHub. Se algo não bater, vale o
-[original em inglês](/). Por enquanto, o resto da documentação está em inglês.
+[original em inglês](/). Por enquanto, a maior parte da documentação está em
+inglês.
 :::
 
 # Bem-vindo ao Quantum
@@ -51,7 +52,7 @@ O Quantum constrói **aplicações web a partir de páginas XML declarativas** �
 mesma página também roda num terminal e numa janela de desktop. Inspirado no
 ColdFusion e no Adobe Flex, ele permite construir ferramentas internas, painéis
 e aplicações de IA sem escrever JavaScript.
-[Por que Quantum?](/guide/why-quantum) (em inglês)
+[Por que Quantum?](/pt/guide/why-quantum)
 
 ## Exemplo rápido
 
@@ -99,4 +100,4 @@ pip install quantum-framework
 quantum start          # in an application folder; the guide builds one step by step
 ```
 
-[Leia o guia de primeiros passos](/guide/getting-started) (em inglês)
+[Leia o início rápido](/pt/guide/quick-start)
