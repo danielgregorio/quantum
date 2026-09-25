@@ -40,7 +40,7 @@ It runs before the page and before each of its actions:
   <q:if condition="session.authenticated">
     <q:redirect url="/dashboard" />
   </q:if>
-  ...
+  <html><body><p>Please sign in.</p></body></html>
 </q:component>
 ```
 

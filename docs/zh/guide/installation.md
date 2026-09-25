@@ -1,6 +1,6 @@
 ---
 source: guide/installation.md
-source_hash: f900f66810af
+source_hash: aac979eb127d
 ---
 
 # 安装
@@ -64,6 +64,8 @@ AI 标签（`q:llm`、`q:knowledge`、`q:agent`）会连接一个 [Ollama](https
   <q:return value="Hello World!" />
 </q:component>
 ```
+
+**输出：** `Hello World!`
 
 ```bash
 quantum run hello.q

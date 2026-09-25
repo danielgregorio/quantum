@@ -3,8 +3,10 @@
 Model calls, retrieval-augmented generation and agents are tags. They talk to
 an [Ollama](https://ollama.com) server; there is no Python glue to write.
 
-Everything on this page is checked against a real model by
-`tests/live_ai/test_ai_real.py` — never against a fake one.
+The examples on this page are run on every change against a stand-in model
+server (`tests/docs/test_guide_ai.py`), which checks what they send to the
+model and what they hand to the page. The AI tags themselves are tested
+against a real model before every release (`tests/live_ai/test_ai_real.py`).
 
 ## Pointing at the model server
 
@@ -277,6 +279,6 @@ model can make it do — give tools only the access the task needs.
 
 ## `q:team`
 
-`q:team` coordinates several agents with handoffs. It is **Beta and less
-exercised** than the tags above: it has not yet been validated end to end
-against a capable model (see [SUPPORT_TIERS.md](https://github.com/danielgregorio/quantum/blob/main/SUPPORT_TIERS.md)).
+`q:team` coordinates several agents with handoffs. It is **Experimental**:
+it has no SPEC rule and no app that proves it yet, so it carries no stability
+promise (see [Stability](/stability/)).
