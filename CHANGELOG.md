@@ -10,6 +10,9 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Screen readers hear the nav, sidebar and pager labels in the page's
+  language (VitePress writes them in English): `theme/aria-labels.js` sets
+  them from `ariaLabels` in `locales.js` after each render.
 - The language switcher goes to the same page in the other language when it
   is translated, and to that language's home otherwise — in every direction.
   The pages it knows come from `TRANSLATED` in `docs/.vitepress/locales.js`

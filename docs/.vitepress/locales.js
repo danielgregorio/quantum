@@ -24,6 +24,7 @@ const TEXT = {
     prev: 'Previous page', next: 'Next page', langMenu: 'Change language', returnToTop: 'Return to top',
     sidebarMenu: 'Menu', darkMode: 'Appearance', lightTitle: 'Switch to light theme',
     darkTitle: 'Switch to dark theme', skipToContent: 'Skip to content',
+    mainNavLabel: 'Main Navigation', sidebarNavLabel: 'Sidebar Navigation', pagerLabel: 'Pager',
     notFound: { title: 'PAGE NOT FOUND', quote: 'This page does not exist (yet).', link: 'Take me home' },
     footer: 'MIT Licensed · Built with VitePress',
     search: {
@@ -41,6 +42,7 @@ const TEXT = {
     prev: 'Página anterior', next: 'Próxima página', langMenu: 'Mudar idioma', returnToTop: 'Voltar ao topo',
     sidebarMenu: 'Menu', darkMode: 'Aparência', lightTitle: 'Mudar para o tema claro',
     darkTitle: 'Mudar para o tema escuro', skipToContent: 'Pular para o conteúdo',
+    mainNavLabel: 'Navegação principal', sidebarNavLabel: 'Navegação lateral', pagerLabel: 'Página anterior e próxima',
     notFound: { title: 'PÁGINA NÃO ENCONTRADA', quote: 'Esta página não existe (ainda).', link: 'Voltar ao início' },
     footer: 'Licença MIT · Feito com VitePress',
     search: {
@@ -58,6 +60,7 @@ const TEXT = {
     prev: 'Página anterior', next: 'Página siguiente', langMenu: 'Cambiar idioma', returnToTop: 'Volver arriba',
     sidebarMenu: 'Menú', darkMode: 'Apariencia', lightTitle: 'Cambiar al tema claro',
     darkTitle: 'Cambiar al tema oscuro', skipToContent: 'Ir al contenido',
+    mainNavLabel: 'Navegación principal', sidebarNavLabel: 'Navegación lateral', pagerLabel: 'Página anterior y siguiente',
     notFound: { title: 'PÁGINA NO ENCONTRADA', quote: 'Esta página no existe (todavía).', link: 'Volver al inicio' },
     footer: 'Licencia MIT · Hecho con VitePress',
     search: {
@@ -75,6 +78,7 @@ const TEXT = {
     prev: '上一页', next: '下一页', langMenu: '切换语言', returnToTop: '返回顶部',
     sidebarMenu: '菜单', darkMode: '外观', lightTitle: '切换到浅色主题',
     darkTitle: '切换到深色主题', skipToContent: '跳到正文',
+    mainNavLabel: '主导航', sidebarNavLabel: '侧边栏导航', pagerLabel: '上一页和下一页',
     notFound: { title: '页面未找到', quote: '此页面（暂时）不存在。', link: '返回首页' },
     footer: 'MIT 许可证 · 使用 VitePress 构建',
     search: {
@@ -300,6 +304,13 @@ function chrome(key) {
     lightModeSwitchTitle: t.lightTitle,
     darkModeSwitchTitle: t.darkTitle,
     skipToContentLabel: t.skipToContent,
+    // Screen-reader labels VitePress 1.6.4 writes in English; theme/index.js sets
+    // them in the page's language, by the id of the element that holds each.
+    ariaLabels: {
+      'main-nav-aria-label': t.mainNavLabel,
+      'sidebar-aria-label': t.sidebarNavLabel,
+      'doc-footer-aria-label': t.pagerLabel,
+    },
     notFound: { title: t.notFound.title, quote: t.notFound.quote, linkText: t.notFound.link },
     footer: { message: t.footer, copyright: 'Quantum Framework' },
   }

@@ -1,5 +1,7 @@
-import { h } from 'vue'
+import { h, nextTick, onMounted, watch } from 'vue'
+import { useData, useRoute } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
+import { applyAriaLabels } from './aria-labels.js'
 import TranslationNotice from './components/TranslationNotice.vue'
 import ExampleCard from './components/ExampleCard.vue'
 import ExampleGallery from './components/ExampleGallery.vue'
@@ -15,6 +17,15 @@ export default {
     'doc-before': () => h(TranslationNotice),
     'home-hero-before': () => h(TranslationNotice),
   }),
+  // Screen-reader labels in the page's language (aria-labels.js), after every
+  // render: the nav, the sidebar and the pager are redrawn when the route changes.
+  setup() {
+    const { theme } = useData()
+    const route = useRoute()
+    const apply = () => nextTick(() => applyAriaLabels(globalThis.document, theme.value.ariaLabels))
+    onMounted(apply)
+    watch(() => route.path, apply)
+  },
   enhanceApp({ app, siteData }) {
     // The search box splits a query as the index was split (Intl.Segmenter, so
     // Chinese works): the config's tokenize function does not reach the browser.
