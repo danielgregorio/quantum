@@ -59,6 +59,17 @@ function openGraph(pageData, siteTitle) {
 export default defineConfig({
   base: BASE,
 
+  // Pages kept in the repository but not published: their code does not
+  // work with Quantum 1.0, and the Cookbook (tested recipes) replaces them.
+  // They are rewritten there, not patched here. tests/docs/docs_blocks.py
+  // lists them as under review.
+  srcExclude: [
+    'examples/advanced.md', 'examples/agents.md', 'examples/authentication.md',
+    'examples/conditionals.md', 'examples/data-import.md', 'examples/forms-actions.md',
+    'examples/functions.md', 'examples/games.md', 'examples/loops.md',
+    'examples/queries.md', 'examples/state-management.md', 'examples/ui-theming.md',
+    'features/animations.md', 'features/form-validation.md', 'features/theming.md',
+  ],
 
   title: 'Quantum Framework',
   description: 'Declarative web applications in XML, with AI and RAG built into the language',
@@ -143,16 +154,6 @@ export default defineConfig({
           ]
         }
       ],
-      '/features/': [
-        {
-          text: 'Features',
-          items: [
-            { text: 'Theming', link: '/features/theming' },
-            { text: 'Animations', link: '/features/animations' },
-            { text: 'Form Validation', link: '/features/form-validation' },
-          ]
-        }
-      ],
       // BEGIN Reference (generated pages: scripts/generate-reference.py)
       '/reference/': [
         {
@@ -170,32 +171,6 @@ export default defineConfig({
         }
       ],
       // END Reference
-      '/examples/': [
-        {
-          text: 'Examples Gallery',
-          items: [
-            { text: 'Overview', link: '/examples/' }
-          ]
-        },
-        {
-          text: 'By Feature',
-          collapsed: false,
-          items: [
-            { text: 'State Management', link: '/examples/state-management' },
-            { text: 'Loops', link: '/examples/loops' },
-            { text: 'Conditionals', link: '/examples/conditionals' },
-            { text: 'Functions', link: '/examples/functions' },
-            { text: 'Database Queries', link: '/examples/queries' },
-            { text: 'Forms & Actions', link: '/examples/forms-actions' },
-            { text: 'Authentication', link: '/examples/authentication' },
-            { text: 'AI Agents', link: '/examples/agents' },
-            { text: 'UI & Theming', link: '/examples/ui-theming' },
-            { text: 'Games', link: '/examples/games' },
-            { text: 'Data Import', link: '/examples/data-import' },
-            { text: 'Advanced', link: '/examples/advanced' }
-          ]
-        }
-      ],
       '/targets/': [
         {
           text: 'Build Targets',

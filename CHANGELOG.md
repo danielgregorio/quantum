@@ -38,6 +38,15 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the English code, block for block (the docs guard checks it), and the nav
   links to a translation when one exists. The zh glossary is in
   docs/.vitepress/i18n/glossary.zh.md.
+- The site no longer publishes the 15 hand-written example and feature pages
+  (`docs/examples/*`, `docs/features/*`) whose code did not work with 1.0: they
+  taught removed attributes (`persist=`, `maxSize=`, `cache=`) and tags that
+  never existed (`q:try`). The Cookbook, the Showcase and the tutorial replace
+  them; the files stay in the repository to be rewritten as recipes.
+- `tests/docs/test_no_deprecated_content.py`: a published page that shows
+  something removed or renamed in the changelog (a tag, an attribute, a CLI
+  command, a tier name, a default) as current fails CI. Two pages were fixed:
+  the UI guide named `quantum new`, and the CLI reference a retired tier name.
 - The hand-written `ui:` component pages (docs/ui/) are gone: they taught
   components that do not exist. The generated [UI tags](/reference/ui)
   reference and the "One App, Many Screens" guide replace them. The Cookbook

@@ -204,4 +204,4 @@ You've learned the basics! Now explore:
 - [State Management](/guide/state-management) - Advanced variable handling
 - [AI](/guide/ai) - LLM calls, RAG and agents as tags
 - [Database Queries](/guide/query) - SQL and data operations
-- [Examples](/examples/) - More real-world examples
+- [Cookbook](/cookbook/) - Tested recipes, one task each

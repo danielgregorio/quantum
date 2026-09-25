@@ -145,4 +145,4 @@ This shows:
 - [Project Structure](/guide/project-structure) - How to organize your code
 - [Components](/guide/components) - Deep dive into components
 - [AI](/guide/ai) - LLM calls, RAG and agents as tags
-- [Examples](/examples/) - Real-world examples
+- [Cookbook](/cookbook/) - Tested recipes, one task each
