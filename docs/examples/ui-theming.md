@@ -30,7 +30,7 @@ tested examples. Until then, trust the [Guide](/guide/getting-started) and the
 UI components, themes, and animations.
 
 <div class="related-links">
-  <a href="../ui/overview" class="related-link">UI Documentation</a>
+  <a href="../reference/ui" class="related-link">UI tags</a>
   <a href="../features/theming" class="related-link">Theming Guide</a>
 </div>
 
