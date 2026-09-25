@@ -29,6 +29,9 @@ alter the behaviour of an existing app is listed under **Breaking**.
 - More of the guide in Simplified Chinese: AI, files and mail, data import,
   services, sessions, the admin, project structure and `q:application`,
   machine-translated, with the English heading anchors.
+- The q:application page no longer lists `type="testing"` (removed in 0.22,
+  replaced by `quantum test`) or a `--target desktop` for `type="ui"`
+  (removed in 0.16), and quotes the parser's message as it is.
 - The Blog index, Status and Community pages in Brazilian Portuguese.
   `scripts/generate-site-pages.py` writes the translated Blog index and Status
   page (`LANGS`) around the same posts and the same measured tables, stamped
@@ -51,7 +54,9 @@ alter the behaviour of an existing app is listed under **Breaking**.
 - The core guide in Spanish and Simplified Chinese: Getting Started,
   Components, How a Page Runs, State Management, Loops, Conditionals,
   Functions, Expressions & Databinding, Actions & Forms, Database Queries,
-  Authentication, One App, Many Screens and Testing an App — machine
+  Authentication, One App, Many Screens and Testing an App (and, in Spanish,
+  the rest of the guide: AI, Files and Mail, Data Import, Declared Services,
+  Sessions, Quantum Admin, Project Structure and q:application) — machine
   translated and marked as such. The prose is translated segment by segment
   around the English page's code, which is copied as it is; each heading keeps
   the English anchor, so links to a section work in every language.

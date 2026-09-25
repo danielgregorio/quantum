@@ -349,7 +349,7 @@ Una variable vive donde dice `scope`: `local` (por defecto), `function`,
 puede decirlo: `session.cart` es el `cart` de la sesión del usuario. Las
 variables de una página viven en el servidor, durante una solicitud (SET-2); lo
 que deba durar más que la solicitud va en `session` o en la base de datos. Las
-sesiones están en [Sesiones](/guide/sessions).
+sesiones están en [Sesiones](/es/guide/sessions).
 
 ```xml
 <q:function name="calculate">

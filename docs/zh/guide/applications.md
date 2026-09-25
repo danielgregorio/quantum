@@ -1,6 +1,6 @@
 ---
 source: guide/applications.md
-source_hash: 42bbd59d0482
+source_hash: 508e483fc213
 ---
 # q:application
 
@@ -16,21 +16,20 @@ Quantum 中的 **Web 应用**不是 `q:application`：它是 `components/` 中�
 |--------|------|-------------------------------|
 | `game` | 实验室 | 构建一个 2D 游戏（`--engine pixi` 或 `--engine godot`） |
 | `terminal` | 实验层 | 构建一个终端界面 |
-| `ui` | 实验层 | 构建一个界面（`--target html`、`desktop` 或 `mobile`） |
-| `testing` | 实验层 | 生成浏览器测试 |
+| `ui` | 实验层 | 构建一个界面，只有布局（`--target html` 或 `textual`；`mobile` 属于实验室） |
 
 运行实验层或实验室的应用时，会打印一次警告说明这一点。它们的标签和输出可能在任何版本中改变。
 
 ## 已移除：`type="html"`、`type="api"`、`type="microservices"` {#removed-type-html-type-api-type-microservices}
 
-早期版本记载了用 `q:application` 加 `q:route` 块声明的 Web 服务器和 JSON API。它们从未真正运行过自己的路由——`html` 启动时就失败，`api` 返回第一个 `q:return` 的字面文本——已在 0.11 中移除。不带 `type` 的 `q:application` 原来表示 `type="html"`，所以同样会被拒绝。
+早期版本记载了用 `q:application` 加 `q:route` 块声明的 Web 服务器和 JSON API。它们从未真正运行过自己的路由——`html` 启动时就失败，`api` 返回第一个 `q:return` 的字面文本——已在 0.11 中移除。不带 `type` 的 `q:application` 原来表示 `type="html"`，所以同样会被拒绝。`type="testing"`（`qtest:` 引擎）已在 0.22 中移除；取代它的是 [`quantum test`](/zh/guide/testing)。
 
 现在解析器会停下并给出指引：
 
 ```text
 <q:application> type="html" was removed in Quantum 0.11: it never ran its
 routes. Build a web app as pages in components/ (components/index.q is /) and
-run `quantum start`.
+run `quantum start`. See https://quantumframework.net/guide/getting-started
 ```
 
 每条路由对应成什么：
@@ -40,4 +39,4 @@ run `quantum start`.
 | `<q:route path="/about" method="GET">` | `components/about.q` |
 | `<q:route path="/" method="GET">` | `components/index.q` |
 | `<q:route path="/users" method="POST">` | `components/users.q` 中的一个 [`q:action`](/zh/guide/actions) |
-| JSON API 路由 | 自 0.11 起不可用 |
+| JSON API 路由 | 不可用 |

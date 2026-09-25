@@ -141,5 +141,5 @@ ningún atributo de protección:
 
 ## Próximos pasos {#next-steps}
 
-- [Sesiones y ámbitos](/guide/sessions) — lo que `session.` conserva entre solicitudes
+- [Sesiones y ámbitos](/es/guide/sessions) — lo que `session.` conserva entre solicitudes
 - [Autenticación](/es/guide/authentication) — proteger páginas con un inicio de sesión

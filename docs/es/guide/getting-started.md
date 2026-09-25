@@ -164,5 +164,5 @@ Esto muestra:
 - [Detalles de la instalación](/es/guide/installation) - Guía completa de configuración
 - [Estructura del proyecto](/guide/project-structure) - Cómo organizar tu código
 - [Componentes](/es/guide/components) - Todo sobre los componentes
-- [IA](/guide/ai) - Llamadas a LLM, RAG y agentes como etiquetas
+- [IA](/es/guide/ai) - Llamadas a LLM, RAG y agentes como etiquetas
 - [Recetario](/es/cookbook/) - Recetas probadas, una tarea cada una

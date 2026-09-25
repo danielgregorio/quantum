@@ -161,6 +161,6 @@ hash que falta o cualquier cosa que no sea un hash válido.
 
 ## Próximos pasos {#next-steps}
 
-- [Sesiones y ámbitos](/guide/sessions) — los valores de sesión que se usan arriba
+- [Sesiones y ámbitos](/es/guide/sessions) — los valores de sesión que se usan arriba
 - [Acciones y formularios](/es/guide/actions) — cómo se declaran los campos del formulario de inicio de sesión
 - [Consultas a la base de datos](/es/guide/query) — declarar la fuente de datos `db`
