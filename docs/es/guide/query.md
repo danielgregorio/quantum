@@ -238,7 +238,7 @@ datasources:
 ```
 
 Cada escritura que hace una acción — INSERT, UPDATE, DELETE, y las ediciones en
-una [tabla editable](/guide/ui#a-table-that-sorts-and-edits-itself) — se registra
+una [tabla editable](/es/guide/ui#a-table-that-sorts-and-edits-itself) — se registra
 en una tabla `quantum_history` de la misma base de datos: cuándo, quién (el
 `userName` de la sesión), qué acción, qué fila, y la fila antes y después. Se
 escribe en la misma transacción que el cambio, así que una escritura revertida

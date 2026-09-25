@@ -45,10 +45,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
   expressions, actions, queries, authentication, UI and testing,
   machine-translated, with the code and its output identical to the English
   and the same heading anchors; the pt guide sidebar has Portuguese labels.
-- The core guide in Spanish and Simplified Chinese, first pages: Getting
-  Started, Components, How a Page Runs, State Management, Loops,
-  Conditionals, Functions, Expressions & Databinding, Actions & Forms,
-  Database Queries and Authentication — machine
+- The core guide in Spanish and Simplified Chinese: Getting Started,
+  Components, How a Page Runs, State Management, Loops, Conditionals,
+  Functions, Expressions & Databinding, Actions & Forms, Database Queries,
+  Authentication, One App, Many Screens and Testing an App — machine
   translated and marked as such. The prose is translated segment by segment
   around the English page's code, which is copied as it is; each heading keeps
   the English anchor, so links to a section work in every language.

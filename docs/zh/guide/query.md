@@ -227,7 +227,7 @@ datasources:
     history: true
 ```
 
-动作的每一次写入——INSERT、UPDATE、DELETE，以及[可编辑表格](/guide/ui#a-table-that-sorts-and-edits-itself)
+动作的每一次写入——INSERT、UPDATE、DELETE，以及[可编辑表格](/zh/guide/ui#a-table-that-sorts-and-edits-itself)
 中的编辑——都会记录到同一个数据库的 `quantum_history` 数据表中：时间、谁（会话的 `userName`）、
 哪个动作、哪一行，以及修改前后的这一行。它与修改在同一个事务中写入，所以回滚的写入不会留下痕迹。
 

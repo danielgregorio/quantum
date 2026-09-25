@@ -99,11 +99,11 @@ const TRANSLATED = {
   es: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/', '/showcase/',
     '/guide/getting-started', '/guide/components', '/guide/how-a-page-runs', '/guide/state-management',
     '/guide/loops', '/guide/conditionals', '/guide/functions', '/guide/databinding',
-    '/guide/actions', '/guide/query', '/guide/authentication'],
+    '/guide/actions', '/guide/query', '/guide/authentication', '/guide/ui', '/guide/testing'],
   zh: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/cookbook/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/showcase/',
     '/guide/getting-started', '/guide/components', '/guide/how-a-page-runs', '/guide/state-management',
     '/guide/loops', '/guide/conditionals', '/guide/functions', '/guide/databinding',
-    '/guide/actions', '/guide/query', '/guide/authentication'],
+    '/guide/actions', '/guide/query', '/guide/authentication', '/guide/ui', '/guide/testing'],
 }
 
 function link(key, path) {
