@@ -2,6 +2,10 @@
 
 Components are the fundamental building blocks of Quantum applications. They encapsulate logic, data processing, and output generation in reusable, modular units.
 
+The examples on this page are run on every change: those with an
+**Output:** as shown, the others — the ones that take parameters, and the page
+that uses a card — by `tests/docs/test_guide_components.py`.
+
 ## Basic Structure
 
 Every Quantum component follows this structure:
@@ -13,12 +17,14 @@ Every Quantum component follows this structure:
 </q:component>
 ```
 
+**Output:** `"output"`
+
 ### Required Elements
 
 | Element | Description |
 |---------|-------------|
 | `q:component` | Root element |
-| `name` attribute | Unique identifier (PascalCase) |
+| `name` attribute | The component's name (PascalCase) |
 | `xmlns:q` | Quantum namespace declaration |
 
 ## Simple Components
@@ -31,19 +37,29 @@ Every Quantum component follows this structure:
 </q:component>
 ```
 
-Output: `"Hello, World!"`
+**Output:** `"Hello, World!"`
 
-### Multiple Returns
+### Returning early
+
+`q:return` ends the component: the first one that runs is the result, and what
+comes after it does not run. Inside a `q:if`, it ends the component only when
+its branch runs.
 
 ```xml
-<q:component name="Colors" xmlns:q="https://quantum.lang/ns">
-  <q:return value="Red" />
-  <q:return value="Green" />
-  <q:return value="Blue" />
+<q:component name="Stock" xmlns:q="https://quantum.lang/ns">
+  <q:set name="stock" value="0" type="number" />
+
+  <q:if condition="stock == 0">
+    <q:return value="Sold out" />
+  </q:if>
+  <q:return value="{stock} in stock" />
 </q:component>
 ```
 
-Output: `["Red", "Green", "Blue"]`
+**Output:** `"Sold out"`
+
+Inside a loop it is different: each `q:return` adds an item to a list (see
+[Loops in Components](#loops-in-components)).
 
 ## Component Parameters
 
@@ -63,6 +79,10 @@ Accept input with `q:param`:
 </q:component>
 ```
 
+With `name` = `Ana` it returns `"Hey Ana!"`; with `formal` = `true` as well,
+`"Good day, Ana."`. Without `name` it is an error:
+`Required parameter 'name' is missing`.
+
 ### Parameter Attributes
 
 | Attribute | Description | Example |
@@ -72,62 +92,72 @@ Accept input with `q:param`:
 | `required` | Required parameter | `required="true"` |
 | `default` | Default value | `default="10"` |
 
-### Supported Types
+### Types
 
-- `string` - Text values
-- `number` - Integers and decimals
-- `boolean` - true/false
-- `array` - JSON arrays
-- `object` - JSON objects
-- `email` - Valid email format
-- `date` - Date strings
+The `type` of a `q:param` is one of `string`, `integer`, `number`, `decimal`,
+`boolean`, `array`, `object`, `json`, `email`, `url`, `date`, `file` or `any`
+(and the aliases `text`, `int`, `long`, `numeric`, `float`, `double`, `binary`,
+`upload`). Any other name is a parse error.
+
+A value that does not fit is an error that names the parameter:
+`age` of type `number` given `abc` stops the component with
+`Parameter 'age' must be a number, got 'abc'`, and an `email` given
+`not-an-email` with `Parameter 'email' must be a valid email`.
 
 ## Component State
 
-Use `q:set` for internal variables:
+Use `q:set` for internal variables. A later `q:set` of the same name
+replaces the value:
 
 ```xml
 <q:component name="Counter" xmlns:q="https://quantum.lang/ns">
   <q:set name="count" value="0" type="number" />
   <q:set name="step" value="1" type="number" />
-
-  <q:function name="increment">
-    <q:set name="count" value="{count + step}" />
-  </q:function>
+  <q:set name="count" value="{count + step}" />
 
   <q:return value="Count: {count}" />
 </q:component>
 ```
 
+**Output:** `"Count: 1"`
+
 ### Variable Validation
+
+`q:set` can check the value it stores — `validate` (`email`, `url`, …),
+`range` and `enum`:
 
 ```xml
 <q:set name="email"
        value="user@example.com"
        validate="email" />
 
-<q:set name="age"
-       type="number"
-       value="25"
-       range="0..150" />
-
 <q:set name="status"
        type="string"
        value="active"
        enum="active,inactive,pending" />
+
+<q:set name="age"
+       type="number"
+       value="200"
+       range="0..150" />
 ```
+
+**Error:** `Value must be between 0 and 150`
+
+The first two pass; the third stops the component. A `status` outside the
+list stops it with `Value must be one of: active, inactive, pending`, and an
+e-mail that is not one with `Invalid email format`.
 
 ## Component Functions
 
-Define reusable logic with `q:function`:
+Define reusable logic with `q:function`, and call it in an expression:
 
 ```xml
 <q:component name="Calculator" xmlns:q="https://quantum.lang/ns">
   <q:function name="add" returnType="number">
     <q:param name="a" type="number" required="true" />
     <q:param name="b" type="number" required="true" />
-    <q:set name="result" value="{a + b}" />
-    <q:return value="{result}" />
+    <q:return value="{a + b}" />
   </q:function>
 
   <q:function name="multiply" returnType="number">
@@ -136,16 +166,21 @@ Define reusable logic with `q:function`:
     <q:return value="{a * b}" />
   </q:function>
 
-  <!-- Use the functions -->
   <q:set name="sum" value="{add(5, 3)}" />
   <q:set name="product" value="{multiply(4, 7)}" />
 
-  <q:return value="5 + 3 = {sum}" />
-  <q:return value="4 * 7 = {product}" />
+  <q:return value="5 + 3 = {sum}, 4 * 7 = {product}" />
 </q:component>
 ```
 
+**Output:** `"5 + 3 = 8, 4 * 7 = 28"`
+
+More in [Functions](/guide/functions).
+
 ## Loops in Components
+
+A `q:return` inside a loop does not end it: each one adds an item, and the
+component returns the list.
 
 ### Range Loop
 
@@ -157,7 +192,7 @@ Define reusable logic with `q:function`:
 </q:component>
 ```
 
-Output: `["Number 1", "Number 2", "Number 3", "Number 4", "Number 5"]`
+**Output:** `["Number 1", "Number 2", "Number 3", "Number 4", "Number 5"]`
 
 ### Array Loop
 
@@ -171,6 +206,8 @@ Output: `["Number 1", "Number 2", "Number 3", "Number 4", "Number 5"]`
 </q:component>
 ```
 
+**Output:** `["I like Apple", "I like Banana", "I like Cherry"]`
+
 ### List Loop
 
 ```xml
@@ -181,7 +218,11 @@ Output: `["Number 1", "Number 2", "Number 3", "Number 4", "Number 5"]`
 </q:component>
 ```
 
+**Output:** `["Color: red", "Color: green", "Color: blue"]`
+
 ### Loop with Index
+
+`index` names the position, counted from 0:
 
 ```xml
 <q:component name="IndexedList" xmlns:q="https://quantum.lang/ns">
@@ -193,7 +234,7 @@ Output: `["Number 1", "Number 2", "Number 3", "Number 4", "Number 5"]`
 </q:component>
 ```
 
-Output: `["1. First", "2. Second", "3. Third"]`
+**Output:** `["1. First", "2. Second", "3. Third"]`
 
 ## Conditionals
 
@@ -211,6 +252,8 @@ Output: `["1. First", "2. Second", "3. Third"]`
   </q:else>
 </q:component>
 ```
+
+With `age` = `20` it returns `"Adult"`; with `15`, `"Minor"`.
 
 ### Multiple Conditions
 
@@ -235,6 +278,8 @@ Output: `["1. First", "2. Second", "3. Third"]`
   </q:else>
 </q:component>
 ```
+
+With `score` = `85` it returns `"B"`; with `42`, `"F"`.
 
 ## Data Binding
 
@@ -280,9 +325,9 @@ Functions are called with the value as an argument — see the
 
 **Output:** `"HELLO WORLD"`
 
-## Nested Components
+## Nested Loops
 
-Components can contain nested structures:
+The items of an inner loop go into the outer loop's list one by one, in order:
 
 ```xml
 <q:component name="Report" xmlns:q="https://quantum.lang/ns">
@@ -300,6 +345,8 @@ Components can contain nested structures:
   </q:loop>
 </q:component>
 ```
+
+**Output:** `["Category: Electronics", "  - Phone", "  - Laptop", "Category: Clothing", "  - Shirt", "  - Pants"]`
 
 ## Using one component inside another
 
@@ -345,36 +392,30 @@ Opening `/` shows the card with the title **Open tickets: 3** and, inside it,
 - A component that is not found, or that fails, is an error of the page — never
   a section that silently disappears.
 
-## Error Handling
+## Errors
 
-### Validation Errors
+A component that cannot do what it says stops with an error that says why.
+
+### A missing parameter
 
 ```xml
-<!-- Missing required parameter -->
-<q:component name="BadComponent" xmlns:q="https://quantum.lang/ns">
-  <q:param name="id" required="true" />
-  <!-- Error: 'id' is required but not provided -->
+<q:component name="Ticket" xmlns:q="https://quantum.lang/ns">
+  <q:param name="id" type="integer" required="true" />
+  <q:return value="Ticket {id}" />
 </q:component>
 ```
 
-### Runtime Errors
+**Error:** `Required parameter 'id' is missing`
+
+### A variable that does not exist
 
 ```xml
 <q:component name="ErrorExample" xmlns:q="https://quantum.lang/ns">
   <q:return value="{undefined_variable}" />
-  <!-- Error: undefined_variable is not defined -->
 </q:component>
 ```
 
-### Error Messages
-
-Quantum provides descriptive error messages:
-
-```
-[ERROR] Component 'MyComponent' at line 5:
-  Variable 'userName' is not defined in this scope.
-  Did you mean 'username'?
-```
+**Error:** `variable 'undefined_variable' is not defined`
 
 ## Best Practices
 
@@ -399,33 +440,37 @@ Prefer `<q:component name="ProductPriceFormatter">` to
 
 ```xml
 <!--
-  Formats a price with currency symbol.
+  Formats a price with a currency code.
 
   @param amount - The price amount (required)
   @param currency - Currency code (default: USD)
 -->
 <q:component name="PriceFormatter" xmlns:q="https://quantum.lang/ns">
-  <q:param name="amount" type="number" required="true" />
+  <q:param name="amount" type="decimal" required="true" />
   <q:param name="currency" type="string" default="USD" />
-  ...
+  <q:return value="{currency} {round(amount, 2)}" />
 </q:component>
 ```
+
+With `amount` = `19.999` it returns `"USD 20.0"`.
 
 ### 4. Validate Input
 
 ```xml
 <q:component name="SafeComponent" xmlns:q="https://quantum.lang/ns">
-  <q:param name="count" type="number" required="true" />
+  <q:param name="count" type="integer" required="true" />
 
-  <q:if condition="count < 0">
-    <q:return value="Error: count must be positive" />
+  <q:if condition="count < 1">
+    <q:return value="Error: count must be at least 1" />
   </q:if>
 
-  <q:loop type="range" var="i" from="1" to="{count}">
-    <q:return value="Item {i}" />
-  </q:loop>
+  <q:return value="{count} item(s)" />
 </q:component>
 ```
+
+With `count` = `3` it returns `"3 item(s)"`; with `-1`,
+`"Error: count must be at least 1"`; with `abc`, the error
+`Parameter 'count' must be an integer, got 'abc'`.
 
 ## Next Steps
 

@@ -42,19 +42,13 @@ Quantum builds **web applications from declarative XML pages** — the same page
 
 ## Quick Example
 
-```xml
-<q:component name="UserList" xmlns:q="https://quantum.lang/ns">
-  <!-- Query the database -->
-  <q:query name="users" datasource="mydb">
-    SELECT id, name, email FROM users WHERE active = 1
-  </q:query>
+A page that lists notes from a database and adds one from a form — the rule
+on the field, the insert and the message after it included:
 
-  <!-- Display results -->
-  <q:loop query="users">
-    <q:return value="User: {users.name} ({users.email})" />
-  </q:loop>
-</q:component>
-```
+<<< @/../examples/cookbook/testing/first-test/components/index.q{xml}
+
+This page and its test run on every change — see the recipe
+[A first test with quantum test](/cookbook/testing/first-test).
 
 ## Key Features
 

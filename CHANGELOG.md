@@ -29,6 +29,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 - Cookbook, "Login & permissions": log in with a hashed password, sign up and
   store a hash, a page for one role only, a guard that redirects (and stops the
   page's actions), and sign out; five tested recipes.
+- Every `xml` example of the guide now runs: with the result it shows, or in
+  a test that runs the page's code as written (`tests/docs/test_guide_*.py`);
+  the docs guard's list of pages that were only parsed is empty. Running them
+  fixed what they claimed: the components page said several `q:return`s
+  returned a list (the first one ends the component, SPEC RET-1), and the
+  home page's example now imports the tested "first test" recipe.
 - Cookbook recipes: "When the mail server says no" (`onerror="continue"`),
   "Test data with test:given" (and `test:as`) and "Testing what an action
   refuses" (`error=`, `message=`, `flash=`, `table=`). Recipes in a topic
