@@ -1,470 +1,356 @@
 # State Management (`q:set`)
 
-`q:set` is the fundamental tag for state management in Quantum, letting you create, modify and validate variables in a declarative, type-safe way.
+`q:set` stores a variable: it converts the value to a `type`, checks it, and
+changes it in place with an `operation`. Every attribute, with its values and
+defaults, is in the [Reference](../reference/tags#q-set); the rules are
+[SET-1 to SET-5](../reference/spec#SET-1).
 
-## 🎯 Basic Concepts
+Each example on this page runs in CI, and shows what it returns.
 
-### Simple Syntax
+## Storing a value
 
 ```xml
-<q:set name="variableName" type="string" value="initialValue" />
+<q:set name="counter" type="number" value="10" />
+<q:return value="{counter}" />
 ```
 
-### Required Attributes
+**Output:** `10`
 
-| Attribute | Description | Example |
-|----------|-----------|---------|
-| `name` | Variable name | `name="counter"` |
+### Types
 
-### Optional Attributes
-
-| Attribute | Description | Default | Example |
-|----------|-----------|--------|---------|
-| `type` | Data type | `string` | `type="number"` |
-| `value` | Initial value | `null` | `value="10"` |
-| `default` | Default value | `null` | `default="0"` |
-| `scope` | Variable scope | `local` | `scope="component"` |
-| `operation` | Operation to perform | `assign` | `operation="increment"` |
-
-## 📦 Data Types
-
-### Primitive Types
+`type` converts the value: `string`, `number`, `decimal`, `boolean`, `array`,
+`object`, `json` (and the aliases the Reference lists).
 
 ```xml
-<!-- String (default) -->
 <q:set name="message" type="string" value="Hello World" />
-
-<!-- Number (integer or float) -->
 <q:set name="age" type="number" value="25" />
-
-<!-- Decimal (float) -->
 <q:set name="price" type="decimal" value="19.99" />
-
-<!-- Boolean -->
 <q:set name="isActive" type="boolean" value="true" />
-
-<!-- A date: ISO text, or the date an expression computes (no type, SET-5) -->
-<q:set name="birthdate" value="1990-01-01" />
-<q:set name="created" value="{now()}" />
+<q:return value="{[message, age, price, isActive]}" />
 ```
 
-### Structured Types
+**Output:** `["Hello World", 25, 19.99, true]`
 
 ```xml
-<!-- Array -->
 <q:set name="fruits" type="array" value='["apple", "banana", "orange"]' />
-
-<!-- Object -->
 <q:set name="user" type="object" value='{"name": "Daniel", "age": 30}' />
-
-<!-- JSON -->
-<q:set name="config" type="json" value='{"debug":true,"port":8080}' />
+<q:set name="config" type="json" value='{"debug": true, "port": 8080}' />
+<q:return value="{[fruits, user, config]}" />
 ```
+
+**Output:** `[["apple", "banana", "orange"], {"name": "Daniel", "age": 30}, {"debug": true, "port": 8080}]`
 
 ### Without `type`
 
 A `value` that is exactly one expression keeps the type of what it computes,
-as in `q:return` and in a component's props; anything else is text:
-
-```xml
-<q:set name="tags" value="{['new', 'sale']}" />   <!-- the list -->
-<q:set name="count" value="{len(tags)}" />        <!-- the number 2 -->
-<q:set name="label" value="{count} tags" />       <!-- the text "2 tags" -->
-<q:set name="code" value="007" />                 <!-- the text "007" -->
-```
+as in `q:return` and in a component's props; anything else is text (SET-5):
 
 ```xml
 <q:set name="tags" value="{['new', 'sale']}" />
 <q:set name="count" value="{len(tags)}" />
-<q:return value="{count} tags" />
+<q:set name="label" value="{count} tags" />
+<q:set name="code" value="007" />
+<q:return value="{[tags, count, label, code]}" />
 ```
 
-**Output:** `2 tags`
+**Output:** `[["new", "sale"], 2, "2 tags", "007"]`
 
-Up to Quantum 0.22 every `q:set` without `type` stored text, so `{tags}` above
-was the text `['new', 'sale']` and `len(tags)` counted its 15 characters. Write
-`type="string"` where you want the text.
+`tags` is the list, `count` the number 2, `label` and `code` are text. Up to
+Quantum 0.22 every `q:set` without `type` stored text, so `len(tags)` counted
+the characters of `['new', 'sale']`. Write `type="string"` where you want text.
 
-## 🔧 Operations
+### A default
 
-### Basic Assignment
+`default` is stored when `value` resolves to nothing: missing, `null` or empty
+text (SET-1). On a first visit, `session.clicks` does not exist yet:
 
 ```xml
-<q:component name="BasicAssignment" xmlns:q="https://quantum.lang/ns">
-  <q:set name="x" type="number" value="10" />
-  <q:return value="x = {x}" />
-</q:component>
+<q:set name="clicks" value="{session.clicks}" default="0" />
+<q:return value="Visits: {clicks}" />
 ```
 
-**Output:** `x = 10`
+**Output:** `Visits: 0`
 
-### Arithmetic Expressions
+## Operations
 
-```xml
-<q:component name="ArithmeticExpressions" xmlns:q="https://quantum.lang/ns">
-  <q:set name="a" type="number" value="5" />
-  <q:set name="b" type="number" value="3" />
-  <q:set name="sum" type="number" value="{a + b}" />
-  <q:return value="Sum: {sum}" />
-</q:component>
-```
+`operation` changes the variable in place (SET-3). The default is `assign`.
 
-**Output:** `Sum: 8`
-
-### Increment/Decrement
+### Numbers
 
 ```xml
-<q:component name="Counter" xmlns:q="https://quantum.lang/ns">
-  <q:set name="counter" type="number" value="0" />
-
-  <!-- Increments by 1 -->
-  <q:set name="counter" operation="increment" />
-  <q:set name="counter" operation="increment" />
-  <q:set name="counter" operation="increment" />
-
-  <q:return value="Counter: {counter}" />
-</q:component>
-```
-
-**Output:** `Counter: 3`
-
-#### Increment with Step
-
-```xml
-<q:set name="counter" value="0" />
+<q:set name="counter" type="number" value="0" />
+<q:set name="counter" operation="increment" />
+<q:set name="counter" operation="increment" />
 <q:set name="counter" operation="increment" step="5" />
-<q:return value="counter = {counter}" />
+<q:return value="Counter: {counter}" />
 ```
 
-**Output:** `counter = 5`
-
-### Arithmetic Operations
+**Output:** `Counter: 7`
 
 ```xml
-<q:component name="ArithmeticOps" xmlns:q="https://quantum.lang/ns">
-  <q:set name="total" type="number" value="10" />
-
-  <!-- Adds 5 -->
-  <q:set name="total" operation="add" value="5" />
-
-  <!-- Multiplies by 2 -->
-  <q:set name="total" operation="multiply" value="2" />
-
-  <q:return value="Total: {total}" />
-</q:component>
+<q:set name="total" type="number" value="10" />
+<q:set name="total" operation="add" value="5" />
+<q:set name="total" operation="multiply" value="2" />
+<q:return value="Total: {total}" />
 ```
 
-**Output:** `Total: 30` (10 + 5 = 15, 15 * 2 = 30)
+**Output:** `Total: 30`
 
-## 📚 Array Operations
-
-### Append/Prepend
+`decrement` works like `increment`. A variable that does not exist starts at
+0, and `append` to one that does not exist starts a list:
 
 ```xml
-<q:component name="ArrayOperations" xmlns:q="https://quantum.lang/ns">
-  <q:set name="list" type="array" value="[]" />
-
-  <!-- Adds at the end -->
-  <q:set name="list" operation="append" value="apple" />
-  <q:set name="list" operation="append" value="banana" />
-
-  <!-- Adds at the start -->
-  <q:set name="list" operation="prepend" value="orange" />
-
-  <q:return value="{list}" />
-</q:component>
+<q:set name="hits" operation="increment" />
+<q:set name="items" operation="append" value="first" />
+<q:return value="{[hits, items]}" />
 ```
 
-**Output:** `['orange', 'apple', 'banana']`
+**Output:** `[1, ["first"]]`
 
-### Remove/RemoveAt
+### Lists
+
+```xml
+<q:set name="list" type="array" value="[]" />
+<q:set name="list" operation="append" value="apple" />
+<q:set name="list" operation="append" value="banana" />
+<q:set name="list" operation="prepend" value="orange" />
+<q:return value="{list}" />
+```
+
+**Output:** `["orange", "apple", "banana"]`
+
+`remove` takes out the first item equal to `value`; `removeAt` the item at
+`index`, counting from 0:
 
 ```xml
 <q:set name="list" type="array" value='["a", "b", "c", "d"]' />
-
-<!-- Remove by value -->
 <q:set name="list" operation="remove" value="b" />
-
-<!-- Remove by index -->
 <q:set name="list" operation="removeAt" index="2" />
+<q:return value="{list}" />
 ```
 
-### Other Operations
+**Output:** `["a", "c"]`
 
 ```xml
-<!-- Clear the array -->
-<q:set name="list" operation="clear" />
-
-<!-- Sort -->
-<q:set name="list" operation="sort" />
-
-<!-- Reverse -->
-<q:set name="list" operation="reverse" />
-
-<!-- Remove duplicates -->
+<q:set name="list" type="array" value='["pear", "apple", "pear", "fig"]' />
 <q:set name="list" operation="unique" />
+<q:set name="list" operation="sort" />
+<q:set name="list" operation="reverse" />
+<q:return value="{list}" />
 ```
 
-## 🗂️ Object Operations
-
-### Merge
+**Output:** `["pear", "fig", "apple"]`
 
 ```xml
-<q:component name="ObjectMerge" xmlns:q="https://quantum.lang/ns">
-  <q:set name="user" type="object" value="{}" />
-
-  <q:set name="user" operation="merge" value='{"name":"Daniel"}' />
-  <q:set name="user" operation="merge" value='{"age":30}' />
-  <q:set name="user" operation="merge" value='{"email":"daniel@example.com"}' />
-
-  <q:return value="{user}" />
-</q:component>
+<q:set name="list" type="array" value='["a", "b"]' />
+<q:set name="list" operation="clear" />
+<q:return value="{list}" />
 ```
 
-**Output:** `{'name': 'Daniel', 'age': 30, 'email': 'daniel@example.com'}`
+**Output:** `[]`
 
-### SetProperty/DeleteProperty
+### Objects
+
+```xml
+<q:set name="user" type="object" value="{}" />
+<q:set name="user" operation="merge" value='{"name": "Daniel"}' />
+<q:set name="user" operation="merge" value='{"age": 30}' />
+<q:return value="{user}" />
+```
+
+**Output:** `{"name": "Daniel", "age": 30}`
+
+`setProperty` and `deleteProperty` take a `key`. A `value` that is literal
+text stays text:
 
 ```xml
 <q:set name="config" type="object" value="{}" />
-
-<!-- Set a property -->
 <q:set name="config" operation="setProperty" key="debug" value="true" />
-
-<!-- Delete a property -->
+<q:set name="config" operation="setProperty" key="port" value="8080" />
 <q:set name="config" operation="deleteProperty" key="debug" />
+<q:return value="{config}" />
 ```
 
-### Clone
+**Output:** `{"port": "8080"}`
+
+`clone` stores a copy of the variable named by `source`; changing the copy
+leaves the original alone:
 
 ```xml
-<q:set name="original" type="object" value='{"x":1}' />
+<q:set name="original" type="object" value='{"x": 1}' />
 <q:set name="copy" operation="clone" source="original" />
+<q:set name="copy" operation="setProperty" key="x" value="2" />
+<q:return value="{[original, copy]}" />
 ```
 
-## 🔤 String Transformations
+**Output:** `[{"x": 1}, {"x": "2"}]`
+
+### Text
 
 ```xml
-<q:set name="text" value="Hello World" />
-
-<!-- Uppercase -->
-<q:set name="text" operation="uppercase" />
-<!-- Result: HELLO WORLD -->
-
-<!-- Lowercase -->
-<q:set name="text" operation="lowercase" />
-<!-- Result: hello world -->
-
-<!-- Trim -->
-<q:set name="text" value="  spaces  " />
+<q:set name="text" value="  Hello World  " />
 <q:set name="text" operation="trim" />
-<!-- Result: spaces -->
+<q:set name="upper" value="{text}" />
+<q:set name="upper" operation="uppercase" />
+<q:set name="lower" value="{text}" />
+<q:set name="lower" operation="lowercase" />
+<q:return value="{[text, upper, lower]}" />
 ```
 
-## 🔄 Use with Loops
+**Output:** `["Hello World", "HELLO WORLD", "hello world"]`
+
+`format` stores `value` with its expressions filled in:
 
 ```xml
-<q:component name="LoopAccumulator" xmlns:q="https://quantum.lang/ns">
-  <q:set name="total" type="number" value="0" />
-
-  <q:loop type="range" var="i" from="1" to="5">
-    <q:set name="total" operation="add" value="{i}" />
-  </q:loop>
-
-  <q:return value="Total: {total}" />
-</q:component>
+<q:set name="name" value="Ana" />
+<q:set name="greeting" operation="format" value="Hello, {name}!" />
+<q:return value="{greeting}" />
 ```
 
-**Output:** `Total: 15` (1+2+3+4+5)
+**Output:** `Hello, Ana!`
 
-### Array Builder with a Loop
+### The wrong kind of value
+
+An operation on a value of the wrong kind is an error that names the variable:
 
 ```xml
-<q:component name="ArrayBuilder" xmlns:q="https://quantum.lang/ns">
-  <q:set name="results" type="array" value="[]" />
+<q:set name="x" value="1" />
+<q:set name="x" operation="append" value="2" />
+```
 
-  <q:loop type="range" var="i" from="1" to="3">
-    <q:set name="results" operation="append" value="{i * 2}" />
-  </q:loop>
+**Error:** `Set execution error for 'x': Cannot perform array operation on non-array`
 
-  <q:return value="{results}" />
-</q:component>
+An operation that does not exist is a parse error (PARSE-5):
+
+```xml
+<q:set name="x" value="1" operation="explode" />
+```
+
+**Error:** `operation="explode" does not exist`
+
+## With loops
+
+```xml
+<q:set name="total" type="number" value="0" />
+<q:loop type="range" var="i" from="1" to="5">
+  <q:set name="total" operation="add" value="{i}" />
+</q:loop>
+<q:return value="Total: {total}" />
+```
+
+**Output:** `Total: 15`
+
+```xml
+<q:set name="results" type="array" value="[]" />
+<q:loop type="range" var="i" from="1" to="3">
+  <q:set name="results" operation="append" value="{i * 2}" />
+</q:loop>
+<q:return value="{results}" />
 ```
 
 **Output:** `[2, 4, 6]`
 
-## ✅ Validation
+## Validation
 
-### Required & Nullable
-
-```xml
-<!-- Required field -->
-<q:set name="email" type="string" required="true" />
-
-<!-- Does not accept null -->
-<q:set name="age" type="number" nullable="false" />
-```
-
-### Built-in Validators
+`q:set` checks the value it stores (SET-4). A value that passes is stored:
 
 ```xml
-<!-- Email -->
-<q:set name="email" type="string" value="daniel@example.com" validate="email" />
-
-<!-- URL -->
-<q:set name="website" type="string" validate="url" />
-
-<!-- CPF (with check-digit verification) -->
-<q:set name="cpf" type="string" value="123.456.789-09" validate="cpf" />
-
-<!-- CNPJ (with check-digit verification) -->
-<q:set name="cnpj" type="string" validate="cnpj" />
-
-<!-- Brazilian phone number -->
-<q:set name="phone" type="string" validate="phone" />
-
-<!-- CEP (Brazilian postal code) -->
-<q:set name="cep" type="string" validate="cep" />
-
-<!-- UUID -->
-<q:set name="id" type="string" validate="uuid" />
-
-<!-- Credit card -->
-<q:set name="card" type="string" validate="creditcard" />
-
-<!-- IP v4 -->
-<q:set name="ip" type="string" validate="ipv4" />
-
-<!-- IP v6 -->
-<q:set name="ip" type="string" validate="ipv6" />
-```
-
-### Regex Pattern
-
-```xml
-<!-- Custom pattern -->
-<q:set name="code" type="string" pattern="^[A-Z]{3}\d{4}$" />
-```
-
-### Range
-
-```xml
-<!-- Numeric range -->
-<q:set name="age" type="number" value="25" range="18..120" />
-```
-
-### Enum
-
-```xml
+<q:set name="code" type="string" value="ABC1234" pattern="^[A-Z]{3}\d{4}$" />
 <q:set name="status" type="string" value="active" enum="pending,active,inactive" />
+<q:set name="score" type="number" value="87" min="0" max="100" />
+<q:set name="age" type="number" value="25" range="18..120" />
+<q:set name="username" type="string" value="ana" minlength="3" maxlength="20" />
+<q:return value="{[code, status, score, age, username]}" />
 ```
 
-### Min/Max
+**Output:** `["ABC1234", "active", 87, 25, "ana"]`
+
+A value that does not pass is an error that names the variable and says why:
 
 ```xml
-<!-- Numbers -->
-<q:set name="score" type="number" min="0" max="100" />
-
-<!-- String length -->
-<q:set name="username" type="string" minlength="3" maxlength="20" />
+<q:set name="email" type="string" value="" required="true" />
 ```
 
-## 🔐 Complete Example: Sign-up Form
+**Error:** `Set execution error for 'email': This field cannot be empty`
 
 ```xml
-<q:component name="UserRegistration" xmlns:q="https://quantum.lang/ns">
-  <!-- Email with validation -->
-  <q:set
-    name="email"
-    type="string"
-    value="daniel@example.com"
-    required="true"
-    validate="email"
-    maxlength="255"
-  />
-
-  <!-- Password with strength validation -->
-  <q:set
-    name="password"
-    type="string"
-    value="Secure123"
-    required="true"
-    minlength="8"
-    pattern="^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)"
-  />
-
-  <!-- CPF -->
-  <q:set
-    name="cpf"
-    type="string"
-    value="123.456.789-09"
-    required="true"
-    validate="cpf"
-  />
-
-  <!-- Age -->
-  <q:set
-    name="age"
-    type="number"
-    value="25"
-    required="true"
-    range="18..120"
-  />
-
-  <!-- Plan -->
-  <q:set
-    name="plan"
-    type="string"
-    value="basic"
-    enum="free,basic,premium,enterprise"
-    default="free"
-  />
-
-  <q:return value="Valid sign-up for {email}" />
-</q:component>
+<q:set name="age" type="number" value="{null}" nullable="false" />
 ```
 
-**Output:** `Valid sign-up for daniel@example.com`
-
-## 🌐 Scopes
-
-### Local (default)
+**Error:** `Set execution error for 'age': Variable 'age' cannot be null`
 
 ```xml
-<q:set name="temp" value="123" scope="local" />
+<q:set name="status" type="string" value="archived" enum="pending,active,inactive" />
 ```
 
-The variable exists only in the current block.
+**Error:** `Set execution error for 'status': Value must be one of: pending, active, inactive`
 
-### Function
+```xml
+<q:set name="age" type="number" value="15" range="18..120" />
+```
+
+**Error:** `Set execution error for 'age': Value must be between 18 and 120`
+
+```xml
+<q:set name="score" type="number" value="120" min="0" max="100" />
+```
+
+**Error:** `Set execution error for 'score': Value must be at most 100`
+
+```xml
+<q:set name="username" type="string" value="al" minlength="3" maxlength="20" />
+```
+
+**Error:** `Set execution error for 'username': Value must be at least 3 characters`
+
+### Named validators
+
+`validate` takes `email`, `url`, `phone`, `cep`, `cpf`, `cnpj`, `uuid`,
+`creditcard`, `ipv4` or `ipv6` — or a regular expression starting with `^`:
+
+```xml
+<q:set name="website" type="string" value="https://quantumframework.net" validate="url" />
+<q:set name="id" type="string" value="7c9e6679-7425-40de-944b-e07fc1f90ae7" validate="uuid" />
+<q:set name="ip" type="string" value="192.168.0.1" validate="ipv4" />
+<q:return value="valid" />
+```
+
+**Output:** `valid`
+
+```xml
+<q:set name="email" value="invalid" validate="email" />
+```
+
+**Error:** `Set execution error for 'email': Invalid email format`
+
+`cpf` and `cnpj` (Brazilian tax IDs) check the digits, not only the shape:
+
+```xml
+<q:set name="cpf" type="string" value="123.456.789-00" validate="cpf" />
+```
+
+**Error:** `Set execution error for 'cpf': Invalid CPF check digit`
+
+## Scopes
+
+A variable lives where `scope` says: `local` (the default), `function`,
+`component`, `session`, `application` or `request` (SET-3). The name can say
+it too: `session.cart` is the `cart` in the user's session. A page's variables
+live on the server, for one request (SET-2); what must outlive the request goes
+in `session` or in the database. Sessions are in [Sessions](./sessions).
 
 ```xml
 <q:function name="calculate">
-  <q:set name="result" value="0" scope="function" />
+  <q:set name="result" type="number" value="0" scope="function" />
+  <q:set name="result" operation="add" value="42" />
+  <q:return value="{result}" />
 </q:function>
+<q:return value="{calculate()}" />
 ```
 
-The variable is visible inside the function.
+**Output:** `42`
 
-### Component
-
-```xml
-<q:set name="globalCounter" value="0" scope="component" />
-```
-
-The variable is visible in the whole component.
-
-### Session
-
-```xml
-<q:set name="userData" value="{}" scope="session" />
-```
-
-The variable is shared in the session (future).
-
-## 🎯 Practical Examples
-
-### Cart Calculator
+## A complete example
 
 ```xml
 <q:component name="ShoppingCart" xmlns:q="https://quantum.lang/ns">
@@ -475,83 +361,15 @@ The variable is shared in the session (future).
   <q:set name="tax" type="number" value="{subtotal * 0.1}" />
   <q:set name="total" type="number" value="{subtotal + tax}" />
 
-  <q:return value="Total: R$ {total}" />
+  <q:return value="Total: {total}" />
 </q:component>
 ```
 
-### Progressive Object Builder
+**Output:** `Total: 22.0`
 
-```xml
-<q:component name="BuildUser" xmlns:q="https://quantum.lang/ns">
-  <q:set name="user" type="object" value="{}" />
-
-  <q:set name="user" operation="merge" value='{"name":"Daniel"}' />
-  <q:set name="user" operation="merge" value='{"age":30}' />
-  <q:set name="user" operation="merge" value='{"role":"admin"}' />
-
-  <q:return value="{user}" />
-</q:component>
-```
-
-### List Filtering and Processing
-
-```xml
-<q:component name="ProcessList" xmlns:q="https://quantum.lang/ns">
-  <q:set name="numbers" type="array" value="[5,2,8,1,9]" />
-
-  <!-- Sort -->
-  <q:set name="numbers" operation="sort" />
-
-  <!-- Reverse -->
-  <q:set name="numbers" operation="reverse" />
-
-  <q:return value="Sorted (desc): {numbers}" />
-</q:component>
-```
-
-## ⚠️ Error Handling
-
-When a validation fails, Quantum raises a descriptive error:
-
-```xml
-<q:set name="email" value="invalid" validate="email" />
-```
-
-**Error:** `Set execution error for 'email': Invalid email format`
-
-```xml
-<q:set name="age" type="number" value="15" range="18..120" />
-```
-
-**Error:** `Set execution error for 'age': Value must be between 18 and 120`
-
-## 📋 Operations Summary
-
-| Operation | Description | Example |
-|----------|-----------|---------|
-| `assign` | Assignment (default) | `value="10"` |
-| `increment` | Increment | `operation="increment"` |
-| `decrement` | Decrement | `operation="decrement"` |
-| `add` | Addition | `operation="add" value="5"` |
-| `multiply` | Multiplication | `operation="multiply" value="2"` |
-| `append` | Adds at the end (array) | `operation="append" value="item"` |
-| `prepend` | Adds at the start (array) | `operation="prepend" value="item"` |
-| `remove` | Removes by value (array) | `operation="remove" value="item"` |
-| `removeAt` | Removes by index (array) | `operation="removeAt" index="2"` |
-| `clear` | Clears the array | `operation="clear"` |
-| `sort` | Sorts the array | `operation="sort"` |
-| `reverse` | Reverses the array | `operation="reverse"` |
-| `unique` | Removes duplicates | `operation="unique"` |
-| `merge` | Merges objects | `operation="merge" value='{...}'` |
-| `setProperty` | Sets a property | `operation="setProperty" key="x" value="1"` |
-| `deleteProperty` | Removes a property | `operation="deleteProperty" key="x"` |
-| `clone` | Clones an object | `operation="clone" source="original"` |
-| `uppercase` | Upper case | `operation="uppercase"` |
-| `lowercase` | Lower case | `operation="lowercase"` |
-| `trim` | Removes spaces | `operation="trim"` |
-
-## 🔗 See Also
+## See also
 
 - [Loops (`q:loop`)](./loops.md)
-- [Databinding](./databinding.md)
+- [Data binding](./databinding.md)
 - [Components (`q:component`)](./components.md)
+- [`q:set` in the Reference](../reference/tags#q-set)

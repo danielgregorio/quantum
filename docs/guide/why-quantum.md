@@ -48,8 +48,8 @@ desktop window (`quantum desktop`).
   as Quantum functions — each with a failure contract the page can handle
   ([AI](/guide/ai)).
 - **It does not pretend.** A mail with no server, a knowledge source that
-  cannot be read, an attribute that does nothing: each is an error that says
-  what to do, not a silent success.
+  cannot be read, an attribute a `q:` tag does not have: each is an error that
+  says what to do, not a silent success.
 
 ## How we know it works
 
@@ -59,7 +59,8 @@ desktop window (`quantum desktop`).
   (browser, console, desktop), a blog, a dashboard, a helpdesk with uploads and
   e-mail, a docs assistant (RAG) and an agent over a SQLite database. The AI
   apps are also tested against a real model server.
-- Every release is installed from PyPI into a clean environment and run.
+- A release is built only after the whole test suite passes on the tagged
+  commit, and this page's example runs in CI as shown.
 
 ## What it is not
 

@@ -4,7 +4,10 @@ Quantum provides powerful loop structures inspired by ColdFusion's `cfloop` but 
 
 ## Loop Types
 
-Quantum supports three main loop types:
+Quantum has four loop types — `range`, `array`, `list` and `query` — and each
+`q:return` inside a loop adds an item to the list the loop returns (LOOP-1).
+Every attribute is in the [Reference](../reference/tags#q-loop); the rules are
+[LOOP-1 to LOOP-6](../reference/spec#LOOP-1).
 
 ### Range Loop (`type="range"`)
 
@@ -110,8 +113,6 @@ Loops can be nested for complex data processing:
 
 ### Integration with Conditionals
 
-Loops work seamlessly with conditional logic:
-
 ```xml
 <q:loop type="range" var="i" from="1" to="5">
   <q:if condition="i % 2 == 0">
@@ -123,51 +124,85 @@ Loops work seamlessly with conditional logic:
 </q:loop>
 ```
 
-## Syntax Reference
+**Output:** `["1 is odd", "2 is even", "3 is odd", "4 is even", "5 is odd"]`
 
-### Range Loop Attributes
+## Query Loop (`query="name"`)
 
-- `type="range"` - Loop type identifier
-- `var="varname"` - Variable name for current iteration value
-- `from="start"` - Starting number (inclusive)
-- `to="end"` - Ending number (inclusive)
-- `step="increment"` - Step size (optional, default: 1)
+Goes over the rows of a `q:query`; each row is reached by the query's name.
+The example database is the one in [Database Queries](./query):
 
-### Array Loop Attributes
+```xml
+<q:query name="users" datasource="db">
+  SELECT name FROM users WHERE status = 'active' ORDER BY name
+</q:query>
+<q:loop query="users">
+  <q:return value="{users.name}" />
+</q:loop>
+```
 
-- `type="array"` - Loop type identifier
-- `var="varname"` - Variable name for current array item
-- `items="[...]"` - JSON array or variable reference
-- `index="indexvar"` - Variable name for current index (optional)
+**Output:** `["Ana", "Bruno"]`
 
-### List Loop Attributes
+A query that returned no rows runs the body zero times (LOOP-4).
 
-- `type="list"` - Loop type identifier
-- `var="varname"` - Variable name for current list item
-- `items="item1,item2,..."` - Delimited string or variable reference
-- `delimiter=","` - Delimiter character (optional, default: comma)
-- `index="indexvar"` - Variable name for current index (optional)
+## Details
 
-## Error Handling
+A loop without `type` is an array loop when it has `items`, and a range loop
+otherwise (LOOP-5):
 
-Quantum provides helpful error messages for common loop issues:
+```xml
+<q:loop var="x" items="{[10, 20]}">
+  <q:return value="{x}" />
+</q:loop>
+```
 
-- **Missing variable name**: `Loop requires 'var' attribute`
-- **Invalid range**: `Range loop requires 'from' and 'to' attributes`
-- **Invalid JSON**: Falls back to string parsing for arrays
-- **Empty collections**: Loops with empty data simply don't execute
+**Output:** `[10, 20]`
 
-## Performance Notes
+A list loop trims the spaces around each item:
 
-- Range loops are most efficient for numeric iterations
-- Array loops support large datasets well
-- List loops automatically trim whitespace from items
-- Nested loops should be used judiciously for large datasets
+```xml
+<q:loop type="list" var="c" items=" red , green ">
+  <q:return value="[{c}]" />
+</q:loop>
+```
 
-## Coming Soon
+**Output:** `["[red]", "[green]"]`
 
-Future loop enhancements planned:
-- Object/Structure loops (`type="object"`)
-- Query/Database loops (`type="query"`)
-- Conditional loops (`type="while"`)
-- Parallel execution options
+With `from` above `to`, a range loop runs zero times, and a loop that returned
+nothing lets execution go on (LOOP-2):
+
+```xml
+<q:loop type="range" var="i" from="5" to="1">
+  <q:return value="{i}" />
+</q:loop>
+<q:return value="none" />
+```
+
+**Output:** `none`
+
+## Errors
+
+An array loop over something that is not a list says what it got (LOOP-6):
+
+```xml
+<q:set name="n" value="{5}" />
+<q:loop type="array" var="x" items="{n}">
+  <q:return value="{x}" />
+</q:loop>
+```
+
+**Error:** `needs a list`
+
+A `type` that does not exist is a parse error (PARSE-5):
+
+```xml
+<q:loop type="while" var="x">
+</q:loop>
+```
+
+**Error:** `<q:loop type="while"> does not exist`
+
+## See also
+
+- [`q:loop` in the Reference](../reference/tags#q-loop)
+- [State Management (`q:set`)](./state-management.md)
+- [Conditionals (`q:if`)](./conditionals.md)
