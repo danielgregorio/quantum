@@ -28,5 +28,5 @@ no ar:
 - **Use e conte o que quebrou.** Um arquivo `.q` mínimo que reproduz um bug,
   numa [issue no GitHub](https://github.com/danielgregorio/quantum/issues), vale
   mais do que qualquer elogio.
-- **Contribua** — veja [Comunidade](/community/) (em inglês).
+- **Contribua** — veja [Comunidade](/pt/community/).
 - **Patrocine** — ainda não está aberto.

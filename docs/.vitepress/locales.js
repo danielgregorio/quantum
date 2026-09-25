@@ -94,7 +94,8 @@ const TRANSLATED = {
     '/guide/conditionals', '/guide/functions', '/guide/databinding', '/guide/actions', '/guide/query',
     '/guide/authentication', '/guide/ui', '/guide/testing',
     '/guide/ai', '/guide/files-and-mail', '/guide/data-import', '/guide/services', '/guide/sessions',
-    '/guide/admin', '/guide/project-structure', '/guide/applications'],
+    '/guide/admin', '/guide/project-structure', '/guide/applications',
+    '/blog/', '/status/', '/community/'],
   es: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/',
     '/guide/getting-started', '/guide/components', '/guide/how-a-page-runs', '/guide/state-management',
     '/guide/loops', '/guide/conditionals', '/guide/functions', '/guide/databinding',
@@ -218,9 +219,9 @@ function nav(key) {
       ],
     },
     { text: t.showcase, link: '/showcase/' },
-    { text: t.blog, link: '/blog/' },
+    { text: t.blog, link: link(key, '/blog/') },
     { text: t.changelog, link: '/changelog/' },
-    { text: t.status, link: '/status/' },
+    { text: t.status, link: link(key, '/status/') },
     { text: t.sponsor, link: link(key, '/sponsor/') },
   ]
 }

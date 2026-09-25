@@ -26,6 +26,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- The Blog index, Status and Community pages in Brazilian Portuguese.
+  `scripts/generate-site-pages.py` writes the translated Blog index and Status
+  page (`LANGS`) around the same posts and the same measured tables, stamped
+  with the English page's hash; the nav's Blog and Status links go to the
+  translation when there is one.
 - The rest of the guide in Brazilian Portuguese: AI, files and mail, data
   import, services, sessions, the admin, project structure and
   `q:application` — every guide page now has a pt version. The pt guide

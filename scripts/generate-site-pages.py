@@ -271,6 +271,70 @@ def blog_pages():
     return {'blog/index.md': index, 'public/blog/feed.xml': feed}
 
 
+# -- translations ------------------------------------------------------------
+
+# The generated pages of a language (docs/<lang>/status/, docs/<lang>/blog/):
+# the language's own words around the same measured tables and the same posts.
+# Each is stamped with the hash of the English page it was generated beside,
+# as scripts/translation-status.py stamps a hand-translated page.
+LANGS = {
+    'pt': {
+        'notice': ('::: info Tradução automática\nEsta página foi traduzida automaticamente do '
+                   'inglês e ainda não foi revisada\npor um falante nativo; correções são '
+                   'bem-vindas no GitHub. Se algo não bater,\nvale o [original em inglês]({url}).\n:::\n'),
+        'status_title': 'O que funciona de verdade hoje',
+        'status_intro': ('Esta página é medida, não escrita: o `scripts/generate-feature-status.py` '
+                         'roda cada exemplo e conta o que passa pelo parser e o que executa, e o '
+                         'site é gerado de novo a partir do resultado. Onde ela discorda do resto '
+                         'da documentação, esta é a página que rodou. As tabelas ficam em inglês, '
+                         'como o script as escreve.\n\n'
+                         'A promessa — o que é Núcleo (Core), IA, Experimental ou Laboratório — '
+                         'está em [Estabilidade](/pt/stability/).'),
+        'blog_intro': ('Notícias do Quantum: versões, o que mudou e por quê. Assine com o '
+                       '[feed RSS](/blog/feed.xml){target="_self"} (em inglês).'),
+        'english': ' (em inglês)',
+    },
+}
+
+
+def _source_hash(text: str) -> str:
+    """As scripts/translation-status.py (and the site) hash a translation's source."""
+    import hashlib
+    return hashlib.sha256(text.replace('\r\n', '\n').encode('utf-8')).hexdigest()[:12]
+
+
+def _stamped(source: str, english: str) -> str:
+    return f'---\nsource: {source}\nsource_hash: {_source_hash(english)}\n---\n'
+
+
+def translated_pages(english: dict) -> dict:
+    out = {}
+    for lang, words in LANGS.items():
+        status = english['status/index.md']
+        body = status.split('\n\n', 3)[3]         # the measured part, after title, intro and tiers line
+        out[f'{lang}/status/index.md'] = (
+            _stamped('status/index.md', status) + GENERATED.format(source='FEATURE_STATUS.md')
+            + f'# {words["status_title"]}\n\n' + words['notice'].format(url='/status/') + '\n'
+            + words['status_intro'] + '\n\n' + body)
+
+        lines = [_stamped('blog/index.md', english['blog/index.md'])
+                 + GENERATED.format(source=f'docs/blog/posts/ and docs/{lang}/blog/posts/'), '# Blog\n',
+                 words['notice'].format(url='/blog/'), words['blog_intro'] + '\n']
+        for p in posts():
+            mine = DOCS / lang / 'blog' / 'posts' / f'{p["slug"]}.md'
+            tags = ' '.join(f'`{t}`' for t in p['tags'])
+            if mine.is_file():
+                meta = {**p, **front_matter(mine.read_text(encoding='utf-8'))}
+                lines.append(f'## [{meta["title"]}](./posts/{p["slug"]}.md)\n')
+            else:
+                meta = p
+                lines.append(f'## [{p["title"]}](/blog/posts/{p["slug"]}){words["english"]}\n')
+            lines.append(f'{p["date"]}{" · " + tags if tags else ""}\n')
+            lines.append(f'{meta["description"]}\n')
+        out[f'{lang}/blog/index.md'] = '\n'.join(lines)
+    return out
+
+
 # -- all ---------------------------------------------------------------------
 
 def pages() -> dict:
@@ -280,6 +344,7 @@ def pages() -> dict:
     out['stability/index.md'] = stability_page((REPO / 'SUPPORT_TIERS.md').read_text(encoding='utf-8'))
     out['tools/vscode-extension.md'] = vscode_page()
     out.update(blog_pages())
+    out.update(translated_pages(out))
     return out
 
 
