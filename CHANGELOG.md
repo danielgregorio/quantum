@@ -32,6 +32,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- The Examples page in Portuguese, Spanish and Chinese. Every live page now
+  has a translation except the generated ones (Reference, SPEC, Changelog),
+  which stay in English: their entries in the pt/es/zh navigation say so.
+
 - Every `quantum …` command in a published page's shell block (all four
   languages) is parsed by the real command line in CI
   (`tests/docs/test_docs_commands.py`); the homes, the Sponsor page, the blog

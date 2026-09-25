@@ -34,8 +34,8 @@ const TEXT = {
   },
   pt: {
     description: 'Aplicações web declarativas em XML, com IA e RAG na própria linguagem',
-    home: 'Início', docs: 'Documentação', guide: 'Guia', tutorial: 'Tutorial', cookbook: 'Receitas', stability: 'Estabilidade', reference: 'Referência',
-    spec: 'Especificação (SPEC)', showcase: 'Vitrine', blog: 'Blog', changelog: 'Mudanças',
+    home: 'Início', docs: 'Documentação', guide: 'Guia', tutorial: 'Tutorial', cookbook: 'Receitas', stability: 'Estabilidade', reference: 'Referência (em inglês)',
+    spec: 'Especificação — SPEC (em inglês)', showcase: 'Vitrine', blog: 'Blog', changelog: 'Mudanças (em inglês)',
     status: 'Status', sponsor: 'Apoie', roadmap: 'Roadmap', community: 'Comunidade',
     editLink: 'Editar esta página no GitHub', lastUpdated: 'Atualizado em', outline: 'Nesta página',
     prev: 'Página anterior', next: 'Próxima página', langMenu: 'Mudar idioma', returnToTop: 'Voltar ao topo',
@@ -51,8 +51,8 @@ const TEXT = {
   },
   es: {
     description: 'Aplicaciones web declarativas en XML, con IA y RAG en el propio lenguaje',
-    home: 'Inicio', docs: 'Documentación', guide: 'Guía', tutorial: 'Tutorial', cookbook: 'Recetario', stability: 'Estabilidad', reference: 'Referencia',
-    spec: 'Especificación (SPEC)', showcase: 'Escaparate', blog: 'Blog', changelog: 'Cambios',
+    home: 'Inicio', docs: 'Documentación', guide: 'Guía', tutorial: 'Tutorial', cookbook: 'Recetario', stability: 'Estabilidad', reference: 'Referencia (en inglés)',
+    spec: 'Especificación — SPEC (en inglés)', showcase: 'Escaparate', blog: 'Blog', changelog: 'Cambios (en inglés)',
     status: 'Estado', sponsor: 'Patrocinar', roadmap: 'Hoja de ruta', community: 'Comunidad',
     editLink: 'Editar esta página en GitHub', lastUpdated: 'Actualizado', outline: 'En esta página',
     prev: 'Página anterior', next: 'Página siguiente', langMenu: 'Cambiar idioma', returnToTop: 'Volver arriba',
@@ -68,8 +68,8 @@ const TEXT = {
   },
   zh: {
     description: '用 XML 编写的声明式 Web 应用，语言内置 AI 与 RAG',
-    home: '首页', docs: '文档', guide: '指南', tutorial: '教程', cookbook: '实用示例', stability: '稳定性', reference: '参考',
-    spec: '规范 (SPEC)', showcase: '案例', blog: '博客', changelog: '更新日志',
+    home: '首页', docs: '文档', guide: '指南', tutorial: '教程', cookbook: '实用示例', stability: '稳定性', reference: '参考（英文）',
+    spec: '规范 SPEC（英文）', showcase: '案例', blog: '博客', changelog: '更新日志（英文）',
     status: '状态', sponsor: '赞助', roadmap: '路线图', community: '社区',
     editLink: '在 GitHub 上编辑此页', lastUpdated: '最后更新', outline: '本页内容',
     prev: '上一页', next: '下一页', langMenu: '切换语言', returnToTop: '返回顶部',
@@ -90,7 +90,7 @@ const GITHUB = 'https://github.com/danielgregorio/quantum'
 // The pages each language has translated (docs/<lang>/<path>). The nav links
 // to the translation when there is one, and to the English page otherwise.
 export const TRANSLATED = {
-  pt: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/', '/showcase/',
+  pt: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/', '/showcase/', '/examples/',
     '/tools/cli', '/tools/hot-reload', '/tools/dev-panel', '/tools/error-pages', '/tools/check', '/tools/vscode-extension', '/tools/lsp-server', '/targets/desktop',
     '/guide/getting-started', '/guide/components', '/guide/how-a-page-runs', '/guide/state-management', '/guide/loops',
     '/guide/conditionals', '/guide/functions', '/guide/databinding', '/guide/actions', '/guide/query',
@@ -98,14 +98,14 @@ export const TRANSLATED = {
     '/guide/ai', '/guide/files-and-mail', '/guide/data-import', '/guide/services', '/guide/sessions',
     '/guide/admin', '/guide/project-structure', '/guide/applications',
     '/blog/', '/status/', '/community/'],
-  es: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/', '/showcase/', '/community/', '/tools/cli', '/tools/hot-reload', '/tools/dev-panel', '/tools/error-pages', '/tools/check', '/tools/vscode-extension', '/tools/lsp-server', '/targets/desktop',
+  es: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/', '/showcase/', '/community/', '/tools/cli', '/tools/hot-reload', '/tools/dev-panel', '/tools/error-pages', '/tools/check', '/tools/vscode-extension', '/tools/lsp-server', '/targets/desktop', '/examples/',
     '/blog/', '/status/',
     '/guide/getting-started', '/guide/components', '/guide/how-a-page-runs', '/guide/state-management',
     '/guide/loops', '/guide/conditionals', '/guide/functions', '/guide/databinding',
     '/guide/actions', '/guide/query', '/guide/authentication', '/guide/ui', '/guide/testing',
     '/guide/ai', '/guide/files-and-mail', '/guide/data-import', '/guide/services', '/guide/sessions',
     '/guide/admin', '/guide/project-structure', '/guide/applications'],
-  zh: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/cookbook/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/showcase/', '/community/', '/tools/cli', '/tools/hot-reload', '/tools/dev-panel', '/tools/error-pages', '/tools/check', '/tools/vscode-extension', '/tools/lsp-server', '/targets/desktop',
+  zh: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/cookbook/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/showcase/', '/community/', '/tools/cli', '/tools/hot-reload', '/tools/dev-panel', '/tools/error-pages', '/tools/check', '/tools/vscode-extension', '/tools/lsp-server', '/targets/desktop', '/examples/',
     '/blog/', '/status/',
     '/guide/getting-started', '/guide/components', '/guide/how-a-page-runs', '/guide/state-management',
     '/guide/ai', '/guide/files-and-mail', '/guide/data-import', '/guide/services', '/guide/sessions',
