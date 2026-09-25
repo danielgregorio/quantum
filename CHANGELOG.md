@@ -38,6 +38,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
   fixed what they claimed: the components page said several `q:return`s
   returned a list (the first one ends the component, SPEC RET-1), and the
   home page's example now imports the tested "first test" recipe.
+- The site in Spanish (`/es/`, machine translated, reviews welcome): the home,
+  Why Quantum, Installation, Quick start, Stability, Sponsor, the Roadmap and
+  the "Quantum 1.0" post. Code blocks are the English ones; the terms are in
+  `docs/.vitepress/i18n/glossary.es.md`.
 - Cookbook recipes: "When the mail server says no" (`onerror="continue"`),
   "Test data with test:given" (and `test:as`) and "Testing what an action
   refuses" (`error=`, `message=`, `flash=`, `table=`). Recipes in a topic

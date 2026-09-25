@@ -81,7 +81,9 @@ DEPRECATED = [
 PAST = re.compile(
     r'\b(removed|no longer|parse error|is (also )?an error|are errors|is refused|refuses|was |were |'
     r'used to|replaced|instead of|deprecated|renamed|never (did|ran|existed|worked)|old\b|until \d|'
-    r'up\s+to\s+(quantum\s+)?0\.)',
+    r'up\s+to\s+(quantum\s+)?0\.|'
+    # the same markers on the Spanish pages (docs/es/)
+    r'se eliminó|eliminad[oa]s?|ya no|es un error de análisis|renombrad[oa]s?|reemplazad[oa]s?|antes eran)',
     re.I)
 
 # Mentions that stay, each with why: (page, pattern id).

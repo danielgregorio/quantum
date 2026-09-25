@@ -90,7 +90,7 @@ const GITHUB = 'https://github.com/danielgregorio/quantum'
 // to the translation when there is one, and to the English page otherwise.
 const TRANSLATED = {
   pt: [],
-  es: [],
+  es: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/'],
   zh: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/'],
 }
 

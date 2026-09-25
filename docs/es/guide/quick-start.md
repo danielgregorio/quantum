@@ -3,19 +3,21 @@ source: guide/quick-start.md
 source_hash: c82f4c234ab8
 ---
 
-# 快速开始
+# Inicio rápido
 
-::: info 机器翻译
-本页由英文原文机器翻译而来，尚未经过母语审校，欢迎在 GitHub 上提出修改。内容如有出入，以[英文原文](/guide/quick-start)为准。
+::: info Traducción automática
+Esta página se tradujo automáticamente del inglés y todavía no la revisó un
+hablante nativo; las correcciones son bienvenidas en GitHub. Si algo no
+coincide, vale el [original en inglés](/guide/quick-start).
 :::
 
-用 5 分钟构建你的第一个 Quantum 应用。
+Construye tu primera aplicación Quantum en 5 minutos.
 
-本页的每一步都在 CI 中运行（`tests/docs/test_guide_quick_start.py`）。
+Cada paso de esta página se ejecuta en CI (`tests/docs/test_guide_quick_start.py`).
 
-## 第 1 步：创建一个组件
+## Paso 1: Crea un componente
 
-创建一个名为 `counter.q` 的文件：
+Crea un archivo llamado `counter.q`:
 
 ```xml
 <q:component name="Counter" xmlns:q="https://quantum.lang/ns">
@@ -34,7 +36,7 @@ source_hash: c82f4c234ab8
 
 **Output:** `Count: 2, doubled: 4`
 
-运行它——`quantum run` 会打印组件返回的值：
+Ejecútalo: `quantum run` imprime lo que devuelve el componente:
 
 ```bash
 quantum run counter.q
@@ -44,9 +46,9 @@ quantum run counter.q
 [SUCCESS] Result: Count: 2, doubled: 4
 ```
 
-## 第 2 步：添加一个循环
+## Paso 2: Agrega un bucle
 
-创建 `todo-list.q`：
+Crea `todo-list.q`:
 
 ```xml
 <q:component name="TodoList" xmlns:q="https://quantum.lang/ns">
@@ -61,12 +63,14 @@ quantum run counter.q
 
 **Output:** `["- Buy groceries", "- Walk the dog", "- Write code"]`
 
-循环中的 `q:return` 不会结束循环：每个值都会被收集起来，循环结束时组件返回这个列表（LOOP-1、LOOP-2）。
-一个没有执行任何 `q:return` 的循环，会让执行继续到它后面的内容。
+Un `q:return` dentro de un bucle no detiene el bucle: cada valor se acumula, y
+cuando el bucle termina el componente devuelve la lista (LOOP-1, LOOP-2). Un
+bucle que no ejecuta ningún `q:return` deja que la ejecución continúe con lo
+que viene después.
 
-## 第 3 步：添加条件
+## Paso 3: Agrega condicionales
 
-创建 `weather.q`：
+Crea `weather.q`:
 
 ```xml
 <q:component name="Weather" xmlns:q="https://quantum.lang/ns">
@@ -89,9 +93,10 @@ quantum run counter.q
 
 **Output:** `Nice weather for a walk.`
 
-## 第 4 步：提供一个网页
+## Paso 4: Sirve una página web
 
-页面放在 `components/` 文件夹中；文件名就是 URL。创建 `components/index.q`：
+Las páginas viven en una carpeta `components/`; el nombre del archivo es la
+URL. Crea `components/index.q`:
 
 ```xml
 <q:component name="index" xmlns:q="https://quantum.lang/ns">
@@ -114,26 +119,29 @@ quantum run counter.q
 </q:component>
 ```
 
-在包含 `components/` 的文件夹中启动服务器：
+Inicia el servidor desde la carpeta que contiene `components/`:
 
 ```bash
 quantum start
 ```
 
-打开 `http://localhost:8080`。`components/about.q` 会对应 `/about`。用 `quantum stop` 停止服务器。
+Abre `http://localhost:8080`: la página muestra los tres elementos y
+`10 + 5 = 15`. `components/about.q` se serviría en `/about`. Detén el servidor
+con `quantum stop`.
 
-> 文件里不要写 `<!DOCTYPE html>`：`.q` 是 XML，而 DOCTYPE 只能出现在根元素之前。
-> 服务器会在响应中加上它。
+> Sin `<!DOCTYPE html>` en el archivo: un `.q` es XML, y un DOCTYPE solo es
+> válido antes del elemento raíz. El servidor lo agrega a la respuesta.
 
-## 第 5 步：读取数据库
+## Paso 5: Lee de una base de datos
 
-创建一个只有一张表的 SQLite 数据库（任何 Python 都可以——Quantum 本来就需要它）：
+Crea una base de datos SQLite con una tabla (sirve cualquier Python; Quantum
+ya lo necesita):
 
 ```bash
 python -c "import sqlite3, os; os.makedirs('data', exist_ok=True); c = sqlite3.connect('data/app.db'); c.execute('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)'); c.executemany('INSERT INTO users (name, email) VALUES (?, ?)', [('Ana', 'ana@example.com'), ('Bruno', 'bruno@example.com')]); c.commit()"
 ```
 
-在 `components/` 旁边的 `quantum.config.yaml` 中声明它：
+Declárala en `quantum.config.yaml`, junto a `components/`:
 
 ```yaml
 datasources:
@@ -142,7 +150,7 @@ datasources:
     database: ./data/app.db
 ```
 
-创建 `components/users.q`：
+Crea `components/users.q`:
 
 ```xml
 <q:component name="users" xmlns:q="https://quantum.lang/ns">
@@ -161,12 +169,14 @@ datasources:
 </q:component>
 ```
 
-重启服务器，打开 `http://localhost:8080/users`。
+Reinicia el servidor y abre `http://localhost:8080/users`: **2 users**, Ana y
+Bruno.
 
-## 第 6 步：处理表单
+## Paso 6: Maneja un formulario
 
-添加一个表单和一个插入一行数据的 `q:action`——参数都经过声明，所以 SQL 永远不会接触到原始输入。
-用下面的内容替换 `components/users.q`：
+Agrega un formulario y una `q:action` que inserta una fila: el parámetro está
+declarado, así que el SQL nunca ve la entrada sin procesar. Reemplaza
+`components/users.q` por:
 
 ```xml
 <q:component name="users" xmlns:q="https://quantum.lang/ns">
@@ -200,14 +210,17 @@ datasources:
 </q:component>
 ```
 
-## 接下来？
+Enviar `Carla` y `carla@example.com` la agrega a la tabla y muestra
+**Added Carla**; un nombre de una sola letra se rechaza, y no se inserta nada.
 
-你已经学会了基础！接下来可以看看（以下页面为英文）：
+## ¿Qué sigue?
 
-- [动作与表单](/guide/actions)——校验、重定向、多个动作
-- [身份认证](/guide/authentication)——带密码校验的登录
-- [组件](/guide/components)——深入了解组件系统
-- [状态管理](/guide/state-management)——更进一步的变量处理
-- [AI](/guide/ai)——以标签形式调用 LLM、RAG 和智能体
-- [数据库查询](/guide/query)——SQL 与数据操作
-- [实用示例](/cookbook/)——经过测试的简短示例
+Ya aprendiste lo básico. Ahora explora (en inglés):
+
+- [Acciones y formularios](/guide/actions): validación, redirecciones, varias acciones
+- [Autenticación](/guide/authentication): inicio de sesión con verificación de contraseña
+- [Componentes](/guide/components): el sistema de componentes en detalle
+- [Manejo de estado](/guide/state-management): variables en detalle
+- [IA](/guide/ai): llamadas a LLM, RAG y agentes como etiquetas
+- [Consultas a bases de datos](/guide/query): SQL y operaciones con datos
+- [Recetario](/cookbook/): recetas probadas, una tarea cada una
