@@ -25,11 +25,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 - The site has a Reference generated from the code (`docs/reference/`,
   `scripts/generate-reference.py`): the Core and AI tags with every attribute,
   type, value, default and the rules that specify them; the expression
-  functions; the command line; the configuration keys; and the SPEC with an
-  anchor per rule (`reference/spec#EXPR-14`) that lists the entries citing it.
-  A test fails when a committed page differs from what the generator writes.
-  It replaces the hand-written `api/tags-reference` and
-  `api/attributes-reference` pages.
+  functions; the command line; the configuration keys; the `ui:*` tags, Core
+  (UI-7) and Experimental apart, with every attribute the UI parser reads;
+  and the SPEC with an anchor per rule (`reference/spec#EXPR-14`) that lists
+  the entries citing it. A test fails when a committed page differs from what
+  the generator writes. It replaces the hand-written `api/tags-reference`,
+  `api/attributes-reference` and `api/ui-reference` pages.
 
 ## 1.0.0
 

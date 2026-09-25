@@ -134,18 +134,9 @@ export default defineConfig({
             { text: 'Expression functions', link: '/reference/functions' },
             { text: 'Command line', link: '/reference/cli' },
             { text: 'Configuration', link: '/reference/config' },
+            { text: 'UI tags (ui:)', link: '/reference/ui' },
             { text: 'Specification', link: '/reference/spec' },
-            { text: 'Experimental tags', link: '/reference/experimental' },
-            { text: 'UI tags (ui:)', link: '/api/ui-reference' }
-          ]
-        }
-      ],
-      '/api/': [
-        {
-          text: 'Reference',
-          items: [
-            { text: 'Overview', link: '/reference/' },
-            { text: 'UI tags (ui:)', link: '/api/ui-reference' }
+            { text: 'Experimental tags', link: '/reference/experimental' }
           ]
         }
       ],

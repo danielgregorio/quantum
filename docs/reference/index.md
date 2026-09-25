@@ -18,6 +18,7 @@ Generated from the code and the SPEC on every change: what is here is what the p
 | [Command line](./cli) | `quantum` and its commands, options and defaults |
 | [Configuration](./config) | The sections and keys of `quantum.config.yaml` |
 | [Specification](./spec) | The 137 rules of the SPEC, each with an anchor |
+| [UI tags](./ui) | The 67 `ui:*` tags, Core and Experimental, with the attributes each reads |
 | [Experimental tags](./experimental) | Tags outside the Core and the AI |
 
 :::

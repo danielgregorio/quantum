@@ -10,6 +10,8 @@ Sources:
   functions     quantum/core/expression_stdlib.py STDLIB (signatures and docstrings)
   cli           quantum/cli/runner.py build_parser()
   config        quantum/runtime/web_config.py (sections, keys, types, defaults)
+  ui            quantum/core/features/ui_engine/src/parser.py (UI_TAG_MAP and what each
+                _parse_ui_* reads) and ast_nodes.CORE_TAGS (UI-7)
   spec          SPEC.md, with an anchor per rule ID and the entries that cite it
 
 tests/docs/test_reference_is_generated.py fails when the committed pages differ.
@@ -406,6 +408,228 @@ def _backlinks(rid):
             ' · '.join(f'<a href="{link}"><code>{html.escape(label.strip("`"))}</code></a>'
                        for label, link in entries) + '</p>']
 
+# ------------------------------------------------------------------ ui: tags
+
+UI_PARSER = REPO / 'quantum' / 'core' / 'features' / 'ui_engine' / 'src' / 'parser.py'
+
+
+def _ui_methods():
+    """UIParser's methods by name, as syntax trees (the source is read, never run)."""
+    import ast
+    tree = ast.parse(UI_PARSER.read_text(encoding='utf-8'))
+    cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'UIParser')
+    return {f.name: f for f in cls.body if isinstance(f, ast.FunctionDef)}
+
+
+def ui_attributes(func):
+    """What one _parse_ui_* method reads: {'attrs': {name: {...}}, 'layout', 'text', 'children', 'contains'}.
+
+    An attribute is every element.get() the method makes; its type comes from the
+    helper that reads it (_parse_bool, _parse_int, int()), its default from get()'s
+    second argument, `or`, `if ... is not None else` or the helper's default, its
+    values from a `not in (...)` check that raises, and "required" from a
+    `not ...` check that raises."""
+    import ast
+    parents = {}
+    for node in ast.walk(func):
+        for child in ast.iter_child_nodes(node):
+            parents[child] = node
+    loops = {}                                   # loop variable -> the constants it runs over
+    for node in ast.walk(func):
+        if isinstance(node, (ast.For, ast.comprehension)) and isinstance(node.iter, ast.Tuple):
+            target = node.target.elts[0] if isinstance(node.target, ast.Tuple) else node.target
+            values = [e.elts[0] if isinstance(e, ast.Tuple) else e for e in node.iter.elts]
+            loops[target.id] = [v.value for v in values if isinstance(v, ast.Constant)]
+    info = {'attrs': {}, 'layout': False, 'text': False, 'children': False, 'contains': []}
+    bound = {}                                   # ast.dump(variable) -> attribute names
+
+    def entry(name):
+        return info['attrs'].setdefault(name, {'type': 'string', 'default': None,
+                                               'values': [], 'required': False})
+
+    def const(node):
+        return node.value if isinstance(node, ast.Constant) else None
+
+    for node in ast.walk(func):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+            continue
+        if isinstance(node.func.value, ast.Name) and node.func.value.id == 'self':
+            if node.func.attr == '_apply_layout_attrs':
+                info['layout'] = True
+            elif node.func.attr == '_parse_children':
+                info['children'] = True
+            elif node.func.attr.startswith('_parse_ui_'):
+                info['contains'].append(node.func.attr[len('_parse_ui_'):].replace('_', '-'))
+            continue
+        if not (node.func.attr == 'get' and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == 'element' and node.args):
+            continue
+        key = node.args[0]
+        names = [key.value] if isinstance(key, ast.Constant) else loops.get(getattr(key, 'id', None), [])
+        default = const(node.args[1]) if len(node.args) > 1 else None
+        kind, up = 'string', parents.get(node)
+        if isinstance(up, ast.Call) and isinstance(up.func, ast.Attribute) and up.func.attr in ('_parse_bool', '_parse_int'):
+            kind = 'boolean' if up.func.attr == '_parse_bool' else 'number'
+            helper_default = const(up.args[1]) if len(up.args) > 1 else (False if kind == 'boolean' else None)
+            default = helper_default if default is None else default
+        elif isinstance(up, ast.BoolOp) and isinstance(up.op, ast.Or) and const(up.values[-1]) is not None:
+            default = const(up.values[-1])
+        elif isinstance(up, ast.Compare) and len(up.ops) == 1 and isinstance(up.ops[0], ast.NotEq):
+            kind = 'boolean'
+        for name in names:
+            a = entry(name)
+            if kind != 'string':
+                a['type'] = kind
+            if default is not None and a['default'] is None:
+                a['default'] = default
+        # required: `not element.get(...)` in a check that raises (or the list the check is built from)
+        if isinstance(up, ast.UnaryOp) and isinstance(up.op, ast.Not):
+            for name in names:
+                entry(name)['required'] = True
+        # the variable (or node field) this read lands in
+        holder, top = node, up
+        while isinstance(top, (ast.Call, ast.BoolOp, ast.IfExp, ast.Compare)) and holder is not None:
+            holder, top = top, parents.get(top)
+        if isinstance(top, ast.Assign):
+            for target in top.targets:
+                bound.setdefault(ast.dump(target), []).extend(names)
+
+    for node in ast.walk(func):
+        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == 'element' \
+                and node.attr == 'text':
+            info['text'] = True
+        if isinstance(node, ast.For) and isinstance(node.iter, ast.Name) and node.iter.id == 'element'                 and any(isinstance(n, ast.Attribute) and n.attr == '_parse_child' for n in ast.walk(node)):
+            info['children'] = True
+        # int(x) / self._parse_int(x) over a variable read from an attribute: a number
+        if isinstance(node, ast.Call) and node.args and isinstance(node.args[0], ast.Name) and (
+                getattr(node.func, 'id', None) == 'int' or getattr(node.func, 'attr', None) == '_parse_int'):
+            for name in _bound_names(bound, node.args[0]):
+                entry(name)['type'] = 'number'
+        # int(x) if x is not None else 2 -> a number, default 2
+        if isinstance(node, ast.IfExp) and isinstance(node.test, ast.Compare) \
+                and isinstance(node.test.ops[0], ast.IsNot) and const(node.orelse) is not None:
+            for name in bound.get(ast.dump(node.test.left, ), []) or \
+                    bound.get(ast.dump(ast.Name(id=getattr(node.test.left, 'id', ''), ctx=ast.Store())), []):
+                a = entry(name)
+                a['type'] = 'number' if isinstance(node.body, ast.Call) and getattr(node.body.func, 'id', '') == 'int' \
+                    else a['type']
+                if a['default'] is None:
+                    a['default'] = node.orelse.value
+        if isinstance(node, ast.If) and any(isinstance(s, ast.Raise) for s in node.body):
+            test = node.test
+            if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
+                for name in _bound_names(bound, test.operand):
+                    entry(name)['required'] = True
+            for cmp in [n for n in ast.walk(test) if isinstance(n, ast.Compare)]:
+                if isinstance(cmp.ops[0], ast.NotIn) and isinstance(cmp.comparators[0], ast.Tuple):
+                    values = [e.value for e in cmp.comparators[0].elts if isinstance(e, ast.Constant) and e.value is not None]
+                    for name in _bound_names(bound, cmp.left):
+                        entry(name)['values'] = values
+    return info
+
+
+def _bound_names(bound, expr):
+    """The attributes an expression (a variable, or node.field) was read from."""
+    import ast
+    if isinstance(expr, ast.Name):
+        return bound.get(ast.dump(ast.Name(id=expr.id, ctx=ast.Store())), [])
+    if isinstance(expr, ast.Attribute):
+        return bound.get(ast.dump(ast.Attribute(value=ast.Name(id=getattr(expr.value, 'id', ''), ctx=ast.Store()),
+                                                attr=expr.attr, ctx=ast.Store())), []) or \
+            bound.get(ast.dump(ast.Attribute(value=ast.Name(id=getattr(expr.value, 'id', ''), ctx=ast.Load()),
+                                             attr=expr.attr, ctx=ast.Store())), [])
+    return []
+
+
+def ui_schema():
+    """{tag: info} for every tag in UIParser.UI_TAG_MAP, plus 'layout' — the attributes every
+    tag that calls _apply_layout_attrs takes."""
+    from quantum.core.features.ui_engine.src.parser import UIParser
+    methods = _ui_methods()
+    schema = {tag: ui_attributes(methods[name]) for tag, name in UIParser.UI_TAG_MAP.items()}
+    layout = ui_attributes(methods['_apply_layout_attrs'])
+    animation = ui_attributes(methods['_apply_animation_attrs'])
+    import ast
+    for tag, name in UIParser.UI_TAG_MAP.items():
+        calls = {n.func.attr for n in ast.walk(methods[name]) if isinstance(n, ast.Call)
+                 and isinstance(n.func, ast.Attribute)}
+        if '_apply_animation_attrs' in calls:
+            for attr, a in animation['attrs'].items():
+                schema[tag]['attrs'].setdefault(attr, a)
+    return schema, layout['attrs'], methods
+
+
+def _ui_rules(tag, method):
+    import ast
+    from quantum.core.features.ui_engine.src.ast_nodes import CORE_TAGS
+    ids = mentions(r'ui:' + re.escape(tag) + r'(?![\w-])') + (['UI-7'] if tag in CORE_TAGS else [])
+    source = ast.get_source_segment(UI_PARSER.read_text(encoding='utf-8'), method) or ''
+    ids += [m.group(0) for m in RULE_ID.finditer(source) if m.group(0) in RULES]
+    return sorted(set(ids), key=lambda r: (r.split('-')[0], int(r.split('-')[1])))
+
+
+def _ui_table(attrs):
+    out = ['| Attribute | Type | Required | Default | Values |', '|---|---|---|---|---|']
+    for name, a in attrs.items():
+        default = a['default']
+        default = '' if default in (None, '') else f'`{str(default).lower() if isinstance(default, bool) else default}`'
+        values = ', '.join(f'`{v}`' for v in a['values'])
+        out.append(f'| `{name}` | {a["type"]} | {"yes" if a["required"] else ""} | {cell(default)} | {values} |')
+    return out
+
+
+def ui_section(tag, info, rules, parents):
+    anchor = 'ui-' + tag
+    cite(rules, f'`<ui:{tag}>`', f'./ui#{anchor}')
+    out = [f'<a id="{anchor}"></a>\n\n## `ui:{tag}`\n']
+    if parents:
+        out.append('Inside: ' + ', '.join(f'[`ui:{p}`](#ui-{p})' for p in parents) + '\n')
+    if info['attrs']:
+        out.extend(_ui_table(info['attrs']))
+        out.append('')
+    reads = []
+    if info['layout']:
+        reads.append('the [layout attributes](#layout-attributes)')
+    if info['text']:
+        reads.append('its text')
+    if info['children']:
+        reads.append('child elements')
+    if info['contains']:
+        reads.append(', '.join(f'[`ui:{c}`](#ui-{c})' for c in info['contains']) + ' children')
+    if not info['attrs'] and not reads:
+        out.append('No attributes, no content.\n')
+    elif reads:
+        out.append(('Also takes ' if info['attrs'] else 'Takes ') + ', '.join(reads) + '.\n')
+    if rules:
+        out.append('Specified by: ' + rule_links(rules) + '\n')
+    return '\n'.join(out)
+
+
+def ui_page():
+    from quantum.core.features.ui_engine.src.ast_nodes import CORE_TAGS
+    schema, layout, methods = ui_schema()
+    from quantum.core.features.ui_engine.src.parser import UIParser
+    parents = {}
+    for tag, info in schema.items():
+        for child in info['contains']:
+            parents.setdefault(child, []).append(tag)
+    body = ['<a id="layout-attributes"></a>\n\n## Layout attributes\n',
+            'Every tag below that says so also takes these ([UI-2](./spec#UI-2) for the responsive ones):\n']
+    body.extend(_ui_table(layout))
+    body.append('')
+    groups = [('Core', 'Drawn with the same meaning by the browser, the console and the desktop '
+                       '([UI-7](./spec#UI-7)).', [t for t in schema if t in CORE_TAGS]),
+              ('Experimental', 'Browser only, with no stability promise: the console says it does not draw '
+                               'them ([UI-7](./spec#UI-7)).', [t for t in schema if t not in CORE_TAGS])]
+    for title, note, tags in groups:
+        body.append(f'<h1 class="reference-group">{title}</h1>\n\n{note}\n')
+        body.extend(ui_section(t, schema[t], _ui_rules(t, methods[UIParser.UI_TAG_MAP[t]]), parents.get(t, []))
+                    for t in tags)
+    intro = ('Every `ui:*` tag the parser knows and every attribute it reads — read from the UI parser\'s '
+             'code, so an attribute that is not here is not read. The Guide shows them at work: '
+             '[Building a UI](../guide/ui).')
+    return page('UI tags', intro, '\n'.join(body))
+
 # ------------------------------------------------------------------ index
 
 
@@ -417,6 +641,7 @@ def index_page(counts):
 | [Command line](./cli) | `quantum` and its commands, options and defaults |
 | [Configuration](./config) | The sections and keys of `quantum.config.yaml` |
 | [Specification](./spec) | The {counts['rules']} rules of the SPEC, each with an anchor |
+| [UI tags](./ui) | The {counts['ui']} `ui:*` tags, Core and Experimental, with the attributes each reads |
 | [Experimental tags](./experimental) | Tags outside the Core and the AI |
 """
     intro = ('Generated from the code and the SPEC on every change: what is here is what the parser, '
@@ -433,12 +658,15 @@ def pages():
         'functions.md': functions_page(),
         'cli.md': cli_page(),
         'config.md': config_page(),
+        'ui.md': ui_page(),
     }
     result['spec.md'] = spec_page()
     from quantum.core.expression_stdlib import STDLIB
     schema = load_lsp_schema()
     core = importlib.import_module(schema.__name__ + '.core_tags').CORE_AI_TAGS
-    result['index.md'] = index_page({'tags': len(core), 'functions': len(STDLIB), 'rules': len(RULES)})
+    from quantum.core.features.ui_engine.src.parser import UIParser
+    result['index.md'] = index_page({'tags': len(core), 'functions': len(STDLIB), 'rules': len(RULES),
+                                     'ui': len(UIParser.UI_TAG_MAP)})
     return result
 
 
