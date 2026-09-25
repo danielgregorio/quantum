@@ -1,0 +1,5 @@
+tests/search.test.q
+  PASS  no ?q= shows everything, sorted by the default
+  PASS  ?q= filters
+  PASS  two parameters at once
+3 passed, 0 failed

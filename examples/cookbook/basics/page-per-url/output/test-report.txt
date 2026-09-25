@@ -1,0 +1,5 @@
+tests/product.test.q
+  PASS  the URL segment becomes a variable
+  PASS  one file answers every id
+  PASS  an id with no product says so
+3 passed, 0 failed

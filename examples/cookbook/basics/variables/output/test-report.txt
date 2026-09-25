@@ -1,0 +1,5 @@
+tests/receipt.test.q
+  PASS  expressions compute with the variables
+  PASS  the default fills an empty value
+  PASS  a value from the URL replaces the default
+3 passed, 0 failed

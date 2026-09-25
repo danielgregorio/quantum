@@ -1,0 +1,5 @@
+tests/prices.test.q
+  PASS  a function called from q:set and from the HTML
+  PASS  an argument by position replaces the default
+  PASS  functions compose
+3 passed, 0 failed

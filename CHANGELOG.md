@@ -26,6 +26,9 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- Cookbook, "Basics": a first page, variables and expressions, loops,
+  conditionals, functions, a page per URL, the query string and reusable
+  components with a slot; eight tested recipes.
 - The essential pages in Brazilian Portuguese (/pt/): why Quantum,
   installation, quick start, the tutorial, stability, sponsor, the roadmap and
   the 1.0 post, machine-translated until a native speaker reviews them, with a

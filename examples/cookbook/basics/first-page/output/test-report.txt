@@ -1,0 +1,5 @@
+tests/pages.test.q
+  PASS  index.q answers /
+  PASS  about.q answers /about
+  PASS  a URL with no file is 404
+3 passed, 0 failed

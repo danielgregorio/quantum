@@ -1,0 +1,3 @@
+# Recipe: a q:function, called from attributes and from the HTML.
+paths:
+  components: ./components

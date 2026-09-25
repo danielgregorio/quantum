@@ -1,0 +1,4 @@
+tests/cards.test.q
+  PASS  each card has its title and the page's content
+  PASS  a component in a _ folder is not a page
+2 passed, 0 failed

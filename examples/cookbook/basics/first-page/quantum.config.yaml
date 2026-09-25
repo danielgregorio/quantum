@@ -1,0 +1,3 @@
+# Recipe: two pages, each file of components/ at its own URL.
+paths:
+  components: ./components

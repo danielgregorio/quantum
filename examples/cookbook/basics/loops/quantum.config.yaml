@@ -1,0 +1,3 @@
+# Recipe: q:loop over a list, a range of numbers and comma-separated text.
+paths:
+  components: ./components

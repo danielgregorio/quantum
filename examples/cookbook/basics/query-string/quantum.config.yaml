@@ -1,0 +1,3 @@
+# Recipe: read ?q= and ?sort= from the address, with defaults.
+paths:
+  components: ./components

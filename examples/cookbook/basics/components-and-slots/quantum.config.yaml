@@ -1,0 +1,3 @@
+# Recipe: a reusable component with props and a slot, kept out of the URLs.
+paths:
+  components: ./components

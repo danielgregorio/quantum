@@ -1,0 +1,3 @@
+# Recipe: one file answers /product/1, /product/2 and so on.
+paths:
+  components: ./components

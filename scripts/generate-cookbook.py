@@ -32,6 +32,7 @@ PAGES = REPO / 'docs' / 'cookbook'
 
 # Topic folder -> title, in the order the index lists them.
 TOPICS = {
+    'basics': 'Basics',
     'testing': 'Testing the app',
     'files-and-mail': 'Files & mail',
     'login-and-permissions': 'Login & permissions',

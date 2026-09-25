@@ -1,0 +1,3 @@
+# Recipe: q:if, q:elseif and q:else.
+paths:
+  components: ./components

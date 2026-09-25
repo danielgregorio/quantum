@@ -1,0 +1,5 @@
+tests/stock.test.q
+  PASS  no stock
+  PASS  a little stock
+  PASS  plenty, and an even number
+3 passed, 0 failed

@@ -4,6 +4,17 @@
 
 Short recipes for one task each. Every recipe is a small app in `examples/cookbook/` with its own `quantum test` suite: the code on its page is imported from the tested files, and what it shows as a result was produced by running it.
 
+## Basics
+
+- [A first page, and a second](./basics/first-page.md) — Each file in components/ is a page at its own URL; a URL with no file is 404.
+- [Variables and expressions](./basics/variables.md) — q:set stores a value, braces compute with it, and default fills in what is missing.
+- [Loops](./basics/loops.md) — q:loop over a list (with its position), a range of numbers and comma-separated text.
+- [Conditionals](./basics/conditionals.md) — q:if, q:elseif and q:else, with conditions that are expressions.
+- [Functions](./basics/functions.md) — A q:function with typed, checked params, called from q:set and from the HTML.
+- [A page per URL](./basics/page-per-url.md) — components/product/[id].q answers /product/1, /product/2...; the segment is a variable.
+- [Read the query string](./basics/query-string.md) — query.name reads ?name= from the address; default covers a missing one; urlencode builds a link.
+- [Reusable components](./basics/components-and-slots.md) — A component with props and a slot, imported from a _ folder that is never served.
+
 ## Testing the app
 
 - [A first test with quantum test](./testing/first-test.md) — Test a page and its action in Quantum itself — visit, submit, check the flash, the table and the field error.

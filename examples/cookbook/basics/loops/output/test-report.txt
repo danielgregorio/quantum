@@ -1,0 +1,5 @@
+tests/loops.test.q
+  PASS  a list, with each position
+  PASS  a range includes both ends
+  PASS  list items lose the spaces around them
+3 passed, 0 failed

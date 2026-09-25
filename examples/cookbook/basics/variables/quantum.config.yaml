@@ -1,0 +1,3 @@
+# Recipe: variables with q:set, and expressions in braces.
+paths:
+  components: ./components
