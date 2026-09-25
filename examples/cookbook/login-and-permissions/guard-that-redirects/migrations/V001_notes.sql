@@ -1,0 +1,5 @@
+CREATE TABLE notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    author TEXT NOT NULL,
+    body TEXT NOT NULL
+);

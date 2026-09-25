@@ -1,0 +1,9 @@
+# Recipe: an account is created with a hash of the password, never the password.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/users.db

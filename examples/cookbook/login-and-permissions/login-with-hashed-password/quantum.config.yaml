@@ -1,0 +1,9 @@
+# Recipe: sign in against a password hash, and a page only a signed-in user sees.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/users.db

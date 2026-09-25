@@ -1,0 +1,5 @@
+tests/signup.test.q
+  PASS  the account keeps a bcrypt hash, not the password
+  PASS  a short password is refused on its field
+  PASS  an address that already has an account is refused
+3 passed, 0 failed

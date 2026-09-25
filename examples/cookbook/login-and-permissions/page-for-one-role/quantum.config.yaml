@@ -1,0 +1,4 @@
+# Recipe: a page only the admins see; everyone else gets 403, and a visitor
+# who is not signed in is sent to sign in.
+paths:
+  components: ./components

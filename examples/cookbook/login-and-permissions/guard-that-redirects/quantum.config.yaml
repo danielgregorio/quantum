@@ -1,0 +1,10 @@
+# Recipe: a guard -- a top-level q:if with q:redirect -- protects the page and
+# its actions.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/notes.db

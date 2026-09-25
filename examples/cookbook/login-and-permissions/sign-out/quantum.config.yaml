@@ -1,0 +1,3 @@
+# Recipe: signing out clears the session; the protected page is closed again.
+paths:
+  components: ./components

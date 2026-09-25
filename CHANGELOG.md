@@ -26,6 +26,9 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- Cookbook, "Login & permissions": log in with a hashed password, sign up and
+  store a hash, a page for one role only, a guard that redirects (and stops the
+  page's actions), and sign out; five tested recipes.
 - Cookbook recipes: "When the mail server says no" (`onerror="continue"`),
   "Test data with test:given" (and `test:as`) and "Testing what an action
   refuses" (`error=`, `message=`, `flash=`, `table=`). Recipes in a topic

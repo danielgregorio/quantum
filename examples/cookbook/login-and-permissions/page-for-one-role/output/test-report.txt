@@ -1,0 +1,5 @@
+tests/reports.test.q
+  PASS  an admin sees the page
+  PASS  a member is refused with 403
+  PASS  a visitor who is not signed in is sent to sign in
+3 passed, 0 failed

@@ -14,3 +14,11 @@ Short recipes for one task each. Every recipe is a small app in `examples/cookbo
 
 - [Mail in development](./files-and-mail/mail-in-development.md) — Send mail from an action without a mail server while you develop — host: log writes each message to the log.
 - [When the mail server says no](./files-and-mail/mail-server-refuses.md) — Keep an order even when its confirmation e-mail cannot be sent — onerror=continue, and tell the visitor.
+
+## Login & permissions
+
+- [Log in with a hashed password](./login-and-permissions/login-with-hashed-password.md) — Check a password against its bcrypt hash with verifyPassword, open the session, and keep a page for signed-in users.
+- [Sign up and store a password hash](./login-and-permissions/sign-up.md) — Create an account with hashPassword, so the database never holds the password, with rules on each field.
+- [A page for one role only](./login-and-permissions/page-for-one-role.md) — require_role keeps a page to the admins: a member gets 403, and a visitor who is not signed in is sent to sign in.
+- [A guard that redirects](./login-and-permissions/guard-that-redirects.md) — A top-level q:if with q:redirect protects a page and every action on it: a post without a session writes nothing.
+- [Sign out](./login-and-permissions/sign-out.md) — A logout page that clears the session and redirects; the protected pages are closed again.

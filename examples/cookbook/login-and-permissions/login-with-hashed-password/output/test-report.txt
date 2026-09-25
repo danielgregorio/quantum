@@ -1,0 +1,5 @@
+tests/login.test.q
+  PASS  a visitor who is not signed in is sent to sign in
+  PASS  the right password signs in
+  PASS  a wrong password is refused, with the same message as an unknown address
+3 passed, 0 failed

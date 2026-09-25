@@ -1,0 +1,5 @@
+tests/guard.test.q
+  PASS  the guard sends a visitor to sign in
+  PASS  the guard also stops the action: nothing is written
+  PASS  a signed-in user writes a note
+3 passed, 0 failed
