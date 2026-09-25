@@ -47,6 +47,15 @@ def test_quantum_code_on_the_site_is_tested(block):
     assert problem is None, f'docs/{block.path}:{block.line}: {problem}'
 
 
+def test_a_page_run_by_a_test_names_a_test_that_reads_it():
+    # THE GUARD, 5: the entry is not a free pass; the test must exist and open the page
+    repo = docs_blocks.DOCS.parent
+    for page, test in docs_blocks.RUN_BY_TEST.items():
+        assert (docs_blocks.DOCS / page).is_file(), page
+        code = (repo / test).read_text(encoding='utf-8')
+        assert page.split('/')[-1] in code and "'docs'" in code, (page, test)
+
+
 def test_the_parse_only_list_only_shrinks():
     unused = docs_blocks.PARSE_ONLY_PAGES - docs_blocks.parse_only_pages_in_use()
     assert not unused, f'no parse-only block left on {sorted(unused)}: take them off PARSE_ONLY_PAGES'

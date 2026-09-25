@@ -23,6 +23,17 @@ alter the behaviour of an existing app is listed under **Breaking**.
   components that do not exist. The generated [UI tags](/reference/ui)
   reference and the "One App, Many Screens" guide replace them. The Cookbook
   is in the Docs menu in all four languages.
+- Tutorial, "Build the tasks app": from `pip install` to the app in
+  `projects/tarefas`, in English, in eight steps (validated forms, finish and
+  delete, a filter, a table that sorts and edits itself, an edit page with
+  history, a `quantum test` suite). Each step's code is built and run as shown
+  by `tests/docs/test_tutorial_tasks_app.py`, and the finished app is checked
+  against `projects/tarefas`, tag by tag.
+- Showcase: the seven proving apps with a screenshot of each running
+  (`scripts/showcase-screenshots.py`, the AI apps on a stand-in model server),
+  what it demonstrates, the SPEC rules it cites, its size, its tests and its
+  source. The numbers are measured by `scripts/generate-showcase.py`, and
+  `tests/docs/test_showcase.py` fails when the page and the apps disagree.
 - The Cookbook: short recipes for one task each. A recipe is a small app in
   `examples/cookbook/` with a `quantum test` suite; its page imports the tested
   files, and what it shows as a result is written by running it
