@@ -1,0 +1,5 @@
+[
+  {"when": "Which products are running out of stock?",
+   "replies": ["{\"action\": \"low_stock\", \"args\": {\"below\": 5}}",
+               "{\"action\": \"finish\", \"result\": \"Monitor (2) and Cable (3) are running out.\"}"]}
+]

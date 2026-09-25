@@ -36,7 +36,8 @@ def embed(text):
 
 
 class FakeOllama:
-    def __init__(self):
+    def __init__(self, embed=embed):
+        self.embed = embed               # text -> vector (the module's bag of words by default)
         self.reply = 'fake answer'
         self.models = ['phi3', 'nomic-embed-text']
         self.fail = {}                   # path -> (status, body)
@@ -85,7 +86,7 @@ class FakeOllama:
             return self._json({'model': model, 'response': text, 'done': True, 'eval_count': 3})
         if request.path == '/api/embed':
             texts = body['input'] if isinstance(body['input'], list) else [body['input']]
-            vectors = [embed(t) for t in texts][:self.embed_count]
+            vectors = [self.embed(t) for t in texts][:self.embed_count]
             return self._json({'model': model, 'embeddings': vectors})
         if request.path == '/api/tags':
             return self._json({'models': [{'name': m} for m in self.models]})

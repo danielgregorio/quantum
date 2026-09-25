@@ -59,3 +59,13 @@ Short recipes for one task each. Every recipe is a small app in `examples/cookbo
 - [Load a CSV file into a table](./data-and-sql/load-a-csv-into-a-table.md) — Insert every row of a file in one transaction — a row that fails leaves nothing behind.
 - [Read a JSON file](./data-and-sql/read-json.md) — A JSON array as a list of records, with a computed field on each.
 - [Totals from one query](./data-and-sql/query-a-result.md) — SQL over a query's result, in memory — the database is asked once.
+
+## AI
+
+- [Answers with their sources](./ai/answer-with-sources.md) — Answer questions from your own documents with q:knowledge and q:llm knowledge=, and list the sources.
+- [When the documents do not know](./ai/honest-i-dont-know.md) — minRelevance keeps unrelated chunks out; with nothing left, the model is not asked and the page says so.
+- [Stream an answer](./ai/stream-an-answer.md) — A streamed q:llm and ui:stream: the page renders at once, the answer appears as it is written.
+- [An agent over your database](./ai/agent-over-your-database.md) — q:agent with a read-only query tool: the model picks the tool and its arguments, never the SQL.
+- [When the model fails](./ai/when-the-model-fails.md) — onerror on q:llm: a model that is down or too slow does not take the page down with it.
+- [Sort messages with JSON answers](./ai/sort-tickets-with-json.md) — responseFormat json: the model's answer is an object whose fields you check and store.
+- [Answers from a table](./ai/knowledge-from-a-table.md) — A q:knowledge source that is a query: the rows of your FAQ table, retrieved like documents.

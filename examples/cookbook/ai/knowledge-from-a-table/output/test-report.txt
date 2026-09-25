@@ -1,0 +1,4 @@
+tests/faq.test.q
+  PASS  a question the FAQ covers
+  PASS  a question it does not
+2 passed, 0 failed

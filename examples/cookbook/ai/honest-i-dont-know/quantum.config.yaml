@@ -1,0 +1,6 @@
+# Recipe: when the documents do not cover the question, say so — do not guess.
+paths:
+  components: ./components
+
+llm:
+  model: phi3

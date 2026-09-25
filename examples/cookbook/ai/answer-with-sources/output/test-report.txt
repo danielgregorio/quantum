@@ -1,0 +1,5 @@
+tests/ask.test.q
+  PASS  the answer comes with the document it is from
+  PASS  another question, another document
+  PASS  no question, no model call
+3 passed, 0 failed

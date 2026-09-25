@@ -29,6 +29,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
 - Cookbook, "Basics": a first page, variables and expressions, loops,
   conditionals, functions, a page per URL, the query string and reusable
   components with a slot; eight tested recipes.
+- Cookbook, "AI": answers with their sources, when the documents do not know
+  (`minRelevance`), a streamed answer, an agent over your database, when the
+  model fails (`onerror`), sorting messages with JSON answers, and answers
+  from a table; seven recipes. In CI they run against a stand-in model server
+  (`scripts/generate-cookbook.py`); before a release, against a real one
+  (`tests/live_ai/test_cookbook_ai.py`). Their tests check structure, never the
+  model's words.
 - The essential pages in Brazilian Portuguese (/pt/): why Quantum,
   installation, quick start, the tutorial, stability, sponsor, the roadmap and
   the 1.0 post, machine-translated until a native speaker reviews them, with a

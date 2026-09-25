@@ -1,0 +1,3 @@
+tests/failure.test.q
+  PASS  the page still renders, and says why
+1 passed, 0 failed

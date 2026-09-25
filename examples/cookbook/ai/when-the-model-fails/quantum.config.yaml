@@ -1,0 +1,6 @@
+# Recipe: the page goes on, and says so, when the model cannot answer.
+paths:
+  components: ./components
+
+llm:
+  model: phi3

@@ -1,0 +1,3 @@
+tests/agent.test.q
+  PASS  the agent looks at the data through its tool
+1 passed, 0 failed

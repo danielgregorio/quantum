@@ -1,0 +1,6 @@
+# Recipe: the page renders at once and the answer appears as it is written.
+paths:
+  components: ./components
+
+llm:
+  model: phi3

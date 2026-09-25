@@ -1,0 +1,9 @@
+# Recipe: answers from your own documents, with the sources they came from.
+paths:
+  components: ./components
+
+# The model server is Ollama at http://localhost:11434 unless
+# QUANTUM_LLM_BASE_URL says otherwise; the model is this one unless
+# QUANTUM_LLM_DEFAULT_MODEL says otherwise.
+llm:
+  model: phi3

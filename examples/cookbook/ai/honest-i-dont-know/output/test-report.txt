@@ -1,0 +1,4 @@
+tests/honest.test.q
+  PASS  a question the documents answer
+  PASS  a question they do not answer
+2 passed, 0 failed

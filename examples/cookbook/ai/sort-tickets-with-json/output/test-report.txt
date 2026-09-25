@@ -1,0 +1,5 @@
+tests/tickets.test.q
+  PASS  a message is filed with the model's fields
+  PASS  a message too short never reaches the model
+  PASS  a category the model made up is filed as other
+3 passed, 0 failed

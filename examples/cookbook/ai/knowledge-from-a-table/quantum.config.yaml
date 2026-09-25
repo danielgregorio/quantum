@@ -1,0 +1,12 @@
+# Recipe: answer from the rows of a table — an FAQ kept in the database.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/faq.db
+
+llm:
+  model: phi3

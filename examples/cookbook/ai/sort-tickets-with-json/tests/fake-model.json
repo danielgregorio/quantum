@@ -1,0 +1,4 @@
+[
+  {"when": "charged twice", "replies": ["{\"category\": \"billing\", \"urgent\": true}"]},
+  {"when": "a poem about the sea", "replies": ["{\"category\": \"poetry\", \"urgent\": false}"]}
+]

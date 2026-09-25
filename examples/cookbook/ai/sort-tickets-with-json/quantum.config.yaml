@@ -1,0 +1,12 @@
+# Recipe: the model reads free text and answers with fields you store.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/helpdesk.db
+
+llm:
+  model: phi3

@@ -1,0 +1,3 @@
+tests/stream.test.q
+  PASS  the page renders with its sources before the answer
+1 passed, 0 failed

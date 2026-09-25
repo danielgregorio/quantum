@@ -1,0 +1,12 @@
+# Recipe: an agent that answers from your database through tools you write.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/shop.db
+
+llm:
+  model: phi3
