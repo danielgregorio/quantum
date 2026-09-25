@@ -109,16 +109,37 @@ list), exactly like a `q:loop`:
 - A `source` that is not a list, or a `key` the row does not have, is an error
   that says so (with the row's fields) — never an empty table.
 
-With a database, the source is a query:
+With a database, the source is a query. The examples from here on use this
+database (CI builds it from this block):
+
+```sql
+CREATE TABLE tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
+    done INTEGER NOT NULL DEFAULT 0
+);
+INSERT INTO tasks (title, priority) VALUES ('Write the guide', 'high'), ('Review it', 'low');
+
+CREATE TABLE posts (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL);
+WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 12)
+INSERT INTO posts (title) SELECT 'Post ' || i FROM n;
+```
 
 ```xml
-<q:query name="tasks" datasource="db">
-  SELECT id, title FROM tasks ORDER BY id
-</q:query>
-<ui:table source="{tasks}">
-  <ui:column key="title" label="Task" />
-</ui:table>
+<q:component name="Tasks">
+  <q:query name="tasks" datasource="db">
+    SELECT id, title FROM tasks ORDER BY id
+  </q:query>
+  <ui:window title="Tasks">
+    <ui:table source="{tasks}">
+      <ui:column key="title" label="Task" />
+    </ui:table>
+  </ui:window>
+</q:component>
 ```
+
+**Shows:** `Task` · `Write the guide` · `Review it`
 
 ## Pages of a long list
 
@@ -126,13 +147,20 @@ A query with `paginate="true"` returns one page; the page is the URL's
 `?page=`. `<ui:pager>` draws the links:
 
 ```xml
-<q:query name="posts" datasource="db" paginate="true" page_size="10">
-  SELECT title FROM posts ORDER BY id DESC
-</q:query>
-
-<ui:list source="{posts}" as="p"><ui:item><ui:text>{p.title}</ui:text></ui:item></ui:list>
-<ui:pager for="posts" />
+<q:component name="Blog">
+  <q:query name="posts" datasource="db" paginate="true" page_size="10">
+    SELECT title FROM posts ORDER BY id DESC
+  </q:query>
+  <ui:window title="Blog">
+    <ui:list source="{posts}" as="p"><ui:item><ui:text>{p.title}</ui:text></ui:item></ui:list>
+    <ui:pager for="posts" />
+  </ui:window>
+</q:component>
 ```
+
+**Shows:** `Post 12` · `Post 3`
+
+The 12 posts make two pages: the first shows `Post 12` down to `Post 3`.
 
 - Previous, the numbers around the current page (first and last always, `…`
   where it skips), next. At the ends previous/next are not links; with one page
@@ -148,17 +176,22 @@ A query with `paginate="true"` returns one page; the page is the URL's
 ## Search as you type
 
 ```xml
-<q:set name="term" value="{query.q}" default="" />
-<q:query name="found" datasource="db">
-  SELECT title FROM posts WHERE title LIKE :p
-  <q:param name="p" value="%{term}%" type="string" />
-</q:query>
-
-<ui:input bind="q" search="results" placeholder="Search" />
-<ui:vbox id="results">
-  <ui:list source="{found}" as="a"><ui:item><ui:text>{a.title}</ui:text></ui:item></ui:list>
-</ui:vbox>
+<q:component name="Search">
+  <q:set name="term" value="{query.q}" default="" />
+  <q:query name="found" datasource="db">
+    SELECT title FROM posts WHERE title LIKE :p
+    <q:param name="p" value="%{term}%" type="string" />
+  </q:query>
+  <ui:window title="Search">
+    <ui:input bind="q" search="results" placeholder="Search" />
+    <ui:vbox id="results">
+      <ui:list source="{found}" as="a"><ui:item><ui:text>{a.title}</ui:text></ui:item></ui:list>
+    </ui:vbox>
+  </ui:window>
+</q:component>
 ```
+
+**Shows:** `Post 1` · `Post 12`
 
 - Each pause in typing (`delay`, 300 ms by default) asks for the same page with
   `?q=…` and swaps only `#results` — the page's own queries do the search.
@@ -176,15 +209,23 @@ A query with `paginate="true"` returns one page; the page is the URL's
 ## A table that sorts and edits itself
 
 ```xml
-<q:query name="tasks" datasource="db" sortable="true">
-  SELECT id, title, priority FROM tasks
-</q:query>
-
-<ui:table source="{tasks}" sort="true" edit="tasks" datasource="db">
-  <ui:column key="title" label="Title" />
-  <ui:column key="priority" label="Priority" />
-</ui:table>
+<q:component name="Sheet">
+  <q:query name="tasks" datasource="db" sortable="true">
+    SELECT id, title, priority FROM tasks
+  </q:query>
+  <ui:window title="Tasks">
+    <ui:table source="{tasks}" sort="true" edit="tasks" datasource="db">
+      <ui:column key="title" label="Title" />
+      <ui:column key="priority" label="Priority" />
+    </ui:table>
+  </ui:window>
+</q:component>
 ```
+
+**Shows:** `Title` · `Priority` · `low` · `medium` · `high`
+
+Each cell is a small form: the titles are in its fields, and each priority is a
+select with the `CHECK` list.
 
 - `sort="true"`: each header is a link that orders the query **in SQL**
   (`sortable="true"` on the query) by `?sort=` and `?dir=` — so it works with a
@@ -283,31 +324,30 @@ so you write them once:
 ## Forms from a table
 
 When an action writes one table, it can take its rules from the table itself —
-the schema you already wrote in the migration:
-
-```sql
-CREATE TABLE tasks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
-    done INTEGER NOT NULL DEFAULT 0
-);
-```
+the schema you already wrote in the migration (the `tasks` table above):
 
 ```xml
-<q:action name="save" method="POST" table="tasks" datasource="db" columns="title,priority">
-  <q:param name="id" type="integer" required="true" />
-  <q:query name="updated" datasource="db">
-    UPDATE tasks SET title = :title, priority = :priority WHERE id = :id
-    <q:param name="title" value="{title}" type="string" />
-    <q:param name="priority" value="{priority}" type="string" />
-    <q:param name="id" value="{id}" type="integer" />
-  </q:query>
-  <q:redirect url="/" flash="Saved: {title}" />
-</q:action>
+<q:component name="EditTask">
+  <q:action name="save" method="POST" table="tasks" datasource="db" columns="title,priority">
+    <q:param name="id" type="integer" required="true" />
+    <q:query name="updated" datasource="db">
+      UPDATE tasks SET title = :title, priority = :priority WHERE id = :id
+      <q:param name="title" value="{title}" type="string" />
+      <q:param name="priority" value="{priority}" type="string" />
+      <q:param name="id" value="{id}" type="integer" />
+    </q:query>
+    <q:redirect url="/" flash="Saved: {title}" />
+  </q:action>
 
-<ui:form on-submit="save" values="{task}" submit="Save" />
+  <q:query name="task" datasource="db">SELECT id, title, priority FROM tasks WHERE id = 1</q:query>
+
+  <ui:window title="Edit task">
+    <ui:form on-submit="save" values="{task}" submit="Save" />
+  </ui:window>
+</q:component>
 ```
+
+**Shows:** `Title` · `Priority` · `low` · `high` · `Save`
 
 - `title` is `NOT NULL` → required; `priority` has `CHECK … IN` → a select
   with those options, and the server refuses anything else.

@@ -58,10 +58,24 @@ def tree_texts(nodes) -> str:
     return ' '.join(parts)
 
 
+def guide_database(folder) -> str:
+    """The database ui.md's examples use: its ```sql block after "use this database", built in `folder`."""
+    import sqlite3
+    text = (GUIDE / 'ui.md').read_text(encoding='utf-8')
+    sql = re.search(r'use this\s+database.*?' + F + r'sql\n(?P<sql>.*?)' + F, text, re.S)['sql']
+    path = folder / 'guide.db'
+    connection = sqlite3.connect(path)
+    connection.executescript(sql)
+    connection.commit()
+    connection.close()
+    return f'datasources:\n  db:\n    driver: sqlite\n    database: {path.as_posix()}\n'
+
+
 @pytest.mark.parametrize('source,texts', ALL)
-def test_the_screen_shows_what_the_guide_says(serve_pages, source, texts):
+def test_the_screen_shows_what_the_guide_says(serve_pages, tmp_path, source, texts):
     # UI-1, UI-3, UI-5, UI-6, UI-7
-    c = serve_pages(screen=source)
+    datasources = guide_database(tmp_path) if 'datasource="db"' in source else ''
+    c = serve_pages(datasources_yaml=datasources, screen=source)
     response = c.get('/screen')
     assert response.status_code == 200, visible(response.get_data(as_text=True))[:500]
     web = visible(response.get_data(as_text=True))

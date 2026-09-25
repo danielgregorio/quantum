@@ -11,33 +11,37 @@ source_hash: e3d3a1ae34f9
 
 用 5 分钟构建你的第一个 Quantum 应用。
 
+本页的每一步都在 CI 中运行（`tests/docs/test_guide_quick_start.py`）。
+
 ## 第 1 步：创建一个组件
 
 创建一个名为 `counter.q` 的文件：
 
 ```xml
 <q:component name="Counter" xmlns:q="https://quantum.lang/ns">
-  <!-- Initialize state -->
-  <q:set name="count" value="0" type="number" />
-
-  <!-- Function to increment -->
-  <q:function name="increment">
-    <q:set name="count" value="{count + 1}" />
+  <q:function name="double">
+    <q:param name="n" type="number" />
+    <q:return value="{n * 2}" />
   </q:function>
 
-  <!-- Function to decrement -->
-  <q:function name="decrement">
-    <q:set name="count" value="{count - 1}" />
-  </q:function>
+  <q:set name="count" type="number" value="0" />
+  <q:set name="count" operation="increment" />
+  <q:set name="count" operation="increment" />
 
-  <!-- Return current count -->
-  <q:return value="Count: {count}" />
+  <q:return value="Count: {count}, doubled: {double(count)}" />
 </q:component>
 ```
 
-运行它：
+**Output:** `Count: 2, doubled: 4`
+
+运行它——`quantum run` 会打印组件返回的值：
+
 ```bash
 quantum run counter.q
+```
+
+```text
+[SUCCESS] Result: Count: 2, doubled: 4
 ```
 
 ## 第 2 步：添加一个循环
@@ -46,24 +50,19 @@ quantum run counter.q
 
 ```xml
 <q:component name="TodoList" xmlns:q="https://quantum.lang/ns">
-  <!-- Define tasks as an array -->
-  <q:set name="tasks" value='["Buy groceries", "Walk the dog", "Write code"]' />
+  <q:set name="tasks" type="array" value='["Buy groceries", "Walk the dog", "Write code"]' />
 
-  <!-- Loop through tasks: each q:return adds one item to the result -->
+  <!-- each q:return adds one item to the result -->
   <q:loop type="array" var="task" items="{tasks}">
     <q:return value="- {task}" />
   </q:loop>
 </q:component>
 ```
 
-输出：
-```
-["- Buy groceries", "- Walk the dog", "- Write code"]
-```
+**Output:** `["- Buy groceries", "- Walk the dog", "- Write code"]`
 
-循环中的 `q:return` 不会结束循环：每个值都会被收集起来，循环结束时组件返回这个列表——
-就像 `q:if` 中的 `q:return` 会结束组件一样。一个没有执行任何 `q:return` 的循环，
-会让执行继续到它后面的内容。
+循环中的 `q:return` 不会结束循环：每个值都会被收集起来，循环结束时组件返回这个列表（LOOP-1、LOOP-2）。
+一个没有执行任何 `q:return` 的循环，会让执行继续到它后面的内容。
 
 ## 第 3 步：添加条件
 
@@ -87,6 +86,8 @@ quantum run counter.q
   </q:else>
 </q:component>
 ```
+
+**Output:** `Nice weather for a walk.`
 
 ## 第 4 步：提供一个网页
 

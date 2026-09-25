@@ -2,33 +2,37 @@
 
 Build your first Quantum application in 5 minutes.
 
+Every step on this page runs in CI (`tests/docs/test_guide_quick_start.py`).
+
 ## Step 1: Create a Component
 
 Create a file called `counter.q`:
 
 ```xml
 <q:component name="Counter" xmlns:q="https://quantum.lang/ns">
-  <!-- Initialize state -->
-  <q:set name="count" value="0" type="number" />
-
-  <!-- Function to increment -->
-  <q:function name="increment">
-    <q:set name="count" value="{count + 1}" />
+  <q:function name="double">
+    <q:param name="n" type="number" />
+    <q:return value="{n * 2}" />
   </q:function>
 
-  <!-- Function to decrement -->
-  <q:function name="decrement">
-    <q:set name="count" value="{count - 1}" />
-  </q:function>
+  <q:set name="count" type="number" value="0" />
+  <q:set name="count" operation="increment" />
+  <q:set name="count" operation="increment" />
 
-  <!-- Return current count -->
-  <q:return value="Count: {count}" />
+  <q:return value="Count: {count}, doubled: {double(count)}" />
 </q:component>
 ```
 
-Run it:
+**Output:** `Count: 2, doubled: 4`
+
+Run it — `quantum run` prints what the component returns:
+
 ```bash
 quantum run counter.q
+```
+
+```text
+[SUCCESS] Result: Count: 2, doubled: 4
 ```
 
 ## Step 2: Add a Loop
@@ -37,25 +41,20 @@ Create `todo-list.q`:
 
 ```xml
 <q:component name="TodoList" xmlns:q="https://quantum.lang/ns">
-  <!-- Define tasks as an array -->
-  <q:set name="tasks" value='["Buy groceries", "Walk the dog", "Write code"]' />
+  <q:set name="tasks" type="array" value='["Buy groceries", "Walk the dog", "Write code"]' />
 
-  <!-- Loop through tasks: each q:return adds one item to the result -->
+  <!-- each q:return adds one item to the result -->
   <q:loop type="array" var="task" items="{tasks}">
     <q:return value="- {task}" />
   </q:loop>
 </q:component>
 ```
 
-Output:
-```
-["- Buy groceries", "- Walk the dog", "- Write code"]
-```
+**Output:** `["- Buy groceries", "- Walk the dog", "- Write code"]`
 
 A `q:return` inside a loop does not stop the loop: every value is collected,
-and when the loop ends the component returns the list — the same way a
-`q:return` inside `q:if` ends the component. A loop that runs no `q:return`
-lets execution continue to what comes after it.
+and when the loop ends the component returns the list (LOOP-1, LOOP-2). A loop
+that runs no `q:return` lets execution continue to what comes after it.
 
 ## Step 3: Add Conditionals
 
@@ -79,6 +78,8 @@ Create `weather.q`:
   </q:else>
 </q:component>
 ```
+
+**Output:** `Nice weather for a walk.`
 
 ## Step 4: Serve a Web Page
 
@@ -112,8 +113,9 @@ Start the server from the folder that contains `components/`:
 quantum start
 ```
 
-Open `http://localhost:8080`. `components/about.q` would be served at
-`/about`. Stop the server with `quantum stop`.
+Open `http://localhost:8080`: the page shows the three items and
+`10 + 5 = 15`. `components/about.q` would be served at `/about`. Stop the
+server with `quantum stop`.
 
 > No `<!DOCTYPE html>` in the file: a `.q` is XML, and a DOCTYPE is only valid
 > before the root element. The server adds it to the response.
@@ -155,7 +157,8 @@ Create `components/users.q`:
 </q:component>
 ```
 
-Restart the server and open `http://localhost:8080/users`.
+Restart the server and open `http://localhost:8080/users`: **2 users**, Ana
+and Bruno.
 
 ## Step 6: Handle a Form
 
@@ -193,6 +196,9 @@ the SQL never sees raw input. Replace `components/users.q` with:
   </body></html>
 </q:component>
 ```
+
+Submitting `Carla` and `carla@example.com` adds her to the table and shows
+**Added Carla**; a one-letter name is refused, and nothing is inserted.
 
 ## What's Next?
 
