@@ -82,14 +82,15 @@ export default defineConfig({
   title: 'Quantum Framework',
   description: 'Declarative web applications in XML, with AI and RAG built into the language',
 
+  // Cloudflare Web Analytics: no cookies, no personal data. The DNS is not
+  // proxied (GitHub Pages serves the site), so the beacon is in the page; its
+  // token is public by design.
   head: [
-    ['script', { async: '', src: 'https://www.googletagmanager.com/gtag/js?id=G-7GDMZJJWW0' }],
-    ['script', {}, `
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-7GDMZJJWW0');
-    `]
+    ['script', {
+      defer: '',
+      src: 'https://static.cloudflareinsights.com/beacon.min.js',
+      'data-cf-beacon': '{"token": "1b8965ae430c43f49739c6c9b5b49856"}',
+    }],
   ],
 
   appearance: 'dark',

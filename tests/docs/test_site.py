@@ -40,6 +40,13 @@ def test_the_top_nav_routes_exist():
         assert route in links
 
 
+def test_the_analytics_is_cloudflare_without_cookies():
+    # Cloudflare Web Analytics replaced Google Tag Manager, which set cookies.
+    config = (VITEPRESS / 'config.js').read_text(encoding='utf-8')
+    assert 'static.cloudflareinsights.com/beacon.min.js' in config
+    assert 'googletagmanager' not in config and 'gtag(' not in config
+
+
 def test_the_base_path_is_not_written_in_the_pages():
     # The site moved from /quantum/ to /: a page that spells the base breaks.
     offenders = [p.relative_to(REPO).as_posix() for p in DOCS.rglob('*.md')
