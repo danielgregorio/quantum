@@ -121,6 +121,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- `q:loop type="range"` takes expressions in `from`, `to` and `step`, like any
+  other `{...}` attribute (LOOP-5): `to="{count}"` was read as the text
+  "{count}" — an error in a statement, zero rows in markup — and `step="{n}"`
+  became 1. A bound that is not a whole number is now an error that names it,
+  in markup too, where it used to draw zero rows.
 - `quantum run --target desktop` is no longer offered: the command line says
   the target was removed and points to `quantum desktop` (UI-8). It used to
   accept the choice and fail later, in the build.

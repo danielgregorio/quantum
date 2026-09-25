@@ -322,21 +322,10 @@ class HTMLRenderer:
             return loop_list(node.items, self._apply_databinding, self.context.get_all_variables())
 
         elif node.loop_type == 'range':
-            # Generate range
-            try:
-                start = int(node.from_value) if node.from_value else 1
-                end = int(node.to_value) if node.to_value else 10
-                step = node.step_value if node.step_value else 1
-                return list(range(start, end + 1, step))
-            except Exception as exc:
-                # from=/to= that did not resolve (a databinding placeholder,
-                # a typo) silently produced an empty range.
-                logger.warning(
-                    "q:loop range from=%r to=%r step=%r is not usable (%s); "
-                    "rendering zero rows",
-                    node.from_value, node.to_value, node.step_value, exc
-                )
-                return []
+            # LOOP-5: bounds that do not resolve to whole numbers are an error,
+            # as in the statement loop — they used to draw zero rows.
+            from quantum.runtime.executors.control_flow.loop_executor import range_numbers
+            return list(range_numbers(node, self._apply_databinding, self.context.get_all_variables()))
 
         elif node.loop_type == 'query':
             # Query loop - resolve items from query result variable

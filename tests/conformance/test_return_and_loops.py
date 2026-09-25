@@ -1,5 +1,7 @@
 """Conformance: SPEC.md sections 1 (Return) and 2 (Loops)."""
 
+import re
+
 import pytest
 
 
@@ -108,6 +110,35 @@ def collect(loop):
 def test_the_loop_types(run_body, loop, item, expected):
     # LOOP-5
     assert run_body(collect(loop).replace('ITEM', item)) == expected
+
+
+@pytest.mark.parametrize('bounds,expected', [
+    ('from="1" to="{n}"', [1, 2, 3]),
+    ('from="{n - 1}" to="{n * 2}" step="{n - 1}"', [2, 4, 6]),
+    ('from="1" to="n"', [1, 2, 3]),
+])
+def test_range_bounds_are_expressions(run_body, bounds, expected):
+    # LOOP-5 (to="{n}" was read as the text "{n}": an error in a statement,
+    # zero rows in markup; step="{n}" became 1)
+    assert run_body('<q:set name="n" value="3" type="integer"/>'
+                    + collect(f'<q:loop type="range" var="i" {bounds}>BODY</q:loop>').replace('ITEM', '{i}')) == expected
+
+
+@pytest.mark.parametrize('bounds', ['from="1" to="{label}"', 'from="1" to="{2.5}"', 'from="1" to="3" step="0"'])
+def test_a_range_bound_that_is_not_a_whole_number_is_an_error(run_body, bounds):
+    # LOOP-5
+    with pytest.raises(Exception, match='LOOP-5'):
+        run_body('<q:set name="label" value="many"/>'
+                 f'<q:loop type="range" var="i" {bounds}><q:return value="{{i}}"/></q:loop>')
+
+
+def test_a_range_in_markup_takes_its_bounds_from_expressions(serve_pages):
+    # LOOP-5: to="{n}" drew zero rows in markup, with only a warning in the log
+    client = serve_pages(p='<q:component name="p" xmlns:q="https://quantum.lang/ns">'
+                           '<q:set name="n" value="3" type="integer"/><ol>'
+                           '<q:loop type="range" var="i" from="1" to="{n}"><li>{i}</li></q:loop></ol></q:component>')
+    body = client.get('/p').get_data(as_text=True)
+    assert [int(x) for x in re.findall(r'<li>\s*(\d+)\s*</li>', body)] == [1, 2, 3]
 
 
 def test_another_loop_type_is_an_error(run_body):

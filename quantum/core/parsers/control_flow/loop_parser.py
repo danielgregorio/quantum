@@ -80,7 +80,10 @@ class LoopParser(BaseTagParser):
         if loop_type == 'range':
             loop_node.from_value = self.get_attr(element, 'from')
             loop_node.to_value = self.get_attr(element, 'to')
-            loop_node.step_value = self.get_int_attr(element, 'step', 1)
+            # A number, a name or an expression — resolved when the loop runs (LOOP-5).
+            # get_int_attr turned step="{n}" into 1 without a word.
+            step = self.get_attr(element, 'step')
+            loop_node.step_value = int(step) if step and step.strip().lstrip('-').isdigit() else (step or 1)
 
         elif loop_type == 'array':
             loop_node.items = self.get_attr(element, 'items')

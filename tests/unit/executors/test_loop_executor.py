@@ -376,37 +376,22 @@ class TestUnsupportedLoopType:
 class TestLoopHelperMethods:
     """Test helper methods"""
 
-    def test_evaluate_simple_expr_integer(self):
-        """Test _evaluate_simple_expr with integer"""
-        runtime = MockRuntime()
-        executor = LoopExecutor(runtime)
+    @pytest.mark.parametrize('written,context,expected', [
+        ('42', {}, 42), (7, {}, 7), ('count', {'count': 10}, 10),
+        ('{count}', {'count': 10}, 10), ('{half}', {'half': 2.0}, 2),
+    ])
+    def test_a_range_bound_is_a_whole_number(self, written, context, expected):
+        from quantum.runtime.executors.control_flow.loop_executor import _range_bound
+        executor = LoopExecutor(MockRuntime())
+        assert _range_bound('to', written, lambda e: executor.apply_databinding(e, context), context) == expected
 
-        result = executor._evaluate_simple_expr("42", {})
-        assert result == 42
-
-    def test_evaluate_simple_expr_float(self):
-        """Test _evaluate_simple_expr with float"""
-        runtime = MockRuntime()
-        executor = LoopExecutor(runtime)
-
-        result = executor._evaluate_simple_expr("3.14", {})
-        assert result == 3.14
-
-    def test_evaluate_simple_expr_variable(self):
-        """Test _evaluate_simple_expr with variable"""
-        runtime = MockRuntime()
-        executor = LoopExecutor(runtime)
-
-        result = executor._evaluate_simple_expr("count", {"count": 10})
-        assert result == 10
-
-    def test_evaluate_simple_expr_empty(self):
-        """Test _evaluate_simple_expr with empty string"""
-        runtime = MockRuntime()
-        executor = LoopExecutor(runtime)
-
-        result = executor._evaluate_simple_expr("", {})
-        assert result == 0
+    @pytest.mark.parametrize('written', ['3.14', 'nothing', '{flag}'])
+    def test_a_range_bound_that_is_not_a_whole_number_is_an_error(self, written):
+        from quantum.runtime.executors.control_flow.loop_executor import _range_bound
+        context = {'flag': True}
+        executor = LoopExecutor(MockRuntime())
+        with pytest.raises(ValueError, match='needs a whole number'):
+            _range_bound('to', written, lambda e: executor.apply_databinding(e, context), context)
 
     def test_parse_array_items_json(self):
         """Test _parse_array_items with JSON array"""

@@ -100,11 +100,9 @@ class LoopExecutor(BaseExecutor):
         context = exec_context.get_all_variables()
 
         try:
-            start = int(self._evaluate_simple_expr(node.from_value, context))
-            end = int(self._evaluate_simple_expr(node.to_value, context))
-            step = node.step_value
+            numbers = range_numbers(node, lambda expr: self.apply_databinding(expr, context), context)
 
-            for i in range(start, end + 1, step):
+            for i in numbers:
                 # Update loop variable
                 loop_context = context.copy()
                 loop_context[node.var_name] = i
@@ -255,19 +253,6 @@ class LoopExecutor(BaseExecutor):
             # Use registry for all other statements
             return self.execute_child(statement, exec_context)
 
-    def _evaluate_simple_expr(self, expr: str, context: Dict[str, Any]) -> Any:
-        """Evaluate simple numeric expression"""
-        if not expr:
-            return 0
-
-        try:
-            return int(expr)
-        except ValueError:
-            try:
-                return float(expr)
-            except ValueError:
-                return context.get(expr, expr)
-
     def _parse_array_items(self, items_expr: str, context: Dict[str, Any]) -> list:
         """The list an array loop goes over (LOOP-6)."""
         return loop_list(items_expr, lambda expr: self.apply_databinding(expr, context), context)
@@ -314,3 +299,43 @@ def loop_list(items_expr: str, resolve, context: Dict[str, Any]) -> list:
     shown = repr(got) if not isinstance(got, (dict, list)) else type(got).__name__
     raise ValueError(f'<q:loop items="{items_expr}"> needs a list — an array or a q:query — '
                      f'and got {shown} ({type(got).__name__}) (LOOP-6)')
+
+
+def _range_bound(attribute: str, written: Any, resolve, context: Dict[str, Any]) -> int:
+    """One of from=, to=, step= of a range loop, as a whole number (LOOP-5).
+
+    A number, a variable by name, or an expression: from="{n + 1}" is an
+    expression like any other {...} attribute. It used to be read as the
+    literal "{n + 1}" — an error in a statement, zero rows in markup.
+    """
+    if isinstance(written, int) and not isinstance(written, bool):
+        return written
+    text = str(written).strip() if written is not None else ''
+    got: Any = text
+    if '{' in text and '}' in text:
+        got = resolve(text)
+    elif text in context:                           # to="count": a variable by name
+        got = context[text]
+    if isinstance(got, float) and got.is_integer():
+        got = int(got)
+    if isinstance(got, str):
+        try:
+            got = int(got.strip())
+        except ValueError:
+            pass
+    if isinstance(got, int) and not isinstance(got, bool):
+        return got
+    raise ValueError(f'<q:loop type="range" {attribute}="{text}"> needs a whole number '
+                     f'and got {got!r} ({type(got).__name__}) (LOOP-5)')
+
+
+def range_numbers(node: LoopNode, resolve, context: Dict[str, Any]) -> range:
+    """LOOP-5: from= to to=, both included, by step= (1 by default)."""
+    if node.from_value in (None, '') or node.to_value in (None, ''):
+        raise ValueError('<q:loop type="range"> needs from= and to= (LOOP-5)')
+    start = _range_bound('from', node.from_value, resolve, context)
+    end = _range_bound('to', node.to_value, resolve, context)
+    step = _range_bound('step', 1 if node.step_value in (None, '') else node.step_value, resolve, context)
+    if step < 1:
+        raise ValueError(f'<q:loop type="range" step="{node.step_value}"> must be 1 or more (LOOP-5)')
+    return range(start, end + 1, step)

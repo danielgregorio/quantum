@@ -1,10 +1,10 @@
 """
 A q:loop that could not resolve its items rendered zero rows in silence.
 
-That is indistinguishable from an empty collection, so an unresolved items=,
-a typo'd query name, or a from=/to= that never resolved all looked like "no
-results" on the page. The audit reported it as "q:loop swallows range errors";
-the same silence covered all three loop kinds.
+That is indistinguishable from an empty collection, so an unresolved items=
+or a typo'd query name looked like "no results" on the page. The audit reported it as "q:loop swallows range errors";
+the same silence covered all three loop kinds. A range whose bounds do not
+resolve is now an error (LOOP-5), like an array loop over a non-list (LOOP-6).
 """
 
 import logging
@@ -57,14 +57,14 @@ class TestQueryLoop:
 
 
 class TestRangeLoop:
-    def test_an_unresolved_bound_warns(self, renderer, caplog):
+    def test_an_unresolved_bound_is_an_error(self, renderer):
+        # LOOP-5: it used to warn and draw zero rows, like an empty range
         node = LoopNode("range", "i")
         node.from_value = "1"
         node.to_value = "{total}"      # never resolved
         node.step_value = 1
-        items, log = _items(renderer, node, caplog)
-        assert items == []
-        assert "zero rows" in log
+        with pytest.raises(ValueError, match="needs a whole number"):
+            renderer._get_loop_items(node)
 
     def test_a_real_range_is_silent(self, renderer, caplog):
         node = LoopNode("range", "i")

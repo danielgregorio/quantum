@@ -95,7 +95,10 @@ one by one, in order. A value that happens to be a list goes in as one item.
 body zero times, wherever the loop is; a `name` that was never set is an error.
 
 **LOOP-5** — `type="range"` counts from `from` to `to`, both included, by `step`
-(1 by default); with `from` above `to` the body runs zero times. `type="array"`
+(1 by default); with `from` above `to` the body runs zero times. Each of the
+three is a number, a variable by name, or an expression (`to="{n * 2}"`) whose
+value is a whole number; anything else — text, `2.5`, a `step` below 1 — is an
+error that names the attribute, in a statement and in markup alike. `type="array"`
 goes over `items` (an expression or a JSON list), and `index="k"` names the
 position, from 0. `type="list"` goes over the text of `items` split by
 `delimiter` (a comma by default), each item without the spaces around it. A loop
