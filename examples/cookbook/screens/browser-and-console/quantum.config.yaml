@@ -1,0 +1,3 @@
+# Recipe: one page, drawn in the browser (quantum start) and in a terminal (quantum console).
+paths:
+  components: ./components

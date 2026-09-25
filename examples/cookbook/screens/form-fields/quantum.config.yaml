@@ -1,0 +1,3 @@
+# Recipe: every kind of field, laid out with ui:form and ui:formitem.
+paths:
+  components: ./components

@@ -1,0 +1,7 @@
+tests/stock.test.q
+  PASS  the table shows the rows and the column labels
+  PASS  a cell edit saves one column of one row
+  PASS  a value the schema refuses is not saved
+  PASS  a column with edit=false cannot be changed
+  PASS  a header sorts the rows
+5 passed, 0 failed

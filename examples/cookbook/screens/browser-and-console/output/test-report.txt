@@ -1,0 +1,5 @@
+tests/guests.test.q
+  PASS  an empty list to start
+  PASS  signing adds the name
+  PASS  a name that is too short is refused on its field
+3 passed, 0 failed

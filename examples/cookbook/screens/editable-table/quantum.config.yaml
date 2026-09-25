@@ -1,0 +1,9 @@
+# Recipe: a table whose cells are edited in place, with the schema as the rule.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/stock.db

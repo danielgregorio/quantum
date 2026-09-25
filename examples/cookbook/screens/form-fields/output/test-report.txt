@@ -1,0 +1,6 @@
+tests/booking.test.q
+  PASS  the form shows its labels, the option texts and the button
+  PASS  the fields reach the action typed
+  PASS  left out, the defaults apply
+  PASS  a refused field keeps the others as typed
+4 passed, 0 failed

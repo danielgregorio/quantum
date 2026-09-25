@@ -26,6 +26,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- Cookbook, "Screens": a layout that fits the screen, a table edited in
+  place, tabs, cards, every kind of field, and the same page in a terminal;
+  six tested recipes, two of them also checked in the console
+  (`tests/docs/test_cookbook_console.py`).
 - Cookbook, "Basics": a first page, variables and expressions, loops,
   conditionals, functions, a page per URL, the query string and reusable
   components with a slot; eight tested recipes.

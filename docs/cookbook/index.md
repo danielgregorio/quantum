@@ -15,6 +15,15 @@ Short recipes for one task each. Every recipe is a small app in `examples/cookbo
 - [Read the query string](./basics/query-string.md) — query.name reads ?name= from the address; default covers a missing one; urlencode builds a link.
 - [Reusable components](./basics/components-and-slots.md) — A component with props and a slot, imported from a _ folder that is never served.
 
+## Screens
+
+- [A layout that fits the screen](./screens/responsive-layout.md) — ui:hbox side by side on a wide screen, stacked on a narrow one, with grow, width and hide-below.
+- [A table you edit in place](./screens/editable-table.md) — ui:table edit= turns each cell into a small form checked against the table's schema; no action to write.
+- [Tabs](./screens/tabs.md) — ui:tabpanel with one ui:tab per section of a page.
+- [Cards](./screens/cards.md) — ui:card with a header, a body and a footer, in a ui:grid; or a card with just a title.
+- [Every kind of field](./screens/form-fields.md) — ui:form with ui:formitem labels: text, number, a select with options, a switch, radios and a multi-line field.
+- [The same page in a terminal](./screens/browser-and-console.md) — One ui:* page, served to the browser by quantum start and drawn in a terminal by quantum console.
+
 ## Testing the app
 
 - [A first test with quantum test](./testing/first-test.md) — Test a page and its action in Quantum itself — visit, submit, check the flash, the table and the field error.

@@ -1,0 +1,4 @@
+tests/tabs.test.q
+  PASS  every tab has its title
+  PASS  every tab's content is on the page
+2 passed, 0 failed

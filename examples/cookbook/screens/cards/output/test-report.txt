@@ -1,0 +1,4 @@
+tests/cards.test.q
+  PASS  one card per plan, with its three parts
+  PASS  a card with a title only
+2 passed, 0 failed
