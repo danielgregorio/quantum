@@ -37,6 +37,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
   Discussions, which are off; SECURITY called 1.0 "experimental" and suggested
   an environment variable nothing reads; SUPPORT_TIERS cited two files that are
   not in the repository.
+- The Cookbook in Brazilian Portuguese (/pt/cookbook/), machine-translated:
+  the code and the results are the same files the English imports. The
+  generator writes each language's Cookbook index (`LANGS` in
+  `scripts/generate-cookbook.py`), linking the English page where a recipe is
+  not translated yet.
 - Cookbook, "Screens": a layout that fits the screen, a table edited in
   place, tabs, cards, every kind of field, and the same page in a terminal;
   six tested recipes, two of them also checked in the console

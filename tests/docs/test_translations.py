@@ -55,6 +55,11 @@ def test_every_translated_page_is_in_its_language_nav_and_every_entry_has_its_pa
         r = route(lang, path)
         if r == '/' or r.startswith('/blog/'):
             continue                     # the language's home, and posts listed by the blog
+        if r.startswith('/cookbook/') and r != '/cookbook/' and '/cookbook/' in listed.get(lang, []):
+            # a recipe is reached from the language's Cookbook index, which the generator writes
+            index = (DOCS / lang / 'cookbook' / 'index.md').read_text(encoding='utf-8')
+            assert f'(./{r[len("/cookbook/"):]}.md)' in index, f'docs/{lang}{r}: not linked from docs/{lang}/cookbook/index.md'
+            continue
         assert r in listed.get(lang, []), f'docs/{lang}{r}: not in TRANSLATED.{lang} (locales.js)'
     for lang, routes in listed.items():
         for r in routes:

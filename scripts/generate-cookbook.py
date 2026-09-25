@@ -182,6 +182,86 @@ def index_page():
     return '\n'.join(lines)
 
 
+# The translated indexes, docs/<lang>/cookbook/index.md: the same list, with each
+# recipe's translated title and description when docs/<lang>/cookbook/<topic>/<page>.md
+# exists, and the English page (marked) when it does not yet. A translated page's
+# front matter: order (as the English), title, description, source, source_hash.
+LANGS = {
+    'pt': {
+        'title': 'Receitas',
+        'intro': 'Receitas curtas, uma tarefa cada. Cada receita é uma pequena aplicação em '
+                 '`examples/cookbook/` com a sua própria suíte `quantum test`: o código da '
+                 'página é importado dos arquivos testados, e o que ela mostra como resultado '
+                 'saiu de rodá-la.',
+        'notice': '::: info Tradução automática\nEsta página foi traduzida automaticamente do '
+                  'inglês e ainda não foi revisada\npor um falante nativo; correções são '
+                  'bem-vindas no GitHub. Se algo não bater,\nvale o [original em inglês](/cookbook/).\n:::',
+        'english': ' (em inglês)',
+        'topics': {'basics': 'Básico', 'screens': 'Telas', 'testing': 'Testando a aplicação',
+                   'files-and-mail': 'Arquivos e e-mail', 'login-and-permissions': 'Login e permissões',
+                   'forms-and-actions': 'Formulários e ações', 'data-and-sql': 'Dados e SQL', 'ai': 'IA'},
+    },
+    'es': {
+        'title': 'Recetario',
+        'intro': 'Recetas cortas, una tarea cada una. Cada receta es una pequeña aplicación en '
+                 '`examples/cookbook/` con su propio conjunto `quantum test`: el código de la '
+                 'página se importa de los archivos probados, y lo que muestra como resultado '
+                 'salió de ejecutarla.',
+        'notice': '::: info Traducción automática\nEsta página se tradujo automáticamente del '
+                  'inglés y todavía no la revisó un\nhablante nativo; las correcciones son '
+                  'bienvenidas en GitHub. Si algo no\ncoincide, vale el [original en inglés](/cookbook/).\n:::',
+        'english': ' (en inglés)',
+        'topics': {'basics': 'Lo básico', 'screens': 'Pantallas', 'testing': 'Probar la aplicación',
+                   'files-and-mail': 'Archivos y correo', 'login-and-permissions': 'Inicio de sesión y permisos',
+                   'forms-and-actions': 'Formularios y acciones', 'data-and-sql': 'Datos y SQL', 'ai': 'IA'},
+    },
+    'zh': {
+        'title': '实用示例',
+        'intro': '简短的示例，每个只做一件事。每个示例都是 `examples/cookbook/` 中的一个小应用，'
+                 '带有自己的 `quantum test` 测试：页面上的代码从经过测试的文件导入，'
+                 '显示的结果来自实际运行。',
+        'notice': '::: info 机器翻译\n本页由英文原文机器翻译而来，尚未经过母语审校，欢迎在 GitHub 上提出修改。'
+                  '内容如有出入，以[英文原文](/cookbook/)为准。\n:::',
+        'english': '（英文）',
+        'topics': {'basics': '基础', 'screens': '界面', 'testing': '测试应用',
+                   'files-and-mail': '文件和邮件', 'login-and-permissions': '登录和权限',
+                   'forms-and-actions': '表单和操作', 'data-and-sql': '数据和 SQL', 'ai': 'AI'},
+    },
+}
+
+
+def _source_hash(text):
+    """As scripts/translation-status.py (and the site) hash a translation's source."""
+    import hashlib
+    return hashlib.sha256(text.replace('\r\n', '\n').encode('utf-8')).hexdigest()[:12]
+
+
+def translated_index(lang, english):
+    """docs/<lang>/cookbook/index.md, stamped with the hash of the English index."""
+    words = LANGS[lang]
+    pages_dir = REPO / 'docs' / lang / 'cookbook'
+    lines = ['---', 'source: cookbook/index.md', f'source_hash: {_source_hash(english)}', '---',
+             GENERATED.replace('docs/cookbook/*/*.md', f'docs/{lang}/cookbook/*/*.md').rstrip('\n'), '',
+             f'# {words["title"]}\n', words['notice'] + '\n', words['intro'] + '\n']
+    for topic in TOPICS:
+        pages = [(page, front_matter(page.read_text(encoding='utf-8'))) for page in (PAGES / topic).glob('*.md')]
+        pages.sort(key=lambda pm: (int(pm[1].get('order') or 99), pm[0].stem))
+        if not pages:
+            continue
+        lines.append(f'## {words["topics"].get(topic, TOPICS[topic])}\n')
+        for page, meta in pages:
+            translated = pages_dir / topic / page.name
+            if translated.is_file():
+                own = front_matter(translated.read_text(encoding='utf-8'))
+                if not own.get('title') or not own.get('description'):
+                    raise SystemExit(f'{translated.relative_to(REPO)}: front matter needs title: and description:')
+                lines.append(f'- [{own["title"]}](./{topic}/{page.stem}.md) — {own["description"]}')
+            else:
+                lines.append(f'- [{meta["title"]}](/cookbook/{topic}/{page.stem}){words["english"]} — {meta["description"]}')
+        lines.append('')
+    return '\n'.join(lines)
+
+
 def expected():
     """{path relative to REPO: text}, and the recipes whose tests fail."""
     out, failing = {}, []
@@ -192,6 +272,9 @@ def expected():
         for name, text in outputs.items():
             out[(recipe / 'output' / name).relative_to(REPO).as_posix()] = text
     out['docs/cookbook/index.md'] = index_page()
+    for lang in LANGS:
+        if any((REPO / 'docs' / lang / 'cookbook').glob('*/*.md')):
+            out[f'docs/{lang}/cookbook/index.md'] = translated_index(lang, out['docs/cookbook/index.md'])
     return out, failing
 
 
