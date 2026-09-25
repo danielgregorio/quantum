@@ -26,6 +26,17 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- The repository's front door meets the site's bar. README's Quantum examples
+  are files of Cookbook recipes, byte for byte, and its quick start is run as
+  shown (`tests/docs/test_readme.py`, which also checks the site and file links
+  of README, CONTRIBUTING, SECURITY, SUPPORT_TIERS and the Code of Conduct);
+  the deprecated-content check reads those five files too. README's AI
+  examples used a model name as if it were a default and an attribute
+  (`minRelevance`) its text no longer explained; it now links the Cookbook,
+  Tutorial, Reference, Showcase, Stability and Roadmap. CONTRIBUTING pointed to
+  Discussions, which are off; SECURITY called 1.0 "experimental" and suggested
+  an environment variable nothing reads; SUPPORT_TIERS cited two files that are
+  not in the repository.
 - Cookbook, "Screens": a layout that fits the screen, a table edited in
   place, tabs, cards, every kind of field, and the same page in a terminal;
   six tested recipes, two of them also checked in the console

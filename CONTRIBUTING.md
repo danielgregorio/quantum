@@ -1,8 +1,8 @@
 # Contributing to Quantum
 
 Thanks for your interest in improving Quantum! This guide gets you from a fresh clone to
-a merged pull request. If anything here is unclear, open a
-[Discussion](https://github.com/danielgregorio/quantum/discussions) — improving this doc
+a merged pull request. If anything here is unclear, open an
+[issue](https://github.com/danielgregorio/quantum/issues/new/choose) — improving this doc
 is itself a great first contribution.
 
 By participating you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).
@@ -40,9 +40,11 @@ pytest -q                      # the suite should pass
 Quantum turns an `.q` file into a running app through a small, well-defined pipeline:
 
 ```
-.q file ──▶ Parser ──▶ AST ──▶ Executor/Codegen ──▶ HTML | Desktop | Terminal | Godot
-          (XML→nodes)         (runs or generates code)
+.q file ──▶ Parser ──▶ AST ──▶ Executors ──▶ the page: browser, console, desktop window
+          (XML→nodes)         (run the tags)
 ```
+
+(The Laboratory's game codegen turns the same AST into a Godot or HTML5 project.)
 
 The parser and runtime are **modular**: every tag has a `Parser` (XML → AST node) and an
 `Executor` (AST node → behaviour), each registered in a central registry. To add a feature
@@ -131,7 +133,9 @@ Then write a test (see below) and you're done. Larger features should follow the
 
 ## 4. Testing
 
-Tests live in `tests/`, mirroring `quantum/`, and use pytest.
+Tests live in `tests/` and use pytest: `conformance/` holds one test per SPEC
+rule (each cites the rule's ID), `unit/` the modules, `apps/` the proving apps in
+`projects/`, and `docs/` the site's examples.
 
 ```bash
 pytest -q                             # full suite
@@ -171,8 +175,8 @@ it, and asserts the output. Fixtures live in `tests/conftest.py`.
 4. Use clear, conventional commit messages (`feat:`, `fix:`, `docs:`, `chore:`, `test:`).
 5. Open a PR using the template; link any related issue and describe the *why*.
 
-Small, focused PRs get reviewed faster than large ones. When in doubt, open an issue or
-Discussion first to align on the approach.
+Small, focused PRs get reviewed faster than large ones. When in doubt, open an issue
+first to align on the approach.
 
 ---
 

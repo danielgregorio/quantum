@@ -23,15 +23,16 @@ after triage.
 
 ## Scope & known limitations
 
-Because Quantum is experimental, treat it accordingly:
+Quantum 1.0 is young, and maintained by one person. Treat it accordingly:
 
-- **Do not expose a Quantum app to untrusted input in production** until you have reviewed
-  the data path yourself.
+- **Review the data path yourself** before you expose a Quantum app to untrusted
+  input in production.
 - Expression evaluation, output rendering (XSS), `q:query` (SQL), and `q:action` (CSRF) are
   active hardening areas. If you find a sandbox escape or injection, that is exactly the
   kind of report we want.
 - Never commit secrets (API keys, tokens) to the repo. Configure them via environment
-  variables (e.g. `QUANTUM_API_KEY`).
+  variables: `QUANTUM_SECRET_KEY` for the session key, and `${NAME}` inside
+  `quantum.config.yaml` for anything else (a datasource password, a model's API key).
 
 ### `q:python` is a full-trust escape hatch
 

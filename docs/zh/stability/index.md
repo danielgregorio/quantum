@@ -1,6 +1,6 @@
 ---
 source: stability/index.md
-source_hash: b2f88ba7b500
+source_hash: 1de73600d71a
 ---
 
 # 稳定性
@@ -97,7 +97,7 @@ Quantum 逐个标签地说明它承诺什么。从 1.0 起，**核心层（Core�
 
 ## 如何避免它过时
 
-`ROADMAP.md` 之所以过时，是因为它靠手工维护、却没人检查。防线如下：
+旧的 `ROADMAP.md` 之所以过时，是因为它靠手工维护、却没人检查（它已被删除；网站的[路线图](/roadmap/)只列出计划，并且写明了这一点）。防线如下：
 
 1. **`FEATURE_STATUS.md` 是生成的**，通过真正运行示例得到（`scripts/generate-feature-status.py`）。
 2. **`manifest.yaml` 对"能不能用"没有发言权**——29 个靠手工同步的文件，正是它们走样的原因。

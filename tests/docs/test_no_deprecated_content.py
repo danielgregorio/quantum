@@ -17,7 +17,10 @@ from pathlib import Path
 
 
 
-DOCS = Path(__file__).resolve().parents[2] / 'docs'
+REPO = Path(__file__).resolve().parents[2]
+DOCS = REPO / 'docs'
+# The repository's front door: what GitHub and PyPI show before the site.
+FRONT_DOOR = ('README.md', 'CONTRIBUTING.md', 'SECURITY.md', 'SUPPORT_TIERS.md', 'CODE_OF_CONDUCT.md')
 
 # Pages about the past, by design.
 HISTORY = ('changelog/', 'blog/')
@@ -75,7 +78,8 @@ DEPRECATED = [
     ('pre-1', r'\bpre-1\.0\b|\bin beta\b|\bbeta release\b|\(beta\)|\bis beta\b',
      'Quantum 1.0 is released'),
     ('old-version', r'\b(?:v|version |Quantum )0\.\d+(?:\.\d+)?\b', 'the current version, or none'),
-    ('test-count', r'\b\d{1,2}[,.]?\d{3} (?:tests|passing)\b', 'no count (it changes with every commit)'),
+    ('test-count', r'\b\d{1,2}[,.]?\d{3} (?:tests|passing)\b|\b\d+(?:\.\d+)?k (?:tests|passing)\b',
+     'no count (it changes with every commit)'),
 ]
 
 # Saying it is gone, refused or old is not presenting it as current.
@@ -111,7 +115,10 @@ UNPUBLISHED = unpublished()
 
 
 def pages():
-    """The published pages: what a reader of the site sees."""
+    """The published pages, and the repository's front door: what a reader sees.
+    A front-door file's name starts with / (/README.md)."""
+    for name in FRONT_DOOR:
+        yield f'/{name}', (REPO / name).read_text(encoding='utf-8')
     for path in sorted(DOCS.rglob('*.md')):
         rel = path.relative_to(DOCS).as_posix()
         if ('node_modules' in path.parts or '.vitepress' in path.parts
@@ -167,9 +174,13 @@ def hits():
 HITS = list(hits())
 
 
+def where(rel):
+    return rel[1:] if rel.startswith('/') else f'docs/{rel}'
+
+
 def test_no_page_presents_a_removed_thing_as_current():
     assert not HITS, '\n'.join(
-        f'docs/{rel}:{line}: {found!r} is gone or renamed; write {instead}'
+        f'{where(rel)}:{line}: {found!r} is gone or renamed; write {instead}'
         for rel, line, pid, found, instead in HITS)
 
 
@@ -181,6 +192,6 @@ def test_the_unpublished_pages_exist():
 def test_the_allowlist_only_shrinks():
     for (rel, pid), why in ALLOWED.items():
         assert why, (rel, pid)
-        text = (DOCS / rel).read_text(encoding='utf-8')
+        text = (REPO / rel[1:] if rel.startswith('/') else DOCS / rel).read_text(encoding='utf-8')
         pattern = next(p for i, p, _ in DEPRECATED if i == pid)
         assert re.search(pattern, text), f'{rel}: no {pid} left — take it off ALLOWED'

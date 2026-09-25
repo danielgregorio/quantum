@@ -1,6 +1,6 @@
 ---
 source: stability/index.md
-source_hash: b2f88ba7b500
+source_hash: 1de73600d71a
 ---
 
 # Estabilidade
@@ -114,8 +114,9 @@ quebrou.
 
 ## Como isto não apodrece
 
-O `ROADMAP.md` apodreceu porque era mantido à mão e ninguém o conferia. As
-defesas:
+O antigo `ROADMAP.md` apodreceu porque era mantido à mão e ninguém o conferia
+(ele não existe mais; o [Roadmap](/pt/roadmap/) do site lista só planos, e diz
+isso). As defesas:
 
 1. **O `FEATURE_STATUS.md` é gerado**, rodando os exemplos de verdade
    (`scripts/generate-feature-status.py`).

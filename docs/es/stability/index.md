@@ -1,6 +1,6 @@
 ---
 source: stability/index.md
-source_hash: b2f88ba7b500
+source_hash: 1de73600d71a
 ---
 
 # Estabilidad
@@ -115,8 +115,9 @@ inmediato qué lado se rompió.
 
 ## Cómo evitamos que esto se pudra
 
-`ROADMAP.md` se pudrió porque se mantenía a mano y nadie lo verificaba. Las
-defensas:
+El antiguo `ROADMAP.md` se pudrió porque se mantenía a mano y nadie lo
+verificaba (ya no existe; el [Roadmap](/es/roadmap/) del sitio solo lista planes,
+y lo dice). Las defensas:
 
 1. **`FEATURE_STATUS.md` se genera** ejecutando de verdad los ejemplos
    (`scripts/generate-feature-status.py`).

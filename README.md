@@ -21,73 +21,132 @@ the app.
 
 ## The part that isn't like the others
 
-Retrieval-augmented generation, as a language construct:
+Retrieval-augmented generation, as a language construct — this page answers a
+question from the Markdown files in `knowledge/` and lists the ones it used:
 
 ```xml
-<q:component name="DocsBot">
-  <q:knowledge name="docs" embedModel="nomic-embed-text">
-    <q:source type="directory" path="./docs/" pattern="*.md" />
+<q:component name="Ask">
+  <!-- The documents in knowledge/, split into chunks and embedded when the
+       page runs. persist="false" keeps the index in memory; without it, it is
+       stored in ./.quantum/knowledge and reused until a document changes. -->
+  <q:knowledge name="docs" persist="false" chunkSize="300" chunkOverlap="30">
+    <q:source type="directory" path="knowledge" pattern="*.md" />
   </q:knowledge>
 
-  <q:llm name="answer" model="phi3" knowledge="docs" minRelevance="0.79">
-    <q:message role="user">{form.question}</q:message>
-  </q:llm>
+  <q:set name="question" value="{query.q}" default="" />
 
-  <p>{answer}</p>
-  <q:loop type="array" items="{answer_result.sources}" var="s">
-    <p>[{s.n}] {s.name}</p>
-  </q:loop>
+  <q:if condition="question">
+    <!-- The question retrieves the closest chunks; they reach the model
+         numbered, with the instruction to answer only from them and cite
+         them like [1]. -->
+    <q:llm name="answer" knowledge="docs" top="2">
+      <q:message role="user">{question}</q:message>
+    </q:llm>
+  </q:if>
+
+  <ui:window title="Ask the store">
+    <ui:form>
+      <ui:input bind="q" value="{question}" placeholder="Your question" />
+      <ui:button variant="primary">Ask</ui:button>
+    </ui:form>
+    <q:if condition="question">
+      <ui:text>{answer}</ui:text>
+      <q:if condition="answer_result.grounded">
+        <ui:text>Sources:</ui:text>
+        <q:loop items="{answer_result.sources}" var="s">
+          <ui:text>[{s.n}] {s.name}</ui:text>
+        </q:loop>
+        <q:else>
+          <ui:alert variant="warning">This answer cites none of the documents.</ui:alert>
+        </q:else>
+      </q:if>
+    </q:if>
+  </ui:window>
 </q:component>
 ```
 
-That indexes a directory, embeds it, stores the vectors, retrieves the relevant chunks
-and asks the model to answer from them, citing each one — in the markup. When no
-chunk is relevant enough, the model is not asked at all. There is no Python file
-behind it.
+That splits the documents into chunks, embeds them, retrieves the closest ones
+and asks the model to answer only from them, citing each one — in the markup.
+`answer_result.grounded` says whether the answer cites any of them. There is no
+Python file behind it. (Recipe:
+[Answers with their sources](https://quantumframework.net/cookbook/ai/answer-with-sources).)
 
-An agent with its own tools, same idea:
+An agent whose tools you write in Quantum, same idea:
 
 ```xml
-<q:agent name="calc" model="phi3" maxIterations="4">
-  <q:instruction>Use the add tool, then answer.</q:instruction>
+<q:component name="Assistant">
+  <!-- The model never writes SQL: it picks a tool and its arguments. The
+       tool is a read-only query you wrote; its q:param says the argument's
+       type, and the model's value is converted to it before the query runs. -->
+  <q:agent name="stock" maxIterations="4" timeout="60000" onerror="continue">
+    <q:instruction>You help a shop owner. Use the tools to look at the data,
+      then answer in one sentence.</q:instruction>
 
-  <q:tool name="add" description="Add two numbers">
-    <q:param name="a" type="number" required="true" />
-    <q:param name="b" type="number" required="true" />
-    <q:function name="doAdd">
-      <q:set name="sum" value="{a + b}" type="number" />
-      <q:return value="{sum}" />
-    </q:function>
-  </q:tool>
+    <q:tool name="low_stock" description="Products with fewer units in stock than `below`">
+      <q:param name="below" type="integer" default="5" />
+      <q:function name="lowStock">
+        <q:query name="rows" datasource="db">
+          SELECT name, stock FROM products WHERE stock &lt; :below ORDER BY stock
+          <q:param name="below" value="{below}" type="integer" />
+        </q:query>
+        <q:return value="{rows}" />
+      </q:function>
+    </q:tool>
 
-  <q:execute task="What is 17 plus 25?" />
-</q:agent>
+    <q:execute task="Which products are running out of stock?" />
+  </q:agent>
+
+  <ui:window title="Stock assistant">
+    <q:if condition="stock_result.success">
+      <ui:text>{stock}</ui:text>
+      <q:else>
+        <ui:alert variant="warning">The assistant did not finish: {stock_result.error.message}</ui:alert>
+      </q:else>
+    </q:if>
+    <!-- Every tool call the agent made, written out. -->
+    <q:loop items="{stock_result.actions}" var="a">
+      <ui:text>Called {a.call}</ui:text>
+    </q:loop>
+  </ui:window>
+</q:component>
 ```
 
-The tool body is Quantum, not Python. The reasoning loop, the tool call and the type
-coercion of the model's arguments are the runtime's job.
+The model never writes SQL: it picks a tool and its arguments, and the
+argument is converted to the `q:param`'s type before the query runs. The
+reasoning loop, the tool calls and the failure contract (`onerror`,
+`stock_result`) are the runtime's job. (Recipe:
+[An agent over your database](https://quantumframework.net/cookbook/ai/agent-over-your-database).)
 
 ---
 
 ## The rest of the language
 
 ```xml
-<q:component name="Orders">
-  <q:query name="orders" datasource="db">
-    SELECT id, customer, total FROM orders WHERE total > :min
-    <q:param name="min" value="100" type="decimal" />
+<q:component name="Products">
+  <!-- ?name=mouse from the URL; empty when it is not there. -->
+  <q:set name="term" value="{query.name}" default="" />
+
+  <!-- :pattern is bound to the q:param: the value is sent to the database
+       apart from the SQL, so it can never change what the SQL does. -->
+  <q:query name="products" datasource="db">
+    SELECT name, price FROM products WHERE name LIKE :pattern ORDER BY price
+    <q:param name="pattern" value="%{term}%" type="string" />
   </q:query>
 
-  <table>
-    <q:loop query="orders">
-      <tr><td>{orders.customer}</td><td>{orders.total}</td></tr>
-    </q:loop>
-  </table>
+  <ui:window title="Products">
+    <ui:text>{products_result.recordCount} products</ui:text>
+    <ui:table source="{products}">
+      <ui:column key="name" label="Name" />
+      <ui:column key="price" label="Price" />
+    </ui:table>
+  </ui:window>
 </q:component>
 ```
 
-Save it as `components/orders.q`, run `quantum start`, and it is served at
-`http://localhost:8080/orders`.
+Saved as `components/index.q`, with the database declared in
+`quantum.config.yaml`, `quantum start` serves it at `http://localhost:8080/`,
+and `/?name=mouse` filters it. (Recipe:
+[A query with parameters](https://quantumframework.net/cookbook/data-and-sql/query-with-parameters).)
 
 `q:query` refuses to run SQL with an undeclared `:param` — parameterised queries are
 enforced by the parser, not by discipline.
@@ -95,6 +154,10 @@ enforced by the parser, not by discipline.
 Also core: `q:set` with `session.` / `application.` / `request.` scopes, `q:if`,
 `q:function`, `q:action` for form handling, `q:data` for CSV/JSON/XML import,
 `q:import` / `q:slot` for composition.
+
+The examples above are files of [Cookbook](https://quantumframework.net/cookbook/)
+recipes, byte for byte, and the recipes run in CI; the quick start below is run
+as shown (`tests/docs/test_readme.py` checks both).
 
 ---
 
@@ -126,13 +189,14 @@ quantum run hello.q
 For a web app, put `.q` files in `components/` and run `quantum start`
 (`components/index.q` is served at `/`). `quantum stop` stops it.
 
-For the AI examples you also need an [Ollama](https://ollama.com) server and the RAG
-extra:
+For the AI examples you also need a model server — [Ollama](https://ollama.com)
+at `http://localhost:11434` unless `QUANTUM_LLM_BASE_URL` says otherwise — and
+the RAG extra. There is no built-in model name: say which one in
+`quantum.config.yaml` (`llm: model: phi3`) or `QUANTUM_LLM_DEFAULT_MODEL`.
 
 ```bash
 pip install "quantum-framework[rag]"
 ollama pull phi3 && ollama pull nomic-embed-text
-export QUANTUM_LLM_BASE_URL=http://localhost:11434
 ```
 
 Declare datasources in `quantum.config.yaml` (next to `components/`) and `q:query` works
@@ -156,8 +220,9 @@ datasources:
 | `check` | Check that pages parse, SQL compiles and query fields exist |
 | `test` | Run the app's `*.test.q` tests |
 | `console` · `desktop` | The application's pages in the terminal, or in a desktop window |
+| `migrate` | Apply, roll back and plan database migrations |
 | `admin` | Start the Quantum Admin (`pip install "quantum-framework[admin]"`) |
-| `pkg` · `jobs` · `mq` · `migrate` | Packages, jobs, message queues, migrations |
+| `pkg` · `jobs` · `mq` | Component packages (a page cannot import one yet), jobs, message queues — no stability promise |
 
 ### From source
 
@@ -178,11 +243,12 @@ See [CONTRIBUTING.md](https://github.com/danielgregorio/quantum/blob/main/CONTRI
 
 Full docs at **[quantumframework.net](https://quantumframework.net/)**:
 
-- [Getting Started](https://quantumframework.net/guide/getting-started) · [Installation](https://quantumframework.net/guide/installation) · [Quick Start](https://quantumframework.net/guide/quick-start)
-- [Components](https://quantumframework.net/guide/components) · [State](https://quantumframework.net/guide/state-management) · [Loops](https://quantumframework.net/guide/loops) · [Conditionals](https://quantumframework.net/guide/conditionals)
-- [Queries](https://quantumframework.net/guide/query) · [Functions](https://quantumframework.net/guide/functions)
+- **Start:** [Installation](https://quantumframework.net/guide/installation) · [Quick Start](https://quantumframework.net/guide/quick-start) · [Tutorial: build the tasks app](https://quantumframework.net/tutorial/tasks-app)
+- **Learn:** [Guide](https://quantumframework.net/guide/getting-started) · [Cookbook](https://quantumframework.net/cookbook/) — short tested recipes · [Showcase](https://quantumframework.net/showcase/) — the complete apps
+- **Look up:** [Reference](https://quantumframework.net/reference/) — every tag, function, command and SPEC rule, generated from the code
+- **Plan:** [Stability](https://quantumframework.net/stability/) — what 1.0 promises · [Roadmap](https://quantumframework.net/roadmap/) · [Changelog](https://quantumframework.net/changelog/)
 
-Releases and their notes are on the [GitHub Releases](https://github.com/danielgregorio/quantum/releases) page.
+The site is also in [Português](https://quantumframework.net/pt/), [Español](https://quantumframework.net/es/) and [中文](https://quantumframework.net/zh/).
 
 ---
 
@@ -218,7 +284,7 @@ quantum/
 │   ├── runtime/     # Execution engine, web server, renderer
 │   └── cli/         # Command-line entry point
 ├── examples/        # runnable .q examples
-├── tests/           # pytest suite (~3.8k tests)
+├── tests/           # pytest suite; conformance/ cites SPEC.md
 ├── scripts/         # dev tools
 └── docs/            # VitePress documentation
 ```

@@ -93,7 +93,9 @@ game shows up — and a red CI says at once which side broke.
 
 ## How this does not rot
 
-`ROADMAP.md` rotted because it was kept by hand and nobody checked it. The defences:
+The old `ROADMAP.md` rotted because it was kept by hand and nobody checked it (it is
+gone; the site's [Roadmap](https://quantumframework.net/roadmap/) lists plans only, and
+says so). The defences:
 
 1. **`FEATURE_STATUS.md` is generated**, by really running the examples
    (`scripts/generate-feature-status.py`).
