@@ -83,7 +83,12 @@ PAST = re.compile(
     r'used to|replaced|instead of|deprecated|renamed|never (did|ran|existed|worked)|old\b|until \d|'
     r'up\s+to\s+(quantum\s+)?0\.|'
     # the same markers on the Spanish pages (docs/es/)
-    r'se eliminó|eliminad[oa]s?|ya no|es un error de análisis|renombrad[oa]s?|reemplazad[oa]s?|antes eran)',
+    r'se eliminó|eliminad[oa]s?|ya no|es un error de análisis|renombrad[oa]s?|reemplazad[oa]s?|antes eran|'
+    # ... and on the Portuguese ones (docs/pt/)
+    r'foi |foram |era |eram |removid[oa]s?|não (é |são )?mais|substituíd[oa]s?|renomead[oa]s?|'
+    r'é um erro de análise|obsolet[oa]s?)'
+    # ... and on the Chinese ones (docs/zh/): no \b between CJK characters
+    r'|已移除|已删除|已被|曾经|曾是|以前|原为|不再|改名|取代|解析错误',
     re.I)
 
 # Mentions that stay, each with why: (page, pattern id).
