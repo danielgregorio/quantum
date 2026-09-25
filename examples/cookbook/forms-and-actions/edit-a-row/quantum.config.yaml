@@ -1,0 +1,9 @@
+# Recipe: open a form with a row's values and save it back.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/books.db

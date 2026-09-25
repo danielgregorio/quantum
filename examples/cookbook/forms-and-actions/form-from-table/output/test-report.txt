@@ -1,0 +1,6 @@
+tests/books.test.q
+  PASS  the form draws a field per column, labelled from its name
+  PASS  a book is added
+  PASS  the rules come from the schema
+  PASS  a blank optional column is stored as NULL
+4 passed, 0 failed

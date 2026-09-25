@@ -28,3 +28,6 @@ Short recipes for one task each. Every recipe is a small app in `examples/cookbo
 - [Show each error on its field](./forms-and-actions/field-errors.md) — Write the rules once on the action's q:param; the form reads them and shows every refusal next to its field.
 - [A refused form keeps what was typed](./forms-and-actions/keep-typed-values.md) — After a refusal, the form comes back filled with the values sent, once, so nobody types a long message twice.
 - [Redirect and say what happened](./forms-and-actions/redirect-and-flash.md) — End an action with q:redirect and a flash; q:flash for a warning; the message shows once on the next page.
+- [Several forms on one page](./forms-and-actions/several-actions.md) — Each form and button posts the name of its action; a name the page does not have answers 400.
+- [A form from the table](./forms-and-actions/form-from-table.md) — q:action table= takes its params from the schema; a ui:form with no fields draws one field per column.
+- [Edit a row](./forms-and-actions/edit-a-row.md) — A page per row with [id].q, a form opened with the row's values, and the table's rules on save.

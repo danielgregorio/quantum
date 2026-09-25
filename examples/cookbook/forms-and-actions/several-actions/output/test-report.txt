@@ -1,0 +1,5 @@
+tests/cart.test.q
+  PASS  each form runs its own action
+  PASS  the button with no fields empties the cart
+  PASS  a post that names no action of the page is refused
+3 passed, 0 failed

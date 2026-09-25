@@ -1,0 +1,9 @@
+# Recipe: several forms on one page, each posting to its own action.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/cart.db

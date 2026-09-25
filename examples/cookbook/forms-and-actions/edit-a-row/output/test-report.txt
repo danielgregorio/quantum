@@ -1,0 +1,6 @@
+tests/edit.test.q
+  PASS  the form opens on the row's page
+  PASS  saving changes only that row
+  PASS  the table's rules still apply
+  PASS  a book that does not exist says so
+4 passed, 0 failed
