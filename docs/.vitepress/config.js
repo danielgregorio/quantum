@@ -5,6 +5,7 @@ import { defineConfig } from 'vitepress'
 import { LANGUAGES, guideSidebar, locales, searchLocales } from './locales.js'
 import { tokenize } from './search-tokenize.js'
 import { markStaleTranslation } from './translations.js'
+import { translatedPaths } from './translated-paths.js'
 
 // Served at the root of https://quantumframework.net (GitHub Pages with a
 // custom domain). Whoever serves it under a sub-path passes DOCS_BASE, and on
@@ -109,7 +110,19 @@ export default defineConfig({
     return [...alternates(pageData.relativePath), ...openGraph(pageData, siteData.title)]
   },
 
+  // The language switcher (theme/langs.js replaces the default theme's
+  // composables/langs.js): the same page in the other language when it exists.
+  vite: {
+    resolve: {
+      alias: [{
+        find: /^\.{1,2}\/composables\/langs(\.js)?$/,
+        replacement: fileURLToPath(new URL('./theme/langs.js', import.meta.url)),
+      }],
+    },
+  },
+
   themeConfig: {
+    translatedPaths: translatedPaths(DOCS),
     logo: '/logo.svg',
 
     // Until the pages are translated (wave 2), the language switcher goes to the

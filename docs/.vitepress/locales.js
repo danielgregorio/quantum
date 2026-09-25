@@ -3,8 +3,9 @@
 // "edit this page", search box...). Page translations live in docs/<lang>/.
 //
 // Until a page is translated, a language's nav points to the English page, and
-// the language switcher goes to the language's home (i18nRouting: false in
-// config.js) — a switcher to /pt/guide/x would be a 404 today.
+// the language switcher goes to the same page in the other language when it is
+// translated, and to the language's home otherwise (theme/langs.js, with
+// i18nRouting: false in config.js, so it never links a page that does not exist).
 
 export const LANGUAGES = {
   root: { label: 'English', lang: 'en', prefix: '/' },
@@ -88,7 +89,7 @@ const GITHUB = 'https://github.com/danielgregorio/quantum'
 
 // The pages each language has translated (docs/<lang>/<path>). The nav links
 // to the translation when there is one, and to the English page otherwise.
-const TRANSLATED = {
+export const TRANSLATED = {
   pt: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/', '/showcase/',
     '/tools/cli', '/tools/hot-reload', '/tools/dev-panel', '/tools/error-pages', '/tools/check', '/tools/vscode-extension', '/tools/lsp-server', '/targets/desktop',
     '/guide/getting-started', '/guide/components', '/guide/how-a-page-runs', '/guide/state-management', '/guide/loops',

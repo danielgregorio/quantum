@@ -10,6 +10,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- The language switcher goes to the same page in the other language when it
+  is translated, and to that language's home otherwise — in every direction.
+  The pages it knows come from `TRANSLATED` in `docs/.vitepress/locales.js`
+  (and the translated pages under a listed section such as `/cookbook/`);
+  `tests/docs/test_language_switch.py` checks that each is a page and that
+  every translated page is reachable.
 - A translated page records the English page it came from and the hash of its
   text (`source:` / `source_hash:`). When the English changes, the page says
   "this translation may be out of date" with a link to the English, and CI
