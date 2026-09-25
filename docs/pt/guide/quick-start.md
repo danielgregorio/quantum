@@ -16,7 +16,7 @@ Construa sua primeira aplicação Quantum em 5 minutos.
 Cada passo desta página roda no CI (`tests/docs/test_guide_quick_start.py`).
 O código está em inglês, como no original.
 
-## Passo 1: crie um componente
+## Passo 1: crie um componente {#step-1-create-a-component}
 
 Crie um arquivo chamado `counter.q`:
 
@@ -47,7 +47,7 @@ quantum run counter.q
 [SUCCESS] Result: Count: 2, doubled: 4
 ```
 
-## Passo 2: acrescente um loop
+## Passo 2: acrescente um loop {#step-2-add-a-loop}
 
 Crie `todo-list.q`:
 
@@ -69,7 +69,7 @@ guardado, e quando o loop termina o componente retorna a lista (LOOP-1,
 LOOP-2). Um loop que não executa nenhum `q:return` deixa a execução seguir
 para o que vem depois dele.
 
-## Passo 3: acrescente condicionais
+## Passo 3: acrescente condicionais {#step-3-add-conditionals}
 
 Crie `weather.q`:
 
@@ -94,7 +94,7 @@ Crie `weather.q`:
 
 **Saída:** `Nice weather for a walk.`
 
-## Passo 4: sirva uma página web
+## Passo 4: sirva uma página web {#step-4-serve-a-web-page}
 
 As páginas ficam numa pasta `components/`; o nome do arquivo é a URL. Crie
 `components/index.q`:
@@ -133,7 +133,7 @@ servidor com `quantum stop`.
 > Sem `<!DOCTYPE html>` no arquivo: um `.q` é XML, e um DOCTYPE só é válido
 > antes do elemento raiz. O servidor o acrescenta à resposta.
 
-## Passo 5: leia de um banco de dados
+## Passo 5: leia de um banco de dados {#step-5-read-from-a-database}
 
 Crie um banco SQLite com uma tabela (qualquer Python serve — Quantum já
 precisa dele):
@@ -173,7 +173,7 @@ Crie `components/users.q`:
 Reinicie o servidor e abra `http://localhost:8080/users`: **2 users**, Ana e
 Bruno.
 
-## Passo 6: trate um formulário
+## Passo 6: trate um formulário {#step-6-handle-a-form}
 
 Acrescente um formulário e uma `q:action` que insere uma linha — o parâmetro é
 declarado, então o SQL nunca vê a entrada crua. Substitua
@@ -214,7 +214,7 @@ declarado, então o SQL nunca vê a entrada crua. Substitua
 Enviar `Carla` e `carla@example.com` a acrescenta à tabela e mostra
 **Added Carla**; um nome de uma letra só é recusado, e nada é inserido.
 
-## E agora?
+## E agora? {#what-s-next}
 
 Você aprendeu o básico! Agora explore (páginas em inglês):
 

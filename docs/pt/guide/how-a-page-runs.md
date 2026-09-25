@@ -16,7 +16,7 @@ Uma página `.q` tem dois tipos de partes: **instruções** (`q:set`, `q:query`,
 explica cada regra que parece surpreendente no começo — e as mensagens de
 erro dessas regras apontam para cá.
 
-## Um GET, em ordem
+## Um GET, em ordem {#a-get-in-order}
 
 1. A **rota** escolhe o componente: `components/index.q` é `/`,
    `components/loja/[id].q` é `/loja/41`.
@@ -73,7 +73,7 @@ ações dela, onde quer que estejam escritas:
 
 **Saída:** `42`
 
-## Um POST: a ação, depois um redirecionamento
+## Um POST: a ação, depois um redirecionamento {#a-post-the-action-then-a-redirect}
 
 Um formulário envia para a página com um campo `action` que nomeia uma das
 suas `q:action`. Os passos 1–3 rodam como num GET; depois **só aquela ação**
@@ -118,7 +118,7 @@ instruções dela rodam depois da ação, como num GET). A resposta é um 200 a 
 POST, e recarregá-la envia o formulário de novo — termine as ações com
 `q:redirect`.
 
-## Quanto tempo as coisas vivem
+## Quanto tempo as coisas vivem {#how-long-things-live}
 
 | O quê | Vive | Visto por |
 |---|---|---|

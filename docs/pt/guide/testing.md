@@ -178,7 +178,7 @@ passos dele rodam em ordem.
 | `<test:submit action="add" title="…"/>` | Envia a ação com os outros atributos como campos |
 | `<test:expect …/>` | Confere o que aconteceu |
 
-### `test:given` — as linhas de que o teste precisa {#test-given-rows-the-test-needs}
+### `test:given` — as linhas de que o teste precisa {#test-given-—-rows-the-test-needs}
 
 ```xml
 <test:given table="notes" title="Draft" kind="todo" />
@@ -194,7 +194,7 @@ linha da tabela para a qual uma chave estrangeira aponta, um número, ou
 `"<column> <n>"` para texto. Com várias fontes de dados, `datasource="…"` diz
 qual.
 
-### `test:as` — quem está usando a aplicação {#test-as-who-is-using-the-app}
+### `test:as` — quem está usando a aplicação {#test-as-—-who-is-using-the-app}
 
 ```xml
 <test:as user="Ana" role="admin" id="1" plan="pro" />
@@ -206,7 +206,7 @@ Define a sessão como um login faz: `session.userName` é `Ana`,
 atributo é uma variável de sessão (`session.plan` acima). Para testar o
 próprio formulário de login, envie-o como uma pessoa faria.
 
-### `test:visit` e `test:submit` — o que um navegador faz {#test-visit-and-test-submit-what-a-browser-does}
+### `test:visit` e `test:submit` — o que um navegador faz {#test-visit-and-test-submit-—-what-a-browser-does}
 
 O `test:submit` envia para a página em que o teste está, do jeito que o
 formulário dessa página enviaria: passando pelas guardas da página, pelas

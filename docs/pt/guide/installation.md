@@ -11,12 +11,12 @@ por um falante nativo; correções são bem-vindas no GitHub. Se algo não bater
 vale o [original em inglês](/guide/installation).
 :::
 
-## Requisitos
+## Requisitos {#requirements}
 
 - **Python 3.12+**
 - **pip**
 
-## Instalar
+## Instalar {#install}
 
 ```bash
 pip install quantum-framework
@@ -37,7 +37,7 @@ quantum 1.0.0
 `.venv\Scripts\activate` no Windows) antes do `pip install`.
 :::
 
-### Extras opcionais
+### Extras opcionais {#optional-extras}
 
 A instalação básica cobre componentes, o servidor web, consultas SQLite e o
 alvo de terminal. Todo o resto é um extra:
@@ -62,7 +62,7 @@ Veja [SUPPORT_TIERS.md](https://github.com/danielgregorio/quantum/blob/main/SUPP
 ou [Estabilidade](/pt/stability/) para saber quais deles são estáveis e quais
 são experimentais.
 
-## Verificar
+## Verificar {#verify}
 
 Crie `hello.q`:
 
@@ -83,7 +83,7 @@ quantum run hello.q
 [SUCCESS] Result: Hello World!
 ```
 
-### Servidor web
+### Servidor web {#web-server}
 
 Coloque os componentes numa pasta `components/` e inicie o servidor a partir
 da pasta que a contém:
@@ -102,7 +102,7 @@ quantum stop                # stops the server started above
 
 `components/orders.q` é servido em `/orders`, e assim por diante.
 
-## Configuração
+## Configuração {#configuration}
 
 As configurações ficam em `quantum.config.yaml`, ao lado de `components/`.
 Fontes de dados para `q:query`:
@@ -131,7 +131,7 @@ datasources:
 Se `DB_PASSWORD` não estiver definida, Quantum se recusa a iniciar e diz qual
 variável e qual configuração.
 
-## A partir do código-fonte
+## A partir do código-fonte {#from-source}
 
 Para trabalhar no próprio Quantum:
 
@@ -152,7 +152,7 @@ npm run docs:dev
 [CONTRIBUTING.md](https://github.com/danielgregorio/quantum/blob/main/CONTRIBUTING.md)
 explica a arquitetura e como acrescentar uma tag.
 
-## Solução de problemas
+## Solução de problemas {#troubleshooting}
 
 **`quantum: command not found`** — o ambiente em que você rodou o
 `pip install` não está ativo, ou a pasta `Scripts`/`bin` dele não está no
@@ -170,7 +170,7 @@ processo não é o servidor que o escreveu (o servidor terminou sem limpar, e o
 número agora pertence a outro programa). Ele não mata nada e apaga o arquivo
 velho; se um servidor Quantum ainda estiver rodando, pare-o à mão.
 
-## Próximos passos
+## Próximos passos {#next-steps}
 
 - [Início rápido](/pt/guide/quick-start) — construa sua primeira aplicação
 - [Componentes](/guide/components) — o sistema de componentes (em inglês)

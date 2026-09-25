@@ -13,26 +13,26 @@ vale o [original em inglês](/guide/getting-started). O código é o mesmo do or
 Bem-vindo ao Quantum! Este guia ajuda você a ter o framework Quantum rodando
 em poucos minutos. O código está em inglês, como no original.
 
-## O que é o Quantum?
+## O que é o Quantum? {#what-is-quantum}
 
 O Quantum é um **framework declarativo full-stack** para aplicações web
 escritas em XML. Ele foi pensado com a filosofia de "simplicidade acima de
 configuração": tornar tarefas complexas simples, mantendo a linguagem limpa e
 legível.
 
-### Principais vantagens
+### Principais vantagens {#key-benefits}
 
 - **Nenhum JavaScript necessário** - construa aplicações interativas só com XML e SQL
 - **IA como tags** - chamadas a modelos, RAG e agentes com ferramentas, sem cola em Python
 - **Full-stack** - consultas ao banco, formulários, sessões e autenticação embutidos
 - **Entrada validada** - os parâmetros declarados têm o tipo verificado antes de o seu código rodar
 
-## Pré-requisitos
+## Pré-requisitos {#prerequisites}
 
 - **Python 3.12+**
 - **pip**
 
-## Instalação
+## Instalação {#installation}
 
 ```bash
 pip install quantum-framework
@@ -42,7 +42,7 @@ quantum --version
 Os extras opcionais (PostgreSQL/MySQL, RAG, jobs, websockets) e a dependência
 extra do alvo desktop estão listados em [Instalação](/pt/guide/installation).
 
-## Seu primeiro componente
+## Seu primeiro componente {#your-first-component}
 
 Crie um arquivo chamado `hello.q`:
 
@@ -60,7 +60,7 @@ Rode:
 quantum run hello.q
 ```
 
-## Acrescentando conteúdo dinâmico
+## Acrescentando conteúdo dinâmico {#adding-dynamic-content}
 
 Vamos deixar mais interessante com variáveis e loops:
 
@@ -81,7 +81,7 @@ Vamos deixar mais interessante com variáveis e loops:
 ["Hello Alice!", "Hello Bob!", "Hello Charlie!"]
 ```
 
-## Usando condicionais
+## Usando condicionais {#using-conditionals}
 
 ```xml
 <q:component name="AgeCheck" xmlns:q="https://quantum.lang/ns">
@@ -98,7 +98,7 @@ Vamos deixar mais interessante com variáveis e loops:
 
 **Saída:** `You are an adult`
 
-## Criando funções
+## Criando funções {#creating-functions}
 
 ```xml
 <q:component name="Calculator" xmlns:q="https://quantum.lang/ns">
@@ -116,7 +116,7 @@ Vamos deixar mais interessante com variáveis e loops:
 
 **Saída:** `5 + 3 = 8`
 
-## Aplicações web
+## Aplicações web {#web-applications}
 
 As páginas são componentes numa pasta `components/`, e o nome do arquivo é a
 URL. Crie `components/index.q`:
@@ -148,7 +148,7 @@ as suas rotas e foi removida na 0.11 — use `components/` como acima. Veja
 [q:application](/guide/applications) (em inglês).
 :::
 
-## Modo de depuração
+## Modo de depuração {#debug-mode}
 
 Para informações detalhadas da execução:
 
@@ -162,7 +162,7 @@ Isso mostra:
 - Etapas de validação
 - O fluxo de execução
 
-## Próximos passos
+## Próximos passos {#next-steps}
 
 - [Instalação](/pt/guide/installation) - o guia de instalação completo
 - [Project Structure](/guide/project-structure) - como organizar o seu código (em inglês)

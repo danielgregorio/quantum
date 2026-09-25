@@ -26,6 +26,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- The rest of the guide in Brazilian Portuguese: AI, files and mail, data
+  import, services, sessions, the admin, project structure and
+  `q:application` — every guide page now has a pt version. The pt guide
+  pages keep the English heading anchors, so a link to a section works in
+  both.
 - The core guide in Brazilian Portuguese (/pt/guide/): getting started,
   components, how a page runs, state, loops, conditionals, functions,
   expressions, actions, queries, authentication, UI and testing,

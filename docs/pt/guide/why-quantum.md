@@ -20,7 +20,7 @@ internas, dashboards, telas de administração e aplicações que usam um modelo
 de linguagem — o tipo de software em que uma cadeia de build de front-end
 custa mais do que o produto.
 
-## Como é uma página
+## Como é uma página {#what-a-page-looks-like}
 
 O código está em inglês, como no original.
 
@@ -51,7 +51,7 @@ servidor), a consulta é parametrizada por construção, e a mesma página roda
 num navegador (`quantum start`), num terminal (`quantum console`) e numa
 janela de desktop (`quantum desktop`).
 
-## O que é diferente
+## O que é diferente {#what-is-different}
 
 - **Um arquivo por página, de cima a baixo.** Guardas, ações, consultas e a
   tela ficam na ordem em que rodam
@@ -67,7 +67,7 @@ janela de desktop (`quantum desktop`).
   pode ser lida, um atributo que uma tag `q:` não tem: cada um é um erro que
   diz o que fazer, não um sucesso silencioso.
 
-## Como sabemos que funciona
+## Como sabemos que funciona {#how-we-know-it-works}
 
 - Uma [especificação](https://github.com/danielgregorio/quantum/blob/main/SPEC.md)
   com regras numeradas; a suíte de testes falha quando uma regra não tem
@@ -80,7 +80,7 @@ janela de desktop (`quantum desktop`).
 - Uma versão só é gerada depois que a suíte de testes inteira passa no commit
   marcado, e o exemplo desta página roda no CI como está.
 
-## O que não é
+## O que não é {#what-it-is-not}
 
 - **Não é um framework mobile.** Celulares ficam fora da 1.0; o alvo React
   Native é um experimento.
