@@ -16,8 +16,8 @@ write once — a validation, a login, a query — behaves the same on every scre
 
 ## A first screen
 
-Save as `components/index.q` in a project (`quantum new` makes one) and run
-`quantum start`:
+Save as `components/index.q` in a project (a folder with a `quantum.config.yaml`)
+and run `quantum start`:
 
 ```xml
 <q:component name="Counter">

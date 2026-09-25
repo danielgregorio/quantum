@@ -42,7 +42,7 @@ quantum run <file.q> [options]
 |--------|-------------|---------|
 | `--debug` | Enable debug output | false |
 | `--config` | Path to config file | quantum.config.yaml |
-| `--target` | Standalone UI build (`type="ui"`): html, textual (layout only), mobile (Laboratório) | html |
+| `--target` | Standalone UI build (`type="ui"`): html, textual (layout only), mobile (Laboratory) | html |
 
 ### Examples
 
