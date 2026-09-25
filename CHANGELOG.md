@@ -36,6 +36,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
   `q:application` — every guide page now has a pt version. The pt guide
   pages keep the English heading anchors, so a link to a section works in
   both.
+- Roadmap and Community in the top nav, in every language. The Showcase in
+  Portuguese, Spanish and Chinese, written by `scripts/generate-showcase.py`
+  with the same measured numbers as the English page; the Roadmap and the
+  tutorial in Chinese. All machine translated and marked so.
 - The core guide in Brazilian Portuguese (/pt/guide/): getting started,
   components, how a page runs, state, loops, conditionals, functions,
   expressions, actions, queries, authentication, UI and testing,

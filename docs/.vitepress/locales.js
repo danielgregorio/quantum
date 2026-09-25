@@ -18,7 +18,7 @@ const TEXT = {
     description: 'Declarative web applications in XML, with AI and RAG built into the language',
     home: 'Home', docs: 'Docs', guide: 'Guide', tutorial: 'Tutorial', cookbook: 'Cookbook', stability: 'Stability', reference: 'Reference',
     spec: 'Specification (SPEC)', showcase: 'Showcase', blog: 'Blog', changelog: 'Changelog',
-    status: 'Status', sponsor: 'Sponsor',
+    status: 'Status', sponsor: 'Sponsor', roadmap: 'Roadmap', community: 'Community',
     editLink: 'Edit this page on GitHub', lastUpdated: 'Last updated', outline: 'On this page',
     prev: 'Previous page', next: 'Next page', langMenu: 'Change language', returnToTop: 'Return to top',
     sidebarMenu: 'Menu', darkMode: 'Appearance', lightTitle: 'Switch to light theme',
@@ -35,7 +35,7 @@ const TEXT = {
     description: 'Aplicações web declarativas em XML, com IA e RAG na própria linguagem',
     home: 'Início', docs: 'Documentação', guide: 'Guia', tutorial: 'Tutorial', cookbook: 'Receitas', stability: 'Estabilidade', reference: 'Referência',
     spec: 'Especificação (SPEC)', showcase: 'Vitrine', blog: 'Blog', changelog: 'Mudanças',
-    status: 'Status', sponsor: 'Apoie',
+    status: 'Status', sponsor: 'Apoie', roadmap: 'Roadmap', community: 'Comunidade',
     editLink: 'Editar esta página no GitHub', lastUpdated: 'Atualizado em', outline: 'Nesta página',
     prev: 'Página anterior', next: 'Próxima página', langMenu: 'Mudar idioma', returnToTop: 'Voltar ao topo',
     sidebarMenu: 'Menu', darkMode: 'Aparência', lightTitle: 'Mudar para o tema claro',
@@ -52,7 +52,7 @@ const TEXT = {
     description: 'Aplicaciones web declarativas en XML, con IA y RAG en el propio lenguaje',
     home: 'Inicio', docs: 'Documentación', guide: 'Guía', tutorial: 'Tutorial', cookbook: 'Recetario', stability: 'Estabilidad', reference: 'Referencia',
     spec: 'Especificación (SPEC)', showcase: 'Escaparate', blog: 'Blog', changelog: 'Cambios',
-    status: 'Estado', sponsor: 'Patrocinar',
+    status: 'Estado', sponsor: 'Patrocinar', roadmap: 'Hoja de ruta', community: 'Comunidad',
     editLink: 'Editar esta página en GitHub', lastUpdated: 'Actualizado', outline: 'En esta página',
     prev: 'Página anterior', next: 'Página siguiente', langMenu: 'Cambiar idioma', returnToTop: 'Volver arriba',
     sidebarMenu: 'Menú', darkMode: 'Apariencia', lightTitle: 'Cambiar al tema claro',
@@ -69,7 +69,7 @@ const TEXT = {
     description: '用 XML 编写的声明式 Web 应用，语言内置 AI 与 RAG',
     home: '首页', docs: '文档', guide: '指南', tutorial: '教程', cookbook: '实用示例', stability: '稳定性', reference: '参考',
     spec: '规范 (SPEC)', showcase: '案例', blog: '博客', changelog: '更新日志',
-    status: '状态', sponsor: '赞助',
+    status: '状态', sponsor: '赞助', roadmap: '路线图', community: '社区',
     editLink: '在 GitHub 上编辑此页', lastUpdated: '最后更新', outline: '本页内容',
     prev: '上一页', next: '下一页', langMenu: '切换语言', returnToTop: '返回顶部',
     sidebarMenu: '菜单', darkMode: '外观', lightTitle: '切换到浅色主题',
@@ -89,18 +89,18 @@ const GITHUB = 'https://github.com/danielgregorio/quantum'
 // The pages each language has translated (docs/<lang>/<path>). The nav links
 // to the translation when there is one, and to the English page otherwise.
 const TRANSLATED = {
-  pt: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/',
+  pt: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/', '/showcase/',
     '/guide/getting-started', '/guide/components', '/guide/how-a-page-runs', '/guide/state-management', '/guide/loops',
     '/guide/conditionals', '/guide/functions', '/guide/databinding', '/guide/actions', '/guide/query',
     '/guide/authentication', '/guide/ui', '/guide/testing',
     '/guide/ai', '/guide/files-and-mail', '/guide/data-import', '/guide/services', '/guide/sessions',
     '/guide/admin', '/guide/project-structure', '/guide/applications',
     '/blog/', '/status/', '/community/'],
-  es: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/',
+  es: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/', '/showcase/',
     '/guide/getting-started', '/guide/components', '/guide/how-a-page-runs', '/guide/state-management',
     '/guide/loops', '/guide/conditionals', '/guide/functions', '/guide/databinding',
     '/guide/actions', '/guide/query', '/guide/authentication'],
-  zh: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/cookbook/',
+  zh: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/cookbook/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/showcase/',
     '/guide/getting-started', '/guide/components', '/guide/how-a-page-runs', '/guide/state-management',
     '/guide/loops', '/guide/conditionals', '/guide/functions', '/guide/databinding',
     '/guide/actions', '/guide/query', '/guide/authentication'],
@@ -201,7 +201,8 @@ export function guideSidebar(key) {
 }
 
 // The top nav: Home · Docs (Guide, Tutorial, Reference, SPEC) · Showcase · Blog ·
-// Changelog · Status · Sponsor · GitHub. Only the home is per language today.
+// Changelog · Status · Roadmap · Community · Sponsor · GitHub. An entry goes to the
+// language's page when TRANSLATED lists it, and to the English page otherwise.
 function nav(key) {
   const t = TEXT[key]
   const home = LANGUAGES[key].prefix

@@ -9,6 +9,11 @@ that run it, and the JavaScript written for it (script files and inline
 <script> blocks in its pages). tests/docs/test_showcase.py fails when the page
 and this script disagree, so the numbers on the site are the apps' numbers.
 
+The translated pages, docs/{pt,es,zh}/showcase/index.md, are written here too,
+from TRANSLATIONS: the words are translated, the facts are the same
+measurement, and each page is stamped with the hash of the English one
+(scripts/translation-status.py). Machine translated, and marked so.
+
 The screenshots come from scripts/showcase-screenshots.py.
 """
 
@@ -62,6 +67,150 @@ APPS = [
 ]
 
 
+# What changes per language: the page's words and each app's description. The
+# numbers, tags, rules and links come from facts(), the same for every page.
+ENGLISH = {
+    'demonstrates': 'Demonstrates', 'rules': 'SPEC rules it cites', 'size': 'Size',
+    'tested': 'Tested by', 'source': 'Source', 'tags': 'Tags it uses',
+    'sizes': lambda f: (f"{f['pages']} page{'s' if f['pages'] != 1 else ''}, {f['lines']} lines of `.q`, "
+                        f"{f['js']} lines of JavaScript"),
+    'tests': lambda n: f'{n} `quantum test` tests',
+    'areas': {}, 'apps': {},
+}
+
+TRANSLATIONS = {
+    'pt': {
+        'title': 'Vitrine',
+        'notice': ('::: info Tradução automática\n'
+                   'Esta página foi traduzida automaticamente do inglês e ainda não foi revisada por um '
+                   'falante nativo; correções são bem-vindas no GitHub. Se algo divergir, vale o '
+                   '[original em inglês](/showcase/).\n:::'),
+        'intro': ('Os aplicativos que provam o Quantum: cada um está no repositório, roda no CI e é\n'
+                  'escrito em arquivos `.q`, sem JavaScript. As capturas de tela vêm dos aplicativos\n'
+                  'rodando (`scripts/showcase-screenshots.py`); os aplicativos de IA respondem por um\n'
+                  'servidor de modelo substituto, então nenhum modelo é necessário para reproduzi-las.'),
+        'demonstrates': 'Demonstra', 'rules': 'Regras da SPEC que cita', 'size': 'Tamanho',
+        'tested': 'Testado por', 'source': 'Código', 'tags': 'Tags que usa',
+        'sizes': lambda f: (f"{f['pages']} página{'s' if f['pages'] != 1 else ''}, {f['lines']} linhas de "
+                            f"`.q`, {f['js']} linhas de JavaScript"),
+        'tests': lambda n: f'{n} testes `quantum test`',
+        'areas': {'Actions and forms': 'Ações e formulários', 'Database': 'Banco de dados', 'UI': 'UI',
+                  'Tests': 'Testes', 'Pages and routes': 'Páginas e rotas', 'Authentication': 'Autenticação',
+                  'Files and mail': 'Arquivos e e-mail', 'AI': 'IA', 'How a page runs': 'Como uma página roda'},
+        'apps': {
+            'tarefas': ('Tarefas', 'Uma lista de tarefas em `ui:*`: um formulário validado pela sua ação, botões '
+                        'de concluir e excluir, um filtro vindo do endereço, uma tabela que ordena e edita suas '
+                        'células conforme o esquema, um formulário de edição gerado a partir da tabela e o '
+                        'histórico de cada alteração. As mesmas páginas rodam no terminal e numa janela de '
+                        'desktop. O conteúdo é em português; o [tutorial](../tutorial/tasks-app.md) o constrói '
+                        'em inglês.'),
+            'blog': ('Blog', 'Um blog sobre SQLite com páginas que são arquivos (`post/[slug].q`), categorias, '
+                     'busca, comentários, login e uma área administrativa que cria e edita posts numa '
+                     'transação.'),
+            'helpdesk': ('Helpdesk', 'Abra um chamado com um anexo, verificado por tamanho e tipo, guardado fora '
+                         'da pasta pública e servido apenas pelo seu chamado; a equipe é avisada por e-mail.'),
+            'bank-transfer': ('Transferência bancária', 'O dinheiro passa entre duas contas dentro de uma única '
+                              'transação: um saque a descoberto é recusado antes de qualquer coisa rodar, e se '
+                              'qualquer passo da transferência falhar nada se move. A página diz por que uma '
+                              'transferência foi recusada.'),
+            'docs-assistant': ('Assistente da documentação', 'Pergunte ao guia do Quantum: a resposta vem só do '
+                               'guia, cita suas fontes e chega enquanto o modelo escreve. Uma pergunta que o guia '
+                               'não cobre nem é enviada ao modelo.'),
+            'shop-agent': ('Agente da loja', 'Um agente responde perguntas sobre uma loja a partir do seu banco '
+                           'de dados, por meio de algumas consultas parametrizadas. O modelo nunca escreve SQL, e '
+                           'cada chamada que fez aparece ao lado da resposta.'),
+            'quantum-chat': ('Chat', 'Uma pequena sala de chat: entre com um nome, envie mensagens, veja quem '
+                             'está online, com a sala guardada no escopo da aplicação.'),
+        },
+    },
+    'es': {
+        'title': 'Escaparate',
+        'notice': ('::: info Traducción automática\n'
+                   'Esta página se tradujo automáticamente del inglés y todavía no la revisó un hablante '
+                   'nativo; las correcciones son bienvenidas en GitHub. Si algo no coincide, vale el '
+                   '[original en inglés](/showcase/).\n:::'),
+        'intro': ('Las aplicaciones que demuestran Quantum: cada una está en el repositorio, se ejecuta en\n'
+                  'CI y está escrita en archivos `.q`, sin JavaScript. Las capturas de pantalla se toman de\n'
+                  'las aplicaciones en ejecución (`scripts/showcase-screenshots.py`); las aplicaciones de IA\n'
+                  'responden a través de un servidor de modelos sustituto, así que no hace falta ningún\n'
+                  'modelo para reproducirlas.'),
+        'demonstrates': 'Demuestra', 'rules': 'Reglas de la SPEC que cita', 'size': 'Tamaño',
+        'tested': 'Probada por', 'source': 'Código', 'tags': 'Etiquetas que usa',
+        'sizes': lambda f: (f"{f['pages']} página{'s' if f['pages'] != 1 else ''}, {f['lines']} líneas de "
+                            f"`.q`, {f['js']} líneas de JavaScript"),
+        'tests': lambda n: f'{n} pruebas `quantum test`',
+        'areas': {'Actions and forms': 'Acciones y formularios', 'Database': 'Base de datos', 'UI': 'UI',
+                  'Tests': 'Pruebas', 'Pages and routes': 'Páginas y rutas', 'Authentication': 'Autenticación',
+                  'Files and mail': 'Archivos y correo', 'AI': 'IA',
+                  'How a page runs': 'Cómo se ejecuta una página'},
+        'apps': {
+            'tarefas': ('Tareas (Tarefas)', 'Una lista de tareas en `ui:*`: un formulario validado por su '
+                        'acción, botones para terminar y eliminar, un filtro desde la dirección, una tabla que '
+                        'ordena y edita sus celdas según el esquema, un formulario de edición generado a partir '
+                        'de la tabla y el historial de cada cambio. Las mismas páginas funcionan en la terminal y '
+                        'en una ventana de escritorio. Su contenido está en portugués; el '
+                        '[tutorial](../tutorial/tasks-app.md) la construye en inglés.'),
+            'blog': ('Blog', 'Un blog sobre SQLite con páginas que son archivos (`post/[slug].q`), categorías, '
+                     'búsqueda, comentarios, un inicio de sesión y un área de administración que crea y edita '
+                     'artículos en una transacción.'),
+            'helpdesk': ('Mesa de ayuda', 'Abre un ticket con un adjunto, verificado por tamaño y tipo, '
+                         'guardado fuera de la carpeta pública y servido solo a través de su ticket; el equipo '
+                         'recibe un aviso por correo.'),
+            'bank-transfer': ('Transferencia bancaria', 'El dinero pasa entre dos cuentas dentro de una sola '
+                              'transacción: un sobregiro se rechaza antes de que se ejecute nada, y si falla '
+                              'cualquier paso de la transferencia no se mueve nada. La página dice por qué se '
+                              'rechazó una transferencia.'),
+            'docs-assistant': ('Asistente de documentación', 'Hazle una pregunta a la guía de Quantum: la '
+                               'respuesta viene solo de la guía, cita sus fuentes y llega mientras el modelo la '
+                               'escribe. Una pregunta que la guía no cubre ni siquiera se envía al modelo.'),
+            'shop-agent': ('Agente de tienda', 'Un agente responde preguntas sobre una tienda a partir de su base '
+                           'de datos, mediante unas pocas consultas parametrizadas. El modelo nunca escribe SQL, y '
+                           'cada llamada que hizo se muestra junto a la respuesta.'),
+            'quantum-chat': ('Chat', 'Una pequeña sala de chat: entra con un nombre, publica mensajes, ve quién '
+                             'está conectado, con la sala guardada en el ámbito de la aplicación.'),
+        },
+    },
+    'zh': {
+        'title': '案例',
+        'notice': ('::: info 机器翻译\n'
+                   '本页由英文原文机器翻译而来，尚未经过母语审校，欢迎在 GitHub 上提出修改。内容如有出入，'
+                   '以[英文原文](/showcase/)为准。\n:::'),
+        'intro': ('证明 Quantum 的应用：每一个都在仓库中，在 CI 中运行，并且用 `.q` 文件编写，没有 JavaScript。\n'
+                  '截图取自正在运行的应用（`scripts/showcase-screenshots.py`）；AI 应用通过替身模型服务器回答，\n'
+                  '因此复现它们不需要任何模型。'),
+        'demonstrates': '展示', 'rules': '引用的 SPEC 规则', 'size': '规模',
+        'tested': '测试', 'source': '源码', 'tags': '使用的标签',
+        'sizes': lambda f: f"{f['pages']} 个页面，{f['lines']} 行 `.q`，{f['js']} 行 JavaScript",
+        'tests': lambda n: f'{n} 个 `quantum test` 测试',
+        'areas': {'Actions and forms': '动作与表单', 'Database': '数据库', 'UI': 'UI', 'Tests': '测试',
+                  'Pages and routes': '页面与路由', 'Authentication': '认证', 'Files and mail': '文件与邮件',
+                  'AI': 'AI', 'How a page runs': '页面如何运行'},
+        'apps': {
+            'tarefas': ('任务（Tarefas）', '一个用 `ui:*` 编写的任务列表：由其动作校验的表单、完成和删除按钮、'
+                        '来自地址的筛选器、按表结构排序并编辑单元格的表格、根据表生成的编辑表单，以及每次修改的'
+                        '历史记录。同样的页面也能在终端和桌面窗口中运行。它的内容是葡萄牙语；'
+                        '[教程](../tutorial/tasks-app.md)用英文构建它。'),
+            'blog': ('博客', '一个基于 SQLite 的博客：页面就是文件（`post/[slug].q`），有分类、搜索、评论、登录，'
+                     '以及在一个事务中创建和编辑文章的管理区。'),
+            'helpdesk': ('服务台', '提交带附件的工单：附件按大小和类型检查，存放在公共文件夹之外，只能通过其工单'
+                         '访问；团队会收到邮件通知。'),
+            'bank-transfer': ('银行转账', '钱在一个事务中在两个账户之间转移：透支在任何操作运行之前就会被拒绝，'
+                              '转账的任何一步失败都不会移动任何钱。页面会说明转账被拒绝的原因。'),
+            'docs-assistant': ('文档助手', '向 Quantum 指南提问：回答只来自指南，引用其来源，并在模型写作时逐步'
+                               '到达。指南没有涵盖的问题根本不会发送给模型。'),
+            'shop-agent': ('商店智能体', '一个智能体通过几个参数化查询，根据商店的数据库回答问题。模型从不编写 '
+                           'SQL，它做的每一次调用都显示在回答旁边。'),
+            'quantum-chat': ('聊天', '一个小型聊天室：用一个名字加入，发送消息，查看谁在线，聊天室保存在应用作用'
+                             '域中。'),
+        },
+    },
+}
+
+
+def translated_page(lang):
+    return REPO / 'docs' / lang / 'showcase' / 'index.md'
+
+
 def spec_ids():
     return set(re.findall(r'^\*\*([A-Z]+-\d+)\*\*', (REPO / 'SPEC.md').read_text(encoding='utf-8'), re.M))
 
@@ -90,8 +239,20 @@ def facts(app):
             'tests': tests, 'suites': suites}
 
 
-def render():
-    out = [f"""---
+def _source_hash(text):
+    """The hash a translation records of its English page (scripts/translation-status.py)."""
+    from importlib.util import module_from_spec, spec_from_file_location
+    spec = spec_from_file_location('translation_status', REPO / 'scripts' / 'translation-status.py')
+    status = module_from_spec(spec)
+    spec.loader.exec_module(status)
+    return status.source_hash(text)
+
+
+def render(lang=None):
+    """The English page, or its translation into `lang` (a key of TRANSLATIONS)."""
+    if lang is None:
+        words = ENGLISH
+        out = [f"""---
 title: Showcase
 ---
 
@@ -105,11 +266,30 @@ apps running (`scripts/showcase-screenshots.py`); the AI apps answer through a
 stand-in model server, so no model is needed to reproduce them.
 
 """]
+    else:
+        words = TRANSLATIONS[lang]
+        out = [f"""---
+title: {words['title']}
+source: showcase/index.md
+source_hash: {_source_hash(render())}
+---
+
+# {words['title']}
+
+{MARKER}
+
+{words['notice']}
+
+{words['intro']}
+
+"""]
     for app, title, what, areas in APPS:
         f = facts(app)
+        title, what = words['apps'].get(app, (title, what))
+        areas = [words['areas'].get(a, a) for a in areas]
         tested = []
         if f['tests']:
-            tested.append(f"{f['tests']} `quantum test` tests")
+            tested.append(words['tests'](f['tests']))
         tested += [f"[`tests/apps/{s}`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/{s})"
                    for s in f['suites']]
         out.append(f"""## {title}
@@ -120,13 +300,13 @@ stand-in model server, so no model is needed to reproduce them.
 
 | | |
 |---|---|
-| Demonstrates | {', '.join(areas)} |
-| SPEC rules it cites | {', '.join(f['rules']) or '—'} |
-| Size | {f['pages']} page{'s' if f['pages'] != 1 else ''}, {f['lines']} lines of `.q`, {f['js']} lines of JavaScript |
-| Tested by | {', '.join(tested)} |
-| Source | [`projects/{app}`]({GITHUB}/projects/{app}) |
+| {words['demonstrates']} | {', '.join(areas)} |
+| {words['rules']} | {', '.join(f['rules']) or '—'} |
+| {words['size']} | {words['sizes'](f)} |
+| {words['tested']} | {', '.join(tested)} |
+| {words['source']} | [`projects/{app}`]({GITHUB}/projects/{app}) |
 
-<details><summary>Tags it uses ({len(f['tags'])})</summary>
+<details><summary>{words['tags']} ({len(f['tags'])})</summary>
 
 {' '.join(f'`{t}`' for t in f['tags'])}
 
@@ -139,4 +319,9 @@ stand-in model server, so no model is needed to reproduce them.
 if __name__ == '__main__':
     PAGE.write_text(render(), encoding='utf-8', newline='\n')
     print(f'wrote {PAGE.relative_to(REPO)}')
+    for lang in TRANSLATIONS:
+        page = translated_page(lang)
+        page.parent.mkdir(parents=True, exist_ok=True)
+        page.write_text(render(lang), encoding='utf-8', newline='\n')
+        print(f'wrote {page.relative_to(REPO)}')
     sys.exit(0)

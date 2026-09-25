@@ -34,3 +34,19 @@ def test_every_app_is_tested():
     for app, *_ in showcase.APPS:
         f = showcase.facts(app)
         assert f['tests'] or f['suites'], app
+
+
+def test_the_translated_pages_are_what_the_script_generates():
+    # The words are translated; the facts are the same measurement, and each page
+    # records the hash of the English page it was made from.
+    for lang in showcase.TRANSLATIONS:
+        page = showcase.translated_page(lang)
+        assert page.is_file() and page.read_text(encoding='utf-8') == showcase.render(lang), (
+            f'docs/{lang}/showcase/index.md is out of date: run python scripts/generate-showcase.py')
+
+
+def test_every_app_is_translated():
+    for lang, words in showcase.TRANSLATIONS.items():
+        assert set(words['apps']) == {app for app, *_ in showcase.APPS}, lang
+        areas = {a for *_, app_areas in showcase.APPS for a in app_areas}
+        assert areas <= set(words['areas']), (lang, areas - set(words['areas']))
