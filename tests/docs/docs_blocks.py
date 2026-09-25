@@ -102,6 +102,37 @@ class Block:
     fragment: Optional[str]
     error: Optional[str]  # the block must fail with this text
     shown: Optional[str]  # Output / Shows: the page shows its result
+    # On a translated page (pt/, es/, zh/): the English page at the same path.
+    # Its code must be the English code — the block takes the English block's
+    # markers and is allowed only where that block is. None: no such block.
+    english: Optional[str] = None
+    translated: bool = False
+
+    @property
+    def page(self) -> str:
+        """The page whose rules apply: the English one, for a translation."""
+        return self.english or self.path
+
+
+LANGUAGES = ('pt', 'es', 'zh')
+
+
+def _page_blocks(doc):
+    rel = doc.relative_to(DOCS).as_posix()
+    text = doc.read_text(encoding='utf-8')
+    for m in FENCE.finditer(text):
+        meta = m['meta']
+        frag = re.search(r'\bfragment=([\w-]+)', meta)
+        err = re.search(r'\berror="([^"]+)"', meta)
+        after = AFTER.match(text, m.end())
+        error = err.group(1) if err else None
+        shown = None
+        if after and after['kind'] == 'Error':
+            error = error or after['inline'] or ''
+        elif after:
+            shown = after['kind']
+        yield Block(rel, text[:m.start()].count('\n') + 1, m['xml'],
+                    frag.group(1) if frag else None, error, shown)
 
 
 def blocks():
@@ -109,20 +140,19 @@ def blocks():
         if 'node_modules' in doc.parts or '.vitepress' in doc.parts:
             continue
         rel = doc.relative_to(DOCS).as_posix()
-        text = doc.read_text(encoding='utf-8')
-        for m in FENCE.finditer(text):
-            meta = m['meta']
-            frag = re.search(r'\bfragment=([\w-]+)', meta)
-            err = re.search(r'\berror="([^"]+)"', meta)
-            after = AFTER.match(text, m.end())
-            error = err.group(1) if err else None
-            shown = None
-            if after and after['kind'] == 'Error':
-                error = error or after['inline'] or ''
-            elif after:
-                shown = after['kind']
-            yield Block(rel, text[:m.start()].count('\n') + 1, m['xml'],
-                        frag.group(1) if frag else None, error, shown)
+        if rel.split('/')[0] not in LANGUAGES:
+            yield from _page_blocks(doc)
+            continue
+        english_path = rel.split('/', 1)[1]
+        english = DOCS / english_path
+        by_code = {b.xml.strip(): b for b in _page_blocks(english)} if english.is_file() else {}
+        for b in _page_blocks(doc):
+            twin = by_code.get(b.xml.strip())
+            if twin:
+                yield Block(b.path, b.line, b.xml, twin.fragment, twin.error, twin.shown,
+                            english=english_path, translated=True)
+            else:
+                yield Block(b.path, b.line, b.xml, b.fragment, b.error, b.shown, translated=True)
 
 
 def source(block: Block) -> str:
@@ -150,8 +180,10 @@ def parse(block: Block):
 
 def check(block: Block) -> Optional[str]:
     """None when the block is what the page says it is; otherwise the problem."""
-    if block.path in UNDER_REVIEW:
+    if block.page in UNDER_REVIEW:
         return None
+    if block.translated and not block.english:
+        return 'a translated page must show the English code: this block is not on the English page'
     try:
         parse(block)
     except Exception as exc:  # noqa: BLE001 — any failure is the finding
@@ -168,10 +200,12 @@ def check(block: Block) -> Optional[str]:
 
 def guard(block: Block) -> Optional[str]:
     """None when the block is one of the allowed kinds (see THE GUARD)."""
-    if (block.path in UNDER_REVIEW or runs_elsewhere(block) or block.path in PARSE_ONLY_PAGES
-            or block.path in RUN_BY_TEST):
+    if block.translated and not block.english:
+        return 'a translated page must show the English code: this block is not on the English page'
+    if (block.page in UNDER_REVIEW or runs_elsewhere(block) or block.page in PARSE_ONLY_PAGES
+            or block.page in RUN_BY_TEST):
         return None
-    if GENERATED_MARKER in (DOCS / block.path).read_text(encoding='utf-8'):
+    if GENERATED_MARKER in (DOCS / block.page).read_text(encoding='utf-8'):
         return None
     return ('Quantum code that nothing tests: import it from a tested file '
             '(<<< @/../examples/cookbook/...), give it a checked **Output:** in the guide, '
@@ -180,7 +214,7 @@ def guard(block: Block) -> Optional[str]:
 
 def parse_only_pages_in_use():
     """The PARSE_ONLY_PAGES that still have a block that is parsed and not run."""
-    return {b.path for b in blocks() if b.path in PARSE_ONLY_PAGES and not runs_elsewhere(b)}
+    return {b.page for b in blocks() if b.page in PARSE_ONLY_PAGES and not runs_elsewhere(b)}
 
 
 # -- quantum.config.yaml snippets ---------------------------------------------
@@ -246,4 +280,4 @@ def runs_elsewhere(block: Block) -> bool:
     There an **Error:** is usually a run-time error (a failed validation, a
     missing table) — the block parses, and that test checks it fails as shown.
     """
-    return block.path.startswith('guide/') and (block.error is not None or block.shown is not None)
+    return block.page.startswith('guide/') and (block.error is not None or block.shown is not None)

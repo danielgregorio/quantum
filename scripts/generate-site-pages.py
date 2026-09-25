@@ -6,6 +6,7 @@
 - docs/changelog/: one page per version from CHANGELOG.md, newest first, with
   an index. Headings carry explicit anchors ({#added}), so a link to a
   version's "Breaking" section stays valid when the text around it changes.
+- docs/stability/index.md: SUPPORT_TIERS.md, the promise of 1.0.
 - docs/status/index.md: FEATURE_STATUS.md ("what really works today"), which
   scripts/generate-feature-status.py measures by running the examples.
 - docs/blog/index.md and docs/public/blog/feed.xml: the post list and its RSS
@@ -120,6 +121,23 @@ def status_page(text: str) -> str:
             + body + '\n')
 
 
+# -- stability ---------------------------------------------------------------
+
+def stability_page(text: str) -> str:
+    """SUPPORT_TIERS.md as the site's Stability page: what 1.0 promises."""
+    body = text.split('\n## ', 1)[1]          # from "The sentence" on; the preamble is internal history
+    return (GENERATED.format(source='SUPPORT_TIERS.md')
+            + '# Stability\n\n'
+            'What Quantum promises, tag by tag. From 1.0, **Core and AI follow semantic '
+            'versioning**: a 1.x release does not break a program that uses only them — '
+            'their meaning is fixed by the rules in the [SPEC](../reference/spec.md), and a '
+            'break waits for 2.0. Experimental and Laboratory carry no such promise.\n\n'
+            'This page is the promise. What really runs today is measured on the '
+            '[Status](../status/index.md) page, and every change is in the '
+            '[Changelog](../changelog/index.md).\n\n'
+            '## ' + body.rstrip() + '\n')
+
+
 # -- blog --------------------------------------------------------------------
 
 def front_matter(text: str) -> dict:
@@ -200,6 +218,7 @@ def pages() -> dict:
     out = {}
     out.update(changelog_pages((REPO / 'CHANGELOG.md').read_text(encoding='utf-8')))
     out['status/index.md'] = status_page((REPO / 'FEATURE_STATUS.md').read_text(encoding='utf-8'))
+    out['stability/index.md'] = stability_page((REPO / 'SUPPORT_TIERS.md').read_text(encoding='utf-8'))
     out.update(blog_pages())
     return out
 

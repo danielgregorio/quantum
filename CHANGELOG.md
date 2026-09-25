@@ -19,6 +19,14 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- A Stability page (/stability/), generated from SUPPORT_TIERS.md: what 1.0
+  promises, tag by tag, and the semver promise for Core and AI.
+- Simplified Chinese (zh-CN) for Why Quantum, Installation, Quick start,
+  Stability, Support and the "Quantum 1.0" post — machine translated, marked
+  as such until a native speaker reviews them. A translated page must show
+  the English code, block for block (the docs guard checks it), and the nav
+  links to a translation when one exists. The zh glossary is in
+  docs/.vitepress/i18n/glossary.zh.md.
 - The hand-written `ui:` component pages (docs/ui/) are gone: they taught
   components that do not exist. The generated [UI tags](/reference/ui)
   reference and the "One App, Many Screens" guide replace them. The Cookbook

@@ -26,7 +26,12 @@ def test_the_top_nav_routes_exist():
     # Home · Docs (Guide, Tutorial, Reference, SPEC) · Showcase · Blog ·
     # Changelog · Status · Sponsor: other pages fill them, the routes are here.
     source = (VITEPRESS / 'locales.js').read_text(encoding='utf-8')
-    links = set(re.findall(r"link: '(/[^']*)'", source))
+    # `link: '/x'`, or `link(key, '/x')` for a route a language may have translated.
+    links = set(re.findall(r"link(?:: |\(key, )'(/[^']*)'", source))
+    translated = re.search(r"const TRANSLATED = \{(.*?)\n\}", source, re.S)
+    for lang, paths in re.findall(r"(\w+): \[([^\]]*)\]", translated.group(1) if translated else ''):
+        for path in re.findall(r"'(/[^']*)'", paths):
+            links.add(f'/{lang}{path}')
     for link in links:
         page = DOCS / (link.strip('/') + ('/index.md' if link.endswith('/') else '.md'))
         assert page.is_file(), f'the nav links to {link}, and {page.relative_to(REPO)} does not exist'
