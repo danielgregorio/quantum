@@ -39,6 +39,8 @@ def server(tmp_path):
 
     s = QuantumWebServer()
     s.config["paths"]["components"] = str(root)
+    # The repository's config serves ./static; rendering writes bundles there.
+    s.config["paths"]["static"] = str(tmp_path / "static")
     s.config.setdefault("security", {})["python_scripting"] = True
     return s
 

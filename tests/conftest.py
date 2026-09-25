@@ -73,10 +73,16 @@ def sample_component_path(tmp_path):
 
 
 @pytest.fixture
-def flask_app():
-    """Flask test app"""
+def flask_app(tmp_path):
+    """Flask test app, with the repository's quantum.config.yaml.
+
+    Its paths.static is ./static — the repository's. Rendering a page writes
+    the bundled <style>/<script> there (styles-<hash>.css), so the bundles go
+    to a temporary folder instead: no test writes into the repository.
+    """
     from quantum.runtime.web_server import QuantumWebServer
     server = QuantumWebServer()
+    server.config['paths']['static'] = str(tmp_path / 'static')
     server.app.config['TESTING'] = True
     return server.app
 

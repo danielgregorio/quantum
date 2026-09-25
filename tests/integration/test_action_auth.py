@@ -35,8 +35,8 @@ server:
   debug: true
 paths:
   components: {EXAMPLES_DIR}
-  static: ./static
-  logs: ./logs
+  static: {(tmp_path / 'static').as_posix()}
+  logs: {(tmp_path / 'logs').as_posix()}
 logging:
   level: ERROR
   console: false
@@ -98,8 +98,8 @@ server:
   debug: true
 paths:
   components: {components_dir.as_posix()}
-  static: ./static
-  logs: ./logs
+  static: {(tmp_path / 'static').as_posix()}
+  logs: {(tmp_path / 'logs').as_posix()}
 logging:
   level: ERROR
   console: false
