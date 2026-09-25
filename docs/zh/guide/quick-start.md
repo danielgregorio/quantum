@@ -120,7 +120,7 @@ quantum run counter.q
 quantum start
 ```
 
-打开 `http://localhost:8080`。`components/about.q` 会对应 `/about`。用 `quantum stop` 停止服务器。
+打开 `http://localhost:8080`：页面显示三个条目和 `10 + 5 = 15`。`components/about.q` 会对应 `/about`。用 `quantum stop` 停止服务器。
 
 > 文件里不要写 `<!DOCTYPE html>`：`.q` 是 XML，而 DOCTYPE 只能出现在根元素之前。
 > 服务器会在响应中加上它。
@@ -161,7 +161,7 @@ datasources:
 </q:component>
 ```
 
-重启服务器，打开 `http://localhost:8080/users`。
+重启服务器，打开 `http://localhost:8080/users`：**2 个用户**，Ana 和 Bruno。
 
 ## 第 6 步：处理表单
 
@@ -199,6 +199,8 @@ datasources:
   </body></html>
 </q:component>
 ```
+
+提交 `Carla` 和 `carla@example.com` 会把她加入数据表，并显示 **Added Carla**；只有一个字母的名字会被拒绝，什么都不会插入。
 
 ## 接下来？
 
