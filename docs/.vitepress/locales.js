@@ -89,7 +89,10 @@ const GITHUB = 'https://github.com/danielgregorio/quantum'
 // The pages each language has translated (docs/<lang>/<path>). The nav links
 // to the translation when there is one, and to the English page otherwise.
 const TRANSLATED = {
-  pt: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/'],
+  pt: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/',
+    '/guide/getting-started', '/guide/components', '/guide/how-a-page-runs', '/guide/state-management', '/guide/loops',
+    '/guide/conditionals', '/guide/functions', '/guide/databinding', '/guide/actions', '/guide/query',
+    '/guide/authentication', '/guide/ui', '/guide/testing'],
   es: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/'],
   zh: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/cookbook/'],
 }
@@ -151,6 +154,19 @@ const GUIDE_TEXT = {
     services: 'Servicios declarados', admin: 'Quantum Admin',
     webApplications: 'Aplicaciones web', actions: 'Acciones y formularios', testing: 'Probar una aplicación (quantum test)',
     ui: 'Una aplicación, varias pantallas (ui:)', applications: 'q:application (no para la web)',
+  },
+  pt: {
+    gettingStarted: 'Primeiros passos', introduction: 'Introdução', whyQuantum: 'Por que Quantum',
+    installation: 'Instalação', quickStart: 'Início rápido', projectStructure: 'Estrutura do projeto',
+    coreConcepts: 'Conceitos principais', components: 'Componentes (arquivos .q)', howAPageRuns: 'Como uma página roda',
+    stateManagement: 'Gerenciamento de estado (q:set)', loops: 'Loops (q:loop)',
+    conditionals: 'Condicionais (q:if/q:else)', functions: 'Funções (q:function)', dataBinding: 'Databinding',
+    ai: 'IA', llmRagAgents: 'LLM, RAG e agentes',
+    dataBackend: 'Dados e backend', queries: 'Consultas ao banco (q:query)', dataImport: 'Importação de dados',
+    filesAndMail: 'Arquivos e e-mail', authentication: 'Autenticação', sessions: 'Sessões e escopos',
+    services: 'Serviços declarados', admin: 'Quantum Admin',
+    webApplications: 'Aplicações web', actions: 'Ações e formulários', testing: 'Testar uma aplicação (quantum test)',
+    ui: 'Uma aplicação, várias telas (ui:)', applications: 'q:application (não para web)',
   },
   zh: {
     gettingStarted: '入门', introduction: '简介', whyQuantum: '为什么选择 Quantum',

@@ -32,7 +32,7 @@ def translated_routes():
     text = (DOCS / '.vitepress' / 'locales.js').read_text(encoding='utf-8')
     block = re.search(r'const TRANSLATED = \{(.*?)\n\}', text, re.S).group(1)
     return {lang: re.findall(r"'([^']+)'", entries)
-            for lang, entries in re.findall(r'^\s*(\w+):\s*\[(.*?)\]', block, re.M)}
+            for lang, entries in re.findall(r'^\s*(\w+):\s*\[(.*?)\]', block, re.M | re.S)}
 
 
 def route(lang, path):

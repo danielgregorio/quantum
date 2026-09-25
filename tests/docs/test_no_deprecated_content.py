@@ -91,10 +91,13 @@ PAST = re.compile(
     r'se eliminó|eliminad[oa]s?|ya no|es un error de análisis|renombrad[oa]s?|reemplazad[oa]s?|antes eran|'
     # ... and on the Portuguese ones (docs/pt/)
     r'foi |foram |era |eram |removid[oa]s?|não (é |são )?mais|substituíd[oa]s?|renomead[oa]s?|'
-    r'é um erro de análise|obsolet[oa]s?)'
+    r'é um erro de (análise|parse)|obsolet[oa]s?|até\s+o\s+quantum\s+0\.)'
     # ... and on the Chinese ones (docs/zh/): no \b between CJK characters
     r'|已移除|已删除|已被|曾经|曾是|以前|原为|不再|改名|取代|解析错误',
     re.I)
+
+# The label that says a block is refused code, in each language of the site.
+ERROR_MARK = re.compile(r'\*\*(Error|Erro|错误)[:：]\*\*')
 
 # Mentions that stay, each with why: (page, pattern id).
 ALLOWED = {
@@ -162,10 +165,10 @@ def hits():
                 continue
             for m in re.finditer(pattern, text):
                 block = fenced_context(text, m.start())
-                if block is not None and ('**Error:**' in block or PAST.search(block)):
+                if block is not None and (ERROR_MARK.search(block) or PAST.search(block)):
                     continue
                 sentence = sentence_around(text, m.start(), m.end())
-                if PAST.search(sentence) or '**Error:**' in sentence:
+                if PAST.search(sentence) or ERROR_MARK.search(sentence):
                     continue
                 line = text.count('\n', 0, m.start()) + 1
                 yield rel, line, pid, m.group(0), instead

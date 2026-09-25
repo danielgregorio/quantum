@@ -26,6 +26,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- The core guide in Brazilian Portuguese (/pt/guide/): getting started,
+  components, how a page runs, state, loops, conditionals, functions,
+  expressions, actions, queries, authentication, UI and testing,
+  machine-translated, with the code and its output identical to the English
+  and the same heading anchors; the pt guide sidebar has Portuguese labels.
 - The Cookbook in Spanish (/es/cookbook/) and Simplified Chinese
   (/zh/cookbook/): all 51 recipes, machine translated and marked as such. The
   code and results on each page are the English page's imports of the tested
