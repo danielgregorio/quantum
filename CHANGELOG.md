@@ -31,6 +31,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
   expressions, actions, queries, authentication, UI and testing,
   machine-translated, with the code and its output identical to the English
   and the same heading anchors; the pt guide sidebar has Portuguese labels.
+- The core guide in Spanish and Simplified Chinese, first pages: Getting
+  Started, Components, How a Page Runs and State Management — machine
+  translated and marked as such. The prose is translated segment by segment
+  around the English page's code, which is copied as it is; each heading keeps
+  the English anchor, so links to a section work in every language.
 - The Cookbook in Spanish (/es/cookbook/) and Simplified Chinese
   (/zh/cookbook/): all 51 recipes, machine translated and marked as such. The
   code and results on each page are the English page's imports of the tested
