@@ -67,11 +67,11 @@ class TransactionParser(BaseTagParser):
         # DB-4: a q:query inside a transaction with datasource= uses it. Every
         # query had to repeat it, or parsing failed with "Query requires
         # either 'datasource' or 'source' attribute" — the guide's own
-        # transaction example did not parse.
-        for child in element:
-            if datasource and self.get_element_name(child) == 'query' \
-                    and not child.get('datasource') and not child.get('source'):
-                child.set('datasource', datasource)
+        # transaction example did not parse. Nested ones too: a q:query in a
+        # q:loop or a q:if of the transaction (loading a file row by row)
+        # still had to repeat it.
+        if datasource:
+            self._inherit_datasource(element, datasource)
 
         # Parse child statements
         for child in element:
@@ -88,6 +88,18 @@ class TransactionParser(BaseTagParser):
             )
 
         return transaction_node
+
+    def _inherit_datasource(self, element: ET.Element, datasource: str) -> None:
+        """Give `datasource` to every q:query under `element` that names none.
+
+        A nested q:transaction with its own datasource= passes on its own."""
+        for child in element:
+            name = self.get_element_name(child)
+            if name == 'query':
+                if not child.get('datasource') and not child.get('source'):
+                    child.set('datasource', datasource)
+            elif not (name == 'transaction' and child.get('datasource')):
+                self._inherit_datasource(child, datasource)
 
     def _datasource_of_children(self, transaction_node) -> str:
         """The datasource of the first child query that names one."""

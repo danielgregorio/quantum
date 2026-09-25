@@ -143,7 +143,7 @@ Inside: [`q:action`](#q-action)
 
 Contains: `q:elseif`, `q:else`
 
-Specified by: [AUTH-6](./spec#AUTH-6) · [DATA-3](./spec#DATA-3) · [EXEC-1](./spec#EXEC-1) · [EXPR-3](./spec#EXPR-3) · [EXPR-5](./spec#EXPR-5) · [IF-1](./spec#IF-1) · [IF-3](./spec#IF-3) · [IF-4](./spec#IF-4) · [RET-3](./spec#RET-3) · [UI-1](./spec#UI-1) · [UI-3](./spec#UI-3)
+Specified by: [AUTH-6](./spec#AUTH-6) · [DATA-3](./spec#DATA-3) · [DB-4](./spec#DB-4) · [EXEC-1](./spec#EXEC-1) · [EXPR-3](./spec#EXPR-3) · [EXPR-5](./spec#EXPR-5) · [IF-1](./spec#IF-1) · [IF-3](./spec#IF-3) · [IF-4](./spec#IF-4) · [RET-3](./spec#RET-3) · [UI-1](./spec#UI-1) · [UI-3](./spec#UI-3)
 
 <a id="q-loop"></a>
 
@@ -165,7 +165,7 @@ Inside: [`q:action`](#q-action)
 | `delimiter` | string |  | `,` |  | Separator of a list loop |
 | `query` | string |  |  |  | Name of the query to loop over ([LOOP-4](./spec#LOOP-4)) |
 
-Specified by: [ACT-8](./spec#ACT-8) · [DEV-3](./spec#DEV-3) · [EXEC-1](./spec#EXEC-1) · [IF-1](./spec#IF-1) · [IF-3](./spec#IF-3) · [LOOP-1](./spec#LOOP-1) · [LOOP-2](./spec#LOOP-2) · [LOOP-4](./spec#LOOP-4) · [LOOP-5](./spec#LOOP-5) · [PARSE-2](./spec#PARSE-2) · [PARSE-5](./spec#PARSE-5) · [UI-1](./spec#UI-1) · [UI-3](./spec#UI-3) · [UI-5](./spec#UI-5)
+Specified by: [ACT-8](./spec#ACT-8) · [DB-4](./spec#DB-4) · [DEV-3](./spec#DEV-3) · [EXEC-1](./spec#EXEC-1) · [IF-1](./spec#IF-1) · [IF-3](./spec#IF-3) · [LOOP-1](./spec#LOOP-1) · [LOOP-2](./spec#LOOP-2) · [LOOP-4](./spec#LOOP-4) · [LOOP-5](./spec#LOOP-5) · [PARSE-2](./spec#PARSE-2) · [PARSE-5](./spec#PARSE-5) · [UI-1](./spec#UI-1) · [UI-3](./spec#UI-3) · [UI-5](./spec#UI-5)
 
 <a id="q-function"></a>
 

@@ -190,6 +190,31 @@ class TestQueries:
         assert run_db('<q:query name="s" datasource="db">SELECT stock FROM products</q:query>'
                       '<q:return value="{s.stock}"/>') == 10
 
+    def test_queries_nested_in_a_loop_or_an_if_inherit_it_too(self, run_db):
+        # DB-4 (before: a q:query inside q:loop or q:if inside the transaction
+        # had to repeat datasource=, or it did not parse)
+        with pytest.raises(Exception, match='rolled back'):
+            run_db('<q:transaction datasource="db">'
+                   '<q:loop items="{[1, 2]}" var="i">'
+                   '<q:if condition="i == 1">'
+                   '<q:query name="a">UPDATE products SET stock = 999 WHERE id = 1</q:query></q:if>'
+                   '<q:query name="b">INSERT INTO missing VALUES (:i)'
+                   '<q:param name="i" value="{i}" type="integer"/></q:query>'
+                   '</q:loop></q:transaction>')
+        assert run_db('<q:query name="s" datasource="db">SELECT stock FROM products</q:query>'
+                      '<q:return value="{s.stock}"/>') == 10
+
+    def test_a_nested_query_keeps_the_datasource_it_names(self):
+        # DB-4: inheriting never overrides what a query declares
+        node = next(s for s in parse('<q:transaction datasource="db"><q:loop items="{[1]}" var="i">'
+                                     '<q:query name="a" datasource="other">SELECT 1</q:query>'
+                                     '</q:loop></q:transaction>').statements
+                    if type(s).__name__ == 'TransactionNode')
+        loop = node.statements[0]
+        query = next(s for s in getattr(loop, 'body', None) or loop.statements
+                     if type(s).__name__ == 'QueryNode')
+        assert query.datasource == 'other'
+
     @pytest.mark.parametrize('declared,level', [('', 'READ_COMMITTED'),
                                                  ('isolationLevel="SERIALIZABLE"', 'SERIALIZABLE'),
                                                  ('isolation="REPEATABLE_READ"', 'REPEATABLE_READ')])

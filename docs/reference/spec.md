@@ -487,12 +487,13 @@ an earlier query, which appears as a table with that query's name.
 <p class="spec-cited">Referenced by: <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a></p>
 
 <a id="DB-4"></a>**[DB-4](#DB-4)** — Inside `q:transaction datasource="…"`, queries use that datasource
-when they do not declare one. If any statement fails, everything is rolled
+when they do not declare one, at any depth (inside a `q:loop` or a `q:if` of
+the transaction too). If any statement fails, everything is rolled
 back and the transaction is an error that says so. `isolationLevel` (or
 `isolation`) is `READ_UNCOMMITTED`, `READ_COMMITTED` (the default),
 `REPEATABLE_READ` or `SERIALIZABLE`; anything else is a parse error.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-transaction"><code>&lt;q:transaction&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./tags#q-transaction"><code>&lt;q:transaction&gt;</code></a></p>
 
 <a id="DB-5"></a>**[DB-5](#DB-5)** — `q:query` does not accept `cache`, `ttl`, `reactive`, `interval`,
 `timeout`, `maxrows` and `batch`, which were accepted and never did anything:

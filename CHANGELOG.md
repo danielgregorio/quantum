@@ -156,6 +156,9 @@ alter the behaviour of an existing app is listed under **Breaking**.
   `RuntimeWarning` before every command. `quantum start --debug` says what it
   does: it prints the traceback when the server fails to start; debug mode is
   `server.debug` in `quantum.config.yaml`.
+- A `q:query` inside a `q:loop` or a `q:if` of a `q:transaction datasource="…"`
+  takes the transaction's datasource, like one directly inside it (DB-4); it
+  had to repeat `datasource=`, or the page did not parse.
 - A page's extracted stylesheet and script (`static/styles-<hash>.css`) are
   written whole or not at all. Written in place, a second request during the
   write linked the file while it was still empty or partial, and its browser

@@ -370,7 +370,8 @@ only the page asked for, and `<name>_result.pagination` has `totalRecords`,
 an earlier query, which appears as a table with that query's name.
 
 **DB-4** — Inside `q:transaction datasource="…"`, queries use that datasource
-when they do not declare one. If any statement fails, everything is rolled
+when they do not declare one, at any depth (inside a `q:loop` or a `q:if` of
+the transaction too). If any statement fails, everything is rolled
 back and the transaction is an error that says so. `isolationLevel` (or
 `isolation`) is `READ_UNCOMMITTED`, `READ_COMMITTED` (the default),
 `REPEATABLE_READ` or `SERIALIZABLE`; anything else is a parse error.

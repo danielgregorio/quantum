@@ -15,8 +15,7 @@ description: "Insert every row of a file in one transaction — a row that fails
 <<< @/../examples/cookbook/data-and-sql/load-a-csv-into-a-table/import/products.csv{text}
 
 The action reads the file with `q:data`, then inserts each row inside one
-`q:transaction`. A query inside a `q:loop` names its datasource, even inside
-the transaction.
+`q:transaction`; the queries in it, in the loop too, use its datasource.
 
 <<< @/../examples/cookbook/data-and-sql/load-a-csv-into-a-table/components/index.q{xml}
 

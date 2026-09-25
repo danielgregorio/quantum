@@ -8,7 +8,7 @@
          already there, a price that is not positive), none stays. -->
     <q:transaction datasource="db">
       <q:loop items="{rows}" var="row">
-        <q:query name="inserted" datasource="db">
+        <q:query name="inserted">
           INSERT INTO products (sku, name, price) VALUES (:sku, :name, :price)
           <q:param name="sku" value="{row.sku}" type="string" />
           <q:param name="name" value="{row.name}" type="string" />
