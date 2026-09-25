@@ -90,20 +90,21 @@ const GITHUB = 'https://github.com/danielgregorio/quantum'
 // to the translation when there is one, and to the English page otherwise.
 const TRANSLATED = {
   pt: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/', '/showcase/',
+    '/tools/cli', '/tools/hot-reload', '/tools/dev-panel', '/tools/error-pages', '/tools/check', '/tools/vscode-extension', '/tools/lsp-server', '/targets/desktop',
     '/guide/getting-started', '/guide/components', '/guide/how-a-page-runs', '/guide/state-management', '/guide/loops',
     '/guide/conditionals', '/guide/functions', '/guide/databinding', '/guide/actions', '/guide/query',
     '/guide/authentication', '/guide/ui', '/guide/testing',
     '/guide/ai', '/guide/files-and-mail', '/guide/data-import', '/guide/services', '/guide/sessions',
     '/guide/admin', '/guide/project-structure', '/guide/applications',
     '/blog/', '/status/', '/community/'],
-  es: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/', '/showcase/',
+  es: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/cookbook/', '/showcase/', '/community/', '/tools/cli', '/tools/hot-reload', '/tools/dev-panel', '/tools/error-pages', '/tools/check', '/tools/vscode-extension', '/tools/lsp-server', '/targets/desktop',
     '/blog/', '/status/',
     '/guide/getting-started', '/guide/components', '/guide/how-a-page-runs', '/guide/state-management',
     '/guide/loops', '/guide/conditionals', '/guide/functions', '/guide/databinding',
     '/guide/actions', '/guide/query', '/guide/authentication', '/guide/ui', '/guide/testing',
     '/guide/ai', '/guide/files-and-mail', '/guide/data-import', '/guide/services', '/guide/sessions',
     '/guide/admin', '/guide/project-structure', '/guide/applications'],
-  zh: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/cookbook/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/showcase/',
+  zh: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/cookbook/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/showcase/', '/community/', '/tools/cli', '/tools/hot-reload', '/tools/dev-panel', '/tools/error-pages', '/tools/check', '/tools/vscode-extension', '/tools/lsp-server', '/targets/desktop',
     '/blog/', '/status/',
     '/guide/getting-started', '/guide/components', '/guide/how-a-page-runs', '/guide/state-management',
     '/guide/ai', '/guide/files-and-mail', '/guide/data-import', '/guide/services', '/guide/sessions',
@@ -198,6 +199,49 @@ const GUIDE_TEXT = {
   },
 }
 
+// BEGIN Tools and targets sidebars (translated pages: docs/<lang>/tools/, docs/<lang>/targets/)
+const TOOLS_SIDEBAR = {
+  tools: ['tools', [['cli', '/tools/cli'], ['hotReload', '/tools/hot-reload'], ['devPanel', '/tools/dev-panel'],
+    ['errorPages', '/tools/error-pages'], ['check', '/tools/check'], ['vscode', '/tools/vscode-extension'],
+    ['lsp', '/tools/lsp-server']]],
+  targets: ['targets', [['desktop', '/targets/desktop']]],
+}
+
+const TOOLS_TEXT = {
+  root: {
+    tools: 'Developer Tools', targets: 'Build Targets', cli: 'CLI Commands', hotReload: 'Hot Reload',
+    devPanel: 'The /_dev Panel', errorPages: 'Error Pages', check: 'quantum check',
+    vscode: 'VS Code Extension', lsp: 'LSP Server', desktop: 'Desktop (quantum desktop)',
+  },
+  pt: {
+    tools: 'Ferramentas de desenvolvimento', targets: 'Destinos de build', cli: 'Comandos da CLI',
+    hotReload: 'Hot Reload', devPanel: 'O painel /_dev', errorPages: 'Páginas de erro',
+    check: 'quantum check', vscode: 'Extensão do VS Code', lsp: 'Servidor LSP',
+    desktop: 'Desktop (quantum desktop)',
+  },
+  es: {
+    tools: 'Herramientas de desarrollo', targets: 'Destinos de compilación', cli: 'Comandos de la CLI',
+    hotReload: 'Hot Reload', devPanel: 'El panel /_dev', errorPages: 'Páginas de error',
+    check: 'quantum check', vscode: 'Extensión de VS Code', lsp: 'Servidor LSP',
+    desktop: 'Escritorio (quantum desktop)',
+  },
+  zh: {
+    tools: '开发工具', targets: '构建目标', cli: 'CLI 命令', hotReload: '热重载',
+    devPanel: '/_dev 面板', errorPages: '错误页面', check: 'quantum check',
+    vscode: 'VS Code 扩展', lsp: 'LSP 服务器', desktop: '桌面（quantum desktop）',
+  },
+}
+
+export function toolsSidebar(key, section) {
+  const t = { ...TOOLS_TEXT.root, ...(TOOLS_TEXT[key] || {}) }
+  const [group, items] = TOOLS_SIDEBAR[section]
+  return [{
+    text: t[group],
+    items: items.map(([label, path]) => ({ text: t[label], link: key === 'root' ? path : link(key, path) })),
+  }]
+}
+// END Tools and targets sidebars
+
 export function guideSidebar(key) {
   const t = { ...GUIDE_TEXT.root, ...(GUIDE_TEXT[key] || {}) }
   return GUIDE_SIDEBAR.map(([group, items]) => ({
@@ -239,7 +283,11 @@ function chrome(key) {
   const t = TEXT[key]
   return {
     nav: nav(key),
-    ...(key === 'root' ? {} : { sidebar: { [`${LANGUAGES[key].prefix}guide/`]: guideSidebar(key) } }),
+    ...(key === 'root' ? {} : { sidebar: {
+      [`${LANGUAGES[key].prefix}guide/`]: guideSidebar(key),
+      [`${LANGUAGES[key].prefix}tools/`]: toolsSidebar(key, 'tools'),
+      [`${LANGUAGES[key].prefix}targets/`]: toolsSidebar(key, 'targets'),
+    } }),
     editLink: { pattern: `${GITHUB}/edit/main/docs/:path`, text: t.editLink },
     lastUpdated: { text: t.lastUpdated },
     outline: { label: t.outline },

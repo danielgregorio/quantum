@@ -141,14 +141,108 @@ def stability_page(text: str) -> str:
 
 # -- VS Code extension -------------------------------------------------------
 
-def vscode_page() -> str:
-    """docs/tools/vscode-extension.md from vscode-quantum/package.json and its snippets.
+# The VS Code page's own words, per language. The tables are the manifest's: the
+# command titles, setting descriptions and snippet names are the extension's own
+# (English) interface, the same in every language.
+VSCODE_TEXT = {
+    'en': {
+        'title': 'VS Code extension',
+        'intro': ('The extension lives in the repository, in `vscode-quantum/`. It is **not '
+                  'published** on the Visual Studio Marketplace; to use it, build it and run it '
+                  'from source (it needs Node.js):'),
+        'f5': ('Then open the `vscode-quantum` folder in VS Code and press **F5**: a second VS '
+               'Code window (the Extension Development Host) opens with the extension '
+               'loaded, and `.q` files get the language features below.'),
+        'requires': ('Requires VS Code {engine}. Features that run Quantum use the `quantum` found '
+                     'through the settings below.'),
+        'commands': 'Commands', 'command': 'Command', 'cmd_title': 'Title',
+        'keys_title': 'Keyboard shortcuts', 'keys': 'Keys',
+        'settings': 'Settings', 'setting': 'Setting', 'default': 'Default', 'description': 'Description',
+        'snippets': 'Snippets', 'snippets_intro': 'Type the prefix in a `.q` file and accept the suggestion.',
+        'prefix': 'Prefix', 'inserts': 'Inserts',
+        'outro': ('The extension has its own completion, hover, definitions and diagnostics, '
+                  'built from the same tag schema as the language server. For other editors, '
+                  'see [LSP server](./lsp-server.md).'),
+    },
+    'pt': {
+        'title': 'Extensão do VS Code',
+        'notice': ('::: info Tradução automática\nEsta página foi traduzida automaticamente do '
+                   'inglês e ainda não foi revisada\npor um falante nativo; correções são '
+                   'bem-vindas no GitHub. Se algo não bater,\nvale o '
+                   '[original em inglês](/tools/vscode-extension).\n:::\n'),
+        'intro': ('A extensão fica no repositório, em `vscode-quantum/`. Ela **não está publicada** '
+                  'no Visual Studio Marketplace; para usá-la, compile e rode a partir do código-fonte '
+                  '(precisa de Node.js):'),
+        'f5': ('Depois abra a pasta `vscode-quantum` no VS Code e aperte **F5**: uma segunda janela '
+               'do VS Code (o Extension Development Host) abre com a extensão carregada, e os '
+               'arquivos `.q` ganham os recursos abaixo.'),
+        'requires': ('Requer VS Code {engine}. Os recursos que executam o Quantum usam o `quantum` '
+                     'encontrado pelas configurações abaixo.'),
+        'commands': 'Comandos', 'command': 'Comando', 'cmd_title': 'Título',
+        'keys_title': 'Atalhos de teclado', 'keys': 'Teclas',
+        'settings': 'Configurações', 'setting': 'Configuração', 'default': 'Padrão',
+        'description': 'Descrição',
+        'snippets': 'Snippets', 'snippets_intro': 'Digite o prefixo num arquivo `.q` e aceite a sugestão.',
+        'prefix': 'Prefixo', 'inserts': 'Insere',
+        'outro': ('A extensão tem o seu próprio autocompletar, hover, definições e diagnósticos, '
+                  'construídos a partir do mesmo esquema de tags do servidor de linguagem. Para '
+                  'outros editores, veja o [servidor LSP](./lsp-server.md).'),
+    },
+    'es': {
+        'title': 'Extensión de VS Code',
+        'notice': ('::: info Traducción automática\nEsta página se tradujo automáticamente del inglés y '
+                   'todavía no la revisó un\nhablante nativo; las correcciones son bienvenidas en GitHub. '
+                   'Si algo no\ncoincide, vale el [original en inglés](/tools/vscode-extension).\n:::\n'),
+        'intro': ('La extensión vive en el repositorio, en `vscode-quantum/`. **No está publicada** en '
+                  'el Visual Studio Marketplace; para usarla, compílala y ejecútala desde el código '
+                  'fuente (necesita Node.js):'),
+        'f5': ('Luego abre la carpeta `vscode-quantum` en VS Code y presiona **F5**: se abre una '
+               'segunda ventana de VS Code (el Extension Development Host) con la extensión cargada, '
+               'y los archivos `.q` obtienen las funciones de abajo.'),
+        'requires': ('Requiere VS Code {engine}. Las funciones que ejecutan Quantum usan el `quantum` '
+                     'que encuentran las configuraciones de abajo.'),
+        'commands': 'Comandos', 'command': 'Comando', 'cmd_title': 'Título',
+        'keys_title': 'Atajos de teclado', 'keys': 'Teclas',
+        'settings': 'Configuración', 'setting': 'Ajuste', 'default': 'Valor por defecto',
+        'description': 'Descripción',
+        'snippets': 'Snippets',
+        'snippets_intro': 'Escribe el prefijo en un archivo `.q` y acepta la sugerencia.',
+        'prefix': 'Prefijo', 'inserts': 'Inserta',
+        'outro': ('La extensión tiene su propio autocompletado, hover, definiciones y diagnósticos, '
+                  'construidos a partir del mismo esquema de etiquetas que el servidor de lenguaje. '
+                  'Para otros editores, consulta el [servidor LSP](./lsp-server.md).'),
+    },
+    'zh': {
+        'title': 'VS Code 扩展',
+        'notice': ('::: info 机器翻译\n本页由英文原文机器翻译而来，尚未经过母语审校，欢迎在 GitHub 上提出修改。'
+                   '内容如有出入，以[英文原文](/tools/vscode-extension)为准。\n:::\n'),
+        'intro': ('扩展位于仓库的 `vscode-quantum/` 中。它**没有发布**到 Visual Studio Marketplace；'
+                  '要使用它，需要从源码构建并运行（需要 Node.js）：'),
+        'f5': ('然后在 VS Code 中打开 `vscode-quantum` 文件夹并按 **F5**：会打开第二个 VS Code 窗口'
+               '（Extension Development Host），其中加载了该扩展，`.q` 文件即可获得下面的语言功能。'),
+        'requires': '需要 VS Code {engine}。运行 Quantum 的功能使用下面设置中找到的 `quantum`。',
+        'commands': '命令', 'command': '命令', 'cmd_title': '标题',
+        'keys_title': '快捷键', 'keys': '按键',
+        'settings': '设置', 'setting': '设置项', 'default': '默认值', 'description': '说明',
+        'snippets': '代码片段', 'snippets_intro': '在 `.q` 文件中输入前缀并接受建议。',
+        'prefix': '前缀', 'inserts': '插入',
+        'outro': ('扩展有自己的补全、悬停提示、定义跳转和诊断，基于与语言服务器相同的标签结构构建。'
+                  '其他编辑器请参见 [LSP 服务器](./lsp-server.md)。'),
+    },
+}
+
+
+def vscode_page(lang: str = 'en') -> str:
+    """docs/tools/vscode-extension.md from vscode-quantum/package.json and its snippets
+    — or its translation, docs/<lang>/tools/vscode-extension.md, stamped with the
+    English page's hash (the tables stay the manifest's own English strings).
 
     The hand-written page described a Marketplace listing that does not exist
     and features nobody had checked; this one lists what the extension's
     manifest declares, so it changes when the extension does.
     """
     import json
+    w = VSCODE_TEXT[lang]
     ext = REPO / 'vscode-quantum'
     manifest = json.loads((ext / 'package.json').read_text(encoding='utf-8'))
     contributes = manifest.get('contributes', {})
@@ -156,28 +250,26 @@ def vscode_page() -> str:
     def cell(text):
         return str(text).replace('|', '\\|').replace('\n', ' ')
 
-    lines = [GENERATED.format(source='vscode-quantum/package.json'),
-             '# VS Code extension\n',
-             'The extension lives in the repository, in `vscode-quantum/`. It is **not '
-             'published** on the Visual Studio Marketplace; to use it, build it and run it '
-             'from source (it needs Node.js):\n',
-             '```bash\ncd vscode-quantum\nnpm install\nnpm run compile\n```\n',
-             'Then open the `vscode-quantum` folder in VS Code and press **F5**: a second VS '
-             'Code window (the Extension Development Host) opens with the extension '
-             'loaded, and `.q` files get the language features below.\n',
-             f'Requires VS Code {manifest.get("engines", {}).get("vscode", "")}. '
-             'Features that run Quantum use the `quantum` found through the settings below.\n',
-             '## Commands\n', '| Command | Title |', '|---|---|']
+    lines = [] if lang == 'en' else [_stamped('tools/vscode-extension.md', vscode_page())]
+    lines += [GENERATED.format(source='vscode-quantum/package.json'), f'# {w["title"]}\n']
+    if lang != 'en':
+        lines.append(w['notice'])
+    lines += [w['intro'] + '\n',
+              '```bash\ncd vscode-quantum\nnpm install\nnpm run compile\n```\n',
+              w['f5'] + '\n',
+              w['requires'].format(engine=manifest.get('engines', {}).get('vscode', '')) + '\n',
+              f'## {w["commands"]}\n', f'| {w["command"]} | {w["cmd_title"]} |', '|---|---|']
     for c in contributes.get('commands', []):
         lines.append(f'| `{c["command"]}` | {cell(c.get("title", ""))} |')
     keys = contributes.get('keybindings', [])
     if keys:
-        lines += ['', '## Keyboard shortcuts\n', '| Keys | Command |', '|---|---|']
+        lines += ['', f'## {w["keys_title"]}\n', f'| {w["keys"]} | {w["command"]} |', '|---|---|']
         for k in keys:
             lines.append(f'| `{k.get("key", "")}` | `{k.get("command", "")}` |')
     props = (contributes.get('configuration', {}) or {}).get('properties', {})
     if props:
-        lines += ['', '## Settings\n', '| Setting | Default | Description |', '|---|---|---|']
+        lines += ['', f'## {w["settings"]}\n',
+                  f'| {w["setting"]} | {w["default"]} | {w["description"]} |', '|---|---|---|']
         for name, spec in props.items():
             default = json.dumps(spec.get('default')) if 'default' in spec else ''
             lines.append(f'| `{name}` | `{cell(default)}` | {cell(spec.get("description", ""))} |')
@@ -186,14 +278,12 @@ def vscode_page() -> str:
         data = json.loads((ext / entry['path']).read_text(encoding='utf-8'))
         snippets += [(s['prefix'], s.get('description', name)) for name, s in data.items()]
     if snippets:
-        lines += ['', '## Snippets\n', 'Type the prefix in a `.q` file and accept the suggestion.\n',
-                  '| Prefix | Inserts |', '|---|---|']
+        lines += ['', f'## {w["snippets"]}\n', w['snippets_intro'] + '\n',
+                  f'| {w["prefix"]} | {w["inserts"]} |', '|---|---|']
         for prefix, description in sorted(snippets):
             prefixes = prefix if isinstance(prefix, list) else [prefix]
             lines.append(f'| {", ".join(f"`{p}`" for p in prefixes)} | {cell(description)} |')
-    lines += ['', 'The extension has its own completion, hover, definitions and diagnostics, '
-              'built from the same tag schema as the language server. For other editors, '
-              'see [LSP server](./lsp-server.md).', '']
+    lines += ['', w['outro'], '']
     return '\n'.join(lines)
 
 
@@ -373,6 +463,8 @@ def pages() -> dict:
     out['status/index.md'] = status_page((REPO / 'FEATURE_STATUS.md').read_text(encoding='utf-8'))
     out['stability/index.md'] = stability_page((REPO / 'SUPPORT_TIERS.md').read_text(encoding='utf-8'))
     out['tools/vscode-extension.md'] = vscode_page()
+    for lang in ('pt', 'es', 'zh'):
+        out[f'{lang}/tools/vscode-extension.md'] = vscode_page(lang)
     out.update(blog_pages())
     out.update(translated_pages(out))
     return out

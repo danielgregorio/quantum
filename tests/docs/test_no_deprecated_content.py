@@ -124,6 +124,9 @@ ERROR_MARK = re.compile(r'\*\*(Error|Erro|错误)[:：]\*\*')
 ALLOWED = {
     ('reference/spec.md', 'qtest'): 'APP-2: a qtest: tag is a parse error that names quantum test',
     ('targets/desktop.md', 'target-desktop'): 'its "What happened to --target desktop" section',
+    ('pt/targets/desktop.md', 'target-desktop'): 'the same section, translated',
+    ('es/targets/desktop.md', 'target-desktop'): 'the same section, translated',
+    ('zh/targets/desktop.md', 'target-desktop'): 'the same section, translated',
 }
 FENCE = '`' * 3
 

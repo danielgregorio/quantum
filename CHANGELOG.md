@@ -43,6 +43,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the admin's deploy feature), and each pattern proves it catches a sample.
   `tests/docs/test_quoted_messages.py` checks that a message the site quotes
   in a text block uses only words Quantum prints.
+- The Tools pages (the CLI, hot reload, the `/_dev` panel, error pages,
+  `quantum check`, the VS Code extension, the LSP server) and Desktop in
+  Portuguese, Spanish and Chinese, and Community in Spanish and Chinese, with
+  their sidebars. Headings keep the English anchors; the VS Code page is
+  generated per language from the extension's manifest. Machine translated
+  and marked so.
 - More of the guide in Simplified Chinese: AI, files and mail, data import,
   services, sessions, the admin, project structure and `q:application`,
   machine-translated, with the English heading anchors.
