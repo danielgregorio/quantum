@@ -12,6 +12,8 @@ hero:
     - theme: alt
       text: GitHub
       link: https://github.com/danielgregorio/quantum
+source: index.md
+source_hash: a290c644b247
 ---
 
 A documentação está em inglês por enquanto; a tradução para o português está a caminho.

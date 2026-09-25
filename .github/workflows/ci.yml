@@ -117,6 +117,11 @@ jobs:
           npx vitepress preview docs --port 4173 &
           python3 scripts/check-docs-links.py http://localhost:4173/
 
+      - name: Translations behind their English source (a report, not a failure)
+        # A stale page already shows "this translation may be out of date"; this
+        # lists them, in the log and in the run summary.
+        run: python3 scripts/translation-status.py | tee -a "$GITHUB_STEP_SUMMARY"
+
   build-examples:
     runs-on: ubuntu-latest
     needs: test

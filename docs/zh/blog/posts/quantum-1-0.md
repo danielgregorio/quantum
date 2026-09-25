@@ -2,6 +2,8 @@
 title: Quantum 1.0
 date: 2026-09-25
 description: 用 XML 编写的声明式 Web 应用，语言内置 AI 与 RAG——1.0 承诺什么，如何验证，接下来做什么。
+source: blog/posts/quantum-1-0.md
+source_hash: 83905caaa8ae
 ---
 
 # Quantum 1.0

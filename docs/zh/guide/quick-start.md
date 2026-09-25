@@ -1,3 +1,8 @@
+---
+source: guide/quick-start.md
+source_hash: e3d3a1ae34f9
+---
+
 # 快速开始
 
 ::: info 机器翻译

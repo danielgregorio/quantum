@@ -1,3 +1,8 @@
+---
+source: guide/why-quantum.md
+source_hash: b3e57fbe210d
+---
+
 # 为什么选择 Quantum
 
 ::: info 机器翻译

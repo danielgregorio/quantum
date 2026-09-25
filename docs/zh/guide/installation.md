@@ -1,3 +1,8 @@
+---
+source: guide/installation.md
+source_hash: f900f66810af
+---
+
 # 安装
 
 ::: info 机器翻译

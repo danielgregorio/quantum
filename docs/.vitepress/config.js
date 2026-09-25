@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitepress'
 import { LANGUAGES, locales, searchLocales } from './locales.js'
 import { tokenize } from './search-tokenize.js'
+import { markStaleTranslation } from './translations.js'
 
 // Served at the root of https://quantumframework.net (GitHub Pages with a
 // custom domain). Whoever serves it under a sub-path passes DOCS_BASE, and on
@@ -90,6 +91,13 @@ export default defineConfig({
   locales: locales(),
 
   sitemap: { hostname: SITE },
+
+  // BEGIN translations (docs/.vitepress/translations.js): a translated page
+  // whose English source changed after it was translated is marked stale.
+  transformPageData(pageData) {
+    markStaleTranslation(pageData, DOCS)
+  },
+  // END translations
 
   transformHead({ pageData, siteData }) {
     return [...alternates(pageData.relativePath), ...openGraph(pageData, siteData.title)]

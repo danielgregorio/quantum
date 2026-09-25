@@ -12,6 +12,8 @@ hero:
     - theme: alt
       text: GitHub
       link: https://github.com/danielgregorio/quantum
+source: index.md
+source_hash: a290c644b247
 ---
 
 文档目前为英文，中文翻译正在进行中。

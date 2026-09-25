@@ -1,4 +1,6 @@
+import { h } from 'vue'
 import DefaultTheme from 'vitepress/theme'
+import TranslationNotice from './components/TranslationNotice.vue'
 import ExampleCard from './components/ExampleCard.vue'
 import ExampleGallery from './components/ExampleGallery.vue'
 import ExampleList from './components/ExampleList.vue'
@@ -8,6 +10,11 @@ import { tokenize } from '../search-tokenize.js'
 
 export default {
   extends: DefaultTheme,
+  // A translation whose English source changed says so, on doc pages and homes.
+  Layout: () => h(DefaultTheme.Layout, null, {
+    'doc-before': () => h(TranslationNotice),
+    'home-hero-before': () => h(TranslationNotice),
+  }),
   enhanceApp({ app, siteData }) {
     // The search box splits a query as the index was split (Intl.Segmenter, so
     // Chinese works): the config's tokenize function does not reach the browser.

@@ -1,3 +1,8 @@
+---
+source: sponsor/index.md
+source_hash: 53384d3cea79
+---
+
 # 支持 Quantum
 
 ::: info 机器翻译

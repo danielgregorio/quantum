@@ -10,6 +10,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- A translated page records the English page it came from and the hash of its
+  text (`source:` / `source_hash:`). When the English changes, the page says
+  "this translation may be out of date" with a link to the English, and CI
+  lists the stale pages (`scripts/translation-status.py`; `--stamp` after
+  updating a translation). `tests/docs/test_translations.py` checks that every
+  translation names an English page that exists and is in its language's
+  navigation.
 - The site speaks four languages: English, and /pt/ (pt-BR), /es/ and
   /zh/ (zh-CN), with a language switcher and each language's interface text;
   the pages are translated next. The top nav is Home · Docs (Guide, Tutorial,
