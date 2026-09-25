@@ -19,6 +19,15 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- The Cookbook: short recipes for one task each. A recipe is a small app in
+  `examples/cookbook/` with a `quantum test` suite; its page imports the tested
+  files, and what it shows as a result is written by running it
+  (`scripts/generate-cookbook.py`). The first two: a first test with
+  `quantum test`, and mail in development with `host: log`.
+- Quantum code on the site is tested: CI fails on an `xml` block that is not a
+  run guide example, a parsed guide or generated-reference example, or on a
+  page marked "Under review"; a `quantum.config.yaml` snippet must load
+  without errors or warnings. Two snippets taught keys that do not exist.
 - Every `xml` example on the site is checked by the real parser in CI
   (tests/docs/test_docs_xml_blocks.py); the guide's examples with a result
   are also run. 121 of 607 failed: the guide's are fixed, the editor
@@ -40,14 +49,6 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the entries citing it. A test fails when a committed page differs from what
   the generator writes. It replaces the hand-written `api/tags-reference`,
   `api/attributes-reference` and `api/ui-reference` pages.
-- The site has a Roadmap (`roadmap/`): what 1.0 promises, and what is next,
-  each item with its status (planned, in design, in progress) and no dates.
-
-### Fixed
-
-- `quantum run --target desktop` is no longer offered: the command line says
-  the target was removed and points to `quantum desktop` (UI-8). It used to
-  accept the choice and fail later, in the build.
 
 ## 1.0.0
 

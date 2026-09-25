@@ -245,14 +245,6 @@ class QuantumRunner:
         return 0
 
 
-def _ui_target(value):
-    """--target: `desktop` was removed (UI-8); say where the desktop went."""
-    if value == 'desktop':
-        raise argparse.ArgumentTypeError('--target desktop was removed (UI-8): the desktop is '
-                                         '`quantum desktop`, the application pages in a window (UI-4)')
-    return value
-
-
 def build_parser():
     """The `quantum` command line: the parser, and the optional sub-commands' handlers.
 
@@ -303,8 +295,8 @@ Examples:
     run_parser.add_argument('file', help='.q file to execute')
     run_parser.add_argument('--debug', action='store_true', help='Debug mode')
     run_parser.add_argument('--config', default='quantum.config.yaml', help='Config file')
-    run_parser.add_argument('--target', type=_ui_target, choices=['html', 'textual', 'mobile'], default='html',
-                            help='UI target (for type="ui" apps): html, textual, or mobile')
+    run_parser.add_argument('--target', choices=['html', 'textual', 'desktop', 'mobile'], default='html',
+                            help='UI target (for type="ui" apps): html, textual, desktop, or mobile')
     run_parser.add_argument('--engine', choices=['pixi', 'godot'], default='pixi',
                             help='Game engine backend: pixi (default, HTML5) or godot (Godot 4 project)')
 

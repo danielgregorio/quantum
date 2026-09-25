@@ -1,0 +1,5 @@
+tests/notes.test.q
+  PASS  the page lists the notes
+  PASS  adding a note stores it and says so
+  PASS  a title that is too short is refused on its field
+3 passed, 0 failed

@@ -1,0 +1,8 @@
+# Recipe: mail in development. `host: log` writes each message to the log
+# instead of sending it; set SMTP_HOST in production and the same page sends.
+paths:
+  components: ./components
+
+mail:
+  host: ${SMTP_HOST:-log}
+  from: support@example.com

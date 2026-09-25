@@ -136,14 +136,13 @@ server:
   port: 8080
   debug: false
 
-database:
-  default:
+datasources:
+  db:
     driver: sqlite
-    database: ./data.db
+    database: ./data/app.db
 
-auth:
-  secret_key: "your-secret-key"
-  session_timeout: 3600
+security:
+  secret_key: ${SECRET_KEY}
 ```
 
 ## quantum console

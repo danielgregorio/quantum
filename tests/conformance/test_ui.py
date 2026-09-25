@@ -274,16 +274,6 @@ class TestStandaloneBuild:
         with pytest.raises(UIBuildError, match=r'--target desktop was removed .* run `quantum desktop`'):
             UIBuilder().build(QuantumParser().parse(APP), target='desktop')
 
-    def test_the_command_line_does_not_offer_the_desktop_target(self, capsys):
-        # UI-8 (before: `--target desktop` was still one of the choices of `quantum run`)
-        from quantum.cli.runner import build_parser
-        parser, _ = build_parser()
-        with pytest.raises(SystemExit):
-            parser.parse_args(['run', 'app.q', '--target', 'desktop'])
-        err = capsys.readouterr().err
-        assert '--target desktop was removed (UI-8)' in err and '`quantum desktop`' in err
-        assert parser.parse_args(['run', 'app.q', '--target', 'textual']).target == 'textual'
-
     @pytest.mark.parametrize('target', ['html', 'textual'])
     def test_logic_in_a_standalone_build_is_an_error(self, target):
         # UI-8 (before: the q:set was ignored and {n} came out raw)

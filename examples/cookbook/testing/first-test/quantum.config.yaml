@@ -1,0 +1,9 @@
+# Recipe: a first test with `quantum test`.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/notes.db

@@ -35,3 +35,27 @@ def test_a_fragment_names_a_known_context():
     for b in docs_blocks.blocks():
         if b.fragment:
             assert b.fragment in docs_blocks.CONTEXTS, f'docs/{b.path}:{b.line}: fragment={b.fragment}'
+
+
+GUARDED = [b for b in docs_blocks.blocks()]
+
+
+@pytest.mark.parametrize('block', GUARDED, ids=[f'{b.path}:{b.line}' for b in GUARDED])
+def test_quantum_code_on_the_site_is_tested(block):
+    # The guard: see THE GUARD in docs_blocks.py.
+    problem = docs_blocks.guard(block)
+    assert problem is None, f'docs/{block.path}:{block.line}: {problem}'
+
+
+def test_the_parse_only_list_only_shrinks():
+    unused = docs_blocks.PARSE_ONLY_PAGES - docs_blocks.parse_only_pages_in_use()
+    assert not unused, f'no parse-only block left on {sorted(unused)}: take them off PARSE_ONLY_PAGES'
+
+
+CONFIGS = list(docs_blocks.config_snippets())
+
+
+@pytest.mark.parametrize('path,line,text', CONFIGS, ids=[f'{p}:{n}' for p, n, _ in CONFIGS])
+def test_a_config_snippet_loads_without_complaint(path, line, text, monkeypatch):
+    problem = docs_blocks.config_problem(text, monkeypatch)
+    assert problem is None, f'docs/{path}:{line}: {problem}'

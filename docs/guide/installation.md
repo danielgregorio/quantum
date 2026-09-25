@@ -108,6 +108,8 @@ datasources:
   db:
     driver: postgres
     host: ${DB_HOST:-localhost}
+    database: app
+    username: app
     password: ${DB_PASSWORD}
 ```
 

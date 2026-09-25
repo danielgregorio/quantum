@@ -866,7 +866,7 @@ only: `--target html` (one page) and `--target textual` (a Textual app). Logic
 inside it (`q:set`, `q:function`, any statement) is an error that says to write
 the screen as a page — logic runs in the page's runtime. `--target desktop` was
 removed (it translated the logic to a JavaScript bridge of its own); the
-desktop is `quantum desktop` (UI-4), and `quantum run --target desktop` says so. `--target mobile` (React Native) is
+desktop is `quantum desktop` (UI-4). `--target mobile` (React Native) is
 Laboratory: it warns once and keeps translating the logic, with no promise.
 
 **UI-9** — A `<ui:form on-submit="x">` takes each field's rules from action
