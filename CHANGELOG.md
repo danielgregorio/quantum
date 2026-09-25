@@ -26,6 +26,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- The Cookbook in Spanish (/es/cookbook/) and Simplified Chinese
+  (/zh/cookbook/): all 51 recipes, machine translated and marked as such. The
+  code and results on each page are the English page's imports of the tested
+  files, line for line; the prose follows each language's glossary.
 - The repository's front door meets the site's bar. README's Quantum examples
   are files of Cookbook recipes, byte for byte, and its quick start is run as
   shown (`tests/docs/test_readme.py`, which also checks the site and file links

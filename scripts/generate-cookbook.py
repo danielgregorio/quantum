@@ -225,7 +225,7 @@ LANGS = {
         'english': '（英文）',
         'topics': {'basics': '基础', 'screens': '界面', 'testing': '测试应用',
                    'files-and-mail': '文件和邮件', 'login-and-permissions': '登录和权限',
-                   'forms-and-actions': '表单和操作', 'data-and-sql': '数据和 SQL', 'ai': 'AI'},
+                   'forms-and-actions': '表单和动作', 'data-and-sql': '数据和 SQL', 'ai': 'AI'},
     },
 }
 
