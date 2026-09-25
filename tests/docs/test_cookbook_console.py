@@ -94,7 +94,8 @@ def test_the_form_posts_the_same_action_from_the_console(console):
     from textual.widgets import Button, Input
 
     async def script(app, pilot):
-        sign = lambda: [b for b in app.query(Button) if str(b.label) == 'Sign'][0]
+        def sign():
+            return [b for b in app.query(Button) if str(b.label) == 'Sign'][0]
         app.query_one(Input).value = 'A'
         await press(app, pilot, sign())
         assert 'Must be at least 2 characters' in screen_text(app)
