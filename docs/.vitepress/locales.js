@@ -89,7 +89,7 @@ const GITHUB = 'https://github.com/danielgregorio/quantum'
 // The pages each language has translated (docs/<lang>/<path>). The nav links
 // to the translation when there is one, and to the English page otherwise.
 const TRANSLATED = {
-  pt: [],
+  pt: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app'],
   es: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app'],
   zh: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/'],
 }

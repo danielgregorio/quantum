@@ -66,7 +66,8 @@ DEPRECATED = [
     # 0.11 — q:application types
     ('app-types', r'<q:application\b[^>]*type="(html|api|microservices)"', 'pages in `components/` (APP-1)'),
     # tiers, renamed for 1.0
-    ('tier-names', r'\bDiferencial\b|\bLaboratório\b', 'the tiers Core, AI, Experimental, Laboratory'),
+    ('tier-names', r'\bDiferencial\b', 'the tiers Core, AI, Experimental, Laboratory'),
+    ('tier-laboratorio', r'\bLaboratório\b', 'the tiers Core, AI, Experimental, Laboratory'),
     # the laboratory's game, which is not in the public repository
     ('smw', r'\bSuper Mario\b|\bMario\b|\bSMW\b|\bYoshi\b|\bNintendo\b|\bKoopa\b|\bGoomba\b',
      'the neutral names of the game examples'),
@@ -119,6 +120,11 @@ def pages():
         yield rel, path.read_text(encoding='utf-8')
 
 
+# An old name that is the right word in a translation: Laboratório is how the
+# pt-BR pages say Laboratory (docs/.vitepress/i18n/glossary.pt.md).
+NATIVE = {('pt/', 'tier-laboratorio')}
+
+
 def sentence_around(text, start, end):
     """The sentence (or line of code) the match is in."""
     left = max(text.rfind('\n\n', 0, start), text.rfind('. ', 0, start), text.rfind('\n```', 0, start))
@@ -145,7 +151,7 @@ def fenced_context(text, start):
 def hits():
     for rel, text in pages():
         for pid, pattern, instead in DEPRECATED:
-            if (rel, pid) in ALLOWED:
+            if (rel, pid) in ALLOWED or any(rel.startswith(lang) and pid == rule for lang, rule in NATIVE):
                 continue
             for m in re.finditer(pattern, text):
                 block = fenced_context(text, m.start())

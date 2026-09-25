@@ -26,6 +26,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- The essential pages in Brazilian Portuguese (/pt/): why Quantum,
+  installation, quick start, the tutorial, stability, sponsor, the roadmap and
+  the 1.0 post, machine-translated until a native speaker reviews them, with a
+  glossary (`docs/.vitepress/i18n/glossary.pt.md`) that keeps the terms the same
+  on every page.
 - Cookbook, "Forms & actions": each error on its field, a refused form that
   keeps what was typed, redirect with a flash (`q:flash` for a warning),
   several forms on one page, a form from the table, edit a row, confirm
