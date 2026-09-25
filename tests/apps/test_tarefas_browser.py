@@ -50,10 +50,25 @@ def box(page, selector):
     return page.locator(selector).first.bounding_box()
 
 
+def open_page(browser, url, width):
+    """The page, with its stylesheet loaded: the layout measured below comes from it.
+
+    Without the stylesheet the boxes are still side by side, but the content
+    does not grow — a failure that would look like a layout bug. When the
+    stylesheet is missing or short, this says so, with its status and size.
+    """
+    page = browser.new_page(viewport={"width": width, "height": 800})
+    stylesheets = []
+    page.on("response", lambda r: stylesheets.append(r) if "/static/styles-" in r.url else None)
+    page.goto(url)
+    assert [(r.status, len(r.body()) > 1000) for r in stylesheets] == [(200, True)], \
+        [(r.url, r.status, len(r.body())) for r in stylesheets]
+    return page
+
+
 def test_side_by_side_on_a_wide_screen(browser, url):
     # UI-2
-    page = browser.new_page(viewport={"width": 1280, "height": 800})
-    page.goto(url)
+    page = open_page(browser, url, 1280)
     side, content = box(page, "#lateral"), box(page, "#conteudo")
     assert content["x"] >= side["x"] + side["width"]                # to the right
     assert abs(content["y"] - side["y"]) < 2                          # same row
@@ -63,8 +78,7 @@ def test_side_by_side_on_a_wide_screen(browser, url):
 
 def test_stacked_on_a_phone_without_overflowing(browser, url):
     # UI-2
-    page = browser.new_page(viewport={"width": 390, "height": 800})
-    page.goto(url)
+    page = open_page(browser, url, 390)
     side, content = box(page, "#lateral"), box(page, "#conteudo")
     assert content["y"] >= side["y"] + side["height"]                # below
     assert side["width"] > 300                                        # the fixed width goes when stacked

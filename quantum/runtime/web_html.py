@@ -5,8 +5,30 @@ Part of QuantumWebServer (web_server.py), as a mixin."""
 import hashlib
 import os
 import re
+import threading
 from html import escape as html_escape
 from pathlib import Path
+
+
+def _write_asset(path: str, text: str) -> None:
+    """Writes an extracted stylesheet or script so that it appears whole or not at all.
+
+    The file's name is its content's hash, and a page links it as soon as the
+    file exists. Written in place, it existed empty while it was being written:
+    a second request in that moment linked it, and its browser got an empty
+    stylesheet — an unstyled page, cached under a name that never changes.
+    """
+    temporary = f'{path}.{os.getpid()}.{threading.get_ident()}.tmp'
+    with open(temporary, 'w', encoding='utf-8') as f:
+        f.write(text)
+    try:
+        os.replace(temporary, path)
+    except PermissionError:
+        # Windows: another request wrote the same file (same name, same content)
+        # and a browser is reading it. That file is already the one we meant.
+        os.remove(temporary)
+        if not os.path.exists(path):
+            raise
 
 
 class HtmlPostProcessing:
@@ -44,8 +66,7 @@ class HtmlPostProcessing:
             css_path = os.path.join(static_dir, css_filename)
 
             if not os.path.exists(css_path):
-                with open(css_path, 'w', encoding='utf-8') as f:
-                    f.write(all_css)
+                _write_asset(css_path, all_css)
 
             html = style_pattern.sub('', html)
 
@@ -72,8 +93,7 @@ class HtmlPostProcessing:
             js_path = os.path.join(static_dir, js_filename)
 
             if not os.path.exists(js_path):
-                with open(js_path, 'w', encoding='utf-8') as f:
-                    f.write(all_js)
+                _write_asset(js_path, all_js)
 
             html = script_pattern.sub('', html)
 

@@ -133,6 +133,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- A page's extracted stylesheet and script (`static/styles-<hash>.css`) are
+  written whole or not at all. Written in place, a second request during the
+  write linked the file while it was still empty or partial, and its browser
+  got an unstyled page, cached under a name that never changes.
 - `q:loop type="range"` takes expressions in `from`, `to` and `step`, like any
   other `{...}` attribute (LOOP-5): `to="{count}"` was read as the text
   "{count}" — an error in a statement, zero rows in markup — and `step="{n}"`
