@@ -1,10 +1,63 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitepress'
+import { LANGUAGES, locales, searchLocales } from './locales.js'
+import { tokenize } from './search-tokenize.js'
+
+// Served at the root of https://quantumframework.net (GitHub Pages with a
+// custom domain). Whoever serves it under a sub-path passes DOCS_BASE, and on
+// another host DOCS_HOST (the absolute URLs of hreflang, the sitemap and Open
+// Graph). Nothing else in the site may spell the base path: links are relative
+// or go through it.
+const BASE = process.env.DOCS_BASE || '/'
+const HOST = (process.env.DOCS_HOST || 'https://quantumframework.net').replace(/\/$/, '')
+const SITE = HOST + BASE
+const DOCS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+
+// The URL of a page (its .md path under docs/), as VitePress builds it.
+function route(relativePath) {
+  return relativePath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '.html')
+}
+
+// hreflang: the same page in each language it exists in (SEO), and English as
+// the default. A page not translated yet has no alternate for that language.
+function alternates(relativePath) {
+  const current = Object.values(LANGUAGES).find(l => l.prefix !== '/' && relativePath.startsWith(l.prefix.slice(1)))
+  const stem = current ? relativePath.slice(current.prefix.length - 1) : relativePath
+  const links = []
+  for (const language of Object.values(LANGUAGES)) {
+    const file = (language.prefix === '/' ? '' : language.prefix.slice(1)) + stem
+    if (fs.existsSync(path.join(DOCS, file))) {
+      links.push(['link', { rel: 'alternate', hreflang: language.lang, href: SITE + route(file) }])
+    }
+  }
+  if (links.length > 1) {
+    links.push(['link', { rel: 'alternate', hreflang: 'x-default', href: SITE + route(stem) }])
+  }
+  return links
+}
+
+// Open Graph: the language's image (scripts/site/og-images.py writes them).
+function openGraph(pageData, siteTitle) {
+  const language = Object.entries(LANGUAGES).find(([key, l]) => key !== 'root' && pageData.relativePath.startsWith(l.prefix.slice(1)))
+  const key = language ? language[0] : 'root'
+  const title = pageData.title ? `${pageData.title} | ${siteTitle}` : siteTitle
+  const description = pageData.description || pageData.frontmatter?.description || ''
+  return [
+    ['meta', { property: 'og:type', content: 'website' }],
+    ['meta', { property: 'og:title', content: title }],
+    ...(description ? [['meta', { property: 'og:description', content: description }]] : []),
+    ['meta', { property: 'og:url', content: SITE + route(pageData.relativePath) }],
+    ['meta', { property: 'og:image', content: `${SITE}og/${key === 'root' ? 'en' : key}.png` }],
+    ['meta', { property: 'og:image:width', content: '1200' }],
+    ['meta', { property: 'og:image:height', content: '630' }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+  ]
+}
 
 export default defineConfig({
-  // Published on GitHub Pages as a project site:
-  // Served at the root of https://quantumframework.net (GitHub Pages with a
-  // custom domain). Whoever serves it under a sub-path passes DOCS_BASE.
-  base: process.env.DOCS_BASE || '/',
+  base: BASE,
 
 
   title: 'Quantum Framework',
@@ -22,30 +75,21 @@ export default defineConfig({
 
   appearance: 'dark',
 
+  // English at the root; /pt/, /es/ and /zh/ (docs/.vitepress/locales.js).
+  locales: locales(),
+
+  sitemap: { hostname: SITE },
+
+  transformHead({ pageData, siteData }) {
+    return [...alternates(pageData.relativePath), ...openGraph(pageData, siteData.title)]
+  },
+
   themeConfig: {
     logo: '/logo.svg',
 
-    nav: [
-      { text: 'Guide', link: '/guide/getting-started' },
-      { text: 'AI', link: '/guide/ai' },
-      // BEGIN Reference (generated pages: scripts/generate-reference.py)
-      { text: 'Reference', link: '/reference/' },
-      // END Reference
-      { text: 'Tools', link: '/tools/cli' },
-      { text: 'Examples', link: '/examples/' },
-      {
-        // Experimental: exists and runs, with no stability promise
-        // (SUPPORT_TIERS.md). Kept out of the main path on purpose.
-        text: 'Experimental',
-        items: [
-          { text: 'UI Component Reference (ui:)', link: '/ui/overview' },
-          { text: 'UI Features', link: '/features/theming' },
-          { text: 'Build Targets', link: '/targets/html' },
-          { text: 'Extensibility', link: '/extensibility/plugins' }
-        ]
-      },
-      { text: 'GitHub', link: 'https://github.com/danielgregorio/quantum' }
-    ],
+    // Until the pages are translated (wave 2), the language switcher goes to the
+    // language's home instead of the same page in that language (a 404 today).
+    i18nRouting: false,
 
     sidebar: {
       '/guide/': [
@@ -207,13 +251,15 @@ export default defineConfig({
       { icon: 'github', link: 'https://github.com/danielgregorio/quantum' }
     ],
 
-    footer: {
-      message: 'Quantum Framework - Simplicity over configuration',
-      copyright: 'MIT Licensed | Built with VitePress'
-    },
-
     search: {
-      provider: 'local'
+      provider: 'local',
+      options: {
+        locales: searchLocales(),
+        // Chinese has no spaces between words: split with Intl.Segmenter when
+        // the index is built. The browser gets the same function from
+        // theme/index.js (functions do not survive into the client config).
+        miniSearch: { options: { tokenize }, searchOptions: { tokenize } }
+      }
     }
   },
 
