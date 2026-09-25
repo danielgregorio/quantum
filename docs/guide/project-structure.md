@@ -16,8 +16,10 @@ my-app/
 └── data/                   your SQLite files, CSV/JSON for q:data
 ```
 
-Only `components/` is required. Everything on this page is checked by the
-conformance tests (`ROUTE-1`, `DB-6`, `CFG-1` in `SPEC.md`).
+Only `components/` is required. The rules are
+[ROUTE-1](../reference/spec#ROUTE-1), [DB-6](../reference/spec#DB-6) and
+[CFG-1](../reference/spec#CFG-1); the page below is served in CI
+(`tests/docs/test_guide_project_structure.py`).
 
 ## Pages and URLs
 
@@ -31,10 +33,9 @@ Each `.q` file in `components/` is served at its path:
 | `components/shop/[id].q` | `/shop/<anything>` |
 
 A `[name]` segment matches any value and hands it to the page as the parameter
-`name`:
+`name`. Save as `components/shop/[id].q`:
 
 ```xml
-<!-- components/shop/[id].q -->
 <q:component name="product" xmlns:q="https://quantum.lang/ns">
   <q:param name="id" type="integer" />
   <q:query name="product" datasource="db">
@@ -45,7 +46,8 @@ A `[name]` segment matches any value and hands it to the page as the parameter
 </q:component>
 ```
 
-A URL with no matching file answers `404`.
+With the products of [the example database](./query#the-example-database), `/shop/2` shows
+**Mouse**. A URL with no matching file answers `404`.
 
 ## quantum.config.yaml
 
@@ -110,16 +112,10 @@ Plan: schema.sql vs. the migrations in migrations/
 
 ## Reusable components
 
-A component used inside pages is a `.q` file too. Import it and use it as a tag:
-
-```xml
-<q:component name="index" xmlns:q="https://quantum.lang/ns">
-  <q:import component="Card" />
-  <Card title="Welcome" />
-</q:component>
-```
-
-See [Components](/guide/components).
+A component used inside pages is a `.q` file too: a page imports it with
+`q:import` and uses it as a tag. A file or folder whose name starts with `_`
+(`components/_parts/Card.q`) is never served as a page (ROUTE-3). The example
+in [Components](/guide/components) runs in CI.
 
 ## Next steps
 

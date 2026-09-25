@@ -159,7 +159,7 @@ steps run in order.
 
 | Step | What it does |
 |---|---|
-| `<test:given table="posts" title="Draft"/>` | Inserts a row, checked against the schema |
+| `<test:given table="notes" title="Draft"/>` | Inserts a row, checked against the schema |
 | `<test:as user="Ana" role="admin" id="1"/>` | Signs in without a password |
 | `<test:visit/>` | Opens the page — or `path="/other"` — with the other attributes as the query string |
 | `<test:submit action="add" title="…"/>` | Posts the action with the other attributes as fields |
@@ -168,7 +168,7 @@ steps run in order.
 ### `test:given` — rows the test needs
 
 ```xml
-<test:given table="posts" title="Draft" tag_id="3" is_published="0" />
+<test:given table="notes" title="Draft" kind="todo" />
 ```
 
 The row goes into the test's database through the schema's rules: a table or

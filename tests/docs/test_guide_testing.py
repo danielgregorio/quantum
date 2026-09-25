@@ -83,3 +83,39 @@ def test_the_parse_error_is_the_one_the_guide_shows(tmp_path, monkeypatch):
     shown = re.search(r'Nothing outside the vocabulary.*?' + F + r'text\n(?P<body>.*?)' + F, TEXT, re.S)['body']
     assert code == 1
     assert shown.strip() in report
+
+
+def step_block(title):
+    """The xml block under a "### `test:...`" heading."""
+    return re.search(re.escape(title) + r'.*?' + F + r'xml\n(?P<body>.*?)' + F, TEXT, re.S)['body'].strip()
+
+
+def test_the_given_and_as_steps_do_what_the_guide_says(tmp_path, monkeypatch):
+    # TEST-2: the blocks under "test:given" and "test:as", as shown, in the guide's app
+    app = build(tmp_path, monkeypatch)
+    (app / 'components' / 'me.q').write_text(
+        '<q:component name="me">'
+        '<p>{session.userName} {session.userRole} {session.userId} {session.plan}</p></q:component>',
+        encoding='utf-8')
+    given, as_ = step_block('### `test:given`'), step_block('### `test:as`')
+    (app / 'tests' / 'steps.test.q').write_text(f"""
+<q:test name="given" page="/">
+  {given}
+  <test:visit />
+  <test:expect text="2 notes" />
+  <test:expect text="Draft (todo)" />
+</q:test>
+<q:test name="as" page="/me">
+  {as_}
+  <test:visit />
+  <test:expect text="Ana admin 1 pro" />
+</q:test>
+<q:test name="given checks the schema" page="/">
+  <test:given table="notes" title="Draft" kind="note" />
+</q:test>
+""", encoding='utf-8')
+    code, report = run()
+    assert 'PASS  given' in report and 'PASS  as ' in report, report
+    # "a value outside a CHECK (... IN ...) list ... fails the step with a message"
+    assert 'FAIL  given checks the schema' in report and 'kind' in report.split('given checks the schema')[1]
+    assert code == 1

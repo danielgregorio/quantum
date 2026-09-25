@@ -231,15 +231,37 @@ in a `quantum_history` table of the same database: when, who (the session's
 written in the same transaction as the change, so a rolled-back write leaves
 no trace.
 
-Show a row's history on any page:
+Show a row's history on any page with `ui:history`. A post page with a
+rename action. Save as `components/post.q`:
 
 ```xml
-<ui:history table="posts" key="{post.id}" datasource="db" />
+<q:component name="post">
+  <q:action name="rename" method="POST">
+    <q:param name="title" required="true" />
+    <q:query name="renamed" datasource="db">
+      UPDATE posts SET title = :title WHERE id = 1
+      <q:param name="title" value="{title}" type="string" />
+    </q:query>
+    <q:redirect url="/post" />
+  </q:action>
+
+  <q:query name="post" datasource="db">SELECT id, title FROM posts WHERE id = 1</q:query>
+
+  <ui:window title="{post.title}">
+    <ui:form on-submit="rename" submit="Rename" />
+    <ui:history table="posts" key="{post.id}" datasource="db" />
+  </ui:window>
+</q:component>
 ```
+
+After `ana` (signed in) renames the post from `First` to `First!`, the page
+shows:
 
 | When | Who | Action | Change |
 |---|---|---|---|
 | 2026-09-24 10:02:11 | ana | rename | title: First → First! |
+
+(`tests/docs/test_guide_query_history.py` renames it and checks this row.)
 
 Page statements and migrations are not recorded — only actions change
 records. SQLite for now.
