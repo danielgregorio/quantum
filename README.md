@@ -3,7 +3,7 @@
 [![CI](https://github.com/danielgregorio/quantum/actions/workflows/ci.yml/badge.svg)](https://github.com/danielgregorio/quantum/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/quantum-framework)](https://pypi.org/project/quantum-framework/)
 [![Python](https://img.shields.io/pypi/pyversions/quantum-framework)](https://pypi.org/project/quantum-framework/)
-[![Docs](https://img.shields.io/badge/docs-github.io-blue)](https://danielgregorio.github.io/quantum/)
+[![Docs](https://img.shields.io/badge/docs-quantumframework.net-blue)](https://quantumframework.net/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/danielgregorio/quantum/blob/main/LICENSE)
 
 > **Declarative web apps in XML, with AI and RAG built into the language.
@@ -176,11 +176,11 @@ See [CONTRIBUTING.md](https://github.com/danielgregorio/quantum/blob/main/CONTRI
 
 ## Documentation
 
-Full docs at **[danielgregorio.github.io/quantum](https://danielgregorio.github.io/quantum/)**:
+Full docs at **[quantumframework.net](https://quantumframework.net/)**:
 
-- [Getting Started](https://danielgregorio.github.io/quantum/guide/getting-started) · [Installation](https://danielgregorio.github.io/quantum/guide/installation) · [Quick Start](https://danielgregorio.github.io/quantum/guide/quick-start)
-- [Components](https://danielgregorio.github.io/quantum/guide/components) · [State](https://danielgregorio.github.io/quantum/guide/state-management) · [Loops](https://danielgregorio.github.io/quantum/guide/loops) · [Conditionals](https://danielgregorio.github.io/quantum/guide/conditionals)
-- [Queries](https://danielgregorio.github.io/quantum/guide/query) · [Functions](https://danielgregorio.github.io/quantum/guide/functions)
+- [Getting Started](https://quantumframework.net/guide/getting-started) · [Installation](https://quantumframework.net/guide/installation) · [Quick Start](https://quantumframework.net/guide/quick-start)
+- [Components](https://quantumframework.net/guide/components) · [State](https://quantumframework.net/guide/state-management) · [Loops](https://quantumframework.net/guide/loops) · [Conditionals](https://quantumframework.net/guide/conditionals)
+- [Queries](https://quantumframework.net/guide/query) · [Functions](https://quantumframework.net/guide/functions)
 
 Releases and their notes are on the [GitHub Releases](https://github.com/danielgregorio/quantum/releases) page.
 

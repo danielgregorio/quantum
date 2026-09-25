@@ -94,7 +94,7 @@ jobs:
     # was found once it was already published. ignoreDeadLinks is false in
     # docs/.vitepress/config.js, so the build fails on a link to a missing
     # page; the crawler also checks links written as HTML and links that
-    # escape the /quantum/ base.
+    # escape the site's base path.
     runs-on: ubuntu-latest
 
     steps:
@@ -113,7 +113,7 @@ jobs:
       - name: No link to a page that does not exist
         run: |
           npx vitepress preview docs --port 4173 &
-          python3 scripts/check-docs-links.py http://localhost:4173/quantum/
+          python3 scripts/check-docs-links.py http://localhost:4173/
 
   build-examples:
     runs-on: ubuntu-latest

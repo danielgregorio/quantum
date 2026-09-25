@@ -2,9 +2,9 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   // Published on GitHub Pages as a project site:
-  // https://danielgregorio.github.io/quantum/ — everything lives under /quantum/.
-  // Whoever serves it at the root of a domain passes DOCS_BASE=/.
-  base: process.env.DOCS_BASE || '/quantum/',
+  // Served at the root of https://quantumframework.net (GitHub Pages with a
+  // custom domain). Whoever serves it under a sub-path passes DOCS_BASE.
+  base: process.env.DOCS_BASE || '/',
 
 
   title: 'Quantum Framework',

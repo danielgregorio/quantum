@@ -95,7 +95,7 @@ def removed_app_type_message(app_type: str, declared: bool) -> str:
         f"<q:application> {what} was removed in Quantum 0.11: it never ran its "
         f"routes. Build a web app as pages in components/ (components/index.q is "
         f"/) and run `quantum start`. See "
-        f"https://danielgregorio.github.io/quantum/guide/getting-started")
+        f"https://quantumframework.net/guide/getting-started")
 
 
 def tier_of(tag_name: str) -> str:

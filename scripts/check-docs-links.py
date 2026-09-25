@@ -2,7 +2,7 @@
 
     npx vitepress build docs
     npx vitepress preview docs --port 4173 &
-    python scripts/check-docs-links.py http://localhost:4173/quantum/
+    python scripts/check-docs-links.py http://localhost:4173/
 
 The VitePress build fails on a markdown link to a missing page
 (`ignoreDeadLinks: false`); it had been `true`, which hid 18 of them. This
@@ -68,4 +68,4 @@ def main(root: str) -> int:
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:4173/quantum/'))
+    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:4173/'))

@@ -42,7 +42,7 @@ quantum-lsp = "quantum_lsp:main"
 
 [project.urls]
 Homepage = "https://github.com/quantum-framework/quantum-lsp"
-Documentation = "https://quantum-framework.github.io/quantum-lsp"
+Documentation = "https://quantumframework.net/tools/lsp-server"
 Repository = "https://github.com/quantum-framework/quantum-lsp"
 
 [tool.hatch.build.targets.wheel]
