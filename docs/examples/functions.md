@@ -24,7 +24,7 @@ Reusable logic with `q:function` and `q:invoke`.
 
 <div class="related-links">
   <a href="../guide/functions" class="related-link">Documentation</a>
-  <a href="../api/tags-reference#q-function" class="related-link">API Reference</a>
+  <a href="../reference/tags#q-function" class="related-link">API Reference</a>
 </div>
 
 ## All Examples

@@ -245,8 +245,11 @@ class QuantumRunner:
         return 0
 
 
-def main():
-    """CLI entry point"""
+def build_parser():
+    """The `quantum` command line: the parser, and the optional sub-commands' handlers.
+
+    docs/reference/cli.md is generated from this parser (scripts/generate-reference.py).
+    """
     parser = argparse.ArgumentParser(
         description='Quantum CLI - Execute .q files and start servers',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -377,6 +380,13 @@ Examples:
     migrate_plan_parser.add_argument('--yes', action='store_true', help='Do not ask before writing')
     migrate_plan_parser.add_argument('--allow-data-loss', action='store_true',
                                      help='Write a plan that drops tables or columns')
+
+    return parser, (pkg_available, handle_pkg, jobs_available, handle_jobs, mq_available, handle_mq)
+
+
+def main():
+    """CLI entry point"""
+    parser, (pkg_available, handle_pkg, jobs_available, handle_jobs, mq_available, handle_mq) = build_parser()
 
     # Parse arguments
     args = parser.parse_args()

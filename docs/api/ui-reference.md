@@ -976,7 +976,6 @@ Color attributes accept:
 
 ## Related Documentation
 
-- [Tags Reference (q:)](/api/tags-reference) - Core tags
-- [Attributes Reference](/api/attributes-reference) - Common attributes
+- [Tags (q:)](/reference/tags) - Core and AI tags, generated from the code
 - [Form Validation](/features/form-validation) - Form validation
 - [Animation System](/features/animations) - Animation details

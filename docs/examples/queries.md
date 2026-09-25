@@ -24,7 +24,7 @@ Database operations with `q:query` and transactions.
 
 <div class="related-links">
   <a href="../guide/query" class="related-link">Documentation</a>
-  <a href="../api/tags-reference#q-query" class="related-link">API Reference</a>
+  <a href="../reference/tags#q-query" class="related-link">API Reference</a>
 </div>
 
 ## All Examples

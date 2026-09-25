@@ -28,7 +28,9 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'AI', link: '/guide/ai' },
-      { text: 'API Reference', link: '/api/tags-reference' },
+      // BEGIN Reference (generated pages: scripts/generate-reference.py)
+      { text: 'Reference', link: '/reference/' },
+      // END Reference
       { text: 'Tools', link: '/tools/cli' },
       { text: 'Examples', link: '/examples/' },
       {
@@ -122,16 +124,32 @@ export default defineConfig({
           ]
         }
       ],
-      '/api/': [
+      // BEGIN Reference (generated pages: scripts/generate-reference.py)
+      '/reference/': [
         {
-          text: 'API Reference',
+          text: 'Reference',
           items: [
-            { text: 'Tags Reference (q:)', link: '/api/tags-reference' },
-            { text: 'UI Reference (ui:)', link: '/api/ui-reference' },
-            { text: 'Attributes Reference', link: '/api/attributes-reference' }
+            { text: 'Overview', link: '/reference/' },
+            { text: 'Tags', link: '/reference/tags' },
+            { text: 'Expression functions', link: '/reference/functions' },
+            { text: 'Command line', link: '/reference/cli' },
+            { text: 'Configuration', link: '/reference/config' },
+            { text: 'Specification', link: '/reference/spec' },
+            { text: 'Experimental tags', link: '/reference/experimental' },
+            { text: 'UI tags (ui:)', link: '/api/ui-reference' }
           ]
         }
       ],
+      '/api/': [
+        {
+          text: 'Reference',
+          items: [
+            { text: 'Overview', link: '/reference/' },
+            { text: 'UI tags (ui:)', link: '/api/ui-reference' }
+          ]
+        }
+      ],
+      // END Reference
       '/extensibility/': [
         {
           text: 'Extensibility',

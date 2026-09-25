@@ -80,12 +80,34 @@ def _as_datetime(value: Any) -> datetime:
 
 # -- strings ---------------------------------------------------------------
 
-def _upper(v: Any) -> str: return str(v).upper()
-def _lower(v: Any) -> str: return str(v).lower()
-def _trim(v: Any) -> str: return str(v).strip()
-def _replace(v: Any, old: str, new: str) -> str: return str(v).replace(old, new)
-def _split(v: Any, sep: str = ",") -> list: return str(v).split(sep)
-def _contains(v: Any, needle: Any) -> bool: return str(needle) in str(v)
+def _upper(v: Any) -> str:
+    """The text in upper case."""
+    return str(v).upper()
+
+
+def _lower(v: Any) -> str:
+    """The text in lower case."""
+    return str(v).lower()
+
+
+def _trim(v: Any) -> str:
+    """The text without the spaces around it."""
+    return str(v).strip()
+
+
+def _replace(v: Any, old: str, new: str) -> str:
+    """The text with every `old` replaced by `new`."""
+    return str(v).replace(old, new)
+
+
+def _split(v: Any, sep: str = ",") -> list:
+    """The text split by `sep` into a list (EXPR-9, EXPR-10)."""
+    return str(v).split(sep)
+
+
+def _contains(v: Any, needle: Any) -> bool:
+    """True when the text contains `needle`."""
+    return str(needle) in str(v)
 
 
 def _slugify(v: Any) -> str:
@@ -98,6 +120,7 @@ def _slugify(v: Any) -> str:
 # -- collections -----------------------------------------------------------
 
 def _len(v: Any) -> int:
+    """The number of items (or characters); 0 for a value without a length."""
     try:
         return len(v)
     except TypeError:
@@ -105,26 +128,31 @@ def _len(v: Any) -> int:
 
 
 def _first(v: Iterable) -> Any:
+    """The first item, or null for an empty list."""
     items = list(v)
     return items[0] if items else None
 
 
 def _last(v: Iterable) -> Any:
+    """The last item, or null for an empty list."""
     items = list(v)
     return items[-1] if items else None
 
 
 def _join(v: Iterable, sep: str = ", ") -> str:
+    """The items as text, joined by `sep`."""
     return sep.join(str(i) for i in v)
 
 
 def _sort(v: Iterable, reverse: bool = False) -> list:
+    """The items sorted (descending with reverse=true)."""
     return sorted(v, reverse=reverse)
 
 
 # -- numbers ---------------------------------------------------------------
 
 def _round(v: Any, digits: int = 0) -> Any:
+    """Rounded to `digits` places, half away from zero: round(2.5) is 3 (EXPR-9)."""
     # EXPR-9: half away from zero, as in ColdFusion and spreadsheets. Python's
     # round() is banker's rounding over binary floats: round(2.5) was 2 and
     # round(0.125, 2) was 0.12. Decimal over the number's text avoids both.
@@ -135,10 +163,12 @@ def _round(v: Any, digits: int = 0) -> Any:
 
 
 def _ceil(v: Any) -> int:
+    """The smallest whole number not below the value (EXPR-9)."""
     return math.ceil(float(v))
 
 
 def _floor(v: Any) -> int:
+    """The largest whole number not above the value (EXPR-9)."""
     return math.floor(float(v))
 
 

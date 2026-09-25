@@ -744,4 +744,4 @@ class ReportTagHandler:
 
 - [Package Manager](/extensibility/packages) - Share and install packages
 - [Custom Components](/guide/components) - Create reusable components
-- [Tags Reference](/api/tags-reference) - Built-in tags reference
+- [Tags](/reference/tags) - Built-in tags reference

@@ -24,7 +24,7 @@ AI agents with `q:agent`, tools, and multi-agent teams.
 
 <div class="related-links">
   <a href="../guide/ai" class="related-link">Documentation</a>
-  <a href="../api/tags-reference#q-agent" class="related-link">API Reference</a>
+  <a href="../reference/tags#q-agent" class="related-link">API Reference</a>
 </div>
 
 ## All Examples

@@ -24,7 +24,7 @@ Loading data from CSV, JSON, and XML files.
 
 <div class="related-links">
   <a href="../guide/data-import" class="related-link">Documentation</a>
-  <a href="../api/tags-reference#q-data" class="related-link">API Reference</a>
+  <a href="../reference/tags#q-data" class="related-link">API Reference</a>
 </div>
 
 ## All Examples

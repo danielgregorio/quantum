@@ -24,7 +24,7 @@ Form handling, validation, and user actions.
 
 <div class="related-links">
   <a href="../guide/actions" class="related-link">Documentation</a>
-  <a href="../api/tags-reference#q-action" class="related-link">API Reference</a>
+  <a href="../reference/tags#q-action" class="related-link">API Reference</a>
 </div>
 
 ## All Examples
