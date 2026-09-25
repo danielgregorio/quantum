@@ -26,6 +26,9 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Documented
 
+- More of the guide in Simplified Chinese: AI, files and mail, data import,
+  services, sessions, the admin, project structure and `q:application`,
+  machine-translated, with the English heading anchors.
 - The Blog index, Status and Community pages in Brazilian Portuguese.
   `scripts/generate-site-pages.py` writes the translated Blog index and Status
   page (`LANGS`) around the same posts and the same measured tables, stamped

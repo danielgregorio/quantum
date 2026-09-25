@@ -102,6 +102,8 @@ const TRANSLATED = {
     '/guide/actions', '/guide/query', '/guide/authentication', '/guide/ui', '/guide/testing'],
   zh: ['/guide/why-quantum', '/guide/installation', '/guide/quick-start', '/stability/', '/sponsor/', '/cookbook/', '/roadmap/', '/tutorial/', '/tutorial/tasks-app', '/showcase/',
     '/guide/getting-started', '/guide/components', '/guide/how-a-page-runs', '/guide/state-management',
+    '/guide/ai', '/guide/files-and-mail', '/guide/data-import', '/guide/services', '/guide/sessions',
+    '/guide/admin', '/guide/project-structure', '/guide/applications',
     '/guide/loops', '/guide/conditionals', '/guide/functions', '/guide/databinding',
     '/guide/actions', '/guide/query', '/guide/authentication', '/guide/ui', '/guide/testing'],
 }
