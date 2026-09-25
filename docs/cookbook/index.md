@@ -31,3 +31,6 @@ Short recipes for one task each. Every recipe is a small app in `examples/cookbo
 - [Several forms on one page](./forms-and-actions/several-actions.md) — Each form and button posts the name of its action; a name the page does not have answers 400.
 - [A form from the table](./forms-and-actions/form-from-table.md) — q:action table= takes its params from the schema; a ui:form with no fields draws one field per column.
 - [Edit a row](./forms-and-actions/edit-a-row.md) — A page per row with [id].q, a form opened with the row's values, and the table's rules on save.
+- [Confirm before deleting](./forms-and-actions/confirm-before-delete.md) — A page that asks first, reached by a link, and the delete as a POST from its button; no JavaScript.
+- [Numbers and dates](./forms-and-actions/numbers-and-dates.md) — type=integer, decimal and date on q:param: the action gets checked numbers and real dates, with min and max.
+- [A choice from a list](./forms-and-actions/choices.md) — enum on q:param gives ui:select and ui:radio their options and refuses anything else; a box is a boolean.

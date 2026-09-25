@@ -1,0 +1,6 @@
+CREATE TABLE orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    size TEXT NOT NULL,
+    milk TEXT NOT NULL,
+    to_go INTEGER NOT NULL
+);

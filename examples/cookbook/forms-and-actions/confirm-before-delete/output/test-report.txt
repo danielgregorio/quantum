@@ -1,0 +1,5 @@
+tests/delete.test.q
+  PASS  opening the link only asks
+  PASS  yes deletes that contact and goes back to the list
+  PASS  a contact already deleted says so
+3 passed, 0 failed

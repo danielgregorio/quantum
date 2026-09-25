@@ -1,0 +1,6 @@
+tests/split.test.q
+  PASS  the numbers arrive as numbers
+  PASS  text where a number goes is refused
+  PASS  min and max hold
+  PASS  a date that does not exist is refused
+4 passed, 0 failed

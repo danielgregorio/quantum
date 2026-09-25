@@ -1,0 +1,6 @@
+tests/order.test.q
+  PASS  the options come from the enum
+  PASS  an order with the defaults
+  PASS  the box, when sent, is true
+  PASS  a value outside the list is refused
+4 passed, 0 failed

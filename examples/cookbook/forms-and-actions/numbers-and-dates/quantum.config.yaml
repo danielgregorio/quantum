@@ -1,0 +1,9 @@
+# Recipe: numbers and dates arrive checked and converted, not as text.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/expenses.db

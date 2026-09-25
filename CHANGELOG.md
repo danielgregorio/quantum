@@ -28,7 +28,8 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 - Cookbook, "Forms & actions": each error on its field, a refused form that
   keeps what was typed, redirect with a flash (`q:flash` for a warning),
-  several forms on one page, a form from the table and edit a row; tested
+  several forms on one page, a form from the table, edit a row, confirm
+  before deleting, numbers and dates, and a choice from a list; nine tested
   recipes.
 - Cookbook, "Login & permissions": log in with a hashed password, sign up and
   store a hash, a page for one role only, a guard that redirects (and stops the

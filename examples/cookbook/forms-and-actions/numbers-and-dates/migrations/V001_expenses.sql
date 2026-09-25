@@ -1,0 +1,6 @@
+CREATE TABLE expenses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    amount REAL NOT NULL,
+    people INTEGER NOT NULL,
+    spent_on DATE NOT NULL
+);

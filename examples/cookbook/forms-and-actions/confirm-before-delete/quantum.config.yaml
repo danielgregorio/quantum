@@ -1,0 +1,9 @@
+# Recipe: ask before deleting, with a page of its own and no JavaScript.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/contacts.db

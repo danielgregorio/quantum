@@ -1,0 +1,9 @@
+# Recipe: a field that takes one value from a list.
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/orders.db
