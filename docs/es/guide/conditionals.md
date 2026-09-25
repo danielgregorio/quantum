@@ -177,7 +177,7 @@ En HTML, `q:if` decide qué se renderiza:
 **Shows:** `Login`
 
 Antes del inicio de sesión, `session.authenticated` no existe, así que la página
-muestra el enlace Login. Ver [Autenticación](/guide/authentication) para el inicio
+muestra el enlace Login. Ver [Autenticación](/es/guide/authentication) para el inicio
 de sesión en sí.
 
 ## Relacionado {#related}

@@ -55,7 +55,7 @@ completa lo que falta:
 **Output:** `"Dr. John Doe / Mr. Ann Lee"`
 
 En cada llamada, cada argumento se convierte a su `type` y se verifica contra
-sus reglas — el mismo `q:param` que en las [acciones](/guide/actions):
+sus reglas — el mismo `q:param` que en las [acciones](/es/guide/actions):
 
 | Atributo | Verifica |
 |-----------|--------|
@@ -163,6 +163,6 @@ ponla en un componente y úsala con [`q:import`](/es/guide/components).
 
 ## Relacionado {#related}
 
-- [Expresiones y enlace de datos](/guide/databinding)
+- [Expresiones y enlace de datos](/es/guide/databinding)
 - [Condicionales](/es/guide/conditionals) · [Bucles](/es/guide/loops)
 - [Manejo de estado (`q:set`)](/es/guide/state-management)

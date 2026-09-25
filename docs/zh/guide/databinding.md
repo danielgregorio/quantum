@@ -113,7 +113,7 @@ source_hash: 68dae0629ce9
 | `dateAdd(unit, n, start=now)` | `dateAdd('d', 7)` | 一周之后 |
 | `dateDiff(unit, start, end)` | `dateDiff('h', a, b)` | 整小时数 |
 | `dateFormat(date, pattern)` | `dateFormat(now(), '%d/%m/%Y')` | `10/09/2026` |
-| `hashPassword(s)`、`verifyPassword(s, hash)` | 见[身份认证](/guide/authentication) | |
+| `hashPassword(s)`、`verifyPassword(s, hash)` | 见[身份认证](/zh/guide/authentication) | |
 | `random()`、`random(a, b)` | `random(1, 6)` | 0 到 1 之间的数；`a` 到 `b` 之间的整数 |
 | `chance(p)`、`pick(list)` | `pick(tips)` | 以概率 `p` 为真；一个元素 |
 

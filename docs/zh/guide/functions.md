@@ -50,7 +50,7 @@ source_hash: 7d723be16710
 
 **Output:** `"Dr. John Doe / Mr. Ann Lee"`
 
-每次调用时，每个参数都会被转换成它的 `type`，并按它的规则检查——与[动作](/guide/actions)
+每次调用时，每个参数都会被转换成它的 `type`，并按它的规则检查——与[动作](/zh/guide/actions)
 中的 `q:param` 相同：
 
 | 属性 | 检查 |
@@ -153,6 +153,6 @@ source_hash: 7d723be16710
 
 ## 相关内容 {#related}
 
-- [表达式与数据绑定](/guide/databinding)
+- [表达式与数据绑定](/zh/guide/databinding)
 - [条件](/zh/guide/conditionals) · [循环](/zh/guide/loops)
 - [状态管理（`q:set`）](/zh/guide/state-management)

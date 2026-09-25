@@ -120,7 +120,7 @@ de un atributo con comillas dobles: `{status == 'active'}`.
 | `dateAdd(unit, n, start=now)` | `dateAdd('d', 7)` | dentro de una semana |
 | `dateDiff(unit, start, end)` | `dateDiff('h', a, b)` | horas completas |
 | `dateFormat(date, pattern)` | `dateFormat(now(), '%d/%m/%Y')` | `10/09/2026` |
-| `hashPassword(s)`, `verifyPassword(s, hash)` | ver [Autenticación](/guide/authentication) | |
+| `hashPassword(s)`, `verifyPassword(s, hash)` | ver [Autenticación](/es/guide/authentication) | |
 | `random()`, `random(a, b)` | `random(1, 6)` | un número desde 0 hasta 1; un entero de `a` a `b` |
 | `chance(p)`, `pick(list)` | `pick(tips)` | verdadero con probabilidad `p`; un elemento |
 

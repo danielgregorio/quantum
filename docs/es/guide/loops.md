@@ -140,7 +140,7 @@ Los bucles se pueden anidar para procesar datos complejos:
 ## Bucle de consulta (`query="name"`) {#query-loop-query-name}
 
 Recorre las filas de un `q:query`; a cada fila se llega por el nombre de la
-consulta. La base de datos de ejemplo es la de [Consultas a la base de datos](/guide/query):
+consulta. La base de datos de ejemplo es la de [Consultas a la base de datos](/es/guide/query):
 
 ```xml
 <q:query name="users" datasource="db">

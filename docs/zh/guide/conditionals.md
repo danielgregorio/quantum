@@ -169,7 +169,7 @@ source_hash: f186a35fba5d
 **Shows:** `Login`
 
 登录之前，`session.authenticated` 不存在，所以页面显示 Login 链接。登录本身见
-[身份认证](/guide/authentication)。
+[身份认证](/zh/guide/authentication)。
 
 ## 相关内容 {#related}
 

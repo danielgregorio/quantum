@@ -138,7 +138,7 @@ Quantum 有四种循环类型——`range`、`array`、`list` 和 `query`——�
 ## 查询循环（`query="name"`） {#query-loop-query-name}
 
 遍历 `q:query` 的行；每一行通过查询的名字访问。示例数据库就是
-[数据库查询](/guide/query)中的那个：
+[数据库查询](/zh/guide/query)中的那个：
 
 ```xml
 <q:query name="users" datasource="db">
