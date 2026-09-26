@@ -1,0 +1,6 @@
+# What stays out of the .vsix: sources, compiler config and notes.
+src/**
+tsconfig.json
+**/*.map
+**/*.ts
+package.json.contributions.md
