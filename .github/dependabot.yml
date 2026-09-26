@@ -1,9 +1,13 @@
 version: 2
 updates:
+  # Python requirements are ranges (`lxml>=4.9.0`). Raising a floor narrows
+  # what users can install alongside Quantum without making anything work, so
+  # a pull request comes only when a new version falls outside the range.
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
+    versioning-strategy: increase-if-necessary
 
   - package-ecosystem: "npm"
     directory: "/"
