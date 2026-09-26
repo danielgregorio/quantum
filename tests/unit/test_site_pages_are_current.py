@@ -8,6 +8,7 @@ regenerated would publish a site that disagrees with the repository.
 
 import importlib.util
 import pathlib
+import re
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 
@@ -29,7 +30,9 @@ def test_every_version_in_the_changelog_has_a_page_newest_first():
     gen = _generator()
     text = (REPO / 'CHANGELOG.md').read_text(encoding='utf-8')
     versions = [v for v, _ in gen.split_versions(text)]
-    assert versions[0] == '1.0.0'
+    # The newest section is the version being released (pyproject.toml).
+    released = re.search(r'^version = "([^"]+)"', (REPO / 'pyproject.toml').read_text(encoding='utf-8'), re.M)
+    assert versions[0] == released.group(1)
     index = gen.pages()['changelog/index.md']
     positions = [index.index(f'[{v}](./{gen.version_slug(v)}.md)') for v in versions]
     assert positions == sorted(positions)
