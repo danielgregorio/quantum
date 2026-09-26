@@ -6,6 +6,18 @@ Experimental and Laboratory may change in any release (`SUPPORT_TIERS.md`).
 Before 1.0, minor versions could break compatibility. Every change that can
 alter the behaviour of an existing app is listed under **Breaking**.
 
+## Unreleased
+
+### Added
+
+- A playground on the site (/playground/): the Cookbook's recipes, editable,
+  run in the browser by the real `quantum-framework` from PyPI (Pyodide) —
+  with the database built from their migrations, links and forms that work,
+  and **Run tests** for their `*.test.q` files. The AI recipes are left out;
+  they need a model. It replaces `playground/`, a small interpreter of its
+  own that imitated Quantum. `scripts/check-playground.mjs` runs every example
+  in Pyodide in CI.
+
 ## 1.0.1
 
 ### Added

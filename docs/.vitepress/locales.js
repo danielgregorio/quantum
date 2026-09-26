@@ -17,7 +17,7 @@ export const LANGUAGES = {
 const TEXT = {
   root: {
     description: 'Declarative web applications in XML, with AI and RAG built into the language',
-    home: 'Home', docs: 'Docs', guide: 'Guide', tutorial: 'Tutorial', cookbook: 'Cookbook', stability: 'Stability', reference: 'Reference',
+    playground: 'Playground', home: 'Home', docs: 'Docs', guide: 'Guide', tutorial: 'Tutorial', cookbook: 'Cookbook', stability: 'Stability', reference: 'Reference',
     spec: 'Specification (SPEC)', showcase: 'Showcase', blog: 'Blog', changelog: 'Changelog',
     status: 'Status', sponsor: 'Sponsor', roadmap: 'Roadmap', community: 'Community',
     editLink: 'Edit this page on GitHub', lastUpdated: 'Last updated', outline: 'On this page',
@@ -35,7 +35,7 @@ const TEXT = {
   },
   pt: {
     description: 'Aplicações web declarativas em XML, com IA e RAG na própria linguagem',
-    home: 'Início', docs: 'Documentação', guide: 'Guia', tutorial: 'Tutorial', cookbook: 'Receitas', stability: 'Estabilidade', reference: 'Referência (em inglês)',
+    playground: 'Playground', home: 'Início', docs: 'Documentação', guide: 'Guia', tutorial: 'Tutorial', cookbook: 'Receitas', stability: 'Estabilidade', reference: 'Referência (em inglês)',
     spec: 'Especificação — SPEC (em inglês)', showcase: 'Vitrine', blog: 'Blog', changelog: 'Mudanças (em inglês)',
     status: 'Status', sponsor: 'Apoie', roadmap: 'Roadmap', community: 'Comunidade',
     editLink: 'Editar esta página no GitHub', lastUpdated: 'Atualizado em', outline: 'Nesta página',
@@ -53,7 +53,7 @@ const TEXT = {
   },
   es: {
     description: 'Aplicaciones web declarativas en XML, con IA y RAG en el propio lenguaje',
-    home: 'Inicio', docs: 'Documentación', guide: 'Guía', tutorial: 'Tutorial', cookbook: 'Recetario', stability: 'Estabilidad', reference: 'Referencia (en inglés)',
+    playground: 'Playground', home: 'Inicio', docs: 'Documentación', guide: 'Guía', tutorial: 'Tutorial', cookbook: 'Recetario', stability: 'Estabilidad', reference: 'Referencia (en inglés)',
     spec: 'Especificación — SPEC (en inglés)', showcase: 'Escaparate', blog: 'Blog', changelog: 'Cambios (en inglés)',
     status: 'Estado', sponsor: 'Patrocinar', roadmap: 'Hoja de ruta', community: 'Comunidad',
     editLink: 'Editar esta página en GitHub', lastUpdated: 'Actualizado', outline: 'En esta página',
@@ -71,7 +71,7 @@ const TEXT = {
   },
   zh: {
     description: '用 XML 编写的声明式 Web 应用，语言内置 AI 与 RAG',
-    home: '首页', docs: '文档', guide: '指南', tutorial: '教程', cookbook: '实用示例', stability: '稳定性', reference: '参考（英文）',
+    playground: '在线试用', home: '首页', docs: '文档', guide: '指南', tutorial: '教程', cookbook: '实用示例', stability: '稳定性', reference: '参考（英文）',
     spec: '规范 SPEC（英文）', showcase: '案例', blog: '博客', changelog: '更新日志（英文）',
     status: '状态', sponsor: '赞助', roadmap: '路线图', community: '社区',
     editLink: '在 GitHub 上编辑此页', lastUpdated: '最后更新', outline: '本页内容',
@@ -255,7 +255,7 @@ export function guideSidebar(key) {
   }))
 }
 
-// The top nav: Home · Docs (Guide, Tutorial, Reference, SPEC) · Showcase · Blog ·
+// The top nav: Home · Docs (Guide, Tutorial, Reference, SPEC) · Playground · Showcase · Blog ·
 // Changelog · Status · Roadmap · Community · Sponsor · GitHub. An entry goes to the
 // language's page when TRANSLATED lists it, and to the English page otherwise.
 function nav(key) {
@@ -274,6 +274,7 @@ function nav(key) {
         { text: t.stability, link: link(key, '/stability/') },
       ],
     },
+    { text: t.playground, link: '/playground/' },
     { text: t.showcase, link: link(key, '/showcase/') },
     { text: t.blog, link: link(key, '/blog/') },
     { text: t.changelog, link: '/changelog/' },

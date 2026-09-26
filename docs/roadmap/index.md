@@ -64,7 +64,7 @@ rule is in the [Reference](../reference/).
 |---|---|
 | Cookbook: short recipes, each one tested in CI | in progress |
 | The site in more languages | in progress |
-| A playground: write Quantum and run it in the browser | planned |
+| A [playground](/playground/): write Quantum and run it in the browser | in progress |
 | Benchmarks that anyone can run again | planned |
 
 ## Laboratory

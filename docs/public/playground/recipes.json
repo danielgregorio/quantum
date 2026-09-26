@@ -1,0 +1,658 @@
+{
+ "topics": [
+  {
+   "topic": "basics",
+   "title": "Basics",
+   "recipes": [
+    {
+     "id": "basics/first-page",
+     "title": "A first page, and a second",
+     "description": "Each file in components/ is a page at its own URL; a URL with no file is 404.",
+     "cookbook": "/cookbook/basics/first-page",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/about.q": "<q:component name=\"About\">\n  <!-- components/about.q answers /about -->\n  <html>\n  <head><title>About</title></head>\n  <body>\n    <h1>About</h1>\n    <p>A second page is a second file.</p>\n    <a href=\"/\">Home</a>\n  </body>\n  </html>\n</q:component>\n",
+      "components/index.q": "<q:component name=\"Home\">\n  <!-- components/index.q answers / -->\n  <html>\n  <head><title>Home</title></head>\n  <body>\n    <h1>Hello from Quantum</h1>\n    <p>This page is components/index.q.</p>\n    <a href=\"/about\">About</a>\n  </body>\n  </html>\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: two pages, each file of components/ at its own URL.\npaths:\n  components: ./components\n",
+      "tests/pages.test.q": "<q:test name=\"index.q answers /\" page=\"/\">\n  <test:visit />\n  <test:expect status=\"200\" text=\"Hello from Quantum\" />\n</q:test>\n\n<q:test name=\"about.q answers /about\" page=\"/about\">\n  <test:visit />\n  <test:expect text=\"A second page is a second file.\" />\n</q:test>\n\n<q:test name=\"a URL with no file is 404\" page=\"/contact\">\n  <test:visit />\n  <test:expect status=\"404\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "basics/variables",
+     "title": "Variables and expressions",
+     "description": "q:set stores a value, braces compute with it, and default fills in what is missing.",
+     "cookbook": "/cookbook/basics/variables",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Receipt\">\n  <q:set name=\"item\" value=\"Coffee beans\" />\n  <q:set name=\"price\" type=\"number\" value=\"12.5\" />\n  <q:set name=\"quantity\" type=\"number\" value=\"3\" />\n  <!-- A value that is one expression keeps its type: total is a number. -->\n  <q:set name=\"total\" value=\"{price * quantity}\" />\n  <!-- default is stored when the value is empty or missing. -->\n  <q:set name=\"note\" value=\"{query.note}\" default=\"no note\" />\n  <q:set name=\"quantity\" operation=\"increment\" />\n\n  <html>\n  <body>\n    <h1>{upper(item)}</h1>\n    <p>{quantity} bags at {price} = {total}</p>\n    <p>With the extra bag: {price * quantity}</p>\n    <p>Note: {note}</p>\n  </body>\n  </html>\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: variables with q:set, and expressions in braces.\npaths:\n  components: ./components\n",
+      "tests/receipt.test.q": "<q:test name=\"expressions compute with the variables\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"COFFEE BEANS\" />\n  <test:expect text=\"4 bags at 12.5 = 37.5\" />\n  <test:expect text=\"With the extra bag: 50.0\" />\n  <test:expect var=\"total\" value=\"37.5\" />\n</q:test>\n\n<q:test name=\"the default fills an empty value\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Note: no note\" />\n</q:test>\n\n<q:test name=\"a value from the URL replaces the default\" page=\"/?note=gift\">\n  <test:visit />\n  <test:expect text=\"Note: gift\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "basics/loops",
+     "title": "Loops",
+     "description": "q:loop over a list (with its position), a range of numbers and comma-separated text.",
+     "cookbook": "/cookbook/basics/loops",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Loops\">\n  <q:set name=\"fruits\" type=\"array\" value='[\"Apple\", \"Banana\", \"Cherry\"]' />\n\n  <html>\n  <body>\n    <h2>A list</h2>\n    <ol>\n      <!-- index= names the position, from 0 -->\n      <q:loop type=\"array\" var=\"fruit\" index=\"i\" items=\"{fruits}\">\n        <li>{i + 1}. {fruit}</li>\n      </q:loop>\n    </ol>\n\n    <h2>A range</h2>\n    <p>\n      <!-- from and to are both included -->\n      <q:loop type=\"range\" var=\"n\" from=\"2\" to=\"10\" step=\"2\">\n        <span>[{n}]</span>\n      </q:loop>\n    </p>\n\n    <h2>Text split by commas</h2>\n    <ul>\n      <q:loop type=\"list\" var=\"tag\" items=\"red, green , blue\">\n        <li>({tag})</li>\n      </q:loop>\n    </ul>\n  </body>\n  </html>\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: q:loop over a list, a range of numbers and comma-separated text.\npaths:\n  components: ./components\n",
+      "tests/loops.test.q": "<q:test name=\"a list, with each position\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"1. Apple\" />\n  <test:expect text=\"3. Cherry\" />\n</q:test>\n\n<q:test name=\"a range includes both ends\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"[2] [4] [6] [8] [10]\" />\n</q:test>\n\n<q:test name=\"list items lose the spaces around them\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"(red) (green) (blue)\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "basics/conditionals",
+     "title": "Conditionals",
+     "description": "q:if, q:elseif and q:else, with conditions that are expressions.",
+     "cookbook": "/cookbook/basics/conditionals",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Stock\">\n  <!-- /?stock=3 -->\n  <q:set name=\"stock\" type=\"number\" value=\"{query.stock}\" default=\"0\" />\n\n  <html>\n  <body>\n    <q:if condition=\"stock == 0\">\n      <p class=\"out\">Out of stock.</p>\n    </q:if>\n    <q:elseif condition=\"stock &lt; 5\">\n      <p class=\"low\">Only {stock} left.</p>\n    </q:elseif>\n    <q:else>\n      <p>In stock.</p>\n    </q:else>\n\n    <!-- A condition is an expression: and, or, not work as in Python. -->\n    <q:if condition=\"stock > 0 and stock % 2 == 0\">\n      <p>Sold in pairs: {stock // 2} pairs.</p>\n    </q:if>\n  </body>\n  </html>\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: q:if, q:elseif and q:else.\npaths:\n  components: ./components\n",
+      "tests/stock.test.q": "<q:test name=\"no stock\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Out of stock.\" />\n  <test:expect no-text=\"In stock.\" />\n</q:test>\n\n<q:test name=\"a little stock\" page=\"/?stock=3\">\n  <test:visit />\n  <test:expect text=\"Only 3 left.\" />\n  <test:expect no-text=\"pairs\" />\n</q:test>\n\n<q:test name=\"plenty, and an even number\" page=\"/?stock=8\">\n  <test:visit />\n  <test:expect text=\"In stock.\" />\n  <test:expect text=\"Sold in pairs: 4 pairs.\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "basics/functions",
+     "title": "Functions",
+     "description": "A q:function with typed, checked params, called from q:set and from the HTML.",
+     "cookbook": "/cookbook/basics/functions",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Prices\">\n  <!-- Arguments are checked against the q:params on every call. -->\n  <q:function name=\"withTax\" returnType=\"number\">\n    <q:param name=\"amount\" type=\"number\" required=\"true\" min=\"0\" />\n    <q:param name=\"rate\" type=\"number\" default=\"0.1\" />\n    <q:return value=\"{round(amount * (1 + rate), 2)}\" />\n  </q:function>\n\n  <q:function name=\"label\">\n    <q:param name=\"amount\" type=\"number\" required=\"true\" />\n    <q:return value=\"{'free' if amount == 0 else '$' + str(amount)}\" />\n  </q:function>\n\n  <q:set name=\"book\" value=\"{withTax(20)}\" />\n\n  <html>\n  <body>\n    <p>Book: {label(book)}</p>\n    <p>Food: {label(withTax(10, 0.05))}</p>\n    <p>Sample: {label(withTax(0))}</p>\n  </body>\n  </html>\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: a q:function, called from attributes and from the HTML.\npaths:\n  components: ./components\n",
+      "tests/prices.test.q": "<q:test name=\"a function called from q:set and from the HTML\" page=\"/\">\n  <test:visit />\n  <test:expect var=\"book\" value=\"22.0\" />\n  <test:expect text=\"Book: $22.0\" />\n</q:test>\n\n<q:test name=\"an argument by position replaces the default\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Food: $10.5\" />\n</q:test>\n\n<q:test name=\"functions compose\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Sample: free\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "basics/page-per-url",
+     "title": "A page per URL",
+     "description": "components/product/[id].q answers /product/1, /product/2...; the segment is a variable.",
+     "cookbook": "/cookbook/basics/page-per-url",
+     "start": "/product/2",
+     "view": "preview",
+     "files": {
+      "components/product/[id].q": "<q:component name=\"Product\">\n  <!-- components/product/[id].q answers /product/7 with id = \"7\". -->\n  <q:set name=\"products\" type=\"array\"\n         value='[{\"name\": \"Kettle\", \"price\": 35}, {\"name\": \"Teapot\", \"price\": 22}]' />\n  <q:set name=\"n\" type=\"integer\" value=\"{id}\" />\n\n  <html>\n  <body>\n    <q:if condition=\"n >= 1 and n &lt;= len(products)\">\n      <h1>{products[n - 1].name}</h1>\n      <p>Product {id}: ${products[n - 1].price}</p>\n    </q:if>\n    <q:else>\n      <h1>No product {id}</h1>\n    </q:else>\n  </body>\n  </html>\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: one file answers /product/1, /product/2 and so on.\npaths:\n  components: ./components\n",
+      "tests/product.test.q": "<q:test name=\"the URL segment becomes a variable\" page=\"/product/2\">\n  <test:visit />\n  <test:expect text=\"Teapot\" />\n  <test:expect text=\"Product 2: $22\" />\n  <test:expect var=\"id\" value=\"2\" />\n</q:test>\n\n<q:test name=\"one file answers every id\" page=\"/product/1\">\n  <test:visit />\n  <test:expect text=\"Kettle\" />\n</q:test>\n\n<q:test name=\"an id with no product says so\" page=\"/product/9\">\n  <test:visit />\n  <test:expect text=\"No product 9\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "basics/query-string",
+     "title": "Read the query string",
+     "description": "query.name reads ?name= from the address; default covers a missing one; urlencode builds a link.",
+     "cookbook": "/cookbook/basics/query-string",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Search\">\n  <!-- query.<name> is the address's ?name=; a missing one is empty. -->\n  <q:set name=\"q\" value=\"{query.q}\" default=\"\" />\n  <q:set name=\"order\" value=\"{query.order}\" default=\"az\" />\n  <q:set name=\"words\" type=\"array\" value='[\"pear\", \"apple\", \"plum\", \"peach\", \"fig\"]' />\n  <q:set name=\"words\" value=\"{sort(words, order == 'za')}\" />\n\n  <html>\n  <body>\n    <form method=\"GET\">\n      <input name=\"q\" value=\"{q}\" />\n      <button>Search</button>\n    </form>\n    <p>Results for \"{q}\", sorted {order}:</p>\n    <ul>\n      <q:loop type=\"array\" var=\"w\" items=\"{words}\">\n        <q:if condition=\"contains(w, lower(q))\">\n          <li>{w}</li>\n        </q:if>\n      </q:loop>\n    </ul>\n    <!-- urlencode keeps a typed value safe inside a link. -->\n    <a href=\"/?q={urlencode(q)}&amp;order=za\">Z to A</a>\n  </body>\n  </html>\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: read ?q= and ?sort= from the address, with defaults.\npaths:\n  components: ./components\n",
+      "tests/search.test.q": "<q:test name=\"no ?q= shows everything, sorted by the default\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Results for &quot;&quot;, sorted az: apple fig peach pear plum\" />\n  <test:expect var=\"order\" value=\"az\" />\n</q:test>\n\n<q:test name=\"?q= filters\" page=\"/?q=PE\">\n  <test:visit />\n  <test:expect text=\"peach pear\" />\n  <test:expect no-text=\"plum\" />\n</q:test>\n\n<q:test name=\"two parameters at once\" page=\"/?q=p&amp;order=za\">\n  <test:visit />\n  <test:expect text=\"plum pear peach apple\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "basics/components-and-slots",
+     "title": "Reusable components",
+     "description": "A component with props and a slot, imported from a _ folder that is never served.",
+     "cookbook": "/cookbook/basics/components-and-slots",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/_shared/Card.q": "<q:component name=\"Card\">\n  <!-- Props are q:params; the caller's content goes where q:slot is. -->\n  <q:param name=\"title\" type=\"string\" required=\"true\" />\n  <q:param name=\"tone\" type=\"string\" default=\"plain\" />\n\n  <section class=\"card card-{tone}\">\n    <h2>{title}</h2>\n    <div class=\"card-body\">\n      <q:slot />\n    </div>\n  </section>\n</q:component>\n",
+      "components/index.q": "<q:component name=\"Dashboard\">\n  <!-- from=\"_shared\": a folder whose name starts with _ is never a page. -->\n  <q:import component=\"Card\" from=\"_shared\" />\n  <q:set name=\"open\" type=\"number\" value=\"4\" />\n\n  <html>\n  <body>\n    <Card title=\"Open tickets\">\n      <p>{open} waiting for an answer.</p>\n    </Card>\n    <Card title=\"Warning\" tone=\"alert\">\n      <p>The mail server is slow today.</p>\n    </Card>\n  </body>\n  </html>\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: a reusable component with props and a slot, kept out of the URLs.\npaths:\n  components: ./components\n",
+      "tests/cards.test.q": "<q:test name=\"each card has its title and the page's content\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Open tickets 4 waiting for an answer.\" />\n  <test:expect text=\"Warning The mail server is slow today.\" />\n</q:test>\n\n<q:test name=\"a component in a _ folder is not a page\" page=\"/_shared/Card\">\n  <test:visit />\n  <test:expect status=\"404\" />\n</q:test>\n"
+     }
+    }
+   ]
+  },
+  {
+   "topic": "screens",
+   "title": "Screens",
+   "recipes": [
+    {
+     "id": "screens/responsive-layout",
+     "title": "A layout that fits the screen",
+     "description": "ui:hbox side by side on a wide screen, stacked on a narrow one, with grow, width and hide-below.",
+     "cookbook": "/cookbook/screens/responsive-layout",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Inbox\">\n  <ui:window title=\"Inbox\">\n    <!-- Side by side from md up; below md (768 px) the boxes stack. -->\n    <ui:hbox gap=\"lg\" padding=\"lg\" stack-below=\"md\" id=\"main\">\n      <ui:vbox width=\"220\" gap=\"sm\" id=\"side\">\n        <ui:link to=\"/\">Inbox (3)</ui:link>\n        <ui:link to=\"/sent\">Sent</ui:link>\n        <!-- Only on wide screens: hidden below lg. -->\n        <ui:text hide-below=\"lg\">Tip: press / to search.</ui:text>\n      </ui:vbox>\n\n      <!-- grow takes the width the side box leaves. -->\n      <ui:vbox gap=\"sm\" grow=\"true\">\n        <ui:panel title=\"Welcome\">\n          <ui:text>The main content takes the rest of the width.</ui:text>\n        </ui:panel>\n        <ui:hbox gap=\"sm\" justify=\"end\">\n          <ui:button>Archive</ui:button>\n          <ui:button variant=\"primary\">Reply</ui:button>\n        </ui:hbox>\n      </ui:vbox>\n    </ui:hbox>\n  </ui:window>\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: side by side on a wide screen, stacked on a narrow one.\npaths:\n  components: ./components\n",
+      "tests/layout.test.q": "<q:test name=\"both columns are on the page, side first\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Inbox (3) Sent\" />\n  <test:expect text=\"Welcome The main content takes the rest of the width.\" />\n  <test:expect text=\"Archive Reply\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "screens/editable-table",
+     "title": "A table you edit in place",
+     "description": "ui:table edit= turns each cell into a small form checked against the table's schema; no action to write.",
+     "cookbook": "/cookbook/screens/editable-table",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Stock\">\n  <q:query name=\"items\" datasource=\"db\" sortable=\"true\">\n    SELECT id, name, shelf, quantity FROM items ORDER BY id\n  </q:query>\n\n  <ui:window title=\"Stock\">\n    <ui:vbox gap=\"md\" padding=\"lg\">\n      <q:if condition=\"flash\">\n        <ui:alert variant=\"{flashType == 'error' and 'danger' or 'success'}\">{flash}</ui:alert>\n      </q:if>\n      <!-- edit=\"items\": each cell is a small form that saves one column of\n           one row, checked against the table's schema. No action to write. -->\n      <ui:table source=\"{items}\" sort=\"true\" edit=\"items\" datasource=\"db\">\n        <ui:column key=\"name\" label=\"Item\" edit=\"false\" />\n        <ui:column key=\"shelf\" label=\"Shelf\" />\n        <ui:column key=\"quantity\" label=\"Quantity\" align=\"right\" />\n      </ui:table>\n    </ui:vbox>\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_items.sql": "CREATE TABLE items (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    name VARCHAR(40) NOT NULL,\n    shelf TEXT NOT NULL CHECK (shelf IN ('A', 'B', 'C')),\n    quantity INTEGER NOT NULL DEFAULT 0\n);\n\nINSERT INTO items (name, shelf, quantity) VALUES ('Bolts', 'A', 120), ('Nuts', 'B', 80), ('Washers', 'A', 45);\n",
+      "quantum.config.yaml": "# Recipe: a table whose cells are edited in place, with the schema as the rule.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/stock.db\n",
+      "tests/stock.test.q": "<q:test name=\"the table shows the rows and the column labels\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Item\" />\n  <test:expect text=\"Washers\" />\n</q:test>\n\n<q:test name=\"a cell edit saves one column of one row\" page=\"/\">\n  <test:submit action=\"__edit\" __table=\"items\" __key=\"2\" __column=\"quantity\" value=\"75\" />\n  <test:expect redirect=\"/\" flash=\"Saved: quantity\" />\n  <test:expect table=\"items\" count=\"1\" where=\"id = 2 AND quantity = 75 AND name = 'Nuts'\" />\n</q:test>\n\n<q:test name=\"a value the schema refuses is not saved\" page=\"/\">\n  <test:submit action=\"__edit\" __table=\"items\" __key=\"1\" __column=\"shelf\" value=\"Z\" />\n  <test:expect table=\"items\" count=\"1\" where=\"id = 1 AND shelf = 'A'\" />\n  <test:expect var=\"flashType\" value=\"error\" />\n  <test:expect flash=\"Parameter 'value' must be one of: A, B, C\" />\n</q:test>\n\n<q:test name=\"a column with edit=false cannot be changed\" page=\"/\">\n  <test:submit action=\"__edit\" __table=\"items\" __key=\"1\" __column=\"name\" value=\"Screws\" />\n  <test:expect status=\"400\" text=\"items.name is not editable on this page.\" />\n  <test:expect table=\"items\" count=\"1\" where=\"id = 1 AND name = 'Bolts'\" />\n</q:test>\n\n<q:test name=\"a header sorts the rows\" page=\"/\">\n  <test:visit sort=\"quantity\" dir=\"asc\" />\n  <test:expect text=\"Washers A B C ✓ ✓ Nuts A B C ✓ ✓ Bolts\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "screens/tabs",
+     "title": "Tabs",
+     "description": "ui:tabpanel with one ui:tab per section of a page.",
+     "cookbook": "/cookbook/screens/tabs",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Settings\">\n  <q:set name=\"plan\" value=\"Pro\" />\n\n  <ui:window title=\"Settings\">\n    <ui:vbox padding=\"lg\">\n      <!-- One ui:tab per section; the first one is open. -->\n      <ui:tabpanel>\n        <ui:tab title=\"Profile\">\n          <ui:text>Name: Ana Lima</ui:text>\n          <ui:text>E-mail: ana@example.com</ui:text>\n        </ui:tab>\n        <ui:tab title=\"Plan\">\n          <ui:text>Current plan: {plan}</ui:text>\n          <ui:badge variant=\"success\">active</ui:badge>\n        </ui:tab>\n        <ui:tab title=\"Security\">\n          <ui:text>Two-step sign-in is off.</ui:text>\n        </ui:tab>\n      </ui:tabpanel>\n    </ui:vbox>\n  </ui:window>\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: sections of a page in tabs.\npaths:\n  components: ./components\n",
+      "tests/tabs.test.q": "<q:test name=\"every tab has its title\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Profile\" />\n  <test:expect text=\"Plan\" />\n  <test:expect text=\"Security\" />\n</q:test>\n\n<q:test name=\"every tab's content is on the page\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Name: Ana Lima\" />\n  <test:expect text=\"Current plan: Pro\" />\n  <test:expect text=\"Two-step sign-in is off.\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "screens/cards",
+     "title": "Cards",
+     "description": "ui:card with a header, a body and a footer, in a ui:grid; or a card with just a title.",
+     "cookbook": "/cookbook/screens/cards",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Plans\">\n  <q:set name=\"plans\" type=\"array\"\n         value='[{\"name\": \"Free\", \"price\": 0, \"seats\": 1}, {\"name\": \"Team\", \"price\": 12, \"seats\": 10}, {\"name\": \"Company\", \"price\": 40, \"seats\": 100}]' />\n\n  <ui:window title=\"Plans\">\n    <!-- Three columns; the grid wraps on a narrow screen. -->\n    <ui:grid columns=\"3\" gap=\"md\" padding=\"lg\">\n      <q:loop type=\"array\" var=\"plan\" items=\"{plans}\">\n        <ui:card>\n          <ui:card-header>\n            <ui:text weight=\"bold\">{plan.name}</ui:text>\n          </ui:card-header>\n          <ui:card-body>\n            <ui:text>${plan.price} a month</ui:text>\n            <ui:text>Up to {plan.seats} people</ui:text>\n          </ui:card-body>\n          <ui:card-footer>\n            <ui:link to=\"/signup?plan={plan.name}\">Choose {plan.name}</ui:link>\n          </ui:card-footer>\n        </ui:card>\n      </q:loop>\n    </ui:grid>\n    <!-- A card with only a title and text needs no parts. -->\n    <ui:card title=\"Not sure?\" padding=\"lg\">\n      <ui:text>Every plan starts with 30 free days.</ui:text>\n    </ui:card>\n  </ui:window>\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: cards with a header, a body and a footer, in a grid.\npaths:\n  components: ./components\n",
+      "tests/cards.test.q": "<q:test name=\"one card per plan, with its three parts\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Free $0 a month Up to 1 people Choose Free\" />\n  <test:expect text=\"Company $40 a month Up to 100 people Choose Company\" />\n</q:test>\n\n<q:test name=\"a card with a title only\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Not sure? Every plan starts with 30 free days.\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "screens/form-fields",
+     "title": "Every kind of field",
+     "description": "ui:form with ui:formitem labels: text, number, a select with options, a switch, radios and a multi-line field.",
+     "cookbook": "/cookbook/screens/form-fields",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Booking\">\n  <q:action name=\"book\" method=\"POST\">\n    <q:param name=\"name\" required=\"true\" minlength=\"2\" />\n    <q:param name=\"nights\" type=\"integer\" required=\"true\" min=\"1\" max=\"14\" />\n    <q:param name=\"room\" enum=\"single,double,suite\" default=\"double\" />\n    <q:param name=\"breakfast\" type=\"boolean\" default=\"false\" />\n    <q:param name=\"arrival\" enum=\"morning,afternoon,night\" default=\"afternoon\" />\n    <q:param name=\"notes\" maxlength=\"300\" default=\"\" />\n    <q:redirect url=\"/\" flash=\"{name}: {nights} nights, {room}, breakfast {'yes' if breakfast else 'no'}, {arrival}.\" />\n  </q:action>\n\n  <ui:window title=\"Book a room\">\n    <ui:vbox gap=\"md\" padding=\"lg\" width=\"480\">\n      <q:if condition=\"flash\">\n        <ui:alert variant=\"{flashType == 'error' and 'danger' or 'success'}\">{flash}</ui:alert>\n      </q:if>\n      <!-- ui:formitem puts a label next to its field. The fields take their\n           rules (and the lists of choices) from the action's q:params. -->\n      <ui:form on-submit=\"book\" submit=\"Book\">\n        <ui:formitem label=\"Name\"><ui:input bind=\"name\" /></ui:formitem>\n        <ui:formitem label=\"Nights\"><ui:input bind=\"nights\" /></ui:formitem>\n        <ui:formitem label=\"Room\">\n          <ui:select bind=\"room\">\n            <ui:option value=\"single\">Single</ui:option>\n            <ui:option value=\"double\">Double</ui:option>\n            <ui:option value=\"suite\">Suite</ui:option>\n          </ui:select>\n        </ui:formitem>\n        <ui:switch bind=\"breakfast\" label=\"Breakfast\" />\n        <ui:formitem label=\"Arrival\"><ui:radio bind=\"arrival\" /></ui:formitem>\n        <ui:formitem label=\"Notes\"><ui:input bind=\"notes\" rows=\"3\" /></ui:formitem>\n      </ui:form>\n    </ui:vbox>\n  </ui:window>\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: every kind of field, laid out with ui:form and ui:formitem.\npaths:\n  components: ./components\n",
+      "tests/booking.test.q": "<q:test name=\"the form shows its labels, the option texts and the button\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Name\" />\n  <test:expect text=\"Single Double Suite\" />\n  <test:expect text=\"Breakfast\" />\n  <test:expect text=\"morning\" />\n  <test:expect text=\"Book\" />\n</q:test>\n\n<q:test name=\"the fields reach the action typed\" page=\"/\">\n  <test:submit action=\"book\" name=\"Ana\" nights=\"3\" room=\"suite\" breakfast=\"on\" arrival=\"night\" />\n  <test:expect redirect=\"/\" flash=\"Ana: 3 nights, suite, breakfast yes, night.\" />\n</q:test>\n\n<q:test name=\"left out, the defaults apply\" page=\"/\">\n  <test:submit action=\"book\" name=\"Ana\" nights=\"1\" />\n  <test:expect flash=\"Ana: 1 nights, double, breakfast no, afternoon.\" />\n</q:test>\n\n<q:test name=\"a refused field keeps the others as typed\" page=\"/\">\n  <test:submit action=\"book\" name=\"Ana\" nights=\"20\" notes=\"Late check-in, please.\" />\n  <test:expect error=\"nights\" message=\"Must be at most 14 (got 20)\" />\n  <test:expect text=\"Late check-in, please.\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "screens/browser-and-console",
+     "title": "The same page in a terminal",
+     "description": "One ui:* page, served to the browser by quantum start and drawn in a terminal by quantum console.",
+     "cookbook": "/cookbook/screens/browser-and-console",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"GuestList\">\n  <q:action name=\"sign\" method=\"POST\">\n    <q:param name=\"name\" required=\"true\" minlength=\"2\" maxlength=\"40\" />\n    <!-- append to a list that does not exist yet starts one -->\n    <q:set name=\"session.guests\" operation=\"append\" value=\"{name}\" />\n    <q:redirect url=\"/\" flash=\"Welcome, {name}!\" />\n  </q:action>\n\n  <q:set name=\"guests\" type=\"array\" value=\"{session.guests}\" default=\"[]\" />\n\n  <ui:window title=\"Guest list\">\n    <ui:vbox gap=\"md\" padding=\"lg\">\n      <q:if condition=\"flash\">\n        <ui:alert variant=\"{flashType == 'error' and 'danger' or 'success'}\">{flash}</ui:alert>\n      </q:if>\n      <ui:text>{len(guests)} signed so far.</ui:text>\n      <ui:form on-submit=\"sign\">\n        <ui:hbox gap=\"sm\">\n          <ui:input bind=\"name\" placeholder=\"Your name\" grow=\"true\" />\n          <ui:button variant=\"primary\">Sign</ui:button>\n        </ui:hbox>\n      </ui:form>\n      <ui:list>\n        <q:loop type=\"array\" var=\"guest\" items=\"{guests}\">\n          <ui:item>{guest}</ui:item>\n        </q:loop>\n      </ui:list>\n    </ui:vbox>\n  </ui:window>\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: one page, drawn in the browser (quantum start) and in a terminal (quantum console).\npaths:\n  components: ./components\n",
+      "tests/guests.test.q": "<q:test name=\"an empty list to start\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"0 signed so far.\" />\n</q:test>\n\n<q:test name=\"signing adds the name\" page=\"/\">\n  <test:submit action=\"sign\" name=\"Ana\" />\n  <test:expect redirect=\"/\" flash=\"Welcome, Ana!\" />\n  <test:expect text=\"1 signed so far.\" />\n  <test:expect text=\"Ana\" />\n</q:test>\n\n<q:test name=\"a name that is too short is refused on its field\" page=\"/\">\n  <test:submit action=\"sign\" name=\"A\" />\n  <test:expect error=\"name\" message=\"Must be at least 2 characters\" />\n  <test:expect text=\"0 signed so far.\" />\n</q:test>\n"
+     }
+    }
+   ]
+  },
+  {
+   "topic": "testing",
+   "title": "Testing the app",
+   "recipes": [
+    {
+     "id": "testing/first-test",
+     "title": "A first test with quantum test",
+     "description": "Test a page and its action in Quantum itself — visit, submit, check the flash, the table and the field error.",
+     "cookbook": "/cookbook/testing/first-test",
+     "start": "/",
+     "view": "tests",
+     "files": {
+      "components/index.q": "<q:component name=\"Notes\">\n  <q:action name=\"add\" method=\"POST\">\n    <q:param name=\"title\" required=\"true\" minlength=\"3\" />\n    <q:query name=\"added\" datasource=\"db\">\n      INSERT INTO notes (title) VALUES (:title)\n      <q:param name=\"title\" value=\"{title}\" type=\"string\" />\n    </q:query>\n    <q:redirect url=\"/\" flash=\"Added: {title}\" />\n  </q:action>\n\n  <q:query name=\"notes\" datasource=\"db\">SELECT title FROM notes ORDER BY id</q:query>\n\n  <h1>Notes ({notes_result.recordCount})</h1>\n  <q:if condition=\"flash\"><p class=\"flash\">{flash}</p></q:if>\n  <form method=\"POST\" action=\"/?action=add\">\n    <input name=\"title\" />\n    <button>Add</button>\n  </form>\n  <ul>\n    <q:loop query=\"notes\"><li>{notes.title}</li></q:loop>\n  </ul>\n</q:component>\n",
+      "migrations/V001_notes.sql": "CREATE TABLE notes (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    title TEXT NOT NULL\n);\nINSERT INTO notes (title) VALUES ('Read the guide');\n",
+      "quantum.config.yaml": "# Recipe: a first test with `quantum test`.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/notes.db\n",
+      "tests/notes.test.q": "<q:test name=\"the page lists the notes\" page=\"/\">\n  <test:visit />\n  <test:expect status=\"200\" text=\"Notes (1)\" />\n  <test:expect text=\"Read the guide\" />\n</q:test>\n\n<q:test name=\"adding a note stores it and says so\" page=\"/\">\n  <test:submit action=\"add\" title=\"Buy bread\" />\n  <test:expect redirect=\"/\" flash=\"Added: Buy bread\" />\n  <test:expect table=\"notes\" count=\"1\" where=\"title = 'Buy bread'\" />\n  <test:expect text=\"Notes (2)\" />\n</q:test>\n\n<q:test name=\"a title that is too short is refused on its field\" page=\"/\">\n  <test:submit action=\"add\" title=\"x\" />\n  <test:expect error=\"title\" />\n  <test:expect table=\"notes\" count=\"1\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "testing/test-data",
+     "title": "Test data with test:given",
+     "description": "Put the rows a test needs in its fresh database with test:given, and sign a user in with test:as.",
+     "cookbook": "/cookbook/testing/test-data",
+     "start": "/",
+     "view": "tests",
+     "files": {
+      "components/index.q": "<q:component name=\"MyTasks\" require_auth=\"true\">\n  <q:query name=\"mine\" datasource=\"db\">\n    SELECT title FROM tasks WHERE owner = :me AND done = 0 ORDER BY id\n    <q:param name=\"me\" value=\"{session.userName}\" type=\"string\" />\n  </q:query>\n\n  <h1>{session.userName}'s open tasks</h1>\n  <q:if condition=\"mine_result.recordCount == 0\">\n    <p>Nothing to do.</p>\n  </q:if>\n  <ul>\n    <q:loop query=\"mine\"><li>{mine.title}</li></q:loop>\n  </ul>\n</q:component>\n",
+      "migrations/V001_tasks.sql": "CREATE TABLE tasks (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    owner TEXT NOT NULL,\n    title TEXT NOT NULL,\n    done INTEGER NOT NULL DEFAULT 0 CHECK (done IN (0, 1))\n);\n",
+      "quantum.config.yaml": "# Recipe: test data with test:given, and a signed-in user with test:as.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/tasks.db\n",
+      "tests/tasks.test.q": "<q:test name=\"a user sees only their own open tasks\" page=\"/\">\n  <test:given table=\"tasks\" owner=\"Ana\" title=\"Write the report\" />\n  <test:given table=\"tasks\" owner=\"Ana\" title=\"Old task\" done=\"1\" />\n  <test:given table=\"tasks\" owner=\"Bruno\" title=\"Fix the printer\" />\n  <test:as user=\"Ana\" />\n  <test:visit />\n  <test:expect status=\"200\" text=\"Ana's open tasks\" />\n  <test:expect text=\"Write the report\" />\n  <test:expect no-text=\"Old task\" />\n  <test:expect no-text=\"Fix the printer\" />\n</q:test>\n\n<q:test name=\"a user with nothing open is told so\" page=\"/\">\n  <test:given table=\"tasks\" owner=\"Bruno\" title=\"Fix the printer\" />\n  <test:as user=\"Ana\" />\n  <test:visit />\n  <test:expect text=\"Nothing to do.\" />\n</q:test>\n\n<q:test name=\"the page needs a signed-in user\" page=\"/\">\n  <test:visit />\n  <test:expect status=\"302\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "testing/action-errors",
+     "title": "Testing what an action refuses",
+     "description": "Test the field errors, the business rule and the success of an action — error=, message=, flash= and the table.",
+     "cookbook": "/cookbook/testing/action-errors",
+     "start": "/",
+     "view": "tests",
+     "files": {
+      "components/index.q": "<q:component name=\"Signup\">\n  <q:action name=\"join\" method=\"POST\">\n    <q:param name=\"name\" required=\"true\" minlength=\"2\" />\n    <q:param name=\"email\" type=\"email\" required=\"true\" />\n\n    <q:query name=\"taken\" datasource=\"db\">\n      SELECT id FROM members WHERE email = :email\n      <q:param name=\"email\" value=\"{email}\" type=\"string\" />\n    </q:query>\n    <q:if condition=\"taken_result.recordCount > 0\">\n      <q:redirect url=\"/\" flash=\"{email} is already a member.\" flashType=\"error\" />\n    </q:if>\n\n    <q:query name=\"added\" datasource=\"db\">\n      INSERT INTO members (name, email) VALUES (:name, :email)\n      <q:param name=\"name\" value=\"{name}\" type=\"string\" />\n      <q:param name=\"email\" value=\"{email}\" type=\"string\" />\n    </q:query>\n    <q:redirect url=\"/\" flash=\"Welcome, {name}!\" />\n  </q:action>\n\n  <h1>Join</h1>\n  <q:if condition=\"flash\"><p class=\"flash-{flashType}\">{flash}</p></q:if>\n  <form method=\"POST\" action=\"/?action=join\">\n    <input name=\"name\" />\n    <input name=\"email\" type=\"email\" />\n    <button>Join</button>\n  </form>\n</q:component>\n",
+      "migrations/V001_members.sql": "CREATE TABLE members (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    name TEXT NOT NULL,\n    email TEXT NOT NULL UNIQUE\n);\nINSERT INTO members (name, email) VALUES ('Ana', 'ana@example.com');\n",
+      "quantum.config.yaml": "# Recipe: testing what an action refuses — field rules and a business rule.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/signup.db\n",
+      "tests/signup.test.q": "<q:test name=\"a short name is refused on its field, with the rule's message\" page=\"/\">\n  <test:submit action=\"join\" name=\"A\" email=\"bia@example.com\" />\n  <test:expect error=\"name\" message=\"Must be at least 2 characters\" />\n  <test:expect table=\"members\" count=\"0\" where=\"email = 'bia@example.com'\" />\n</q:test>\n\n<q:test name=\"an address that is not an e-mail is refused on its field\" page=\"/\">\n  <test:submit action=\"join\" name=\"Bia\" email=\"bia-at-example\" />\n  <test:expect error=\"email\" />\n  <test:expect table=\"members\" count=\"1\" />\n</q:test>\n\n<q:test name=\"an address that is already a member is refused with a flash\" page=\"/\">\n  <test:submit action=\"join\" name=\"Ana Again\" email=\"ana@example.com\" />\n  <test:expect redirect=\"/\" flash=\"ana@example.com is already a member.\" />\n  <test:expect table=\"members\" count=\"1\" />\n</q:test>\n\n<q:test name=\"a new member is welcomed\" page=\"/\">\n  <test:submit action=\"join\" name=\"Bia\" email=\"bia@example.com\" />\n  <test:expect redirect=\"/\" flash=\"Welcome, Bia!\" />\n  <test:expect table=\"members\" count=\"1\" where=\"email = 'bia@example.com'\" />\n</q:test>\n"
+     }
+    }
+   ]
+  },
+  {
+   "topic": "files-and-mail",
+   "title": "Files & mail",
+   "recipes": [
+    {
+     "id": "files-and-mail/mail-in-development",
+     "title": "Mail in development",
+     "description": "Send mail from an action without a mail server while you develop — host: log writes each message to the log.",
+     "cookbook": "/cookbook/files-and-mail/mail-in-development",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Contact\">\n  <q:action name=\"send\" method=\"POST\">\n    <q:param name=\"email\" type=\"email\" required=\"true\" />\n    <q:param name=\"message\" required=\"true\" minlength=\"5\" />\n    <q:mail to=\"support@example.com\" reply_to=\"{email}\" subject=\"Contact from {email}\" type=\"text\">{message}</q:mail>\n    <q:redirect url=\"/\" flash=\"Thanks! We will answer {email}.\" />\n  </q:action>\n\n  <h1>Contact us</h1>\n  <q:if condition=\"flash\"><p class=\"flash\">{flash}</p></q:if>\n  <form method=\"POST\" action=\"/?action=send\">\n    <input name=\"email\" type=\"email\" />\n    <textarea name=\"message\"></textarea>\n    <button>Send</button>\n  </form>\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: mail in development. `host: log` writes each message to the log\n# instead of sending it; set SMTP_HOST in production and the same page sends.\npaths:\n  components: ./components\n\nmail:\n  host: ${SMTP_HOST:-log}\n  from: support@example.com\n",
+      "tests/contact.test.q": "<q:test name=\"a message is sent and the visitor is told\" page=\"/\">\n  <test:submit action=\"send\" email=\"ana@example.com\" message=\"Where is my order?\" />\n  <test:expect redirect=\"/\" flash=\"Thanks! We will answer ana@example.com.\" />\n</q:test>\n\n<q:test name=\"an address that is not an e-mail is refused on its field\" page=\"/\">\n  <test:submit action=\"send\" email=\"not-an-email\" message=\"Where is my order?\" />\n  <test:expect error=\"email\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "files-and-mail/mail-server-refuses",
+     "title": "When the mail server says no",
+     "description": "Keep an order even when its confirmation e-mail cannot be sent — onerror=continue, and tell the visitor.",
+     "cookbook": "/cookbook/files-and-mail/mail-server-refuses",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Order\">\n  <q:action name=\"order\" method=\"POST\">\n    <q:param name=\"email\" type=\"email\" required=\"true\" />\n    <q:param name=\"item\" required=\"true\" />\n    <q:query name=\"saved\" datasource=\"db\">\n      INSERT INTO orders (email, item) VALUES (:email, :item)\n      <q:param name=\"email\" value=\"{email}\" type=\"string\" />\n      <q:param name=\"item\" value=\"{item}\" type=\"string\" />\n    </q:query>\n\n    <!-- onerror=\"continue\": a refused message does not undo the order -->\n    <q:mail name=\"confirmation\" to=\"{email}\" subject=\"Your order: {item}\"\n            type=\"text\" onerror=\"continue\">We received your order for {item}.</q:mail>\n\n    <q:if condition=\"confirmation_result.success\">\n      <q:redirect url=\"/\" flash=\"Ordered {item}. A confirmation is on its way.\" />\n    </q:if>\n    <q:redirect url=\"/\" flash=\"Ordered {item}. We could not send the confirmation e-mail.\" />\n  </q:action>\n\n  <h1>Order</h1>\n  <q:if condition=\"flash\"><p class=\"flash\">{flash}</p></q:if>\n  <form method=\"POST\" action=\"/?action=order\">\n    <input name=\"email\" type=\"email\" />\n    <input name=\"item\" />\n    <button>Order</button>\n  </form>\n</q:component>\n",
+      "migrations/V001_orders.sql": "CREATE TABLE orders (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    email TEXT NOT NULL,\n    item TEXT NOT NULL\n);\n",
+      "quantum.config.yaml": "# Recipe: an order is saved even when the confirmation e-mail cannot be sent.\n# The mail server here is deliberately unreachable (nothing listens on port 9),\n# so every q:mail fails — as it does when the real server is down.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/orders.db\n\nmail:\n  host: 127.0.0.1\n  port: 9\n  tls: false\n  timeout: 2\n  from: shop@example.com\n",
+      "tests/order.test.q": "<q:test name=\"the order is saved and the visitor told the e-mail failed\" page=\"/\">\n  <test:submit action=\"order\" email=\"ana@example.com\" item=\"Blue mug\" />\n  <test:expect redirect=\"/\" flash=\"Ordered Blue mug. We could not send the confirmation e-mail.\" />\n  <test:expect table=\"orders\" count=\"1\" where=\"email = 'ana@example.com' AND item = 'Blue mug'\" />\n</q:test>\n"
+     }
+    }
+   ]
+  },
+  {
+   "topic": "login-and-permissions",
+   "title": "Login & permissions",
+   "recipes": [
+    {
+     "id": "login-and-permissions/login-with-hashed-password",
+     "title": "Log in with a hashed password",
+     "description": "Check a password against its bcrypt hash with verifyPassword, open the session, and keep a page for signed-in users.",
+     "cookbook": "/cookbook/login-and-permissions/login-with-hashed-password",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Home\" require_auth=\"true\">\n  <q:if condition=\"flash\"><p>{flash}</p></q:if>\n  <h1>Hello, {session.userName}</h1>\n  <p>You are signed in as {session.userRole}.</p>\n</q:component>\n",
+      "components/login.q": "<q:component name=\"Login\">\n  <q:action name=\"signin\" method=\"POST\">\n    <q:param name=\"email\" type=\"email\" required=\"true\" />\n    <q:param name=\"password\" required=\"true\" />\n\n    <q:query name=\"user\" datasource=\"db\">\n      SELECT id, name, role, password_hash FROM users WHERE email = :email\n      <q:param name=\"email\" value=\"{email}\" type=\"string\" />\n    </q:query>\n\n    <q:if condition=\"user_result.recordCount == 1 and verifyPassword(password, user[0].password_hash)\">\n      <q:set name=\"session.authenticated\" value=\"true\" type=\"boolean\" />\n      <q:set name=\"session.userId\" value=\"{user[0].id}\" />\n      <q:set name=\"session.userName\" value=\"{user[0].name}\" />\n      <q:set name=\"session.userRole\" value=\"{user[0].role}\" />\n      <q:set name=\"session.sessionExpiry\" value=\"{dateAdd('h', 8)}\" />\n      <q:redirect url=\"/\" flash=\"Welcome, {user[0].name}!\" />\n    </q:if>\n    <!-- The same message whether the address or the password is wrong. -->\n    <q:redirect url=\"/login\" flash=\"Wrong e-mail or password.\" flashType=\"error\" />\n  </q:action>\n\n  <h1>Sign in</h1>\n  <q:if condition=\"flash\"><p class=\"flash-{flashType}\">{flash}</p></q:if>\n  <form method=\"POST\">\n    <input name=\"email\" type=\"email\" placeholder=\"E-mail\" />\n    <input name=\"password\" type=\"password\" placeholder=\"Password\" />\n    <button>Sign in</button>\n  </form>\n</q:component>\n",
+      "migrations/V001_users.sql": "CREATE TABLE users (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    email TEXT NOT NULL UNIQUE,\n    name TEXT NOT NULL,\n    role TEXT NOT NULL DEFAULT 'member',\n    password_hash TEXT NOT NULL\n);\n\n-- The password is \"correct horse battery\"; only its bcrypt hash is stored\n-- (made with hashPassword, see the sign-up recipe).\nINSERT INTO users (email, name, role, password_hash) VALUES\n    ('ana@example.com', 'Ana', 'admin',\n     '$2b$12$I4TEFfyLIaWrYBSQnyB1cuE1nkqh3CS4qpXmtZcUPUokfv/cOZNnC');\n",
+      "quantum.config.yaml": "# Recipe: sign in against a password hash, and a page only a signed-in user sees.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/users.db\n",
+      "tests/login.test.q": "<q:test name=\"a visitor who is not signed in is sent to sign in\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Sign in\" />\n  <test:expect no-text=\"Hello,\" />\n</q:test>\n\n<q:test name=\"the right password signs in\" page=\"/login\">\n  <test:submit action=\"signin\" email=\"ana@example.com\" password=\"correct horse battery\" />\n  <test:expect redirect=\"/\" flash=\"Welcome, Ana!\" />\n  <test:expect text=\"Hello, Ana\" />\n  <test:expect text=\"You are signed in as admin.\" />\n</q:test>\n\n<q:test name=\"a wrong password is refused, with the same message as an unknown address\" page=\"/login\">\n  <test:submit action=\"signin\" email=\"ana@example.com\" password=\"guess\" />\n  <test:expect redirect=\"/login\" flash=\"Wrong e-mail or password.\" />\n  <test:submit action=\"signin\" email=\"nobody@example.com\" password=\"guess\" />\n  <test:expect redirect=\"/login\" flash=\"Wrong e-mail or password.\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "login-and-permissions/sign-up",
+     "title": "Sign up and store a password hash",
+     "description": "Create an account with hashPassword, so the database never holds the password, with rules on each field.",
+     "cookbook": "/cookbook/login-and-permissions/sign-up",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"SignUp\">\n  <q:action name=\"register\" method=\"POST\">\n    <q:param name=\"name\" required=\"true\" minlength=\"2\" maxlength=\"80\" />\n    <q:param name=\"email\" type=\"email\" required=\"true\" />\n    <q:param name=\"password\" required=\"true\" minlength=\"12\" />\n\n    <q:query name=\"taken\" datasource=\"db\">\n      SELECT id FROM users WHERE email = :email\n      <q:param name=\"email\" value=\"{email}\" type=\"string\" />\n    </q:query>\n    <q:if condition=\"taken_result.recordCount > 0\">\n      <q:redirect url=\"/\" flash=\"There is already an account for {email}.\" flashType=\"error\" />\n    </q:if>\n\n    <!-- hashPassword: bcrypt, with a new salt every time. -->\n    <q:query name=\"created\" datasource=\"db\">\n      INSERT INTO users (email, name, password_hash) VALUES (:email, :name, :hash)\n      <q:param name=\"email\" value=\"{email}\" type=\"string\" />\n      <q:param name=\"name\" value=\"{name}\" type=\"string\" />\n      <q:param name=\"hash\" value=\"{hashPassword(password)}\" type=\"string\" />\n    </q:query>\n    <q:redirect url=\"/\" flash=\"Account created for {name}.\" />\n  </q:action>\n\n  <h1>Create an account</h1>\n  <q:if condition=\"flash\"><p class=\"flash-{flashType}\">{flash}</p></q:if>\n  <form method=\"POST\">\n    <input name=\"name\" placeholder=\"Name\" />\n    <input name=\"email\" type=\"email\" placeholder=\"E-mail\" />\n    <input name=\"password\" type=\"password\" placeholder=\"Password (12 characters or more)\" />\n    <button>Create account</button>\n  </form>\n</q:component>\n",
+      "migrations/V001_users.sql": "CREATE TABLE users (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    email TEXT NOT NULL UNIQUE,\n    name TEXT NOT NULL,\n    password_hash TEXT NOT NULL\n);\n",
+      "quantum.config.yaml": "# Recipe: an account is created with a hash of the password, never the password.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/users.db\n",
+      "tests/signup.test.q": "<q:test name=\"the account keeps a bcrypt hash, not the password\" page=\"/\">\n  <test:submit action=\"register\" name=\"Bia\" email=\"bia@example.com\" password=\"a long passphrase\" />\n  <test:expect redirect=\"/\" flash=\"Account created for Bia.\" />\n  <test:expect table=\"users\" count=\"1\" where=\"email = 'bia@example.com' AND password_hash LIKE '$2b$%'\" />\n  <test:expect table=\"users\" count=\"0\" where=\"password_hash = 'a long passphrase'\" />\n</q:test>\n\n<q:test name=\"a short password is refused on its field\" page=\"/\">\n  <test:submit action=\"register\" name=\"Bia\" email=\"bia@example.com\" password=\"short\" />\n  <test:expect error=\"password\" message=\"Must be at least 12 characters\" />\n  <test:expect table=\"users\" count=\"0\" />\n</q:test>\n\n<q:test name=\"an address that already has an account is refused\" page=\"/\">\n  <test:given table=\"users\" email=\"bia@example.com\" name=\"Bia\" password_hash=\"x\" />\n  <test:submit action=\"register\" name=\"Bia Again\" email=\"bia@example.com\" password=\"a long passphrase\" />\n  <test:expect redirect=\"/\" flash=\"There is already an account for bia@example.com.\" />\n  <test:expect table=\"users\" count=\"1\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "login-and-permissions/page-for-one-role",
+     "title": "A page for one role only",
+     "description": "require_role keeps a page to the admins: a member gets 403, and a visitor who is not signed in is sent to sign in.",
+     "cookbook": "/cookbook/login-and-permissions/page-for-one-role",
+     "start": "/reports",
+     "view": "preview",
+     "files": {
+      "components/login.q": "<q:component name=\"Login\">\n  <h1>Sign in</h1>\n</q:component>\n",
+      "components/reports.q": "<q:component name=\"Reports\" require_auth=\"true\" require_role=\"admin\">\n  <h1>Reports</h1>\n  <p>Only admins see this, {session.userName}.</p>\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: a page only the admins see; everyone else gets 403, and a visitor\n# who is not signed in is sent to sign in.\npaths:\n  components: ./components\n",
+      "tests/reports.test.q": "<q:test name=\"an admin sees the page\" page=\"/reports\">\n  <test:as user=\"ana\" role=\"admin\" />\n  <test:visit />\n  <test:expect status=\"200\" text=\"Only admins see this, ana.\" />\n</q:test>\n\n<q:test name=\"a member is refused with 403\" page=\"/reports\">\n  <test:as user=\"bruno\" role=\"member\" />\n  <test:visit />\n  <test:expect status=\"403\" />\n</q:test>\n\n<q:test name=\"a visitor who is not signed in is sent to sign in\" page=\"/reports\">\n  <test:visit />\n  <test:expect status=\"302\" redirect=\"/login\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "login-and-permissions/guard-that-redirects",
+     "title": "A guard that redirects",
+     "description": "A top-level q:if with q:redirect protects a page and every action on it: a post without a session writes nothing.",
+     "cookbook": "/cookbook/login-and-permissions/guard-that-redirects",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Notes\">\n  <!-- The guard: it runs before the page AND before each of its actions. -->\n  <q:if condition=\"not session.authenticated\">\n    <q:redirect url=\"/login\" flash=\"Sign in to write notes.\" />\n  </q:if>\n\n  <q:action name=\"add\" method=\"POST\">\n    <q:param name=\"body\" required=\"true\" minlength=\"2\" />\n    <q:query name=\"added\" datasource=\"db\">\n      INSERT INTO notes (author, body) VALUES (:author, :body)\n      <q:param name=\"author\" value=\"{session.userName}\" type=\"string\" />\n      <q:param name=\"body\" value=\"{body}\" type=\"string\" />\n    </q:query>\n    <q:redirect url=\"/\" flash=\"Saved.\" />\n  </q:action>\n\n  <q:query name=\"notes\" datasource=\"db\">\n    SELECT author, body FROM notes ORDER BY id DESC\n  </q:query>\n\n  <h1>Notes</h1>\n  <q:if condition=\"flash\"><p>{flash}</p></q:if>\n  <form method=\"POST\"><input name=\"body\" /><button>Add</button></form>\n  <q:loop query=\"notes\"><p>{notes.author}: {notes.body}</p></q:loop>\n</q:component>\n",
+      "components/login.q": "<q:component name=\"Login\">\n  <q:if condition=\"flash\"><p>{flash}</p></q:if>\n  <h1>Sign in</h1>\n</q:component>\n",
+      "migrations/V001_notes.sql": "CREATE TABLE notes (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    author TEXT NOT NULL,\n    body TEXT NOT NULL\n);\n",
+      "quantum.config.yaml": "# Recipe: a guard -- a top-level q:if with q:redirect -- protects the page and\n# its actions.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/notes.db\n",
+      "tests/guard.test.q": "<q:test name=\"the guard sends a visitor to sign in\" page=\"/\">\n  <test:visit />\n  <test:expect status=\"302\" redirect=\"/login\" />\n  <test:expect text=\"Sign in to write notes.\" />\n</q:test>\n\n<q:test name=\"the guard also stops the action: nothing is written\" page=\"/\">\n  <test:submit action=\"add\" body=\"Sneaky note\" />\n  <test:expect status=\"302\" redirect=\"/login\" />\n  <test:expect table=\"notes\" count=\"0\" />\n</q:test>\n\n<q:test name=\"a signed-in user writes a note\" page=\"/\">\n  <test:as user=\"ana\" role=\"member\" />\n  <test:submit action=\"add\" body=\"Buy coffee\" />\n  <test:expect redirect=\"/\" flash=\"Saved.\" />\n  <test:expect table=\"notes\" count=\"1\" where=\"author = 'ana' AND body = 'Buy coffee'\" />\n  <test:expect text=\"ana: Buy coffee\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "login-and-permissions/sign-out",
+     "title": "Sign out",
+     "description": "A logout page that clears the session and redirects; the protected pages are closed again.",
+     "cookbook": "/cookbook/login-and-permissions/sign-out",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Home\" require_auth=\"true\">\n  <h1>Hello, {session.userName}</h1>\n  <a href=\"/logout\">Sign out</a>\n</q:component>\n",
+      "components/login.q": "<q:component name=\"Login\">\n  <q:if condition=\"flash\"><p>{flash}</p></q:if>\n  <h1>Sign in</h1>\n</q:component>\n",
+      "components/logout.q": "<q:component name=\"Logout\">\n  <!-- A page that clears the session and redirects (ACT-7). -->\n  <q:set name=\"session.authenticated\" value=\"false\" type=\"boolean\" />\n  <q:set name=\"session.userName\" value=\"\" />\n  <q:set name=\"session.userRole\" value=\"\" />\n  <q:redirect url=\"/login\" flash=\"You are signed out.\" />\n</q:component>\n",
+      "quantum.config.yaml": "# Recipe: signing out clears the session; the protected page is closed again.\npaths:\n  components: ./components\n",
+      "tests/logout.test.q": "<q:test name=\"signing out ends the session\" page=\"/\">\n  <test:as user=\"ana\" role=\"member\" />\n  <test:visit />\n  <test:expect text=\"Hello, ana\" />\n  <test:visit path=\"/logout\" />\n  <test:expect status=\"302\" redirect=\"/login\" />\n  <test:expect text=\"You are signed out.\" />\n  <test:visit path=\"/\" />\n  <test:expect status=\"302\" redirect=\"/login\" />\n</q:test>\n"
+     }
+    }
+   ]
+  },
+  {
+   "topic": "forms-and-actions",
+   "title": "Forms & actions",
+   "recipes": [
+    {
+     "id": "forms-and-actions/field-errors",
+     "title": "Show each error on its field",
+     "description": "Write the rules once on the action's q:param; the form reads them and shows every refusal next to its field.",
+     "cookbook": "/cookbook/forms-and-actions/field-errors",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Guests\">\n  <!-- The rules are written once, on the action. The form reads them (UI-9)\n       and the server checks them again (ACT-2), every field at once. -->\n  <q:action name=\"register\" method=\"POST\">\n    <q:param name=\"name\" required=\"true\" minlength=\"2\" maxlength=\"60\" />\n    <q:param name=\"email\" type=\"email\" required=\"true\" />\n    <q:param name=\"age\" type=\"integer\" required=\"true\" min=\"18\" max=\"120\" />\n    <q:query name=\"added\" datasource=\"db\">\n      INSERT INTO guests (name, email, age) VALUES (:name, :email, :age)\n      <q:param name=\"name\" value=\"{name}\" type=\"string\" />\n      <q:param name=\"email\" value=\"{email}\" type=\"string\" />\n      <q:param name=\"age\" value=\"{age}\" type=\"integer\" />\n    </q:query>\n    <q:redirect url=\"/\" flash=\"{name} is on the list.\" />\n  </q:action>\n\n  <ui:window title=\"Guest list\">\n    <q:if condition=\"flash\">\n      <ui:alert variant=\"{flashType == 'error' and 'danger' or 'success'}\">{flash}</ui:alert>\n    </q:if>\n    <ui:form on-submit=\"register\">\n      <ui:formitem label=\"Name\"><ui:input bind=\"name\" /></ui:formitem>\n      <ui:formitem label=\"E-mail\"><ui:input bind=\"email\" /></ui:formitem>\n      <ui:formitem label=\"Age\"><ui:input bind=\"age\" /></ui:formitem>\n      <ui:button variant=\"primary\">Add guest</ui:button>\n    </ui:form>\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_guests.sql": "CREATE TABLE guests (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    name TEXT NOT NULL,\n    email TEXT NOT NULL,\n    age INTEGER NOT NULL\n);\n",
+      "quantum.config.yaml": "# Recipe: the rules live on the action; the form shows each refusal on its field.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/guests.db\n",
+      "tests/guests.test.q": "<q:test name=\"a valid guest is added\" page=\"/\">\n  <test:submit action=\"register\" name=\"Ana\" email=\"ana@example.com\" age=\"30\" />\n  <test:expect redirect=\"/\" flash=\"Ana is on the list.\" />\n  <test:expect table=\"guests\" count=\"1\" where=\"name = 'Ana' AND age = 30\" />\n</q:test>\n\n<q:test name=\"every broken field gets its own message\" page=\"/\">\n  <test:submit action=\"register\" name=\"A\" email=\"not an address\" age=\"12\" />\n  <test:expect redirect=\"/\" />\n  <test:expect error=\"name\" message=\"Must be at least 2 characters\" />\n  <test:expect error=\"email\" message=\"Must be a valid email\" />\n  <test:expect error=\"age\" message=\"Must be at least 18 (got 12)\" />\n  <test:expect text=\"Must be at least 2 characters\" />\n  <test:expect table=\"guests\" count=\"0\" />\n</q:test>\n\n<q:test name=\"a missing field is refused as Required\" page=\"/\">\n  <test:submit action=\"register\" name=\"Ana\" email=\"ana@example.com\" />\n  <test:expect error=\"age\" message=\"Required\" />\n  <test:expect table=\"guests\" count=\"0\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "forms-and-actions/keep-typed-values",
+     "title": "A refused form keeps what was typed",
+     "description": "After a refusal, the form comes back filled with the values sent, once, so nobody types a long message twice.",
+     "cookbook": "/cookbook/forms-and-actions/keep-typed-values",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Contact\">\n  <q:action name=\"send\" method=\"POST\">\n    <q:param name=\"email\" type=\"email\" required=\"true\" />\n    <q:param name=\"body\" required=\"true\" minlength=\"20\" maxlength=\"2000\" />\n    <q:query name=\"saved\" datasource=\"db\">\n      INSERT INTO messages (email, body) VALUES (:email, :body)\n      <q:param name=\"email\" value=\"{email}\" type=\"string\" />\n      <q:param name=\"body\" value=\"{body}\" type=\"string\" />\n    </q:query>\n    <q:redirect url=\"/\" flash=\"Thanks, we got your message.\" />\n  </q:action>\n\n  <ui:window title=\"Contact us\">\n    <q:if condition=\"flash\">\n      <ui:alert variant=\"{flashType == 'error' and 'danger' or 'success'}\">{flash}</ui:alert>\n    </q:if>\n    <!-- Nothing to write for the values: after a refusal, the next render of\n         this form fills each field with what was sent (UI-9), once. -->\n    <ui:form on-submit=\"send\">\n      <ui:formitem label=\"Your e-mail\"><ui:input bind=\"email\" /></ui:formitem>\n      <ui:formitem label=\"Message\"><ui:input bind=\"body\" rows=\"6\" /></ui:formitem>\n      <ui:button variant=\"primary\">Send</ui:button>\n    </ui:form>\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_messages.sql": "CREATE TABLE messages (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    email TEXT NOT NULL,\n    body TEXT NOT NULL\n);\n",
+      "quantum.config.yaml": "# Recipe: a refused form comes back with what was typed, not empty.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/messages.db\n",
+      "tests/contact.test.q": "<q:test name=\"a refused message comes back as it was typed\" page=\"/\">\n  <test:submit action=\"send\" email=\"ana@example\" body=\"Your shop is closed on Sundays?\" />\n  <test:expect redirect=\"/\" />\n  <test:expect error=\"email\" message=\"Must be a valid email\" />\n  <test:expect text=\"Your shop is closed on Sundays?\" />\n  <test:expect table=\"messages\" count=\"0\" />\n</q:test>\n\n<q:test name=\"the values come back once: the next visit is empty\" page=\"/\">\n  <test:submit action=\"send\" email=\"ana@example\" body=\"Your shop is closed on Sundays?\" />\n  <test:visit />\n  <test:expect no-text=\"Your shop is closed on Sundays?\" />\n</q:test>\n\n<q:test name=\"a valid message is saved\" page=\"/\">\n  <test:submit action=\"send\" email=\"ana@example.com\" body=\"Your shop is closed on Sundays?\" />\n  <test:expect redirect=\"/\" flash=\"Thanks, we got your message.\" />\n  <test:expect table=\"messages\" count=\"1\" where=\"email = 'ana@example.com'\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "forms-and-actions/redirect-and-flash",
+     "title": "Redirect and say what happened",
+     "description": "End an action with q:redirect and a flash; q:flash for a warning; the message shows once on the next page.",
+     "cookbook": "/cookbook/forms-and-actions/redirect-and-flash",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/done.q": "<q:component name=\"Done\">\n  <ui:window title=\"All clear\">\n    <q:if condition=\"flash\">\n      <ui:alert variant=\"{flashType}\">{flash}</ui:alert>\n    </q:if>\n    <ui:link to=\"/\">Back to the notes</ui:link>\n  </ui:window>\n</q:component>\n",
+      "components/index.q": "<q:component name=\"Notes\">\n  <q:action name=\"add\" method=\"POST\">\n    <q:param name=\"text\" required=\"true\" maxlength=\"200\" />\n    <q:query name=\"added\" datasource=\"db\">\n      INSERT INTO notes (text) VALUES (:text)\n      <q:param name=\"text\" value=\"{text}\" type=\"string\" />\n    </q:query>\n    <!-- The flash accepts expressions; its type is \"success\". -->\n    <q:redirect url=\"/\" flash=\"Added: {text}\" />\n  </q:action>\n\n  <q:action name=\"clear\" method=\"POST\">\n    <q:query name=\"finished\" datasource=\"db\">\n      UPDATE notes SET done = 1 WHERE done = 0\n    </q:query>\n    <q:if condition=\"finished_result.recordCount == 0\">\n      <!-- A flash of another kind: q:flash sets both, the redirect keeps them. -->\n      <q:flash type=\"warning\">There was nothing to clear.</q:flash>\n      <q:redirect url=\"/\" />\n    </q:if>\n    <q:redirect url=\"/done\" flash=\"Cleared {finished_result.recordCount} notes.\" />\n  </q:action>\n\n  <q:query name=\"notes\" datasource=\"db\">\n    SELECT id, text FROM notes WHERE done = 0 ORDER BY id\n  </q:query>\n\n  <ui:window title=\"Notes\">\n    <!-- flash and flashType exist on every page, '' when there is none;\n         a flash shows on the next page rendered, once. -->\n    <q:if condition=\"flash\">\n      <ui:alert variant=\"{flashType}\">{flash}</ui:alert>\n    </q:if>\n    <ui:form on-submit=\"add\">\n      <ui:hbox gap=\"sm\">\n        <ui:input bind=\"text\" placeholder=\"A note\" grow=\"true\" />\n        <ui:button variant=\"primary\">Add</ui:button>\n      </ui:hbox>\n    </ui:form>\n    <q:loop query=\"notes\">\n      <ui:text>{notes.text}</ui:text>\n    </q:loop>\n    <ui:button on-click=\"clear\">Clear all</ui:button>\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_notes.sql": "CREATE TABLE notes (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    text TEXT NOT NULL,\n    done INTEGER NOT NULL DEFAULT 0\n);\n",
+      "quantum.config.yaml": "# Recipe: after a POST, send the browser to a page and tell it what happened.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/notes.db\n",
+      "tests/notes.test.q": "<q:test name=\"adding a note redirects back with a success flash\" page=\"/\">\n  <test:submit action=\"add\" text=\"Buy bread\" />\n  <test:expect status=\"302\" redirect=\"/\" flash=\"Added: Buy bread\" />\n  <test:expect var=\"flashType\" value=\"success\" />\n  <test:expect text=\"Buy bread\" />\n</q:test>\n\n<q:test name=\"the flash shows once\" page=\"/\">\n  <test:submit action=\"add\" text=\"Buy bread\" />\n  <test:expect text=\"Added: Buy bread\" />\n  <test:visit />\n  <test:expect no-text=\"Added: Buy bread\" />\n  <test:expect var=\"flash\" value=\"\" />\n</q:test>\n\n<q:test name=\"clearing sends the browser to another page\" page=\"/\">\n  <test:given table=\"notes\" text=\"Buy bread\" />\n  <test:given table=\"notes\" text=\"Call Ana\" />\n  <test:submit action=\"clear\" />\n  <test:expect redirect=\"/done\" flash=\"Cleared 2 notes.\" />\n  <test:expect text=\"All clear\" />\n  <test:expect table=\"notes\" count=\"0\" where=\"done = 0\" />\n</q:test>\n\n<q:test name=\"nothing to clear is a warning, on the same page\" page=\"/\">\n  <test:submit action=\"clear\" />\n  <test:expect redirect=\"/\" flash=\"There was nothing to clear.\" />\n  <test:expect var=\"flashType\" value=\"warning\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "forms-and-actions/several-actions",
+     "title": "Several forms on one page",
+     "description": "Each form and button posts the name of its action; a name the page does not have answers 400.",
+     "cookbook": "/cookbook/forms-and-actions/several-actions",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Cart\">\n  <!-- Three actions on one page. Each form (and each button) sends the name\n       of its action in the field \"action\"; the page runs that one only. -->\n  <q:action name=\"add\" method=\"POST\">\n    <q:param name=\"item\" required=\"true\" maxlength=\"60\" />\n    <q:param name=\"quantity\" type=\"integer\" min=\"1\" max=\"99\" default=\"1\" />\n    <q:query name=\"added\" datasource=\"db\">\n      INSERT INTO cart (item, quantity) VALUES (:item, :quantity)\n      <q:param name=\"item\" value=\"{item}\" type=\"string\" />\n      <q:param name=\"quantity\" value=\"{quantity}\" type=\"integer\" />\n    </q:query>\n    <q:redirect url=\"/\" flash=\"Added {quantity} × {item}.\" />\n  </q:action>\n\n  <q:action name=\"remove\" method=\"POST\">\n    <q:param name=\"id\" type=\"integer\" required=\"true\" />\n    <q:query name=\"removed\" datasource=\"db\">\n      DELETE FROM cart WHERE id = :id\n      <q:param name=\"id\" value=\"{id}\" type=\"integer\" />\n    </q:query>\n    <q:redirect url=\"/\" flash=\"Removed.\" />\n  </q:action>\n\n  <q:action name=\"empty\" method=\"POST\">\n    <q:query name=\"emptied\" datasource=\"db\">DELETE FROM cart</q:query>\n    <q:redirect url=\"/\" flash=\"The cart is empty.\" />\n  </q:action>\n\n  <q:query name=\"cart\" datasource=\"db\">\n    SELECT id, item, quantity FROM cart ORDER BY id\n  </q:query>\n\n  <ui:window title=\"Cart\">\n    <q:if condition=\"flash\">\n      <ui:alert variant=\"{flashType == 'error' and 'danger' or 'success'}\">{flash}</ui:alert>\n    </q:if>\n    <ui:form on-submit=\"add\">\n      <ui:hbox gap=\"sm\">\n        <ui:input bind=\"item\" placeholder=\"Item\" grow=\"true\" />\n        <ui:input bind=\"quantity\" width=\"80\" />\n        <ui:button variant=\"primary\">Add</ui:button>\n      </ui:hbox>\n    </ui:form>\n    <q:loop query=\"cart\">\n      <ui:hbox gap=\"sm\" align=\"center\">\n        <ui:text>{cart.quantity} × {cart.item}</ui:text>\n        <!-- with= sends the row's id along with the action's name. -->\n        <ui:button on-click=\"remove\" with=\"id={cart.id}\">Remove</ui:button>\n      </ui:hbox>\n    </q:loop>\n    <ui:button on-click=\"empty\" variant=\"danger\">Empty the cart</ui:button>\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_cart.sql": "CREATE TABLE cart (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    item TEXT NOT NULL,\n    quantity INTEGER NOT NULL\n);\n\nINSERT INTO cart (item, quantity) VALUES ('Coffee', 1), ('Bread', 2);\n",
+      "quantum.config.yaml": "# Recipe: several forms on one page, each posting to its own action.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/cart.db\n",
+      "tests/cart.test.q": "<q:test name=\"each form runs its own action\" page=\"/\">\n  <test:submit action=\"add\" item=\"Milk\" quantity=\"3\" />\n  <test:expect flash=\"Added 3 × Milk.\" />\n  <test:submit action=\"remove\" id=\"1\" />\n  <test:expect flash=\"Removed.\" />\n  <test:expect table=\"cart\" count=\"2\" />\n  <test:expect table=\"cart\" count=\"0\" where=\"item = 'Coffee'\" />\n</q:test>\n\n<q:test name=\"the button with no fields empties the cart\" page=\"/\">\n  <test:submit action=\"empty\" />\n  <test:expect redirect=\"/\" flash=\"The cart is empty.\" />\n  <test:expect table=\"cart\" count=\"0\" />\n</q:test>\n\n<q:test name=\"a post that names no action of the page is refused\" page=\"/\">\n  <test:submit action=\"checkout\" />\n  <test:expect status=\"400\" />\n  <test:expect text=\"No q:action named 'checkout' on this page. Available: add, remove, empty.\" />\n  <test:expect table=\"cart\" count=\"2\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "forms-and-actions/form-from-table",
+     "title": "A form from the table",
+     "description": "q:action table= takes its params from the schema; a ui:form with no fields draws one field per column.",
+     "cookbook": "/cookbook/forms-and-actions/form-from-table",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Books\">\n  <!-- No q:param: each column but the key becomes one, with the rules the\n       schema gives it (UI-10). NOT NULL is required, VARCHAR(120) a\n       maxlength, the CHECK a list, the REFERENCES a row that must exist. -->\n  <q:action name=\"add\" method=\"POST\" table=\"books\" datasource=\"db\">\n    <q:query name=\"added\" datasource=\"db\">\n      INSERT INTO books (title, author_id, genre, pages, lent)\n      VALUES (:title, :author_id, :genre, :pages, :lent)\n      <q:param name=\"title\" value=\"{title}\" type=\"string\" />\n      <q:param name=\"author_id\" value=\"{author_id}\" type=\"integer\" />\n      <q:param name=\"genre\" value=\"{genre}\" type=\"string\" />\n      <q:param name=\"pages\" value=\"{pages}\" type=\"integer\" null=\"true\" />\n      <q:param name=\"lent\" value=\"{lent}\" type=\"boolean\" />\n    </q:query>\n    <q:redirect url=\"/\" flash=\"Added: {title}\" />\n  </q:action>\n\n  <q:query name=\"books\" datasource=\"db\">\n    SELECT b.title, a.name AS author, b.genre FROM books b JOIN authors a ON a.id = b.author_id\n    ORDER BY b.id\n  </q:query>\n\n  <ui:window title=\"Library\">\n    <q:if condition=\"flash\">\n      <ui:alert variant=\"{flashType == 'error' and 'danger' or 'success'}\">{flash}</ui:alert>\n    </q:if>\n    <!-- A form with no fields draws one per param: a list of authors for\n         author_id, a list for genre, a box for lent, and the button. -->\n    <ui:form on-submit=\"add\" submit=\"Add book\" />\n    <ui:table source=\"{books}\" />\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_library.sql": "CREATE TABLE authors (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    name TEXT NOT NULL\n);\n\nCREATE TABLE books (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    title VARCHAR(120) NOT NULL,\n    author_id INTEGER NOT NULL REFERENCES authors(id),\n    genre TEXT NOT NULL CHECK (genre IN ('novel', 'poetry', 'essay')),\n    pages INTEGER,\n    lent BOOLEAN NOT NULL DEFAULT 0\n);\n\nINSERT INTO authors (name) VALUES ('Clarice Lispector'), ('Machado de Assis');\n",
+      "quantum.config.yaml": "# Recipe: the table's schema gives the action its rules and the form its fields.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/library.db\n",
+      "tests/books.test.q": "<q:test name=\"the form draws a field per column, labelled from its name\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Title\" />\n  <test:expect text=\"Author\" />\n  <test:expect text=\"Machado de Assis\" />\n  <test:expect text=\"Add book\" />\n</q:test>\n\n<q:test name=\"a book is added\" page=\"/\">\n  <test:submit action=\"add\" title=\"Dom Casmurro\" author_id=\"2\" genre=\"novel\" pages=\"256\" />\n  <test:expect redirect=\"/\" flash=\"Added: Dom Casmurro\" />\n  <test:expect table=\"books\" count=\"1\" where=\"title = 'Dom Casmurro' AND pages = 256 AND lent = 0\" />\n</q:test>\n\n<q:test name=\"the rules come from the schema\" page=\"/\">\n  <test:submit action=\"add\" title=\"\" author_id=\"9\" genre=\"comic\" pages=\"many\" />\n  <test:expect error=\"title\" message=\"Required\" />\n  <test:expect error=\"author_id\" message=\"Must name an existing row of authors (no id = 9)\" />\n  <test:expect error=\"genre\" message=\"Must be one of: novel, poetry, essay\" />\n  <test:expect error=\"pages\" message=\"Must be an integer, got 'many'\" />\n  <test:expect table=\"books\" count=\"0\" />\n</q:test>\n\n<q:test name=\"a blank optional column is stored as NULL\" page=\"/\">\n  <test:submit action=\"add\" title=\"A hora da estrela\" author_id=\"1\" genre=\"novel\" pages=\"\" />\n  <test:expect table=\"books\" count=\"1\" where=\"pages IS NULL\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "forms-and-actions/edit-a-row",
+     "title": "Edit a row",
+     "description": "A page per row with [id].q, a form opened with the row's values, and the table's rules on save.",
+     "cookbook": "/cookbook/forms-and-actions/edit-a-row",
+     "start": "/book/2",
+     "view": "preview",
+     "files": {
+      "components/book/[id].q": "<q:component name=\"EditBook\">\n  <!-- /book/2 gives id = 2. The action takes title and genre, with their\n       rules, from the table (UI-10); id comes from the URL. -->\n  <q:action name=\"save\" method=\"POST\" table=\"books\" datasource=\"db\" columns=\"title,genre\">\n    <q:query name=\"saved\" datasource=\"db\">\n      UPDATE books SET title = :title, genre = :genre WHERE id = :id\n      <q:param name=\"title\" value=\"{title}\" type=\"string\" />\n      <q:param name=\"genre\" value=\"{genre}\" type=\"string\" />\n      <q:param name=\"id\" value=\"{id}\" type=\"integer\" />\n    </q:query>\n    <q:redirect url=\"/\" flash=\"Saved: {title}\" />\n  </q:action>\n\n  <q:query name=\"book\" datasource=\"db\">\n    SELECT id, title, genre FROM books WHERE id = :id\n    <q:param name=\"id\" value=\"{id}\" type=\"integer\" />\n  </q:query>\n\n  <ui:window title=\"Edit a book\">\n    <q:if condition=\"book_result.recordCount == 0\">\n      <ui:alert variant=\"danger\">There is no book {id}.</ui:alert>\n    </q:if>\n    <q:else>\n      <!-- values= opens the form with the row's values; a one-row query works. -->\n      <ui:form on-submit=\"save\" values=\"{book}\" submit=\"Save\" />\n    </q:else>\n    <ui:link to=\"/\">Back</ui:link>\n  </ui:window>\n</q:component>\n",
+      "components/index.q": "<q:component name=\"Books\">\n  <q:query name=\"books\" datasource=\"db\">\n    SELECT id, title, genre FROM books ORDER BY id\n  </q:query>\n\n  <ui:window title=\"Books\">\n    <q:if condition=\"flash\">\n      <ui:alert variant=\"success\">{flash}</ui:alert>\n    </q:if>\n    <q:loop query=\"books\">\n      <ui:hbox gap=\"sm\">\n        <ui:text>{books.title} ({books.genre})</ui:text>\n        <ui:link to=\"/book/{books.id}\">Edit</ui:link>\n      </ui:hbox>\n    </q:loop>\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_books.sql": "CREATE TABLE books (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    title VARCHAR(120) NOT NULL,\n    genre TEXT NOT NULL CHECK (genre IN ('novel', 'poetry', 'essay'))\n);\n\nINSERT INTO books (title, genre) VALUES ('Dom Casmurro', 'novel'), ('Libertinagem', 'poetry');\n",
+      "quantum.config.yaml": "# Recipe: open a form with a row's values and save it back.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/books.db\n",
+      "tests/edit.test.q": "<q:test name=\"the form opens on the row's page\" page=\"/book/2\">\n  <test:visit />\n  <test:expect text=\"Edit a book\" />\n  <test:expect text=\"Save\" />\n  <test:expect no-text=\"There is no book\" />\n</q:test>\n\n<q:test name=\"saving changes only that row\" page=\"/book/2\">\n  <test:submit action=\"save\" title=\"Libertinagem (1930)\" genre=\"poetry\" />\n  <test:expect redirect=\"/\" flash=\"Saved: Libertinagem (1930)\" />\n  <test:expect table=\"books\" count=\"1\" where=\"id = 2 AND title = 'Libertinagem (1930)'\" />\n  <test:expect table=\"books\" count=\"1\" where=\"id = 1 AND title = 'Dom Casmurro'\" />\n  <test:expect text=\"Libertinagem (1930) (poetry)\" />\n</q:test>\n\n<q:test name=\"the table's rules still apply\" page=\"/book/2\">\n  <test:submit action=\"save\" title=\"Libertinagem\" genre=\"comic\" />\n  <test:expect error=\"genre\" message=\"Must be one of: novel, poetry, essay\" />\n  <test:expect table=\"books\" count=\"1\" where=\"id = 2 AND genre = 'poetry'\" />\n</q:test>\n\n<q:test name=\"a book that does not exist says so\" page=\"/book/99\">\n  <test:visit />\n  <test:expect text=\"There is no book 99.\" />\n  <test:expect no-text=\"Save\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "forms-and-actions/confirm-before-delete",
+     "title": "Confirm before deleting",
+     "description": "A page that asks first, reached by a link, and the delete as a POST from its button; no JavaScript.",
+     "cookbook": "/cookbook/forms-and-actions/confirm-before-delete",
+     "start": "/delete/1",
+     "view": "preview",
+     "files": {
+      "components/delete/[id].q": "<q:component name=\"ConfirmDelete\">\n  <q:action name=\"remove\" method=\"POST\">\n    <q:param name=\"id\" type=\"integer\" required=\"true\" />\n    <q:query name=\"removed\" datasource=\"db\">\n      DELETE FROM contacts WHERE id = :id\n      <q:param name=\"id\" value=\"{id}\" type=\"integer\" />\n    </q:query>\n    <q:redirect url=\"/\" flash=\"Deleted.\" />\n  </q:action>\n\n  <q:query name=\"contact\" datasource=\"db\">\n    SELECT id, name FROM contacts WHERE id = :id\n    <q:param name=\"id\" value=\"{id}\" type=\"integer\" />\n  </q:query>\n\n  <ui:window title=\"Delete a contact\">\n    <q:if condition=\"contact_result.recordCount == 0\">\n      <ui:text>That contact is already gone.</ui:text>\n    </q:if>\n    <q:else>\n      <ui:text>Delete {contact.name}? This cannot be undone.</ui:text>\n      <ui:hbox gap=\"sm\">\n        <ui:button on-click=\"remove\" with=\"id={contact.id}\" variant=\"danger\">Yes, delete</ui:button>\n        <ui:link to=\"/\">Cancel</ui:link>\n      </ui:hbox>\n    </q:else>\n  </ui:window>\n</q:component>\n",
+      "components/index.q": "<q:component name=\"Contacts\">\n  <q:query name=\"contacts\" datasource=\"db\">\n    SELECT id, name FROM contacts ORDER BY name\n  </q:query>\n\n  <ui:window title=\"Contacts\">\n    <q:if condition=\"flash\">\n      <ui:alert variant=\"success\">{flash}</ui:alert>\n    </q:if>\n    <q:loop query=\"contacts\">\n      <ui:hbox gap=\"sm\">\n        <ui:text>{contacts.name}</ui:text>\n        <!-- A link, not a button: opening it only asks. -->\n        <ui:link to=\"/delete/{contacts.id}\">Delete</ui:link>\n      </ui:hbox>\n    </q:loop>\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_contacts.sql": "CREATE TABLE contacts (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    name TEXT NOT NULL\n);\n\nINSERT INTO contacts (name) VALUES ('Ana'), ('Bruno');\n",
+      "quantum.config.yaml": "# Recipe: ask before deleting, with a page of its own and no JavaScript.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/contacts.db\n",
+      "tests/delete.test.q": "<q:test name=\"opening the link only asks\" page=\"/delete/1\">\n  <test:visit />\n  <test:expect text=\"Delete Ana? This cannot be undone.\" />\n  <test:expect table=\"contacts\" count=\"2\" />\n</q:test>\n\n<q:test name=\"yes deletes that contact and goes back to the list\" page=\"/delete/1\">\n  <test:submit action=\"remove\" id=\"1\" />\n  <test:expect redirect=\"/\" flash=\"Deleted.\" />\n  <test:expect table=\"contacts\" count=\"0\" where=\"name = 'Ana'\" />\n  <test:expect no-text=\"Ana\" />\n  <test:expect text=\"Bruno\" />\n</q:test>\n\n<q:test name=\"a contact already deleted says so\" page=\"/delete/9\">\n  <test:visit />\n  <test:expect text=\"That contact is already gone.\" />\n  <test:expect no-text=\"Yes, delete\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "forms-and-actions/numbers-and-dates",
+     "title": "Numbers and dates",
+     "description": "type=integer, decimal and date on q:param: the action gets checked numbers and real dates, with min and max.",
+     "cookbook": "/cookbook/forms-and-actions/numbers-and-dates",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Expenses\">\n  <q:action name=\"split\" method=\"POST\">\n    <!-- decimal and integer arrive as numbers, date as a checked date:\n         the arithmetic below needs no conversion. -->\n    <q:param name=\"amount\" type=\"decimal\" required=\"true\" min=\"0.01\" max=\"10000\" />\n    <q:param name=\"people\" type=\"integer\" required=\"true\" min=\"1\" max=\"50\" />\n    <q:param name=\"spent_on\" type=\"date\" required=\"true\" />\n    <q:query name=\"saved\" datasource=\"db\">\n      INSERT INTO expenses (amount, people, spent_on) VALUES (:amount, :people, :spent_on)\n      <q:param name=\"amount\" value=\"{amount}\" type=\"decimal\" />\n      <q:param name=\"people\" value=\"{people}\" type=\"integer\" />\n      <q:param name=\"spent_on\" value=\"{spent_on}\" type=\"string\" />\n    </q:query>\n    <q:redirect url=\"/\" flash=\"{amount} on {spent_on}: {round(amount / people, 2)} each.\" />\n  </q:action>\n\n  <ui:window title=\"Split an expense\">\n    <q:if condition=\"flash\">\n      <ui:alert variant=\"{flashType == 'error' and 'danger' or 'success'}\">{flash}</ui:alert>\n    </q:if>\n    <!-- The form gets type=\"number\" (with min and max) and type=\"date\". -->\n    <ui:form on-submit=\"split\" submit=\"Split\">\n      <ui:formitem label=\"Amount\"><ui:input bind=\"amount\" /></ui:formitem>\n      <ui:formitem label=\"People\"><ui:input bind=\"people\" /></ui:formitem>\n      <ui:formitem label=\"Date\"><ui:input bind=\"spent_on\" /></ui:formitem>\n    </ui:form>\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_expenses.sql": "CREATE TABLE expenses (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    amount REAL NOT NULL,\n    people INTEGER NOT NULL,\n    spent_on DATE NOT NULL\n);\n",
+      "quantum.config.yaml": "# Recipe: numbers and dates arrive checked and converted, not as text.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/expenses.db\n",
+      "tests/split.test.q": "<q:test name=\"the numbers arrive as numbers\" page=\"/\">\n  <test:submit action=\"split\" amount=\"100\" people=\"3\" spent_on=\"2026-09-20\" />\n  <test:expect redirect=\"/\" flash=\"100.0 on 2026-09-20: 33.33 each.\" />\n  <test:expect table=\"expenses\" count=\"1\" where=\"amount = 100 AND people = 3 AND spent_on = '2026-09-20'\" />\n</q:test>\n\n<q:test name=\"text where a number goes is refused\" page=\"/\">\n  <test:submit action=\"split\" amount=\"ten\" people=\"3\" spent_on=\"2026-09-20\" />\n  <test:expect error=\"amount\" message=\"Must be a number, got 'ten'\" />\n</q:test>\n\n<q:test name=\"min and max hold\" page=\"/\">\n  <test:submit action=\"split\" amount=\"0\" people=\"51\" spent_on=\"2026-09-20\" />\n  <test:expect error=\"amount\" message=\"Must be at least 0.01 (got 0.0)\" />\n  <test:expect error=\"people\" message=\"Must be at most 50 (got 51)\" />\n</q:test>\n\n<q:test name=\"a date that does not exist is refused\" page=\"/\">\n  <test:submit action=\"split\" amount=\"10\" people=\"2\" spent_on=\"2026-02-30\" />\n  <test:expect error=\"spent_on\" message=\"Must be a date (YYYY-MM-DD), got '2026-02-30'\" />\n  <test:expect table=\"expenses\" count=\"0\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "forms-and-actions/choices",
+     "title": "A choice from a list",
+     "description": "enum on q:param gives ui:select and ui:radio their options and refuses anything else; a box is a boolean.",
+     "cookbook": "/cookbook/forms-and-actions/choices",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Coffee\">\n  <q:action name=\"order\" method=\"POST\">\n    <!-- enum is the list: the form's select and radios take their options\n         from it (UI-9), and the server refuses anything else (ACT-2). -->\n    <q:param name=\"size\" required=\"true\" enum=\"small,medium,large\" />\n    <q:param name=\"milk\" enum=\"none,whole,oat\" default=\"none\" />\n    <q:param name=\"to_go\" type=\"boolean\" default=\"false\" />\n    <q:query name=\"placed\" datasource=\"db\">\n      INSERT INTO orders (size, milk, to_go) VALUES (:size, :milk, :to_go)\n      <q:param name=\"size\" value=\"{size}\" type=\"string\" />\n      <q:param name=\"milk\" value=\"{milk}\" type=\"string\" />\n      <q:param name=\"to_go\" value=\"{to_go}\" type=\"boolean\" />\n    </q:query>\n    <q:redirect url=\"/\" flash=\"A {size} coffee, milk: {milk}{', to go' if to_go else ''}.\" />\n  </q:action>\n\n  <ui:window title=\"Order a coffee\">\n    <q:if condition=\"flash\">\n      <ui:alert variant=\"{flashType == 'error' and 'danger' or 'success'}\">{flash}</ui:alert>\n    </q:if>\n    <ui:form on-submit=\"order\" submit=\"Order\">\n      <ui:formitem label=\"Size\"><ui:select bind=\"size\" /></ui:formitem>\n      <ui:formitem label=\"Milk\"><ui:radio bind=\"milk\" /></ui:formitem>\n      <ui:checkbox bind=\"to_go\" label=\"To go\" />\n    </ui:form>\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_orders.sql": "CREATE TABLE orders (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    size TEXT NOT NULL,\n    milk TEXT NOT NULL,\n    to_go INTEGER NOT NULL\n);\n",
+      "quantum.config.yaml": "# Recipe: a field that takes one value from a list.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/orders.db\n",
+      "tests/order.test.q": "<q:test name=\"the options come from the enum\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"small\" />\n  <test:expect text=\"large\" />\n  <test:expect text=\"oat\" />\n</q:test>\n\n<q:test name=\"an order with the defaults\" page=\"/\">\n  <test:submit action=\"order\" size=\"large\" />\n  <test:expect redirect=\"/\" flash=\"A large coffee, milk: none.\" />\n  <test:expect table=\"orders\" count=\"1\" where=\"size = 'large' AND milk = 'none' AND to_go = 0\" />\n</q:test>\n\n<q:test name=\"the box, when sent, is true\" page=\"/\">\n  <test:submit action=\"order\" size=\"small\" milk=\"oat\" to_go=\"on\" />\n  <test:expect flash=\"A small coffee, milk: oat, to go.\" />\n  <test:expect table=\"orders\" count=\"1\" where=\"to_go = 1\" />\n</q:test>\n\n<q:test name=\"a value outside the list is refused\" page=\"/\">\n  <test:submit action=\"order\" size=\"huge\" milk=\"soy\" />\n  <test:expect error=\"size\" message=\"Must be one of: small, medium, large\" />\n  <test:expect error=\"milk\" message=\"Must be one of: none, whole, oat\" />\n  <test:expect table=\"orders\" count=\"0\" />\n</q:test>\n"
+     }
+    }
+   ]
+  },
+  {
+   "topic": "data-and-sql",
+   "title": "Data & SQL",
+   "recipes": [
+    {
+     "id": "data-and-sql/query-with-parameters",
+     "title": "A query with parameters",
+     "description": "Filter by a value from the URL, bound as a q:param — the value never becomes SQL.",
+     "cookbook": "/cookbook/data-and-sql/query-with-parameters",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Products\">\n  <!-- ?name=mouse from the URL; empty when it is not there. -->\n  <q:set name=\"term\" value=\"{query.name}\" default=\"\" />\n\n  <!-- :pattern is bound to the q:param: the value is sent to the database\n       apart from the SQL, so it can never change what the SQL does. -->\n  <q:query name=\"products\" datasource=\"db\">\n    SELECT name, price FROM products WHERE name LIKE :pattern ORDER BY price\n    <q:param name=\"pattern\" value=\"%{term}%\" type=\"string\" />\n  </q:query>\n\n  <ui:window title=\"Products\">\n    <ui:text>{products_result.recordCount} products</ui:text>\n    <ui:table source=\"{products}\">\n      <ui:column key=\"name\" label=\"Name\" />\n      <ui:column key=\"price\" label=\"Price\" />\n    </ui:table>\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_products.sql": "CREATE TABLE products (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    name TEXT NOT NULL,\n    price REAL NOT NULL\n);\n\nINSERT INTO products (name, price) VALUES\n    ('Notebook', 3500.0), ('Mouse', 80.0), ('Monitor', 1200.0), ('Mousepad', 25.0);\n",
+      "quantum.config.yaml": "# Recipe: a query that takes a value from the URL, bound as a parameter.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/shop.db\n",
+      "tests/products.test.q": "<q:test name=\"without a filter, every product\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"4 products\" />\n  <test:expect text=\"Notebook\" />\n</q:test>\n\n<q:test name=\"the value from the URL filters\" page=\"/\">\n  <test:visit name=\"mouse\" />\n  <test:expect text=\"2 products\" />\n  <test:expect text=\"Mousepad\" />\n  <test:expect no-text=\"Monitor\" />\n</q:test>\n\n<q:test name=\"SQL in the URL is only text to search for\" page=\"/\">\n  <test:visit name=\"' OR '1'='1\" />\n  <test:expect text=\"0 products\" />\n  <test:expect table=\"products\" count=\"4\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "data-and-sql/paginated-list",
+     "title": "A paginated list",
+     "description": "One page of a long list at a time, with ui:pager drawing the links to the others.",
+     "cookbook": "/cookbook/data-and-sql/paginated-list",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Posts\">\n  <!-- paginate: the page is the URL's ?page= (page 1 without it). -->\n  <q:query name=\"posts\" datasource=\"db\" paginate=\"true\" page_size=\"10\">\n    SELECT id, title FROM posts ORDER BY id DESC\n  </q:query>\n\n  <ui:window title=\"Posts\">\n    <ui:text>\n      {posts_result.pagination.startRecord}–{posts_result.pagination.endRecord}\n      of {posts_result.pagination.totalRecords}\n    </ui:text>\n    <ui:list source=\"{posts}\" as=\"p\">\n      <ui:item><ui:text>{p.title}</ui:text></ui:item>\n    </ui:list>\n    <!-- Previous, the page numbers, next — keeping the URL's other parameters. -->\n    <ui:pager for=\"posts\" />\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_posts.sql": "CREATE TABLE posts (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    title TEXT NOT NULL\n);\n\n-- 23 posts: \"Post 1\" … \"Post 23\".\nWITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 23)\nINSERT INTO posts (title) SELECT 'Post ' || i FROM n;\n",
+      "quantum.config.yaml": "# Recipe: a long list, one page at a time, with the links to the others.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/blog.db\n",
+      "tests/posts.test.q": "<q:test name=\"the first page\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"1–10 of 23\" />\n  <test:expect text=\"Post 23\" />\n  <test:expect text=\"Post 14\" />\n  <test:expect no-text=\"Post 13\" />\n</q:test>\n\n<q:test name=\"the last page\" page=\"/\">\n  <test:visit page=\"3\" />\n  <test:expect text=\"21–23 of 23\" />\n  <test:expect text=\"Post 1\" />\n  <test:expect no-text=\"Post 4\" />\n</q:test>\n\n<q:test name=\"a page that is not a number is page 1\" page=\"/\">\n  <test:visit page=\"abc\" />\n  <test:expect text=\"1–10 of 23\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "data-and-sql/search-as-you-type",
+     "title": "Search as you type",
+     "description": "A field that refreshes the results after each pause in typing — the page's own query does the search.",
+     "cookbook": "/cookbook/data-and-sql/search-as-you-type",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Library\">\n  <!-- The search is the URL's ?q=; the page's own query does the searching. -->\n  <q:set name=\"term\" value=\"{query.q}\" default=\"\" />\n  <q:query name=\"found\" datasource=\"db\">\n    SELECT title, author FROM books\n    WHERE title LIKE :pattern OR author LIKE :pattern\n    ORDER BY title\n    <q:param name=\"pattern\" value=\"%{term}%\" type=\"string\" />\n  </q:query>\n\n  <ui:window title=\"Library\">\n    <!-- search=\"results\": after a pause in typing, the page is asked again\n         with ?q=… and only #results is swapped. Enter works without JavaScript. -->\n    <ui:input bind=\"q\" value=\"{term}\" search=\"results\" placeholder=\"Title or author\" />\n    <ui:vbox id=\"results\">\n      <ui:text>{found_result.recordCount} books</ui:text>\n      <ui:list source=\"{found}\" as=\"b\">\n        <ui:item><ui:text>{b.title} — {b.author}</ui:text></ui:item>\n      </ui:list>\n    </ui:vbox>\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_books.sql": "CREATE TABLE books (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    title TEXT NOT NULL,\n    author TEXT NOT NULL\n);\n\nINSERT INTO books (title, author) VALUES\n    ('Dom Casmurro', 'Machado de Assis'),\n    ('Quincas Borba', 'Machado de Assis'),\n    ('Vidas Secas', 'Graciliano Ramos'),\n    ('Grande Sertão: Veredas', 'João Guimarães Rosa');\n",
+      "quantum.config.yaml": "# Recipe: a search field that refreshes the results while you type.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/library.db\n",
+      "tests/search.test.q": "<q:test name=\"every book before a search\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"4 books\" />\n</q:test>\n\n<q:test name=\"a title or an author\" page=\"/\">\n  <test:visit q=\"machado\" />\n  <test:expect text=\"2 books\" />\n  <test:expect text=\"Quincas Borba — Machado de Assis\" />\n  <test:expect no-text=\"Vidas Secas\" />\n</q:test>\n\n<q:test name=\"nothing found\" page=\"/\">\n  <test:visit q=\"tolstoy\" />\n  <test:expect text=\"0 books\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "data-and-sql/filter-and-sort",
+     "title": "Filter and sort a table",
+     "description": "Links that filter the rows and headers that sort them — both in SQL, both in the URL.",
+     "cookbook": "/cookbook/data-and-sql/filter-and-sort",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Tasks\">\n  <!-- ?show=open|done|all, from the links below; open by default. -->\n  <q:set name=\"show\" value=\"{query.show}\" default=\"open\" />\n\n  <!-- sortable: the table's headers order the query in SQL (?sort= and ?dir=). -->\n  <q:query name=\"tasks\" datasource=\"db\" sortable=\"true\">\n    SELECT id, title, priority FROM tasks\n    WHERE :show = 'all' OR done = CASE :show WHEN 'done' THEN 1 ELSE 0 END\n    <q:param name=\"show\" value=\"{show}\" type=\"string\" />\n  </q:query>\n\n  <ui:window title=\"Tasks\">\n    <ui:hbox gap=\"md\">\n      <ui:link to=\"/?show=open\">Open</ui:link>\n      <ui:link to=\"/?show=done\">Done</ui:link>\n      <ui:link to=\"/?show=all\">All</ui:link>\n    </ui:hbox>\n    <ui:text>Showing {show}: {tasks_result.recordCount}</ui:text>\n    <ui:table source=\"{tasks}\" sort=\"true\">\n      <ui:column key=\"title\" label=\"Title\" />\n      <ui:column key=\"priority\" label=\"Priority\" />\n    </ui:table>\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_tasks.sql": "CREATE TABLE tasks (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    title TEXT NOT NULL,\n    priority INTEGER NOT NULL,\n    done INTEGER NOT NULL DEFAULT 0\n);\n\nINSERT INTO tasks (title, priority, done) VALUES\n    ('Write the report', 2, 0),\n    ('Call the bank', 1, 0),\n    ('Pay the rent', 3, 1);\n",
+      "quantum.config.yaml": "# Recipe: a table the reader filters with links and sorts by its headers.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/tasks.db\n",
+      "tests/tasks.test.q": "<q:test name=\"open tasks by default\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Showing open: 2\" />\n  <test:expect no-text=\"Pay the rent\" />\n</q:test>\n\n<q:test name=\"the links filter\" page=\"/\">\n  <test:visit show=\"done\" />\n  <test:expect text=\"Showing done: 1\" />\n  <test:expect text=\"Pay the rent\" />\n</q:test>\n\n<q:test name=\"a header sorts in SQL\" page=\"/\">\n  <test:visit show=\"all\" sort=\"priority\" dir=\"desc\" />\n  <test:expect text=\"Pay the rent 3 Write the report 2 Call the bank 1\" />\n</q:test>\n\n<q:test name=\"a column the query does not return is ignored\" page=\"/\">\n  <test:visit sort=\"password\" />\n  <test:expect text=\"Showing open: 2\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "data-and-sql/transaction",
+     "title": "Writes that happen together",
+     "description": "A q:transaction: the debit, the credit and the log line commit together, or none of them does.",
+     "cookbook": "/cookbook/data-and-sql/transaction",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Bank\">\n  <q:action name=\"transfer\" method=\"POST\">\n    <q:param name=\"amount\" type=\"integer\" required=\"true\" min=\"1\" />\n\n    <q:query name=\"source\" datasource=\"db\">\n      SELECT balance FROM accounts WHERE id = 1\n    </q:query>\n    <q:if condition=\"source.balance &lt; amount\">\n      <q:redirect url=\"/\" flash=\"Not enough money in Ana's account.\" flashType=\"error\" />\n    </q:if>\n\n    <!-- The debit, the credit and the log line commit together. If one of\n         them fails, the ones before it are undone and the page stops with\n         the error: no money appears or disappears. -->\n    <q:transaction datasource=\"db\">\n      <q:query name=\"debit\">\n        UPDATE accounts SET balance = balance - :amount WHERE id = 1\n        <q:param name=\"amount\" value=\"{amount}\" type=\"integer\" />\n      </q:query>\n      <q:query name=\"credit\">\n        UPDATE accounts SET balance = balance + :amount WHERE id = 2\n        <q:param name=\"amount\" value=\"{amount}\" type=\"integer\" />\n      </q:query>\n      <q:query name=\"logged\">\n        INSERT INTO transfers (from_id, to_id, amount) VALUES (1, 2, :amount)\n        <q:param name=\"amount\" value=\"{amount}\" type=\"integer\" />\n      </q:query>\n    </q:transaction>\n\n    <q:redirect url=\"/\" flash=\"Moved {amount} from Ana to Bruno.\" />\n  </q:action>\n\n  <q:query name=\"accounts\" datasource=\"db\">\n    SELECT owner, balance FROM accounts ORDER BY id\n  </q:query>\n\n  <ui:window title=\"Bank\">\n    <q:if condition=\"flash\">\n      <ui:alert variant=\"info\">{flash}</ui:alert>\n    </q:if>\n    <q:loop query=\"accounts\">\n      <ui:text>{accounts.owner}: {accounts.balance}</ui:text>\n    </q:loop>\n    <ui:form on-submit=\"transfer\">\n      <ui:input bind=\"amount\" placeholder=\"Amount\" />\n      <ui:button variant=\"primary\">Move from Ana to Bruno</ui:button>\n    </ui:form>\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_accounts.sql": "CREATE TABLE accounts (\n    id INTEGER PRIMARY KEY,\n    owner TEXT NOT NULL,\n    balance INTEGER NOT NULL CHECK (balance >= 0)\n);\n\n-- Every transfer is logged; one transfer moves at most 1000.\nCREATE TABLE transfers (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    from_id INTEGER NOT NULL REFERENCES accounts (id),\n    to_id INTEGER NOT NULL REFERENCES accounts (id),\n    amount INTEGER NOT NULL CHECK (amount > 0 AND amount <= 1000)\n);\n\nINSERT INTO accounts (id, owner, balance) VALUES (1, 'Ana', 1500), (2, 'Bruno', 200);\n",
+      "quantum.config.yaml": "# Recipe: several writes that happen together or not at all.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/bank.db\n",
+      "tests/transfer.test.q": "<q:test name=\"a transfer moves the money and logs it\" page=\"/\">\n  <test:submit action=\"transfer\" amount=\"300\" />\n  <test:expect redirect=\"/\" flash=\"Moved 300 from Ana to Bruno.\" />\n  <test:expect table=\"accounts\" count=\"1\" where=\"owner = 'Ana' AND balance = 1200\" />\n  <test:expect table=\"accounts\" count=\"1\" where=\"owner = 'Bruno' AND balance = 500\" />\n  <test:expect table=\"transfers\" count=\"1\" />\n</q:test>\n\n<q:test name=\"the page refuses what the account cannot pay\" page=\"/\">\n  <test:submit action=\"transfer\" amount=\"5000\" />\n  <test:expect flash=\"Not enough money in Ana's account.\" />\n  <test:expect table=\"transfers\" count=\"0\" />\n</q:test>\n\n<q:test name=\"when the last write fails, the first two are undone\" page=\"/\">\n  <!-- 1200 passes the balance check, but the log refuses more than 1000:\n       the debit and the credit already ran, and are rolled back. -->\n  <test:submit action=\"transfer\" amount=\"1200\" />\n  <test:expect status=\"500\" />\n  <test:expect table=\"accounts\" count=\"1\" where=\"owner = 'Ana' AND balance = 1500\" />\n  <test:expect table=\"accounts\" count=\"1\" where=\"owner = 'Bruno' AND balance = 200\" />\n  <test:expect table=\"transfers\" count=\"0\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "data-and-sql/change-history",
+     "title": "Change history",
+     "description": "history: true records who changed which row, and how; ui:history shows it on the page.",
+     "cookbook": "/cookbook/data-and-sql/change-history",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Wiki\">\n  <!-- history: true on the datasource: each write below is recorded with\n       the session's user, the action, and the row before and after. -->\n  <q:action name=\"edit\" method=\"POST\">\n    <q:param name=\"title\" required=\"true\" minlength=\"3\" />\n    <q:param name=\"body\" default=\"\" />\n    <q:query name=\"saved\" datasource=\"db\">\n      UPDATE pages SET title = :title, body = :body WHERE id = 1\n      <q:param name=\"title\" value=\"{title}\" type=\"string\" />\n      <q:param name=\"body\" value=\"{body}\" type=\"string\" />\n    </q:query>\n    <q:redirect url=\"/\" flash=\"Saved.\" />\n  </q:action>\n\n  <q:query name=\"page\" datasource=\"db\">SELECT id, title, body FROM pages WHERE id = 1</q:query>\n\n  <ui:window title=\"{page.title}\">\n    <ui:text>{page.body}</ui:text>\n    <ui:form on-submit=\"edit\" values=\"{page}\" submit=\"Save\" />\n    <!-- Newest first: when, who, which action, and each changed column. -->\n    <ui:history table=\"pages\" key=\"{page.id}\" datasource=\"db\" />\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_pages.sql": "CREATE TABLE pages (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    title TEXT NOT NULL,\n    body TEXT NOT NULL DEFAULT ''\n);\n\nINSERT INTO pages (title, body) VALUES ('Welcome', 'First draft.');\n",
+      "quantum.config.yaml": "# Recipe: who changed what, and when — recorded by every action's writes.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/wiki.db\n    history: true\n",
+      "tests/history.test.q": "<q:test name=\"an edit is recorded with who made it\" page=\"/\">\n  <test:as user=\"ana\" />\n  <test:submit action=\"edit\" title=\"Welcome!\" body=\"Second draft.\" />\n  <test:expect redirect=\"/\" flash=\"Saved.\" />\n  <test:expect history=\"pages\" action=\"edit\" op=\"update\" user=\"ana\" count=\"1\" />\n  <test:expect text=\"title: Welcome → Welcome!\" />\n  <test:expect text=\"body: First draft. → Second draft.\" />\n</q:test>\n\n<q:test name=\"a refused edit leaves no history\" page=\"/\">\n  <test:as user=\"ana\" />\n  <test:submit action=\"edit\" title=\"W\" />\n  <test:expect error=\"title\" />\n  <test:expect history=\"pages\" count=\"0\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "data-and-sql/add-a-column",
+     "title": "Add a column with a migration",
+     "description": "Change the schema with a new migration file; the old one stays as it was.",
+     "cookbook": "/cookbook/data-and-sql/add-a-column",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Products\">\n  <q:query name=\"products\" datasource=\"db\">\n    SELECT name, stock FROM products ORDER BY name\n  </q:query>\n\n  <ui:window title=\"Products\">\n    <ui:table source=\"{products}\">\n      <ui:column key=\"name\" label=\"Name\" />\n      <ui:column key=\"stock\" label=\"In stock\" />\n    </ui:table>\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_products.sql": "CREATE TABLE products (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    name TEXT NOT NULL\n);\n\nINSERT INTO products (name) VALUES ('Mug'), ('Sticker');\n",
+      "migrations/V002_add_stock.sql": "-- Rows that already exist get the default.\nALTER TABLE products ADD COLUMN stock INTEGER NOT NULL DEFAULT 0;\n\nUPDATE products SET stock = 12 WHERE name = 'Mug';\n",
+      "quantum.config.yaml": "# Recipe: change the schema with a new migration, never by editing an old one.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/shop.db\n",
+      "tests/stock.test.q": "<q:test name=\"both migrations ran, in order\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"In stock\" />\n  <test:expect table=\"products\" count=\"1\" where=\"name = 'Mug' AND stock = 12\" />\n  <test:expect table=\"products\" count=\"1\" where=\"name = 'Sticker' AND stock = 0\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "data-and-sql/read-a-csv",
+     "title": "Read a CSV file",
+     "description": "q:data turns a CSV file into typed records, filtered and sorted — no database needed.",
+     "cookbook": "/cookbook/data-and-sql/read-a-csv",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Customers\">\n  <!-- The path is relative to the app's folder. Declared columns are typed;\n       the others come as text. -->\n  <q:data name=\"customers\" source=\"import/customers.csv\" type=\"csv\">\n    <q:column name=\"id\" type=\"integer\" />\n    <q:column name=\"age\" type=\"integer\" />\n    <q:column name=\"active\" type=\"boolean\" />\n    <q:transform>\n      <q:filter condition=\"active\" />\n      <q:sort by=\"age\" order=\"desc\" />\n    </q:transform>\n  </q:data>\n\n  <ui:window title=\"Active customers\">\n    <ui:table source=\"{customers}\">\n      <ui:column key=\"name\" label=\"Name\" />\n      <ui:column key=\"age\" label=\"Age\" />\n    </ui:table>\n  </ui:window>\n</q:component>\n",
+      "import/customers.csv": "id,name,age,active\n1,Ana,28,true\n2,Bruno,35,true\n3,Carla,42,false\n4,Davi,19,yes\n",
+      "quantum.config.yaml": "# Recipe: read a CSV file, typed, filtered and sorted — no database.\npaths:\n  components: ./components\n",
+      "tests/customers.test.q": "<q:test name=\"the active customers, oldest first\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Bruno 35 Ana 28 Davi 19\" />\n  <test:expect no-text=\"Carla\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "data-and-sql/load-a-csv-into-a-table",
+     "title": "Load a CSV file into a table",
+     "description": "Insert every row of a file in one transaction — a row that fails leaves nothing behind.",
+     "cookbook": "/cookbook/data-and-sql/load-a-csv-into-a-table",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Import\">\n  <q:action name=\"load\" method=\"POST\">\n    <q:data name=\"rows\" source=\"import/products.csv\" type=\"csv\">\n      <q:column name=\"price\" type=\"integer\" />\n    </q:data>\n\n    <!-- One transaction for the whole file: if one row is refused (a sku\n         already there, a price that is not positive), none stays. -->\n    <q:transaction datasource=\"db\">\n      <q:loop items=\"{rows}\" var=\"row\">\n        <q:query name=\"inserted\">\n          INSERT INTO products (sku, name, price) VALUES (:sku, :name, :price)\n          <q:param name=\"sku\" value=\"{row.sku}\" type=\"string\" />\n          <q:param name=\"name\" value=\"{row.name}\" type=\"string\" />\n          <q:param name=\"price\" value=\"{row.price}\" type=\"integer\" />\n        </q:query>\n      </q:loop>\n    </q:transaction>\n\n    <q:redirect url=\"/\" flash=\"Loaded {len(rows)} products.\" />\n  </q:action>\n\n  <q:query name=\"products\" datasource=\"db\">SELECT sku, name, price FROM products ORDER BY sku</q:query>\n\n  <ui:window title=\"Products\">\n    <q:if condition=\"flash\">\n      <ui:alert variant=\"success\">{flash}</ui:alert>\n    </q:if>\n    <ui:text>{products_result.recordCount} products</ui:text>\n    <ui:table source=\"{products}\" />\n    <ui:form on-submit=\"load\" submit=\"Load import/products.csv\" />\n  </ui:window>\n</q:component>\n",
+      "import/products.csv": "sku,name,price\nMUG-1,Mug,30\nTEE-1,T-shirt,80\nSTK-1,Sticker,5\n",
+      "migrations/V001_products.sql": "CREATE TABLE products (\n    sku TEXT PRIMARY KEY,\n    name TEXT NOT NULL,\n    price INTEGER NOT NULL CHECK (price > 0)\n);\n",
+      "quantum.config.yaml": "# Recipe: load the rows of a CSV file into a table, all or nothing.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/shop.db\n",
+      "tests/load.test.q": "<q:test name=\"the file's rows land in the table\" page=\"/\">\n  <test:submit action=\"load\" />\n  <test:expect redirect=\"/\" flash=\"Loaded 3 products.\" />\n  <test:expect table=\"products\" count=\"3\" />\n  <test:expect table=\"products\" count=\"1\" where=\"sku = 'TEE-1' AND price = 80\" />\n  <test:expect text=\"3 products\" />\n</q:test>\n\n<q:test name=\"a file that fails halfway leaves nothing behind\" page=\"/\">\n  <!-- TEE-1 is already there: the second row fails, so the first is undone too. -->\n  <test:given table=\"products\" sku=\"TEE-1\" name=\"T-shirt\" price=\"80\" />\n  <test:submit action=\"load\" />\n  <test:expect status=\"500\" />\n  <test:expect table=\"products\" count=\"1\" />\n  <test:expect table=\"products\" count=\"0\" where=\"sku = 'MUG-1'\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "data-and-sql/read-json",
+     "title": "Read a JSON file",
+     "description": "A JSON array as a list of records, with a computed field on each.",
+     "cookbook": "/cookbook/data-and-sql/read-json",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Cart\">\n  <!-- A JSON array is the list as it is; each object is a record. -->\n  <q:data name=\"items\" source=\"import/products.json\" type=\"json\">\n    <q:transform>\n      <q:compute field=\"subtotal\" expression=\"{price} * {qty}\" type=\"integer\" />\n      <q:sort by=\"subtotal\" order=\"desc\" />\n    </q:transform>\n  </q:data>\n\n  <ui:window title=\"Cart\">\n    <ui:table source=\"{items}\">\n      <ui:column key=\"name\" label=\"Item\" />\n      <ui:column key=\"qty\" label=\"Qty\" />\n      <ui:column key=\"subtotal\" label=\"Subtotal\" />\n    </ui:table>\n  </ui:window>\n</q:component>\n",
+      "import/products.json": "[\n  {\"id\": 1, \"name\": \"Mug\", \"price\": 30, \"qty\": 4},\n  {\"id\": 2, \"name\": \"T-shirt\", \"price\": 80, \"qty\": 1},\n  {\"id\": 3, \"name\": \"Sticker\", \"price\": 5, \"qty\": 10}\n]\n",
+      "quantum.config.yaml": "# Recipe: read a JSON file and add a computed field to each record.\npaths:\n  components: ./components\n",
+      "tests/cart.test.q": "<q:test name=\"each item with its subtotal, largest first\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"Mug 4 120 T-shirt 1 80 Sticker 10 50\" />\n</q:test>\n"
+     }
+    },
+    {
+     "id": "data-and-sql/query-a-result",
+     "title": "Totals from one query",
+     "description": "SQL over a query's result, in memory — the database is asked once.",
+     "cookbook": "/cookbook/data-and-sql/query-a-result",
+     "start": "/",
+     "view": "preview",
+     "files": {
+      "components/index.q": "<q:component name=\"Sales\">\n  <!-- The database is asked once. -->\n  <q:query name=\"sales\" datasource=\"db\">\n    SELECT region, amount FROM sales ORDER BY id\n  </q:query>\n\n  <!-- source=\"sales\": SQL over that result, in memory — the table is\n       named after the query. -->\n  <q:query name=\"totals\" source=\"sales\">\n    SELECT region, SUM(amount) AS total, COUNT(*) AS n\n    FROM sales GROUP BY region ORDER BY total DESC\n  </q:query>\n\n  <ui:window title=\"Sales\">\n    <ui:table source=\"{totals}\">\n      <ui:column key=\"region\" label=\"Region\" />\n      <ui:column key=\"total\" label=\"Total\" />\n      <ui:column key=\"n\" label=\"Sales\" />\n    </ui:table>\n    <ui:text>{sales_result.recordCount} sales</ui:text>\n  </ui:window>\n</q:component>\n",
+      "migrations/V001_sales.sql": "CREATE TABLE sales (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    region TEXT NOT NULL,\n    amount INTEGER NOT NULL\n);\n\nINSERT INTO sales (region, amount) VALUES\n    ('North', 120), ('South', 80), ('North', 200), ('East', 50), ('South', 40);\n",
+      "quantum.config.yaml": "# Recipe: one query to the database, and totals computed from its result.\npaths:\n  components: ./components\n  migrations: ./migrations\n\ndatasources:\n  db:\n    driver: sqlite\n    database: ./data/sales.db\n",
+      "tests/totals.test.q": "<q:test name=\"totals by region, from one query\" page=\"/\">\n  <test:visit />\n  <test:expect text=\"North 320 2 South 120 2 East 50 1\" />\n  <test:expect text=\"5 sales\" />\n  <test:expect queries=\"1\" />\n</q:test>\n"
+     }
+    }
+   ]
+  }
+ ]
+}

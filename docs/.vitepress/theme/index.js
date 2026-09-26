@@ -7,6 +7,7 @@ import ExampleCard from './components/ExampleCard.vue'
 import ExampleGallery from './components/ExampleGallery.vue'
 import ExampleList from './components/ExampleList.vue'
 import CategoryCard from './components/CategoryCard.vue'
+import QuantumPlayground from './components/QuantumPlayground.vue'
 import './custom.css'
 import { tokenize } from '../search-tokenize.js'
 
@@ -40,5 +41,6 @@ export default {
     app.component('ExampleGallery', ExampleGallery)
     app.component('ExampleList', ExampleList)
     app.component('CategoryCard', CategoryCard)
+    app.component('QuantumPlayground', QuantumPlayground)
   }
 }

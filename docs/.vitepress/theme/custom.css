@@ -224,3 +224,14 @@
 .vp-doc a.sponsor-button:hover {
   background: var(--vp-c-brand-2);
 }
+
+/* The playground page (docs/playground/): wide, with the page's usual margins. */
+.playground-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+@media (max-width: 640px) {
+  .playground-page { padding: 24px 16px 48px; }
+}

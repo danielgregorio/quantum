@@ -18,6 +18,8 @@ const HOST = (process.env.DOCS_HOST || 'https://quantumframework.net').replace(/
 const SITE = HOST + BASE
 const DOCS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const LOCALES = locales()
+// The playground installs this version of quantum-framework from PyPI.
+const QUANTUM_VERSION = fs.readFileSync(path.join(DOCS, '..', 'pyproject.toml'), 'utf8').match(/^version = "([^"]+)"/m)[1]
 
 // The URL of a page (its .md path under docs/), as VitePress builds it.
 function route(relativePath) {
@@ -123,6 +125,7 @@ export default defineConfig({
   // The language switcher (theme/langs.js replaces the default theme's
   // composables/langs.js): the same page in the other language when it exists.
   vite: {
+    define: { __QUANTUM_VERSION__: JSON.stringify(QUANTUM_VERSION) },
     resolve: {
       alias: [{
         find: /^\.{1,2}\/composables\/langs(\.js)?$/,

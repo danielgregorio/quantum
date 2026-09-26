@@ -1,7 +1,7 @@
 ---
 title: Roadmap
 source: roadmap/index.md
-source_hash: bf70795ae40e
+source_hash: ec723835fb0c
 ---
 
 # Roadmap
@@ -74,7 +74,7 @@ O `quantum test` saiu na 1.0 ([Testing](/guide/testing), em inglês). A seguir:
 |---|---|
 | Receitas: receitas curtas, cada uma testada no CI | em andamento |
 | O site em mais idiomas | em andamento |
-| Um playground: escrever Quantum e rodar no navegador | planejado |
+| Um [playground](/playground/): escrever Quantum e rodar no navegador | em andamento |
 | Benchmarks que qualquer pessoa pode rodar de novo | planejado |
 
 ## Laboratório

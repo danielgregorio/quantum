@@ -1,7 +1,7 @@
 ---
 title: 路线图
 source: roadmap/index.md
-source_hash: bf70795ae40e
+source_hash: ec723835fb0c
 ---
 
 # 路线图
@@ -63,7 +63,7 @@ Quantum 1.0 是用 XML 编写的声明式 Web 应用，语言内置 AI 与 RAG�
 |---|---|
 | 实用示例：简短的示例，每一个都在 CI 中测试 | 进行中 |
 | 更多语言的网站 | 进行中 |
-| Playground：在浏览器中编写并运行 Quantum | 计划中 |
+| [Playground](/playground/)：在浏览器中编写并运行 Quantum | 进行中 |
 | 任何人都可以重新运行的基准测试 | 计划中 |
 
 ## 实验室

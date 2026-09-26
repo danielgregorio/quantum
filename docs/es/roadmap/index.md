@@ -1,7 +1,7 @@
 ---
 title: Hoja de ruta
 source: roadmap/index.md
-source_hash: bf70795ae40e
+source_hash: ec723835fb0c
 ---
 
 # Hoja de ruta
@@ -75,7 +75,7 @@ próximo:
 |---|---|
 | Recetario: recetas cortas, cada una probada en CI | en progreso |
 | El sitio en más idiomas | en progreso |
-| Un playground: escribir Quantum y ejecutarlo en el navegador | planeado |
+| Un [playground](/playground/): escribir Quantum y ejecutarlo en el navegador | en curso |
 | Benchmarks que cualquiera puede volver a ejecutar | planeado |
 
 ## Laboratorio

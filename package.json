@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/danielgregorio/quantum#readme",
   "devDependencies": {
+    "pyodide": "314.0.7",
     "vitepress": "^1.6.4"
   }
 }
