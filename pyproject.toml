@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quantum-framework"
-version = "1.0.0"
+version = "1.0.1"
 description = "Declarative web applications in XML, with AI and RAG built into the language"
 readme = "README.md"
 license = {text = "MIT"}

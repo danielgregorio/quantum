@@ -10,6 +10,7 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 | Version | Sections |
 |---|---|
+| [1.0.1](./v1-0-1.md) | Added, Documented, Fixed |
 | [1.0.0](./v1-0-0.md) | Added, Breaking, Removed, Fixed, Documented |
 | [0.22.0](./v0-22-0.md) | Added, Breaking, Removed, Fixed, Documented |
 | [0.21.0](./v0-21-0.md) | Added, Breaking, Changed, Removed, Fixed |

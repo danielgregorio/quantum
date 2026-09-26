@@ -6,13 +6,18 @@ Experimental and Laboratory may change in any release (`SUPPORT_TIERS.md`).
 Before 1.0, minor versions could break compatibility. Every change that can
 alter the behaviour of an existing app is listed under **Breaking**.
 
-## Unreleased
+## 1.0.1
 
 ### Added
 
 - Screen readers hear the nav, sidebar and pager labels in the page's
-  language (VitePress writes them in English): `theme/aria-labels.js` sets
-  them from `ariaLabels` in `locales.js` after each render.
+  language (VitePress writes them in English): the build writes them into
+  each page's HTML, and `theme/aria-labels.js` sets them again after each
+  navigation, from `ariaLabels` in `locales.js`.
+- The Support page links to Patreon, in the four languages, and
+  `.github/FUNDING.yml` puts the Sponsor button on the repository.
+- The site counts visits with Cloudflare Web Analytics, which sets no cookies
+  and collects no personal data; Google Tag Manager is gone.
 - The language switcher goes to the same page in the other language when it
   is translated, and to that language's home otherwise — in every direction.
   The pages it knows come from `TRANSLATED` in `docs/.vitepress/locales.js`
@@ -245,6 +250,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
   each item with its status (planned, in design, in progress) and no dates.
 
 ### Fixed
+
+- The VS Code extension packages: `vsce package` stopped on an icon that
+  `package.json` named and the repository never had. The extension carries
+  its icon and the MIT LICENSE, and leaves its TypeScript sources out.
 
 - Two pages with an in-memory `q:knowledge` of the same name and different
   sources deleted each other's index: the other page's search failed with
