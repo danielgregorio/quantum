@@ -99,7 +99,7 @@ jobs:
       - name: Release notes from CHANGELOG.md
         run: python scripts/release-notes.py "$GITHUB_REF_NAME" > release_notes.md
       - name: Create GitHub release with the built artifacts
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           body_path: release_notes.md
           files: dist/*
