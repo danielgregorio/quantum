@@ -34,7 +34,7 @@ jobs:
           npx vitepress preview docs --port 4173 &
           python3 scripts/check-docs-links.py http://localhost:4173/
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: docs/.vitepress/dist
 
