@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitepress'
 import { LANGUAGES, guideSidebar, locales, searchLocales } from './locales.js'
 import { tokenize } from './search-tokenize.js'
+import { ariaLabelsInHtml } from './theme/aria-labels.js'
 import { markStaleTranslation } from './translations.js'
 import { translatedPaths } from './translated-paths.js'
 
@@ -16,6 +17,7 @@ const BASE = process.env.DOCS_BASE || '/'
 const HOST = (process.env.DOCS_HOST || 'https://quantumframework.net').replace(/\/$/, '')
 const SITE = HOST + BASE
 const DOCS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const LOCALES = locales()
 
 // The URL of a page (its .md path under docs/), as VitePress builds it.
 function route(relativePath) {
@@ -96,7 +98,7 @@ export default defineConfig({
   appearance: 'dark',
 
   // English at the root; /pt/, /es/ and /zh/ (docs/.vitepress/locales.js).
-  locales: locales(),
+  locales: LOCALES,
 
   sitemap: { hostname: SITE },
 
@@ -106,6 +108,13 @@ export default defineConfig({
     markStaleTranslation(pageData, DOCS)
   },
   // END translations
+
+  // Screen-reader labels in the page's language in the built HTML too
+  // (theme/aria-labels.js); the theme sets them again after each navigation.
+  transformHtml(html, _id, { pageData }) {
+    const key = Object.keys(LANGUAGES).find(k => k !== 'root' && pageData.relativePath.startsWith(k + '/')) || 'root'
+    return ariaLabelsInHtml(html, LOCALES[key].themeConfig.ariaLabels)
+  },
 
   transformHead({ pageData, siteData }) {
     return [...alternates(pageData.relativePath), ...openGraph(pageData, siteData.title)]
