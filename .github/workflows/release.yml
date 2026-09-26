@@ -27,7 +27,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev,db,jobs,websocket]"
+          # The same extras as ci.yml: the Cookbook's AI recipes need [rag].
+          pip install -e ".[dev,db,jobs,websocket,rag]"
           # deps do admin (quantum_admin), senao os testes de admin caem no collect
           pip install -r quantum_admin/backend/requirements.txt
       - name: Run the full declared test suite
