@@ -45,6 +45,7 @@ class Element:
     line: Optional[int]
     children: List['Node'] = field(default_factory=list)
     text: str = ''
+    gd: Dict[str, str] = field(default_factory=dict)   # gd:name="raw": Godot node properties
 
     def get(self, name: str, default=None):
         return self.attrs.get(name, default)
@@ -127,6 +128,13 @@ def _convert(name: str, attr: Attr, raw: str, line: Optional[int]) -> object:
     raise GameCompileError(f'schema bug: unknown attribute type {t}', line)
 
 
+GD_NS = '{https://quantum.lang/godot}'
+
+
+def _read_gd(element: ET.Element) -> Dict[str, str]:
+    return {name[len(GD_NS):]: raw for name, raw in element.attrib.items() if name.startswith(GD_NS)}
+
+
 def _read_attrs(tag: str, element: ET.Element) -> Dict[str, object]:
     spec = TAGS[tag]
     line = _line(element)
@@ -188,7 +196,7 @@ def _read_element(element: ET.Element, parent_tag: str) -> Element:
             ', '.join(f'<qg:{p}>' if p not in ('application', 'handler') else
                       ('<q:application>' if p == 'application' else 'a handler (qg:on-collision, q:if...)')
                       for p in allowed), line)
-    node = Element(tag, _read_attrs(tag, element), line)
+    node = Element(tag, _read_attrs(tag, element), line, gd=_read_gd(element))
     if spec.text:
         node.text = (element.text or '').strip()
         if len(element):

@@ -247,6 +247,8 @@ class QuantumParser:
         # qtest: tag reaches the removal message instead of "unbound prefix".
         'qtest': 'https://quantum.lang/testing',
         'ui': 'https://quantum.lang/ui',
+        # gd: attributes on game tags set properties of the Godot node they become.
+        'gd': 'https://quantum.lang/godot',
     }
 
     # The document's first element, whatever it is.
@@ -291,6 +293,7 @@ class QuantumParser:
         # `type="game"` implies qg: even before any qg: tag appears, and so
         # on — behaviour that already existed.
         for attribute, prefix in (('type="game"', 'qg'),
+                                  ('type="game"', 'gd'),   # gd: is used as attributes, which the scan above does not see
                                   ('type="terminal"', 'qt'),
                                   ('type="ui"', 'ui')):
             if attribute in content and f'xmlns:{prefix}=' not in content:

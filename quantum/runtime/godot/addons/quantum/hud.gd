@@ -23,6 +23,7 @@ func setup(spec: Dictionary, scene: Node) -> void:
 		if item["kind"] == "counter" or item["kind"] == "text":
 			var label := Label.new()
 			label.add_theme_font_size_override("font_size", 8)
+			Q.apply_gd(label, item.get("gd"))
 			box.add_child(label)
 			_labels.append({"label": label, "bind": item["bind"], "prefix": item.get("label", "")})
 	_refresh()

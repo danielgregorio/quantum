@@ -27,6 +27,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: `gd:` attributes on game tags — `<qg:camera gd:zoom="2,2" />`
+  sets `Camera2D.zoom`. A pure forward: the compiler checks the name and the
+  type against Godot's own class reference (`godot_properties.json`,
+  generated from `godot --doctool` by `scripts/generate-godot-properties.py`),
+  and the runtime calls `node.set()` once as the scene is built. Properties
+  only (float, int, bool, String, Vector2, Vector2i, Color); methods, signals
+  and what the runtime sets itself (`position`, `velocity`, the collision
+  layers) are not forwarded. A wrong name is a compile error naming the
+  properties the class has. `tests/godot/test_godot_gd.py` reads back, in
+  Godot, the class and the values of every kind of node.
 - Laboratory: a new game compiler and runtime (`quantum/runtime/godot/`),
   rebuilt from scratch on the "thin compiler, fat runtime" design of
   `PLAN_GAMES_2.md`. The `.q` compiles to `game.json` (everything

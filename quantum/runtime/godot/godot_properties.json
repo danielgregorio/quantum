@@ -1,0 +1,335 @@
+{
+ "classes": {
+  "AnimatableBody2D": {
+   "inherits": "StaticBody2D",
+   "properties": {
+    "sync_to_physics": "bool"
+   }
+  },
+  "Area2D": {
+   "inherits": "CollisionObject2D",
+   "properties": {
+    "angular_damp": "float",
+    "angular_damp_space_override": "int",
+    "audio_bus_name": "StringName",
+    "audio_bus_override": "bool",
+    "gravity": "float",
+    "gravity_direction": "Vector2",
+    "gravity_point": "bool",
+    "gravity_point_center": "Vector2",
+    "gravity_point_unit_distance": "float",
+    "gravity_space_override": "int",
+    "linear_damp": "float",
+    "linear_damp_space_override": "int",
+    "monitorable": "bool",
+    "monitoring": "bool",
+    "priority": "int"
+   }
+  },
+  "AudioStreamPlayer": {
+   "inherits": "Node",
+   "properties": {
+    "autoplay": "bool",
+    "bus": "StringName",
+    "max_polyphony": "int",
+    "mix_target": "int",
+    "pitch_scale": "float",
+    "playback_type": "int",
+    "playing": "bool",
+    "stream_paused": "bool",
+    "volume_db": "float",
+    "volume_linear": "float"
+   }
+  },
+  "CPUParticles2D": {
+   "inherits": "Node2D",
+   "properties": {
+    "amount": "int",
+    "angle_max": "float",
+    "angle_min": "float",
+    "angular_velocity_max": "float",
+    "angular_velocity_min": "float",
+    "anim_offset_max": "float",
+    "anim_offset_min": "float",
+    "anim_speed_max": "float",
+    "anim_speed_min": "float",
+    "color": "Color",
+    "damping_max": "float",
+    "damping_min": "float",
+    "direction": "Vector2",
+    "draw_order": "int",
+    "emission_rect_extents": "Vector2",
+    "emission_shape": "int",
+    "emission_sphere_radius": "float",
+    "emitting": "bool",
+    "explosiveness": "float",
+    "fixed_fps": "int",
+    "fract_delta": "bool",
+    "gravity": "Vector2",
+    "hue_variation_max": "float",
+    "hue_variation_min": "float",
+    "initial_velocity_max": "float",
+    "initial_velocity_min": "float",
+    "lifetime": "float",
+    "lifetime_randomness": "float",
+    "linear_accel_max": "float",
+    "linear_accel_min": "float",
+    "local_coords": "bool",
+    "one_shot": "bool",
+    "orbit_velocity_max": "float",
+    "orbit_velocity_min": "float",
+    "particle_flag_align_y": "bool",
+    "physics_interpolation_mode": "int",
+    "preprocess": "float",
+    "radial_accel_max": "float",
+    "radial_accel_min": "float",
+    "randomness": "float",
+    "scale_amount_max": "float",
+    "scale_amount_min": "float",
+    "seed": "int",
+    "speed_scale": "float",
+    "split_scale": "bool",
+    "spread": "float",
+    "tangential_accel_max": "float",
+    "tangential_accel_min": "float",
+    "use_fixed_seed": "bool"
+   }
+  },
+  "Camera2D": {
+   "inherits": "Node2D",
+   "properties": {
+    "anchor_mode": "int",
+    "drag_bottom_margin": "float",
+    "drag_horizontal_enabled": "bool",
+    "drag_horizontal_offset": "float",
+    "drag_left_margin": "float",
+    "drag_right_margin": "float",
+    "drag_top_margin": "float",
+    "drag_vertical_enabled": "bool",
+    "drag_vertical_offset": "float",
+    "editor_draw_drag_margin": "bool",
+    "editor_draw_limits": "bool",
+    "editor_draw_screen": "bool",
+    "enabled": "bool",
+    "ignore_rotation": "bool",
+    "limit_bottom": "int",
+    "limit_left": "int",
+    "limit_right": "int",
+    "limit_smoothed": "bool",
+    "limit_top": "int",
+    "offset": "Vector2",
+    "position_smoothing_enabled": "bool",
+    "position_smoothing_speed": "float",
+    "process_callback": "int",
+    "rotation_smoothing_enabled": "bool",
+    "rotation_smoothing_speed": "float",
+    "zoom": "Vector2"
+   }
+  },
+  "CanvasItem": {
+   "inherits": "Node",
+   "properties": {
+    "clip_children": "int",
+    "light_mask": "int",
+    "modulate": "Color",
+    "self_modulate": "Color",
+    "show_behind_parent": "bool",
+    "texture_filter": "int",
+    "texture_repeat": "int",
+    "top_level": "bool",
+    "use_parent_material": "bool",
+    "visibility_layer": "int",
+    "visible": "bool",
+    "y_sort_enabled": "bool",
+    "z_as_relative": "bool",
+    "z_index": "int"
+   }
+  },
+  "CanvasLayer": {
+   "inherits": "Node",
+   "properties": {
+    "follow_viewport_enabled": "bool",
+    "follow_viewport_scale": "float",
+    "layer": "int",
+    "offset": "Vector2",
+    "rotation": "float",
+    "scale": "Vector2",
+    "visible": "bool"
+   }
+  },
+  "CharacterBody2D": {
+   "inherits": "PhysicsBody2D",
+   "properties": {
+    "floor_block_on_wall": "bool",
+    "floor_constant_speed": "bool",
+    "floor_max_angle": "float",
+    "floor_snap_length": "float",
+    "floor_stop_on_slope": "bool",
+    "max_slides": "int",
+    "motion_mode": "int",
+    "platform_floor_layers": "int",
+    "platform_on_leave": "int",
+    "platform_wall_layers": "int",
+    "safe_margin": "float",
+    "slide_on_ceiling": "bool",
+    "up_direction": "Vector2",
+    "wall_min_slide_angle": "float"
+   }
+  },
+  "CollisionObject2D": {
+   "inherits": "Node2D",
+   "properties": {
+    "collision_priority": "float",
+    "disable_mode": "int",
+    "input_pickable": "bool"
+   }
+  },
+  "Control": {
+   "inherits": "CanvasItem",
+   "properties": {
+    "anchor_bottom": "float",
+    "anchor_left": "float",
+    "anchor_right": "float",
+    "anchor_top": "float",
+    "auto_translate": "bool",
+    "clip_contents": "bool",
+    "custom_minimum_size": "Vector2",
+    "focus_mode": "int",
+    "grow_horizontal": "int",
+    "grow_vertical": "int",
+    "layout_direction": "int",
+    "localize_numeral_system": "bool",
+    "mouse_default_cursor_shape": "int",
+    "mouse_filter": "int",
+    "mouse_force_pass_scroll_events": "bool",
+    "offset_bottom": "float",
+    "offset_left": "float",
+    "offset_right": "float",
+    "offset_top": "float",
+    "physics_interpolation_mode": "int",
+    "pivot_offset": "Vector2",
+    "rotation": "float",
+    "rotation_degrees": "float",
+    "scale": "Vector2",
+    "size": "Vector2",
+    "size_flags_horizontal": "int",
+    "size_flags_stretch_ratio": "float",
+    "size_flags_vertical": "int",
+    "theme_type_variation": "StringName",
+    "tooltip_auto_translate_mode": "int",
+    "tooltip_text": "String"
+   }
+  },
+  "Label": {
+   "inherits": "Control",
+   "properties": {
+    "autowrap_mode": "int",
+    "clip_text": "bool",
+    "ellipsis_char": "String",
+    "horizontal_alignment": "int",
+    "justification_flags": "int",
+    "language": "String",
+    "lines_skipped": "int",
+    "max_lines_visible": "int",
+    "mouse_filter": "int",
+    "paragraph_separator": "String",
+    "size_flags_vertical": "int",
+    "structured_text_bidi_override": "int",
+    "text": "String",
+    "text_direction": "int",
+    "text_overrun_behavior": "int",
+    "uppercase": "bool",
+    "vertical_alignment": "int",
+    "visible_characters": "int",
+    "visible_characters_behavior": "int",
+    "visible_ratio": "float"
+   }
+  },
+  "Line2D": {
+   "inherits": "Node2D",
+   "properties": {
+    "antialiased": "bool",
+    "begin_cap_mode": "int",
+    "closed": "bool",
+    "default_color": "Color",
+    "end_cap_mode": "int",
+    "joint_mode": "int",
+    "round_precision": "int",
+    "sharp_limit": "float",
+    "texture_mode": "int",
+    "width": "float"
+   }
+  },
+  "Node": {
+   "inherits": "Object",
+   "properties": {
+    "auto_translate_mode": "int",
+    "editor_description": "String",
+    "physics_interpolation_mode": "int",
+    "process_mode": "int",
+    "process_physics_priority": "int",
+    "process_priority": "int",
+    "process_thread_group": "int",
+    "process_thread_group_order": "int",
+    "process_thread_messages": "int"
+   }
+  },
+  "Node2D": {
+   "inherits": "CanvasItem",
+   "properties": {
+    "global_rotation": "float",
+    "global_rotation_degrees": "float",
+    "global_scale": "Vector2",
+    "global_skew": "float",
+    "rotation": "float",
+    "rotation_degrees": "float",
+    "scale": "Vector2",
+    "skew": "float"
+   }
+  },
+  "PhysicsBody2D": {
+   "inherits": "CollisionObject2D",
+   "properties": {
+    "input_pickable": "bool"
+   }
+  },
+  "Sprite2D": {
+   "inherits": "Node2D",
+   "properties": {
+    "centered": "bool",
+    "flip_h": "bool",
+    "flip_v": "bool",
+    "frame": "int",
+    "frame_coords": "Vector2i",
+    "hframes": "int",
+    "offset": "Vector2",
+    "region_enabled": "bool",
+    "region_filter_clip_enabled": "bool",
+    "vframes": "int"
+   }
+  },
+  "StaticBody2D": {
+   "inherits": "PhysicsBody2D",
+   "properties": {
+    "constant_angular_velocity": "float",
+    "constant_linear_velocity": "Vector2"
+   }
+  },
+  "TileMapLayer": {
+   "inherits": "Node2D",
+   "properties": {
+    "collision_enabled": "bool",
+    "collision_visibility_mode": "int",
+    "enabled": "bool",
+    "navigation_enabled": "bool",
+    "navigation_visibility_mode": "int",
+    "occlusion_enabled": "bool",
+    "rendering_quadrant_size": "int",
+    "use_kinematic_bodies": "bool",
+    "x_draw_order_reversed": "bool",
+    "y_sort_origin": "int"
+   }
+  }
+ },
+ "godot": "4.4.1"
+}

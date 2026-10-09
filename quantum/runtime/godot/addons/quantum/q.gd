@@ -58,6 +58,24 @@ static func slice(v, start, end):
 	return (v as Array).slice(s, e)
 
 
+# gd: attributes: properties of the Godot node a tag became, as game.json
+# carries them ({name: {type, value}}), set as they are — nothing is
+# interpreted here; the compiler checked them against Godot's reference.
+static func apply_gd(node: Node, gd) -> void:
+	if gd == null:
+		return
+	for name_ in gd.keys():
+		var entry: Dictionary = gd[name_]
+		var v = entry["value"]
+		match str(entry["type"]):
+			"Vector2": v = Vector2(v[0], v[1])
+			"Vector2i": v = Vector2i(int(v[0]), int(v[1]))
+			"Color": v = Color(v)
+			"int": v = int(v)
+			"float": v = float(v)
+		node.set(name_, v)
+
+
 # Removes a thing from the scene at the end of the tick.
 static func destroy(node) -> void:
 	node = _thing(node)
@@ -245,6 +263,7 @@ func load_sounds(sounds: Dictionary) -> void:
 		var player := AudioStreamPlayer.new()
 		player.name = name_
 		player.stream = stream
+		apply_gd(player, sounds[name_].get("gd"))
 		add_child(player)
 		_sounds[name_] = player
 

@@ -828,3 +828,85 @@ class TestExpressions:
     def test_refuses(self, source, message):
         with pytest.raises(GameCompileError, match=re.escape(message)):
             compile_expression(source, self.scope)
+
+
+class TestGdAttributes:
+    """`gd:name="value"`: a property of the Godot node the tag becomes, checked
+    against Godot's own class reference (quantum/runtime/godot/gd.py)."""
+
+    def test_a_property_is_converted_and_carried_in_game_json(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main" gd:y_sort_enabled="true">
+    <qg:character id="player" controller="platformer" sheet="c" x="10" y="10" hitbox="18x22" gd:floor_max_angle="0.5" />
+    <qg:instance prefab="Coin" x="30" y="10" gd:modulate="#FF000080" gd:z_index="3" />
+    <qg:camera follow="player" bounds="none" gd:zoom="2,2" gd:position_smoothing_enabled="yes" />
+    <qg:hud gd:layer="7"><qg:counter bind="x" label="X" gd:uppercase="true" /></qg:hud>
+    <q:set name="x" value="0" type="number" />
+  </qg:scene>
+'''))
+        scene = json.loads((out / 'game.json').read_text())['scenes']['main']
+        assert scene['gd'] == {'y_sort_enabled': {'type': 'bool', 'value': True}}
+        gd = {n['kind']: n['gd'] for n in scene['nodes']}
+        assert gd['character'] == {'floor_max_angle': {'type': 'float', 'value': 0.5}}
+        assert gd['instance'] == {'modulate': {'type': 'Color', 'value': '#ff000080'},
+                                  'z_index': {'type': 'int', 'value': 3}}
+        assert gd['camera'] == {'zoom': {'type': 'Vector2', 'value': [2.0, 2.0]},
+                                'position_smoothing_enabled': {'type': 'bool', 'value': True}}
+        hud = [n for n in scene['nodes'] if n['kind'] == 'hud'][0]
+        assert hud['gd'] == {'layer': {'type': 'int', 'value': 7}}
+        assert hud['items'][0]['gd'] == {'uppercase': {'type': 'bool', 'value': True}}
+
+    def test_a_prefab_is_checked_against_what_it_becomes(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:prefab name="Crate" tag="crate" sheet="k" frame="9" hitbox="18x18" solid="true" gd:constant_linear_velocity="10,0" />
+  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" gd:volume_db="-6" />
+  <qg:scene name="main"><qg:instance prefab="Crate" x="30" y="10" /></qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['prefabs']['Crate']['gd'] == {'constant_linear_velocity': {'type': 'Vector2', 'value': [10.0, 0.0]}}
+        assert data['sounds']['hurt']['gd'] == {'volume_db': {'type': 'float', 'value': -6.0}}
+        # an item is an Area2D: a StaticBody2D property is not its
+        err = refuse(tmp_path, HEAD + '''  <qg:prefab name="Gem" tag="gem" sheet="k" frame="9" hitbox="18x18" gd:constant_linear_velocity="10,0" />
+  <qg:scene name="main"><qg:instance prefab="Gem" x="30" y="10" /></qg:scene>
+''' + TAIL)
+        assert 'gd:constant_linear_velocity is not a property of Area2D' in str(err)
+
+    def test_an_unknown_property_names_the_class_and_what_it_has(self, tmp_path):
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="player" controller="platformer" sheet="c" x="10" y="10" hitbox="18x22" />
+    <qg:camera follow="player" bounds="none" gd:zoom_level="2" />
+  </qg:scene>
+'''))
+        message = str(err)
+        assert '<qg:camera>: gd:zoom_level is not a property of Camera2D (it has:' in message
+        assert ', zoom)' in message and 'limit_left' in message and 'modulate' in message
+        assert message.startswith(str(tmp_path / 'game.q') + ':7:')
+
+    @pytest.mark.parametrize('attr,message', [
+        ('gd:zoom="2"', 'gd:zoom="2": a Vector2 (e.g. 2,2)'),
+        ('gd:zoom="a,b"', 'a Vector2'),
+        ('gd:limit_left="1.5"', 'gd:limit_left="1.5": a int (e.g. 2)'),
+        ('gd:position_smoothing_enabled="maybe"', 'a bool (e.g. true)'),
+        ('gd:modulate="red"', 'gd:modulate="red": a Color (e.g. #rrggbb)'),
+    ])
+    def test_a_value_of_the_wrong_type(self, tmp_path, attr, message):
+        err = refuse(tmp_path, game(f'''  <qg:scene name="main">
+    <qg:character id="player" controller="platformer" sheet="c" x="10" y="10" hitbox="18x22" />
+    <qg:camera follow="player" bounds="none" {attr} />
+  </qg:scene>
+'''))
+        assert message in str(err)
+
+    def test_a_tag_that_becomes_no_node_takes_none(self, tmp_path):
+        err = refuse(tmp_path, '''<q:application id="t" type="game">
+  <qg:tileset name="k" src="assets/kenney/tilemap_packed.png" tile="18" gd:modulate="#ffffff" />
+  <qg:scene name="main" />
+</q:application>
+''')
+        assert 'becomes no Godot node: gd: attributes go on what is placed' in str(err)
+
+    def test_the_table_comes_from_the_pinned_godot(self):
+        from quantum.runtime.godot import gd
+        from quantum.runtime.godot_bin import GODOT_VERSION
+        assert gd.table()['godot'] == GODOT_VERSION
+        assert gd.properties_of('Camera2D')['zoom'] == 'Vector2'
+        assert gd.properties_of('Camera2D')['modulate'] == 'Color'      # inherited from CanvasItem
+        assert 'name' not in gd.properties_of('Node')                   # the runtime's, never a gd:

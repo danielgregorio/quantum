@@ -156,3 +156,16 @@ controller is written in the language rather than in the runtime. Godot's
 `CharacterBody2D` surface (15 properties, 18 methods) is exactly the set
 such a behavior tag would expose, as `qg:gravity`, `qg:move`, `qg:jump`,
 `qg:face`, `qg:bounds`.
+
+## Postscript: `gd:` attributes
+
+The analysis above led to one general mechanism before any of the families:
+`gd:name="value"` on a game tag forwards a property to the Godot node the tag
+becomes, checked at compile time against Godot's class reference (see
+`docs/targets/games.md`, "gd: attributes"). It covers, with no new tag, the
+*property-shaped* gaps in the tables: camera zoom and smoothing, sound
+volume and pitch, `modulate`/`visible`/`z_index`/`scale`/`rotation`,
+`y_sort_enabled`, slope settings on a body, `layer` on the HUD. It covers
+none of the others — queries in expressions, tweens, handlers, UI widgets —
+which need a tag with semantics of its own. The rule: a `gd:` attribute used
+by a second game is promoted to a `qg:` attribute.

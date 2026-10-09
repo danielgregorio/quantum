@@ -12,6 +12,7 @@ from quantum.runtime.godot.errors import GameCompileError
 from quantum.runtime.godot.model import Element, Game, Statement, read_game
 from quantum.runtime.godot.expressions import compile_expression, strip_braces
 from quantum.runtime.godot.tiled import read_tmx
+from quantum.runtime.godot import gd as gdprops
 from quantum.runtime.godot.statements import (
     SceneScript, StateVar, compile_function, compile_handler, declare_state, game_state_source,
     is_expression, prefabs_source,
@@ -143,11 +144,14 @@ class _Compiler:
             inputs[el.get('action')] = keys
         sheets = {}
         for name, el in list(g.tilesets.items()) + list(g.sheets.items()):
+            if el.gd:
+                raise GameCompileError(f'<qg:{el.tag}> becomes no Godot node: gd: attributes go on what is placed', el.line)
             sheets[name] = {'src': self._asset(el.get('src'), el.line), 'tile': el.get('tile'),
                             'kind': el.tag}
         sounds = {}
         for name, el in g.sounds.items():
             sounds[name] = {'src': self._asset(el.get('src'), el.line)}
+            gdprops.attach(sounds[name], 'AudioStreamPlayer', el.gd, f'<qg:sound name="{name}">', el.line)
         self.sounds = sounds
         prefabs = {}
         pscript = SceneScript('prefabs', game_state=self.game_state)
@@ -188,6 +192,8 @@ class _Compiler:
                              'states': states, 'initial_state': initial_state,
                              'on_collision': handlers, 'on_damage': on_damage, 'on_death': on_death,
                              'animations': _animations(el)}
+            gdprops.attach(prefabs[name], gdprops.PREFAB_CLASS[gdprops.prefab_kind(prefabs[name])], el.gd,
+                           f'<qg:prefab name="{name}">', el.line)
         for pname, line in pscript.prefabs_used + [(p['fire_prefab'], el.line) for p in prefabs.values()
                                                    if p['fire_prefab']]:
             if pname not in prefabs:
@@ -291,6 +297,7 @@ class _Compiler:
         exits: Dict[str, dict] = {}
         conditions = 0
         on_death: Dict[str, str] = {}
+        self._node_elements: List[Optional[Element]] = []
         for node in scene.children:
             if isinstance(node, Statement):
                 continue
@@ -305,6 +312,7 @@ class _Compiler:
                 map_nodes[mname] = {'kind': 'map-node', 'name': mname, 'x': el.get('x'), 'y': el.get('y'),
                                     'sheet': el.get('sheet'), 'frame': el.get('frame'), 'scene': el.get('scene')}
                 nodes.append(map_nodes[mname])
+                self._node_elements.append(el)
             elif el.tag == 'map-path':
                 if el.get('requires') is not None:
                     self._scenes_used.append((el.get('requires'), el.line))
@@ -324,6 +332,7 @@ class _Compiler:
                                 'width': el.get('width'), 'height': el.get('height'),
                                 'to': el.get('to'), 'at': el.get('at')}
                 nodes.append(exits[ename])
+                self._node_elements.append(el)
             elif el.tag == 'spawner':
                 if el.get('prefab') not in prefabs:
                     raise GameCompileError(
@@ -337,6 +346,7 @@ class _Compiler:
                         raise GameCompileError(f'<qg:spawner x="{x}">: a number, or random', el.line)
                 nodes.append({'kind': 'spawner', 'prefab': el.get('prefab'), 'from': el.get('from'),
                               'every': el.get('every'), 'count': el.get('count'), 'x': x, 'y': el.get('y')})
+                self._node_elements.append(el)
             elif el.tag == 'on-death':
                 tag = el.get('of')
                 if not tag:
@@ -351,6 +361,7 @@ class _Compiler:
                 handler = compile_handler(script, f'_on_timer_{timers}', el.children, el.line)
                 nodes.append({'kind': 'timer', 'after': el.get('after'), 'every': el.get('every'),
                               'count': el.get('count'), 'handler': handler})
+                self._node_elements.append(el)
             elif el.tag == 'on-input':
                 action = el.get('action')
                 if action in on_input:
@@ -376,10 +387,12 @@ class _Compiler:
                                 f'no qg:prefab of that name (declared: {", ".join(sorted(prefabs)) or "none"})',
                                 el.line)
                         nodes.append({'kind': 'instance', 'prefab': obj.prefab, 'x': obj.x, 'y': obj.y})
+                        self._node_elements.append(None)
                 else:
                     layers = [{'name': 'tiles', 'rows': _csv_rows(el), 'collision': el.get('collision')}]
                 tilemap = {'kind': 'tilemap', 'tileset': el.get('tileset'), 'layers': layers}
                 nodes.insert(0, tilemap)
+                self._node_elements.insert(0, el)
             elif el.tag == 'character':
                 cid = el.get('id')
                 if cid in ids:
@@ -447,6 +460,7 @@ class _Compiler:
                     'states': states, 'initial_state': initial_state,
                     'on_collision': handlers, 'on_hit': hits, 'on_fall': on_fall,
                 })
+                self._node_elements.append(el)
             elif el.tag == 'instance':
                 if el.get('prefab') not in prefabs:
                     known = ', '.join(sorted(prefabs)) or 'none'
@@ -459,8 +473,10 @@ class _Compiler:
                     script.functions.append(f'func {condition}() -> bool:\n\treturn {expr}\n')
                 nodes.append({'kind': 'instance', 'prefab': el.get('prefab'), 'x': el.get('x'), 'y': el.get('y'),
                               'name': el.get('name'), 'if': condition})
+                self._node_elements.append(el)
             elif el.tag == 'camera':
                 nodes.append({'kind': 'camera', 'follow': el.get('follow'), 'bounds': el.get('bounds')})
+                self._node_elements.append(el)
             elif el.tag == 'hud':
                 items = []
                 for c in el.children:
@@ -470,9 +486,11 @@ class _Compiler:
                                 f'<qg:{c.tag} bind="{c.get("bind")}">: no q:set of that name in the scene '
                                 f'or the game', c.line)
                         items.append({'kind': c.tag, 'bind': c.get('bind'), 'label': c.get('label', '')})
+                        gdprops.attach(items[-1], 'Label', c.gd, f'<qg:{c.tag}>', c.line)
                     else:
                         raise GameCompileError('<qg:hud> holds qg:counter and qg:text', getattr(c, 'line', el.line))
                 nodes.append({'kind': 'hud', 'position': el.get('position'), 'items': items})
+                self._node_elements.append(el)
             else:
                 raise GameCompileError(f'<qg:{el.tag}> cannot go directly inside a scene', el.line)
         # 3. references between nodes
@@ -511,14 +529,25 @@ class _Compiler:
                 raise GameCompileError(
                     f'<qg:play sound="{played}">: no qg:sound of that name '
                     f'(declared: {", ".join(sorted(self.sounds)) or "none"})', scene.line)
+        # gd: attributes, checked against the Godot class each node becomes
+        for n, el in zip(nodes, self._node_elements):
+            if el is None:
+                continue
+            if n['kind'] == 'instance':
+                cls = gdprops.PREFAB_CLASS[gdprops.prefab_kind(prefabs[n['prefab']])]
+            else:
+                cls = gdprops.NODE_CLASS.get(n['kind'], 'Node')
+            gdprops.attach(n, cls, el.gd, f'<qg:{el.tag}>', el.line)
         script_file = _script_name(name)
         self.scripts[script_file] = script.source()
-        return {
+        spec = {
             'name': name, 'script': f'res://scripts/{script_file}',
             'width': scene.get('width'), 'height': scene.get('height'),
             'background': scene.get('background'), 'seed': scene.get('seed'),
             'nodes': nodes, 'map_paths': map_paths, 'on_input': on_input, 'on_death': on_death,
         }
+        gdprops.attach(spec, 'Node2D', scene.gd, f'<qg:scene name="{name}">', scene.line)
+        return spec
 
 
 def _ident(text: str) -> str:

@@ -93,7 +93,7 @@ include = ["quantum", "quantum.*",
 
 [tool.setuptools.package-data]
 # The replay harness Godot runs (quantum/runtime/godot_replay.gd).
-quantum = ["runtime/*.gd", "runtime/godot/addons/quantum/*.gd"]
+quantum = ["runtime/*.gd", "runtime/godot/addons/quantum/*.gd", "runtime/godot/*.json"]
 quantum_admin = ["components/**/*.q", "assets/*"]
 
 [tool.setuptools.exclude-package-data]
