@@ -65,7 +65,26 @@ alter the behaviour of an existing app is listed under **Breaking**.
   scene, arriving at the exit named there — disarmed until left),
   `qg:prefab ai="wander"` (headings from the scene's seed) and
   `ai="chase" sight=`, `qg:instance name=` (`other.name` in a handler) and
-  `if=` (placed only when true as the scene is built).
+  `if=` (placed only when true as the scene is built). For the shooter:
+  `qg:character controller="ship"` (eight directions, kept in the scene,
+  shoots `fire-prefab=` every `fire-every=` ticks while `fire-action=` is
+  held); `qg:prefab ai="fly" heading= lifetime=` and `ai="sway"`;
+  `health=` with `qg:damage`, `qg:on-damage` and `qg:on-death` (in the
+  prefab, or in the scene with `of=` a tag); `qg:on-collision` in a
+  prefab (a shot that hits); `qg:state` on a prefab (frame, speed,
+  fire-every); `qg:spawner` (so many of a prefab, every so many ticks,
+  `x="random"` from the scene's seed); `qg:burst` and `qg:shake`
+  (cosmetic); a `q:set` in `<q:application>` with `saved="true"` is kept
+  between runs (a file in `user://`; the replay harness gives each run its
+  own); `q:if`/`q:loop`/`q:call` directly in a scene run as it is entered.
+- `projects/drift/drift.q`, the vertical shooter: three waves of drones
+  and tanks that come down and shoot, then a boss with two phases; lives,
+  score and a high score kept between runs — zero lines of script.
+  `tests/godot/test_godot_drift.py` replays it: the waves come from the
+  seed the same way every run, shots kill drones and the score counts,
+  drones and their shots cost lives, the boss turns angry below half
+  health and its death wins, the high score survives into the next run,
+  three lives lost are game over and jump starts again.
 - `projects/keep/keep.q`, the top-down adventure: six rooms of a keep, a
   character that walks in eight directions and swings a sword, slimes
   that wander and bats that chase, a sign, hearts, a key and a locked

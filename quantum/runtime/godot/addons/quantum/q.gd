@@ -93,6 +93,53 @@ static func checkpoint(node, at) -> void:
 		node.set_checkpoint((at as Node2D).position)
 
 
+# Takes health from a thing (qg:damage).
+static func damage(node, amount: int) -> void:
+	node = _thing(node)
+	if node != null and node.has_method("take_damage"):
+		node.take_damage(amount)
+
+
+# Places a prefab at a point of the scene, at the end of the tick.
+static func spawn_at(scene: Node, prefab: String, at: Vector2) -> Node:
+	var builder = load("res://addons/quantum/scene_builder.gd")
+	return builder.instance(scene.q_game, scene, prefab, at, true)
+
+
+# A puff of particles where a thing is (qg:burst). Cosmetic.
+static func burst(node, color: String, count: int) -> void:
+	node = _thing(node)
+	if node == null or not (node is Node2D):
+		return
+	var scene := (node as Node).get_parent()
+	if scene == null:
+		return
+	var puff := CPUParticles2D.new()
+	puff.one_shot = true
+	puff.emitting = true
+	puff.amount = count
+	puff.lifetime = 0.5
+	puff.explosiveness = 1.0
+	puff.direction = Vector2.ZERO
+	puff.spread = 180.0
+	puff.initial_velocity_min = 30.0
+	puff.initial_velocity_max = 80.0
+	puff.color = Color(color)
+	puff.position = (node as Node2D).position
+	scene.call_deferred("add_child", puff)
+	puff.finished.connect(puff.queue_free)
+
+
+# Shakes the scene a thing is in (qg:shake). Cosmetic.
+static func shake(node, frames: int, strength: float) -> void:
+	node = _thing(node)
+	if node == null:
+		return
+	var scene := (node as Node).get_parent()
+	if scene != null and scene.has_method("q_shake"):
+		scene.q_shake(frames, strength)
+
+
 # Leaves the scene for another at the end of the tick (qg:goto-scene).
 static func goto_scene(scene: Node, name_: String) -> void:
 	var game := scene.get_parent()
@@ -107,6 +154,53 @@ static func _thing(node):
 	if node.has_method("quantum_owner"):
 		return node.quantum_owner()
 	return node
+
+
+# --- persistence: the q:sets with saved="true" (G calls these) ---
+
+# Where the file goes: --persist-dir=<dir> from the command line (the
+# replay harness passes a temporary one), else user://.
+var persist_dir: String = ""
+
+
+func _ready() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--persist-dir="):
+			persist_dir = a.substr(14)
+
+
+func _persist_path() -> String:
+	var base := persist_dir if persist_dir != "" else "user://"
+	if not base.ends_with("/"):
+		base += "/"
+	return base + "quantum-state.json"
+
+
+func load_persisted(state: Node, names: Array) -> void:
+	if names.is_empty():
+		return
+	var f := FileAccess.open(_persist_path(), FileAccess.READ)
+	if f == null:
+		return
+	var data = JSON.parse_string(f.get_as_text())
+	if typeof(data) != TYPE_DICTIONARY:
+		return
+	for n in names:
+		if data.has(n):
+			state.set(n, data[n])
+
+
+func save_persisted(state: Node, names: Array) -> void:
+	if names.is_empty():
+		return
+	var data := {}
+	for n in names:
+		data[n] = state.get(n)
+	var f := FileAccess.open(_persist_path(), FileAccess.WRITE)
+	if f == null:
+		push_warning("quantum: cannot write " + _persist_path())
+		return
+	f.store_string(JSON.stringify(data))
 
 
 # --- sounds (an instance method: Q is an autoload node) ---

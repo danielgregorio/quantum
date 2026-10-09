@@ -13,6 +13,8 @@ const Block := preload("res://addons/quantum/block.gd")
 const MapWalker := preload("res://addons/quantum/map_walker.gd")
 const TopdownBody := preload("res://addons/quantum/topdown_body.gd")
 const Exit := preload("res://addons/quantum/exit.gd")
+const ShipBody := preload("res://addons/quantum/ship_body.gd")
+const Spawner := preload("res://addons/quantum/spawner.gd")
 const Hud := preload("res://addons/quantum/hud.gd")
 const Tilemap := preload("res://addons/quantum/tilemap.gd")
 
@@ -36,6 +38,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	scene.add_child(bg)
 
 	scene.q_on_input = scene_spec.get("on_input", {})
+	scene.q_on_death = scene_spec.get("on_death", {})
 	var tilemap: Node = null
 	var characters: Dictionary = {}
 	var exits: Dictionary = {}
@@ -86,6 +89,10 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				var made := instance(game, scene, node_spec["prefab"], Vector2(node_spec["x"], node_spec["y"]))
 				if node_spec.get("name") != null:
 					made.name = node_spec["name"]
+			"spawner":
+				var spawner := Spawner.new()
+				spawner.setup(node_spec)
+				scene.add_child(spawner)
 			"exit":
 				var exit := Exit.new()
 				exit.setup(node_spec, scene)
@@ -150,6 +157,8 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 	var body: CharacterBody2D
 	if node_spec["controller"] == "topdown":
 		body = TopdownBody.new()
+	elif node_spec["controller"] == "ship":
+		body = ShipBody.new()
 	else:
 		body = PlatformerBody.new()
 	body.name = node_spec["id"]

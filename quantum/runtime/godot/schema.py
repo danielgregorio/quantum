@@ -37,7 +37,8 @@ class Tag:
 
 
 # The actions a handler can hold, besides q: statements.
-ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene')
+ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
+           'damage', 'burst', 'shake')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -64,11 +65,18 @@ TAGS: Dict[str, Tag] = {
          'sheet': Attr('ident', required=True, doc='a qg:spritesheet or qg:tileset'),
          'frame': Attr('int', 0),
          'hitbox': Attr('size', required=True),
-         'ai': Attr('enum:patrol|wander|chase', None,
+         'ai': Attr('enum:patrol|wander|chase|fly|sway', None,
                     doc='patrol: walks under gravity, turns at walls (and at edges with turns-at); '
                         'wander: top-down, changes direction now and then (from the scene seed); '
-                        'chase: top-down, goes for the character within sight='),
+                        'chase: top-down, goes for the character within sight=; '
+                        'fly: straight along heading=; sway: side to side across the scene'),
          'sight': Attr('float', 80.0, doc='chase: pixels'),
+         'heading': Attr('enum:up|down|left|right', 'down', doc='fly: which way'),
+         'lifetime': Attr('int', 0, doc='fly: gone after this many ticks (0: never); any fly is gone off-screen'),
+         'health': Attr('int', 1, doc='hits it takes (qg:damage); at 0 its qg:on-death runs and it is gone'),
+         'fire-prefab': Attr('ident', None, doc='what it shoots, placed below it (or above, when heading is up)'),
+         'fire-every': Attr('int', 0, doc='ticks between shots (0: never)'),
+         'fire-sound': Attr('ident', None),
          'speed': Attr('float', 30.0, doc='pixels per second, for ai='),
          'direction': Attr('enum:left|right', 'left', doc='where it walks first'),
          'turns-at': Attr('enum:wall|edge', 'wall', doc='edge: also turns before falling off'),
@@ -76,13 +84,15 @@ TAGS: Dict[str, Tag] = {
          'solid': Attr('bool', False, doc='characters stand on it and bump it (a block)')},
         parents=('application',)),
     'state': Tag(
-        'A form of the character (small, big...): its hitbox, its frame, its animations. '
-        '`me.state` reads it; qg:become changes it.',
+        'A form of a character or a prefab (small, big; calm, angry): hitbox, frame, animations, '
+        'and for a prefab its speed and fire-every. `me.state` reads it; qg:become changes it.',
         {'name': Attr('ident', required=True),
-         'hitbox': Attr('size', required=True),
+         'hitbox': Attr('size', None, doc='a character needs one; a prefab keeps its own'),
          'frame': Attr('int', 0),
+         'speed': Attr('float', None, doc='prefab: overrides its speed'),
+         'fire-every': Attr('int', None, doc='prefab: overrides its fire-every'),
          'initial': Attr('bool', False, doc='the state it starts in (else the first one)')},
-        parents=('character',)),
+        parents=('character', 'prefab')),
     'animation': Tag(
         'Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what it does; a prefab plays "walk".',
         {'name': Attr('ident', required=True),
@@ -106,7 +116,12 @@ TAGS: Dict[str, Tag] = {
     'character': Tag(
         'A body the player moves: a platformer, or a walker on a world map.',
         {'id': Attr('ident', required=True),
-         'controller': Attr('enum:platformer|map|topdown', required=True),
+         'controller': Attr('enum:platformer|map|topdown|ship', required=True),
+         'bounds': Attr('enum:scene|none', 'scene', doc='ship: kept inside the scene'),
+         'fire-action': Attr('enum:jump', None, doc='ship: the action that shoots'),
+         'fire-prefab': Attr('ident', None, doc='ship: what it shoots, placed above it'),
+         'fire-every': Attr('int', 10, doc='ship: ticks between shots while the action is held'),
+         'fire-sound': Attr('ident', None),
          'at': Attr('expr', None, doc='map: the qg:map-node it starts on (a name, or an expression)'),
          'speed': Attr('float', 60.0, doc='map, topdown: pixels per second'),
          'attack-action': Attr('enum:jump', None, doc='topdown: the action that swings in front'),
@@ -157,14 +172,31 @@ TAGS: Dict[str, Tag] = {
         {'bind': Attr('ident', required=True, doc='a q:set of the scene')},
         parents=('hud',)),
     'on-collision': Tag(
-        'What happens when this character touches something. Holds actions and statements; '
-        '`me` is the character, `other` what it touched.',
+        'What happens when this character or prefab touches something. Holds actions and statements; '
+        '`me` is the toucher, `other` what it touched. In a prefab, only the game state is in reach.',
         {'with': Attr('ident', required=True, doc='the tag of what it touches'),
          'side': Attr('enum:any|top|bottom', 'any',
                       doc='top: landing on it; bottom: hitting it from below. A side handler runs '
                           'before the "any" one, which then does not'),
          'cooldown': Attr('int', 0, doc='ticks before this handler can fire again')},
-        parents=('character',)),
+        parents=('character', 'prefab')),
+    'on-damage': Tag(
+        'What happens when this prefab takes qg:damage and lives (`me.health` is what is left).',
+        {},
+        parents=('prefab',)),
+    'on-death': Tag(
+        'What happens when this prefab\'s health reaches 0, before it goes. In a scene, with of=, '
+        'when any thing of that tag dies there.',
+        {'of': Attr('ident', None, doc='scene: the tag')},
+        parents=('prefab', 'scene')),
+    'spawner': Tag(
+        'Places count instances of a prefab, one every so many ticks, from a tick on.',
+        {'prefab': Attr('ident', required=True),
+         'from': Attr('int', 0, doc='the tick of the first one'),
+         'every': Attr('int', 60), 'count': Attr('int', 1),
+         'x': Attr('str', 'random', doc='a number, or random across the scene width (from the seed)'),
+         'y': Attr('float', -12.0)},
+        parents=('scene',)),
     'map-node': Tag(
         'A place on a world map. With scene=, pressing jump there enters that scene.',
         {'name': Attr('ident', required=True),
@@ -227,6 +259,23 @@ TAGS: Dict[str, Tag] = {
         "Makes the other thing's position where the character respawns.",
         {'target': Attr('enum:me', 'me'),
          'at': Attr('enum:other', 'other')},
+        parents=('handler',)),
+    'damage': Tag(
+        'Takes health from a thing; at 0 its qg:on-death runs and it goes.',
+        {'target': Attr('enum:other|me', 'other'),
+         'amount': Attr('int', 1)},
+        parents=('handler',)),
+    'burst': Tag(
+        'A puff of particles where a thing is. Cosmetic.',
+        {'at': Attr('enum:other|me', 'me'),
+         'color': Attr('color', '#ffffff'),
+         'count': Attr('int', 12)},
+        parents=('handler',)),
+    'shake': Tag(
+        'Shakes the scene a thing is in. Cosmetic.',
+        {'at': Attr('enum:other|me', 'me'),
+         'frames': Attr('int', 10),
+         'strength': Attr('float', 3.0, doc='pixels')},
         parents=('handler',)),
     'goto-scene': Tag(
         'Leaves this scene for another, at the end of the tick. Scene state is lost; game state stays.',

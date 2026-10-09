@@ -39,8 +39,14 @@ def tape_from_holds(holds: Iterable[Tuple[str, int, int]]) -> Tape:
 
 
 def replay(project_dir: Path, ticks: int, tape: Optional[Tape] = None,
-           binary: Optional[Path] = None, timeout: float = 300) -> dict:
-    """Run the project's main scene for ``ticks`` physics ticks under ``tape``."""
+           binary: Optional[Path] = None, timeout: float = 300,
+           persist_dir: Optional[Path] = None) -> dict:
+    """Run the project's main scene for ``ticks`` physics ticks under ``tape``.
+
+    ``persist_dir`` is where the game's persisted state (``q:set
+    persist="true"``) is read and written; a fresh temporary directory
+    when not given, so a replay starts from nothing.
+    """
     project_dir = Path(project_dir)
     with tempfile.TemporaryDirectory(prefix='quantum-replay-') as tmp:
         tape_path = Path(tmp) / 'tape.json'
@@ -48,8 +54,11 @@ def replay(project_dir: Path, ticks: int, tape: Optional[Tape] = None,
         tape_path.write_text(json.dumps({str(k): [list(e) for e in v]
                                          for k, v in (tape or {}).items()}),
                              encoding='utf-8')
+        persist = Path(persist_dir) if persist_dir else Path(tmp) / 'persist'
+        persist.mkdir(parents=True, exist_ok=True)
         result = run_godot(['--path', str(project_dir), '-s', str(REPLAY_SCRIPT), '--',
-                            f'--ticks={ticks}', f'--tape={tape_path}', f'--out={out_path}'],
+                            f'--ticks={ticks}', f'--tape={tape_path}', f'--out={out_path}',
+                            f'--persist-dir={persist}'],
                            binary=binary, timeout=timeout)
         output = result.stdout + result.stderr
         errors = script_errors(output)

@@ -14,7 +14,7 @@ from quantum.runtime.godot.expressions import compile_expression, strip_braces
 from quantum.runtime.godot.tiled import read_tmx
 from quantum.runtime.godot.statements import (
     SceneScript, StateVar, compile_function, compile_handler, declare_state, game_state_source,
-    is_expression,
+    is_expression, prefabs_source,
 )
 
 ADDON_SRC = Path(__file__).with_name('addons') / 'quantum'
@@ -40,6 +40,7 @@ config/features=PackedStringArray("4.4", "GL Compatibility")
 [autoload]
 Q="*res://addons/quantum/q.gd"
 G="*res://scripts/game_state.gd"
+P="*res://scripts/prefabs.gd"
 
 [display]
 window/size/viewport_width={width}
@@ -143,20 +144,60 @@ class _Compiler:
             sounds[name] = {'src': self._asset(el.get('src'), el.line)}
         self.sounds = sounds
         prefabs = {}
+        pscript = SceneScript('prefabs', game_state=self.game_state)
         for name, el in g.prefabs.items():
             self._sheet_exists(el.get('sheet'), sheets, el.line)
+            if el.get('solid') and el.get('ai'):
+                raise GameCompileError('a prefab is solid or has ai=, not both', el.line)
+            for attr in ('fire-sound',):
+                if el.get(attr) and el.get(attr) not in sounds:
+                    raise GameCompileError(f'{attr}="{el.get(attr)}": no qg:sound of that name', el.line)
+            states, initial_state = _states(el, pscript, name, for_prefab=True)
+            handlers = []
+            for i, h in enumerate(el.find_all('on-collision')):
+                hname = compile_handler(pscript, f'_{_ident(name)}_on_collision_{i}', h.children, h.line)
+                handlers.append({'with': h.get('with'), 'cooldown': h.get('cooldown'), 'handler': hname})
+            on_damage = on_death = None
+            for h in el.find_all('on-damage'):
+                on_damage = compile_handler(pscript, f'_{_ident(name)}_on_damage', h.children, h.line)
+            for h in el.find_all('on-death'):
+                if h.get('of'):
+                    raise GameCompileError('of= is for a <qg:on-death> in a scene', h.line)
+                on_death = compile_handler(pscript, f'_{_ident(name)}_on_death', h.children, h.line)
             prefabs[name] = {'tag': el.get('tag') or name.lower(), 'sheet': el.get('sheet'),
                              'frame': el.get('frame'), 'hitbox': list(el.get('hitbox')),
                              'ai': el.get('ai'), 'speed': el.get('speed'), 'sight': el.get('sight'),
                              'direction': el.get('direction'), 'turns_at': el.get('turns-at'),
                              'gravity': el.get('gravity'), 'solid': el.get('solid'),
+                             'heading': el.get('heading'), 'lifetime': el.get('lifetime'),
+                             'health': el.get('health'),
+                             'fire_prefab': el.get('fire-prefab'), 'fire_every': el.get('fire-every'),
+                             'fire_sound': el.get('fire-sound'),
+                             'states': states, 'initial_state': initial_state,
+                             'on_collision': handlers, 'on_damage': on_damage, 'on_death': on_death,
                              'animations': _animations(el)}
-            if el.get('solid') and el.get('ai'):
-                raise GameCompileError('a prefab is solid or has ai=, not both', el.line)
+        for pname, line in pscript.prefabs_used + [(p['fire_prefab'], el.line) for p in prefabs.values()
+                                                   if p['fire_prefab']]:
+            if pname not in prefabs:
+                raise GameCompileError(
+                    f'no qg:prefab named {pname!r} (declared: {", ".join(sorted(prefabs)) or "none"})', line)
+        for played in pscript.sounds_played:
+            if played not in sounds:
+                raise GameCompileError(f'<qg:play sound="{played}">: no qg:sound of that name', None)
+        tags = {p['tag'] for p in prefabs.values()}
+        for p_ in prefabs.values():
+            for h in p_['on_collision']:
+                if h['with'] not in tags:
+                    raise GameCompileError(
+                        f'<qg:on-collision with="{h["with"]}">: no prefab has that tag '
+                        f'(tags: {", ".join(sorted(tags))})', None)
+        self.scripts['prefabs.gd'] = prefabs_source(pscript)
+        self._prefab_scenes_used = pscript.scenes_used
         scenes = {}
         self._scenes_used: List[tuple] = []
         self._exits_used: List[tuple] = []
         self._scene_exits: Dict[str, set] = {}
+        self._scenes_used.extend(self._prefab_scenes_used)
         for scene in g.scenes:
             scenes[scene.get('name')] = self._scene(scene, sheets, prefabs)
         for sname, line in self._scenes_used:
@@ -222,10 +263,12 @@ class _Compiler:
         for node in scene.children:
             if isinstance(node, Statement) and node.kind == 'function':
                 compile_function(script, node)
+            elif isinstance(node, Statement) and node.kind in ('if', 'loop', 'call'):
+                script.enter.append(node)   # runs as the scene is entered
             elif isinstance(node, Statement) and node.kind != 'set':
                 raise GameCompileError(
-                    f'<q:{node.kind}> directly in a scene: only q:set and q:function go there; '
-                    f'logic goes inside a handler', node.line)
+                    f'<q:{node.kind}> directly in a scene: q:set, q:function, and q:if/q:loop/q:call '
+                    f'(run as the scene is entered) go there', node.line)
         # 2. the nodes
         nodes: List[dict] = []
         ids: Dict[str, int] = {}
@@ -235,6 +278,7 @@ class _Compiler:
         on_input: Dict[str, str] = {}
         exits: Dict[str, dict] = {}
         conditions = 0
+        on_death: Dict[str, str] = {}
         for node in scene.children:
             if isinstance(node, Statement):
                 continue
@@ -268,6 +312,26 @@ class _Compiler:
                                 'width': el.get('width'), 'height': el.get('height'),
                                 'to': el.get('to'), 'at': el.get('at')}
                 nodes.append(exits[ename])
+            elif el.tag == 'spawner':
+                if el.get('prefab') not in prefabs:
+                    raise GameCompileError(
+                        f'no qg:prefab named {el.get("prefab")!r} (declared: {", ".join(sorted(prefabs)) or "none"})',
+                        el.line)
+                x = el.get('x')
+                if x != 'random':
+                    try:
+                        x = float(x)
+                    except ValueError:
+                        raise GameCompileError(f'<qg:spawner x="{x}">: a number, or random', el.line)
+                nodes.append({'kind': 'spawner', 'prefab': el.get('prefab'), 'from': el.get('from'),
+                              'every': el.get('every'), 'count': el.get('count'), 'x': x, 'y': el.get('y')})
+            elif el.tag == 'on-death':
+                tag = el.get('of')
+                if not tag:
+                    raise GameCompileError('<qg:on-death> in a scene needs of= (a tag)', el.line)
+                if tag in on_death:
+                    raise GameCompileError(f'two <qg:on-death of="{tag}">', el.line)
+                on_death[tag] = compile_handler(script, f'_on_death_of_{_ident(tag)}', el.children, el.line)
             elif el.tag == 'on-input':
                 action = el.get('action')
                 if action in on_input:
@@ -326,26 +390,15 @@ class _Compiler:
                 if el.get('jump-sound') and el.get('jump-sound') not in self.sounds:
                     raise GameCompileError(
                         f'jump-sound="{el.get("jump-sound")}": no qg:sound of that name', el.line)
-                states = {}
-                initial_state = None
-                for st in el.find_all('state'):
-                    sname = st.get('name')
-                    if sname in states:
-                        raise GameCompileError(f'two states named {sname!r}', st.line)
-                    states[sname] = {'hitbox': list(st.get('hitbox')), 'frame': st.get('frame'),
-                                     'animations': _animations(st)}
-                    if st.get('initial'):
-                        if initial_state is not None:
-                            raise GameCompileError('two states marked initial', st.line)
-                        initial_state = sname
-                if states and initial_state is None:
-                    initial_state = next(iter(states))
-                for sname, line in script.states_used[len(self._states_checked):]:
-                    if sname not in states:
-                        raise GameCompileError(
-                            f'<qg:become state="{sname}">: {cid!r} has no qg:state of that name '
-                            f'(it has: {", ".join(states) or "none"})', line)
+                states, initial_state = _states(el, script, cid, for_prefab=False,
+                                                already=len(self._states_checked))
                 self._states_checked = list(script.states_used)
+                for attr in ('fire-sound',):
+                    if el.get(attr) and el.get(attr) not in self.sounds:
+                        raise GameCompileError(f'{attr}="{el.get(attr)}": no qg:sound of that name', el.line)
+                if el.get('fire-prefab') and el.get('fire-prefab') not in prefabs:
+                    raise GameCompileError(
+                        f'fire-prefab="{el.get("fire-prefab")}": no qg:prefab of that name', el.line)
                 at_method = None
                 if el.get('controller') == 'map':
                     at = el.get('at')
@@ -366,6 +419,9 @@ class _Compiler:
                     'variable_jump': el.get('variable-jump'), 'coyote_frames': el.get('coyote-frames'),
                     'gravity': el.get('gravity'), 'max_fall': el.get('max-fall'),
                     'jump_sound': el.get('jump-sound'),
+                    'bounds': el.get('bounds'), 'fire_action': el.get('fire-action'),
+                    'fire_prefab': el.get('fire-prefab'), 'fire_every': el.get('fire-every'),
+                    'fire_sound': el.get('fire-sound'),
                     'attack_action': el.get('attack-action'), 'attack_reach': el.get('attack-reach'),
                     'attack_frames': el.get('attack-frames'), 'attack_sound': el.get('attack-sound'),
                     'animations': _animations(el),
@@ -415,6 +471,9 @@ class _Compiler:
             if n['kind'] == 'camera' and n['bounds'] == 'tilemap' and tilemap is None:
                 raise GameCompileError('<qg:camera bounds="tilemap"> in a scene without a tilemap', scene.line)
         tags = {p['tag'] for p in prefabs.values()}
+        for tag in on_death:
+            if tag not in tags:
+                raise GameCompileError(f'<qg:on-death of="{tag}">: no prefab has that tag', scene.line)
         for n in nodes:
             for kind in ('on_collision', 'on_hit'):
                 for h in n.get(kind, []):
@@ -439,12 +498,39 @@ class _Compiler:
             'name': name, 'script': f'res://scripts/{script_file}',
             'width': scene.get('width'), 'height': scene.get('height'),
             'background': scene.get('background'), 'seed': scene.get('seed'),
-            'nodes': nodes, 'map_paths': map_paths, 'on_input': on_input,
+            'nodes': nodes, 'map_paths': map_paths, 'on_input': on_input, 'on_death': on_death,
         }
 
 
 def _ident(text: str) -> str:
     return re.sub(r'[^A-Za-z0-9_]+', '_', text)
+
+
+def _states(el: Element, script: SceneScript, owner: str, for_prefab: bool, already: int = 0):
+    """The qg:states of a character or a prefab: (states, initial)."""
+    states: Dict[str, dict] = {}
+    initial_state = None
+    for st in el.find_all('state'):
+        sname = st.get('name')
+        if sname in states:
+            raise GameCompileError(f'two states named {sname!r}', st.line)
+        if not for_prefab and st.get('hitbox') is None:
+            raise GameCompileError('<qg:state> of a character needs hitbox=', st.line)
+        states[sname] = {'hitbox': list(st.get('hitbox')) if st.get('hitbox') else None,
+                         'frame': st.get('frame'), 'speed': st.get('speed'), 'fire_every': st.get('fire-every'),
+                         'animations': _animations(st)}
+        if st.get('initial'):
+            if initial_state is not None:
+                raise GameCompileError('two states marked initial', st.line)
+            initial_state = sname
+    if states and initial_state is None:
+        initial_state = next(iter(states))
+    for sname, line in script.states_used[already:]:
+        if sname not in states:
+            raise GameCompileError(
+                f'<qg:become state="{sname}">: {owner!r} has no qg:state of that name '
+                f'(it has: {", ".join(states) or "none"})', line)
+    return states, initial_state
 
 
 def _animations(el: Element) -> Dict[str, dict]:

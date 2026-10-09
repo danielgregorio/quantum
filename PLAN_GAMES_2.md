@@ -258,7 +258,17 @@ half-reach wide.
   timed child collider, `qg:dialogue` in the HUD with paging.
 - Keep: 6 rooms, 2 enemy kinds, 1 locked door, 1 switch puzzle, an ending.
 
-### Phase 4 — Arcade kit and Drift (2 weeks)
+### Phase 4 — Arcade kit and Drift (2 weeks) — done 2026-10-09
+
+What was built: the `ship` controller, `fly`/`sway` AIs with `lifetime`,
+health with `qg:damage`/`qg:on-damage`/`qg:on-death`, handlers on
+prefabs (compiled into the autoload `P`, with the game state in reach),
+states on prefabs (the boss's phases), `qg:spawner` from the scene's
+seed, `qg:burst`/`qg:shake`, `saved="true"` state. Not built: object
+pooling (Godot copes with a few dozen nodes; a game that needs more will
+say so), continues (lives suffice). Learned: `persist=` is a removed
+Core attribute the parser refuses, so the game's word is `saved=`.
+
 
 - Projectiles with pooling, `qg:spawner` with waves, particles, boss as a
   prefab with a `qg:state-machine` driving phases, screen shake, continues,

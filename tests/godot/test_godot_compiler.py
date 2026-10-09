@@ -248,8 +248,9 @@ class TestStatesBlocksAndSpawns:
         character = data['scenes']['main']['nodes'][0]
         assert character['initial_state'] == 'small'
         assert character['states'] == {
-            'small': {'hitbox': [18, 22], 'frame': 0, 'animations': {}},
-            'big': {'hitbox': [18, 30], 'frame': 3, 'animations': {'walk': {'frames': [4, 5], 'fps': 8}}},
+            'small': {'hitbox': [18, 22], 'frame': 0, 'speed': None, 'fire_every': None, 'animations': {}},
+            'big': {'hitbox': [18, 30], 'frame': 3, 'speed': None, 'fire_every': None,
+                    'animations': {'walk': {'frames': [4, 5], 'fps': 8}}},
         }
         assert character['on_collision'][0]['side'] == 'bottom'
         assert data['scenes']['main']['nodes'][2]['items'] == [{'kind': 'text', 'bind': 'message', 'label': ''}]
@@ -561,6 +562,95 @@ class TestTopDownExitsAndHits:
   </qg:scene>
 '''))
         assert '<qg:on-hit with="ghost">: no prefab has that tag' in e.message
+
+
+class TestArcadePrefabsAndSpawners:
+    SOURCE = '''<q:application id="t" type="game">
+  <q:set name="score" value="0" type="number" />
+  <q:set name="best" value="0" type="number" saved="true" />
+  <qg:tileset name="k" src="assets/kenney/tilemap_packed.png" tile="18" />
+  <qg:spritesheet name="c" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
+  <qg:sound name="boom" src="assets/kenney/audio/block.ogg" />
+  <qg:prefab name="Shot" tag="shot" sheet="k" hitbox="6x6" ai="fly" heading="up" speed="240" lifetime="80">
+    <qg:on-collision with="enemy"><qg:damage target="other" amount="2" /><qg:destroy target="me" /></qg:on-collision>
+  </qg:prefab>
+  <qg:prefab name="Drone" tag="enemy" sheet="c" hitbox="14x14" ai="fly" speed="45" health="3"
+             fire-prefab="Shot" fire-every="90">
+    <qg:state name="calm" frame="1" speed="30" fire-every="60" initial="true" />
+    <qg:state name="angry" frame="2" speed="70" fire-every="25" />
+    <qg:on-damage><q:if condition="{me.health <= 1}"><qg:become target="me" state="angry" /></q:if></qg:on-damage>
+    <qg:on-death><qg:play sound="boom" /><qg:burst at="me" color="#ffcc44" count="10" /><qg:shake at="me" />
+      <q:set name="score" value="{score + 100}" /></qg:on-death>
+  </qg:prefab>
+  <qg:scene name="play">
+    <q:if condition="{score > best}"><q:set name="best" value="{score}" /></q:if>
+    <qg:character id="ship" controller="ship" sheet="c" x="128" y="196" hitbox="14x14" speed="120"
+                  fire-action="jump" fire-prefab="Shot" fire-every="10" />
+    <qg:spawner prefab="Drone" from="60" every="40" count="8" x="random" y="-12" />
+    <qg:spawner prefab="Drone" from="500" every="1" count="1" x="128" y="40" />
+    <qg:on-death of="enemy"><q:set name="score" value="{score + 1}" /></qg:on-death>
+  </qg:scene>
+</q:application>
+'''
+
+    def test_the_prefabs_script_is_an_autoload(self, tmp_path):
+        out = build(tmp_path, self.SOURCE)
+        assert 'P="*res://scripts/prefabs.gd"' in (out / 'project.godot').read_text()
+        p = (out / 'scripts' / 'prefabs.gd').read_text()
+        assert 'func _Shot_on_collision_0(me, other) -> void:\n\tQ.damage(other, 2)\n\tQ.destroy(me)\n' in p
+        assert ('func _Drone_on_damage(me, other) -> void:\n\tif (me.health <= 1):\n'
+                '\t\tQ.become(me, "angry")\n') in p
+        assert ('func _Drone_on_death(me, other) -> void:\n\tQ.play("boom")\n\tQ.burst(me, "#ffcc44", 10)\n'
+                '\tQ.shake(me, 10, 3.0)\n\tG.score = (G.score + 100)\n') in p
+
+    def test_the_json(self, tmp_path):
+        out = build(tmp_path, self.SOURCE)
+        data = json.loads((out / 'game.json').read_text())
+        shot, drone = data['prefabs']['Shot'], data['prefabs']['Drone']
+        assert (shot['ai'], shot['heading'], shot['lifetime'], shot['health']) == ('fly', 'up', 80, 1)
+        assert shot['on_collision'] == [{'with': 'enemy', 'cooldown': 0, 'handler': '_Shot_on_collision_0'}]
+        assert (drone['health'], drone['fire_prefab'], drone['fire_every']) == (3, 'Shot', 90)
+        assert drone['on_damage'] == '_Drone_on_damage' and drone['on_death'] == '_Drone_on_death'
+        assert drone['initial_state'] == 'calm'
+        assert drone['states']['angry'] == {'hitbox': None, 'frame': 2, 'speed': 70, 'fire_every': 25,
+                                            'animations': {}}
+        play = data['scenes']['play']
+        ship = play['nodes'][0]
+        assert (ship['controller'], ship['fire_action'], ship['fire_prefab'], ship['fire_every']) == \
+            ('ship', 'jump', 'Shot', 10)
+        assert play['nodes'][1] == {'kind': 'spawner', 'prefab': 'Drone', 'from': 60, 'every': 40, 'count': 8,
+                                    'x': 'random', 'y': -12}
+        assert play['nodes'][2]['x'] == 128
+        assert play['on_death'] == {'enemy': '_on_death_of_enemy'}
+
+    def test_saved_state_and_enter_logic(self, tmp_path):
+        out = build(tmp_path, self.SOURCE)
+        g = (out / 'scripts' / 'game_state.gd').read_text()
+        assert 'const PERSISTED := ["best"]' in g
+        assert 'Q.load_persisted(self, PERSISTED)' in g and 'Q.save_persisted(self, PERSISTED)' in g
+        play = (out / 'scripts' / 'scene_play.gd').read_text()
+        assert 'func _q_enter() -> void:\n\tif (G.score > G.best):\n\t\tG.best = G.score\n' in play
+
+    def test_saved_is_for_the_game_state(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:scene name="main"><q:set name="x" value="0" type="number" saved="true" /></qg:scene>\n'))
+        assert 'saved= is for the game state' in e.message
+
+    def test_a_fire_prefab_nobody_declared(self, tmp_path):
+        e = refuse(tmp_path, HEAD + '  <qg:prefab name="D" sheet="c" hitbox="1x1" ai="fly" fire-prefab="Pew" fire-every="9" />\n'
+                   '  <qg:scene name="main" />\n' + TAIL)
+        assert "no qg:prefab named 'Pew'" in e.message
+
+    def test_a_scene_on_death_needs_a_tag(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:on-death /></qg:scene>\n'))
+        assert '<qg:on-death> in a scene needs of=' in e.message
+
+    def test_a_scene_on_death_of_an_unknown_tag(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:on-death of="ghost" /></qg:scene>\n'))
+        assert '<qg:on-death of="ghost">: no prefab has that tag' in e.message
+
+    def test_a_spawner_x_is_a_number_or_random(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:spawner prefab="Coin" x="left" /></qg:scene>\n'))
+        assert '<qg:spawner x="left">: a number, or random' in e.message
 
 
 class TestWhatItRefuses:

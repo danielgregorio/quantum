@@ -43,3 +43,10 @@ func go_to_scene(scene_name: String) -> void:
 	current_scene = SceneBuilder.build(spec, scene_spec)
 	current_scene.name = scene_name
 	add_child(current_scene)
+	if G.has_method("_q_save"):
+		G._q_save()
+
+
+func _exit_tree() -> void:
+	if G.has_method("_q_save"):
+		G._q_save()

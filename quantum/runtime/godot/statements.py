@@ -28,6 +28,7 @@ class StateVar:
     type: str
     initial: str   # GDScript literal
     line: Optional[int]
+    persist: bool = False   # game state kept between runs (q:set saved="true")
 
 
 @dataclass
@@ -47,12 +48,18 @@ class SceneScript:
     def scope(self) -> Scope:
         return Scope(self.state.keys(), functions=self.function_names, game_names=self.game_state.keys())
 
+    enter: List[Node] = field(default_factory=list)   # statements directly in the scene: run on enter
+
     def source(self) -> str:
         lines = ['extends "res://addons/quantum/quantum_scene.gd"',
                  '# Compiled by Quantum from the scene; do not edit.', '']
         for var in self.state.values():
             lines.append(f'var {var.name}: {GD_TYPES.get(var.type, "Variant")} = {var.initial}')
         lines.append('')
+        if self.enter:
+            lines.append('func _q_enter() -> void:')
+            lines.append(compile_block(self.enter, self.scope(), self, 1).rstrip('\n'))
+            lines.append('')
         lines.append('func _q_state() -> Dictionary:')
         if self.state:
             items = ', '.join(f'"{v.name}": {v.name}' for v in self.state.values())
@@ -92,7 +99,10 @@ def declare_state(script: SceneScript, st: Statement) -> None:
             initial = gdscript_literal(value, type_name)
         except GameCompileError as e:
             raise GameCompileError(e.message, st.line)
-    script.state[name] = StateVar(name, type_name, initial, st.line)
+    persist = str(st.attrs.get('saved', 'false')).lower() in ('true', '1', 'yes')
+    if persist and script.name != 'game':
+        raise GameCompileError('saved= is for the game state (a q:set in <q:application>)', st.line)
+    script.state[name] = StateVar(name, type_name, initial, st.line, persist)
 
 
 def compile_function(script: SceneScript, st: Statement) -> None:
@@ -117,7 +127,26 @@ def game_state_source(state: Dict[str, StateVar]) -> str:
         lines.append(f'{_INDENT}return {{{items}}}')
     else:
         lines.append(f'{_INDENT}return {{}}')
+    persisted = [v.name for v in state.values() if v.persist]
+    lines.append('')
+    lines.append('# The q:sets with saved=\"true\": read at start, written on every scene change.')
+    lines.append(f'const PERSISTED := {json.dumps(persisted)}')
+    lines.append('')
+    lines.append('func _ready() -> void:')
+    lines.append(f'{_INDENT}Q.load_persisted(self, PERSISTED)')
+    lines.append('')
+    lines.append('func _q_save() -> void:')
+    lines.append(f'{_INDENT}Q.save_persisted(self, PERSISTED)')
     return '\n'.join(lines) + '\n'
+
+
+def prefabs_source(script: 'SceneScript') -> str:
+    """The autoload P: the handlers of the prefabs (qg:on-collision, qg:on-damage, qg:on-death)."""
+    lines = ['extends Node', '# Compiled by Quantum from the handlers of the qg:prefabs; do not edit.', '']
+    for block in script.handlers:
+        lines.append(block)
+        lines.append('')
+    return '\n'.join(lines).rstrip('\n') + '\n'
 
 
 def compile_handler(script: SceneScript, name: str, body: List[Node], line: Optional[int]) -> str:
@@ -221,6 +250,18 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     if el.tag == 'swap':
         script.prefabs_used.append((el.get('prefab'), el.line))
         return f'Q.swap(self, {target}, {json.dumps(el.get("prefab"))})'
+    if el.tag == 'damage':
+        return f'Q.damage({target}, {int(el.get("amount"))})'
+    if el.tag == 'burst':
+        at = el.get('at')
+        if not scope.has(at):
+            raise GameCompileError(f'<qg:burst at="{at}"> outside a handler that has {at!r}', el.line)
+        return f'Q.burst({at}, {json.dumps(el.get("color"))}, {int(el.get("count"))})'
+    if el.tag == 'shake':
+        at = el.get('at')
+        if not scope.has(at):
+            raise GameCompileError(f'<qg:shake at="{at}"> outside a handler that has {at!r}', el.line)
+        return f'Q.shake({at}, {int(el.get("frames"))}, {float(el.get("strength"))!r})'
     if el.tag == 'goto-scene':
         script.scenes_used.append((el.get('name'), el.line))
         return f'Q.goto_scene(self, {json.dumps(el.get("name"))})'
