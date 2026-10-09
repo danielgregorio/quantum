@@ -209,7 +209,7 @@ const TOOLS_SIDEBAR = {
   tools: ['tools', [['cli', '/tools/cli'], ['hotReload', '/tools/hot-reload'], ['devPanel', '/tools/dev-panel'],
     ['errorPages', '/tools/error-pages'], ['check', '/tools/check'], ['vscode', '/tools/vscode-extension'],
     ['lsp', '/tools/lsp-server']]],
-  targets: ['targets', [['desktop', '/targets/desktop']]],
+  targets: ['targets', [['desktop', '/targets/desktop'], ['games', '/targets/games']]],
 }
 
 const TOOLS_TEXT = {
@@ -217,23 +217,25 @@ const TOOLS_TEXT = {
     tools: 'Developer Tools', targets: 'Build Targets', cli: 'CLI Commands', hotReload: 'Hot Reload',
     devPanel: 'The /_dev Panel', errorPages: 'Error Pages', check: 'quantum check',
     vscode: 'VS Code Extension', lsp: 'LSP Server', desktop: 'Desktop (quantum desktop)',
+    games: 'Games (Laboratory)',
   },
   pt: {
     tools: 'Ferramentas de desenvolvimento', targets: 'Destinos de build', cli: 'Comandos da CLI',
     hotReload: 'Hot Reload', devPanel: 'O painel /_dev', errorPages: 'Páginas de erro',
     check: 'quantum check', vscode: 'Extensão do VS Code', lsp: 'Servidor LSP',
-    desktop: 'Desktop (quantum desktop)',
+    desktop: 'Desktop (quantum desktop)', games: 'Jogos (Laboratório)',
   },
   es: {
     tools: 'Herramientas de desarrollo', targets: 'Destinos de compilación', cli: 'Comandos de la CLI',
     hotReload: 'Hot Reload', devPanel: 'El panel /_dev', errorPages: 'Páginas de error',
     check: 'quantum check', vscode: 'Extensión de VS Code', lsp: 'Servidor LSP',
-    desktop: 'Escritorio (quantum desktop)',
+    desktop: 'Escritorio (quantum desktop)', games: 'Juegos (Laboratorio)',
   },
   zh: {
     tools: '开发工具', targets: '构建目标', cli: 'CLI 命令', hotReload: '热重载',
     devPanel: '/_dev 面板', errorPages: '错误页面', check: 'quantum check',
     vscode: 'VS Code 扩展', lsp: 'LSP 服务器', desktop: '桌面（quantum desktop）',
+    games: '游戏（实验室）',
   },
 }
 

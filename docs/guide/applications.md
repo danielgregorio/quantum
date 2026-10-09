@@ -9,7 +9,7 @@ None of them is part of the supported core (see `SUPPORT_TIERS.md`):
 
 | `type` | Tier | What `quantum run app.q` does |
 |--------|------|-------------------------------|
-| `game` | Laboratory | builds a 2D game (`--engine pixi` or `--engine godot`) |
+| `game` | Laboratory | builds a 2D game (a Godot 4 project): see [Games](/targets/games) |
 | `terminal` | Experimental | builds a terminal UI |
 | `ui` | Experimental | builds a UI, layout only (`--target html` or `textual`; `mobile` is Laboratory) |
 

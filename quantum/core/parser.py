@@ -23,10 +23,6 @@ from quantum.core.features.loops.src.ast_node import LoopNode
 from quantum.core.features.state_management.src.ast_node import SetNode
 from quantum.core.docs_links import HOW_A_PAGE_RUNS
 from quantum.core.features.functions.src.ast_node import FunctionNode
-from quantum.core.features.game_engine_2d.src.parser import GameParser
-from quantum.core.features.game_engine_2d.src.ast_nodes import (
-    SceneNode, BehaviorNode, PrefabNode, PersistentNode, EnemyNode,
-)
 from quantum.core.features.terminal_engine.src.parser import TerminalParser
 from quantum.core.features.terminal_engine.src.ast_nodes import (
     ScreenNode as TerminalScreenNode, KeybindingNode as TerminalKeybindingNode,
@@ -998,6 +994,11 @@ class QuantumParser:
 
         app = ApplicationNode(app_id, app_type)
         app.engine = root.get('engine')
+        # The game compiler (quantum/runtime/godot) reads the elements
+        # themselves: a qg: action tag may sit inside a q:if, which the
+        # statement parser would drop.
+        app.xml_root = root
+        app.source_path = getattr(self, '_source_path', None) or str(path)
 
         # Parse theme attribute for UI applications
         theme_attr = root.get('theme')
@@ -1019,9 +1020,8 @@ class QuantumParser:
         # function an on-click pointed to.
         self._parse_application_quantum_children(root, app)
 
-        # Game Engine 2D: parse game children when type="game"
-        if app_type == 'game':
-            self._parse_game_application_children(root, app)
+        # A game's qg: elements are read by its compiler (quantum/runtime/godot)
+        # from app.xml_root, against the game schema.
 
         # Terminal Engine: parse terminal children when type="terminal"
         if app_type == 'terminal':
@@ -1058,122 +1058,6 @@ class QuantumParser:
                 app.functions.append(node)
             elif isinstance(node, SetNode):
                 app.state_vars.append(node)
-
-    def _parse_game_application_children(self, root: ET.Element, app: ApplicationNode):
-        """Parse children of a game application (qg: elements at top level)."""
-        game_parser = GameParser(self)
-        for child in root:
-            local_name = self._get_element_name(child)
-            ns = self._get_element_game_namespace(child)
-
-            if ns == 'game':
-                # Handle scene-include specially (resolved at parse time)
-                if local_name == 'scene-include':
-                    self._parse_scene_include(child, app, game_parser)
-                    continue
-
-                node = game_parser.parse_game_element(local_name, child)
-                if isinstance(node, SceneNode):
-                    app.scenes.append(node)
-                elif isinstance(node, BehaviorNode):
-                    app.behaviors.append(node)
-                elif isinstance(node, PrefabNode):
-                    app.prefabs.append(node)
-                elif isinstance(node, EnemyNode):
-                    app.enemies.append(node)
-                elif isinstance(node, PersistentNode):
-                    app.persistent.append(node)
-
-    def _parse_scene_include(self, element: ET.Element, app: ApplicationNode, game_parser):
-        """Parse <qg:scene-include src="..."> - Include a scene from external .q file.
-
-        The external file should contain a <qg:scene> element (with or without
-        a <q:application> wrapper). The scene is added to the application's scene list.
-        """
-        src = element.get('src', '')
-        if not src:
-            raise QuantumParseError("scene-include requires a 'src' attribute")
-
-        # Resolve relative path from the source file being parsed
-        base_path = getattr(self, '_source_path', None)
-        if base_path:
-            include_path = Path(base_path).parent / src
-        else:
-            include_path = Path(src)
-
-        if not include_path.exists():
-            raise QuantumParseError(f"scene-include: file not found: {include_path}")
-
-        content = include_path.read_text(encoding='utf-8')
-
-        # The same HTML tolerated in any other .q. This path reads a .q file
-        # and went straight to the ET.fromstring below, without passing
-        # through here: a `<br>`, a raw `&`, a boolean attribute or a `<`
-        # inside a value gave "scene-include: parse error" on a file the
-        # normal parser accepts without complaint.
-        content = normalise_html(content)
-
-        # Strip XML processing instruction if present
-        import re
-        content = re.sub(r'<\?xml[^?]*\?>\s*', '', content)
-        # Strip XML comments at the top level
-        content = re.sub(r'<!--[\s\S]*?-->\s*', '', content, count=1)
-        content = content.strip()
-
-        # Wrap in a root element with namespace declarations
-        # This handles bare <qg:scene> files that don't have <q:application>
-        if 'xmlns:qg' not in content:
-            ns_attrs = 'xmlns:qg="https://quantum.lang/game"'
-            if 'q:' in content:
-                ns_attrs += ' xmlns:q="https://quantum.lang/ns"'
-            content = f'<_root {ns_attrs}>{content}</_root>'
-
-        try:
-            include_root = ET.fromstring(content)
-        except ET.ParseError as e:
-            raise QuantumParseError(f"scene-include: parse error in {src}: {e}")
-
-        # Find scene element(s) in the included file
-        self._extract_scenes_from_include(include_root, app, game_parser)
-
-    def _extract_scenes_from_include(self, root: ET.Element, app: ApplicationNode, game_parser):
-        """Extract SceneNode(s) from an included file's parsed XML."""
-        tag = root.tag
-        # Strip namespace
-        if '}' in tag:
-            local = tag.split('}')[-1]
-        elif ':' in tag:
-            local = tag.split(':')[-1]
-        else:
-            local = tag
-
-        if local == 'scene':
-            # Root element is the scene itself
-            node = game_parser.parse_game_element('scene', root)
-            if isinstance(node, SceneNode):
-                app.scenes.append(node)
-        else:
-            # Root is a wrapper — look for scene children
-            for child in root:
-                child_ns = self._get_element_game_namespace(child)
-                child_local = self._get_element_name(child)
-                if child_ns == 'game' and child_local == 'scene':
-                    node = game_parser.parse_game_element('scene', child)
-                    if isinstance(node, SceneNode):
-                        app.scenes.append(node)
-
-    def _get_element_game_namespace(self, element: ET.Element) -> str:
-        """Detect if element belongs to qg: (game) or q: (quantum) namespace."""
-        tag = element.tag
-        if '{https://quantum.lang/game}' in tag:
-            return 'game'
-        if '{https://quantum.lang/ns}' in tag:
-            return 'quantum'
-        if tag.startswith('qg:'):
-            return 'game'
-        if tag.startswith('q:'):
-            return 'quantum'
-        return 'html'
 
     def _parse_terminal_application_children(self, root: ET.Element, app: ApplicationNode):
         """Parse children of a terminal application (qt: elements at top level)."""

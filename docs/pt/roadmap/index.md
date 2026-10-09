@@ -81,7 +81,7 @@ O `quantum test` saiu na 1.0 ([Testing](/guide/testing), em inglês). A seguir:
 
 | Item | Estado |
 |---|---|
-| Games 2: jogos como uma simulação declarativa determinística, em que as mesmas entradas dão sempre o mesmo jogo, para que um jogo possa ser testado e repetido | em desenho |
+| Games 2: jogos como uma simulação declarativa determinística, em que as mesmas entradas dão sempre o mesmo jogo, para que um jogo possa ser testado e repetido — um compilador para Godot 4, três jogos ([Hopper, Keep, Drift](/targets/games)), cada um repetido no CI | feito |
 
 O trabalho do Laboratório não tem promessa: pode mudar ou parar a qualquer
 momento.

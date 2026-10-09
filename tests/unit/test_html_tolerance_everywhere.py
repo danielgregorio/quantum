@@ -6,7 +6,7 @@ HTML people write — `<input required>`, `<br>`, `Forms & Actions`,
 `QuantumParser.parse` calls it. Two other places read `.q` and called
 `ET.fromstring` directly, without it:
 
-  * `QuantumParser._parse_scene_include` (games' scene-include): a `<br>` or a
+  * The games' scene-include (since removed with the old game parser): a `<br>` or a
     raw `&` in a scene file gave "scene-include: parse error" on a file the
     normal parser accepts.
   * `component_discovery.QuantumParser._validate_xml` (admin): it marked the
@@ -125,46 +125,6 @@ class TestJavaScriptWithMarkupInside:
         if not target.exists():
             pytest.skip("the file is not in this checkout")
         QuantumParser(use_cache=False).parse_file(str(target))
-
-
-class TestSceneInclude:
-    def test_common_html_in_an_included_file_does_not_break(self, tmp_path):
-        from quantum.core.parser import QuantumParser
-
-        (tmp_path / "scene.q").write_text(
-            '<qg:scene name="level1" xmlns:qg="https://quantum.lang/game">\n'
-            '  <qg:sprite name="hero" x="0" y="0" />\n'
-            '</qg:scene>\n',
-            encoding='utf-8')
-        game = tmp_path / "game.q"
-        game.write_text(
-            '<q:application id="j" type="game">\n'
-            '  <qg:scene-include src="scene.q" />\n'
-            '</q:application>\n',
-            encoding='utf-8')
-
-        ast = QuantumParser(use_cache=False).parse_file(str(game))
-        assert [c.name for c in ast.scenes] == ["level1"]
-
-    def test_a_raw_ampersand_in_an_included_file(self, tmp_path):
-        """A raw `&`: valid in HTML, invalid in XML. It went straight to the
-        scene-include's ET.fromstring."""
-        from quantum.core.parser import QuantumParser
-
-        (tmp_path / "scene.q").write_text(
-            '<qg:scene name="level1" xmlns:qg="https://quantum.lang/game">\n'
-            '  <qg:sprite name="Lives & Points" x="0" y="0" />\n'
-            '</qg:scene>\n',
-            encoding='utf-8')
-        game = tmp_path / "game.q"
-        game.write_text(
-            '<q:application id="j" type="game">\n'
-            '  <qg:scene-include src="scene.q" />\n'
-            '</q:application>\n',
-            encoding='utf-8')
-
-        ast = QuantumParser(use_cache=False).parse_file(str(game))
-        assert [c.name for c in ast.scenes] == ["level1"]
 
 
 class TestTheNamespacesTheFrameworkInjects:

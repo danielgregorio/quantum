@@ -176,13 +176,6 @@ def game_builder():
     return GameBuilder()
 
 
-@pytest.fixture
-def game_codegen():
-    """GameCodeGenerator instance."""
-    from quantum.runtime.game_code_generator import GameCodeGenerator
-    return GameCodeGenerator()
-
-
 @pytest.fixture(autouse=True)
 def _stop_job_threads():
     """A test that ran q:job, q:schedule or q:thread leaves its threads stopped and joined.

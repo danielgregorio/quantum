@@ -85,7 +85,7 @@ game shows up — and a red CI says at once which side broke.
 
 | Area | Note |
 |---|---|
-| 2D game engine (`qg:`), Godot codegen | The games in `projects/` and `examples/` are built by the codegen; never edit the generated output. Language changes that break a game migrate its `.q` sources in the same change |
+| The game language (`qg:`) and its compiler to Godot 4 (`quantum/runtime/godot/`) | `docs/targets/games.md` is generated from the schema. The three games in `projects/` (Hopper, Keep, Drift) are written in the tags and nothing else, and replayed in CI by the real engine (`tests/godot/`); `projects/*/godot/` is build output, never edited. A language change that breaks a game changes the game in the same commit (`PLAN_GAMES_2.md`) |
 | `quantum-as4` (MXML/AS4 → JS compiler) | Has an open regression in `test_transpiler_comprehensive.py` |
 | `quantum run --target mobile` (React Native) | Translates `q:set`/`q:function` to JavaScript on its own — the opposite of "one runtime". Phones are out of 1.0. Warns once (`tiers.warn_ui_target`) |
 

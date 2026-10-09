@@ -8,8 +8,135 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ## Unreleased
 
+### Removed
+
+- Laboratory: the old game parser (`quantum/core/features/game_engine_2d`)
+  and Godot generator (`godot_code_generator.py`, `godot_templates.py`)
+  with their tests: the new compiler reads the elements itself, and the
+  old parser rejected every tag it did not know.
+- Laboratory: the HTML game backend (PixiJS + Matter.js) is gone. A
+  `q:application type="game"` builds a Godot 4 project, the only backend;
+  `quantum run game.q` no longer takes `--engine`.
+- Laboratory: the games written for that backend are gone with it —
+  `projects/quantum-snake`, `quantum-tictactoe`, `kenney-platformer` and
+  the game examples (`snake.q`, `tictactoe.q`, `platformer.q`, `fighter.q`,
+  `adventure.q`, `kenney_platformer.q`), whose logic was JavaScript against
+  its runtime. The language is being redesigned (`PLAN_GAMES_2.md`) and
+  owes them no compatibility; the three games of that plan replace them.
+  The Kenney CC0 art and sounds they used stay, in `assets/kenney/`.
+
 ### Added
 
+- Laboratory: a new game compiler and runtime (`quantum/runtime/godot/`),
+  rebuilt from scratch on the "thin compiler, fat runtime" design of
+  `PLAN_GAMES_2.md`. The `.q` compiles to `game.json` (everything
+  declarative), one GDScript per scene (its `q:set`s as properties, its
+  `q:function`s and handlers as methods, Quantum expressions compiled to
+  GDScript), and a fixed runtime, `addons/quantum/`, that builds the scene
+  tree from the JSON. The schema (`schema.py`) is the language: an unknown
+  tag or attribute, a name no `q:set` declared, text where statements go
+  (the old backend's JavaScript) — each is a compile error with its line.
+  Tags so far: `qg:tileset`, `qg:spritesheet`, `qg:prefab`, `qg:scene`,
+  `qg:tilemap` (CSV), `qg:character controller="platformer"` (kinematic,
+  with `run-speed`, `jump-height` to the pixel, variable jump, coyote
+  frames), `qg:on-collision with=`, `qg:destroy`, `qg:instance`,
+  `qg:camera`, `qg:hud` with `qg:counter`; and `q:set`, `q:if`/`q:else`/
+  `q:elseif`, `q:loop`, `q:function`, `q:return` inside handlers. Then, for
+  the platformer: `qg:sound` and `qg:play`; `qg:animation` (frames cycled
+  by physics ticks — a character plays idle/walk/jump by what it does);
+  `qg:prefab ai="patrol"` (walks, turns at walls or edges, under gravity);
+  `qg:on-collision side="top"` (a stomp) with `cooldown=` ticks; `qg:bounce`,
+  `qg:respawn`; `qg:on-fall` below the tilemap; `jump-sound=`. Things
+  collide with the tiles, not with the characters: touching is the areas'
+  job, so a walker hurts instead of blocking. Then: `qg:state` (a form of
+  the character — hitbox, frame, animations; `me.state` reads it) and
+  `qg:become`; `qg:prefab solid="true"` (a block to stand on and bump) with
+  `qg:on-collision side="bottom"`; `qg:spawn`, `qg:swap`, `qg:checkpoint`;
+  `qg:text` in the HUD. Then: a `q:set` in `<q:application>` is the game's
+  state, kept across scenes (an autoload `G`); `qg:goto-scene`; a world
+  map (`qg:character controller="map"`, `qg:map-node`, `qg:map-path
+  requires=`); `qg:on-input` in a scene; `q:call` of a `q:function`. And
+  `qg:tilemap src="level.tmx"`: a level drawn in Tiled — its tile layers
+  (a `collision` property makes one solid) and its object layers, whose
+  objects place prefabs by their class. For the top-down game:
+  `qg:character controller="topdown"` (eight directions, `speed=`, a swing
+  on `attack-action=` with `attack-reach=`/`attack-frames=`), `qg:on-hit`
+  for what the swing reaches, `qg:exit` (a rectangle that leads to another
+  scene, arriving at the exit named there — disarmed until left),
+  `qg:prefab ai="wander"` (headings from the scene's seed) and
+  `ai="chase" sight=`, `qg:instance name=` (`other.name` in a handler) and
+  `if=` (placed only when true as the scene is built). For the shooter:
+  `qg:character controller="ship"` (eight directions, kept in the scene,
+  shoots `fire-prefab=` every `fire-every=` ticks while `fire-action=` is
+  held); `qg:prefab ai="fly" heading= lifetime=` and `ai="sway"`;
+  `health=` with `qg:damage`, `qg:on-damage` and `qg:on-death` (in the
+  prefab, or in the scene with `of=` a tag); `qg:on-collision` in a
+  prefab (a shot that hits); `qg:state` on a prefab (frame, speed,
+  fire-every); `qg:spawner` (so many of a prefab, every so many ticks,
+  `x="random"` from the scene's seed); `qg:burst` and `qg:shake`
+  (cosmetic); a `q:set` in `<q:application>` with `saved="true"` is kept
+  between runs (a file in `user://`; the replay harness gives each run its
+  own); `q:if`/`q:loop`/`q:call` directly in a scene run as it is entered.
+- `projects/drift/drift.q`, the vertical shooter: three waves of drones
+  and tanks that come down and shoot, then a boss with two phases; lives,
+  score and a high score kept between runs — zero lines of script.
+  `tests/godot/test_godot_drift.py` replays it: the waves come from the
+  seed the same way every run, shots kill drones and the score counts,
+  drones and their shots cost lives, the boss turns angry below half
+  health and its death wins, the high score survives into the next run,
+  three lives lost are game over and jump starts again.
+- `projects/keep/keep.q`, the top-down adventure: six rooms of a keep, a
+  character that walks in eight directions and swings a sword, slimes
+  that wander and bats that chase, a sign, hearts, a key and a locked
+  door, a switch that opens a gate in another room, a chest at the end, a
+  game over — zero lines of script. `tests/godot/test_godot_keep.py`
+  replays it: the slime wanders the same way from the same seed, walking
+  into an exit changes room and arrives at the matching exit, the bat
+  chases within sight and hurts once per cooldown, the swing kills it, the
+  key opens the door, the gate blocks until the switch is thrown, the
+  chest ends the game, three hurts are game over and jump starts again.
+- `projects/hopper/hopper.q`, the platformer: a world map and three
+  levels (the second drawn in Tiled). A character that walks and jumps on a tilemap, blocks with a
+  power-up in them that makes it big (a hit makes it small again), coins,
+  walkers to stomp or be hurt by, pits, checkpoints, spikes, a flag at the
+  end of each level that opens the next on the map, a game over after
+  three deaths; score, coins, lives and a message in the HUD — zero lines
+  of script. `tests/godot/test_godot_hopper.py` replays it in Godot: the
+  game starts on the map and a shut path stays shut; jump enters a level;
+  the character rests on the ground, runs at its `run-speed`, a held jump
+  peaks at `jump-height` within a pixel, a tap is a short hop, a coin
+  collected is counted, the block opens from below, the power-up and the
+  hit change its state, the walker hurts once (cooldown) and sends it
+  back to the start, landing on the walker stomps it, the pit costs a
+  life, the spikes send it back to the checkpoint, the flag wins the level
+  and opens the next on the map, three deaths are game over and jump
+  starts again, and the same tape gives the same game.
+- Laboratory, after the plan closed: `qg:input` (a game's own keys for an
+  action); `qg:timer after=` / `every=` in a scene (Hopper's clock,
+  Drift's "here it comes"); `qg:prefab solid="true" one-way="true"` (a
+  ledge jumped through from below) and `ai="shuttle"` (a lift that goes
+  `dx`,`dy` and back every `period` ticks, carrying what stands on it);
+  slices in expressions (`items[1:3]`, `name[-2:]`); `q:loop` over a
+  dictionary iterates its keys, as GDScript does. A `q:set` without
+  `type=` is a `Variant` in GDScript, so a number may follow a string as
+  in Quantum; a `q:set` named like a Godot node property (`name`,
+  `position`...) is refused. `str()` of a whole number is `7`, not `7.0`.
+  `tests/godot/test_godot_expressions.py` runs 45 expressions in Godot
+  and compares each with the Core evaluator.
+- `docs/targets/games.md`, the game language reference, generated from the
+  compiler's schema and the three games by `scripts/generate-games-reference.py`
+  (a test fails when it is stale); `scripts/export-games.py` exports the
+  games for the web with Godot's export templates, when they are installed.
+- Laboratory: the real engine checks and replays a game, headless.
+  `quantum run game.q --check` opens the built Godot project and fails on
+  any script error (Godot exits 0 either way; the check reads its output).
+  `quantum/runtime/godot_replay.py` runs a game for N physics ticks under
+  an input tape and returns the state every node reports through
+  `quantum_state()` — the same tape, the same state, which is how the games
+  get tested. The Godot version is pinned in `quantum/runtime/godot_bin.py`;
+  `python scripts/godot.py install` downloads it into `~/.cache/quantum/godot`,
+  and the Laboratory CI job does the same (cached by version). Without it,
+  the tests in `tests/godot/` skip.
 - A playground on the site (/playground/): the Cookbook's recipes, editable,
   run in the browser by the real `quantum-framework` from PyPI (Pyodide) —
   with the database built from their migrations, links and forms that work,
