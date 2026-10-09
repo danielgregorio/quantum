@@ -248,8 +248,8 @@ class TestStatesBlocksAndSpawns:
         character = data['scenes']['main']['nodes'][0]
         assert character['initial_state'] == 'small'
         assert character['states'] == {
-            'small': {'hitbox': [18, 22], 'frame': 0, 'speed': None, 'fire_every': None, 'animations': {}},
-            'big': {'hitbox': [18, 30], 'frame': 3, 'speed': None, 'fire_every': None,
+            'small': {'hitbox': [18, 22], 'frame': 0, 'speed': None, 'fire_every': None, 'fire_prefab': None, 'range': None, 'animations': {}},
+            'big': {'hitbox': [18, 30], 'frame': 3, 'speed': None, 'fire_every': None, 'fire_prefab': None, 'range': None,
                     'animations': {'walk': {'frames': [4, 5], 'fps': 8}}},
         }
         assert character['on_collision'][0]['side'] == 'bottom'
@@ -616,7 +616,7 @@ class TestArcadePrefabsAndSpawners:
         assert (drone['health'], drone['fire_prefab'], drone['fire_every']) == (3, 'Shot', 90)
         assert drone['on_damage'] == '_Drone_on_damage' and drone['on_death'] == '_Drone_on_death'
         assert drone['initial_state'] == 'calm'
-        assert drone['states']['angry'] == {'hitbox': None, 'frame': 2, 'speed': 70, 'fire_every': 25,
+        assert drone['states']['angry'] == {'hitbox': None, 'frame': 2, 'speed': 70, 'fire_every': 25, 'fire_prefab': None, 'range': None,
                                             'animations': {}}
         play = data['scenes']['play']
         ship = play['nodes'][0]
@@ -1106,3 +1106,69 @@ class TestMultiplayer:
     ])
     def test_what_it_refuses(self, tmp_path, source, message):
         assert message in str(refuse(tmp_path, HEAD + '  ' + source + '\n' + TAIL))
+
+
+class TestWhatTowersAsked:
+    """What the tower defense made the language say (projects/towers/README.md)."""
+
+    def test_named_actions_the_mouse_and_the_defaults(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:input action="buy" keys="1, MouseRight" />
+  <qg:scene name="main">
+    <q:set name="n" value="0" type="number" />
+    <qg:on-input action="buy"><q:set name="n" value="{n + 1}" /></qg:on-input>
+    <qg:on-input action="select"><q:set name="n" value="{n + 2}" /></qg:on-input>
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['inputs']['buy'] == ['1', {'mouse_button': 2}]
+        assert data['inputs']['select'] == ['Enter', {'mouse_button': 1}, {'joy_button': 0, 'device': 0}]
+        assert data['actions'] == ['left', 'right', 'up', 'down', 'jump', 'select', 'cancel', 'buy']
+        assert set(data['scenes']['main']['on_input']) == {'buy', 'select'}
+        err = refuse(tmp_path, game('  <qg:scene name="main"><qg:on-input action="fire"><q:set name="x" value="1" /></qg:on-input></qg:scene>\n'))
+        assert '<qg:on-input action="fire">: no such action' in str(err)
+
+    def test_a_cursor_a_select_handler_and_a_spawn_at_the_cursor(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:prefab name="Tower" tag="tower" sheet="k" frame="1" hitbox="16x16" ai="turret" targets="coin" range="80" fire-every="30" attack="area" damage="2" />
+  <qg:scene name="main">
+    <q:set name="gold" value="100" type="number" />
+    <qg:cursor player="1" grid="16" sheet="k" frame="2" />
+    <qg:zone name="r" tag="road" x="0" y="0" width="50" height="50" />
+    <qg:on-select>
+      <q:if condition="{other == null and thing_at('road', cursor.x, cursor.y) == null and gold >= 10 and count('tower') < 5}">
+        <q:set name="gold" value="{gold - 10}" />
+        <qg:spawn prefab="Tower" at="cursor" />
+      </q:if>
+      <q:if condition="{other != null and other.tag == 'tower'}"><qg:become target="other" state="x" /></q:if>
+    </qg:on-select>
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        tower = data['prefabs']['Tower']
+        assert (tower['ai'], tower['targets'], tower['range'], tower['attack'], tower['damage']) == ('turret', 'coin', 80.0, 'area', 2)
+        nodes = data['scenes']['main']['nodes']
+        assert nodes[0] == {'kind': 'cursor', 'player': 1, 'step': 16.0, 'grid': 16, 'sheet': 'k', 'frame': 2}
+        assert data['scenes']['main']['on_select'] == {'0': '_on_select_0'}
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'func _on_select_0(cursor, other) -> void:' in script
+        assert 'Q.thing_at(self, "road", cursor.x, cursor.y)' in script and 'Q.count(self, "tower")' in script
+        assert 'Q.spawn_at(self, "Tower", Vector2(cursor.x + 0.0, cursor.y + 0.0))' in script
+        err = refuse(tmp_path, game('  <qg:scene name="main"><q:set name="x" value="0" type="number" />'
+                                    '<qg:on-select><q:set name="x" value="1" /></qg:on-select></qg:scene>\n'))
+        assert '<qg:on-select> in a scene without a <qg:cursor>' in str(err)
+
+    def test_a_path_and_what_follows_it(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:prefab name="Walker" tag="w" sheet="k" frame="1" hitbox="16x16" ai="path" speed="100" />
+  <qg:scene name="main">
+    <qg:path name="road" points="0,10; 100,10; 100,200" />
+    <qg:timer every="30"><qg:spawn prefab="Walker" at="path" path="road" /></qg:timer>
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['scenes']['main']['nodes'][0] == {'kind': 'path', 'name': 'road', 'points': [[0.0, 10.0], [100.0, 10.0], [100.0, 200.0]]}
+        assert 'Q.spawn_on_path(self, "Walker", "road")' in (out / 'scripts' / 'scene_main.gd').read_text()
+        err = refuse(tmp_path, HEAD + '''  <qg:prefab name="Walker" tag="w" sheet="k" frame="1" hitbox="16x16" ai="path" />
+  <qg:scene name="main"><qg:timer every="30"><qg:spawn prefab="Walker" at="path" path="lane" /></qg:timer></qg:scene>
+''' + TAIL)
+        assert '<qg:spawn path="lane">: no qg:path of that name' in str(err)
+        err = refuse(tmp_path, game('  <qg:scene name="main"><qg:path name="p" points="1,2" /></qg:scene>\n'))
+        assert 'points= needs at least two points' in str(err)

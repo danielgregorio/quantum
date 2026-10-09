@@ -41,8 +41,8 @@ func _ready() -> void:
 # Under lockstep the keys press raw_<action>; the real actions (up, p2_up...)
 # are pressed by the lockstep node alone, on every peer alike.
 func _shadow_inputs() -> void:
-	for action in ["left", "right", "up", "down", "jump"]:
-		var raw: String = "raw_" + action
+	for action in spec.get("actions", ["left", "right", "up", "down", "jump"]):
+		var raw: String = "raw_" + str(action)
 		if not InputMap.has_action(raw):
 			InputMap.add_action(raw)
 		for ev in InputMap.action_get_events(action):
@@ -64,6 +64,10 @@ func _register_inputs(inputs: Dictionary) -> void:
 				jb.button_index = int(key["joy_button"])
 				jb.device = int(key.get("device", 0))
 				InputMap.action_add_event(action, jb)
+			elif key is Dictionary and key.has("mouse_button"):
+				var mb := InputEventMouseButton.new()
+				mb.button_index = int(key["mouse_button"])
+				InputMap.action_add_event(action, mb)
 			elif key is Dictionary and key.has("joy_axis"):
 				var ja := InputEventJoypadMotion.new()
 				ja.axis = int(key["joy_axis"])

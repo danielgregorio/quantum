@@ -27,6 +27,19 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: a sixth game, `projects/towers/towers.q` — the MIT "Godot 4
+  Tower Defense Template" transcribed (`projects/towers/README.md` maps it),
+  playable by two over the network. What it made the language grow: named
+  actions (`qg:input action="buy-gatling"`, `qg:on-input` on any declared
+  action), `MouseLeft`/`MouseRight` keys and the default `select`/`cancel`
+  actions; `qg:cursor` (the mouse, or a player's directions, snapped to
+  `grid=`) and `qg:on-select` with `cursor` and `other` — under
+  `qg:multiplayer` the cursor travels in the input frame; `count(tag)` and
+  `thing_at(tag, x, y)` in expressions; `qg:path points=` with `ai="path"`
+  and `qg:spawn at="path"`; `ai="turret" targets= range= attack= damage=`
+  firing `fire-prefab` at the nearest target, `fire-prefab`/`range` on a
+  `qg:state`, `qg:become target="other"`, `qg:spawn at="cursor"`. The
+  replay tape takes `cursor` events (`cursor_at()`).
 - Laboratory: declarative multiplayer. `<qg:multiplayer players="2" />` in
   a game: every peer runs the whole game in lockstep — a tick runs when
   every player's input for it has arrived, `delay=` ticks after the press;

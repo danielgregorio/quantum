@@ -116,8 +116,8 @@ The keys of an action, instead of the defaults (arrows/WASD to move, space/Z/X t
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `action` | `left` / `right` / `up` / `down` / `jump` | required |  |
-| `keys` | text | required | comma-separated: Godot key names (Space, Left, A, Enter...) and joypad names — JoyA JoyB JoyX JoyY JoyL JoyR JoyL2 JoyR2 JoyStart JoySelect, JoyUp JoyDown JoyLeft JoyRight (the pad), JoyLeftStickUp/Down/Left/Right, JoyRightStickUp/Down/Left/Right. Player n reads joypad n-1 |
+| `action` | a name | required | left, right, up, down, jump, select, cancel — or a name of the game's own (buy, pause): qg:on-input reads it |
+| `keys` | text | required | comma-separated: Godot key names (Space, Left, A, Enter...) and joypad names — JoyA JoyB JoyX JoyY JoyL JoyR JoyL2 JoyR2 JoyStart JoySelect, JoyUp JoyDown JoyLeft JoyRight (the pad), JoyLeftStickUp/Down/Left/Right, JoyRightStickUp/Down/Left/Right; MouseLeft, MouseRight, MouseMiddle. Player n reads joypad n-1 |
 | `player` | integer | `1` | whose keys: the character with the same player= |
 
 Goes inside: `q:application`.
@@ -157,7 +157,11 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `sheet` | a name | required | a qg:spritesheet or qg:tileset |
 | `frame` | integer | `0` |  |
 | `hitbox` | `WxH` pixels | required |  |
-| `ai` | `patrol` / `wander` / `chase` / `fly` / `sway` / `shuttle` |  | patrol: walks under gravity, turns at walls (and at edges with turns-at); wander: top-down, changes direction now and then (from the scene seed); chase: top-down, goes for the character within sight=; fly: straight along heading=; sway: side to side across the scene; shuttle: a solid that goes dx=,dy= and back every period= ticks, carrying what stands on it |
+| `ai` | `patrol` / `wander` / `chase` / `fly` / `sway` / `shuttle` / `path` / `turret` |  | patrol: walks under gravity, turns at walls (and at edges with turns-at); wander: top-down, changes direction now and then (from the scene seed); chase: top-down, goes for the character within sight=; fly: straight along heading=; sway: side to side across the scene; shuttle: a solid that goes dx=,dy= and back every period= ticks, carrying what stands on it; path: follows the qg:path it was spawned on (qg:spawn at="path"), then stands at its end; turret: stands, and fires fire-prefab at the nearest targets= within range= every fire-every |
+| `range` | number | `100.0` | turret: pixels |
+| `targets` | a name |  | turret: the tag it shoots at |
+| `attack` | `shoot` / `area` | `shoot` | turret: shoot spawns fire-prefab headed at the target; area damages every target in range by damage= |
+| `damage` | integer | `1` | turret attack="area": the damage |
 | `dx` | number | `0.0` | shuttle: how far it goes, pixels |
 | `dy` | number | `0.0` | shuttle: how far it goes, pixels |
 | `period` | integer | `240` | shuttle: ticks for there and back |
@@ -202,6 +206,8 @@ A form of a character or a prefab (small, big; calm, angry): hitbox, frame, anim
 | `frame` | integer | `0` |  |
 | `speed` | number |  | prefab: overrides its speed |
 | `fire-every` | integer |  | prefab: overrides its fire-every |
+| `fire-prefab` | a name |  | prefab: overrides its fire-prefab |
+| `range` | number |  | turret: overrides its range |
 | `initial` | true / false | `false` | the state it starts in (else the first one) |
 
 Goes inside: `qg:character`, `qg:prefab`.
@@ -334,6 +340,31 @@ A picture in the scene, with no behaviour: a backdrop, a divider, a sign.
 
 Goes inside: `qg:scene`.
 
+### `qg:path`
+
+A route through the scene, straight from point to point, that ai="path" prefabs follow (qg:spawn at="path" path=).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required |  |
+| `points` | text | required | x,y pairs separated by semicolons: 0,100; 200,100; 200,300 |
+
+Goes inside: `qg:scene`.
+
+### `qg:cursor`
+
+A player's pointer in the scene: the mouse, moved also by that player's left/right/up/down by step= pixels. `cursor.x`, `cursor.y` (and, with grid=, `cursor.col`, `cursor.row`, snapped) in qg:on-select; with sheet= it is drawn. Under qg:multiplayer every player's cursor travels with their input.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `player` | integer | `1` |  |
+| `step` | number | `16.0` | pixels per tick while a direction is held |
+| `grid` | integer |  | cell size: the cursor snaps to cell centres |
+| `sheet` | a name |  |  |
+| `frame` | integer | `0` |  |
+
+Goes inside: `qg:scene`.
+
 ### `qg:exit`
 
 A rectangle that leads to another scene; the character arrives at the exit named at= there.
@@ -425,7 +456,7 @@ Goes inside: `qg:hud`.
 
 ## Handlers
 
-Where the logic goes: actions and statements, with `me` and `other`.
+Where the logic goes: actions and statements, with `me` and `other` (`cursor` and `other` in qg:on-select).
 
 ### `qg:on-collision`
 
@@ -461,7 +492,17 @@ What happens when the player presses an action in this scene. Holds actions and 
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `action` | `jump` / `left` / `right` / `up` / `down` | required |  |
+| `action` | a name | required | a default action, or one a qg:input declares |
+
+Goes inside: `qg:scene`.
+
+### `qg:on-select`
+
+What happens when a player presses select with their qg:cursor somewhere. Holds actions and statements; `cursor` is where (x, y, col, row, player), `other` the thing under it, or null.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `player` | integer |  | only this player's cursor (any, when not given) |
 
 Goes inside: `qg:scene`.
 
@@ -528,11 +569,11 @@ Goes inside: a handler.
 
 ### `qg:become`
 
-Changes the character to one of its qg:states.
+Changes a character or a thing to one of its qg:states.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `target` | `me` | `me` |  |
+| `target` | `me` / `other` | `me` |  |
 | `state` | a name | required |  |
 
 Goes inside: a handler.
@@ -544,7 +585,8 @@ Places a new prefab instance in the scene.
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `prefab` | a name | required |  |
-| `at` | `other` / `me` | `other` | whose position |
+| `at` | `other` / `me` / `cursor` / `path` | `other` | whose position; cursor: where the qg:on-select cursor is; path: the start of path= |
+| `path` | a name |  | at="path": a qg:path of the scene, which an ai="path" prefab follows |
 | `dx` | number | `0.0` |  |
 | `dy` | number | `0.0` | offset in pixels |
 
@@ -682,10 +724,10 @@ second game, it is a `qg:` attribute waiting to be named.
 | Camera2D | `qg:camera` | 57 |
 | CharacterBody2D | `qg:character`, a thing prefab and its instances | 48 |
 | Label | `qg:counter`, `qg:text` | 71 |
+| Node2D | `qg:cursor`, `qg:path`, `qg:scene` | 31 |
 | Area2D | `qg:exit`, `qg:zone`, an item prefab and its instances | 49 |
 | CanvasLayer | `qg:hud` | 16 |
 | Sprite2D | `qg:map-node`, `qg:sprite` | 41 |
-| Node2D | `qg:scene` | 31 |
 | AudioStreamPlayer | `qg:sound` | 19 |
 | Node | `qg:spawner`, `qg:timer` | 9 |
 | TileMapLayer | `qg:tilemap` | 41 |
@@ -1856,6 +1898,186 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <qg:goto-scene name="play" />
       </q:if>
     </qg:on-input>
+  </qg:scene>
+
+</q:application>
+```
+
+### Towers
+
+`projects/towers/towers.q` — a tower defense transcribed from an MIT Godot template: a cursor, turrets that shoot the nearest dino, dinos down a path in waves, gold and a base; two players over the network (projects/towers/README.md).
+
+```xml
+<q:application id="towers" type="game">
+
+  <!-- Towers: the "Godot 4 Tower Defense Template" (github.com/ape1121, MIT)
+       transcribed into the game language, with its map, dinos and turrets
+       (assets/LICENSE.md). README.md next to this file maps the original to
+       its tags and lists what the language had to grow. Two players can
+       build on the same map over the network (qg:multiplayer). -->
+
+  <q:set name="gold" value="100" type="number" />
+  <q:set name="base_hp" value="10" type="number" />
+  <q:set name="wave" value="0" type="number" />
+
+  <qg:spritesheet name="map" src="assets/map.png" tile="1156x745" />
+  <qg:spritesheet name="gatling" src="assets/gatling.png" tile="96" />
+  <qg:spritesheet name="explosive" src="assets/explosive.png" tile="32" />
+  <qg:spritesheet name="bullet" src="assets/bullet1.png" tile="16" />
+  <qg:spritesheet name="red" src="assets/dino1.png" tile="48" />
+  <qg:spritesheet name="blue" src="assets/dino2.png" tile="48" />
+  <qg:spritesheet name="yellow" src="assets/dino3.png" tile="48" />
+  <qg:spritesheet name="green" src="assets/dino4.png" tile="48" />
+
+  <qg:input action="buy-gatling" keys="1" />
+  <qg:input action="buy-explosive" keys="2" />
+  <qg:multiplayer players="2" delay="3" />
+
+  <!-- The gatling shoots a bullet at the nearest dino in range every half
+       second; upgraded, twice as often. The explosive hurts every dino in
+       reach every second. -->
+  <qg:prefab name="Bullet" tag="bullet" sheet="bullet" frame="0" hitbox="12x12" ai="fly" speed="200" lifetime="90" rotate="true">
+    <qg:animation name="walk" frames="0, 1, 2, 3, 4, 5" fps="12" />
+    <qg:on-collision with="dino">
+      <qg:damage target="other" amount="10" />
+      <qg:destroy target="me" />
+    </qg:on-collision>
+  </qg:prefab>
+  <qg:prefab name="Gatling" tag="tower" sheet="gatling" frame="0" hitbox="48x48" ai="turret" targets="dino"
+             range="200" fire-prefab="Bullet" fire-every="30" rotate="true">
+    <qg:state name="level1" initial="true" />
+    <qg:state name="level2" fire-every="15" />
+  </qg:prefab>
+  <qg:prefab name="Explosive" tag="tower" sheet="explosive" frame="0" hitbox="32x32" ai="turret" targets="dino"
+             range="100" attack="area" damage="5" fire-every="60">
+    <qg:state name="level1" initial="true" />
+    <qg:state name="level2" fire-every="40" />
+  </qg:prefab>
+
+  <!-- Four dinos, as the template has them: health, speed (100 px/s per unit),
+       what one costs the base at the end of the road, what it pays when it dies. -->
+  <qg:prefab name="RedDino" tag="dino" sheet="red" frame="4" hitbox="26x26" ai="path" speed="100" health="10">
+    <qg:animation name="walk" frames="4, 5, 6, 7, 8, 9" fps="10" />
+    <qg:on-collision with="base"><q:set name="base_hp" value="{base_hp - 5}" /><qg:destroy target="me" /></qg:on-collision>
+    <qg:on-death><q:set name="gold" value="{gold + 10}" /></qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="BlueDino" tag="dino" sheet="blue" frame="4" hitbox="26x26" ai="path" speed="200" health="5">
+    <qg:animation name="walk" frames="4, 5, 6, 7, 8, 9" fps="10" />
+    <qg:on-collision with="base"><q:set name="base_hp" value="{base_hp - 5}" /><qg:destroy target="me" /></qg:on-collision>
+    <qg:on-death><q:set name="gold" value="{gold + 10}" /></qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="YellowDino" tag="dino" sheet="yellow" frame="4" hitbox="26x26" ai="path" speed="500" health="10">
+    <qg:animation name="walk" frames="4, 5, 6, 7, 8, 9" fps="10" />
+    <qg:on-collision with="base"><q:set name="base_hp" value="{base_hp - 1}" /><qg:destroy target="me" /></qg:on-collision>
+    <qg:on-death><q:set name="gold" value="{gold + 10}" /></qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="GreenDino" tag="dino" sheet="green" frame="4" hitbox="26x26" ai="path" speed="1000" health="10">
+    <qg:animation name="walk" frames="4, 5, 6, 7, 8, 9" fps="10" />
+    <qg:on-collision with="base"><q:set name="base_hp" value="{base_hp - 1}" /><qg:destroy target="me" /></qg:on-collision>
+    <qg:on-death><q:set name="gold" value="{gold + 10}" /></qg:on-death>
+  </qg:prefab>
+
+  <qg:scene name="map" width="1152" height="648" background="#1a1a1a" seed="11">
+    <q:set name="gold" value="100" />
+    <q:set name="base_hp" value="10" />
+    <q:set name="wave" value="0" />
+    <q:set name="to_spawn" value="0" type="number" />
+    <q:set name="kinds" value="1" type="number" />
+    <q:set name="enemies" value="0" type="number" />
+    <q:set name="choice" value="Gatling" />
+    <q:set name="status" value="1: Gatling (50)   2: Explosive (70)   click a cell to build, click a tower to upgrade (50)" />
+
+    <qg:sprite sheet="map" x="578" y="372" />
+    <qg:path name="road" points="508,645; 522,498; 857,490; 870,210; 733,200; 716,380; 183,390; 186,537; 372,552; 381,86; 570,93; 562,264; -1,265" />
+    <qg:zone name="base" tag="base" x="-40" y="235" width="40" height="60" />
+    <!-- where the road is, no tower goes -->
+    <qg:zone name="road-1" tag="road" x="480" y="470" width="400" height="60" />
+    <qg:zone name="road-2" tag="road" x="840" y="180" width="60" height="330" />
+    <qg:zone name="road-3" tag="road" x="700" y="170" width="200" height="60" />
+    <qg:zone name="road-4" tag="road" x="690" y="170" width="60" height="240" />
+    <qg:zone name="road-5" tag="road" x="160" y="360" width="590" height="60" />
+    <qg:zone name="road-6" tag="road" x="160" y="360" width="60" height="210" />
+    <qg:zone name="road-7" tag="road" x="160" y="520" width="240" height="60" />
+    <qg:zone name="road-8" tag="road" x="350" y="60" width="60" height="520" />
+    <qg:zone name="road-9" tag="road" x="350" y="60" width="250" height="60" />
+    <qg:zone name="road-10" tag="road" x="540" y="60" width="60" height="230" />
+    <qg:zone name="road-11" tag="road" x="0" y="235" width="590" height="60" />
+    <qg:zone name="road-12" tag="road" x="480" y="480" width="60" height="170" />
+
+    <qg:cursor player="1" grid="48" sheet="explosive" frame="0" gd:modulate="#ffffff80" />
+    <qg:cursor player="2" grid="48" sheet="explosive" frame="0" gd:modulate="#80c0ff80" />
+
+    <qg:on-input action="buy-gatling"><q:set name="choice" value="Gatling" /></qg:on-input>
+    <qg:on-input action="buy-explosive"><q:set name="choice" value="Explosive" /></qg:on-input>
+
+    <!-- A click: on a tower, its upgrade; on free ground, the chosen tower, if the gold is there. -->
+    <qg:on-select>
+      <q:if condition="{other != null and other.tag == 'tower' and gold >= 50 and other.state == 'level1'}">
+        <q:set name="gold" value="{gold - 50}" />
+        <qg:become target="other" state="level2" />
+      </q:if>
+      <q:if condition="{other == null and thing_at('road', cursor.x, cursor.y) == null}">
+        <q:if condition="{choice == 'Gatling' and gold >= 50}">
+          <q:set name="gold" value="{gold - 50}" />
+          <qg:spawn prefab="Gatling" at="cursor" />
+        </q:if>
+        <q:if condition="{choice == 'Explosive' and gold >= 70}">
+          <q:set name="gold" value="{gold - 70}" />
+          <qg:spawn prefab="Explosive" at="cursor" />
+        </q:if>
+      </q:if>
+    </qg:on-select>
+
+    <!-- Waves: ten of them, each 5 + 3 × wave dinos, a new kind every two
+         waves; the next starts five seconds after the last dino of this one
+         is gone. A dino every 0.2 s while the wave has some to send. -->
+    <qg:timer every="300">
+      <q:if condition="{to_spawn == 0 and enemies == 0 and base_hp > 0}">
+        <q:if condition="{wave >= 10}">
+          <qg:goto-scene name="won" />
+        <q:else>
+          <q:set name="wave" value="{wave + 1}" />
+          <q:set name="to_spawn" value="{5 + 3 * wave}" />
+          <q:set name="kinds" value="{min(4, 1 + wave // 2)}" />
+        </q:else>
+        </q:if>
+      </q:if>
+    </qg:timer>
+    <qg:timer every="12">
+      <q:if condition="{to_spawn > 0}">
+        <q:set name="to_spawn" value="{to_spawn - 1}" />
+        <q:set name="kind" value="{int(random(0, kinds))}" />
+        <q:if condition="{kind == 0}"><qg:spawn prefab="RedDino" at="path" path="road" /></q:if>
+        <q:if condition="{kind == 1}"><qg:spawn prefab="BlueDino" at="path" path="road" /></q:if>
+        <q:if condition="{kind == 2}"><qg:spawn prefab="YellowDino" at="path" path="road" /></q:if>
+        <q:if condition="{kind >= 3}"><qg:spawn prefab="GreenDino" at="path" path="road" /></q:if>
+      </q:if>
+    </qg:timer>
+    <q:set name="kind" value="0" type="number" />
+    <qg:timer every="1">
+      <q:set name="enemies" value="{count('dino')}" />
+      <q:if condition="{base_hp <= 0}"><qg:goto-scene name="lost" /></q:if>
+    </qg:timer>
+
+    <qg:hud position="top-left" size="20">
+      <qg:counter bind="gold" label="Gold" />
+      <qg:counter bind="base_hp" label="Base" />
+      <qg:counter bind="wave" label="Wave" />
+      <qg:counter bind="enemies" label="Dinos" />
+      <qg:text bind="choice" />
+      <qg:text bind="status" />
+    </qg:hud>
+  </qg:scene>
+
+  <qg:scene name="won" width="1152" height="648" background="#1a3a1a">
+    <q:set name="message" value="The base stands. Press space to play again." />
+    <qg:hud position="center" size="40"><qg:text bind="message" /><qg:counter bind="gold" label="Gold left" /></qg:hud>
+    <qg:on-input action="jump"><qg:goto-scene name="map" /></qg:on-input>
+  </qg:scene>
+  <qg:scene name="lost" width="1152" height="648" background="#3a1a1a">
+    <q:set name="message" value="The base fell. Press space to try again." />
+    <qg:hud position="center" size="40"><qg:text bind="message" /><qg:counter bind="wave" label="Reached wave" /></qg:hud>
+    <qg:on-input action="jump"><qg:goto-scene name="map" /></qg:on-input>
   </qg:scene>
 
 </q:application>

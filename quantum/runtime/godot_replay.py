@@ -21,7 +21,7 @@ from quantum.runtime.godot_bin import run_godot, script_errors
 
 REPLAY_SCRIPT = Path(__file__).with_name('godot_replay.gd')
 
-Tape = Dict[int, List[Tuple[str, bool]]]
+Tape = Dict[int, List[tuple]]   # tick -> [(action, pressed)] and [('cursor', [x, y])]
 
 
 class ReplayError(RuntimeError):
@@ -35,6 +35,12 @@ def tape_from_holds(holds: Iterable[Tuple[str, int, int]]) -> Tape:
     for action, start, end in holds:
         tape.setdefault(start, []).append((action, True))
         tape.setdefault(end, []).append((action, False))
+    return tape
+
+
+def cursor_at(tape: Tape, tick: int, x: float, y: float) -> Tape:
+    """Adds to the tape: on ``tick`` the player's qg:cursor points at (x, y), as a mouse would."""
+    tape.setdefault(tick, []).append(('cursor', [x, y]))
     return tape
 
 

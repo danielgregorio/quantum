@@ -57,6 +57,7 @@ class SceneScript:
     prefabs_used: List[tuple] = field(default_factory=list)   # (name, line) from spawn/swap
     states_used: List[tuple] = field(default_factory=list)    # (name, line) from become
     scenes_used: List[tuple] = field(default_factory=list)    # (name, line) from goto-scene
+    paths_used: List[tuple] = field(default_factory=list)     # (name, line) from spawn at="path"
 
     def scope(self) -> Scope:
         return Scope(self.state.keys(), functions=self.function_names, game_names=self.game_state.keys())
@@ -165,11 +166,12 @@ def prefabs_source(script: 'SceneScript') -> str:
     return '\n'.join(lines).rstrip('\n') + '\n'
 
 
-def compile_handler(script: SceneScript, name: str, body: List[Node], line: Optional[int]) -> str:
-    """A handler method `(me, other)`; returns its name."""
-    scope = script.scope().child(['me', 'other'])
+def compile_handler(script: SceneScript, name: str, body: List[Node], line: Optional[int],
+                    params: tuple = ('me', 'other')) -> str:
+    """A handler method `(me, other)` (or `(cursor, other)` for qg:on-select); returns its name."""
+    scope = script.scope().child(params)
     code = compile_block(body, scope, script, 1)
-    script.handlers.append(f'func {name}(me, other) -> void:\n' + code)
+    script.handlers.append(f'func {name}({", ".join(params)}) -> void:\n' + code)
     return name
 
 
@@ -261,9 +263,19 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         return f'Q.become({target}, {json.dumps(el.get("state"))})'
     if el.tag == 'spawn':
         at = el.get('at')
+        script.prefabs_used.append((el.get('prefab'), el.line))
+        if at == 'path':
+            if not el.get('path'):
+                raise GameCompileError('<qg:spawn at="path"> needs path= (a qg:path of the scene)', el.line)
+            script.paths_used.append((el.get('path'), el.line))
+            return f'Q.spawn_on_path(self, {json.dumps(el.get("prefab"))}, {json.dumps(el.get("path"))})'
+        if el.get('path'):
+            raise GameCompileError('path= goes with at="path"', el.line)
         if not scope.has(at):
             raise GameCompileError(f'<qg:spawn at="{at}"> outside a handler that has {at!r}', el.line)
-        script.prefabs_used.append((el.get('prefab'), el.line))
+        if at == 'cursor':
+            return (f'Q.spawn_at(self, {json.dumps(el.get("prefab"))}, '
+                    f'Vector2(cursor.x + {float(el.get("dx"))!r}, cursor.y + {float(el.get("dy"))!r}))')
         return (f'Q.spawn(self, {json.dumps(el.get("prefab"))}, {at}, '
                 f'{float(el.get("dx"))!r}, {float(el.get("dy"))!r})')
     if el.tag == 'swap':

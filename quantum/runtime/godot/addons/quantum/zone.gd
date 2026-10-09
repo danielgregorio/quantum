@@ -4,6 +4,7 @@ extends Area2D
 # sensor, a thing's hitbox) runs its own qg:on-collision with= the tag.
 
 var tag: String = ""
+var hitbox_size: Vector2 = Vector2.ZERO
 
 
 func setup(spec: Dictionary) -> void:
@@ -16,6 +17,7 @@ func setup(spec: Dictionary) -> void:
 	var shape := CollisionShape2D.new()
 	var rect := RectangleShape2D.new()
 	rect.size = Vector2(spec["width"], spec["height"])
+	hitbox_size = rect.size
 	shape.shape = rect
 	add_child(shape)
 

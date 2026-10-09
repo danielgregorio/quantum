@@ -27,7 +27,10 @@ DEFAULT_INPUTS = {
     'up': ['Up', 'W', 'JoyUp', 'JoyLeftStickUp'],
     'down': ['Down', 'S', 'JoyDown', 'JoyLeftStickDown'],
     'jump': ['Space', 'Z', 'X', 'JoyA'],
+    'select': ['Enter', 'MouseLeft', 'JoyA'],
+    'cancel': ['Escape', 'MouseRight', 'JoyB'],
 }
+MOUSE_BUTTONS = {'MouseLeft': 1, 'MouseRight': 2, 'MouseMiddle': 3}
 
 # Joypad names a qg:input may use: Godot's button index, or an axis and its sign.
 JOY_BUTTONS = {'JoyA': 0, 'JoyB': 1, 'JoyX': 2, 'JoyY': 3, 'JoySelect': 4, 'JoyStart': 6, 'JoyL': 9, 'JoyR': 10,
@@ -152,6 +155,9 @@ class _Compiler:
                 raise GameCompileError('<qg:input player=>: 1 or more', el.line)
             inputs[action_name(el.get('player'), el.get('action'))] = [_key(k, el.get('player'), el.line)
                                                                        for k in keys]
+        # every action the game has: the defaults and the names qg:input declares (the lockstep frame's bits)
+        self.actions = list(DEFAULT_INPUTS) + sorted({
+            el.get('action') for el in g.inputs if el.get('action') not in DEFAULT_INPUTS})
         self.multiplayer = None
         if g.multiplayer is not None:
             mp = g.multiplayer
@@ -163,7 +169,7 @@ class _Compiler:
                                 'check_every': mp.get('check-every')}
             # every player's actions exist; under lockstep they are pressed by the runtime, not by keys
             for p in range(2, mp.get('players') + 1):
-                for action in DEFAULT_INPUTS:
+                for action in self.actions:
                     inputs.setdefault(action_name(p, action), [])
         self.inputs = inputs
         # the tags of the zones of every scene: handlers may name them like a prefab's
@@ -210,7 +216,8 @@ class _Compiler:
             prefabs[name] = {'tag': el.get('tag') or name.lower(), 'sheet': el.get('sheet'),
                              'frame': el.get('frame'), 'hitbox': list(el.get('hitbox')),
                              'ai': el.get('ai'), 'speed': _speed(el.get('speed'), el.line), 'sight': el.get('sight'),
-                             'rotate': el.get('rotate'),
+                             'rotate': el.get('rotate'), 'range': el.get('range'), 'targets': el.get('targets'),
+                             'attack': el.get('attack'), 'damage': el.get('damage'),
                              'direction': el.get('direction'), 'turns_at': el.get('turns-at'),
                              'gravity': el.get('gravity'), 'solid': el.get('solid'),
                              'one_way': el.get('one-way'), 'dx': el.get('dx'), 'dy': el.get('dy'),
@@ -263,6 +270,7 @@ class _Compiler:
                 'id': g.id,
                 'initial': g.scenes[0].get('name'),
                 'inputs': inputs,
+                'actions': self.actions,
                 'multiplayer': self.multiplayer,
                 'sheets': sheets,
                 'sounds': sounds,
@@ -333,6 +341,9 @@ class _Compiler:
         on_input: Dict[str, str] = {}
         exits: Dict[str, dict] = {}
         zones: set = set()
+        on_select: Dict[str, str] = {}
+        cursors: set = set()
+        paths: Dict[str, list] = {}
         conditions = 0
         on_death: Dict[str, str] = {}
         self._node_elements: List[Optional[Element]] = []
@@ -422,9 +433,35 @@ class _Compiler:
                 self._node_elements.append(el)
             elif el.tag == 'on-input':
                 action = el.get('action')
+                if action not in self.actions:
+                    raise GameCompileError(
+                        f'<qg:on-input action="{action}">: no such action (the defaults are '
+                        f'{", ".join(DEFAULT_INPUTS)}; a qg:input declares another)', el.line)
                 if action in on_input:
                     raise GameCompileError(f'two <qg:on-input action="{action}">', el.line)
-                on_input[action] = compile_handler(script, f'_on_input_{action}', el.children, el.line)
+                on_input[action] = compile_handler(script, f'_on_input_{_ident(action)}', el.children, el.line)
+            elif el.tag == 'on-select':
+                key = str(el.get('player') or 0)
+                if key in on_select:
+                    raise GameCompileError('two <qg:on-select> for the same player', el.line)
+                on_select[key] = compile_handler(script, f'_on_select_{key}', el.children, el.line,
+                                                 params=('cursor', 'other'))
+            elif el.tag == 'cursor':
+                if el.get('sheet'):
+                    self._sheet_exists(el.get('sheet'), sheets, el.line)
+                if el.get('player') in cursors:
+                    raise GameCompileError(f'two <qg:cursor player="{el.get("player")}">', el.line)
+                cursors.add(el.get('player'))
+                nodes.append({'kind': 'cursor', 'player': el.get('player'), 'step': el.get('step'),
+                              'grid': el.get('grid'), 'sheet': el.get('sheet'), 'frame': el.get('frame')})
+                self._node_elements.append(el)
+            elif el.tag == 'path':
+                pname = el.get('name')
+                if pname in paths:
+                    raise GameCompileError(f'two paths named {pname!r}', el.line)
+                paths[pname] = _points(el.get('points'), el.line)
+                nodes.append({'kind': 'path', 'name': pname, 'points': paths[pname]})
+                self._node_elements.append(el)
             elif el.tag == 'tilemap':
                 if tilemap is not None:
                     raise GameCompileError('a scene has one <qg:tilemap>', el.line)
@@ -598,6 +635,12 @@ class _Compiler:
                         raise GameCompileError(
                             f'<qg:{kind.replace("_", "-")} with="{h["with"]}">: no prefab or zone has that tag '
                             f'(tags: {", ".join(sorted(tags)) or "none"})', scene.line)
+        if on_select and not cursors:
+            raise GameCompileError('<qg:on-select> in a scene without a <qg:cursor>', scene.line)
+        for pname, line in script.paths_used:
+            if pname not in paths:
+                raise GameCompileError(f'<qg:spawn path="{pname}">: no qg:path of that name in the scene '
+                                       f'(paths: {", ".join(sorted(paths)) or "none"})', line)
         self._scene_exits[name] = set(exits)
         self._scenes_used.extend(script.scenes_used)
         for pname, line in script.prefabs_used:
@@ -625,6 +668,7 @@ class _Compiler:
             'width': scene.get('width'), 'height': scene.get('height'),
             'background': scene.get('background'), 'seed': scene.get('seed'),
             'nodes': nodes, 'map_paths': map_paths, 'on_input': on_input, 'on_death': on_death,
+            'on_select': on_select,
         }
         gdprops.attach(spec, 'Node2D', scene.gd, f'<qg:scene name="{name}">', scene.line)
         return spec
@@ -636,6 +680,8 @@ def _ident(text: str) -> str:
 
 def _key(name: str, player: int, line: Optional[int]):
     """A qg:input key as game.json carries it: a key name, or a joypad button/axis of the player's pad."""
+    if name in MOUSE_BUTTONS:
+        return {'mouse_button': MOUSE_BUTTONS[name]}
     if name in JOY_BUTTONS:
         return {'joy_button': JOY_BUTTONS[name], 'device': player - 1}
     if name in JOY_AXES:
@@ -669,6 +715,24 @@ def action_name(player: int, action: str) -> str:
 _HEADINGS = {'up': (0.0, -1.0), 'down': (0.0, 1.0), 'left': (-1.0, 0.0), 'right': (1.0, 0.0)}
 
 
+def _points(raw: str, line: Optional[int]) -> list:
+    """points= as [[x, y], ...]: `0,100; 200,100`."""
+    out = []
+    for part in str(raw).split(';'):
+        if not part.strip():
+            continue
+        xy = part.split(',')
+        try:
+            if len(xy) != 2:
+                raise ValueError
+            out.append([float(xy[0]), float(xy[1])])
+        except ValueError:
+            raise GameCompileError(f'points="{raw}": x,y pairs separated by semicolons', line)
+    if len(out) < 2:
+        raise GameCompileError('points= needs at least two points', line)
+    return out
+
+
 def _heading(raw: str, line: Optional[int]) -> list:
     """heading= as a unit vector [x, y]: a word, or `x,y`."""
     raw = str(raw).strip()
@@ -699,6 +763,7 @@ def _states(el: Element, script: SceneScript, owner: str, for_prefab: bool, alre
             raise GameCompileError('<qg:state> of a character needs hitbox=', st.line)
         states[sname] = {'hitbox': list(st.get('hitbox')) if st.get('hitbox') else None,
                          'frame': st.get('frame'), 'speed': st.get('speed'), 'fire_every': st.get('fire-every'),
+                         'fire_prefab': st.get('fire-prefab'), 'range': st.get('range'),
                          'animations': _animations(st)}
         if st.get('initial'):
             if initial_state is not None:

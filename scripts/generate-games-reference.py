@@ -35,6 +35,9 @@ GAMES = [
      'a ball that flies and bounces, zones at the edges (projects/pong/README.md maps the original to it)'),
     ('Creeps', 'projects/creeps/creeps.q', 'Godot\'s "Dodge the Creeps" tutorial game transcribed: a title, '
      'creeps from the border at random speeds, a score a second, a game over (projects/creeps/README.md)'),
+    ('Towers', 'projects/towers/towers.q', 'a tower defense transcribed from an MIT Godot template: a cursor, '
+     'turrets that shoot the nearest dino, dinos down a path in waves, gold and a base; two players over the '
+     'network (projects/towers/README.md)'),
 ]
 
 INTRO = f'''---
@@ -214,10 +217,11 @@ def build() -> str:
         ('What a game is made of', 'Declared once, in `q:application`.',
          ['tileset', 'spritesheet', 'input', 'multiplayer', 'sound', 'prefab', 'animation', 'state', 'scene']),
         ('What a scene holds', 'The level, the character, the things placed in it, and what the screen shows.',
-         ['tilemap', 'character', 'instance', 'spawner', 'zone', 'sprite', 'exit', 'map-node', 'map-path',
-          'camera', 'hud', 'counter', 'text']),
-        ('Handlers', 'Where the logic goes: actions and statements, with `me` and `other`.',
-         ['on-collision', 'on-hit', 'on-fall', 'on-input', 'on-damage', 'on-death']),
+         ['tilemap', 'character', 'instance', 'spawner', 'zone', 'sprite', 'path', 'cursor', 'exit', 'map-node',
+          'map-path', 'camera', 'hud', 'counter', 'text']),
+        ('Handlers', 'Where the logic goes: actions and statements, with `me` and `other` '
+         '(`cursor` and `other` in qg:on-select).',
+         ['on-collision', 'on-hit', 'on-fall', 'on-input', 'on-select', 'on-damage', 'on-death']),
         ('Actions', 'What a handler can do, besides `q:set`, `q:if`, `q:loop`, `q:call` and `q:return`.',
          list(ACTIONS)),
     ]

@@ -20,7 +20,7 @@ extends Node
 # Every `check_every` ticks the peers compare a hash of the whole state: a
 # difference is a desync, reported and fatal, never silent.
 
-const ACTIONS := ["left", "right", "up", "down", "jump"]
+var ACTIONS: Array = ["left", "right", "up", "down", "jump"]   # the game's, from game.json
 
 var players: int = 2
 var delay: int = 3
@@ -44,6 +44,7 @@ var _stalled: bool = false
 
 func setup(spec: Dictionary, game_: Node, host_: String, port_: int) -> void:
 	game = game_
+	ACTIONS = game_.spec.get("actions", ACTIONS)
 	players = int(spec.get("players", 2))
 	delay = int(spec.get("delay", 3))
 	check_every = int(spec.get("check_every", 60))
@@ -123,7 +124,7 @@ func _begin() -> void:
 	for t in range(delay):
 		_frames[t] = {}
 		for p in range(1, players + 1):
-			_frames[t][p] = 0
+			_frames[t][p] = [0, 0.0, 0.0]
 	started = true
 	game.call("_q_lockstep_ready")
 
@@ -145,9 +146,10 @@ func _physics_process(_delta: float) -> void:
 	if not _frames.has(ahead):
 		_frames[ahead] = {}
 	if not _frames[ahead].has(player):
-		_frames[ahead][player] = mask
+		var raw: Vector2 = Q.raw_cursor
+		_frames[ahead][player] = [mask, raw.x, raw.y]
 		if not ended:
-			_frame.rpc(player, ahead, mask)
+			_frame.rpc(player, ahead, mask, raw.x, raw.y)
 	# 2. this tick runs only when every player's input for it is here
 	var frame: Dictionary = _frames.get(tick, {})
 	if frame.size() < players:
@@ -159,7 +161,9 @@ func _physics_process(_delta: float) -> void:
 		_stalled = false
 		scene.process_mode = Node.PROCESS_MODE_INHERIT
 	for p in range(1, players + 1):
-		var m: int = int(frame[p])
+		var entry: Array = frame[p]
+		var m: int = int(entry[0])
+		Q.cursors[p] = Vector2(float(entry[1]), float(entry[2]))
 		for i in ACTIONS.size():
 			var action: String = ACTIONS[i] if p == 1 else "p%d_%s" % [p, ACTIONS[i]]
 			if m & (1 << i):
@@ -178,10 +182,10 @@ func _physics_process(_delta: float) -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func _frame(p: int, t: int, mask: int) -> void:
+func _frame(p: int, t: int, mask: int, cx: float, cy: float) -> void:
 	if not _frames.has(t):
 		_frames[t] = {}
-	_frames[t][p] = mask
+	_frames[t][p] = [mask, cx, cy]
 
 
 @rpc("any_peer", "call_remote", "reliable")

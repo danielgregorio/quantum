@@ -73,7 +73,9 @@ func _physics_process(_delta: float) -> bool:
 		if t == ticks:
 			if tape.has(t):
 				for ev in tape[t]:
-					if ev[1]:
+					if ev[0] == "cursor":
+						root.get_node("Q").tape_cursor = Vector2(ev[1][0], ev[1][1])
+					elif ev[1]:
 						Input.action_press("raw_" + ev[0])
 					else:
 						Input.action_release("raw_" + ev[0])
@@ -84,7 +86,9 @@ func _physics_process(_delta: float) -> bool:
 		return true
 	if tape.has(ticks):
 		for ev in tape[ticks]:
-			if ev[1]:
+			if ev[0] == "cursor":
+				root.get_node("Q").tape_cursor = Vector2(ev[1][0], ev[1][1])
+			elif ev[1]:
 				Input.action_press(ev[0])
 			else:
 				Input.action_release(ev[0])

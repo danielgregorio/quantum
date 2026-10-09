@@ -37,6 +37,8 @@ _FUNCTIONS = {
     'ceil': 'ceili({0})',
     'sqrt': 'sqrt({0})',
     'random': 'Q.random(self, {0}, {1})',   # a float in [a, b] from the scene's seeded source
+    'count': 'Q.count(self, {0})',           # how many things of a tag are in the scene
+    'thing_at': 'Q.thing_at(self, {0}, {1}, {2})',   # the thing of a tag at (x, y), or null
 }
 
 _BIN = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*'}

@@ -26,6 +26,12 @@ var heading: Vector2 = Vector2.DOWN
 var lifetime: int = 0
 var accel: float = 0.0
 var rotate: bool = false
+var range_: float = 100.0
+var targets: String = ""
+var attack: String = "shoot"
+var damage: int = 1
+var path_points: Array = []
+var _path_index: int = 1
 var _speed_range: Array = []
 var spawn_point: Vector2 = Vector2.ZERO
 var health: int = 1
@@ -65,11 +71,15 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 	else:
 		speed = float(sp)
 	rotate = bool(prefab.get("rotate", false))
+	range_ = float(prefab.get("range", 100.0))
+	targets = str(prefab.get("targets", "")) if prefab.get("targets") != null else ""
+	attack = str(prefab.get("attack", "shoot"))
+	damage = int(prefab.get("damage", 1))
 	ai = str(prefab.get("ai", "patrol"))
 	sight = float(prefab.get("sight", 80.0))
 	if ai != "patrol":
 		motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
-	if ai == "fly" or ai == "sway":
+	if ai == "fly" or ai == "sway" or ai == "path" or ai == "turret":
 		collision_mask = 0   # through everything: a shot or a drone is stopped by nothing
 	direction = -1 if prefab.get("direction", "left") == "left" else 1
 	turns_at_edge = prefab.get("turns_at", "wall") == "edge"
@@ -88,7 +98,8 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 	_on_damage = str(prefab.get("on_damage", "")) if prefab.get("on_damage") != null else ""
 	_on_death = str(prefab.get("on_death", "")) if prefab.get("on_death") != null else ""
 	_states = prefab.get("states", {})
-	_base = {"frame": int(prefab.get("frame", 0)), "speed": speed, "fire_every": fire_every, "heading": heading}
+	_base = {"frame": int(prefab.get("frame", 0)), "speed": speed, "fire_every": fire_every, "heading": heading,
+		"fire_prefab": fire_prefab, "range": range_}
 
 	var sprite := Sprite2D.new()
 	sprite.name = "Sprite"
@@ -214,6 +225,8 @@ func become(name_: String) -> void:
 		sprite.frame = int(st.get("frame", _base["frame"]))
 	speed = float(st["speed"]) if st.get("speed") != null else float(_base["speed"])
 	fire_every = int(st["fire_every"]) if st.get("fire_every") != null else int(_base["fire_every"])
+	fire_prefab = str(st["fire_prefab"]) if st.get("fire_prefab") != null else str(_base["fire_prefab"])
+	range_ = float(st["range"]) if st.get("range") != null else float(_base["range"])
 	if animator != null and st.get("animations", {}).size() > 0:
 		animator.animations = st["animations"]
 		animator.current = ""
@@ -253,12 +266,18 @@ func _physics_process(delta: float) -> void:
 			_fly(delta)
 		"sway":
 			_sway(delta)
+		"path":
+			_follow_path(delta)
+		"turret":
+			_turret()
 		_:
 			_patrol(delta)
 	_fire()
 
 
 func _fire() -> void:
+	if ai == "turret":
+		return   # a turret fires at what it sees (_turret)
 	if fire_prefab == "" or fire_every <= 0 or _scene_of() == null:
 		return
 	_fire_in -= 1
@@ -267,6 +286,69 @@ func _fire() -> void:
 	_fire_in = fire_every
 	var below := position + Vector2(0, hitbox_size.y / 2.0 + 4.0) * (-1.0 if heading == Vector2.UP else 1.0)
 	Q.spawn_at(_scene_of(), fire_prefab, below)
+	if fire_sound != "":
+		Q.play(fire_sound)
+
+
+# ai="path": from point to point at `speed`; at the last point it stands.
+func _follow_path(delta: float) -> void:
+	if _path_index >= path_points.size():
+		return
+	var goal := Vector2(path_points[_path_index][0], path_points[_path_index][1])
+	var remaining := speed * delta
+	while remaining > 0.0 and _path_index < path_points.size():
+		goal = Vector2(path_points[_path_index][0], path_points[_path_index][1])
+		var to_goal := goal - position
+		if to_goal.length() <= remaining:
+			position = goal
+			remaining -= to_goal.length()
+			_path_index += 1
+		else:
+			heading = to_goal.normalized()
+			position += heading * remaining
+			remaining = 0.0
+	_face(heading.x)
+	_face_heading()
+
+
+# ai="turret": the nearest `targets` thing within `range` is the target; every
+# fire_every ticks, shoot fire_prefab at it (headed its way) or, with
+# attack="area", damage every target in range.
+func _turret() -> void:
+	var scene := _scene_of()
+	if scene == null or targets == "":
+		return
+	var target: Node2D = null
+	var best := range_
+	for t in get_tree().get_nodes_in_group("q_thing"):
+		if t == self or t.get_parent() != scene or t.is_queued_for_deletion() or t.quantum_tag() != targets:
+			continue
+		var d := position.distance_to((t as Node2D).position)
+		if d <= best:
+			best = d
+			target = t
+	if target == null:
+		return
+	if rotate:
+		var sprite := get_node_or_null("Sprite")
+		if sprite != null:
+			sprite.rotation = (target.position - position).angle()
+	_fire_in -= 1
+	if _fire_in > 0:
+		return
+	_fire_in = fire_every
+	if attack == "area":
+		for t in get_tree().get_nodes_in_group("q_thing"):
+			if t == self or t.get_parent() != scene or t.is_queued_for_deletion() or t.quantum_tag() != targets:
+				continue
+			if position.distance_to((t as Node2D).position) <= range_ and t.has_method("take_damage"):
+				t.take_damage(damage)
+	elif fire_prefab != "":
+		var shot = Q.spawn_at(scene, fire_prefab, position)
+		if shot != null and "heading" in shot:
+			shot.heading = (target.position - position).normalized()
+			if "rotate" in shot and shot.rotate:
+				shot.call_deferred("_face_heading")
 	if fire_sound != "":
 		Q.play(fire_sound)
 

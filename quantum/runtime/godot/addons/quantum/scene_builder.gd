@@ -20,6 +20,7 @@ const Timer_ := preload("res://addons/quantum/timer.gd")
 const Hud := preload("res://addons/quantum/hud.gd")
 const Tilemap := preload("res://addons/quantum/tilemap.gd")
 const Zone := preload("res://addons/quantum/zone.gd")
+const Cursor := preload("res://addons/quantum/cursor.gd")
 
 static var _textures: Dictionary = {}
 
@@ -41,6 +42,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	scene.add_child(bg)
 
 	scene.q_on_input = scene_spec.get("on_input", {})
+	scene.q_on_select = scene_spec.get("on_select", {})
 	Q.apply_gd(scene, scene_spec.get("gd"))
 	scene.q_on_death = scene_spec.get("on_death", {})
 	var tilemap: Node = null
@@ -109,6 +111,18 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				spawner.setup(node_spec)
 				Q.apply_gd(spawner, node_spec.get("gd"))
 				scene.add_child(spawner)
+			"cursor":
+				var cursor := Cursor.new()
+				cursor.setup(node_spec, scene)
+				if node_spec.get("sheet") != null:
+					var sheet: Dictionary = game["sheets"][node_spec["sheet"]]
+					cursor.add_child(_sprite(_texture(sheet), sheet["tile"], int(node_spec["frame"])))
+				cursor.z_index = 50
+				Q.apply_gd(cursor, node_spec.get("gd"))
+				scene.add_child(cursor)
+				scene.q_cursors.append(cursor)
+			"path":
+				scene.q_paths[node_spec["name"]] = node_spec["points"]
 			"zone":
 				var zone := Zone.new()
 				zone.setup(node_spec)

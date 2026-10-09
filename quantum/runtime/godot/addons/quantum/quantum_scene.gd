@@ -90,12 +90,27 @@ func quantum_state() -> Dictionary:
 
 # The qg:on-input handlers of the scene: {action: method name}.
 var q_on_input: Dictionary = {}
+# The qg:on-select handlers: {"0": any player, "2": player 2...}; and the qg:paths: {name: points}.
+var q_on_select: Dictionary = {}
+var q_cursors: Array = []
+var q_paths: Dictionary = {}
 
 
 func _physics_process(_delta: float) -> void:
 	for action in q_on_input.keys():
 		if Input.is_action_just_pressed(action):
 			call(q_on_input[action], null, null)
+	for cursor in q_cursors:
+		var p: int = cursor.player
+		var select: String = "select" if p == 1 else "p%d_select" % p
+		if not Input.is_action_just_pressed(select):
+			continue
+		var handler = q_on_select.get(str(p), q_on_select.get("0"))
+		if handler == null:
+			continue
+		var at: Dictionary = cursor.where()
+		var other = Q.thing_at(self, "", at["x"], at["y"])
+		call(handler, at, other)
 
 
 # Below this y a character has fallen out of the level (qg:on-fall).
