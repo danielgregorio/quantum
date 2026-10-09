@@ -27,6 +27,35 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: declarative multiplayer. `<qg:multiplayer players="2" />` in
+  a game: every peer runs the whole game in lockstep — a tick runs when
+  every player's input for it has arrived, `delay=` ticks after the press;
+  the peers compare a hash of the whole state every `check-every=` ticks
+  and a difference is a reported, fatal desync. One peer hosts
+  (`--q-host=PORT`, player 1), the others join (`--q-join=HOST:PORT`);
+  `player=` on the characters says whose is whose, as it did on one
+  keyboard. Nothing else in the game knows. `replay_peers()` runs N
+  headless Godots on localhost under tapes; `tests/godot/test_godot_multiplayer.py`
+  plays Pong on two and checks they agree with each other and with one
+  Godot replaying both tapes. Design and what is left: `PLAN_MULTIPLAYER.md`.
+- Laboratory: a fifth game, `projects/creeps/creeps.q` — Godot's "Dodge the
+  Creeps" tutorial game transcribed (`projects/creeps/README.md` maps it).
+  What it made the language grow: `qg:spawner along="edges" heading="inward"
+  spread=`, several prefabs drawn at random and `count="0"`; `speed="150..250"`
+  and `rotate=` on a prefab; `bounds="scene"`, `walk-up`/`walk-down` and
+  analog strength on the top-down controller; `qg:hud position="center"`,
+  `font=`, `size=`; `loop=` on `qg:sound`, `qg:stop`, and `qg:play`/`qg:stop`
+  directly in a scene; `from=` on `qg:timer every=`; a `q:set` of a
+  game-wide name in a scene sets it as the scene is entered.
+  `tests/godot/test_godot_creeps.py` replays it. `scripts/pack-sprites.py`
+  packs separate frames into a sheet.
+- Laboratory: joypads. `qg:input keys=` takes `JoyA`, `JoyUp`, `JoyLeftStickUp`
+  and the rest (the reference lists them); player n reads joypad n-1; the
+  defaults include the pad and the left stick; the ship and top-down
+  controllers read the stick's strength.
+- Laboratory: a scene state named like any member of Godot's `Node2D`
+  (`ready`, `draw`, `show`…) is a compile error, from the same generated
+  reference `gd:` attributes use; it was a GDScript error at run time.
 - Laboratory: a fourth game, `projects/pong/pong.q` — Godot's own "Pong
   with GDScript" demo (godotengine/godot-demo-projects, MIT) transcribed
   tag for node; `projects/pong/README.md` maps each piece of the original

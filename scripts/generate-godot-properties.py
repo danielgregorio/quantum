@@ -49,7 +49,12 @@ def main() -> int:
             for m in root.findall('members/member'):
                 if m.get('setter') and m.get('type') in TYPES and m.get('name') not in OWNED:
                     props[m.get('name')] = m.get('type')
-            classes[name] = {'inherits': root.get('inherits'), 'properties': props}
+            # every member name of the class: a game state may not be called like one
+            # (GDScript refuses a variable named like a native property, method or signal)
+            members = sorted({m.get('name') for m in root.findall('members/member')}
+                             | {m.get('name') for m in root.findall('methods/method')}
+                             | {m.get('name') for m in root.findall('signals/signal')})
+            classes[name] = {'inherits': root.get('inherits'), 'properties': props, 'members': members}
     OUT.write_text(json.dumps({'godot': GODOT_VERSION, 'classes': classes}, indent=1, sort_keys=True) + '\n',
                    encoding='utf-8')
     print(f'wrote {OUT.relative_to(REPO)}: {sum(len(c["properties"]) for c in classes.values())} properties')

@@ -110,6 +110,30 @@ A sheet of equal frames for characters and items.
 
 Goes inside: `q:application`.
 
+### `qg:input`
+
+The keys of an action, instead of the defaults (arrows/WASD to move, space/Z/X to jump). A second player has no defaults: every action it uses is declared with player="2".
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `action` | `left` / `right` / `up` / `down` / `jump` | required |  |
+| `keys` | text | required | comma-separated: Godot key names (Space, Left, A, Enter...) and joypad names — JoyA JoyB JoyX JoyY JoyL JoyR JoyL2 JoyR2 JoyStart JoySelect, JoyUp JoyDown JoyLeft JoyRight (the pad), JoyLeftStickUp/Down/Left/Right, JoyRightStickUp/Down/Left/Right. Player n reads joypad n-1 |
+| `player` | integer | `1` | whose keys: the character with the same player= |
+
+Goes inside: `q:application`.
+
+### `qg:multiplayer`
+
+The game is played by several people, each on their own machine, in lockstep: every peer runs the whole game and a tick runs when every player's input for it has arrived. One hosts (`--q-host=PORT`, player 1), the others join (`--q-join=HOST:PORT`, players 2.. in order). The players' characters are told apart by player=; nobody declares keys for players 2..
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `players` | integer | required | how many, 2 or more |
+| `delay` | integer | `3` | ticks between a press and its effect, everywhere: hides the round trip |
+| `check-every` | integer | `60` | ticks between comparisons of the whole state across peers; a difference is a desync, reported and fatal (0: never) |
+
+Goes inside: `q:application`.
+
 ### `qg:sound`
 
 A sound the game can play (qg:play).
@@ -118,6 +142,7 @@ A sound the game can play (qg:play).
 |---|---|---|---|
 | `name` | a name | required |  |
 | `src` | text | required | an .ogg or .wav |
+| `loop` | true / false | `false` | plays until qg:stop (music) |
 
 Goes inside: `q:application`.
 
@@ -145,7 +170,8 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `fire-prefab` | a name |  | what it shoots, placed below it (or above, when heading is up) |
 | `fire-every` | integer | `0` | ticks between shots (0: never) |
 | `fire-sound` | a name |  |  |
-| `speed` | number | `30.0` | pixels per second, for ai= |
+| `speed` | text | `30` | pixels per second, for ai=; or a range, 150..250, drawn from the scene seed as each instance is placed |
+| `rotate` | true / false | `false` | fly: the sprite turns to face the heading |
 | `direction` | `left` / `right` | `left` | where it walks first |
 | `turns-at` | `wall` / `edge` | `wall` | edge: also turns before falling off |
 | `gravity` | number | `900.0` |  |
@@ -155,7 +181,7 @@ Goes inside: `q:application`.
 
 ### `qg:animation`
 
-Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what it does; a prefab plays "walk".
+Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what it does (a topdown one "walk-up" and "walk-down" when it has them, "walk-up" upside down for down); a prefab plays "walk".
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
@@ -221,7 +247,7 @@ A body the player moves: a platformer, or a walker on a world map.
 | `id` | a name | required |  |
 | `controller` | `platformer` / `map` / `topdown` / `ship` | required |  |
 | `player` | integer | `1` | whose keys move it (qg:input player=); 1 has the defaults |
-| `bounds` | `scene` / `none` | `scene` | ship: kept inside the scene |
+| `bounds` | `scene` / `none` |  | kept inside the scene: a ship unless none, a topdown character when scene |
 | `axis` | `both` / `vertical` / `horizontal` | `both` | ship: which way it can move |
 | `fire-action` | `jump` |  | ship: the action that shoots |
 | `fire-prefab` | a name |  | ship: what it shoots, placed above it |
@@ -268,12 +294,15 @@ Places count instances of a prefab, one every so many ticks, from a tick on.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `prefab` | a name | required |  |
+| `prefab` | text | required | a prefab name, or several comma-separated: one is drawn from the seed for each instance |
 | `from` | integer | `0` | the tick of the first one |
 | `every` | integer | `60` |  |
-| `count` | integer | `1` |  |
+| `count` | integer | `1` | 0: no end |
 | `x` | text | `random` | a number, or random across the scene width (from the seed) |
 | `y` | number | `-12.0` |  |
+| `along` | `edges` |  | edges: instead of x,y, a random point on the scene's border |
+| `heading` | `inward` |  | along: a flying prefab heads into the scene... |
+| `spread` | number | `0.0` | ...turned by up to this many degrees either way, from the seed |
 
 Goes inside: `qg:scene`.
 
@@ -365,7 +394,9 @@ Text over the game.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `position` | `top-left` / `top-center` / `top-right` | `top-left` |  |
+| `position` | `top-left` / `top-center` / `top-right` / `center` | `top-left` |  |
+| `font` | text |  | a .ttf, relative to the .q or a folder above it |
+| `size` | integer | `8` | the font size of its items, unless an item says otherwise |
 
 Goes inside: `qg:scene`.
 
@@ -377,6 +408,7 @@ A number from the scene state, in the HUD.
 |---|---|---|---|
 | `bind` | a name | required | a q:set of the scene |
 | `label` | text | `` | text before the number |
+| `size` | integer |  | font size |
 
 Goes inside: `qg:hud`.
 
@@ -387,6 +419,7 @@ A string from the scene state, in the HUD.
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `bind` | a name | required | a q:set of the scene |
+| `size` | integer |  | font size |
 
 Goes inside: `qg:hud`.
 
@@ -475,13 +508,13 @@ Goes inside: a handler.
 
 ### `qg:play`
 
-Plays a qg:sound.
+Plays a qg:sound. Directly in a scene: as the scene is entered.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `sound` | a name | required |  |
 
-Goes inside: a handler.
+Goes inside: a handler, `qg:scene`.
 
 ### `qg:respawn`
 
@@ -597,19 +630,17 @@ Changes where a flying thing (ai="fly") goes: flips one axis of its heading, or 
 
 Goes inside: a handler.
 
-## Other tags
+### `qg:stop`
 
-### `qg:input`
-
-The keys of an action, instead of the defaults (arrows/WASD to move, space/Z/X to jump). A second player has no defaults: every action it uses is declared with player="2".
+Stops a qg:sound (a looping one, mostly). Directly in a scene: as the scene is entered.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `action` | `left` / `right` / `up` / `down` / `jump` | required |  |
-| `keys` | text | required | comma-separated Godot key names: Space, Left, A, Enter... |
-| `player` | integer | `1` | whose keys: the character with the same player= |
+| `sound` | a name | required |  |
 
-Goes inside: `q:application`.
+Goes inside: a handler, `qg:scene`.
+
+## Other tags
 
 ### `qg:timer`
 
@@ -618,7 +649,8 @@ Runs its handler after so many ticks, or every so many ticks, in this scene.
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `after` | integer |  | ticks from entering the scene, once |
-| `every` | integer |  | ticks between runs, from entering the scene |
+| `every` | integer |  | ticks between runs, from entering the scene (or from=) |
+| `from` | integer | `0` | every: the tick the count starts at |
 | `count` | integer | `0` | every: stop after this many runs (0: never) |
 
 Goes inside: `qg:scene`.
@@ -1668,11 +1700,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:spritesheet name="ball" src="assets/ball.png" tile="8" />
   <qg:spritesheet name="separator" src="assets/separator.png" tile="2x400" />
 
-  <!-- The left paddle is player 1 on W/S, the right one player 2 on the arrows. -->
+  <!-- The left paddle is player 1 on W/S, the right one player 2 on the arrows —
+       on one keyboard. Over the network each peer is one player: one hosts
+       (q-host=7777), the other joins (q-join=HOST:7777), and the game runs
+       in lockstep, the same on both (README.md). -->
   <qg:input player="1" action="up" keys="W" />
   <qg:input player="1" action="down" keys="S" />
   <qg:input player="2" action="up" keys="Up" />
   <qg:input player="2" action="down" keys="Down" />
+  <qg:multiplayer players="2" delay="3" />
 
   <!-- The ball flies left at 100 px/s, 2 px/s faster every second; it bounces
        off the ceiling and the floor, and goes back to its start, as it was,
@@ -1710,6 +1746,116 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:zone name="floor" tag="edge" x="0" y="400" width="640" height="20" />
     <qg:zone name="left-wall" tag="wall" x="-20" y="0" width="20" height="400" />
     <qg:zone name="right-wall" tag="wall" x="640" y="0" width="20" height="400" />
+  </qg:scene>
+
+</q:application>
+```
+
+### Creeps
+
+`projects/creeps/creeps.q` — Godot's "Dodge the Creeps" tutorial game transcribed: a title, creeps from the border at random speeds, a score a second, a game over (projects/creeps/README.md).
+
+```xml
+<q:application id="creeps" type="game">
+
+  <!-- Creeps: Godot's own "Dodge the Creeps" demo (godotengine/godot-demo-projects,
+       2d/dodge_the_creeps, MIT — the game of the "Your first 2D game" tutorial)
+       transcribed into the game language. README.md next to this file maps each
+       piece of the original to its tag and lists what the language had to grow.
+       The art, music and font are the demo's (assets/LICENSE.md). -->
+
+  <q:set name="score" value="0" type="number" />
+
+  <qg:spritesheet name="player" src="assets/player.png" tile="112x136" />
+  <qg:spritesheet name="creeps" src="assets/creeps.png" tile="100x140" />
+
+  <qg:sound name="music" src="assets/music.ogg" loop="true" />
+  <qg:sound name="death" src="assets/gameover.wav" />
+
+  <qg:input action="jump" keys="Space, Enter, JoyA, JoyStart" />
+
+  <!-- Three kinds of creep: each flies straight at a speed of its own, turned to
+       face where it goes, and is gone once off the screen. -->
+  <qg:prefab name="Flyer" tag="creep" sheet="creeps" frame="0" hitbox="75x56" ai="fly" speed="150..250" rotate="true">
+    <qg:animation name="walk" frames="0, 1" fps="3" />
+  </qg:prefab>
+  <qg:prefab name="Swimmer" tag="creep" sheet="creeps" frame="2" hitbox="75x56" ai="fly" speed="150..250" rotate="true">
+    <qg:animation name="walk" frames="2, 3" fps="4" />
+  </qg:prefab>
+  <qg:prefab name="Walker" tag="creep" sheet="creeps" frame="4" hitbox="75x56" ai="fly" speed="150..250" rotate="true">
+    <qg:animation name="walk" frames="4, 5" fps="4" />
+  </qg:prefab>
+
+  <qg:scene name="title" width="480" height="720" background="#385f61">
+    <q:set name="message" value="Dodge the&#10;Creeps" />
+    <q:set name="start" value="Start" />
+    <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:text bind="message" />
+      <qg:text bind="start" />
+    </qg:hud>
+    <qg:on-input action="jump">
+      <qg:goto-scene name="play" />
+    </qg:on-input>
+  </qg:scene>
+
+  <!-- Two seconds of "Get Ready", then a creep every half second from a random
+       point on the border, headed in at up to 45° off straight, and a point a
+       second. Touching a creep ends the run. -->
+  <qg:scene name="play" width="480" height="720" background="#385f61" seed="7">
+    <q:set name="score" value="0" />
+    <q:set name="message" value="Get Ready" />
+    <qg:play sound="music" />
+    <qg:hud position="top-center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:counter bind="score" />
+    </qg:hud>
+    <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:text bind="message" />
+    </qg:hud>
+    <qg:character id="player" controller="topdown" sheet="player" frame="0" x="240" y="450" hitbox="54x68"
+                  speed="400" bounds="scene">
+      <qg:animation name="idle" frames="0" />
+      <qg:animation name="walk" frames="0, 1" fps="5" />
+      <qg:animation name="walk-up" frames="2, 3" fps="5" />
+      <qg:on-collision with="creep">
+        <qg:stop sound="music" />
+        <qg:play sound="death" />
+        <qg:goto-scene name="over" />
+      </qg:on-collision>
+    </qg:character>
+    <qg:timer after="120">
+      <q:set name="message" value="" />
+    </qg:timer>
+    <qg:spawner prefab="Flyer, Swimmer, Walker" along="edges" heading="inward" spread="45" from="120" every="30" count="0" />
+    <qg:timer every="60" from="120">
+      <q:set name="score" value="{score + 1}" />
+    </qg:timer>
+  </qg:scene>
+
+  <!-- "Game Over" for two seconds, the title for one more, then the start line;
+       the score stays on the screen. -->
+  <qg:scene name="over" width="480" height="720" background="#385f61">
+    <q:set name="message" value="Game Over" />
+    <q:set name="start" value="" />
+    <q:set name="can_start" value="false" type="boolean" />
+    <qg:hud position="top-center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:counter bind="score" />
+    </qg:hud>
+    <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:text bind="message" />
+      <qg:text bind="start" />
+    </qg:hud>
+    <qg:timer after="120">
+      <q:set name="message" value="Dodge the&#10;Creeps" />
+    </qg:timer>
+    <qg:timer after="180">
+      <q:set name="start" value="Start" />
+      <q:set name="can_start" value="true" />
+    </qg:timer>
+    <qg:on-input action="jump">
+      <q:if condition="{can_start}">
+        <qg:goto-scene name="play" />
+      </q:if>
+    </qg:on-input>
   </qg:scene>
 
 </q:application>

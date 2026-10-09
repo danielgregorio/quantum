@@ -30,7 +30,7 @@ var _fire_in: int = 0
 func setup(spec: Dictionary) -> void:
 	player = int(spec.get("player", 1))
 	speed = float(spec.get("speed", speed))
-	bounds = spec.get("bounds", "scene") == "scene"
+	bounds = spec.get("bounds") != "none"
 	axis = str(spec.get("axis", "both"))
 	fire_action = str(spec.get("fire_action", "")) if spec.get("fire_action") != null else ""
 	fire_prefab = str(spec.get("fire_prefab", "")) if spec.get("fire_prefab") != null else ""
@@ -96,18 +96,15 @@ func _fire_handler(h: Dictionary, other: Node) -> bool:
 
 func _physics_process(delta: float) -> void:
 	_ticks += 1
+	# analog: a stick's strength scales the speed; a key is 1.0
 	var dir := Vector2.ZERO
 	if axis != "vertical":
-		if Input.is_action_pressed(_a("right")):
-			dir.x += 1
-		if Input.is_action_pressed(_a("left")):
-			dir.x -= 1
+		dir.x = Input.get_action_strength(_a("right")) - Input.get_action_strength(_a("left"))
 	if axis != "horizontal":
-		if Input.is_action_pressed(_a("down")):
-			dir.y += 1
-		if Input.is_action_pressed(_a("up")):
-			dir.y -= 1
-	position += dir.normalized() * speed * delta
+		dir.y = Input.get_action_strength(_a("down")) - Input.get_action_strength(_a("up"))
+	if dir.length() > 1.0:
+		dir = dir.normalized()
+	position += dir * speed * delta
 	if bounds and "q_spec" in _scene:
 		var w := float(_scene.q_spec.get("width", 256))
 		var h := float(_scene.q_spec.get("height", 224))

@@ -4,6 +4,7 @@ extends Node
 
 var after: int = -1
 var every: int = -1
+var from_tick: int = 0
 var count: int = 0
 var handler: String = ""
 var _ticks: int = 0
@@ -14,6 +15,7 @@ var _scene: Node = null
 func setup(spec: Dictionary, scene: Node) -> void:
 	after = int(spec["after"]) if spec.get("after") != null else -1
 	every = int(spec["every"]) if spec.get("every") != null else -1
+	from_tick = int(spec.get("from", 0)) if spec.get("from") != null else 0
 	count = int(spec.get("count", 0))
 	handler = spec["handler"]
 	_scene = scene
@@ -26,7 +28,7 @@ func _physics_process(_delta: float) -> void:
 		if _ticks == after and _scene.has_method(handler):
 			_scene.call(handler, null, null)
 		return
-	if every > 0 and _ticks % every == 0 and (count == 0 or _runs < count):
+	if every > 0 and _ticks > from_tick and (_ticks - from_tick) % every == 0 and (count == 0 or _runs < count):
 		_runs += 1
 		if _scene.has_method(handler):
 			_scene.call(handler, null, null)

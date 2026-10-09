@@ -13,6 +13,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+from quantum.runtime.godot import gd as gdprops
 from quantum.runtime.godot.errors import GameCompileError
 from quantum.runtime.godot.expressions import (
     GD_TYPES, Scope, compile_expression, gdscript_literal, strip_braces,
@@ -21,11 +22,12 @@ from quantum.runtime.godot.model import Element, Node, Statement
 
 _INDENT = '\t'
 
-# Names every Godot node already has: a q:set of that name would redefine them.
+# Names a scene script may not declare: what every Node2D already has (its
+# properties, methods and signals, from Godot's own reference — a variable
+# named like one is a GDScript error), and what the runtime's scripts use.
 RESERVED_NAMES = frozenset((
-    'name', 'owner', 'position', 'global_position', 'rotation', 'scale', 'visible', 'modulate',
-    'z_index', 'process_mode', 'self', 'rng', 'state', 'health', 'tag', 'speed', 'velocity',
-))
+    'self', 'rng', 'state', 'health', 'tag', 'speed', 'velocity', 'heading', 'player',
+)) | gdprops.members_of('Node2D')
 
 
 @dataclass
@@ -251,6 +253,9 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     if el.tag == 'play':
         script.sounds_played.append(el.get('sound'))
         return f'Q.play({json.dumps(el.get("sound"))})'
+    if el.tag == 'stop':
+        script.sounds_played.append(el.get('sound'))
+        return f'Q.stop({json.dumps(el.get("sound"))})'
     if el.tag == 'become':
         script.states_used.append((el.get('state'), el.line))
         return f'Q.become({target}, {json.dumps(el.get("state"))})'

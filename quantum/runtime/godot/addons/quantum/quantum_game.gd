@@ -4,9 +4,11 @@ extends Node
 # compiled scripts (scripts/*.gd) only hold the game's logic.
 
 const SceneBuilder := preload("res://addons/quantum/scene_builder.gd")
+const Lockstep := preload("res://addons/quantum/lockstep.gd")
 
 var spec: Dictionary = {}
 var current_scene: Node = null
+var lockstep: Node = null
 
 
 func _ready() -> void:
@@ -16,6 +18,39 @@ func _ready() -> void:
 		return
 	spec = JSON.parse_string(f.get_as_text())
 	_register_inputs(spec.get("inputs", {}))
+	# qg:multiplayer, with --q-host=PORT or --q-join=HOST:PORT: the game waits
+	# for every player, and the local keys only reach it through the lockstep
+	var host := ""
+	var port := -1
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--q-host="):
+			port = int(a.substr(9))
+		elif a.begins_with("--q-join="):
+			var parts: PackedStringArray = a.substr(9).split(":")
+			host = parts[0]
+			port = int(parts[1]) if parts.size() > 1 else -1
+	if spec.has("multiplayer") and port > 0:
+		_shadow_inputs()
+		lockstep = Lockstep.new()
+		add_child(lockstep)
+		lockstep.setup(spec["multiplayer"], self, host, port)
+		return
+	go_to_scene(spec["initial"])
+
+
+# Under lockstep the keys press raw_<action>; the real actions (up, p2_up...)
+# are pressed by the lockstep node alone, on every peer alike.
+func _shadow_inputs() -> void:
+	for action in ["left", "right", "up", "down", "jump"]:
+		var raw: String = "raw_" + action
+		if not InputMap.has_action(raw):
+			InputMap.add_action(raw)
+		for ev in InputMap.action_get_events(action):
+			InputMap.action_add_event(raw, ev)
+		InputMap.action_erase_events(action)
+
+
+func _q_lockstep_ready() -> void:
 	go_to_scene(spec["initial"])
 
 
@@ -23,10 +58,22 @@ func _register_inputs(inputs: Dictionary) -> void:
 	for action in inputs.keys():
 		if not InputMap.has_action(action):
 			InputMap.add_action(action)
-		for key_name in inputs[action]:
-			var ev := InputEventKey.new()
-			ev.physical_keycode = OS.find_keycode_from_string(key_name)
-			InputMap.action_add_event(action, ev)
+		for key in inputs[action]:
+			if key is Dictionary and key.has("joy_button"):
+				var jb := InputEventJoypadButton.new()
+				jb.button_index = int(key["joy_button"])
+				jb.device = int(key.get("device", 0))
+				InputMap.action_add_event(action, jb)
+			elif key is Dictionary and key.has("joy_axis"):
+				var ja := InputEventJoypadMotion.new()
+				ja.axis = int(key["joy_axis"])
+				ja.axis_value = float(key["value"])
+				ja.device = int(key.get("device", 0))
+				InputMap.action_add_event(action, ja)
+			else:
+				var ev := InputEventKey.new()
+				ev.physical_keycode = OS.find_keycode_from_string(str(key))
+				InputMap.action_add_event(action, ev)
 
 
 func go_to_scene(scene_name: String) -> void:

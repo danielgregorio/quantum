@@ -182,3 +182,11 @@ the tables above (§2 queries, §9 named actions, §1 sprites); two were not
 (zones, a second player). The next candidates, in order: `2d/dodge_the_creeps`
 (spawners, timers, a title screen and a score — §10 UI), then `2d/platformer`
 (a direct comparison with the platformer controller).
+
+## Postscript 3: multiplayer
+
+Not in the tables above because Godot's `MultiplayerAPI` surface (RPCs,
+`MultiplayerSynchronizer`, `MultiplayerSpawner`) is exactly what a
+declarative language should not mirror. The language's answer is in
+`PLAN_MULTIPLAYER.md`: determinism makes lockstep free, so multiplayer is
+one declaration, `qg:multiplayer`, and the exchange of inputs.

@@ -53,6 +53,16 @@ def properties_of(cls: str) -> Dict[str, str]:
     return out
 
 
+def members_of(cls: str) -> frozenset:
+    """Every property, method and signal name of the class, inherited ones included."""
+    classes = table()['classes']
+    out = set()
+    while cls and cls in classes:
+        out.update(classes[cls].get('members', ()))
+        cls = classes[cls]['inherits']
+    return frozenset(out)
+
+
 def prefab_kind(prefab: dict) -> str:
     if prefab.get('ai') == 'shuttle':
         return 'shuttle'

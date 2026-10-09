@@ -25,6 +25,8 @@ var sight: float = 80.0
 var heading: Vector2 = Vector2.DOWN
 var lifetime: int = 0
 var accel: float = 0.0
+var rotate: bool = false
+var _speed_range: Array = []
 var spawn_point: Vector2 = Vector2.ZERO
 var health: int = 1
 var fire_prefab: String = ""
@@ -56,7 +58,13 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 	# characters, whose bodies only see layer 1; touching is the areas' job.
 	collision_layer = 2
 	collision_mask = 1
-	speed = float(prefab.get("speed", 30.0))
+	var sp = prefab.get("speed", 30.0)
+	if sp is Array:
+		_speed_range = sp
+		speed = float(sp[0])
+	else:
+		speed = float(sp)
+	rotate = bool(prefab.get("rotate", false))
 	ai = str(prefab.get("ai", "patrol"))
 	sight = float(prefab.get("sight", 80.0))
 	if ai != "patrol":
@@ -119,6 +127,22 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 
 func _ready() -> void:
 	spawn_point = position
+	if _speed_range.size() == 2:
+		# a range: drawn from the scene's seeded source as the thing is placed
+		var scene := _scene_of()
+		var rng: RandomNumberGenerator = scene.rng if scene != null and "rng" in scene else RandomNumberGenerator.new()
+		speed = rng.randf_range(float(_speed_range[0]), float(_speed_range[1]))
+		_base["speed"] = speed
+	_face_heading()
+
+
+# rotate="true": the sprite turns to where the thing flies.
+func _face_heading() -> void:
+	if not rotate:
+		return
+	var sprite := get_node_or_null("Sprite")
+	if sprite != null:
+		sprite.rotation = heading.angle()
 
 
 func quantum_tag() -> String:
@@ -140,6 +164,7 @@ func deflect_axis(axis: String) -> void:
 		heading.x = -heading.x
 	else:
 		heading.y = -heading.y
+	_face_heading()
 
 
 # qg:deflect dx= dy=: a new heading.
@@ -147,6 +172,7 @@ func deflect_to(dx: float, dy: float) -> void:
 	var v := Vector2(dx, dy)
 	if v.length() > 0.0:
 		heading = v.normalized()
+	_face_heading()
 
 
 func quantum_destroy() -> void:

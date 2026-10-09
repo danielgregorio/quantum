@@ -10,11 +10,15 @@
   <qg:spritesheet name="ball" src="assets/ball.png" tile="8" />
   <qg:spritesheet name="separator" src="assets/separator.png" tile="2x400" />
 
-  <!-- The left paddle is player 1 on W/S, the right one player 2 on the arrows. -->
+  <!-- The left paddle is player 1 on W/S, the right one player 2 on the arrows —
+       on one keyboard. Over the network each peer is one player: one hosts
+       (q-host=7777), the other joins (q-join=HOST:7777), and the game runs
+       in lockstep, the same on both (README.md). -->
   <qg:input player="1" action="up" keys="W" />
   <qg:input player="1" action="down" keys="S" />
   <qg:input player="2" action="up" keys="Up" />
   <qg:input player="2" action="down" keys="Down" />
+  <qg:multiplayer players="2" delay="3" />
 
   <!-- The ball flies left at 100 px/s, 2 px/s faster every second; it bounces
        off the ceiling and the floor, and goes back to its start, as it was,

@@ -33,6 +33,8 @@ GAMES = [
      'drones and tanks that shoot, a boss with two phases, a high score kept between runs'),
     ('Pong', 'projects/pong/pong.q', 'Godot\'s own Pong demo transcribed tag for node: two players, '
      'a ball that flies and bounces, zones at the edges (projects/pong/README.md maps the original to it)'),
+    ('Creeps', 'projects/creeps/creeps.q', 'Godot\'s "Dodge the Creeps" tutorial game transcribed: a title, '
+     'creeps from the border at random speeds, a score a second, a game over (projects/creeps/README.md)'),
 ]
 
 INTRO = f'''---
@@ -210,7 +212,7 @@ def build() -> str:
     parts = [INTRO]
     groups = [
         ('What a game is made of', 'Declared once, in `q:application`.',
-         ['tileset', 'spritesheet', 'sound', 'prefab', 'animation', 'state', 'scene']),
+         ['tileset', 'spritesheet', 'input', 'multiplayer', 'sound', 'prefab', 'animation', 'state', 'scene']),
         ('What a scene holds', 'The level, the character, the things placed in it, and what the screen shows.',
          ['tilemap', 'character', 'instance', 'spawner', 'zone', 'sprite', 'exit', 'map-node', 'map-path',
           'camera', 'hud', 'counter', 'text']),

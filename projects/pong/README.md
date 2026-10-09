@@ -55,6 +55,22 @@ source, so a replay is the same every time.
 Still missing after Pong, left for the next game: joypad bindings and analog
 strength on `qg:input`; a score (the demo has none).
 
+## Over the network
+
+`pong.q` declares `<qg:multiplayer players="2" />`. On one keyboard it is the
+demo: W/S and the arrows. Over the network each machine is one player:
+
+```
+godot --path projects/pong/godot -- --q-host=7777          # player 1, the left paddle
+godot --path projects/pong/godot -- --q-join=HOST:7777     # player 2, the right one
+```
+
+Both run the whole game in lockstep (`PLAN_MULTIPLAYER.md`): the demo's
+random slant comes from the scene seed, so both see the same ball.
+`tests/godot/test_godot_multiplayer.py` runs two headless Godots on
+localhost and checks they agree, with each other and with one Godot
+replaying both tapes.
+
 ## The test
 
 `tests/godot/test_godot_pong.py` replays the game in Godot: the ball's

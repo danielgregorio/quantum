@@ -281,8 +281,13 @@ func load_sounds(sounds: Dictionary) -> void:
 		var path := ProjectSettings.globalize_path("res://" + src)
 		if src.ends_with(".ogg"):
 			stream = AudioStreamOggVorbis.load_from_file(path)
+			if stream != null:
+				stream.loop = bool(sounds[name_].get("loop", false))
 		elif src.ends_with(".wav"):
 			stream = AudioStreamWAV.load_from_file(path)
+			if stream != null and sounds[name_].get("loop", false):
+				stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+				stream.loop_end = stream.data.size() / max(1, 2 if stream.format == AudioStreamWAV.FORMAT_16_BITS else 1) / max(1, 2 if stream.stereo else 1)
 		if stream == null:
 			push_warning("quantum: cannot load the sound " + src)
 			continue
@@ -299,3 +304,11 @@ func play(name_: String) -> void:
 	var player: AudioStreamPlayer = _sounds.get(name_)
 	if player != null:
 		player.play()
+
+
+# qg:stop: the sound is silent (the replay state records it as "-name").
+func stop(name_: String) -> void:
+	sounds_played.append("-" + name_)
+	var player: AudioStreamPlayer = _sounds.get(name_)
+	if player != null:
+		player.stop()
