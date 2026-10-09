@@ -37,7 +37,7 @@ class Tag:
 
 
 # The actions a handler can hold, besides q: statements.
-ACTIONS = ('destroy',)
+ACTIONS = ('destroy', 'bounce', 'play', 'respawn')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -52,14 +52,30 @@ TAGS: Dict[str, Tag] = {
          'src': Attr('str', required=True),
          'tile': Attr('int', required=True, doc='frame size in pixels (square)')},
         parents=('application',)),
+    'sound': Tag(
+        'A sound the game can play (qg:play).',
+        {'name': Attr('ident', required=True),
+         'src': Attr('str', required=True, doc='an .ogg or .wav')},
+        parents=('application',)),
     'prefab': Tag(
-        'A kind of thing the scene places with qg:instance.',
+        'A kind of thing the scene places with qg:instance. With ai= it moves.',
         {'name': Attr('ident', required=True),
          'tag': Attr('ident', doc='what collisions see it as (`with="coin"`)'),
          'sheet': Attr('ident', required=True, doc='a qg:spritesheet or qg:tileset'),
          'frame': Attr('int', 0),
-         'hitbox': Attr('size', required=True)},
+         'hitbox': Attr('size', required=True),
+         'ai': Attr('enum:patrol', None, doc='patrol: walks, turns at walls (and at edges with turns-at)'),
+         'speed': Attr('float', 30.0, doc='pixels per second, for ai='),
+         'direction': Attr('enum:left|right', 'left', doc='where it walks first'),
+         'turns-at': Attr('enum:wall|edge', 'wall', doc='edge: also turns before falling off'),
+         'gravity': Attr('float', 900.0)},
         parents=('application',)),
+    'animation': Tag(
+        'Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what it does; a prefab plays "walk".',
+        {'name': Attr('ident', required=True),
+         'frames': Attr('str', required=True, doc='comma-separated frame numbers'),
+         'fps': Attr('float', 8.0)},
+        parents=('character', 'prefab')),
     'scene': Tag(
         'A screen of the game. The first one is where the game starts.',
         {'name': Attr('ident', required=True),
@@ -84,7 +100,8 @@ TAGS: Dict[str, Tag] = {
          'variable-jump': Attr('bool', True, doc='releasing the button cuts the jump'),
          'coyote-frames': Attr('int', 6, doc='ticks after leaving a ledge in which a jump still works'),
          'gravity': Attr('float', 900.0, doc='pixels per second squared'),
-         'max-fall': Attr('float', 300.0, doc='terminal velocity, pixels per second')},
+         'max-fall': Attr('float', 300.0, doc='terminal velocity, pixels per second'),
+         'jump-sound': Attr('ident', None, doc='a qg:sound, played on take-off')},
         parents=('scene',)),
     'instance': Tag(
         'A prefab placed in the scene.',
@@ -106,13 +123,34 @@ TAGS: Dict[str, Tag] = {
          'label': Attr('str', '', doc='text before the number')},
         parents=('hud',)),
     'on-collision': Tag(
-        'What happens when this character touches something. Holds actions and statements.',
-        {'with': Attr('ident', required=True, doc='the tag of what it touches')},
+        'What happens when this character touches something. Holds actions and statements; '
+        '`me` is the character, `other` what it touched.',
+        {'with': Attr('ident', required=True, doc='the tag of what it touches'),
+         'side': Attr('enum:any|top', 'any',
+                      doc='top: landing on it. A side handler runs before the "any" one, which then does not'),
+         'cooldown': Attr('int', 0, doc='ticks before this handler can fire again')},
+        parents=('character',)),
+    'on-fall': Tag(
+        'What happens when this character falls below the tilemap. Holds actions and statements.',
+        {},
         parents=('character',)),
     # actions
     'destroy': Tag(
         'Removes a thing from the scene.',
-        {'target': Attr('enum:other|self', 'other')},
+        {'target': Attr('enum:other|me', 'other')},
+        parents=('handler',)),
+    'bounce': Tag(
+        'Throws the character up, as after a stomp.',
+        {'target': Attr('enum:me', 'me'),
+         'height': Attr('float', 32.0, doc='pixels')},
+        parents=('handler',)),
+    'play': Tag(
+        'Plays a qg:sound.',
+        {'sound': Attr('ident', required=True)},
+        parents=('handler',)),
+    'respawn': Tag(
+        'Puts the character back where it started the scene, still.',
+        {'target': Attr('enum:me', 'me')},
         parents=('handler',)),
 }
 

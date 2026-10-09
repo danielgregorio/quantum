@@ -10,7 +10,7 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: int) -> 
 	prefab_name = name_
 	tag = prefab["tag"]
 	name = name_
-	add_to_group("q_item")
+	add_to_group("q_thing")
 	var sprite := Sprite2D.new()
 	sprite.name = "Sprite"
 	sprite.texture = texture
@@ -32,5 +32,5 @@ func quantum_tag() -> String:
 func quantum_destroy() -> void:
 	# Out of the physics world at once, so the same tick cannot touch it twice.
 	set_deferred("monitorable", false)
-	remove_from_group("q_item")
+	remove_from_group("q_thing")
 	queue_free()

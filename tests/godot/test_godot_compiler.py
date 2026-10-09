@@ -85,8 +85,12 @@ class TestWhatItWrites:
         kinds = [n['kind'] for n in scene['nodes']]
         assert kinds == ['tilemap', 'character', 'instance', 'camera', 'hud']
         assert scene['nodes'][0]['rows'] == [[0, 0, 0], [23, 23, 23]]
-        assert scene['nodes'][1]['on_collision'] == [{'with': 'coin', 'handler': '_on_player_collision_0'}]
-        assert data['prefabs']['Coin'] == {'tag': 'coin', 'sheet': 'k', 'frame': 151, 'hitbox': [12, 12]}
+        assert scene['nodes'][1]['on_collision'] == [
+            {'with': 'coin', 'side': 'any', 'cooldown': 0, 'handler': '_on_player_collision_0'}]
+        coin = data['prefabs']['Coin']
+        assert {k: coin[k] for k in ('tag', 'sheet', 'frame', 'hitbox')} == {
+            'tag': 'coin', 'sheet': 'k', 'frame': 151, 'hitbox': [12, 12]}
+        assert coin['ai'] is None and coin['animations'] == {}
 
     def test_the_scene_script(self, tmp_path):
         out = build(tmp_path, game(SCENE))
@@ -120,6 +124,91 @@ class TestWhatItWrites:
                 '\tfor i in range(int(1), int(times) + 1):\n'
                 '\t\ttotal = (total + n)\n'
                 '\treturn total\n') in script
+
+
+class TestEnemiesSoundsAndAnimations:
+    SOURCE = HEAD + '''  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
+  <qg:prefab name="Walker" tag="enemy" sheet="c" frame="18" hitbox="18x18" ai="patrol" speed="30" turns-at="edge">
+    <qg:animation name="walk" frames="18, 19,20" fps="6" />
+  </qg:prefab>
+  <qg:scene name="main">
+    <q:set name="lives" value="3" type="number" />
+    <qg:tilemap tileset="k" collision="true">
+23,23
+    </qg:tilemap>
+    <qg:character id="player" controller="platformer" sheet="c" x="10" y="10" hitbox="18x22" jump-sound="hurt">
+      <qg:animation name="idle" frames="0" />
+      <qg:on-collision with="enemy" side="top">
+        <qg:destroy target="other" />
+        <qg:bounce target="me" height="32" />
+      </qg:on-collision>
+      <qg:on-collision with="enemy" cooldown="60">
+        <qg:play sound="hurt" />
+        <q:set name="lives" value="{lives - 1}" />
+        <qg:respawn target="me" />
+      </qg:on-collision>
+      <qg:on-fall>
+        <qg:respawn />
+      </qg:on-fall>
+    </qg:character>
+    <qg:instance prefab="Walker" x="30" y="10" />
+  </qg:scene>
+''' + TAIL
+
+    def test_the_json(self, tmp_path):
+        out = build(tmp_path, self.SOURCE)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['sounds'] == {'hurt': {'src': 'assets/kenney/audio/hurt.ogg'}}
+        assert (out / 'assets' / 'kenney' / 'audio' / 'hurt.ogg').is_file()
+        walker = data['prefabs']['Walker']
+        assert walker['ai'] == 'patrol' and walker['speed'] == 30 and walker['turns_at'] == 'edge'
+        assert walker['direction'] == 'left'
+        assert walker['animations'] == {'walk': {'frames': [18, 19, 20], 'fps': 6}}
+        character = data['scenes']['main']['nodes'][1]
+        assert character['jump_sound'] == 'hurt'
+        assert character['animations'] == {'idle': {'frames': [0], 'fps': 8}}
+        assert character['on_collision'] == [
+            {'with': 'enemy', 'side': 'top', 'cooldown': 0, 'handler': '_on_player_collision_0'},
+            {'with': 'enemy', 'side': 'any', 'cooldown': 60, 'handler': '_on_player_collision_1'},
+        ]
+        assert character['on_fall'] == '_on_player_fall'
+
+    def test_the_actions(self, tmp_path):
+        out = build(tmp_path, self.SOURCE)
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'func _on_player_collision_0(me, other) -> void:\n\tQ.destroy(other)\n\tQ.bounce(me, 32.0)\n' in script
+        assert ('func _on_player_collision_1(me, other) -> void:\n\tQ.play("hurt")\n'
+                '\tlives = (lives - 1)\n\tQ.respawn(me)\n') in script
+        assert 'func _on_player_fall(me, other) -> void:\n\tQ.respawn(me)\n' in script
+
+    def test_a_sound_nobody_declared(self, tmp_path):
+        e = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p" controller="platformer" sheet="c" x="0" y="0" hitbox="1x1">
+      <qg:on-collision with="coin"><qg:play sound="ding" /></qg:on-collision>
+    </qg:character>
+  </qg:scene>
+'''))
+        assert '<qg:play sound="ding">: no qg:sound of that name' in e.message
+
+    def test_a_jump_sound_nobody_declared(self, tmp_path):
+        e = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p" controller="platformer" sheet="c" x="0" y="0" hitbox="1x1" jump-sound="boing" />
+  </qg:scene>
+'''))
+        assert 'jump-sound="boing": no qg:sound of that name' in e.message
+
+    def test_frames_must_be_numbers(self, tmp_path):
+        e = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p" controller="platformer" sheet="c" x="0" y="0" hitbox="1x1">
+      <qg:animation name="walk" frames="a,b" />
+    </qg:character>
+  </qg:scene>
+'''))
+        assert 'frames="a,b": comma-separated frame numbers' in e.message
+
+    def test_an_action_outside_a_handler(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:bounce /></qg:scene>\n'))
+        assert '<qg:bounce> cannot go inside <scene>' in e.message
 
 
 class TestWhatItRefuses:

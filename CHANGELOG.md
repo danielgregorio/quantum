@@ -41,13 +41,23 @@ alter the behaviour of an existing app is listed under **Breaking**.
   with `run-speed`, `jump-height` to the pixel, variable jump, coyote
   frames), `qg:on-collision with=`, `qg:destroy`, `qg:instance`,
   `qg:camera`, `qg:hud` with `qg:counter`; and `q:set`, `q:if`/`q:else`/
-  `q:elseif`, `q:loop`, `q:function`, `q:return` inside handlers.
-- `projects/hopper/hopper.q`, the first slice of the platformer: a screen,
-  a character that walks and jumps on a tilemap, two coins, a counter.
+  `q:elseif`, `q:loop`, `q:function`, `q:return` inside handlers. Then, for
+  the platformer: `qg:sound` and `qg:play`; `qg:animation` (frames cycled
+  by physics ticks — a character plays idle/walk/jump by what it does);
+  `qg:prefab ai="patrol"` (walks, turns at walls or edges, under gravity);
+  `qg:on-collision side="top"` (a stomp) with `cooldown=` ticks; `qg:bounce`,
+  `qg:respawn`; `qg:on-fall` below the tilemap; `jump-sound=`. Things
+  collide with the tiles, not with the characters: touching is the areas'
+  job, so a walker hurts instead of blocking.
+- `projects/hopper/hopper.q`, the platformer, so far one screen: a
+  character that walks and jumps on a tilemap, coins, a walker to stomp or
+  be hurt by, a pit, score/coins/lives in the HUD — zero lines of script.
   `tests/godot/test_godot_hopper.py` replays it in Godot: it rests on the
   ground, runs at its `run-speed`, a held jump peaks at `jump-height`
-  within a pixel, a tap is a short hop, a coin collected is counted, and
-  the same tape gives the same game.
+  within a pixel, a tap is a short hop, a coin collected is counted, the
+  walker hurts once (cooldown) and sends it back to the start, landing on
+  the walker stomps it, the pit costs a life, and the same tape gives the
+  same game.
 - Laboratory: the real engine checks and replays a game, headless.
   `quantum run game.q --check` opens the built Godot project and fails on
   any script error (Godot exits 0 either way; the check reads its output).

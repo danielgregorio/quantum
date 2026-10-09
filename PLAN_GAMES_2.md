@@ -189,7 +189,20 @@ Estimates assume one person full-time; each phase ends green in CI.
   `qg:input` (own keys) does not exist yet — the platformer's actions are
   bound to arrows/WASD/space.
 
-### Phase 2 — Platformer kit and Hopper (3 weeks)
+### Phase 2 — Platformer kit and Hopper (3 weeks) — in progress
+
+Slices, each one green in CI before the next:
+
+- [x] 2a (2026-10-09): sounds, animations, a patrol enemy, stomp (`side="top"`),
+  hurt with `cooldown=`, `qg:bounce`, `qg:respawn`, `qg:on-fall`. Learned:
+  two CharacterBody2Ds on the same layer block each other and their areas
+  never overlap — things live on layer 2, characters' bodies only see
+  layer 1; `is_on_top_of` is "falling, feet above the other's middle".
+- [ ] 2b: character states (`qg:state`, hitbox per state, a power-up that
+  grows), question/breakable blocks, hazards, checkpoints, a goal.
+- [ ] 2c: several scenes, `qg:goto-scene`, state that persists across
+  scenes, a world map, game over, three levels.
+- [ ] 2d: Tiled `.tmx` levels with object layers that place prefabs.
 
 - Kinematic `platformer` controller with the existing retro constants
   (variable jump, coyote frames, rising/falling gravity, terminal velocity).

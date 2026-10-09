@@ -9,6 +9,7 @@ harness (`_q_state`).
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
@@ -37,6 +38,7 @@ class SceneScript:
     functions: List[str] = field(default_factory=list)   # compiled func blocks
     handlers: List[str] = field(default_factory=list)
     function_names: List[str] = field(default_factory=list)
+    sounds_played: List[str] = field(default_factory=list)
 
     def scope(self) -> Scope:
         return Scope(self.state.keys(), functions=self.function_names)
@@ -115,7 +117,7 @@ def compile_block(nodes: List[Node], scope: Scope, script: SceneScript, depth: i
 def _compile_node(node: Node, scope: Scope, script: SceneScript, depth: int) -> List[str]:
     ind = _INDENT * depth
     if isinstance(node, Element):
-        return [ind + _compile_action(node, scope)]
+        return [ind + _compile_action(node, scope, script)]
     st = node
     if st.kind == 'set':
         name = st.attrs['name']
@@ -163,12 +165,19 @@ def _compile_node(node: Node, scope: Scope, script: SceneScript, depth: int) -> 
     raise GameCompileError(f'<q:{st.kind}> cannot go here', st.line)
 
 
-def _compile_action(el: Element, scope: Scope) -> str:
+def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
+    target = el.get('target')
+    if target is not None and not scope.has(target):
+        raise GameCompileError(f'<qg:{el.tag} target="{target}"> outside a handler that has {target!r}', el.line)
     if el.tag == 'destroy':
-        target = el.get('target', 'other')
-        if not scope.has(target):
-            raise GameCompileError(f'<qg:destroy target="{target}"> outside a collision handler', el.line)
         return f'Q.destroy({target})'
+    if el.tag == 'bounce':
+        return f'Q.bounce({target}, {float(el.get("height"))!r})'
+    if el.tag == 'respawn':
+        return f'Q.respawn({target})'
+    if el.tag == 'play':
+        script.sounds_played.append(el.get('sound'))
+        return f'Q.play({json.dumps(el.get("sound"))})'
     raise GameCompileError(f'<qg:{el.tag}> is not an action; it cannot go inside a handler', el.line)
 
 

@@ -64,6 +64,7 @@ class Game:
     prefabs: Dict[str, Element]
     scenes: List[Element]
     source_path: Optional[str]
+    sounds: Dict[str, Element] = field(default_factory=dict)
 
 
 def _local(element: ET.Element) -> tuple:
@@ -192,7 +193,7 @@ def _read_element(element: ET.Element, parent_tag: str) -> Element:
             raise GameCompileError(f'<qg:{tag}> holds {spec.text}, not tags', line)
         return node
     _no_raw_text(element, f'<qg:{tag}>')
-    child_parent = 'handler' if tag == 'on-collision' else tag
+    child_parent = 'handler' if tag in ('on-collision', 'on-fall') else tag
     node.children = _read_children(element, child_parent, f'<qg:{tag}>')
     return node
 
@@ -261,6 +262,7 @@ def read_game(app) -> Game:
     tilesets: Dict[str, Element] = {}
     sheets: Dict[str, Element] = {}
     prefabs: Dict[str, Element] = {}
+    sounds: Dict[str, Element] = {}
     scenes: List[Element] = []
     try:
         for child in root:
@@ -273,6 +275,8 @@ def read_game(app) -> Game:
                     _unique(sheets, el, 'spritesheet')
                 elif el.tag == 'prefab':
                     _unique(prefabs, el, 'prefab')
+                elif el.tag == 'sound':
+                    _unique(sounds, el, 'sound')
                 elif el.tag == 'scene':
                     if any(s.get('name') == el.get('name') for s in scenes):
                         raise GameCompileError(f'two scenes named {el.get("name")!r}', el.line)
@@ -290,7 +294,7 @@ def read_game(app) -> Game:
         raise
     if not scenes:
         raise GameCompileError('a game needs at least one <qg:scene>', file=source_path)
-    return Game(getattr(app, 'app_id', 'game'), tilesets, sheets, prefabs, scenes, source_path)
+    return Game(getattr(app, 'app_id', 'game'), tilesets, sheets, prefabs, scenes, source_path, sounds)
 
 
 def _unique(table: Dict[str, Element], el: Element, what: str) -> None:

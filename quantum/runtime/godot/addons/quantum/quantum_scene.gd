@@ -9,6 +9,7 @@ extends Node2D
 var q_spec: Dictionary = {}
 var q_seed: int = 0
 var q_camera: Camera2D = null
+var q_fall_y: float = 100000.0
 var rng := RandomNumberGenerator.new()
 
 
@@ -31,10 +32,16 @@ func quantum_state() -> Dictionary:
 	for n in get_tree().get_nodes_in_group("q_named"):
 		if n.get_parent() == self:
 			nodes[n.name] = {"x": snappedf(n.position.x, 0.01), "y": snappedf(n.position.y, 0.01)}
-	var items := 0
-	for n in get_tree().get_nodes_in_group("q_item"):
+	var things := {}
+	for n in get_tree().get_nodes_in_group("q_thing"):
 		if n.get_parent() == self and not n.is_queued_for_deletion():
-			items += 1
+			things[n.tag] = int(things.get(n.tag, 0)) + 1
 	state["nodes"] = nodes
-	state["items"] = items
+	state["things"] = things
+	state["sounds"] = Q.sounds_played.duplicate()
 	return state
+
+
+# Below this y a character has fallen out of the level (qg:on-fall).
+func q_fall_line() -> float:
+	return q_fall_y

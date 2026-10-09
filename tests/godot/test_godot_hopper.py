@@ -43,7 +43,7 @@ def test_the_character_lands_and_rests_on_the_ground(godot, hopper):
     state = replay(hopper, 90, binary=godot)
     assert player(state) == {'x': 40.0, 'y': REST_Y}
     assert state['level-1']['coins'] == 0
-    assert state['level-1']['items'] == 2
+    assert state['level-1']['things'] == {'coin': 2, 'enemy': 1}
 
 
 def test_running_covers_run_speed_pixels_per_second(godot, hopper):
@@ -68,7 +68,7 @@ def test_a_tapped_jump_is_a_short_hop(godot, hopper):
 def test_walking_through_a_coin_collects_it(godot, hopper):
     state = replay(hopper, 120, tape_from_holds([('right', 0, 120)]), binary=godot)
     assert state['level-1']['coins'] == 1
-    assert state['level-1']['items'] == 1
+    assert state['level-1']['things']['coin'] == 1
 
 
 def test_the_same_tape_gives_the_same_game(godot, hopper):
@@ -90,3 +90,34 @@ def test_the_build_replaces_an_earlier_build_only(godot, hopper, tmp_path):
     (again / 'scripts' / 'stale.gd').write_text('extends Node\n')
     compile_game(app, str(again), source_dir=str(HOPPER.parent))
     assert not (again / 'scripts' / 'stale.gd').exists()
+
+
+# --- the walker: stomp it, or be hurt by it ---
+
+def test_walking_into_the_walker_hurts_once_and_respawns(godot, hopper):
+    # The walker starts at x=200 walking left; held right, the character meets it
+    # around tick 75 and is sent back to its start, one life down, once (cooldown).
+    state = replay(hopper, 90, tape_from_holds([('right', 0, 90)]), binary=godot)
+    s = state['level-1']
+    assert s['lives'] == 2
+    assert s['sounds'].count('hurt') == 1
+    assert s['things']['enemy'] == 1
+    assert player(state)['x'] < 100   # respawned at x=40, walked on since
+
+
+def test_landing_on_the_walker_stomps_it(godot, hopper):
+    state = replay(hopper, 140, tape_from_holds([('right', 0, 140), ('jump', 52, 72)]), binary=godot)
+    s = state['level-1']
+    assert s['things'].get('enemy', 0) == 0
+    assert s['score'] == 10 + 100   # the coin on the way, and the stomp
+    assert s['lives'] == 3
+    assert s['sounds'] == ['coin', 'jump', 'stomp']
+
+
+def test_falling_into_the_pit_costs_a_life(godot, hopper):
+    # Stomp the walker, keep going: the pit is at columns 13-14.
+    state = replay(hopper, 300, tape_from_holds([('right', 0, 300), ('jump', 52, 72)]), binary=godot)
+    s = state['level-1']
+    assert s['lives'] == 2
+    assert s['sounds'][-1] == 'hurt'
+    assert player(state)['y'] == pytest.approx(REST_Y, abs=1)   # back on the ground

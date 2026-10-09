@@ -119,11 +119,19 @@ class _Compiler:
         for name, el in list(g.tilesets.items()) + list(g.sheets.items()):
             sheets[name] = {'src': self._asset(el.get('src'), el.line), 'tile': el.get('tile'),
                             'kind': el.tag}
+        sounds = {}
+        for name, el in g.sounds.items():
+            sounds[name] = {'src': self._asset(el.get('src'), el.line)}
+        self.sounds = sounds
         prefabs = {}
         for name, el in g.prefabs.items():
             self._sheet_exists(el.get('sheet'), sheets, el.line)
             prefabs[name] = {'tag': el.get('tag') or name.lower(), 'sheet': el.get('sheet'),
-                             'frame': el.get('frame'), 'hitbox': list(el.get('hitbox'))}
+                             'frame': el.get('frame'), 'hitbox': list(el.get('hitbox')),
+                             'ai': el.get('ai'), 'speed': el.get('speed'),
+                             'direction': el.get('direction'), 'turns_at': el.get('turns-at'),
+                             'gravity': el.get('gravity'),
+                             'animations': _animations(el)}
         scenes = {}
         for scene in g.scenes:
             scenes[scene.get('name')] = self._scene(scene, sheets, prefabs)
@@ -133,6 +141,7 @@ class _Compiler:
                 'initial': g.scenes[0].get('name'),
                 'inputs': DEFAULT_INPUTS,
                 'sheets': sheets,
+                'sounds': sounds,
                 'prefabs': prefabs,
                 'scenes': scenes,
             },
@@ -200,7 +209,17 @@ class _Compiler:
                 handlers = []
                 for i, h in enumerate(el.find_all('on-collision')):
                     hname = compile_handler(script, f'_on_{_ident(cid)}_collision_{i}', h.children, h.line)
-                    handlers.append({'with': h.get('with'), 'handler': hname})
+                    handlers.append({'with': h.get('with'), 'side': h.get('side'),
+                                     'cooldown': h.get('cooldown'), 'handler': hname})
+                on_fall = None
+                falls = el.find_all('on-fall')
+                if len(falls) > 1:
+                    raise GameCompileError('a character has one <qg:on-fall>', falls[1].line)
+                if falls:
+                    on_fall = compile_handler(script, f'_on_{_ident(cid)}_fall', falls[0].children, falls[0].line)
+                if el.get('jump-sound') and el.get('jump-sound') not in self.sounds:
+                    raise GameCompileError(
+                        f'jump-sound="{el.get("jump-sound")}": no qg:sound of that name', el.line)
                 nodes.append({
                     'kind': 'character', 'id': cid, 'controller': el.get('controller'),
                     'sheet': el.get('sheet'), 'frame': el.get('frame'),
@@ -208,7 +227,9 @@ class _Compiler:
                     'run_speed': el.get('run-speed'), 'jump_height': el.get('jump-height'),
                     'variable_jump': el.get('variable-jump'), 'coyote_frames': el.get('coyote-frames'),
                     'gravity': el.get('gravity'), 'max_fall': el.get('max-fall'),
-                    'on_collision': handlers,
+                    'jump_sound': el.get('jump-sound'),
+                    'animations': _animations(el),
+                    'on_collision': handlers, 'on_fall': on_fall,
                 })
             elif el.tag == 'instance':
                 if el.get('prefab') not in prefabs:
@@ -243,6 +264,11 @@ class _Compiler:
                     raise GameCompileError(
                         f'<qg:on-collision with="{h["with"]}">: no prefab has that tag '
                         f'(tags: {", ".join(sorted(tags)) or "none"})', scene.line)
+        for played in script.sounds_played:
+            if played not in self.sounds:
+                raise GameCompileError(
+                    f'<qg:play sound="{played}">: no qg:sound of that name '
+                    f'(declared: {", ".join(sorted(self.sounds)) or "none"})', scene.line)
         script_file = _script_name(name)
         self.scripts[script_file] = script.source()
         return {
@@ -255,6 +281,22 @@ class _Compiler:
 
 def _ident(text: str) -> str:
     return re.sub(r'[^A-Za-z0-9_]+', '_', text)
+
+
+def _animations(el: Element) -> Dict[str, dict]:
+    out: Dict[str, dict] = {}
+    for a in el.find_all('animation'):
+        name = a.get('name')
+        if name in out:
+            raise GameCompileError(f'two animations named {name!r}', a.line)
+        try:
+            frames = [int(f.strip()) for f in str(a.get('frames')).split(',') if f.strip()]
+        except ValueError:
+            raise GameCompileError(f'frames="{a.get("frames")}": comma-separated frame numbers', a.line)
+        if not frames:
+            raise GameCompileError('<qg:animation> needs at least one frame', a.line)
+        out[name] = {'frames': frames, 'fps': a.get('fps')}
+    return out
 
 
 def _csv_rows(el: Element) -> List[List[int]]:

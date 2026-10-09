@@ -8,6 +8,7 @@ extends RefCounted
 const QuantumScene := preload("res://addons/quantum/quantum_scene.gd")
 const PlatformerBody := preload("res://addons/quantum/platformer_body.gd")
 const Item := preload("res://addons/quantum/item.gd")
+const Thing := preload("res://addons/quantum/thing.gd")
 const Hud := preload("res://addons/quantum/hud.gd")
 const Tilemap := preload("res://addons/quantum/tilemap.gd")
 
@@ -19,6 +20,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	scene.set_script(load(scene_spec["script"]))
 	scene.q_spec = scene_spec
 	scene.q_seed = int(scene_spec.get("seed", 0))
+	Q.load_sounds(game.get("sounds", {}))
 
 	var bg := ColorRect.new()
 	bg.name = "Background"
@@ -35,17 +37,22 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 			"tilemap":
 				tilemap = Tilemap.build(node_spec, game["sheets"][node_spec["tileset"]], _texture)
 				scene.add_child(tilemap)
+				scene.q_fall_y = tilemap.pixel_size().y + 64.0
 			"character":
 				var body := _character(node_spec, game, scene)
 				characters[node_spec["id"]] = body
 				scene.add_child(body)
 			"instance":
 				var prefab: Dictionary = game["prefabs"][node_spec["prefab"]]
-				var item := Item.new()
-				item.setup(node_spec["prefab"], prefab, _texture(game["sheets"][prefab["sheet"]]),
-					int(game["sheets"][prefab["sheet"]]["tile"]))
-				item.position = Vector2(node_spec["x"], node_spec["y"])
-				scene.add_child(item)
+				var sheet: Dictionary = game["sheets"][prefab["sheet"]]
+				var thing: Node2D
+				if prefab.get("ai") != null:
+					thing = Thing.new()
+				else:
+					thing = Item.new()
+				thing.setup(node_spec["prefab"], prefab, _texture(sheet), int(sheet["tile"]))
+				thing.position = Vector2(node_spec["x"], node_spec["y"])
+				scene.add_child(thing)
 			"camera":
 				var cam := Camera2D.new()
 				cam.name = "Camera"
@@ -72,11 +79,14 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> CharacterBody2D:
 	var body := PlatformerBody.new()
 	body.name = node_spec["id"]
+	body.collision_layer = 1
+	body.collision_mask = 1
 	body.add_to_group("q_named")
 	body.position = Vector2(node_spec["x"], node_spec["y"])
 	body.setup(node_spec)
 	var sheet: Dictionary = game["sheets"][node_spec["sheet"]]
-	body.add_child(_sprite(_texture(sheet), int(sheet["tile"]), int(node_spec["frame"])))
+	var sprite := _sprite(_texture(sheet), int(sheet["tile"]), int(node_spec["frame"]))
+	body.add_child(sprite)
 	var shape := CollisionShape2D.new()
 	var rect := RectangleShape2D.new()
 	rect.size = Vector2(node_spec["hitbox"][0], node_spec["hitbox"][1])
@@ -90,7 +100,7 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 	sensor_shape.shape = rect
 	sensor.add_child(sensor_shape)
 	body.add_child(sensor)
-	body.wire_collisions(sensor, node_spec.get("on_collision", []), scene)
+	body.wire(sensor, node_spec, scene, sprite)
 	return body
 
 
