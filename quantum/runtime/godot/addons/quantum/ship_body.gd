@@ -99,9 +99,9 @@ func _physics_process(delta: float) -> void:
 	# analog: a stick's strength scales the speed; a key is 1.0
 	var dir := Vector2.ZERO
 	if axis != "vertical":
-		dir.x = Input.get_action_strength(_a("right")) - Input.get_action_strength(_a("left"))
+		dir.x = Q.strength(_a("right")) - Q.strength(_a("left"))
 	if axis != "horizontal":
-		dir.y = Input.get_action_strength(_a("down")) - Input.get_action_strength(_a("up"))
+		dir.y = Q.strength(_a("down")) - Q.strength(_a("up"))
 	if dir.length() > 1.0:
 		dir = dir.normalized()
 	position += dir * speed * delta
@@ -114,7 +114,7 @@ func _physics_process(delta: float) -> void:
 
 	if _fire_in > 0:
 		_fire_in -= 1
-	if fire_action != "" and fire_prefab != "" and Input.is_action_pressed(_a(fire_action)) and _fire_in == 0:
+	if fire_action != "" and fire_prefab != "" and Q.held(_a(fire_action)) and _fire_in == 0:
 		_fire_in = fire_every
 		Q.spawn_at(_scene, fire_prefab, position + Vector2(0, -hitbox_size.y / 2.0 - 4.0))
 		if fire_sound != "":

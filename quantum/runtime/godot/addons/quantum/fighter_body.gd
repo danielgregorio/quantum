@@ -183,19 +183,19 @@ func _physics_process(delta: float) -> void:
 		return
 	# free: read the player's actions
 	var dir := 0
-	if Input.is_action_pressed(_a("right")):
+	if Q.held(_a("right")):
 		dir += 1
-	if Input.is_action_pressed(_a("left")):
+	if Q.held(_a("left")):
 		dir -= 1
-	_crouching = on_floor and Input.is_action_pressed(_a("down"))
+	_crouching = on_floor and Q.held(_a("down"))
 	_blocking = on_floor and dir != 0 and dir == -facing and other != null and other.phase == "move"
 	for name_ in _moves.keys():
-		if Input.is_action_just_pressed(_a(_moves[name_]["action"])):
+		if Q.tapped(_a(_moves[name_]["action"])):
 			_start_move(name_)
 			velocity.x = 0.0
 			_fall(delta, on_floor)
 			return
-	if on_floor and Input.is_action_just_pressed(_a("jump")):
+	if on_floor and Q.tapped(_a("jump")):
 		velocity.y = -_jump_speed
 		position.y -= 0.01
 		on_floor = false

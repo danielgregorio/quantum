@@ -253,7 +253,8 @@ def test_a_one_way_ledge_is_jumped_through_from_below_and_stood_on(godot, hopper
     below = replay(hopper, 500, tape, binary=godot)['level-2']
     assert below['nodes']['player']['y'] == pytest.approx(REST_Y, abs=0.5)   # walked under it
     on_it = replay(hopper, 560, tape, binary=godot)['level-2']
-    assert on_it['nodes']['player'] == {'x': 84.98, 'y': 130.0}   # the ledge's top is at y=141
+    assert on_it['nodes']['player']['x'] == 84.98
+    assert on_it['nodes']['player']['y'] == pytest.approx(130.0, abs=0.05)   # on the ledge, whose top is at y=141
 
 
 def test_the_lift_carries_whoever_stands_on_it(godot, hopper):

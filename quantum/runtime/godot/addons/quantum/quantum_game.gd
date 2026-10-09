@@ -30,24 +30,11 @@ func _ready() -> void:
 			host = parts[0]
 			port = int(parts[1]) if parts.size() > 1 else -1
 	if spec.has("multiplayer") and port > 0:
-		_shadow_inputs()
 		lockstep = Lockstep.new()
 		add_child(lockstep)
 		lockstep.setup(spec["multiplayer"], self, host, port)
 		return
 	go_to_scene(spec["initial"])
-
-
-# Under lockstep the keys press raw_<action>; the real actions (up, p2_up...)
-# are pressed by the lockstep node alone, on every peer alike.
-func _shadow_inputs() -> void:
-	for action in spec.get("actions", ["left", "right", "up", "down", "jump"]):
-		var raw: String = "raw_" + str(action)
-		if not InputMap.has_action(raw):
-			InputMap.add_action(raw)
-		for ev in InputMap.action_get_events(action):
-			InputMap.action_add_event(raw, ev)
-		InputMap.action_erase_events(action)
 
 
 func _q_lockstep_ready() -> void:

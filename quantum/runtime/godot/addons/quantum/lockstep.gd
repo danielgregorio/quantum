@@ -13,10 +13,10 @@ extends Node
 #
 # One peer hosts (--q-host=PORT: it is player 1), the others join
 # (--q-join=HOST:PORT) and are players 2.. in the order they connect. The
-# game starts when all `players` are there. The local keys are bound to
-# raw_<action> actions; this node samples them, schedules them `delay`
-# ticks ahead for its player's actions (up, p2_up...) and presses those
-# — the real actions are only ever pressed from here, on every peer alike.
+# game starts when all `players` are there. This node samples the local
+# keys (player 1's actions, whatever player this peer is), schedules them
+# `delay` ticks ahead for its own player, and gives Q the input of every
+# player for the tick (Q.set_input) — the game reads nothing else.
 # Every `check_every` ticks the peers compare a hash of the whole state: a
 # difference is a desync, reported and fatal, never silent.
 
@@ -126,6 +126,7 @@ func _begin() -> void:
 		for p in range(1, players + 1):
 			_frames[t][p] = [0, 0.0, 0.0]
 	started = true
+	Q.external_input = true
 	game.call("_q_lockstep_ready")
 
 
@@ -140,7 +141,7 @@ func _physics_process(_delta: float) -> void:
 	# 1. what this player presses now runs `delay` ticks from now, everywhere
 	var mask := 0
 	for i in ACTIONS.size():
-		if Input.is_action_pressed("raw_" + ACTIONS[i]):
+		if Input.is_action_pressed(ACTIONS[i]):
 			mask |= 1 << i
 	var ahead := tick + delay
 	if not _frames.has(ahead):
@@ -160,17 +161,15 @@ func _physics_process(_delta: float) -> void:
 	if _stalled:
 		_stalled = false
 		scene.process_mode = Node.PROCESS_MODE_INHERIT
+	var input := {}
 	for p in range(1, players + 1):
 		var entry: Array = frame[p]
 		var m: int = int(entry[0])
 		Q.cursors[p] = Vector2(float(entry[1]), float(entry[2]))
 		for i in ACTIONS.size():
-			var action: String = ACTIONS[i] if p == 1 else "p%d_%s" % [p, ACTIONS[i]]
 			if m & (1 << i):
-				if not Input.is_action_pressed(action):
-					Input.action_press(action)
-			elif Input.is_action_pressed(action):
-				Input.action_release(action)
+				input[ACTIONS[i] if p == 1 else "p%d_%s" % [p, ACTIONS[i]]] = 1.0
+	Q.set_input(input)
 	# 3. the state everyone must agree on
 	if check_every > 0 and tick > 0 and tick % check_every == 0 and scene.has_method("quantum_state"):
 		var h := hash(JSON.stringify(scene.quantum_state(), "", true))

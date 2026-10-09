@@ -186,9 +186,9 @@ func _is_on_top_of(other: Node) -> bool:
 func _physics_process(delta: float) -> void:
 	_ticks += 1
 	var dir := 0
-	if Input.is_action_pressed(_a("right")):
+	if Q.held(_a("right")):
 		dir += 1
-	if Input.is_action_pressed(_a("left")):
+	if Q.held(_a("left")):
 		dir -= 1
 	velocity.x = dir * run_speed
 
@@ -197,14 +197,14 @@ func _physics_process(delta: float) -> void:
 	elif _coyote > 0:
 		_coyote -= 1
 
-	if Input.is_action_just_pressed(_a("jump")) and _coyote > 0:
+	if Q.tapped(_a("jump")) and _coyote > 0:
 		velocity.y = -_jump_speed
 		_coyote = 0
 		if jump_sound != "":
 			Q.play(jump_sound)
 
 	var g := gravity
-	if variable_jump and velocity.y < 0.0 and not Input.is_action_pressed(_a("jump")):
+	if variable_jump and velocity.y < 0.0 and not Q.held(_a("jump")):
 		g *= 3.0
 	velocity.y = minf(velocity.y + g * delta, max_fall)
 

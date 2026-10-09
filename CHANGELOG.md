@@ -8,6 +8,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ## Unreleased
 
+### Changed
+
+- Laboratory: the game runtime reads input through `Q` (`Q.held`,
+  `Q.tapped`, `Q.strength`), sampled once per physics tick before any
+  node runs, instead of asking Godot's `Input` from each node. A tick's
+  input is a value the lockstep sets directly (no more `raw_` shadow
+  actions), and the base for rollback. One visible effect: a press is
+  seen on the tick it happens; Godot's `is_action_just_pressed`, called
+  from a replay's main loop, saw it a tick later.
+
 ### Removed
 
 - Laboratory: the old game parser (`quantum/core/features/game_engine_2d`)

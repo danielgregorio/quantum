@@ -58,7 +58,7 @@ func _initialize() -> void:
 func _physics_process(_delta: float) -> bool:
 	# Under qg:multiplayer (--q-host / --q-join) the game's tick is the
 	# lockstep's, which stalls while a peer's input is late: the tape and
-	# the count follow it, and the tape presses raw_<action> like a key.
+	# the count follow it; the tape presses this peer's keys (player 1's actions).
 	var lockstep: Node = scene.get("lockstep") if "lockstep" in scene else null
 	if lockstep != null:
 		if not lockstep.started or lockstep.desynced:
@@ -76,9 +76,9 @@ func _physics_process(_delta: float) -> bool:
 					if ev[0] == "cursor":
 						root.get_node("Q").tape_cursor = Vector2(ev[1][0], ev[1][1])
 					elif ev[1]:
-						Input.action_press("raw_" + ev[0])
+						Input.action_press(ev[0])
 					else:
-						Input.action_release("raw_" + ev[0])
+						Input.action_release(ev[0])
 			ticks += 1
 		return false
 	if ticks >= max_ticks:

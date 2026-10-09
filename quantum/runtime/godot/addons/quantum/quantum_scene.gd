@@ -98,12 +98,12 @@ var q_paths: Dictionary = {}
 
 func _physics_process(_delta: float) -> void:
 	for action in q_on_input.keys():
-		if Input.is_action_just_pressed(action):
+		if Q.tapped(action):
 			call(q_on_input[action], null, null)
 	for cursor in q_cursors:
 		var p: int = cursor.player
 		var select: String = "select" if p == 1 else "p%d_select" % p
-		if not Input.is_action_just_pressed(select):
+		if not Q.tapped(select):
 			continue
 		var handler = q_on_select.get(str(p), q_on_select.get("0"))
 		if handler == null:

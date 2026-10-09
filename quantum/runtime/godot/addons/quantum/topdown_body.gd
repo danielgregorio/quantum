@@ -135,8 +135,8 @@ func _fire(h: Dictionary, other: Node) -> bool:
 func _physics_process(delta: float) -> void:
 	_ticks += 1
 	# analog: a stick's strength scales the speed; a key is 1.0
-	var dir := Vector2(Input.get_action_strength(_a("right")) - Input.get_action_strength(_a("left")),
-		Input.get_action_strength(_a("down")) - Input.get_action_strength(_a("up")))
+	var dir := Vector2(Q.strength(_a("right")) - Q.strength(_a("left")),
+		Q.strength(_a("down")) - Q.strength(_a("up")))
 	if dir.length() > 1.0:
 		dir = dir.normalized()
 	if dir != Vector2.ZERO:
@@ -157,7 +157,7 @@ func _physics_process(delta: float) -> void:
 		_swinging -= 1
 		if _swinging == 0:
 			_swing_shape.set_deferred("disabled", true)
-	elif attack_action != "" and Input.is_action_just_pressed(_a(attack_action)):
+	elif attack_action != "" and Q.tapped(_a(attack_action)):
 		_swinging = attack_frames
 		_hit_this_swing = []
 		# The swing: `reach` deep in front of the body, and as wide as the

@@ -15,6 +15,16 @@ var raw_cursor: Vector2 = Vector2.ZERO
 var tape_cursor = null   # the replay tape's pointer (Vector2), instead of the mouse
 var sounds_played: Array = []  # names, in order — the replay harness reads it
 
+# --- the input of the tick ---
+# Every action is read once per physics tick, here, before any node of the
+# game runs (Q is an autoload, first in the tree, and runs at the lowest
+# priority); the runtime asks Q, never Input. So a tick's input is a value:
+# the lockstep and the rollback set it themselves (external_input), and the
+# rollback can replay old ticks with their input in one frame.
+var _now: Dictionary = {}    # action -> strength (0..1), only the pressed ones
+var _prev: Dictionary = {}
+var external_input: bool = false
+
 
 # `/` in Quantum is a float division, whatever the operands.
 static func div(a, b):
@@ -288,9 +298,52 @@ var persist_dir: String = ""
 
 
 func _ready() -> void:
+	process_physics_priority = -1000
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--persist-dir="):
 			persist_dir = a.substr(14)
+
+
+func _physics_process(_delta: float) -> void:
+	if external_input:
+		return
+	var next := {}
+	for a in InputMap.get_actions():
+		var name_ := String(a)
+		if name_.begins_with("ui_"):
+			continue
+		var v := Input.get_action_strength(name_)
+		if v > 0.0:
+			next[name_] = v
+	set_input(next)
+
+
+# The input of the next tick: {action: strength}, only what is pressed.
+func set_input(next: Dictionary) -> void:
+	_prev = _now
+	_now = next
+
+
+func held(action: String) -> bool:
+	return float(_now.get(action, 0.0)) > 0.0
+
+
+func tapped(action: String) -> bool:
+	return float(_now.get(action, 0.0)) > 0.0 and float(_prev.get(action, 0.0)) <= 0.0
+
+
+func strength(action: String) -> float:
+	return float(_now.get(action, 0.0))
+
+
+# For the rollback: the input state, and back to it.
+func input_state() -> Array:
+	return [_now.duplicate(), _prev.duplicate()]
+
+
+func restore_input(state: Array) -> void:
+	_now = state[0].duplicate()
+	_prev = state[1].duplicate()
 
 
 func _persist_path() -> String:
