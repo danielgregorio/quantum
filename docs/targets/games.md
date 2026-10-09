@@ -489,6 +489,42 @@ A bar in the HUD: a number against its maximum — a q:set, or a fighter's healt
 
 Goes inside: `qg:hud`.
 
+### `qg:menu`
+
+A list of buttons (and text fields) over the scene. A player moves through it with up/down and chooses with select (Enter, a click, the joypad's A), or points at a button with the mouse — the pointer is that player's qg:cursor, so a click is replayed and travels in the lockstep like a key.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `player` | integer | `1` | whose keys and pointer choose |
+| `position` | `top-left` / `top-center` / `top-right` / `center` / `bottom-center` | `center` |  |
+| `font` | text |  | a .ttf, relative to the .q or a folder above it |
+| `size` | integer | `16` | font size |
+
+Goes inside: `qg:scene`.
+
+### `qg:button`
+
+A button of a qg:menu. What it holds runs when it is chosen: actions and statements, like a handler.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `label` | text | required | its text, or an expression ({...}) read every frame |
+| `if` | an expression |  | shown, and choosable, only while this is true |
+
+Goes inside: `qg:menu`.
+
+### `qg:field`
+
+A text box of a qg:menu, bound to a string state: what is typed is the state. Typing is local to the machine (an address, a name) — a replay cannot type, and the lockstep does not carry it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `bind` | a name | required | a q:set of the scene or the game |
+| `label` | text | `` | text before the box |
+| `max-length` | integer | `64` |  |
+
+Goes inside: `qg:menu`.
+
 ## Handlers
 
 Where the logic goes: actions and statements, with `me` and `other` (`cursor` and `other` in qg:on-select).
@@ -780,7 +816,7 @@ second game, it is a `qg:` attribute waiting to be named.
 | Label | `qg:counter`, `qg:text` | 71 |
 | Node2D | `qg:cursor`, `qg:path`, `qg:scene` | 31 |
 | Area2D | `qg:exit`, `qg:zone`, an item prefab and its instances | 49 |
-| CanvasLayer | `qg:hud` | 16 |
+| CanvasLayer | `qg:hud`, `qg:menu` | 16 |
 | Sprite2D | `qg:map-node`, `qg:sprite` | 41 |
 | AudioStreamPlayer | `qg:sound` | 19 |
 | Node | `qg:spawner`, `qg:timer` | 9 |
@@ -1884,11 +1920,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <qg:scene name="title" width="480" height="720" background="#385f61">
     <q:set name="message" value="Dodge the&#10;Creeps" />
-    <q:set name="start" value="Start" />
     <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
       <qg:text bind="message" />
-      <qg:text bind="start" />
     </qg:hud>
+    <!-- The demo's StartButton: clicked, or Enter, or the joypad's A. -->
+    <qg:menu position="bottom-center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:button label="Start"><qg:goto-scene name="play" /></qg:button>
+    </qg:menu>
     <qg:on-input action="jump">
       <qg:goto-scene name="play" />
     </qg:on-input>
@@ -1931,22 +1969,22 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
        the score stays on the screen. -->
   <qg:scene name="over" width="480" height="720" background="#385f61">
     <q:set name="message" value="Game Over" />
-    <q:set name="start" value="" />
     <q:set name="can_start" value="false" type="boolean" />
     <qg:hud position="top-center" font="fonts/Xolonium-Regular.ttf" size="60">
       <qg:counter bind="score" />
     </qg:hud>
     <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
       <qg:text bind="message" />
-      <qg:text bind="start" />
     </qg:hud>
     <qg:timer after="120">
       <q:set name="message" value="Dodge the&#10;Creeps" />
     </qg:timer>
     <qg:timer after="180">
-      <q:set name="start" value="Start" />
       <q:set name="can_start" value="true" />
     </qg:timer>
+    <qg:menu position="bottom-center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:button label="Start" if="{can_start}"><qg:goto-scene name="play" /></qg:button>
+    </qg:menu>
     <qg:on-input action="jump">
       <q:if condition="{can_start}">
         <qg:goto-scene name="play" />

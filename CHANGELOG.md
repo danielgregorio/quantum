@@ -8,6 +8,17 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ## Unreleased
 
+### Added
+
+- Laboratory: menus. `qg:menu` holds `qg:button`s (each runs what it holds
+  when chosen; `label=` may be an expression read every frame, `if=` shows
+  it only while true) and `qg:field`s (a text box bound to a string state).
+  A player moves with up/down and chooses with select (Enter, a click, the
+  joypad's A); the pointer is the player's `qg:cursor`, so a click is
+  replayed and travels in the lockstep like a key. Creeps' title now has
+  the demo's Start button. `tests/godot/test_godot_menu.py` drives a menu
+  by keys and by the pointer.
+
 ### Changed
 
 - Laboratory: the game runtime reads input through `Q` (`Q.held`,

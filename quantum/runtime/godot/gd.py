@@ -30,7 +30,7 @@ NODE_CLASS: Dict[str, str] = {
     'scene': 'Node2D', 'character': 'CharacterBody2D', 'camera': 'Camera2D', 'tilemap': 'TileMapLayer',
     'hud': 'CanvasLayer', 'counter': 'Label', 'text': 'Label', 'map-node': 'Sprite2D', 'exit': 'Area2D',
     'sound': 'AudioStreamPlayer', 'timer': 'Node', 'spawner': 'Node', 'zone': 'Area2D', 'sprite': 'Sprite2D',
-    'cursor': 'Node2D', 'path': 'Node2D', 'bar': 'ProgressBar',
+    'cursor': 'Node2D', 'path': 'Node2D', 'bar': 'ProgressBar', 'menu': 'CanvasLayer',
 }
 # Where a gd: attribute on a prefab (or an instance of it) lands, by what the prefab is.
 PREFAB_CLASS = {'item': 'Area2D', 'thing': 'CharacterBody2D', 'block': 'StaticBody2D', 'shuttle': 'AnimatableBody2D'}

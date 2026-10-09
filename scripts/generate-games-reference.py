@@ -225,7 +225,7 @@ def build() -> str:
           'scene']),
         ('What a scene holds', 'The level, the character, the things placed in it, and what the screen shows.',
          ['tilemap', 'character', 'instance', 'spawner', 'zone', 'sprite', 'path', 'cursor', 'exit', 'map-node',
-          'map-path', 'camera', 'hud', 'counter', 'text', 'bar']),
+          'map-path', 'camera', 'hud', 'counter', 'text', 'bar', 'menu', 'button', 'field']),
         ('Handlers', 'Where the logic goes: actions and statements, with `me` and `other` '
          '(`cursor` and `other` in qg:on-select).',
          ['on-collision', 'on-hit', 'on-fall', 'on-ko', 'on-input', 'on-select', 'on-damage', 'on-death']),

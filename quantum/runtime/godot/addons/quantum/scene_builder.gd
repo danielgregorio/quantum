@@ -22,6 +22,7 @@ const Tilemap := preload("res://addons/quantum/tilemap.gd")
 const Zone := preload("res://addons/quantum/zone.gd")
 const Cursor := preload("res://addons/quantum/cursor.gd")
 const FighterBody := preload("res://addons/quantum/fighter_body.gd")
+const Menu := preload("res://addons/quantum/menu.gd")
 
 static var _textures: Dictionary = {}
 
@@ -158,6 +159,20 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				else:
 					scene.add_child(cam)
 				scene.q_camera = cam
+			"menu":
+				var menu := Menu.new()
+				menu.setup(node_spec, scene)
+				Q.apply_gd(menu, node_spec.get("gd"))
+				scene.add_child(menu)
+				# the pointer is the player's qg:cursor; without one, a hidden one that only follows the mouse
+				var has_cursor := false
+				for other in scene_spec["nodes"]:
+					if other["kind"] == "cursor" and int(other.get("player", 1)) == int(node_spec.get("player", 1)):
+						has_cursor = true
+				if not has_cursor:
+					var pointer := Cursor.new()
+					pointer.setup({"player": node_spec.get("player", 1), "step": 0.0}, scene)
+					scene.add_child(pointer)
 			"hud":
 				var hud := Hud.new()
 				hud.setup(node_spec, scene)

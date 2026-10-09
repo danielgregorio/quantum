@@ -346,6 +346,7 @@ class _Compiler:
         zones: set = set()
         on_select: Dict[str, str] = {}
         cursors: set = set()
+        menus = 0
         paths: Dict[str, list] = {}
         conditions = 0
         on_death: Dict[str, str] = {}
@@ -620,6 +621,44 @@ class _Compiler:
                 self._node_elements.append(el)
             elif el.tag == 'camera':
                 nodes.append({'kind': 'camera', 'follow': el.get('follow'), 'bounds': el.get('bounds')})
+                self._node_elements.append(el)
+            elif el.tag == 'menu':
+                menus += 1
+                items = []
+                for c in el.children:
+                    if isinstance(c, Element) and c.tag == 'button':
+                        n = len(items)
+                        item = {'kind': 'button',
+                                'handler': compile_handler(script, f'_on_menu_{menus}_button_{n}', c.children, c.line)}
+                        label = str(c.get('label'))
+                        if is_expression(label):
+                            item['label_method'] = f'_q_menu_{menus}_label_{n}'
+                            script.functions.append(
+                                f'func {item["label_method"]}():\n\treturn Q.to_str({compile_expression(label, script.scope(), c.line)})\n')
+                        else:
+                            item['label'] = label
+                        if c.get('if') is not None:
+                            item['if_method'] = f'_q_menu_{menus}_if_{n}'
+                            script.functions.append(
+                                f'func {item["if_method"]}():\n\treturn {compile_expression(c.get("if"), script.scope(), c.line)}\n')
+                        gdprops.attach(item, 'Button', c.gd, '<qg:button>', c.line)
+                        items.append(item)
+                    elif isinstance(c, Element) and c.tag == 'field':
+                        bind = c.get('bind')
+                        var = script.state.get(bind) or self.game_state.get(bind)
+                        if var is None:
+                            raise GameCompileError(f'<qg:field bind="{bind}">: no q:set of that name in the scene or the game', c.line)
+                        if var.typed and var.type != 'string':
+                            raise GameCompileError(f'<qg:field bind="{bind}">: a field holds text; {bind!r} is a {var.type}', c.line)
+                        items.append({'kind': 'field', 'bind': bind, 'label': c.get('label'), 'max_length': c.get('max-length'),
+                                      'game': bind not in script.state})
+                    else:
+                        raise GameCompileError('<qg:menu> holds qg:button and qg:field', getattr(c, 'line', el.line))
+                if not items:
+                    raise GameCompileError('<qg:menu> needs at least one qg:button', el.line)
+                font = self._asset(el.get('font'), el.line) if el.get('font') else None
+                nodes.append({'kind': 'menu', 'player': el.get('player'), 'position': el.get('position'),
+                              'size': el.get('size'), 'font': font, 'items': items})
                 self._node_elements.append(el)
             elif el.tag == 'hud':
                 items = []

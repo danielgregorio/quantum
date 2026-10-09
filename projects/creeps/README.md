@@ -7,7 +7,7 @@ tutorial, written in the game language. Same screen, player, creeps, timing
 and screens; the art, music and font are the demo's (`assets/LICENSE.md`).
 
 Run it: `quantum run projects/creeps/creeps.q`, then open `projects/creeps/godot`
-in Godot. Arrows or WASD (or a joypad) to move, Space/Enter to start.
+in Godot. Arrows or WASD (or a joypad) to move; click Start, or press Space or Enter.
 
 ## The original, piece by piece
 
@@ -21,14 +21,12 @@ in Godot. Arrows or WASD (or a joypad) to move, Space/Enter to start.
 | `main.gd`: `MobTimer` 0.5 s → a mob at a random point of a `Path2D` round the screen, heading perpendicular ± 45°, speed 150–250 | 20 | `<qg:spawner prefab="Flyer, Swimmer, Walker" along="edges" heading="inward" spread="45" every="30" count="0" />` and `speed="150..250"` |
 | `main.gd`: `StartTimer` 2 s, then `ScoreTimer` 1 s → `score += 1` | 8 | `<qg:timer every="60" from="120">` with `q:set score` |
 | `hud.tscn` + `hud.gd`: `ScoreLabel` (top, 60 px Xolonium), `MessageLabel` (centre), `StartButton`, `MessageTimer` | 60 + 30 | `<qg:hud position="top-center" font=… size="60">` and `<qg:hud position="center">` with `qg:text`s; messages are state the timers set |
-| `hud.gd`: "Get Ready" for a `MessageTimer`, "Game Over", then the title after 1 s, then the button | 15 | `qg:timer after=` setting `message` and `start`; `qg:on-input action="jump"` starts (the button's shortcut) |
+| `hud.gd`: "Get Ready" for a `MessageTimer`, "Game Over", then the title after 1 s, then the button | 15 | `qg:timer after=` setting `message` and `can_start`; a `qg:menu` with a Start `qg:button` shown `if="{can_start}"`; `qg:on-input action="jump"` is the button's shortcut |
 | `Music`, `DeathSound` | 4 | `<qg:sound loop="true">` played as `play` is entered, stopped on the hit |
 | `project.godot`: four `move_*` actions on WASD/arrows | 40 | the defaults; `jump` on Space/Enter/JoyA/JoyStart |
 | `Trail` particles behind the player | 20 | nothing (cosmetic) |
 
-Deliberate differences: the Start button is a key, not a clickable
-button (there is no mouse in the language yet); the player's trail is not
-drawn; a creep's capsule is a rectangle.
+Deliberate differences: the player's trail is not drawn; a creep's capsule is a rectangle.
 
 ## What the language had to grow
 
@@ -50,8 +48,8 @@ drawn; a creep's capsule is a rectangle.
    GDScript error at run time; every member of `Node2D` is now refused at
    compile time, from the same generated table `gd:` uses.
 
-Still missing after Creeps: a clickable `qg:button` (mouse and touch),
-particles beyond `qg:burst`.
+Still missing after Creeps: particles beyond `qg:burst`. (The clickable Start
+button came later, with `qg:menu`.)
 
 ## The test
 

@@ -39,7 +39,17 @@ def run(project, ticks, holds=()):
 def test_the_title_waits_for_the_start_key(godot, project):
     state = replay(project, 30)
     assert list(state) == ['title']
-    assert state['title']['message'] == 'Dodge the\nCreeps' and state['title']['start'] == 'Start'
+    assert state['title']['message'] == 'Dodge the\nCreeps' and state['title']['menus'] == [0]
+
+
+def test_the_start_button_is_clicked_like_the_demos(godot, project):
+    from quantum.runtime.godot_replay import cursor_at
+    tape = tape_from_holds([('select', 8, 10)])
+    cursor_at(tape, 3, 240, 680)       # the Start button, at the bottom of the screen
+    assert list(replay(project, 14, tape=tape)) == ['play']
+    tape = tape_from_holds([('select', 8, 10)])
+    cursor_at(tape, 3, 240, 100)       # the title text: no button there
+    assert list(replay(project, 14, tape=tape)) == ['title']
 
 
 def test_get_ready_then_creeps_from_the_border_and_a_point_a_second(godot, project):
@@ -63,7 +73,7 @@ def test_the_player_moves_at_400_and_stays_on_the_screen(godot, project):
 def test_a_creep_ends_the_run_and_the_score_stays(godot, project):
     holds = [('left', 10, 80), ('up', 10, 80)]
     scene, over = run(project, 300, holds)
-    assert scene == 'over' and over['message'] == 'Game Over' and over['start'] == ''
+    assert scene == 'over' and over['message'] == 'Game Over' and over['can_start'] is False
     assert over['sounds'][-2:] == ['-music', 'death'] and over['game']['score'] >= 1
     scene, over = run(project, 600, holds)
-    assert over['message'] == 'Dodge the\nCreeps' and over['start'] == 'Start'
+    assert over['message'] == 'Dodge the\nCreeps' and over['can_start'] is True

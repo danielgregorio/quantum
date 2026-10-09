@@ -213,6 +213,27 @@ TAGS: Dict[str, Tag] = {
         '`cursor` is where (x, y, col, row, player), `other` the thing under it, or null.',
         {'player': Attr('int', None, doc='only this player\'s cursor (any, when not given)')},
         parents=('scene',)),
+    'menu': Tag(
+        'A list of buttons (and text fields) over the scene. A player moves through it with up/down and '
+        'chooses with select (Enter, a click, the joypad\'s A), or points at a button with the mouse — the '
+        'pointer is that player\'s qg:cursor, so a click is replayed and travels in the lockstep like a key.',
+        {'player': Attr('int', 1, doc='whose keys and pointer choose'),
+         'position': Attr('enum:top-left|top-center|top-right|center|bottom-center', 'center'),
+         'font': Attr('str', None, doc='a .ttf, relative to the .q or a folder above it'),
+         'size': Attr('int', 16, doc='font size')},
+        parents=('scene',)),
+    'button': Tag(
+        'A button of a qg:menu. What it holds runs when it is chosen: actions and statements, like a handler.',
+        {'label': Attr('str', required=True, doc='its text, or an expression ({...}) read every frame'),
+         'if': Attr('expr', None, doc='shown, and choosable, only while this is true')},
+        parents=('menu',)),
+    'field': Tag(
+        'A text box of a qg:menu, bound to a string state: what is typed is the state. Typing is local to '
+        'the machine (an address, a name) — a replay cannot type, and the lockstep does not carry it.',
+        {'bind': Attr('ident', required=True, doc='a q:set of the scene or the game'),
+         'label': Attr('str', '', doc='text before the box'),
+         'max-length': Attr('int', 64)},
+        parents=('menu',)),
     'zone': Tag(
         'An invisible rectangle with a tag: what touches it runs its qg:on-collision with= that tag.',
         {'name': Attr('ident', required=True),

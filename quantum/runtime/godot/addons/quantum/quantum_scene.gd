@@ -84,6 +84,12 @@ func quantum_state() -> Dictionary:
 	where.sort()
 	state["where"] = where
 	state["sounds"] = Q.sounds_played.duplicate()
+	var menus := []
+	for m in get_tree().get_nodes_in_group("q_menu"):
+		if m.get_parent() == self:
+			menus.append(m.focus)
+	if not menus.is_empty():
+		state["menus"] = menus
 	state["game"] = G.quantum_state()
 	return state
 

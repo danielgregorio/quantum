@@ -1277,3 +1277,35 @@ class TestWhatChessAsked:
 '''))
         script = (out / 'scripts' / 'scene_main.gd').read_text()
         assert '\t\tQ.destroy(hit)\n' in script and '\tQ.put(get_node("mark"), cursor.x, (cursor.y + 1))\n' in script
+
+
+class TestMenus:
+    def test_buttons_labels_conditions_and_a_field(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="n" value="0" type="number" />
+    <q:set name="who" value="x" />
+    <qg:menu player="1" position="top-left" size="12">
+      <qg:button label="Go"><q:set name="n" value="{n + 1}" /></qg:button>
+      <qg:button label="{'N ' + str(n)}" if="{n &gt; 0}"><qg:goto-scene name="main" /></qg:button>
+      <qg:field label="Who" bind="who" max-length="8" />
+    </qg:menu>
+  </qg:scene>
+'''))
+        menu = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'][0]
+        assert (menu['kind'], menu['player'], menu['position'], menu['size']) == ('menu', 1, 'top-left', 12)
+        go, n, who = menu['items']
+        assert go == {'kind': 'button', 'handler': '_on_menu_1_button_0', 'label': 'Go'}
+        assert n['label_method'] == '_q_menu_1_label_1' and n['if_method'] == '_q_menu_1_if_1'
+        assert who == {'kind': 'field', 'bind': 'who', 'label': 'Who', 'max_length': 8, 'game': False}
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'func _on_menu_1_button_0(me, other) -> void:\n\tn = (n + 1)\n' in script
+        assert 'func _q_menu_1_label_1():\n\treturn Q.to_str(("N " + Q.to_str(n)))\n' in script
+        assert 'func _q_menu_1_if_1():\n\treturn (n > 0)\n' in script
+
+    @pytest.mark.parametrize('body,message', [
+        ('<qg:menu />', 'needs at least one qg:button'),
+        ('<qg:menu><qg:field bind="nope" /></qg:menu>', '<qg:field bind="nope">: no q:set of that name'),
+        ('<q:set name="k" value="0" type="number" /><qg:menu><qg:field bind="k" /></qg:menu>', "a field holds text; 'k' is a number"),
+    ])
+    def test_what_a_menu_refuses(self, tmp_path, body, message):
+        assert message in str(refuse(tmp_path, game(f'  <qg:scene name="main">{body}</qg:scene>\n')))
