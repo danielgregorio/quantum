@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 from quantum.runtime.godot.errors import GameCompileError
 from quantum.runtime.godot.model import Element, Game, Statement, read_game
 from quantum.runtime.godot.expressions import compile_expression, strip_braces
+from quantum.runtime.godot.schema import TAGS
 from quantum.runtime.godot.tiled import read_tmx
 from quantum.runtime.godot import gd as gdprops
 from quantum.runtime.godot.statements import (
@@ -166,7 +167,11 @@ class _Compiler:
             if mp.get('delay') < 1:
                 raise GameCompileError('<qg:multiplayer delay=>: 1 or more', mp.line)
             self.multiplayer = {'players': mp.get('players'), 'delay': mp.get('delay'),
-                                'check_every': mp.get('check-every')}
+                                'check_every': mp.get('check-every'), 'transport': mp.get('transport')}
+            if mp.get('start'):
+                if not any(sc.get('name') == mp.get('start') for sc in g.scenes):
+                    raise GameCompileError(f'<qg:multiplayer start="{mp.get("start")}">: no scene of that name', mp.line)
+                self.multiplayer['start'] = mp.get('start')
             # every player's actions exist; under lockstep they are pressed by the runtime, not by keys
             for p in range(2, mp.get('players') + 1):
                 for action in self.actions:
@@ -309,6 +314,7 @@ class _Compiler:
 
     def _scene(self, scene: Element, sheets: dict, prefabs: dict) -> dict:
         name = scene.get('name')
+        scene.children = _expand_lobbies(scene.children, self.multiplayer)
         script = SceneScript(name, game_state=self.game_state)
         self._states_checked: list = []
         # the characters, by id: names in the scene's expressions, targets of its actions
@@ -347,6 +353,7 @@ class _Compiler:
         on_select: Dict[str, str] = {}
         cursors: set = set()
         menus = 0
+        texts = 0
         paths: Dict[str, list] = {}
         conditions = 0
         on_death: Dict[str, str] = {}
@@ -677,12 +684,19 @@ class _Compiler:
                         gdprops.attach(items[-1], 'ProgressBar', c.gd, '<qg:bar>', c.line)
                         continue
                     if isinstance(c, Element) and c.tag in ('counter', 'text'):
-                        if c.get('bind') not in script.state and c.get('bind') not in self.game_state:
+                        if c.tag == 'text' and (c.get('bind') is None) == (c.get('value') is None):
+                            raise GameCompileError('<qg:text> takes bind= or value=, one of them', c.line)
+                        if c.get('bind') is not None and c.get('bind') not in script.state and c.get('bind') not in self.game_state:
                             raise GameCompileError(
                                 f'<qg:{c.tag} bind="{c.get("bind")}">: no q:set of that name in the scene '
                                 f'or the game', c.line)
                         items.append({'kind': c.tag, 'bind': c.get('bind'), 'label': c.get('label', ''),
                                       'size': c.get('size')})
+                        if c.tag == 'text' and c.get('value') is not None:
+                            texts += 1
+                            items[-1]['value_method'] = f'_q_text_{texts}'
+                            script.functions.append(
+                                f'func _q_text_{texts}():\n\treturn Q.to_str({compile_expression(c.get("value"), script.scope(), c.line)})\n')
                         gdprops.attach(items[-1], 'Label', c.gd, f'<qg:{c.tag}>', c.line)
                     else:
                         raise GameCompileError('<qg:hud> holds qg:counter, qg:text and qg:bar', getattr(c, 'line', el.line))
@@ -726,6 +740,8 @@ class _Compiler:
             if pname not in paths:
                 raise GameCompileError(f'<qg:spawn path="{pname}">: no qg:path of that name in the scene '
                                        f'(paths: {", ".join(sorted(paths)) or "none"})', line)
+        if script.net_used and self.multiplayer is None:
+            raise GameCompileError('qg:host, qg:join and qg:leave need a <qg:multiplayer> in q:application', script.net_used[0])
         self._scene_exits[name] = set(exits)
         self._scenes_used.extend(script.scenes_used)
         for pname, line in script.prefabs_used:
@@ -798,6 +814,49 @@ def action_name(player: int, action: str) -> str:
 
 
 _HEADINGS = {'up': (0.0, -1.0), 'down': (0.0, 1.0), 'left': (-1.0, 0.0), 'right': (1.0, 0.0)}
+
+
+def _el(tag: str, line: Optional[int], children=(), **attrs) -> Element:
+    """An element the compiler writes itself, with the schema's defaults (attribute names use _ for -)."""
+    values = {name: spec.default for name, spec in TAGS[tag].attrs.items()}
+    values.update({k.replace('_', '-'): v for k, v in attrs.items()})
+    return Element(tag, values, line, list(children))
+
+
+_BUSY = "net_status() == 'hosting' or net_status() == 'joining' or net_status() == 'connected'"
+_IDLE = "net_status() == 'offline' or net_status() == 'failed'"
+
+
+def _expand_lobbies(children: list, multiplayer: Optional[dict]) -> list:
+    """qg:lobby, written out: a q:set for the address, a qg:menu, a qg:hud with the status line."""
+    out: list = []
+    for node in children:
+        if not (isinstance(node, Element) and node.tag == 'lobby'):
+            out.append(node)
+            continue
+        el, line = node, node.line
+        if multiplayer is None:
+            raise GameCompileError('<qg:lobby> needs a <qg:multiplayer> in q:application', line)
+        if el.children:
+            raise GameCompileError('<qg:lobby> holds nothing; write a qg:menu to have other buttons', line)
+        port = el.get('port')
+        buttons = []
+        if el.get('local'):
+            buttons.append(_el('button', line, [_el('goto-scene', line, name=el.get('local'))], label=el.get('local-label')))
+        buttons += [
+            _el('button', line, [_el('host', line, port=port)], label='Host a game', **{'if': '{' + _IDLE + '}'}),
+            _el('field', line, bind='lobby_address', label='Address'),
+            _el('button', line, [_el('join', line, address='{lobby_address}')], label='Join', **{'if': '{' + _IDLE + '}'}),
+            _el('button', line, [_el('leave', line)], label='Cancel', **{'if': '{' + _BUSY + '}'}),
+        ]
+        status = ("{" + f"'Waiting for the other players on port {port}' if net_status() == 'hosting' else "
+                  "('Joining ' + lobby_address + '...' if net_status() == 'joining' else "
+                  "('Connected, starting...' if net_status() == 'connected' else "
+                  "('Could not connect' if net_status() == 'failed' else '')))" + "}")
+        out.append(Statement('set', {'name': 'lobby_address', 'value': str(el.get('address'))}, line))
+        out.append(_el('menu', line, buttons, font=el.get('font'), size=el.get('size')))
+        out.append(_el('hud', line, [_el('text', line, value=status)], position='bottom-center', size=el.get('size')))
+    return out
 
 
 def _points(raw: str, line: Optional[int]) -> list:

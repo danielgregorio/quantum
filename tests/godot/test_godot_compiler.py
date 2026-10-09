@@ -1092,7 +1092,7 @@ class TestMultiplayer:
   </qg:scene>
 ''' + TAIL)
         data = json.loads((out / 'game.json').read_text())
-        assert data['multiplayer'] == {'players': 3, 'delay': 2, 'check_every': 30}
+        assert data['multiplayer'] == {'players': 3, 'delay': 2, 'check_every': 30, 'transport': 'enet'}
         assert data['inputs']['p2_up'] == [] and data['inputs']['p3_jump'] == []   # pressed by the lockstep, not keys
 
     @pytest.mark.parametrize('source,message', [
@@ -1309,3 +1309,52 @@ class TestMenus:
     ])
     def test_what_a_menu_refuses(self, tmp_path, body, message):
         assert message in str(refuse(tmp_path, game(f'  <qg:scene name="main">{body}</qg:scene>\n')))
+
+
+class TestLobby:
+    MP = '  <qg:multiplayer players="2" start="play" transport="websocket" />\n'
+
+    def test_host_join_leave_and_the_network_in_expressions(self, tmp_path):
+        out = build(tmp_path, HEAD + self.MP + '''  <qg:scene name="title">
+    <q:set name="where" value="127.0.0.1:9000" />
+    <qg:menu>
+      <qg:button label="Host"><qg:host port="9000" /></qg:button>
+      <qg:button label="Join" if="{net_status() == 'offline'}"><qg:join address="{where}" /></qg:button>
+      <qg:button label="Leave"><qg:leave /></qg:button>
+    </qg:menu>
+    <qg:hud><qg:text value="{net_status() + ' ' + str(net_players()) + ' ' + str(net_player())}" /></qg:hud>
+  </qg:scene>
+  <qg:scene name="play" />
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['multiplayer'] == {'players': 2, 'delay': 3, 'check_every': 60, 'transport': 'websocket', 'start': 'play'}
+        script = (out / 'scripts' / 'scene_title.gd').read_text()
+        assert '\tQ.net_host(9000)\n' in script and '\tQ.net_join(where)\n' in script and '\tQ.net_leave()\n' in script
+        assert 'return (Q.net_status() == "offline")' in script
+        assert 'Q.to_str(Q.net_players())' in script and 'Q.to_str(Q.net_player())' in script
+        hud = [n for n in data['scenes']['title']['nodes'] if n['kind'] == 'hud'][0]
+        assert hud['items'][0]['value_method'] == '_q_text_1'
+
+    def test_a_lobby_is_a_menu_a_field_and_a_status_line(self, tmp_path):
+        out = build(tmp_path, HEAD + self.MP + '''  <qg:scene name="title"><qg:lobby local="play" port="9000" address="10.0.0.2:9000" /></qg:scene>
+  <qg:scene name="play" />
+''' + TAIL)
+        title = json.loads((out / 'game.json').read_text())['scenes']['title']
+        menu, hud = title['nodes']
+        assert [i.get('label') for i in menu['items']] == ['Play here', 'Host a game', 'Address', 'Join', 'Cancel']
+        assert menu['items'][2] == {'kind': 'field', 'bind': 'lobby_address', 'label': 'Address', 'max_length': 64, 'game': False}
+        assert hud['position'] == 'bottom-center' and 'value_method' in hud['items'][0]
+        script = (out / 'scripts' / 'scene_title.gd').read_text()
+        assert 'var lobby_address: Variant = "10.0.0.2:9000"' in script
+        assert '\tQ.net_host(9000)\n' in script and '\tQ.net_join(lobby_address)\n' in script
+        assert 'Q.goto_scene(self, "play")' in script
+
+    @pytest.mark.parametrize('source,message', [
+        ('<qg:scene name="t"><qg:menu><qg:button label="H"><qg:host /></qg:button></qg:menu></qg:scene>',
+         'qg:host, qg:join and qg:leave need a <qg:multiplayer>'),
+        ('<qg:scene name="t"><qg:lobby /></qg:scene>', '<qg:lobby> needs a <qg:multiplayer>'),
+        ('<qg:multiplayer players="2" start="nowhere" /><qg:scene name="t" />', 'start="nowhere">: no scene of that name'),
+        ('<qg:scene name="t"><qg:hud><qg:text /></qg:hud></qg:scene>', '<qg:text> takes bind= or value=, one of them'),
+    ])
+    def test_what_it_refuses(self, tmp_path, source, message):
+        assert message in str(refuse(tmp_path, HEAD + '  ' + source + '\n' + TAIL))

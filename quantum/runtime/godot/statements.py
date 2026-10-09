@@ -59,6 +59,7 @@ class SceneScript:
     states_used: List[tuple] = field(default_factory=list)    # (name, line) from become
     scenes_used: List[tuple] = field(default_factory=list)    # (name, line) from goto-scene
     paths_used: List[tuple] = field(default_factory=list)     # (name, line) from spawn at="path"
+    net_used: List[Optional[int]] = field(default_factory=list)   # lines of qg:host, qg:join, qg:leave
 
     node_ids: List[str] = field(default_factory=list)   # the scene's characters, by id
 
@@ -395,6 +396,15 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
             raise GameCompileError('<qg:deflect> needs axis="x|y", or dx= and dy=', el.line)
         return (f'Q.deflect_to({target}, {compile_expression(dx, scope, el.line)}, '
                 f'{compile_expression(dy, scope, el.line)})')
+    if el.tag == 'host':
+        script.net_used.append(el.line)
+        return f'Q.net_host({int(el.get("port"))})'
+    if el.tag == 'join':
+        script.net_used.append(el.line)
+        return f'Q.net_join({compile_expression(el.get("address"), scope, el.line)})'
+    if el.tag == 'leave':
+        script.net_used.append(el.line)
+        return 'Q.net_leave()'
     if el.tag == 'put':
         return (f'Q.put({target}, {compile_expression(el.get("x"), scope, el.line)}, '
                 f'{compile_expression(el.get("y"), scope, el.line)})')

@@ -336,6 +336,45 @@ func strength(action: String) -> float:
 	return float(_now.get(action, 0.0))
 
 
+# --- the network, from a scene: qg:host, qg:join, qg:leave, net_*() ---
+
+static func _game() -> Node:
+	return (Engine.get_main_loop() as SceneTree).root.get_node_or_null("Game")
+
+
+static func net_host(port: int) -> void:
+	var g := _game()
+	if g != null:
+		g.net_host(port)
+
+
+static func net_join(address) -> void:
+	var g := _game()
+	if g != null:
+		g.net_join(str(address))
+
+
+static func net_leave() -> void:
+	var g := _game()
+	if g != null:
+		g.net_leave()
+
+
+static func net_status() -> String:
+	var g := _game()
+	return g.net_status() if g != null else "offline"
+
+
+static func net_players() -> int:
+	var g := _game()
+	return g.net_players() if g != null else 0
+
+
+static func net_player() -> int:
+	var g := _game()
+	return g.net_player() if g != null else 0
+
+
 # For the rollback: the input state, and back to it.
 func input_state() -> Array:
 	return [_now.duplicate(), _prev.duplicate()]

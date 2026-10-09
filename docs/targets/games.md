@@ -131,6 +131,8 @@ The game is played by several people, each on their own machine, in lockstep: ev
 | `players` | integer | required | how many, 2 or more |
 | `delay` | integer | `3` | ticks between a press and its effect, everywhere: hides the round trip |
 | `check-every` | integer | `60` | ticks between comparisons of the whole state across peers; a difference is a desync, reported and fatal (0: never) |
+| `start` | a name |  | the scene the networked game starts in, on every peer, once all the players are there (the first scene when not given); the scenes before it — a title, a lobby — run on each machine alone |
+| `transport` | `enet` / `websocket` | `enet` | enet (desktop to desktop), or websocket (a browser build can join a desktop host) |
 
 Goes inside: `q:application`.
 
@@ -470,7 +472,8 @@ A string from the scene state, in the HUD.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `bind` | a name | required | a q:set of the scene |
+| `bind` | a name |  | a q:set of the scene (or value=) |
+| `value` | an expression |  | an expression, read every frame (or bind=) |
 | `size` | integer |  | font size |
 
 Goes inside: `qg:hud`.
@@ -524,6 +527,21 @@ A text box of a qg:menu, bound to a string state: what is typed is the state. Ty
 | `max-length` | integer | `64` |  |
 
 Goes inside: `qg:menu`.
+
+### `qg:lobby`
+
+The usual networked-game menu, ready made: play here (local=), host, an address field, join, cancel, and a line that says where things are. It is a qg:menu and a qg:hud the compiler writes; the address is the scene's `lobby_address`.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `local` | a name |  | a scene to play on this machine alone (a button for it when given) |
+| `local-label` | text | `Play here` |  |
+| `port` | integer | `7777` |  |
+| `address` | text | `127.0.0.1:7777` | what the address field starts with |
+| `font` | text |  |  |
+| `size` | integer | `16` |  |
+
+Goes inside: `qg:scene`.
 
 ## Handlers
 
@@ -768,6 +786,32 @@ Moves a thing or a character to a point, at once.
 | `target` | a name | `other` | me, other, a character id, or a q:set holding a thing (thing_at) |
 | `x` | an expression | required |  |
 | `y` | an expression | required |  |
+
+Goes inside: a handler.
+
+### `qg:host`
+
+Hosts the networked game (qg:multiplayer): this machine is player 1 and waits for the others; the game starts in the start= scene when they are all there. `net_status()` says where things are.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `port` | integer | `7777` |  |
+
+Goes inside: a handler.
+
+### `qg:join`
+
+Joins a networked game at an address (host:port); this machine is the next player.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `address` | an expression | required | an expression: a q:set a qg:field fills, or text |
+
+Goes inside: a handler.
+
+### `qg:leave`
+
+Leaves the networked game, or stops hosting or joining.
 
 Goes inside: a handler.
 
@@ -1833,14 +1877,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:spritesheet name="separator" src="assets/separator.png" tile="2x400" />
 
   <!-- The left paddle is player 1 on W/S, the right one player 2 on the arrows —
-       on one keyboard. Over the network each peer is one player: one hosts
-       (q-host=7777), the other joins (q-join=HOST:7777), and the game runs
-       in lockstep, the same on both (README.md). -->
+       on one keyboard. Over the network each machine is one player (the
+       title's Host and Join), and the game runs in lockstep, the same on
+       both (README.md). -->
   <qg:input player="1" action="up" keys="W" />
   <qg:input player="1" action="down" keys="S" />
   <qg:input player="2" action="up" keys="Up" />
   <qg:input player="2" action="down" keys="Down" />
-  <qg:multiplayer players="2" delay="3" />
+  <qg:multiplayer players="2" delay="3" start="court" />
 
   <!-- The ball flies left at 100 px/s, 2 px/s faster every second; it bounces
        off the ceiling and the floor, and goes back to its start, as it was,
@@ -1853,6 +1897,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:respawn target="me" />
     </qg:on-collision>
   </qg:prefab>
+
+  <!-- The title: two on one keyboard, or one on each machine — host, or join at
+       an address. The court starts on both machines once both are there. -->
+  <qg:scene name="title" width="640" height="400" background="#24272a">
+    <qg:hud position="top-center" size="48"><qg:text value="{'PONG'}" /></qg:hud>
+    <qg:lobby local="court" local-label="Two players, one keyboard" size="20" />
+  </qg:scene>
 
   <qg:scene name="court" width="640" height="400" background="#24272a" seed="1">
     <qg:sprite sheet="separator" x="320" y="200" />
@@ -2023,7 +2074,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <qg:input action="buy-gatling" keys="1" />
   <qg:input action="buy-explosive" keys="2" />
-  <qg:multiplayer players="2" delay="3" />
+  <qg:multiplayer players="2" delay="3" start="map" />
 
   <!-- The gatling shoots a bullet at the nearest dino in range every half
        second; upgraded, twice as often. The explosive hurts every dino in
@@ -2068,6 +2119,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:on-collision with="base"><q:set name="base_hp" value="{base_hp - 1}" /><qg:destroy target="me" /></qg:on-collision>
     <qg:on-death><q:set name="gold" value="{gold + 10}" /></qg:on-death>
   </qg:prefab>
+
+  <!-- The title: alone, or two builders on two machines. -->
+  <qg:scene name="title" width="1152" height="648" background="#1a1a1a">
+    <qg:sprite sheet="map" x="578" y="372" gd:modulate="#ffffff60" />
+    <qg:hud position="top-center" size="48"><qg:text value="{'TOWERS'}" /></qg:hud>
+    <qg:lobby local="map" local-label="Play alone" size="22" />
+  </qg:scene>
 
   <qg:scene name="map" width="1152" height="648" background="#1a1a1a" seed="11">
     <q:set name="gold" value="100" />
@@ -2208,7 +2266,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:input player="2" action="jump" keys="Up" />
   <qg:input player="2" action="punch" keys="Period" />
   <qg:input player="2" action="kick" keys="Slash" />
-  <qg:multiplayer players="2" delay="3" />
+  <qg:multiplayer players="2" delay="3" start="fight" />
+
+  <!-- The title: two on one keyboard, or one on each machine. -->
+  <qg:scene name="title" width="640" height="360" background="#201820">
+    <qg:sprite sheet="stage" x="320" y="180" />
+    <qg:hud position="top-center" size="40"><qg:text value="{'ARENA'}" /></qg:hud>
+    <qg:lobby local="fight" local-label="Two players, one keyboard" size="18" />
+  </qg:scene>
 
   <qg:scene name="fight" width="640" height="360" background="#201820" seed="1">
     <q:set name="wins_1" value="0" />
@@ -2332,7 +2397,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <qg:tileset name="board" src="assets/board.png" tile="62" />
   <qg:spritesheet name="pieces" src="assets/pieces.png" tile="60" />
-  <qg:multiplayer players="2" delay="2" />
+  <qg:multiplayer players="2" delay="2" start="game" />
 
   <qg:prefab name="wK" tag="piece" sheet="pieces" frame="0" hitbox="60x60" />
   <qg:prefab name="wQ" tag="piece" sheet="pieces" frame="1" hitbox="60x60" />
@@ -2347,6 +2412,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:prefab name="bN" tag="piece" sheet="pieces" frame="10" hitbox="60x60" />
   <qg:prefab name="bP" tag="piece" sheet="pieces" frame="11" hitbox="60x60" />
   <qg:prefab name="Marker" tag="marker" sheet="board" frame="1" hitbox="4x4" gd:modulate="#e0d040a0" gd:z_index="-1" />
+
+  <!-- The title: both colours on one board, or white and black on two machines. -->
+  <qg:scene name="title" width="496" height="540" background="#2a2520">
+    <qg:hud position="top-center" size="40"><qg:text value="{'CHESS'}" /></qg:hud>
+    <qg:lobby local="game" local-label="Two players, one board" size="18" />
+  </qg:scene>
 
   <qg:scene name="game" width="496" height="540" background="#2a2520">
     <!-- row 0 is the eighth rank (black's home), row 7 the first; a square is board[row * 8 + col] -->

@@ -39,6 +39,9 @@ _FUNCTIONS = {
     'random': 'Q.random(self, {0}, {1})',   # a float in [a, b] from the scene's seeded source
     'count': 'Q.count(self, {0})',           # how many things of a tag are in the scene
     'thing_at': 'Q.thing_at(self, {0}, {1}, {2})',   # the thing of a tag at (x, y), or null
+    'net_status': 'Q.net_status()',          # offline, hosting, joining, connected, playing, failed, ended
+    'net_players': 'Q.net_players()',        # how many are connected
+    'net_player': 'Q.net_player()',          # this machine's player number (0: none yet)
 }
 
 _BIN = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*'}

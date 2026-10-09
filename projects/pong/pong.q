@@ -11,14 +11,14 @@
   <qg:spritesheet name="separator" src="assets/separator.png" tile="2x400" />
 
   <!-- The left paddle is player 1 on W/S, the right one player 2 on the arrows —
-       on one keyboard. Over the network each peer is one player: one hosts
-       (q-host=7777), the other joins (q-join=HOST:7777), and the game runs
-       in lockstep, the same on both (README.md). -->
+       on one keyboard. Over the network each machine is one player (the
+       title's Host and Join), and the game runs in lockstep, the same on
+       both (README.md). -->
   <qg:input player="1" action="up" keys="W" />
   <qg:input player="1" action="down" keys="S" />
   <qg:input player="2" action="up" keys="Up" />
   <qg:input player="2" action="down" keys="Down" />
-  <qg:multiplayer players="2" delay="3" />
+  <qg:multiplayer players="2" delay="3" start="court" />
 
   <!-- The ball flies left at 100 px/s, 2 px/s faster every second; it bounces
        off the ceiling and the floor, and goes back to its start, as it was,
@@ -31,6 +31,13 @@
       <qg:respawn target="me" />
     </qg:on-collision>
   </qg:prefab>
+
+  <!-- The title: two on one keyboard, or one on each machine — host, or join at
+       an address. The court starts on both machines once both are there. -->
+  <qg:scene name="title" width="640" height="400" background="#24272a">
+    <qg:hud position="top-center" size="48"><qg:text value="{'PONG'}" /></qg:hud>
+    <qg:lobby local="court" local-label="Two players, one keyboard" size="20" />
+  </qg:scene>
 
   <qg:scene name="court" width="640" height="400" background="#24272a" seed="1">
     <qg:sprite sheet="separator" x="320" y="200" />

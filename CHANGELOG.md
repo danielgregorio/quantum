@@ -10,6 +10,18 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the lobby in the language. `qg:host port=`, `qg:join
+  address=` and `qg:leave` start and stop the networked game from a scene;
+  `net_status()`, `net_players()` and `net_player()` say where things are;
+  `qg:multiplayer start=` names the scene the networked game begins in on
+  every peer (the title and the lobby before it run on each machine
+  alone), and `transport="websocket"` lets a desktop host take players over
+  WebSocket. `qg:lobby` is the usual menu — play here, host, an address
+  field, join, cancel, a status line — written by the compiler. `qg:text`
+  takes `value=`, an expression read every frame. Pong, Arena, Chess and
+  Towers start on a title with a lobby; `replay_peers(lobby_tapes=...)`
+  plays two machines through the menus, over ENet and WebSocket, and checks
+  the game is the one the command line gives.
 - Laboratory: menus. `qg:menu` holds `qg:button`s (each runs what it holds
   when chosen; `label=` may be an expression read every frame, `if=` shows
   it only while true) and `qg:field`s (a text box bound to a string state).

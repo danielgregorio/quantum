@@ -29,8 +29,12 @@ def project(godot, tmp_path_factory) -> Path:
     return Path(out)
 
 
+ENTER = 1   # the title's "Two players, one keyboard", chosen on tick 0: the fight's first tick is tick 1
+
+
 def fight(project, ticks, holds):
-    state = replay(project, ticks, tape=tape_from_holds(list(holds)))
+    tape = tape_from_holds([('select', 0, 2)] + [(a, s + ENTER, e + ENTER) for a, s, e in holds])
+    state = replay(project, ticks + ENTER, tape=tape)
     scene = next(iter(state))
     return scene, state[scene]
 

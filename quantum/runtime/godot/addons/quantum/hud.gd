@@ -67,7 +67,8 @@ func setup(spec: Dictionary, scene: Node) -> void:
 				label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			Q.apply_gd(label, item.get("gd"))
 			box.add_child(label)
-			_labels.append({"label": label, "bind": item["bind"], "prefix": item.get("label", "")})
+			_labels.append({"label": label, "bind": item.get("bind"), "prefix": item.get("label", ""),
+				"method": item.get("value_method")})
 	_refresh()
 
 
@@ -90,9 +91,13 @@ func _refresh() -> void:
 			var v = _bound(entry["bind"])
 			entry["bar"].value = float(v) if v != null else 0.0
 			continue
-		var value = _scene.get(entry["bind"])
-		if value == null:
-			value = G.get(entry["bind"])
+		var value
+		if entry.get("method") != null:
+			value = _scene.call(entry["method"])
+		else:
+			value = _scene.get(entry["bind"])
+			if value == null:
+				value = G.get(entry["bind"])
 		var text: String = str(value)
 		if value is float and value == floorf(value):
 			text = str(int(value))

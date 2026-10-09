@@ -29,16 +29,68 @@ func _ready() -> void:
 			var parts: PackedStringArray = a.substr(9).split(":")
 			host = parts[0]
 			port = int(parts[1]) if parts.size() > 1 else -1
+		elif a.begins_with("--q-port="):
+			port_override = int(a.substr(9))
+		elif a.begins_with("--q-transport="):
+			transport_override = a.substr(14)
 	if spec.has("multiplayer") and port > 0:
-		lockstep = Lockstep.new()
-		add_child(lockstep)
-		lockstep.setup(spec["multiplayer"], self, host, port)
+		_start_network(host, port).from_command_line = true
 		return
 	go_to_scene(spec["initial"])
 
 
+# Overrides for tests (several games on one machine): --q-port=N, --q-transport=websocket.
+var port_override: int = -1
+var transport_override: String = ""
+
+
+func _start_network(host: String, port: int) -> Node:
+	if lockstep != null:
+		lockstep.leave()
+		remove_child(lockstep)
+		lockstep.queue_free()
+	var mp: Dictionary = spec["multiplayer"].duplicate()
+	if transport_override != "":
+		mp["transport"] = transport_override
+	lockstep = Lockstep.new()
+	add_child(lockstep)
+	lockstep.setup(mp, self, host, port_override if port_override > 0 else port)
+	return lockstep
+
+
+# qg:host / qg:join / qg:leave, from a scene (Q.net_host...).
+func net_host(port: int) -> void:
+	_start_network("", port)
+
+
+func net_join(address: String) -> void:
+	var parts := address.strip_edges().split(":")
+	var port := int(parts[1]) if parts.size() > 1 else 7777
+	_start_network(parts[0], port)
+
+
+func net_leave() -> void:
+	if lockstep != null:
+		lockstep.leave()
+		remove_child(lockstep)
+		lockstep.queue_free()
+		lockstep = null
+
+
+func net_status() -> String:
+	return lockstep.status if lockstep != null else "offline"
+
+
+func net_players() -> int:
+	return lockstep.connected_players if lockstep != null else 0
+
+
+func net_player() -> int:
+	return lockstep.player if lockstep != null else 0
+
+
 func _q_lockstep_ready() -> void:
-	go_to_scene(spec["initial"])
+	go_to_scene(str(spec["multiplayer"].get("start", spec["initial"])))
 
 
 func _register_inputs(inputs: Dictionary) -> void:

@@ -13,10 +13,13 @@ they are; the desktop builds are a zip with one executable inside (on Linux,
 `chmod +x` it first). The site rebuilds them from `main` with
 `scripts/export-games.py`.
 
-Two of the games are played by two people on one keyboard, and five of them
-also over the network: one machine hosts, the other joins, and both run the
-same game in lockstep (`PLAN_MULTIPLAYER.md` in the repository says how).
-That needs the desktop build and a command line:
+Pong, Arena, Chess and Towers are played by two, on one keyboard or over the
+network: on the title, one machine chooses **Host a game**, the other types
+the host's address and chooses **Join**, and both run the same game in
+lockstep (`PLAN_MULTIPLAYER.md` in the repository says how). Over the network
+it takes the desktop builds: a browser cannot host, and joining from a page
+served over HTTPS needs a secure WebSocket the games do not offer yet. The
+command line skips the title:
 
 ```
 ./pong.x86_64 -- --q-host=7777            # player 1 hosts on port 7777

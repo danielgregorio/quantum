@@ -39,7 +39,7 @@ class Tag:
 
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
-           'damage', 'burst', 'shake', 'deflect', 'stop', 'put')
+           'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -74,7 +74,12 @@ TAGS: Dict[str, Tag] = {
         {'players': Attr('int', required=True, doc='how many, 2 or more'),
          'delay': Attr('int', 3, doc='ticks between a press and its effect, everywhere: hides the round trip'),
          'check-every': Attr('int', 60, doc='ticks between comparisons of the whole state across peers; '
-                                           'a difference is a desync, reported and fatal (0: never)')},
+                                           'a difference is a desync, reported and fatal (0: never)'),
+         'start': Attr('ident', None, doc='the scene the networked game starts in, on every peer, once all the '
+                                          'players are there (the first scene when not given); the scenes before '
+                                          'it — a title, a lobby — run on each machine alone'),
+         'transport': Attr('enum:enet|websocket', 'enet',
+                           doc='enet (desktop to desktop), or websocket (a browser build can join a desktop host)')},
         parents=('application',)),
     'sound': Tag(
         'A sound the game can play (qg:play).',
@@ -272,7 +277,8 @@ TAGS: Dict[str, Tag] = {
         parents=('hud',)),
     'text': Tag(
         'A string from the scene state, in the HUD.',
-        {'bind': Attr('ident', required=True, doc='a q:set of the scene'),
+        {'bind': Attr('ident', None, doc='a q:set of the scene (or value=)'),
+         'value': Attr('expr', None, doc='an expression, read every frame (or bind=)'),
          'size': Attr('int', None, doc='font size')},
         parents=('hud',)),
     'on-collision': Tag(
@@ -436,6 +442,29 @@ TAGS: Dict[str, Tag] = {
         'Moves a thing or a character to a point, at once.',
         {'target': Attr('ident', 'other', doc='me, other, a character id, or a q:set holding a thing (thing_at)'),
          'x': Attr('expr', required=True), 'y': Attr('expr', required=True)},
+        parents=('handler',)),
+    'lobby': Tag(
+        'The usual networked-game menu, ready made: play here (local=), host, an address field, join, cancel, '
+        'and a line that says where things are. It is a qg:menu and a qg:hud the compiler writes; the address '
+        'is the scene\'s `lobby_address`.',
+        {'local': Attr('ident', None, doc='a scene to play on this machine alone (a button for it when given)'),
+         'local-label': Attr('str', 'Play here'),
+         'port': Attr('int', 7777),
+         'address': Attr('str', '127.0.0.1:7777', doc='what the address field starts with'),
+         'font': Attr('str', None), 'size': Attr('int', 16)},
+        parents=('scene',)),
+    'host': Tag(
+        'Hosts the networked game (qg:multiplayer): this machine is player 1 and waits for the others; the game '
+        'starts in the start= scene when they are all there. `net_status()` says where things are.',
+        {'port': Attr('int', 7777)},
+        parents=('handler',)),
+    'join': Tag(
+        'Joins a networked game at an address (host:port); this machine is the next player.',
+        {'address': Attr('expr', required=True, doc='an expression: a q:set a qg:field fills, or text')},
+        parents=('handler',)),
+    'leave': Tag(
+        'Leaves the networked game, or stops hosting or joining.',
+        {},
         parents=('handler',)),
     'goto-scene': Tag(
         'Leaves this scene for another, at the end of the tick. Scene state is lost; game state stays.',
