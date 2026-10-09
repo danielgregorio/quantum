@@ -45,6 +45,7 @@ class Element:
     line: Optional[int]
     children: List['Node'] = field(default_factory=list)
     text: str = ''
+    gd: Dict[str, str] = field(default_factory=dict)   # gd:name="raw": Godot node properties
 
     def get(self, name: str, default=None):
         return self.attrs.get(name, default)
@@ -67,6 +68,7 @@ class Game:
     sounds: Dict[str, Element] = field(default_factory=dict)
     state: List[Statement] = field(default_factory=list)   # q:set at the application level
     inputs: List[Element] = field(default_factory=list)
+    multiplayer: Optional[Element] = None
 
 
 def _local(element: ET.Element) -> tuple:
@@ -112,6 +114,11 @@ def _convert(name: str, attr: Attr, raw: str, line: Optional[int]) -> object:
             if not m:
                 raise ValueError
             return (int(m.group(1)), int(m.group(2)))
+        if t == 'tile':
+            m = _SIZE.match(raw.strip())
+            if m:
+                return (int(m.group(1)), int(m.group(2)))
+            return (int(raw), int(raw))
         if t == 'color':
             if not _COLOR.match(raw.strip()):
                 raise ValueError
@@ -125,6 +132,13 @@ def _convert(name: str, attr: Attr, raw: str, line: Optional[int]) -> object:
     except ValueError:
         raise GameCompileError(f'{name}="{raw}" is not a {t}', line)
     raise GameCompileError(f'schema bug: unknown attribute type {t}', line)
+
+
+GD_NS = '{https://quantum.lang/godot}'
+
+
+def _read_gd(element: ET.Element) -> Dict[str, str]:
+    return {name[len(GD_NS):]: raw for name, raw in element.attrib.items() if name.startswith(GD_NS)}
 
 
 def _read_attrs(tag: str, element: ET.Element) -> Dict[str, object]:
@@ -188,7 +202,7 @@ def _read_element(element: ET.Element, parent_tag: str) -> Element:
             ', '.join(f'<qg:{p}>' if p not in ('application', 'handler') else
                       ('<q:application>' if p == 'application' else 'a handler (qg:on-collision, q:if...)')
                       for p in allowed), line)
-    node = Element(tag, _read_attrs(tag, element), line)
+    node = Element(tag, _read_attrs(tag, element), line, gd=_read_gd(element))
     if spec.text:
         node.text = (element.text or '').strip()
         if len(element):
@@ -197,7 +211,7 @@ def _read_element(element: ET.Element, parent_tag: str) -> Element:
             raise GameCompileError(f'<qg:{tag}> has src= or {spec.text}, not both', line)
         return node
     _no_raw_text(element, f'<qg:{tag}>')
-    child_parent = 'handler' if tag in ('on-collision', 'on-fall', 'on-input', 'on-hit', 'on-death', 'on-damage', 'timer') else tag
+    child_parent = 'handler' if tag in ('on-collision', 'on-fall', 'on-input', 'on-select', 'on-hit', 'on-ko', 'on-death', 'on-damage', 'timer') else tag
     node.children = _read_children(element, child_parent, f'<qg:{tag}>')
     return node
 
@@ -274,6 +288,7 @@ def read_game(app) -> Game:
     scenes: List[Element] = []
     game_state: List[Statement] = []
     inputs: List[Element] = []
+    multiplayer: Optional[Element] = None
     try:
         for child in root:
             ns, name = _local(child)
@@ -289,6 +304,10 @@ def read_game(app) -> Game:
                     _unique(sounds, el, 'sound')
                 elif el.tag == 'input':
                     inputs.append(el)
+                elif el.tag == 'multiplayer':
+                    if multiplayer is not None:
+                        raise GameCompileError('one <qg:multiplayer> per game', el.line)
+                    multiplayer = el
                 elif el.tag == 'scene':
                     if any(s.get('name') == el.get('name') for s in scenes):
                         raise GameCompileError(f'two scenes named {el.get("name")!r}', el.line)
@@ -309,7 +328,7 @@ def read_game(app) -> Game:
     if not scenes:
         raise GameCompileError('a game needs at least one <qg:scene>', file=source_path)
     return Game(getattr(app, 'app_id', 'game'), tilesets, sheets, prefabs, scenes, source_path, sounds,
-                game_state, inputs)
+                game_state, inputs, multiplayer)
 
 
 def _unique(table: Dict[str, Element], el: Element, what: str) -> None:

@@ -12,7 +12,7 @@ var _origin: Vector2 = Vector2.ZERO
 var _ticks: int = 0
 
 
-func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: int) -> void:
+func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -> void:
 	prefab_name = name_
 	tag = prefab["tag"]
 	name = name_
@@ -26,8 +26,8 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: int) -> 
 	var sprite := Sprite2D.new()
 	sprite.name = "Sprite"
 	sprite.texture = texture
-	sprite.hframes = max(1, int(texture.get_width()) / tile)
-	sprite.vframes = max(1, int(texture.get_height()) / tile)
+	sprite.hframes = max(1, int(texture.get_width()) / int(tile[0]))
+	sprite.vframes = max(1, int(texture.get_height()) / int(tile[1]))
 	sprite.frame = int(prefab.get("frame", 0))
 	add_child(sprite)
 	var rect := RectangleShape2D.new()

@@ -9,6 +9,7 @@ const Animator := preload("res://addons/quantum/animator.gd")
 
 var speed: float = 120.0
 var bounds: bool = true
+var axis: String = "both"
 var fire_action: String = ""
 var fire_prefab: String = ""
 var fire_every: int = 10
@@ -17,6 +18,7 @@ var hitbox_size: Vector2 = Vector2(14, 14)
 var spawn_point: Vector2 = Vector2.ZERO
 var animator: Node = null
 var state: String = ""
+var player: int = 1
 
 var _handlers: Array = []
 var _cooldowns: Dictionary = {}
@@ -26,8 +28,10 @@ var _fire_in: int = 0
 
 
 func setup(spec: Dictionary) -> void:
+	player = int(spec.get("player", 1))
 	speed = float(spec.get("speed", speed))
-	bounds = spec.get("bounds", "scene") == "scene"
+	bounds = spec.get("bounds") != "none"
+	axis = str(spec.get("axis", "both"))
 	fire_action = str(spec.get("fire_action", "")) if spec.get("fire_action") != null else ""
 	fire_prefab = str(spec.get("fire_prefab", "")) if spec.get("fire_prefab") != null else ""
 	fire_every = int(spec.get("fire_every", 10))
@@ -92,16 +96,15 @@ func _fire_handler(h: Dictionary, other: Node) -> bool:
 
 func _physics_process(delta: float) -> void:
 	_ticks += 1
+	# analog: a stick's strength scales the speed; a key is 1.0
 	var dir := Vector2.ZERO
-	if Input.is_action_pressed("right"):
-		dir.x += 1
-	if Input.is_action_pressed("left"):
-		dir.x -= 1
-	if Input.is_action_pressed("down"):
-		dir.y += 1
-	if Input.is_action_pressed("up"):
-		dir.y -= 1
-	position += dir.normalized() * speed * delta
+	if axis != "vertical":
+		dir.x = Input.get_action_strength(_a("right")) - Input.get_action_strength(_a("left"))
+	if axis != "horizontal":
+		dir.y = Input.get_action_strength(_a("down")) - Input.get_action_strength(_a("up"))
+	if dir.length() > 1.0:
+		dir = dir.normalized()
+	position += dir * speed * delta
 	if bounds and "q_spec" in _scene:
 		var w := float(_scene.q_spec.get("width", 256))
 		var h := float(_scene.q_spec.get("height", 224))
@@ -111,8 +114,13 @@ func _physics_process(delta: float) -> void:
 
 	if _fire_in > 0:
 		_fire_in -= 1
-	if fire_action != "" and fire_prefab != "" and Input.is_action_pressed(fire_action) and _fire_in == 0:
+	if fire_action != "" and fire_prefab != "" and Input.is_action_pressed(_a(fire_action)) and _fire_in == 0:
 		_fire_in = fire_every
 		Q.spawn_at(_scene, fire_prefab, position + Vector2(0, -hitbox_size.y / 2.0 - 4.0))
 		if fire_sound != "":
 			Q.play(fire_sound)
+
+
+# The input action of this player: "up" for player 1, "p2_up" for player 2.
+func _a(action: String) -> String:
+	return action if player == 1 else "p%d_%s" % [player, action]

@@ -106,7 +106,31 @@ A sheet of equal frames for characters and items.
 |---|---|---|---|
 | `name` | a name | required |  |
 | `src` | text | required |  |
-| `tile` | integer | required | frame size in pixels (square) |
+| `tile` | tile | required | frame size in pixels: 24, or 8x32 for frames that are not square |
+
+Goes inside: `q:application`.
+
+### `qg:input`
+
+The keys of an action, instead of the defaults (arrows/WASD to move, space/Z/X to jump). A second player has no defaults: every action it uses is declared with player="2".
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `action` | a name | required | left, right, up, down, jump, select, cancel — or a name of the game's own (buy, pause): qg:on-input reads it |
+| `keys` | text | required | comma-separated: Godot key names (Space, Left, A, Enter...) and joypad names — JoyA JoyB JoyX JoyY JoyL JoyR JoyL2 JoyR2 JoyStart JoySelect, JoyUp JoyDown JoyLeft JoyRight (the pad), JoyLeftStickUp/Down/Left/Right, JoyRightStickUp/Down/Left/Right; MouseLeft, MouseRight, MouseMiddle. Player n reads joypad n-1 |
+| `player` | integer | `1` | whose keys: the character with the same player= |
+
+Goes inside: `q:application`.
+
+### `qg:multiplayer`
+
+The game is played by several people, each on their own machine, in lockstep: every peer runs the whole game and a tick runs when every player's input for it has arrived. One hosts (`--q-host=PORT`, player 1), the others join (`--q-join=HOST:PORT`, players 2.. in order). The players' characters are told apart by player=; nobody declares keys for players 2..
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `players` | integer | required | how many, 2 or more |
+| `delay` | integer | `3` | ticks between a press and its effect, everywhere: hides the round trip |
+| `check-every` | integer | `60` | ticks between comparisons of the whole state across peers; a difference is a desync, reported and fatal (0: never) |
 
 Goes inside: `q:application`.
 
@@ -118,6 +142,7 @@ A sound the game can play (qg:play).
 |---|---|---|---|
 | `name` | a name | required |  |
 | `src` | text | required | an .ogg or .wav |
+| `loop` | true / false | `false` | plays until qg:stop (music) |
 
 Goes inside: `q:application`.
 
@@ -132,19 +157,25 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `sheet` | a name | required | a qg:spritesheet or qg:tileset |
 | `frame` | integer | `0` |  |
 | `hitbox` | `WxH` pixels | required |  |
-| `ai` | `patrol` / `wander` / `chase` / `fly` / `sway` / `shuttle` |  | patrol: walks under gravity, turns at walls (and at edges with turns-at); wander: top-down, changes direction now and then (from the scene seed); chase: top-down, goes for the character within sight=; fly: straight along heading=; sway: side to side across the scene; shuttle: a solid that goes dx=,dy= and back every period= ticks, carrying what stands on it |
+| `ai` | `patrol` / `wander` / `chase` / `fly` / `sway` / `shuttle` / `path` / `turret` |  | patrol: walks under gravity, turns at walls (and at edges with turns-at); wander: top-down, changes direction now and then (from the scene seed); chase: top-down, goes for the character within sight=; fly: straight along heading=; sway: side to side across the scene; shuttle: a solid that goes dx=,dy= and back every period= ticks, carrying what stands on it; path: follows the qg:path it was spawned on (qg:spawn at="path"), then stands at its end; turret: stands, and fires fire-prefab at the nearest targets= within range= every fire-every |
+| `range` | number | `100.0` | turret: pixels |
+| `targets` | a name |  | turret: the tag it shoots at |
+| `attack` | `shoot` / `area` | `shoot` | turret: shoot spawns fire-prefab headed at the target; area damages every target in range by damage= |
+| `damage` | integer | `1` | turret attack="area": the damage |
 | `dx` | number | `0.0` | shuttle: how far it goes, pixels |
 | `dy` | number | `0.0` | shuttle: how far it goes, pixels |
 | `period` | integer | `240` | shuttle: ticks for there and back |
 | `one-way` | true / false | `false` | solid: can be jumped through from below and stood on |
 | `sight` | number | `80.0` | chase: pixels |
-| `heading` | `up` / `down` / `left` / `right` | `down` | fly: which way |
+| `heading` | text | `down` | fly: up, down, left, right, or a direction as x,y (-1,0.5) |
+| `accel` | number | `0.0` | fly: pixels per second added to its speed every second |
 | `lifetime` | integer | `0` | fly: gone after this many ticks (0: never); any fly is gone off-screen |
 | `health` | integer | `1` | hits it takes (qg:damage); at 0 its qg:on-death runs and it is gone |
 | `fire-prefab` | a name |  | what it shoots, placed below it (or above, when heading is up) |
 | `fire-every` | integer | `0` | ticks between shots (0: never) |
 | `fire-sound` | a name |  |  |
-| `speed` | number | `30.0` | pixels per second, for ai= |
+| `speed` | text | `30` | pixels per second, for ai=; or a range, 150..250, drawn from the scene seed as each instance is placed |
+| `rotate` | true / false | `false` | fly: the sprite turns to face the heading |
 | `direction` | `left` / `right` | `left` | where it walks first |
 | `turns-at` | `wall` / `edge` | `wall` | edge: also turns before falling off |
 | `gravity` | number | `900.0` |  |
@@ -154,7 +185,7 @@ Goes inside: `q:application`.
 
 ### `qg:animation`
 
-Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what it does; a prefab plays "walk".
+Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what it does (a topdown one "walk-up" and "walk-down" when it has them, "walk-up" upside down for down); a prefab plays "walk".
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
@@ -175,9 +206,30 @@ A form of a character or a prefab (small, big; calm, angry): hitbox, frame, anim
 | `frame` | integer | `0` |  |
 | `speed` | number |  | prefab: overrides its speed |
 | `fire-every` | integer |  | prefab: overrides its fire-every |
+| `fire-prefab` | a name |  | prefab: overrides its fire-prefab |
+| `range` | number |  | turret: overrides its range |
 | `initial` | true / false | `false` | the state it starts in (else the first one) |
 
 Goes inside: `qg:character`, `qg:prefab`.
+
+### `qg:move`
+
+A fighter's attack, on an action: an animation with one active frame, in which a box of reach= at at= (in front, in the facing direction) is tested against the opponent once. A hit takes damage=, stuns for stun= ticks and pushes push= pixels; blocked (the opponent holding away), it takes no damage and half the rest.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required |  |
+| `action` | a name | required | a default action or one a qg:input declares |
+| `frames` | text | required | comma-separated frame numbers |
+| `fps` | number | `12.0` |  |
+| `active` | integer | `1` | which frame (0-based) hits |
+| `reach` | `WxH` pixels | required | the hit box, WxH |
+| `at` | text | `0,0` | the hit box's centre from the body's, dx,dy; dx is forward |
+| `damage` | integer | `5` |  |
+| `stun` | integer | `12` |  |
+| `push` | number | `40.0` |  |
+
+Goes inside: `qg:character`.
 
 ### `qg:scene`
 
@@ -218,8 +270,12 @@ A body the player moves: a platformer, or a walker on a world map.
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `id` | a name | required |  |
-| `controller` | `platformer` / `map` / `topdown` / `ship` | required |  |
-| `bounds` | `scene` / `none` | `scene` | ship: kept inside the scene |
+| `controller` | `platformer` / `map` / `topdown` / `ship` / `fighter` | required |  |
+| `player` | integer | `1` | whose keys move it (qg:input player=); 1 has the defaults |
+| `health` | integer | `100` | fighter: hits it takes; at 0 it is KO and qg:on-ko runs |
+| `facing` | `left` / `right` | `right` | fighter: where it looks at first |
+| `bounds` | `scene` / `none` |  | kept inside the scene: a ship unless none, a topdown character when scene |
+| `axis` | `both` / `vertical` / `horizontal` | `both` | ship: which way it can move |
 | `fire-action` | `jump` |  | ship: the action that shoots |
 | `fire-prefab` | a name |  | ship: what it shoots, placed above it |
 | `fire-every` | integer | `10` | ship: ticks between shots while the action is held |
@@ -265,12 +321,68 @@ Places count instances of a prefab, one every so many ticks, from a tick on.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `prefab` | a name | required |  |
+| `prefab` | text | required | a prefab name, or several comma-separated: one is drawn from the seed for each instance |
 | `from` | integer | `0` | the tick of the first one |
 | `every` | integer | `60` |  |
-| `count` | integer | `1` |  |
+| `count` | integer | `1` | 0: no end |
 | `x` | text | `random` | a number, or random across the scene width (from the seed) |
 | `y` | number | `-12.0` |  |
+| `along` | `edges` |  | edges: instead of x,y, a random point on the scene's border |
+| `heading` | `inward` |  | along: a flying prefab heads into the scene... |
+| `spread` | number | `0.0` | ...turned by up to this many degrees either way, from the seed |
+
+Goes inside: `qg:scene`.
+
+### `qg:zone`
+
+An invisible rectangle with a tag: what touches it runs its qg:on-collision with= that tag.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required |  |
+| `tag` | a name | required |  |
+| `x` | number | required |  |
+| `y` | number | required |  |
+| `width` | number | required |  |
+| `height` | number | required |  |
+
+Goes inside: `qg:scene`.
+
+### `qg:sprite`
+
+A picture in the scene, with no behaviour: a backdrop, a divider, a sign.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `sheet` | a name | required |  |
+| `frame` | integer | `0` |  |
+| `x` | number | required |  |
+| `y` | number | required |  |
+
+Goes inside: `qg:scene`.
+
+### `qg:path`
+
+A route through the scene, straight from point to point, that ai="path" prefabs follow (qg:spawn at="path" path=).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required |  |
+| `points` | text | required | x,y pairs separated by semicolons: 0,100; 200,100; 200,300 |
+
+Goes inside: `qg:scene`.
+
+### `qg:cursor`
+
+A player's pointer in the scene: the mouse, moved also by that player's left/right/up/down by step= pixels. `cursor.x`, `cursor.y` (and, with grid=, `cursor.col`, `cursor.row`, snapped) in qg:on-select; with sheet= it is drawn. Under qg:multiplayer every player's cursor travels with their input.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `player` | integer | `1` |  |
+| `step` | number | `16.0` | pixels per tick while a direction is held |
+| `grid` | integer |  | cell size: the cursor snaps to cell centres |
+| `sheet` | a name |  |  |
+| `frame` | integer | `0` |  |
 
 Goes inside: `qg:scene`.
 
@@ -334,7 +446,9 @@ Text over the game.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `position` | `top-left` / `top-center` / `top-right` | `top-left` |  |
+| `position` | `top-left` / `top-center` / `top-right` / `center` / `bottom-center` | `top-left` |  |
+| `font` | text |  | a .ttf, relative to the .q or a folder above it |
+| `size` | integer | `8` | the font size of its items, unless an item says otherwise |
 
 Goes inside: `qg:scene`.
 
@@ -346,6 +460,7 @@ A number from the scene state, in the HUD.
 |---|---|---|---|
 | `bind` | a name | required | a q:set of the scene |
 | `label` | text | `` | text before the number |
+| `size` | integer |  | font size |
 
 Goes inside: `qg:hud`.
 
@@ -356,12 +471,27 @@ A string from the scene state, in the HUD.
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `bind` | a name | required | a q:set of the scene |
+| `size` | integer |  | font size |
+
+Goes inside: `qg:hud`.
+
+### `qg:bar`
+
+A bar in the HUD: a number against its maximum — a q:set, or a fighter's health as `id.health`.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `bind` | text | required | a q:set of the scene or the game, or a fighter's id and .health (p1.health) |
+| `max` | number | `100.0` |  |
+| `width` | integer | `100` |  |
+| `height` | integer | `10` |  |
+| `color` | `#rrggbb` | `#e04040` |  |
 
 Goes inside: `qg:hud`.
 
 ## Handlers
 
-Where the logic goes: actions and statements, with `me` and `other`.
+Where the logic goes: actions and statements, with `me` and `other` (`cursor` and `other` in qg:on-select).
 
 ### `qg:on-collision`
 
@@ -391,13 +521,29 @@ What happens when this character falls below the tilemap. Holds actions and stat
 
 Goes inside: `qg:character`.
 
+### `qg:on-ko`
+
+What happens when this fighter's health reaches 0. Holds actions and statements; `me` is the loser, `other` the winner.
+
+Goes inside: `qg:character`.
+
 ### `qg:on-input`
 
 What happens when the player presses an action in this scene. Holds actions and statements.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `action` | `jump` / `left` / `right` / `up` / `down` | required |  |
+| `action` | a name | required | a default action, or one a qg:input declares |
+
+Goes inside: `qg:scene`.
+
+### `qg:on-select`
+
+What happens when a player presses select with their qg:cursor somewhere. Holds actions and statements; `cursor` is where (x, y, col, row, player), `other` the thing under it, or null.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `player` | integer |  | only this player's cursor (any, when not given) |
 
 Goes inside: `qg:scene`.
 
@@ -427,7 +573,7 @@ Removes a thing from the scene.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `target` | `other` / `me` | `other` |  |
+| `target` | a name | `other` | other, me, or a q:set holding a thing (thing_at) |
 
 Goes inside: a handler.
 
@@ -444,31 +590,31 @@ Goes inside: a handler.
 
 ### `qg:play`
 
-Plays a qg:sound.
+Plays a qg:sound. Directly in a scene: as the scene is entered.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `sound` | a name | required |  |
 
-Goes inside: a handler.
+Goes inside: a handler, `qg:scene`.
 
 ### `qg:respawn`
 
-Puts the character back at its start or its last checkpoint, still.
+Puts a character back at its start or its last checkpoint, still; a thing back where it was placed, with its first heading and speed.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `target` | `me` | `me` |  |
+| `target` | a name | `me` | me, other, or a character of the scene by id |
 
 Goes inside: a handler.
 
 ### `qg:become`
 
-Changes the character to one of its qg:states.
+Changes a character or a thing to one of its qg:states.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `target` | `me` | `me` |  |
+| `target` | `me` / `other` | `me` |  |
 | `state` | a name | required |  |
 
 Goes inside: a handler.
@@ -480,7 +626,8 @@ Places a new prefab instance in the scene.
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `prefab` | a name | required |  |
-| `at` | `other` / `me` | `other` | whose position |
+| `at` | `other` / `me` / `cursor` / `path` | `other` | whose position; cursor: where the qg:on-select cursor is; path: the start of path= |
+| `path` | a name |  | at="path": a qg:path of the scene, which an ai="path" prefab follows |
 | `dx` | number | `0.0` |  |
 | `dy` | number | `0.0` | offset in pixels |
 
@@ -492,7 +639,7 @@ Replaces a thing with an instance of another prefab, in its place.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `target` | `other` | `other` |  |
+| `target` | a name | `other` | other, or a q:set holding a thing |
 | `prefab` | a name | required |  |
 
 Goes inside: a handler.
@@ -553,18 +700,42 @@ Shakes the scene a thing is in. Cosmetic.
 
 Goes inside: a handler.
 
-## Other tags
+### `qg:deflect`
 
-### `qg:input`
-
-The keys of an action, instead of the defaults (arrows/WASD to move, space/Z/X to jump).
+Changes where a flying thing (ai="fly") goes: flips one axis of its heading, or sets the heading to dx,dy (expressions; the length does not matter).
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `action` | `left` / `right` / `up` / `down` / `jump` | required |  |
-| `keys` | text | required | comma-separated Godot key names: Space, Left, A, Enter... |
+| `target` | `other` / `me` | `other` |  |
+| `axis` | `x` / `y` |  | the axis to flip |
+| `dx` | an expression |  |  |
+| `dy` | an expression |  |  |
 
-Goes inside: `q:application`.
+Goes inside: a handler.
+
+### `qg:stop`
+
+Stops a qg:sound (a looping one, mostly). Directly in a scene: as the scene is entered.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `sound` | a name | required |  |
+
+Goes inside: a handler, `qg:scene`.
+
+### `qg:put`
+
+Moves a thing or a character to a point, at once.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `target` | a name | `other` | me, other, a character id, or a q:set holding a thing (thing_at) |
+| `x` | an expression | required |  |
+| `y` | an expression | required |  |
+
+Goes inside: a handler.
+
+## Other tags
 
 ### `qg:timer`
 
@@ -573,7 +744,8 @@ Runs its handler after so many ticks, or every so many ticks, in this scene.
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `after` | integer |  | ticks from entering the scene, once |
-| `every` | integer |  | ticks between runs, from entering the scene |
+| `every` | integer |  | ticks between runs, from entering the scene (or from=) |
+| `from` | integer | `0` | every: the tick the count starts at |
 | `count` | integer | `0` | every: stop after this many runs (0: never) |
 
 Goes inside: `qg:scene`.
@@ -582,7 +754,58 @@ Goes inside: `qg:scene`.
 
 Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs.
 
-## The three games
+## `gd:` attributes
+
+Every tag above becomes a Godot node, and `gd:name="value"` sets a property of that
+node, as it is: the compiler forwards it, the runtime calls `node.set()` once as the
+scene is built, and nothing is reimplemented. The name must be a property of the
+node's class (inherited ones included), with a type the compiler can write: `float`,
+`int`, `bool`, `String`, `Vector2` and `Vector2i` as `x,y`, `Color` as `#rrggbb` or
+`#rrggbbaa`. Anything else — a property the class does not have, a value of the wrong
+type, a `gd:` on a tag that becomes no node (`qg:tileset`, `qg:spritesheet`) — is a
+compile error with the line, and the error names the properties the class does have.
+
+The table is Godot 4.4.1's own class reference
+(`quantum/runtime/godot/godot_properties.json`, generated by
+`scripts/generate-godot-properties.py`). Properties only: methods, signals, and what
+the runtime sets from the language's attributes (`position`, `velocity`, `name`, the
+collision layers) are not forwarded. When the same `gd:` attribute shows up in a
+second game, it is a `qg:` attribute waiting to be named.
+
+| Node | Tags | Properties |
+|---|---|---|
+| ProgressBar | `qg:bar` | 67 |
+| Camera2D | `qg:camera` | 57 |
+| CharacterBody2D | `qg:character`, a thing prefab and its instances | 48 |
+| Label | `qg:counter`, `qg:text` | 71 |
+| Node2D | `qg:cursor`, `qg:path`, `qg:scene` | 31 |
+| Area2D | `qg:exit`, `qg:zone`, an item prefab and its instances | 49 |
+| CanvasLayer | `qg:hud` | 16 |
+| Sprite2D | `qg:map-node`, `qg:sprite` | 41 |
+| AudioStreamPlayer | `qg:sound` | 19 |
+| Node | `qg:spawner`, `qg:timer` | 9 |
+| TileMapLayer | `qg:tilemap` | 41 |
+| StaticBody2D | a block prefab and its instances | 36 |
+| AnimatableBody2D | a shuttle prefab and its instances | 37 |
+
+```xml
+<q:application id="smooth" type="game">
+  <qg:tileset name="k" src="assets/kenney/tilemap_packed.png" tile="18" />
+  <qg:spritesheet name="c" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
+  <qg:prefab name="Coin" tag="coin" sheet="k" frame="151" hitbox="12x12" gd:modulate="#ffd700" />
+  <qg:scene name="main">
+    <qg:tilemap tileset="k" collision="true">
+0,0,0,0,0
+23,23,23,23,23
+    </qg:tilemap>
+    <qg:character id="player" controller="platformer" sheet="c" x="20" y="10" hitbox="18x22" />
+    <qg:instance prefab="Coin" x="60" y="10" gd:scale="1.5,1.5" />
+    <qg:camera follow="player" gd:zoom="2,2" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
+  </qg:scene>
+</q:application>
+```
+
+## The games
 
 Each one is written in these tags and nothing else, and replayed in CI from input tapes (`tests/godot/test_godot_<name>.py`).
 
@@ -787,7 +1010,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:instance prefab="Spikes" x="351" y="176" />
     <qg:instance prefab="Flag" x="405" y="171" />
 
-    <qg:camera follow="player" bounds="tilemap" />
+    <qg:camera follow="player" bounds="tilemap" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
 
     <qg:hud position="top-left">
       <qg:counter bind="score" label="SCORE" />
@@ -854,7 +1077,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:character>
 
 
-    <qg:camera follow="player" bounds="tilemap" />
+    <qg:camera follow="player" bounds="tilemap" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
     <qg:hud position="top-left">
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="coins" label="COINS" />
@@ -936,7 +1159,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:instance prefab="Coin" x="252" y="96" />
     <qg:instance prefab="Flag" x="405" y="171" />
 
-    <qg:camera follow="player" bounds="tilemap" />
+    <qg:camera follow="player" bounds="tilemap" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
     <qg:hud position="top-left">
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="coins" label="COINS" />
@@ -1551,6 +1774,782 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="high_score" label="HIGH" />
     </qg:hud>
+  </qg:scene>
+
+</q:application>
+```
+
+### Pong
+
+`projects/pong/pong.q` — Godot's own Pong demo transcribed tag for node: two players, a ball that flies and bounces, zones at the edges (projects/pong/README.md maps the original to it).
+
+```xml
+<q:application id="pong" type="game">
+
+  <!-- Pong: Godot's own "Pong with GDScript" demo (godotengine/godot-demo-projects,
+       2d/pong, MIT), transcribed into the game language node for node and line
+       for line. README.md next to this file maps each piece of the original to
+       its tag, and lists what the language had to grow to say it. The sprites
+       are the demo's (assets/LICENSE.md). -->
+
+  <qg:spritesheet name="paddle" src="assets/paddle.png" tile="8x32" />
+  <qg:spritesheet name="ball" src="assets/ball.png" tile="8" />
+  <qg:spritesheet name="separator" src="assets/separator.png" tile="2x400" />
+
+  <!-- The left paddle is player 1 on W/S, the right one player 2 on the arrows —
+       on one keyboard. Over the network each peer is one player: one hosts
+       (q-host=7777), the other joins (q-join=HOST:7777), and the game runs
+       in lockstep, the same on both (README.md). -->
+  <qg:input player="1" action="up" keys="W" />
+  <qg:input player="1" action="down" keys="S" />
+  <qg:input player="2" action="up" keys="Up" />
+  <qg:input player="2" action="down" keys="Down" />
+  <qg:multiplayer players="2" delay="3" />
+
+  <!-- The ball flies left at 100 px/s, 2 px/s faster every second; it bounces
+       off the ceiling and the floor, and goes back to its start, as it was,
+       when it passes a paddle. -->
+  <qg:prefab name="Ball" tag="ball" sheet="ball" hitbox="8x8" ai="fly" heading="left" speed="100" accel="2">
+    <qg:on-collision with="edge">
+      <qg:deflect target="me" axis="y" />
+    </qg:on-collision>
+    <qg:on-collision with="wall">
+      <qg:respawn target="me" />
+    </qg:on-collision>
+  </qg:prefab>
+
+  <qg:scene name="court" width="640" height="400" background="#24272a" seed="1">
+    <qg:sprite sheet="separator" x="320" y="200" />
+
+    <!-- A paddle moves up and down at 100 px/s, kept on the screen; the ball
+         it touches leaves towards the other side, at a random slant. -->
+    <qg:character id="left" controller="ship" player="1" axis="vertical" speed="100"
+                  sheet="paddle" x="67.6285" y="192.594" hitbox="8x32" gd:modulate="#00ffff">
+      <qg:on-collision with="ball">
+        <qg:deflect target="other" dx="1" dy="{random(-1, 1)}" />
+      </qg:on-collision>
+    </qg:character>
+    <qg:character id="right" controller="ship" player="2" axis="vertical" speed="100"
+                  sheet="paddle" x="563.815" y="188.919" hitbox="8x32" gd:modulate="#ff00ff">
+      <qg:on-collision with="ball">
+        <qg:deflect target="other" dx="-1" dy="{random(-1, 1)}" />
+      </qg:on-collision>
+    </qg:character>
+
+    <qg:instance prefab="Ball" name="ball" x="320.5" y="191.124" />
+
+    <qg:zone name="ceiling" tag="edge" x="0" y="-20" width="640" height="20" />
+    <qg:zone name="floor" tag="edge" x="0" y="400" width="640" height="20" />
+    <qg:zone name="left-wall" tag="wall" x="-20" y="0" width="20" height="400" />
+    <qg:zone name="right-wall" tag="wall" x="640" y="0" width="20" height="400" />
+  </qg:scene>
+
+</q:application>
+```
+
+### Creeps
+
+`projects/creeps/creeps.q` — Godot's "Dodge the Creeps" tutorial game transcribed: a title, creeps from the border at random speeds, a score a second, a game over (projects/creeps/README.md).
+
+```xml
+<q:application id="creeps" type="game">
+
+  <!-- Creeps: Godot's own "Dodge the Creeps" demo (godotengine/godot-demo-projects,
+       2d/dodge_the_creeps, MIT — the game of the "Your first 2D game" tutorial)
+       transcribed into the game language. README.md next to this file maps each
+       piece of the original to its tag and lists what the language had to grow.
+       The art, music and font are the demo's (assets/LICENSE.md). -->
+
+  <q:set name="score" value="0" type="number" />
+
+  <qg:spritesheet name="player" src="assets/player.png" tile="112x136" />
+  <qg:spritesheet name="creeps" src="assets/creeps.png" tile="100x140" />
+
+  <qg:sound name="music" src="assets/music.ogg" loop="true" />
+  <qg:sound name="death" src="assets/gameover.wav" />
+
+  <qg:input action="jump" keys="Space, Enter, JoyA, JoyStart" />
+
+  <!-- Three kinds of creep: each flies straight at a speed of its own, turned to
+       face where it goes, and is gone once off the screen. -->
+  <qg:prefab name="Flyer" tag="creep" sheet="creeps" frame="0" hitbox="75x56" ai="fly" speed="150..250" rotate="true">
+    <qg:animation name="walk" frames="0, 1" fps="3" />
+  </qg:prefab>
+  <qg:prefab name="Swimmer" tag="creep" sheet="creeps" frame="2" hitbox="75x56" ai="fly" speed="150..250" rotate="true">
+    <qg:animation name="walk" frames="2, 3" fps="4" />
+  </qg:prefab>
+  <qg:prefab name="Walker" tag="creep" sheet="creeps" frame="4" hitbox="75x56" ai="fly" speed="150..250" rotate="true">
+    <qg:animation name="walk" frames="4, 5" fps="4" />
+  </qg:prefab>
+
+  <qg:scene name="title" width="480" height="720" background="#385f61">
+    <q:set name="message" value="Dodge the&#10;Creeps" />
+    <q:set name="start" value="Start" />
+    <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:text bind="message" />
+      <qg:text bind="start" />
+    </qg:hud>
+    <qg:on-input action="jump">
+      <qg:goto-scene name="play" />
+    </qg:on-input>
+  </qg:scene>
+
+  <!-- Two seconds of "Get Ready", then a creep every half second from a random
+       point on the border, headed in at up to 45° off straight, and a point a
+       second. Touching a creep ends the run. -->
+  <qg:scene name="play" width="480" height="720" background="#385f61" seed="7">
+    <q:set name="score" value="0" />
+    <q:set name="message" value="Get Ready" />
+    <qg:play sound="music" />
+    <qg:hud position="top-center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:counter bind="score" />
+    </qg:hud>
+    <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:text bind="message" />
+    </qg:hud>
+    <qg:character id="player" controller="topdown" sheet="player" frame="0" x="240" y="450" hitbox="54x68"
+                  speed="400" bounds="scene">
+      <qg:animation name="idle" frames="0" />
+      <qg:animation name="walk" frames="0, 1" fps="5" />
+      <qg:animation name="walk-up" frames="2, 3" fps="5" />
+      <qg:on-collision with="creep">
+        <qg:stop sound="music" />
+        <qg:play sound="death" />
+        <qg:goto-scene name="over" />
+      </qg:on-collision>
+    </qg:character>
+    <qg:timer after="120">
+      <q:set name="message" value="" />
+    </qg:timer>
+    <qg:spawner prefab="Flyer, Swimmer, Walker" along="edges" heading="inward" spread="45" from="120" every="30" count="0" />
+    <qg:timer every="60" from="120">
+      <q:set name="score" value="{score + 1}" />
+    </qg:timer>
+  </qg:scene>
+
+  <!-- "Game Over" for two seconds, the title for one more, then the start line;
+       the score stays on the screen. -->
+  <qg:scene name="over" width="480" height="720" background="#385f61">
+    <q:set name="message" value="Game Over" />
+    <q:set name="start" value="" />
+    <q:set name="can_start" value="false" type="boolean" />
+    <qg:hud position="top-center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:counter bind="score" />
+    </qg:hud>
+    <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:text bind="message" />
+      <qg:text bind="start" />
+    </qg:hud>
+    <qg:timer after="120">
+      <q:set name="message" value="Dodge the&#10;Creeps" />
+    </qg:timer>
+    <qg:timer after="180">
+      <q:set name="start" value="Start" />
+      <q:set name="can_start" value="true" />
+    </qg:timer>
+    <qg:on-input action="jump">
+      <q:if condition="{can_start}">
+        <qg:goto-scene name="play" />
+      </q:if>
+    </qg:on-input>
+  </qg:scene>
+
+</q:application>
+```
+
+### Towers
+
+`projects/towers/towers.q` — a tower defense transcribed from an MIT Godot template: a cursor, turrets that shoot the nearest dino, dinos down a path in waves, gold and a base; two players over the network (projects/towers/README.md).
+
+```xml
+<q:application id="towers" type="game">
+
+  <!-- Towers: the "Godot 4 Tower Defense Template" (github.com/ape1121, MIT)
+       transcribed into the game language, with its map, dinos and turrets
+       (assets/LICENSE.md). README.md next to this file maps the original to
+       its tags and lists what the language had to grow. Two players can
+       build on the same map over the network (qg:multiplayer). -->
+
+  <q:set name="gold" value="100" type="number" />
+  <q:set name="base_hp" value="10" type="number" />
+  <q:set name="wave" value="0" type="number" />
+
+  <qg:spritesheet name="map" src="assets/map.png" tile="1156x745" />
+  <qg:spritesheet name="gatling" src="assets/gatling.png" tile="96" />
+  <qg:spritesheet name="explosive" src="assets/explosive.png" tile="32" />
+  <qg:spritesheet name="bullet" src="assets/bullet1.png" tile="16" />
+  <qg:spritesheet name="red" src="assets/dino1.png" tile="48" />
+  <qg:spritesheet name="blue" src="assets/dino2.png" tile="48" />
+  <qg:spritesheet name="yellow" src="assets/dino3.png" tile="48" />
+  <qg:spritesheet name="green" src="assets/dino4.png" tile="48" />
+
+  <qg:input action="buy-gatling" keys="1" />
+  <qg:input action="buy-explosive" keys="2" />
+  <qg:multiplayer players="2" delay="3" />
+
+  <!-- The gatling shoots a bullet at the nearest dino in range every half
+       second; upgraded, twice as often. The explosive hurts every dino in
+       reach every second. -->
+  <qg:prefab name="Bullet" tag="bullet" sheet="bullet" frame="0" hitbox="12x12" ai="fly" speed="200" lifetime="90" rotate="true">
+    <qg:animation name="walk" frames="0, 1, 2, 3, 4, 5" fps="12" />
+    <qg:on-collision with="dino">
+      <qg:damage target="other" amount="10" />
+      <qg:destroy target="me" />
+    </qg:on-collision>
+  </qg:prefab>
+  <qg:prefab name="Gatling" tag="tower" sheet="gatling" frame="0" hitbox="48x48" ai="turret" targets="dino"
+             range="200" fire-prefab="Bullet" fire-every="30" rotate="true">
+    <qg:state name="level1" initial="true" />
+    <qg:state name="level2" fire-every="15" />
+  </qg:prefab>
+  <qg:prefab name="Explosive" tag="tower" sheet="explosive" frame="0" hitbox="32x32" ai="turret" targets="dino"
+             range="100" attack="area" damage="5" fire-every="60">
+    <qg:state name="level1" initial="true" />
+    <qg:state name="level2" fire-every="40" />
+  </qg:prefab>
+
+  <!-- Four dinos, as the template has them: health, speed (100 px/s per unit),
+       what one costs the base at the end of the road, what it pays when it dies. -->
+  <qg:prefab name="RedDino" tag="dino" sheet="red" frame="4" hitbox="26x26" ai="path" speed="100" health="10">
+    <qg:animation name="walk" frames="4, 5, 6, 7, 8, 9" fps="10" />
+    <qg:on-collision with="base"><q:set name="base_hp" value="{base_hp - 5}" /><qg:destroy target="me" /></qg:on-collision>
+    <qg:on-death><q:set name="gold" value="{gold + 10}" /></qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="BlueDino" tag="dino" sheet="blue" frame="4" hitbox="26x26" ai="path" speed="200" health="5">
+    <qg:animation name="walk" frames="4, 5, 6, 7, 8, 9" fps="10" />
+    <qg:on-collision with="base"><q:set name="base_hp" value="{base_hp - 5}" /><qg:destroy target="me" /></qg:on-collision>
+    <qg:on-death><q:set name="gold" value="{gold + 10}" /></qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="YellowDino" tag="dino" sheet="yellow" frame="4" hitbox="26x26" ai="path" speed="500" health="10">
+    <qg:animation name="walk" frames="4, 5, 6, 7, 8, 9" fps="10" />
+    <qg:on-collision with="base"><q:set name="base_hp" value="{base_hp - 1}" /><qg:destroy target="me" /></qg:on-collision>
+    <qg:on-death><q:set name="gold" value="{gold + 10}" /></qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="GreenDino" tag="dino" sheet="green" frame="4" hitbox="26x26" ai="path" speed="1000" health="10">
+    <qg:animation name="walk" frames="4, 5, 6, 7, 8, 9" fps="10" />
+    <qg:on-collision with="base"><q:set name="base_hp" value="{base_hp - 1}" /><qg:destroy target="me" /></qg:on-collision>
+    <qg:on-death><q:set name="gold" value="{gold + 10}" /></qg:on-death>
+  </qg:prefab>
+
+  <qg:scene name="map" width="1152" height="648" background="#1a1a1a" seed="11">
+    <q:set name="gold" value="100" />
+    <q:set name="base_hp" value="10" />
+    <q:set name="wave" value="0" />
+    <q:set name="to_spawn" value="0" type="number" />
+    <q:set name="kinds" value="1" type="number" />
+    <q:set name="enemies" value="0" type="number" />
+    <q:set name="choice" value="Gatling" />
+    <q:set name="status" value="1: Gatling (50)   2: Explosive (70)   click a cell to build, click a tower to upgrade (50)" />
+
+    <qg:sprite sheet="map" x="578" y="372" />
+    <qg:path name="road" points="508,645; 522,498; 857,490; 870,210; 733,200; 716,380; 183,390; 186,537; 372,552; 381,86; 570,93; 562,264; -1,265" />
+    <qg:zone name="base" tag="base" x="-40" y="235" width="40" height="60" />
+    <!-- where the road is, no tower goes -->
+    <qg:zone name="road-1" tag="road" x="480" y="470" width="400" height="60" />
+    <qg:zone name="road-2" tag="road" x="840" y="180" width="60" height="330" />
+    <qg:zone name="road-3" tag="road" x="700" y="170" width="200" height="60" />
+    <qg:zone name="road-4" tag="road" x="690" y="170" width="60" height="240" />
+    <qg:zone name="road-5" tag="road" x="160" y="360" width="590" height="60" />
+    <qg:zone name="road-6" tag="road" x="160" y="360" width="60" height="210" />
+    <qg:zone name="road-7" tag="road" x="160" y="520" width="240" height="60" />
+    <qg:zone name="road-8" tag="road" x="350" y="60" width="60" height="520" />
+    <qg:zone name="road-9" tag="road" x="350" y="60" width="250" height="60" />
+    <qg:zone name="road-10" tag="road" x="540" y="60" width="60" height="230" />
+    <qg:zone name="road-11" tag="road" x="0" y="235" width="590" height="60" />
+    <qg:zone name="road-12" tag="road" x="480" y="480" width="60" height="170" />
+
+    <qg:cursor player="1" grid="48" sheet="explosive" frame="0" gd:modulate="#ffffff80" />
+    <qg:cursor player="2" grid="48" sheet="explosive" frame="0" gd:modulate="#80c0ff80" />
+
+    <qg:on-input action="buy-gatling"><q:set name="choice" value="Gatling" /></qg:on-input>
+    <qg:on-input action="buy-explosive"><q:set name="choice" value="Explosive" /></qg:on-input>
+
+    <!-- A click: on a tower, its upgrade; on free ground, the chosen tower, if the gold is there. -->
+    <qg:on-select>
+      <q:if condition="{other != null and other.tag == 'tower' and gold >= 50 and other.state == 'level1'}">
+        <q:set name="gold" value="{gold - 50}" />
+        <qg:become target="other" state="level2" />
+      </q:if>
+      <q:if condition="{other == null and thing_at('road', cursor.x, cursor.y) == null}">
+        <q:if condition="{choice == 'Gatling' and gold >= 50}">
+          <q:set name="gold" value="{gold - 50}" />
+          <qg:spawn prefab="Gatling" at="cursor" />
+        </q:if>
+        <q:if condition="{choice == 'Explosive' and gold >= 70}">
+          <q:set name="gold" value="{gold - 70}" />
+          <qg:spawn prefab="Explosive" at="cursor" />
+        </q:if>
+      </q:if>
+    </qg:on-select>
+
+    <!-- Waves: ten of them, each 5 + 3 × wave dinos, a new kind every two
+         waves; the next starts five seconds after the last dino of this one
+         is gone. A dino every 0.2 s while the wave has some to send. -->
+    <qg:timer every="300">
+      <q:if condition="{to_spawn == 0 and enemies == 0 and base_hp > 0}">
+        <q:if condition="{wave >= 10}">
+          <qg:goto-scene name="won" />
+        <q:else>
+          <q:set name="wave" value="{wave + 1}" />
+          <q:set name="to_spawn" value="{5 + 3 * wave}" />
+          <q:set name="kinds" value="{min(4, 1 + wave // 2)}" />
+        </q:else>
+        </q:if>
+      </q:if>
+    </qg:timer>
+    <qg:timer every="12">
+      <q:if condition="{to_spawn > 0}">
+        <q:set name="to_spawn" value="{to_spawn - 1}" />
+        <q:set name="kind" value="{int(random(0, kinds))}" />
+        <q:if condition="{kind == 0}"><qg:spawn prefab="RedDino" at="path" path="road" /></q:if>
+        <q:if condition="{kind == 1}"><qg:spawn prefab="BlueDino" at="path" path="road" /></q:if>
+        <q:if condition="{kind == 2}"><qg:spawn prefab="YellowDino" at="path" path="road" /></q:if>
+        <q:if condition="{kind >= 3}"><qg:spawn prefab="GreenDino" at="path" path="road" /></q:if>
+      </q:if>
+    </qg:timer>
+    <q:set name="kind" value="0" type="number" />
+    <qg:timer every="1">
+      <q:set name="enemies" value="{count('dino')}" />
+      <q:if condition="{base_hp <= 0}"><qg:goto-scene name="lost" /></q:if>
+    </qg:timer>
+
+    <qg:hud position="top-left" size="20">
+      <qg:counter bind="gold" label="Gold" />
+      <qg:counter bind="base_hp" label="Base" />
+      <qg:counter bind="wave" label="Wave" />
+      <qg:counter bind="enemies" label="Dinos" />
+      <qg:text bind="choice" />
+      <qg:text bind="status" />
+    </qg:hud>
+  </qg:scene>
+
+  <qg:scene name="won" width="1152" height="648" background="#1a3a1a">
+    <q:set name="message" value="The base stands. Press space to play again." />
+    <qg:hud position="center" size="40"><qg:text bind="message" /><qg:counter bind="gold" label="Gold left" /></qg:hud>
+    <qg:on-input action="jump"><qg:goto-scene name="map" /></qg:on-input>
+  </qg:scene>
+  <qg:scene name="lost" width="1152" height="648" background="#3a1a1a">
+    <q:set name="message" value="The base fell. Press space to try again." />
+    <qg:hud position="center" size="40"><qg:text bind="message" /><qg:counter bind="wave" label="Reached wave" /></qg:hud>
+    <qg:on-input action="jump"><qg:goto-scene name="map" /></qg:on-input>
+  </qg:scene>
+
+</q:application>
+```
+
+### Arena
+
+`projects/arena/arena.q` — a one-on-one fighting game: moves with frame data, blocking, hit stun, health bars, rounds on a clock; two players over the network, which is the fighting games' own netcode (projects/arena/README.md).
+
+```xml
+<q:application id="arena" type="game">
+
+  <!-- Arena: a one-on-one fighting game in the shape of the arcade classics —
+       two fighters, walk, jump, crouch, block, a punch and a kick with frame
+       data, best of three rounds on a clock — written to see what a fighting
+       game asks of the language, and played by two over the network in
+       lockstep, which is the fighting games' own netcode. The sprites are
+       placeholders drawn for the repository (assets/LICENSE.md). -->
+
+  <q:set name="wins_1" value="0" type="number" />
+  <q:set name="wins_2" value="0" type="number" />
+
+  <qg:spritesheet name="red" src="assets/red.png" tile="64x96" />
+  <qg:spritesheet name="blue" src="assets/blue.png" tile="64x96" />
+  <qg:spritesheet name="stage" src="assets/stage.png" tile="640x360" />
+
+  <!-- Player 1: A/D, W to jump, S to crouch, J punch, K kick. Player 2 on the
+       same keyboard: the arrows, . punch, / kick. Over the network each peer
+       is one player on player 1's keys. -->
+  <qg:input action="jump" keys="W, Space, JoyA" />
+  <qg:input action="punch" keys="J, JoyX" />
+  <qg:input action="kick" keys="K, JoyB" />
+  <qg:input player="2" action="left" keys="Left" />
+  <qg:input player="2" action="right" keys="Right" />
+  <qg:input player="2" action="down" keys="Down" />
+  <qg:input player="2" action="jump" keys="Up" />
+  <qg:input player="2" action="punch" keys="Period" />
+  <qg:input player="2" action="kick" keys="Slash" />
+  <qg:multiplayer players="2" delay="3" />
+
+  <qg:scene name="fight" width="640" height="360" background="#201820" seed="1">
+    <q:set name="wins_1" value="0" />
+    <q:set name="wins_2" value="0" />
+    <q:set name="round" value="1" type="number" />
+    <q:set name="clock" value="99" type="number" />
+    <q:set name="message" value="ROUND 1 - FIGHT" />
+    <q:set name="reset_in" value="0" type="number" />
+
+    <qg:sprite sheet="stage" x="320" y="180" />
+
+    <qg:character id="p1" controller="fighter" player="1" sheet="red" frame="0" x="200" y="252" hitbox="40x90"
+                  speed="140" jump-height="100" health="100" facing="right">
+      <qg:animation name="idle" frames="0" />
+      <qg:animation name="walk" frames="1, 2" fps="8" />
+      <qg:animation name="jump" frames="3" />
+      <qg:animation name="crouch" frames="4" />
+      <qg:animation name="block" frames="5" />
+      <qg:animation name="hit" frames="12" />
+      <qg:animation name="ko" frames="13" />
+      <qg:move name="punch" action="punch" frames="6, 7, 8" fps="15" active="1" reach="36x20" at="40,-10" damage="8" stun="14" push="40" />
+      <qg:move name="kick" action="kick" frames="9, 10, 11" fps="10" active="1" reach="44x20" at="44,8" damage="12" stun="20" push="70" />
+      <qg:on-ko>
+        <q:set name="wins_2" value="{wins_2 + 1}" />
+        <q:set name="message" value="PLAYER 2 WINS THE ROUND" />
+        <q:set name="reset_in" value="120" />
+      </qg:on-ko>
+    </qg:character>
+    <qg:character id="p2" controller="fighter" player="2" sheet="blue" frame="0" x="440" y="252" hitbox="40x90"
+                  speed="140" jump-height="100" health="100" facing="left">
+      <qg:animation name="idle" frames="0" />
+      <qg:animation name="walk" frames="1, 2" fps="8" />
+      <qg:animation name="jump" frames="3" />
+      <qg:animation name="crouch" frames="4" />
+      <qg:animation name="block" frames="5" />
+      <qg:animation name="hit" frames="12" />
+      <qg:animation name="ko" frames="13" />
+      <qg:move name="punch" action="punch" frames="6, 7, 8" fps="15" active="1" reach="36x20" at="40,-10" damage="8" stun="14" push="40" />
+      <qg:move name="kick" action="kick" frames="9, 10, 11" fps="10" active="1" reach="44x20" at="44,8" damage="12" stun="20" push="70" />
+      <qg:on-ko>
+        <q:set name="wins_1" value="{wins_1 + 1}" />
+        <q:set name="message" value="PLAYER 1 WINS THE ROUND" />
+        <q:set name="reset_in" value="120" />
+      </qg:on-ko>
+    </qg:character>
+
+    <!-- The clock: a second a second; at zero the healthier fighter takes the round. -->
+    <qg:timer every="60">
+      <q:if condition="{clock > 0 and reset_in == 0}">
+        <q:set name="clock" value="{clock - 1}" />
+        <q:if condition="{clock == 0}">
+          <q:if condition="{p1.health >= p2.health}">
+            <q:set name="wins_1" value="{wins_1 + 1}" />
+            <q:set name="message" value="TIME - PLAYER 1 TAKES THE ROUND" />
+          <q:else>
+            <q:set name="wins_2" value="{wins_2 + 1}" />
+            <q:set name="message" value="TIME - PLAYER 2 TAKES THE ROUND" />
+          </q:else>
+          </q:if>
+          <q:set name="reset_in" value="120" />
+        </q:if>
+      </q:if>
+    </qg:timer>
+    <!-- Between rounds: two seconds of the message, then both back at their marks,
+         or the match's end at two rounds. -->
+    <qg:timer every="1">
+      <q:if condition="{reset_in > 0}">
+        <q:set name="reset_in" value="{reset_in - 1}" />
+        <q:if condition="{reset_in == 0}">
+          <q:if condition="{wins_1 >= 2 or wins_2 >= 2}">
+            <qg:goto-scene name="result" />
+          </q:if>
+          <q:set name="round" value="{round + 1}" />
+          <q:set name="clock" value="99" />
+          <q:set name="message" value="{'ROUND ' + str(round) + ' - FIGHT'}" />
+          <q:call function="reset_fighters" />
+        </q:if>
+      </q:if>
+    </qg:timer>
+    <q:function name="reset_fighters">
+      <qg:respawn target="p1" />
+      <qg:respawn target="p2" />
+    </q:function>
+    <qg:hud position="top-left" size="12">
+      <qg:bar bind="p1.health" max="100" width="200" height="12" color="#e04040" />
+      <qg:counter bind="wins_1" label="P1 rounds" />
+    </qg:hud>
+    <qg:hud position="top-right" size="12">
+      <qg:bar bind="p2.health" max="100" width="200" height="12" color="#4060e0" />
+      <qg:counter bind="wins_2" label="P2 rounds" />
+    </qg:hud>
+    <qg:hud position="top-center" size="16">
+      <qg:counter bind="clock" />
+      <qg:text bind="message" />
+    </qg:hud>
+  </qg:scene>
+
+  <qg:scene name="result" width="640" height="360" background="#101018">
+    <q:set name="message" value="{'PLAYER ' + ('1' if wins_1 > wins_2 else '2') + ' WINS - press jump'}" />
+    <qg:hud position="center" size="24"><qg:text bind="message" /></qg:hud>
+    <qg:on-input action="jump"><qg:goto-scene name="fight" /></qg:on-input>
+  </qg:scene>
+
+</q:application>
+```
+
+### Chess
+
+`projects/chess/chess.q` — chess: the rules — castling, en passant, promotion, check, mate, stalemate — in q:functions over an array of 64 squares, the pieces mirroring it; white and black over the network (projects/chess/README.md).
+
+```xml
+<q:application id="chess" type="game">
+
+  <!-- Chess: the rules of github.com/Prashanna135/chess (MIT) — legal moves,
+       castling, en passant, promotion, check, checkmate and stalemate —
+       written in the game language's own statements and expressions over an
+       array of 64 squares; the pieces on the screen mirror it. White is
+       player 1, black player 2: on one machine both click the same board;
+       over the network each machine is one colour, in lockstep. README.md
+       maps the original to this file. -->
+
+  <qg:tileset name="board" src="assets/board.png" tile="62" />
+  <qg:spritesheet name="pieces" src="assets/pieces.png" tile="60" />
+  <qg:multiplayer players="2" delay="2" />
+
+  <qg:prefab name="wK" tag="piece" sheet="pieces" frame="0" hitbox="60x60" />
+  <qg:prefab name="wQ" tag="piece" sheet="pieces" frame="1" hitbox="60x60" />
+  <qg:prefab name="wR" tag="piece" sheet="pieces" frame="2" hitbox="60x60" />
+  <qg:prefab name="wB" tag="piece" sheet="pieces" frame="3" hitbox="60x60" />
+  <qg:prefab name="wN" tag="piece" sheet="pieces" frame="4" hitbox="60x60" />
+  <qg:prefab name="wP" tag="piece" sheet="pieces" frame="5" hitbox="60x60" />
+  <qg:prefab name="bK" tag="piece" sheet="pieces" frame="6" hitbox="60x60" />
+  <qg:prefab name="bQ" tag="piece" sheet="pieces" frame="7" hitbox="60x60" />
+  <qg:prefab name="bR" tag="piece" sheet="pieces" frame="8" hitbox="60x60" />
+  <qg:prefab name="bB" tag="piece" sheet="pieces" frame="9" hitbox="60x60" />
+  <qg:prefab name="bN" tag="piece" sheet="pieces" frame="10" hitbox="60x60" />
+  <qg:prefab name="bP" tag="piece" sheet="pieces" frame="11" hitbox="60x60" />
+  <qg:prefab name="Marker" tag="marker" sheet="board" frame="1" hitbox="4x4" gd:modulate="#e0d040a0" gd:z_index="-1" />
+
+  <qg:scene name="game" width="496" height="540" background="#2a2520">
+    <!-- row 0 is the eighth rank (black's home), row 7 the first; a square is board[row * 8 + col] -->
+    <q:set name="board" type="array" value="{['bR','bN','bB','bQ','bK','bB','bN','bR', 'bP','bP','bP','bP','bP','bP','bP','bP', '','','','','','','','', '','','','','','','','', '','','','','','','','', '','','','','','','','', 'wP','wP','wP','wP','wP','wP','wP','wP', 'wR','wN','wB','wQ','wK','wB','wN','wR']}" />
+    <q:set name="turn" value="w" />
+    <q:set name="sel_r" value="-1" type="number" />
+    <q:set name="sel_c" value="-1" type="number" />
+    <q:set name="legal" type="array" value="{[]}" />
+    <q:set name="ep_col" value="-1" type="number" />
+    <q:set name="moved" type="array" value="{[]}" />
+    <q:set name="status" value="White to move" />
+    <q:set name="finished" value="false" type="boolean" />
+
+    <qg:tilemap tileset="board">
+1,2,1,2,1,2,1,2
+2,1,2,1,2,1,2,1
+1,2,1,2,1,2,1,2
+2,1,2,1,2,1,2,1
+1,2,1,2,1,2,1,2
+2,1,2,1,2,1,2,1
+1,2,1,2,1,2,1,2
+2,1,2,1,2,1,2,1
+    </qg:tilemap>
+    <qg:cursor player="1" grid="62" />
+    <qg:cursor player="2" grid="62" />
+    <!-- the picked square's mark, kept off the board until a piece is picked -->
+    <qg:instance prefab="Marker" name="mark" x="-100" y="-100" />
+
+    <qg:instance prefab="bR" x="31" y="31" /><qg:instance prefab="bN" x="93" y="31" /><qg:instance prefab="bB" x="155" y="31" /><qg:instance prefab="bQ" x="217" y="31" />
+    <qg:instance prefab="bK" x="279" y="31" /><qg:instance prefab="bB" x="341" y="31" /><qg:instance prefab="bN" x="403" y="31" /><qg:instance prefab="bR" x="465" y="31" />
+    <qg:instance prefab="bP" x="31" y="93" /><qg:instance prefab="bP" x="93" y="93" /><qg:instance prefab="bP" x="155" y="93" /><qg:instance prefab="bP" x="217" y="93" />
+    <qg:instance prefab="bP" x="279" y="93" /><qg:instance prefab="bP" x="341" y="93" /><qg:instance prefab="bP" x="403" y="93" /><qg:instance prefab="bP" x="465" y="93" />
+    <qg:instance prefab="wP" x="31" y="403" /><qg:instance prefab="wP" x="93" y="403" /><qg:instance prefab="wP" x="155" y="403" /><qg:instance prefab="wP" x="217" y="403" />
+    <qg:instance prefab="wP" x="279" y="403" /><qg:instance prefab="wP" x="341" y="403" /><qg:instance prefab="wP" x="403" y="403" /><qg:instance prefab="wP" x="465" y="403" />
+    <qg:instance prefab="wR" x="31" y="465" /><qg:instance prefab="wN" x="93" y="465" /><qg:instance prefab="wB" x="155" y="465" /><qg:instance prefab="wQ" x="217" y="465" />
+    <qg:instance prefab="wK" x="279" y="465" /><qg:instance prefab="wB" x="341" y="465" /><qg:instance prefab="wN" x="403" y="465" /><qg:instance prefab="wR" x="465" y="465" />
+
+    <qg:hud position="bottom-center" size="14"><qg:text bind="status" /></qg:hud>
+
+    <!-- what is on a square ("x" off the board), whose it is -->
+    <q:function name="at" params="r, c">
+      <q:if condition="{r &lt; 0 or r &gt; 7 or c &lt; 0 or c &gt; 7}"><q:return value="{'x'}" /></q:if>
+      <q:return value="{board[r * 8 + c]}" />
+    </q:function>
+    <q:function name="own" params="p, color">
+      <q:return value="{p != '' and p != 'x' and p[0:1] == color}" />
+    </q:function>
+    <q:function name="enemy" params="p, color">
+      <q:return value="{p != '' and p != 'x' and p[0:1] != color}" />
+    </q:function>
+    <q:function name="other_color" params="color">
+      <q:return value="{'b' if color == 'w' else 'w'}" />
+    </q:function>
+
+    <!-- where a piece may go by its own rule (attacks only, for a pawn, when atk) -->
+    <q:function name="pseudo" params="r, c, atk">
+      <q:set name="result" value="{[]}" />
+      <q:set name="p" value="{at(r, c)}" />
+      <q:set name="color" value="{p[0:1]}" />
+      <q:set name="kind" value="{p[1:2]}" />
+      <q:if condition="{kind == 'P'}">
+        <q:set name="dir" value="{-1 if color == 'w' else 1}" />
+        <q:if condition="{not atk and at(r + dir, c) == ''}">
+          <q:set name="result" value="{result + [[r + dir, c]]}" />
+          <q:if condition="{(r == 6 and color == 'w' or r == 1 and color == 'b') and at(r + 2 * dir, c) == ''}">
+            <q:set name="result" value="{result + [[r + 2 * dir, c]]}" />
+          </q:if>
+        </q:if>
+        <q:loop var="dc" items="{[-1, 1]}">
+          <q:if condition="{atk or enemy(at(r + dir, c + dc), color)}">
+            <q:if condition="{at(r + dir, c + dc) != 'x'}">
+              <q:set name="result" value="{result + [[r + dir, c + dc]]}" />
+            </q:if>
+          </q:if>
+          <q:if condition="{not atk and ep_col == c + dc and r == (3 if color == 'w' else 4)}">
+            <q:set name="result" value="{result + [[r + dir, c + dc]]}" />
+          </q:if>
+        </q:loop>
+      </q:if>
+      <q:if condition="{kind == 'N' or kind == 'K'}">
+        <q:set name="steps" value="{[[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]] if kind == 'N' else [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]]}" />
+        <q:loop var="s" items="{steps}">
+          <q:set name="q" value="{at(r + s[0], c + s[1])}" />
+          <q:if condition="{q != 'x' and not own(q, color)}">
+            <q:set name="result" value="{result + [[r + s[0], c + s[1]]]}" />
+          </q:if>
+        </q:loop>
+      </q:if>
+      <q:if condition="{kind == 'R' or kind == 'B' or kind == 'Q'}">
+        <q:set name="dirs" value="{[]}" />
+        <q:if condition="{kind != 'B'}"><q:set name="dirs" value="{dirs + [[1, 0], [-1, 0], [0, 1], [0, -1]]}" /></q:if>
+        <q:if condition="{kind != 'R'}"><q:set name="dirs" value="{dirs + [[1, 1], [1, -1], [-1, 1], [-1, -1]]}" /></q:if>
+        <q:loop var="d" items="{dirs}">
+          <q:set name="blocked" value="false" />
+          <q:loop var="n" from="1" to="7">
+            <q:if condition="{not blocked}">
+              <q:set name="q" value="{at(r + d[0] * n, c + d[1] * n)}" />
+              <q:if condition="{q == 'x' or own(q, color)}">
+                <q:set name="blocked" value="true" />
+              <q:else>
+                <q:set name="result" value="{result + [[r + d[0] * n, c + d[1] * n]]}" />
+                <q:if condition="{q != ''}"><q:set name="blocked" value="true" /></q:if>
+              </q:else>
+              </q:if>
+            </q:if>
+          </q:loop>
+        </q:loop>
+      </q:if>
+      <q:return value="{result}" />
+    </q:function>
+
+    <q:function name="attacked" params="r, c, by">
+      <q:loop var="i" from="0" to="63">
+        <q:if condition="{own(board[i], by)}">
+          <q:if condition="{[r, c] in pseudo(i // 8, i % 8, true)}"><q:return value="{true}" /></q:if>
+        </q:if>
+      </q:loop>
+      <q:return value="{false}" />
+    </q:function>
+    <q:function name="in_check" params="color">
+      <q:loop var="i" from="0" to="63">
+        <q:if condition="{board[i] == color + 'K'}">
+          <q:return value="{attacked(i // 8, i % 8, other_color(color))}" />
+        </q:if>
+      </q:loop>
+      <q:return value="{false}" />
+    </q:function>
+
+    <!-- the board after a move: the rook of a castling, the pawn of an en passant, a promotion -->
+    <q:function name="apply" params="r1, c1, r2, c2">
+      <q:set name="p" value="{board[r1 * 8 + c1]}" />
+      <q:if condition="{p[1:2] == 'P' and c1 != c2 and board[r2 * 8 + c2] == ''}">
+        <q:set name="board" index="{r1 * 8 + c2}" value="" />
+      </q:if>
+      <q:if condition="{p[1:2] == 'K' and c2 - c1 == 2}">
+        <q:set name="board" index="{r1 * 8 + 5}" value="{board[r1 * 8 + 7]}" />
+        <q:set name="board" index="{r1 * 8 + 7}" value="" />
+      </q:if>
+      <q:if condition="{p[1:2] == 'K' and c1 - c2 == 2}">
+        <q:set name="board" index="{r1 * 8 + 3}" value="{board[r1 * 8]}" />
+        <q:set name="board" index="{r1 * 8}" value="" />
+      </q:if>
+      <q:set name="board" index="{r1 * 8 + c1}" value="" />
+      <q:set name="board" index="{r2 * 8 + c2}" value="{p[0:1] + 'Q' if p[1:2] == 'P' and (r2 == 0 or r2 == 7) else p}" />
+    </q:function>
+
+    <!-- the moves that leave the king safe, castling included -->
+    <q:function name="legal_moves" params="r, c">
+      <q:set name="p" value="{at(r, c)}" />
+      <q:set name="color" value="{p[0:1]}" />
+      <q:set name="candidates" value="{pseudo(r, c, false)}" />
+      <q:if condition="{p[1:2] == 'K' and not (color + 'K') in moved and not in_check(color)}">
+        <q:if condition="{not (color + 'Rh') in moved and at(r, 5) == '' and at(r, 6) == '' and at(r, 7) == color + 'R' and not attacked(r, 5, other_color(color)) and not attacked(r, 6, other_color(color))}">
+          <q:set name="candidates" value="{candidates + [[r, 6]]}" />
+        </q:if>
+        <q:if condition="{not (color + 'Ra') in moved and at(r, 1) == '' and at(r, 2) == '' and at(r, 3) == '' and at(r, 0) == color + 'R' and not attacked(r, 3, other_color(color)) and not attacked(r, 2, other_color(color))}">
+          <q:set name="candidates" value="{candidates + [[r, 2]]}" />
+        </q:if>
+      </q:if>
+      <q:set name="result" value="{[]}" />
+      <q:loop var="m" items="{candidates}">
+        <q:set name="saved" value="{board[:]}" />
+        <q:call function="apply" args="r, c, m[0], m[1]" />
+        <q:set name="ok" value="{not in_check(color)}" />
+        <q:set name="board" value="{saved}" />
+        <q:if condition="{ok}"><q:set name="result" value="{result + [m]}" /></q:if>
+      </q:loop>
+      <q:return value="{result}" />
+    </q:function>
+    <q:function name="any_legal" params="color">
+      <q:loop var="i" from="0" to="63">
+        <q:if condition="{own(board[i], color)}">
+          <q:if condition="{len(legal_moves(i // 8, i % 8)) &gt; 0}"><q:return value="{true}" /></q:if>
+        </q:if>
+      </q:loop>
+      <q:return value="{false}" />
+    </q:function>
+
+    <q:function name="clear_mark">
+      <qg:put target="mark" x="-100" y="-100" />
+      <q:set name="sel_r" value="-1" />
+      <q:set name="sel_c" value="-1" />
+      <q:set name="legal" value="{[]}" />
+    </q:function>
+
+    <!-- a click: pick up one of your pieces, or put the picked one on a legal square -->
+    <qg:on-select>
+      <q:if condition="{not finished and (cursor.player == 1 and turn == 'w' or cursor.player == 2 and turn == 'b')}">
+        <q:set name="r" value="{cursor.row}" />
+        <q:set name="c" value="{cursor.col}" />
+        <q:set name="act" value="{'move' if sel_r &gt;= 0 and [r, c] in legal else ('pick' if own(at(r, c), turn) else 'clear')}" />
+        <q:if condition="{act == 'move'}">
+          <q:set name="mover" value="{thing_at('piece', sel_c * 62 + 31, sel_r * 62 + 31)}" />
+          <q:set name="p" value="{board[sel_r * 8 + sel_c]}" />
+          <!-- what the move takes: the piece on the square, or the pawn passed en passant -->
+          <q:set name="taken" value="{thing_at('piece', c * 62 + 31, r * 62 + 31)}" />
+          <q:if condition="{taken == null and p[1:2] == 'P' and c != sel_c}">
+            <q:set name="taken" value="{thing_at('piece', c * 62 + 31, sel_r * 62 + 31)}" />
+          </q:if>
+          <q:if condition="{taken != null}"><qg:destroy target="taken" /></q:if>
+          <q:if condition="{p[1:2] == 'K' and c - sel_c == 2}">
+            <q:set name="taken" value="{thing_at('piece', 7 * 62 + 31, r * 62 + 31)}" />
+            <qg:put target="taken" x="{5 * 62 + 31}" y="{r * 62 + 31}" />
+          </q:if>
+          <q:if condition="{p[1:2] == 'K' and sel_c - c == 2}">
+            <q:set name="taken" value="{thing_at('piece', 31, r * 62 + 31)}" />
+            <qg:put target="taken" x="{3 * 62 + 31}" y="{r * 62 + 31}" />
+          </q:if>
+          <qg:put target="mover" x="{c * 62 + 31}" y="{r * 62 + 31}" />
+          <q:if condition="{p[1:2] == 'P' and (r == 0 or r == 7)}">
+            <q:if condition="{turn == 'w'}"><qg:swap target="mover" prefab="wQ" /><q:else><qg:swap target="mover" prefab="bQ" /></q:else></q:if>
+          </q:if>
+          <q:call function="apply" args="sel_r, sel_c, r, c" />
+          <!-- the rights and the en passant square after the move -->
+          <q:if condition="{p[1:2] == 'K'}"><q:set name="moved" value="{moved + [turn + 'K']}" /></q:if>
+          <q:if condition="{p[1:2] == 'R' and sel_c == 0}"><q:set name="moved" value="{moved + [turn + 'Ra']}" /></q:if>
+          <q:if condition="{p[1:2] == 'R' and sel_c == 7}"><q:set name="moved" value="{moved + [turn + 'Rh']}" /></q:if>
+          <q:set name="ep_col" value="{c if p[1:2] == 'P' and abs(r - sel_r) == 2 else -1}" />
+          <q:set name="turn" value="{other_color(turn)}" />
+          <q:call function="clear_mark" />
+          <q:set name="status" value="{('White' if turn == 'w' else 'Black') + ' to move'}" />
+          <q:if condition="{not any_legal(turn)}">
+            <q:set name="finished" value="true" />
+            <q:set name="status" value="{('Checkmate - ' + ('Black' if turn == 'w' else 'White') + ' wins') if in_check(turn) else 'Stalemate'}" />
+          <q:elseif condition="{in_check(turn)}">
+            <q:set name="status" value="{status + ' - check'}" />
+          </q:elseif>
+          </q:if>
+        </q:if>
+        <q:if condition="{act == 'pick'}">
+          <q:call function="clear_mark" />
+          <q:set name="sel_r" value="{r}" />
+          <q:set name="sel_c" value="{c}" />
+          <q:set name="legal" value="{legal_moves(r, c)}" />
+          <qg:put target="mark" x="{cursor.x}" y="{cursor.y}" />
+        </q:if>
+        <q:if condition="{act == 'clear'}">
+          <q:call function="clear_mark" />
+        </q:if>
+      </q:if>
+    </qg:on-select>
   </qg:scene>
 
 </q:application>

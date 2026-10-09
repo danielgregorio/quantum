@@ -10,9 +10,11 @@ harness (`_q_state`).
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+from quantum.runtime.godot import gd as gdprops
 from quantum.runtime.godot.errors import GameCompileError
 from quantum.runtime.godot.expressions import (
     GD_TYPES, Scope, compile_expression, gdscript_literal, strip_braces,
@@ -21,11 +23,12 @@ from quantum.runtime.godot.model import Element, Node, Statement
 
 _INDENT = '\t'
 
-# Names every Godot node already has: a q:set of that name would redefine them.
+# Names a scene script may not declare: what every Node2D already has (its
+# properties, methods and signals, from Godot's own reference — a variable
+# named like one is a GDScript error), and what the runtime's scripts use.
 RESERVED_NAMES = frozenset((
-    'name', 'owner', 'position', 'global_position', 'rotation', 'scale', 'visible', 'modulate',
-    'z_index', 'process_mode', 'self', 'rng', 'state', 'health', 'tag', 'speed', 'velocity',
-))
+    'self', 'rng', 'state', 'health', 'tag', 'speed', 'velocity', 'heading', 'player',
+)) | gdprops.members_of('Node2D')
 
 
 @dataclass
@@ -55,9 +58,13 @@ class SceneScript:
     prefabs_used: List[tuple] = field(default_factory=list)   # (name, line) from spawn/swap
     states_used: List[tuple] = field(default_factory=list)    # (name, line) from become
     scenes_used: List[tuple] = field(default_factory=list)    # (name, line) from goto-scene
+    paths_used: List[tuple] = field(default_factory=list)     # (name, line) from spawn at="path"
+
+    node_ids: List[str] = field(default_factory=list)   # the scene's characters, by id
 
     def scope(self) -> Scope:
-        return Scope(self.state.keys(), functions=self.function_names, game_names=self.game_state.keys())
+        return Scope(self.state.keys(), functions=self.function_names, game_names=self.game_state.keys(),
+                     node_ids=self.node_ids)
 
     enter: List[Node] = field(default_factory=list)   # statements directly in the scene: run on enter
 
@@ -119,12 +126,88 @@ def declare_state(script: SceneScript, st: Statement) -> None:
     script.state[name] = StateVar(name, type_name, initial, st.line, persist, typed='type' in st.attrs)
 
 
+def _literal_type(value: str) -> str:
+    """What a bare literal is, for a variable no q:set typed: true/false, a number, else text."""
+    low = value.strip().lower()
+    if low in ('true', 'false'):
+        return 'boolean'
+    try:
+        float(low)
+        return 'number'
+    except ValueError:
+        return 'string'
+
+
+def local_names(body: List[Node], scope: Scope) -> List[str]:
+    """The names a q:set in the body gives that no q:set of the scene or the game declared: the
+    function's (or the handler's) own variables, local to the call — they never clash with another
+    function's, nor with the same function called from within a loop of itself."""
+    out: List[str] = []
+
+    def walk(nodes: List[Node]) -> None:
+        for n in nodes:
+            if isinstance(n, Statement):
+                if n.kind == 'set' and n.attrs.get('index') is None:
+                    name = n.attrs['name']
+                    if not scope.has(name) and name not in out:
+                        out.append(name)
+                walk(n.body)
+                for b in n.branches:
+                    walk(b.body)
+    walk(body)
+    for name in out:
+        if name in RESERVED_NAMES:
+            raise GameCompileError(f'{name!r} is a property of every Godot node; a variable needs another name', None)
+    # a variable set and never read is a misspelt state, not a variable
+    read = _texts_read(body)
+    for name in out:
+        if not any(re.search(rf'(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])', text) for text in read):
+            line = next((n.line for n in _sets(body) if n.attrs['name'] == name), None)
+            raise GameCompileError(
+                f'{name!r} is set and never read: a state of the scene is declared with <q:set name="{name}" .../> '
+                f'in the scene; a variable of the function or handler is read somewhere in it', line)
+    return out
+
+
+def _sets(body: List[Node]) -> List[Statement]:
+    out: List[Statement] = []
+    for n in body:
+        if isinstance(n, Statement):
+            if n.kind == 'set':
+                out.append(n)
+            out.extend(_sets(n.body))
+            for b in n.branches:
+                out.extend(_sets(b.body))
+    return out
+
+
+def _texts_read(body: List[Node]) -> List[str]:
+    """Every attribute value in the body that an expression or a name may sit in (q:set's own name aside)."""
+    out: List[str] = []
+    for n in body:
+        if isinstance(n, Statement):
+            for key, value in n.attrs.items():
+                if not (n.kind == 'set' and key == 'name'):
+                    out.append(str(value))
+            out.extend(_texts_read(n.body))
+            for b in n.branches:
+                out.extend([str(v) for v in b.attrs.values()])
+                out.extend(_texts_read(b.body))
+        else:
+            out.extend(str(v) for v in n.attrs.values())
+            out.extend(_texts_read(n.children))
+    return out
+
+
 def compile_function(script: SceneScript, st: Statement) -> None:
     name = st.attrs['name']
     params = [p.strip() for p in st.attrs.get('params', '').split(',') if p.strip()]
     scope = script.scope().child(params)
+    locals_ = local_names(st.body, scope)
+    scope = scope.child(locals_)
+    head = ''.join(f'{_INDENT}var {v} = null\n' for v in locals_)
     body = compile_block(st.body, scope, script, 1)
-    script.functions.append(f'func {name}({", ".join(params)}):\n' + body)
+    script.functions.append(f'func {name}({", ".join(params)}):\n' + head + body)
 
 
 def game_state_source(state: Dict[str, StateVar]) -> str:
@@ -163,11 +246,15 @@ def prefabs_source(script: 'SceneScript') -> str:
     return '\n'.join(lines).rstrip('\n') + '\n'
 
 
-def compile_handler(script: SceneScript, name: str, body: List[Node], line: Optional[int]) -> str:
-    """A handler method `(me, other)`; returns its name."""
-    scope = script.scope().child(['me', 'other'])
+def compile_handler(script: SceneScript, name: str, body: List[Node], line: Optional[int],
+                    params: tuple = ('me', 'other')) -> str:
+    """A handler method `(me, other)` (or `(cursor, other)` for qg:on-select); returns its name."""
+    scope = script.scope().child(params)
+    locals_ = local_names(body, scope)
+    scope = scope.child(locals_)
+    head = ''.join(f'{_INDENT}var {v} = null\n' for v in locals_)
     code = compile_block(body, scope, script, 1)
-    script.handlers.append(f'func {name}(me, other) -> void:\n' + code)
+    script.handlers.append(f'func {name}({", ".join(params)}) -> void:\n' + head + code)
     return name
 
 
@@ -193,11 +280,17 @@ def _compile_node(node: Node, scope: Scope, script: SceneScript, depth: int) -> 
         value = st.attrs.get('value')
         if value is None:
             raise GameCompileError('<q:set> in a handler needs value=', st.line)
+        if st.attrs.get('index') is not None and not scope.has(name):
+            raise GameCompileError(f'<q:set name="{name}" index=>: {name!r} is not an array of the scene', st.line)
         if is_expression(value):
             rhs = compile_expression(value, scope, st.line)
+        elif st.attrs.get('index') is not None:
+            rhs = gdscript_literal(value, 'string')   # an element, written as text
         else:
             var = script.state.get(name) or script.game_state.get(name)
-            rhs = gdscript_literal(value, var.type if var else 'string')
+            rhs = gdscript_literal(value, var.type if var else _literal_type(value))
+        if st.attrs.get('index') is not None:   # one element of an array: <q:set name="board" index="{i}" .../>
+            return [f'{ind}{scope.reference(name)}[int({compile_expression(st.attrs["index"], scope, st.line)})] = {rhs}']
         return [f'{ind}{scope.reference(name)} = {rhs}']
     if st.kind == 'if':
         out = [f'{ind}if {compile_expression(st.attrs["condition"], scope, st.line)}:']
@@ -241,7 +334,10 @@ def _compile_node(node: Node, scope: Scope, script: SceneScript, depth: int) -> 
 def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     target = el.get('target')
     if target is not None and not scope.has(target):
-        raise GameCompileError(f'<qg:{el.tag} target="{target}"> outside a handler that has {target!r}', el.line)
+        raise GameCompileError(
+            f'<qg:{el.tag} target="{target}">: not me/other of this handler nor a character of the scene', el.line)
+    if target is not None:
+        target = scope.reference(target)
     if el.tag == 'destroy':
         return f'Q.destroy({target})'
     if el.tag == 'bounce':
@@ -251,14 +347,27 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     if el.tag == 'play':
         script.sounds_played.append(el.get('sound'))
         return f'Q.play({json.dumps(el.get("sound"))})'
+    if el.tag == 'stop':
+        script.sounds_played.append(el.get('sound'))
+        return f'Q.stop({json.dumps(el.get("sound"))})'
     if el.tag == 'become':
         script.states_used.append((el.get('state'), el.line))
         return f'Q.become({target}, {json.dumps(el.get("state"))})'
     if el.tag == 'spawn':
         at = el.get('at')
+        script.prefabs_used.append((el.get('prefab'), el.line))
+        if at == 'path':
+            if not el.get('path'):
+                raise GameCompileError('<qg:spawn at="path"> needs path= (a qg:path of the scene)', el.line)
+            script.paths_used.append((el.get('path'), el.line))
+            return f'Q.spawn_on_path(self, {json.dumps(el.get("prefab"))}, {json.dumps(el.get("path"))})'
+        if el.get('path'):
+            raise GameCompileError('path= goes with at="path"', el.line)
         if not scope.has(at):
             raise GameCompileError(f'<qg:spawn at="{at}"> outside a handler that has {at!r}', el.line)
-        script.prefabs_used.append((el.get('prefab'), el.line))
+        if at == 'cursor':
+            return (f'Q.spawn_at(self, {json.dumps(el.get("prefab"))}, '
+                    f'Vector2(cursor.x + {float(el.get("dx"))!r}, cursor.y + {float(el.get("dy"))!r}))')
         return (f'Q.spawn(self, {json.dumps(el.get("prefab"))}, {at}, '
                 f'{float(el.get("dx"))!r}, {float(el.get("dy"))!r})')
     if el.tag == 'swap':
@@ -276,6 +385,19 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         if not scope.has(at):
             raise GameCompileError(f'<qg:shake at="{at}"> outside a handler that has {at!r}', el.line)
         return f'Q.shake({at}, {int(el.get("frames"))}, {float(el.get("strength"))!r})'
+    if el.tag == 'deflect':
+        axis, dx, dy = el.get('axis'), el.get('dx'), el.get('dy')
+        if axis is not None and (dx is not None or dy is not None):
+            raise GameCompileError('<qg:deflect>: axis=, or dx= and dy=, not both', el.line)
+        if axis is not None:
+            return f'Q.deflect_axis({target}, {json.dumps(axis)})'
+        if dx is None or dy is None:
+            raise GameCompileError('<qg:deflect> needs axis="x|y", or dx= and dy=', el.line)
+        return (f'Q.deflect_to({target}, {compile_expression(dx, scope, el.line)}, '
+                f'{compile_expression(dy, scope, el.line)})')
+    if el.tag == 'put':
+        return (f'Q.put({target}, {compile_expression(el.get("x"), scope, el.line)}, '
+                f'{compile_expression(el.get("y"), scope, el.line)})')
     if el.tag == 'goto-scene':
         script.scenes_used.append((el.get('name'), el.line))
         return f'Q.goto_scene(self, {json.dumps(el.get("name"))})'

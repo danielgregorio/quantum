@@ -36,6 +36,9 @@ _FUNCTIONS = {
     'floor': 'floori({0})',
     'ceil': 'ceili({0})',
     'sqrt': 'sqrt({0})',
+    'random': 'Q.random(self, {0}, {1})',   # a float in [a, b] from the scene's seeded source
+    'count': 'Q.count(self, {0})',           # how many things of a tag are in the scene
+    'thing_at': 'Q.thing_at(self, {0}, {1}, {2})',   # the thing of a tag at (x, y), or null
 }
 
 _BIN = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*'}
@@ -50,15 +53,21 @@ class Scope:
     """
 
     def __init__(self, names: Iterable[str] = (), parent: Optional['Scope'] = None,
-                 functions: Iterable[str] = (), game_names: Iterable[str] = ()):
+                 functions: Iterable[str] = (), game_names: Iterable[str] = (), node_ids: Iterable[str] = ()):
         self.names: Set[str] = set(names)
         self.functions: Set[str] = set(functions)
         self.game_names: Set[str] = set(game_names)
+        self.node_ids: Set[str] = set(node_ids)   # the scene's characters, by id: `p1.health`
         self.parent = parent
 
     def has(self, name: str) -> bool:
-        return (name in self.names or name in self.game_names
+        return (name in self.names or name in self.game_names or name in self.node_ids
                 or (self.parent is not None and self.parent.has(name)))
+
+    def is_node(self, name: str) -> bool:
+        if name in self.names:
+            return False
+        return name in self.node_ids or (self.parent is not None and self.parent.is_node(name))
 
     def is_game(self, name: str) -> bool:
         if name in self.names:
@@ -68,6 +77,8 @@ class Scope:
         return self.parent is not None and self.parent.is_game(name)
 
     def reference(self, name: str) -> str:
+        if self.is_node(name):
+            return f'get_node("{name}")'
         return f'G.{name}' if self.is_game(name) else name
 
     def has_function(self, name: str) -> bool:

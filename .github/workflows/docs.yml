@@ -6,6 +6,9 @@ on:
     paths:
       - 'docs/**'
       - 'package.json'
+      - 'projects/**'
+      - 'quantum/runtime/godot/**'
+      - 'scripts/export-games.py'
   workflow_dispatch:
 
 permissions:
@@ -24,6 +27,25 @@ jobs:
           node-version: '20'
 
       - run: npm ci
+
+      # The games, for docs/targets/play.md: built by Godot from projects/*/*.q
+      # into docs/public/games/ (never committed). The binary and the export
+      # templates (1.2 GB) come from GitHub's releases, cached between runs.
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: pip install -e .
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/quantum
+            ~/.local/share/godot/export_templates
+          key: godot-export-${{ hashFiles('quantum/runtime/godot_bin.py') }}
+      - run: python scripts/godot.py install
+      - run: python scripts/export-games.py --install-templates
+      - name: Export every game for the browser, Linux and Windows
+        run: python scripts/export-games.py
+
       - run: npm run docs:build
 
       # The build already fails on a markdown link to a missing page

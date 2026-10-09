@@ -280,3 +280,5 @@ quantum_admin/quantum.config.yaml
 quantum_admin/jwt_secret
 quantum_admin/session_secret
 quantum_admin/admin.pid
+# The games exported for the site (scripts/export-games.py): built by Deploy Docs, never committed
+docs/public/games/

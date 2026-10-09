@@ -194,7 +194,7 @@
     <qg:instance prefab="Spikes" x="351" y="176" />
     <qg:instance prefab="Flag" x="405" y="171" />
 
-    <qg:camera follow="player" bounds="tilemap" />
+    <qg:camera follow="player" bounds="tilemap" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
 
     <qg:hud position="top-left">
       <qg:counter bind="score" label="SCORE" />
@@ -261,7 +261,7 @@
     </qg:character>
 
 
-    <qg:camera follow="player" bounds="tilemap" />
+    <qg:camera follow="player" bounds="tilemap" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
     <qg:hud position="top-left">
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="coins" label="COINS" />
@@ -343,7 +343,7 @@
     <qg:instance prefab="Coin" x="252" y="96" />
     <qg:instance prefab="Flag" x="405" y="171" />
 
-    <qg:camera follow="player" bounds="tilemap" />
+    <qg:camera follow="player" bounds="tilemap" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
     <qg:hud position="top-left">
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="coins" label="COINS" />

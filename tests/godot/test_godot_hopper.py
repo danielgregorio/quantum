@@ -242,7 +242,7 @@ def test_the_jump_keys_are_the_games_own(godot, hopper):
     import json
     data = json.loads((hopper / 'game.json').read_text())
     assert data['inputs']['jump'] == ['Space', 'Z', 'X', 'Up', 'W']
-    assert data['inputs']['right'] == ['Right', 'D']
+    assert data['inputs']['right'][:2] == ['Right', 'D']   # then the joypad defaults
 
 
 IN_LEVEL_2 = [('right', 360, 362), ('jump', 460, 462)]

@@ -158,7 +158,7 @@ class TestEnemiesSoundsAndAnimations:
     def test_the_json(self, tmp_path):
         out = build(tmp_path, self.SOURCE)
         data = json.loads((out / 'game.json').read_text())
-        assert data['sounds'] == {'hurt': {'src': 'assets/kenney/audio/hurt.ogg'}}
+        assert data['sounds'] == {'hurt': {'src': 'assets/kenney/audio/hurt.ogg', 'loop': False}}
         assert (out / 'assets' / 'kenney' / 'audio' / 'hurt.ogg').is_file()
         walker = data['prefabs']['Walker']
         assert walker['ai'] == 'patrol' and walker['speed'] == 30 and walker['turns_at'] == 'edge'
@@ -248,12 +248,12 @@ class TestStatesBlocksAndSpawns:
         character = data['scenes']['main']['nodes'][0]
         assert character['initial_state'] == 'small'
         assert character['states'] == {
-            'small': {'hitbox': [18, 22], 'frame': 0, 'speed': None, 'fire_every': None, 'animations': {}},
-            'big': {'hitbox': [18, 30], 'frame': 3, 'speed': None, 'fire_every': None,
+            'small': {'hitbox': [18, 22], 'frame': 0, 'speed': None, 'fire_every': None, 'fire_prefab': None, 'range': None, 'animations': {}},
+            'big': {'hitbox': [18, 30], 'frame': 3, 'speed': None, 'fire_every': None, 'fire_prefab': None, 'range': None,
                     'animations': {'walk': {'frames': [4, 5], 'fps': 8}}},
         }
         assert character['on_collision'][0]['side'] == 'bottom'
-        assert data['scenes']['main']['nodes'][2]['items'] == [{'kind': 'text', 'bind': 'message', 'label': ''}]
+        assert data['scenes']['main']['nodes'][2]['items'] == [{'kind': 'text', 'bind': 'message', 'label': '', 'size': None}]
 
     def test_the_actions(self, tmp_path):
         out = build(tmp_path, self.SOURCE)
@@ -565,7 +565,7 @@ class TestTopDownExitsAndHits:
     </qg:character>
   </qg:scene>
 '''))
-        assert '<qg:on-hit with="ghost">: no prefab has that tag' in e.message
+        assert '<qg:on-hit with="ghost">: no prefab or zone has that tag' in e.message
 
 
 class TestArcadePrefabsAndSpawners:
@@ -611,18 +611,19 @@ class TestArcadePrefabsAndSpawners:
         out = build(tmp_path, self.SOURCE)
         data = json.loads((out / 'game.json').read_text())
         shot, drone = data['prefabs']['Shot'], data['prefabs']['Drone']
-        assert (shot['ai'], shot['heading'], shot['lifetime'], shot['health']) == ('fly', 'up', 80, 1)
+        assert (shot['ai'], shot['heading'], shot['lifetime'], shot['health']) == ('fly', [0.0, -1.0], 80, 1)
         assert shot['on_collision'] == [{'with': 'enemy', 'cooldown': 0, 'handler': '_Shot_on_collision_0'}]
         assert (drone['health'], drone['fire_prefab'], drone['fire_every']) == (3, 'Shot', 90)
         assert drone['on_damage'] == '_Drone_on_damage' and drone['on_death'] == '_Drone_on_death'
         assert drone['initial_state'] == 'calm'
-        assert drone['states']['angry'] == {'hitbox': None, 'frame': 2, 'speed': 70, 'fire_every': 25,
+        assert drone['states']['angry'] == {'hitbox': None, 'frame': 2, 'speed': 70, 'fire_every': 25, 'fire_prefab': None, 'range': None,
                                             'animations': {}}
         play = data['scenes']['play']
         ship = play['nodes'][0]
         assert (ship['controller'], ship['fire_action'], ship['fire_prefab'], ship['fire_every']) == \
             ('ship', 'jump', 'Shot', 10)
-        assert play['nodes'][1] == {'kind': 'spawner', 'prefab': 'Drone', 'from': 60, 'every': 40, 'count': 8,
+        assert play['nodes'][1] == {'kind': 'spawner', 'prefabs': ['Drone'], 'along': None, 'heading': None,
+                                    'spread': 0.0, 'from': 60, 'every': 40, 'count': 8,
                                     'x': 'random', 'y': -12}
         assert play['nodes'][2]['x'] == 128
         assert play['on_death'] == {'enemy': '_on_death_of_enemy'}
@@ -672,13 +673,13 @@ class TestInputsTimersAndPlatforms:
         out = build(tmp_path, self.SOURCE)
         data = json.loads((out / 'game.json').read_text())
         assert data['inputs']['jump'] == ['Space', 'Enter']
-        assert data['inputs']['left'] == ['Left', 'A']       # the others keep their defaults
+        assert data['inputs']['left'][:2] == ['Left', 'A']   # the others keep their defaults (keys, then the joypad)
         assert data['prefabs']['Ledge']['one_way'] is True
         lift = data['prefabs']['Lift']
         assert (lift['ai'], lift['solid'], lift['dx'], lift['dy'], lift['period']) == ('shuttle', True, 0, -80, 120)
         timers = [n for n in data['scenes']['main']['nodes'] if n['kind'] == 'timer']
-        assert timers == [{'kind': 'timer', 'after': None, 'every': 60, 'count': 9, 'handler': '_on_timer_0'},
-                          {'kind': 'timer', 'after': 30, 'every': None, 'count': 0, 'handler': '_on_timer_1'}]
+        assert timers == [{'kind': 'timer', 'after': None, 'every': 60, 'from': 0, 'count': 9, 'handler': '_on_timer_0'},
+                          {'kind': 'timer', 'after': 30, 'every': None, 'from': 0, 'count': 0, 'handler': '_on_timer_1'}]
         script = (out / 'scripts' / 'scene_main.gd').read_text()
         assert 'func _on_timer_0(me, other) -> void:\n\ttime = (time - 1)\n' in script
 
@@ -703,8 +704,8 @@ class TestInputsTimersAndPlatforms:
 
 class TestWhatItRefuses:
     def test_an_unknown_tag_with_its_line(self, tmp_path):
-        e = refuse(tmp_path, game('  <qg:scene name="main">\n    <qg:sprite id="x" />\n  </qg:scene>\n'))
-        assert '<qg:sprite> is not a game tag' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main">\n    <qg:ghost id="x" />\n  </qg:scene>\n'))
+        assert '<qg:ghost> is not a game tag' in e.message
         assert e.line == 6
 
     def test_an_unknown_attribute_lists_the_known_ones(self, tmp_path):
@@ -753,7 +754,7 @@ class TestWhatItRefuses:
     </qg:character>
   </qg:scene>
 '''))
-        assert "'score' is not declared" in e.message
+        assert "'score' is set and never read" in e.message
 
     def test_a_collision_with_a_tag_no_prefab_has(self, tmp_path):
         e = refuse(tmp_path, game('''  <qg:scene name="main">
@@ -762,7 +763,7 @@ class TestWhatItRefuses:
     </qg:character>
   </qg:scene>
 '''))
-        assert 'no prefab has that tag (tags: coin)' in e.message
+        assert 'no prefab or zone has that tag (tags: coin)' in e.message
 
     def test_an_asset_that_does_not_exist(self, tmp_path):
         e = refuse(tmp_path, '<q:application id="t" type="game">\n'
@@ -828,3 +829,451 @@ class TestExpressions:
     def test_refuses(self, source, message):
         with pytest.raises(GameCompileError, match=re.escape(message)):
             compile_expression(source, self.scope)
+
+
+class TestGdAttributes:
+    """`gd:name="value"`: a property of the Godot node the tag becomes, checked
+    against Godot's own class reference (quantum/runtime/godot/gd.py)."""
+
+    def test_a_property_is_converted_and_carried_in_game_json(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main" gd:y_sort_enabled="true">
+    <qg:character id="player" controller="platformer" sheet="c" x="10" y="10" hitbox="18x22" gd:floor_max_angle="0.5" />
+    <qg:instance prefab="Coin" x="30" y="10" gd:modulate="#FF000080" gd:z_index="3" />
+    <qg:camera follow="player" bounds="none" gd:zoom="2,2" gd:position_smoothing_enabled="yes" />
+    <qg:hud gd:layer="7"><qg:counter bind="x" label="X" gd:uppercase="true" /></qg:hud>
+    <q:set name="x" value="0" type="number" />
+  </qg:scene>
+'''))
+        scene = json.loads((out / 'game.json').read_text())['scenes']['main']
+        assert scene['gd'] == {'y_sort_enabled': {'type': 'bool', 'value': True}}
+        gd = {n['kind']: n['gd'] for n in scene['nodes']}
+        assert gd['character'] == {'floor_max_angle': {'type': 'float', 'value': 0.5}}
+        assert gd['instance'] == {'modulate': {'type': 'Color', 'value': '#ff000080'},
+                                  'z_index': {'type': 'int', 'value': 3}}
+        assert gd['camera'] == {'zoom': {'type': 'Vector2', 'value': [2.0, 2.0]},
+                                'position_smoothing_enabled': {'type': 'bool', 'value': True}}
+        hud = [n for n in scene['nodes'] if n['kind'] == 'hud'][0]
+        assert hud['gd'] == {'layer': {'type': 'int', 'value': 7}}
+        assert hud['items'][0]['gd'] == {'uppercase': {'type': 'bool', 'value': True}}
+
+    def test_a_prefab_is_checked_against_what_it_becomes(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:prefab name="Crate" tag="crate" sheet="k" frame="9" hitbox="18x18" solid="true" gd:constant_linear_velocity="10,0" />
+  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" gd:volume_db="-6" />
+  <qg:scene name="main"><qg:instance prefab="Crate" x="30" y="10" /></qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['prefabs']['Crate']['gd'] == {'constant_linear_velocity': {'type': 'Vector2', 'value': [10.0, 0.0]}}
+        assert data['sounds']['hurt']['gd'] == {'volume_db': {'type': 'float', 'value': -6.0}}
+        # an item is an Area2D: a StaticBody2D property is not its
+        err = refuse(tmp_path, HEAD + '''  <qg:prefab name="Gem" tag="gem" sheet="k" frame="9" hitbox="18x18" gd:constant_linear_velocity="10,0" />
+  <qg:scene name="main"><qg:instance prefab="Gem" x="30" y="10" /></qg:scene>
+''' + TAIL)
+        assert 'gd:constant_linear_velocity is not a property of Area2D' in str(err)
+
+    def test_an_unknown_property_names_the_class_and_what_it_has(self, tmp_path):
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="player" controller="platformer" sheet="c" x="10" y="10" hitbox="18x22" />
+    <qg:camera follow="player" bounds="none" gd:zoom_level="2" />
+  </qg:scene>
+'''))
+        message = str(err)
+        assert '<qg:camera>: gd:zoom_level is not a property of Camera2D (it has:' in message
+        assert ', zoom)' in message and 'limit_left' in message and 'modulate' in message
+        assert message.startswith(str(tmp_path / 'game.q') + ':7:')
+
+    @pytest.mark.parametrize('attr,message', [
+        ('gd:zoom="2"', 'gd:zoom="2": a Vector2 (e.g. 2,2)'),
+        ('gd:zoom="a,b"', 'a Vector2'),
+        ('gd:limit_left="1.5"', 'gd:limit_left="1.5": a int (e.g. 2)'),
+        ('gd:position_smoothing_enabled="maybe"', 'a bool (e.g. true)'),
+        ('gd:modulate="red"', 'gd:modulate="red": a Color (e.g. #rrggbb)'),
+    ])
+    def test_a_value_of_the_wrong_type(self, tmp_path, attr, message):
+        err = refuse(tmp_path, game(f'''  <qg:scene name="main">
+    <qg:character id="player" controller="platformer" sheet="c" x="10" y="10" hitbox="18x22" />
+    <qg:camera follow="player" bounds="none" {attr} />
+  </qg:scene>
+'''))
+        assert message in str(err)
+
+    def test_a_tag_that_becomes_no_node_takes_none(self, tmp_path):
+        err = refuse(tmp_path, '''<q:application id="t" type="game">
+  <qg:tileset name="k" src="assets/kenney/tilemap_packed.png" tile="18" gd:modulate="#ffffff" />
+  <qg:scene name="main" />
+</q:application>
+''')
+        assert 'becomes no Godot node: gd: attributes go on what is placed' in str(err)
+
+    def test_the_table_comes_from_the_pinned_godot(self):
+        from quantum.runtime.godot import gd
+        from quantum.runtime.godot_bin import GODOT_VERSION
+        assert gd.table()['godot'] == GODOT_VERSION
+        assert gd.properties_of('Camera2D')['zoom'] == 'Vector2'
+        assert gd.properties_of('Camera2D')['modulate'] == 'Color'      # inherited from CanvasItem
+        assert 'name' not in gd.properties_of('Node')                   # the runtime's, never a gd:
+
+
+class TestWhatPongAsked:
+    """The six things Godot's Pong demo made the language say (projects/pong/README.md)."""
+
+    def test_a_second_player_its_keys_and_a_vertical_ship(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:input player="2" action="up" keys="Up" />
+  <qg:input player="2" action="down" keys="Down" />
+  <qg:scene name="main">
+    <qg:character id="left" controller="ship" sheet="c" x="10" y="10" hitbox="8x32" axis="vertical" />
+    <qg:character id="right" controller="ship" player="2" sheet="c" x="100" y="10" hitbox="8x32" axis="vertical" />
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['inputs']['p2_up'] == ['Up'] and data['inputs']['p2_down'] == ['Down']
+        assert data['inputs']['up'][:2] == ['Up', 'W']      # player 1 keeps the defaults
+        left, right = data['scenes']['main']['nodes']
+        assert (left['player'], left['axis']) == (1, 'vertical')
+        assert (right['player'], right['axis']) == (2, 'vertical')
+
+    def test_a_player_without_keys(self, tmp_path):
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="right" controller="ship" player="2" sheet="c" x="100" y="10" hitbox="8x32" />
+  </qg:scene>
+'''))
+        assert '<qg:character player="2">: no keys for that player' in str(err)
+
+    def test_axis_is_for_the_ship(self, tmp_path):
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p" controller="topdown" axis="vertical" sheet="c" x="100" y="10" hitbox="8x32" />
+  </qg:scene>
+'''))
+        assert 'axis= is for controller="ship"' in str(err)
+
+    def test_frames_that_are_not_square(self, tmp_path):
+        out = build(tmp_path, '''<q:application id="t" type="game">
+  <qg:tileset name="k" src="assets/kenney/tilemap_packed.png" tile="18" />
+  <qg:spritesheet name="tall" src="assets/kenney/tilemap-characters_packed.png" tile="8x32" />
+  <qg:scene name="main"><qg:sprite sheet="tall" frame="2" x="20" y="30" /></qg:scene>
+</q:application>
+''')
+        data = json.loads((out / 'game.json').read_text())
+        assert data['sheets']['k']['tile'] == [18, 18] and data['sheets']['tall']['tile'] == [8, 32]
+        assert data['scenes']['main']['nodes'] == [{'kind': 'sprite', 'sheet': 'tall', 'frame': 2, 'x': 20.0, 'y': 30.0}]
+
+    def test_a_heading_as_a_vector_and_an_acceleration(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:prefab name="Ball" tag="ball" sheet="k" frame="151" hitbox="8x8" ai="fly" heading="3,-4" accel="2" />
+  <qg:scene name="main"><qg:instance prefab="Ball" x="30" y="10" /></qg:scene>
+''' + TAIL)
+        ball = json.loads((out / 'game.json').read_text())['prefabs']['Ball']
+        assert ball['heading'] == [0.6, -0.8] and ball['accel'] == 2.0
+        err = refuse(tmp_path, HEAD + '''  <qg:prefab name="Ball" tag="ball" sheet="k" frame="151" hitbox="8x8" ai="fly" heading="north" />
+  <qg:scene name="main" />
+''' + TAIL)
+        assert 'heading="north": up, down, left, right, or x,y' in str(err)
+
+    def test_zones_deflect_and_respawn(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:prefab name="Ball" tag="ball" sheet="k" frame="151" hitbox="8x8" ai="fly" heading="left" speed="100">
+    <qg:on-collision with="edge"><qg:deflect target="me" axis="y" /></qg:on-collision>
+    <qg:on-collision with="wall"><qg:respawn target="me" /></qg:on-collision>
+  </qg:prefab>
+  <qg:scene name="main">
+    <qg:character id="left" controller="ship" sheet="c" x="10" y="10" hitbox="8x32">
+      <qg:on-collision with="ball"><qg:deflect target="other" dx="1" dy="{random(-1, 1)}" /></qg:on-collision>
+    </qg:character>
+    <qg:instance prefab="Ball" name="ball" x="30" y="10" />
+    <qg:zone name="ceiling" tag="edge" x="0" y="-20" width="640" height="20" />
+    <qg:zone name="left-wall" tag="wall" x="-20" y="0" width="20" height="400" />
+  </qg:scene>
+''' + TAIL)
+        prefabs = (out / 'scripts' / 'prefabs.gd').read_text()
+        assert '\tQ.deflect_axis(me, "y")\n' in prefabs and '\tQ.respawn(me)\n' in prefabs
+        scene = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\tQ.deflect_to(other, 1, Q.random(self, (-1), 1))\n' in scene
+        nodes = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes']
+        assert nodes[2] == {'kind': 'zone', 'name': 'ceiling', 'tag': 'edge', 'x': 0.0, 'y': -20.0,
+                            'width': 640.0, 'height': 20.0}
+
+    @pytest.mark.parametrize('attrs,message', [
+        ('target="me" axis="y" dx="1" dy="0"', 'axis=, or dx= and dy=, not both'),
+        ('target="me" dx="1"', 'needs axis="x|y", or dx= and dy='),
+    ])
+    def test_a_deflect_that_says_too_much_or_too_little(self, tmp_path, attrs, message):
+        err = refuse(tmp_path, HEAD + f'''  <qg:prefab name="Ball" tag="ball" sheet="k" frame="151" hitbox="8x8" ai="fly">
+    <qg:on-collision with="coin"><qg:deflect {attrs} /></qg:on-collision>
+  </qg:prefab>
+  <qg:scene name="main" />
+''' + TAIL)
+        assert message in str(err)
+
+
+class TestWhatCreepsAsked:
+    """What Godot's "Dodge the Creeps" made the language say (projects/creeps/README.md)."""
+
+    def test_joypad_names_on_the_players_pad(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:input action="jump" keys="Space, JoyA, JoyStart" />
+  <qg:input player="2" action="up" keys="Up, JoyUp, JoyLeftStickUp" />
+  <qg:scene name="main" />
+''' + TAIL)
+        inputs = json.loads((out / 'game.json').read_text())['inputs']
+        assert inputs['jump'] == ['Space', {'joy_button': 0, 'device': 0}, {'joy_button': 6, 'device': 0}]
+        assert inputs['p2_up'] == ['Up', {'joy_button': 11, 'device': 1}, {'joy_axis': 1, 'value': -1.0, 'device': 1}]
+        assert inputs['left'] == ['Left', 'A', {'joy_button': 13, 'device': 0}, {'joy_axis': 0, 'value': -1.0, 'device': 0}]
+        err = refuse(tmp_path, HEAD + '  <qg:input action="jump" keys="JoyZ" />\n  <qg:scene name="main" />\n' + TAIL)
+        assert 'keys="JoyZ": not a joypad name' in str(err)
+
+    def test_a_spawner_along_the_edges_with_several_prefabs(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:prefab name="A" tag="creep" sheet="k" frame="1" hitbox="8x8" ai="fly" speed="150..250" rotate="true" />
+  <qg:prefab name="B" tag="creep" sheet="k" frame="2" hitbox="8x8" ai="fly" />
+  <qg:scene name="main">
+    <qg:spawner prefab="A, B" along="edges" heading="inward" spread="45" every="30" count="0" />
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['prefabs']['A']['speed'] == [150.0, 250.0] and data['prefabs']['A']['rotate'] is True
+        assert data['prefabs']['B']['speed'] == 30.0
+        spawner = data['scenes']['main']['nodes'][0]
+        assert (spawner['prefabs'], spawner['along'], spawner['heading'], spawner['spread'], spawner['count']) == (
+            ['A', 'B'], 'edges', 'inward', 45.0, 0)
+        err = refuse(tmp_path, HEAD + '''  <qg:prefab name="W" tag="w" sheet="k" frame="1" hitbox="8x8" ai="patrol" />
+  <qg:scene name="main"><qg:spawner prefab="W" along="edges" heading="inward" /></qg:scene>
+''' + TAIL)
+        assert 'every prefab must be ai="fly"' in str(err)
+        err = refuse(tmp_path, HEAD + '''  <qg:prefab name="W" tag="w" sheet="k" frame="1" hitbox="8x8" ai="fly" speed="fast" />
+  <qg:scene name="main" />
+''' + TAIL)
+        assert 'speed="fast": a number, or a range like 150..250' in str(err)
+
+    def test_sounds_that_loop_and_stop_as_a_scene_is_entered(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:sound name="music" src="assets/kenney/audio/hurt.ogg" loop="true" />
+  <qg:scene name="main">
+    <qg:play sound="music" />
+    <q:set name="x" value="0" type="number" />
+  </qg:scene>
+  <qg:scene name="end">
+    <qg:stop sound="music" />
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['sounds']['music']['loop'] is True
+        assert '\tQ.play("music")\n' in (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\tQ.stop("music")\n' in (out / 'scripts' / 'scene_end.gd').read_text()
+
+    def test_the_hud_font_size_and_centre_and_a_timer_from(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:scene name="main">
+    <q:set name="message" value="Hi" />
+    <qg:hud position="center" font="assets/kenney/tilemap_packed.png" size="60">
+      <qg:text bind="message" size="30" />
+    </qg:hud>
+    <qg:timer every="60" from="120"><q:set name="message" value="" /></qg:timer>
+  </qg:scene>
+''' + TAIL)
+        nodes = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes']
+        assert nodes[0]['position'] == 'center' and nodes[0]['font'] == 'assets/kenney/tilemap_packed.png'
+        assert nodes[0]['size'] == 60 and nodes[0]['items'][0]['size'] == 30
+        assert nodes[1]['from'] == 120
+
+    def test_the_games_state_set_as_a_scene_is_entered(self, tmp_path):
+        out = build(tmp_path, '''<q:application id="t" type="game">
+  <q:set name="score" value="0" type="number" />
+  <qg:tileset name="k" src="assets/kenney/tilemap_packed.png" tile="18" />
+  <qg:scene name="main"><q:set name="score" value="0" /></qg:scene>
+</q:application>
+''')
+        assert 'func _q_enter() -> void:\n\tG.score = 0.0\n' in (out / 'scripts' / 'scene_main.gd').read_text()
+
+    def test_a_state_named_like_a_node_member(self, tmp_path):
+        err = refuse(tmp_path, game('  <qg:scene name="main"><q:set name="ready" value="false" type="boolean" /></qg:scene>\n'))
+        assert "'ready' is a property of every Godot node" in str(err)
+
+
+class TestMultiplayer:
+    def test_the_declaration_and_every_players_actions(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:multiplayer players="3" delay="2" check-every="30" />
+  <qg:scene name="main">
+    <qg:character id="a" controller="ship" sheet="c" x="10" y="10" hitbox="8x8" />
+    <qg:character id="b" controller="ship" player="2" sheet="c" x="20" y="10" hitbox="8x8" />
+    <qg:character id="c" controller="ship" player="3" sheet="c" x="30" y="10" hitbox="8x8" />
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['multiplayer'] == {'players': 3, 'delay': 2, 'check_every': 30}
+        assert data['inputs']['p2_up'] == [] and data['inputs']['p3_jump'] == []   # pressed by the lockstep, not keys
+
+    @pytest.mark.parametrize('source,message', [
+        ('<qg:multiplayer players="1" />\n  <qg:scene name="main" />', 'players=>: 2 or more'),
+        ('<qg:multiplayer players="2" delay="0" />\n  <qg:scene name="main" />', 'delay=>: 1 or more'),
+        ('<qg:multiplayer players="2" />\n  <qg:multiplayer players="2" />\n  <qg:scene name="main" />',
+         'one <qg:multiplayer> per game'),
+        ('<qg:multiplayer players="2" />\n  <qg:scene name="main">\n'
+         '    <qg:character id="c" controller="ship" player="3" sheet="c" x="30" y="10" hitbox="8x8" />\n  </qg:scene>',
+         'player="3">: the game has 2 players'),
+    ])
+    def test_what_it_refuses(self, tmp_path, source, message):
+        assert message in str(refuse(tmp_path, HEAD + '  ' + source + '\n' + TAIL))
+
+
+class TestWhatTowersAsked:
+    """What the tower defense made the language say (projects/towers/README.md)."""
+
+    def test_named_actions_the_mouse_and_the_defaults(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:input action="buy" keys="1, MouseRight" />
+  <qg:scene name="main">
+    <q:set name="n" value="0" type="number" />
+    <qg:on-input action="buy"><q:set name="n" value="{n + 1}" /></qg:on-input>
+    <qg:on-input action="select"><q:set name="n" value="{n + 2}" /></qg:on-input>
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['inputs']['buy'] == ['1', {'mouse_button': 2}]
+        assert data['inputs']['select'] == ['Enter', {'mouse_button': 1}, {'joy_button': 0, 'device': 0}]
+        assert data['actions'] == ['left', 'right', 'up', 'down', 'jump', 'select', 'cancel', 'buy']
+        assert set(data['scenes']['main']['on_input']) == {'buy', 'select'}
+        err = refuse(tmp_path, game('  <qg:scene name="main"><qg:on-input action="fire"><q:set name="x" value="1" /></qg:on-input></qg:scene>\n'))
+        assert '<qg:on-input action="fire">: no such action' in str(err)
+
+    def test_a_cursor_a_select_handler_and_a_spawn_at_the_cursor(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:prefab name="Tower" tag="tower" sheet="k" frame="1" hitbox="16x16" ai="turret" targets="coin" range="80" fire-every="30" attack="area" damage="2" />
+  <qg:scene name="main">
+    <q:set name="gold" value="100" type="number" />
+    <qg:cursor player="1" grid="16" sheet="k" frame="2" />
+    <qg:zone name="r" tag="road" x="0" y="0" width="50" height="50" />
+    <qg:on-select>
+      <q:if condition="{other == null and thing_at('road', cursor.x, cursor.y) == null and gold >= 10 and count('tower') < 5}">
+        <q:set name="gold" value="{gold - 10}" />
+        <qg:spawn prefab="Tower" at="cursor" />
+      </q:if>
+      <q:if condition="{other != null and other.tag == 'tower'}"><qg:become target="other" state="x" /></q:if>
+    </qg:on-select>
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        tower = data['prefabs']['Tower']
+        assert (tower['ai'], tower['targets'], tower['range'], tower['attack'], tower['damage']) == ('turret', 'coin', 80.0, 'area', 2)
+        nodes = data['scenes']['main']['nodes']
+        assert nodes[0] == {'kind': 'cursor', 'player': 1, 'step': 16.0, 'grid': 16, 'sheet': 'k', 'frame': 2}
+        assert data['scenes']['main']['on_select'] == {'0': '_on_select_0'}
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'func _on_select_0(cursor, other) -> void:' in script
+        assert 'Q.thing_at(self, "road", cursor.x, cursor.y)' in script and 'Q.count(self, "tower")' in script
+        assert 'Q.spawn_at(self, "Tower", Vector2(cursor.x + 0.0, cursor.y + 0.0))' in script
+        err = refuse(tmp_path, game('  <qg:scene name="main"><q:set name="x" value="0" type="number" />'
+                                    '<qg:on-select><q:set name="x" value="1" /></qg:on-select></qg:scene>\n'))
+        assert '<qg:on-select> in a scene without a <qg:cursor>' in str(err)
+
+    def test_a_path_and_what_follows_it(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:prefab name="Walker" tag="w" sheet="k" frame="1" hitbox="16x16" ai="path" speed="100" />
+  <qg:scene name="main">
+    <qg:path name="road" points="0,10; 100,10; 100,200" />
+    <qg:timer every="30"><qg:spawn prefab="Walker" at="path" path="road" /></qg:timer>
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['scenes']['main']['nodes'][0] == {'kind': 'path', 'name': 'road', 'points': [[0.0, 10.0], [100.0, 10.0], [100.0, 200.0]]}
+        assert 'Q.spawn_on_path(self, "Walker", "road")' in (out / 'scripts' / 'scene_main.gd').read_text()
+        err = refuse(tmp_path, HEAD + '''  <qg:prefab name="Walker" tag="w" sheet="k" frame="1" hitbox="16x16" ai="path" />
+  <qg:scene name="main"><qg:timer every="30"><qg:spawn prefab="Walker" at="path" path="lane" /></qg:timer></qg:scene>
+''' + TAIL)
+        assert '<qg:spawn path="lane">: no qg:path of that name' in str(err)
+        err = refuse(tmp_path, game('  <qg:scene name="main"><qg:path name="p" points="1,2" /></qg:scene>\n'))
+        assert 'points= needs at least two points' in str(err)
+
+
+class TestWhatArenaAsked:
+    """What the fighting game made the language say (projects/arena/README.md)."""
+
+    FIGHTERS = '''  <qg:input action="punch" keys="J" />
+  <qg:scene name="main">
+    <q:set name="wins" value="0" type="number" />
+    <qg:character id="p1" controller="fighter" sheet="c" x="100" y="100" hitbox="20x40" health="80" facing="left">
+      <qg:animation name="idle" frames="0" />
+      <qg:move name="jab" action="punch" frames="1, 2, 3" fps="15" active="1" reach="20x10" at="16,-4" damage="7" />
+      <qg:on-ko><q:set name="wins" value="{wins + 1}" /></qg:on-ko>
+    </qg:character>
+    <qg:character id="p2" controller="fighter" player="2" sheet="c" x="200" y="100" hitbox="20x40" />
+    <qg:timer after="10"><qg:respawn target="p2" /><q:set name="wins" value="{p1.health + p2.health}" /></qg:timer>
+    <qg:hud><qg:bar bind="p1.health" max="80" width="60" /></qg:hud>
+  </qg:scene>
+'''
+
+    def test_a_fighter_its_moves_and_its_ko(self, tmp_path):
+        out = build(tmp_path, HEAD + '  <qg:input player="2" action="left" keys="Left" />\n' + self.FIGHTERS + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        p1, p2 = [n for n in data['scenes']['main']['nodes'] if n['kind'] == 'character']
+        assert (p1['controller'], p1['health'], p1['facing'], p1['on_ko']) == ('fighter', 80, 'left', '_on_p1_ko')
+        assert p1['moves'] == [{'name': 'jab', 'action': 'punch', 'frames': [1, 2, 3], 'fps': 15.0, 'active': 1,
+                                'reach': [20, 10], 'at': [16.0, -4.0], 'damage': 7, 'stun': 12, 'push': 40.0}]
+        assert p2['moves'] == [] and p2['health'] == 100
+        hud = [n for n in data['scenes']['main']['nodes'] if n['kind'] == 'hud'][0]
+        assert hud['items'] == [{'kind': 'bar', 'bind': 'p1.health', 'max': 80.0, 'width': 60, 'height': 10, 'color': '#e04040'}]
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\tQ.respawn(get_node("p2"))\n' in script
+        assert 'wins = (get_node("p1").health + get_node("p2").health)' in script
+
+    @pytest.mark.parametrize('bad,message', [
+        ('<qg:move name="m" action="fire" frames="1" reach="4x4" />', 'action="fire">: no such action'),
+        ('<qg:move name="m" action="punch" frames="1, 2" active="2" reach="4x4" />', 'active="2">: a frame index'),
+        ('<qg:move name="m" action="punch" frames="1" reach="4x4" at="3" />', 'at= is dx,dy'),
+    ])
+    def test_a_move_that_is_wrong(self, tmp_path, bad, message):
+        src = self.FIGHTERS.replace('<qg:animation name="idle" frames="0" />', bad)
+        assert message in str(refuse(tmp_path, HEAD + '  <qg:input player="2" action="left" keys="Left" />\n' + src + TAIL))
+
+    def test_a_move_and_a_bar_where_they_do_not_belong(self, tmp_path):
+        err = refuse(tmp_path, HEAD + '''  <qg:input action="punch" keys="J" />
+  <qg:scene name="main">
+    <qg:character id="p" controller="ship" sheet="c" x="1" y="1" hitbox="4x4">
+      <qg:move name="m" action="punch" frames="1" reach="4x4" />
+    </qg:character>
+  </qg:scene>
+''' + TAIL)
+        assert '<qg:move> is for controller="fighter"' in str(err)
+        err = refuse(tmp_path, game('  <qg:scene name="main"><qg:hud><qg:bar bind="p9.health" /></qg:hud></qg:scene>\n'))
+        assert '<qg:bar bind="p9.health">: a fighter of this scene' in str(err)
+
+
+class TestWhatChessAsked:
+    """What chess made the language say (projects/chess/README.md)."""
+
+    def test_a_functions_own_variables_and_an_element_of_an_array(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="board" type="array" value="{['a', 'b']}" />
+    <q:function name="swap_first" params="i">
+      <q:set name="held" value="{board[0]}" />
+      <q:set name="flag" value="true" />
+      <q:set name="n" value="3" />
+      <q:set name="board" index="0" value="{board[i]}" />
+      <q:set name="board" index="{i}" value="x" />
+      <q:return value="{held if flag else n}" />
+    </q:function>
+  </qg:scene>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert ('func swap_first(i):\n\tvar held = null\n\tvar flag = null\n\tvar n = null\n'
+                '\theld = board[0]\n\tflag = true\n\tn = 3.0\n\tboard[int(0)] = board[i]\n\tboard[int(i)] = "x"\n'
+                '\treturn (held if flag else n)\n') in script
+        assert 'var held' not in script.split('func swap_first')[0]      # the scene's state has no `held`
+
+    def test_a_variable_set_and_never_read_is_a_misspelt_state(self, tmp_path):
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="score" value="0" type="number" />
+    <q:function name="f"><q:set name="scroe" value="{score + 1}" /></q:function>
+  </qg:scene>
+'''))
+        assert "'scroe' is set and never read" in str(err)
+
+    def test_an_element_of_what_is_not_an_array(self, tmp_path):
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <q:function name="f"><q:set name="nothing" index="0" value="x" /></q:function>
+  </qg:scene>
+'''))
+        assert "'nothing' is not declared" in str(err)
+
+    def test_put_and_destroy_on_a_name_holding_a_thing_and_a_named_instance(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <qg:cursor player="1" grid="16" />
+    <qg:instance prefab="Coin" name="mark" x="30" y="10" />
+    <qg:on-select>
+      <q:set name="hit" value="{thing_at('coin', cursor.x, cursor.y)}" />
+      <q:if condition="{hit != null}"><qg:destroy target="hit" /></q:if>
+      <qg:put target="mark" x="{cursor.x}" y="{cursor.y + 1}" />
+    </qg:on-select>
+  </qg:scene>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\t\tQ.destroy(hit)\n' in script and '\tQ.put(get_node("mark"), cursor.x, (cursor.y + 1))\n' in script

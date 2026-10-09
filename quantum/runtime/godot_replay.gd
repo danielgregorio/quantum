@@ -56,12 +56,39 @@ func _initialize() -> void:
 # MainLoop runs this before the nodes' _physics_process of the same tick, so
 # when ticks == max_ticks the scene has run exactly max_ticks ticks.
 func _physics_process(_delta: float) -> bool:
+	# Under qg:multiplayer (--q-host / --q-join) the game's tick is the
+	# lockstep's, which stalls while a peer's input is late: the tape and
+	# the count follow it, and the tape presses raw_<action> like a key.
+	var lockstep: Node = scene.get("lockstep") if "lockstep" in scene else null
+	if lockstep != null:
+		if not lockstep.started or lockstep.desynced:
+			if lockstep.desynced:
+				_dump()
+				return true
+			return false
+		var t: int = lockstep.tick
+		if t >= max_ticks or (lockstep.ended and lockstep.stalled()):
+			_dump()
+			return true
+		if t == ticks:
+			if tape.has(t):
+				for ev in tape[t]:
+					if ev[0] == "cursor":
+						root.get_node("Q").tape_cursor = Vector2(ev[1][0], ev[1][1])
+					elif ev[1]:
+						Input.action_press("raw_" + ev[0])
+					else:
+						Input.action_release("raw_" + ev[0])
+			ticks += 1
+		return false
 	if ticks >= max_ticks:
 		_dump()
 		return true
 	if tape.has(ticks):
 		for ev in tape[ticks]:
-			if ev[1]:
+			if ev[0] == "cursor":
+				root.get_node("Q").tape_cursor = Vector2(ev[1][0], ev[1][1])
+			elif ev[1]:
 				Input.action_press(ev[0])
 			else:
 				Input.action_release(ev[0])

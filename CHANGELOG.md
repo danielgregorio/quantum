@@ -27,6 +27,96 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the games on the site — `docs/targets/play.md` lists the
+  eight games with a browser build, Linux and Windows downloads, controls
+  and the network commands. `scripts/export-games.py` exports every
+  `projects/<name>/<name>.q` with Godot's templates (the web build without
+  threads, so it runs on a static host) and installs the templates itself
+  (`--install-templates`); the Deploy Docs workflow runs it, with the
+  templates cached, before the site is built. Nothing exported is committed.
+- Laboratory: an eighth game, `projects/chess/chess.q` — chess, its rules
+  written in `q:function`s over an array of 64 squares (the rules of
+  github.com/Prashanna135/chess, MIT; `projects/chess/README.md` maps it),
+  white and black over the network. What it made the language grow:
+  **local variables** — a `q:set` of an undeclared name inside a
+  `q:function` or a handler is the call's own (the first recursion the
+  language met); `<q:set name="board" index="{i}" />` for one element of
+  an array; `qg:put target= x= y=`; `qg:destroy`, `qg:swap`, `qg:put` on
+  any name holding a thing, and a named `qg:instance` as a name in its
+  scene; `qg:hud position="bottom-center"`.
+- Laboratory: a seventh game, `projects/arena/arena.q` — a one-on-one
+  fighting game (`projects/arena/README.md`), two players over the network.
+  What it made the language grow: `controller="fighter"` (walk, jump,
+  crouch, block by holding away, hit stun and push back, KO) with
+  `health=` and `facing=`; `qg:move` — an attack on an action with frame
+  data: `frames`, `active`, `reach`, `at`, `damage`, `stun`, `push`;
+  `qg:on-ko`; `qg:bar` in the HUD bound to a q:set or a fighter's
+  `id.health`; a character's id as a name in its scene's expressions
+  (`p1.health`) and as an action target (`qg:respawn target="p1"`).
+- Laboratory: a sixth game, `projects/towers/towers.q` — the MIT "Godot 4
+  Tower Defense Template" transcribed (`projects/towers/README.md` maps it),
+  playable by two over the network. What it made the language grow: named
+  actions (`qg:input action="buy-gatling"`, `qg:on-input` on any declared
+  action), `MouseLeft`/`MouseRight` keys and the default `select`/`cancel`
+  actions; `qg:cursor` (the mouse, or a player's directions, snapped to
+  `grid=`) and `qg:on-select` with `cursor` and `other` — under
+  `qg:multiplayer` the cursor travels in the input frame; `count(tag)` and
+  `thing_at(tag, x, y)` in expressions; `qg:path points=` with `ai="path"`
+  and `qg:spawn at="path"`; `ai="turret" targets= range= attack= damage=`
+  firing `fire-prefab` at the nearest target, `fire-prefab`/`range` on a
+  `qg:state`, `qg:become target="other"`, `qg:spawn at="cursor"`. The
+  replay tape takes `cursor` events (`cursor_at()`).
+- Laboratory: declarative multiplayer. `<qg:multiplayer players="2" />` in
+  a game: every peer runs the whole game in lockstep — a tick runs when
+  every player's input for it has arrived, `delay=` ticks after the press;
+  the peers compare a hash of the whole state every `check-every=` ticks
+  and a difference is a reported, fatal desync. One peer hosts
+  (`--q-host=PORT`, player 1), the others join (`--q-join=HOST:PORT`);
+  `player=` on the characters says whose is whose, as it did on one
+  keyboard. Nothing else in the game knows. `replay_peers()` runs N
+  headless Godots on localhost under tapes; `tests/godot/test_godot_multiplayer.py`
+  plays Pong on two and checks they agree with each other and with one
+  Godot replaying both tapes. Design and what is left: `PLAN_MULTIPLAYER.md`.
+- Laboratory: a fifth game, `projects/creeps/creeps.q` — Godot's "Dodge the
+  Creeps" tutorial game transcribed (`projects/creeps/README.md` maps it).
+  What it made the language grow: `qg:spawner along="edges" heading="inward"
+  spread=`, several prefabs drawn at random and `count="0"`; `speed="150..250"`
+  and `rotate=` on a prefab; `bounds="scene"`, `walk-up`/`walk-down` and
+  analog strength on the top-down controller; `qg:hud position="center"`,
+  `font=`, `size=`; `loop=` on `qg:sound`, `qg:stop`, and `qg:play`/`qg:stop`
+  directly in a scene; `from=` on `qg:timer every=`; a `q:set` of a
+  game-wide name in a scene sets it as the scene is entered.
+  `tests/godot/test_godot_creeps.py` replays it. `scripts/pack-sprites.py`
+  packs separate frames into a sheet.
+- Laboratory: joypads. `qg:input keys=` takes `JoyA`, `JoyUp`, `JoyLeftStickUp`
+  and the rest (the reference lists them); player n reads joypad n-1; the
+  defaults include the pad and the left stick; the ship and top-down
+  controllers read the stick's strength.
+- Laboratory: a scene state named like any member of Godot's `Node2D`
+  (`ready`, `draw`, `show`…) is a compile error, from the same generated
+  reference `gd:` attributes use; it was a GDScript error at run time.
+- Laboratory: a fourth game, `projects/pong/pong.q` — Godot's own "Pong
+  with GDScript" demo (godotengine/godot-demo-projects, MIT) transcribed
+  tag for node; `projects/pong/README.md` maps each piece of the original
+  to its tag. What it made the language grow, each a tag or an attribute:
+  `player=` on `qg:input` and `qg:character` (a second player's keys, as
+  `p2_up`…); `axis=` on the ship controller; `qg:zone` (an invisible
+  tagged rectangle, touched like a prefab); `heading="x,y"` and `accel=`
+  on a flying prefab, `qg:deflect` (reflect one axis, or set `dx`/`dy`),
+  `qg:respawn target="other"`; `tile="8x32"` on `qg:spritesheet` for frames
+  that are not square; `qg:sprite` (a picture with no behaviour); and
+  `random(a, b)` in expressions, from the scene's seeded source.
+  `tests/godot/test_godot_pong.py` replays it.
+- Laboratory: `gd:` attributes on game tags — `<qg:camera gd:zoom="2,2" />`
+  sets `Camera2D.zoom`. A pure forward: the compiler checks the name and the
+  type against Godot's own class reference (`godot_properties.json`,
+  generated from `godot --doctool` by `scripts/generate-godot-properties.py`),
+  and the runtime calls `node.set()` once as the scene is built. Properties
+  only (float, int, bool, String, Vector2, Vector2i, Color); methods, signals
+  and what the runtime sets itself (`position`, `velocity`, the collision
+  layers) are not forwarded. A wrong name is a compile error naming the
+  properties the class has. `tests/godot/test_godot_gd.py` reads back, in
+  Godot, the class and the values of every kind of node.
 - Laboratory: a new game compiler and runtime (`quantum/runtime/godot/`),
   rebuilt from scratch on the "thin compiler, fat runtime" design of
   `PLAN_GAMES_2.md`. The `.q` compiles to `game.json` (everything

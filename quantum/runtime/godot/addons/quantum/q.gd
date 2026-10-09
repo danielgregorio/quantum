@@ -6,6 +6,13 @@ extends Node
 # (quantum/core/expressions.py), the compiler emits one of these instead.
 
 var _sounds: Dictionary = {}   # name -> AudioStreamPlayer
+# qg:cursor: where each player points, {player: Vector2}, in scene pixels.
+# raw_cursor is the local pointer before the lockstep (the mouse, or the
+# replay tape's "cursor" events); under lockstep it travels with the input
+# and lands in cursors[p] on every peer; alone it is cursors[player] at once.
+var cursors: Dictionary = {}
+var raw_cursor: Vector2 = Vector2.ZERO
+var tape_cursor = null   # the replay tape's pointer (Vector2), instead of the mouse
 var sounds_played: Array = []  # names, in order — the replay harness reads it
 
 
@@ -58,6 +65,24 @@ static func slice(v, start, end):
 	return (v as Array).slice(s, e)
 
 
+# gd: attributes: properties of the Godot node a tag became, as game.json
+# carries them ({name: {type, value}}), set as they are — nothing is
+# interpreted here; the compiler checked them against Godot's reference.
+static func apply_gd(node: Node, gd) -> void:
+	if gd == null:
+		return
+	for name_ in gd.keys():
+		var entry: Dictionary = gd[name_]
+		var v = entry["value"]
+		match str(entry["type"]):
+			"Vector2": v = Vector2(v[0], v[1])
+			"Vector2i": v = Vector2i(int(v[0]), int(v[1]))
+			"Color": v = Color(v)
+			"int": v = int(v)
+			"float": v = float(v)
+		node.set(name_, v)
+
+
 # Removes a thing from the scene at the end of the tick.
 static func destroy(node) -> void:
 	node = _thing(node)
@@ -83,6 +108,39 @@ static func respawn(node) -> void:
 		node.respawn()
 
 
+# qg:deflect on a flying thing.
+static func deflect_axis(node, axis: String) -> void:
+	node = _thing(node)
+	if node != null and node.has_method("deflect_axis"):
+		node.deflect_axis(axis)
+
+
+static func deflect_to(node, dx: float, dy: float) -> void:
+	node = _thing(node)
+	if node != null and node.has_method("deflect_to"):
+		node.deflect_to(dx, dy)
+
+
+# random(a, b) in an expression: a float in [a, b] from the scene's seeded
+# source, so the same seed gives the same game. `ctx` is the scene script
+# (self in its handlers) or P (a prefab handler): then the current scene's.
+static func random(ctx, a: float, b: float) -> float:
+	var scene = ctx
+	if ctx == null or not ("rng" in ctx):
+		var scenes: Array = Engine.get_main_loop().get_nodes_in_group("q_scene")
+		scene = scenes[0] if scenes.size() > 0 else null
+	if scene == null:
+		return a
+	return scene.rng.randf_range(a, b)
+
+
+# qg:put: a thing or a character moved to a point.
+static func put(node, x: float, y: float) -> void:
+	node = _thing(node)
+	if node != null and node is Node2D:
+		(node as Node2D).position = Vector2(x, y)
+
+
 # Changes a character to one of its states (qg:become).
 static func become(node, state: String) -> void:
 	node = _thing(node)
@@ -97,6 +155,47 @@ static func spawn(scene: Node, prefab: String, at, dx: float, dy: float) -> Node
 		return null
 	var builder = load("res://addons/quantum/scene_builder.gd")
 	return builder.instance(scene.q_game, scene, prefab, (at as Node2D).position + Vector2(dx, dy), true)
+
+
+# qg:spawn at="path": at the start of the scene's path, which an ai="path" thing then follows.
+static func spawn_on_path(scene: Node, prefab: String, path_name: String) -> Node:
+	var paths: Dictionary = scene.q_paths if "q_paths" in scene else {}
+	if not paths.has(path_name):
+		return null
+	var points: Array = paths[path_name]
+	var builder = load("res://addons/quantum/scene_builder.gd")
+	var made = builder.instance(scene.q_game, scene, prefab, Vector2(points[0][0], points[0][1]), true)
+	if made != null and "path_points" in made:
+		made.path_points = points
+	return made
+
+
+# count(tag): how many things of the tag are in the scene (zones are not things).
+static func count(scene: Node, tag: String) -> int:
+	var n := 0
+	for t in scene.get_tree().get_nodes_in_group("q_thing"):
+		if t.get_parent() == scene and t.quantum_tag() == tag and not t.is_queued_for_deletion():
+			n += 1
+	return n
+
+
+# thing_at(tag, x, y): the thing (or zone) of the tag whose box covers the point ("" for any thing), or null.
+static func thing_at(scene: Node, tag: String, x: float, y: float):
+	var point := Vector2(x, y)
+	for t in scene.get_tree().get_nodes_in_group("q_thing"):
+		if t.get_parent() != scene or t.is_queued_for_deletion():
+			continue
+		if tag != "" and t.quantum_tag() != tag:
+			continue
+		var size: Vector2 = t.hitbox_size if "hitbox_size" in t else Vector2(16, 16)
+		if Rect2((t as Node2D).position - size / 2.0, size).has_point(point):
+			return t
+	if tag != "":
+		for z in scene.get_children():
+			if z is Area2D and "tag" in z and z.tag == tag and "hitbox_size" in z:
+				if Rect2((z as Node2D).position - z.hitbox_size / 2.0, z.hitbox_size).has_point(point):
+					return z
+	return null
 
 
 # Replaces a thing with another prefab, in its place (qg:swap).
@@ -237,14 +336,20 @@ func load_sounds(sounds: Dictionary) -> void:
 		var path := ProjectSettings.globalize_path("res://" + src)
 		if src.ends_with(".ogg"):
 			stream = AudioStreamOggVorbis.load_from_file(path)
+			if stream != null:
+				stream.loop = bool(sounds[name_].get("loop", false))
 		elif src.ends_with(".wav"):
 			stream = AudioStreamWAV.load_from_file(path)
+			if stream != null and sounds[name_].get("loop", false):
+				stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+				stream.loop_end = stream.data.size() / max(1, 2 if stream.format == AudioStreamWAV.FORMAT_16_BITS else 1) / max(1, 2 if stream.stereo else 1)
 		if stream == null:
 			push_warning("quantum: cannot load the sound " + src)
 			continue
 		var player := AudioStreamPlayer.new()
 		player.name = name_
 		player.stream = stream
+		apply_gd(player, sounds[name_].get("gd"))
 		add_child(player)
 		_sounds[name_] = player
 
@@ -254,3 +359,11 @@ func play(name_: String) -> void:
 	var player: AudioStreamPlayer = _sounds.get(name_)
 	if player != null:
 		player.play()
+
+
+# qg:stop: the sound is silent (the replay state records it as "-name").
+func stop(name_: String) -> void:
+	sounds_played.append("-" + name_)
+	var player: AudioStreamPlayer = _sounds.get(name_)
+	if player != null:
+		player.stop()

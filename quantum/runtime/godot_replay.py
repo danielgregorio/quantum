@@ -21,7 +21,7 @@ from quantum.runtime.godot_bin import run_godot, script_errors
 
 REPLAY_SCRIPT = Path(__file__).with_name('godot_replay.gd')
 
-Tape = Dict[int, List[Tuple[str, bool]]]
+Tape = Dict[int, List[tuple]]   # tick -> [(action, pressed)] and [('cursor', [x, y])]
 
 
 class ReplayError(RuntimeError):
@@ -35,6 +35,12 @@ def tape_from_holds(holds: Iterable[Tuple[str, int, int]]) -> Tape:
     for action, start, end in holds:
         tape.setdefault(start, []).append((action, True))
         tape.setdefault(end, []).append((action, False))
+    return tape
+
+
+def cursor_at(tape: Tape, tick: int, x: float, y: float) -> Tape:
+    """Adds to the tape: on ``tick`` the player's qg:cursor points at (x, y), as a mouse would."""
+    tape.setdefault(tick, []).append(('cursor', [x, y]))
     return tape
 
 
@@ -68,3 +74,68 @@ def replay(project_dir: Path, ticks: int, tape: Optional[Tape] = None,
         if errors:
             raise ReplayError('; '.join(errors))
         return json.loads(out_path.read_text(encoding='utf-8'))
+
+
+def free_port() -> int:
+    """A TCP/UDP port nobody listens on right now (tests run in parallel)."""
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.bind(('127.0.0.1', 0))
+        return s.getsockname()[1]
+
+
+def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], port: Optional[int] = None,
+                 binary: Optional[Path] = None, timeout: float = 300) -> List[dict]:
+    """Run the project under qg:multiplayer: one Godot per player, on localhost.
+
+    The first tape is player 1's, who hosts; the others join in order. Each
+    tape names the actions as a single-player tape does (``up``, ``jump``):
+    the lockstep turns them into that player's actions, ``delay`` ticks
+    later, on every peer. Returns the state each peer dumped at ``ticks``
+    — the same dictionary on every peer, or the game is not deterministic.
+    """
+    import subprocess
+    import time
+    from quantum.runtime.godot_bin import ensure_godot
+    project_dir = Path(project_dir)
+    binary = Path(binary) if binary else ensure_godot()
+    port = port or free_port()
+    with tempfile.TemporaryDirectory(prefix='quantum-peers-') as tmp:
+        procs = []
+        outs = []
+        for i, tape in enumerate(tapes):
+            tape_path = Path(tmp) / f'tape{i}.json'
+            out_path = Path(tmp) / f'state{i}.json'
+            persist = Path(tmp) / f'persist{i}'
+            persist.mkdir()
+            tape_path.write_text(json.dumps({str(k): [list(e) for e in v] for k, v in (tape or {}).items()}),
+                                 encoding='utf-8')
+            peer_arg = f'--q-host={port}' if i == 0 else f'--q-join=127.0.0.1:{port}'
+            log = open(Path(tmp) / f'log{i}.txt', 'w', encoding='utf-8')
+            procs.append((subprocess.Popen(
+                [str(binary), '--headless', '--path', str(project_dir), '-s', str(REPLAY_SCRIPT), '--',
+                 f'--ticks={ticks}', f'--tape={tape_path}', f'--out={out_path}', f'--persist-dir={persist}',
+                 peer_arg], stdout=log, stderr=subprocess.STDOUT), log))
+            outs.append(out_path)
+            if i == 0:
+                time.sleep(1.0)   # the host listens before anyone joins
+        deadline = time.time() + timeout
+        for proc, log in procs:
+            remaining = max(1.0, deadline - time.time())
+            try:
+                proc.wait(timeout=remaining)
+            except subprocess.TimeoutExpired:
+                for p_, _ in procs:
+                    p_.kill()
+                raise ReplayError(f'a peer did not finish within {timeout}s')
+            log.close()
+        states = []
+        for i, out_path in enumerate(outs):
+            output = (Path(tmp) / f'log{i}.txt').read_text(encoding='utf-8')
+            errors = script_errors(output)
+            if not out_path.is_file():
+                raise ReplayError(f'peer {i + 1} wrote no state' + (': ' + '; '.join(errors) if errors else f'\n{output}'))
+            if errors:
+                raise ReplayError(f'peer {i + 1}: ' + '; '.join(errors))
+            states.append(json.loads(out_path.read_text(encoding='utf-8')))
+        return states

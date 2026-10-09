@@ -17,6 +17,8 @@ var hitbox_size: Vector2 = Vector2(14, 14)
 var facing: Vector2 = Vector2.DOWN
 var animator: Node = null
 var state: String = ""
+var player: int = 1
+var bounds: bool = false
 
 var _handlers: Array = []
 var _hits: Array = []
@@ -30,6 +32,8 @@ var _hit_this_swing: Array = []
 
 
 func setup(spec: Dictionary) -> void:
+	player = int(spec.get("player", 1))
+	bounds = spec.get("bounds") == "scene"
 	speed = float(spec.get("speed", speed))
 	attack_action = str(spec.get("attack_action", "")) if spec.get("attack_action") != null else ""
 	attack_reach = float(spec.get("attack_reach", attack_reach))
@@ -130,29 +134,30 @@ func _fire(h: Dictionary, other: Node) -> bool:
 
 func _physics_process(delta: float) -> void:
 	_ticks += 1
-	var dir := Vector2.ZERO
-	if Input.is_action_pressed("right"):
-		dir.x += 1
-	if Input.is_action_pressed("left"):
-		dir.x -= 1
-	if Input.is_action_pressed("down"):
-		dir.y += 1
-	if Input.is_action_pressed("up"):
-		dir.y -= 1
+	# analog: a stick's strength scales the speed; a key is 1.0
+	var dir := Vector2(Input.get_action_strength(_a("right")) - Input.get_action_strength(_a("left")),
+		Input.get_action_strength(_a("down")) - Input.get_action_strength(_a("up")))
+	if dir.length() > 1.0:
+		dir = dir.normalized()
 	if dir != Vector2.ZERO:
 		facing = dir.normalized()
 		var sprite := get_node_or_null("Sprite")
 		if sprite != null and dir.x != 0:
 			sprite.flip_h = dir.x < 0
-	velocity = dir.normalized() * speed
+	velocity = dir * speed
 	move_and_slide()
+	if bounds and "q_spec" in _scene:
+		var w := float(_scene.q_spec.get("width", 256))
+		var h := float(_scene.q_spec.get("height", 224))
+		position.x = clampf(position.x, hitbox_size.x / 2.0, w - hitbox_size.x / 2.0)
+		position.y = clampf(position.y, hitbox_size.y / 2.0, h - hitbox_size.y / 2.0)
 	_still_touching()
 
 	if _swinging > 0:
 		_swinging -= 1
 		if _swinging == 0:
 			_swing_shape.set_deferred("disabled", true)
-	elif attack_action != "" and Input.is_action_just_pressed(attack_action):
+	elif attack_action != "" and Input.is_action_just_pressed(_a(attack_action)):
 		_swinging = attack_frames
 		_hit_this_swing = []
 		# The swing: `reach` deep in front of the body, and as wide as the
@@ -172,7 +177,32 @@ func _physics_process(delta: float) -> void:
 			Q.play(attack_sound)
 
 	if animator != null:
-		if dir != Vector2.ZERO and animator.has("walk"):
-			animator.play("walk")
+		var sprite := get_node_or_null("Sprite")
+		if dir != Vector2.ZERO:
+			# up and down have their own walk when declared; "walk-up" upside down stands in for down
+			var vertical := absf(dir.y) > absf(dir.x)
+			if vertical and dir.y < 0 and animator.has("walk-up"):
+				animator.play("walk-up")
+				if sprite != null:
+					sprite.flip_v = false
+			elif vertical and dir.y > 0 and animator.has("walk-down"):
+				animator.play("walk-down")
+				if sprite != null:
+					sprite.flip_v = false
+			elif vertical and dir.y > 0 and animator.has("walk-up"):
+				animator.play("walk-up")
+				if sprite != null:
+					sprite.flip_v = true
+			elif animator.has("walk"):
+				animator.play("walk")
+				if sprite != null:
+					sprite.flip_v = false
 		elif animator.has("idle"):
 			animator.play("idle")
+			if sprite != null:
+				sprite.flip_v = false
+
+
+# The input action of this player: "up" for player 1, "p2_up" for player 2.
+func _a(action: String) -> String:
+	return action if player == 1 else "p%d_%s" % [player, action]
