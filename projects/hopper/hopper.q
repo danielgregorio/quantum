@@ -203,21 +203,10 @@
       </q:if>
     </q:function>
 
-    <qg:tilemap tileset="kenney" collision="true">
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,23,23,23,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,23,23,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,23,23,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-23,23,23,23,23,23,23,23,23,23,23,23,0,0,0,23,23,23,23,23,23,23,23,23
-25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25
-25,25,25,25,25,25,25,25,25,25,25,25,0,0,0,25,25,25,25,25,25,25,25,25
-    </qg:tilemap>
+    <!-- The level is drawn in Tiled (levels/level-2.tmx): a decor layer, a ground
+         layer with a collision property, and an object layer whose points place
+         the coins, the walkers and the flag by their class. -->
+    <qg:tilemap tileset="kenney" src="levels/level-2.tmx" />
 
     <qg:character id="player" controller="platformer" sheet="chars" frame="0"
                   x="40" y="160" hitbox="18x22"
@@ -253,12 +242,6 @@
       </qg:on-fall>
     </qg:character>
 
-    <qg:instance prefab="Coin" x="171" y="96" />
-    <qg:instance prefab="Coin" x="261" y="78" />
-    <qg:instance prefab="Coin" x="351" y="42" />
-    <qg:instance prefab="Walker" x="150" y="160" />
-    <qg:instance prefab="Walker" x="380" y="160" />
-    <qg:instance prefab="Flag" x="405" y="171" />
 
     <qg:camera follow="player" bounds="tilemap" />
     <qg:hud position="top-left">

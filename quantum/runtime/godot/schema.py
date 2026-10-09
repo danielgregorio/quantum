@@ -93,9 +93,11 @@ TAGS: Dict[str, Tag] = {
          'seed': Attr('int', 0, doc='the random seed; the same seed gives the same game')},
         parents=('application',)),
     'tilemap': Tag(
-        'The level, as CSV rows of tile numbers: 0 is empty, n is tile n-1 of the tileset.',
+        'The level: CSV rows of tile numbers (0 is empty, n is tile n-1 of the tileset), '
+        'or a Tiled map (src=) whose tile layers draw it and whose object layers place prefabs by class.',
         {'tileset': Attr('ident', required=True),
-         'collision': Attr('bool', False, doc='every tile is solid')},
+         'collision': Attr('bool', False, doc='every tile is solid (a Tiled layer says so with a collision property)'),
+         'src': Attr('str', None, doc='a .tmx, relative to the .q or a folder above it')},
         parents=('scene',), text='the CSV rows'),
     'character': Tag(
         'A body the player moves: a platformer, or a walker on a world map.',

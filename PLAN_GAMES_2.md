@@ -189,7 +189,7 @@ Estimates assume one person full-time; each phase ends green in CI.
   `qg:input` (own keys) does not exist yet — the platformer's actions are
   bound to arrows/WASD/space.
 
-### Phase 2 — Platformer kit and Hopper (3 weeks) — in progress
+### Phase 2 — Platformer kit and Hopper (3 weeks) — done 2026-10-09
 
 Slices, each one green in CI before the next:
 
@@ -214,7 +214,16 @@ Slices, each one green in CI before the next:
   three levels. Learned: a held action in the tape is not "just pressed"
   again — a test that presses on the map must release first; a scene
   entered at tick t runs its first tick at t + 2.
-- [ ] 2d: Tiled `.tmx` levels with object layers that place prefabs.
+- [x] 2d (2026-10-09): `qg:tilemap src="level.tmx"`: tile layers (a
+  `collision` property), object layers placing prefabs by class (points,
+  rectangles, tile objects). One tileset per map, no flipped tiles, CSV
+  only — each refused with a message that says what to change in Tiled.
+  Hopper's level 2 is a `.tmx`.
+
+Phase 2 is done. Of the enemy AIs the plan listed, only `patrol` exists:
+no game needed the others yet (rule 3). What Hopper did not need and the
+language does not have: `qg:input` for own keys, moving platforms,
+one-way platforms, a timer, a boss.
 
 - Kinematic `platformer` controller with the existing retro constants
   (variable jump, coyote frames, rising/falling gravity, terminal velocity).

@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 from quantum.runtime.godot.errors import GameCompileError
 from quantum.runtime.godot.model import Element, Game, Statement, read_game
 from quantum.runtime.godot.expressions import compile_expression, strip_braces
+from quantum.runtime.godot.tiled import read_tmx
 from quantum.runtime.godot.statements import (
     SceneScript, StateVar, compile_function, compile_handler, declare_state, game_state_source,
     is_expression,
@@ -73,7 +74,7 @@ def compile_game(app, output_dir: str, source_dir: Optional[str] = None) -> str:
     base_dir = Path(source_dir) if source_dir else (source.parent if source else Path.cwd())
 
     try:
-        data = _Compiler(game, base_dir).build()
+        data = _Compiler(game, base_dir, source.parent if source and source.parent.is_dir() else None).build()
     except GameCompileError as e:
         if e.file is None:
             e.file = game.source_path
@@ -117,9 +118,11 @@ def _script_name(scene: str) -> str:
 
 
 class _Compiler:
-    def __init__(self, game: Game, base_dir: Path):
+    def __init__(self, game: Game, base_dir: Path, source_dir: Optional[Path] = None):
         self.game = game
         self.base_dir = base_dir
+        # Files are looked for next to the .q first, then from base_dir up.
+        self.search_roots = [d for d in (source_dir, base_dir) if d is not None]
         self.assets: Dict[str, Path] = {}
         self.scripts: Dict[str, str] = {}
 
@@ -172,18 +175,25 @@ class _Compiler:
             'assets': self.assets,
         }
 
-    def _asset(self, rel: str, line: Optional[int]) -> str:
+    def _find(self, rel: str, line: Optional[int]) -> Path:
+        """A file named in the .q: next to it, or in a folder above it."""
         rel = rel.replace('\\', '/').lstrip('/')
-        d = self.base_dir
-        for _ in range(6):
-            candidate = d / rel
-            if candidate.is_file():
-                self.assets[rel] = candidate
-                return rel
-            if d.parent == d:
-                break
-            d = d.parent
-        raise GameCompileError(f'asset not found: {rel} (looked in {self.base_dir} and the folders above it)', line)
+        for root in self.search_roots:
+            d = root
+            for _ in range(6):
+                candidate = d / rel
+                if candidate.is_file():
+                    return candidate
+                if d.parent == d:
+                    break
+                d = d.parent
+        raise GameCompileError(f'file not found: {rel} (looked in {self.base_dir} and the folders above it)', line)
+
+    def _asset(self, rel: str, line: Optional[int]) -> str:
+        """A file copied into the build (an image, a sound); returns its path there."""
+        rel = rel.replace('\\', '/').lstrip('/')
+        self.assets[rel] = self._find(rel, line)
+        return rel
 
     @staticmethod
     def _sheet_exists(name: str, sheets: dict, line: Optional[int]) -> None:
@@ -248,9 +258,26 @@ class _Compiler:
                 if tilemap is not None:
                     raise GameCompileError('a scene has one <qg:tilemap>', el.line)
                 self._sheet_exists(el.get('tileset'), sheets, el.line)
-                tilemap = {'kind': 'tilemap', 'tileset': el.get('tileset'),
-                           'collision': el.get('collision'), 'rows': _csv_rows(el)}
-                nodes.append(tilemap)
+                if el.get('src'):
+                    tmx = read_tmx(self._find(el.get('src'), el.line), el.line)
+                    tile = sheets[el.get('tileset')]['tile']
+                    if (tmx.tile_width, tmx.tile_height) != (tile, tile):
+                        raise GameCompileError(
+                            f'{el.get("src")}: tiles are {tmx.tile_width}x{tmx.tile_height}, the tileset '
+                            f'{el.get("tileset")!r} has {tile}x{tile}', el.line)
+                    layers = [{'name': ly.name, 'rows': ly.rows, 'collision': ly.collision or el.get('collision')}
+                              for ly in tmx.layers]
+                    for obj in tmx.objects:
+                        if obj.prefab not in prefabs:
+                            raise GameCompileError(
+                                f'{el.get("src")}: object {obj.name or obj.prefab!r} has class {obj.prefab!r}, '
+                                f'no qg:prefab of that name (declared: {", ".join(sorted(prefabs)) or "none"})',
+                                el.line)
+                        nodes.append({'kind': 'instance', 'prefab': obj.prefab, 'x': obj.x, 'y': obj.y})
+                else:
+                    layers = [{'name': 'tiles', 'rows': _csv_rows(el), 'collision': el.get('collision')}]
+                tilemap = {'kind': 'tilemap', 'tileset': el.get('tileset'), 'layers': layers}
+                nodes.insert(0, tilemap)
             elif el.tag == 'character':
                 cid = el.get('id')
                 if cid in ids:

@@ -55,9 +55,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
   `qg:text` in the HUD. Then: a `q:set` in `<q:application>` is the game's
   state, kept across scenes (an autoload `G`); `qg:goto-scene`; a world
   map (`qg:character controller="map"`, `qg:map-node`, `qg:map-path
-  requires=`); `qg:on-input` in a scene; `q:call` of a `q:function`.
+  requires=`); `qg:on-input` in a scene; `q:call` of a `q:function`. And
+  `qg:tilemap src="level.tmx"`: a level drawn in Tiled — its tile layers
+  (a `collision` property makes one solid) and its object layers, whose
+  objects place prefabs by their class.
 - `projects/hopper/hopper.q`, the platformer: a world map and three
-  levels. A character that walks and jumps on a tilemap, blocks with a
+  levels (the second drawn in Tiled). A character that walks and jumps on a tilemap, blocks with a
   power-up in them that makes it big (a hit makes it small again), coins,
   walkers to stomp or be hurt by, pits, checkpoints, spikes, a flag at the
   end of each level that opens the next on the map, a game over after

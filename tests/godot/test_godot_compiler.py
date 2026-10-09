@@ -84,7 +84,7 @@ class TestWhatItWrites:
         assert scene['script'] == 'res://scripts/scene_main.gd'
         kinds = [n['kind'] for n in scene['nodes']]
         assert kinds == ['tilemap', 'character', 'instance', 'camera', 'hud']
-        assert scene['nodes'][0]['rows'] == [[0, 0, 0], [23, 23, 23]]
+        assert scene['nodes'][0]['layers'] == [{'name': 'tiles', 'rows': [[0, 0, 0], [23, 23, 23]], 'collision': True}]
         assert scene['nodes'][1]['on_collision'] == [
             {'with': 'coin', 'side': 'any', 'cooldown': 0, 'handler': '_on_player_collision_0'}]
         coin = data['prefabs']['Coin']
@@ -396,6 +396,91 @@ class TestScenesMapAndGameState:
         assert '<q:call function="boom">: no q:function of that name' in e.message
 
 
+TMX = '''<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" orientation="orthogonal" width="3" height="2" tilewidth="18" tileheight="18">
+ <tileset firstgid="1" name="kenney" tilewidth="18" tileheight="18" tilecount="180" columns="20">
+  <image source="x.png" width="360" height="162"/>
+ </tileset>
+ <layer id="1" name="decor" width="3" height="2">
+  <data encoding="csv">
+0,11,0,
+0,0,0
+</data>
+ </layer>
+ <layer id="2" name="ground" width="3" height="2">
+  <properties><property name="collision" type="bool" value="true"/></properties>
+  <data encoding="csv">
+0,0,0,
+23,23,23
+</data>
+ </layer>
+ <objectgroup id="3" name="things">
+  <object id="1" name="a" class="Coin" x="30" y="10"><point/></object>
+  <object id="2" type="Coin" x="10" y="10" width="20" height="10"/>
+  <object id="3" name="Coin" gid="5" x="40" y="36" width="18" height="18"/>
+ </objectgroup>
+</map>
+'''
+
+
+class TestTiledMaps:
+    def scene(self, tmp_path, tmx=TMX, extra=''):
+        (tmp_path / 'level.tmx').write_text(tmx, encoding='utf-8')
+        return game(f'  <qg:scene name="main">\n    <qg:tilemap tileset="k" src="level.tmx" {extra}/>\n  </qg:scene>\n')
+
+    def test_layers_and_objects(self, tmp_path):
+        out = build(tmp_path, self.scene(tmp_path))
+        scene = json.loads((out / 'game.json').read_text())['scenes']['main']
+        tilemap = scene['nodes'][0]
+        assert tilemap['layers'] == [
+            {'name': 'decor', 'rows': [[0, 11, 0], [0, 0, 0]], 'collision': False},
+            {'name': 'ground', 'rows': [[0, 0, 0], [23, 23, 23]], 'collision': True},
+        ]
+        placed = [(n['prefab'], n['x'], n['y']) for n in scene['nodes'][1:]]
+        assert placed == [('Coin', 30.0, 10.0),      # a point
+                          ('Coin', 20.0, 15.0),      # a rectangle, at its centre
+                          ('Coin', 49.0, 27.0)]      # a tile, whose y is its bottom edge
+
+    def test_collision_on_the_tag_makes_every_layer_solid(self, tmp_path):
+        out = build(tmp_path, self.scene(tmp_path, extra='collision="true" '))
+        scene = json.loads((out / 'game.json').read_text())['scenes']['main']
+        assert [ly['collision'] for ly in scene['nodes'][0]['layers']] == [True, True]
+
+    def test_an_object_whose_class_is_no_prefab(self, tmp_path):
+        tmx = TMX.replace('class="Coin"', 'class="Gem"')
+        e = refuse(tmp_path, self.scene(tmp_path, tmx))
+        assert "level.tmx: object 'a' has class 'Gem', no qg:prefab of that name" in e.message
+
+    def test_a_flipped_tile(self, tmp_path):
+        tmx = TMX.replace('23,23,23', '23,2147483671,23')
+        e = refuse(tmp_path, self.scene(tmp_path, tmx))
+        assert "layer 'ground' has a flipped or rotated tile" in e.message
+
+    def test_a_layer_not_saved_as_csv(self, tmp_path):
+        tmx = TMX.replace('<data encoding="csv">\n0,11,0,\n0,0,0\n</data>', '<data encoding="base64">AAAA</data>')
+        e = refuse(tmp_path, self.scene(tmp_path, tmx))
+        assert "layer 'decor' must be saved as CSV" in e.message
+
+    def test_two_tilesets(self, tmp_path):
+        tmx = TMX.replace('</tileset>', '</tileset><tileset firstgid="181" name="b" tilewidth="18" tileheight="18"/>')
+        e = refuse(tmp_path, self.scene(tmp_path, tmx))
+        assert 'one tileset per map (2 found)' in e.message
+
+    def test_tile_size_must_match_the_tileset(self, tmp_path):
+        tmx = TMX.replace('tilewidth="18" tileheight="18">\n <tileset', 'tilewidth="16" tileheight="16">\n <tileset')
+        e = refuse(tmp_path, self.scene(tmp_path, tmx))
+        assert "tiles are 16x16, the tileset 'k' has 18x18" in e.message
+
+    def test_src_or_rows_not_both(self, tmp_path):
+        (tmp_path / 'level.tmx').write_text(TMX, encoding='utf-8')
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:tilemap tileset="k" src="level.tmx">\n1\n</qg:tilemap></qg:scene>\n'))
+        assert 'has src= or the CSV rows, not both' in e.message
+
+    def test_a_missing_map(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:tilemap tileset="k" src="levels/none.tmx" /></qg:scene>\n'))
+        assert 'file not found: levels/none.tmx' in e.message
+
+
 class TestWhatItRefuses:
     def test_an_unknown_tag_with_its_line(self, tmp_path):
         e = refuse(tmp_path, game('  <qg:scene name="main">\n    <qg:sprite id="x" />\n  </qg:scene>\n'))
@@ -463,7 +548,7 @@ class TestWhatItRefuses:
         e = refuse(tmp_path, '<q:application id="t" type="game">\n'
                              '  <qg:tileset name="k" src="art/none.png" tile="18" />\n'
                              '  <qg:scene name="main" />\n</q:application>\n')
-        assert 'asset not found: art/none.png' in e.message
+        assert 'file not found: art/none.png' in e.message
         assert e.line == 2
 
     def test_a_ragged_tilemap(self, tmp_path):

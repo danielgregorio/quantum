@@ -214,6 +214,13 @@ def test_reaching_the_flag_wins_the_level_and_opens_the_next_on_the_map(godot, h
     assert entered['level-2']['game']['map_at'] == 'level-2'
 
 
+def test_level_two_is_a_tiled_map_whose_objects_are_the_things(godot, hopper):
+    entered = replay(hopper, 470, level(TO_THE_FLAG, [('right', 360, 362), ('jump', 460, 462)]), binary=godot)
+    s = entered['level-2']
+    assert s['things'] == {'coin': 3, 'enemy': 2, 'flag': 1}
+    assert s['nodes']['player']['x'] == 40.0
+
+
 def test_three_deaths_are_game_over_and_jump_starts_again(godot, hopper):
     over = replay(hopper, 500, level([('right', 10, 500)]), binary=godot)
     assert list(over) == ['game-over']

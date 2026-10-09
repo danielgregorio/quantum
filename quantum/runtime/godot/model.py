@@ -192,6 +192,8 @@ def _read_element(element: ET.Element, parent_tag: str) -> Element:
         node.text = (element.text or '').strip()
         if len(element):
             raise GameCompileError(f'<qg:{tag}> holds {spec.text}, not tags', line)
+        if node.text and node.attrs.get('src'):
+            raise GameCompileError(f'<qg:{tag}> has src= or {spec.text}, not both', line)
         return node
     _no_raw_text(element, f'<qg:{tag}>')
     child_parent = 'handler' if tag in ('on-collision', 'on-fall', 'on-input') else tag
