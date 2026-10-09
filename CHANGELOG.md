@@ -111,6 +111,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
   life, the spikes send it back to the checkpoint, the flag wins the level
   and opens the next on the map, three deaths are game over and jump
   starts again, and the same tape gives the same game.
+- `docs/targets/games.md`, the game language reference, generated from the
+  compiler's schema and the three games by `scripts/generate-games-reference.py`
+  (a test fails when it is stale); `scripts/export-games.py` exports the
+  games for the web with Godot's export templates, when they are installed.
 - Laboratory: the real engine checks and replays a game, headless.
   `quantum run game.q --check` opens the built Godot project and fails on
   any script error (Godot exits 0 either way; the check reads its output).

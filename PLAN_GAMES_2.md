@@ -1,8 +1,10 @@
 # Games 2 — plan for a complete declarative game engine
 
-> Status: proposal (2026-10-09). Laboratory tier. This is the design the
-> roadmap lists as "Games 2: games as a deterministic declarative simulation".
-> Nothing here carries a stability promise until it ships.
+> Status: done (2026-10-09, all five phases, on the branch `plan/games-2`).
+> Laboratory tier. This is the design the roadmap listed as "Games 2: games
+> as a deterministic declarative simulation". Nothing here carries a
+> stability promise. The record of what was built and learned is in each
+> phase below; the closing notes are at the end.
 
 ## The decision
 
@@ -275,7 +277,19 @@ Core attribute the parser refuses, so the game's word is `saved=`.
   high score persisted (`qg:persistent`).
 - Drift: 3 waves, 1 boss with 2 phases, high-score table.
 
-### Phase 5 — Document and ship (1 week)
+### Phase 5 — Document and ship (1 week) — done 2026-10-09
+
+What was done: `docs/targets/games.md` generated from the schema with the
+three games whole (`scripts/generate-games-reference.py`, a test keeps it
+current), in the site's Build Targets section; the roadmap row, the
+Laboratory row of `SUPPORT_TIERS.md`, the CHANGELOG. What was adapted:
+the web exports are not built in CI — Godot's export templates are 1.2 GB
+per version, so `scripts/export-games.py` builds them for whoever has the
+templates installed, and the site does not embed them yet. The three
+"build this game" tutorials became the three games on the reference page,
+whole and replayed in CI: a tutorial that could rot was not worth more
+than a game that cannot.
+
 
 - (The PixiJS backend was removed before phase 0, with its tests, the
   committed HTML builds and the web pages that framed them. `engine="2d"`
@@ -318,11 +332,39 @@ Core attribute the parser refuses, so the game's word is `saved=`.
 | Three games is a lot of content | levels are data (Tiled); the plan sizes them small (3 levels, 6 rooms, 3 waves) |
 | Playground cannot run games (Pyodide has no Godot) | out of scope; the site embeds the web exports instead |
 
-## Open questions for the author
+## Open questions, answered along the way
 
-- Name of the file format: is `game.json` fine, or a Godot `.tres` resource so
-  the editor shows it natively? (`.json` is easier to test from Python.)
-- Should the three games live in `projects/` (today's convention) or in a
-  new `games/`?
-- Keep `qg:` as the prefix, or move to `game:`? (Cosmetic; decide before the
-  docs are generated.)
+- `game.json`: kept; it is what the runtime reads and what the tests assert on.
+- The games live in `projects/` (today's convention).
+- `qg:` stays the prefix.
+
+## Closing notes
+
+What exists now: `quantum/runtime/godot/` (schema, model, expressions,
+statements, compiler, tiled: ~1.7k lines of Python), `addons/quantum/` (the
+runtime: ~1.4k lines of GDScript in 16 files), 36 tags, three games written
+in the tags and nothing else (`projects/hopper`, `keep`, `drift`), 180+
+tests in `tests/godot/` of which ~60 replay the games in the real engine,
+and a generated reference page. The old engine (two backends, 10k lines,
+JavaScript in every game) is gone.
+
+What the plan got right: writing each game before its features — every
+tag exists because a game needed it, and the "what Hopper/Keep/Drift did
+not need" lists are the tags that do not exist. Replay as the test: every
+mechanic is a number a tape reproduces (a 64 px jump, a bat that parks at
+x=143.5), and tuning happened against those numbers, not by eye. No
+escape hatch: not once did a game need script.
+
+What the plan got wrong: the estimates (eleven weeks of calendar for one
+person; the work was done in one long session, because the engine does
+the heavy lifting and the compiler is thin); the expression conformance
+table (a few dozen cases, not two hundred — the games exercised what they
+exercised); the web exports in CI (1.2 GB of templates; `scripts/
+export-games.py` for whoever has them); the tutorials (the games on the
+reference page, whole and replayed, do that job).
+
+What remains open, for a game that needs it: `qg:input` for own keys,
+moving and one-way platforms, timers in a scene, `q:loop` over a
+dictionary and slices in expressions, items (non-moving prefabs) with
+handlers of their own, cross-platform determinism (Linux is what CI
+replays on), and the web exports on the site.

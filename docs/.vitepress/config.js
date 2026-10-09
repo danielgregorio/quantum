@@ -166,7 +166,8 @@ export default defineConfig({
         {
           text: 'Build Targets',
           items: [
-            { text: 'Desktop (quantum desktop)', link: '/targets/desktop' }
+            { text: 'Desktop (quantum desktop)', link: '/targets/desktop' },
+            { text: 'Games (Laboratory)', link: '/targets/games' }
           ]
         }
       ],
