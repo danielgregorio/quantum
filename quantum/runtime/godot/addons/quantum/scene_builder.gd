@@ -21,6 +21,7 @@ const Hud := preload("res://addons/quantum/hud.gd")
 const Tilemap := preload("res://addons/quantum/tilemap.gd")
 const Zone := preload("res://addons/quantum/zone.gd")
 const Cursor := preload("res://addons/quantum/cursor.gd")
+const FighterBody := preload("res://addons/quantum/fighter_body.gd")
 
 static var _textures: Dictionary = {}
 
@@ -206,6 +207,8 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 		body = TopdownBody.new()
 	elif node_spec["controller"] == "ship":
 		body = ShipBody.new()
+	elif node_spec["controller"] == "fighter":
+		body = FighterBody.new()
 	else:
 		body = PlatformerBody.new()
 	body.name = node_spec["id"]

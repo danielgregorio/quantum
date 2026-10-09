@@ -27,7 +27,8 @@ OUT = REPO / 'quantum' / 'runtime' / 'godot' / 'godot_properties.json'
 # The classes the runtime instantiates for a tag (scene_builder.gd).
 CLASSES = ['Node', 'CanvasItem', 'Node2D', 'Sprite2D', 'CollisionObject2D', 'PhysicsBody2D',
            'CharacterBody2D', 'StaticBody2D', 'AnimatableBody2D', 'Area2D', 'Camera2D', 'TileMapLayer',
-           'AudioStreamPlayer', 'CanvasLayer', 'Control', 'Label', 'CPUParticles2D', 'Line2D']
+           'AudioStreamPlayer', 'CanvasLayer', 'Control', 'Label', 'CPUParticles2D', 'Line2D', 'Range',
+           'ProgressBar']
 TYPES = {'float', 'int', 'bool', 'String', 'Vector2', 'Vector2i', 'Color', 'StringName'}
 # What the runtime sets from the language's own attributes (x=/y=, the
 # controllers' velocity, the fixed collision layers, node names): a gd:

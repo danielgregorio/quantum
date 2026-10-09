@@ -37,6 +37,22 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			push_warning("quantum: cannot load the font " + str(spec["font"]))
 	var size := int(spec.get("size", 8))
 	for item in spec.get("items", []):
+		if item["kind"] == "bar":
+			var bar := ProgressBar.new()
+			bar.show_percentage = false
+			bar.max_value = float(item.get("max", 100))
+			bar.custom_minimum_size = Vector2(int(item.get("width", 100)), int(item.get("height", 10)))
+			bar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			var fill := StyleBoxFlat.new()
+			fill.bg_color = Color(str(item.get("color", "#e04040")))
+			bar.add_theme_stylebox_override("fill", fill)
+			var back := StyleBoxFlat.new()
+			back.bg_color = Color(0, 0, 0, 0.5)
+			bar.add_theme_stylebox_override("background", back)
+			Q.apply_gd(bar, item.get("gd"))
+			box.add_child(bar)
+			_labels.append({"bar": bar, "bind": item["bind"]})
+			continue
 		if item["kind"] == "counter" or item["kind"] == "text":
 			var label := Label.new()
 			label.add_theme_font_size_override("font_size", int(item["size"]) if item.get("size") != null else size)
@@ -55,8 +71,21 @@ func _process(_delta: float) -> void:
 	_refresh()
 
 
+func _bound(bind: String):
+	if "." in bind:
+		var parts: PackedStringArray = bind.split(".", true, 1)
+		var node: Node = _scene.get_node_or_null(parts[0])
+		return node.get(parts[1]) if node != null else null
+	var value = _scene.get(bind)
+	return value if value != null else G.get(bind)
+
+
 func _refresh() -> void:
 	for entry in _labels:
+		if entry.has("bar"):
+			var v = _bound(entry["bind"])
+			entry["bar"].value = float(v) if v != null else 0.0
+			continue
 		var value = _scene.get(entry["bind"])
 		if value == null:
 			value = G.get(entry["bind"])

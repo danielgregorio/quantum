@@ -158,8 +158,10 @@ TAGS: Dict[str, Tag] = {
     'character': Tag(
         'A body the player moves: a platformer, or a walker on a world map.',
         {'id': Attr('ident', required=True),
-         'controller': Attr('enum:platformer|map|topdown|ship', required=True),
+         'controller': Attr('enum:platformer|map|topdown|ship|fighter', required=True),
          'player': Attr('int', 1, doc='whose keys move it (qg:input player=); 1 has the defaults'),
+         'health': Attr('int', 100, doc='fighter: hits it takes; at 0 it is KO and qg:on-ko runs'),
+         'facing': Attr('enum:left|right', 'right', doc='fighter: where it looks at first'),
          'bounds': Attr('enum:scene|none', None, doc='kept inside the scene: a ship unless none, a topdown '
                                                     'character when scene'),
          'axis': Attr('enum:both|vertical|horizontal', 'both', doc='ship: which way it can move'),
@@ -313,6 +315,32 @@ TAGS: Dict[str, Tag] = {
         'What happens when this character falls below the tilemap. Holds actions and statements.',
         {},
         parents=('character',)),
+    'move': Tag(
+        'A fighter\'s attack, on an action: an animation with one active frame, in which a box of reach= '
+        'at at= (in front, in the facing direction) is tested against the opponent once. A hit takes '
+        'damage=, stuns for stun= ticks and pushes push= pixels; blocked (the opponent holding away), it '
+        'takes no damage and half the rest.',
+        {'name': Attr('ident', required=True),
+         'action': Attr('ident', required=True, doc='a default action or one a qg:input declares'),
+         'frames': Attr('str', required=True, doc='comma-separated frame numbers'),
+         'fps': Attr('float', 12.0),
+         'active': Attr('int', 1, doc='which frame (0-based) hits'),
+         'reach': Attr('size', required=True, doc='the hit box, WxH'),
+         'at': Attr('str', '0,0', doc='the hit box\'s centre from the body\'s, dx,dy; dx is forward'),
+         'damage': Attr('int', 5), 'stun': Attr('int', 12), 'push': Attr('float', 40.0)},
+        parents=('character',)),
+    'on-ko': Tag(
+        'What happens when this fighter\'s health reaches 0. Holds actions and statements; `me` is the loser, '
+        '`other` the winner.',
+        {},
+        parents=('character',)),
+    'bar': Tag(
+        'A bar in the HUD: a number against its maximum — a q:set, or a fighter\'s health as `id.health`.',
+        {'bind': Attr('str', required=True, doc='a q:set of the scene or the game, or <character id>.health'),
+         'max': Attr('float', 100.0),
+         'width': Attr('int', 100), 'height': Attr('int', 10),
+         'color': Attr('color', '#e04040')},
+        parents=('hud',)),
     # actions
     'destroy': Tag(
         'Removes a thing from the scene.',
@@ -334,7 +362,7 @@ TAGS: Dict[str, Tag] = {
     'respawn': Tag(
         'Puts a character back at its start or its last checkpoint, still; a thing back where it was '
         'placed, with its first heading and speed.',
-        {'target': Attr('enum:me|other', 'me')},
+        {'target': Attr('ident', 'me', doc='me, other, or a character of the scene by id')},
         parents=('handler',)),
     'deflect': Tag(
         'Changes where a flying thing (ai="fly") goes: flips one axis of its heading, or sets the heading '

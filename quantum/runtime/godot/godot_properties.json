@@ -993,6 +993,56 @@
     "input_pickable": "bool"
    }
   },
+  "ProgressBar": {
+   "inherits": "Range",
+   "members": [
+    "editor_preview_indeterminate",
+    "fill_mode",
+    "indeterminate",
+    "show_percentage"
+   ],
+   "properties": {
+    "editor_preview_indeterminate": "bool",
+    "fill_mode": "int",
+    "indeterminate": "bool",
+    "show_percentage": "bool"
+   }
+  },
+  "Range": {
+   "inherits": "Control",
+   "members": [
+    "_value_changed",
+    "allow_greater",
+    "allow_lesser",
+    "changed",
+    "exp_edit",
+    "max_value",
+    "min_value",
+    "page",
+    "ratio",
+    "rounded",
+    "set_value_no_signal",
+    "share",
+    "size_flags_vertical",
+    "step",
+    "unshare",
+    "value",
+    "value_changed"
+   ],
+   "properties": {
+    "allow_greater": "bool",
+    "allow_lesser": "bool",
+    "exp_edit": "bool",
+    "max_value": "float",
+    "min_value": "float",
+    "page": "float",
+    "ratio": "float",
+    "rounded": "bool",
+    "size_flags_vertical": "int",
+    "step": "float",
+    "value": "float"
+   }
+  },
   "Sprite2D": {
    "inherits": "Node2D",
    "members": [

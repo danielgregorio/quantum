@@ -38,6 +38,9 @@ GAMES = [
     ('Towers', 'projects/towers/towers.q', 'a tower defense transcribed from an MIT Godot template: a cursor, '
      'turrets that shoot the nearest dino, dinos down a path in waves, gold and a base; two players over the '
      'network (projects/towers/README.md)'),
+    ('Arena', 'projects/arena/arena.q', 'a one-on-one fighting game: moves with frame data, blocking, hit stun, '
+     'health bars, rounds on a clock; two players over the network, which is the fighting games\' own netcode '
+     '(projects/arena/README.md)'),
 ]
 
 INTRO = f'''---
@@ -215,13 +218,14 @@ def build() -> str:
     parts = [INTRO]
     groups = [
         ('What a game is made of', 'Declared once, in `q:application`.',
-         ['tileset', 'spritesheet', 'input', 'multiplayer', 'sound', 'prefab', 'animation', 'state', 'scene']),
+         ['tileset', 'spritesheet', 'input', 'multiplayer', 'sound', 'prefab', 'animation', 'state', 'move',
+          'scene']),
         ('What a scene holds', 'The level, the character, the things placed in it, and what the screen shows.',
          ['tilemap', 'character', 'instance', 'spawner', 'zone', 'sprite', 'path', 'cursor', 'exit', 'map-node',
-          'map-path', 'camera', 'hud', 'counter', 'text']),
+          'map-path', 'camera', 'hud', 'counter', 'text', 'bar']),
         ('Handlers', 'Where the logic goes: actions and statements, with `me` and `other` '
          '(`cursor` and `other` in qg:on-select).',
-         ['on-collision', 'on-hit', 'on-fall', 'on-input', 'on-select', 'on-damage', 'on-death']),
+         ['on-collision', 'on-hit', 'on-fall', 'on-ko', 'on-input', 'on-select', 'on-damage', 'on-death']),
         ('Actions', 'What a handler can do, besides `q:set`, `q:if`, `q:loop`, `q:call` and `q:return`.',
          list(ACTIONS)),
     ]

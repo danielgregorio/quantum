@@ -59,8 +59,11 @@ class SceneScript:
     scenes_used: List[tuple] = field(default_factory=list)    # (name, line) from goto-scene
     paths_used: List[tuple] = field(default_factory=list)     # (name, line) from spawn at="path"
 
+    node_ids: List[str] = field(default_factory=list)   # the scene's characters, by id
+
     def scope(self) -> Scope:
-        return Scope(self.state.keys(), functions=self.function_names, game_names=self.game_state.keys())
+        return Scope(self.state.keys(), functions=self.function_names, game_names=self.game_state.keys(),
+                     node_ids=self.node_ids)
 
     enter: List[Node] = field(default_factory=list)   # statements directly in the scene: run on enter
 
@@ -245,7 +248,10 @@ def _compile_node(node: Node, scope: Scope, script: SceneScript, depth: int) -> 
 def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     target = el.get('target')
     if target is not None and not scope.has(target):
-        raise GameCompileError(f'<qg:{el.tag} target="{target}"> outside a handler that has {target!r}', el.line)
+        raise GameCompileError(
+            f'<qg:{el.tag} target="{target}">: not me/other of this handler nor a character of the scene', el.line)
+    if target is not None:
+        target = scope.reference(target)
     if el.tag == 'destroy':
         return f'Q.destroy({target})'
     if el.tag == 'bounce':

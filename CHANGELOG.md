@@ -27,6 +27,15 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: a seventh game, `projects/arena/arena.q` — a one-on-one
+  fighting game (`projects/arena/README.md`), two players over the network.
+  What it made the language grow: `controller="fighter"` (walk, jump,
+  crouch, block by holding away, hit stun and push back, KO) with
+  `health=` and `facing=`; `qg:move` — an attack on an action with frame
+  data: `frames`, `active`, `reach`, `at`, `damage`, `stun`, `push`;
+  `qg:on-ko`; `qg:bar` in the HUD bound to a q:set or a fighter's
+  `id.health`; a character's id as a name in its scene's expressions
+  (`p1.health`) and as an action target (`qg:respawn target="p1"`).
 - Laboratory: a sixth game, `projects/towers/towers.q` — the MIT "Godot 4
   Tower Defense Template" transcribed (`projects/towers/README.md` maps it),
   playable by two over the network. What it made the language grow: named

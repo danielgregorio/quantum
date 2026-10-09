@@ -311,6 +311,8 @@ class _Compiler:
         name = scene.get('name')
         script = SceneScript(name, game_state=self.game_state)
         self._states_checked: list = []
+        # the characters, by id: names in the scene's expressions, targets of its actions
+        script.node_ids = [c.get('id') for c in scene.find_all('character')]
         # 1. state and functions first: handlers refer to them
         for node in scene.children:
             if isinstance(node, Statement) and node.kind == 'set':
@@ -508,6 +510,35 @@ class _Compiler:
                 if el.get('attack-sound') and el.get('attack-sound') not in self.sounds:
                     raise GameCompileError(
                         f'attack-sound="{el.get("attack-sound")}": no qg:sound of that name', el.line)
+                moves = []
+                for m in el.find_all('move'):
+                    if el.get('controller') != 'fighter':
+                        raise GameCompileError('<qg:move> is for controller="fighter"', m.line)
+                    if m.get('action') not in self.actions:
+                        raise GameCompileError(
+                            f'<qg:move action="{m.get("action")}">: no such action (a qg:input declares it)', m.line)
+                    try:
+                        frames = [int(f.strip()) for f in str(m.get('frames')).split(',') if f.strip()]
+                        at = [float(v) for v in str(m.get('at')).split(',')]
+                        if len(at) != 2:
+                            raise ValueError
+                    except ValueError:
+                        raise GameCompileError('<qg:move>: frames= are frame numbers, at= is dx,dy', m.line)
+                    if not frames or not 0 <= m.get('active') < len(frames):
+                        raise GameCompileError(f'<qg:move active="{m.get("active")}">: a frame index of frames=', m.line)
+                    if any(mv['name'] == m.get('name') for mv in moves):
+                        raise GameCompileError(f'two moves named {m.get("name")!r}', m.line)
+                    moves.append({'name': m.get('name'), 'action': m.get('action'), 'frames': frames,
+                                  'fps': m.get('fps'), 'active': m.get('active'), 'reach': list(m.get('reach')),
+                                  'at': at, 'damage': m.get('damage'), 'stun': m.get('stun'), 'push': m.get('push')})
+                on_ko = None
+                kos = el.find_all('on-ko')
+                if kos and el.get('controller') != 'fighter':
+                    raise GameCompileError('<qg:on-ko> is for controller="fighter"', kos[0].line)
+                if len(kos) > 1:
+                    raise GameCompileError('a fighter has one <qg:on-ko>', kos[1].line)
+                if kos:
+                    on_ko = compile_handler(script, f'_on_{_ident(cid)}_ko', kos[0].children, kos[0].line)
                 on_fall = None
                 falls = el.find_all('on-fall')
                 if len(falls) > 1:
@@ -570,6 +601,7 @@ class _Compiler:
                     'animations': _animations(el),
                     'states': states, 'initial_state': initial_state,
                     'on_collision': handlers, 'on_hit': hits, 'on_fall': on_fall,
+                    'health': el.get('health'), 'facing': el.get('facing'), 'moves': moves, 'on_ko': on_ko,
                 })
                 self._node_elements.append(el)
             elif el.tag == 'instance':
@@ -591,6 +623,19 @@ class _Compiler:
             elif el.tag == 'hud':
                 items = []
                 for c in el.children:
+                    if isinstance(c, Element) and c.tag == 'bar':
+                        bind = str(c.get('bind'))
+                        if '.' in bind:
+                            node, prop = bind.split('.', 1)
+                            if node not in ids or prop != 'health':
+                                raise GameCompileError(
+                                    f'<qg:bar bind="{bind}">: <character id>.health of a fighter of this scene', c.line)
+                        elif bind not in script.state and bind not in self.game_state:
+                            raise GameCompileError(f'<qg:bar bind="{bind}">: no q:set of that name', c.line)
+                        items.append({'kind': 'bar', 'bind': bind, 'max': c.get('max'), 'width': c.get('width'),
+                                      'height': c.get('height'), 'color': c.get('color')})
+                        gdprops.attach(items[-1], 'ProgressBar', c.gd, '<qg:bar>', c.line)
+                        continue
                     if isinstance(c, Element) and c.tag in ('counter', 'text'):
                         if c.get('bind') not in script.state and c.get('bind') not in self.game_state:
                             raise GameCompileError(
@@ -600,7 +645,7 @@ class _Compiler:
                                       'size': c.get('size')})
                         gdprops.attach(items[-1], 'Label', c.gd, f'<qg:{c.tag}>', c.line)
                     else:
-                        raise GameCompileError('<qg:hud> holds qg:counter and qg:text', getattr(c, 'line', el.line))
+                        raise GameCompileError('<qg:hud> holds qg:counter, qg:text and qg:bar', getattr(c, 'line', el.line))
                 font = self._asset(el.get('font'), el.line) if el.get('font') else None
                 nodes.append({'kind': 'hud', 'position': el.get('position'), 'items': items,
                               'font': font, 'size': el.get('size')})

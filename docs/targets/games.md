@@ -212,6 +212,25 @@ A form of a character or a prefab (small, big; calm, angry): hitbox, frame, anim
 
 Goes inside: `qg:character`, `qg:prefab`.
 
+### `qg:move`
+
+A fighter's attack, on an action: an animation with one active frame, in which a box of reach= at at= (in front, in the facing direction) is tested against the opponent once. A hit takes damage=, stuns for stun= ticks and pushes push= pixels; blocked (the opponent holding away), it takes no damage and half the rest.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required |  |
+| `action` | a name | required | a default action or one a qg:input declares |
+| `frames` | text | required | comma-separated frame numbers |
+| `fps` | number | `12.0` |  |
+| `active` | integer | `1` | which frame (0-based) hits |
+| `reach` | `WxH` pixels | required | the hit box, WxH |
+| `at` | text | `0,0` | the hit box's centre from the body's, dx,dy; dx is forward |
+| `damage` | integer | `5` |  |
+| `stun` | integer | `12` |  |
+| `push` | number | `40.0` |  |
+
+Goes inside: `qg:character`.
+
 ### `qg:scene`
 
 A screen of the game. The first one is where the game starts.
@@ -251,8 +270,10 @@ A body the player moves: a platformer, or a walker on a world map.
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `id` | a name | required |  |
-| `controller` | `platformer` / `map` / `topdown` / `ship` | required |  |
+| `controller` | `platformer` / `map` / `topdown` / `ship` / `fighter` | required |  |
 | `player` | integer | `1` | whose keys move it (qg:input player=); 1 has the defaults |
+| `health` | integer | `100` | fighter: hits it takes; at 0 it is KO and qg:on-ko runs |
+| `facing` | `left` / `right` | `right` | fighter: where it looks at first |
 | `bounds` | `scene` / `none` |  | kept inside the scene: a ship unless none, a topdown character when scene |
 | `axis` | `both` / `vertical` / `horizontal` | `both` | ship: which way it can move |
 | `fire-action` | `jump` |  | ship: the action that shoots |
@@ -454,6 +475,20 @@ A string from the scene state, in the HUD.
 
 Goes inside: `qg:hud`.
 
+### `qg:bar`
+
+A bar in the HUD: a number against its maximum — a q:set, or a fighter's health as `id.health`.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `bind` | text | required | a q:set of the scene or the game, or <character id>.health |
+| `max` | number | `100.0` |  |
+| `width` | integer | `100` |  |
+| `height` | integer | `10` |  |
+| `color` | `#rrggbb` | `#e04040` |  |
+
+Goes inside: `qg:hud`.
+
 ## Handlers
 
 Where the logic goes: actions and statements, with `me` and `other` (`cursor` and `other` in qg:on-select).
@@ -483,6 +518,12 @@ Goes inside: `qg:character`.
 ### `qg:on-fall`
 
 What happens when this character falls below the tilemap. Holds actions and statements.
+
+Goes inside: `qg:character`.
+
+### `qg:on-ko`
+
+What happens when this fighter's health reaches 0. Holds actions and statements; `me` is the loser, `other` the winner.
 
 Goes inside: `qg:character`.
 
@@ -563,7 +604,7 @@ Puts a character back at its start or its last checkpoint, still; a thing back w
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `target` | `me` / `other` | `me` |  |
+| `target` | a name | `me` | me, other, or a character of the scene by id |
 
 Goes inside: a handler.
 
@@ -721,6 +762,7 @@ second game, it is a `qg:` attribute waiting to be named.
 
 | Node | Tags | Properties |
 |---|---|---|
+| ProgressBar | `qg:bar` | 67 |
 | Camera2D | `qg:camera` | 57 |
 | CharacterBody2D | `qg:character`, a thing prefab and its instances | 48 |
 | Label | `qg:counter`, `qg:text` | 71 |
@@ -2078,6 +2120,146 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="message" value="The base fell. Press space to try again." />
     <qg:hud position="center" size="40"><qg:text bind="message" /><qg:counter bind="wave" label="Reached wave" /></qg:hud>
     <qg:on-input action="jump"><qg:goto-scene name="map" /></qg:on-input>
+  </qg:scene>
+
+</q:application>
+```
+
+### Arena
+
+`projects/arena/arena.q` — a one-on-one fighting game: moves with frame data, blocking, hit stun, health bars, rounds on a clock; two players over the network, which is the fighting games' own netcode (projects/arena/README.md).
+
+```xml
+<q:application id="arena" type="game">
+
+  <!-- Arena: a one-on-one fighting game in the shape of the arcade classics —
+       two fighters, walk, jump, crouch, block, a punch and a kick with frame
+       data, best of three rounds on a clock — written to see what a fighting
+       game asks of the language, and played by two over the network in
+       lockstep, which is the fighting games' own netcode. The sprites are
+       placeholders drawn for the repository (assets/LICENSE.md). -->
+
+  <q:set name="wins_1" value="0" type="number" />
+  <q:set name="wins_2" value="0" type="number" />
+
+  <qg:spritesheet name="red" src="assets/red.png" tile="64x96" />
+  <qg:spritesheet name="blue" src="assets/blue.png" tile="64x96" />
+  <qg:spritesheet name="stage" src="assets/stage.png" tile="640x360" />
+
+  <!-- Player 1: A/D, W to jump, S to crouch, J punch, K kick. Player 2 on the
+       same keyboard: the arrows, . punch, / kick. Over the network each peer
+       is one player on player 1's keys. -->
+  <qg:input action="jump" keys="W, Space, JoyA" />
+  <qg:input action="punch" keys="J, JoyX" />
+  <qg:input action="kick" keys="K, JoyB" />
+  <qg:input player="2" action="left" keys="Left" />
+  <qg:input player="2" action="right" keys="Right" />
+  <qg:input player="2" action="down" keys="Down" />
+  <qg:input player="2" action="jump" keys="Up" />
+  <qg:input player="2" action="punch" keys="Period" />
+  <qg:input player="2" action="kick" keys="Slash" />
+  <qg:multiplayer players="2" delay="3" />
+
+  <qg:scene name="fight" width="640" height="360" background="#201820" seed="1">
+    <q:set name="wins_1" value="0" />
+    <q:set name="wins_2" value="0" />
+    <q:set name="round" value="1" type="number" />
+    <q:set name="clock" value="99" type="number" />
+    <q:set name="message" value="ROUND 1 - FIGHT" />
+    <q:set name="reset_in" value="0" type="number" />
+
+    <qg:sprite sheet="stage" x="320" y="180" />
+
+    <qg:character id="p1" controller="fighter" player="1" sheet="red" frame="0" x="200" y="252" hitbox="40x90"
+                  speed="140" jump-height="100" health="100" facing="right">
+      <qg:animation name="idle" frames="0" />
+      <qg:animation name="walk" frames="1, 2" fps="8" />
+      <qg:animation name="jump" frames="3" />
+      <qg:animation name="crouch" frames="4" />
+      <qg:animation name="block" frames="5" />
+      <qg:animation name="hit" frames="12" />
+      <qg:animation name="ko" frames="13" />
+      <qg:move name="punch" action="punch" frames="6, 7, 8" fps="15" active="1" reach="36x20" at="40,-10" damage="8" stun="14" push="40" />
+      <qg:move name="kick" action="kick" frames="9, 10, 11" fps="10" active="1" reach="44x20" at="44,8" damage="12" stun="20" push="70" />
+      <qg:on-ko>
+        <q:set name="wins_2" value="{wins_2 + 1}" />
+        <q:set name="message" value="PLAYER 2 WINS THE ROUND" />
+        <q:set name="reset_in" value="120" />
+      </qg:on-ko>
+    </qg:character>
+    <qg:character id="p2" controller="fighter" player="2" sheet="blue" frame="0" x="440" y="252" hitbox="40x90"
+                  speed="140" jump-height="100" health="100" facing="left">
+      <qg:animation name="idle" frames="0" />
+      <qg:animation name="walk" frames="1, 2" fps="8" />
+      <qg:animation name="jump" frames="3" />
+      <qg:animation name="crouch" frames="4" />
+      <qg:animation name="block" frames="5" />
+      <qg:animation name="hit" frames="12" />
+      <qg:animation name="ko" frames="13" />
+      <qg:move name="punch" action="punch" frames="6, 7, 8" fps="15" active="1" reach="36x20" at="40,-10" damage="8" stun="14" push="40" />
+      <qg:move name="kick" action="kick" frames="9, 10, 11" fps="10" active="1" reach="44x20" at="44,8" damage="12" stun="20" push="70" />
+      <qg:on-ko>
+        <q:set name="wins_1" value="{wins_1 + 1}" />
+        <q:set name="message" value="PLAYER 1 WINS THE ROUND" />
+        <q:set name="reset_in" value="120" />
+      </qg:on-ko>
+    </qg:character>
+
+    <!-- The clock: a second a second; at zero the healthier fighter takes the round. -->
+    <qg:timer every="60">
+      <q:if condition="{clock > 0 and reset_in == 0}">
+        <q:set name="clock" value="{clock - 1}" />
+        <q:if condition="{clock == 0}">
+          <q:if condition="{p1.health >= p2.health}">
+            <q:set name="wins_1" value="{wins_1 + 1}" />
+            <q:set name="message" value="TIME - PLAYER 1 TAKES THE ROUND" />
+          <q:else>
+            <q:set name="wins_2" value="{wins_2 + 1}" />
+            <q:set name="message" value="TIME - PLAYER 2 TAKES THE ROUND" />
+          </q:else>
+          </q:if>
+          <q:set name="reset_in" value="120" />
+        </q:if>
+      </q:if>
+    </qg:timer>
+    <!-- Between rounds: two seconds of the message, then both back at their marks,
+         or the match's end at two rounds. -->
+    <qg:timer every="1">
+      <q:if condition="{reset_in > 0}">
+        <q:set name="reset_in" value="{reset_in - 1}" />
+        <q:if condition="{reset_in == 0}">
+          <q:if condition="{wins_1 >= 2 or wins_2 >= 2}">
+            <qg:goto-scene name="result" />
+          </q:if>
+          <q:set name="round" value="{round + 1}" />
+          <q:set name="clock" value="99" />
+          <q:set name="message" value="{'ROUND ' + str(round) + ' - FIGHT'}" />
+          <q:call function="reset_fighters" />
+        </q:if>
+      </q:if>
+    </qg:timer>
+    <q:function name="reset_fighters">
+      <qg:respawn target="p1" />
+      <qg:respawn target="p2" />
+    </q:function>
+    <qg:hud position="top-left" size="12">
+      <qg:bar bind="p1.health" max="100" width="200" height="12" color="#e04040" />
+      <qg:counter bind="wins_1" label="P1 rounds" />
+    </qg:hud>
+    <qg:hud position="top-right" size="12">
+      <qg:bar bind="p2.health" max="100" width="200" height="12" color="#4060e0" />
+      <qg:counter bind="wins_2" label="P2 rounds" />
+    </qg:hud>
+    <qg:hud position="top-center" size="16">
+      <qg:counter bind="clock" />
+      <qg:text bind="message" />
+    </qg:hud>
+  </qg:scene>
+
+  <qg:scene name="result" width="640" height="360" background="#101018">
+    <q:set name="message" value="{'PLAYER ' + ('1' if wins_1 > wins_2 else '2') + ' WINS - press jump'}" />
+    <qg:hud position="center" size="24"><qg:text bind="message" /></qg:hud>
+    <qg:on-input action="jump"><qg:goto-scene name="fight" /></qg:on-input>
   </qg:scene>
 
 </q:application>

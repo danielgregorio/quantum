@@ -1172,3 +1172,56 @@ class TestWhatTowersAsked:
         assert '<qg:spawn path="lane">: no qg:path of that name' in str(err)
         err = refuse(tmp_path, game('  <qg:scene name="main"><qg:path name="p" points="1,2" /></qg:scene>\n'))
         assert 'points= needs at least two points' in str(err)
+
+
+class TestWhatArenaAsked:
+    """What the fighting game made the language say (projects/arena/README.md)."""
+
+    FIGHTERS = '''  <qg:input action="punch" keys="J" />
+  <qg:scene name="main">
+    <q:set name="wins" value="0" type="number" />
+    <qg:character id="p1" controller="fighter" sheet="c" x="100" y="100" hitbox="20x40" health="80" facing="left">
+      <qg:animation name="idle" frames="0" />
+      <qg:move name="jab" action="punch" frames="1, 2, 3" fps="15" active="1" reach="20x10" at="16,-4" damage="7" />
+      <qg:on-ko><q:set name="wins" value="{wins + 1}" /></qg:on-ko>
+    </qg:character>
+    <qg:character id="p2" controller="fighter" player="2" sheet="c" x="200" y="100" hitbox="20x40" />
+    <qg:timer after="10"><qg:respawn target="p2" /><q:set name="wins" value="{p1.health + p2.health}" /></qg:timer>
+    <qg:hud><qg:bar bind="p1.health" max="80" width="60" /></qg:hud>
+  </qg:scene>
+'''
+
+    def test_a_fighter_its_moves_and_its_ko(self, tmp_path):
+        out = build(tmp_path, HEAD + '  <qg:input player="2" action="left" keys="Left" />\n' + self.FIGHTERS + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        p1, p2 = [n for n in data['scenes']['main']['nodes'] if n['kind'] == 'character']
+        assert (p1['controller'], p1['health'], p1['facing'], p1['on_ko']) == ('fighter', 80, 'left', '_on_p1_ko')
+        assert p1['moves'] == [{'name': 'jab', 'action': 'punch', 'frames': [1, 2, 3], 'fps': 15.0, 'active': 1,
+                                'reach': [20, 10], 'at': [16.0, -4.0], 'damage': 7, 'stun': 12, 'push': 40.0}]
+        assert p2['moves'] == [] and p2['health'] == 100
+        hud = [n for n in data['scenes']['main']['nodes'] if n['kind'] == 'hud'][0]
+        assert hud['items'] == [{'kind': 'bar', 'bind': 'p1.health', 'max': 80.0, 'width': 60, 'height': 10, 'color': '#e04040'}]
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\tQ.respawn(get_node("p2"))\n' in script
+        assert 'wins = (get_node("p1").health + get_node("p2").health)' in script
+
+    @pytest.mark.parametrize('bad,message', [
+        ('<qg:move name="m" action="fire" frames="1" reach="4x4" />', 'action="fire">: no such action'),
+        ('<qg:move name="m" action="punch" frames="1, 2" active="2" reach="4x4" />', 'active="2">: a frame index'),
+        ('<qg:move name="m" action="punch" frames="1" reach="4x4" at="3" />', 'at= is dx,dy'),
+    ])
+    def test_a_move_that_is_wrong(self, tmp_path, bad, message):
+        src = self.FIGHTERS.replace('<qg:animation name="idle" frames="0" />', bad)
+        assert message in str(refuse(tmp_path, HEAD + '  <qg:input player="2" action="left" keys="Left" />\n' + src + TAIL))
+
+    def test_a_move_and_a_bar_where_they_do_not_belong(self, tmp_path):
+        err = refuse(tmp_path, HEAD + '''  <qg:input action="punch" keys="J" />
+  <qg:scene name="main">
+    <qg:character id="p" controller="ship" sheet="c" x="1" y="1" hitbox="4x4">
+      <qg:move name="m" action="punch" frames="1" reach="4x4" />
+    </qg:character>
+  </qg:scene>
+''' + TAIL)
+        assert '<qg:move> is for controller="fighter"' in str(err)
+        err = refuse(tmp_path, game('  <qg:scene name="main"><qg:hud><qg:bar bind="p9.health" /></qg:hud></qg:scene>\n'))
+        assert '<qg:bar bind="p9.health">: <character id>.health' in str(err)
