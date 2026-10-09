@@ -85,7 +85,23 @@ jobs:
           pip install -e ".[dev,db,jobs,websocket]"
           pip install -r quantum_admin/backend/requirements.txt
 
+      - name: Godot (pinned in quantum/runtime/godot_bin.py)
+        # The games are checked and replayed headless by the real engine
+        # (tests/godot/). Cached by version; a miss downloads the release.
+        id: godot-version
+        run: echo "version=$(python scripts/godot.py version)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/quantum/godot
+          key: godot-${{ runner.os }}-${{ steps.godot-version.outputs.version }}
+      - name: Install Godot
+        run: python scripts/godot.py install
+
       - name: Run Laboratory tests
+        # QUANTUM_GODOT_REQUIRED: without Godot the tests in tests/godot/ skip
+        # on a developer's machine; here a missing binary is a failure.
+        env:
+          QUANTUM_GODOT_REQUIRED: '1'
         run: pytest -n auto -m laboratory
 
   docs:

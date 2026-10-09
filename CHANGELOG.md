@@ -23,6 +23,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the real engine checks and replays a game, headless.
+  `quantum run game.q --check` opens the built Godot project and fails on
+  any script error (Godot exits 0 either way; the check reads its output).
+  `quantum/runtime/godot_replay.py` runs a game for N physics ticks under
+  an input tape and returns the state every node reports through
+  `quantum_state()` — the same tape, the same state, which is how the games
+  get tested. The Godot version is pinned in `quantum/runtime/godot_bin.py`;
+  `python scripts/godot.py install` downloads it into `~/.cache/quantum/godot`,
+  and the Laboratory CI job does the same (cached by version). Without it,
+  the tests in `tests/godot/` skip.
 - A playground on the site (/playground/): the Cookbook's recipes, editable,
   run in the browser by the real `quantum-framework` from PyPI (Pyodide) —
   with the database built from their migrations, links and forms that work,

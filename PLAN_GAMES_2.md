@@ -142,14 +142,19 @@ backend is the first slice of Hopper (phase 1), not an old game.
 
 Estimates assume one person full-time; each phase ends green in CI.
 
-### Phase 0 — Ground (3–4 days)
+### Phase 0 — Ground (3–4 days) — done 2026-10-09
 
-- Pin a Godot 4 version. `scripts/godot.py`: download the headless binary into
-  a cache; CI job `laboratory` installs it. `quantum run game.q --engine godot
-  --check` imports the project headless and fails on any script error. This
-  alone turns the 259 text-assertion tests into real ones.
-- `tests/godot/`: a harness that runs a project headless for N ticks with a
-  scripted input tape and dumps state as JSON. Used by every game test after.
+- Godot 4.4.1, pinned in `quantum/runtime/godot_bin.py`; `scripts/godot.py
+  install` downloads it into `~/.cache/quantum/godot`; the Laboratory CI job
+  installs it (cached) and sets `QUANTUM_GODOT_REQUIRED=1`. `quantum run
+  game.q --check` imports the project headless and fails on any script error
+  (Godot exits 0 either way, so the output is parsed).
+- `quantum/runtime/godot_replay.gd` + `.py`: runs the main scene for N
+  physics ticks under an input tape (`Input.action_press`), dumps every
+  node's `quantum_state()`. Verified deterministic on
+  `tests/godot/fixtures/mover`. Used by every game test after.
+- What was learned: the physics tick is the unit; `MainLoop._physics_process`
+  runs before the nodes', so the harness controls the count exactly.
 
 ### Phase 1 — Runtime addon and new compiler, first slice of Hopper (2 weeks)
 

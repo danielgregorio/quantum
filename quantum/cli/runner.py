@@ -191,6 +191,19 @@ class QuantumRunner:
             builder = GameBuilder(source_dir=source_dir)
             output_path = builder.build_to_file(app)
             print(f"[SUCCESS] Godot 4 project built: {output_path}")
+            if getattr(self, '_check_build', False):
+                from quantum.runtime.godot_bin import GodotNotFound, check_project
+                try:
+                    errors = check_project(Path(output_path))
+                except GodotNotFound as e:
+                    print(f"[ERROR] {e}")
+                    return 1
+                if errors:
+                    print(f"[ERROR] Godot rejects the project ({len(errors)} error(s)):")
+                    for error in errors:
+                        print(f"   {error}")
+                    return 1
+                print("[OK] Godot opens the project: every script parses and the first frames run clean")
             if debug:
                 print(f"   Scenes: {len(getattr(app, 'scenes', []))}")
                 print(f"   Behaviors: {len(getattr(app, 'behaviors', []))}")
@@ -302,6 +315,9 @@ Examples:
     run_parser.add_argument('--config', default='quantum.config.yaml', help='Config file')
     run_parser.add_argument('--target', type=_ui_target, choices=['html', 'textual', 'mobile'], default='html',
                             help='UI target (for type="ui" apps): html, textual, or mobile')
+    run_parser.add_argument('--check', action='store_true',
+                            help='For a game: after the build, open the Godot project headless and '
+                                 'fail on any script error (needs Godot; `python scripts/godot.py install`)')
 
     # Start command
     start_parser = subparsers.add_parser('start', help='Start web server')
@@ -450,6 +466,7 @@ def main():
 
         runner = QuantumRunner(config=load_config(getattr(args, 'config', 'quantum.config.yaml')))
         runner._ui_target = getattr(args, 'target', 'html')
+        runner._check_build = getattr(args, 'check', False)
         exit_code = runner.run(args.file, getattr(args, 'debug', False))
         sys.exit(exit_code)
 
