@@ -207,8 +207,13 @@ Slices, each one green in CI before the next:
   collision callback, so spawn/swap add deferred and a state change
   resizes deferred; a character's sensor is 2 px larger than its body,
   or a solid it rests on is never "touched".
-- [ ] 2c: several scenes, `qg:goto-scene`, state that persists across
-  scenes, a world map, game over, three levels.
+- [x] 2c (2026-10-09): game state (`q:set` in `<q:application>`, the
+  autoload `G`), `qg:goto-scene` (deferred to the end of the tick), a
+  world map (`controller="map"`, `qg:map-node`, `qg:map-path requires=`
+  read against the game's `cleared`), `qg:on-input`, `q:call`, game over,
+  three levels. Learned: a held action in the tape is not "just pressed"
+  again — a test that presses on the map must release first; a scene
+  entered at tick t runs its first tick at t + 2.
 - [ ] 2d: Tiled `.tmx` levels with object layers that place prefabs.
 
 - Kinematic `platformer` controller with the existing retro constants

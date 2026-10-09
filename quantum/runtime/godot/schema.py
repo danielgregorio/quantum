@@ -37,7 +37,7 @@ class Tag:
 
 
 # The actions a handler can hold, besides q: statements.
-ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint')
+ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -98,9 +98,11 @@ TAGS: Dict[str, Tag] = {
          'collision': Attr('bool', False, doc='every tile is solid')},
         parents=('scene',), text='the CSV rows'),
     'character': Tag(
-        'A body the player or the game moves.',
+        'A body the player moves: a platformer, or a walker on a world map.',
         {'id': Attr('ident', required=True),
-         'controller': Attr('enum:platformer', required=True),
+         'controller': Attr('enum:platformer|map', required=True),
+         'at': Attr('expr', None, doc='map: the qg:map-node it starts on (a name, or an expression)'),
+         'speed': Attr('float', 60.0, doc='map: pixels per second between nodes'),
          'sheet': Attr('ident', required=True), 'frame': Attr('int', 0),
          'x': Attr('float', required=True), 'y': Attr('float', required=True),
          'hitbox': Attr('size', required=True),
@@ -144,6 +146,22 @@ TAGS: Dict[str, Tag] = {
                           'before the "any" one, which then does not'),
          'cooldown': Attr('int', 0, doc='ticks before this handler can fire again')},
         parents=('character',)),
+    'map-node': Tag(
+        'A place on a world map. With scene=, pressing jump there enters that scene.',
+        {'name': Attr('ident', required=True),
+         'x': Attr('float', required=True), 'y': Attr('float', required=True),
+         'sheet': Attr('ident', required=True), 'frame': Attr('int', 0),
+         'scene': Attr('ident', None)},
+        parents=('scene',)),
+    'map-path': Tag(
+        'A way between two map nodes, both directions.',
+        {'from': Attr('ident', required=True), 'to': Attr('ident', required=True),
+         'requires': Attr('ident', None, doc='a scene name that must be in the game state `cleared`')},
+        parents=('scene',)),
+    'on-input': Tag(
+        'What happens when the player presses an action in this scene. Holds actions and statements.',
+        {'action': Attr('enum:jump|left|right|up|down', required=True)},
+        parents=('scene',)),
     'on-fall': Tag(
         'What happens when this character falls below the tilemap. Holds actions and statements.',
         {},
@@ -187,7 +205,11 @@ TAGS: Dict[str, Tag] = {
         {'target': Attr('enum:me', 'me'),
          'at': Attr('enum:other', 'other')},
         parents=('handler',)),
+    'goto-scene': Tag(
+        'Leaves this scene for another, at the end of the tick. Scene state is lost; game state stays.',
+        {'name': Attr('ident', required=True)},
+        parents=('handler',)),
 }
 
 # q: statements the compiler reads itself (see model.py).
-STATEMENTS = ('set', 'if', 'else', 'elseif', 'loop', 'function', 'return')
+STATEMENTS = ('set', 'if', 'else', 'elseif', 'loop', 'function', 'return', 'call')

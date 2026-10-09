@@ -93,6 +93,13 @@ static func checkpoint(node, at) -> void:
 		node.set_checkpoint((at as Node2D).position)
 
 
+# Leaves the scene for another at the end of the tick (qg:goto-scene).
+static func goto_scene(scene: Node, name_: String) -> void:
+	var game := scene.get_parent()
+	if game != null and game.has_method("go_to_scene"):
+		game.call_deferred("go_to_scene", name_)
+
+
 # A collision hands the handler a hitbox area; the thing is its owner.
 static func _thing(node):
 	if node == null or not is_instance_valid(node):

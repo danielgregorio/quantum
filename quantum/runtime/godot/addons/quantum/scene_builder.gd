@@ -10,6 +10,7 @@ const PlatformerBody := preload("res://addons/quantum/platformer_body.gd")
 const Item := preload("res://addons/quantum/item.gd")
 const Thing := preload("res://addons/quantum/thing.gd")
 const Block := preload("res://addons/quantum/block.gd")
+const MapWalker := preload("res://addons/quantum/map_walker.gd")
 const Hud := preload("res://addons/quantum/hud.gd")
 const Tilemap := preload("res://addons/quantum/tilemap.gd")
 
@@ -32,18 +33,50 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	bg.z_index = -100
 	scene.add_child(bg)
 
+	scene.q_on_input = scene_spec.get("on_input", {})
 	var tilemap: Node = null
 	var characters: Dictionary = {}
+	var map_nodes: Dictionary = {}
+	var map_paths: Array = scene_spec.get("map_paths", [])
+	for node_spec in scene_spec["nodes"]:
+		if node_spec["kind"] == "map-node":
+			map_nodes[node_spec["name"]] = node_spec
+	for p in map_paths:
+		var line := Line2D.new()
+		line.width = 3.0
+		line.default_color = Color(1, 1, 1, 0.6)
+		line.add_point(Vector2(map_nodes[p["from"]]["x"], map_nodes[p["from"]]["y"]))
+		line.add_point(Vector2(map_nodes[p["to"]]["x"], map_nodes[p["to"]]["y"]))
+		scene.add_child(line)
 	for node_spec in scene_spec["nodes"]:
 		match node_spec["kind"]:
+			"map-node":
+				var sheet: Dictionary = game["sheets"][node_spec["sheet"]]
+				var marker := _sprite(_texture(sheet), int(sheet["tile"]), int(node_spec["frame"]))
+				marker.name = node_spec["name"]
+				marker.position = Vector2(node_spec["x"], node_spec["y"])
+				scene.add_child(marker)
 			"tilemap":
 				tilemap = Tilemap.build(node_spec, game["sheets"][node_spec["tileset"]], _texture)
 				scene.add_child(tilemap)
 				scene.q_fall_y = tilemap.pixel_size().y + 64.0
 			"character":
-				var body := _character(node_spec, game, scene)
-				characters[node_spec["id"]] = body
-				scene.add_child(body)
+				if node_spec["controller"] == "map":
+					var walker := MapWalker.new()
+					var sheet: Dictionary = game["sheets"][node_spec["sheet"]]
+					var sprite := _sprite(_texture(sheet), int(sheet["tile"]), int(node_spec["frame"]))
+					walker.add_child(sprite)
+					walker.setup(node_spec, map_nodes, map_paths, scene, sprite)
+					var start: String = ""
+					if node_spec.get("at_method") != null:
+						start = str(scene.call(node_spec["at_method"]))
+					walker.place(start)
+					characters[node_spec["id"]] = walker
+					scene.add_child(walker)
+				else:
+					var body := _character(node_spec, game, scene)
+					characters[node_spec["id"]] = body
+					scene.add_child(body)
 			"instance":
 				instance(game, scene, node_spec["prefab"], Vector2(node_spec["x"], node_spec["y"]))
 			"camera":

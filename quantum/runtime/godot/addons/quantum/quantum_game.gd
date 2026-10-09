@@ -30,7 +30,13 @@ func _register_inputs(inputs: Dictionary) -> void:
 
 
 func go_to_scene(scene_name: String) -> void:
+	if not spec["scenes"].has(scene_name):
+		push_error("quantum: no scene named " + scene_name)
+		return
 	if current_scene != null:
+		if current_scene.name == scene_name and current_scene.is_queued_for_deletion():
+			return
+		remove_child(current_scene)
 		current_scene.queue_free()
 		current_scene = null
 	var scene_spec: Dictionary = spec["scenes"][scene_name]

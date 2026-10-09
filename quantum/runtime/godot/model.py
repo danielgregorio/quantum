@@ -65,6 +65,7 @@ class Game:
     scenes: List[Element]
     source_path: Optional[str]
     sounds: Dict[str, Element] = field(default_factory=dict)
+    state: List[Statement] = field(default_factory=list)   # q:set at the application level
 
 
 def _local(element: ET.Element) -> tuple:
@@ -193,7 +194,7 @@ def _read_element(element: ET.Element, parent_tag: str) -> Element:
             raise GameCompileError(f'<qg:{tag}> holds {spec.text}, not tags', line)
         return node
     _no_raw_text(element, f'<qg:{tag}>')
-    child_parent = 'handler' if tag in ('on-collision', 'on-fall') else tag
+    child_parent = 'handler' if tag in ('on-collision', 'on-fall', 'on-input') else tag
     node.children = _read_children(element, child_parent, f'<qg:{tag}>')
     return node
 
@@ -216,6 +217,10 @@ def _read_statement(element: ET.Element, parent_tag: str) -> Statement:
             raise GameCompileError('<q:set> in a game takes value=, not a body', line)
         return st
     if kind == 'return':
+        return st
+    if kind == 'call':
+        if 'function' not in attrs:
+            raise GameCompileError('<q:call> needs function=', line)
         return st
     # if, loop, function: a body of statements and actions
     _no_raw_text(element, f'<q:{kind}>')
@@ -264,6 +269,7 @@ def read_game(app) -> Game:
     prefabs: Dict[str, Element] = {}
     sounds: Dict[str, Element] = {}
     scenes: List[Element] = []
+    game_state: List[Statement] = []
     try:
         for child in root:
             ns, name = _local(child)
@@ -284,8 +290,10 @@ def read_game(app) -> Game:
                 else:
                     raise GameCompileError(f'<qg:{el.tag}> goes inside a scene', el.line)
             elif ns == 'q':
-                raise GameCompileError(
-                    f'<q:{name}> goes inside a <qg:scene>; the game state is the scene\'s', _line(child))
+                if name != 'set':
+                    raise GameCompileError(
+                        f'<q:{name}> goes inside a <qg:scene>; only q:set goes here, as game state', _line(child))
+                game_state.append(_read_statement(child, 'application'))
             elif isinstance(child.tag, str):
                 raise GameCompileError(f'<{name}> is not a game tag', _line(child))
     except GameCompileError as e:
@@ -294,7 +302,8 @@ def read_game(app) -> Game:
         raise
     if not scenes:
         raise GameCompileError('a game needs at least one <qg:scene>', file=source_path)
-    return Game(getattr(app, 'app_id', 'game'), tilesets, sheets, prefabs, scenes, source_path, sounds)
+    return Game(getattr(app, 'app_id', 'game'), tilesets, sheets, prefabs, scenes, source_path, sounds,
+                game_state)
 
 
 def _unique(table: Dict[str, Element], el: Element, what: str) -> None:

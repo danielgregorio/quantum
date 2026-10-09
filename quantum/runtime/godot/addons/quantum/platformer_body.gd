@@ -95,6 +95,10 @@ func respawn() -> void:
 	_fell = false
 
 
+func quantum_node_state() -> Dictionary:
+	return {"state": state} if state != "" else {}
+
+
 func set_checkpoint(at: Vector2) -> void:
 	spawn_point = Vector2(at.x, at.y - 2.0)
 

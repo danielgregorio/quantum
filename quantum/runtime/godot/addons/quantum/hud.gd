@@ -35,6 +35,8 @@ func _process(_delta: float) -> void:
 func _refresh() -> void:
 	for entry in _labels:
 		var value = _scene.get(entry["bind"])
+		if value == null:
+			value = G.get(entry["bind"])
 		var text: String = str(value)
 		if value is float and value == floorf(value):
 			text = str(int(value))

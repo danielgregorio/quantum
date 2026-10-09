@@ -43,16 +43,32 @@ _CMP = {ast.Eq: '==', ast.NotEq: '!=', ast.Lt: '<', ast.LtE: '<=', ast.Gt: '>', 
 
 
 class Scope:
-    """The names an expression may use, with the enclosing scopes."""
+    """The names an expression may use, with the enclosing scopes.
+
+    Game-wide names (the q:sets at the application level) live on the
+    autoload `G` and compile to `G.name`.
+    """
 
     def __init__(self, names: Iterable[str] = (), parent: Optional['Scope'] = None,
-                 functions: Iterable[str] = ()):
+                 functions: Iterable[str] = (), game_names: Iterable[str] = ()):
         self.names: Set[str] = set(names)
         self.functions: Set[str] = set(functions)
+        self.game_names: Set[str] = set(game_names)
         self.parent = parent
 
     def has(self, name: str) -> bool:
-        return name in self.names or (self.parent is not None and self.parent.has(name))
+        return (name in self.names or name in self.game_names
+                or (self.parent is not None and self.parent.has(name)))
+
+    def is_game(self, name: str) -> bool:
+        if name in self.names:
+            return False
+        if name in self.game_names:
+            return True
+        return self.parent is not None and self.parent.is_game(name)
+
+    def reference(self, name: str) -> str:
+        return f'G.{name}' if self.is_game(name) else name
 
     def has_function(self, name: str) -> bool:
         return name in self.functions or (self.parent is not None and self.parent.has_function(name))
@@ -111,8 +127,8 @@ class _Emitter:
         if node.id in _LITERALS:
             return _LITERALS[node.id]
         if not self.scope.has(node.id):
-            raise self.fail(f'{node.id!r} is not declared (a q:set of the scene, a parameter or a loop variable)')
-        return node.id
+            raise self.fail(f'{node.id!r} is not declared (a q:set of the scene or the game, a parameter or a loop variable)')
+        return self.scope.reference(node.id)
 
     def _BinOp(self, node: ast.BinOp) -> str:
         left, right = self.emit(node.left), self.emit(node.right)

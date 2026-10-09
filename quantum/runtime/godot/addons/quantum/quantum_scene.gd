@@ -33,8 +33,8 @@ func quantum_state() -> Dictionary:
 	for n in get_tree().get_nodes_in_group("q_named"):
 		if n.get_parent() == self:
 			var entry := {"x": snappedf(n.position.x, 0.01), "y": snappedf(n.position.y, 0.01)}
-			if "state" in n and n.state != "":
-				entry["state"] = n.state
+			if n.has_method("quantum_node_state"):
+				entry.merge(n.quantum_node_state())
 			nodes[n.name] = entry
 	var things := {}
 	for n in get_tree().get_nodes_in_group("q_thing"):
@@ -43,7 +43,18 @@ func quantum_state() -> Dictionary:
 	state["nodes"] = nodes
 	state["things"] = things
 	state["sounds"] = Q.sounds_played.duplicate()
+	state["game"] = G.quantum_state()
 	return state
+
+
+# The qg:on-input handlers of the scene: {action: method name}.
+var q_on_input: Dictionary = {}
+
+
+func _physics_process(_delta: float) -> void:
+	for action in q_on_input.keys():
+		if Input.is_action_just_pressed(action):
+			call(q_on_input[action], null, null)
 
 
 # Below this y a character has fallen out of the level (qg:on-fall).

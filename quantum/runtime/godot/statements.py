@@ -34,6 +34,7 @@ class StateVar:
 class SceneScript:
     """The GDScript of one scene, built up by the compiler."""
     name: str
+    game_state: Dict[str, 'StateVar'] = field(default_factory=dict)
     state: Dict[str, StateVar] = field(default_factory=dict)
     functions: List[str] = field(default_factory=list)   # compiled func blocks
     handlers: List[str] = field(default_factory=list)
@@ -41,9 +42,10 @@ class SceneScript:
     sounds_played: List[str] = field(default_factory=list)
     prefabs_used: List[tuple] = field(default_factory=list)   # (name, line) from spawn/swap
     states_used: List[tuple] = field(default_factory=list)    # (name, line) from become
+    scenes_used: List[tuple] = field(default_factory=list)    # (name, line) from goto-scene
 
     def scope(self) -> Scope:
-        return Scope(self.state.keys(), functions=self.function_names)
+        return Scope(self.state.keys(), functions=self.function_names, game_names=self.game_state.keys())
 
     def source(self) -> str:
         lines = ['extends "res://addons/quantum/quantum_scene.gd"',
@@ -74,6 +76,8 @@ def declare_state(script: SceneScript, st: Statement) -> None:
     name = st.attrs['name']
     if name in script.state:
         raise GameCompileError(f'{name!r} is declared twice', st.line)
+    if name in script.game_state:
+        raise GameCompileError(f'{name!r} is already the game\'s state (a q:set in <q:application>)', st.line)
     type_name = st.attrs.get('type', 'string')
     if type_name not in GD_TYPES:
         raise GameCompileError(
@@ -97,6 +101,21 @@ def compile_function(script: SceneScript, st: Statement) -> None:
     scope = script.scope().child(params)
     body = compile_block(st.body, scope, script, 1)
     script.functions.append(f'func {name}({", ".join(params)}):\n' + body)
+
+
+def game_state_source(state: Dict[str, StateVar]) -> str:
+    """The autoload G: the q:sets of <q:application>, kept across scenes."""
+    lines = ['extends Node', '# Compiled by Quantum from the q:sets of <q:application>; do not edit.', '']
+    for var in state.values():
+        lines.append(f'var {var.name}: {GD_TYPES.get(var.type, "Variant")} = {var.initial}')
+    lines.append('')
+    lines.append('func quantum_state() -> Dictionary:')
+    if state:
+        items = ', '.join(f'"{v.name}": {v.name}' for v in state.values())
+        lines.append(f'{_INDENT}return {{{items}}}')
+    else:
+        lines.append(f'{_INDENT}return {{}}')
+    return '\n'.join(lines) + '\n'
 
 
 def compile_handler(script: SceneScript, name: str, body: List[Node], line: Optional[int]) -> str:
@@ -132,9 +151,9 @@ def _compile_node(node: Node, scope: Scope, script: SceneScript, depth: int) -> 
         if is_expression(value):
             rhs = compile_expression(value, scope, st.line)
         else:
-            var = script.state.get(name)
+            var = script.state.get(name) or script.game_state.get(name)
             rhs = gdscript_literal(value, var.type if var else 'string')
-        return [f'{ind}{name} = {rhs}']
+        return [f'{ind}{scope.reference(name)} = {rhs}']
     if st.kind == 'if':
         out = [f'{ind}if {compile_expression(st.attrs["condition"], scope, st.line)}:']
         out.append(compile_block(st.body, scope, script, depth + 1).rstrip('\n'))
@@ -162,6 +181,13 @@ def _compile_node(node: Node, scope: Scope, script: SceneScript, depth: int) -> 
         if value is None:
             return [f'{ind}return']
         return [f'{ind}return {compile_expression(value, scope, st.line)}']
+    if st.kind == 'call':
+        fname = st.attrs['function']
+        if not scope.has_function(fname):
+            raise GameCompileError(f'<q:call function="{fname}">: no q:function of that name in the scene', st.line)
+        args = [compile_expression(a.strip(), scope, st.line)
+                for a in st.attrs.get('args', '').split(',') if a.strip()]
+        return [f'{ind}{fname}({", ".join(args)})']
     if st.kind == 'function':
         raise GameCompileError('<q:function> goes directly inside <qg:scene>', st.line)
     raise GameCompileError(f'<q:{st.kind}> cannot go here', st.line)
@@ -193,6 +219,9 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     if el.tag == 'swap':
         script.prefabs_used.append((el.get('prefab'), el.line))
         return f'Q.swap(self, {target}, {json.dumps(el.get("prefab"))})'
+    if el.tag == 'goto-scene':
+        script.scenes_used.append((el.get('name'), el.line))
+        return f'Q.goto_scene(self, {json.dumps(el.get("name"))})'
     if el.tag == 'checkpoint':
         at = el.get('at')
         if not scope.has(at):

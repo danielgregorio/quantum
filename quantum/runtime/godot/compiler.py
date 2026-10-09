@@ -10,8 +10,10 @@ from typing import Dict, List, Optional
 
 from quantum.runtime.godot.errors import GameCompileError
 from quantum.runtime.godot.model import Element, Game, Statement, read_game
+from quantum.runtime.godot.expressions import compile_expression, strip_braces
 from quantum.runtime.godot.statements import (
-    SceneScript, compile_function, compile_handler, declare_state,
+    SceneScript, StateVar, compile_function, compile_handler, declare_state, game_state_source,
+    is_expression,
 )
 
 ADDON_SRC = Path(__file__).with_name('addons') / 'quantum'
@@ -20,7 +22,9 @@ ADDON_SRC = Path(__file__).with_name('addons') / 'quantum'
 DEFAULT_INPUTS = {
     'left': ['Left', 'A'],
     'right': ['Right', 'D'],
-    'jump': ['Space', 'Z', 'Up', 'W'],
+    'up': ['Up', 'W'],
+    'down': ['Down', 'S'],
+    'jump': ['Space', 'Z', 'X'],
 }
 
 PROJECT_GODOT = '''; Engine configuration file.
@@ -34,6 +38,7 @@ config/features=PackedStringArray("4.4", "GL Compatibility")
 
 [autoload]
 Q="*res://addons/quantum/q.gd"
+G="*res://scripts/game_state.gd"
 
 [display]
 window/size/viewport_width={width}
@@ -67,7 +72,12 @@ def compile_game(app, output_dir: str, source_dir: Optional[str] = None) -> str:
     source = Path(game.source_path) if game.source_path else None
     base_dir = Path(source_dir) if source_dir else (source.parent if source else Path.cwd())
 
-    data = _Compiler(game, base_dir).build()
+    try:
+        data = _Compiler(game, base_dir).build()
+    except GameCompileError as e:
+        if e.file is None:
+            e.file = game.source_path
+        raise
 
     if out.exists():
         _clear(out)
@@ -115,6 +125,12 @@ class _Compiler:
 
     def build(self) -> dict:
         g = self.game
+        # the game-wide state: the q:sets of <q:application>, the autoload G
+        game_script = SceneScript('game')
+        for st in g.state:
+            declare_state(game_script, st)
+        self.game_state: Dict[str, StateVar] = game_script.state
+        self.scripts['game_state.gd'] = game_state_source(self.game_state)
         sheets = {}
         for name, el in list(g.tilesets.items()) + list(g.sheets.items()):
             sheets[name] = {'src': self._asset(el.get('src'), el.line), 'tile': el.get('tile'),
@@ -135,8 +151,13 @@ class _Compiler:
             if el.get('solid') and el.get('ai'):
                 raise GameCompileError('a prefab is solid or has ai=, not both', el.line)
         scenes = {}
+        self._scenes_used: List[tuple] = []
         for scene in g.scenes:
             scenes[scene.get('name')] = self._scene(scene, sheets, prefabs)
+        for sname, line in self._scenes_used:
+            if sname not in scenes:
+                raise GameCompileError(
+                    f'no qg:scene named {sname!r} (declared: {", ".join(scenes)})', line)
         return {
             'game': {
                 'id': g.id,
@@ -172,7 +193,7 @@ class _Compiler:
 
     def _scene(self, scene: Element, sheets: dict, prefabs: dict) -> dict:
         name = scene.get('name')
-        script = SceneScript(name)
+        script = SceneScript(name, game_state=self.game_state)
         self._states_checked: list = []
         # 1. state and functions first: handlers refer to them
         for node in scene.children:
@@ -192,11 +213,38 @@ class _Compiler:
         nodes: List[dict] = []
         ids: Dict[str, int] = {}
         tilemap: Optional[dict] = None
+        map_nodes: Dict[str, dict] = {}
+        map_paths: List[dict] = []
+        on_input: Dict[str, str] = {}
         for node in scene.children:
             if isinstance(node, Statement):
                 continue
             el = node
-            if el.tag == 'tilemap':
+            if el.tag == 'map-node':
+                mname = el.get('name')
+                if mname in map_nodes:
+                    raise GameCompileError(f'two map nodes named {mname!r}', el.line)
+                self._sheet_exists(el.get('sheet'), sheets, el.line)
+                if el.get('scene'):
+                    self._scenes_used.append((el.get('scene'), el.line))
+                map_nodes[mname] = {'kind': 'map-node', 'name': mname, 'x': el.get('x'), 'y': el.get('y'),
+                                    'sheet': el.get('sheet'), 'frame': el.get('frame'), 'scene': el.get('scene')}
+                nodes.append(map_nodes[mname])
+            elif el.tag == 'map-path':
+                if el.get('requires') is not None:
+                    self._scenes_used.append((el.get('requires'), el.line))
+                    if 'cleared' not in self.game_state:
+                        raise GameCompileError(
+                            '<qg:map-path requires=> reads the game state `cleared`: declare '
+                            '<q:set name="cleared" type="array" /> in <q:application>', el.line)
+                map_paths.append({'from': el.get('from'), 'to': el.get('to'), 'requires': el.get('requires'),
+                                  'line': el.line})
+            elif el.tag == 'on-input':
+                action = el.get('action')
+                if action in on_input:
+                    raise GameCompileError(f'two <qg:on-input action="{action}">', el.line)
+                on_input[action] = compile_handler(script, f'_on_input_{action}', el.children, el.line)
+            elif el.tag == 'tilemap':
                 if tilemap is not None:
                     raise GameCompileError('a scene has one <qg:tilemap>', el.line)
                 self._sheet_exists(el.get('tileset'), sheets, el.line)
@@ -243,8 +291,20 @@ class _Compiler:
                             f'<qg:become state="{sname}">: {cid!r} has no qg:state of that name '
                             f'(it has: {", ".join(states) or "none"})', line)
                 self._states_checked = list(script.states_used)
+                at_method = None
+                if el.get('controller') == 'map':
+                    at = el.get('at')
+                    if at is None:
+                        raise GameCompileError('<qg:character controller="map"> needs at= (a map node)', el.line)
+                    expr = compile_expression(at, script.scope(), el.line) if is_expression(at) \
+                        else json.dumps(strip_braces(at))
+                    at_method = f'_q_at_{_ident(cid)}'
+                    script.functions.append(f'func {at_method}():\n\treturn {expr}\n')
+                elif el.get('at') is not None:
+                    raise GameCompileError('at= is for controller="map"', el.line)
                 nodes.append({
                     'kind': 'character', 'id': cid, 'controller': el.get('controller'),
+                    'at_method': at_method, 'speed': el.get('speed'),
                     'sheet': el.get('sheet'), 'frame': el.get('frame'),
                     'x': el.get('x'), 'y': el.get('y'), 'hitbox': list(el.get('hitbox')),
                     'run_speed': el.get('run-speed'), 'jump_height': el.get('jump-height'),
@@ -266,9 +326,10 @@ class _Compiler:
                 items = []
                 for c in el.children:
                     if isinstance(c, Element) and c.tag in ('counter', 'text'):
-                        if c.get('bind') not in script.state:
+                        if c.get('bind') not in script.state and c.get('bind') not in self.game_state:
                             raise GameCompileError(
-                                f'<qg:{c.tag} bind="{c.get("bind")}">: no q:set of that name in the scene', c.line)
+                                f'<qg:{c.tag} bind="{c.get("bind")}">: no q:set of that name in the scene '
+                                f'or the game', c.line)
                         items.append({'kind': c.tag, 'bind': c.get('bind'), 'label': c.get('label', '')})
                     else:
                         raise GameCompileError('<qg:hud> holds qg:counter and qg:text', getattr(c, 'line', el.line))
@@ -276,6 +337,14 @@ class _Compiler:
             else:
                 raise GameCompileError(f'<qg:{el.tag}> cannot go directly inside a scene', el.line)
         # 3. references between nodes
+        for p in map_paths:
+            for end in ('from', 'to'):
+                if p[end] not in map_nodes:
+                    raise GameCompileError(f'<qg:map-path {end}="{p[end]}">: no map node of that name', p['line'])
+            del p['line']
+        for n in nodes:
+            if n['kind'] == 'character' and n['controller'] == 'map' and not map_nodes:
+                raise GameCompileError('<qg:character controller="map"> in a scene without qg:map-node', scene.line)
         for n in nodes:
             if n['kind'] == 'camera' and n['follow'] not in ids:
                 raise GameCompileError(f'<qg:camera follow="{n["follow"]}">: no character with that id', scene.line)
@@ -288,6 +357,7 @@ class _Compiler:
                     raise GameCompileError(
                         f'<qg:on-collision with="{h["with"]}">: no prefab has that tag '
                         f'(tags: {", ".join(sorted(tags)) or "none"})', scene.line)
+        self._scenes_used.extend(script.scenes_used)
         for pname, line in script.prefabs_used:
             if pname not in prefabs:
                 raise GameCompileError(
@@ -303,7 +373,7 @@ class _Compiler:
             'name': name, 'script': f'res://scripts/{script_file}',
             'width': scene.get('width'), 'height': scene.get('height'),
             'background': scene.get('background'), 'seed': scene.get('seed'),
-            'nodes': nodes,
+            'nodes': nodes, 'map_paths': map_paths, 'on_input': on_input,
         }
 
 

@@ -287,6 +287,115 @@ class TestStatesBlocksAndSpawns:
         assert 'solid or has ai=, not both' in e.message
 
 
+class TestScenesMapAndGameState:
+    SOURCE = '''<q:application id="t" type="game">
+  <q:set name="lives" value="3" type="number" />
+  <q:set name="cleared" value="[]" type="array" />
+  <q:set name="map_at" value="one" />
+  <qg:tileset name="k" src="assets/kenney/tilemap_packed.png" tile="18" />
+  <qg:spritesheet name="c" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
+  <qg:prefab name="Flag" tag="flag" sheet="k" hitbox="18x18" />
+  <qg:scene name="map">
+    <qg:map-node name="one" x="10" y="10" sheet="k" scene="one" />
+    <qg:map-node name="two" x="50" y="10" sheet="k" scene="two" />
+    <qg:map-path from="one" to="two" requires="one" />
+    <qg:character id="player" controller="map" sheet="c" at="{map_at}" x="0" y="0" hitbox="1x1" />
+    <qg:hud><qg:counter bind="lives" label="LIVES" /></qg:hud>
+  </qg:scene>
+  <qg:scene name="one">
+    <q:set name="coins" value="0" type="number" />
+    <q:function name="die" params="me">
+      <q:set name="lives" value="{lives - 1}" />
+      <q:if condition="{lives <= 0}"><qg:goto-scene name="over" /><q:else><qg:respawn /></q:else></q:if>
+    </q:function>
+    <qg:character id="player" controller="platformer" sheet="c" x="0" y="0" hitbox="1x1">
+      <qg:on-collision with="flag">
+        <q:set name="cleared" value="{cleared + ['one']}" />
+        <q:set name="coins" value="{coins + lives}" />
+        <qg:goto-scene name="map" />
+      </qg:on-collision>
+      <qg:on-fall><q:call function="die" args="me" /></qg:on-fall>
+    </qg:character>
+  </qg:scene>
+  <qg:scene name="two" />
+  <qg:scene name="over">
+    <qg:on-input action="jump"><q:set name="lives" value="3" /><qg:goto-scene name="map" /></qg:on-input>
+  </qg:scene>
+</q:application>
+'''
+
+    def test_the_game_state_is_an_autoload(self, tmp_path):
+        out = build(tmp_path, self.SOURCE)
+        assert 'G="*res://scripts/game_state.gd"' in (out / 'project.godot').read_text()
+        state = (out / 'scripts' / 'game_state.gd').read_text()
+        assert 'var lives: float = 3.0\nvar cleared: Array = []\nvar map_at: String = "one"\n' in state
+        assert 'return {"lives": lives, "cleared": cleared, "map_at": map_at}' in state
+
+    def test_scene_logic_reads_and_writes_it_through_g(self, tmp_path):
+        out = build(tmp_path, self.SOURCE)
+        one = (out / 'scripts' / 'scene_one.gd').read_text()
+        assert ('func die(me):\n\tG.lives = (G.lives - 1)\n\tif (G.lives <= 0):\n'
+                '\t\tQ.goto_scene(self, "over")\n\telse:\n\t\tQ.respawn(me)\n') in one
+        assert '\tG.cleared = (G.cleared + ["one"])\n\tcoins = (coins + G.lives)\n\tQ.goto_scene(self, "map")\n' in one
+        assert 'func _on_player_fall(me, other) -> void:\n\tdie(me)\n' in one
+        over = (out / 'scripts' / 'scene_over.gd').read_text()
+        assert 'func _on_input_jump(me, other) -> void:\n\tG.lives = 3.0\n\tQ.goto_scene(self, "map")\n' in over
+
+    def test_the_map(self, tmp_path):
+        out = build(tmp_path, self.SOURCE)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['initial'] == 'map'
+        m = data['scenes']['map']
+        assert m['map_paths'] == [{'from': 'one', 'to': 'two', 'requires': 'one'}]
+        assert m['nodes'][0] == {'kind': 'map-node', 'name': 'one', 'x': 10, 'y': 10, 'sheet': 'k',
+                                 'frame': 0, 'scene': 'one'}
+        walker = m['nodes'][2]
+        assert walker['controller'] == 'map' and walker['at_method'] == '_q_at_player'
+        assert 'func _q_at_player():\n\treturn G.map_at\n' in (out / 'scripts' / 'scene_map.gd').read_text()
+        assert data['scenes']['over']['on_input'] == {'jump': '_on_input_jump'}
+
+    def test_a_scene_nobody_declared(self, tmp_path):
+        e = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:on-input action="jump"><qg:goto-scene name="credits" /></qg:on-input>
+  </qg:scene>
+'''))
+        assert "no qg:scene named 'credits' (declared: main)" in e.message
+
+    def test_a_map_path_to_nowhere(self, tmp_path):
+        e = refuse(tmp_path, game('''  <qg:scene name="map">
+    <qg:map-node name="one" x="1" y="1" sheet="k" />
+    <qg:map-path from="one" to="two" />
+  </qg:scene>
+'''))
+        assert '<qg:map-path to="two">: no map node of that name' in e.message
+
+    def test_requires_needs_the_cleared_state(self, tmp_path):
+        e = refuse(tmp_path, game('''  <qg:scene name="map">
+    <qg:map-node name="one" x="1" y="1" sheet="k" />
+    <qg:map-node name="two" x="9" y="1" sheet="k" />
+    <qg:map-path from="one" to="two" requires="map" />
+  </qg:scene>
+'''))
+        assert '<q:set name="cleared" type="array" /> in <q:application>' in e.message
+
+    def test_a_scene_state_cannot_shadow_the_game_state(self, tmp_path):
+        e = refuse(tmp_path, '<q:application id="t" type="game">\n  <q:set name="lives" value="3" type="number" />\n'
+                   '  <qg:scene name="main"><q:set name="lives" value="1" type="number" /></qg:scene>\n</q:application>\n')
+        assert "'lives' is already the game's state" in e.message
+
+    def test_only_q_set_goes_in_the_application(self, tmp_path):
+        e = refuse(tmp_path, '<q:application id="t" type="game">\n  <q:function name="f" />\n'
+                   '  <qg:scene name="main" />\n</q:application>\n')
+        assert '<q:function> goes inside a <qg:scene>; only q:set goes here, as game state' in e.message
+
+    def test_a_call_to_no_function(self, tmp_path):
+        e = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:on-input action="jump"><q:call function="boom" /></qg:on-input>
+  </qg:scene>
+'''))
+        assert '<q:call function="boom">: no q:function of that name' in e.message
+
+
 class TestWhatItRefuses:
     def test_an_unknown_tag_with_its_line(self, tmp_path):
         e = refuse(tmp_path, game('  <qg:scene name="main">\n    <qg:sprite id="x" />\n  </qg:scene>\n'))
