@@ -10,6 +10,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Removed
 
+- Laboratory: the old game parser (`quantum/core/features/game_engine_2d`)
+  and Godot generator (`godot_code_generator.py`, `godot_templates.py`)
+  with their tests: the new compiler reads the elements itself, and the
+  old parser rejected every tag it did not know.
 - Laboratory: the HTML game backend (PixiJS + Matter.js) is gone. A
   `q:application type="game"` builds a Godot 4 project, the only backend;
   `quantum run game.q` no longer takes `--engine`.
@@ -23,6 +27,27 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: a new game compiler and runtime (`quantum/runtime/godot/`),
+  rebuilt from scratch on the "thin compiler, fat runtime" design of
+  `PLAN_GAMES_2.md`. The `.q` compiles to `game.json` (everything
+  declarative), one GDScript per scene (its `q:set`s as properties, its
+  `q:function`s and handlers as methods, Quantum expressions compiled to
+  GDScript), and a fixed runtime, `addons/quantum/`, that builds the scene
+  tree from the JSON. The schema (`schema.py`) is the language: an unknown
+  tag or attribute, a name no `q:set` declared, text where statements go
+  (the old backend's JavaScript) — each is a compile error with its line.
+  Tags so far: `qg:tileset`, `qg:spritesheet`, `qg:prefab`, `qg:scene`,
+  `qg:tilemap` (CSV), `qg:character controller="platformer"` (kinematic,
+  with `run-speed`, `jump-height` to the pixel, variable jump, coyote
+  frames), `qg:on-collision with=`, `qg:destroy`, `qg:instance`,
+  `qg:camera`, `qg:hud` with `qg:counter`; and `q:set`, `q:if`/`q:else`/
+  `q:elseif`, `q:loop`, `q:function`, `q:return` inside handlers.
+- `projects/hopper/hopper.q`, the first slice of the platformer: a screen,
+  a character that walks and jumps on a tilemap, two coins, a counter.
+  `tests/godot/test_godot_hopper.py` replays it in Godot: it rests on the
+  ground, runs at its `run-speed`, a held jump peaks at `jump-height`
+  within a pixel, a tap is a short hop, a coin collected is counted, and
+  the same tape gives the same game.
 - Laboratory: the real engine checks and replays a game, headless.
   `quantum run game.q --check` opens the built Godot project and fails on
   any script error (Godot exits 0 either way; the check reads its output).

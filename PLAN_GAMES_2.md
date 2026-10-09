@@ -156,7 +156,7 @@ Estimates assume one person full-time; each phase ends green in CI.
 - What was learned: the physics tick is the unit; `MainLoop._physics_process`
   runs before the nodes', so the harness controls the count exactly.
 
-### Phase 1 — Runtime addon and new compiler, first slice of Hopper (2 weeks)
+### Phase 1 — Runtime addon and new compiler, first slice of Hopper (2 weeks) — done 2026-10-09
 
 - `addons/quantum/`: scene builder from `game.json`, input map, sprites,
   animations, timers, event bus, HUD counters, scene manager, persistence.
@@ -174,6 +174,20 @@ Estimates assume one person full-time; each phase ends green in CI.
   generator (`godot_code_generator.py`, `godot_templates.py`) is deleted —
   what it did that the slice needs was rebuilt, the rest waits for a game
   to need it.
+- What was built: `quantum/runtime/godot/` (schema, model, expressions,
+  statements, compiler) and `addons/quantum/` (game root, scene builder,
+  scene base, platformer body, item, tilemap from CSV, HUD). The old
+  parser went with the old generator: it rejected every new tag.
+- What was learned: in a `.tscn`, `script` is a property line, not a node
+  attribute (silently ignored otherwise); `Camera2D.make_current` needs the
+  tree, so the scene does it in `_ready`; with gravity applied before the
+  move, the take-off speed that peaks at exactly h is
+  `g·dt/2 + sqrt((g·dt/2)² + 2·g·h)`; textures load from the image files
+  (`Image.load_from_file`), so headless runs need no import step.
+- Still open from this phase: the expression conformance table has 21
+  cases, not ~200; `q:loop` over a dictionary and slices are not compiled;
+  `qg:input` (own keys) does not exist yet — the platformer's actions are
+  bound to arrows/WASD/space.
 
 ### Phase 2 — Platformer kit and Hopper (3 weeks)
 

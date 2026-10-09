@@ -186,6 +186,7 @@ class QuantumRunner:
     def _build_game(self, app: ApplicationNode, debug: bool = False) -> int:
         """Build a Godot 4 project from a game application."""
         from quantum.runtime.game_builder import GameBuilder, GameBuildError
+        from quantum.runtime.godot import GameCompileError
         try:
             source_dir = getattr(self, '_source_dir', None)
             builder = GameBuilder(source_dir=source_dir)
@@ -209,6 +210,9 @@ class QuantumRunner:
                 print(f"   Behaviors: {len(getattr(app, 'behaviors', []))}")
                 print(f"   Prefabs: {len(getattr(app, 'prefabs', []))}")
             return 0
+        except GameCompileError as e:
+            print(f"[ERROR] {e}")
+            return 1
         except GameBuildError as e:
             print(f"[ERROR] Game build error: {e}")
             return 1
