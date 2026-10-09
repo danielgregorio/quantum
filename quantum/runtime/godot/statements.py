@@ -39,6 +39,8 @@ class SceneScript:
     handlers: List[str] = field(default_factory=list)
     function_names: List[str] = field(default_factory=list)
     sounds_played: List[str] = field(default_factory=list)
+    prefabs_used: List[tuple] = field(default_factory=list)   # (name, line) from spawn/swap
+    states_used: List[tuple] = field(default_factory=list)    # (name, line) from become
 
     def scope(self) -> Scope:
         return Scope(self.state.keys(), functions=self.function_names)
@@ -178,6 +180,24 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     if el.tag == 'play':
         script.sounds_played.append(el.get('sound'))
         return f'Q.play({json.dumps(el.get("sound"))})'
+    if el.tag == 'become':
+        script.states_used.append((el.get('state'), el.line))
+        return f'Q.become({target}, {json.dumps(el.get("state"))})'
+    if el.tag == 'spawn':
+        at = el.get('at')
+        if not scope.has(at):
+            raise GameCompileError(f'<qg:spawn at="{at}"> outside a handler that has {at!r}', el.line)
+        script.prefabs_used.append((el.get('prefab'), el.line))
+        return (f'Q.spawn(self, {json.dumps(el.get("prefab"))}, {at}, '
+                f'{float(el.get("dx"))!r}, {float(el.get("dy"))!r})')
+    if el.tag == 'swap':
+        script.prefabs_used.append((el.get('prefab'), el.line))
+        return f'Q.swap(self, {target}, {json.dumps(el.get("prefab"))})'
+    if el.tag == 'checkpoint':
+        at = el.get('at')
+        if not scope.has(at):
+            raise GameCompileError(f'<qg:checkpoint at="{at}"> outside a handler that has {at!r}', el.line)
+        return f'Q.checkpoint({target}, {at})'
     raise GameCompileError(f'<qg:{el.tag}> is not an action; it cannot go inside a handler', el.line)
 
 

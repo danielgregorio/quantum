@@ -9,6 +9,7 @@ const QuantumScene := preload("res://addons/quantum/quantum_scene.gd")
 const PlatformerBody := preload("res://addons/quantum/platformer_body.gd")
 const Item := preload("res://addons/quantum/item.gd")
 const Thing := preload("res://addons/quantum/thing.gd")
+const Block := preload("res://addons/quantum/block.gd")
 const Hud := preload("res://addons/quantum/hud.gd")
 const Tilemap := preload("res://addons/quantum/tilemap.gd")
 
@@ -19,6 +20,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	var scene: Node2D = QuantumScene.new()
 	scene.set_script(load(scene_spec["script"]))
 	scene.q_spec = scene_spec
+	scene.q_game = game
 	scene.q_seed = int(scene_spec.get("seed", 0))
 	Q.load_sounds(game.get("sounds", {}))
 
@@ -43,16 +45,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				characters[node_spec["id"]] = body
 				scene.add_child(body)
 			"instance":
-				var prefab: Dictionary = game["prefabs"][node_spec["prefab"]]
-				var sheet: Dictionary = game["sheets"][prefab["sheet"]]
-				var thing: Node2D
-				if prefab.get("ai") != null:
-					thing = Thing.new()
-				else:
-					thing = Item.new()
-				thing.setup(node_spec["prefab"], prefab, _texture(sheet), int(sheet["tile"]))
-				thing.position = Vector2(node_spec["x"], node_spec["y"])
-				scene.add_child(thing)
+				instance(game, scene, node_spec["prefab"], Vector2(node_spec["x"], node_spec["y"]))
 			"camera":
 				var cam := Camera2D.new()
 				cam.name = "Camera"
@@ -76,6 +69,29 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	return scene
 
 
+# A prefab instance in the scene; qg:instance, qg:spawn and qg:swap use it.
+# From a collision handler (deferred), the node joins the tree at the end
+# of the frame: physics refuses new shapes while it reports touches.
+static func instance(game: Dictionary, scene: Node, prefab_name: String, at: Vector2,
+		deferred: bool = false) -> Node2D:
+	var prefab: Dictionary = game["prefabs"][prefab_name]
+	var sheet: Dictionary = game["sheets"][prefab["sheet"]]
+	var thing: Node2D
+	if prefab.get("ai") != null:
+		thing = Thing.new()
+	elif prefab.get("solid", false):
+		thing = Block.new()
+	else:
+		thing = Item.new()
+	thing.setup(prefab_name, prefab, _texture(sheet), int(sheet["tile"]))
+	thing.position = at
+	if deferred:
+		scene.call_deferred("add_child", thing)
+	else:
+		scene.add_child(thing)
+	return thing
+
+
 static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> CharacterBody2D:
 	var body := PlatformerBody.new()
 	body.name = node_spec["id"]
@@ -88,16 +104,21 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 	var sprite := _sprite(_texture(sheet), int(sheet["tile"]), int(node_spec["frame"]))
 	body.add_child(sprite)
 	var shape := CollisionShape2D.new()
+	shape.name = "Shape"
 	var rect := RectangleShape2D.new()
 	rect.size = Vector2(node_spec["hitbox"][0], node_spec["hitbox"][1])
 	shape.shape = rect
 	body.add_child(shape)
-	# What it touches: an Area2D the same size, reporting the items it overlaps.
+	# What it touches: an Area2D two pixels larger each side, so a solid
+	# thing the body rests on or bumps (which it cannot overlap) is seen.
 	var sensor := Area2D.new()
 	sensor.name = "Sensor"
 	sensor.monitorable = false
 	var sensor_shape := CollisionShape2D.new()
-	sensor_shape.shape = rect
+	sensor_shape.name = "Shape"
+	var sensor_rect := RectangleShape2D.new()
+	sensor_rect.size = rect.size + Vector2(4, 4)
+	sensor_shape.shape = sensor_rect
 	sensor.add_child(sensor_shape)
 	body.add_child(sensor)
 	body.wire(sensor, node_spec, scene, sprite)

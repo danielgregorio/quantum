@@ -48,16 +48,23 @@ alter the behaviour of an existing app is listed under **Breaking**.
   `qg:on-collision side="top"` (a stomp) with `cooldown=` ticks; `qg:bounce`,
   `qg:respawn`; `qg:on-fall` below the tilemap; `jump-sound=`. Things
   collide with the tiles, not with the characters: touching is the areas'
-  job, so a walker hurts instead of blocking.
-- `projects/hopper/hopper.q`, the platformer, so far one screen: a
-  character that walks and jumps on a tilemap, coins, a walker to stomp or
-  be hurt by, a pit, score/coins/lives in the HUD — zero lines of script.
+  job, so a walker hurts instead of blocking. Then: `qg:state` (a form of
+  the character — hitbox, frame, animations; `me.state` reads it) and
+  `qg:become`; `qg:prefab solid="true"` (a block to stand on and bump) with
+  `qg:on-collision side="bottom"`; `qg:spawn`, `qg:swap`, `qg:checkpoint`;
+  `qg:text` in the HUD.
+- `projects/hopper/hopper.q`, the platformer, so far one level: a
+  character that walks and jumps on a tilemap, a block with a power-up in
+  it that makes it big (a hit makes it small again), coins, a walker to
+  stomp or be hurt by, a pit, a checkpoint, spikes, a flag; score, coins,
+  lives and a message in the HUD — zero lines of script.
   `tests/godot/test_godot_hopper.py` replays it in Godot: it rests on the
   ground, runs at its `run-speed`, a held jump peaks at `jump-height`
   within a pixel, a tap is a short hop, a coin collected is counted, the
+  block opens from below, the power-up and the hit change its state, the
   walker hurts once (cooldown) and sends it back to the start, landing on
-  the walker stomps it, the pit costs a life, and the same tape gives the
-  same game.
+  the walker stomps it, the pit costs a life, the spikes send it back to
+  the checkpoint, the flag wins, and the same tape gives the same game.
 - Laboratory: the real engine checks and replays a game, headless.
   `quantum run game.q --check` opens the built Godot project and fails on
   any script error (Godot exits 0 either way; the check reads its output).

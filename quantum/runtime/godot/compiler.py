@@ -130,8 +130,10 @@ class _Compiler:
                              'frame': el.get('frame'), 'hitbox': list(el.get('hitbox')),
                              'ai': el.get('ai'), 'speed': el.get('speed'),
                              'direction': el.get('direction'), 'turns_at': el.get('turns-at'),
-                             'gravity': el.get('gravity'),
+                             'gravity': el.get('gravity'), 'solid': el.get('solid'),
                              'animations': _animations(el)}
+            if el.get('solid') and el.get('ai'):
+                raise GameCompileError('a prefab is solid or has ai=, not both', el.line)
         scenes = {}
         for scene in g.scenes:
             scenes[scene.get('name')] = self._scene(scene, sheets, prefabs)
@@ -171,6 +173,7 @@ class _Compiler:
     def _scene(self, scene: Element, sheets: dict, prefabs: dict) -> dict:
         name = scene.get('name')
         script = SceneScript(name)
+        self._states_checked: list = []
         # 1. state and functions first: handlers refer to them
         for node in scene.children:
             if isinstance(node, Statement) and node.kind == 'set':
@@ -220,6 +223,26 @@ class _Compiler:
                 if el.get('jump-sound') and el.get('jump-sound') not in self.sounds:
                     raise GameCompileError(
                         f'jump-sound="{el.get("jump-sound")}": no qg:sound of that name', el.line)
+                states = {}
+                initial_state = None
+                for st in el.find_all('state'):
+                    sname = st.get('name')
+                    if sname in states:
+                        raise GameCompileError(f'two states named {sname!r}', st.line)
+                    states[sname] = {'hitbox': list(st.get('hitbox')), 'frame': st.get('frame'),
+                                     'animations': _animations(st)}
+                    if st.get('initial'):
+                        if initial_state is not None:
+                            raise GameCompileError('two states marked initial', st.line)
+                        initial_state = sname
+                if states and initial_state is None:
+                    initial_state = next(iter(states))
+                for sname, line in script.states_used[len(self._states_checked):]:
+                    if sname not in states:
+                        raise GameCompileError(
+                            f'<qg:become state="{sname}">: {cid!r} has no qg:state of that name '
+                            f'(it has: {", ".join(states) or "none"})', line)
+                self._states_checked = list(script.states_used)
                 nodes.append({
                     'kind': 'character', 'id': cid, 'controller': el.get('controller'),
                     'sheet': el.get('sheet'), 'frame': el.get('frame'),
@@ -229,6 +252,7 @@ class _Compiler:
                     'gravity': el.get('gravity'), 'max_fall': el.get('max-fall'),
                     'jump_sound': el.get('jump-sound'),
                     'animations': _animations(el),
+                    'states': states, 'initial_state': initial_state,
                     'on_collision': handlers, 'on_fall': on_fall,
                 })
             elif el.tag == 'instance':
@@ -241,13 +265,13 @@ class _Compiler:
             elif el.tag == 'hud':
                 items = []
                 for c in el.children:
-                    if isinstance(c, Element) and c.tag == 'counter':
+                    if isinstance(c, Element) and c.tag in ('counter', 'text'):
                         if c.get('bind') not in script.state:
                             raise GameCompileError(
-                                f'<qg:counter bind="{c.get("bind")}">: no q:set of that name in the scene', c.line)
-                        items.append({'kind': 'counter', 'bind': c.get('bind'), 'label': c.get('label')})
+                                f'<qg:{c.tag} bind="{c.get("bind")}">: no q:set of that name in the scene', c.line)
+                        items.append({'kind': c.tag, 'bind': c.get('bind'), 'label': c.get('label', '')})
                     else:
-                        raise GameCompileError('<qg:hud> holds qg:counter', getattr(c, 'line', el.line))
+                        raise GameCompileError('<qg:hud> holds qg:counter and qg:text', getattr(c, 'line', el.line))
                 nodes.append({'kind': 'hud', 'position': el.get('position'), 'items': items})
             else:
                 raise GameCompileError(f'<qg:{el.tag}> cannot go directly inside a scene', el.line)
@@ -264,6 +288,10 @@ class _Compiler:
                     raise GameCompileError(
                         f'<qg:on-collision with="{h["with"]}">: no prefab has that tag '
                         f'(tags: {", ".join(sorted(tags)) or "none"})', scene.line)
+        for pname, line in script.prefabs_used:
+            if pname not in prefabs:
+                raise GameCompileError(
+                    f'no qg:prefab named {pname!r} (declared: {", ".join(sorted(prefabs)) or "none"})', line)
         for played in script.sounds_played:
             if played not in self.sounds:
                 raise GameCompileError(

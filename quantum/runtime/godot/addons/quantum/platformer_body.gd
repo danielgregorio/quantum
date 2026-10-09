@@ -30,6 +30,10 @@ var hitbox_size: Vector2 = Vector2(16, 16)
 
 var spawn_point: Vector2 = Vector2.ZERO
 var animator: Node = null
+var state: String = ""
+var _states: Dictionary = {}
+var _base_animations: Dictionary = {}
+var _base_frame: int = 0
 
 var _coyote: int = 0
 var _jump_speed: float = 0.0
@@ -39,6 +43,9 @@ var _on_fall: String = ""
 var _fell: bool = false
 var _scene: Node = null
 var _ticks: int = 0
+# The velocity before move_and_slide, which zeroes it on a floor or a
+# ceiling: the side of a touch is judged by where the body was going.
+var _moving: Vector2 = Vector2.ZERO
 
 
 func setup(spec: Dictionary) -> void:
@@ -65,11 +72,16 @@ func wire(sensor: Area2D, spec: Dictionary, scene: Node, sprite: Sprite2D) -> vo
 	_on_fall = str(spec.get("on_fall", "")) if spec.get("on_fall") != null else ""
 	_scene = scene
 	sensor.area_entered.connect(_on_area_entered)
+	_base_animations = spec.get("animations", {})
+	_base_frame = int(spec.get("frame", 0))
+	_states = spec.get("states", {})
 	animator = Animator.new()
 	animator.name = "Animator"
-	animator.setup(sprite, spec.get("animations", {}))
+	animator.setup(sprite, _base_animations)
 	add_child(animator)
 	animator.play("idle")
+	if spec.get("initial_state") != null:
+		become(str(spec["initial_state"]))
 
 
 func bounce(height: float) -> void:
@@ -83,15 +95,51 @@ func respawn() -> void:
 	_fell = false
 
 
+func set_checkpoint(at: Vector2) -> void:
+	spawn_point = Vector2(at.x, at.y - 2.0)
+
+
+# One of the qg:states: its hitbox, its frame, its animations (the
+# character's own where the state has none).
+func become(name_: String) -> void:
+	if not _states.has(name_) or name_ == state:
+		return
+	state = name_
+	var st: Dictionary = _states[name_]
+	var old_h := hitbox_size.y
+	hitbox_size = Vector2(st["hitbox"][0], st["hitbox"][1])
+	# Deferred: a state change comes from a collision handler, while
+	# physics refuses shape changes.
+	var shape := get_node_or_null("Shape")
+	if shape != null:
+		shape.shape.set_deferred("size", hitbox_size)
+	var sensor_shape := get_node_or_null("Sensor/Shape")
+	if sensor_shape != null:
+		sensor_shape.shape.set_deferred("size", hitbox_size + Vector2(4, 4))
+	# Keep the feet where they were.
+	position.y -= (hitbox_size.y - old_h) / 2.0
+	var sprite: Sprite2D = get_node_or_null("Sprite")
+	if sprite != null:
+		sprite.frame = int(st.get("frame", _base_frame))
+	if animator != null:
+		var anims: Dictionary = _base_animations.duplicate()
+		for k in st.get("animations", {}).keys():
+			anims[k] = st["animations"][k]
+		animator.animations = anims
+		animator.current = ""
+
+
 func _on_area_entered(area: Area2D) -> void:
 	if not area.has_method("quantum_tag"):
 		return
 	var tag: String = area.quantum_tag()
 	var other: Node = area.quantum_owner() if area.has_method("quantum_owner") else area
 	var on_top := _is_on_top_of(other)
+	var from_below := _is_below(other)
 	var matched := false
 	for h in _handlers:
-		if h["with"] == tag and h.get("side", "any") == "top" and on_top:
+		var side: String = h.get("side", "any")
+		if h["with"] == tag and ((side == "top" and on_top) or (side == "bottom" and from_below)):
 			if _fire(h, other):
 				matched = true
 	if matched:
@@ -113,12 +161,20 @@ func _fire(h: Dictionary, other: Node) -> bool:
 	return true
 
 
+# Hitting it from below: rising, with the head below its middle.
+func _is_below(other: Node) -> bool:
+	if not (other is Node2D):
+		return false
+	var head := global_position.y - hitbox_size.y / 2.0
+	return _moving.y < 0.0 and head >= (other as Node2D).global_position.y - 2.0
+
+
 # Landing on it: falling, with the feet above its middle.
 func _is_on_top_of(other: Node) -> bool:
 	if not (other is Node2D):
 		return false
 	var feet := global_position.y + hitbox_size.y / 2.0
-	return velocity.y > 0.0 and feet <= (other as Node2D).global_position.y + 2.0
+	return _moving.y > 0.0 and feet <= (other as Node2D).global_position.y + 2.0
 
 
 func _physics_process(delta: float) -> void:
@@ -150,6 +206,7 @@ func _physics_process(delta: float) -> void:
 	if sprite != null and dir != 0:
 		sprite.flip_h = dir < 0
 
+	_moving = velocity
 	move_and_slide()
 
 	if animator != null:

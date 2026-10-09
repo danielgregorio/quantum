@@ -7,6 +7,7 @@ extends Node2D
 # the replay harness reads (quantum_state).
 
 var q_spec: Dictionary = {}
+var q_game: Dictionary = {}
 var q_seed: int = 0
 var q_camera: Camera2D = null
 var q_fall_y: float = 100000.0
@@ -31,7 +32,10 @@ func quantum_state() -> Dictionary:
 	var nodes := {}
 	for n in get_tree().get_nodes_in_group("q_named"):
 		if n.get_parent() == self:
-			nodes[n.name] = {"x": snappedf(n.position.x, 0.01), "y": snappedf(n.position.y, 0.01)}
+			var entry := {"x": snappedf(n.position.x, 0.01), "y": snappedf(n.position.y, 0.01)}
+			if "state" in n and n.state != "":
+				entry["state"] = n.state
+			nodes[n.name] = entry
 	var things := {}
 	for n in get_tree().get_nodes_in_group("q_thing"):
 		if n.get_parent() == self and not n.is_queued_for_deletion():

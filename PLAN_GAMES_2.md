@@ -198,8 +198,15 @@ Slices, each one green in CI before the next:
   two CharacterBody2Ds on the same layer block each other and their areas
   never overlap — things live on layer 2, characters' bodies only see
   layer 1; `is_on_top_of` is "falling, feet above the other's middle".
-- [ ] 2b: character states (`qg:state`, hitbox per state, a power-up that
-  grows), question/breakable blocks, hazards, checkpoints, a goal.
+- [x] 2b (2026-10-09): `qg:state` + `qg:become` (a power-up that grows, a
+  hit that shrinks), solid prefabs bumped from below (`side="bottom"`),
+  `qg:spawn`, `qg:swap`, `qg:checkpoint`, spikes, a flag, `qg:text`.
+  Learned: `move_and_slide` zeroes the velocity on a floor or ceiling
+  before the touch is reported, so the side is judged by the pre-move
+  velocity; physics refuses new shapes and shape changes during a
+  collision callback, so spawn/swap add deferred and a state change
+  resizes deferred; a character's sensor is 2 px larger than its body,
+  or a solid it rests on is never "touched".
 - [ ] 2c: several scenes, `qg:goto-scene`, state that persists across
   scenes, a world map, game over, three levels.
 - [ ] 2d: Tiled `.tmx` levels with object layers that place prefabs.

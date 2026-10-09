@@ -20,7 +20,7 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			box.position = Vector2(4, 4)
 	add_child(box)
 	for item in spec.get("items", []):
-		if item["kind"] == "counter":
+		if item["kind"] == "counter" or item["kind"] == "text":
 			var label := Label.new()
 			label.add_theme_font_size_override("font_size", 8)
 			box.add_child(label)

@@ -37,7 +37,7 @@ class Tag:
 
 
 # The actions a handler can hold, besides q: statements.
-ACTIONS = ('destroy', 'bounce', 'play', 'respawn')
+ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -68,14 +68,23 @@ TAGS: Dict[str, Tag] = {
          'speed': Attr('float', 30.0, doc='pixels per second, for ai='),
          'direction': Attr('enum:left|right', 'left', doc='where it walks first'),
          'turns-at': Attr('enum:wall|edge', 'wall', doc='edge: also turns before falling off'),
-         'gravity': Attr('float', 900.0)},
+         'gravity': Attr('float', 900.0),
+         'solid': Attr('bool', False, doc='characters stand on it and bump it (a block)')},
         parents=('application',)),
+    'state': Tag(
+        'A form of the character (small, big...): its hitbox, its frame, its animations. '
+        '`me.state` reads it; qg:become changes it.',
+        {'name': Attr('ident', required=True),
+         'hitbox': Attr('size', required=True),
+         'frame': Attr('int', 0),
+         'initial': Attr('bool', False, doc='the state it starts in (else the first one)')},
+        parents=('character',)),
     'animation': Tag(
         'Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what it does; a prefab plays "walk".',
         {'name': Attr('ident', required=True),
          'frames': Attr('str', required=True, doc='comma-separated frame numbers'),
          'fps': Attr('float', 8.0)},
-        parents=('character', 'prefab')),
+        parents=('character', 'prefab', 'state')),
     'scene': Tag(
         'A screen of the game. The first one is where the game starts.',
         {'name': Attr('ident', required=True),
@@ -122,12 +131,17 @@ TAGS: Dict[str, Tag] = {
         {'bind': Attr('ident', required=True, doc='a q:set of the scene'),
          'label': Attr('str', '', doc='text before the number')},
         parents=('hud',)),
+    'text': Tag(
+        'A string from the scene state, in the HUD.',
+        {'bind': Attr('ident', required=True, doc='a q:set of the scene')},
+        parents=('hud',)),
     'on-collision': Tag(
         'What happens when this character touches something. Holds actions and statements; '
         '`me` is the character, `other` what it touched.',
         {'with': Attr('ident', required=True, doc='the tag of what it touches'),
-         'side': Attr('enum:any|top', 'any',
-                      doc='top: landing on it. A side handler runs before the "any" one, which then does not'),
+         'side': Attr('enum:any|top|bottom', 'any',
+                      doc='top: landing on it; bottom: hitting it from below. A side handler runs '
+                          'before the "any" one, which then does not'),
          'cooldown': Attr('int', 0, doc='ticks before this handler can fire again')},
         parents=('character',)),
     'on-fall': Tag(
@@ -149,8 +163,29 @@ TAGS: Dict[str, Tag] = {
         {'sound': Attr('ident', required=True)},
         parents=('handler',)),
     'respawn': Tag(
-        'Puts the character back where it started the scene, still.',
+        'Puts the character back at its start or its last checkpoint, still.',
         {'target': Attr('enum:me', 'me')},
+        parents=('handler',)),
+    'become': Tag(
+        'Changes the character to one of its qg:states.',
+        {'target': Attr('enum:me', 'me'),
+         'state': Attr('ident', required=True)},
+        parents=('handler',)),
+    'spawn': Tag(
+        'Places a new prefab instance in the scene.',
+        {'prefab': Attr('ident', required=True),
+         'at': Attr('enum:other|me', 'other', doc='whose position'),
+         'dx': Attr('float', 0.0), 'dy': Attr('float', 0.0, doc='offset in pixels')},
+        parents=('handler',)),
+    'swap': Tag(
+        'Replaces a thing with an instance of another prefab, in its place.',
+        {'target': Attr('enum:other', 'other'),
+         'prefab': Attr('ident', required=True)},
+        parents=('handler',)),
+    'checkpoint': Tag(
+        "Makes the other thing's position where the character respawns.",
+        {'target': Attr('enum:me', 'me'),
+         'at': Attr('enum:other', 'other')},
         parents=('handler',)),
 }
 

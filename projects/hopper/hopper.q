@@ -1,9 +1,10 @@
 <q:application id="hopper" type="game">
 
   <!-- Hopper: the platformer that drives the game language (PLAN_GAMES_2.md).
-       One screen so far: a character that walks and jumps on a tilemap, coins,
-       a walker to stomp or be hurt by, a pit to fall into, a counter in the
-       HUD. Art and sounds: Kenney's Pixel Platformer (CC0), in assets/kenney/. -->
+       One level so far: a character that walks and jumps on a tilemap, coins,
+       a block with a power-up in it, a walker to stomp or be hurt by, a pit,
+       a checkpoint, spikes, a flag. Art and sounds: Kenney's Pixel Platformer
+       (CC0), in assets/kenney/. -->
 
   <qg:tileset name="kenney" src="assets/kenney/tilemap_packed.png" tile="18" />
   <qg:spritesheet name="chars" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
@@ -12,8 +13,19 @@
   <qg:sound name="coin" src="assets/kenney/audio/coin.ogg" />
   <qg:sound name="stomp" src="assets/kenney/audio/stomp.ogg" />
   <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound name="block" src="assets/kenney/audio/block.ogg" />
+  <qg:sound name="powerup" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
 
   <qg:prefab name="Coin" tag="coin" sheet="kenney" frame="151" hitbox="12x12" />
+  <qg:prefab name="QBlock" tag="qblock" sheet="kenney" frame="10" hitbox="18x18" solid="true" />
+  <qg:prefab name="UsedBlock" tag="usedblock" sheet="kenney" frame="11" hitbox="18x18" solid="true" />
+  <qg:prefab name="Shroom" tag="shroom" sheet="kenney" frame="128" hitbox="12x12"
+             ai="patrol" speed="40" direction="right" turns-at="wall" />
+  <qg:prefab name="Spikes" tag="spikes" sheet="kenney" frame="68" hitbox="18x8" />
+  <qg:prefab name="Checkpoint" tag="checkpoint" sheet="kenney" frame="111" hitbox="18x18" />
+  <qg:prefab name="CheckpointOn" tag="checkpoint-on" sheet="kenney" frame="112" hitbox="18x18" />
+  <qg:prefab name="Flag" tag="flag" sheet="kenney" frame="153" hitbox="18x18" />
 
   <qg:prefab name="Walker" tag="enemy" sheet="chars" frame="18" hitbox="18x18"
              ai="patrol" speed="30" direction="left" turns-at="edge">
@@ -24,38 +36,59 @@
     <q:set name="coins" value="0" type="number" />
     <q:set name="score" value="0" type="number" />
     <q:set name="lives" value="3" type="number" />
+    <q:set name="message" value="" />
 
-    <!-- 16 columns x 13 rows of 18 px = 288 x 234. 0 is empty; 23 is the grass
+    <!-- 24 columns x 13 rows of 18 px = 432 x 234. 0 is empty; 23 is the grass
          top, 25 the dirt below it. A platform at row 6, a pit at columns 13-14. -->
     <qg:tilemap tileset="kenney" collision="true">
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,23,23,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-23,23,23,23,23,23,23,23,23,23,23,23,23,0,0,23
-25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,25
-25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,25
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,23,23,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+23,23,23,23,23,23,23,23,23,23,23,23,23,0,0,23,23,23,23,23,23,23,23,23
+25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,25,25,25,25,25,25,25,25,25
+25,25,25,25,25,25,25,25,25,25,25,25,25,0,0,25,25,25,25,25,25,25,25,25
     </qg:tilemap>
 
     <qg:character id="player" controller="platformer" sheet="chars" frame="0"
                   x="40" y="160" hitbox="18x22"
                   run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6"
                   jump-sound="jump">
-      <qg:animation name="idle" frames="0" />
-      <qg:animation name="walk" frames="1,2" fps="8" />
-      <qg:animation name="jump" frames="1" />
+      <qg:state name="small" hitbox="18x22" frame="0" initial="true">
+        <qg:animation name="idle" frames="0" />
+        <qg:animation name="walk" frames="1,2" fps="8" />
+        <qg:animation name="jump" frames="1" />
+      </qg:state>
+      <qg:state name="big" hitbox="18x22" frame="3">
+        <qg:animation name="idle" frames="3" />
+        <qg:animation name="walk" frames="4,5" fps="8" />
+        <qg:animation name="jump" frames="4" />
+      </qg:state>
 
       <qg:on-collision with="coin">
         <qg:destroy target="other" />
         <qg:play sound="coin" />
         <q:set name="coins" value="{coins + 1}" />
         <q:set name="score" value="{score + 10}" />
+      </qg:on-collision>
+
+      <qg:on-collision with="qblock" side="bottom">
+        <qg:swap target="other" prefab="UsedBlock" />
+        <qg:spawn prefab="Shroom" at="other" dy="-18" />
+        <qg:play sound="block" />
+      </qg:on-collision>
+
+      <qg:on-collision with="shroom">
+        <qg:destroy target="other" />
+        <qg:play sound="powerup" />
+        <qg:become target="me" state="big" />
+        <q:set name="score" value="{score + 50}" />
       </qg:on-collision>
 
       <qg:on-collision with="enemy" side="top">
@@ -67,8 +100,30 @@
 
       <qg:on-collision with="enemy" side="any" cooldown="60">
         <qg:play sound="hurt" />
+        <q:if condition="{me.state == 'big'}">
+          <qg:become target="me" state="small" />
+        <q:else>
+          <q:set name="lives" value="{lives - 1}" />
+          <qg:respawn target="me" />
+        </q:else>
+        </q:if>
+      </qg:on-collision>
+
+      <qg:on-collision with="spikes" cooldown="60">
+        <qg:play sound="hurt" />
         <q:set name="lives" value="{lives - 1}" />
         <qg:respawn target="me" />
+      </qg:on-collision>
+
+      <qg:on-collision with="checkpoint">
+        <qg:checkpoint target="me" at="other" />
+        <qg:swap target="other" prefab="CheckpointOn" />
+      </qg:on-collision>
+
+      <qg:on-collision with="flag" cooldown="100000">
+        <qg:play sound="win" />
+        <q:set name="score" value="{score + 500}" />
+        <q:set name="message" value="YOU WIN" />
       </qg:on-collision>
 
       <qg:on-fall>
@@ -78,9 +133,13 @@
       </qg:on-fall>
     </qg:character>
 
+    <qg:instance prefab="QBlock" x="45" y="135" />
     <qg:instance prefab="Coin" x="120" y="160" />
     <qg:instance prefab="Coin" x="171" y="96" />
     <qg:instance prefab="Walker" x="200" y="160" />
+    <qg:instance prefab="Checkpoint" x="297" y="171" />
+    <qg:instance prefab="Spikes" x="351" y="176" />
+    <qg:instance prefab="Flag" x="405" y="171" />
 
     <qg:camera follow="player" bounds="tilemap" />
 
@@ -88,6 +147,7 @@
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="coins" label="COINS" />
       <qg:counter bind="lives" label="LIVES" />
+      <qg:text bind="message" />
     </qg:hud>
   </qg:scene>
 

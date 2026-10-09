@@ -211,6 +211,82 @@ class TestEnemiesSoundsAndAnimations:
         assert '<qg:bounce> cannot go inside <scene>' in e.message
 
 
+class TestStatesBlocksAndSpawns:
+    SOURCE = HEAD + '''  <qg:prefab name="QBlock" tag="qblock" sheet="k" frame="10" hitbox="18x18" solid="true" />
+  <qg:prefab name="Used" tag="used" sheet="k" frame="11" hitbox="18x18" solid="true" />
+  <qg:prefab name="Shroom" tag="shroom" sheet="k" frame="128" hitbox="12x12" ai="patrol" direction="right" />
+  <qg:prefab name="Post" tag="post" sheet="k" frame="111" hitbox="18x18" />
+  <qg:scene name="main">
+    <q:set name="message" value="" />
+    <qg:character id="player" controller="platformer" sheet="c" x="10" y="10" hitbox="18x22">
+      <qg:state name="small" hitbox="18x22" frame="0" initial="true" />
+      <qg:state name="big" hitbox="18x30" frame="3">
+        <qg:animation name="walk" frames="4,5" />
+      </qg:state>
+      <qg:on-collision with="qblock" side="bottom">
+        <qg:swap target="other" prefab="Used" />
+        <qg:spawn prefab="Shroom" at="other" dy="-18" />
+      </qg:on-collision>
+      <qg:on-collision with="shroom">
+        <qg:destroy />
+        <qg:become state="big" />
+      </qg:on-collision>
+      <qg:on-collision with="post">
+        <qg:checkpoint target="me" at="other" />
+        <q:if condition="{me.state == 'big'}"><q:set name="message" value="big!" /></q:if>
+      </qg:on-collision>
+    </qg:character>
+    <qg:instance prefab="QBlock" x="30" y="10" />
+    <qg:hud><qg:text bind="message" /></qg:hud>
+  </qg:scene>
+''' + TAIL
+
+    def test_the_json(self, tmp_path):
+        out = build(tmp_path, self.SOURCE)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['prefabs']['QBlock']['solid'] is True
+        character = data['scenes']['main']['nodes'][0]
+        assert character['initial_state'] == 'small'
+        assert character['states'] == {
+            'small': {'hitbox': [18, 22], 'frame': 0, 'animations': {}},
+            'big': {'hitbox': [18, 30], 'frame': 3, 'animations': {'walk': {'frames': [4, 5], 'fps': 8}}},
+        }
+        assert character['on_collision'][0]['side'] == 'bottom'
+        assert data['scenes']['main']['nodes'][2]['items'] == [{'kind': 'text', 'bind': 'message', 'label': ''}]
+
+    def test_the_actions(self, tmp_path):
+        out = build(tmp_path, self.SOURCE)
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\tQ.swap(self, other, "Used")\n\tQ.spawn(self, "Shroom", other, 0.0, -18.0)\n' in script
+        assert '\tQ.destroy(other)\n\tQ.become(me, "big")\n' in script
+        assert '\tQ.checkpoint(me, other)\n\tif (me.state == "big"):\n\t\tmessage = "big!"\n' in script
+
+    def test_a_state_nobody_declared(self, tmp_path):
+        e = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p" controller="platformer" sheet="c" x="0" y="0" hitbox="1x1">
+      <qg:state name="small" hitbox="1x1" />
+      <qg:on-collision with="coin"><qg:become state="huge" /></qg:on-collision>
+    </qg:character>
+  </qg:scene>
+'''))
+        assert '<qg:become state="huge">: \'p\' has no qg:state of that name (it has: small)' in e.message
+
+    def test_a_spawned_prefab_nobody_declared(self, tmp_path):
+        e = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p" controller="platformer" sheet="c" x="0" y="0" hitbox="1x1">
+      <qg:on-collision with="coin"><qg:spawn prefab="Gem" /></qg:on-collision>
+    </qg:character>
+  </qg:scene>
+'''))
+        assert "no qg:prefab named 'Gem' (declared: Coin)" in e.message
+        assert e.line == 7
+
+    def test_solid_and_ai_exclude_each_other(self, tmp_path):
+        e = refuse(tmp_path, HEAD + '  <qg:prefab name="X" sheet="k" hitbox="1x1" solid="true" ai="patrol" />\n'
+                   '  <qg:scene name="main" />\n' + TAIL)
+        assert 'solid or has ai=, not both' in e.message
+
+
 class TestWhatItRefuses:
     def test_an_unknown_tag_with_its_line(self, tmp_path):
         e = refuse(tmp_path, game('  <qg:scene name="main">\n    <qg:sprite id="x" />\n  </qg:scene>\n'))
