@@ -1224,7 +1224,7 @@ class TestWhatArenaAsked:
 ''' + TAIL)
         assert '<qg:move> is for controller="fighter"' in str(err)
         err = refuse(tmp_path, game('  <qg:scene name="main"><qg:hud><qg:bar bind="p9.health" /></qg:hud></qg:scene>\n'))
-        assert '<qg:bar bind="p9.health">: <character id>.health' in str(err)
+        assert '<qg:bar bind="p9.health">: a fighter of this scene' in str(err)
 
 
 class TestWhatChessAsked:

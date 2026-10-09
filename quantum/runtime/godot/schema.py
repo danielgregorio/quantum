@@ -336,7 +336,7 @@ TAGS: Dict[str, Tag] = {
         parents=('character',)),
     'bar': Tag(
         'A bar in the HUD: a number against its maximum — a q:set, or a fighter\'s health as `id.health`.',
-        {'bind': Attr('str', required=True, doc='a q:set of the scene or the game, or <character id>.health'),
+        {'bind': Attr('str', required=True, doc='a q:set of the scene or the game, or a fighter\'s id and .health (p1.health)'),
          'max': Attr('float', 100.0),
          'width': Attr('int', 100), 'height': Attr('int', 10),
          'color': Attr('color', '#e04040')},

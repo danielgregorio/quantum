@@ -27,6 +27,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the games on the site — `docs/targets/play.md` lists the
+  eight games with a browser build, Linux and Windows downloads, controls
+  and the network commands. `scripts/export-games.py` exports every
+  `projects/<name>/<name>.q` with Godot's templates (the web build without
+  threads, so it runs on a static host) and installs the templates itself
+  (`--install-templates`); the Deploy Docs workflow runs it, with the
+  templates cached, before the site is built. Nothing exported is committed.
 - Laboratory: an eighth game, `projects/chess/chess.q` — chess, its rules
   written in `q:function`s over an array of 64 squares (the rules of
   github.com/Prashanna135/chess, MIT; `projects/chess/README.md` maps it),

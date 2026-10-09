@@ -481,7 +481,7 @@ A bar in the HUD: a number against its maximum — a q:set, or a fighter's healt
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `bind` | text | required | a q:set of the scene or the game, or <character id>.health |
+| `bind` | text | required | a q:set of the scene or the game, or a fighter's id and .health (p1.health) |
 | `max` | number | `100.0` |  |
 | `width` | integer | `100` |  |
 | `height` | integer | `10` |  |

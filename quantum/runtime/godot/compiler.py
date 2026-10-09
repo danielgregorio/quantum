@@ -630,7 +630,7 @@ class _Compiler:
                             node, prop = bind.split('.', 1)
                             if node not in ids or prop != 'health':
                                 raise GameCompileError(
-                                    f'<qg:bar bind="{bind}">: <character id>.health of a fighter of this scene', c.line)
+                                    f'<qg:bar bind="{bind}">: a fighter of this scene and .health (p1.health)', c.line)
                         elif bind not in script.state and bind not in self.game_state:
                             raise GameCompileError(f'<qg:bar bind="{bind}">: no q:set of that name', c.line)
                         items.append({'kind': 'bar', 'bind': bind, 'max': c.get('max'), 'width': c.get('width'),
