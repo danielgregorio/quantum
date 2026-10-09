@@ -1,10 +1,15 @@
-extends StaticBody2D
-# A solid prefab instance (qg:prefab solid="true"): characters stand on it
-# and bump it from below. Its Hitbox area carries the tag collisions see.
-
+extends AnimatableBody2D
+# A moving platform (qg:prefab solid="true" ai="shuttle"): goes dx, dy
+# from where it is placed and back, every `period` ticks, carrying what
+# stands on it (sync_to_physics). Its Hitbox carries the tag.
 
 var prefab_name: String = ""
 var tag: String = ""
+var dx: float = 0.0
+var dy: float = 0.0
+var period: int = 240
+var _origin: Vector2 = Vector2.ZERO
+var _ticks: int = 0
 
 
 func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: int) -> void:
@@ -14,6 +19,10 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: int) -> 
 	add_to_group("q_thing")
 	collision_layer = 1
 	collision_mask = 0
+	sync_to_physics = true
+	dx = float(prefab.get("dx", 0.0))
+	dy = float(prefab.get("dy", 0.0))
+	period = maxi(2, int(prefab.get("period", 240)))
 	var sprite := Sprite2D.new()
 	sprite.name = "Sprite"
 	sprite.texture = texture
@@ -36,14 +45,25 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: int) -> 
 	add_child(hitbox)
 
 
+func _ready() -> void:
+	_origin = position
+
+
 func quantum_tag() -> String:
 	return tag
 
 
 func quantum_destroy() -> void:
 	remove_from_group("q_thing")
-	var hitbox := get_node_or_null("Hitbox")
-	if hitbox != null:
-		hitbox.set_deferred("monitorable", false)
 	set_deferred("collision_layer", 0)
 	queue_free()
+
+
+# There and back along a triangle wave, so it never jumps.
+func _physics_process(_delta: float) -> void:
+	_ticks = (_ticks + 1) % period
+	var half := period / 2.0
+	var t := _ticks / half
+	if t > 1.0:
+		t = 2.0 - t
+	position = _origin + Vector2(dx, dy) * t

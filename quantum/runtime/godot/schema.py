@@ -53,6 +53,11 @@ TAGS: Dict[str, Tag] = {
          'src': Attr('str', required=True),
          'tile': Attr('int', required=True, doc='frame size in pixels (square)')},
         parents=('application',)),
+    'input': Tag(
+        'The keys of an action, instead of the defaults (arrows/WASD to move, space/Z/X to jump).',
+        {'action': Attr('enum:left|right|up|down|jump', required=True),
+         'keys': Attr('str', required=True, doc='comma-separated Godot key names: Space, Left, A, Enter...')},
+        parents=('application',)),
     'sound': Tag(
         'A sound the game can play (qg:play).',
         {'name': Attr('ident', required=True),
@@ -65,11 +70,16 @@ TAGS: Dict[str, Tag] = {
          'sheet': Attr('ident', required=True, doc='a qg:spritesheet or qg:tileset'),
          'frame': Attr('int', 0),
          'hitbox': Attr('size', required=True),
-         'ai': Attr('enum:patrol|wander|chase|fly|sway', None,
+         'ai': Attr('enum:patrol|wander|chase|fly|sway|shuttle', None,
                     doc='patrol: walks under gravity, turns at walls (and at edges with turns-at); '
                         'wander: top-down, changes direction now and then (from the scene seed); '
                         'chase: top-down, goes for the character within sight=; '
-                        'fly: straight along heading=; sway: side to side across the scene'),
+                        'fly: straight along heading=; sway: side to side across the scene; '
+                        'shuttle: a solid that goes dx=,dy= and back every period= ticks, carrying what stands on it'),
+         'dx': Attr('float', 0.0, doc='shuttle: how far it goes, pixels'),
+         'dy': Attr('float', 0.0, doc='shuttle: how far it goes, pixels'),
+         'period': Attr('int', 240, doc='shuttle: ticks for there and back'),
+         'one-way': Attr('bool', False, doc='solid: can be jumped through from below and stood on'),
          'sight': Attr('float', 80.0, doc='chase: pixels'),
          'heading': Attr('enum:up|down|left|right', 'down', doc='fly: which way'),
          'lifetime': Attr('int', 0, doc='fly: gone after this many ticks (0: never); any fly is gone off-screen'),
@@ -189,6 +199,12 @@ TAGS: Dict[str, Tag] = {
         'when any thing of that tag dies there.',
         {'of': Attr('ident', None, doc='scene: the tag')},
         parents=('prefab', 'scene')),
+    'timer': Tag(
+        'Runs its handler after so many ticks, or every so many ticks, in this scene.',
+        {'after': Attr('int', None, doc='ticks from entering the scene, once'),
+         'every': Attr('int', None, doc='ticks between runs, from entering the scene'),
+         'count': Attr('int', 0, doc='every: stop after this many runs (0: never)')},
+        parents=('scene',)),
     'spawner': Tag(
         'Places count instances of a prefab, one every so many ticks, from a tick on.',
         {'prefab': Attr('ident', required=True),

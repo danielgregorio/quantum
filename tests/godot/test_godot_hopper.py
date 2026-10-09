@@ -217,7 +217,7 @@ def test_reaching_the_flag_wins_the_level_and_opens_the_next_on_the_map(godot, h
 def test_level_two_is_a_tiled_map_whose_objects_are_the_things(godot, hopper):
     entered = replay(hopper, 470, level(TO_THE_FLAG, [('right', 360, 362), ('jump', 460, 462)]), binary=godot)
     s = entered['level-2']
-    assert s['things'] == {'coin': 3, 'enemy': 2, 'flag': 1}
+    assert s['things'] == {'coin': 3, 'enemy': 2, 'flag': 1, 'ledge': 1, 'lift': 1}
     assert s['nodes']['player']['x'] == 40.0
 
 
@@ -229,3 +229,38 @@ def test_three_deaths_are_game_over_and_jump_starts_again(godot, hopper):
     again = replay(hopper, 530, level([('right', 10, 500), ('jump', 520, 522)]), binary=godot)
     assert list(again) == ['map']
     assert again['map']['game'] == {'cleared': [], 'lives': 3, 'map_at': 'level-1', 'score': 0}
+
+
+# --- the clock, the keys, the ledge and the lift ---
+
+def test_the_clock_loses_a_second_every_sixty_ticks(godot, hopper):
+    state = replay(hopper, 120 + ENTER, level([('right', 0, 120)]), binary=godot)
+    assert state['level-1']['time'] == 97
+
+
+def test_the_jump_keys_are_the_games_own(godot, hopper):
+    import json
+    data = json.loads((hopper / 'game.json').read_text())
+    assert data['inputs']['jump'] == ['Space', 'Z', 'X', 'Up', 'W']
+    assert data['inputs']['right'] == ['Right', 'D']
+
+
+IN_LEVEL_2 = [('right', 360, 362), ('jump', 460, 462)]
+
+
+def test_a_one_way_ledge_is_jumped_through_from_below_and_stood_on(godot, hopper):
+    tape = level(TO_THE_FLAG, IN_LEVEL_2 + [('right', 470, 500), ('jump', 505, 525)])
+    below = replay(hopper, 500, tape, binary=godot)['level-2']
+    assert below['nodes']['player']['y'] == pytest.approx(REST_Y, abs=0.5)   # walked under it
+    on_it = replay(hopper, 560, tape, binary=godot)['level-2']
+    assert on_it['nodes']['player'] == {'x': 84.98, 'y': 130.0}   # the ledge's top is at y=141
+
+
+def test_the_lift_carries_whoever_stands_on_it(godot, hopper):
+    tape = level(TO_THE_FLAG, IN_LEVEL_2 + [('right', 470, 500), ('jump', 505, 525), ('right', 700, 730)])
+    low = replay(hopper, 735, tape, binary=godot)['level-2']
+    high = replay(hopper, 830, tape, binary=godot)['level-2']
+    lift = {w[0]: w for w in high['where']}['lift']
+    assert high['nodes']['player']['x'] == low['nodes']['player']['x']    # standing still on it
+    assert high['nodes']['player']['y'] < low['nodes']['player']['y'] - 30   # carried up
+    assert high['nodes']['player']['y'] == pytest.approx(lift[2] - 4 - 11, abs=1)   # on its top

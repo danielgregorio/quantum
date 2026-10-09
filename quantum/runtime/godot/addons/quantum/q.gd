@@ -24,6 +24,13 @@ static func mod(a, b):
 	return fposmod(float(a), float(b))
 
 
+# `str()` as Quantum writes a number: 7, not 7.0, for a whole one.
+static func to_str(v) -> String:
+	if v is float and v == floorf(v) and absf(v) < 1e15:
+		return str(int(v))
+	return str(v)
+
+
 # `len()` of a string, an array or a dictionary.
 static func len(v) -> int:
 	if v is String:
@@ -31,6 +38,24 @@ static func len(v) -> int:
 	if v is Array or v is Dictionary:
 		return v.size()
 	return 0
+
+
+# `a[start:end]` of a string or an array, like Python (null: from the start / to the end).
+static func slice(v, start, end):
+	var n: int = v.length() if v is String else v.size()
+	var s: int = 0 if start == null else int(start)
+	var e: int = n if end == null else int(end)
+	if s < 0:
+		s = maxi(0, n + s)
+	if e < 0:
+		e = maxi(0, n + e)
+	s = mini(s, n)
+	e = mini(e, n)
+	if e <= s:
+		return "" if v is String else []
+	if v is String:
+		return (v as String).substr(s, e - s)
+	return (v as Array).slice(s, e)
 
 
 # Removes a thing from the scene at the end of the tick.

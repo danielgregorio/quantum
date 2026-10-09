@@ -111,6 +111,18 @@ alter the behaviour of an existing app is listed under **Breaking**.
   life, the spikes send it back to the checkpoint, the flag wins the level
   and opens the next on the map, three deaths are game over and jump
   starts again, and the same tape gives the same game.
+- Laboratory, after the plan closed: `qg:input` (a game's own keys for an
+  action); `qg:timer after=` / `every=` in a scene (Hopper's clock,
+  Drift's "here it comes"); `qg:prefab solid="true" one-way="true"` (a
+  ledge jumped through from below) and `ai="shuttle"` (a lift that goes
+  `dx`,`dy` and back every `period` ticks, carrying what stands on it);
+  slices in expressions (`items[1:3]`, `name[-2:]`); `q:loop` over a
+  dictionary iterates its keys, as GDScript does. A `q:set` without
+  `type=` is a `Variant` in GDScript, so a number may follow a string as
+  in Quantum; a `q:set` named like a Godot node property (`name`,
+  `position`...) is refused. `str()` of a whole number is `7`, not `7.0`.
+  `tests/godot/test_godot_expressions.py` runs 45 expressions in Godot
+  and compares each with the Core evaluator.
 - `docs/targets/games.md`, the game language reference, generated from the
   compiler's schema and the three games by `scripts/generate-games-reference.py`
   (a test fails when it is stale); `scripts/export-games.py` exports the

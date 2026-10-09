@@ -135,6 +135,12 @@ class _Compiler:
             declare_state(game_script, st)
         self.game_state: Dict[str, StateVar] = game_script.state
         self.scripts['game_state.gd'] = game_state_source(self.game_state)
+        inputs = {k: list(v) for k, v in DEFAULT_INPUTS.items()}
+        for el in g.inputs:
+            keys = [k.strip() for k in str(el.get('keys')).split(',') if k.strip()]
+            if not keys:
+                raise GameCompileError('<qg:input> needs at least one key', el.line)
+            inputs[el.get('action')] = keys
         sheets = {}
         for name, el in list(g.tilesets.items()) + list(g.sheets.items()):
             sheets[name] = {'src': self._asset(el.get('src'), el.line), 'tile': el.get('tile'),
@@ -147,8 +153,12 @@ class _Compiler:
         pscript = SceneScript('prefabs', game_state=self.game_state)
         for name, el in g.prefabs.items():
             self._sheet_exists(el.get('sheet'), sheets, el.line)
-            if el.get('solid') and el.get('ai'):
-                raise GameCompileError('a prefab is solid or has ai=, not both', el.line)
+            if el.get('solid') and el.get('ai') and el.get('ai') != 'shuttle':
+                raise GameCompileError('a prefab is solid or has ai=, not both (a shuttle is both)', el.line)
+            if el.get('ai') == 'shuttle' and not el.get('solid'):
+                raise GameCompileError('ai="shuttle" is a solid: add solid="true"', el.line)
+            if el.get('one-way') and not el.get('solid'):
+                raise GameCompileError('one-way="true" is for a solid prefab', el.line)
             for attr in ('fire-sound',):
                 if el.get(attr) and el.get(attr) not in sounds:
                     raise GameCompileError(f'{attr}="{el.get(attr)}": no qg:sound of that name', el.line)
@@ -169,6 +179,8 @@ class _Compiler:
                              'ai': el.get('ai'), 'speed': el.get('speed'), 'sight': el.get('sight'),
                              'direction': el.get('direction'), 'turns_at': el.get('turns-at'),
                              'gravity': el.get('gravity'), 'solid': el.get('solid'),
+                             'one_way': el.get('one-way'), 'dx': el.get('dx'), 'dy': el.get('dy'),
+                             'period': el.get('period'),
                              'heading': el.get('heading'), 'lifetime': el.get('lifetime'),
                              'health': el.get('health'),
                              'fire_prefab': el.get('fire-prefab'), 'fire_every': el.get('fire-every'),
@@ -213,7 +225,7 @@ class _Compiler:
             'game': {
                 'id': g.id,
                 'initial': g.scenes[0].get('name'),
-                'inputs': DEFAULT_INPUTS,
+                'inputs': inputs,
                 'sheets': sheets,
                 'sounds': sounds,
                 'prefabs': prefabs,
@@ -332,6 +344,13 @@ class _Compiler:
                 if tag in on_death:
                     raise GameCompileError(f'two <qg:on-death of="{tag}">', el.line)
                 on_death[tag] = compile_handler(script, f'_on_death_of_{_ident(tag)}', el.children, el.line)
+            elif el.tag == 'timer':
+                if (el.get('after') is None) == (el.get('every') is None):
+                    raise GameCompileError('<qg:timer> takes after= or every=, one of them', el.line)
+                timers = sum(1 for n in nodes if n['kind'] == 'timer')
+                handler = compile_handler(script, f'_on_timer_{timers}', el.children, el.line)
+                nodes.append({'kind': 'timer', 'after': el.get('after'), 'every': el.get('every'),
+                              'count': el.get('count'), 'handler': handler})
             elif el.tag == 'on-input':
                 action = el.get('action')
                 if action in on_input:

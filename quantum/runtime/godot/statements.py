@@ -21,6 +21,12 @@ from quantum.runtime.godot.model import Element, Node, Statement
 
 _INDENT = '\t'
 
+# Names every Godot node already has: a q:set of that name would redefine them.
+RESERVED_NAMES = frozenset((
+    'name', 'owner', 'position', 'global_position', 'rotation', 'scale', 'visible', 'modulate',
+    'z_index', 'process_mode', 'self', 'rng', 'state', 'health', 'tag', 'speed', 'velocity',
+))
+
 
 @dataclass
 class StateVar:
@@ -29,6 +35,11 @@ class StateVar:
     initial: str   # GDScript literal
     line: Optional[int]
     persist: bool = False   # game state kept between runs (q:set saved="true")
+    typed: bool = True      # type= written: the GDScript variable is typed; else Variant
+
+    @property
+    def gd_type(self) -> str:
+        return GD_TYPES.get(self.type, 'Variant') if self.typed else 'Variant'
 
 
 @dataclass
@@ -54,7 +65,7 @@ class SceneScript:
         lines = ['extends "res://addons/quantum/quantum_scene.gd"',
                  '# Compiled by Quantum from the scene; do not edit.', '']
         for var in self.state.values():
-            lines.append(f'var {var.name}: {GD_TYPES.get(var.type, "Variant")} = {var.initial}')
+            lines.append(f'var {var.name}: {var.gd_type} = {var.initial}')
         lines.append('')
         if self.enter:
             lines.append('func _q_enter() -> void:')
@@ -85,6 +96,9 @@ def declare_state(script: SceneScript, st: Statement) -> None:
         raise GameCompileError(f'{name!r} is declared twice', st.line)
     if name in script.game_state:
         raise GameCompileError(f'{name!r} is already the game\'s state (a q:set in <q:application>)', st.line)
+    if name in RESERVED_NAMES:
+        raise GameCompileError(
+            f'{name!r} is a property of every Godot node; a game state needs another name', st.line)
     type_name = st.attrs.get('type', 'string')
     if type_name not in GD_TYPES:
         raise GameCompileError(
@@ -102,7 +116,7 @@ def declare_state(script: SceneScript, st: Statement) -> None:
     persist = str(st.attrs.get('saved', 'false')).lower() in ('true', '1', 'yes')
     if persist and script.name != 'game':
         raise GameCompileError('saved= is for the game state (a q:set in <q:application>)', st.line)
-    script.state[name] = StateVar(name, type_name, initial, st.line, persist)
+    script.state[name] = StateVar(name, type_name, initial, st.line, persist, typed='type' in st.attrs)
 
 
 def compile_function(script: SceneScript, st: Statement) -> None:
@@ -119,7 +133,7 @@ def game_state_source(state: Dict[str, StateVar]) -> str:
              '# Where the character arrives after a qg:exit (the runtime\'s, not the game\'s).',
              'var _q_arrive_at: String = ""', '']
     for var in state.values():
-        lines.append(f'var {var.name}: {GD_TYPES.get(var.type, "Variant")} = {var.initial}')
+        lines.append(f'var {var.name}: {var.gd_type} = {var.initial}')
     lines.append('')
     lines.append('func quantum_state() -> Dictionary:')
     if state:

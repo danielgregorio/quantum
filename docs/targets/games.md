@@ -132,7 +132,11 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `sheet` | a name | required | a qg:spritesheet or qg:tileset |
 | `frame` | integer | `0` |  |
 | `hitbox` | `WxH` pixels | required |  |
-| `ai` | `patrol` / `wander` / `chase` / `fly` / `sway` |  | patrol: walks under gravity, turns at walls (and at edges with turns-at); wander: top-down, changes direction now and then (from the scene seed); chase: top-down, goes for the character within sight=; fly: straight along heading=; sway: side to side across the scene |
+| `ai` | `patrol` / `wander` / `chase` / `fly` / `sway` / `shuttle` |  | patrol: walks under gravity, turns at walls (and at edges with turns-at); wander: top-down, changes direction now and then (from the scene seed); chase: top-down, goes for the character within sight=; fly: straight along heading=; sway: side to side across the scene; shuttle: a solid that goes dx=,dy= and back every period= ticks, carrying what stands on it |
+| `dx` | number | `0.0` | shuttle: how far it goes, pixels |
+| `dy` | number | `0.0` | shuttle: how far it goes, pixels |
+| `period` | integer | `240` | shuttle: ticks for there and back |
+| `one-way` | true / false | `false` | solid: can be jumped through from below and stood on |
 | `sight` | number | `80.0` | chase: pixels |
 | `heading` | `up` / `down` / `left` / `right` | `down` | fly: which way |
 | `lifetime` | integer | `0` | fly: gone after this many ticks (0: never); any fly is gone off-screen |
@@ -549,6 +553,31 @@ Shakes the scene a thing is in. Cosmetic.
 
 Goes inside: a handler.
 
+## Other tags
+
+### `qg:input`
+
+The keys of an action, instead of the defaults (arrows/WASD to move, space/Z/X to jump).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `action` | `left` / `right` / `up` / `down` / `jump` | required |  |
+| `keys` | text | required | comma-separated Godot key names: Space, Left, A, Enter... |
+
+Goes inside: `q:application`.
+
+### `qg:timer`
+
+Runs its handler after so many ticks, or every so many ticks, in this scene.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `after` | integer |  | ticks from entering the scene, once |
+| `every` | integer |  | ticks between runs, from entering the scene |
+| `count` | integer | `0` | every: stop after this many runs (0: never) |
+
+Goes inside: `qg:scene`.
+
 ## Statements
 
 Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs.
@@ -577,6 +606,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <q:set name="cleared" value="[]" type="array" />
   <q:set name="map_at" value="level-1" />
 
+  <!-- Jump on space, Z, X, up or W; the other actions keep their default keys. -->
+  <qg:input action="jump" keys="Space, Z, X, Up, W" />
+
   <qg:tileset name="kenney" src="assets/kenney/tilemap_packed.png" tile="18" />
   <qg:spritesheet name="chars" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
 
@@ -597,6 +629,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:prefab name="Checkpoint" tag="checkpoint" sheet="kenney" frame="111" hitbox="18x18" />
   <qg:prefab name="CheckpointOn" tag="checkpoint-on" sheet="kenney" frame="112" hitbox="18x18" />
   <qg:prefab name="Flag" tag="flag" sheet="kenney" frame="153" hitbox="18x18" />
+  <!-- A ledge to jump through from below and stand on; a lift that rises and comes back. -->
+  <qg:prefab name="Ledge" tag="ledge" sheet="kenney" frame="23" hitbox="18x6" solid="true" one-way="true" />
+  <qg:prefab name="Lift" tag="lift" sheet="kenney" frame="43" hitbox="18x8" solid="true"
+             ai="shuttle" dy="-80" period="240" />
 
   <qg:prefab name="Walker" tag="enemy" sheet="chars" frame="18" hitbox="18x18"
              ai="patrol" speed="30" direction="left" turns-at="edge">
@@ -629,6 +665,16 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:scene name="level-1" width="256" height="224" background="#5c94fc" seed="7">
     <q:set name="coins" value="0" type="number" />
     <q:set name="message" value="" />
+    <q:set name="time" value="99" type="number" />
+
+    <!-- The clock: a second off every 60 ticks; at zero the level is lost. -->
+    <qg:timer every="60">
+      <q:set name="time" value="{time - 1}" />
+      <q:if condition="{time <= 0}">
+        <q:set name="lives" value="{lives - 1}" />
+        <qg:goto-scene name="map" />
+      </q:if>
+    </qg:timer>
 
     <q:function name="die" params="me">
       <qg:play sound="hurt" />
@@ -747,6 +793,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="coins" label="COINS" />
       <qg:counter bind="lives" label="LIVES" />
+      <qg:counter bind="time" label="TIME" />
       <qg:text bind="message" />
     </qg:hud>
   </qg:scene>
@@ -1454,6 +1501,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:spawner prefab="Drone" from="900" every="25" count="12" x="random" y="-12" />
     <qg:spawner prefab="Tank" from="950" every="150" count="2" x="random" y="-12" />
     <qg:spawner prefab="Boss" from="1500" every="1" count="1" x="128" y="40" />
+    <qg:timer after="1440">
+      <q:set name="message" value="HERE IT COMES" />
+    </qg:timer>
 
     <qg:on-death of="boss">
       <q:set name="boss_down" value="true" />
@@ -1465,6 +1515,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="lives" label="LIVES" />
       <qg:counter bind="high_score" label="HIGH" />
+      <qg:text bind="message" />
     </qg:hud>
   </qg:scene>
 

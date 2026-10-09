@@ -81,6 +81,8 @@ def test_drones_that_get_through_cost_lives(godot, drift):
 
 
 def test_the_boss_sways_turns_angry_and_its_death_wins(godot, drift):
+    warned = replay(drift, 1450, SWEEP, binary=godot)['play']
+    assert warned['message'] == 'HERE IT COMES'          # the timer, 60 ticks before the boss
     # spawned at tick 1500 at (128, 40), right over the sweep: calm at first, angry within a hundred ticks
     arrived = replay(drift, 1520, SWEEP, binary=godot)['play']
     boss = [w for w in arrived['where'] if w[0] == 'boss']

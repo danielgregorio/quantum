@@ -15,6 +15,8 @@ const TopdownBody := preload("res://addons/quantum/topdown_body.gd")
 const Exit := preload("res://addons/quantum/exit.gd")
 const ShipBody := preload("res://addons/quantum/ship_body.gd")
 const Spawner := preload("res://addons/quantum/spawner.gd")
+const Shuttle := preload("res://addons/quantum/shuttle.gd")
+const Timer_ := preload("res://addons/quantum/timer.gd")
 const Hud := preload("res://addons/quantum/hud.gd")
 const Tilemap := preload("res://addons/quantum/tilemap.gd")
 
@@ -89,6 +91,10 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				var made := instance(game, scene, node_spec["prefab"], Vector2(node_spec["x"], node_spec["y"]))
 				if node_spec.get("name") != null:
 					made.name = node_spec["name"]
+			"timer":
+				var timer := Timer_.new()
+				timer.setup(node_spec, scene)
+				scene.add_child(timer)
 			"spawner":
 				var spawner := Spawner.new()
 				spawner.setup(node_spec)
@@ -138,7 +144,9 @@ static func instance(game: Dictionary, scene: Node, prefab_name: String, at: Vec
 	var prefab: Dictionary = game["prefabs"][prefab_name]
 	var sheet: Dictionary = game["sheets"][prefab["sheet"]]
 	var thing: Node2D
-	if prefab.get("ai") != null:
+	if prefab.get("ai") == "shuttle":
+		thing = Shuttle.new()
+	elif prefab.get("ai") != null:
 		thing = Thing.new()
 	elif prefab.get("solid", false):
 		thing = Block.new()

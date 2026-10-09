@@ -116,6 +116,9 @@
     <qg:spawner prefab="Drone" from="900" every="25" count="12" x="random" y="-12" />
     <qg:spawner prefab="Tank" from="950" every="150" count="2" x="random" y="-12" />
     <qg:spawner prefab="Boss" from="1500" every="1" count="1" x="128" y="40" />
+    <qg:timer after="1440">
+      <q:set name="message" value="HERE IT COMES" />
+    </qg:timer>
 
     <qg:on-death of="boss">
       <q:set name="boss_down" value="true" />
@@ -127,6 +130,7 @@
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="lives" label="LIVES" />
       <qg:counter bind="high_score" label="HIGH" />
+      <qg:text bind="message" />
     </qg:hud>
   </qg:scene>
 

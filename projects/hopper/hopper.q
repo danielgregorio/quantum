@@ -13,6 +13,9 @@
   <q:set name="cleared" value="[]" type="array" />
   <q:set name="map_at" value="level-1" />
 
+  <!-- Jump on space, Z, X, up or W; the other actions keep their default keys. -->
+  <qg:input action="jump" keys="Space, Z, X, Up, W" />
+
   <qg:tileset name="kenney" src="assets/kenney/tilemap_packed.png" tile="18" />
   <qg:spritesheet name="chars" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
 
@@ -33,6 +36,10 @@
   <qg:prefab name="Checkpoint" tag="checkpoint" sheet="kenney" frame="111" hitbox="18x18" />
   <qg:prefab name="CheckpointOn" tag="checkpoint-on" sheet="kenney" frame="112" hitbox="18x18" />
   <qg:prefab name="Flag" tag="flag" sheet="kenney" frame="153" hitbox="18x18" />
+  <!-- A ledge to jump through from below and stand on; a lift that rises and comes back. -->
+  <qg:prefab name="Ledge" tag="ledge" sheet="kenney" frame="23" hitbox="18x6" solid="true" one-way="true" />
+  <qg:prefab name="Lift" tag="lift" sheet="kenney" frame="43" hitbox="18x8" solid="true"
+             ai="shuttle" dy="-80" period="240" />
 
   <qg:prefab name="Walker" tag="enemy" sheet="chars" frame="18" hitbox="18x18"
              ai="patrol" speed="30" direction="left" turns-at="edge">
@@ -65,6 +72,16 @@
   <qg:scene name="level-1" width="256" height="224" background="#5c94fc" seed="7">
     <q:set name="coins" value="0" type="number" />
     <q:set name="message" value="" />
+    <q:set name="time" value="99" type="number" />
+
+    <!-- The clock: a second off every 60 ticks; at zero the level is lost. -->
+    <qg:timer every="60">
+      <q:set name="time" value="{time - 1}" />
+      <q:if condition="{time <= 0}">
+        <q:set name="lives" value="{lives - 1}" />
+        <qg:goto-scene name="map" />
+      </q:if>
+    </qg:timer>
 
     <q:function name="die" params="me">
       <qg:play sound="hurt" />
@@ -183,6 +200,7 @@
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="coins" label="COINS" />
       <qg:counter bind="lives" label="LIVES" />
+      <qg:counter bind="time" label="TIME" />
       <qg:text bind="message" />
     </qg:hud>
   </qg:scene>

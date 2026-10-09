@@ -66,6 +66,7 @@ class Game:
     source_path: Optional[str]
     sounds: Dict[str, Element] = field(default_factory=dict)
     state: List[Statement] = field(default_factory=list)   # q:set at the application level
+    inputs: List[Element] = field(default_factory=list)
 
 
 def _local(element: ET.Element) -> tuple:
@@ -196,7 +197,7 @@ def _read_element(element: ET.Element, parent_tag: str) -> Element:
             raise GameCompileError(f'<qg:{tag}> has src= or {spec.text}, not both', line)
         return node
     _no_raw_text(element, f'<qg:{tag}>')
-    child_parent = 'handler' if tag in ('on-collision', 'on-fall', 'on-input', 'on-hit', 'on-death', 'on-damage') else tag
+    child_parent = 'handler' if tag in ('on-collision', 'on-fall', 'on-input', 'on-hit', 'on-death', 'on-damage', 'timer') else tag
     node.children = _read_children(element, child_parent, f'<qg:{tag}>')
     return node
 
@@ -272,6 +273,7 @@ def read_game(app) -> Game:
     sounds: Dict[str, Element] = {}
     scenes: List[Element] = []
     game_state: List[Statement] = []
+    inputs: List[Element] = []
     try:
         for child in root:
             ns, name = _local(child)
@@ -285,6 +287,8 @@ def read_game(app) -> Game:
                     _unique(prefabs, el, 'prefab')
                 elif el.tag == 'sound':
                     _unique(sounds, el, 'sound')
+                elif el.tag == 'input':
+                    inputs.append(el)
                 elif el.tag == 'scene':
                     if any(s.get('name') == el.get('name') for s in scenes):
                         raise GameCompileError(f'two scenes named {el.get("name")!r}', el.line)
@@ -305,7 +309,7 @@ def read_game(app) -> Game:
     if not scenes:
         raise GameCompileError('a game needs at least one <qg:scene>', file=source_path)
     return Game(getattr(app, 'app_id', 'game'), tilesets, sheets, prefabs, scenes, source_path, sounds,
-                game_state)
+                game_state, inputs)
 
 
 def _unique(table: Dict[str, Element], el: Element, what: str) -> None:

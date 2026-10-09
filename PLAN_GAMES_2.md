@@ -363,8 +363,14 @@ exercised); the web exports in CI (1.2 GB of templates; `scripts/
 export-games.py` for whoever has them); the tutorials (the games on the
 reference page, whole and replayed, do that job).
 
-What remains open, for a game that needs it: `qg:input` for own keys,
-moving and one-way platforms, timers in a scene, `q:loop` over a
-dictionary and slices in expressions, items (non-moving prefabs) with
-handlers of their own, cross-platform determinism (Linux is what CI
-replays on), and the web exports on the site.
+Taken up after the plan closed (2026-10-09): `qg:input` (Hopper's jump
+keys), `qg:timer` (Hopper's clock, Drift's warning), one-way ledges and
+shuttle lifts (Hopper's level 2), slices in expressions and `q:loop`
+over a dictionary, and a conformance test that runs 45 expressions in
+Godot against the Core evaluator — which found two real language
+faults: an untyped `q:set` was a `String` in GDScript (now `Variant`),
+and a state named `name` redefined `Node.name` (such names are refused).
+
+What remains open, for a game that needs it: items (non-moving prefabs)
+with handlers of their own, cross-platform determinism (Linux is what
+CI replays on), and the web exports on the site (1.2 GB of templates).

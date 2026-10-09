@@ -97,7 +97,7 @@ class TestWhatItWrites:
         script = (out / 'scripts' / 'scene_main.gd').read_text()
         assert script.startswith('extends "res://addons/quantum/quantum_scene.gd"\n')
         assert 'var coins: float = 0.0\n' in script
-        assert 'var title: String = "Hop"\n' in script
+        assert 'var title: Variant = "Hop"\n' in script   # no type= written: any value may follow
         assert 'var done: bool = false\n' in script
         assert 'return {"coins": coins, "title": title, "done": done}' in script
         assert ('func _on_player_collision_0(me, other) -> void:\n'
@@ -262,6 +262,10 @@ class TestStatesBlocksAndSpawns:
         assert '\tQ.destroy(other)\n\tQ.become(me, "big")\n' in script
         assert '\tQ.checkpoint(me, other)\n\tif (me.state == "big"):\n\t\tmessage = "big!"\n' in script
 
+    def test_a_godot_property_name_is_refused(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:scene name="main"><q:set name="position" value="1" type="number" /></qg:scene>\n'))
+        assert "'position' is a property of every Godot node" in e.message
+
     def test_a_state_nobody_declared(self, tmp_path):
         e = refuse(tmp_path, game('''  <qg:scene name="main">
     <qg:character id="p" controller="platformer" sheet="c" x="0" y="0" hitbox="1x1">
@@ -329,7 +333,7 @@ class TestScenesMapAndGameState:
         out = build(tmp_path, self.SOURCE)
         assert 'G="*res://scripts/game_state.gd"' in (out / 'project.godot').read_text()
         state = (out / 'scripts' / 'game_state.gd').read_text()
-        assert 'var lives: float = 3.0\nvar cleared: Array = []\nvar map_at: String = "one"\n' in state
+        assert 'var lives: float = 3.0\nvar cleared: Array = []\nvar map_at: Variant = "one"\n' in state
         assert 'return {"lives": lives, "cleared": cleared, "map_at": map_at}' in state
 
     def test_scene_logic_reads_and_writes_it_through_g(self, tmp_path):
@@ -653,6 +657,50 @@ class TestArcadePrefabsAndSpawners:
         assert '<qg:spawner x="left">: a number, or random' in e.message
 
 
+class TestInputsTimersAndPlatforms:
+    SOURCE = HEAD + '''  <qg:input action="jump" keys="Space, Enter" />
+  <qg:prefab name="Ledge" tag="ledge" sheet="k" hitbox="18x6" solid="true" one-way="true" />
+  <qg:prefab name="Lift" tag="lift" sheet="k" hitbox="18x8" solid="true" ai="shuttle" dy="-80" period="120" />
+  <qg:scene name="main">
+    <q:set name="time" value="9" type="number" />
+    <qg:timer every="60" count="9"><q:set name="time" value="{time - 1}" /></qg:timer>
+    <qg:timer after="30"><q:set name="time" value="{time + 100}" /></qg:timer>
+  </qg:scene>
+''' + TAIL
+
+    def test_the_json(self, tmp_path):
+        out = build(tmp_path, self.SOURCE)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['inputs']['jump'] == ['Space', 'Enter']
+        assert data['inputs']['left'] == ['Left', 'A']       # the others keep their defaults
+        assert data['prefabs']['Ledge']['one_way'] is True
+        lift = data['prefabs']['Lift']
+        assert (lift['ai'], lift['solid'], lift['dx'], lift['dy'], lift['period']) == ('shuttle', True, 0, -80, 120)
+        timers = [n for n in data['scenes']['main']['nodes'] if n['kind'] == 'timer']
+        assert timers == [{'kind': 'timer', 'after': None, 'every': 60, 'count': 9, 'handler': '_on_timer_0'},
+                          {'kind': 'timer', 'after': 30, 'every': None, 'count': 0, 'handler': '_on_timer_1'}]
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'func _on_timer_0(me, other) -> void:\n\ttime = (time - 1)\n' in script
+
+    def test_a_timer_takes_after_or_every(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:timer after="1" every="2" /></qg:scene>\n'))
+        assert '<qg:timer> takes after= or every=, one of them' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:timer /></qg:scene>\n'))
+        assert 'one of them' in e.message
+
+    def test_a_shuttle_is_a_solid(self, tmp_path):
+        e = refuse(tmp_path, HEAD + '  <qg:prefab name="L" sheet="k" hitbox="1x1" ai="shuttle" />\n  <qg:scene name="main" />\n' + TAIL)
+        assert 'ai="shuttle" is a solid: add solid="true"' in e.message
+
+    def test_one_way_is_for_a_solid(self, tmp_path):
+        e = refuse(tmp_path, HEAD + '  <qg:prefab name="L" sheet="k" hitbox="1x1" one-way="true" />\n  <qg:scene name="main" />\n' + TAIL)
+        assert 'one-way="true" is for a solid prefab' in e.message
+
+    def test_an_input_needs_a_key(self, tmp_path):
+        e = refuse(tmp_path, HEAD + '  <qg:input action="jump" keys=" , " />\n  <qg:scene name="main" />\n' + TAIL)
+        assert '<qg:input> needs at least one key' in e.message
+
+
 class TestWhatItRefuses:
     def test_an_unknown_tag_with_its_line(self, tmp_path):
         e = refuse(tmp_path, game('  <qg:scene name="main">\n    <qg:sprite id="x" />\n  </qg:scene>\n'))
@@ -753,6 +801,9 @@ class TestExpressions:
         ('"a" in name', '("a" in name)'),
         ('coins if name else 0', '(coins if name else 0)'),
         ('items[0].x', 'items[0].x'),
+        ('items[1:3]', 'Q.slice(items, 1, 3)'),
+        ('name[:2]', 'Q.slice(name, null, 2)'),
+        ('items[-2:]', 'Q.slice(items, (-2), null)'),
         ('len(name)', 'Q.len(name)'),
         ('max(coins, 10)', 'max(coins, 10)'),
         ('round(coins)', 'roundi(coins)'),
@@ -768,9 +819,9 @@ class TestExpressions:
     @pytest.mark.parametrize('source,message', [
         ('coins + ', 'cannot read the expression'),
         ('score', "'score' is not declared"),
-        ('items[1:2]', 'slices are not part'),
         ('name.upper()', 'method calls are not part'),
         ('lambda: 1', 'Lambda is not part of the language'),
+        ('items[::2]', 'a slice with a step is not part'),
         ('nope(1)', 'nope() is not a built-in nor a q:function'),
         ('len(1, 2)', 'len() takes 1 argument(s), 2 given'),
     ])

@@ -26,7 +26,7 @@ _LITERALS = {'true': 'true', 'false': 'false', 'null': 'null',
 # Quantum built-in function -> GDScript
 _FUNCTIONS = {
     'len': 'Q.len({0})',
-    'str': 'str({0})',
+    'str': 'Q.to_str({0})',
     'int': 'int({0})',
     'float': 'float({0})',
     'abs': 'abs({0})',
@@ -186,7 +186,12 @@ class _Emitter:
 
     def _Subscript(self, node: ast.Subscript) -> str:
         if isinstance(node.slice, ast.Slice):
-            raise self.fail('slices are not part of the game language yet')
+            sl = node.slice
+            if sl.step is not None:
+                raise self.fail('a slice with a step is not part of the game language')
+            start = self.emit(sl.lower) if sl.lower is not None else 'null'
+            end = self.emit(sl.upper) if sl.upper is not None else 'null'
+            return f'Q.slice({self.emit(node.value)}, {start}, {end})'
         return f'{self.emit(node.value)}[{self.emit(node.slice)}]'
 
     def _List(self, node: ast.List) -> str:
