@@ -105,7 +105,9 @@ def compile_function(script: SceneScript, st: Statement) -> None:
 
 def game_state_source(state: Dict[str, StateVar]) -> str:
     """The autoload G: the q:sets of <q:application>, kept across scenes."""
-    lines = ['extends Node', '# Compiled by Quantum from the q:sets of <q:application>; do not edit.', '']
+    lines = ['extends Node', '# Compiled by Quantum from the q:sets of <q:application>; do not edit.', '',
+             '# Where the character arrives after a qg:exit (the runtime\'s, not the game\'s).',
+             'var _q_arrive_at: String = ""', '']
     for var in state.values():
         lines.append(f'var {var.name}: {GD_TYPES.get(var.type, "Variant")} = {var.initial}')
     lines.append('')

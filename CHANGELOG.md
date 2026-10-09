@@ -58,7 +58,24 @@ alter the behaviour of an existing app is listed under **Breaking**.
   requires=`); `qg:on-input` in a scene; `q:call` of a `q:function`. And
   `qg:tilemap src="level.tmx"`: a level drawn in Tiled — its tile layers
   (a `collision` property makes one solid) and its object layers, whose
-  objects place prefabs by their class.
+  objects place prefabs by their class. For the top-down game:
+  `qg:character controller="topdown"` (eight directions, `speed=`, a swing
+  on `attack-action=` with `attack-reach=`/`attack-frames=`), `qg:on-hit`
+  for what the swing reaches, `qg:exit` (a rectangle that leads to another
+  scene, arriving at the exit named there — disarmed until left),
+  `qg:prefab ai="wander"` (headings from the scene's seed) and
+  `ai="chase" sight=`, `qg:instance name=` (`other.name` in a handler) and
+  `if=` (placed only when true as the scene is built).
+- `projects/keep/keep.q`, the top-down adventure: six rooms of a keep, a
+  character that walks in eight directions and swings a sword, slimes
+  that wander and bats that chase, a sign, hearts, a key and a locked
+  door, a switch that opens a gate in another room, a chest at the end, a
+  game over — zero lines of script. `tests/godot/test_godot_keep.py`
+  replays it: the slime wanders the same way from the same seed, walking
+  into an exit changes room and arrives at the matching exit, the bat
+  chases within sight and hurts once per cooldown, the swing kills it, the
+  key opens the door, the gate blocks until the switch is thrown, the
+  chest ends the game, three hurts are game over and jump starts again.
 - `projects/hopper/hopper.q`, the platformer: a world map and three
   levels (the second drawn in Tiled). A character that walks and jumps on a tilemap, blocks with a
   power-up in them that makes it big (a hit makes it small again), coins,

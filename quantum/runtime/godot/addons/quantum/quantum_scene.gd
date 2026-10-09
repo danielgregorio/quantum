@@ -37,11 +37,16 @@ func quantum_state() -> Dictionary:
 				entry.merge(n.quantum_node_state())
 			nodes[n.name] = entry
 	var things := {}
+	var named := {}
 	for n in get_tree().get_nodes_in_group("q_thing"):
 		if n.get_parent() == self and not n.is_queued_for_deletion():
 			things[n.tag] = int(things.get(n.tag, 0)) + 1
+			# A thing with a name of its own (qg:instance name=) is reported by it.
+			if n.name != n.prefab_name:
+				named[n.name] = {"x": snappedf(n.position.x, 0.01), "y": snappedf(n.position.y, 0.01)}
 	state["nodes"] = nodes
 	state["things"] = things
+	state["named"] = named
 	state["sounds"] = Q.sounds_played.duplicate()
 	state["game"] = G.quantum_state()
 	return state

@@ -64,7 +64,11 @@ TAGS: Dict[str, Tag] = {
          'sheet': Attr('ident', required=True, doc='a qg:spritesheet or qg:tileset'),
          'frame': Attr('int', 0),
          'hitbox': Attr('size', required=True),
-         'ai': Attr('enum:patrol', None, doc='patrol: walks, turns at walls (and at edges with turns-at)'),
+         'ai': Attr('enum:patrol|wander|chase', None,
+                    doc='patrol: walks under gravity, turns at walls (and at edges with turns-at); '
+                        'wander: top-down, changes direction now and then (from the scene seed); '
+                        'chase: top-down, goes for the character within sight='),
+         'sight': Attr('float', 80.0, doc='chase: pixels'),
          'speed': Attr('float', 30.0, doc='pixels per second, for ai='),
          'direction': Attr('enum:left|right', 'left', doc='where it walks first'),
          'turns-at': Attr('enum:wall|edge', 'wall', doc='edge: also turns before falling off'),
@@ -102,9 +106,13 @@ TAGS: Dict[str, Tag] = {
     'character': Tag(
         'A body the player moves: a platformer, or a walker on a world map.',
         {'id': Attr('ident', required=True),
-         'controller': Attr('enum:platformer|map', required=True),
+         'controller': Attr('enum:platformer|map|topdown', required=True),
          'at': Attr('expr', None, doc='map: the qg:map-node it starts on (a name, or an expression)'),
-         'speed': Attr('float', 60.0, doc='map: pixels per second between nodes'),
+         'speed': Attr('float', 60.0, doc='map, topdown: pixels per second'),
+         'attack-action': Attr('enum:jump', None, doc='topdown: the action that swings in front'),
+         'attack-reach': Attr('float', 16.0, doc='topdown: how far the swing reaches, pixels'),
+         'attack-frames': Attr('int', 12, doc='topdown: how many ticks the swing lasts'),
+         'attack-sound': Attr('ident', None, doc='a qg:sound, played on the swing'),
          'sheet': Attr('ident', required=True), 'frame': Attr('int', 0),
          'x': Attr('float', required=True), 'y': Attr('float', required=True),
          'hitbox': Attr('size', required=True),
@@ -119,7 +127,16 @@ TAGS: Dict[str, Tag] = {
     'instance': Tag(
         'A prefab placed in the scene.',
         {'prefab': Attr('ident', required=True),
-         'x': Attr('float', required=True), 'y': Attr('float', required=True)},
+         'x': Attr('float', required=True), 'y': Attr('float', required=True),
+         'name': Attr('ident', None, doc='the node name (`other.name` in a handler); the prefab name otherwise'),
+         'if': Attr('expr', None, doc='placed only when this is true as the scene is built')},
+        parents=('scene',)),
+    'exit': Tag(
+        'A rectangle that leads to another scene; the character arrives at the exit named at= there.',
+        {'name': Attr('ident', required=True),
+         'x': Attr('float', required=True), 'y': Attr('float', required=True),
+         'width': Attr('float', required=True), 'height': Attr('float', required=True),
+         'to': Attr('ident', required=True), 'at': Attr('ident', required=True)},
         parents=('scene',)),
     'camera': Tag(
         'What the screen shows.',
@@ -164,6 +181,10 @@ TAGS: Dict[str, Tag] = {
         'What happens when the player presses an action in this scene. Holds actions and statements.',
         {'action': Attr('enum:jump|left|right|up|down', required=True)},
         parents=('scene',)),
+    'on-hit': Tag(
+        'What happens when this character\'s swing (attack-action) reaches something. Holds actions and statements.',
+        {'with': Attr('ident', required=True, doc='the tag of what it hits')},
+        parents=('character',)),
     'on-fall': Tag(
         'What happens when this character falls below the tilemap. Holds actions and statements.',
         {},

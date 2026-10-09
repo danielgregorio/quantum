@@ -237,7 +237,20 @@ one-way platforms, a timer, a boss.
 - Milestone: Hopper playable end to end from a web export; every tag it
   needed exists.
 
-### Phase 3 — Top-down kit and Keep (2 weeks)
+### Phase 3 — Top-down kit and Keep (2 weeks) — done 2026-10-09
+
+What was built: `controller="topdown"` with a swing and `qg:on-hit`;
+`qg:exit` with arrival at a named exit of the next scene (the exit is
+disarmed until the character leaves it, or it would send it straight
+back); `ai="wander"` from the scene's seeded RNG and `ai="chase"`;
+`qg:instance if=` (a door opened or a key taken is not placed again) and
+`name=`. The camera is simply absent in a room the size of the screen.
+What the plan listed and Keep did not need: camera snap/scroll modes,
+`qg:trigger`, `qg:dialogue` with paging (a `qg:text` bound to a message
+did). Learned: a chasing thing parks on the character, so a swing must
+reach the body's own cell too — the swing is `reach` deep and body-plus-
+half-reach wide.
+
 
 - `topdown` controller, 8-direction animation sets, room transitions
   (`qg:door to="room-3" at="east"`), camera snap/scroll modes, triggers

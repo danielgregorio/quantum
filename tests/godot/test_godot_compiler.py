@@ -481,6 +481,88 @@ class TestTiledMaps:
         assert 'file not found: levels/none.tmx' in e.message
 
 
+class TestTopDownExitsAndHits:
+    SOURCE = '''<q:application id="t" type="game">
+  <q:set name="taken" value="[]" type="array" />
+  <qg:tileset name="k" src="assets/kenney/tilemap_packed.png" tile="18" />
+  <qg:spritesheet name="c" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
+  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
+  <qg:prefab name="Slime" tag="enemy" sheet="c" hitbox="14x14" ai="wander" speed="25" />
+  <qg:prefab name="Bat" tag="enemy" sheet="c" hitbox="14x14" ai="chase" speed="40" sight="90" />
+  <qg:prefab name="Key" tag="key" sheet="k" hitbox="12x12" />
+  <qg:scene name="a">
+    <qg:character id="player" controller="topdown" sheet="c" x="10" y="10" hitbox="14x14" speed="70"
+                  attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
+      <qg:on-hit with="enemy"><qg:destroy /></qg:on-hit>
+      <qg:on-collision with="key">
+        <q:set name="taken" value="{taken + [other.name]}" />
+        <qg:destroy />
+      </qg:on-collision>
+    </qg:character>
+    <qg:instance prefab="Key" name="key-1" x="30" y="10" if="{'key-1' not in taken}" />
+    <qg:instance prefab="Slime" x="50" y="10" />
+    <qg:exit name="east" x="252" y="99" width="8" height="36" to="b" at="west" />
+  </qg:scene>
+  <qg:scene name="b">
+    <qg:exit name="west" x="-4" y="99" width="8" height="36" to="a" at="east" />
+  </qg:scene>
+</q:application>
+'''
+
+    def test_the_json(self, tmp_path):
+        out = build(tmp_path, self.SOURCE)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['prefabs']['Slime']['ai'] == 'wander'
+        assert data['prefabs']['Bat']['sight'] == 90
+        a = data['scenes']['a']
+        player = a['nodes'][0]
+        assert player['controller'] == 'topdown' and player['speed'] == 70
+        assert (player['attack_action'], player['attack_reach'], player['attack_frames'], player['attack_sound']) == \
+            ('jump', 16, 12, 'hit')
+        assert player['on_hit'] == [{'with': 'enemy', 'handler': '_on_player_hit_0'}]
+        key, slime, exit_ = a['nodes'][1], a['nodes'][2], a['nodes'][3]
+        assert key['name'] == 'key-1' and key['if'] == '_q_if_1'
+        assert slime['name'] is None and slime['if'] is None
+        assert exit_ == {'kind': 'exit', 'name': 'east', 'x': 252, 'y': 99, 'width': 8, 'height': 36,
+                         'to': 'b', 'at': 'west'}
+
+    def test_the_script(self, tmp_path):
+        out = build(tmp_path, self.SOURCE)
+        script = (out / 'scripts' / 'scene_a.gd').read_text()
+        assert 'func _q_if_1() -> bool:\n\treturn ("key-1" not in G.taken)\n' in script
+        assert 'func _on_player_hit_0(me, other) -> void:\n\tQ.destroy(other)\n' in script
+        assert '\tG.taken = (G.taken + [other.name])\n' in script
+        assert 'var _q_arrive_at: String = ""' in (out / 'scripts' / 'game_state.gd').read_text()
+
+    def test_an_exit_to_an_exit_that_is_not_there(self, tmp_path):
+        e = refuse(tmp_path, game('''  <qg:scene name="a">
+    <qg:exit name="east" x="0" y="0" width="8" height="8" to="b" at="north" />
+  </qg:scene>
+  <qg:scene name="b">
+    <qg:exit name="west" x="0" y="0" width="8" height="8" to="a" at="east" />
+  </qg:scene>
+'''))
+        assert "<qg:exit to=\"b\" at=\"north\">: scene 'b' has no exit named 'north' (it has: west)" in e.message
+
+    def test_on_hit_needs_an_attack(self, tmp_path):
+        e = refuse(tmp_path, game('''  <qg:scene name="a">
+    <qg:character id="p" controller="topdown" sheet="c" x="0" y="0" hitbox="1x1">
+      <qg:on-hit with="coin" />
+    </qg:character>
+  </qg:scene>
+'''))
+        assert '<qg:on-hit> needs attack-action= on the character' in e.message
+
+    def test_a_hit_with_a_tag_no_prefab_has(self, tmp_path):
+        e = refuse(tmp_path, game('''  <qg:scene name="a">
+    <qg:character id="p" controller="topdown" sheet="c" x="0" y="0" hitbox="1x1" attack-action="jump">
+      <qg:on-hit with="ghost" />
+    </qg:character>
+  </qg:scene>
+'''))
+        assert '<qg:on-hit with="ghost">: no prefab has that tag' in e.message
+
+
 class TestWhatItRefuses:
     def test_an_unknown_tag_with_its_line(self, tmp_path):
         e = refuse(tmp_path, game('  <qg:scene name="main">\n    <qg:sprite id="x" />\n  </qg:scene>\n'))

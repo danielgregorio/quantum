@@ -11,6 +11,8 @@ const Item := preload("res://addons/quantum/item.gd")
 const Thing := preload("res://addons/quantum/thing.gd")
 const Block := preload("res://addons/quantum/block.gd")
 const MapWalker := preload("res://addons/quantum/map_walker.gd")
+const TopdownBody := preload("res://addons/quantum/topdown_body.gd")
+const Exit := preload("res://addons/quantum/exit.gd")
 const Hud := preload("res://addons/quantum/hud.gd")
 const Tilemap := preload("res://addons/quantum/tilemap.gd")
 
@@ -36,6 +38,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	scene.q_on_input = scene_spec.get("on_input", {})
 	var tilemap: Node = null
 	var characters: Dictionary = {}
+	var exits: Dictionary = {}
 	var map_nodes: Dictionary = {}
 	var map_paths: Array = scene_spec.get("map_paths", [])
 	for node_spec in scene_spec["nodes"]:
@@ -78,7 +81,16 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 					characters[node_spec["id"]] = body
 					scene.add_child(body)
 			"instance":
-				instance(game, scene, node_spec["prefab"], Vector2(node_spec["x"], node_spec["y"]))
+				if node_spec.get("if") != null and not scene.call(node_spec["if"]):
+					continue
+				var made := instance(game, scene, node_spec["prefab"], Vector2(node_spec["x"], node_spec["y"]))
+				if node_spec.get("name") != null:
+					made.name = node_spec["name"]
+			"exit":
+				var exit := Exit.new()
+				exit.setup(node_spec, scene)
+				scene.add_child(exit)
+				exits[node_spec["name"]] = exit
 			"camera":
 				var cam := Camera2D.new()
 				cam.name = "Camera"
@@ -99,6 +111,15 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				var hud := Hud.new()
 				hud.setup(node_spec, scene)
 				scene.add_child(hud)
+	# Arriving through an exit: the character stands in the exit it was
+	# sent to, which stays disarmed until it walks out of it.
+	var arrive_at = G.get("_q_arrive_at")
+	if arrive_at != null and arrive_at != "" and exits.has(arrive_at):
+		for c in characters.values():
+			if c is CharacterBody2D:
+				c.position = exits[arrive_at].position
+		exits[arrive_at].disarm()
+	G.set("_q_arrive_at", "")
 	return scene
 
 
@@ -126,7 +147,11 @@ static func instance(game: Dictionary, scene: Node, prefab_name: String, at: Vec
 
 
 static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> CharacterBody2D:
-	var body := PlatformerBody.new()
+	var body: CharacterBody2D
+	if node_spec["controller"] == "topdown":
+		body = TopdownBody.new()
+	else:
+		body = PlatformerBody.new()
 	body.name = node_spec["id"]
 	body.collision_layer = 1
 	body.collision_mask = 1

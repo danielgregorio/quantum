@@ -147,7 +147,7 @@ class _Compiler:
             self._sheet_exists(el.get('sheet'), sheets, el.line)
             prefabs[name] = {'tag': el.get('tag') or name.lower(), 'sheet': el.get('sheet'),
                              'frame': el.get('frame'), 'hitbox': list(el.get('hitbox')),
-                             'ai': el.get('ai'), 'speed': el.get('speed'),
+                             'ai': el.get('ai'), 'speed': el.get('speed'), 'sight': el.get('sight'),
                              'direction': el.get('direction'), 'turns_at': el.get('turns-at'),
                              'gravity': el.get('gravity'), 'solid': el.get('solid'),
                              'animations': _animations(el)}
@@ -155,12 +155,19 @@ class _Compiler:
                 raise GameCompileError('a prefab is solid or has ai=, not both', el.line)
         scenes = {}
         self._scenes_used: List[tuple] = []
+        self._exits_used: List[tuple] = []
+        self._scene_exits: Dict[str, set] = {}
         for scene in g.scenes:
             scenes[scene.get('name')] = self._scene(scene, sheets, prefabs)
         for sname, line in self._scenes_used:
             if sname not in scenes:
                 raise GameCompileError(
                     f'no qg:scene named {sname!r} (declared: {", ".join(scenes)})', line)
+        for here, to, at, line in self._exits_used:
+            if at not in self._scene_exits.get(to, set()):
+                raise GameCompileError(
+                    f'<qg:exit to="{to}" at="{at}">: scene {to!r} has no exit named {at!r} '
+                    f'(it has: {", ".join(sorted(self._scene_exits.get(to, set()))) or "none"})', line)
         return {
             'game': {
                 'id': g.id,
@@ -226,6 +233,8 @@ class _Compiler:
         map_nodes: Dict[str, dict] = {}
         map_paths: List[dict] = []
         on_input: Dict[str, str] = {}
+        exits: Dict[str, dict] = {}
+        conditions = 0
         for node in scene.children:
             if isinstance(node, Statement):
                 continue
@@ -249,6 +258,16 @@ class _Compiler:
                             '<q:set name="cleared" type="array" /> in <q:application>', el.line)
                 map_paths.append({'from': el.get('from'), 'to': el.get('to'), 'requires': el.get('requires'),
                                   'line': el.line})
+            elif el.tag == 'exit':
+                ename = el.get('name')
+                if ename in exits:
+                    raise GameCompileError(f'two exits named {ename!r}', el.line)
+                self._scenes_used.append((el.get('to'), el.line))
+                self._exits_used.append((name, el.get('to'), el.get('at'), el.line))
+                exits[ename] = {'kind': 'exit', 'name': ename, 'x': el.get('x'), 'y': el.get('y'),
+                                'width': el.get('width'), 'height': el.get('height'),
+                                'to': el.get('to'), 'at': el.get('at')}
+                nodes.append(exits[ename])
             elif el.tag == 'on-input':
                 action = el.get('action')
                 if action in on_input:
@@ -289,6 +308,15 @@ class _Compiler:
                     hname = compile_handler(script, f'_on_{_ident(cid)}_collision_{i}', h.children, h.line)
                     handlers.append({'with': h.get('with'), 'side': h.get('side'),
                                      'cooldown': h.get('cooldown'), 'handler': hname})
+                hits = []
+                for i, h in enumerate(el.find_all('on-hit')):
+                    if not el.get('attack-action'):
+                        raise GameCompileError('<qg:on-hit> needs attack-action= on the character', h.line)
+                    hname = compile_handler(script, f'_on_{_ident(cid)}_hit_{i}', h.children, h.line)
+                    hits.append({'with': h.get('with'), 'handler': hname})
+                if el.get('attack-sound') and el.get('attack-sound') not in self.sounds:
+                    raise GameCompileError(
+                        f'attack-sound="{el.get("attack-sound")}": no qg:sound of that name', el.line)
                 on_fall = None
                 falls = el.find_all('on-fall')
                 if len(falls) > 1:
@@ -338,15 +366,24 @@ class _Compiler:
                     'variable_jump': el.get('variable-jump'), 'coyote_frames': el.get('coyote-frames'),
                     'gravity': el.get('gravity'), 'max_fall': el.get('max-fall'),
                     'jump_sound': el.get('jump-sound'),
+                    'attack_action': el.get('attack-action'), 'attack_reach': el.get('attack-reach'),
+                    'attack_frames': el.get('attack-frames'), 'attack_sound': el.get('attack-sound'),
                     'animations': _animations(el),
                     'states': states, 'initial_state': initial_state,
-                    'on_collision': handlers, 'on_fall': on_fall,
+                    'on_collision': handlers, 'on_hit': hits, 'on_fall': on_fall,
                 })
             elif el.tag == 'instance':
                 if el.get('prefab') not in prefabs:
                     known = ', '.join(sorted(prefabs)) or 'none'
                     raise GameCompileError(f'no qg:prefab named {el.get("prefab")!r} (declared: {known})', el.line)
-                nodes.append({'kind': 'instance', 'prefab': el.get('prefab'), 'x': el.get('x'), 'y': el.get('y')})
+                condition = None
+                if el.get('if') is not None:
+                    conditions += 1
+                    condition = f'_q_if_{conditions}'
+                    expr = compile_expression(el.get('if'), script.scope(), el.line)
+                    script.functions.append(f'func {condition}() -> bool:\n\treturn {expr}\n')
+                nodes.append({'kind': 'instance', 'prefab': el.get('prefab'), 'x': el.get('x'), 'y': el.get('y'),
+                              'name': el.get('name'), 'if': condition})
             elif el.tag == 'camera':
                 nodes.append({'kind': 'camera', 'follow': el.get('follow'), 'bounds': el.get('bounds')})
             elif el.tag == 'hud':
@@ -379,11 +416,13 @@ class _Compiler:
                 raise GameCompileError('<qg:camera bounds="tilemap"> in a scene without a tilemap', scene.line)
         tags = {p['tag'] for p in prefabs.values()}
         for n in nodes:
-            for h in n.get('on_collision', []):
-                if h['with'] not in tags:
-                    raise GameCompileError(
-                        f'<qg:on-collision with="{h["with"]}">: no prefab has that tag '
-                        f'(tags: {", ".join(sorted(tags)) or "none"})', scene.line)
+            for kind in ('on_collision', 'on_hit'):
+                for h in n.get(kind, []):
+                    if h['with'] not in tags:
+                        raise GameCompileError(
+                            f'<qg:{kind.replace("_", "-")} with="{h["with"]}">: no prefab has that tag '
+                            f'(tags: {", ".join(sorted(tags)) or "none"})', scene.line)
+        self._scene_exits[name] = set(exits)
         self._scenes_used.extend(script.scenes_used)
         for pname, line in script.prefabs_used:
             if pname not in prefabs:
