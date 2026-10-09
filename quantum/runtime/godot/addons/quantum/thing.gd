@@ -39,6 +39,7 @@ var fire_prefab: String = ""
 var fire_every: int = 0
 var fire_sound: String = ""
 var state: String = ""
+var stops_at_walls: bool = false
 
 var _heading: Vector2 = Vector2.ZERO
 var _rethink: int = 0
@@ -81,6 +82,9 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 		motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
 	if ai == "fly" or ai == "sway" or ai == "path" or ai == "turret":
 		collision_mask = 0   # through everything: a shot or a drone is stopped by nothing
+	stops_at_walls = ai == "fly" and prefab.get("walls", "pass") == "stop"
+	if stops_at_walls:
+		collision_mask = 1
 	direction = -1 if prefab.get("direction", "left") == "left" else 1
 	turns_at_edge = prefab.get("turns_at", "wall") == "edge"
 	gravity = float(prefab.get("gravity", 900.0))
@@ -107,6 +111,7 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 	sprite.hframes = max(1, int(texture.get_width()) / int(tile[0]))
 	sprite.vframes = max(1, int(texture.get_height()) / int(tile[1]))
 	sprite.frame = int(prefab.get("frame", 0))
+	sprite.scale = Vector2.ONE * float(prefab.get("scale", 1.0))
 	add_child(sprite)
 
 	var rect := RectangleShape2D.new()
@@ -408,7 +413,16 @@ func _chase() -> void:
 # Straight along the heading; gone when old or out of the scene.
 func _fly(delta: float) -> void:
 	speed += accel * delta
-	position += heading * speed * delta
+	if stops_at_walls:
+		# walls="stop": gone on touching a tile; the bodies it meets it goes through
+		var hit := move_and_collide(heading * speed * delta)
+		if hit != null:
+			if hit.get_collider() is TileMapLayer:
+				quantum_destroy()
+				return
+			position += hit.get_remainder()
+	else:
+		position += heading * speed * delta
 	if lifetime > 0 and _age >= lifetime:
 		quantum_destroy()
 		return
@@ -416,6 +430,11 @@ func _fly(delta: float) -> void:
 	if scene != null and "q_spec" in scene:
 		var w := float(scene.q_spec.get("width", 256))
 		var h := float(scene.q_spec.get("height", 224))
+		# in a level larger than the screen, the level is where it may fly
+		var map: Node = scene.get_node_or_null("Tilemap")
+		if map != null:
+			w = maxf(w, map.pixel_size().x)
+			h = maxf(h, map.pixel_size().y)
 		if position.x < -32.0 or position.x > w + 32.0 or position.y < -32.0 or position.y > h + 32.0:
 			quantum_destroy()
 

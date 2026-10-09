@@ -405,6 +405,10 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     if el.tag == 'leave':
         script.net_used.append(el.line)
         return 'Q.net_leave()'
+    if el.tag == 'pause':
+        return 'Q.pause(self, true)'
+    if el.tag == 'resume':
+        return 'Q.pause(self, false)'
     if el.tag == 'put':
         return (f'Q.put({target}, {compile_expression(el.get("x"), scope, el.line)}, '
                 f'{compile_expression(el.get("y"), scope, el.line)})')

@@ -12,6 +12,12 @@ extends CharacterBody2D
 # Releasing the button early (when variable_jump) applies extra gravity, so
 # a tap is a short hop.
 #
+# jump_speed, when given, is the take-off speed instead. accel eases the run
+# speed in and out (0: at once); air_jumps are jumps taken in the air, each
+# multiplying the speed across by air_jump_boost; jump_cut, when given,
+# multiplies the rise once as the button is released instead of the extra
+# gravity. fire_action shoots fire_prefab (a fly prefab) the way it faces.
+#
 # Collisions: the Sensor area reports what the character overlaps; each
 # qg:on-collision handler has a tag, a side ("top": landing on it) and a
 # cooldown in ticks. For one touch, the side handlers that match run; only
@@ -27,6 +33,18 @@ var gravity: float = 900.0
 var max_fall: float = 300.0
 var jump_sound: String = ""
 var hitbox_size: Vector2 = Vector2(16, 16)
+var accel: float = 0.0
+var air_jumps: int = 0
+var air_jump_boost: float = 1.0
+var jump_cut: float = 0.0
+var fire_action: String = ""
+var fire_prefab: String = ""
+var fire_every: int = 10
+var fire_sound: String = ""
+var facing: int = 1
+var _air_jumps_left: int = 0
+var _jump_was_held: bool = false
+var _fire_in: int = 0
 
 var spawn_point: Vector2 = Vector2.ZERO
 var animator: Node = null
@@ -60,6 +78,16 @@ func setup(spec: Dictionary) -> void:
 	jump_sound = str(spec.get("jump_sound", "")) if spec.get("jump_sound") != null else ""
 	hitbox_size = Vector2(spec["hitbox"][0], spec["hitbox"][1])
 	_jump_speed = _speed_for_height(jump_height)
+	if spec.get("jump_speed") != null:
+		_jump_speed = float(spec["jump_speed"])
+	accel = float(spec.get("accel", 0.0))
+	air_jumps = int(spec.get("air_jumps", 0))
+	air_jump_boost = float(spec.get("air_jump_boost", 1.0))
+	jump_cut = float(spec.get("jump_cut", 0.0))
+	fire_action = str(spec.get("fire_action", "")) if spec.get("fire_action") != null else ""
+	fire_prefab = str(spec.get("fire_prefab", "")) if spec.get("fire_prefab") != null else ""
+	fire_every = int(spec.get("fire_every", 10))
+	fire_sound = str(spec.get("fire_sound", "")) if spec.get("fire_sound") != null else ""
 	floor_snap_length = 4.0
 	spawn_point = position
 
@@ -190,35 +218,57 @@ func _physics_process(delta: float) -> void:
 		dir += 1
 	if Q.held(_a("left")):
 		dir -= 1
-	velocity.x = dir * run_speed
+	if accel > 0.0:
+		velocity.x = move_toward(velocity.x, dir * run_speed, accel * delta)
+	else:
+		velocity.x = dir * run_speed
 
 	if is_on_floor():
-		_coyote = coyote_frames
+		_coyote = maxi(coyote_frames, 1)   # standing, a jump works whatever coyote-frames says
+		_air_jumps_left = air_jumps
 	elif _coyote > 0:
 		_coyote -= 1
 
-	if Q.tapped(_a("jump")) and _coyote > 0:
-		velocity.y = -_jump_speed
-		_coyote = 0
-		if jump_sound != "":
-			Q.play(jump_sound)
+	if Q.tapped(_a("jump")):
+		if _coyote > 0:
+			_jump()
+			_coyote = 0
+		elif _air_jumps_left > 0:
+			_air_jumps_left -= 1
+			velocity.x *= air_jump_boost
+			_jump()
 
 	var g := gravity
-	if variable_jump and velocity.y < 0.0 and not Q.held(_a("jump")):
-		g *= 3.0
+	var holding := Q.held(_a("jump"))
+	if variable_jump and velocity.y < 0.0 and not holding:
+		if jump_cut <= 0.0:
+			g *= 3.0
+		elif _jump_was_held:
+			velocity.y *= jump_cut
+	_jump_was_held = holding
 	velocity.y = minf(velocity.y + g * delta, max_fall)
 
+	if not is_zero_approx(velocity.x):
+		facing = 1 if velocity.x > 0.0 else -1
 	var sprite := get_node_or_null("Sprite")
-	if sprite != null and dir != 0:
-		sprite.flip_h = dir < 0
+	if sprite != null:
+		sprite.flip_h = facing < 0
 
 	_moving = velocity
 	move_and_slide()
 
+	if _fire_in > 0:
+		_fire_in -= 1
+	if fire_action != "" and fire_prefab != "" and Q.tapped(_a(fire_action)) and _fire_in == 0:
+		_fire_in = fire_every
+		_shoot()
+
 	if animator != null:
-		if not is_on_floor() and animator.has("jump"):
+		if not is_on_floor() and velocity.y > 0.0 and animator.has("fall"):
+			animator.play("fall")
+		elif not is_on_floor() and animator.has("jump"):
 			animator.play("jump")
-		elif dir != 0 and animator.has("walk"):
+		elif absf(velocity.x) > 0.1 and animator.has("walk"):
 			animator.play("walk")
 		elif animator.has("idle"):
 			animator.play("idle")
@@ -227,6 +277,27 @@ func _physics_process(delta: float) -> void:
 		if position.y > _scene.q_fall_line():
 			_fell = true
 			_scene.call(_on_fall, self, null)
+
+
+func _jump() -> void:
+	velocity.y = -_jump_speed
+	if jump_sound != "":
+		Q.play(jump_sound)
+
+
+# fire_prefab, in front of it at its middle, heading the way it faces.
+func _shoot() -> void:
+	if _scene == null:
+		return
+	var shot: Node = Q.spawn_at(_scene, fire_prefab, position + Vector2(facing * hitbox_size.x / 2.0, 0.0))
+	if shot is PhysicsBody2D:
+		(shot as PhysicsBody2D).add_collision_exception_with(self)
+	if "heading" in shot and facing < 0:
+		shot.heading = Vector2(-shot.heading.x, shot.heading.y)
+		if shot.has_method("_face"):
+			shot._face(shot.heading.x)
+	if fire_sound != "":
+		Q.play(fire_sound)
 
 
 # The input action of this player: "up" for player 1, "p2_up" for player 2.

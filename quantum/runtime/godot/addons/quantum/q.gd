@@ -274,6 +274,25 @@ static func shake(node, frames: int, strength: float) -> void:
 		scene.q_shake(frames, strength)
 
 
+# qg:pause / qg:resume, and paused(): the scene the handler is in, or the
+# current one (a prefab's handler).
+static func _current_scene(node) -> Node:
+	if node is Node and (node as Node).has_method("q_pause"):
+		return node
+	return (Engine.get_main_loop() as SceneTree).get_first_node_in_group("q_scene")
+
+
+static func pause(node, on: bool) -> void:
+	var scene := _current_scene(node)
+	if scene != null:
+		scene.q_pause(on)
+
+
+static func paused(node) -> bool:
+	var scene := _current_scene(node)
+	return scene != null and scene.q_paused
+
+
 # Leaves the scene for another at the end of the tick (qg:goto-scene).
 static func goto_scene(scene: Node, name_: String) -> void:
 	var game := scene.get_parent()
@@ -285,6 +304,26 @@ static func goto_scene(scene: Node, name_: String) -> void:
 		net.request_scene(name_)
 		return
 	game.call_deferred("go_to_scene", name_)
+
+
+# The solid part of a solid prefab: its shape= polygon (from its centre), or
+# its hitbox. A polygon may be concave: CollisionPolygon2D splits it.
+static func solid_shape(prefab: Dictionary) -> Node2D:
+	var one_way := bool(prefab.get("one_way", false))
+	if prefab.get("shape") != null:
+		var poly := CollisionPolygon2D.new()
+		var points := PackedVector2Array()
+		for p in prefab["shape"]:
+			points.append(Vector2(float(p[0]), float(p[1])))
+		poly.polygon = points
+		poly.one_way_collision = one_way
+		return poly
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(prefab["hitbox"][0], prefab["hitbox"][1])
+	var shape := CollisionShape2D.new()
+	shape.shape = rect
+	shape.one_way_collision = one_way
+	return shape
 
 
 # A collision hands the handler a hitbox area; the thing is its owner.

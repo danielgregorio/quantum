@@ -102,6 +102,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				var made := instance(game, scene, node_spec["prefab"], Vector2(node_spec["x"], node_spec["y"]))
 				if node_spec.get("name") != null:
 					made.name = node_spec["name"]
+					made.set_meta("q_named", true)
 				Q.apply_gd(made, node_spec.get("gd"))
 			"timer":
 				var timer := Timer_.new()
@@ -234,6 +235,7 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 	body.setup(node_spec)
 	var sheet: Dictionary = game["sheets"][node_spec["sheet"]]
 	var sprite := _sprite(_texture(sheet), sheet["tile"], int(node_spec["frame"]))
+	sprite.scale = Vector2.ONE * float(node_spec.get("scale", 1.0))
 	body.add_child(sprite)
 	var shape := CollisionShape2D.new()
 	shape.name = "Shape"

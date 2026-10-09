@@ -10,6 +10,21 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: a ninth game, `projects/robot/robot.q` — Godot's "Platformer 2D"
+  demo (godot-demo-projects, `2d/platformer`, MIT) transcribed: its level,
+  the robot that runs, jumps twice and shoots, the crawling enemies, the
+  coins, the lifts, the tilted ledge and the pause menu, with the demo's art
+  and sounds (`projects/robot/README.md` maps it, piece by piece). What it
+  asked of the language: `qg:tile` gives a tileset's tile a shape of its own
+  (a lower top, a thin ledge, a one-way slope) or none, and a negative number
+  in a tilemap is the tile flipped; the platformer controller takes
+  `accel=`, `jump-speed=`, `air-jumps=`, `air-jump-boost=`, `jump-cut=`,
+  `fire-action=`/`fire-prefab=` (a shot the way it faces) and a "fall"
+  animation; a solid prefab takes `shape=` (a polygon, concave or not); a
+  flying one `walls="stop"`; prefabs and characters `scale=` (the picture
+  only); a coin-like prefab plays its animation; `qg:pause`, `qg:resume`,
+  `paused()` and `qg:menu if=` make a pause menu.
+
 - Laboratory: rollback. `<qg:multiplayer rollback="8" />` runs each tick at
   once with the other players' input guessed, keeps a snapshot before every
   tick, and when a guess was wrong goes back and runs the ticks since again
@@ -20,12 +35,6 @@ alter the behaviour of an existing app is listed under **Breaking**.
   camera); a scene change waits until the tick that asked is certain.
   Arena plays with it. `replay_peers(latency_ms=..., net_report=True)`
   injects latency and reports each peer's rollbacks.
-
-### Fixed
-
-- Laboratory: `qg:shake` drew its jolt from the scene's random source once
-  per drawn frame, so two machines drawing at different rates would have
-  drawn different random numbers afterwards; it has its own source now.
 
 - Laboratory: the lobby in the language. `qg:host port=`, `qg:join
   address=` and `qg:leave` start and stop the networked game from a scene;
@@ -47,6 +56,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
   replayed and travels in the lockstep like a key. Creeps' title now has
   the demo's Start button. `tests/godot/test_godot_menu.py` drives a menu
   by keys and by the pointer.
+
+### Fixed
+
+- Laboratory: `qg:shake` drew its jolt from the scene's random source once
+  per drawn frame, so two machines drawing at different rates would have
+  drawn different random numbers afterwards; it has its own source now.
+
+- Laboratory: the replay dump's `named` listed every second instance of a
+  prefab under a name Godot made up (`@Area2D@10`); it lists only the
+  things a `qg:instance name=` names.
 
 ### Changed
 

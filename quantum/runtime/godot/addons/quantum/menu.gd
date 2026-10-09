@@ -20,11 +20,13 @@ var _items: Array = []            # [{spec, control, line}]
 var _editing: int = -1            # the field being typed in, or -1
 var _pointer_seen = null          # the pointer at the last tick (null: not yet seen)
 var _pointer_last: bool = false   # the last move was the pointer's, not a key's
+var _if_method = null             # qg:menu if=: the menu is there only while it is true
 
 
 func setup(spec: Dictionary, scene: Node) -> void:
 	_scene = scene
 	player = int(spec.get("player", 1))
+	_if_method = spec.get("if_method")
 	name = "Menu"
 	layer = 10
 	add_to_group("q_menu")
@@ -155,8 +157,15 @@ func q_load(d: Dictionary) -> void:
 	_pointer_last = d["pl"]
 
 
+func active() -> bool:
+	return _if_method == null or bool(_scene.call(_if_method))
+
+
 func _physics_process(_delta: float) -> void:
 	if _editing >= 0:
+		return
+	if not active():
+		_pointer_seen = null   # a pointer that moved while it was away does not choose when it comes back
 		return
 	var shown := _shown_indices()
 	if shown.is_empty():
@@ -206,6 +215,7 @@ func _process(_delta: float) -> void:
 
 
 func _refresh() -> void:
+	visible = active()
 	for i in _items.size():
 		var entry: Dictionary = _items[i]
 		var spec: Dictionary = entry["spec"]

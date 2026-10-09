@@ -1386,3 +1386,105 @@ class TestRollback:
   <qg:scene name="fight">{scene}</qg:scene>
 ''' + TAIL)
         assert message in str(err)
+
+
+class TestWhatRobotAsked:
+    """What Godot's "Platformer 2D" made the language say (projects/robot/README.md)."""
+
+    def test_tiles_with_shapes_of_their_own(self, tmp_path):
+        out = build(tmp_path, HEAD.replace('tile="18" />', '''tile="18">
+    <qg:tile frame="0" shape="0,4; 18,4; 18,18; 0,18" />
+    <qg:tile frame="1" shape="0,0; 18,18; 0,18" one-way="true" />
+    <qg:tile frame="2" shape="none" />
+    <qg:tile frame="3" one-way="true" />
+  </qg:tileset>''', 1) + '''  <qg:scene name="main">
+    <qg:tilemap tileset="k" collision="true">
+1,-2,3,4
+    </qg:tilemap>
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        tiles = data['sheets']['k']['tiles']
+        assert tiles['0'] == {'shape': [[0.0, 4.0], [18.0, 4.0], [18.0, 18.0], [0.0, 18.0]], 'one_way': False}
+        assert tiles['1']['one_way'] is True and len(tiles['1']['shape']) == 3
+        assert tiles['2'] == {'shape': None, 'one_way': False}
+        assert tiles['3']['shape'] == [[0.0, 0.0], [18.0, 0.0], [18.0, 18.0], [0.0, 18.0]]   # the full square
+        assert data['scenes']['main']['nodes'][0]['layers'][0]['rows'] == [[1, -2, 3, 4]]   # -2: flipped
+        assert 'tiles' not in data['sheets']['c']
+        for tile, message in (('<qg:tile frame="0" shape="0,0; 4,4" />', 'at least three points'),
+                              ('<qg:tile frame="0" shape="none" one-way="true" />', 'one-way= means nothing'),
+                              ('<qg:tile frame="0" /><qg:tile frame="0" />', 'two <qg:tile frame="0">')):
+            err = refuse(tmp_path, HEAD.replace('tile="18" />', f'tile="18">{tile}</qg:tileset>', 1)
+                         + '  <qg:scene name="main" />\n' + TAIL)
+            assert message in str(err)
+        err = refuse(tmp_path, HEAD.replace('tile="24" />', 'tile="24"><qg:tile frame="0" /></qg:spritesheet>', 1)
+                     + '  <qg:scene name="main" />\n' + TAIL)
+        assert '<qg:tile> cannot go inside <spritesheet>' in str(err)
+
+    def test_solid_shapes_picture_scale_and_shots_stopped_by_walls(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:prefab name="Lift" tag="lift" sheet="k" hitbox="64x16" solid="true" one-way="true"
+             shape="-32,-8; 32,-8; 32,4; -32,4" ai="shuttle" dy="-100" />
+  <qg:prefab name="Shot" tag="shot" sheet="k" hitbox="4x4" ai="fly" heading="right" walls="stop" scale="0.5" />
+  <qg:scene name="main">
+    <qg:instance prefab="Lift" x="10" y="10" gd:rotation="0.3" />
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['prefabs']['Lift']['shape'][0] == [-32.0, -8.0]
+        assert (data['prefabs']['Shot']['walls'], data['prefabs']['Shot']['scale']) == ('stop', 0.5)
+        assert data['scenes']['main']['nodes'][0]['gd'] == {'rotation': {'type': 'float', 'value': 0.3}}
+        for prefab, message in (('hitbox="4x4" shape="0,0; 1,0; 1,1"', 'shape= is for a solid prefab'),
+                                ('hitbox="4x4" ai="patrol" walls="stop"', 'walls= is for ai="fly"'),
+                                ('hitbox="4x4" scale="0"', 'scale=>: more than 0')):
+            err = refuse(tmp_path, HEAD + f'  <qg:prefab name="X" tag="x" sheet="k" {prefab} />\n'
+                         '  <qg:scene name="main" />\n' + TAIL)
+            assert message in str(err)
+
+    def test_the_platformer_accelerates_jumps_in_the_air_and_shoots(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:input action="shoot" keys="Ctrl" />
+  <qg:prefab name="Shot" tag="shot" sheet="k" hitbox="4x4" ai="fly" heading="right" />
+  <qg:scene name="main">
+    <qg:character id="p" controller="platformer" sheet="c" x="0" y="0" hitbox="18x22" scale="0.8"
+                  accel="1800" jump-speed="725" air-jumps="1" air-jump-boost="2.5" jump-cut="0.6"
+                  fire-action="shoot" fire-prefab="Shot" fire-every="18">
+      <qg:animation name="fall" frames="3" />
+    </qg:character>
+  </qg:scene>
+''' + TAIL)
+        p = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'][0]
+        assert (p['accel'], p['jump_speed'], p['air_jumps'], p['air_jump_boost'], p['jump_cut'], p['scale']) == (
+            1800.0, 725.0, 1, 2.5, 0.6, 0.8)
+        assert (p['fire_action'], p['fire_prefab'], p['fire_every']) == ('shoot', 'Shot', 18)
+        assert p['animations']['fall'] == {'frames': [3], 'fps': 8.0}
+        cases = (
+            ('controller="topdown" accel="10"', 'accel= is for controller="platformer"'),
+            ('controller="platformer" jump-cut="2"', 'jump-cut=: between 0 and 1'),
+            ('controller="platformer" fire-action="fire" fire-prefab="Shot"', 'fire-action="fire": no such action'),
+            ('controller="platformer" fire-action="jump"', 'fire-action= needs fire-prefab='),
+            ('controller="platformer" fire-action="jump" fire-prefab="Coin"', 'a platformer shoots a prefab with ai="fly"'),
+            ('controller="topdown" fire-action="jump" fire-prefab="Shot"', 'fire-action= is for controller="ship" or "platformer"'),
+        )
+        for attrs, message in cases:
+            err = refuse(tmp_path, HEAD + '''  <qg:prefab name="Shot" tag="shot" sheet="k" hitbox="4x4" ai="fly" />
+  <qg:scene name="main">
+    <qg:character id="p" sheet="c" x="0" y="0" hitbox="18x22" ''' + attrs + ''' />
+  </qg:scene>
+''' + TAIL)
+            assert message in str(err), attrs
+
+    def test_pause_resume_paused_and_a_menu_shown_while_paused(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:input action="pause" keys="Escape" />
+  <qg:scene name="main">
+    <qg:on-input action="pause">
+      <q:if condition="{paused()}"><qg:resume /><q:else><qg:pause /></q:else></q:if>
+    </qg:on-input>
+    <qg:menu if="{paused()}">
+      <qg:button label="Resume"><qg:resume /></qg:button>
+    </qg:menu>
+  </qg:scene>
+''' + TAIL)
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'if Q.paused(self):' in script and 'Q.pause(self, false)' in script and 'Q.pause(self, true)' in script
+        menu = [n for n in json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'] if n['kind'] == 'menu'][0]
+        assert menu['if_method'] == '_q_menu_1_if'
+        assert 'func _q_menu_1_if():\n\treturn Q.paused(self)' in script

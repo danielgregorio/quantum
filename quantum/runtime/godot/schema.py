@@ -39,7 +39,7 @@ class Tag:
 
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
-           'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave')
+           'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -48,6 +48,15 @@ TAGS: Dict[str, Tag] = {
          'src': Attr('str', required=True, doc='the image, relative to the .q or a folder above it'),
          'tile': Attr('int', required=True, doc='tile size in pixels (square)')},
         parents=('application',)),
+    'tile': Tag(
+        'One tile of a qg:tileset that is not a full solid square, for the tilemap layers with collision: '
+        'a lower top, a thin ledge, a slope, a tile to jump through from below, or no collision at all. '
+        'A flipped tile (a negative number in the tilemap) flips its shape too.',
+        {'frame': Attr('int', required=True, doc='which tile: its number in the tilemap is frame+1'),
+         'shape': Attr('str', None, doc='the solid part, as x,y points from the tile\'s top-left corner '
+                                        'separated by semicolons (0,10; 64,10; 64,64; 0,64); none: not solid'),
+         'one-way': Attr('bool', False, doc='stood on from above, jumped through from below')},
+        parents=('tileset',)),
     'spritesheet': Tag(
         'A sheet of equal frames for characters and items.',
         {'name': Attr('ident', required=True),
@@ -115,6 +124,10 @@ TAGS: Dict[str, Tag] = {
          'dy': Attr('float', 0.0, doc='shuttle: how far it goes, pixels'),
          'period': Attr('int', 240, doc='shuttle: ticks for there and back'),
          'one-way': Attr('bool', False, doc='solid: can be jumped through from below and stood on'),
+         'shape': Attr('str', None, doc='solid: the solid part as x,y points from its centre, separated by '
+                                        'semicolons (-96,-21; 96,-21; 96,6; -96,6), instead of the hitbox'),
+         'scale': Attr('float', 1.0, doc='the picture\'s size, times its frame (the hitbox stays as given)'),
+         'walls': Attr('enum:pass|stop', 'pass', doc='fly: pass goes through the tiles; stop is gone on touching one'),
          'sight': Attr('float', 80.0, doc='chase: pixels'),
          'heading': Attr('str', 'down', doc='fly: up, down, left, right, or a direction as x,y (-1,0.5)'),
          'accel': Attr('float', 0.0, doc='fly: pixels per second added to its speed every second'),
@@ -144,7 +157,8 @@ TAGS: Dict[str, Tag] = {
          'initial': Attr('bool', False, doc='the state it starts in (else the first one)')},
         parents=('character', 'prefab')),
     'animation': Tag(
-        'Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what it does (a topdown one '
+        'Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what it does (a platformer '
+        '"fall" while it comes down, when it has one; a topdown one '
         '"walk-up" and "walk-down" when it has them, "walk-up" upside down for down); a prefab plays "walk".',
         {'name': Attr('ident', required=True),
          'frames': Attr('str', required=True, doc='comma-separated frame numbers'),
@@ -174,9 +188,12 @@ TAGS: Dict[str, Tag] = {
          'bounds': Attr('enum:scene|none', None, doc='kept inside the scene: a ship unless none, a topdown '
                                                     'character when scene'),
          'axis': Attr('enum:both|vertical|horizontal', 'both', doc='ship: which way it can move'),
-         'fire-action': Attr('enum:jump', None, doc='ship: the action that shoots'),
-         'fire-prefab': Attr('ident', None, doc='ship: what it shoots, placed above it'),
-         'fire-every': Attr('int', 10, doc='ship: ticks between shots while the action is held'),
+         'fire-action': Attr('ident', None, doc='ship, platformer: the action that shoots (jump, or one a qg:input '
+                                                 'declares)'),
+         'fire-prefab': Attr('ident', None, doc='ship: what it shoots, placed above it; platformer: in front of it, '
+                                                'a fly prefab heading the way it faces'),
+         'fire-every': Attr('int', 10, doc='ship: ticks between shots while the action is held; platformer: the '
+                                           'fewest ticks between two presses that shoot'),
          'fire-sound': Attr('ident', None),
          'at': Attr('expr', None, doc='map: the qg:map-node it starts on (a name, or an expression)'),
          'speed': Attr('float', 60.0, doc='map, topdown: pixels per second'),
@@ -193,7 +210,16 @@ TAGS: Dict[str, Tag] = {
          'coyote-frames': Attr('int', 6, doc='ticks after leaving a ledge in which a jump still works'),
          'gravity': Attr('float', 900.0, doc='pixels per second squared'),
          'max-fall': Attr('float', 300.0, doc='terminal velocity, pixels per second'),
-         'jump-sound': Attr('ident', None, doc='a qg:sound, played on take-off')},
+         'jump-sound': Attr('ident', None, doc='a qg:sound, played on take-off'),
+         'jump-speed': Attr('float', None, doc='platformer: the take-off speed, pixels per second, instead of '
+                                               'jump-height'),
+         'accel': Attr('float', 0.0, doc='platformer: pixels per second squared towards the run speed '
+                                         '(0: at once)'),
+         'air-jumps': Attr('int', 0, doc='platformer: jumps it may take in the air before landing again'),
+         'air-jump-boost': Attr('float', 1.0, doc='platformer: an air jump multiplies the speed across by this'),
+         'jump-cut': Attr('float', 0.0, doc='platformer: releasing the button while rising multiplies the rise by '
+                                            'this, once (0: the extra gravity of variable-jump instead)'),
+         'scale': Attr('float', 1.0, doc='the picture\'s size, times its frame (the hitbox stays as given)')},
         parents=('scene',)),
     'instance': Tag(
         'A prefab placed in the scene.',
@@ -227,6 +253,7 @@ TAGS: Dict[str, Tag] = {
         'chooses with select (Enter, a click, the joypad\'s A), or points at a button with the mouse — the '
         'pointer is that player\'s qg:cursor, so a click is replayed and travels in the lockstep like a key.',
         {'player': Attr('int', 1, doc='whose keys and pointer choose'),
+         'if': Attr('expr', None, doc='shown, and choosable, only while this is true: paused(), a q:set...'),
          'position': Attr('enum:top-left|top-center|top-right|center|bottom-center', 'center'),
          'font': Attr('str', None, doc='a .ttf, relative to the .q or a folder above it'),
          'size': Attr('int', 16, doc='font size')},
@@ -468,6 +495,15 @@ TAGS: Dict[str, Tag] = {
         parents=('handler',)),
     'leave': Tag(
         'Leaves the networked game, or stops hosting or joining.',
+        {},
+        parents=('handler',)),
+    'pause': Tag(
+        'Pauses the scene: its characters, things, timers and spawners stop where they are. Menus, the HUD, '
+        'the camera and qg:on-input go on, so a key or a button can resume it. `paused()` says whether it is.',
+        {},
+        parents=('handler',)),
+    'resume': Tag(
+        'Goes on with a paused scene.',
         {},
         parents=('handler',)),
     'goto-scene': Tag(

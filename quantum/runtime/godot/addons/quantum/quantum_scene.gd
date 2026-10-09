@@ -52,6 +52,23 @@ func _process(_delta: float) -> void:
 			_shake_rng.randf_range(-_shake_strength, _shake_strength)) if _shake_frames > 0 else Vector2.ZERO
 
 
+# qg:pause: everything that plays stops where it is — characters, things,
+# timers, spawners (and the bodies leave the physics until resumed). The
+# scene itself goes on, for qg:on-input; so do its menus and HUD (canvas
+# layers) and the cursors that point at the menus.
+var q_paused: bool = false
+
+
+func q_pause(on: bool) -> void:
+	if on == q_paused:
+		return
+	q_paused = on
+	for c in get_children():
+		if c is CanvasLayer or c.is_in_group("q_cursor"):
+			continue
+		c.process_mode = Node.PROCESS_MODE_DISABLED if on else Node.PROCESS_MODE_INHERIT
+
+
 # For the rollback: the scene's state (its q:sets) and its random source, and back.
 func q_save() -> Dictionary:
 	return {"vars": _q_state().duplicate(true), "rng": rng.state}
@@ -90,8 +107,9 @@ func quantum_state() -> Dictionary:
 			if "state" in n and n.state != "":
 				entry.append(n.state)
 			where.append(entry)
-			# A thing with a name of its own (qg:instance name=) is reported by it.
-			if n.name != n.prefab_name:
+			# A thing with a name of its own (qg:instance name=) is reported by it; the
+			# names Godot makes up for a second thing of the same prefab are not.
+			if n.has_meta("q_named"):
 				named[n.name] = {"x": snappedf(n.position.x, 0.01), "y": snappedf(n.position.y, 0.01)}
 	state["nodes"] = nodes
 	state["things"] = things
@@ -99,6 +117,8 @@ func quantum_state() -> Dictionary:
 	where.sort()
 	state["where"] = where
 	state["sounds"] = Q.sounds_played.duplicate()
+	if q_paused:
+		state["paused"] = true
 	var menus := []
 	for m in get_tree().get_nodes_in_group("q_menu"):
 		if m.get_parent() == self:

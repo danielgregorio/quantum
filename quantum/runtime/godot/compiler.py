@@ -192,6 +192,27 @@ class _Compiler:
                 tile = (tile, tile)
             sheets[name] = {'src': self._asset(el.get('src'), el.line), 'tile': list(tile),
                             'kind': el.tag}
+            tiles = {}
+            for t in el.find_all('tile'):
+                if str(t.get('frame')) in tiles:
+                    raise GameCompileError(f'two <qg:tile frame="{t.get("frame")}"> in tileset {name!r}', t.line)
+                if t.get('frame') < 0:
+                    raise GameCompileError('<qg:tile frame=>: 0 or more', t.line)
+                shape = t.get('shape')
+                if shape is not None and str(shape).strip() == 'none':
+                    if t.get('one-way'):
+                        raise GameCompileError('<qg:tile shape="none"> is not solid: one-way= means nothing', t.line)
+                    points = None
+                elif shape is None:
+                    size = float(tile[0])
+                    points = [[0.0, 0.0], [size, 0.0], [size, size], [0.0, size]]
+                else:
+                    points = _points(shape, t.line)
+                    if len(points) < 3:
+                        raise GameCompileError('<qg:tile shape=>: at least three points', t.line)
+                tiles[str(t.get('frame'))] = {'shape': points, 'one_way': t.get('one-way')}
+            if tiles:
+                sheets[name]['tiles'] = tiles
         sounds = {}
         for name, el in g.sounds.items():
             sounds[name] = {'src': self._asset(el.get('src'), el.line), 'loop': el.get('loop')}
@@ -207,6 +228,17 @@ class _Compiler:
                 raise GameCompileError('ai="shuttle" is a solid: add solid="true"', el.line)
             if el.get('one-way') and not el.get('solid'):
                 raise GameCompileError('one-way="true" is for a solid prefab', el.line)
+            shape = None
+            if el.get('shape') is not None:
+                if not el.get('solid'):
+                    raise GameCompileError('shape= is for a solid prefab', el.line)
+                shape = _points(el.get('shape'), el.line)
+                if len(shape) < 3:
+                    raise GameCompileError('<qg:prefab shape=>: at least three points', el.line)
+            if el.get('walls') != 'pass' and el.get('ai') != 'fly':
+                raise GameCompileError('walls= is for ai="fly"', el.line)
+            if el.get('scale') <= 0:
+                raise GameCompileError('<qg:prefab scale=>: more than 0', el.line)
             for attr in ('fire-sound',):
                 if el.get(attr) and el.get(attr) not in sounds:
                     raise GameCompileError(f'{attr}="{el.get(attr)}": no qg:sound of that name', el.line)
@@ -230,6 +262,7 @@ class _Compiler:
                              'direction': el.get('direction'), 'turns_at': el.get('turns-at'),
                              'gravity': el.get('gravity'), 'solid': el.get('solid'),
                              'one_way': el.get('one-way'), 'dx': el.get('dx'), 'dy': el.get('dy'),
+                             'shape': shape, 'scale': el.get('scale'), 'walls': el.get('walls'),
                              'period': el.get('period'),
                              'heading': _heading(el.get('heading'), el.line), 'accel': el.get('accel'),
                              'lifetime': el.get('lifetime'),
@@ -575,6 +608,31 @@ class _Compiler:
                 if el.get('fire-prefab') and el.get('fire-prefab') not in prefabs:
                     raise GameCompileError(
                         f'fire-prefab="{el.get("fire-prefab")}": no qg:prefab of that name', el.line)
+                controller = el.get('controller')
+                if el.get('fire-action') is not None:
+                    if controller not in ('ship', 'platformer'):
+                        raise GameCompileError('fire-action= is for controller="ship" or "platformer"', el.line)
+                    if el.get('fire-action') not in self.actions:
+                        raise GameCompileError(
+                            f'fire-action="{el.get("fire-action")}": no such action — declare it with '
+                            f'<qg:input action="{el.get("fire-action")}" keys="..." />', el.line)
+                    if not el.get('fire-prefab'):
+                        raise GameCompileError('fire-action= needs fire-prefab= (what it shoots)', el.line)
+                    if controller == 'platformer' and prefabs[el.get('fire-prefab')]['ai'] != 'fly':
+                        raise GameCompileError(
+                            f'fire-prefab="{el.get("fire-prefab")}": a platformer shoots a prefab with ai="fly"', el.line)
+                for attr, default in (('jump-speed', None), ('accel', 0.0), ('air-jumps', 0),
+                                      ('air-jump-boost', 1.0), ('jump-cut', 0.0)):
+                    if el.get(attr) != default and controller != 'platformer':
+                        raise GameCompileError(f'{attr}= is for controller="platformer"', el.line)
+                if el.get('jump-speed') is not None and el.get('jump-speed') <= 0:
+                    raise GameCompileError('jump-speed=: more than 0 (pixels per second, upwards)', el.line)
+                if el.get('air-jumps') < 0 or el.get('accel') < 0:
+                    raise GameCompileError('air-jumps= and accel=: 0 or more', el.line)
+                if not 0 <= el.get('jump-cut') <= 1:
+                    raise GameCompileError('jump-cut=: between 0 and 1', el.line)
+                if el.get('scale') <= 0:
+                    raise GameCompileError('<qg:character scale=>: more than 0', el.line)
                 at_method = None
                 if el.get('controller') == 'map':
                     at = el.get('at')
@@ -610,7 +668,10 @@ class _Compiler:
                     'run_speed': el.get('run-speed'), 'jump_height': el.get('jump-height'),
                     'variable_jump': el.get('variable-jump'), 'coyote_frames': el.get('coyote-frames'),
                     'gravity': el.get('gravity'), 'max_fall': el.get('max-fall'),
-                    'jump_sound': el.get('jump-sound'),
+                    'jump_sound': el.get('jump-sound'), 'jump_speed': el.get('jump-speed'),
+                    'accel': el.get('accel'), 'air_jumps': el.get('air-jumps'),
+                    'air_jump_boost': el.get('air-jump-boost'), 'jump_cut': el.get('jump-cut'),
+                    'scale': el.get('scale'),
                     'bounds': el.get('bounds'), 'fire_action': el.get('fire-action'),
                     'fire_prefab': el.get('fire-prefab'), 'fire_every': el.get('fire-every'),
                     'fire_sound': el.get('fire-sound'),
@@ -675,6 +736,10 @@ class _Compiler:
                 font = self._asset(el.get('font'), el.line) if el.get('font') else None
                 nodes.append({'kind': 'menu', 'player': el.get('player'), 'position': el.get('position'),
                               'size': el.get('size'), 'font': font, 'items': items})
+                if el.get('if') is not None:
+                    nodes[-1]['if_method'] = f'_q_menu_{menus}_if'
+                    script.functions.append(
+                        f'func {nodes[-1]["if_method"]}():\n\treturn {compile_expression(el.get("if"), script.scope(), el.line)}\n')
                 self._node_elements.append(el)
             elif el.tag == 'hud':
                 items = []

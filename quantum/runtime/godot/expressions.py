@@ -42,6 +42,7 @@ _FUNCTIONS = {
     'net_status': 'Q.net_status()',          # offline, hosting, joining, connected, playing, failed, ended
     'net_players': 'Q.net_players()',        # how many are connected
     'net_player': 'Q.net_player()',          # this machine's player number (0: none yet)
+    'paused': 'Q.paused(self)',              # the scene is paused (qg:pause)
 }
 
 _BIN = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*'}

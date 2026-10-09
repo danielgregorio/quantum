@@ -18,6 +18,7 @@ func setup(spec: Dictionary, scene: Node) -> void:
 	step = float(spec.get("step", 16.0))
 	grid = int(spec["grid"]) if spec.get("grid") != null else 0
 	_scene = scene
+	add_to_group("q_cursor")
 	name = "cursor-%d" % player
 	var w := float(scene.q_spec.get("width", 256)) if "q_spec" in scene else 256.0
 	var h := float(scene.q_spec.get("height", 224)) if "q_spec" in scene else 224.0
