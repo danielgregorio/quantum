@@ -991,9 +991,9 @@ class TestSceneScript:
 class TestGameBuilderEngineSelection:
     """Test GameBuilder with engine parameter."""
 
-    def test_default_engine_is_pixi(self):
+    def test_default_engine_is_godot(self):
         builder = GameBuilder()
-        assert builder.engine == 'pixi'
+        assert builder.engine == 'godot'
 
     def test_godot_engine_selection(self):
         builder = GameBuilder(engine='godot')
@@ -1004,8 +1004,11 @@ class TestGameBuilderEngineSelection:
             GameBuilder(engine='unity')
 
     def test_valid_engines(self):
-        assert 'pixi' in GameBuilder.VALID_ENGINES
-        assert 'godot' in GameBuilder.VALID_ENGINES
+        assert GameBuilder.VALID_ENGINES == ('godot',)
+
+    def test_pixi_is_gone(self):
+        with pytest.raises(GameBuildError):
+            GameBuilder(engine='pixi')
 
     def test_godot_build_produces_directory(self, tmp_path):
         app = ApplicationNode('test_game', 'game')
@@ -1022,21 +1025,6 @@ class TestGameBuilderEngineSelection:
         assert Path(output).exists()
         assert (Path(output) / 'project.godot').exists()
         assert (Path(output) / 'main.tscn').exists()
-
-    def test_pixi_build_produces_html(self, tmp_path):
-        app = ApplicationNode('test_game', 'game')
-        scene = SceneNode('main')
-        sprite = SpriteNode('s1')
-        sprite.src = 'test.png'
-        scene.add_child(sprite)
-        app.scenes = [scene]
-        app.behaviors = []
-        app.prefabs = []
-
-        builder = GameBuilder(engine='pixi')
-        output = builder.build_to_file(app, str(tmp_path / 'test.html'))
-        assert Path(output).exists()
-        assert output.endswith('.html')
 
 
 # ==========================================================================

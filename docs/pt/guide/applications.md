@@ -20,7 +20,7 @@ Nenhum deles faz parte do núcleo suportado (veja `SUPPORT_TIERS.md`):
 
 | `type` | Nível | O que o `quantum run app.q` faz |
 |--------|------|-------------------------------|
-| `game` | Laboratório | gera um jogo 2D (`--engine pixi` ou `--engine godot`) |
+| `game` | Laboratório | gera um jogo 2D (um projeto Godot 4) |
 | `terminal` | Experimental | gera uma interface de terminal |
 | `ui` | Experimental | gera uma interface, só o layout (`--target html` ou `textual`; `mobile` é Laboratório) |
 

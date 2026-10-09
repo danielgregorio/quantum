@@ -19,12 +19,11 @@ Why not keep the generators: they are the part that leaked.
 
 | Problem today | Where |
 |---|---|
-| Two backends (PixiJS 4.4k lines, Godot 6.1k lines) that drift: every tag must be implemented twice, and in practice is implemented in one | `quantum/runtime/game_*.py`, `godot_*.py` |
+| Two backends (PixiJS 4.4k lines, Godot 6.1k lines) that drifted: every tag had to be implemented twice, and in practice was implemented in one. **Done first (2026-10-09): the PixiJS backend is deleted; Godot is the only backend.** | `quantum/runtime/game_builder.py` |
 | `q:function` bodies are copied through as raw JavaScript / GDScript, line by line. `q:if` and `q:loop` inside a function are silently dropped on Godot. This is the escape hatch every game in `projects/` falls into: the platformer has ~130 lines of JS in 15 functions | `game_engine_2d/src/parser.py:163`, `godot_code_generator.py:4548` |
 | Unknown collision actions become a comment and the game builds anyway — against the "nothing without effect" rule | `godot_code_generator.py:4585` |
 | Genre rules (stomp, squish, emerge, question block) are hard-coded as special cases in the generator instead of composed from primitives. A third genre means a third pile of special cases | `godot_code_generator.py` (`_write_*_script`, 3k lines) |
 | No game uses the Godot backend. Nothing in CI runs Godot, so 259 tests assert generated text, not behaviour | `tests/test_godot_codegen.py` |
-| Default engine is still `pixi` | `quantum/cli/runner.py:308` |
 
 Why Godot and not a browser engine or our own: a real engine with an editor,
 headless mode for CI (`godot --headless`), exports to web, desktop and mobile
@@ -143,7 +142,6 @@ Estimates assume one person full-time; each phase ends green in CI.
   alone turns the 259 text-assertion tests into real ones.
 - `tests/godot/`: a harness that runs a project headless for N ticks with a
   scripted input tape and dumps state as JSON. Used by every game test after.
-- Mark PixiJS deprecated in the CLI (warning, not removal yet).
 
 ### Phase 1 — Runtime addon and new compiler, feature-parity with Snake (2 weeks)
 
@@ -156,7 +154,9 @@ Estimates assume one person full-time; each phase ends green in CI.
   function is a compile error with the line. Unknown tag or attribute is a
   compile error. Conformance tests: the same expression evaluated by the Core
   evaluator and by Godot gives the same value (table of ~200 cases).
-- Migrate Snake and Tic-tac-toe; their replays pass in CI.
+- Migrate Snake and Tic-tac-toe (today their `q:function` bodies are still
+  the JavaScript of the old backend, copied into GDScript as they are);
+  their replays pass in CI.
 - Milestone: `projects/quantum-snake/snake.q` has zero lines of script.
 
 ### Phase 2 — Platformer kit and Hopper (3 weeks)
@@ -188,11 +188,11 @@ Estimates assume one person full-time; each phase ends green in CI.
   high score persisted (`qg:persistent`).
 - Drift: 3 waves, 1 boss with 2 phases, high-score table.
 
-### Phase 5 — Retire PixiJS, document, ship (1 week)
+### Phase 5 — Document and ship (1 week)
 
-- Delete `game_code_generator.py`, `game_templates.py`, `game_builder.py`,
-  `compile_game.py`, the Pixi tests and CDN references. `engine="2d"` keeps
-  working and means Godot.
+- (The PixiJS backend was removed before phase 0, with its tests, the
+  committed HTML builds and the web pages that framed them. `engine="2d"`
+  keeps working and means Godot.)
 - `docs/targets/games.md`: the tag reference, generated from the AST nodes the
   way `FEATURE_STATUS.md` is generated, so it cannot rot. Three "build this
   game" tutorials, one per genre, each one tested in CI like the cookbook.

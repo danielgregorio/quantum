@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "generated": true,
-  "totalExamples": 153,
+  "totalExamples": 152,
   "categories": [
     {
       "id": "state-management",
@@ -215,14 +215,13 @@
       "description": "Game development with qg:scene, sprites, and physics",
       "icon": "🎮",
       "docsPath": "/features/game-engine",
-      "exampleCount": 6,
+      "exampleCount": 5,
       "examples": [
         "adventure.q",
         "fighter.q",
         "kenney_platformer.q",
         "platformer.q",
-        "snake.q",
-        "tictactoe.q"
+        "snake.q"
       ]
     },
     {

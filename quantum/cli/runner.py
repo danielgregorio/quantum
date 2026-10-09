@@ -184,17 +184,14 @@ class QuantumRunner:
             return 1
 
     def _build_game(self, app: ApplicationNode, debug: bool = False) -> int:
-        """Build game from game application using selected engine backend."""
+        """Build a Godot 4 project from a game application."""
         from quantum.runtime.game_builder import GameBuilder, GameBuildError
-        engine = getattr(self, '_game_engine', 'pixi')
         try:
             source_dir = getattr(self, '_source_dir', None)
-            builder = GameBuilder(engine=engine, source_dir=source_dir)
+            builder = GameBuilder(source_dir=source_dir)
             output_path = builder.build_to_file(app)
-            engine_label = 'Godot 4 project' if engine == 'godot' else 'HTML game'
-            print(f"[SUCCESS] {engine_label} built: {output_path}")
+            print(f"[SUCCESS] Godot 4 project built: {output_path}")
             if debug:
-                print(f"   Engine: {engine}")
                 print(f"   Scenes: {len(getattr(app, 'scenes', []))}")
                 print(f"   Behaviors: {len(getattr(app, 'behaviors', []))}")
                 print(f"   Prefabs: {len(getattr(app, 'prefabs', []))}")
@@ -270,7 +267,7 @@ Examples:
   quantum desktop                  # The application's pages in a desktop window
   quantum check                    # Pages parse, SQL compiles, query fields exist
   quantum test                     # Run the app's *.test.q tests
-  quantum run game.q --engine godot # Build Godot 4 project
+  quantum run game.q               # Build a Godot 4 project
   quantum run backup-job.q         # Execute job
   quantum pkg init ./my-component  # Initialize new package
   quantum pkg install ./package    # Install package
@@ -305,8 +302,6 @@ Examples:
     run_parser.add_argument('--config', default='quantum.config.yaml', help='Config file')
     run_parser.add_argument('--target', type=_ui_target, choices=['html', 'textual', 'mobile'], default='html',
                             help='UI target (for type="ui" apps): html, textual, or mobile')
-    run_parser.add_argument('--engine', choices=['pixi', 'godot'], default='pixi',
-                            help='Game engine backend: pixi (default, HTML5) or godot (Godot 4 project)')
 
     # Start command
     start_parser = subparsers.add_parser('start', help='Start web server')
@@ -455,7 +450,6 @@ def main():
 
         runner = QuantumRunner(config=load_config(getattr(args, 'config', 'quantum.config.yaml')))
         runner._ui_target = getattr(args, 'target', 'html')
-        runner._game_engine = getattr(args, 'engine', 'pixi')
         exit_code = runner.run(args.file, getattr(args, 'debug', False))
         sys.exit(exit_code)
 

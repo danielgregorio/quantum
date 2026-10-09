@@ -151,36 +151,6 @@
         "/features/game-engine"
       ],
       "lineCount": 150
-    },
-    {
-      "file": "tictactoe.q",
-      "title": "Tictactoe",
-      "description": "Example demonstrating Tictactoe",
-      "complexity": "advanced",
-      "tags": [
-        "games",
-        "qg:scene",
-        "qg:hud",
-        "qg:sprite",
-        "q:application",
-        "q:function",
-        "q:set",
-        "databinding"
-      ],
-      "features": [
-        "databinding",
-        "q:application",
-        "q:function",
-        "q:set",
-        "qg:hud",
-        "qg:input",
-        "qg:scene",
-        "qg:sprite"
-      ],
-      "relatedDocs": [
-        "/features/game-engine"
-      ],
-      "lineCount": 133
     }
   ]
 }

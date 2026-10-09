@@ -7,15 +7,13 @@ feature:
 
 description: |
   2D game engine for Quantum Framework.
-  Compiles declarative XML (qg: namespace) to standalone HTML
-  using PixiJS (WebGL rendering) and Matter.js (physics).
-  Games run 100% in the browser - no server-side runtime needed.
+  Compiles declarative XML (qg: namespace) to a Godot 4 project
+  (.tscn scenes, .gd scripts), which Godot runs and exports.
 
 tags:
   - "game"
   - "2d"
-  - "pixi"
-  - "matter"
+  - "godot"
   - "physics"
   - "sprites"
 
@@ -24,10 +22,10 @@ maintainers:
   - "Claude"
 
 api:
-  ast_nodes: "src/core/features/game_engine_2d/src/ast_nodes.py"
-  parser: "src/core/features/game_engine_2d/src/parser.py"
-  code_generator: "src/runtime/game_code_generator.py"
-  builder: "src/runtime/game_builder.py"
+  ast_nodes: "quantum/core/features/game_engine_2d/src/ast_nodes.py"
+  parser: "quantum/core/features/game_engine_2d/src/parser.py"
+  code_generator: "quantum/runtime/godot_code_generator.py"
+  builder: "quantum/runtime/game_builder.py"
 
 testing:
   integration_tests: 3

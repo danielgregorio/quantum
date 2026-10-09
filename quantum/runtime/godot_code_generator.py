@@ -2,7 +2,7 @@
 Godot 4 - Code Generator
 
 Transforms Game AST nodes into Godot 4 project files (.tscn, .gd, project.godot).
-This is the Godot backend equivalent of game_code_generator.py (PIXI+Matter.js).
+The only backend of the game engine.
 
 AST and Parser are unchanged — only the code generation backend differs.
 
@@ -1838,9 +1838,9 @@ class GodotCodeGenerator:
         }
         if cam.get('offset_x') or cam.get('offset_y'):
             # Scale camera offset proportionally to viewport height.
-            # .q offset values were calibrated for ~480px PIXI viewport.
+            # .q offset values were calibrated for a ~480px viewport.
             # For retro 224px viewport, scale down to avoid hiding ground.
-            default_vp = 480.0  # PIXI default viewport height
+            default_vp = 480.0  # the viewport height the offsets assume
             scale_factor = min(1.0, self._viewport_height / default_vp)
             offset_x = float(cam.get('offset_x', 0)) * scale_factor
             offset_y = float(cam.get('offset_y', 0)) * scale_factor

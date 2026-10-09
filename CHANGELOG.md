@@ -8,6 +8,17 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ## Unreleased
 
+### Removed
+
+- Laboratory: the HTML game backend (PixiJS + Matter.js) is gone. A
+  `q:application type="game"` builds a Godot 4 project, the only backend;
+  `quantum run game.q` no longer takes `--engine`. The three games in
+  `projects/` (snake, tictactoe, kenney-platformer) keep their `.q` source
+  and lose the web page that framed the HTML build; their logic is still the
+  JavaScript they were written in and they are the migration backlog of
+  `PLAN_GAMES_2.md`. `examples/tictactoe.q`, an older copy of the project,
+  is gone too.
+
 ### Added
 
 - A playground on the site (/playground/): the Cookbook's recipes, editable,

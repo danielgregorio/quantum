@@ -14,7 +14,7 @@ Quantum 中的 **Web 应用**不是 `q:application`：它是 `components/` 中�
 
 | `type` | 层级 | `quantum run app.q` 做什么 |
 |--------|------|-------------------------------|
-| `game` | 实验室 | 构建一个 2D 游戏（`--engine pixi` 或 `--engine godot`） |
+| `game` | 实验室 | 构建一个 2D 游戏（一个 Godot 4 项目） |
 | `terminal` | 实验层 | 构建一个终端界面 |
 | `ui` | 实验层 | 构建一个界面，只有布局（`--target html` 或 `textual`；`mobile` 属于实验室） |
 

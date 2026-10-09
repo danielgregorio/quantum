@@ -2,19 +2,17 @@
 Game Engine 2D - Builder/Orchestrator
 
 Orchestrates the compilation pipeline:
-  ApplicationNode (type="game") → extract scenes/behaviors/prefabs → CodeGenerator → output
+  ApplicationNode (type="game") → extract scenes/behaviors/prefabs → GodotCodeGenerator → project directory
 
-Supports two backends:
-  - pixi (default): PIXI.js + Matter.js → standalone HTML file
-  - godot: Godot 4 → project directory with .tscn + .gd files
+The only backend is Godot 4: a game builds to a project directory with
+.tscn + .gd files (project.godot, export_presets.cfg), which Godot opens,
+runs and exports.
 
 Usage:
-    builder = GameBuilder()                    # Default: pixi backend
-    builder = GameBuilder(engine='godot')      # Godot 4 backend
-    builder.build_to_file(app_node)
+    builder = GameBuilder()
+    builder.build_to_file(app_node)            # projects/<id>/godot/
 """
 
-from pathlib import Path
 from typing import Optional
 
 from quantum.core.ast_nodes import ApplicationNode
@@ -29,15 +27,16 @@ class GameBuildError(Exception):
 
 
 class GameBuilder:
-    """Builds a game from a Quantum game ApplicationNode.
+    """Builds a Godot 4 project from a Quantum game ApplicationNode.
 
     Args:
-        engine: Backend engine to use. 'pixi' (default) or 'godot'.
+        engine: Backend engine. Only 'godot' exists; the argument stays so a
+            caller that names the engine keeps working.
     """
 
-    VALID_ENGINES = ('pixi', 'godot')
+    VALID_ENGINES = ('godot',)
 
-    def __init__(self, engine: str = 'pixi', source_dir: str = None):
+    def __init__(self, engine: str = 'godot', source_dir: str = None):
         if engine not in self.VALID_ENGINES:
             raise GameBuildError(
                 f"Unknown engine '{engine}'. Valid engines: {', '.join(self.VALID_ENGINES)}"
@@ -46,10 +45,9 @@ class GameBuilder:
         self.source_dir = source_dir
 
     def build(self, app: ApplicationNode, output_dir: Optional[str] = None) -> str:
-        """Build game from an ApplicationNode with type='game'.
+        """Build the game from an ApplicationNode with type='game'.
 
-        For pixi engine: returns HTML string.
-        For godot engine: returns output directory path.
+        Returns the output directory path (``projects/<id>/godot`` by default).
         """
         scenes = getattr(app, 'scenes', [])
         behaviors = getattr(app, 'behaviors', [])
@@ -63,49 +61,12 @@ class GameBuilder:
         valid_prefabs = [p for p in prefabs if isinstance(p, PrefabNode)]
         valid_enemies = [e for e in enemies if isinstance(e, EnemyNode)]
 
-        if self.engine == 'godot':
-            return self._build_godot(app, scenes, valid_behaviors, valid_prefabs, output_dir, valid_enemies)
-        else:
-            return self._build_pixi(app, scenes, valid_behaviors, valid_prefabs)
-
-    def _build_pixi(self, app: ApplicationNode, scenes, behaviors, prefabs) -> str:
-        """Build with PIXI.js + Matter.js backend (returns HTML string)."""
-        from quantum.runtime.game_code_generator import GameCodeGenerator
-
-        if len(scenes) > 1:
-            initial_name = scenes[0].name
-            for scene in scenes:
-                if isinstance(scene, SceneNode) and scene.active:
-                    initial_name = scene.name
-                    break
-
-            generator = GameCodeGenerator()
-            return generator.generate_multi(
-                scenes=[s for s in scenes if isinstance(s, SceneNode)],
-                initial=initial_name,
-                behaviors=behaviors,
-                prefabs=prefabs,
-                title=app.app_id,
-            )
-
-        active_scene = scenes[0]
-        for scene in scenes:
-            if isinstance(scene, SceneNode) and scene.active:
-                active_scene = scene
-                break
-
-        generator = GameCodeGenerator()
-        return generator.generate(
-            scene=active_scene,
-            behaviors=behaviors,
-            prefabs=prefabs,
-            title=app.app_id,
-        )
+        return self._build_godot(app, scenes, valid_behaviors, valid_prefabs, output_dir, valid_enemies)
 
     def _build_godot(self, app: ApplicationNode, scenes, behaviors, prefabs,
                      output_dir: Optional[str] = None,
                      enemies: list = None) -> str:
-        """Build with Godot 4 backend (returns output directory path)."""
+        """Build with the Godot 4 backend (returns output directory path)."""
         from quantum.runtime.godot_code_generator import GodotCodeGenerator
 
         if output_dir is None:
@@ -148,18 +109,5 @@ class GameBuilder:
         )
 
     def build_to_file(self, app: ApplicationNode, output_path: Optional[str] = None) -> str:
-        """Build and write output. Returns the output file/directory path."""
-        if self.engine == 'godot':
-            return self.build(app, output_dir=output_path)
-
-        # PIXI: write HTML file
-        html = self.build(app)
-
-        if output_path is None:
-            output_path = f"{app.app_id}.html"
-
-        path = Path(output_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(html, encoding='utf-8')
-
-        return str(path.resolve())
+        """Build and write the project. Returns the output directory path."""
+        return self.build(app, output_dir=output_path)

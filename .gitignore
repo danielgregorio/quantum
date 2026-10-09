@@ -150,8 +150,6 @@ quantum_admin/settings/last_test_result.json
 /test_*.html
 /tilemap_test.html
 /task-manager.html
-/temp_snake_game.html
-/kenney_platformer.html
 /rag_error.html
 /dashboard.html
 
@@ -198,6 +196,8 @@ debug_notes.md
 
 # Godot editor cache (generated, user-specific)
 .godot/
+# Game builds: `quantum run <game>.q` writes the Godot project next to the source
+projects/*/godot/
 
 # Temporary debug images and scripts
 _*.png
@@ -233,7 +233,6 @@ quantum_kb/
 # litters it, and the files get swept into unrelated commits (twice this
 # session). Ignore root-level generated .py, keeping the three real ones.
 /*.py
-!/compile_game.py
 !/conftest.py
 !/test_database.py
 

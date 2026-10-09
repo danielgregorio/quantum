@@ -3,7 +3,7 @@ AST Nodes for Game Engine 2D (qg: namespace)
 
 All game-specific AST nodes for the Quantum 2D game engine.
 These represent game objects, systems, behaviors, and abstractions
-that compile to PixiJS + Matter.js JavaScript.
+that compile to a Godot 4 project.
 """
 
 from typing import Dict, Any, List, Optional
