@@ -6,8 +6,16 @@
 
 ## The decision
 
-**Keep Godot 4 as the only runtime. Keep the `qg:` language. Rebuild the
-middle — the code generators — from scratch. Retire the PixiJS backend.**
+**Keep Godot 4 as the only runtime. Keep the `qg:` language where it is
+good. Rebuild the middle — the code generators — from scratch. Retire the
+PixiJS backend. Owe nothing to the old games.**
+
+The language is in flux and that is the point of the Laboratory tier: no
+tag, attribute or game that exists today is a constraint. The old games
+(snake, tic-tac-toe, the Kenney platformer, the example fighter and
+adventure) were JavaScript against the PixiJS runtime; they are deleted,
+not migrated. Their Kenney CC0 art stays in `assets/kenney/` for the new
+games.
 
 Why not rebuild everything: the language layer (`qg:` parser, 1.7k lines of
 AST nodes, 84 parser tests) is in good shape and already knows the vocabulary
@@ -127,8 +135,8 @@ clean-up for the same reason).
 | **Keep** (top-down adventure, ~6 rooms) | top-down | 8-direction movement, room-to-room transitions with the camera snapping, triggers and switches, keys/doors (inventory as state), hearts, melee hitbox, simple enemies, dialogue boxes in the HUD |
 | **Drift** (vertical shooter, 3 waves + boss) | arcade | projectiles and pools, spawners on timers and waves, particles, boss state machine with phases, screen shake, lives/continues, high score persisted to disk |
 
-Snake and Tic-tac-toe (today Pixi + JS) are migrated at milestone 1 as the
-smoke test of the new backend; they are not counted among the three.
+There is no migration: the old games are gone. The smoke test of the new
+backend is the first slice of Hopper (phase 1), not an old game.
 
 ## Phases
 
@@ -143,7 +151,7 @@ Estimates assume one person full-time; each phase ends green in CI.
 - `tests/godot/`: a harness that runs a project headless for N ticks with a
   scripted input tape and dumps state as JSON. Used by every game test after.
 
-### Phase 1 — Runtime addon and new compiler, feature-parity with Snake (2 weeks)
+### Phase 1 — Runtime addon and new compiler, first slice of Hopper (2 weeks)
 
 - `addons/quantum/`: scene builder from `game.json`, input map, sprites,
   animations, timers, event bus, HUD counters, scene manager, persistence.
@@ -154,10 +162,13 @@ Estimates assume one person full-time; each phase ends green in CI.
   function is a compile error with the line. Unknown tag or attribute is a
   compile error. Conformance tests: the same expression evaluated by the Core
   evaluator and by Godot gives the same value (table of ~200 cases).
-- Migrate Snake and Tic-tac-toe (today their `q:function` bodies are still
-  the JavaScript of the old backend, copied into GDScript as they are);
-  their replays pass in CI.
-- Milestone: `projects/quantum-snake/snake.q` has zero lines of script.
+- The first slice of Hopper: one screen, a sprite that walks and jumps on
+  a tilemap, a coin to collect, a counter in the HUD. Its replay passes in
+  CI.
+- Milestone: that slice is a `.q` with zero lines of script, and the old
+  generator (`godot_code_generator.py`, `godot_templates.py`) is deleted —
+  what it did that the slice needs was rebuilt, the rest waits for a game
+  to need it.
 
 ### Phase 2 — Platformer kit and Hopper (3 weeks)
 
@@ -171,7 +182,7 @@ Estimates assume one person full-time; each phase ends green in CI.
   `emerge`, `fly-patrol`), stomp with squish, world map, game over.
 - Hopper: 3 levels, world map, 3 enemy kinds, 2 power-ups.
 - Milestone: Hopper playable end to end from a web export; every tag it
-  needed exists; `kenney-platformer` is deleted (Hopper replaces it).
+  needed exists.
 
 ### Phase 3 — Top-down kit and Keep (2 weeks)
 

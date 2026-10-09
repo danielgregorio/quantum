@@ -243,7 +243,6 @@ quantum_kb/
 # Debug/test HTML files
 # Rastreados por engano ate 2026-09; removidos do indice com `git rm --cached`
 # (preservados no disco para o demo rodar localmente). Um clone publico NAO
-# Kenney CC0 ja presentes em projects/kenney-platformer/.
 
 # install.py e o instalador CLI oficial (melhor peca de onboarding). A regra
 # `/*.py` acima o engolia; esta negacao o traz de volta.
