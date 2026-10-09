@@ -565,7 +565,7 @@ class TestTopDownExitsAndHits:
     </qg:character>
   </qg:scene>
 '''))
-        assert '<qg:on-hit with="ghost">: no prefab has that tag' in e.message
+        assert '<qg:on-hit with="ghost">: no prefab or zone has that tag' in e.message
 
 
 class TestArcadePrefabsAndSpawners:
@@ -611,7 +611,7 @@ class TestArcadePrefabsAndSpawners:
         out = build(tmp_path, self.SOURCE)
         data = json.loads((out / 'game.json').read_text())
         shot, drone = data['prefabs']['Shot'], data['prefabs']['Drone']
-        assert (shot['ai'], shot['heading'], shot['lifetime'], shot['health']) == ('fly', 'up', 80, 1)
+        assert (shot['ai'], shot['heading'], shot['lifetime'], shot['health']) == ('fly', [0.0, -1.0], 80, 1)
         assert shot['on_collision'] == [{'with': 'enemy', 'cooldown': 0, 'handler': '_Shot_on_collision_0'}]
         assert (drone['health'], drone['fire_prefab'], drone['fire_every']) == (3, 'Shot', 90)
         assert drone['on_damage'] == '_Drone_on_damage' and drone['on_death'] == '_Drone_on_death'
@@ -703,8 +703,8 @@ class TestInputsTimersAndPlatforms:
 
 class TestWhatItRefuses:
     def test_an_unknown_tag_with_its_line(self, tmp_path):
-        e = refuse(tmp_path, game('  <qg:scene name="main">\n    <qg:sprite id="x" />\n  </qg:scene>\n'))
-        assert '<qg:sprite> is not a game tag' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main">\n    <qg:ghost id="x" />\n  </qg:scene>\n'))
+        assert '<qg:ghost> is not a game tag' in e.message
         assert e.line == 6
 
     def test_an_unknown_attribute_lists_the_known_ones(self, tmp_path):
@@ -762,7 +762,7 @@ class TestWhatItRefuses:
     </qg:character>
   </qg:scene>
 '''))
-        assert 'no prefab has that tag (tags: coin)' in e.message
+        assert 'no prefab or zone has that tag (tags: coin)' in e.message
 
     def test_an_asset_that_does_not_exist(self, tmp_path):
         e = refuse(tmp_path, '<q:application id="t" type="game">\n'
@@ -910,3 +910,92 @@ class TestGdAttributes:
         assert gd.properties_of('Camera2D')['zoom'] == 'Vector2'
         assert gd.properties_of('Camera2D')['modulate'] == 'Color'      # inherited from CanvasItem
         assert 'name' not in gd.properties_of('Node')                   # the runtime's, never a gd:
+
+
+class TestWhatPongAsked:
+    """The six things Godot's Pong demo made the language say (projects/pong/README.md)."""
+
+    def test_a_second_player_its_keys_and_a_vertical_ship(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:input player="2" action="up" keys="Up" />
+  <qg:input player="2" action="down" keys="Down" />
+  <qg:scene name="main">
+    <qg:character id="left" controller="ship" sheet="c" x="10" y="10" hitbox="8x32" axis="vertical" />
+    <qg:character id="right" controller="ship" player="2" sheet="c" x="100" y="10" hitbox="8x32" axis="vertical" />
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['inputs']['p2_up'] == ['Up'] and data['inputs']['p2_down'] == ['Down']
+        assert data['inputs']['up'] == ['Up', 'W']          # player 1 keeps the defaults
+        left, right = data['scenes']['main']['nodes']
+        assert (left['player'], left['axis']) == (1, 'vertical')
+        assert (right['player'], right['axis']) == (2, 'vertical')
+
+    def test_a_player_without_keys(self, tmp_path):
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="right" controller="ship" player="2" sheet="c" x="100" y="10" hitbox="8x32" />
+  </qg:scene>
+'''))
+        assert '<qg:character player="2">: no keys for that player' in str(err)
+
+    def test_axis_is_for_the_ship(self, tmp_path):
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p" controller="topdown" axis="vertical" sheet="c" x="100" y="10" hitbox="8x32" />
+  </qg:scene>
+'''))
+        assert 'axis= is for controller="ship"' in str(err)
+
+    def test_frames_that_are_not_square(self, tmp_path):
+        out = build(tmp_path, '''<q:application id="t" type="game">
+  <qg:tileset name="k" src="assets/kenney/tilemap_packed.png" tile="18" />
+  <qg:spritesheet name="tall" src="assets/kenney/tilemap-characters_packed.png" tile="8x32" />
+  <qg:scene name="main"><qg:sprite sheet="tall" frame="2" x="20" y="30" /></qg:scene>
+</q:application>
+''')
+        data = json.loads((out / 'game.json').read_text())
+        assert data['sheets']['k']['tile'] == [18, 18] and data['sheets']['tall']['tile'] == [8, 32]
+        assert data['scenes']['main']['nodes'] == [{'kind': 'sprite', 'sheet': 'tall', 'frame': 2, 'x': 20.0, 'y': 30.0}]
+
+    def test_a_heading_as_a_vector_and_an_acceleration(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:prefab name="Ball" tag="ball" sheet="k" frame="151" hitbox="8x8" ai="fly" heading="3,-4" accel="2" />
+  <qg:scene name="main"><qg:instance prefab="Ball" x="30" y="10" /></qg:scene>
+''' + TAIL)
+        ball = json.loads((out / 'game.json').read_text())['prefabs']['Ball']
+        assert ball['heading'] == [0.6, -0.8] and ball['accel'] == 2.0
+        err = refuse(tmp_path, HEAD + '''  <qg:prefab name="Ball" tag="ball" sheet="k" frame="151" hitbox="8x8" ai="fly" heading="north" />
+  <qg:scene name="main" />
+''' + TAIL)
+        assert 'heading="north": up, down, left, right, or x,y' in str(err)
+
+    def test_zones_deflect_and_respawn(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:prefab name="Ball" tag="ball" sheet="k" frame="151" hitbox="8x8" ai="fly" heading="left" speed="100">
+    <qg:on-collision with="edge"><qg:deflect target="me" axis="y" /></qg:on-collision>
+    <qg:on-collision with="wall"><qg:respawn target="me" /></qg:on-collision>
+  </qg:prefab>
+  <qg:scene name="main">
+    <qg:character id="left" controller="ship" sheet="c" x="10" y="10" hitbox="8x32">
+      <qg:on-collision with="ball"><qg:deflect target="other" dx="1" dy="{random(-1, 1)}" /></qg:on-collision>
+    </qg:character>
+    <qg:instance prefab="Ball" name="ball" x="30" y="10" />
+    <qg:zone name="ceiling" tag="edge" x="0" y="-20" width="640" height="20" />
+    <qg:zone name="left-wall" tag="wall" x="-20" y="0" width="20" height="400" />
+  </qg:scene>
+''' + TAIL)
+        prefabs = (out / 'scripts' / 'prefabs.gd').read_text()
+        assert '\tQ.deflect_axis(me, "y")\n' in prefabs and '\tQ.respawn(me)\n' in prefabs
+        scene = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\tQ.deflect_to(other, 1, Q.random(self, (-1), 1))\n' in scene
+        nodes = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes']
+        assert nodes[2] == {'kind': 'zone', 'name': 'ceiling', 'tag': 'edge', 'x': 0.0, 'y': -20.0,
+                            'width': 640.0, 'height': 20.0}
+
+    @pytest.mark.parametrize('attrs,message', [
+        ('target="me" axis="y" dx="1" dy="0"', 'axis=, or dx= and dy=, not both'),
+        ('target="me" dx="1"', 'needs axis="x|y", or dx= and dy='),
+    ])
+    def test_a_deflect_that_says_too_much_or_too_little(self, tmp_path, attrs, message):
+        err = refuse(tmp_path, HEAD + f'''  <qg:prefab name="Ball" tag="ball" sheet="k" frame="151" hitbox="8x8" ai="fly">
+    <qg:on-collision with="coin"><qg:deflect {attrs} /></qg:on-collision>
+  </qg:prefab>
+  <qg:scene name="main" />
+''' + TAIL)
+        assert message in str(err)

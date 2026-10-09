@@ -141,12 +141,20 @@ class _Compiler:
             keys = [k.strip() for k in str(el.get('keys')).split(',') if k.strip()]
             if not keys:
                 raise GameCompileError('<qg:input> needs at least one key', el.line)
-            inputs[el.get('action')] = keys
+            if el.get('player') < 1:
+                raise GameCompileError('<qg:input player=>: 1 or more', el.line)
+            inputs[action_name(el.get('player'), el.get('action'))] = keys
+        self.inputs = inputs
+        # the tags of the zones of every scene: handlers may name them like a prefab's
+        self._zone_tags = {z.get('tag') for sc in g.scenes for z in sc.find_all('zone')}
         sheets = {}
         for name, el in list(g.tilesets.items()) + list(g.sheets.items()):
             if el.gd:
                 raise GameCompileError(f'<qg:{el.tag}> becomes no Godot node: gd: attributes go on what is placed', el.line)
-            sheets[name] = {'src': self._asset(el.get('src'), el.line), 'tile': el.get('tile'),
+            tile = el.get('tile')
+            if isinstance(tile, int):
+                tile = (tile, tile)
+            sheets[name] = {'src': self._asset(el.get('src'), el.line), 'tile': list(tile),
                             'kind': el.tag}
         sounds = {}
         for name, el in g.sounds.items():
@@ -185,7 +193,8 @@ class _Compiler:
                              'gravity': el.get('gravity'), 'solid': el.get('solid'),
                              'one_way': el.get('one-way'), 'dx': el.get('dx'), 'dy': el.get('dy'),
                              'period': el.get('period'),
-                             'heading': el.get('heading'), 'lifetime': el.get('lifetime'),
+                             'heading': _heading(el.get('heading'), el.line), 'accel': el.get('accel'),
+                             'lifetime': el.get('lifetime'),
                              'health': el.get('health'),
                              'fire_prefab': el.get('fire-prefab'), 'fire_every': el.get('fire-every'),
                              'fire_sound': el.get('fire-sound'),
@@ -202,12 +211,12 @@ class _Compiler:
         for played in pscript.sounds_played:
             if played not in sounds:
                 raise GameCompileError(f'<qg:play sound="{played}">: no qg:sound of that name', None)
-        tags = {p['tag'] for p in prefabs.values()}
+        tags = {p['tag'] for p in prefabs.values()} | self._zone_tags
         for p_ in prefabs.values():
             for h in p_['on_collision']:
                 if h['with'] not in tags:
                     raise GameCompileError(
-                        f'<qg:on-collision with="{h["with"]}">: no prefab has that tag '
+                        f'<qg:on-collision with="{h["with"]}">: no prefab or zone has that tag '
                         f'(tags: {", ".join(sorted(tags))})', None)
         self.scripts['prefabs.gd'] = prefabs_source(pscript)
         self._prefab_scenes_used = pscript.scenes_used
@@ -295,6 +304,7 @@ class _Compiler:
         map_paths: List[dict] = []
         on_input: Dict[str, str] = {}
         exits: Dict[str, dict] = {}
+        zones: set = set()
         conditions = 0
         on_death: Dict[str, str] = {}
         self._node_elements: List[Optional[Element]] = []
@@ -322,6 +332,19 @@ class _Compiler:
                             '<q:set name="cleared" type="array" /> in <q:application>', el.line)
                 map_paths.append({'from': el.get('from'), 'to': el.get('to'), 'requires': el.get('requires'),
                                   'line': el.line})
+            elif el.tag == 'zone':
+                zname = el.get('name')
+                if zname in zones:
+                    raise GameCompileError(f'two zones named {zname!r}', el.line)
+                zones.add(zname)
+                nodes.append({'kind': 'zone', 'name': zname, 'tag': el.get('tag'), 'x': el.get('x'), 'y': el.get('y'),
+                              'width': el.get('width'), 'height': el.get('height')})
+                self._node_elements.append(el)
+            elif el.tag == 'sprite':
+                self._sheet_exists(el.get('sheet'), sheets, el.line)
+                nodes.append({'kind': 'sprite', 'sheet': el.get('sheet'), 'frame': el.get('frame'),
+                              'x': el.get('x'), 'y': el.get('y')})
+                self._node_elements.append(el)
             elif el.tag == 'exit':
                 ename = el.get('name')
                 if ename in exits:
@@ -373,7 +396,7 @@ class _Compiler:
                 self._sheet_exists(el.get('tileset'), sheets, el.line)
                 if el.get('src'):
                     tmx = read_tmx(self._find(el.get('src'), el.line), el.line)
-                    tile = sheets[el.get('tileset')]['tile']
+                    tile = sheets[el.get('tileset')]['tile'][0]
                     if (tmx.tile_width, tmx.tile_height) != (tile, tile):
                         raise GameCompileError(
                             f'{el.get("src")}: tiles are {tmx.tile_width}x{tmx.tile_height}, the tileset '
@@ -442,8 +465,18 @@ class _Compiler:
                     script.functions.append(f'func {at_method}():\n\treturn {expr}\n')
                 elif el.get('at') is not None:
                     raise GameCompileError('at= is for controller="map"', el.line)
+                player = el.get('player')
+                if player < 1:
+                    raise GameCompileError('<qg:character player=>: 1 or more', el.line)
+                if player > 1 and not any(k.startswith(f'p{player}_') for k in self.inputs):
+                    raise GameCompileError(
+                        f'<qg:character player="{player}">: no keys for that player — declare '
+                        f'<qg:input player="{player}" action="up" keys="..." /> and so on in q:application', el.line)
+                if el.get('axis') != 'both' and el.get('controller') != 'ship':
+                    raise GameCompileError('axis= is for controller="ship"', el.line)
                 nodes.append({
                     'kind': 'character', 'id': cid, 'controller': el.get('controller'),
+                    'player': player, 'axis': el.get('axis'),
                     'at_method': at_method, 'speed': el.get('speed'),
                     'sheet': el.get('sheet'), 'frame': el.get('frame'),
                     'x': el.get('x'), 'y': el.get('y'), 'hitbox': list(el.get('hitbox')),
@@ -511,12 +544,13 @@ class _Compiler:
         for tag in on_death:
             if tag not in tags:
                 raise GameCompileError(f'<qg:on-death of="{tag}">: no prefab has that tag', scene.line)
+        tags |= self._zone_tags
         for n in nodes:
             for kind in ('on_collision', 'on_hit'):
                 for h in n.get(kind, []):
                     if h['with'] not in tags:
                         raise GameCompileError(
-                            f'<qg:{kind.replace("_", "-")} with="{h["with"]}">: no prefab has that tag '
+                            f'<qg:{kind.replace("_", "-")} with="{h["with"]}">: no prefab or zone has that tag '
                             f'(tags: {", ".join(sorted(tags)) or "none"})', scene.line)
         self._scene_exits[name] = set(exits)
         self._scenes_used.extend(script.scenes_used)
@@ -552,6 +586,32 @@ class _Compiler:
 
 def _ident(text: str) -> str:
     return re.sub(r'[^A-Za-z0-9_]+', '_', text)
+
+
+def action_name(player: int, action: str) -> str:
+    """The Godot input action of a player's action: `up` for player 1, `p2_up` for player 2."""
+    return action if player == 1 else f'p{player}_{action}'
+
+
+_HEADINGS = {'up': (0.0, -1.0), 'down': (0.0, 1.0), 'left': (-1.0, 0.0), 'right': (1.0, 0.0)}
+
+
+def _heading(raw: str, line: Optional[int]) -> list:
+    """heading= as a unit vector [x, y]: a word, or `x,y`."""
+    raw = str(raw).strip()
+    if raw in _HEADINGS:
+        return list(_HEADINGS[raw])
+    parts = raw.split(',')
+    try:
+        if len(parts) != 2:
+            raise ValueError
+        x, y = float(parts[0]), float(parts[1])
+    except ValueError:
+        raise GameCompileError(f'heading="{raw}": up, down, left, right, or x,y (e.g. -1,0.5)', line)
+    length = (x * x + y * y) ** 0.5
+    if length == 0:
+        raise GameCompileError('heading="0,0" goes nowhere', line)
+    return [x / length, y / length]
 
 
 def _states(el: Element, script: SceneScript, owner: str, for_prefab: bool, already: int = 0):

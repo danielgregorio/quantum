@@ -36,6 +36,7 @@ _FUNCTIONS = {
     'floor': 'floori({0})',
     'ceil': 'ceili({0})',
     'sqrt': 'sqrt({0})',
+    'random': 'Q.random(self, {0}, {1})',   # a float in [a, b] from the scene's seeded source
 }
 
 _BIN = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*'}

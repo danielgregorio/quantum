@@ -20,6 +20,7 @@ var _shake_strength: float = 0.0
 
 
 func _ready() -> void:
+	add_to_group("q_scene")
 	rng.seed = q_seed
 	if q_camera != null:
 		q_camera.make_current()

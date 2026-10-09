@@ -169,3 +169,16 @@ volume and pitch, `modulate`/`visible`/`z_index`/`scale`/`rotation`,
 none of the others — queries in expressions, tweens, handlers, UI widgets —
 which need a tag with semantics of its own. The rule: a `gd:` attribute used
 by a second game is promoted to a `qg:` attribute.
+
+## Postscript 2: transcribing a game that exists
+
+Designing games from scratch spends most of the effort on the game, not the
+language. Transcribing one that exists — Godot's own Pong demo, in
+`projects/pong/` — found six gaps in an afternoon, each with a real line of
+GDScript asking for it (the mapping is in `projects/pong/README.md`): a
+second player, a single-axis ship, zones, a free heading with acceleration
+and a deflection, non-square frames, a plain picture. Four of them were in
+the tables above (§2 queries, §9 named actions, §1 sprites); two were not
+(zones, a second player). The next candidates, in order: `2d/dodge_the_creeps`
+(spawners, timers, a title screen and a score — §10 UI), then `2d/platformer`
+(a direct comparison with the platformer controller).

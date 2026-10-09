@@ -31,6 +31,7 @@ var hitbox_size: Vector2 = Vector2(16, 16)
 var spawn_point: Vector2 = Vector2.ZERO
 var animator: Node = null
 var state: String = ""
+var player: int = 1
 var _states: Dictionary = {}
 var _base_animations: Dictionary = {}
 var _base_frame: int = 0
@@ -49,6 +50,7 @@ var _moving: Vector2 = Vector2.ZERO
 
 
 func setup(spec: Dictionary) -> void:
+	player = int(spec.get("player", 1))
 	run_speed = float(spec.get("run_speed", run_speed))
 	jump_height = float(spec.get("jump_height", jump_height))
 	variable_jump = bool(spec.get("variable_jump", variable_jump))
@@ -184,9 +186,9 @@ func _is_on_top_of(other: Node) -> bool:
 func _physics_process(delta: float) -> void:
 	_ticks += 1
 	var dir := 0
-	if Input.is_action_pressed("right"):
+	if Input.is_action_pressed(_a("right")):
 		dir += 1
-	if Input.is_action_pressed("left"):
+	if Input.is_action_pressed(_a("left")):
 		dir -= 1
 	velocity.x = dir * run_speed
 
@@ -195,14 +197,14 @@ func _physics_process(delta: float) -> void:
 	elif _coyote > 0:
 		_coyote -= 1
 
-	if Input.is_action_just_pressed("jump") and _coyote > 0:
+	if Input.is_action_just_pressed(_a("jump")) and _coyote > 0:
 		velocity.y = -_jump_speed
 		_coyote = 0
 		if jump_sound != "":
 			Q.play(jump_sound)
 
 	var g := gravity
-	if variable_jump and velocity.y < 0.0 and not Input.is_action_pressed("jump"):
+	if variable_jump and velocity.y < 0.0 and not Input.is_action_pressed(_a("jump")):
 		g *= 3.0
 	velocity.y = minf(velocity.y + g * delta, max_fall)
 
@@ -225,3 +227,8 @@ func _physics_process(delta: float) -> void:
 		if position.y > _scene.q_fall_line():
 			_fell = true
 			_scene.call(_on_fall, self, null)
+
+
+# The input action of this player: "up" for player 1, "p2_up" for player 2.
+func _a(action: String) -> String:
+	return action if player == 1 else "p%d_%s" % [player, action]

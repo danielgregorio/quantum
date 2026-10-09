@@ -19,6 +19,7 @@ const Shuttle := preload("res://addons/quantum/shuttle.gd")
 const Timer_ := preload("res://addons/quantum/timer.gd")
 const Hud := preload("res://addons/quantum/hud.gd")
 const Tilemap := preload("res://addons/quantum/tilemap.gd")
+const Zone := preload("res://addons/quantum/zone.gd")
 
 static var _textures: Dictionary = {}
 
@@ -61,7 +62,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 		match node_spec["kind"]:
 			"map-node":
 				var sheet: Dictionary = game["sheets"][node_spec["sheet"]]
-				var marker := _sprite(_texture(sheet), int(sheet["tile"]), int(node_spec["frame"]))
+				var marker := _sprite(_texture(sheet), sheet["tile"], int(node_spec["frame"]))
 				marker.name = node_spec["name"]
 				marker.position = Vector2(node_spec["x"], node_spec["y"])
 				Q.apply_gd(marker, node_spec.get("gd"))
@@ -76,7 +77,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				if node_spec["controller"] == "map":
 					var walker := MapWalker.new()
 					var sheet: Dictionary = game["sheets"][node_spec["sheet"]]
-					var sprite := _sprite(_texture(sheet), int(sheet["tile"]), int(node_spec["frame"]))
+					var sprite := _sprite(_texture(sheet), sheet["tile"], int(node_spec["frame"]))
 					walker.add_child(sprite)
 					walker.setup(node_spec, map_nodes, map_paths, scene, sprite)
 					var start: String = ""
@@ -108,6 +109,17 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				spawner.setup(node_spec)
 				Q.apply_gd(spawner, node_spec.get("gd"))
 				scene.add_child(spawner)
+			"zone":
+				var zone := Zone.new()
+				zone.setup(node_spec)
+				Q.apply_gd(zone, node_spec.get("gd"))
+				scene.add_child(zone)
+			"sprite":
+				var sheet: Dictionary = game["sheets"][node_spec["sheet"]]
+				var picture := _sprite(_texture(sheet), sheet["tile"], int(node_spec["frame"]))
+				picture.position = Vector2(node_spec["x"], node_spec["y"])
+				Q.apply_gd(picture, node_spec.get("gd"))
+				scene.add_child(picture)
 			"exit":
 				var exit := Exit.new()
 				exit.setup(node_spec, scene)
@@ -164,7 +176,7 @@ static func instance(game: Dictionary, scene: Node, prefab_name: String, at: Vec
 		thing = Block.new()
 	else:
 		thing = Item.new()
-	thing.setup(prefab_name, prefab, _texture(sheet), int(sheet["tile"]))
+	thing.setup(prefab_name, prefab, _texture(sheet), sheet["tile"])
 	thing.position = at
 	Q.apply_gd(thing, prefab.get("gd"))
 	if deferred:
@@ -189,7 +201,7 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 	body.position = Vector2(node_spec["x"], node_spec["y"])
 	body.setup(node_spec)
 	var sheet: Dictionary = game["sheets"][node_spec["sheet"]]
-	var sprite := _sprite(_texture(sheet), int(sheet["tile"]), int(node_spec["frame"]))
+	var sprite := _sprite(_texture(sheet), sheet["tile"], int(node_spec["frame"]))
 	body.add_child(sprite)
 	var shape := CollisionShape2D.new()
 	shape.name = "Shape"
@@ -213,12 +225,12 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 	return body
 
 
-static func _sprite(texture: Texture2D, tile: int, frame: int) -> Sprite2D:
+static func _sprite(texture: Texture2D, tile: Array, frame: int) -> Sprite2D:
 	var sprite := Sprite2D.new()
 	sprite.name = "Sprite"
 	sprite.texture = texture
-	sprite.hframes = max(1, int(texture.get_width()) / tile)
-	sprite.vframes = max(1, int(texture.get_height()) / tile)
+	sprite.hframes = max(1, int(texture.get_width()) / int(tile[0]))
+	sprite.vframes = max(1, int(texture.get_height()) / int(tile[1]))
 	sprite.frame = frame
 	return sprite
 

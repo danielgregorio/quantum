@@ -12,7 +12,7 @@ var tile: int = 16
 static func build(spec: Dictionary, sheet: Dictionary, texture_of: Callable) -> Node2D:
 	var map = load("res://addons/quantum/tilemap.gd").new()
 	map.name = "Tilemap"
-	var size := int(sheet["tile"])
+	var size := int(sheet["tile"][0])
 	map.tile = size
 	var texture: Texture2D = texture_of.call(sheet)
 	var per_row := maxi(1, int(texture.get_width()) / size)

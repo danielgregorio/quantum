@@ -7,6 +7,7 @@ exist. Attribute types:
 - `str`, `int`, `float`, `bool`
 - `ident`: a name (`[A-Za-z_][A-Za-z0-9_-]*`)
 - `size`: `WxH` in pixels, e.g. `18x22`
+- `tile`: a square tile size (`18`) or `WxH` frames (`8x32`)
 - `color`: `#rrggbb`
 - `expr`: a Quantum expression, with or without braces
 - `enum:a|b|c`
@@ -38,7 +39,7 @@ class Tag:
 
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
-           'damage', 'burst', 'shake')
+           'damage', 'burst', 'shake', 'deflect')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -51,12 +52,14 @@ TAGS: Dict[str, Tag] = {
         'A sheet of equal frames for characters and items.',
         {'name': Attr('ident', required=True),
          'src': Attr('str', required=True),
-         'tile': Attr('int', required=True, doc='frame size in pixels (square)')},
+         'tile': Attr('tile', required=True, doc='frame size in pixels: 24, or 8x32 for frames that are not square')},
         parents=('application',)),
     'input': Tag(
-        'The keys of an action, instead of the defaults (arrows/WASD to move, space/Z/X to jump).',
+        'The keys of an action, instead of the defaults (arrows/WASD to move, space/Z/X to jump). '
+        'A second player has no defaults: every action it uses is declared with player="2".',
         {'action': Attr('enum:left|right|up|down|jump', required=True),
-         'keys': Attr('str', required=True, doc='comma-separated Godot key names: Space, Left, A, Enter...')},
+         'keys': Attr('str', required=True, doc='comma-separated Godot key names: Space, Left, A, Enter...'),
+         'player': Attr('int', 1, doc='whose keys: the character with the same player=')},
         parents=('application',)),
     'sound': Tag(
         'A sound the game can play (qg:play).',
@@ -81,7 +84,8 @@ TAGS: Dict[str, Tag] = {
          'period': Attr('int', 240, doc='shuttle: ticks for there and back'),
          'one-way': Attr('bool', False, doc='solid: can be jumped through from below and stood on'),
          'sight': Attr('float', 80.0, doc='chase: pixels'),
-         'heading': Attr('enum:up|down|left|right', 'down', doc='fly: which way'),
+         'heading': Attr('str', 'down', doc='fly: up, down, left, right, or a direction as x,y (-1,0.5)'),
+         'accel': Attr('float', 0.0, doc='fly: pixels per second added to its speed every second'),
          'lifetime': Attr('int', 0, doc='fly: gone after this many ticks (0: never); any fly is gone off-screen'),
          'health': Attr('int', 1, doc='hits it takes (qg:damage); at 0 its qg:on-death runs and it is gone'),
          'fire-prefab': Attr('ident', None, doc='what it shoots, placed below it (or above, when heading is up)'),
@@ -127,7 +131,9 @@ TAGS: Dict[str, Tag] = {
         'A body the player moves: a platformer, or a walker on a world map.',
         {'id': Attr('ident', required=True),
          'controller': Attr('enum:platformer|map|topdown|ship', required=True),
+         'player': Attr('int', 1, doc='whose keys move it (qg:input player=); 1 has the defaults'),
          'bounds': Attr('enum:scene|none', 'scene', doc='ship: kept inside the scene'),
+         'axis': Attr('enum:both|vertical|horizontal', 'both', doc='ship: which way it can move'),
          'fire-action': Attr('enum:jump', None, doc='ship: the action that shoots'),
          'fire-prefab': Attr('ident', None, doc='ship: what it shoots, placed above it'),
          'fire-every': Attr('int', 10, doc='ship: ticks between shots while the action is held'),
@@ -155,6 +161,18 @@ TAGS: Dict[str, Tag] = {
          'x': Attr('float', required=True), 'y': Attr('float', required=True),
          'name': Attr('ident', None, doc='the node name (`other.name` in a handler); the prefab name otherwise'),
          'if': Attr('expr', None, doc='placed only when this is true as the scene is built')},
+        parents=('scene',)),
+    'zone': Tag(
+        'An invisible rectangle with a tag: what touches it runs its qg:on-collision with= that tag.',
+        {'name': Attr('ident', required=True),
+         'tag': Attr('ident', required=True),
+         'x': Attr('float', required=True), 'y': Attr('float', required=True),
+         'width': Attr('float', required=True), 'height': Attr('float', required=True)},
+        parents=('scene',)),
+    'sprite': Tag(
+        'A picture in the scene, with no behaviour: a backdrop, a divider, a sign.',
+        {'sheet': Attr('ident', required=True), 'frame': Attr('int', 0),
+         'x': Attr('float', required=True), 'y': Attr('float', required=True)},
         parents=('scene',)),
     'exit': Tag(
         'A rectangle that leads to another scene; the character arrives at the exit named at= there.',
@@ -252,8 +270,16 @@ TAGS: Dict[str, Tag] = {
         {'sound': Attr('ident', required=True)},
         parents=('handler',)),
     'respawn': Tag(
-        'Puts the character back at its start or its last checkpoint, still.',
-        {'target': Attr('enum:me', 'me')},
+        'Puts a character back at its start or its last checkpoint, still; a thing back where it was '
+        'placed, with its first heading and speed.',
+        {'target': Attr('enum:me|other', 'me')},
+        parents=('handler',)),
+    'deflect': Tag(
+        'Changes where a flying thing (ai="fly") goes: flips one axis of its heading, or sets the heading '
+        'to dx,dy (expressions; the length does not matter).',
+        {'target': Attr('enum:other|me', 'other'),
+         'axis': Attr('enum:x|y', None, doc='the axis to flip'),
+         'dx': Attr('expr', None), 'dy': Attr('expr', None)},
         parents=('handler',)),
     'become': Tag(
         'Changes the character to one of its qg:states.',

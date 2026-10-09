@@ -101,6 +101,32 @@ static func respawn(node) -> void:
 		node.respawn()
 
 
+# qg:deflect on a flying thing.
+static func deflect_axis(node, axis: String) -> void:
+	node = _thing(node)
+	if node != null and node.has_method("deflect_axis"):
+		node.deflect_axis(axis)
+
+
+static func deflect_to(node, dx: float, dy: float) -> void:
+	node = _thing(node)
+	if node != null and node.has_method("deflect_to"):
+		node.deflect_to(dx, dy)
+
+
+# random(a, b) in an expression: a float in [a, b] from the scene's seeded
+# source, so the same seed gives the same game. `ctx` is the scene script
+# (self in its handlers) or P (a prefab handler): then the current scene's.
+static func random(ctx, a: float, b: float) -> float:
+	var scene = ctx
+	if ctx == null or not ("rng" in ctx):
+		var scenes: Array = Engine.get_main_loop().get_nodes_in_group("q_scene")
+		scene = scenes[0] if scenes.size() > 0 else null
+	if scene == null:
+		return a
+	return scene.rng.randf_range(a, b)
+
+
 # Changes a character to one of its states (qg:become).
 static func become(node, state: String) -> void:
 	node = _thing(node)

@@ -17,6 +17,7 @@ var hitbox_size: Vector2 = Vector2(14, 14)
 var facing: Vector2 = Vector2.DOWN
 var animator: Node = null
 var state: String = ""
+var player: int = 1
 
 var _handlers: Array = []
 var _hits: Array = []
@@ -30,6 +31,7 @@ var _hit_this_swing: Array = []
 
 
 func setup(spec: Dictionary) -> void:
+	player = int(spec.get("player", 1))
 	speed = float(spec.get("speed", speed))
 	attack_action = str(spec.get("attack_action", "")) if spec.get("attack_action") != null else ""
 	attack_reach = float(spec.get("attack_reach", attack_reach))
@@ -131,13 +133,13 @@ func _fire(h: Dictionary, other: Node) -> bool:
 func _physics_process(delta: float) -> void:
 	_ticks += 1
 	var dir := Vector2.ZERO
-	if Input.is_action_pressed("right"):
+	if Input.is_action_pressed(_a("right")):
 		dir.x += 1
-	if Input.is_action_pressed("left"):
+	if Input.is_action_pressed(_a("left")):
 		dir.x -= 1
-	if Input.is_action_pressed("down"):
+	if Input.is_action_pressed(_a("down")):
 		dir.y += 1
-	if Input.is_action_pressed("up"):
+	if Input.is_action_pressed(_a("up")):
 		dir.y -= 1
 	if dir != Vector2.ZERO:
 		facing = dir.normalized()
@@ -152,7 +154,7 @@ func _physics_process(delta: float) -> void:
 		_swinging -= 1
 		if _swinging == 0:
 			_swing_shape.set_deferred("disabled", true)
-	elif attack_action != "" and Input.is_action_just_pressed(attack_action):
+	elif attack_action != "" and Input.is_action_just_pressed(_a(attack_action)):
 		_swinging = attack_frames
 		_hit_this_swing = []
 		# The swing: `reach` deep in front of the body, and as wide as the
@@ -176,3 +178,8 @@ func _physics_process(delta: float) -> void:
 			animator.play("walk")
 		elif animator.has("idle"):
 			animator.play("idle")
+
+
+# The input action of this player: "up" for player 1, "p2_up" for player 2.
+func _a(action: String) -> String:
+	return action if player == 1 else "p%d_%s" % [player, action]

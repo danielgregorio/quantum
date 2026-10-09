@@ -27,6 +27,18 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: a fourth game, `projects/pong/pong.q` — Godot's own "Pong
+  with GDScript" demo (godotengine/godot-demo-projects, MIT) transcribed
+  tag for node; `projects/pong/README.md` maps each piece of the original
+  to its tag. What it made the language grow, each a tag or an attribute:
+  `player=` on `qg:input` and `qg:character` (a second player's keys, as
+  `p2_up`…); `axis=` on the ship controller; `qg:zone` (an invisible
+  tagged rectangle, touched like a prefab); `heading="x,y"` and `accel=`
+  on a flying prefab, `qg:deflect` (reflect one axis, or set `dx`/`dy`),
+  `qg:respawn target="other"`; `tile="8x32"` on `qg:spritesheet` for frames
+  that are not square; `qg:sprite` (a picture with no behaviour); and
+  `random(a, b)` in expressions, from the scene's seeded source.
+  `tests/godot/test_godot_pong.py` replays it.
 - Laboratory: `gd:` attributes on game tags — `<qg:camera gd:zoom="2,2" />`
   sets `Camera2D.zoom`. A pure forward: the compiler checks the name and the
   type against Godot's own class reference (`godot_properties.json`,

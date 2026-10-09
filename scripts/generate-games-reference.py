@@ -6,7 +6,7 @@
 
 The tags, their attributes and what they mean come from
 quantum/runtime/godot/schema.py: the table the compiler validates against,
-so the page cannot say what the compiler does not. The three games are
+so the page cannot say what the compiler does not. The games are
 included whole: they are the examples, and they are replayed in CI.
 
 tests/docs/test_games_reference_is_generated.py fails when the committed
@@ -31,6 +31,8 @@ GAMES = [
      'chase, a sword, a key and a locked door, a switch that opens a gate in another room, a chest'),
     ('Drift', 'projects/drift/drift.q', 'a vertical shooter: three waves from the scene\'s seed, '
      'drones and tanks that shoot, a boss with two phases, a high score kept between runs'),
+    ('Pong', 'projects/pong/pong.q', 'Godot\'s own Pong demo transcribed tag for node: two players, '
+     'a ball that flies and bounces, zones at the edges (projects/pong/README.md maps the original to it)'),
 ]
 
 INTRO = f'''---
@@ -210,8 +212,8 @@ def build() -> str:
         ('What a game is made of', 'Declared once, in `q:application`.',
          ['tileset', 'spritesheet', 'sound', 'prefab', 'animation', 'state', 'scene']),
         ('What a scene holds', 'The level, the character, the things placed in it, and what the screen shows.',
-         ['tilemap', 'character', 'instance', 'spawner', 'exit', 'map-node', 'map-path', 'camera', 'hud',
-          'counter', 'text']),
+         ['tilemap', 'character', 'instance', 'spawner', 'zone', 'sprite', 'exit', 'map-node', 'map-path',
+          'camera', 'hud', 'counter', 'text']),
         ('Handlers', 'Where the logic goes: actions and statements, with `me` and `other`.',
          ['on-collision', 'on-hit', 'on-fall', 'on-input', 'on-damage', 'on-death']),
         ('Actions', 'What a handler can do, besides `q:set`, `q:if`, `q:loop`, `q:call` and `q:return`.',
@@ -235,7 +237,7 @@ def build() -> str:
                  'scene\'s state; in `q:application`, the game\'s, kept across scenes — with `saved="true"`, '
                  'between runs.\n')
     parts.append(gd_section())
-    parts.append('## The three games\n\nEach one is written in these tags and nothing else, and replayed '
+    parts.append('## The games\n\nEach one is written in these tags and nothing else, and replayed '
                  'in CI from input tapes (`tests/godot/test_godot_<name>.py`).\n')
     for name, path, blurb in GAMES:
         source = (REPO / path).read_text(encoding='utf-8').rstrip('\n')

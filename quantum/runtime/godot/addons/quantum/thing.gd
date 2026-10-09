@@ -24,6 +24,8 @@ var ai: String = "patrol"
 var sight: float = 80.0
 var heading: Vector2 = Vector2.DOWN
 var lifetime: int = 0
+var accel: float = 0.0
+var spawn_point: Vector2 = Vector2.ZERO
 var health: int = 1
 var fire_prefab: String = ""
 var fire_every: int = 0
@@ -45,7 +47,7 @@ var _dead: bool = false
 var _ticks: int = 0
 
 
-func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: int) -> void:
+func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -> void:
 	prefab_name = name_
 	tag = prefab["tag"]
 	name = name_
@@ -65,11 +67,9 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: int) -> 
 	turns_at_edge = prefab.get("turns_at", "wall") == "edge"
 	gravity = float(prefab.get("gravity", 900.0))
 	hitbox_size = Vector2(prefab["hitbox"][0], prefab["hitbox"][1])
-	match str(prefab.get("heading", "down")):
-		"up": heading = Vector2.UP
-		"left": heading = Vector2.LEFT
-		"right": heading = Vector2.RIGHT
-		_: heading = Vector2.DOWN
+	var h = prefab.get("heading", [0.0, 1.0])
+	heading = Vector2(h[0], h[1]) if h is Array else Vector2.DOWN
+	accel = float(prefab.get("accel", 0.0))
 	lifetime = int(prefab.get("lifetime", 0))
 	health = int(prefab.get("health", 1))
 	fire_prefab = str(prefab.get("fire_prefab", "")) if prefab.get("fire_prefab") != null else ""
@@ -80,13 +80,13 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: int) -> 
 	_on_damage = str(prefab.get("on_damage", "")) if prefab.get("on_damage") != null else ""
 	_on_death = str(prefab.get("on_death", "")) if prefab.get("on_death") != null else ""
 	_states = prefab.get("states", {})
-	_base = {"frame": int(prefab.get("frame", 0)), "speed": speed, "fire_every": fire_every}
+	_base = {"frame": int(prefab.get("frame", 0)), "speed": speed, "fire_every": fire_every, "heading": heading}
 
 	var sprite := Sprite2D.new()
 	sprite.name = "Sprite"
 	sprite.texture = texture
-	sprite.hframes = max(1, int(texture.get_width()) / tile)
-	sprite.vframes = max(1, int(texture.get_height()) / tile)
+	sprite.hframes = max(1, int(texture.get_width()) / int(tile[0]))
+	sprite.vframes = max(1, int(texture.get_height()) / int(tile[1]))
 	sprite.frame = int(prefab.get("frame", 0))
 	add_child(sprite)
 
@@ -117,8 +117,36 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: int) -> 
 		become(str(prefab["initial_state"]))
 
 
+func _ready() -> void:
+	spawn_point = position
+
+
 func quantum_tag() -> String:
 	return tag
+
+
+# qg:respawn target="other": back where it was placed, as it was declared.
+func respawn() -> void:
+	position = spawn_point
+	velocity = Vector2.ZERO
+	heading = _base["heading"]
+	speed = float(_base["speed"])
+	_age = 0
+
+
+# qg:deflect axis=: the heading's x or y the other way (a bounce).
+func deflect_axis(axis: String) -> void:
+	if axis == "x":
+		heading.x = -heading.x
+	else:
+		heading.y = -heading.y
+
+
+# qg:deflect dx= dy=: a new heading.
+func deflect_to(dx: float, dy: float) -> void:
+	var v := Vector2(dx, dy)
+	if v.length() > 0.0:
+		heading = v.normalized()
 
 
 func quantum_destroy() -> void:
@@ -271,6 +299,7 @@ func _chase() -> void:
 
 # Straight along the heading; gone when old or out of the scene.
 func _fly(delta: float) -> void:
+	speed += accel * delta
 	position += heading * speed * delta
 	if lifetime > 0 and _age >= lifetime:
 		quantum_destroy()

@@ -276,6 +276,16 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         if not scope.has(at):
             raise GameCompileError(f'<qg:shake at="{at}"> outside a handler that has {at!r}', el.line)
         return f'Q.shake({at}, {int(el.get("frames"))}, {float(el.get("strength"))!r})'
+    if el.tag == 'deflect':
+        axis, dx, dy = el.get('axis'), el.get('dx'), el.get('dy')
+        if axis is not None and (dx is not None or dy is not None):
+            raise GameCompileError('<qg:deflect>: axis=, or dx= and dy=, not both', el.line)
+        if axis is not None:
+            return f'Q.deflect_axis({target}, {json.dumps(axis)})'
+        if dx is None or dy is None:
+            raise GameCompileError('<qg:deflect> needs axis="x|y", or dx= and dy=', el.line)
+        return (f'Q.deflect_to({target}, {compile_expression(dx, scope, el.line)}, '
+                f'{compile_expression(dy, scope, el.line)})')
     if el.tag == 'goto-scene':
         script.scenes_used.append((el.get('name'), el.line))
         return f'Q.goto_scene(self, {json.dumps(el.get("name"))})'

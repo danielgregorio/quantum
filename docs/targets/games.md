@@ -106,7 +106,7 @@ A sheet of equal frames for characters and items.
 |---|---|---|---|
 | `name` | a name | required |  |
 | `src` | text | required |  |
-| `tile` | integer | required | frame size in pixels (square) |
+| `tile` | tile | required | frame size in pixels: 24, or 8x32 for frames that are not square |
 
 Goes inside: `q:application`.
 
@@ -138,7 +138,8 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `period` | integer | `240` | shuttle: ticks for there and back |
 | `one-way` | true / false | `false` | solid: can be jumped through from below and stood on |
 | `sight` | number | `80.0` | chase: pixels |
-| `heading` | `up` / `down` / `left` / `right` | `down` | fly: which way |
+| `heading` | text | `down` | fly: up, down, left, right, or a direction as x,y (-1,0.5) |
+| `accel` | number | `0.0` | fly: pixels per second added to its speed every second |
 | `lifetime` | integer | `0` | fly: gone after this many ticks (0: never); any fly is gone off-screen |
 | `health` | integer | `1` | hits it takes (qg:damage); at 0 its qg:on-death runs and it is gone |
 | `fire-prefab` | a name |  | what it shoots, placed below it (or above, when heading is up) |
@@ -219,7 +220,9 @@ A body the player moves: a platformer, or a walker on a world map.
 |---|---|---|---|
 | `id` | a name | required |  |
 | `controller` | `platformer` / `map` / `topdown` / `ship` | required |  |
+| `player` | integer | `1` | whose keys move it (qg:input player=); 1 has the defaults |
 | `bounds` | `scene` / `none` | `scene` | ship: kept inside the scene |
+| `axis` | `both` / `vertical` / `horizontal` | `both` | ship: which way it can move |
 | `fire-action` | `jump` |  | ship: the action that shoots |
 | `fire-prefab` | a name |  | ship: what it shoots, placed above it |
 | `fire-every` | integer | `10` | ship: ticks between shots while the action is held |
@@ -271,6 +274,34 @@ Places count instances of a prefab, one every so many ticks, from a tick on.
 | `count` | integer | `1` |  |
 | `x` | text | `random` | a number, or random across the scene width (from the seed) |
 | `y` | number | `-12.0` |  |
+
+Goes inside: `qg:scene`.
+
+### `qg:zone`
+
+An invisible rectangle with a tag: what touches it runs its qg:on-collision with= that tag.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required |  |
+| `tag` | a name | required |  |
+| `x` | number | required |  |
+| `y` | number | required |  |
+| `width` | number | required |  |
+| `height` | number | required |  |
+
+Goes inside: `qg:scene`.
+
+### `qg:sprite`
+
+A picture in the scene, with no behaviour: a backdrop, a divider, a sign.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `sheet` | a name | required |  |
+| `frame` | integer | `0` |  |
+| `x` | number | required |  |
+| `y` | number | required |  |
 
 Goes inside: `qg:scene`.
 
@@ -454,11 +485,11 @@ Goes inside: a handler.
 
 ### `qg:respawn`
 
-Puts the character back at its start or its last checkpoint, still.
+Puts a character back at its start or its last checkpoint, still; a thing back where it was placed, with its first heading and speed.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `target` | `me` | `me` |  |
+| `target` | `me` / `other` | `me` |  |
 
 Goes inside: a handler.
 
@@ -553,16 +584,30 @@ Shakes the scene a thing is in. Cosmetic.
 
 Goes inside: a handler.
 
+### `qg:deflect`
+
+Changes where a flying thing (ai="fly") goes: flips one axis of its heading, or sets the heading to dx,dy (expressions; the length does not matter).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `target` | `other` / `me` | `other` |  |
+| `axis` | `x` / `y` |  | the axis to flip |
+| `dx` | an expression |  |  |
+| `dy` | an expression |  |  |
+
+Goes inside: a handler.
+
 ## Other tags
 
 ### `qg:input`
 
-The keys of an action, instead of the defaults (arrows/WASD to move, space/Z/X to jump).
+The keys of an action, instead of the defaults (arrows/WASD to move, space/Z/X to jump). A second player has no defaults: every action it uses is declared with player="2".
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `action` | `left` / `right` / `up` / `down` / `jump` | required |  |
 | `keys` | text | required | comma-separated Godot key names: Space, Left, A, Enter... |
+| `player` | integer | `1` | whose keys: the character with the same player= |
 
 Goes inside: `q:application`.
 
@@ -605,9 +650,9 @@ second game, it is a `qg:` attribute waiting to be named.
 | Camera2D | `qg:camera` | 57 |
 | CharacterBody2D | `qg:character`, a thing prefab and its instances | 48 |
 | Label | `qg:counter`, `qg:text` | 71 |
-| Area2D | `qg:exit`, an item prefab and its instances | 49 |
+| Area2D | `qg:exit`, `qg:zone`, an item prefab and its instances | 49 |
 | CanvasLayer | `qg:hud` | 16 |
-| Sprite2D | `qg:map-node` | 41 |
+| Sprite2D | `qg:map-node`, `qg:sprite` | 41 |
 | Node2D | `qg:scene` | 31 |
 | AudioStreamPlayer | `qg:sound` | 19 |
 | Node | `qg:spawner`, `qg:timer` | 9 |
@@ -632,7 +677,7 @@ second game, it is a `qg:` attribute waiting to be named.
 </q:application>
 ```
 
-## The three games
+## The games
 
 Each one is written in these tags and nothing else, and replayed in CI from input tapes (`tests/godot/test_godot_<name>.py`).
 
@@ -1601,6 +1646,70 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="high_score" label="HIGH" />
     </qg:hud>
+  </qg:scene>
+
+</q:application>
+```
+
+### Pong
+
+`projects/pong/pong.q` — Godot's own Pong demo transcribed tag for node: two players, a ball that flies and bounces, zones at the edges (projects/pong/README.md maps the original to it).
+
+```xml
+<q:application id="pong" type="game">
+
+  <!-- Pong: Godot's own "Pong with GDScript" demo (godotengine/godot-demo-projects,
+       2d/pong, MIT), transcribed into the game language node for node and line
+       for line. README.md next to this file maps each piece of the original to
+       its tag, and lists what the language had to grow to say it. The sprites
+       are the demo's (assets/LICENSE.md). -->
+
+  <qg:spritesheet name="paddle" src="assets/paddle.png" tile="8x32" />
+  <qg:spritesheet name="ball" src="assets/ball.png" tile="8" />
+  <qg:spritesheet name="separator" src="assets/separator.png" tile="2x400" />
+
+  <!-- The left paddle is player 1 on W/S, the right one player 2 on the arrows. -->
+  <qg:input player="1" action="up" keys="W" />
+  <qg:input player="1" action="down" keys="S" />
+  <qg:input player="2" action="up" keys="Up" />
+  <qg:input player="2" action="down" keys="Down" />
+
+  <!-- The ball flies left at 100 px/s, 2 px/s faster every second; it bounces
+       off the ceiling and the floor, and goes back to its start, as it was,
+       when it passes a paddle. -->
+  <qg:prefab name="Ball" tag="ball" sheet="ball" hitbox="8x8" ai="fly" heading="left" speed="100" accel="2">
+    <qg:on-collision with="edge">
+      <qg:deflect target="me" axis="y" />
+    </qg:on-collision>
+    <qg:on-collision with="wall">
+      <qg:respawn target="me" />
+    </qg:on-collision>
+  </qg:prefab>
+
+  <qg:scene name="court" width="640" height="400" background="#24272a" seed="1">
+    <qg:sprite sheet="separator" x="320" y="200" />
+
+    <!-- A paddle moves up and down at 100 px/s, kept on the screen; the ball
+         it touches leaves towards the other side, at a random slant. -->
+    <qg:character id="left" controller="ship" player="1" axis="vertical" speed="100"
+                  sheet="paddle" x="67.6285" y="192.594" hitbox="8x32" gd:modulate="#00ffff">
+      <qg:on-collision with="ball">
+        <qg:deflect target="other" dx="1" dy="{random(-1, 1)}" />
+      </qg:on-collision>
+    </qg:character>
+    <qg:character id="right" controller="ship" player="2" axis="vertical" speed="100"
+                  sheet="paddle" x="563.815" y="188.919" hitbox="8x32" gd:modulate="#ff00ff">
+      <qg:on-collision with="ball">
+        <qg:deflect target="other" dx="-1" dy="{random(-1, 1)}" />
+      </qg:on-collision>
+    </qg:character>
+
+    <qg:instance prefab="Ball" name="ball" x="320.5" y="191.124" />
+
+    <qg:zone name="ceiling" tag="edge" x="0" y="-20" width="640" height="20" />
+    <qg:zone name="floor" tag="edge" x="0" y="400" width="640" height="20" />
+    <qg:zone name="left-wall" tag="wall" x="-20" y="0" width="20" height="400" />
+    <qg:zone name="right-wall" tag="wall" x="640" y="0" width="20" height="400" />
   </qg:scene>
 
 </q:application>

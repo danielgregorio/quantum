@@ -113,6 +113,11 @@ def _convert(name: str, attr: Attr, raw: str, line: Optional[int]) -> object:
             if not m:
                 raise ValueError
             return (int(m.group(1)), int(m.group(2)))
+        if t == 'tile':
+            m = _SIZE.match(raw.strip())
+            if m:
+                return (int(m.group(1)), int(m.group(2)))
+            return (int(raw), int(raw))
         if t == 'color':
             if not _COLOR.match(raw.strip()):
                 raise ValueError
