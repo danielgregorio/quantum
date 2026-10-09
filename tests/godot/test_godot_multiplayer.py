@@ -43,7 +43,7 @@ def test_two_peers_see_the_same_game_as_one_replay(godot, project):
 
 def test_the_ball_is_returned_on_both_peers_alike(godot, project):
     # nobody moves: the left paddle returns the ball at a random slant from the scene seed, on both
-    peers = replay_peers(project, 200, [{}, {}], binary=godot, port=17778)
+    peers = replay_peers(project, 200, [{}, {}], binary=godot)
     assert peers[0] == peers[1]
     ball = peers[0]['court']['named']['ball']
     assert ball['x'] > 90 and ball['y'] != 191.12

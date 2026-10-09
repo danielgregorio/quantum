@@ -70,7 +70,15 @@ def replay(project_dir: Path, ticks: int, tape: Optional[Tape] = None,
         return json.loads(out_path.read_text(encoding='utf-8'))
 
 
-def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], port: int = 17777,
+def free_port() -> int:
+    """A TCP/UDP port nobody listens on right now (tests run in parallel)."""
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.bind(('127.0.0.1', 0))
+        return s.getsockname()[1]
+
+
+def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], port: Optional[int] = None,
                  binary: Optional[Path] = None, timeout: float = 300) -> List[dict]:
     """Run the project under qg:multiplayer: one Godot per player, on localhost.
 
@@ -85,6 +93,7 @@ def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], por
     from quantum.runtime.godot_bin import ensure_godot
     project_dir = Path(project_dir)
     binary = Path(binary) if binary else ensure_godot()
+    port = port or free_port()
     with tempfile.TemporaryDirectory(prefix='quantum-peers-') as tmp:
         procs = []
         outs = []
