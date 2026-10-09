@@ -85,3 +85,41 @@ def test_two_peers_fight_the_same_fight(godot, project):
     assert peers[0] == peers[1]
     nodes = peers[0]['fight']['nodes']
     assert nodes['p2']['health'] == 92 and nodes['p1']['health'] == 88
+
+
+# --- rollback (pong.q's lockstep waits; arena.q's rollback="8" guesses and corrects) ---
+
+def kick_holds(start, n):
+    holds = [('right', start, start + 90)]
+    for k in range(n):
+        t0 = start + 95 + k * 80
+        holds += [('kick', t0, t0 + 2), ('right', t0 + 30, t0 + 70)]
+    return holds
+
+
+DELAY = 2   # arena.q: <qg:multiplayer delay="2" rollback="8" />
+
+
+def test_rollback_peers_with_latency_end_where_one_replay_does(godot, project):
+    one = tape_from_holds([('right', 0, 90), ('punch', 95, 97), ('kick', 130, 132), ('jump', 160, 162)])
+    two = tape_from_holds([('left', 100, 120), ('kick', 122, 124), ('down', 140, 170), ('punch', 175, 177)])
+    a, b = replay_peers(project, 240, [one, two], binary=godot, latency_ms=[120, 30], net_report=True)
+    assert a['fight'] == b['fight']
+    assert a['_net']['rollbacks'] > 0 and b['_net']['rollbacks'] > 0      # both guessed wrong, both corrected
+    holds = [('right', 0, 90), ('punch', 95, 97), ('kick', 130, 132), ('jump', 160, 162),
+             ('p2_left', 100, 120), ('p2_kick', 122, 124), ('p2_down', 140, 170), ('p2_punch', 175, 177)]
+    alone = replay(project, 240 + ENTER, binary=godot, tape=tape_from_holds(
+        [('select', 0, 2)] + [(x, s + DELAY + ENTER, e + DELAY + ENTER) for x, s, e in holds]))
+    assert alone['fight'] == a['fight']
+
+
+def test_a_match_to_the_result_under_rollback(godot, project):
+    # two KOs (the second round starts at tick 900), the result scene, and the same on both peers:
+    # a scene change waits until the tick that asked for it is certain, then happens on both
+    one = tape_from_holds(kick_holds(0, 11) + kick_holds(900, 11))
+    a, b = replay_peers(project, 1850, [one, {}], binary=godot, latency_ms=[100, 100], net_report=True)
+    assert a.keys() == b.keys() and 'result' in a
+    assert a['result'] == b['result']
+    assert a['result']['game'] == {'wins_1': 2.0, 'wins_2': 0.0}
+    assert a['result']['message'] == 'PLAYER 1 WINS - press jump'
+    assert b['_net']['rollbacks'] > 0

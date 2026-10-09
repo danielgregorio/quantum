@@ -168,6 +168,10 @@ class _Compiler:
                 raise GameCompileError('<qg:multiplayer delay=>: 1 or more', mp.line)
             self.multiplayer = {'players': mp.get('players'), 'delay': mp.get('delay'),
                                 'check_every': mp.get('check-every'), 'transport': mp.get('transport')}
+            if mp.get('rollback'):
+                if mp.get('rollback') < 1:
+                    raise GameCompileError('<qg:multiplayer rollback=>: 1 or more ticks (0 is off)', mp.line)
+                self.multiplayer['rollback'] = mp.get('rollback')
             if mp.get('start'):
                 if not any(sc.get('name') == mp.get('start') for sc in g.scenes):
                     raise GameCompileError(f'<qg:multiplayer start="{mp.get("start")}">: no scene of that name', mp.line)
@@ -259,8 +263,13 @@ class _Compiler:
         self._exits_used: List[tuple] = []
         self._scene_exits: Dict[str, set] = {}
         self._scenes_used.extend(self._prefab_scenes_used)
+        self._scene_goes: Dict[str, List[str]] = {}
+        self._scene_spawns: Dict[str, Optional[int]] = {}
         for scene in g.scenes:
             scenes[scene.get('name')] = self._scene(scene, sheets, prefabs)
+        if self.multiplayer is not None and self.multiplayer.get('rollback'):
+            _check_rollback(self.multiplayer.get('start') or g.scenes[0].get('name'), scenes,
+                            self._scene_goes, self._scene_spawns, g.multiplayer.line)
         for sname, line in self._scenes_used:
             if sname not in scenes:
                 raise GameCompileError(
@@ -744,6 +753,8 @@ class _Compiler:
             raise GameCompileError('qg:host, qg:join and qg:leave need a <qg:multiplayer> in q:application', script.net_used[0])
         self._scene_exits[name] = set(exits)
         self._scenes_used.extend(script.scenes_used)
+        self._scene_goes[name] = [s for s, _ in script.scenes_used]
+        self._scene_spawns[name] = script.prefabs_used[0][1] if script.prefabs_used else None
         for pname, line in script.prefabs_used:
             if pname not in prefabs:
                 raise GameCompileError(
@@ -814,6 +825,33 @@ def action_name(player: int, action: str) -> str:
 
 
 _HEADINGS = {'up': (0.0, -1.0), 'down': (0.0, 1.0), 'left': (-1.0, 0.0), 'right': (1.0, 0.0)}
+
+
+# What a scene the rollback reaches may hold: nodes that save and load their whole state
+# and never go through Godot's physics, which cannot be run again inside one frame.
+_ROLLBACK_KINDS = {'character', 'timer', 'hud', 'sprite', 'menu', 'camera'}
+
+
+def _check_rollback(start: str, scenes: dict, goes: Dict[str, List[str]], spawns: Dict[str, Optional[int]],
+                    line: Optional[int]) -> None:
+    reach, todo = set(), [start]
+    while todo:
+        s = todo.pop()
+        if s in reach or s not in scenes:
+            continue
+        reach.add(s)
+        todo.extend(goes.get(s, []))
+    for s in sorted(reach):
+        for n in scenes[s]['nodes']:
+            what = n['kind'] if n['kind'] != 'character' else f'controller="{n["controller"]}"'
+            if n['kind'] not in _ROLLBACK_KINDS or (n['kind'] == 'character' and n['controller'] != 'fighter'):
+                raise GameCompileError(
+                    f'<qg:multiplayer rollback=>: the scene {s!r} holds {what}, which goes through physics or '
+                    f'keeps no state to roll back — rollback takes fighters, timers, menus, the HUD, pictures '
+                    f'and a camera (rollback="0" is the plain lockstep)', line)
+        if spawns.get(s) is not None:
+            raise GameCompileError(f'<qg:multiplayer rollback=>: the scene {s!r} places prefabs (qg:spawn, qg:swap), '
+                                   f'which rollback cannot take back', spawns[s])
 
 
 def _el(tag: str, line: Optional[int], children=(), **attrs) -> Element:

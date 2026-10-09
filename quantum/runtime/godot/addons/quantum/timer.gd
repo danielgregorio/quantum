@@ -22,6 +22,16 @@ func setup(spec: Dictionary, scene: Node) -> void:
 	name = "timer-" + handler
 
 
+# For the rollback.
+func q_save() -> Dictionary:
+	return {"t": _ticks, "r": _runs}
+
+
+func q_load(d: Dictionary) -> void:
+	_ticks = d["t"]
+	_runs = d["r"]
+
+
 func _physics_process(_delta: float) -> void:
 	_ticks += 1
 	if after >= 0:

@@ -17,6 +17,9 @@ var rng := RandomNumberGenerator.new()
 var q_on_death: Dictionary = {}   # tag -> handler, from qg:on-death of= in the scene
 var _shake_frames: int = 0
 var _shake_strength: float = 0.0
+# The shake runs in _process, once per drawn frame, so it has a random source of
+# its own: drawing at another rate on another machine must not move the scene's.
+var _shake_rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
@@ -45,8 +48,20 @@ func q_shake(frames: int, strength: float) -> void:
 func _process(_delta: float) -> void:
 	if _shake_frames > 0:
 		_shake_frames -= 1
-		position = Vector2(rng.randf_range(-_shake_strength, _shake_strength),
-			rng.randf_range(-_shake_strength, _shake_strength)) if _shake_frames > 0 else Vector2.ZERO
+		position = Vector2(_shake_rng.randf_range(-_shake_strength, _shake_strength),
+			_shake_rng.randf_range(-_shake_strength, _shake_strength)) if _shake_frames > 0 else Vector2.ZERO
+
+
+# For the rollback: the scene's state (its q:sets) and its random source, and back.
+func q_save() -> Dictionary:
+	return {"vars": _q_state().duplicate(true), "rng": rng.state}
+
+
+func q_load(d: Dictionary) -> void:
+	for k in d["vars"].keys():
+		var v = d["vars"][k]
+		set(k, v.duplicate(true) if (v is Array or v is Dictionary) else v)
+	rng.state = d["rng"]
 
 
 # Overridden by the compiled script: the scene's q:set variables.

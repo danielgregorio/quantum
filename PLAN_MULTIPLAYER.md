@@ -104,9 +104,20 @@ No controller, prefab or handler knows multiplayer exists.
    (the others run out their known ticks and stop). Rejoining means
    replaying the input history, which the model allows and the runtime
    does not yet keep.
-3. **Rollback** (GGPO-style): predict the remote inputs, run ahead, roll
-   back on a miss. Hides the delay entirely; needs state snapshots, which
-   `quantum_state()` almost is. The step after lockstep is stable.
+3. ~~**Rollback**~~ — done, for the scenes it can take:
+   `<qg:multiplayer rollback="8" />`. Each tick runs at once with the
+   others' input guessed (what they last pressed); a snapshot of the state
+   is kept before every tick; when an input arrives that was guessed wrong,
+   the state goes back to that tick and the ticks since run again inside
+   one frame (`addons/quantum/rollback.gd`). The runtime reads input
+   through `Q`, one value per tick, so an old tick can be run again with
+   its own input. Godot's physics cannot be run again inside a frame, so
+   the compiler allows rollback only when every scene the networked game
+   reaches holds fighters, timers, menus, the HUD, pictures and a camera —
+   nodes that save and load their whole state. A scene change waits until
+   the tick that asked for it is certain. Arena uses it, with an input
+   delay of 2 ticks; its tests inject 30–120 ms of latency and check both
+   peers end where one replay of both tapes ends.
 4. **Web export**: ENet is not in the browser. `transport="websocket"`
    lets a desktop host take players over WebSocket, which a browser build
    can open — but a page served over HTTPS may only open a secure one

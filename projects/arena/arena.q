@@ -26,7 +26,7 @@
   <qg:input player="2" action="jump" keys="Up" />
   <qg:input player="2" action="punch" keys="Period" />
   <qg:input player="2" action="kick" keys="Slash" />
-  <qg:multiplayer players="2" delay="3" start="fight" />
+  <qg:multiplayer players="2" delay="2" rollback="8" start="fight" />
 
   <!-- The title: two on one keyboard, or one on each machine. -->
   <qg:scene name="title" width="640" height="360" background="#201820">

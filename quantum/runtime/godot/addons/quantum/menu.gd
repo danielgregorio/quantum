@@ -144,6 +144,17 @@ func _item_at(p: Vector2) -> int:
 	return -1
 
 
+# For the rollback.
+func q_save() -> Dictionary:
+	return {"f": focus, "ps": _pointer_seen, "pl": _pointer_last}
+
+
+func q_load(d: Dictionary) -> void:
+	focus = d["f"]
+	_pointer_seen = d["ps"]
+	_pointer_last = d["pl"]
+
+
 func _physics_process(_delta: float) -> void:
 	if _editing >= 0:
 		return

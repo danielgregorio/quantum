@@ -47,6 +47,8 @@ var _hashes: Dictionary = {}   # tick -> {player: hash}
 var _peers: Dictionary = {}    # peer id -> player number (host only)
 var _retries: int = 0
 var _stalled: bool = false
+var latency_ms: int = 0          # --q-latency=MS: this peer's frames leave that much later (tests)
+var _outbox: Array = []          # [due msec, player, tick, mask, cx, cy]
 
 
 func setup(spec: Dictionary, game_: Node, host_: String, port_: int) -> void:
@@ -216,7 +218,7 @@ func _physics_process(_delta: float) -> void:
 		var raw: Vector2 = Q.raw_cursor
 		_frames[ahead][player] = [mask, raw.x, raw.y]
 		if not ended:
-			_frame.rpc(player, ahead, mask, raw.x, raw.y)
+			_send_frame(player, ahead, mask, raw.x, raw.y)
 	# 2. this tick runs only when every player's input for it is here
 	var frame: Dictionary = _frames.get(tick, {})
 	if frame.size() < players:
@@ -244,6 +246,20 @@ func _physics_process(_delta: float) -> void:
 			_hash.rpc(player, tick, h)
 	_frames.erase(tick - delay - 1)
 	tick += 1
+
+
+func _send_frame(p: int, t: int, mask: int, cx: float, cy: float) -> void:
+	if latency_ms <= 0:
+		_frame.rpc(p, t, mask, cx, cy)
+	else:
+		_outbox.append([Time.get_ticks_msec() + latency_ms, p, t, mask, cx, cy])
+
+
+func _process(_delta: float) -> void:
+	var now := Time.get_ticks_msec()
+	while not _outbox.is_empty() and int(_outbox[0][0]) <= now and not ended:
+		var f: Array = _outbox.pop_front()
+		_frame.rpc(f[1], f[2], f[3], f[4], f[5])
 
 
 @rpc("any_peer", "call_remote", "reliable")

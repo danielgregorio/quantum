@@ -10,6 +10,23 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: rollback. `<qg:multiplayer rollback="8" />` runs each tick at
+  once with the other players' input guessed, keeps a snapshot before every
+  tick, and when a guess was wrong goes back and runs the ticks since again
+  inside one frame — no waiting on the network, the same end state as the
+  lockstep. The compiler allows it when every scene the networked game
+  reaches holds only nodes that save and load their whole state and never
+  go through Godot's physics (fighters, timers, menus, the HUD, pictures, a
+  camera); a scene change waits until the tick that asked is certain.
+  Arena plays with it. `replay_peers(latency_ms=..., net_report=True)`
+  injects latency and reports each peer's rollbacks.
+
+### Fixed
+
+- Laboratory: `qg:shake` drew its jolt from the scene's random source once
+  per drawn frame, so two machines drawing at different rates would have
+  drawn different random numbers afterwards; it has its own source now.
+
 - Laboratory: the lobby in the language. `qg:host port=`, `qg:join
   address=` and `qg:leave` start and stop the networked game from a scene;
   `net_status()`, `net_players()` and `net_player()` say where things are;

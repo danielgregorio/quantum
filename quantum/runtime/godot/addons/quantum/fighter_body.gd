@@ -103,6 +103,30 @@ func respawn() -> void:
 		animator.play("idle")
 
 
+# For the rollback.
+func q_save() -> Dictionary:
+	return {"p": position, "v": velocity, "h": health, "ph": phase, "st": state, "f": facing,
+		"mv": str(_move.get("name", "")), "mt": _move_tick, "hd": _hit_done, "su": _stun, "pu": _push,
+		"ko": _ko_reported, "bl": _blocking, "cr": _crouching}
+
+
+func q_load(d: Dictionary) -> void:
+	position = d["p"]
+	velocity = d["v"]
+	health = d["h"]
+	phase = d["ph"]
+	state = d["st"]
+	facing = d["f"]
+	_move = _moves[d["mv"]] if d["mv"] != "" else {}
+	_move_tick = d["mt"]
+	_hit_done = d["hd"]
+	_stun = d["su"]
+	_push = d["pu"]
+	_ko_reported = d["ko"]
+	_blocking = d["bl"]
+	_crouching = d["cr"]
+
+
 func opponent() -> Node:
 	for n in get_tree().get_nodes_in_group("q_named"):
 		if n != self and n.get_parent() == get_parent() and "phase" in n and "max_health" in n:

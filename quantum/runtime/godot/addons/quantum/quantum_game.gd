@@ -5,6 +5,7 @@ extends Node
 
 const SceneBuilder := preload("res://addons/quantum/scene_builder.gd")
 const Lockstep := preload("res://addons/quantum/lockstep.gd")
+const Rollback := preload("res://addons/quantum/rollback.gd")
 
 var spec: Dictionary = {}
 var current_scene: Node = null
@@ -33,6 +34,8 @@ func _ready() -> void:
 			port_override = int(a.substr(9))
 		elif a.begins_with("--q-transport="):
 			transport_override = a.substr(14)
+		elif a.begins_with("--q-latency="):
+			latency_override = int(a.substr(12))
 	if spec.has("multiplayer") and port > 0:
 		_start_network(host, port).from_command_line = true
 		return
@@ -42,6 +45,7 @@ func _ready() -> void:
 # Overrides for tests (several games on one machine): --q-port=N, --q-transport=websocket.
 var port_override: int = -1
 var transport_override: String = ""
+var latency_override: int = 0
 
 
 func _start_network(host: String, port: int) -> Node:
@@ -52,7 +56,8 @@ func _start_network(host: String, port: int) -> Node:
 	var mp: Dictionary = spec["multiplayer"].duplicate()
 	if transport_override != "":
 		mp["transport"] = transport_override
-	lockstep = Lockstep.new()
+	lockstep = Rollback.new() if int(mp.get("rollback", 0)) > 0 else Lockstep.new()
+	lockstep.latency_ms = latency_override
 	add_child(lockstep)
 	lockstep.setup(mp, self, host, port_override if port_override > 0 else port)
 	return lockstep

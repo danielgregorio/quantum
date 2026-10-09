@@ -12,8 +12,11 @@ replaces them frame for frame.
 
 Run it: `quantum run projects/arena/arena.q`, then open `projects/arena/godot`
 in Godot. Player 1: A/D, W jump, S crouch, J punch, K kick. Player 2 on the
-same keyboard: the arrows, `.` punch, `/` kick. Over the network — the
-fighting games' classic netcode is exactly the lockstep of `PLAN_MULTIPLAYER.md`:
+same keyboard: the arrows, `.` punch, `/` kick. Over the network, the title's
+Host and Join, with **rollback** (`<qg:multiplayer rollback="8" delay="2" />`):
+each machine plays on at once, guessing the other's input, and runs the last
+ticks again when a guess was wrong — the fighting games' own netcode
+(`PLAN_MULTIPLAYER.md`). From the command line:
 
 ```
 godot --path projects/arena/godot -- --q-host=7777          # player 1
@@ -54,12 +57,12 @@ godot --path projects/arena/godot -- --q-join=HOST:7777     # player 2
    of its actions (`qg:respawn target="p2"` from a `q:function`).
 
 Still missing: special moves from input sequences (a quarter circle), air
-attacks and throws, a character select screen (`qg:menu`), rollback on top
-of the lockstep so the input delay disappears.
+attacks and throws, a character select screen.
 
 ## The test
 
 `tests/godot/test_godot_arena.py` replays it: a punch and a kick land for
 their damage and push, a block takes none, kicks to a KO give the round and
-the second round starts with both at their marks, and two peers fight the
-same fight in lockstep.
+the second round starts with both at their marks, two peers fight the same
+fight, and — with 30 to 120 ms of latency injected — two rollback peers end
+where one replay of both tapes ends, through two rounds and the result.

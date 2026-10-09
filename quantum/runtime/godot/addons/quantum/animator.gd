@@ -15,6 +15,22 @@ func setup(sprite_: Sprite2D, animations_: Dictionary) -> void:
 	animations = animations_
 
 
+# For the rollback.
+func q_save() -> Dictionary:
+	return {"a": animations, "c": current, "t": _ticks, "i": _index, "fr": sprite.frame,
+		"fh": sprite.flip_h, "fv": sprite.flip_v}
+
+
+func q_load(d: Dictionary) -> void:
+	animations = d["a"]
+	current = d["c"]
+	_ticks = d["t"]
+	_index = d["i"]
+	sprite.frame = d["fr"]
+	sprite.flip_h = d["fh"]
+	sprite.flip_v = d["fv"]
+
+
 func has(name_: String) -> bool:
 	return animations.has(name_)
 

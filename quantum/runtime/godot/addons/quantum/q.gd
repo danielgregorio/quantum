@@ -277,8 +277,14 @@ static func shake(node, frames: int, strength: float) -> void:
 # Leaves the scene for another at the end of the tick (qg:goto-scene).
 static func goto_scene(scene: Node, name_: String) -> void:
 	var game := scene.get_parent()
-	if game != null and game.has_method("go_to_scene"):
-		game.call_deferred("go_to_scene", name_)
+	if game == null or not game.has_method("go_to_scene"):
+		return
+	# under the rollback, a scene change waits until the tick that asked is certain
+	var net = game.get("lockstep")
+	if net != null and net.has_method("request_scene") and net.started:
+		net.request_scene(name_)
+		return
+	game.call_deferred("go_to_scene", name_)
 
 
 # A collision hands the handler a hitbox area; the thing is its owner.
@@ -446,8 +452,13 @@ func load_sounds(sounds: Dictionary) -> void:
 		_sounds[name_] = player
 
 
+var resimulating: bool = false   # the rollback replays old ticks: record sounds, play none
+
+
 func play(name_: String) -> void:
 	sounds_played.append(name_)
+	if resimulating:
+		return
 	var player: AudioStreamPlayer = _sounds.get(name_)
 	if player != null:
 		player.play()

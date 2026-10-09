@@ -23,6 +23,7 @@ var has_game_tape := false
 var lobby_ticks := 0         # with a game tape, the ticks before the networked game starts
 const LOBBY_LIMIT := 6000
 var out_path := ""
+var net_report := false      # --net-report: the rollback's own counts in the dump, under "_net"
 var scene: Node
 
 
@@ -54,6 +55,8 @@ func _initialize() -> void:
 			has_game_tape = true
 		elif a.begins_with("--out="):
 			out_path = a.substr(6)
+		elif a == "--net-report":
+			net_report = true
 	var main: String = ProjectSettings.get_setting("application/run/main_scene", "")
 	if main == "":
 		push_error("replay: the project has no main scene")
@@ -82,16 +85,34 @@ func _apply(events: Array) -> void:
 # tape, --tape is the lobby's: it runs by this script's own count until the
 # networked game starts (qg:host / qg:join in a scene), and those ticks do
 # not count towards --ticks.
+var _linger := -1   # after the dump, frames left before quitting: what this peer sent must reach the others
+
+
+func _finish(lockstep: Node) -> bool:
+	if _linger < 0:
+		_dump()
+		_linger = 30 + int(lockstep.latency_ms / 16.0) if lockstep != null else 0
+	_linger -= 1
+	var outbox_empty: bool = lockstep == null or lockstep._outbox.is_empty()
+	return _linger <= 0 and outbox_empty
+
+
 func _physics_process(_delta: float) -> bool:
 	var lockstep: Node = scene.get("lockstep") if "lockstep" in scene else null
+	if _linger >= 0:
+		return _finish(lockstep)
 	if lockstep != null and lockstep.started:
 		if lockstep.desynced:
-			_dump()
-			return true
+			return _finish(lockstep)
 		var t: int = lockstep.tick
-		if t >= max_ticks or (lockstep.ended and lockstep.stalled()):
-			_dump()
-			return true
+		if "confirmed" in lockstep:
+			# the rollback runs ahead on guesses: it stops at --ticks, and the state is
+			# dumped once every input up to there is known and every guess corrected
+			lockstep.stop_at = max_ticks
+			if (t >= max_ticks and lockstep.confirmed >= max_ticks - 1) or (lockstep.ended and lockstep.stalled()):
+				return _finish(lockstep)
+		elif t >= max_ticks or (lockstep.ended and lockstep.stalled()):
+			return _finish(lockstep)
 		if t == ticks:
 			var source: Dictionary = game_tape if has_game_tape else tape
 			if source.has(t):
@@ -119,6 +140,9 @@ func _physics_process(_delta: float) -> bool:
 
 func _dump() -> void:
 	var state := {}
+	var net = scene.get("lockstep") if scene != null and "lockstep" in scene else null
+	if net_report and net != null and net.has_method("net_report"):
+		state["_net"] = net.net_report()
 	for n in _walk(scene):
 		if n.has_method("quantum_state"):
 			state[String(scene.get_path_to(n))] = n.quantum_state()

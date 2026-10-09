@@ -86,7 +86,8 @@ def free_port() -> int:
 
 def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], port: Optional[int] = None,
                  binary: Optional[Path] = None, timeout: float = 300,
-                 lobby_tapes: Optional[List[Optional[Tape]]] = None, transport: Optional[str] = None) -> List[dict]:
+                 lobby_tapes: Optional[List[Optional[Tape]]] = None, transport: Optional[str] = None,
+                 latency_ms: Optional[List[int]] = None, net_report: bool = False) -> List[dict]:
     """Run the project under qg:multiplayer: one Godot per player, on localhost.
 
     The first tape is player 1's, who hosts; the others join in order. Each
@@ -100,6 +101,9 @@ def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], por
     game's own qg:host and qg:join start the network (on ``port``, which
     overrides theirs); ``tapes`` are then the networked game's, from its
     first tick. ``transport`` overrides qg:multiplayer's (``websocket``).
+    ``latency_ms`` holds back each peer's frames that long (one number per
+    peer), so a rollback game has guesses to correct; ``net_report`` adds
+    each peer's own counts (rollbacks) under ``_net``.
     """
     import subprocess
     import time
@@ -129,6 +133,10 @@ def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], por
                              f'--q-host={port}' if i == 0 else f'--q-join=127.0.0.1:{port}']
             if transport:
                 peer_args.append(f'--q-transport={transport}')
+            if latency_ms and latency_ms[i]:
+                peer_args.append(f'--q-latency={latency_ms[i]}')
+            if net_report:
+                peer_args.append('--net-report')
             log = open(Path(tmp) / f'log{i}.txt', 'w', encoding='utf-8')
             procs.append((subprocess.Popen(
                 [str(binary), '--headless', '--path', str(project_dir), '-s', str(REPLAY_SCRIPT), '--',

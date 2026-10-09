@@ -1358,3 +1358,31 @@ class TestLobby:
     ])
     def test_what_it_refuses(self, tmp_path, source, message):
         assert message in str(refuse(tmp_path, HEAD + '  ' + source + '\n' + TAIL))
+
+
+class TestRollback:
+    def test_rollback_on_a_scene_of_fighters(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:input action="punch" keys="J" />
+  <qg:multiplayer players="2" delay="1" rollback="6" start="fight" />
+  <qg:scene name="title"><qg:lobby local="fight" /></qg:scene>
+  <qg:scene name="fight">
+    <qg:character id="a" controller="fighter" sheet="c" x="10" y="10" hitbox="8x8" />
+    <qg:character id="b" controller="fighter" player="2" sheet="c" x="40" y="10" hitbox="8x8" />
+    <qg:timer every="60"><qg:goto-scene name="end" /></qg:timer>
+    <qg:hud><qg:bar bind="a.health" /></qg:hud>
+  </qg:scene>
+  <qg:scene name="end"><qg:hud><qg:text value="{'over'}" /></qg:hud></qg:scene>
+''' + TAIL)
+        assert json.loads((out / 'game.json').read_text())['multiplayer']['rollback'] == 6
+
+    @pytest.mark.parametrize('scene,message', [
+        ('<qg:instance prefab="Coin" x="1" y="1" />', "holds instance, which goes through physics"),
+        ('<qg:character id="p" controller="platformer" sheet="c" x="1" y="1" hitbox="4x4" />', 'holds controller="platformer"'),
+        ('<qg:timer every="5"><qg:spawn prefab="Coin" at="path" path="r" /></qg:timer><qg:path name="r" points="0,0; 9,9" />',
+         'holds path'),
+    ])
+    def test_what_rollback_refuses(self, tmp_path, scene, message):
+        err = refuse(tmp_path, HEAD + f'''  <qg:multiplayer players="2" rollback="6" />
+  <qg:scene name="fight">{scene}</qg:scene>
+''' + TAIL)
+        assert message in str(err)

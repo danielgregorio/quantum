@@ -131,6 +131,7 @@ The game is played by several people, each on their own machine, in lockstep: ev
 | `players` | integer | required | how many, 2 or more |
 | `delay` | integer | `3` | ticks between a press and its effect, everywhere: hides the round trip |
 | `check-every` | integer | `60` | ticks between comparisons of the whole state across peers; a difference is a desync, reported and fatal (0: never) |
+| `rollback` | integer | `0` | rollback instead of waiting: up to this many ticks run ahead on a guess of the others' input and are run again when it was wrong (0: plain lockstep). The scenes the networked game reaches may only hold fighters, timers, menus, the HUD, pictures and a camera — nothing that goes through physics |
 | `start` | a name |  | the scene the networked game starts in, on every peer, once all the players are there (the first scene when not given); the scenes before it — a title, a lobby — run on each machine alone |
 | `transport` | `enet` / `websocket` | `enet` | enet (desktop to desktop), or websocket (a browser build can join a desktop host) |
 
@@ -2266,7 +2267,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:input player="2" action="jump" keys="Up" />
   <qg:input player="2" action="punch" keys="Period" />
   <qg:input player="2" action="kick" keys="Slash" />
-  <qg:multiplayer players="2" delay="3" start="fight" />
+  <qg:multiplayer players="2" delay="2" rollback="8" start="fight" />
 
   <!-- The title: two on one keyboard, or one on each machine. -->
   <qg:scene name="title" width="640" height="360" background="#201820">

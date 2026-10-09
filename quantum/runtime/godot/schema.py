@@ -75,6 +75,10 @@ TAGS: Dict[str, Tag] = {
          'delay': Attr('int', 3, doc='ticks between a press and its effect, everywhere: hides the round trip'),
          'check-every': Attr('int', 60, doc='ticks between comparisons of the whole state across peers; '
                                            'a difference is a desync, reported and fatal (0: never)'),
+         'rollback': Attr('int', 0, doc='rollback instead of waiting: up to this many ticks run ahead on a guess of '
+                                        'the others\' input and are run again when it was wrong (0: plain lockstep). '
+                                        'The scenes the networked game reaches may only hold fighters, timers, '
+                                        'menus, the HUD, pictures and a camera — nothing that goes through physics'),
          'start': Attr('ident', None, doc='the scene the networked game starts in, on every peer, once all the '
                                           'players are there (the first scene when not given); the scenes before '
                                           'it — a title, a lobby — run on each machine alone'),
