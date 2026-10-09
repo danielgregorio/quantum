@@ -312,7 +312,8 @@ class _Compiler:
         script = SceneScript(name, game_state=self.game_state)
         self._states_checked: list = []
         # the characters, by id: names in the scene's expressions, targets of its actions
-        script.node_ids = [c.get('id') for c in scene.find_all('character')]
+        script.node_ids = ([c.get('id') for c in scene.find_all('character')]
+                           + [i.get('name') for i in scene.find_all('instance') if i.get('name')])
         # 1. state and functions first: handlers refer to them
         for node in scene.children:
             if isinstance(node, Statement) and node.kind == 'set':

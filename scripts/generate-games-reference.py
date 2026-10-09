@@ -41,6 +41,9 @@ GAMES = [
     ('Arena', 'projects/arena/arena.q', 'a one-on-one fighting game: moves with frame data, blocking, hit stun, '
      'health bars, rounds on a clock; two players over the network, which is the fighting games\' own netcode '
      '(projects/arena/README.md)'),
+    ('Chess', 'projects/chess/chess.q', 'chess: the rules — castling, en passant, promotion, check, mate, '
+     'stalemate — in q:functions over an array of 64 squares, the pieces mirroring it; white and black over the '
+     'network (projects/chess/README.md)'),
 ]
 
 INTRO = f'''---

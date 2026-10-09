@@ -27,6 +27,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: an eighth game, `projects/chess/chess.q` — chess, its rules
+  written in `q:function`s over an array of 64 squares (the rules of
+  github.com/Prashanna135/chess, MIT; `projects/chess/README.md` maps it),
+  white and black over the network. What it made the language grow:
+  **local variables** — a `q:set` of an undeclared name inside a
+  `q:function` or a handler is the call's own (the first recursion the
+  language met); `<q:set name="board" index="{i}" />` for one element of
+  an array; `qg:put target= x= y=`; `qg:destroy`, `qg:swap`, `qg:put` on
+  any name holding a thing, and a named `qg:instance` as a name in its
+  scene; `qg:hud position="bottom-center"`.
 - Laboratory: a seventh game, `projects/arena/arena.q` — a one-on-one
   fighting game (`projects/arena/README.md`), two players over the network.
   What it made the language grow: `controller="fighter"` (walk, jump,

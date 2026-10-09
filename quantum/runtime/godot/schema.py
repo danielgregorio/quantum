@@ -39,7 +39,7 @@ class Tag:
 
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
-           'damage', 'burst', 'shake', 'deflect', 'stop')
+           'damage', 'burst', 'shake', 'deflect', 'stop', 'put')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -239,7 +239,7 @@ TAGS: Dict[str, Tag] = {
         parents=('scene',)),
     'hud': Tag(
         'Text over the game.',
-        {'position': Attr('enum:top-left|top-center|top-right|center', 'top-left'),
+        {'position': Attr('enum:top-left|top-center|top-right|center|bottom-center', 'top-left'),
          'font': Attr('str', None, doc='a .ttf, relative to the .q or a folder above it'),
          'size': Attr('int', 8, doc='the font size of its items, unless an item says otherwise')},
         parents=('scene',)),
@@ -344,7 +344,7 @@ TAGS: Dict[str, Tag] = {
     # actions
     'destroy': Tag(
         'Removes a thing from the scene.',
-        {'target': Attr('enum:other|me', 'other')},
+        {'target': Attr('ident', 'other', doc='other, me, or a q:set holding a thing (thing_at)')},
         parents=('handler',)),
     'bounce': Tag(
         'Throws the character up, as after a stomp.',
@@ -386,7 +386,7 @@ TAGS: Dict[str, Tag] = {
         parents=('handler',)),
     'swap': Tag(
         'Replaces a thing with an instance of another prefab, in its place.',
-        {'target': Attr('enum:other', 'other'),
+        {'target': Attr('ident', 'other', doc='other, or a q:set holding a thing'),
          'prefab': Attr('ident', required=True)},
         parents=('handler',)),
     'checkpoint': Tag(
@@ -410,6 +410,11 @@ TAGS: Dict[str, Tag] = {
         {'at': Attr('enum:other|me', 'me'),
          'frames': Attr('int', 10),
          'strength': Attr('float', 3.0, doc='pixels')},
+        parents=('handler',)),
+    'put': Tag(
+        'Moves a thing or a character to a point, at once.',
+        {'target': Attr('ident', 'other', doc='me, other, a character id, or a q:set holding a thing (thing_at)'),
+         'x': Attr('expr', required=True), 'y': Attr('expr', required=True)},
         parents=('handler',)),
     'goto-scene': Tag(
         'Leaves this scene for another, at the end of the tick. Scene state is lost; game state stays.',

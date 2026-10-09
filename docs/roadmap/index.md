@@ -71,6 +71,6 @@ rule is in the [Reference](../reference/).
 
 | Item | Status |
 |---|---|
-| Games 2: games as a deterministic declarative simulation, where the same inputs always give the same game, so a game can be tested and replayed — a compiler to Godot 4, seven games ([Hopper, Keep, Drift, Godot's Pong and Dodge the Creeps demos, a tower defense, and a fighting game](/targets/games)), each replayed in CI, and lockstep multiplayer from the same determinism (`PLAN_MULTIPLAYER.md`) | done |
+| Games 2: games as a deterministic declarative simulation, where the same inputs always give the same game, so a game can be tested and replayed — a compiler to Godot 4, eight games ([Hopper, Keep, Drift, Godot's Pong and Dodge the Creeps demos, a tower defense, a fighting game and chess](/targets/games)), each replayed in CI, and lockstep multiplayer from the same determinism (`PLAN_MULTIPLAYER.md`) | done |
 
 Laboratory work carries no promise: it can change or stop at any point.

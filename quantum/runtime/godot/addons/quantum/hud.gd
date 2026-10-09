@@ -14,7 +14,7 @@ func setup(spec: Dictionary, scene: Node) -> void:
 	var viewport_w: int = ProjectSettings.get_setting("display/window/size/viewport_width", 256)
 	var viewport_h: int = ProjectSettings.get_setting("display/window/size/viewport_height", 224)
 	var position_ := str(spec.get("position", "top-left"))
-	var centered := position_ == "top-center" or position_ == "center"
+	var centered := position_ == "top-center" or position_ == "center" or position_ == "bottom-center"
 	match position_:
 		"top-center":
 			box.position = Vector2(0, 4)
@@ -25,6 +25,10 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			box.position = Vector2(0, 0)
 			box.size = Vector2(viewport_w, viewport_h)
 			box.alignment = BoxContainer.ALIGNMENT_CENTER
+		"bottom-center":
+			box.position = Vector2(0, 0)
+			box.size = Vector2(viewport_w, viewport_h - 4)
+			box.alignment = BoxContainer.ALIGNMENT_END
 		_:
 			box.position = Vector2(4, 4)
 	add_child(box)

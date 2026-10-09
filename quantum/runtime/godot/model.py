@@ -211,7 +211,7 @@ def _read_element(element: ET.Element, parent_tag: str) -> Element:
             raise GameCompileError(f'<qg:{tag}> has src= or {spec.text}, not both', line)
         return node
     _no_raw_text(element, f'<qg:{tag}>')
-    child_parent = 'handler' if tag in ('on-collision', 'on-fall', 'on-input', 'on-hit', 'on-death', 'on-damage', 'timer') else tag
+    child_parent = 'handler' if tag in ('on-collision', 'on-fall', 'on-input', 'on-select', 'on-hit', 'on-ko', 'on-death', 'on-damage', 'timer') else tag
     node.children = _read_children(element, child_parent, f'<qg:{tag}>')
     return node
 

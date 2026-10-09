@@ -754,7 +754,7 @@ class TestWhatItRefuses:
     </qg:character>
   </qg:scene>
 '''))
-        assert "'score' is not declared" in e.message
+        assert "'score' is set and never read" in e.message
 
     def test_a_collision_with_a_tag_no_prefab_has(self, tmp_path):
         e = refuse(tmp_path, game('''  <qg:scene name="main">
@@ -1225,3 +1225,55 @@ class TestWhatArenaAsked:
         assert '<qg:move> is for controller="fighter"' in str(err)
         err = refuse(tmp_path, game('  <qg:scene name="main"><qg:hud><qg:bar bind="p9.health" /></qg:hud></qg:scene>\n'))
         assert '<qg:bar bind="p9.health">: <character id>.health' in str(err)
+
+
+class TestWhatChessAsked:
+    """What chess made the language say (projects/chess/README.md)."""
+
+    def test_a_functions_own_variables_and_an_element_of_an_array(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="board" type="array" value="{['a', 'b']}" />
+    <q:function name="swap_first" params="i">
+      <q:set name="held" value="{board[0]}" />
+      <q:set name="flag" value="true" />
+      <q:set name="n" value="3" />
+      <q:set name="board" index="0" value="{board[i]}" />
+      <q:set name="board" index="{i}" value="x" />
+      <q:return value="{held if flag else n}" />
+    </q:function>
+  </qg:scene>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert ('func swap_first(i):\n\tvar held = null\n\tvar flag = null\n\tvar n = null\n'
+                '\theld = board[0]\n\tflag = true\n\tn = 3.0\n\tboard[int(0)] = board[i]\n\tboard[int(i)] = "x"\n'
+                '\treturn (held if flag else n)\n') in script
+        assert 'var held' not in script.split('func swap_first')[0]      # the scene's state has no `held`
+
+    def test_a_variable_set_and_never_read_is_a_misspelt_state(self, tmp_path):
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="score" value="0" type="number" />
+    <q:function name="f"><q:set name="scroe" value="{score + 1}" /></q:function>
+  </qg:scene>
+'''))
+        assert "'scroe' is set and never read" in str(err)
+
+    def test_an_element_of_what_is_not_an_array(self, tmp_path):
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <q:function name="f"><q:set name="nothing" index="0" value="x" /></q:function>
+  </qg:scene>
+'''))
+        assert "'nothing' is not declared" in str(err)
+
+    def test_put_and_destroy_on_a_name_holding_a_thing_and_a_named_instance(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <qg:cursor player="1" grid="16" />
+    <qg:instance prefab="Coin" name="mark" x="30" y="10" />
+    <qg:on-select>
+      <q:set name="hit" value="{thing_at('coin', cursor.x, cursor.y)}" />
+      <q:if condition="{hit != null}"><qg:destroy target="hit" /></q:if>
+      <qg:put target="mark" x="{cursor.x}" y="{cursor.y + 1}" />
+    </qg:on-select>
+  </qg:scene>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\t\tQ.destroy(hit)\n' in script and '\tQ.put(get_node("mark"), cursor.x, (cursor.y + 1))\n' in script

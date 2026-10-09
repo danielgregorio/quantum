@@ -134,6 +134,13 @@ static func random(ctx, a: float, b: float) -> float:
 	return scene.rng.randf_range(a, b)
 
 
+# qg:put: a thing or a character moved to a point.
+static func put(node, x: float, y: float) -> void:
+	node = _thing(node)
+	if node != null and node is Node2D:
+		(node as Node2D).position = Vector2(x, y)
+
+
 # Changes a character to one of its states (qg:become).
 static func become(node, state: String) -> void:
 	node = _thing(node)
