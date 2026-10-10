@@ -10,6 +10,22 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the play protocol, phase 4: the console and the MCP server.
+  - `quantum play rpg` plays a game a request at a time in the terminal.
+    Typed words are the requests: `right 32`, `tap select`,
+    `until talking with right`, `view`, `snap`, `back`, `tape won.json`.
+    The answers are printed short: where, what happened, what the screen
+    says.
+  - `quantum play --mcp` serves the same as MCP tools: `play_games`,
+    `play_start`, `play_act`, `play_until`, `play_view`, `play_snapshot`,
+    `play_restore`, `play_tape` and more. With `.mcp.json` at the
+    repository's root, a Claude Code session opened on it can play the
+    games directly. The server needs the `play` extra
+    (`pip install quantum[play]`, the `mcp` package).
+  - An event repeated in a row (a walker bumping a wall) is told once, with
+    `times`.
+  - In the tests, an MCP client wins the RPG through the tools alone.
+
 - Laboratory: the play protocol, phase 3: branching, and every session is a
   tape. The driver records every input it applies, with its tick, in the
   replay's format. `snapshot()` marks a point of the game. `restore()` comes
