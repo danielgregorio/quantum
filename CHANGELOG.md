@@ -76,6 +76,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- Laboratory: Hopper was over in seconds for a player who stood still: a
+  death put the character back at the start while the walker that killed it
+  walked on, into it again. A death now starts the level again — the
+  enemies, the coins and the clock as they were — from its checkpoint when
+  one was reached (the game's `check_at`, `check_x`, `check_y`).
+
 - Laboratory: a quick click or tap was lost: the game reads its keys once a
   tick, and a press released before the next tick was never seen — on the
   site, Chess picked no piece and Towers built nothing for a brisk click.
