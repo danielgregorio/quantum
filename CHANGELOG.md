@@ -17,6 +17,32 @@ alter the behaviour of an existing app is listed under **Breaking**.
   waits for the scene change, as the change does. The play protocol sees the
   fade as a `screen` view (`{"kind": "fade", "dark": 0.5}`). The RPG fades
   into and out of its fights.
+- Laboratory: the play protocol, phase 4: the console and the MCP server.
+  - `quantum play rpg` plays a game a request at a time in the terminal.
+    Typed words are the requests: `right 32`, `tap select`,
+    `until talking with right`, `view`, `snap`, `back`, `tape won.json`.
+    The answers are printed short: where, what happened, what the screen
+    says.
+  - `quantum play --mcp` serves the same as MCP tools: `play_games`,
+    `play_start`, `play_act`, `play_until`, `play_view`, `play_snapshot`,
+    `play_restore`, `play_tape` and more. With `.mcp.json` at the
+    repository's root, a Claude Code session opened on it can play the
+    games directly. The server needs the `play` extra
+    (`pip install quantum[play]`, the `mcp` package).
+  - An event repeated in a row (a walker bumping a wall) is told once, with
+    `times`.
+  - In the tests, an MCP client wins the RPG through the tools alone.
+
+- Laboratory: the play protocol, phase 3: branching, and every session is a
+  tape. The driver records every input it applies, with its tick, in the
+  replay's format. `snapshot()` marks a point of the game. `restore()` comes
+  back to it in a fresh game replayed to that tick, with the saved state
+  the session began with and the actions it held still held. `tape()` and
+  `save_tape()` give the session as a replay tape: a game played by
+  looking is a regression test as it is. In the tests, a fight branches
+  from a snapshot (Attack, then Defend, then Attack again, the same to the
+  tick), and a won fight saved as a tape replays to the same state.
+
 - Laboratory: the play protocol, phase 2: perception. An answer to an act
   or an until now carries the events of its ticks: what the runtime reports
   through `Q.event()` (a touch, a hit, a step or a bump, a thing spawned or
