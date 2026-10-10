@@ -366,6 +366,20 @@ class TestScenesMapAndGameState:
 '''))
         assert "no qg:scene named 'credits' (declared: main)" in e.message
 
+    def test_a_sprite_whose_frame_follows_an_expression(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="hurt" value="0" type="number" />
+    <qg:sprite sheet="c" frame="3" x="0" y="0" />
+    <qg:sprite sheet="c" frame="{1 if hurt > 0 else 0}" x="0" y="0" />
+  </qg:scene>
+'''))
+        nodes = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes']
+        fixed, follows = [n for n in nodes if n['kind'] == 'sprite']
+        assert fixed['frame'] == 3 and 'frame_method' not in fixed
+        assert follows['frame'] == 0
+        assert (f'func {follows["frame_method"]}():\n\treturn int((1 if (hurt > 0) else 0))\n'
+                in (out / 'scripts' / 'scene_main.gd').read_text())
+
     def test_a_scene_change_with_a_fade(self, tmp_path):
         out = build(tmp_path, game('''  <qg:scene name="main">
     <qg:on-input action="jump"><qg:goto-scene name="main" fade="0.5" /></qg:on-input>

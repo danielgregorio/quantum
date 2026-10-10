@@ -123,6 +123,15 @@ def test_an_attack_and_the_answer_a_quarter_second_later(project):
     assert (answered['life'], answered['turn']) == (8, 'player')               # 3 damage less 1 armor
 
 
+def test_a_fighter_just_hit_makes_a_face_for_half_a_second(project):
+    attack = [('select', 250, 251)]
+    hit = play(project, 255, TO_THE_OPPONENT + TALK + attack)
+    assert (hit['foe_hurt'], hit['hurt']) == (25, 0)                           # 30 from the hit, a tick after the press
+    answered = play(project, 270, TO_THE_OPPONENT + TALK + attack)
+    assert answered['hurt'] > 0 and answered['foe_hurt'] > 0
+    assert play(project, 320, TO_THE_OPPONENT + TALK + attack)['hurt'] == 0
+
+
 def test_defending_adds_armor_for_one_hit(project):
     state = play(project, 300, TO_THE_OPPONENT + TALK + [('down', 248, 249), ('select', 250, 251)])
     assert state['life'] == 9 and state['armor'] == 1                          # 3 less 2; back to 1 on its turn
