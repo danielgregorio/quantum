@@ -18,6 +18,17 @@ answer to ``act`` or ``until`` also carries the ``events`` of its ticks
 (a touch, a hit, a line said, a variable set...), and, after a scene
 change, the new scene's ``map``. ``view()`` draws the screen as text;
 ``frame()`` saves the real picture, in a session opened with ``frames=True``.
+
+A session is its inputs: ``snapshot()`` marks a point, ``restore(snap)``
+comes back to it (a fresh game replayed to that tick), and ``tape()`` or
+``save_tape(path)`` give the session as a replay tape, which
+``godot_replay.replay()`` plays to the same state::
+
+    snap = game.snapshot()
+    game.act(tap=['select'], ticks=20)                      # one way
+    game.restore(snap)
+    game.act(tap=['down'], ticks=2)                         # and the other
+    game.save_tape('won.json')                              # a test, as it is
 """
 
 from __future__ import annotations
