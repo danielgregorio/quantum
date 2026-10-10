@@ -38,9 +38,9 @@ func setup(spec: Dictionary, game_: Node, host_: String, port_: int) -> void:
 	super.setup(spec, game_, host_, port_)
 
 
-func request_scene(name_: String) -> void:
+func request_scene(name_: String, fade: float = 0.0) -> void:
 	if _pending == null:
-		_pending = [_sim_tick, name_]
+		_pending = [_sim_tick, name_, fade]
 
 
 func net_report() -> Dictionary:
@@ -97,10 +97,11 @@ func _physics_process(_delta: float) -> void:
 	if _pending != null:
 		if int(_pending[0]) <= confirmed:
 			var to: String = _pending[1]
+			var fade: float = _pending[2]
 			_pending = null
 			_snapshots.clear()
 			_used.clear()
-			game.go_to_scene(to)
+			game.go_to_scene(to, fade)
 			_stall(true)
 			return
 		_stall(true)

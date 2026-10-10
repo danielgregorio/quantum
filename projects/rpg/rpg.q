@@ -107,7 +107,7 @@
       <qg:line who="UNKNOWN" text="Let me introduce myself, I'm your OPPONENT." />
       <qg:line who="OPPONENT" text="Enough talking. Let's fight!" />
       <qg:on-end>
-        <qg:goto-scene name="combat" />
+        <qg:goto-scene name="combat" fade="0.4" />
       </qg:on-end>
     </qg:dialogue>
     <qg:dialogue name="key" font="assets/montserrat_extra_bold.otf" size="28">
@@ -155,7 +155,7 @@
     <!-- health.gd: a hit takes the damage less the armor. -->
     <q:function name="end" params="result">
       <q:set name="outcome" value="{result}" />
-      <qg:goto-scene name="exploration" />
+      <qg:goto-scene name="exploration" fade="0.4" />
     </q:function>
     <q:function name="foes_turn">
       <q:set name="turn" value="opponent" />

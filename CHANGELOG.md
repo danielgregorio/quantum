@@ -10,6 +10,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: `<qg:goto-scene fade="0.4">`: the new scene comes out of black
+  over that many seconds. Only the picture fades. The tween counts physics
+  ticks, so a frame at a given tick always shows the same shade, and the
+  game runs exactly as it would without the fade. Under rollback the fade
+  waits for the scene change, as the change does. The play protocol sees the
+  fade as a `screen` view (`{"kind": "fade", "dark": 0.5}`). The RPG fades
+  into and out of its fights.
 - Laboratory: the play protocol, phase 2: perception. An answer to an act
   or an until now carries the events of its ticks: what the runtime reports
   through `Q.event()` (a touch, a hit, a step or a bump, a thing spawned or

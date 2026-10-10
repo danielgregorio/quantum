@@ -549,7 +549,9 @@ TAGS: Dict[str, Tag] = {
         parents=('handler',)),
     'goto-scene': Tag(
         'Leaves this scene for another, at the end of the tick. Scene state is lost; game state stays.',
-        {'name': Attr('ident', required=True)},
+        {'name': Attr('ident', required=True),
+         'fade': Attr('float', 0.0, doc='seconds the new scene takes to come out of black (0: a cut); '
+                      'only the picture fades, the game runs from its first tick as without it')},
         parents=('handler',)),
 }
 
