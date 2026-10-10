@@ -426,6 +426,11 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
                 f'{compile_expression(el.get("y"), scope, el.line)})')
     if el.tag == 'goto-scene':
         script.scenes_used.append((el.get('name'), el.line))
+        fade = el.get('fade') or 0.0
+        if fade < 0:
+            raise GameCompileError(f'<qg:goto-scene fade="{fade}">: the seconds of a fade cannot be negative', el.line)
+        if fade:
+            return f'Q.goto_scene(self, {json.dumps(el.get("name"))}, {float(fade)!r})'
         return f'Q.goto_scene(self, {json.dumps(el.get("name"))})'
     if el.tag == 'checkpoint':
         at = el.get('at')

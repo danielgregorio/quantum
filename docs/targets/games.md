@@ -731,6 +731,7 @@ Leaves this scene for another, at the end of the tick. Scene state is lost; game
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `name` | a name | required |  |
+| `fade` | number | `0.0` | seconds the new scene takes to come out of black (0: a cut); only the picture fades, the game runs from its first tick as without it |
 
 Goes inside: a handler.
 
@@ -3167,7 +3168,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:line who="UNKNOWN" text="Let me introduce myself, I'm your OPPONENT." />
       <qg:line who="OPPONENT" text="Enough talking. Let's fight!" />
       <qg:on-end>
-        <qg:goto-scene name="combat" />
+        <qg:goto-scene name="combat" fade="0.4" />
       </qg:on-end>
     </qg:dialogue>
     <qg:dialogue name="key" font="assets/montserrat_extra_bold.otf" size="28">
@@ -3215,7 +3216,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <!-- health.gd: a hit takes the damage less the armor. -->
     <q:function name="end" params="result">
       <q:set name="outcome" value="{result}" />
-      <qg:goto-scene name="exploration" />
+      <qg:goto-scene name="exploration" fade="0.4" />
     </q:function>
     <q:function name="foes_turn">
       <q:set name="turn" value="opponent" />

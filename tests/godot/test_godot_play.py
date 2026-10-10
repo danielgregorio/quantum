@@ -189,6 +189,21 @@ def test_the_events_of_a_fight_tell_each_hit(rpg, godot):
         assert not seen.get('events_dropped')
 
 
+def test_the_fight_comes_out_of_black(rpg, godot):
+    with PlaySession(rpg, binary=godot) as game:
+        game.until('player.row == 7', hold=['down'])
+        game.until('talking', hold=['right'])
+        fight = game.until("scene == 'combat'", tap=['select'], max_ticks=10)
+        for _ in range(2):
+            fight = game.until("scene == 'combat'", tap=['select'], max_ticks=10)
+        assert fight['scene'] == 'combat'
+        assert PlaySession.screen(fight, 'fade')['dark'] > 0.9                 # fade="0.4": 24 ticks of it
+        assert 0.4 < PlaySession.screen(game.act(ticks=12), 'fade')['dark'] < 0.6
+        clear = game.act(ticks=14)
+        assert PlaySession.screen(clear, 'fade') is None
+        assert PlaySession.screen(clear, 'menu')['items'][0]['button'] == 'Attack'
+
+
 def test_an_agent_leaves_keeps_first_room_by_the_map_and_the_view(keep, godot):
     """Phase 2's check: the way out found on the map, the player found in the view, nothing else."""
     from collections import deque

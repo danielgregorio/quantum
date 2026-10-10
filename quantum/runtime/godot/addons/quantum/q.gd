@@ -349,16 +349,16 @@ static func talking(node) -> bool:
 
 
 # Leaves the scene for another at the end of the tick (qg:goto-scene).
-static func goto_scene(scene: Node, name_: String) -> void:
+static func goto_scene(scene: Node, name_: String, fade: float = 0.0) -> void:
 	var game := scene.get_parent()
 	if game == null or not game.has_method("go_to_scene"):
 		return
 	# under the rollback, a scene change waits until the tick that asked is certain
 	var net = game.get("lockstep")
 	if net != null and net.has_method("request_scene") and net.started:
-		net.request_scene(name_)
+		net.request_scene(name_, fade)
 		return
-	game.call_deferred("go_to_scene", name_)
+	game.call_deferred("go_to_scene", name_, fade)
 
 
 # The solid part of a solid prefab: its shape= polygon (from its centre), or

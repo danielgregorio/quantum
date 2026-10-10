@@ -6,6 +6,7 @@ extends Node
 const SceneBuilder := preload("res://addons/quantum/scene_builder.gd")
 const Lockstep := preload("res://addons/quantum/lockstep.gd")
 const Rollback := preload("res://addons/quantum/rollback.gd")
+const Fade := preload("res://addons/quantum/fade.gd")
 
 var spec: Dictionary = {}
 var current_scene: Node = null
@@ -124,7 +125,7 @@ func _register_inputs(inputs: Dictionary) -> void:
 				InputMap.action_add_event(action, ev)
 
 
-func go_to_scene(scene_name: String) -> void:
+func go_to_scene(scene_name: String, fade: float = 0.0) -> void:
 	if not spec["scenes"].has(scene_name):
 		push_error("quantum: no scene named " + scene_name)
 		return
@@ -140,8 +141,20 @@ func go_to_scene(scene_name: String) -> void:
 	add_child(current_scene)
 	Q.web_report("quantumScene", scene_name)
 	Q.event("scene", {"name": scene_name})
+	if fade > 0.0:
+		_fade_in(fade)
 	if G.has_method("_q_save"):
 		G._q_save()
+
+
+func _fade_in(seconds: float) -> void:
+	var old := get_node_or_null("Fade")
+	if old != null:
+		remove_child(old)
+		old.queue_free()
+	var fade := Fade.new()
+	add_child(fade)
+	fade.start(seconds)
 
 
 func _exit_tree() -> void:
