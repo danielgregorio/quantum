@@ -302,6 +302,15 @@ TAGS: Dict[str, Tag] = {
          'x': Attr('float', required=True), 'y': Attr('float', required=True),
          'width': Attr('float', required=True), 'height': Attr('float', required=True)},
         parents=('scene',)),
+    'parallax': Tag(
+        'A backdrop behind the level that the camera scrolls slower than the level: a sky, distant hills. '
+        'Its picture is one frame of a sheet, placed on the screen, repeating across. Several are drawn in order.',
+        {'sheet': Attr('ident', required=True), 'frame': Attr('int', 0),
+         'y': Attr('float', 0.0, doc='where its top is on the screen'),
+         'scroll': Attr('float', 0.0, doc='how fast it scrolls across with the camera: 0 stays still, '
+                                          '1 moves with the level'),
+         'repeat': Attr('bool', True, doc='repeats across, so it never ends')},
+        parents=('scene',)),
     'sprite': Tag(
         'A picture in the scene, with no behaviour: a backdrop, a divider, a sign.',
         {'sheet': Attr('ident', required=True), 'frame': Attr('int', 0),

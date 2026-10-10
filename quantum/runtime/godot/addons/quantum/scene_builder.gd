@@ -132,6 +132,22 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				zone.setup(node_spec)
 				Q.apply_gd(zone, node_spec.get("gd"))
 				scene.add_child(zone)
+			"parallax":
+				# Parallax2D: scroll 0 stays on the screen, 1 moves with the level; it keeps the
+				# screen's top, so a camera that rises or falls does not move it up or down
+				var sheet: Dictionary = game["sheets"][node_spec["sheet"]]
+				var back := Parallax2D.new()
+				back.scroll_scale = Vector2(float(node_spec.get("scroll", 0.0)), 0.0)
+				back.z_index = -90
+				var picture := _sprite(_texture(sheet), sheet["tile"], int(node_spec["frame"]))
+				picture.centered = false
+				picture.position = Vector2(0, float(node_spec.get("y", 0.0)))
+				back.add_child(picture)
+				if node_spec.get("repeat", true):
+					back.repeat_size = Vector2(float(sheet["tile"][0]), 0)
+					back.repeat_times = 3
+				Q.apply_gd(back, node_spec.get("gd"))
+				scene.add_child(back)
 			"sprite":
 				var sheet: Dictionary = game["sheets"][node_spec["sheet"]]
 				var picture := _sprite(_texture(sheet), sheet["tile"], int(node_spec["frame"]))

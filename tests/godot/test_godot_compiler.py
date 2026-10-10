@@ -1573,3 +1573,17 @@ class TestWhatTheRpgAsked:
             assert message in str(err), (message, str(err))
         no_map = re.sub(r'<qg:tilemap.*?</qg:tilemap>', '', self.GRID, flags=re.S)
         assert 'the scene has none' in str(refuse(tmp_path, game(no_map)))
+
+
+def test_a_parallax_backdrop(tmp_path):
+    out = build(tmp_path, game('''  <qg:scene name="main">
+    <qg:parallax sheet="k" scroll="0.25" y="40" />
+    <qg:parallax sheet="c" repeat="false" />
+  </qg:scene>
+'''))
+    nodes = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes']
+    assert nodes == [{'kind': 'parallax', 'sheet': 'k', 'frame': 0, 'y': 40.0, 'scroll': 0.25, 'repeat': True},
+                     {'kind': 'parallax', 'sheet': 'c', 'frame': 0, 'y': 0.0, 'scroll': 0.0, 'repeat': False}]
+    err = refuse(tmp_path, game('  <qg:scene name="main"><qg:parallax sheet="k" scroll="2" /></qg:scene>\n'))
+    assert 'between 0 (still) and 1' in str(err)
+    assert 'no' in str(refuse(tmp_path, game('  <qg:scene name="main"><qg:parallax sheet="nope" /></qg:scene>\n')))

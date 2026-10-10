@@ -883,6 +883,20 @@ What happens when a qg:dialogue has shown its last line. Holds actions and state
 
 Goes inside: `qg:dialogue`.
 
+### `qg:parallax`
+
+A backdrop behind the level that the camera scrolls slower than the level: a sky, distant hills. Its picture is one frame of a sheet, placed on the screen, repeating across. Several are drawn in order.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `sheet` | a name | required |  |
+| `frame` | integer | `0` |  |
+| `y` | number | `0.0` | where its top is on the screen |
+| `scroll` | number | `0.0` | how fast it scrolls across with the camera: 0 stays still, 1 moves with the level |
+| `repeat` | true / false | `true` | repeats across, so it never ends |
+
+Goes inside: `qg:scene`.
+
 ### `qg:tile`
 
 One tile of a qg:tileset that is not a full solid square, for the tilemap layers with collision: a lower top, a thin ledge, a slope, a tile to jump through from below, or no collision at all. A flipped tile (a negative number in the tilemap) flips its shape too.
@@ -2884,6 +2898,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:spritesheet name="coin" src="assets/coin.png" tile="32" />
   <qg:spritesheet name="bullet" src="assets/bullet.png" tile="16" />
   <qg:spritesheet name="platform" src="assets/platform.png" tile="256x64" />
+  <!-- The demo's ParallaxBackground, composed by scripts/art/robot_sky.py. -->
+  <qg:spritesheet name="sky" src="assets/sky.png" tile="2458x480" />
+  <qg:spritesheet name="hills" src="assets/hills.png" tile="2048x480" />
 
   <qg:sound name="jump" src="assets/jump.wav" />
   <qg:sound name="shoot" src="assets/shoot.wav" />
@@ -2921,6 +2938,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
              shape="-174.04,-0.43; -94.04,-23.61; 91.84,-28.64; 80.29,-5.16; -54.32,0.04; -179.99,26.44" />
 
   <qg:scene name="level" width="800" height="480" background="#52c9ff">
+    <!-- level/background/parallax_background.tscn: a base scale of 0.1 times each layer's -->
+    <qg:parallax sheet="sky" scroll="0.02" />
+    <qg:parallax sheet="hills" scroll="0.04" />
     <q:set name="coins" value="0" type="number" />
 
     <!-- 35 x 24 tiles of 64 px; the demo's map, whose top-left cell is (-12, -11), so

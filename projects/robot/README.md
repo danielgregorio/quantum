@@ -28,6 +28,7 @@ can jump again in the air. Space, Z or Ctrl shoots. Escape pauses the game.
 | `coins_counter.gd`: the count, top-left | 16 | `<qg:hud><qg:counter bind="coins">` |
 | `platform.tscn`: an `AnimatableBody2D`, a one-way 192x27 box 7.5 px above its middle; two `AnimationPlayer`s move them, one 210 px up and back in 4 s, the other 295 px in 8 s | 174 + 30 | `ai="shuttle" one-way="true" shape="-96,-21; 96,-21; 96,6; -96,6"` with `dy="-210" period="240"` and `dy="-295" period="480"` |
 | `PlatformStatic`: a `StaticBody2D` rotated 0.356 rad, a six-point polygon, two sprites | 20 | the `Ledge` prefab: its `shape=` is the demo's polygon, the instance has `gd:rotation`, and the second picture is a `qg:sprite` |
+| `parallax_background.tscn`: a sky, clouds and two rows of distant platforms, at a tenth of 0.2, 0.1, 0.2 and 0.4 of the camera across, fixed up and down | 150 | two `<qg:parallax>`: `sky` (the sky and the clouds) at `scroll="0.02"`, `hills` at `scroll="0.04"` |
 | the player's `Camera`: limits -715, -250, 1425, 690; offset 50 px down | 8 | `<qg:camera bounds="none" gd:limit_left="53" ... gd:offset="0,39">` (the demo's limits moved like the map) |
 | `game.gd` + `pause_menu.gd`: `toggle_pause` pauses the tree and opens a menu with Resume | 25 + 78 | `<qg:on-input action="pause">` with `qg:pause`/`qg:resume`, and a `<qg:menu if="{paused()}">` with Resume and Restart |
 | `project.godot`: `jump` on Up/W/JoyA, `shoot` on Space/Z/Ctrl/JoyX, `toggle_pause` on Escape/Start | 60 | three `qg:input`s |
@@ -38,7 +39,8 @@ These differences are deliberate:
 - An enemy dies with a burst at once. The demo plays a fall-and-fade animation first.
 - The robot passes through enemies, while in the demo it bumps them. It is invincible in both.
 - The decorations (grass, flowers, trees, vines, bushes) are not placed.
-- The parallax sky, the music, splitscreen and the fullscreen key are not transcribed. The music has no license of its own in the demo (`assets/LICENSE.md`).
+- The music, splitscreen and the fullscreen key are not transcribed. The music has no license of its own in the demo (`assets/LICENSE.md`).
+- The parallax sky is two pictures instead of six layers: `scripts/art/robot_sky.py` draws the sky and its clouds into one, and the two rows of distant platforms into another, as the screen first shows them.
 
 The demo's map has two lips. One is the 10 px step at the foot of the slope, the other the 7 px edge at its top. A rectangle cannot walk over either of them, so the robot jumps them in this level as it would in the demo.
 
@@ -69,6 +71,9 @@ The demo's map has two lips. One is the 10 px step at the foot of the slope, the
    plays in the scene (characters, things, timers, spawners). Menus, the HUD,
    the cursors and `qg:on-input` keep going. `paused()` says which, and
    `qg:menu if=` shows a menu only while its condition holds.
+8. **A parallax backdrop**: `qg:parallax` places a picture on the screen,
+   behind the level, repeating across. `scroll=` is how fast it moves with
+   the camera: 0 stays still, 1 moves with the level.
 
 Every number above is checked in Godot by `tests/godot/test_godot_robot.py`:
 
