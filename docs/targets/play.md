@@ -52,7 +52,7 @@ command line skips the title:
 - **Arena**: player 1 A/D, W jump, S crouch, J punch, K kick; player 2 the arrows, `.` punch, `/` kick. Hold away from the opponent to block.
 - **Chess**: click a piece, then a square (white first).
 - **Robot**: arrows or A/D; Up, W or the joypad's A jumps (again in the air); Space, Z or Ctrl shoots; Escape pauses.
-- **RPG**: arrows or WASD walk (two at once, diagonally); walk into someone to talk; Enter, Space or a click shows the next line; in the fight, Attack, Defend or Flee.
+- **RPG**: arrows or WASD walk (two at once, diagonally); walk into someone to talk; Enter, Space or a click shows the next line; in the fight, Attack, Defend, Potion or Flee.
 
 A joypad works everywhere: the pad or the left stick moves, A jumps or
 selects, B cancels. Player 2 reads the second joypad.

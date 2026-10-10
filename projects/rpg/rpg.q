@@ -10,6 +10,10 @@
   <q:set name="outcome" value="" />
   <q:set name="back_col" value="3" type="number" />
   <q:set name="back_row" value="4" type="number" />
+  <!-- Beyond the demo: what the player carries, and what it took from the map, by name. -->
+  <q:set name="keys" value="0" type="number" />
+  <q:set name="potions" value="0" type="number" />
+  <q:set name="taken" value="[]" type="array" />
 
   <!-- The demo's ui_accept: Enter, Space, the joypad's A; and a click. -->
   <qg:input action="select" keys="Enter, Space, MouseLeft, JoyA" />
@@ -23,6 +27,7 @@
 
   <qg:prefab name="Opponent" tag="opponent" sheet="pawns" frame="2" hitbox="48x48" />
   <qg:prefab name="Key" tag="key" sheet="pawns" frame="3" hitbox="48x48" />
+  <qg:prefab name="Potion" tag="potion" sheet="pawns" frame="4" hitbox="48x48" />
 
   <!-- ===== Exploration: grid_movement/exploration.tscn ===== -->
 
@@ -67,7 +72,9 @@
 28,28,28,28,28,28,28,43,44,44,44,44,44,44,44,44,44,36,38,28
     </qg:tilemap>
 
-    <qg:instance prefab="Key" x="544" y="288" />
+    <qg:instance prefab="Key" name="key" x="544" y="288" if="{'key' not in taken}" />
+    <qg:instance prefab="Potion" name="potion-1" x="96" y="96" if="{'potion-1' not in taken}" />
+    <qg:instance prefab="Potion" name="potion-2" x="928" y="608" if="{'potion-2' not in taken}" />
     <qg:instance prefab="Opponent" x="800" y="480" />
 
     <qg:character id="player" controller="grid" diagonal="true" step-frames="15"
@@ -76,7 +83,16 @@
       <qg:animation name="walk" frames="0" fps="1" />
       <qg:animation name="bump" frames="1" fps="1" />
       <qg:on-collision with="key">
+        <q:set name="taken" value="{taken + [other.name]}" />
+        <q:set name="keys" value="{keys + 1}" />
+        <qg:destroy target="other" />
         <qg:say dialogue="key" />
+      </qg:on-collision>
+      <qg:on-collision with="potion">
+        <q:set name="taken" value="{taken + [other.name]}" />
+        <q:set name="potions" value="{potions + 1}" />
+        <qg:destroy target="other" />
+        <qg:say dialogue="potion" />
       </qg:on-collision>
       <qg:on-collision with="opponent">
         <q:set name="back_col" value="{me.col}" />
@@ -96,7 +112,17 @@
     </qg:dialogue>
     <qg:dialogue name="key" font="assets/montserrat_extra_bold.otf" size="28">
       <qg:line who="PLAYER" text="Just a key..." />
+      <qg:line who="PLAYER" text="I'll keep it anyway." />
     </qg:dialogue>
+    <qg:dialogue name="potion" font="assets/montserrat_extra_bold.otf" size="28">
+      <qg:line who="PLAYER" text="A potion! In a fight, it gives back 5 life." />
+    </qg:dialogue>
+
+    <!-- What the player carries. -->
+    <qg:hud position="top-left" font="assets/montserrat_extra_bold.otf" size="24">
+      <qg:counter bind="potions" label="Potions" />
+      <qg:counter bind="keys" label="Keys" />
+    </qg:hud>
     <qg:dialogue name="won" font="assets/montserrat_extra_bold.otf" size="28">
       <qg:line who="OPPONENT" text="Congratulations, you won!" />
       <qg:on-end><q:set name="outcome" value="" /></qg:on-end>
@@ -163,6 +189,12 @@
       </qg:button>
       <qg:button label="Defend">
         <q:set name="armor" value="{armor + 1}" />
+        <q:call function="foes_turn" />
+      </qg:button>
+      <!-- beyond the demo: a potion gives back 5 life (health.gd's heal, up to the most) -->
+      <qg:button label="Potion" if="{potions > 0}">
+        <q:set name="potions" value="{potions - 1}" />
+        <q:set name="life" value="{min(10, life + 5)}" />
         <q:call function="foes_turn" />
       </qg:button>
       <qg:button label="Flee">

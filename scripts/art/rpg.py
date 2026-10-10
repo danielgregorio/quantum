@@ -8,7 +8,8 @@ its world with three TileMapLayers whose tiles are single images, each
 placed flipped or transposed. Here every (image, transform) used becomes one
 64 px tile of assets/tiles.png, and the layers are printed as the CSV rows of
 the qg:tilemaps in rpg.q (the visible 20x11 cells). The pawns, the
-combatants and the combat background are packed as they are.
+combatants and the combat background are packed as they are. The potion,
+which the demo does not have, is drawn here (CC0) as the fifth pawn.
 """
 
 import base64
@@ -17,7 +18,7 @@ import struct
 import sys
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 OUT = Path(__file__).resolve().parents[2] / 'projects' / 'rpg' / 'assets'
 TILE, COLS, ROWS = 64, 20, 11
@@ -91,6 +92,24 @@ def sheet(demo: Path, files, cell: int) -> Image.Image:
     return out
 
 
+def potion() -> Image.Image:
+    """A round flask of red potion with a cork, in the demo's soft, outlined style."""
+    big = Image.new('RGBA', (256, 256), (0, 0, 0, 0))   # drawn 4x, then scaled down: smooth edges
+    d = ImageDraw.Draw(big)
+    outline, glass, red, shine = (90, 30, 50, 255), (220, 236, 245, 255), (226, 52, 84, 255), (255, 255, 255, 200)
+    d.ellipse((44, 84, 212, 244), fill=outline)                      # the bowl
+    d.rounded_rectangle((98, 36, 158, 110), 12, fill=outline)        # the neck
+    d.ellipse((56, 96, 200, 232), fill=glass)
+    d.rounded_rectangle((110, 48, 146, 112), 8, fill=glass)
+    liquid = Image.new('L', (256, 256), 0)                           # the potion: the bowl below its surface
+    ImageDraw.Draw(liquid).ellipse((56, 96, 200, 232), fill=255)
+    ImageDraw.Draw(liquid).rectangle((0, 0, 256, 148), fill=0)
+    big.paste(Image.new('RGBA', (256, 256), red), (0, 0), liquid)
+    d.rounded_rectangle((92, 16, 164, 52), 10, fill=(150, 98, 60, 255), outline=outline, width=8)   # the cork
+    d.ellipse((84, 120, 112, 160), fill=shine)
+    return big.resize((64, 64), Image.LANCZOS)
+
+
 def main(argv) -> int:
     if len(argv) != 1:
         print(__doc__)
@@ -110,7 +129,11 @@ def main(argv) -> int:
     for i, (image, flags) in enumerate(tiles):
         atlas.alpha_composite(transformed(demo, image, flags), ((i % per_row) * TILE, (i // per_row) * TILE))
     atlas.save(OUT / 'tiles.png')
-    sheet(demo, PAWNS, 64).save(OUT / 'pawns.png')
+    pawns = sheet(demo, PAWNS, 64)
+    with_potion = Image.new('RGBA', (pawns.width + 64, 64), (0, 0, 0, 0))
+    with_potion.alpha_composite(pawns)
+    with_potion.alpha_composite(potion(), (pawns.width, 0))
+    with_potion.save(OUT / 'pawns.png')
     sheet(demo, FIGHTERS, 128).save(OUT / 'fighters.png')
     Image.open(demo / 'combat' / 'background' / 'combat_background.png').convert('RGB').save(OUT / 'arena.png')
     for name in LAYERS:

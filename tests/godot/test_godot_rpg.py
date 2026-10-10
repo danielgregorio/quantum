@@ -71,15 +71,38 @@ def test_a_wall_is_a_bump_that_takes_as_long_as_a_step(project):
     assert player(state)['y'] == 96.0 and 'talking' not in state
 
 
-def test_the_key_says_what_it_is_and_select_closes_it(project):
+def test_the_key_says_what_it_is_and_is_taken(project):
     # (3, 4) down to row 7, right to column 11, up the gap of the rocks to row 4, left into the key at (8, 4)
     walk = [('down', 1, 40), ('right', 50, 165), ('up', 180, 215), ('left', 230, 265)]
     state = play(project, 275, walk)
     assert (player(state)['col'], player(state)['row']) == (9, 4)
     assert state['talking'] == 'key' and state['paused'] is True
-    closed = play(project, 295, walk + [('select', 285, 286)])
+    assert 'key' not in state['things'] and state['game']['keys'] == 1        # beyond the demo: it is taken
+    assert state['game']['taken'] == ['key']
+    closed = play(project, 310, walk + [('select', 285, 286), ('select', 300, 301)])
     assert 'talking' not in closed and 'paused' not in closed
-    assert closed['things']['key'] == 1                                        # it stays where it is
+
+
+# Beyond the demo: two potions on the map, and a Potion button in the fight.
+TO_THE_POTION = [('up', 1, 45), ('left', 50, 70)]           # (3, 4) up to (3, 1), left to (2, 1), into (1, 1)
+
+
+def test_a_potion_is_picked_up(project):
+    state = play(project, 80, TO_THE_POTION)
+    assert state['talking'] == 'potion' and state['game']['potions'] == 1
+    assert state['things'] == {'key': 1, 'opponent': 1, 'potion': 1}           # the other one, at (14, 9)
+
+
+def test_a_potion_gives_back_five_life_up_to_ten_in_the_fight(project):
+    # from (2, 1): right to (11, 1), down to (11, 7), into the opponent; its three lines; the fight
+    to_fight = TO_THE_POTION + [('select', 90, 91), ('right', 100, 235), ('down', 240, 330), ('right', 340, 345),
+                                ('select', 360, 361), ('select', 375, 376), ('select', 390, 391)]
+    fight = play(project, 395, to_fight)
+    assert fight['scene'] == 'combat' and fight['game']['potions'] == 1
+    hit = to_fight + [('select', 400, 401)]                                     # Attack; the answer: 8 life
+    assert play(project, 425, hit)['life'] == 8
+    drunk = play(project, 445, hit + [('down', 428, 429), ('down', 432, 433), ('select', 440, 441)])
+    assert (drunk['life'], drunk['game']['potions'], drunk['turn']) == (10, 0, 'opponent')   # 8 + 5, at most 10
 
 
 def test_the_opponent_talks_three_lines_then_fights(project):

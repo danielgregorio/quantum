@@ -34,6 +34,23 @@ These differences are deliberate:
 - The fight's names and life bars are a HUD over the background, not the demo's panels, and the buttons are the language's menu. The blue and green pillars are not drawn.
 - There is no fade to black between the map and the fight.
 
+## Beyond the demo
+
+The demo has a key that says "Just a key..." and nothing to carry. Here the
+player takes what it walks into, in the game state, so the map remembers it
+across fights:
+
+- the key: `keys`, and its name in `taken`, so its `qg:instance if=` leaves it
+  off the map from then on;
+- two potions on the map, at (1, 1) and (14, 9): `potions`;
+- a HUD with what it carries, and a Potion button in the fight, shown while
+  it has one: 5 life back, up to 10 (the demo's `health.gd` has a `heal`
+  nothing calls), and the opponent's turn.
+
+The potion is drawn by `scripts/art/rpg.py` (CC0). All of it is the
+language as it was: game state, `qg:instance if=`, `qg:destroy`, `qg:menu`
+buttons with `if=`.
+
 ## What the language had to grow
 
 1. **Grid walking**: `controller="grid"` steps from cell centre to cell
@@ -58,4 +75,5 @@ Every number above is checked in Godot by `tests/godot/test_godot_rpg.py`:
 - an attack, and the answer a quarter of a second later;
 - Defend's armor, for one hit;
 - four attacks that win, and the line on the map from where the fight started;
-- Flee, which loses.
+- Flee, which loses;
+- a potion picked up, and drunk in the fight.
