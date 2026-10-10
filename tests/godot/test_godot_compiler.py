@@ -366,6 +366,20 @@ class TestScenesMapAndGameState:
 '''))
         assert "no qg:scene named 'credits' (declared: main)" in e.message
 
+    def test_a_scene_change_with_a_fade(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <qg:on-input action="jump"><qg:goto-scene name="main" fade="0.5" /></qg:on-input>
+  </qg:scene>
+'''))
+        assert 'Q.goto_scene(self, "main", 0.5)' in (out / 'scripts' / 'scene_main.gd').read_text()
+
+    def test_a_fade_of_negative_seconds(self, tmp_path):
+        e = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:on-input action="jump"><qg:goto-scene name="main" fade="-1" /></qg:on-input>
+  </qg:scene>
+'''))
+        assert 'the seconds of a fade cannot be negative' in e.message
+
     def test_a_map_path_to_nowhere(self, tmp_path):
         e = refuse(tmp_path, game('''  <qg:scene name="map">
     <qg:map-node name="one" x="1" y="1" sheet="k" />

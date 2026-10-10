@@ -10,6 +10,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: `<qg:goto-scene fade="0.4">`: the new scene comes out of black
+  over that many seconds. Only the picture fades. The tween counts physics
+  ticks, so a frame at a given tick always shows the same shade, and the
+  game runs exactly as it would without the fade. Under rollback the fade
+  waits for the scene change, as the change does. The play protocol sees the
+  fade as a `screen` view (`{"kind": "fade", "dark": 0.5}`). The RPG fades
+  into and out of its fights.
 - Laboratory: the play protocol, phase 4: the console and the MCP server.
   - `quantum play rpg` plays a game a request at a time in the terminal.
     Typed words are the requests: `right 32`, `tap select`,
