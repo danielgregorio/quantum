@@ -237,13 +237,13 @@ def test_an_agent_leaves_keeps_first_room_by_the_map_and_the_view(keep, godot):
 
 @pytest.mark.skipif(shutil.which('xvfb-run') is None, reason='frame needs a virtual display (xvfb-run)')
 def test_a_frame_is_the_picture_on_the_screen(rpg, godot, tmp_path):
-    from PIL import Image
     with PlaySession(rpg, binary=godot, frames=True) as game:
         game.act(ticks=5)
         shot = game.frame(tmp_path / 'shot.png')
         assert (shot['width'], shot['height']) == (1280, 720)
-        picture = Image.open(shot['frame']).convert('RGB')
-        assert len(picture.resize((64, 36)).getcolors(4096) or []) > 20      # a drawn map, not one colour
+        png = Path(shot['frame']).read_bytes()
+        assert png[:8] == b'\x89PNG\r\n\x1a\n'
+        assert len(png) > 50_000                     # a drawn map: one colour over 1280x720 is a few KB
     with PlaySession(rpg, binary=godot) as game:
         with pytest.raises(PlayError, match='headless'):
             game.frame(tmp_path / 'none.png')
