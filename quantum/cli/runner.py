@@ -359,6 +359,12 @@ Examples:
     desktop_parser.add_argument('--width', type=int, default=1024, help='Window width (default: 1024)')
     desktop_parser.add_argument('--height', type=int, default=720, help='Window height (default: 720)')
 
+    # Play: a game step by step, for a person or (with --mcp) an agent (PLAN_PLAY_PROTOCOL.md)
+    play_parser = subparsers.add_parser('play', help='Play a game step by step (or serve it to an agent, --mcp)')
+    play_parser.add_argument('game', nargs='?', help='a game of projects/ (rpg, chess...) or a .q')
+    play_parser.add_argument('--mcp', action='store_true', help='serve the play tools over MCP (stdio)')
+    play_parser.add_argument('--frames', action='store_true', help='draw on a virtual display, for "frame"')
+
     # Admin command (the screens need the [admin] extra; checked when run)
     from quantum.cli.admin import create_admin_parser
     create_admin_parser(subparsers)
@@ -451,6 +457,10 @@ def main():
     elif args.command == 'desktop':
         from quantum.runtime.ui_desktop import run_desktop
         sys.exit(run_desktop(args.config, args.path, width=args.width, height=args.height))
+
+    elif args.command == 'play':
+        from quantum.cli.play import main as play_main
+        sys.exit(play_main(args))
 
     elif args.command == 'admin':
         from quantum.cli.admin import handle_admin

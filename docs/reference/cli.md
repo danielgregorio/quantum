@@ -108,6 +108,18 @@ Open the application's pages in a desktop window.
 
 Specified by: [UI-4](./spec#UI-4) · [UI-8](./spec#UI-8)
 
+<a id="cli-play"></a>
+
+## `quantum play`
+
+Play a game step by step (or serve it to an agent, --mcp).
+
+| Argument | Meaning | Default | Values |
+|---|---|---|---|
+| `[game]` | a game of projects/ (rpg, chess...) or a .q |  |  |
+| `--mcp` | serve the play tools over MCP (stdio) |  |  |
+| `--frames` | draw on a virtual display, for "frame" |  |  |
+
 <a id="cli-admin"></a>
 
 ## `quantum admin`

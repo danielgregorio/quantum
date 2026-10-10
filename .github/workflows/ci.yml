@@ -79,10 +79,11 @@ jobs:
       - name: Install dependencies
         # The same as the test job (without the browser): pytest collects the
         # whole suite before filtering by marker, and the admin conftest
-        # imports its dependencies at collection.
+        # imports its dependencies at collection. [play]: the MCP server of
+        # the play protocol, which tests/godot/test_godot_play_mcp.py drives.
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev,db,jobs,websocket]"
+          pip install -e ".[dev,db,jobs,websocket,play]"
           pip install -r quantum_admin/backend/requirements.txt
 
       - name: Godot (pinned in quantum/runtime/godot_bin.py)
