@@ -254,6 +254,7 @@ func _on_hitbox_entered(area: Area2D) -> void:
 		if cooldown > 0:
 			_cooldowns[h["handler"]] = _ticks + cooldown
 		if P.has_method(h["handler"]):
+			Q.event("touch", {"who": Q.who(self), "with": Q.who(other)})
 			P.call(h["handler"], self, other)
 
 

@@ -21,10 +21,9 @@ PROJECTS = Path(__file__).resolve().parents[2] / 'projects'
 def _build(godot, tmp_path_factory, game: str) -> Path:
     from quantum.core.parser import QuantumParser
     from quantum.runtime.godot import compile_game
-    src = tmp_path_factory.mktemp(game)
-    shutil.copytree(PROJECTS / game, src / game, ignore=shutil.ignore_patterns('godot'))
-    out = Path(compile_game(QuantumParser(use_cache=False).parse_file(str(src / game / f'{game}.q')),
-                            str(src / 'godot'), source_dir=str(src / game)))
+    out_dir = tmp_path_factory.mktemp(game)    # its assets are found from the project, and above it
+    out = Path(compile_game(QuantumParser(use_cache=False).parse_file(str(PROJECTS / game / f'{game}.q')),
+                            str(out_dir / 'godot'), source_dir=str(PROJECTS / game)))
     assert check_project(out, binary=godot) == []
     return out
 
@@ -55,7 +54,7 @@ def test_the_game_waits_and_an_act_runs_exactly_its_ticks(rpg, godot):
         assert (start['tick'], start['scene']) == (0, 'exploration')
         assert start['state']['nodes']['player'] == {'col': 3, 'row': 4, 'x': 224.0, 'y': 288.0, 'facing': [1, 0]}
         assert {'left', 'right', 'up', 'down', 'select'} <= set(start['controls'])
-        assert PlaySession.view(start, 'hud')['items'] == ['Potions 0', 'Keys 0']
+        assert PlaySession.screen(start, 'hud')['items'] == ['Potions 0', 'Keys 0']
         assert game.observe()['tick'] == 0                          # observing runs nothing
         moved = game.act(hold=['right'], ticks=16)                   # a step is 15 ticks and the one that reads it
         assert (moved['tick'], moved['stopped']) == (16, 'ticks')
@@ -79,7 +78,7 @@ def test_until_stops_on_its_condition_or_its_ticks(rpg, godot):
         assert walked['stopped'] == 'condition' and walked['state']['nodes']['player']['row'] == 7
         talking = game.until('talking', hold=['right'])              # right along row 7, into the opponent
         assert talking['stopped'] == 'condition' and talking['state']['talking'] == 'npc'
-        said = PlaySession.view(talking, 'dialogue')
+        said = PlaySession.screen(talking, 'dialogue')
         assert (said['who'], said['text']) == ('UNKNOWN', "Hey, it's a good time to have a JRPG fight, right?")
         assert game.until('changed scene', max_ticks=30)['stopped'] == 'max_ticks'   # paused: nothing changes
 
@@ -110,7 +109,7 @@ def test_an_agent_wins_the_rpg_by_looking(rpg, godot):
             if seen['state']['turn'] != 'player':
                 seen = game.until(["turn == 'player'", 'changed scene'], max_ticks=120)
                 continue
-            menu = PlaySession.view(seen, 'menu')
+            menu = PlaySession.screen(seen, 'menu')
             labels = [item.get('button') for item in menu['items']]
             want = labels.index('Attack')
             if menu['focus'] != want:
@@ -119,7 +118,7 @@ def test_an_agent_wins_the_rpg_by_looking(rpg, godot):
             seen = game.act(tap=['select'], ticks=2)
         seen = game.until('talking', max_ticks=30)                     # back on the map, the opponent speaks
         assert seen['scene'] == 'exploration'
-        assert PlaySession.view(seen, 'dialogue')['text'] == 'Congratulations, you won!'
+        assert PlaySession.screen(seen, 'dialogue')['text'] == 'Congratulations, you won!'
         seen = game.act(tap=['select'], ticks=2)
         assert seen['state']['game']['outcome'] == '' and not seen['state'].get('talking')
         assert game.requests < 40, game.requests                       # 16 when this was written
@@ -128,7 +127,7 @@ def test_an_agent_wins_the_rpg_by_looking(rpg, godot):
 def test_chess_is_played_with_the_cursor(chess, godot):
     with PlaySession(chess, binary=godot) as game:
         title = game.observe()
-        menu = PlaySession.view(title, 'menu')
+        menu = PlaySession.screen(title, 'menu')
         assert menu['items'][menu['focus']]['button'] == 'Two players, one board'
         board = game.act(tap=['select'], ticks=2)
         assert board['scene'] == 'game'
@@ -148,3 +147,103 @@ def test_chess_is_played_with_the_cursor(chess, godot):
         assert after['state']['board'][e4] == before[e2] and not after['state']['board'][e2]
         after = move('e7', 'e5')                                      # the same mouse plays black
         assert after['state']['board'][3 * 8 + 4] == before[1 * 8 + 4]
+
+
+# --- phase 2: perception ---
+
+@pytest.fixture(scope='module')
+def keep(godot, tmp_path_factory) -> Path:
+    return _build(godot, tmp_path_factory, 'keep')
+
+
+def test_the_view_draws_the_screen_as_text(rpg, godot):
+    with PlaySession(rpg, binary=godot) as game:
+        seen = game.view()
+        assert seen['cell'] == 64 and seen['origin'] == [0, 0]
+        assert seen['view'][4] == '#..P..##k........###'                       # the player, the key, the rocks
+        assert seen['view'][7] == '###.........o.....##'                       # the opponent
+        assert seen['legend'] == {'P': ['player'], 'k': ['key'], 'o': ['opponent'], 'p': ['potion']}
+        assert game.map()['cells'][4] == '#.....##.........###'                 # the map alone: no one on it
+
+
+def test_the_events_of_a_fight_tell_each_hit(rpg, godot):
+    with PlaySession(rpg, binary=godot) as game:
+        walked = game.until('player.row == 7', hold=['down'])
+        assert walked['map']['cells'][7] == '###...............##'                # the session's first map
+        met = game.until('event:say', hold=['right'])
+        kinds = [e['kind'] for e in met['events']]
+        order = [kinds.index(k) for k in ('touch', 'say', 'pause')]
+        assert order == sorted(order)                                          # walked into it, it spoke, all stopped
+        said = next(e for e in met['events'] if e['kind'] == 'say')
+        assert (said['who'], said['dialogue']) == ('UNKNOWN', 'npc')
+        assert 'map' not in met                                                # the same scene: no map again
+        for _ in range(3):
+            seen = game.act(tap=['select'], ticks=2)                         # the last line opens the fight
+        assert seen['scene'] == 'combat' and seen['map'] is None              # a new scene: its map, here none
+        assert {'kind': 'scene', 'name': 'combat', 'tick': seen['tick'] - 2} in seen['events']
+        hit = game.until(["turn == 'player'", 'changed scene'], tap=['select'], max_ticks=120)
+        sets = {e['name']: (e['from'], e['to']) for e in hit['events'] if e['kind'] == 'set'}
+        assert sets['foe_life'] == (7, 5) and sets['life'] == (10, 8)          # 2 dealt; 3 taken, less 1 armor
+        assert [e for e in hit['events'] if e['kind'] == 'choose'] == [
+            {'kind': 'choose', 'shown': True, 'button': 'Attack', 'tick': hit['events'][0]['tick']}]
+        assert not seen.get('events_dropped')
+
+
+def test_an_agent_leaves_keeps_first_room_by_the_map_and_the_view(keep, godot):
+    """Phase 2's check: the way out found on the map, the player found in the view, nothing else."""
+    from collections import deque
+    with Counted(keep, binary=godot) as game:
+        cells = game.map()['cells']
+        seen = game.view()
+        tile = int(seen['cell'])
+        start = next((x + seen['origin'][0], y + seen['origin'][1])
+                     for y, row in enumerate(seen['view']) for x, ch in enumerate(row) if ch in '@P')
+        rows, cols = len(cells), len(cells[0])
+        exits = {(x, y) for y in range(rows) for x in range(cols)
+                 if cells[y][x] == '.' and (x in (0, cols - 1) or y in (0, rows - 1))}
+        came = {start: None}
+        todo = deque([start])
+        while todo:                                                          # the shortest way to an opening
+            at = todo.popleft()
+            if at in exits:
+                break
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nxt = (at[0] + dx, at[1] + dy)
+                if 0 <= nxt[0] < cols and 0 <= nxt[1] < rows and cells[nxt[1]][nxt[0]] == '.' and nxt not in came:
+                    came[nxt] = at
+                    todo.append(nxt)
+        path = [at]
+        while came[path[-1]] is not None:
+            path.append(came[path[-1]])
+        path.reverse()
+        names = {(1, 0): ('right', 'x', '>='), (-1, 0): ('left', 'x', '<='),
+                 (0, 1): ('down', 'y', '>='), (0, -1): ('up', 'y', '<=')}
+        i = 0
+        seen = game.observe()
+        while seen['scene'] == 'room-1' and i < len(path) - 1:
+            step = (path[i + 1][0] - path[i][0], path[i + 1][1] - path[i][1])
+            j = i + 1                                                         # run on while the way goes on straight
+            while j < len(path) - 1 and (path[j + 1][0] - path[j][0], path[j + 1][1] - path[j][1]) == step:
+                j += 1
+            key, axis, op = names[step]
+            centre = (path[j][0] if axis == 'x' else path[j][1]) * tile + tile // 2
+            seen = game.until([f'player.{axis} {op} {centre}', 'changed scene'], hold=[key], max_ticks=600)
+            i = j
+        if seen['scene'] == 'room-1':                                         # at the opening: on, out of the room
+            seen = game.until('changed scene', hold=[names[step][0]], max_ticks=120)
+        assert seen['scene'] == 'room-2', seen['scene']
+        assert game.requests < 12
+
+
+@pytest.mark.skipif(shutil.which('xvfb-run') is None, reason='frame needs a virtual display (xvfb-run)')
+def test_a_frame_is_the_picture_on_the_screen(rpg, godot, tmp_path):
+    with PlaySession(rpg, binary=godot, frames=True) as game:
+        game.act(ticks=5)
+        shot = game.frame(tmp_path / 'shot.png')
+        assert (shot['width'], shot['height']) == (1280, 720)
+        png = Path(shot['frame']).read_bytes()
+        assert png[:8] == b'\x89PNG\r\n\x1a\n'
+        assert len(png) > 50_000                     # a drawn map: one colour over 1280x720 is a few KB
+    with PlaySession(rpg, binary=godot) as game:
+        with pytest.raises(PlayError, match='headless'):
+            game.frame(tmp_path / 'none.png')

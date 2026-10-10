@@ -14,13 +14,22 @@ extends SceneTree
 #   {"op": "observe"}
 #   {"op": "act", "ticks": N, "hold": [...], "tap": [...], "press": [...], "release": [...], "cursor": [x, y]}
 #   {"op": "until", "max_ticks": N, "condition": {...}, ...the same actions as act}
+#   {"op": "map"}     the scene's tilemap as a grid of what is solid ("#"), one-way ("-") or open (".")
+#   {"op": "view"}    the screen as text at the map's cell size: walls, characters, things, with a legend
+#   {"op": "frame", "path": "/tmp/x.png"}   the real picture (a session with a display only)
 #   {"op": "end"}
+# Every answer to an act or an until carries the events of its ticks: what
+# the runtime reported (Q.event: touch, hit, step, bump, spawn, destroy,
+# damage, death, sound, scene, say, said, choose, pause, resume) and every
+# change of a scene's or the game's variable ("set": name, from, to). An
+# answer after a scene change carries the new scene's map.
 # What the agent may do is what a player may do: press and release the
 # game's actions and point its cursor. Nothing else in the game is reachable.
 #
 # A condition, checked after every tick of an until:
 #   {"path": "player.col", "op": "==", "value": 11}   (==, !=, <, <=, >, >=; "truthy", "falsy")
 #   {"changed": "scene"}                              (differs from when the until began)
+#   {"event": "say"} / {"event": "touch", "with": "key"}  (one happened during the until)
 #   {"any": [...]} / {"all": [...]}
 # A path is looked up in the observation, then in its state, the state's
 # nodes, the game's state, and the screen's views by kind ("dialogue.text").
@@ -34,6 +43,10 @@ var taps: Array = []          # released after the request's first tick
 var held: Dictionary = {}     # pressed by "press", until a "release"
 var until_start: Dictionary = {}
 var ended := false
+var q: Node = null              # the Q autoload, which records the events
+var vars_before: Dictionary = {}  # the variables after the last tick, for the "set" events
+var scene_before := ""
+var map_sent := ""               # the scene whose map the agent has
 
 
 func _initialize() -> void:
@@ -49,6 +62,11 @@ func _initialize() -> void:
 func _physics_process(_delta: float) -> bool:
 	if ended:
 		return true
+	if q == null:
+		q = root.get_node_or_null("Q")
+		if q != null:
+			q.tracing = true
+	_note_sets()
 	if not taps.is_empty() and request.has("_first_done"):
 		for a in taps:
 			if not held.has(a):
@@ -60,9 +78,7 @@ func _physics_process(_delta: float) -> bool:
 			and _holds(request.get("condition", {}), observation()):
 		_finish("condition")
 	if run_left > 0:
-		run_left -= 1
-		ticks += 1
-		request["_first_done"] = true
+		_tick()
 		return false
 	if not request.is_empty():
 		_finish("ticks" if request.get("op") == "act" else "max_ticks")
@@ -94,10 +110,14 @@ func _physics_process(_delta: float) -> bool:
 				if run_left == 0:
 					_finish("ticks")
 					continue
-				run_left -= 1
-				ticks += 1
-				request["_first_done"] = true
+				_tick()
 				return false
+			"map":
+				_answer({"tick": ticks, "map": game_map()})
+			"view":
+				_answer(view())
+			"frame":
+				_answer(frame(str(req.get("path", "user://frame.png"))))
 			_:
 				_answer({"error": "no such request: " + str(req.get("op", ""))})
 	return false
@@ -139,6 +159,56 @@ func _start(req: Dictionary) -> String:
 	return ""
 
 
+func _tick() -> void:
+	if q != null:
+		q.event_tick = ticks
+	run_left -= 1
+	ticks += 1
+	request["_first_done"] = true
+
+
+# A variable of the scene or the game that changed on the tick just run is a
+# "set" event; a scene change is reported by the runtime ("scene") instead.
+func _note_sets() -> void:
+	var now := _vars()
+	var name_ := _scene_name()
+	if name_ == scene_before and q != null and q.tracing:
+		for k in now.keys():
+			if vars_before.has(k) and JSON.stringify(now[k]) != JSON.stringify(vars_before[k]):
+				var e := {"kind": "set", "name": k, "from": vars_before[k], "to": now[k], "tick": ticks - 1}
+				if q.events.size() < 500:
+					q.events.append(e)
+	vars_before = now
+	scene_before = name_
+
+
+func _vars() -> Dictionary:
+	var out := {}
+	var s := _scene_node()
+	if s != null and s.has_method("_q_state"):
+		var own: Dictionary = s._q_state()
+		for k in own.keys():
+			out[k] = own[k]
+	var g := root.get_node_or_null("G")
+	if g != null and g.has_method("quantum_state"):
+		var game: Dictionary = g.quantum_state()
+		for k in game.keys():
+			out["game." + str(k)] = game[k]
+	return out
+
+
+func _scene_node() -> Node:
+	for n in _walk(scene):
+		if n.has_method("q_pause"):
+			return n
+	return null
+
+
+func _scene_name() -> String:
+	var s := _scene_node()
+	return String(s.name) if s != null else ""
+
+
 func _finish(why: String) -> void:
 	for a in holds:
 		if not held.has(a):
@@ -146,6 +216,15 @@ func _finish(why: String) -> void:
 	holds = []
 	var obs := observation()
 	obs["stopped"] = why
+	if q != null:
+		obs["events"] = q.events.duplicate()
+		if q.events_dropped > 0:
+			obs["events_dropped"] = q.events_dropped
+		q.events.clear()
+		q.events_dropped = 0
+	if obs["scene"] != map_sent:
+		map_sent = obs["scene"]
+		obs["map"] = game_map()
 	request = {}
 	run_left = 0
 	_answer(obs)
@@ -201,6 +280,17 @@ func _holds(cond: Dictionary, obs: Dictionary) -> bool:
 			if not _holds(c, obs):
 				return false
 		return true
+	if cond.has("event"):
+		for e in (q.events if q != null else []):
+			if e["kind"] != str(cond["event"]):
+				continue
+			var all_match := true
+			for k in cond.keys():
+				if k != "event" and (not e.has(k) or str(e[k]) != str(cond[k])):
+					all_match = false
+			if all_match:
+				return true
+		return false
 	if cond.has("changed"):
 		return JSON.stringify(lookup(obs, str(cond["changed"]))) != JSON.stringify(lookup(until_start, str(cond["changed"])))
 	if cond.has("path"):
@@ -275,3 +365,125 @@ func lookup(obs: Dictionary, path: String):
 			if ok:
 				return cur
 	return null
+
+
+# --- the map, the view, the picture ---
+
+func _tilemap() -> Node:
+	var s := _scene_node()
+	return s.get_node_or_null("Tilemap") if s != null else null
+
+
+# The scene's tilemap as rows of text: "#" a tile that stops (a layer with
+# collision, the tile not shape="none"), "-" one a body stands on from above
+# only, "." open. null for a scene without a tilemap.
+func game_map():
+	var map := _tilemap()
+	if map == null:
+		return null
+	var rows := []
+	for y in map.rows_count:
+		var row := ""
+		for x in map.columns:
+			row += _cell(map, Vector2i(x, y))
+		rows.append(row)
+	return {"tile": map.tile, "columns": map.columns, "rows": map.rows_count, "cells": rows}
+
+
+func _cell(map: Node, c: Vector2i) -> String:
+	var mark := "."
+	for layer in map.get_children():
+		if not (layer is TileMapLayer) or layer.tile_set.get_physics_layers_count() == 0:
+			continue
+		var data: TileData = layer.get_cell_tile_data(c)
+		if data == null or data.get_collision_polygons_count(0) == 0:
+			continue
+		if data.is_collision_polygon_one_way(0, 0):
+			mark = "-"
+		else:
+			return "#"
+	return mark
+
+
+# What is on the screen, as text, one character a cell of the map's size (16
+# px without a map): the map's marks, then the things (the first letter of
+# their tag) and the characters (the first letter of their name, upper case;
+# "@" for the one the camera follows). The legend says which is which.
+func view() -> Dictionary:
+	var s := _scene_node()
+	if s == null:
+		return {"error": "no scene"}
+	var map := _tilemap()
+	var cell := float(map.tile) if map != null else 16.0
+	var size := Vector2(float(ProjectSettings.get_setting("display/window/size/viewport_width", 256)),
+		float(ProjectSettings.get_setting("display/window/size/viewport_height", 224)))
+	var top_left := Vector2.ZERO
+	var cam = s.get("q_camera")
+	if cam != null and is_instance_valid(cam):
+		top_left = cam.get_screen_center_position() - size / 2.0
+	var c0 := Vector2i(floori(top_left.x / cell), floori(top_left.y / cell))
+	var cols := int(ceil(size.x / cell)) + (1 if fmod(top_left.x, cell) != 0.0 else 0)
+	var rows := int(ceil(size.y / cell)) + (1 if fmod(top_left.y, cell) != 0.0 else 0)
+	var grid := []
+	for y in rows:
+		var line := []
+		for x in cols:
+			var c := c0 + Vector2i(x, y)
+			if map != null and c.x >= 0 and c.y >= 0 and c.x < map.columns and c.y < map.rows_count:
+				line.append(_cell(map, c))
+			else:
+				line.append(" " if map != null else ".")
+		grid.append(line)
+	var legend := {}
+	var followed = cam.get_parent() if cam != null and is_instance_valid(cam) else null
+	var marks := []
+	for n in s.get_children():
+		if not (n is Node2D) or n.is_queued_for_deletion():
+			continue
+		var letter := ""
+		var label := ""
+		if n.is_in_group("q_thing"):
+			label = str(n.tag)
+			letter = label.left(1).to_lower()
+		elif n.is_in_group("q_named"):
+			label = String(n.name)
+			letter = "@" if n == followed else label.left(1).to_upper()
+		else:
+			continue
+		marks.append([n, letter, label])
+	for m in marks:   # things first, characters over them
+		if m[1] == m[1].to_lower() and m[1] != "@":
+			_put(grid, m[0], m[1], c0, cell)
+	for m in marks:
+		if not (m[1] == m[1].to_lower() and m[1] != "@"):
+			_put(grid, m[0], m[1], c0, cell)
+	for m in marks:
+		var names: Array = legend.get(m[1], [])
+		if not m[2] in names:
+			names.append(m[2])
+		legend[m[1]] = names
+	var text := []
+	for line in grid:
+		text.append("".join(line))
+	return {"tick": ticks, "scene": _scene_name(), "cell": cell, "origin": [c0.x, c0.y], "view": text,
+		"legend": legend}
+
+
+func _put(grid: Array, n: Node2D, letter: String, c0: Vector2i, cell: float) -> void:
+	var c := Vector2i(floori(n.position.x / cell), floori(n.position.y / cell)) - c0
+	if c.y >= 0 and c.y < grid.size() and c.x >= 0 and c.x < grid[c.y].size():
+		grid[c.y][c.x] = letter
+
+
+# The picture on the screen, saved as a PNG: only with a display (a session
+# opened with frames), as headless Godot draws nothing.
+func frame(path: String) -> Dictionary:
+	if DisplayServer.get_name() == "headless":
+		return {"error": "no picture in a headless session: open it with frames=True"}
+	var img := root.get_viewport().get_texture().get_image()
+	if img == null or img.is_empty():
+		return {"error": "nothing drawn yet"}
+	var err := img.save_png(path)
+	if err != OK:
+		return {"error": "cannot write " + path}
+	return {"tick": ticks, "frame": path, "width": img.get_width(), "height": img.get_height()}

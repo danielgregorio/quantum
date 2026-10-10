@@ -212,6 +212,7 @@ func _physics_process(_delta: float) -> void:
 func _choose(i: int) -> void:
 	focus = i
 	var spec: Dictionary = _items[i]["spec"]
+	Q.event("choose", quantum_view()["items"][i])
 	if spec["kind"] == "button":
 		if _scene.has_method(spec["handler"]):
 			_scene.call(spec["handler"], null, null)

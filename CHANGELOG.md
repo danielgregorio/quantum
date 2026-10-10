@@ -10,6 +10,19 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the play protocol, phase 2: perception. An answer to an act
+  or an until now carries the events of its ticks: what the runtime reports
+  through `Q.event()` (a touch, a hit, a step or a bump, a thing spawned or
+  destroyed, damage, a death, a sound, a scene, a line said, a button
+  chosen, a pause) and every variable of the scene or the game that changed
+  (`set`, from, to). `Q.event()` records nothing outside a play session.
+  `until` stops on an event (`"event:say"`, `"event:touch with=key"`). The
+  first answer in a scene carries its `map`: the tilemap as rows of `#`
+  (stops), `-` (one-way) and `.` (open). `view()` draws the screen as
+  text, with a legend of the characters and things on it, and `frame()`
+  saves the real picture in a session opened with `frames=True`. In the
+  tests, an agent leaves Keep's first room by the map and the view alone.
+
 - Laboratory: the play protocol, phase 1 (`PLAN_PLAY_PROTOCOL.md`): a game
   an agent plays step by step. `PlaySession` (`quantum/runtime/godot_play.py`)
   runs a built game headless through a driver (`godot_play.gd`) that waits
