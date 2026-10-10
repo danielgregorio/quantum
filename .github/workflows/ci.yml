@@ -104,6 +104,54 @@ jobs:
           QUANTUM_GODOT_REQUIRED: '1'
         run: pytest -n auto -m laboratory
 
+  games-in-browser:
+    # The web builds of the games, played in Chromium as a visitor of /games/
+    # would (scripts/check-games-in-browser.py). The replay tests above run each
+    # game in Godot with its files on disk; an export carries only Godot's
+    # imports, and its keys arrive as browser events. Both broke on the site
+    # once while the Laboratory was green. Each game must start on its scene,
+    # print no error, and react to its keys (projects/games.json: "check").
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install quantum and a headless browser
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e . playwright
+          python -m playwright install --with-deps chromium
+
+      # The binary and the export templates (1.2 GB), with the same cache as
+      # Deploy Docs, which exports the same games for the site.
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/quantum
+            ~/.local/share/godot/export_templates
+          key: godot-export-${{ hashFiles('quantum/runtime/godot_bin.py') }}
+      - run: python scripts/godot.py install
+      - run: python scripts/export-games.py --install-templates
+
+      - name: Export every game for the browser
+        run: python scripts/export-games.py --preset Web --out "$RUNNER_TEMP/games"
+
+      - name: Play them in Chromium
+        run: python scripts/check-games-in-browser.py "$RUNNER_TEMP/games"
+
+      - name: What each game showed (check.png)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: games-in-browser
+          path: ${{ runner.temp }}/games/*/check.png
+          if-no-files-found: ignore
+
   docs:
     # The docs site, on every push and pull request. "Deploy Docs" builds it
     # too, but only after a change to docs/ has reached main -- a broken link

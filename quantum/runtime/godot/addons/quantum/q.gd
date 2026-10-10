@@ -392,6 +392,26 @@ func sample_local() -> Dictionary:
 func set_input(next: Dictionary) -> void:
 	_prev = _now
 	_now = next
+	if OS.has_feature("web"):
+		for a in next.keys():
+			if not _web_pressed.has(a):
+				_web_pressed[a] = true
+				web_report("quantumActions", ",".join(PackedStringArray(_web_pressed.keys())))
+
+
+# In a browser, what the game is doing, for a page to read: window.quantumScene
+# is the scene being played and window.quantumActions every action pressed
+# since the start, comma-separated. The CI's browser check
+# (scripts/check-games-in-browser.py) plays the web builds with them.
+var _web_pressed: Dictionary = {}
+
+
+static func web_report(key: String, value: String) -> void:
+	if not OS.has_feature("web"):
+		return
+	var window = JavaScriptBridge.get_interface("window")
+	if window != null:
+		window[key] = value
 
 
 func held(action: String) -> bool:

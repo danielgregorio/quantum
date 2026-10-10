@@ -64,3 +64,22 @@ def test_the_games_page_shows_every_game_with_its_screenshot_and_links(tmp_path)
     # a game that was not built is not on the page
     shutil.rmtree(tmp_path / 'pong')
     assert 'id="pong"' not in eg.write_index(tmp_path).read_text(encoding='utf-8')
+
+
+def test_what_the_browser_check_expects_is_in_each_game(tmp_path):
+    # scripts/check-games-in-browser.py waits for these scenes and actions in
+    # the web build; a scene renamed in a .q must be renamed here too.
+    from quantum.core.parser import QuantumParser
+    from quantum.runtime.godot import compile_game
+    for g in json.loads((REPO / 'projects' / 'games.json').read_text(encoding='utf-8'))['games']:
+        src = REPO / 'projects' / g['name']
+        out = compile_game(QuantumParser(use_cache=False).parse_file(str(src / f'{g["name"]}.q')),
+                           str(tmp_path / g['name']), source_dir=str(src))
+        game = json.loads((Path(out) / 'game.json').read_text(encoding='utf-8'))
+        check = g['check']
+        assert check['scene'] == game['initial'], g['name']
+        assert check['press'] and ('then' in check or check.get('actions')), g['name']
+        if 'then' in check:
+            assert check['then'] in game['scenes'], g['name']
+        for action in check.get('actions', []):
+            assert action in game['actions'], (g['name'], action)
