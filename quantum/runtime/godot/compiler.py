@@ -30,6 +30,8 @@ DEFAULT_INPUTS = {
     'jump': ['Space', 'Z', 'X', 'JoyA'],
     'select': ['Enter', 'MouseLeft', 'JoyA'],
     'cancel': ['Escape', 'MouseRight', 'JoyB'],
+    # the mouse button alone: a menu tells a click (what is under the pointer) from Enter (what has the focus)
+    'click': ['MouseLeft'],
 }
 MOUSE_BUTTONS = {'MouseLeft': 1, 'MouseRight': 2, 'MouseMiddle': 3}
 

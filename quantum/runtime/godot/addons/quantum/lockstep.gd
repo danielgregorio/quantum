@@ -208,8 +208,9 @@ func _physics_process(_delta: float) -> void:
 		return
 	# 1. what this player presses now runs `delay` ticks from now, everywhere
 	var mask := 0
+	var local: Dictionary = Q.sample_local()   # held, and tapped since the last tick
 	for i in ACTIONS.size():
-		if Input.is_action_pressed(ACTIONS[i]):
+		if local.has(ACTIONS[i]):
 			mask |= 1 << i
 	var ahead := tick + delay
 	if not _frames.has(ahead):

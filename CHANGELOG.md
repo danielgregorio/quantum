@@ -76,6 +76,20 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- Laboratory: a quick click or tap was lost: the game reads its keys once a
+  tick, and a press released before the next tick was never seen — on the
+  site, Chess picked no piece and Towers built nothing for a brisk click.
+  `Q` keeps the presses that come between two ticks for the next one, the
+  lockstep and the rollback send them too (`Q.sample_local()`).
+- Laboratory: a menu chose nothing on Enter while the mouse rested off its
+  buttons (clicking the game to give it the keyboard leaves it there). A
+  new default action, `click` (the mouse button alone), tells a click from
+  Enter: a click chooses what is under the pointer, or nothing; Enter, or
+  the joypad's A, chooses the focused button.
+- Laboratory: Arena's fighters are drawn again, as one silhouette each
+  instead of separately outlined bones, in a guard with the fists up: they
+  read as fighters, and which way each faces.
+
 - Laboratory: Chess on one machine: black could not move. The board took
   black's click only from player 2's select, which no key presses on a
   single machine; now on one machine the same pointer plays both colours,

@@ -5,9 +5,11 @@ extends CanvasLayer
 # (Q): up/down move the focus, select chooses. The pointer is the player's
 # qg:cursor (the builder adds a hidden one when the scene has none), so the
 # mouse goes through the same path as in a replay or the lockstep: when the
-# pointer moves onto a button the focus goes there, and a select made with
-# the pointer chooses what is under it, or nothing. Godot's own GUI focus
-# and mouse handling are off, so they cannot choose a second way.
+# pointer moves onto a button the focus goes there. A click (select with the
+# mouse button, the "click" action) chooses what is under the pointer, or
+# nothing; Enter or the joypad (select alone) chooses what has the focus,
+# wherever the pointer rests. Godot's own GUI focus and mouse handling are
+# off, so they cannot choose a second way.
 #
 # A field, once chosen, takes the keyboard until Enter or until it loses the
 # focus; what is typed is the bound state. Typing is local: it is not input
@@ -19,7 +21,6 @@ var _scene: Node = null
 var _items: Array = []            # [{spec, control, line}]
 var _editing: int = -1            # the field being typed in, or -1
 var _pointer_seen = null          # the pointer at the last tick (null: not yet seen)
-var _pointer_last: bool = false   # the last move was the pointer's, not a key's
 var _if_method = null             # qg:menu if=: the menu is there only while it is true
 
 
@@ -146,13 +147,12 @@ func _item_at(p: Vector2) -> int:
 
 # For the rollback.
 func q_save() -> Dictionary:
-	return {"f": focus, "ps": _pointer_seen, "pl": _pointer_last}
+	return {"f": focus, "ps": _pointer_seen}
 
 
 func q_load(d: Dictionary) -> void:
 	focus = d["f"]
 	_pointer_seen = d["ps"]
-	_pointer_last = d["pl"]
 
 
 func active() -> bool:
@@ -176,20 +176,17 @@ func _physics_process(_delta: float) -> void:
 			_pointer_seen = pointer
 		elif pointer != _pointer_seen:
 			_pointer_seen = pointer
-			_pointer_last = true
 			var hit := _item_at(pointer)
 			if hit >= 0:
 				focus = hit
 	var at := shown.find(focus)
 	if Q.tapped(_a("down")):
 		focus = shown[(at + 1) % shown.size()]
-		_pointer_last = false
 	elif Q.tapped(_a("up")):
 		focus = shown[(at - 1 + shown.size()) % shown.size()]
-		_pointer_last = false
 	if Q.tapped(_a("select")):
 		var target := focus
-		if _pointer_last and pointer != null:
+		if Q.held(_a("click")) and pointer != null:
 			target = _item_at(pointer)
 		if target >= 0:
 			_choose(target)

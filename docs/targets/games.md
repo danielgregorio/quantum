@@ -504,7 +504,7 @@ Goes inside: `qg:hud`.
 
 ### `qg:menu`
 
-A list of buttons (and text fields) over the scene. A player moves through it with up/down and chooses with select (Enter, a click, the joypad's A), or points at a button with the mouse — the pointer is that player's qg:cursor, so a click is replayed and travels in the lockstep like a key.
+A list of buttons (and text fields) over the scene. A player moves through it with up/down and chooses with select (Enter, the joypad's A: the button that has the focus), or points at a button with the mouse and clicks it (a click away from the buttons chooses nothing) — the pointer is that player's qg:cursor and the click its "click" action, so a click is replayed and travels in the lockstep like a key.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
