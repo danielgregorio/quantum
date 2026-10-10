@@ -10,6 +10,17 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: CI plays the games in a browser. A new job, `games-in-browser`,
+  exports every game for the web and opens each one in a headless Chromium
+  (`scripts/check-games-in-browser.py`). The game must start on its first
+  scene, print no error to the console (a picture, sound or font it cannot
+  load, a script error) and react to its keys. What it expects of each game
+  is the `check` of `projects/games.json`. In a browser the runtime reports
+  the scene being played in `window.quantumScene`, and every action pressed so
+  far in `window.quantumActions`. A screenshot of each game is kept with the
+  run. This is the check that would have caught the games that lost their
+  pictures, and the quick clicks that were lost, on the site.
+
 - Laboratory: https://quantumframework.net/games/ is a page of its own: every
   game with a screenshot, what it is, its keys, and its links (play in the
   browser, the Linux and Windows downloads, the `.q`). `scripts/export-games.py`
