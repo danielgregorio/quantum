@@ -369,7 +369,7 @@ A picture in the scene, with no behaviour: a backdrop, a divider, a sign.
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `sheet` | a name | required |  |
-| `frame` | an expression | `0` | a number, or an expression the picture follows tick by tick: {1 if hurt > 0 else 0} |
+| `frame` | an expression | `0` | a number, or an expression the picture follows tick by tick: `{1 if hurt > 0 else 0}` |
 | `x` | number | required |  |
 | `y` | number | required |  |
 
