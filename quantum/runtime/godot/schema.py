@@ -39,7 +39,8 @@ class Tag:
 
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
-           'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume')
+           'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
+           'say')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -174,7 +175,8 @@ TAGS: Dict[str, Tag] = {
         parents=('application',)),
     'tilemap': Tag(
         'The level: CSV rows of tile numbers (0 is empty, n is tile n-1 of the tileset), '
-        'or a Tiled map (src=) whose tile layers draw it and whose object layers place prefabs by class.',
+        'or a Tiled map (src=) whose tile layers draw it and whose object layers place prefabs by class. '
+        'Several in a scene are layers of one map, drawn in order (a floor, a path, the walls), on one tileset.',
         {'tileset': Attr('ident', required=True),
          'collision': Attr('bool', False, doc='every tile is solid (a Tiled layer says so with a collision property)'),
          'src': Attr('str', None, doc='a .tmx, relative to the .q or a folder above it')},
@@ -182,7 +184,12 @@ TAGS: Dict[str, Tag] = {
     'character': Tag(
         'A body the player moves: a platformer, or a walker on a world map.',
         {'id': Attr('ident', required=True),
-         'controller': Attr('enum:platformer|map|topdown|ship|fighter', required=True),
+         'controller': Attr('enum:platformer|map|topdown|ship|fighter|grid', required=True,
+                            doc='grid: steps from cell to cell of the tilemap; the tiles of a layer with collision, '
+                                'and the things, stop it, and stepping into a thing runs its qg:on-collision '
+                                '(`me.col`, `me.row`: its cell)'),
+         'step-frames': Attr('int', 15, doc='grid: ticks to walk one cell (a bump takes as long)'),
+         'diagonal': Attr('bool', False, doc='grid: two directions held at once step diagonally'),
          'player': Attr('int', 1, doc='whose keys move it (qg:input player=); 1 has the defaults'),
          'health': Attr('int', 100, doc='fighter: hits it takes; at 0 it is KO and qg:on-ko runs'),
          'facing': Attr('enum:left|right', 'right', doc='fighter: where it looks at first'),
@@ -273,6 +280,21 @@ TAGS: Dict[str, Tag] = {
          'label': Attr('str', '', doc='text before the box'),
          'max-length': Attr('int', 64)},
         parents=('menu',)),
+    'dialogue': Tag(
+        'Lines someone says, shown one at a time in a box at the bottom of the screen (qg:say opens it).',
+        {'name': Attr('ident', required=True),
+         'font': Attr('str', None, doc='a .ttf, relative to the .q or a folder above it'),
+         'size': Attr('int', 24, doc='font size')},
+        parents=('scene',)),
+    'line': Tag(
+        'One line of a qg:dialogue: who says it, and what.',
+        {'who': Attr('str', '', doc='the name over the text, or an expression ({...})'),
+         'text': Attr('str', required=True, doc='the line, or an expression ({...}) read as it is shown')},
+        parents=('dialogue',)),
+    'on-end': Tag(
+        'What happens when a qg:dialogue has shown its last line. Holds actions and statements.',
+        {},
+        parents=('dialogue',)),
     'zone': Tag(
         'An invisible rectangle with a tag: what touches it runs its qg:on-collision with= that tag.',
         {'name': Attr('ident', required=True),
@@ -510,6 +532,11 @@ TAGS: Dict[str, Tag] = {
     'resume': Tag(
         'Goes on with a paused scene.',
         {},
+        parents=('handler',)),
+    'say': Tag(
+        'Opens a qg:dialogue of the scene: its lines one at a time, select for the next. The scene is paused '
+        'while it is open (`talking()` says so); after the last line, its qg:on-end runs.',
+        {'dialogue': Attr('ident', required=True)},
         parents=('handler',)),
     'goto-scene': Tag(
         'Leaves this scene for another, at the end of the tick. Scene state is lost; game state stays.',
