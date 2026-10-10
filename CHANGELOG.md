@@ -10,6 +10,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: https://quantumframework.net/games/ is a page of its own: every
+  game with a screenshot, what it is, its keys, and its links (play in the
+  browser, the Linux and Windows downloads, the `.q`). `scripts/export-games.py`
+  writes it after the builds, from `projects/games.json` and each game's
+  `projects/<name>/screenshot.png`.
+
 - Laboratory: the games are drawn. Drift has a ship, drones, tanks, a crab
   boss that turns red when angry and a starfield; Keep a stone dungeon seen
   from above, a hero who walks and swings a visible sword in four
