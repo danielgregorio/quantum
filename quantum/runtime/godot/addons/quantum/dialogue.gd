@@ -81,6 +81,7 @@ func _show() -> void:
 	_who.text = _value(spec, "who")
 	_who.visible = _who.text != ""
 	_text.text = _value(spec, "text")
+	Q.event("say", {"dialogue": dialogue_name, "who": _who.text, "text": _text.text})
 
 
 func _value(spec: Dictionary, key: String) -> String:
@@ -100,6 +101,7 @@ func _physics_process(_delta: float) -> void:
 		return
 	line = -1
 	visible = false
+	Q.event("said", {"dialogue": dialogue_name})
 	Q.pause(_scene, false)
 	if _on_end != null and _scene.has_method(_on_end):
 		_scene.call(_on_end, null, null)

@@ -191,6 +191,7 @@ func _fire(h: Dictionary, other: Node) -> bool:
 	if cooldown > 0:
 		_cooldowns[name_] = _ticks + cooldown
 	if _scene.has_method(name_):
+		Q.event("touch", {"who": String(name), "with": Q.who(other)})
 		_scene.call(name_, self, other)
 	return true
 

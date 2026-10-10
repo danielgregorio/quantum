@@ -230,6 +230,8 @@ static func instance(game: Dictionary, scene: Node, prefab_name: String, at: Vec
 		thing = Item.new()
 	thing.setup(prefab_name, prefab, _texture(sheet), sheet["tile"])
 	thing.position = at
+	if deferred:   # made by the game as it runs (qg:spawn), not placed with the scene
+		Q.event("spawn", {"what": str(prefab.get("tag", prefab_name)), "x": snappedf(at.x, 0.1), "y": snappedf(at.y, 0.1)})
 	Q.apply_gd(thing, prefab.get("gd"))
 	if deferred:
 		scene.call_deferred("add_child", thing)

@@ -93,11 +93,48 @@ static func apply_gd(node: Node, gd) -> void:
 		node.set(name_, v)
 
 
+# --- events, for the play protocol (PLAN_PLAY_PROTOCOL.md) ---
+# What happened, as a player would notice it: a touch, a hit, a thing made or
+# gone, a sound, a scene, a line said. Recorded only while a play session
+# traces (godot_play.gd sets `tracing`); otherwise each call is one check.
+var tracing: bool = false
+var events: Array = []
+var events_dropped: int = 0
+var event_tick: int = 0
+
+
+static func event(kind: String, data: Dictionary = {}) -> void:
+	var q = (Engine.get_main_loop() as SceneTree).root.get_node_or_null("Q")
+	if q == null or not q.tracing or q.resimulating:
+		return
+	if q.events.size() >= 500:
+		q.events_dropped += 1
+		return
+	var e := data.duplicate()
+	e["kind"] = kind
+	e["tick"] = q.event_tick
+	q.events.append(e)
+
+
+# How an event names a node: a character or a named thing by its name, a thing by its tag.
+static func who(node) -> String:
+	node = _thing(node)
+	if node == null:
+		return ""
+	if node.is_in_group("q_named") or node.has_meta("q_named"):
+		return String(node.name)
+	if "tag" in node:
+		return str(node.tag)
+	return String(node.name)
+
+
 # Removes a thing from the scene at the end of the tick.
 static func destroy(node) -> void:
 	node = _thing(node)
 	if node == null:
 		return
+	if node is Node2D:
+		event("destroy", {"what": who(node), "x": snappedf(node.position.x, 0.1), "y": snappedf(node.position.y, 0.1)})
 	if node.has_method("quantum_destroy"):
 		node.quantum_destroy()
 	else:
@@ -232,6 +269,9 @@ static func damage(node, amount: int) -> void:
 	node = _thing(node)
 	if node != null and node.has_method("take_damage"):
 		node.take_damage(amount)
+		event("damage", {"what": who(node), "amount": amount, "health": node.get("health")})
+		if node.get("health") != null and int(node.get("health")) <= 0:
+			event("death", {"what": who(node)})
 
 
 # Places a prefab at a point of the scene, at the end of the tick.
@@ -284,6 +324,7 @@ static func _current_scene(node) -> Node:
 
 static func pause(node, on: bool) -> void:
 	var scene := _current_scene(node)
+	event("pause" if on else "resume")
 	if scene != null:
 		scene.q_pause(on)
 
@@ -608,6 +649,7 @@ var resimulating: bool = false   # the rollback replays old ticks: record sounds
 
 func play(name_: String) -> void:
 	sounds_played.append(name_)
+	event("sound", {"name": name_})
 	if resimulating:
 		return
 	var player: AudioStreamPlayer = _sounds.get(name_)

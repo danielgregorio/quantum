@@ -153,16 +153,19 @@ func _physics_process(_delta: float) -> void:
 		if thing.has_method("quantum_tag"):
 			for h in _handlers:
 				if h["with"] == thing.quantum_tag() and _scene.has_method(h["handler"]):
+					Q.event("touch", {"who": String(name), "with": thing.quantum_tag()})
 					_scene.call(h["handler"], self, thing)
 					fired = true
 		if fired:
 			return
 	if thing != null or _wall(target):
+		Q.event("bump", {"who": String(name), "at": [target.x, target.y]})
 		_bumping = step_frames
 		_play("bump")
 		return
 	_from = position
 	_to = _centre(target)
+	Q.event("step", {"who": String(name), "to": [target.x, target.y]})
 	_moving = step_frames
 	_play("walk")
 

@@ -150,6 +150,7 @@ func is_blocking() -> bool:
 func take_hit(damage: int, stun: int, push: float, from_facing: int) -> void:
 	if phase == "ko":
 		return
+	Q.event("hit", {"who": String(name), "damage": damage, "blocked": _blocking})
 	if _blocking:
 		_stun = maxi(1, stun / 2)
 		_push = push / 2.0 * from_facing

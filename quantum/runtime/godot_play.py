@@ -9,11 +9,15 @@ it asks for, at the fixed physics step, as a replay does::
         seen = game.observe()
         seen = game.act(hold=['right'], ticks=16)          # one cell to the right
         seen = game.until('talking', hold=['right'])        # walk until someone talks
-        seen['screen']                                      # what is on the screen to read
+        PlaySession.screen(seen, 'dialogue')                # what is on the screen to read
 
 Every answer is an observation: the tick, the scene, its state as
 ``quantum_state()`` reports it, what the screen shows (``screen``: the HUD,
-the menus, the dialogue), the actions held, and the game's actions.
+the menus, the dialogue), the actions held, and the game's actions. An
+answer to ``act`` or ``until`` also carries the ``events`` of its ticks
+(a touch, a hit, a line said, a variable set...), and, after a scene
+change, the new scene's ``map``. ``view()`` draws the screen as text;
+``frame()`` saves the real picture, in a session opened with ``frames=True``.
 """
 
 from __future__ import annotations
@@ -43,14 +47,22 @@ def condition(spec: Union[str, dict, list]) -> dict:
     """A condition for ``until``, from its short form.
 
     ``"player.col == 11"``, ``"scene != 'exploration'"``, ``"talking"`` (the
-    path is truthy), ``"not talking"``, ``"changed scene"``; a list is any
-    of them; a dict is passed as it is (``{"all": [...]}``).
+    path is truthy), ``"not talking"``, ``"changed scene"``, ``"event:say"``,
+    ``"event:touch with=key"`` (such an event happened); a list is any of
+    them; a dict is passed as it is (``{"all": [...]}``).
     """
     if isinstance(spec, dict):
         return spec
     if isinstance(spec, (list, tuple)):
         return {'any': [condition(s) for s in spec]}
     text = spec.strip()
+    if text.startswith('event:'):   # "event:say", "event:touch with=key"
+        name, *pairs = text[6:].split()
+        cond = {'event': name}
+        for pair in pairs:
+            k, _, v = pair.partition('=')
+            cond[k] = v
+        return cond
     if text.startswith('changed '):
         return {'changed': text[8:].strip()}
     if text.startswith('not '):
@@ -70,15 +82,26 @@ class PlaySession:
     """One running game, played request by request."""
 
     def __init__(self, project_dir: Union[str, Path], binary: Optional[Path] = None,
-                 persist_dir: Optional[Path] = None, timeout: float = 120):
+                 persist_dir: Optional[Path] = None, timeout: float = 120, frames: bool = False):
         self.project_dir = Path(project_dir)
         self.timeout = timeout
         self._tmp = tempfile.TemporaryDirectory(prefix='quantum-play-')
         persist = Path(persist_dir) if persist_dir else Path(self._tmp.name) / 'persist'
         persist.mkdir(parents=True, exist_ok=True)
         self.log: List[str] = []      # what Godot printed besides the answers
+        godot = [str(binary or ensure_godot())]
+        if frames:
+            # a display to draw on: a virtual one (xvfb), and a renderer that works in it
+            if not shutil.which('xvfb-run'):
+                raise PlayError('frames=True needs xvfb-run (a virtual display) on this machine')
+            width = self._setting('display/window/size/viewport_width', 1280)
+            height = self._setting('display/window/size/viewport_height', 720)
+            godot = ['xvfb-run', '-a', '-s', f'-screen 0 {width + 64}x{height + 64}x24', *godot,
+                     '--rendering-driver', 'opengl3', '--resolution', f'{width}x{height}']
+        else:
+            godot.append('--headless')
         self._proc = subprocess.Popen(
-            [str(binary or ensure_godot()), '--headless', '--fixed-fps', '60', '--path', str(self.project_dir),
+            [*godot, '--fixed-fps', '60', '--path', str(self.project_dir),
              '-s', str(PLAY_SCRIPT), '--', f'--persist-dir={persist}'],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
         self.last: Optional[dict] = None
@@ -148,10 +171,27 @@ class PlaySession:
         req.update(more)
         return req
 
+    def map(self) -> Optional[dict]:
+        """The scene's tilemap as rows of text: "#" stops, "-" one-way, "." open."""
+        return self.request({'op': 'map'})['map']
+
+    def view(self) -> dict:
+        """The screen drawn as text at the map's cell size, with a legend of its letters."""
+        return self.request({'op': 'view'})
+
+    def frame(self, path: Union[str, Path]) -> dict:
+        """Saves the picture on the screen as a PNG (a session opened with ``frames=True``)."""
+        return self.request({'op': 'frame', 'path': str(Path(path).resolve())})
+
+    def _setting(self, key: str, default: int) -> int:
+        text = (self.project_dir / 'project.godot').read_text(encoding='utf-8')
+        m = re.search(rf'^{re.escape(key.split("/")[-1])}=(\d+)', text, re.M)
+        return int(m.group(1)) if m else default
+
     # --- reading an observation ---
 
     @staticmethod
-    def view(obs: dict, kind: str) -> Optional[dict]:
+    def screen(obs: dict, kind: str) -> Optional[dict]:
         """The first screen view of a kind (``"dialogue"``, ``"menu"``, ``"hud"``) that is shown."""
         for v in obs.get('screen', []):
             if v.get('kind') == kind and v.get('shown', True):
