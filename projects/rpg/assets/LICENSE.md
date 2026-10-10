@@ -7,7 +7,8 @@ and 2007-2014 Juan Linietsky, Ariel Manzur), packed by `scripts/art/rpg.py`:
 - `tiles.png`: the demo's tile images (`grid_movement/grid/tiles/`), each one
   flipped or turned as the demo's map places it, one 64 px tile per placement.
 - `pawns.png`: the player's two faces on the map, the opponent's, and the key
-  (`grid_movement/pawns/`, `grid_movement/grid/tiles/object.png`).
+  (`grid_movement/pawns/`, `grid_movement/grid/tiles/object.png`), and a
+  potion, which the demo does not have, drawn by the script (CC0).
 - `fighters.png`: the two slimes in the fight, each calm and surprised, and
   their shadow (`combat/combatants/sprites/`).
 - `arena.png`: the fight's background (`combat/background/combat_background.png`).

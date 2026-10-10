@@ -10,6 +10,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the RPG has an inventory, beyond the demo it transcribes. The
+  key is taken and stays taken; two potions lie on the map; a HUD shows what
+  the player carries, and a Potion button in the fight gives back 5 life, up
+  to 10. All of it is written with the language as it was (game state,
+  `qg:instance if=`, `qg:destroy`, `qg:button if=`).
+
 - Laboratory: `qg:parallax`, a backdrop that the camera scrolls slower than
   the level (`scroll=`, from 0, still, to 1, with the level), repeating
   across. Robot has the demo's sky again: its clouds and distant platforms,
