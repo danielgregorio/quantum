@@ -178,7 +178,18 @@ func _physics_process(delta: float) -> void:
 
 	if animator != null:
 		var sprite := get_node_or_null("Sprite")
-		if dir != Vector2.ZERO:
+		if _swinging > 0 and animator.has("attack"):
+			# the swing, the way it faces: "attack-up" and "attack-down" when declared, else "attack"
+			var vert := absf(facing.y) > absf(facing.x)
+			if vert and facing.y < 0 and animator.has("attack-up"):
+				animator.play("attack-up")
+			elif vert and facing.y > 0 and animator.has("attack-down"):
+				animator.play("attack-down")
+			else:
+				animator.play("attack")
+			if sprite != null:
+				sprite.flip_v = false
+		elif dir != Vector2.ZERO:
 			# up and down have their own walk when declared; "walk-up" upside down stands in for down
 			var vertical := absf(dir.y) > absf(dir.x)
 			if vertical and dir.y < 0 and animator.has("walk-up"):

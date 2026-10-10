@@ -1488,3 +1488,24 @@ class TestWhatRobotAsked:
         menu = [n for n in json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'] if n['kind'] == 'menu'][0]
         assert menu['if_method'] == '_q_menu_1_if'
         assert 'func _q_menu_1_if():\n\treturn Q.paused(self)' in script
+
+
+class TestWhatTheArtAsked:
+    """What redrawing the games asked of the language: a spawn at a point (Chess's dots)."""
+
+    def test_spawn_at_a_point(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:scene name="main">
+    <q:set name="c" value="2" type="number" />
+    <qg:on-input action="jump">
+      <qg:spawn prefab="Coin" x="{c * 62 + 31}" y="{93}" dy="-2" />
+    </qg:on-input>
+  </qg:scene>
+''' + TAIL)
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.spawn_at(self, "Coin", Vector2(float(((c * 62) + 31)) + 0.0, float(93) + -2.0))' in script
+        for attrs, message in (('x="1"', 'x= and y= together'), ('x="1" y="2" at="me"', 'x= and y=, or at=, not both')):
+            err = refuse(tmp_path, HEAD + '''  <qg:scene name="main"><qg:on-input action="jump">
+      <qg:spawn prefab="Coin" ''' + attrs + ''' />
+    </qg:on-input></qg:scene>
+''' + TAIL)
+            assert message in str(err)

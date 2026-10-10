@@ -3,15 +3,18 @@
   <!-- Drift: the vertical shooter that drives the game language (PLAN_GAMES_2.md).
        A ship at the bottom of the screen, three waves of drones and tanks that
        come down and shoot, then a boss with two phases; lives, score, and a high
-       score kept between runs. Art and sounds: Kenney's Pixel Platformer (CC0),
-       pressed into service as spaceships. -->
+       score kept between runs. The ship, the drones, the tanks, the boss and the
+       sky are drawn for it by scripts/art/drift.py (CC0); the sounds are
+       Kenney's Pixel Platformer (CC0). -->
 
   <q:set name="score" value="0" type="number" />
   <q:set name="lives" value="3" type="number" />
   <q:set name="high_score" value="0" type="number" saved="true" />
 
-  <qg:tileset name="kenney" src="assets/kenney/tilemap_packed.png" tile="18" />
-  <qg:spritesheet name="chars" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
+  <!-- The ships, the boss and the sky are drawn for this game by scripts/art/drift.py (CC0). -->
+  <qg:spritesheet name="ships" src="assets/ships.png" tile="24" />
+  <qg:spritesheet name="boss" src="assets/boss.png" tile="40" />
+  <qg:spritesheet name="space" src="assets/space.png" tile="256x224" />
 
   <qg:sound name="shoot" src="assets/kenney/audio/jump.ogg" />
   <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
@@ -20,7 +23,7 @@
   <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
 
   <!-- The ship's shot: flies up, gone after 80 ticks or when it leaves the screen. -->
-  <qg:prefab name="Shot" tag="shot" sheet="kenney" frame="151" hitbox="18x8"
+  <qg:prefab name="Shot" tag="shot" sheet="ships" frame="8" hitbox="18x8"
              ai="fly" heading="up" speed="240" lifetime="80">
     <qg:on-collision with="enemy">
       <qg:damage target="other" amount="1" />
@@ -32,13 +35,13 @@
     </qg:on-collision>
   </qg:prefab>
 
-  <qg:prefab name="EnemyShot" tag="enemy-shot" sheet="kenney" frame="128" hitbox="6x6"
+  <qg:prefab name="EnemyShot" tag="enemy-shot" sheet="ships" frame="9" hitbox="6x6"
              ai="fly" heading="down" speed="120" lifetime="150" />
 
   <!-- A drone: comes straight down, one hit. -->
-  <qg:prefab name="Drone" tag="enemy" sheet="chars" frame="18" hitbox="14x14"
+  <qg:prefab name="Drone" tag="enemy" sheet="ships" frame="2" hitbox="14x14"
              ai="fly" heading="down" speed="45" lifetime="400" health="1">
-    <qg:animation name="walk" frames="18,19,20" fps="6" />
+    <qg:animation name="walk" frames="2,3,4" fps="6" />
     <qg:on-death>
       <qg:play sound="boom" />
       <qg:burst at="me" color="#ffcc44" count="10" />
@@ -47,10 +50,10 @@
   </qg:prefab>
 
   <!-- A tank: slow, three hits, shoots. -->
-  <qg:prefab name="Tank" tag="enemy" sheet="chars" frame="24" hitbox="16x16"
+  <qg:prefab name="Tank" tag="enemy" sheet="ships" frame="5" hitbox="16x16"
              ai="fly" heading="down" speed="20" lifetime="900" health="3"
              fire-prefab="EnemyShot" fire-every="90">
-    <qg:animation name="walk" frames="24,25,26" fps="4" />
+    <qg:animation name="walk" frames="5,6,7" fps="8" />
     <qg:on-damage>
       <qg:play sound="hit" />
     </qg:on-damage>
@@ -62,10 +65,10 @@
   </qg:prefab>
 
   <!-- The boss: sways across the top, twenty hits; angry below half. -->
-  <qg:prefab name="Boss" tag="boss" sheet="chars" frame="9" hitbox="20x20"
+  <qg:prefab name="Boss" tag="boss" sheet="boss" frame="0" hitbox="20x20"
              ai="sway" speed="30" health="12" fire-prefab="EnemyShot" fire-every="90">
-    <qg:state name="calm" frame="9" speed="30" fire-every="90" initial="true" />
-    <qg:state name="angry" frame="12" speed="70" fire-every="60" />
+    <qg:state name="calm" frame="0" speed="30" fire-every="90" initial="true" />
+    <qg:state name="angry" frame="1" speed="70" fire-every="60" />
     <qg:on-damage>
       <qg:play sound="hit" />
       <q:if condition="{me.health <= 6 and me.state == 'calm'}">
@@ -81,6 +84,7 @@
   </qg:prefab>
 
   <qg:scene name="play" width="256" height="224" background="#0a0a1e" seed="3">
+    <qg:sprite sheet="space" x="128" y="112" />
     <q:set name="message" value="" />
     <q:set name="boss_down" value="false" type="boolean" />
 
@@ -93,10 +97,10 @@
       </q:if>
     </q:function>
 
-    <qg:character id="ship" controller="ship" sheet="chars" frame="6" x="128" y="196" hitbox="12x12"
+    <qg:character id="ship" controller="ship" sheet="ships" frame="0" x="128" y="196" hitbox="12x12"
                   speed="120" bounds="scene"
                   fire-action="jump" fire-prefab="Shot" fire-every="8" fire-sound="shoot">
-      <qg:animation name="idle" frames="6" />
+      <qg:animation name="idle" frames="0,1" fps="12" />
       <qg:on-collision with="enemy" cooldown="90">
         <qg:destroy target="other" />
         <q:call function="hurt" args="me" />
@@ -135,6 +139,7 @@
   </qg:scene>
 
   <qg:scene name="victory" width="256" height="224" background="#102040">
+    <qg:sprite sheet="space" x="128" y="112" />
     <q:set name="title" value="THE DRIFT IS CLEAR. PRESS JUMP." />
     <q:if condition="{score > high_score}">
       <q:set name="high_score" value="{score}" />
@@ -152,6 +157,7 @@
   </qg:scene>
 
   <qg:scene name="game-over" width="256" height="224" background="#000000">
+    <qg:sprite sheet="space" x="128" y="112" />
     <q:set name="title" value="LOST IN THE DRIFT. PRESS JUMP." />
     <q:if condition="{score > high_score}">
       <q:set name="high_score" value="{score}" />

@@ -6,9 +6,9 @@ and a kick with frame data, hit stun and push back, health bars, a 99-second
 clock, best of three rounds. It was not transcribed from a repository: no
 complete open-source Godot fighter with a usable licence turned up (the
 candidates are in the project's log), so it was written to see what a
-fighting game asks of the language. The sprites are placeholders drawn for
-the repository (`assets/LICENSE.md`); a CC0 sheet such as "Godinez Fighter"
-replaces them frame for frame.
+fighting game asks of the language. The two fighters and the dojo are drawn
+for it by `scripts/art/fighters.py` and `scripts/art/stage.py`
+(`assets/LICENSE.md`, CC0).
 
 Run it: `quantum run projects/arena/arena.q`, then open `projects/arena/godot`
 in Godot. Player 1: A/D, W jump, S crouch, J punch, K kick. Player 2 on the

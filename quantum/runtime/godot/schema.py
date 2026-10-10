@@ -159,7 +159,8 @@ TAGS: Dict[str, Tag] = {
     'animation': Tag(
         'Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what it does (a platformer '
         '"fall" while it comes down, when it has one; a topdown one '
-        '"walk-up" and "walk-down" when it has them, "walk-up" upside down for down); a prefab plays "walk".',
+        '"walk-up" and "walk-down" when it has them, "walk-up" upside down for down, and while it swings '
+        '"attack", or "attack-up" and "attack-down" by where it faces); a prefab plays "walk".',
         {'name': Attr('ident', required=True),
          'frames': Attr('str', required=True, doc='comma-separated frame numbers'),
          'fps': Attr('float', 8.0)},
@@ -440,6 +441,8 @@ TAGS: Dict[str, Tag] = {
          'at': Attr('enum:other|me|cursor|path', 'other',
                     doc='whose position; cursor: where the qg:on-select cursor is; path: the start of path='),
          'path': Attr('ident', None, doc='at="path": a qg:path of the scene, which an ai="path" prefab follows'),
+         'x': Attr('expr', None, doc='a point of the scene instead of at= (with y=): an expression, in pixels'),
+         'y': Attr('expr', None),
          'dx': Attr('float', 0.0), 'dy': Attr('float', 0.0, doc='offset in pixels')},
         parents=('handler',)),
     'swap': Tag(

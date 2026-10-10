@@ -24,7 +24,13 @@
   <qg:prefab name="bB" tag="piece" sheet="pieces" frame="9" hitbox="60x60" />
   <qg:prefab name="bN" tag="piece" sheet="pieces" frame="10" hitbox="60x60" />
   <qg:prefab name="bP" tag="piece" sheet="pieces" frame="11" hitbox="60x60" />
-  <qg:prefab name="Marker" tag="marker" sheet="board" frame="1" hitbox="4x4" gd:modulate="#e0d040a0" gd:z_index="-1" />
+  <!-- What the board shows besides the pieces (assets/board.png): the picked square, a dot on each
+       square the picked piece may go to (a ring round a piece it may take), the last move, a king in check. -->
+  <qg:prefab name="Marker" tag="marker" sheet="board" frame="2" hitbox="4x4" />
+  <qg:prefab name="Dot" tag="dot" sheet="board" frame="3" hitbox="4x4" gd:z_index="1" />
+  <qg:prefab name="Ring" tag="dot" sheet="board" frame="4" hitbox="4x4" gd:z_index="1" />
+  <qg:prefab name="Last" tag="last" sheet="board" frame="6" hitbox="4x4" />
+  <qg:prefab name="Check" tag="check" sheet="board" frame="7" hitbox="4x4" />
 
   <!-- The title: both colours on one board, or white and black on two machines. -->
   <qg:scene name="title" width="496" height="540" background="#2a2520">
@@ -41,7 +47,7 @@
     <q:set name="legal" type="array" value="{[]}" />
     <q:set name="ep_col" value="-1" type="number" />
     <q:set name="moved" type="array" value="{[]}" />
-    <q:set name="status" value="White to move" />
+    <q:set name="status" value="White to move - click a piece, then where it goes" />
     <q:set name="finished" value="false" type="boolean" />
 
     <qg:tilemap tileset="board">
@@ -54,9 +60,13 @@
 1,2,1,2,1,2,1,2
 2,1,2,1,2,1,2,1
     </qg:tilemap>
-    <qg:cursor player="1" grid="62" />
+    <!-- the pointer: the mouse, or the arrows (Enter picks and puts); drawn as a frame round its square -->
+    <qg:cursor player="1" grid="62" sheet="board" frame="5" />
     <qg:cursor player="2" grid="62" />
-    <!-- the picked square's mark, kept off the board until a piece is picked -->
+    <!-- the marks, kept off the board until they mean something; under the pieces -->
+    <qg:instance prefab="Last" name="last_from" x="-100" y="-100" />
+    <qg:instance prefab="Last" name="last_to" x="-100" y="-100" />
+    <qg:instance prefab="Check" name="check_mark" x="-100" y="-100" />
     <qg:instance prefab="Marker" name="mark" x="-100" y="-100" />
 
     <qg:instance prefab="bR" x="31" y="31" /><qg:instance prefab="bN" x="93" y="31" /><qg:instance prefab="bB" x="155" y="31" /><qg:instance prefab="bQ" x="217" y="31" />
@@ -211,14 +221,31 @@
 
     <q:function name="clear_mark">
       <qg:put target="mark" x="-100" y="-100" />
+      <q:loop var="m" items="{legal}">
+        <q:set name="d" value="{thing_at('dot', m[1] * 62 + 31, m[0] * 62 + 31)}" />
+        <q:if condition="{d != null}"><qg:destroy target="d" /></q:if>
+      </q:loop>
       <q:set name="sel_r" value="-1" />
       <q:set name="sel_c" value="-1" />
       <q:set name="legal" value="{[]}" />
     </q:function>
 
-    <!-- a click: pick up one of your pieces, or put the picked one on a legal square -->
+    <!-- the red glow under the king of the side to move, when it is in check -->
+    <q:function name="show_check">
+      <qg:put target="check_mark" x="-100" y="-100" />
+      <q:if condition="{in_check(turn)}">
+        <q:loop var="i" from="0" to="63">
+          <q:if condition="{board[i] == turn + 'K'}">
+            <qg:put target="check_mark" x="{(i % 8) * 62 + 31}" y="{(i // 8) * 62 + 31}" />
+          </q:if>
+        </q:loop>
+      </q:if>
+    </q:function>
+
+    <!-- a click: pick up one of your pieces, or put the picked one on a legal square. On one machine
+         the same pointer plays both colours; over the network each machine plays its own. -->
     <qg:on-select>
-      <q:if condition="{not finished and (cursor.player == 1 and turn == 'w' or cursor.player == 2 and turn == 'b')}">
+      <q:if condition="{not finished and (net_status() != 'playing' or cursor.player == 1 and turn == 'w' or cursor.player == 2 and turn == 'b')}">
         <q:set name="r" value="{cursor.row}" />
         <q:set name="c" value="{cursor.col}" />
         <q:set name="act" value="{'move' if sel_r &gt;= 0 and [r, c] in legal else ('pick' if own(at(r, c), turn) else 'clear')}" />
@@ -249,8 +276,11 @@
           <q:if condition="{p[1:2] == 'R' and sel_c == 0}"><q:set name="moved" value="{moved + [turn + 'Ra']}" /></q:if>
           <q:if condition="{p[1:2] == 'R' and sel_c == 7}"><q:set name="moved" value="{moved + [turn + 'Rh']}" /></q:if>
           <q:set name="ep_col" value="{c if p[1:2] == 'P' and abs(r - sel_r) == 2 else -1}" />
+          <qg:put target="last_from" x="{sel_c * 62 + 31}" y="{sel_r * 62 + 31}" />
+          <qg:put target="last_to" x="{c * 62 + 31}" y="{r * 62 + 31}" />
           <q:set name="turn" value="{other_color(turn)}" />
           <q:call function="clear_mark" />
+          <q:call function="show_check" />
           <q:set name="status" value="{('White' if turn == 'w' else 'Black') + ' to move'}" />
           <q:if condition="{not any_legal(turn)}">
             <q:set name="finished" value="true" />
@@ -266,6 +296,16 @@
           <q:set name="sel_c" value="{c}" />
           <q:set name="legal" value="{legal_moves(r, c)}" />
           <qg:put target="mark" x="{cursor.x}" y="{cursor.y}" />
+          <q:loop var="m" items="{legal}">
+            <q:if condition="{at(m[0], m[1]) == ''}">
+              <qg:spawn prefab="Dot" x="{m[1] * 62 + 31}" y="{m[0] * 62 + 31}" />
+            <q:else>
+              <qg:spawn prefab="Ring" x="{m[1] * 62 + 31}" y="{m[0] * 62 + 31}" />
+            </q:else>
+            </q:if>
+          </q:loop>
+          <q:set name="status" value="{('White' if turn == 'w' else 'Black') + (' to move' if len(legal) &gt; 0 else ' to move - that piece cannot move')}" />
+          <q:if condition="{len(legal) &gt; 0 and in_check(turn)}"><q:set name="status" value="{status + ' - check'}" /></q:if>
         </q:if>
         <q:if condition="{act == 'clear'}">
           <q:call function="clear_mark" />

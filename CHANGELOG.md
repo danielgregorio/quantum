@@ -10,6 +10,17 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the games are drawn. Drift has a ship, drones, tanks, a crab
+  boss that turns red when angry and a starfield; Keep a stone dungeon seen
+  from above, a hero who walks and swings a visible sword in four
+  directions, a slime and a bat; Arena two martial artists in fourteen poses
+  and a dojo yard at dusk; Chess the picked square, a dot on every square the
+  picked piece may go to (a ring round a piece it may take), the last move,
+  the king in check and a cursor for the keyboard. The art is drawn by
+  scripts in `scripts/art/` (CC0). The top-down controller plays "attack"
+  ("attack-up", "attack-down") while it swings; `qg:spawn` takes `x=` and
+  `y=`, a point of the scene.
+
 - Laboratory: a ninth game, `projects/robot/robot.q` — Godot's "Platformer 2D"
   demo (godot-demo-projects, `2d/platformer`, MIT) transcribed: its level,
   the robot that runs, jumps twice and shoots, the crawling enemies, the
@@ -58,6 +69,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
   by keys and by the pointer.
 
 ### Fixed
+
+- Laboratory: Chess on one machine: black could not move. The board took
+  black's click only from player 2's select, which no key presses on a
+  single machine; now on one machine the same pointer plays both colours,
+  and over the network each machine its own.
 
 - Laboratory: the games on the site drew no pictures, played no sounds and
   had no tilemap: the runtime read the image, sound and font files
