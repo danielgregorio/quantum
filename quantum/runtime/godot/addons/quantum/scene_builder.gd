@@ -14,6 +14,7 @@ const TopdownBody := preload("res://addons/quantum/topdown_body.gd")
 const Exit := preload("res://addons/quantum/exit.gd")
 const ShipBody := preload("res://addons/quantum/ship_body.gd")
 const Spawner := preload("res://addons/quantum/spawner.gd")
+const Picture := preload("res://addons/quantum/picture.gd")
 const Shuttle := preload("res://addons/quantum/shuttle.gd")
 const Timer_ := preload("res://addons/quantum/timer.gd")
 const Hud := preload("res://addons/quantum/hud.gd")
@@ -152,6 +153,9 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				var sheet: Dictionary = game["sheets"][node_spec["sheet"]]
 				var picture := _sprite(_texture(sheet), sheet["tile"], int(node_spec["frame"]))
 				picture.position = Vector2(node_spec["x"], node_spec["y"])
+				if node_spec.get("frame_method") != null:
+					picture.set_script(Picture)
+					picture.follow(scene, node_spec["frame_method"])
 				Q.apply_gd(picture, node_spec.get("gd"))
 				scene.add_child(picture)
 			"exit":

@@ -10,6 +10,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: `<qg:sprite frame="{1 if hurt > 0 else 0}">`: a picture whose
+  frame follows an expression, tick by tick (a number stays a fixed frame).
+  In the RPG, a fighter just hit makes a surprised face for half a second,
+  with the faces already in `fighters.png`.
 - Laboratory: `<qg:goto-scene fade="0.4">`: the new scene comes out of black
   over that many seconds. Only the picture fades. The tween counts physics
   ticks, so a frame at a given tick always shows the same shade, and the

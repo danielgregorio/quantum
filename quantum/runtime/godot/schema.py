@@ -313,7 +313,9 @@ TAGS: Dict[str, Tag] = {
         parents=('scene',)),
     'sprite': Tag(
         'A picture in the scene, with no behaviour: a backdrop, a divider, a sign.',
-        {'sheet': Attr('ident', required=True), 'frame': Attr('int', 0),
+        {'sheet': Attr('ident', required=True),
+         'frame': Attr('expr', '0', doc='a number, or an expression the picture follows tick by tick: '
+                       '{1 if hurt > 0 else 0}'),
          'x': Attr('float', required=True), 'y': Attr('float', required=True)},
         parents=('scene',)),
     'exit': Tag(

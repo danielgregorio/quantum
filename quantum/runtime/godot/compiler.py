@@ -444,8 +444,14 @@ class _Compiler:
                 self._node_elements.append(el)
             elif el.tag == 'sprite':
                 self._sheet_exists(el.get('sheet'), sheets, el.line)
-                nodes.append({'kind': 'sprite', 'sheet': el.get('sheet'), 'frame': el.get('frame'),
+                frame = str(el.get('frame')).strip()
+                nodes.append({'kind': 'sprite', 'sheet': el.get('sheet'), 'frame': int(frame) if frame.isdigit() else 0,
                               'x': el.get('x'), 'y': el.get('y')})
+                if not frame.isdigit():
+                    # frame="{...}": the picture shows what the expression says, tick by tick
+                    nodes[-1]['frame_method'] = f'_q_sprite_{len(nodes) - 1}_frame'
+                    script.functions.append(f'func {nodes[-1]["frame_method"]}():\n'
+                                            f'\treturn int({compile_expression(frame, script.scope(), el.line)})\n')
                 self._node_elements.append(el)
             elif el.tag == 'exit':
                 ename = el.get('name')

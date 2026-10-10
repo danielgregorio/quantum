@@ -369,7 +369,7 @@ A picture in the scene, with no behaviour: a backdrop, a divider, a sign.
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `sheet` | a name | required |  |
-| `frame` | integer | `0` |  |
+| `frame` | an expression | `0` | a number, or an expression the picture follows tick by tick: {1 if hurt > 0 else 0} |
 | `x` | number | required |  |
 | `y` | number | required |  |
 
@@ -3212,6 +3212,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="foe_armor" value="0" type="number" />
     <q:set name="turn" value="player" />
     <q:set name="wait" value="0" type="number" />   <!-- the opponent's Timer: 0.25 s -->
+    <!-- beyond the demo: a fighter just hit makes a face for half a second -->
+    <q:set name="hurt" value="0" type="number" />
+    <q:set name="foe_hurt" value="0" type="number" />
 
     <!-- health.gd: a hit takes the damage less the armor. -->
     <q:function name="end" params="result">
@@ -3227,8 +3230,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:sprite sheet="arena" x="640" y="360" />
     <qg:sprite sheet="fighters" frame="4" x="440" y="470" />
     <qg:sprite sheet="fighters" frame="4" x="840" y="470" />
-    <qg:sprite sheet="fighters" frame="0" x="440" y="420" />
-    <qg:sprite sheet="fighters" frame="2" x="840" y="420" />
+    <qg:sprite sheet="fighters" frame="{1 if hurt > 0 else 0}" x="440" y="420" />
+    <qg:sprite sheet="fighters" frame="{3 if foe_hurt > 0 else 2}" x="840" y="420" />
 
     <qg:hud position="top-left" font="assets/montserrat_extra_bold.otf" size="32">
       <qg:text value="{'Player'}" />
@@ -3244,6 +3247,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
              if="{turn == 'player'}">
       <qg:button label="Attack">
         <q:set name="foe_life" value="{foe_life - 2 + foe_armor}" />
+        <q:set name="foe_hurt" value="30" />
         <qg:shake frames="10" strength="6" />
         <q:if condition="{foe_life <= 0}"><q:call function="end" args="'won'" /></q:if>
         <q:if condition="{foe_life > 0}"><q:call function="foes_turn" /></q:if>
@@ -3265,10 +3269,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
     <!-- opponent.gd: a quarter of a second into its turn, it attacks. -->
     <qg:timer every="1">
+      <q:if condition="{hurt > 0}"><q:set name="hurt" value="{hurt - 1}" /></q:if>
+      <q:if condition="{foe_hurt > 0}"><q:set name="foe_hurt" value="{foe_hurt - 1}" /></q:if>
       <q:if condition="{turn == 'opponent' and wait > 0}">
         <q:set name="wait" value="{wait - 1}" />
         <q:if condition="{wait == 0}">
           <q:set name="life" value="{life - 3 + armor}" />
+          <q:set name="hurt" value="30" />
           <qg:shake frames="10" strength="6" />
           <q:if condition="{life <= 0}"><q:call function="end" args="'lost'" /></q:if>
           <q:if condition="{life > 0}">
