@@ -10,6 +10,19 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the play protocol, phase 1 (`PLAN_PLAY_PROTOCOL.md`): a game
+  an agent plays step by step. `PlaySession` (`quantum/runtime/godot_play.py`)
+  runs a built game headless through a driver (`godot_play.gd`) that waits
+  for each request and runs exactly the ticks it asks for. `act` presses,
+  holds or taps the game's own actions and points its cursor; `until` runs
+  until a condition holds ("talking", "player.row == 7", "changed scene").
+  Each answer is what a player would know by looking: the scene, its state,
+  and what the screen shows to read and choose (the HUD's texts, the menus'
+  buttons and focus, the dialogue's line), which the HUD, menus and dialogue
+  now report through `quantum_view()`. The same requests give the same game
+  as a replay. In the tests, an agent wins the RPG in 16 requests, deciding
+  each from the last answer, and plays Chess with the cursor.
+
 - Laboratory: the RPG has an inventory, beyond the demo it transcribes. The
   key is taken and stays taken; two potions lie on the map; a HUD shows what
   the player carries, and a Potion button in the fight gives back 5 life, up

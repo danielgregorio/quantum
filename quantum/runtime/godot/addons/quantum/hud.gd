@@ -77,6 +77,19 @@ func _process(_delta: float) -> void:
 	_refresh()
 
 
+# What a player reads on it (the play protocol): each text as shown, each bar
+# as its value against its maximum.
+func quantum_view() -> Dictionary:
+	_refresh()
+	var shown := []
+	for entry in _labels:
+		if entry.has("bar"):
+			shown.append({"bar": entry["bind"], "value": entry["bar"].value, "max": entry["bar"].max_value})
+		else:
+			shown.append(entry["label"].text)
+	return {"kind": "hud", "items": shown}
+
+
 func _bound(bind: String):
 	if "." in bind:
 		var parts: PackedStringArray = bind.split(".", true, 1)
