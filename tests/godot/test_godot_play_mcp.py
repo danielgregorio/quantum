@@ -54,6 +54,22 @@ def test_repeated_events_are_told_once():
                                          {'kind': 'step', 'who': 'p', 'tick': 49}]
 
 
+def test_a_countdown_is_one_set_from_its_first_value_to_its_last():
+    events = []
+    for t in range(1, 5):
+        events += [{'kind': 'set', 'name': 'wait', 'from': 15 - t, 'to': 14 - t, 'tick': t},
+                   {'kind': 'set', 'name': 'hurt', 'from': 30 - t, 'to': 29 - t, 'tick': t}]
+    events += [{'kind': 'damage', 'who': 'player', 'tick': 5}, {'kind': 'set', 'name': 'wait', 'from': 10, 'to': 0, 'tick': 5}]
+    turns = [{'kind': 'set', 'name': 'turn', 'from': 'player', 'to': 'opponent', 'tick': 6},
+             {'kind': 'set', 'name': 'turn', 'from': 'opponent', 'to': 'player', 'tick': 7}]
+    assert PlayTools.squeeze(turns) == turns                             # a text is told at each change
+    assert PlayTools.squeeze(events) == [
+        {'kind': 'set', 'name': 'wait', 'from': 14, 'to': 10, 'tick': 1, 'times': 4, 'until': 4},
+        {'kind': 'set', 'name': 'hurt', 'from': 29, 'to': 25, 'tick': 1, 'times': 4, 'until': 4},
+        {'kind': 'damage', 'who': 'player', 'tick': 5},                 # something else happened: told apart
+        {'kind': 'set', 'name': 'wait', 'from': 10, 'to': 0, 'tick': 5}]
+
+
 def test_the_repository_declares_the_server():
     servers = json.loads((REPO / '.mcp.json').read_text())['mcpServers']
     assert servers['quantum-play']['args'] == ['-m', 'quantum.runtime.play_mcp']
