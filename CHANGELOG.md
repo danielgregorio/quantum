@@ -10,6 +10,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: `qg:parallax`, a backdrop that the camera scrolls slower than
+  the level (`scroll=`, from 0, still, to 1, with the level), repeating
+  across. Robot has the demo's sky again: its clouds and distant platforms,
+  composed by `scripts/art/robot_sky.py`.
+
 - Laboratory: a tenth game, `projects/rpg/rpg.q`: Godot's "JRPG" demo
   (`2d/role_playing_game`), transcribed with its own art and font. A slime
   walks the demo's map cell by cell, reads a key, talks to another slime and

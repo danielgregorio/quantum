@@ -6,6 +6,8 @@ From the "Platformer 2D" demo in godotengine/godot-demo-projects
 
 - `tiles.png`, `robot.png`, `enemy.png`, `coin.png`, `bullet.png` and
   `platform.png` are the demo's `.webp` images, converted to PNG unchanged.
+- `sky.png` and `hills.png` are the demo's `level/background/` pictures (the sky,
+  its clouds, the distant platforms), composed by `scripts/art/robot_sky.py`.
 - `jump.wav`, `shoot.wav`, `coin_pickup.wav` and `explode.wav` are the demo's
   sounds.
 

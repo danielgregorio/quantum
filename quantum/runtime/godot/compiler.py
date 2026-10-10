@@ -435,6 +435,13 @@ class _Compiler:
                 nodes.append({'kind': 'zone', 'name': zname, 'tag': el.get('tag'), 'x': el.get('x'), 'y': el.get('y'),
                               'width': el.get('width'), 'height': el.get('height')})
                 self._node_elements.append(el)
+            elif el.tag == 'parallax':
+                self._sheet_exists(el.get('sheet'), sheets, el.line)
+                if not 0 <= el.get('scroll') <= 1:
+                    raise GameCompileError('<qg:parallax scroll=>: between 0 (still) and 1 (with the level)', el.line)
+                nodes.append({'kind': 'parallax', 'sheet': el.get('sheet'), 'frame': el.get('frame'),
+                              'y': el.get('y'), 'scroll': el.get('scroll'), 'repeat': el.get('repeat')})
+                self._node_elements.append(el)
             elif el.tag == 'sprite':
                 self._sheet_exists(el.get('sheet'), sheets, el.line)
                 nodes.append({'kind': 'sprite', 'sheet': el.get('sheet'), 'frame': el.get('frame'),

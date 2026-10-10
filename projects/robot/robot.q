@@ -29,6 +29,9 @@
   <qg:spritesheet name="coin" src="assets/coin.png" tile="32" />
   <qg:spritesheet name="bullet" src="assets/bullet.png" tile="16" />
   <qg:spritesheet name="platform" src="assets/platform.png" tile="256x64" />
+  <!-- The demo's ParallaxBackground, composed by scripts/art/robot_sky.py. -->
+  <qg:spritesheet name="sky" src="assets/sky.png" tile="2458x480" />
+  <qg:spritesheet name="hills" src="assets/hills.png" tile="2048x480" />
 
   <qg:sound name="jump" src="assets/jump.wav" />
   <qg:sound name="shoot" src="assets/shoot.wav" />
@@ -66,6 +69,9 @@
              shape="-174.04,-0.43; -94.04,-23.61; 91.84,-28.64; 80.29,-5.16; -54.32,0.04; -179.99,26.44" />
 
   <qg:scene name="level" width="800" height="480" background="#52c9ff">
+    <!-- level/background/parallax_background.tscn: a base scale of 0.1 times each layer's -->
+    <qg:parallax sheet="sky" scroll="0.02" />
+    <qg:parallax sheet="hills" scroll="0.04" />
     <q:set name="coins" value="0" type="number" />
 
     <!-- 35 x 24 tiles of 64 px; the demo's map, whose top-left cell is (-12, -11), so
