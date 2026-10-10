@@ -68,6 +68,14 @@ func is_open() -> bool:
 	return line >= 0
 
 
+# What a player reads in it (the play protocol): who says what, while it is open.
+func quantum_view() -> Dictionary:
+	if line < 0:
+		return {}
+	return {"kind": "dialogue", "name": dialogue_name, "line": line, "lines": _lines.size(),
+		"who": _who.text, "text": _text.text}
+
+
 func _show() -> void:
 	var spec: Dictionary = _lines[line]
 	_who.text = _value(spec, "who")

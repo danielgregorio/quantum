@@ -145,6 +145,23 @@ func _item_at(p: Vector2) -> int:
 	return -1
 
 
+# What a player sees of it (the play protocol, PLAN_PLAY_PROTOCOL.md): its
+# buttons and fields as shown, which are choosable, and which has the focus.
+func quantum_view() -> Dictionary:
+	var items := []
+	for i in _items.size():
+		var spec: Dictionary = _items[i]["spec"]
+		var item := {"shown": _shown(i)}
+		if spec["kind"] == "button":
+			item["button"] = str(_scene.call(spec["label_method"])) if spec.get("label_method") != null \
+				else str(spec.get("label", ""))
+		else:
+			item["field"] = str(spec.get("label", ""))
+			item["value"] = str(_read(spec["bind"], spec.get("game", false)))
+		items.append(item)
+	return {"kind": "menu", "player": player, "shown": active(), "focus": focus, "items": items}
+
+
 # For the rollback.
 func q_save() -> Dictionary:
 	return {"f": focus, "ps": _pointer_seen}
