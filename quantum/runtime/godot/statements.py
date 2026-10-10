@@ -59,6 +59,7 @@ class SceneScript:
     states_used: List[tuple] = field(default_factory=list)    # (name, line) from become
     scenes_used: List[tuple] = field(default_factory=list)    # (name, line) from goto-scene
     paths_used: List[tuple] = field(default_factory=list)     # (name, line) from spawn at="path"
+    dialogues_used: List[tuple] = field(default_factory=list)  # (name, line) from qg:say
     net_used: List[Optional[int]] = field(default_factory=list)   # lines of qg:host, qg:join, qg:leave
 
     node_ids: List[str] = field(default_factory=list)   # the scene's characters, by id
@@ -417,6 +418,9 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         return 'Q.pause(self, true)'
     if el.tag == 'resume':
         return 'Q.pause(self, false)'
+    if el.tag == 'say':
+        script.dialogues_used.append((el.get('dialogue'), el.line))
+        return f'Q.say(self, {json.dumps(el.get("dialogue"))})'
     if el.tag == 'put':
         return (f'Q.put({target}, {compile_expression(el.get("x"), scope, el.line)}, '
                 f'{compile_expression(el.get("y"), scope, el.line)})')

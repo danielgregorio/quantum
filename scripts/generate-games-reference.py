@@ -47,6 +47,9 @@ GAMES = [
     ('Robot', 'projects/robot/robot.q', 'Godot\'s "Platformer 2D" demo transcribed: its level tile for tile, with '
      'slopes and ledges, a robot that runs, jumps twice and shoots, crawling enemies, coins, lifts and a pause menu '
      '(projects/robot/README.md)'),
+    ('RPG', 'projects/rpg/rpg.q', 'Godot\'s "JRPG" demo transcribed: its map in three tile layers, a slime that '
+     'walks it cell by cell, a key and another slime that talk in a dialogue box, and a turn-based fight '
+     '(projects/rpg/README.md)'),
 ]
 
 INTRO = f'''---

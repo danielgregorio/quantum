@@ -119,6 +119,9 @@ func quantum_state() -> Dictionary:
 	state["sounds"] = Q.sounds_played.duplicate()
 	if q_paused:
 		state["paused"] = true
+	if q_talking() != "":
+		state["talking"] = q_talking()
+		state["line"] = get_node("Dialogue_" + q_talking()).line
 	var menus := []
 	for m in get_tree().get_nodes_in_group("q_menu"):
 		if m.get_parent() == self:
@@ -152,6 +155,14 @@ func _physics_process(_delta: float) -> void:
 		var at: Dictionary = cursor.where()
 		var other = Q.thing_at(self, "", at["x"], at["y"])
 		call(handler, at, other)
+
+
+# The qg:dialogue open now (qg:say), or "".
+func q_talking() -> String:
+	for c in get_children():
+		if c.has_method("is_open") and c.is_open():
+			return c.dialogue_name
+	return ""
 
 
 # Below this y a character has fallen out of the level (qg:on-fall).

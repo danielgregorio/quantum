@@ -401,6 +401,7 @@ class _Compiler:
         paths: Dict[str, list] = {}
         conditions = 0
         on_death: Dict[str, str] = {}
+        dialogues: Dict[str, dict] = {}
         self._node_elements: List[Optional[Element]] = []
         for node in scene.children:
             if isinstance(node, Statement):
@@ -518,8 +519,10 @@ class _Compiler:
                 nodes.append({'kind': 'path', 'name': pname, 'points': paths[pname]})
                 self._node_elements.append(el)
             elif el.tag == 'tilemap':
-                if tilemap is not None:
-                    raise GameCompileError('a scene has one <qg:tilemap>', el.line)
+                if tilemap is not None and el.get('tileset') != tilemap['tileset']:
+                    raise GameCompileError(
+                        f'<qg:tilemap tileset="{el.get("tileset")}">: the layers of a scene share one tileset, '
+                        f'{tilemap["tileset"]!r}', el.line)
                 self._sheet_exists(el.get('tileset'), sheets, el.line)
                 if el.get('src'):
                     tmx = read_tmx(self._find(el.get('src'), el.line), el.line)
@@ -540,6 +543,12 @@ class _Compiler:
                         self._node_elements.append(None)
                 else:
                     layers = [{'name': 'tiles', 'rows': _csv_rows(el), 'collision': el.get('collision')}]
+                if tilemap is not None:
+                    # another layer of the same map, drawn over the ones before
+                    for ly in layers:
+                        ly['name'] = f'{ly["name"]}-{len(tilemap["layers"])}'
+                    tilemap['layers'].extend(layers)
+                    continue
                 tilemap = {'kind': 'tilemap', 'tileset': el.get('tileset'), 'layers': layers}
                 nodes.insert(0, tilemap)
                 self._node_elements.insert(0, el)
@@ -659,6 +668,11 @@ class _Compiler:
                         f'<qg:input player="{player}" action="up" keys="..." /> and so on in q:application', el.line)
                 if el.get('axis') != 'both' and el.get('controller') != 'ship':
                     raise GameCompileError('axis= is for controller="ship"', el.line)
+                for attr, default in (('step-frames', 15), ('diagonal', False)):
+                    if el.get(attr) != default and controller != 'grid':
+                        raise GameCompileError(f'{attr}= is for controller="grid"', el.line)
+                if el.get('step-frames') < 1:
+                    raise GameCompileError('step-frames=: 1 or more', el.line)
                 if el.get('bounds') is not None and el.get('controller') not in ('ship', 'topdown'):
                     raise GameCompileError('bounds= is for controller="ship" or "topdown"', el.line)
                 nodes.append({
@@ -683,6 +697,7 @@ class _Compiler:
                     'states': states, 'initial_state': initial_state,
                     'on_collision': handlers, 'on_hit': hits, 'on_fall': on_fall,
                     'health': el.get('health'), 'facing': el.get('facing'), 'moves': moves, 'on_ko': on_ko,
+                    'step_frames': el.get('step-frames'), 'diagonal': el.get('diagonal'),
                 })
                 self._node_elements.append(el)
             elif el.tag == 'instance':
@@ -780,6 +795,38 @@ class _Compiler:
                 nodes.append({'kind': 'hud', 'position': el.get('position'), 'items': items,
                               'font': font, 'size': el.get('size')})
                 self._node_elements.append(el)
+            elif el.tag == 'dialogue':
+                dname = el.get('name')
+                if dname in dialogues:
+                    raise GameCompileError(f'two dialogues named {dname!r}', el.line)
+                lines, on_end = [], None
+                for c in el.children:
+                    if isinstance(c, Element) and c.tag == 'line':
+                        line_spec = {}
+                        for attr in ('who', 'text'):
+                            value = str(c.get(attr) or '')
+                            if is_expression(value):
+                                method = f'_q_dialogue_{_ident(dname)}_{len(lines)}_{attr}'
+                                script.functions.append(
+                                    f'func {method}():\n\treturn Q.to_str({compile_expression(value, script.scope(), c.line)})\n')
+                                line_spec[f'{attr}_method'] = method
+                            else:
+                                line_spec[attr] = value
+                        lines.append(line_spec)
+                    elif isinstance(c, Element) and c.tag == 'on-end':
+                        if on_end is not None:
+                            raise GameCompileError('a qg:dialogue has one <qg:on-end>', c.line)
+                        on_end = compile_handler(script, f'_on_dialogue_{_ident(dname)}_end', c.children, c.line)
+                    else:
+                        raise GameCompileError('<qg:dialogue> holds qg:line and qg:on-end',
+                                               getattr(c, 'line', el.line))
+                if not lines:
+                    raise GameCompileError(f'<qg:dialogue name="{dname}"> needs at least one qg:line', el.line)
+                font = self._asset(el.get('font'), el.line) if el.get('font') else None
+                dialogues[dname] = {'kind': 'dialogue', 'name': dname, 'lines': lines, 'on_end': on_end,
+                                    'font': font, 'size': el.get('size')}
+                nodes.append(dialogues[dname])
+                self._node_elements.append(el)
             elif el.tag in ('play', 'stop'):
                 pass   # an enter statement, read above
             else:
@@ -810,6 +857,14 @@ class _Compiler:
                         raise GameCompileError(
                             f'<qg:{kind.replace("_", "-")} with="{h["with"]}">: no prefab or zone has that tag '
                             f'(tags: {", ".join(sorted(tags)) or "none"})', scene.line)
+        for dname, line in script.dialogues_used:
+            if dname not in dialogues:
+                raise GameCompileError(f'<qg:say dialogue="{dname}">: no qg:dialogue of that name in the scene '
+                                       f'(dialogues: {", ".join(sorted(dialogues)) or "none"})', line)
+        for n in nodes:
+            if n['kind'] == 'character' and n['controller'] == 'grid' and tilemap is None:
+                raise GameCompileError('<qg:character controller="grid"> walks the cells of a tilemap: '
+                                       'the scene has none', scene.line)
         if on_select and not cursors:
             raise GameCompileError('<qg:on-select> in a scene without a <qg:cursor>', scene.line)
         for pname, line in script.paths_used:

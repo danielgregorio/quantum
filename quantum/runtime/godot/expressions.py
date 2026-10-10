@@ -43,6 +43,7 @@ _FUNCTIONS = {
     'net_players': 'Q.net_players()',        # how many are connected
     'net_player': 'Q.net_player()',          # this machine's player number (0: none yet)
     'paused': 'Q.paused(self)',              # the scene is paused (qg:pause)
+    'talking': 'Q.talking(self)',            # a qg:dialogue is open (qg:say)
 }
 
 _BIN = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*'}
