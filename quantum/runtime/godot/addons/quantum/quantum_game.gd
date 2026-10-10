@@ -5,6 +5,7 @@ extends Node
 
 const SceneBuilder := preload("res://addons/quantum/scene_builder.gd")
 const Lockstep := preload("res://addons/quantum/lockstep.gd")
+const Rollback := preload("res://addons/quantum/rollback.gd")
 
 var spec: Dictionary = {}
 var current_scene: Node = null
@@ -29,29 +30,72 @@ func _ready() -> void:
 			var parts: PackedStringArray = a.substr(9).split(":")
 			host = parts[0]
 			port = int(parts[1]) if parts.size() > 1 else -1
+		elif a.begins_with("--q-port="):
+			port_override = int(a.substr(9))
+		elif a.begins_with("--q-transport="):
+			transport_override = a.substr(14)
+		elif a.begins_with("--q-latency="):
+			latency_override = int(a.substr(12))
 	if spec.has("multiplayer") and port > 0:
-		_shadow_inputs()
-		lockstep = Lockstep.new()
-		add_child(lockstep)
-		lockstep.setup(spec["multiplayer"], self, host, port)
+		_start_network(host, port).from_command_line = true
 		return
 	go_to_scene(spec["initial"])
 
 
-# Under lockstep the keys press raw_<action>; the real actions (up, p2_up...)
-# are pressed by the lockstep node alone, on every peer alike.
-func _shadow_inputs() -> void:
-	for action in spec.get("actions", ["left", "right", "up", "down", "jump"]):
-		var raw: String = "raw_" + str(action)
-		if not InputMap.has_action(raw):
-			InputMap.add_action(raw)
-		for ev in InputMap.action_get_events(action):
-			InputMap.action_add_event(raw, ev)
-		InputMap.action_erase_events(action)
+# Overrides for tests (several games on one machine): --q-port=N, --q-transport=websocket.
+var port_override: int = -1
+var transport_override: String = ""
+var latency_override: int = 0
+
+
+func _start_network(host: String, port: int) -> Node:
+	if lockstep != null:
+		lockstep.leave()
+		remove_child(lockstep)
+		lockstep.queue_free()
+	var mp: Dictionary = spec["multiplayer"].duplicate()
+	if transport_override != "":
+		mp["transport"] = transport_override
+	lockstep = Rollback.new() if int(mp.get("rollback", 0)) > 0 else Lockstep.new()
+	lockstep.latency_ms = latency_override
+	add_child(lockstep)
+	lockstep.setup(mp, self, host, port_override if port_override > 0 else port)
+	return lockstep
+
+
+# qg:host / qg:join / qg:leave, from a scene (Q.net_host...).
+func net_host(port: int) -> void:
+	_start_network("", port)
+
+
+func net_join(address: String) -> void:
+	var parts := address.strip_edges().split(":")
+	var port := int(parts[1]) if parts.size() > 1 else 7777
+	_start_network(parts[0], port)
+
+
+func net_leave() -> void:
+	if lockstep != null:
+		lockstep.leave()
+		remove_child(lockstep)
+		lockstep.queue_free()
+		lockstep = null
+
+
+func net_status() -> String:
+	return lockstep.status if lockstep != null else "offline"
+
+
+func net_players() -> int:
+	return lockstep.connected_players if lockstep != null else 0
+
+
+func net_player() -> int:
+	return lockstep.player if lockstep != null else 0
 
 
 func _q_lockstep_ready() -> void:
-	go_to_scene(spec["initial"])
+	go_to_scene(str(spec["multiplayer"].get("start", spec["initial"])))
 
 
 func _register_inputs(inputs: Dictionary) -> void:

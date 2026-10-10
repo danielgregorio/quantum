@@ -57,19 +57,22 @@ strength on `qg:input`; a score (the demo has none).
 
 ## Over the network
 
-`pong.q` declares `<qg:multiplayer players="2" />`. On one keyboard it is the
-demo: W/S and the arrows. Over the network each machine is one player:
+`pong.q` declares `<qg:multiplayer players="2" start="court" />` and its title
+is a `<qg:lobby local="court" />`: two on one keyboard, or one player on each
+machine — one chooses Host a game, the other types the host's address and
+chooses Join, and the court starts on both. Both run the whole game in
+lockstep (`PLAN_MULTIPLAYER.md`): the demo's random slant comes from the scene
+seed, so both see the same ball. The command line still skips the title:
 
 ```
 godot --path projects/pong/godot -- --q-host=7777          # player 1, the left paddle
 godot --path projects/pong/godot -- --q-join=HOST:7777     # player 2, the right one
 ```
 
-Both run the whole game in lockstep (`PLAN_MULTIPLAYER.md`): the demo's
-random slant comes from the scene seed, so both see the same ball.
 `tests/godot/test_godot_multiplayer.py` runs two headless Godots on
-localhost and checks they agree, with each other and with one Godot
-replaying both tapes.
+localhost, over ENet and over WebSocket: through the title's own Host and
+Join buttons, and by the command line; the courts agree with each other,
+and with one Godot replaying both tapes.
 
 ## The test
 

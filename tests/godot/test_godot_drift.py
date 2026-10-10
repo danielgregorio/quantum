@@ -74,7 +74,8 @@ def test_tanks_take_three_hits_and_shoot_back(godot, drift):
 
 def test_drones_that_get_through_cost_lives(godot, drift):
     # Not shooting, not moving: the drones that come down the middle hit the ship.
-    state = replay(drift, 1000, binary=godot)
+    # (The shake has its own random source: the scene's seed alone decides where drones go.)
+    state = replay(drift, 600, binary=godot)
     assert scene(state) == 'play'
     assert state['play']['game']['lives'] == 1
     assert state['play']['sounds'].count('hurt') == 2

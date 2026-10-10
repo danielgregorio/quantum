@@ -15,6 +15,16 @@ var raw_cursor: Vector2 = Vector2.ZERO
 var tape_cursor = null   # the replay tape's pointer (Vector2), instead of the mouse
 var sounds_played: Array = []  # names, in order — the replay harness reads it
 
+# --- the input of the tick ---
+# Every action is read once per physics tick, here, before any node of the
+# game runs (Q is an autoload, first in the tree, and runs at the lowest
+# priority); the runtime asks Q, never Input. So a tick's input is a value:
+# the lockstep and the rollback set it themselves (external_input), and the
+# rollback can replay old ticks with their input in one frame.
+var _now: Dictionary = {}    # action -> strength (0..1), only the pressed ones
+var _prev: Dictionary = {}
+var external_input: bool = false
+
 
 # `/` in Quantum is a float division, whatever the operands.
 static func div(a, b):
@@ -264,11 +274,56 @@ static func shake(node, frames: int, strength: float) -> void:
 		scene.q_shake(frames, strength)
 
 
+# qg:pause / qg:resume, and paused(): the scene the handler is in, or the
+# current one (a prefab's handler).
+static func _current_scene(node) -> Node:
+	if node is Node and (node as Node).has_method("q_pause"):
+		return node
+	return (Engine.get_main_loop() as SceneTree).get_first_node_in_group("q_scene")
+
+
+static func pause(node, on: bool) -> void:
+	var scene := _current_scene(node)
+	if scene != null:
+		scene.q_pause(on)
+
+
+static func paused(node) -> bool:
+	var scene := _current_scene(node)
+	return scene != null and scene.q_paused
+
+
 # Leaves the scene for another at the end of the tick (qg:goto-scene).
 static func goto_scene(scene: Node, name_: String) -> void:
 	var game := scene.get_parent()
-	if game != null and game.has_method("go_to_scene"):
-		game.call_deferred("go_to_scene", name_)
+	if game == null or not game.has_method("go_to_scene"):
+		return
+	# under the rollback, a scene change waits until the tick that asked is certain
+	var net = game.get("lockstep")
+	if net != null and net.has_method("request_scene") and net.started:
+		net.request_scene(name_)
+		return
+	game.call_deferred("go_to_scene", name_)
+
+
+# The solid part of a solid prefab: its shape= polygon (from its centre), or
+# its hitbox. A polygon may be concave: CollisionPolygon2D splits it.
+static func solid_shape(prefab: Dictionary) -> Node2D:
+	var one_way := bool(prefab.get("one_way", false))
+	if prefab.get("shape") != null:
+		var poly := CollisionPolygon2D.new()
+		var points := PackedVector2Array()
+		for p in prefab["shape"]:
+			points.append(Vector2(float(p[0]), float(p[1])))
+		poly.polygon = points
+		poly.one_way_collision = one_way
+		return poly
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(prefab["hitbox"][0], prefab["hitbox"][1])
+	var shape := CollisionShape2D.new()
+	shape.shape = rect
+	shape.one_way_collision = one_way
+	return shape
 
 
 # A collision hands the handler a hitbox area; the thing is its owner.
@@ -288,9 +343,91 @@ var persist_dir: String = ""
 
 
 func _ready() -> void:
+	process_physics_priority = -1000
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--persist-dir="):
 			persist_dir = a.substr(14)
+
+
+func _physics_process(_delta: float) -> void:
+	if external_input:
+		return
+	var next := {}
+	for a in InputMap.get_actions():
+		var name_ := String(a)
+		if name_.begins_with("ui_"):
+			continue
+		var v := Input.get_action_strength(name_)
+		if v > 0.0:
+			next[name_] = v
+	set_input(next)
+
+
+# The input of the next tick: {action: strength}, only what is pressed.
+func set_input(next: Dictionary) -> void:
+	_prev = _now
+	_now = next
+
+
+func held(action: String) -> bool:
+	return float(_now.get(action, 0.0)) > 0.0
+
+
+func tapped(action: String) -> bool:
+	return float(_now.get(action, 0.0)) > 0.0 and float(_prev.get(action, 0.0)) <= 0.0
+
+
+func strength(action: String) -> float:
+	return float(_now.get(action, 0.0))
+
+
+# --- the network, from a scene: qg:host, qg:join, qg:leave, net_*() ---
+
+static func _game() -> Node:
+	return (Engine.get_main_loop() as SceneTree).root.get_node_or_null("Game")
+
+
+static func net_host(port: int) -> void:
+	var g := _game()
+	if g != null:
+		g.net_host(port)
+
+
+static func net_join(address) -> void:
+	var g := _game()
+	if g != null:
+		g.net_join(str(address))
+
+
+static func net_leave() -> void:
+	var g := _game()
+	if g != null:
+		g.net_leave()
+
+
+static func net_status() -> String:
+	var g := _game()
+	return g.net_status() if g != null else "offline"
+
+
+static func net_players() -> int:
+	var g := _game()
+	return g.net_players() if g != null else 0
+
+
+static func net_player() -> int:
+	var g := _game()
+	return g.net_player() if g != null else 0
+
+
+# For the rollback: the input state, and back to it.
+func input_state() -> Array:
+	return [_now.duplicate(), _prev.duplicate()]
+
+
+func restore_input(state: Array) -> void:
+	_now = state[0].duplicate()
+	_prev = state[1].duplicate()
 
 
 func _persist_path() -> String:
@@ -354,8 +491,13 @@ func load_sounds(sounds: Dictionary) -> void:
 		_sounds[name_] = player
 
 
+var resimulating: bool = false   # the rollback replays old ticks: record sounds, play none
+
+
 func play(name_: String) -> void:
 	sounds_played.append(name_)
+	if resimulating:
+		return
 	var player: AudioStreamPlayer = _sounds.get(name_)
 	if player != null:
 		player.play()

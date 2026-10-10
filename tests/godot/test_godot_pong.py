@@ -30,8 +30,14 @@ def project(godot, tmp_path_factory) -> Path:
     return Path(out)
 
 
+# The title's first button, "Two players, one keyboard", chosen on tick 0: the
+# court's first tick is the replay's tick 1. Court tapes are in court ticks.
+ENTER = 1
+
+
 def court(project, ticks, holds=()):
-    return replay(project, ticks, tape=tape_from_holds(list(holds)))['court']
+    tape = tape_from_holds([('select', 0, 2)] + [(a, s + ENTER, e + ENTER) for a, s, e in holds])
+    return replay(project, ticks + ENTER, tape=tape)['court']
 
 
 def test_the_ball_flies_left_faster_and_faster(godot, project):

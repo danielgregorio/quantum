@@ -49,7 +49,13 @@ def game(moves, peers=False):
             tape.setdefault(tick + 2, []).append((action, True))
             tape.setdefault(tick + 4, []).append((action, False))
             tick += 10
-    return (white, black, tick) if peers else (white, tick)
+    if peers:
+        return white, black, tick
+    # alone: the title's "Two players, one board" on tick 0, everything else one tick later
+    local = {0: [('select', True)], 2: [('select', False)]}
+    for t, events in white.items():
+        local.setdefault(t + 1, []).extend(events)
+    return local, tick + 1
 
 
 def board_of(state):

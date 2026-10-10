@@ -26,7 +26,14 @@
   <qg:input player="2" action="jump" keys="Up" />
   <qg:input player="2" action="punch" keys="Period" />
   <qg:input player="2" action="kick" keys="Slash" />
-  <qg:multiplayer players="2" delay="3" />
+  <qg:multiplayer players="2" delay="2" rollback="8" start="fight" />
+
+  <!-- The title: two on one keyboard, or one on each machine. -->
+  <qg:scene name="title" width="640" height="360" background="#201820">
+    <qg:sprite sheet="stage" x="320" y="180" />
+    <qg:hud position="top-center" size="40"><qg:text value="{'ARENA'}" /></qg:hud>
+    <qg:lobby local="fight" local-label="Two players, one keyboard" size="18" />
+  </qg:scene>
 
   <qg:scene name="fight" width="640" height="360" background="#201820" seed="1">
     <q:set name="wins_1" value="0" />

@@ -22,6 +22,7 @@ const Tilemap := preload("res://addons/quantum/tilemap.gd")
 const Zone := preload("res://addons/quantum/zone.gd")
 const Cursor := preload("res://addons/quantum/cursor.gd")
 const FighterBody := preload("res://addons/quantum/fighter_body.gd")
+const Menu := preload("res://addons/quantum/menu.gd")
 
 static var _textures: Dictionary = {}
 
@@ -101,6 +102,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				var made := instance(game, scene, node_spec["prefab"], Vector2(node_spec["x"], node_spec["y"]))
 				if node_spec.get("name") != null:
 					made.name = node_spec["name"]
+					made.set_meta("q_named", true)
 				Q.apply_gd(made, node_spec.get("gd"))
 			"timer":
 				var timer := Timer_.new()
@@ -158,6 +160,20 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				else:
 					scene.add_child(cam)
 				scene.q_camera = cam
+			"menu":
+				var menu := Menu.new()
+				menu.setup(node_spec, scene)
+				Q.apply_gd(menu, node_spec.get("gd"))
+				scene.add_child(menu)
+				# the pointer is the player's qg:cursor; without one, a hidden one that only follows the mouse
+				var has_cursor := false
+				for other in scene_spec["nodes"]:
+					if other["kind"] == "cursor" and int(other.get("player", 1)) == int(node_spec.get("player", 1)):
+						has_cursor = true
+				if not has_cursor:
+					var pointer := Cursor.new()
+					pointer.setup({"player": node_spec.get("player", 1), "step": 0.0}, scene)
+					scene.add_child(pointer)
 			"hud":
 				var hud := Hud.new()
 				hud.setup(node_spec, scene)
@@ -219,6 +235,7 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 	body.setup(node_spec)
 	var sheet: Dictionary = game["sheets"][node_spec["sheet"]]
 	var sprite := _sprite(_texture(sheet), sheet["tile"], int(node_spec["frame"]))
+	sprite.scale = Vector2.ONE * float(node_spec.get("scale", 1.0))
 	body.add_child(sprite)
 	var shape := CollisionShape2D.new()
 	shape.name = "Shape"

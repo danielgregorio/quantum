@@ -5,7 +5,7 @@ outline: [2, 3]
 
 # Play the games
 
-Eight games written in the game language, each a single `.q` file in
+Nine games written in the game language, each a single `.q` file in
 [`projects/`](https://github.com/danielgregorio/quantum/tree/main/projects), built by
 `quantum run`, replayed in CI from input tapes, and exported here by Godot
 4.4.1 for the browser, Linux and Windows. The browser builds run as
@@ -13,10 +13,13 @@ they are; the desktop builds are a zip with one executable inside (on Linux,
 `chmod +x` it first). The site rebuilds them from `main` with
 `scripts/export-games.py`.
 
-Two of the games are played by two people on one keyboard, and five of them
-also over the network: one machine hosts, the other joins, and both run the
-same game in lockstep (`PLAN_MULTIPLAYER.md` in the repository says how).
-That needs the desktop build and a command line:
+Pong, Arena, Chess and Towers are played by two, on one keyboard or over the
+network: on the title, one machine chooses **Host a game**, the other types
+the host's address and chooses **Join**, and both run the same game in
+lockstep (`PLAN_MULTIPLAYER.md` in the repository says how). Over the network
+it takes the desktop builds: a browser cannot host, and joining from a page
+served over HTTPS needs a secure WebSocket the games do not offer yet. The
+command line skips the title:
 
 ```
 ./pong.x86_64 -- --q-host=7777            # player 1 hosts on port 7777
@@ -33,6 +36,7 @@ That needs the desktop build and a command line:
 | **Towers** | A tower defense: turrets that shoot the nearest dino, dinos down a road in waves, gold and a base; two builders over the network | [browser](https://quantumframework.net/games/towers/) | [Linux](https://quantumframework.net/games/towers/towers-linux.zip) · [Windows](https://quantumframework.net/games/towers/towers-windows.zip) | [towers.q](https://github.com/danielgregorio/quantum/blob/main/projects/towers/towers.q) |
 | **Arena** | A one-on-one fighting game: moves with frame data, blocking, hit stun, rounds on a clock; two players on one keyboard or over the network | [browser](https://quantumframework.net/games/arena/) | [Linux](https://quantumframework.net/games/arena/arena-linux.zip) · [Windows](https://quantumframework.net/games/arena/arena-windows.zip) | [arena.q](https://github.com/danielgregorio/quantum/blob/main/projects/arena/arena.q) |
 | **Chess** | Chess, its rules written in the language: castling, en passant, promotion, check, mate, stalemate; white and black on one board or over the network | [browser](https://quantumframework.net/games/chess/) | [Linux](https://quantumframework.net/games/chess/chess-linux.zip) · [Windows](https://quantumframework.net/games/chess/chess-windows.zip) | [chess.q](https://github.com/danielgregorio/quantum/blob/main/projects/chess/chess.q) |
+| **Robot** | Godot's "Platformer 2D" demo transcribed: slopes and ledges, a robot that runs, jumps twice and shoots, crawling enemies, coins, lifts, a pause menu | [browser](https://quantumframework.net/games/robot/) | [Linux](https://quantumframework.net/games/robot/robot-linux.zip) · [Windows](https://quantumframework.net/games/robot/robot-windows.zip) | [robot.q](https://github.com/danielgregorio/quantum/blob/main/projects/robot/robot.q) |
 
 ## Controls
 
@@ -44,6 +48,7 @@ That needs the desktop build and a command line:
 - **Towers**: the mouse (or the arrows) points, click or Enter builds; `1` and `2` choose the turret; a click on a turret upgrades it.
 - **Arena**: player 1 A/D, W jump, S crouch, J punch, K kick; player 2 the arrows, `.` punch, `/` kick. Hold away from the opponent to block.
 - **Chess**: click a piece, then a square (white first).
+- **Robot**: arrows or A/D; Up, W or the joypad's A jumps (again in the air); Space, Z or Ctrl shoots; Escape pauses.
 
 A joypad works everywhere: the pad or the left stick moves, A jumps or
 selects, B cancels. Player 2 reads the second joypad.

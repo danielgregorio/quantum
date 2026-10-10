@@ -1,6 +1,8 @@
 # Declarative multiplayer
 
-> Status: a first slice works (`qg:multiplayer`, `tests/godot/test_godot_multiplayer.py`).
+> Status: lockstep works, started from the game's own lobby (`qg:lobby`, or
+> `qg:host`/`qg:join`) or the command line, over ENet or WebSocket
+> (`tests/godot/test_godot_multiplayer.py`).
 > This page says what it is, why it is this and not something else, what it
 > costs, and what is left.
 
@@ -92,17 +94,35 @@ No controller, prefab or handler knows multiplayer exists.
 
 ## What is left
 
-1. **A lobby in the language**: today the host/join choice is a command
-   line flag; a `qg:lobby` scene (host, join at an address, wait for
-   players, start) would make it a game tag like any other.
+1. ~~**A lobby in the language**~~ — done: `qg:host port=`, `qg:join
+   address=`, `qg:leave`, `net_status()`/`net_players()`/`net_player()`,
+   `qg:multiplayer start=` (the scene the networked game begins in; the
+   scenes before it run on each machine alone) and `qg:lobby`, the usual
+   menu written by the compiler. Game state set before the start scene is
+   each machine's own: the hash check would report a difference.
 2. **Rejoin and spectate**: a peer that leaves ends the game for the rest
    (the others run out their known ticks and stop). Rejoining means
    replaying the input history, which the model allows and the runtime
    does not yet keep.
-3. **Rollback** (GGPO-style): predict the remote inputs, run ahead, roll
-   back on a miss. Hides the delay entirely; needs state snapshots, which
-   `quantum_state()` almost is. The step after lockstep is stable.
-4. **Web export**: ENet is not in the browser; WebRTC through Godot's
-   `WebRTCMultiplayerPeer` with a signalling service would be.
+3. ~~**Rollback**~~ — done, for the scenes it can take:
+   `<qg:multiplayer rollback="8" />`. Each tick runs at once with the
+   others' input guessed (what they last pressed); a snapshot of the state
+   is kept before every tick; when an input arrives that was guessed wrong,
+   the state goes back to that tick and the ticks since run again inside
+   one frame (`addons/quantum/rollback.gd`). The runtime reads input
+   through `Q`, one value per tick, so an old tick can be run again with
+   its own input. Godot's physics cannot be run again inside a frame, so
+   the compiler allows rollback only when every scene the networked game
+   reaches holds fighters, timers, menus, the HUD, pictures and a camera —
+   nodes that save and load their whole state. A scene change waits until
+   the tick that asked for it is certain. Arena uses it, with an input
+   delay of 2 ticks; its tests inject 30–120 ms of latency and check both
+   peers end where one replay of both tapes ends.
+4. **Web export**: ENet is not in the browser. `transport="websocket"`
+   lets a desktop host take players over WebSocket, which a browser build
+   can open — but a page served over HTTPS may only open a secure one
+   (`wss://`), which needs a certificate on the host; and two browsers
+   cannot meet without a server between them (WebRTC through Godot's
+   `WebRTCMultiplayerPeer` and a signalling service).
 5. **Three or more players in a game that uses it**: the runtime takes
    any `players`; only Pong (2) exercises it.

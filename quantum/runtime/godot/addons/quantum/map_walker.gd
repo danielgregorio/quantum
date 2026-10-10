@@ -87,13 +87,13 @@ func _physics_process(delta: float) -> void:
 	if at == "":
 		return
 	var dir := Vector2.ZERO
-	if Input.is_action_just_pressed("right"):
+	if Q.tapped("right"):
 		dir = Vector2.RIGHT
-	elif Input.is_action_just_pressed("left"):
+	elif Q.tapped("left"):
 		dir = Vector2.LEFT
-	elif Input.is_action_just_pressed("up"):
+	elif Q.tapped("up"):
 		dir = Vector2.UP
-	elif Input.is_action_just_pressed("down"):
+	elif Q.tapped("down"):
 		dir = Vector2.DOWN
 	if dir != Vector2.ZERO:
 		var next := _neighbour(dir)
@@ -105,7 +105,7 @@ func _physics_process(delta: float) -> void:
 				sprite.flip_h = dir.x < 0
 			animator.play("walk")
 		return
-	if Input.is_action_just_pressed("jump"):
+	if Q.tapped("jump"):
 		var scene_name = nodes[at].get("scene")
 		if scene_name != null and scene_name != "":
 			G.map_at = at

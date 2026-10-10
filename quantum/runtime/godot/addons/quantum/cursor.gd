@@ -18,6 +18,7 @@ func setup(spec: Dictionary, scene: Node) -> void:
 	step = float(spec.get("step", 16.0))
 	grid = int(spec["grid"]) if spec.get("grid") != null else 0
 	_scene = scene
+	add_to_group("q_cursor")
 	name = "cursor-%d" % player
 	var w := float(scene.q_spec.get("width", 256)) if "q_spec" in scene else 256.0
 	var h := float(scene.q_spec.get("height", 224)) if "q_spec" in scene else 224.0
@@ -40,13 +41,15 @@ func _physics_process(_delta: float) -> void:
 			if mouse != _mouse_seen:
 				_mouse_seen = mouse
 				_pos = mouse
-		# under the lockstep the local keys are raw_<action>, whatever player this peer is
-		var right := "raw_right" if lockstep else _a("right")
-		var left := "raw_left" if lockstep else _a("left")
-		var down := "raw_down" if lockstep else _a("down")
-		var up := "raw_up" if lockstep else _a("up")
-		var dir := Vector2(Input.get_action_strength(right) - Input.get_action_strength(left),
-			Input.get_action_strength(down) - Input.get_action_strength(up))
+		# under the lockstep, this peer's own keys (player 1's actions) before they travel;
+		# alone, the tick's input of this cursor's player
+		var dir: Vector2
+		if lockstep:
+			dir = Vector2(Input.get_action_strength("right") - Input.get_action_strength("left"),
+				Input.get_action_strength("down") - Input.get_action_strength("up"))
+		else:
+			dir = Vector2(Q.strength(_a("right")) - Q.strength(_a("left")),
+				Q.strength(_a("down")) - Q.strength(_a("up")))
 		_pos += dir * step
 		var w := float(_scene.q_spec.get("width", 256)) if "q_spec" in _scene else 256.0
 		var h := float(_scene.q_spec.get("height", 224)) if "q_spec" in _scene else 224.0

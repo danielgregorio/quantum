@@ -85,7 +85,9 @@ def free_port() -> int:
 
 
 def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], port: Optional[int] = None,
-                 binary: Optional[Path] = None, timeout: float = 300) -> List[dict]:
+                 binary: Optional[Path] = None, timeout: float = 300,
+                 lobby_tapes: Optional[List[Optional[Tape]]] = None, transport: Optional[str] = None,
+                 latency_ms: Optional[List[int]] = None, net_report: bool = False) -> List[dict]:
     """Run the project under qg:multiplayer: one Godot per player, on localhost.
 
     The first tape is player 1's, who hosts; the others join in order. Each
@@ -93,6 +95,15 @@ def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], por
     the lockstep turns them into that player's actions, ``delay`` ticks
     later, on every peer. Returns the state each peer dumped at ``ticks``
     — the same dictionary on every peer, or the game is not deterministic.
+
+    With ``lobby_tapes``, nobody is told to host or join: each peer starts
+    in the game's first scene and its lobby tape plays the menus, so the
+    game's own qg:host and qg:join start the network (on ``port``, which
+    overrides theirs); ``tapes`` are then the networked game's, from its
+    first tick. ``transport`` overrides qg:multiplayer's (``websocket``).
+    ``latency_ms`` holds back each peer's frames that long (one number per
+    peer), so a rollback game has guesses to correct; ``net_report`` adds
+    each peer's own counts (rollbacks) under ``_net``.
     """
     import subprocess
     import time
@@ -103,22 +114,37 @@ def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], por
     with tempfile.TemporaryDirectory(prefix='quantum-peers-') as tmp:
         procs = []
         outs = []
+        def write(path: Path, tape: Optional[Tape]) -> None:
+            path.write_text(json.dumps({str(k): [list(e) for e in v] for k, v in (tape or {}).items()}),
+                            encoding='utf-8')
+
         for i, tape in enumerate(tapes):
             tape_path = Path(tmp) / f'tape{i}.json'
             out_path = Path(tmp) / f'state{i}.json'
             persist = Path(tmp) / f'persist{i}'
             persist.mkdir()
-            tape_path.write_text(json.dumps({str(k): [list(e) for e in v] for k, v in (tape or {}).items()}),
-                                 encoding='utf-8')
-            peer_arg = f'--q-host={port}' if i == 0 else f'--q-join=127.0.0.1:{port}'
+            write(tape_path, tape)
+            if lobby_tapes is not None:
+                lobby_path = Path(tmp) / f'lobby{i}.json'
+                write(lobby_path, lobby_tapes[i])
+                peer_args = [f'--tape={lobby_path}', f'--game-tape={tape_path}', f'--q-port={port}']
+            else:
+                peer_args = [f'--tape={tape_path}',
+                             f'--q-host={port}' if i == 0 else f'--q-join=127.0.0.1:{port}']
+            if transport:
+                peer_args.append(f'--q-transport={transport}')
+            if latency_ms and latency_ms[i]:
+                peer_args.append(f'--q-latency={latency_ms[i]}')
+            if net_report:
+                peer_args.append('--net-report')
             log = open(Path(tmp) / f'log{i}.txt', 'w', encoding='utf-8')
             procs.append((subprocess.Popen(
                 [str(binary), '--headless', '--path', str(project_dir), '-s', str(REPLAY_SCRIPT), '--',
-                 f'--ticks={ticks}', f'--tape={tape_path}', f'--out={out_path}', f'--persist-dir={persist}',
-                 peer_arg], stdout=log, stderr=subprocess.STDOUT), log))
+                 f'--ticks={ticks}', f'--out={out_path}', f'--persist-dir={persist}', *peer_args],
+                stdout=log, stderr=subprocess.STDOUT), log))
             outs.append(out_path)
-            if i == 0:
-                time.sleep(1.0)   # the host listens before anyone joins
+            if i == 0 and lobby_tapes is None:
+                time.sleep(1.0)   # the host listens before anyone joins (a lobby tape times it itself)
         deadline = time.time() + timeout
         for proc, log in procs:
             remaining = max(1.0, deadline - time.time())

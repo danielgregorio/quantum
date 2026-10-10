@@ -21,7 +21,7 @@
 
   <qg:input action="buy-gatling" keys="1" />
   <qg:input action="buy-explosive" keys="2" />
-  <qg:multiplayer players="2" delay="3" />
+  <qg:multiplayer players="2" delay="3" start="map" />
 
   <!-- The gatling shoots a bullet at the nearest dino in range every half
        second; upgraded, twice as often. The explosive hurts every dino in
@@ -66,6 +66,13 @@
     <qg:on-collision with="base"><q:set name="base_hp" value="{base_hp - 1}" /><qg:destroy target="me" /></qg:on-collision>
     <qg:on-death><q:set name="gold" value="{gold + 10}" /></qg:on-death>
   </qg:prefab>
+
+  <!-- The title: alone, or two builders on two machines. -->
+  <qg:scene name="title" width="1152" height="648" background="#1a1a1a">
+    <qg:sprite sheet="map" x="578" y="372" gd:modulate="#ffffff60" />
+    <qg:hud position="top-center" size="48"><qg:text value="{'TOWERS'}" /></qg:hud>
+    <qg:lobby local="map" local-label="Play alone" size="22" />
+  </qg:scene>
 
   <qg:scene name="map" width="1152" height="648" background="#1a1a1a" seed="11">
     <q:set name="gold" value="100" />

@@ -18,32 +18,45 @@ extends SceneTree
 var ticks := 0
 var max_ticks := 0
 var tape := {}
+var game_tape := {}          # --game-tape: the networked game's input, by the lockstep's tick
+var has_game_tape := false
+var lobby_ticks := 0         # with a game tape, the ticks before the networked game starts
+const LOBBY_LIMIT := 6000
 var out_path := ""
+var net_report := false      # --net-report: the rollback's own counts in the dump, under "_net"
 var scene: Node
 
 
+func _read_tape(path: String) -> Dictionary:
+	var out := {}
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		push_error("replay: cannot read the tape at " + path)
+		quit(2)
+		return out
+	var data = JSON.parse_string(f.get_as_text())
+	if typeof(data) != TYPE_DICTIONARY:
+		push_error("replay: the tape is not a JSON object")
+		quit(2)
+		return out
+	for k in data.keys():
+		out[int(k)] = data[k]
+	return out
+
+
 func _initialize() -> void:
-	var tape_path := ""
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--ticks="):
 			max_ticks = int(a.substr(8))
 		elif a.begins_with("--tape="):
-			tape_path = a.substr(7)
+			tape = _read_tape(a.substr(7))
+		elif a.begins_with("--game-tape="):
+			game_tape = _read_tape(a.substr(12))
+			has_game_tape = true
 		elif a.begins_with("--out="):
 			out_path = a.substr(6)
-	if tape_path != "":
-		var f := FileAccess.open(tape_path, FileAccess.READ)
-		if f == null:
-			push_error("replay: cannot read the tape at " + tape_path)
-			quit(2)
-			return
-		var data = JSON.parse_string(f.get_as_text())
-		if typeof(data) != TYPE_DICTIONARY:
-			push_error("replay: the tape is not a JSON object")
-			quit(2)
-			return
-		for k in data.keys():
-			tape[int(k)] = data[k]
+		elif a == "--net-report":
+			net_report = true
 	var main: String = ProjectSettings.get_setting("application/run/main_scene", "")
 	if main == "":
 		push_error("replay: the project has no main scene")
@@ -53,51 +66,83 @@ func _initialize() -> void:
 	root.add_child(scene)
 
 
+func _apply(events: Array) -> void:
+	for ev in events:
+		if ev[0] == "cursor":
+			root.get_node("Q").tape_cursor = Vector2(ev[1][0], ev[1][1])
+		elif ev[1]:
+			Input.action_press(ev[0])
+		else:
+			Input.action_release(ev[0])
+
+
 # MainLoop runs this before the nodes' _physics_process of the same tick, so
 # when ticks == max_ticks the scene has run exactly max_ticks ticks.
+#
+# Under qg:multiplayer the networked game's tick is the lockstep's, which
+# stalls while a peer's input is late: the count and the tape follow it,
+# and the tape presses this peer's keys (player 1's actions). With a game
+# tape, --tape is the lobby's: it runs by this script's own count until the
+# networked game starts (qg:host / qg:join in a scene), and those ticks do
+# not count towards --ticks.
+var _linger := -1   # after the dump, frames left before quitting: what this peer sent must reach the others
+
+
+func _finish(lockstep: Node) -> bool:
+	if _linger < 0:
+		_dump()
+		_linger = 30 + int(lockstep.latency_ms / 16.0) if lockstep != null else 0
+	_linger -= 1
+	var outbox_empty: bool = lockstep == null or lockstep._outbox.is_empty()
+	return _linger <= 0 and outbox_empty
+
+
 func _physics_process(_delta: float) -> bool:
-	# Under qg:multiplayer (--q-host / --q-join) the game's tick is the
-	# lockstep's, which stalls while a peer's input is late: the tape and
-	# the count follow it, and the tape presses raw_<action> like a key.
 	var lockstep: Node = scene.get("lockstep") if "lockstep" in scene else null
-	if lockstep != null:
-		if not lockstep.started or lockstep.desynced:
-			if lockstep.desynced:
-				_dump()
-				return true
-			return false
+	if _linger >= 0:
+		return _finish(lockstep)
+	if lockstep != null and lockstep.started:
+		if lockstep.desynced:
+			return _finish(lockstep)
 		var t: int = lockstep.tick
-		if t >= max_ticks or (lockstep.ended and lockstep.stalled()):
+		if "confirmed" in lockstep:
+			# the rollback runs ahead on guesses: it stops at --ticks, and the state is
+			# dumped once every input up to there is known and every guess corrected
+			lockstep.stop_at = max_ticks
+			if (t >= max_ticks and lockstep.confirmed >= max_ticks - 1) or (lockstep.ended and lockstep.stalled()):
+				return _finish(lockstep)
+		elif t >= max_ticks or (lockstep.ended and lockstep.stalled()):
+			return _finish(lockstep)
+		if t == ticks:
+			var source: Dictionary = game_tape if has_game_tape else tape
+			if source.has(t):
+				_apply(source[t])
+			ticks += 1
+		return false
+	if has_game_tape or lockstep != null:
+		# before the networked game: the lobby's tape (or, from the command line, nothing)
+		if tape.has(lobby_ticks) and has_game_tape:
+			_apply(tape[lobby_ticks])
+		lobby_ticks += 1
+		if lobby_ticks > LOBBY_LIMIT:
+			push_error("replay: the networked game did not start within %d ticks" % LOBBY_LIMIT)
 			_dump()
 			return true
-		if t == ticks:
-			if tape.has(t):
-				for ev in tape[t]:
-					if ev[0] == "cursor":
-						root.get_node("Q").tape_cursor = Vector2(ev[1][0], ev[1][1])
-					elif ev[1]:
-						Input.action_press("raw_" + ev[0])
-					else:
-						Input.action_release("raw_" + ev[0])
-			ticks += 1
 		return false
 	if ticks >= max_ticks:
 		_dump()
 		return true
 	if tape.has(ticks):
-		for ev in tape[ticks]:
-			if ev[0] == "cursor":
-				root.get_node("Q").tape_cursor = Vector2(ev[1][0], ev[1][1])
-			elif ev[1]:
-				Input.action_press(ev[0])
-			else:
-				Input.action_release(ev[0])
+		_apply(tape[ticks])
 	ticks += 1
 	return false
 
 
 func _dump() -> void:
 	var state := {}
+	var net = scene.get("lockstep") if scene != null and "lockstep" in scene else null
+	if net_report and net != null and net.has_method("net_report"):
+		state["_net"] = net.net_report()
 	for n in _walk(scene):
 		if n.has_method("quantum_state"):
 			state[String(scene.get_path_to(n))] = n.quantum_state()

@@ -30,11 +30,13 @@
 
   <qg:scene name="title" width="480" height="720" background="#385f61">
     <q:set name="message" value="Dodge the&#10;Creeps" />
-    <q:set name="start" value="Start" />
     <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
       <qg:text bind="message" />
-      <qg:text bind="start" />
     </qg:hud>
+    <!-- The demo's StartButton: clicked, or Enter, or the joypad's A. -->
+    <qg:menu position="bottom-center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:button label="Start"><qg:goto-scene name="play" /></qg:button>
+    </qg:menu>
     <qg:on-input action="jump">
       <qg:goto-scene name="play" />
     </qg:on-input>
@@ -77,22 +79,22 @@
        the score stays on the screen. -->
   <qg:scene name="over" width="480" height="720" background="#385f61">
     <q:set name="message" value="Game Over" />
-    <q:set name="start" value="" />
     <q:set name="can_start" value="false" type="boolean" />
     <qg:hud position="top-center" font="fonts/Xolonium-Regular.ttf" size="60">
       <qg:counter bind="score" />
     </qg:hud>
     <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
       <qg:text bind="message" />
-      <qg:text bind="start" />
     </qg:hud>
     <qg:timer after="120">
       <q:set name="message" value="Dodge the&#10;Creeps" />
     </qg:timer>
     <qg:timer after="180">
-      <q:set name="start" value="Start" />
       <q:set name="can_start" value="true" />
     </qg:timer>
+    <qg:menu position="bottom-center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:button label="Start" if="{can_start}"><qg:goto-scene name="play" /></qg:button>
+    </qg:menu>
     <qg:on-input action="jump">
       <q:if condition="{can_start}">
         <qg:goto-scene name="play" />

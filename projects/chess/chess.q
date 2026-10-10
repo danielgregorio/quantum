@@ -10,7 +10,7 @@
 
   <qg:tileset name="board" src="assets/board.png" tile="62" />
   <qg:spritesheet name="pieces" src="assets/pieces.png" tile="60" />
-  <qg:multiplayer players="2" delay="2" />
+  <qg:multiplayer players="2" delay="2" start="game" />
 
   <qg:prefab name="wK" tag="piece" sheet="pieces" frame="0" hitbox="60x60" />
   <qg:prefab name="wQ" tag="piece" sheet="pieces" frame="1" hitbox="60x60" />
@@ -25,6 +25,12 @@
   <qg:prefab name="bN" tag="piece" sheet="pieces" frame="10" hitbox="60x60" />
   <qg:prefab name="bP" tag="piece" sheet="pieces" frame="11" hitbox="60x60" />
   <qg:prefab name="Marker" tag="marker" sheet="board" frame="1" hitbox="4x4" gd:modulate="#e0d040a0" gd:z_index="-1" />
+
+  <!-- The title: both colours on one board, or white and black on two machines. -->
+  <qg:scene name="title" width="496" height="540" background="#2a2520">
+    <qg:hud position="top-center" size="40"><qg:text value="{'CHESS'}" /></qg:hud>
+    <qg:lobby local="game" local-label="Two players, one board" size="18" />
+  </qg:scene>
 
   <qg:scene name="game" width="496" height="540" background="#2a2520">
     <!-- row 0 is the eighth rank (black's home), row 7 the first; a square is board[row * 8 + col] -->

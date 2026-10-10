@@ -21,17 +21,13 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 	sprite.vframes = max(1, int(texture.get_height()) / int(tile[1]))
 	sprite.frame = int(prefab.get("frame", 0))
 	add_child(sprite)
-	var rect := RectangleShape2D.new()
-	rect.size = Vector2(prefab["hitbox"][0], prefab["hitbox"][1])
-	var shape := CollisionShape2D.new()
-	shape.shape = rect
-	shape.one_way_collision = bool(prefab.get("one_way", false))
-	add_child(shape)
+	sprite.scale = Vector2.ONE * float(prefab.get("scale", 1.0))
+	add_child(Q.solid_shape(prefab))
 	var hitbox := Area2D.new()
 	hitbox.name = "Hitbox"
 	hitbox.set_script(load("res://addons/quantum/hitbox.gd"))
-	var hit_shape := CollisionShape2D.new()
-	hit_shape.shape = rect
+	var hit_shape := Q.solid_shape(prefab)
+	hit_shape.set("one_way_collision", false)
 	hitbox.add_child(hit_shape)
 	add_child(hitbox)
 

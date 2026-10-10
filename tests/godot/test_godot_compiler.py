@@ -1092,7 +1092,7 @@ class TestMultiplayer:
   </qg:scene>
 ''' + TAIL)
         data = json.loads((out / 'game.json').read_text())
-        assert data['multiplayer'] == {'players': 3, 'delay': 2, 'check_every': 30}
+        assert data['multiplayer'] == {'players': 3, 'delay': 2, 'check_every': 30, 'transport': 'enet'}
         assert data['inputs']['p2_up'] == [] and data['inputs']['p3_jump'] == []   # pressed by the lockstep, not keys
 
     @pytest.mark.parametrize('source,message', [
@@ -1277,3 +1277,214 @@ class TestWhatChessAsked:
 '''))
         script = (out / 'scripts' / 'scene_main.gd').read_text()
         assert '\t\tQ.destroy(hit)\n' in script and '\tQ.put(get_node("mark"), cursor.x, (cursor.y + 1))\n' in script
+
+
+class TestMenus:
+    def test_buttons_labels_conditions_and_a_field(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="n" value="0" type="number" />
+    <q:set name="who" value="x" />
+    <qg:menu player="1" position="top-left" size="12">
+      <qg:button label="Go"><q:set name="n" value="{n + 1}" /></qg:button>
+      <qg:button label="{'N ' + str(n)}" if="{n &gt; 0}"><qg:goto-scene name="main" /></qg:button>
+      <qg:field label="Who" bind="who" max-length="8" />
+    </qg:menu>
+  </qg:scene>
+'''))
+        menu = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'][0]
+        assert (menu['kind'], menu['player'], menu['position'], menu['size']) == ('menu', 1, 'top-left', 12)
+        go, n, who = menu['items']
+        assert go == {'kind': 'button', 'handler': '_on_menu_1_button_0', 'label': 'Go'}
+        assert n['label_method'] == '_q_menu_1_label_1' and n['if_method'] == '_q_menu_1_if_1'
+        assert who == {'kind': 'field', 'bind': 'who', 'label': 'Who', 'max_length': 8, 'game': False}
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'func _on_menu_1_button_0(me, other) -> void:\n\tn = (n + 1)\n' in script
+        assert 'func _q_menu_1_label_1():\n\treturn Q.to_str(("N " + Q.to_str(n)))\n' in script
+        assert 'func _q_menu_1_if_1():\n\treturn (n > 0)\n' in script
+
+    @pytest.mark.parametrize('body,message', [
+        ('<qg:menu />', 'needs at least one qg:button'),
+        ('<qg:menu><qg:field bind="nope" /></qg:menu>', '<qg:field bind="nope">: no q:set of that name'),
+        ('<q:set name="k" value="0" type="number" /><qg:menu><qg:field bind="k" /></qg:menu>', "a field holds text; 'k' is a number"),
+    ])
+    def test_what_a_menu_refuses(self, tmp_path, body, message):
+        assert message in str(refuse(tmp_path, game(f'  <qg:scene name="main">{body}</qg:scene>\n')))
+
+
+class TestLobby:
+    MP = '  <qg:multiplayer players="2" start="play" transport="websocket" />\n'
+
+    def test_host_join_leave_and_the_network_in_expressions(self, tmp_path):
+        out = build(tmp_path, HEAD + self.MP + '''  <qg:scene name="title">
+    <q:set name="where" value="127.0.0.1:9000" />
+    <qg:menu>
+      <qg:button label="Host"><qg:host port="9000" /></qg:button>
+      <qg:button label="Join" if="{net_status() == 'offline'}"><qg:join address="{where}" /></qg:button>
+      <qg:button label="Leave"><qg:leave /></qg:button>
+    </qg:menu>
+    <qg:hud><qg:text value="{net_status() + ' ' + str(net_players()) + ' ' + str(net_player())}" /></qg:hud>
+  </qg:scene>
+  <qg:scene name="play" />
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['multiplayer'] == {'players': 2, 'delay': 3, 'check_every': 60, 'transport': 'websocket', 'start': 'play'}
+        script = (out / 'scripts' / 'scene_title.gd').read_text()
+        assert '\tQ.net_host(9000)\n' in script and '\tQ.net_join(where)\n' in script and '\tQ.net_leave()\n' in script
+        assert 'return (Q.net_status() == "offline")' in script
+        assert 'Q.to_str(Q.net_players())' in script and 'Q.to_str(Q.net_player())' in script
+        hud = [n for n in data['scenes']['title']['nodes'] if n['kind'] == 'hud'][0]
+        assert hud['items'][0]['value_method'] == '_q_text_1'
+
+    def test_a_lobby_is_a_menu_a_field_and_a_status_line(self, tmp_path):
+        out = build(tmp_path, HEAD + self.MP + '''  <qg:scene name="title"><qg:lobby local="play" port="9000" address="10.0.0.2:9000" /></qg:scene>
+  <qg:scene name="play" />
+''' + TAIL)
+        title = json.loads((out / 'game.json').read_text())['scenes']['title']
+        menu, hud = title['nodes']
+        assert [i.get('label') for i in menu['items']] == ['Play here', 'Host a game', 'Address', 'Join', 'Cancel']
+        assert menu['items'][2] == {'kind': 'field', 'bind': 'lobby_address', 'label': 'Address', 'max_length': 64, 'game': False}
+        assert hud['position'] == 'bottom-center' and 'value_method' in hud['items'][0]
+        script = (out / 'scripts' / 'scene_title.gd').read_text()
+        assert 'var lobby_address: Variant = "10.0.0.2:9000"' in script
+        assert '\tQ.net_host(9000)\n' in script and '\tQ.net_join(lobby_address)\n' in script
+        assert 'Q.goto_scene(self, "play")' in script
+
+    @pytest.mark.parametrize('source,message', [
+        ('<qg:scene name="t"><qg:menu><qg:button label="H"><qg:host /></qg:button></qg:menu></qg:scene>',
+         'qg:host, qg:join and qg:leave need a <qg:multiplayer>'),
+        ('<qg:scene name="t"><qg:lobby /></qg:scene>', '<qg:lobby> needs a <qg:multiplayer>'),
+        ('<qg:multiplayer players="2" start="nowhere" /><qg:scene name="t" />', 'start="nowhere">: no scene of that name'),
+        ('<qg:scene name="t"><qg:hud><qg:text /></qg:hud></qg:scene>', '<qg:text> takes bind= or value=, one of them'),
+    ])
+    def test_what_it_refuses(self, tmp_path, source, message):
+        assert message in str(refuse(tmp_path, HEAD + '  ' + source + '\n' + TAIL))
+
+
+class TestRollback:
+    def test_rollback_on_a_scene_of_fighters(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:input action="punch" keys="J" />
+  <qg:multiplayer players="2" delay="1" rollback="6" start="fight" />
+  <qg:scene name="title"><qg:lobby local="fight" /></qg:scene>
+  <qg:scene name="fight">
+    <qg:character id="a" controller="fighter" sheet="c" x="10" y="10" hitbox="8x8" />
+    <qg:character id="b" controller="fighter" player="2" sheet="c" x="40" y="10" hitbox="8x8" />
+    <qg:timer every="60"><qg:goto-scene name="end" /></qg:timer>
+    <qg:hud><qg:bar bind="a.health" /></qg:hud>
+  </qg:scene>
+  <qg:scene name="end"><qg:hud><qg:text value="{'over'}" /></qg:hud></qg:scene>
+''' + TAIL)
+        assert json.loads((out / 'game.json').read_text())['multiplayer']['rollback'] == 6
+
+    @pytest.mark.parametrize('scene,message', [
+        ('<qg:instance prefab="Coin" x="1" y="1" />', "holds instance, which goes through physics"),
+        ('<qg:character id="p" controller="platformer" sheet="c" x="1" y="1" hitbox="4x4" />', 'holds controller="platformer"'),
+        ('<qg:timer every="5"><qg:spawn prefab="Coin" at="path" path="r" /></qg:timer><qg:path name="r" points="0,0; 9,9" />',
+         'holds path'),
+    ])
+    def test_what_rollback_refuses(self, tmp_path, scene, message):
+        err = refuse(tmp_path, HEAD + f'''  <qg:multiplayer players="2" rollback="6" />
+  <qg:scene name="fight">{scene}</qg:scene>
+''' + TAIL)
+        assert message in str(err)
+
+
+class TestWhatRobotAsked:
+    """What Godot's "Platformer 2D" made the language say (projects/robot/README.md)."""
+
+    def test_tiles_with_shapes_of_their_own(self, tmp_path):
+        out = build(tmp_path, HEAD.replace('tile="18" />', '''tile="18">
+    <qg:tile frame="0" shape="0,4; 18,4; 18,18; 0,18" />
+    <qg:tile frame="1" shape="0,0; 18,18; 0,18" one-way="true" />
+    <qg:tile frame="2" shape="none" />
+    <qg:tile frame="3" one-way="true" />
+  </qg:tileset>''', 1) + '''  <qg:scene name="main">
+    <qg:tilemap tileset="k" collision="true">
+1,-2,3,4
+    </qg:tilemap>
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        tiles = data['sheets']['k']['tiles']
+        assert tiles['0'] == {'shape': [[0.0, 4.0], [18.0, 4.0], [18.0, 18.0], [0.0, 18.0]], 'one_way': False}
+        assert tiles['1']['one_way'] is True and len(tiles['1']['shape']) == 3
+        assert tiles['2'] == {'shape': None, 'one_way': False}
+        assert tiles['3']['shape'] == [[0.0, 0.0], [18.0, 0.0], [18.0, 18.0], [0.0, 18.0]]   # the full square
+        assert data['scenes']['main']['nodes'][0]['layers'][0]['rows'] == [[1, -2, 3, 4]]   # -2: flipped
+        assert 'tiles' not in data['sheets']['c']
+        for tile, message in (('<qg:tile frame="0" shape="0,0; 4,4" />', 'at least three points'),
+                              ('<qg:tile frame="0" shape="none" one-way="true" />', 'one-way= means nothing'),
+                              ('<qg:tile frame="0" /><qg:tile frame="0" />', 'two <qg:tile frame="0">')):
+            err = refuse(tmp_path, HEAD.replace('tile="18" />', f'tile="18">{tile}</qg:tileset>', 1)
+                         + '  <qg:scene name="main" />\n' + TAIL)
+            assert message in str(err)
+        err = refuse(tmp_path, HEAD.replace('tile="24" />', 'tile="24"><qg:tile frame="0" /></qg:spritesheet>', 1)
+                     + '  <qg:scene name="main" />\n' + TAIL)
+        assert '<qg:tile> cannot go inside <spritesheet>' in str(err)
+
+    def test_solid_shapes_picture_scale_and_shots_stopped_by_walls(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:prefab name="Lift" tag="lift" sheet="k" hitbox="64x16" solid="true" one-way="true"
+             shape="-32,-8; 32,-8; 32,4; -32,4" ai="shuttle" dy="-100" />
+  <qg:prefab name="Shot" tag="shot" sheet="k" hitbox="4x4" ai="fly" heading="right" walls="stop" scale="0.5" />
+  <qg:scene name="main">
+    <qg:instance prefab="Lift" x="10" y="10" gd:rotation="0.3" />
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['prefabs']['Lift']['shape'][0] == [-32.0, -8.0]
+        assert (data['prefabs']['Shot']['walls'], data['prefabs']['Shot']['scale']) == ('stop', 0.5)
+        assert data['scenes']['main']['nodes'][0]['gd'] == {'rotation': {'type': 'float', 'value': 0.3}}
+        for prefab, message in (('hitbox="4x4" shape="0,0; 1,0; 1,1"', 'shape= is for a solid prefab'),
+                                ('hitbox="4x4" ai="patrol" walls="stop"', 'walls= is for ai="fly"'),
+                                ('hitbox="4x4" scale="0"', 'scale=>: more than 0')):
+            err = refuse(tmp_path, HEAD + f'  <qg:prefab name="X" tag="x" sheet="k" {prefab} />\n'
+                         '  <qg:scene name="main" />\n' + TAIL)
+            assert message in str(err)
+
+    def test_the_platformer_accelerates_jumps_in_the_air_and_shoots(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:input action="shoot" keys="Ctrl" />
+  <qg:prefab name="Shot" tag="shot" sheet="k" hitbox="4x4" ai="fly" heading="right" />
+  <qg:scene name="main">
+    <qg:character id="p" controller="platformer" sheet="c" x="0" y="0" hitbox="18x22" scale="0.8"
+                  accel="1800" jump-speed="725" air-jumps="1" air-jump-boost="2.5" jump-cut="0.6"
+                  fire-action="shoot" fire-prefab="Shot" fire-every="18">
+      <qg:animation name="fall" frames="3" />
+    </qg:character>
+  </qg:scene>
+''' + TAIL)
+        p = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'][0]
+        assert (p['accel'], p['jump_speed'], p['air_jumps'], p['air_jump_boost'], p['jump_cut'], p['scale']) == (
+            1800.0, 725.0, 1, 2.5, 0.6, 0.8)
+        assert (p['fire_action'], p['fire_prefab'], p['fire_every']) == ('shoot', 'Shot', 18)
+        assert p['animations']['fall'] == {'frames': [3], 'fps': 8.0}
+        cases = (
+            ('controller="topdown" accel="10"', 'accel= is for controller="platformer"'),
+            ('controller="platformer" jump-cut="2"', 'jump-cut=: between 0 and 1'),
+            ('controller="platformer" fire-action="fire" fire-prefab="Shot"', 'fire-action="fire": no such action'),
+            ('controller="platformer" fire-action="jump"', 'fire-action= needs fire-prefab='),
+            ('controller="platformer" fire-action="jump" fire-prefab="Coin"', 'a platformer shoots a prefab with ai="fly"'),
+            ('controller="topdown" fire-action="jump" fire-prefab="Shot"', 'fire-action= is for controller="ship" or "platformer"'),
+        )
+        for attrs, message in cases:
+            err = refuse(tmp_path, HEAD + '''  <qg:prefab name="Shot" tag="shot" sheet="k" hitbox="4x4" ai="fly" />
+  <qg:scene name="main">
+    <qg:character id="p" sheet="c" x="0" y="0" hitbox="18x22" ''' + attrs + ''' />
+  </qg:scene>
+''' + TAIL)
+            assert message in str(err), attrs
+
+    def test_pause_resume_paused_and_a_menu_shown_while_paused(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:input action="pause" keys="Escape" />
+  <qg:scene name="main">
+    <qg:on-input action="pause">
+      <q:if condition="{paused()}"><qg:resume /><q:else><qg:pause /></q:else></q:if>
+    </qg:on-input>
+    <qg:menu if="{paused()}">
+      <qg:button label="Resume"><qg:resume /></qg:button>
+    </qg:menu>
+  </qg:scene>
+''' + TAIL)
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'if Q.paused(self):' in script and 'Q.pause(self, false)' in script and 'Q.pause(self, true)' in script
+        menu = [n for n in json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'] if n['kind'] == 'menu'][0]
+        assert menu['if_method'] == '_q_menu_1_if'
+        assert 'func _q_menu_1_if():\n\treturn Q.paused(self)' in script

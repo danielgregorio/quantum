@@ -44,6 +44,9 @@ GAMES = [
     ('Chess', 'projects/chess/chess.q', 'chess: the rules — castling, en passant, promotion, check, mate, '
      'stalemate — in q:functions over an array of 64 squares, the pieces mirroring it; white and black over the '
      'network (projects/chess/README.md)'),
+    ('Robot', 'projects/robot/robot.q', 'Godot\'s "Platformer 2D" demo transcribed: its level tile for tile, with '
+     'slopes and ledges, a robot that runs, jumps twice and shoots, crawling enemies, coins, lifts and a pause menu '
+     '(projects/robot/README.md)'),
 ]
 
 INTRO = f'''---
@@ -225,7 +228,7 @@ def build() -> str:
           'scene']),
         ('What a scene holds', 'The level, the character, the things placed in it, and what the screen shows.',
          ['tilemap', 'character', 'instance', 'spawner', 'zone', 'sprite', 'path', 'cursor', 'exit', 'map-node',
-          'map-path', 'camera', 'hud', 'counter', 'text', 'bar']),
+          'map-path', 'camera', 'hud', 'counter', 'text', 'bar', 'menu', 'button', 'field', 'lobby']),
         ('Handlers', 'Where the logic goes: actions and statements, with `me` and `other` '
          '(`cursor` and `other` in qg:on-select).',
          ['on-collision', 'on-hit', 'on-fall', 'on-ko', 'on-input', 'on-select', 'on-damage', 'on-death']),

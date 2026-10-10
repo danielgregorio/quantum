@@ -131,6 +131,9 @@ The game is played by several people, each on their own machine, in lockstep: ev
 | `players` | integer | required | how many, 2 or more |
 | `delay` | integer | `3` | ticks between a press and its effect, everywhere: hides the round trip |
 | `check-every` | integer | `60` | ticks between comparisons of the whole state across peers; a difference is a desync, reported and fatal (0: never) |
+| `rollback` | integer | `0` | rollback instead of waiting: up to this many ticks run ahead on a guess of the others' input and are run again when it was wrong (0: plain lockstep). The scenes the networked game reaches may only hold fighters, timers, menus, the HUD, pictures and a camera — nothing that goes through physics |
+| `start` | a name |  | the scene the networked game starts in, on every peer, once all the players are there (the first scene when not given); the scenes before it — a title, a lobby — run on each machine alone |
+| `transport` | `enet` / `websocket` | `enet` | enet (desktop to desktop), or websocket (a browser build can join a desktop host) |
 
 Goes inside: `q:application`.
 
@@ -166,6 +169,9 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `dy` | number | `0.0` | shuttle: how far it goes, pixels |
 | `period` | integer | `240` | shuttle: ticks for there and back |
 | `one-way` | true / false | `false` | solid: can be jumped through from below and stood on |
+| `shape` | text |  | solid: the solid part as x,y points from its centre, separated by semicolons (-96,-21; 96,-21; 96,6; -96,6), instead of the hitbox |
+| `scale` | number | `1.0` | the picture's size, times its frame (the hitbox stays as given) |
+| `walls` | `pass` / `stop` | `pass` | fly: pass goes through the tiles; stop is gone on touching one |
 | `sight` | number | `80.0` | chase: pixels |
 | `heading` | text | `down` | fly: up, down, left, right, or a direction as x,y (-1,0.5) |
 | `accel` | number | `0.0` | fly: pixels per second added to its speed every second |
@@ -185,7 +191,7 @@ Goes inside: `q:application`.
 
 ### `qg:animation`
 
-Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what it does (a topdown one "walk-up" and "walk-down" when it has them, "walk-up" upside down for down); a prefab plays "walk".
+Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what it does (a platformer "fall" while it comes down, when it has one; a topdown one "walk-up" and "walk-down" when it has them, "walk-up" upside down for down); a prefab plays "walk".
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
@@ -276,9 +282,9 @@ A body the player moves: a platformer, or a walker on a world map.
 | `facing` | `left` / `right` | `right` | fighter: where it looks at first |
 | `bounds` | `scene` / `none` |  | kept inside the scene: a ship unless none, a topdown character when scene |
 | `axis` | `both` / `vertical` / `horizontal` | `both` | ship: which way it can move |
-| `fire-action` | `jump` |  | ship: the action that shoots |
-| `fire-prefab` | a name |  | ship: what it shoots, placed above it |
-| `fire-every` | integer | `10` | ship: ticks between shots while the action is held |
+| `fire-action` | a name |  | ship, platformer: the action that shoots (jump, or one a qg:input declares) |
+| `fire-prefab` | a name |  | ship: what it shoots, placed above it; platformer: in front of it, a fly prefab heading the way it faces |
+| `fire-every` | integer | `10` | ship: ticks between shots while the action is held; platformer: the fewest ticks between two presses that shoot |
 | `fire-sound` | a name |  |  |
 | `at` | an expression |  | map: the qg:map-node it starts on (a name, or an expression) |
 | `speed` | number | `60.0` | map, topdown: pixels per second |
@@ -298,6 +304,12 @@ A body the player moves: a platformer, or a walker on a world map.
 | `gravity` | number | `900.0` | pixels per second squared |
 | `max-fall` | number | `300.0` | terminal velocity, pixels per second |
 | `jump-sound` | a name |  | a qg:sound, played on take-off |
+| `jump-speed` | number |  | platformer: the take-off speed, pixels per second, instead of jump-height |
+| `accel` | number | `0.0` | platformer: pixels per second squared towards the run speed (0: at once) |
+| `air-jumps` | integer | `0` | platformer: jumps it may take in the air before landing again |
+| `air-jump-boost` | number | `1.0` | platformer: an air jump multiplies the speed across by this |
+| `jump-cut` | number | `0.0` | platformer: releasing the button while rising multiplies the rise by this, once (0: the extra gravity of variable-jump instead) |
+| `scale` | number | `1.0` | the picture's size, times its frame (the hitbox stays as given) |
 
 Goes inside: `qg:scene`.
 
@@ -470,7 +482,8 @@ A string from the scene state, in the HUD.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `bind` | a name | required | a q:set of the scene |
+| `bind` | a name |  | a q:set of the scene (or value=) |
+| `value` | an expression |  | an expression, read every frame (or bind=) |
 | `size` | integer |  | font size |
 
 Goes inside: `qg:hud`.
@@ -488,6 +501,58 @@ A bar in the HUD: a number against its maximum — a q:set, or a fighter's healt
 | `color` | `#rrggbb` | `#e04040` |  |
 
 Goes inside: `qg:hud`.
+
+### `qg:menu`
+
+A list of buttons (and text fields) over the scene. A player moves through it with up/down and chooses with select (Enter, a click, the joypad's A), or points at a button with the mouse — the pointer is that player's qg:cursor, so a click is replayed and travels in the lockstep like a key.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `player` | integer | `1` | whose keys and pointer choose |
+| `if` | an expression |  | shown, and choosable, only while this is true: paused(), a q:set... |
+| `position` | `top-left` / `top-center` / `top-right` / `center` / `bottom-center` | `center` |  |
+| `font` | text |  | a .ttf, relative to the .q or a folder above it |
+| `size` | integer | `16` | font size |
+
+Goes inside: `qg:scene`.
+
+### `qg:button`
+
+A button of a qg:menu. What it holds runs when it is chosen: actions and statements, like a handler.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `label` | text | required | its text, or an expression ({...}) read every frame |
+| `if` | an expression |  | shown, and choosable, only while this is true |
+
+Goes inside: `qg:menu`.
+
+### `qg:field`
+
+A text box of a qg:menu, bound to a string state: what is typed is the state. Typing is local to the machine (an address, a name) — a replay cannot type, and the lockstep does not carry it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `bind` | a name | required | a q:set of the scene or the game |
+| `label` | text | `` | text before the box |
+| `max-length` | integer | `64` |  |
+
+Goes inside: `qg:menu`.
+
+### `qg:lobby`
+
+The usual networked-game menu, ready made: play here (local=), host, an address field, join, cancel, and a line that says where things are. It is a qg:menu and a qg:hud the compiler writes; the address is the scene's `lobby_address`.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `local` | a name |  | a scene to play on this machine alone (a button for it when given) |
+| `local-label` | text | `Play here` |  |
+| `port` | integer | `7777` |  |
+| `address` | text | `127.0.0.1:7777` | what the address field starts with |
+| `font` | text |  |  |
+| `size` | integer | `16` |  |
+
+Goes inside: `qg:scene`.
 
 ## Handlers
 
@@ -735,7 +800,57 @@ Moves a thing or a character to a point, at once.
 
 Goes inside: a handler.
 
+### `qg:host`
+
+Hosts the networked game (qg:multiplayer): this machine is player 1 and waits for the others; the game starts in the start= scene when they are all there. `net_status()` says where things are.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `port` | integer | `7777` |  |
+
+Goes inside: a handler.
+
+### `qg:join`
+
+Joins a networked game at an address (host:port); this machine is the next player.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `address` | an expression | required | an expression: a q:set a qg:field fills, or text |
+
+Goes inside: a handler.
+
+### `qg:leave`
+
+Leaves the networked game, or stops hosting or joining.
+
+Goes inside: a handler.
+
+### `qg:pause`
+
+Pauses the scene: its characters, things, timers and spawners stop where they are. Menus, the HUD, the camera and qg:on-input go on, so a key or a button can resume it. `paused()` says whether it is.
+
+Goes inside: a handler.
+
+### `qg:resume`
+
+Goes on with a paused scene.
+
+Goes inside: a handler.
+
 ## Other tags
+
+### `qg:tile`
+
+One tile of a qg:tileset that is not a full solid square, for the tilemap layers with collision: a lower top, a thin ledge, a slope, a tile to jump through from below, or no collision at all. A flipped tile (a negative number in the tilemap) flips its shape too.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `frame` | integer | required | which tile: its number in the tilemap is frame+1 |
+| `shape` | text |  | the solid part, as x,y points from the tile's top-left corner separated by semicolons (0,10; 64,10; 64,64; 0,64); none: not solid |
+| `one-way` | true / false | `false` | stood on from above, jumped through from below |
+
+Goes inside: `qg:tileset`.
 
 ### `qg:timer`
 
@@ -780,7 +895,7 @@ second game, it is a `qg:` attribute waiting to be named.
 | Label | `qg:counter`, `qg:text` | 71 |
 | Node2D | `qg:cursor`, `qg:path`, `qg:scene` | 31 |
 | Area2D | `qg:exit`, `qg:zone`, an item prefab and its instances | 49 |
-| CanvasLayer | `qg:hud` | 16 |
+| CanvasLayer | `qg:hud`, `qg:menu` | 16 |
 | Sprite2D | `qg:map-node`, `qg:sprite` | 41 |
 | AudioStreamPlayer | `qg:sound` | 19 |
 | Node | `qg:spawner`, `qg:timer` | 9 |
@@ -1797,14 +1912,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:spritesheet name="separator" src="assets/separator.png" tile="2x400" />
 
   <!-- The left paddle is player 1 on W/S, the right one player 2 on the arrows —
-       on one keyboard. Over the network each peer is one player: one hosts
-       (q-host=7777), the other joins (q-join=HOST:7777), and the game runs
-       in lockstep, the same on both (README.md). -->
+       on one keyboard. Over the network each machine is one player (the
+       title's Host and Join), and the game runs in lockstep, the same on
+       both (README.md). -->
   <qg:input player="1" action="up" keys="W" />
   <qg:input player="1" action="down" keys="S" />
   <qg:input player="2" action="up" keys="Up" />
   <qg:input player="2" action="down" keys="Down" />
-  <qg:multiplayer players="2" delay="3" />
+  <qg:multiplayer players="2" delay="3" start="court" />
 
   <!-- The ball flies left at 100 px/s, 2 px/s faster every second; it bounces
        off the ceiling and the floor, and goes back to its start, as it was,
@@ -1817,6 +1932,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:respawn target="me" />
     </qg:on-collision>
   </qg:prefab>
+
+  <!-- The title: two on one keyboard, or one on each machine — host, or join at
+       an address. The court starts on both machines once both are there. -->
+  <qg:scene name="title" width="640" height="400" background="#24272a">
+    <qg:hud position="top-center" size="48"><qg:text value="{'PONG'}" /></qg:hud>
+    <qg:lobby local="court" local-label="Two players, one keyboard" size="20" />
+  </qg:scene>
 
   <qg:scene name="court" width="640" height="400" background="#24272a" seed="1">
     <qg:sprite sheet="separator" x="320" y="200" />
@@ -1884,11 +2006,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <qg:scene name="title" width="480" height="720" background="#385f61">
     <q:set name="message" value="Dodge the&#10;Creeps" />
-    <q:set name="start" value="Start" />
     <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
       <qg:text bind="message" />
-      <qg:text bind="start" />
     </qg:hud>
+    <!-- The demo's StartButton: clicked, or Enter, or the joypad's A. -->
+    <qg:menu position="bottom-center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:button label="Start"><qg:goto-scene name="play" /></qg:button>
+    </qg:menu>
     <qg:on-input action="jump">
       <qg:goto-scene name="play" />
     </qg:on-input>
@@ -1931,22 +2055,22 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
        the score stays on the screen. -->
   <qg:scene name="over" width="480" height="720" background="#385f61">
     <q:set name="message" value="Game Over" />
-    <q:set name="start" value="" />
     <q:set name="can_start" value="false" type="boolean" />
     <qg:hud position="top-center" font="fonts/Xolonium-Regular.ttf" size="60">
       <qg:counter bind="score" />
     </qg:hud>
     <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
       <qg:text bind="message" />
-      <qg:text bind="start" />
     </qg:hud>
     <qg:timer after="120">
       <q:set name="message" value="Dodge the&#10;Creeps" />
     </qg:timer>
     <qg:timer after="180">
-      <q:set name="start" value="Start" />
       <q:set name="can_start" value="true" />
     </qg:timer>
+    <qg:menu position="bottom-center" font="fonts/Xolonium-Regular.ttf" size="60">
+      <qg:button label="Start" if="{can_start}"><qg:goto-scene name="play" /></qg:button>
+    </qg:menu>
     <qg:on-input action="jump">
       <q:if condition="{can_start}">
         <qg:goto-scene name="play" />
@@ -1985,7 +2109,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <qg:input action="buy-gatling" keys="1" />
   <qg:input action="buy-explosive" keys="2" />
-  <qg:multiplayer players="2" delay="3" />
+  <qg:multiplayer players="2" delay="3" start="map" />
 
   <!-- The gatling shoots a bullet at the nearest dino in range every half
        second; upgraded, twice as often. The explosive hurts every dino in
@@ -2030,6 +2154,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:on-collision with="base"><q:set name="base_hp" value="{base_hp - 1}" /><qg:destroy target="me" /></qg:on-collision>
     <qg:on-death><q:set name="gold" value="{gold + 10}" /></qg:on-death>
   </qg:prefab>
+
+  <!-- The title: alone, or two builders on two machines. -->
+  <qg:scene name="title" width="1152" height="648" background="#1a1a1a">
+    <qg:sprite sheet="map" x="578" y="372" gd:modulate="#ffffff60" />
+    <qg:hud position="top-center" size="48"><qg:text value="{'TOWERS'}" /></qg:hud>
+    <qg:lobby local="map" local-label="Play alone" size="22" />
+  </qg:scene>
 
   <qg:scene name="map" width="1152" height="648" background="#1a1a1a" seed="11">
     <q:set name="gold" value="100" />
@@ -2170,7 +2301,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:input player="2" action="jump" keys="Up" />
   <qg:input player="2" action="punch" keys="Period" />
   <qg:input player="2" action="kick" keys="Slash" />
-  <qg:multiplayer players="2" delay="3" />
+  <qg:multiplayer players="2" delay="2" rollback="8" start="fight" />
+
+  <!-- The title: two on one keyboard, or one on each machine. -->
+  <qg:scene name="title" width="640" height="360" background="#201820">
+    <qg:sprite sheet="stage" x="320" y="180" />
+    <qg:hud position="top-center" size="40"><qg:text value="{'ARENA'}" /></qg:hud>
+    <qg:lobby local="fight" local-label="Two players, one keyboard" size="18" />
+  </qg:scene>
 
   <qg:scene name="fight" width="640" height="360" background="#201820" seed="1">
     <q:set name="wins_1" value="0" />
@@ -2294,7 +2432,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <qg:tileset name="board" src="assets/board.png" tile="62" />
   <qg:spritesheet name="pieces" src="assets/pieces.png" tile="60" />
-  <qg:multiplayer players="2" delay="2" />
+  <qg:multiplayer players="2" delay="2" start="game" />
 
   <qg:prefab name="wK" tag="piece" sheet="pieces" frame="0" hitbox="60x60" />
   <qg:prefab name="wQ" tag="piece" sheet="pieces" frame="1" hitbox="60x60" />
@@ -2309,6 +2447,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:prefab name="bN" tag="piece" sheet="pieces" frame="10" hitbox="60x60" />
   <qg:prefab name="bP" tag="piece" sheet="pieces" frame="11" hitbox="60x60" />
   <qg:prefab name="Marker" tag="marker" sheet="board" frame="1" hitbox="4x4" gd:modulate="#e0d040a0" gd:z_index="-1" />
+
+  <!-- The title: both colours on one board, or white and black on two machines. -->
+  <qg:scene name="title" width="496" height="540" background="#2a2520">
+    <qg:hud position="top-center" size="40"><qg:text value="{'CHESS'}" /></qg:hud>
+    <qg:lobby local="game" local-label="Two players, one board" size="18" />
+  </qg:scene>
 
   <qg:scene name="game" width="496" height="540" background="#2a2520">
     <!-- row 0 is the eighth rank (black's home), row 7 the first; a square is board[row * 8 + col] -->
@@ -2550,6 +2694,191 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         </q:if>
       </q:if>
     </qg:on-select>
+  </qg:scene>
+
+</q:application>
+```
+
+### Robot
+
+`projects/robot/robot.q` — Godot's "Platformer 2D" demo transcribed: its level tile for tile, with slopes and ledges, a robot that runs, jumps twice and shoots, crawling enemies, coins, lifts and a pause menu (projects/robot/README.md).
+
+```xml
+<q:application id="robot" type="game">
+
+  <!-- Robot: Godot's "Platformer 2D" demo (godot-demo-projects, 2d/platformer, MIT),
+       transcribed. One closed level of slopes, ledges, moving platforms, coins and
+       crawling enemies; the robot runs, jumps twice, shoots, and cannot be hurt.
+       The demo's art and sounds are in assets/ (assets/LICENSE.md); README.md maps
+       the original, piece by piece. -->
+
+  <!-- The demo's keys: jump on Up, W or the joypad's A; shoot on Space, Z, Ctrl or
+       the joypad's X; pause on Escape or Start. Left and right keep their defaults. -->
+  <qg:input action="jump" keys="Up, W, JoyA" />
+  <qg:input action="shoot" keys="Space, Z, Ctrl, JoyX" />
+  <qg:input action="pause" keys="Escape, JoyStart" />
+
+  <!-- The tiles are 64 px. Most are full squares; these are not: a grassy top that
+       starts 10 px down, two thin ledges, a slope to walk up and jump through. -->
+  <qg:tileset name="tiles" src="assets/tiles.png" tile="64">
+    <qg:tile frame="0" shape="0,10; 64,10; 64,64; 0,64" />
+    <qg:tile frame="1" shape="0,10; 64,10; 64,64; 0,64" />
+    <qg:tile frame="2" shape="0,10; 64,10; 64,46; 0,46" />
+    <qg:tile frame="3" shape="0,10; 64,10; 64,43; 0,43" />
+    <qg:tile frame="18" shape="0,7.25; 58.18,64; 0,64" one-way="true" />
+    <qg:tile frame="27" shape="0,10; 64,10; 64,64; 0,64" />
+    <qg:tile frame="28" shape="0,10; 64,10; 64,64; 0,64" />
+    <qg:tile frame="29" shape="0,10; 64,10; 64,64; 0,64" />
+  </qg:tileset>
+  <qg:spritesheet name="robot" src="assets/robot.png" tile="64" />
+  <qg:spritesheet name="enemy" src="assets/enemy.png" tile="128" />
+  <qg:spritesheet name="coin" src="assets/coin.png" tile="32" />
+  <qg:spritesheet name="bullet" src="assets/bullet.png" tile="16" />
+  <qg:spritesheet name="platform" src="assets/platform.png" tile="256x64" />
+
+  <qg:sound name="jump" src="assets/jump.wav" />
+  <qg:sound name="shoot" src="assets/shoot.wav" />
+  <qg:sound name="coin" src="assets/coin_pickup.wav" />
+  <qg:sound name="explode" src="assets/explode.wav" />
+
+  <qg:prefab name="Coin" tag="coin" sheet="coin" frame="0" hitbox="20x20" scale="0.65">
+    <qg:animation name="walk" frames="0,1,2,3,2,1" fps="6" />
+  </qg:prefab>
+
+  <!-- Crawls at 22 px/s and turns at walls and before falling off. -->
+  <qg:prefab name="Enemy" tag="enemy" sheet="enemy" frame="0" hitbox="50x36" scale="0.8"
+             ai="patrol" speed="22" direction="right" turns-at="edge" gravity="2100">
+    <qg:animation name="walk" frames="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15" fps="16" />
+  </qg:prefab>
+
+  <!-- 850 px/s the way the robot faces, gone after a second or on a wall. -->
+  <qg:prefab name="Bullet" tag="bullet" sheet="bullet" frame="0" hitbox="16x16"
+             ai="fly" heading="right" speed="850" lifetime="60" walls="stop">
+    <qg:on-collision with="enemy">
+      <qg:burst at="other" color="#ffd27f" count="24" />
+      <qg:play sound="explode" />
+      <qg:destroy target="other" />
+      <qg:destroy target="me" />
+    </qg:on-collision>
+  </qg:prefab>
+
+  <!-- 192x27 to stand on, 7.5 px above the picture's middle; jumped through from below. -->
+  <qg:prefab name="LiftUp" tag="lift" sheet="platform" frame="0" hitbox="192x27" solid="true" one-way="true"
+             shape="-96,-21; 96,-21; 96,6; -96,6" ai="shuttle" dy="-210" period="240" />
+  <qg:prefab name="LiftSlow" tag="lift" sheet="platform" frame="0" hitbox="192x27" solid="true" one-way="true"
+             shape="-96,-21; 96,-21; 96,6; -96,6" ai="shuttle" dy="-295" period="480" />
+  <!-- The tilted platform at the top: the demo's polygon, rotated with the instance. -->
+  <qg:prefab name="Ledge" tag="ledge" sheet="platform" frame="0" hitbox="192x27" solid="true"
+             shape="-174.04,-0.43; -94.04,-23.61; 91.84,-28.64; 80.29,-5.16; -54.32,0.04; -179.99,26.44" />
+
+  <qg:scene name="level" width="800" height="480" background="#52c9ff">
+    <q:set name="coins" value="0" type="number" />
+
+    <!-- 35 x 24 tiles of 64 px; the demo's map, whose top-left cell is (-12, -11), so
+         every position here is the demo's plus (768, 704). A negative number is a
+         tile flipped left to right. -->
+    <qg:tilemap tileset="tiles" collision="true">
+-2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2
+-10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10
+-10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10
+-10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10
+-10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10
+-10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10
+-10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10
+-10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10
+-10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10
+-10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10
+-10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,10
+-10,1,1,1,1,1,1,1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-2,-1,1,1,1,1,1,1,10
+-10,9,9,9,9,9,9,9,10,0,0,0,0,0,-4,3,3,-3,4,0,0,0,0,0,0,0,-10,-9,9,9,9,9,9,9,10
+-10,9,9,9,9,9,9,9,10,0,0,-4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,-10,-9,9,9,9,9,9,9,10
+-10,9,9,9,9,9,9,9,10,0,0,0,0,0,0,0,0,0,-4,-3,4,0,0,0,0,0,-10,-9,9,9,9,9,9,9,10
+-10,9,9,9,9,9,9,9,18,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-10,-9,9,9,9,9,9,9,10
+-10,9,9,9,9,9,9,9,9,10,0,0,0,-4,3,4,0,0,0,0,0,0,0,0,0,0,-10,-9,9,9,9,9,9,9,10
+-10,9,9,9,9,9,9,9,-14,10,0,0,0,0,0,0,0,0,-2,28,30,28,2,0,0,0,-10,-9,9,9,9,9,9,9,10
+-10,9,9,9,9,9,9,9,9,10,0,0,0,-4,-3,-3,4,0,-16,-7,15,15,16,0,0,0,-10,-9,9,9,9,9,9,9,10
+-10,9,9,9,9,9,9,9,9,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-10,-9,9,9,9,9,9,9,10
+-10,9,9,9,9,9,9,9,-14,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-19,-18,-9,9,9,9,9,9,9,10
+-10,9,9,9,9,9,9,9,9,18,30,28,28,30,30,28,28,30,28,30,28,30,28,28,30,-27,-9,-9,9,9,9,9,9,9,10
+-10,9,9,9,9,9,9,9,9,9,9,9,14,9,14,9,14,9,9,9,-14,14,9,9,-14,9,-9,-9,9,9,9,9,9,9,10
+-10,9,9,9,9,9,9,9,-15,-15,15,15,15,15,15,15,15,14,15,15,15,15,15,15,15,15,-9,-9,9,9,9,9,9,9,10
+    </qg:tilemap>
+
+    <qg:instance prefab="LiftUp" x="1568" y="1114" />
+    <qg:instance prefab="LiftSlow" x="740" y="1349" />
+    <qg:instance prefab="Ledge" x="1379" y="839" gd:rotation="0.355618" />
+    <qg:sprite sheet="platform" frame="0" x="1292.2" y="818" gd:rotation="0.109325" gd:z_index="-1" />
+
+    <qg:instance prefab="Coin" x="1468" y="1314" />
+    <qg:instance prefab="Coin" x="1498" y="1314" />
+    <qg:instance prefab="Coin" x="1528" y="1314" />
+    <qg:instance prefab="Coin" x="922" y="747" />
+    <qg:instance prefab="Coin" x="952" y="747" />
+    <qg:instance prefab="Coin" x="982" y="747" />
+    <qg:instance prefab="Coin" x="968" y="1314" />
+    <qg:instance prefab="Coin" x="998" y="1314" />
+    <qg:instance prefab="Coin" x="1028" y="1314" />
+    <qg:instance prefab="Coin" x="1075" y="1298" />
+    <qg:instance prefab="Coin" x="1105" y="1288" />
+    <qg:instance prefab="Coin" x="1135" y="1298" />
+    <qg:instance prefab="Coin" x="1221" y="1036" />
+    <qg:instance prefab="Coin" x="1251" y="1026" />
+    <qg:instance prefab="Coin" x="1281" y="1036" />
+    <qg:instance prefab="Coin" x="890" y="1110" />
+    <qg:instance prefab="Coin" x="920" y="1100" />
+    <qg:instance prefab="Coin" x="950" y="1110" />
+    <qg:instance prefab="Coin" x="1362" y="1036" />
+    <qg:instance prefab="Coin" x="1392" y="1026" />
+    <qg:instance prefab="Coin" x="1422" y="1036" />
+
+    <qg:instance prefab="Enemy" x="1312" y="1059" />
+    <qg:instance prefab="Enemy" x="1260" y="1314" />
+    <qg:instance prefab="Enemy" x="1163" y="757" />
+
+    <qg:character id="robot" controller="platformer" sheet="robot" frame="30" scale="0.8"
+                  x="858" y="1329" hitbox="34x44"
+                  run-speed="300" accel="1800" jump-speed="725" gravity="2100" max-fall="700"
+                  coyote-frames="0" air-jumps="1" air-jump-boost="2.5" jump-cut="0.6"
+                  jump-sound="jump"
+                  fire-action="shoot" fire-prefab="Bullet" fire-every="18" fire-sound="shoot">
+      <qg:animation name="idle" frames="30,31,32,33" fps="8" />
+      <qg:animation name="walk" frames="0,1,2,3,4,5,6,7,8,9" fps="16" />
+      <qg:animation name="jump" frames="45" />
+      <qg:animation name="fall" frames="48" />
+
+      <qg:on-collision with="coin">
+        <qg:destroy target="other" />
+        <qg:play sound="coin" />
+        <q:set name="coins" value="{coins + 1}" />
+      </qg:on-collision>
+    </qg:character>
+
+    <!-- The camera stays inside the level's walls, a little below the robot. -->
+    <qg:camera follow="robot" bounds="none" gd:offset="0,39"
+               gd:limit_left="53" gd:limit_top="454" gd:limit_right="2193" gd:limit_bottom="1394" />
+
+    <qg:hud position="top-left" size="24">
+      <qg:counter bind="coins" label="COINS" />
+    </qg:hud>
+
+    <!-- Escape pauses and resumes; while paused, the menu. -->
+    <qg:on-input action="pause">
+      <q:if condition="{paused()}">
+        <qg:resume />
+      <q:else>
+        <qg:pause />
+      </q:else>
+      </q:if>
+    </qg:on-input>
+
+    <qg:menu if="{paused()}" size="24">
+      <qg:button label="Resume">
+        <qg:resume />
+      </qg:button>
+      <qg:button label="Restart">
+        <qg:goto-scene name="level" />
+      </qg:button>
+    </qg:menu>
   </qg:scene>
 
 </q:application>

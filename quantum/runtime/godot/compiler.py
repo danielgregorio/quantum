@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 from quantum.runtime.godot.errors import GameCompileError
 from quantum.runtime.godot.model import Element, Game, Statement, read_game
 from quantum.runtime.godot.expressions import compile_expression, strip_braces
+from quantum.runtime.godot.schema import TAGS
 from quantum.runtime.godot.tiled import read_tmx
 from quantum.runtime.godot import gd as gdprops
 from quantum.runtime.godot.statements import (
@@ -166,7 +167,15 @@ class _Compiler:
             if mp.get('delay') < 1:
                 raise GameCompileError('<qg:multiplayer delay=>: 1 or more', mp.line)
             self.multiplayer = {'players': mp.get('players'), 'delay': mp.get('delay'),
-                                'check_every': mp.get('check-every')}
+                                'check_every': mp.get('check-every'), 'transport': mp.get('transport')}
+            if mp.get('rollback'):
+                if mp.get('rollback') < 1:
+                    raise GameCompileError('<qg:multiplayer rollback=>: 1 or more ticks (0 is off)', mp.line)
+                self.multiplayer['rollback'] = mp.get('rollback')
+            if mp.get('start'):
+                if not any(sc.get('name') == mp.get('start') for sc in g.scenes):
+                    raise GameCompileError(f'<qg:multiplayer start="{mp.get("start")}">: no scene of that name', mp.line)
+                self.multiplayer['start'] = mp.get('start')
             # every player's actions exist; under lockstep they are pressed by the runtime, not by keys
             for p in range(2, mp.get('players') + 1):
                 for action in self.actions:
@@ -183,6 +192,27 @@ class _Compiler:
                 tile = (tile, tile)
             sheets[name] = {'src': self._asset(el.get('src'), el.line), 'tile': list(tile),
                             'kind': el.tag}
+            tiles = {}
+            for t in el.find_all('tile'):
+                if str(t.get('frame')) in tiles:
+                    raise GameCompileError(f'two <qg:tile frame="{t.get("frame")}"> in tileset {name!r}', t.line)
+                if t.get('frame') < 0:
+                    raise GameCompileError('<qg:tile frame=>: 0 or more', t.line)
+                shape = t.get('shape')
+                if shape is not None and str(shape).strip() == 'none':
+                    if t.get('one-way'):
+                        raise GameCompileError('<qg:tile shape="none"> is not solid: one-way= means nothing', t.line)
+                    points = None
+                elif shape is None:
+                    size = float(tile[0])
+                    points = [[0.0, 0.0], [size, 0.0], [size, size], [0.0, size]]
+                else:
+                    points = _points(shape, t.line)
+                    if len(points) < 3:
+                        raise GameCompileError('<qg:tile shape=>: at least three points', t.line)
+                tiles[str(t.get('frame'))] = {'shape': points, 'one_way': t.get('one-way')}
+            if tiles:
+                sheets[name]['tiles'] = tiles
         sounds = {}
         for name, el in g.sounds.items():
             sounds[name] = {'src': self._asset(el.get('src'), el.line), 'loop': el.get('loop')}
@@ -198,6 +228,17 @@ class _Compiler:
                 raise GameCompileError('ai="shuttle" is a solid: add solid="true"', el.line)
             if el.get('one-way') and not el.get('solid'):
                 raise GameCompileError('one-way="true" is for a solid prefab', el.line)
+            shape = None
+            if el.get('shape') is not None:
+                if not el.get('solid'):
+                    raise GameCompileError('shape= is for a solid prefab', el.line)
+                shape = _points(el.get('shape'), el.line)
+                if len(shape) < 3:
+                    raise GameCompileError('<qg:prefab shape=>: at least three points', el.line)
+            if el.get('walls') != 'pass' and el.get('ai') != 'fly':
+                raise GameCompileError('walls= is for ai="fly"', el.line)
+            if el.get('scale') <= 0:
+                raise GameCompileError('<qg:prefab scale=>: more than 0', el.line)
             for attr in ('fire-sound',):
                 if el.get(attr) and el.get(attr) not in sounds:
                     raise GameCompileError(f'{attr}="{el.get(attr)}": no qg:sound of that name', el.line)
@@ -221,6 +262,7 @@ class _Compiler:
                              'direction': el.get('direction'), 'turns_at': el.get('turns-at'),
                              'gravity': el.get('gravity'), 'solid': el.get('solid'),
                              'one_way': el.get('one-way'), 'dx': el.get('dx'), 'dy': el.get('dy'),
+                             'shape': shape, 'scale': el.get('scale'), 'walls': el.get('walls'),
                              'period': el.get('period'),
                              'heading': _heading(el.get('heading'), el.line), 'accel': el.get('accel'),
                              'lifetime': el.get('lifetime'),
@@ -254,8 +296,13 @@ class _Compiler:
         self._exits_used: List[tuple] = []
         self._scene_exits: Dict[str, set] = {}
         self._scenes_used.extend(self._prefab_scenes_used)
+        self._scene_goes: Dict[str, List[str]] = {}
+        self._scene_spawns: Dict[str, Optional[int]] = {}
         for scene in g.scenes:
             scenes[scene.get('name')] = self._scene(scene, sheets, prefabs)
+        if self.multiplayer is not None and self.multiplayer.get('rollback'):
+            _check_rollback(self.multiplayer.get('start') or g.scenes[0].get('name'), scenes,
+                            self._scene_goes, self._scene_spawns, g.multiplayer.line)
         for sname, line in self._scenes_used:
             if sname not in scenes:
                 raise GameCompileError(
@@ -309,6 +356,7 @@ class _Compiler:
 
     def _scene(self, scene: Element, sheets: dict, prefabs: dict) -> dict:
         name = scene.get('name')
+        scene.children = _expand_lobbies(scene.children, self.multiplayer)
         script = SceneScript(name, game_state=self.game_state)
         self._states_checked: list = []
         # the characters, by id: names in the scene's expressions, targets of its actions
@@ -346,6 +394,8 @@ class _Compiler:
         zones: set = set()
         on_select: Dict[str, str] = {}
         cursors: set = set()
+        menus = 0
+        texts = 0
         paths: Dict[str, list] = {}
         conditions = 0
         on_death: Dict[str, str] = {}
@@ -558,6 +608,31 @@ class _Compiler:
                 if el.get('fire-prefab') and el.get('fire-prefab') not in prefabs:
                     raise GameCompileError(
                         f'fire-prefab="{el.get("fire-prefab")}": no qg:prefab of that name', el.line)
+                controller = el.get('controller')
+                if el.get('fire-action') is not None:
+                    if controller not in ('ship', 'platformer'):
+                        raise GameCompileError('fire-action= is for controller="ship" or "platformer"', el.line)
+                    if el.get('fire-action') not in self.actions:
+                        raise GameCompileError(
+                            f'fire-action="{el.get("fire-action")}": no such action — declare it with '
+                            f'<qg:input action="{el.get("fire-action")}" keys="..." />', el.line)
+                    if not el.get('fire-prefab'):
+                        raise GameCompileError('fire-action= needs fire-prefab= (what it shoots)', el.line)
+                    if controller == 'platformer' and prefabs[el.get('fire-prefab')]['ai'] != 'fly':
+                        raise GameCompileError(
+                            f'fire-prefab="{el.get("fire-prefab")}": a platformer shoots a prefab with ai="fly"', el.line)
+                for attr, default in (('jump-speed', None), ('accel', 0.0), ('air-jumps', 0),
+                                      ('air-jump-boost', 1.0), ('jump-cut', 0.0)):
+                    if el.get(attr) != default and controller != 'platformer':
+                        raise GameCompileError(f'{attr}= is for controller="platformer"', el.line)
+                if el.get('jump-speed') is not None and el.get('jump-speed') <= 0:
+                    raise GameCompileError('jump-speed=: more than 0 (pixels per second, upwards)', el.line)
+                if el.get('air-jumps') < 0 or el.get('accel') < 0:
+                    raise GameCompileError('air-jumps= and accel=: 0 or more', el.line)
+                if not 0 <= el.get('jump-cut') <= 1:
+                    raise GameCompileError('jump-cut=: between 0 and 1', el.line)
+                if el.get('scale') <= 0:
+                    raise GameCompileError('<qg:character scale=>: more than 0', el.line)
                 at_method = None
                 if el.get('controller') == 'map':
                     at = el.get('at')
@@ -593,7 +668,10 @@ class _Compiler:
                     'run_speed': el.get('run-speed'), 'jump_height': el.get('jump-height'),
                     'variable_jump': el.get('variable-jump'), 'coyote_frames': el.get('coyote-frames'),
                     'gravity': el.get('gravity'), 'max_fall': el.get('max-fall'),
-                    'jump_sound': el.get('jump-sound'),
+                    'jump_sound': el.get('jump-sound'), 'jump_speed': el.get('jump-speed'),
+                    'accel': el.get('accel'), 'air_jumps': el.get('air-jumps'),
+                    'air_jump_boost': el.get('air-jump-boost'), 'jump_cut': el.get('jump-cut'),
+                    'scale': el.get('scale'),
                     'bounds': el.get('bounds'), 'fire_action': el.get('fire-action'),
                     'fire_prefab': el.get('fire-prefab'), 'fire_every': el.get('fire-every'),
                     'fire_sound': el.get('fire-sound'),
@@ -621,6 +699,48 @@ class _Compiler:
             elif el.tag == 'camera':
                 nodes.append({'kind': 'camera', 'follow': el.get('follow'), 'bounds': el.get('bounds')})
                 self._node_elements.append(el)
+            elif el.tag == 'menu':
+                menus += 1
+                items = []
+                for c in el.children:
+                    if isinstance(c, Element) and c.tag == 'button':
+                        n = len(items)
+                        item = {'kind': 'button',
+                                'handler': compile_handler(script, f'_on_menu_{menus}_button_{n}', c.children, c.line)}
+                        label = str(c.get('label'))
+                        if is_expression(label):
+                            item['label_method'] = f'_q_menu_{menus}_label_{n}'
+                            script.functions.append(
+                                f'func {item["label_method"]}():\n\treturn Q.to_str({compile_expression(label, script.scope(), c.line)})\n')
+                        else:
+                            item['label'] = label
+                        if c.get('if') is not None:
+                            item['if_method'] = f'_q_menu_{menus}_if_{n}'
+                            script.functions.append(
+                                f'func {item["if_method"]}():\n\treturn {compile_expression(c.get("if"), script.scope(), c.line)}\n')
+                        gdprops.attach(item, 'Button', c.gd, '<qg:button>', c.line)
+                        items.append(item)
+                    elif isinstance(c, Element) and c.tag == 'field':
+                        bind = c.get('bind')
+                        var = script.state.get(bind) or self.game_state.get(bind)
+                        if var is None:
+                            raise GameCompileError(f'<qg:field bind="{bind}">: no q:set of that name in the scene or the game', c.line)
+                        if var.typed and var.type != 'string':
+                            raise GameCompileError(f'<qg:field bind="{bind}">: a field holds text; {bind!r} is a {var.type}', c.line)
+                        items.append({'kind': 'field', 'bind': bind, 'label': c.get('label'), 'max_length': c.get('max-length'),
+                                      'game': bind not in script.state})
+                    else:
+                        raise GameCompileError('<qg:menu> holds qg:button and qg:field', getattr(c, 'line', el.line))
+                if not items:
+                    raise GameCompileError('<qg:menu> needs at least one qg:button', el.line)
+                font = self._asset(el.get('font'), el.line) if el.get('font') else None
+                nodes.append({'kind': 'menu', 'player': el.get('player'), 'position': el.get('position'),
+                              'size': el.get('size'), 'font': font, 'items': items})
+                if el.get('if') is not None:
+                    nodes[-1]['if_method'] = f'_q_menu_{menus}_if'
+                    script.functions.append(
+                        f'func {nodes[-1]["if_method"]}():\n\treturn {compile_expression(el.get("if"), script.scope(), el.line)}\n')
+                self._node_elements.append(el)
             elif el.tag == 'hud':
                 items = []
                 for c in el.children:
@@ -638,12 +758,19 @@ class _Compiler:
                         gdprops.attach(items[-1], 'ProgressBar', c.gd, '<qg:bar>', c.line)
                         continue
                     if isinstance(c, Element) and c.tag in ('counter', 'text'):
-                        if c.get('bind') not in script.state and c.get('bind') not in self.game_state:
+                        if c.tag == 'text' and (c.get('bind') is None) == (c.get('value') is None):
+                            raise GameCompileError('<qg:text> takes bind= or value=, one of them', c.line)
+                        if c.get('bind') is not None and c.get('bind') not in script.state and c.get('bind') not in self.game_state:
                             raise GameCompileError(
                                 f'<qg:{c.tag} bind="{c.get("bind")}">: no q:set of that name in the scene '
                                 f'or the game', c.line)
                         items.append({'kind': c.tag, 'bind': c.get('bind'), 'label': c.get('label', ''),
                                       'size': c.get('size')})
+                        if c.tag == 'text' and c.get('value') is not None:
+                            texts += 1
+                            items[-1]['value_method'] = f'_q_text_{texts}'
+                            script.functions.append(
+                                f'func _q_text_{texts}():\n\treturn Q.to_str({compile_expression(c.get("value"), script.scope(), c.line)})\n')
                         gdprops.attach(items[-1], 'Label', c.gd, f'<qg:{c.tag}>', c.line)
                     else:
                         raise GameCompileError('<qg:hud> holds qg:counter, qg:text and qg:bar', getattr(c, 'line', el.line))
@@ -687,8 +814,12 @@ class _Compiler:
             if pname not in paths:
                 raise GameCompileError(f'<qg:spawn path="{pname}">: no qg:path of that name in the scene '
                                        f'(paths: {", ".join(sorted(paths)) or "none"})', line)
+        if script.net_used and self.multiplayer is None:
+            raise GameCompileError('qg:host, qg:join and qg:leave need a <qg:multiplayer> in q:application', script.net_used[0])
         self._scene_exits[name] = set(exits)
         self._scenes_used.extend(script.scenes_used)
+        self._scene_goes[name] = [s for s, _ in script.scenes_used]
+        self._scene_spawns[name] = script.prefabs_used[0][1] if script.prefabs_used else None
         for pname, line in script.prefabs_used:
             if pname not in prefabs:
                 raise GameCompileError(
@@ -759,6 +890,76 @@ def action_name(player: int, action: str) -> str:
 
 
 _HEADINGS = {'up': (0.0, -1.0), 'down': (0.0, 1.0), 'left': (-1.0, 0.0), 'right': (1.0, 0.0)}
+
+
+# What a scene the rollback reaches may hold: nodes that save and load their whole state
+# and never go through Godot's physics, which cannot be run again inside one frame.
+_ROLLBACK_KINDS = {'character', 'timer', 'hud', 'sprite', 'menu', 'camera'}
+
+
+def _check_rollback(start: str, scenes: dict, goes: Dict[str, List[str]], spawns: Dict[str, Optional[int]],
+                    line: Optional[int]) -> None:
+    reach, todo = set(), [start]
+    while todo:
+        s = todo.pop()
+        if s in reach or s not in scenes:
+            continue
+        reach.add(s)
+        todo.extend(goes.get(s, []))
+    for s in sorted(reach):
+        for n in scenes[s]['nodes']:
+            what = n['kind'] if n['kind'] != 'character' else f'controller="{n["controller"]}"'
+            if n['kind'] not in _ROLLBACK_KINDS or (n['kind'] == 'character' and n['controller'] != 'fighter'):
+                raise GameCompileError(
+                    f'<qg:multiplayer rollback=>: the scene {s!r} holds {what}, which goes through physics or '
+                    f'keeps no state to roll back — rollback takes fighters, timers, menus, the HUD, pictures '
+                    f'and a camera (rollback="0" is the plain lockstep)', line)
+        if spawns.get(s) is not None:
+            raise GameCompileError(f'<qg:multiplayer rollback=>: the scene {s!r} places prefabs (qg:spawn, qg:swap), '
+                                   f'which rollback cannot take back', spawns[s])
+
+
+def _el(tag: str, line: Optional[int], children=(), **attrs) -> Element:
+    """An element the compiler writes itself, with the schema's defaults (attribute names use _ for -)."""
+    values = {name: spec.default for name, spec in TAGS[tag].attrs.items()}
+    values.update({k.replace('_', '-'): v for k, v in attrs.items()})
+    return Element(tag, values, line, list(children))
+
+
+_BUSY = "net_status() == 'hosting' or net_status() == 'joining' or net_status() == 'connected'"
+_IDLE = "net_status() == 'offline' or net_status() == 'failed'"
+
+
+def _expand_lobbies(children: list, multiplayer: Optional[dict]) -> list:
+    """qg:lobby, written out: a q:set for the address, a qg:menu, a qg:hud with the status line."""
+    out: list = []
+    for node in children:
+        if not (isinstance(node, Element) and node.tag == 'lobby'):
+            out.append(node)
+            continue
+        el, line = node, node.line
+        if multiplayer is None:
+            raise GameCompileError('<qg:lobby> needs a <qg:multiplayer> in q:application', line)
+        if el.children:
+            raise GameCompileError('<qg:lobby> holds nothing; write a qg:menu to have other buttons', line)
+        port = el.get('port')
+        buttons = []
+        if el.get('local'):
+            buttons.append(_el('button', line, [_el('goto-scene', line, name=el.get('local'))], label=el.get('local-label')))
+        buttons += [
+            _el('button', line, [_el('host', line, port=port)], label='Host a game', **{'if': '{' + _IDLE + '}'}),
+            _el('field', line, bind='lobby_address', label='Address'),
+            _el('button', line, [_el('join', line, address='{lobby_address}')], label='Join', **{'if': '{' + _IDLE + '}'}),
+            _el('button', line, [_el('leave', line)], label='Cancel', **{'if': '{' + _BUSY + '}'}),
+        ]
+        status = ("{" + f"'Waiting for the other players on port {port}' if net_status() == 'hosting' else "
+                  "('Joining ' + lobby_address + '...' if net_status() == 'joining' else "
+                  "('Connected, starting...' if net_status() == 'connected' else "
+                  "('Could not connect' if net_status() == 'failed' else '')))" + "}")
+        out.append(Statement('set', {'name': 'lobby_address', 'value': str(el.get('address'))}, line))
+        out.append(_el('menu', line, buttons, font=el.get('font'), size=el.get('size')))
+        out.append(_el('hud', line, [_el('text', line, value=status)], position='bottom-center', size=el.get('size')))
+    return out
 
 
 def _points(raw: str, line: Optional[int]) -> list:
