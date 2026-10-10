@@ -59,6 +59,15 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- Laboratory: the games on the site drew no pictures, played no sounds and
+  had no tilemap: the runtime read the image, sound and font files
+  themselves, and an exported game (the browser, the desktop zips) carries
+  only Godot's imports of them. Every picture was a magenta square and a
+  platformer's character fell through a level it could not see. The runtime
+  now loads the imports when the files are not there
+  (`Q.texture`, `Q.audio`, `Q.font`); `test_godot_exported_files.py` deletes
+  a project's files after the import and plays it.
+
 - Laboratory: `qg:shake` drew its jolt from the scene's random source once
   per drawn frame, so two machines drawing at different rates would have
   drawn different random numbers afterwards; it has its own source now.

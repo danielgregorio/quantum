@@ -466,20 +466,73 @@ func save_persisted(state: Node, names: Array) -> void:
 
 # --- sounds (an instance method: Q is an autoload node) ---
 
+# --- the game's files: images, sounds, fonts ---
+#
+# A project on disk (the editor, a replay, the tests) has the files
+# themselves, read as they are: no import step needed. An exported game (the
+# browser, a desktop zip) carries only Godot's imported version of each file,
+# which load() finds.
+
+static func _imported(src: String) -> Resource:
+	var path := "res://" + src
+	if not FileAccess.file_exists(path) and ResourceLoader.exists(path):
+		return load(path)
+	return null
+
+
+static func texture(src: String) -> Texture2D:
+	var res := _imported(src)
+	if res is Texture2D:
+		return res
+	var image := Image.load_from_file(ProjectSettings.globalize_path("res://" + src))
+	if image == null:
+		return null
+	return ImageTexture.create_from_image(image)
+
+
+static func audio(src: String, loop: bool) -> AudioStream:
+	var stream: AudioStream = null
+	var res := _imported(src)
+	if res is AudioStream:
+		stream = res
+	elif src.ends_with(".ogg"):
+		stream = AudioStreamOggVorbis.load_from_file(ProjectSettings.globalize_path("res://" + src))
+	elif src.ends_with(".wav"):
+		stream = AudioStreamWAV.load_from_file(ProjectSettings.globalize_path("res://" + src))
+	if stream == null:
+		return null
+	if stream is AudioStreamOggVorbis:
+		stream.loop = loop
+	elif stream is AudioStreamWAV and loop:
+		var wav := stream as AudioStreamWAV
+		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		wav.loop_end = wav.data.size() / max(1, 2 if wav.format == AudioStreamWAV.FORMAT_16_BITS else 1) / max(1, 2 if wav.stereo else 1)
+	return stream
+
+
+static func font(src: String) -> Font:
+	var res := _imported(src)
+	if res is Font:
+		return res
+	var file := FontFile.new()
+	if file.load_dynamic_font(ProjectSettings.globalize_path("res://" + src)) == OK:
+		return file
+	return null
+
+
+# Quitting while a sound plays would leave its playback, and the imported
+# stream it reads, alive after the engine: stop and drop them first.
+func _exit_tree() -> void:
+	for player in _sounds.values():
+		player.stop()
+		player.stream = null
+	_sounds.clear()
+
+
 func load_sounds(sounds: Dictionary) -> void:
 	for name_ in sounds.keys():
 		var src: String = sounds[name_]["src"]
-		var stream: AudioStream = null
-		var path := ProjectSettings.globalize_path("res://" + src)
-		if src.ends_with(".ogg"):
-			stream = AudioStreamOggVorbis.load_from_file(path)
-			if stream != null:
-				stream.loop = bool(sounds[name_].get("loop", false))
-		elif src.ends_with(".wav"):
-			stream = AudioStreamWAV.load_from_file(path)
-			if stream != null and sounds[name_].get("loop", false):
-				stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-				stream.loop_end = stream.data.size() / max(1, 2 if stream.format == AudioStreamWAV.FORMAT_16_BITS else 1) / max(1, 2 if stream.stereo else 1)
+		var stream := audio(src, bool(sounds[name_].get("loop", false)))
 		if stream == null:
 			push_warning("quantum: cannot load the sound " + src)
 			continue

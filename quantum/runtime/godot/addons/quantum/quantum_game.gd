@@ -145,3 +145,4 @@ func go_to_scene(scene_name: String) -> void:
 func _exit_tree() -> void:
 	if G.has_method("_q_save"):
 		G._q_save()
+	SceneBuilder.forget_textures()   # the static cache holds loaded resources: let them go with the game
