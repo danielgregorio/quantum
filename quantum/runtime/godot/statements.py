@@ -357,6 +357,14 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     if el.tag == 'spawn':
         at = el.get('at')
         script.prefabs_used.append((el.get('prefab'), el.line))
+        if (el.get('x') is None) != (el.get('y') is None):
+            raise GameCompileError('<qg:spawn> takes x= and y= together', el.line)
+        if el.get('x') is not None:
+            if at != 'other' or el.get('path'):
+                raise GameCompileError('<qg:spawn>: x= and y=, or at=, not both', el.line)
+            return (f'Q.spawn_at(self, {json.dumps(el.get("prefab"))}, '
+                    f'Vector2(float({compile_expression(el.get("x"), scope, el.line)}) + {float(el.get("dx"))!r}, '
+                    f'float({compile_expression(el.get("y"), scope, el.line)}) + {float(el.get("dy"))!r}))')
         if at == 'path':
             if not el.get('path'):
                 raise GameCompileError('<qg:spawn at="path"> needs path= (a qg:path of the scene)', el.line)

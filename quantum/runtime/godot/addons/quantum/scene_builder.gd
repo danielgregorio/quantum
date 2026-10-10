@@ -1,9 +1,8 @@
 extends RefCounted
 # Builds a scene's node tree from its entry in game.json.
 #
-# Textures are loaded from the image files themselves (Image.load_from_file),
-# not through Godot's import, so a headless run needs no import step and the
-# same files serve the editor, the replay and the export.
+# Textures come through Q.texture: Godot's import in an exported game, the
+# image file itself in a project never imported (a headless replay).
 
 const QuantumScene := preload("res://addons/quantum/quantum_scene.gd")
 const PlatformerBody := preload("res://addons/quantum/platformer_body.gd")
@@ -269,15 +268,19 @@ static func _sprite(texture: Texture2D, tile: Array, frame: int) -> Sprite2D:
 	return sprite
 
 
+static func forget_textures() -> void:
+	_textures.clear()
+
+
 static func _texture(sheet: Dictionary) -> Texture2D:
 	var src: String = sheet["src"]
 	if _textures.has(src):
 		return _textures[src]
-	var image := Image.load_from_file(ProjectSettings.globalize_path("res://" + src))
-	if image == null:
+	var texture := Q.texture(src)
+	if texture == null:
 		push_error("quantum: cannot load the image " + src)
-		image = Image.create(16, 16, false, Image.FORMAT_RGBA8)
+		var image := Image.create(16, 16, false, Image.FORMAT_RGBA8)
 		image.fill(Color.MAGENTA)
-	var texture := ImageTexture.create_from_image(image)
+		texture = ImageTexture.create_from_image(image)
 	_textures[src] = texture
 	return texture

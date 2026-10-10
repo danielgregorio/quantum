@@ -45,7 +45,7 @@ def game(moves, peers=False):
             row, col = square(name)
             tape = white if (player == 1 or not peers) else black
             cursor_at(tape, tick, col * 62 + 31, row * 62 + 31)
-            action = 'select' if (player == 1 or peers) else 'p2_select'
+            action = 'select'   # on one machine the same mouse plays both colours; peers each their own
             tape.setdefault(tick + 2, []).append((action, True))
             tape.setdefault(tick + 4, []).append((action, False))
             tick += 10
@@ -66,7 +66,9 @@ def test_the_scholars_mate(godot, project):
     tape, end = game(['e2e4', 'e7e5', 'd1h5', 'b8c6', 'f1c4', 'g8f6', 'h5f7'])
     s = replay(project, end, tape=tape)['game']
     assert s['status'] == 'Checkmate - White wins' and s['finished'] is True
-    assert s['things'] == {'marker': 1, 'piece': 31}
+    assert s['things'] == {'marker': 1, 'piece': 31, 'last': 2, 'check': 1}     # no dots left
+    assert s['named']['check_mark'] == {'x': 279.0, 'y': 31.0}                   # glowing under e8's king
+    assert (s['named']['last_from'], s['named']['last_to']) == ({'x': 465.0, 'y': 217.0}, {'x': 341.0, 'y': 93.0})
     b = board_of(s)
     assert b['f7'] == 'wQ' and b['c4'] == 'wB' and b['c6'] == 'bN' and 'h5' not in b and b['e8'] == 'bK'
 
@@ -105,3 +107,24 @@ def test_white_and_black_on_two_peers(godot, project):
     peers = replay_peers(project, end, [white, black], binary=godot)
     assert peers[0] == peers[1]
     assert peers[0]['game']['status'] == 'Checkmate - White wins'
+
+
+def test_a_picked_piece_shows_where_it_may_go(godot, project):
+    tape, _ = game(['e2e4', 'e7e5', 'g1f3', 'b8c6'])
+    # then white picks the knight on f3, and leaves it picked
+    row, col = square('f3')
+    cursor_at(tape, 100, col * 62 + 31, row * 62 + 31)
+    tape.setdefault(102, []).append(('select', True))
+    tape.setdefault(104, []).append(('select', False))
+    s = replay(project, 110, tape=tape)['game']
+    assert (s['sel_r'], s['sel_c']) == (5.0, 5.0)
+    # g1, d4, h4 empty; e5 holds a black pawn (a ring); g5 empty
+    assert s['things']['dot'] == len(s['legal']) == 5
+    dots = sorted((w[1], w[2]) for w in s['where'] if w[0] == 'dot')
+    assert (row - 2) * 62 + 31 in [y for _, y in dots]
+
+
+def test_black_moves_with_the_same_mouse_on_one_machine(godot, project):
+    tape, end = game(['e2e4', 'e7e5'])            # every click is player 1's select
+    s = replay(project, end, tape=tape)['game']
+    assert s['turn'] == 'w' and board_of(s)['e5'] == 'bP' and s['status'] == 'White to move'

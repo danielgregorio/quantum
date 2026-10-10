@@ -34,10 +34,8 @@ func setup(spec: Dictionary, scene: Node) -> void:
 	add_child(box)
 	var font: Font = null
 	if spec.get("font") != null:
-		var file := FontFile.new()
-		if file.load_dynamic_font(ProjectSettings.globalize_path("res://" + str(spec["font"]))) == OK:
-			font = file
-		else:
+		font = Q.font(str(spec["font"]))
+		if font == null:
 			push_warning("quantum: cannot load the font " + str(spec["font"]))
 	var size := int(spec.get("size", 8))
 	for item in spec.get("items", []):

@@ -191,7 +191,7 @@ Goes inside: `q:application`.
 
 ### `qg:animation`
 
-Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what it does (a platformer "fall" while it comes down, when it has one; a topdown one "walk-up" and "walk-down" when it has them, "walk-up" upside down for down); a prefab plays "walk".
+Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what it does (a platformer "fall" while it comes down, when it has one; a topdown one "walk-up" and "walk-down" when it has them, "walk-up" upside down for down, and while it swings "attack", or "attack-up" and "attack-down" by where it faces); a prefab plays "walk".
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
@@ -693,6 +693,8 @@ Places a new prefab instance in the scene.
 | `prefab` | a name | required |  |
 | `at` | `other` / `me` / `cursor` / `path` | `other` | whose position; cursor: where the qg:on-select cursor is; path: the start of path= |
 | `path` | a name |  | at="path": a qg:path of the scene, which an ai="path" prefab follows |
+| `x` | an expression |  | a point of the scene instead of at= (with y=): an expression, in pixels |
+| `y` | an expression |  |  |
 | `dx` | number | `0.0` |  |
 | `dy` | number | `0.0` | offset in pixels |
 
@@ -1314,8 +1316,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
        Six rooms of a keep, seen from above. A character that walks in eight
        directions and swings a sword; slimes that wander and bats that chase;
        hearts; a key and a locked door; a switch that opens a gate in another
-       room; a chest at the end. Art and sounds: Kenney's Pixel Platformer (CC0),
-       pressed into service for walls and floors. -->
+       room; a chest at the end. The dungeon, the hero and the monsters are drawn
+       for it by scripts/art/keep.py (CC0); the sounds are Kenney's Pixel
+       Platformer (CC0). -->
 
   <!-- The game's state, kept across rooms. -->
   <q:set name="hearts" value="3" type="number" />
@@ -1324,8 +1327,11 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <q:set name="opened" value="[]" type="array" />     <!-- doors and gates opened, by name -->
   <q:set name="message" value="" />
 
-  <qg:tileset name="kenney" src="assets/kenney/tilemap_packed.png" tile="18" />
-  <qg:spritesheet name="chars" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
+  <!-- 1 is the floor (walked on: no collision), 2 the wall. -->
+  <qg:tileset name="dungeon" src="assets/dungeon.png" tile="18">
+    <qg:tile frame="0" shape="none" />
+  </qg:tileset>
+  <qg:spritesheet name="hero" src="assets/hero.png" tile="24" />
 
   <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
   <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
@@ -1333,22 +1339,22 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:sound name="open" src="assets/kenney/audio/block.ogg" />
   <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
 
-  <qg:prefab name="Key" tag="key" sheet="kenney" frame="27" hitbox="12x12" />
-  <qg:prefab name="Heart" tag="heart" sheet="kenney" frame="44" hitbox="12x12" />
-  <qg:prefab name="Door" tag="door" sheet="kenney" frame="9" hitbox="18x18" solid="true" />
-  <qg:prefab name="Gate" tag="gate" sheet="kenney" frame="21" hitbox="18x18" solid="true" />
-  <qg:prefab name="Switch" tag="switch" sheet="kenney" frame="111" hitbox="14x14" />
-  <qg:prefab name="SwitchOn" tag="switch-on" sheet="kenney" frame="112" hitbox="14x14" />
-  <qg:prefab name="Sign" tag="sign" sheet="kenney" frame="86" hitbox="18x18" solid="true" />
-  <qg:prefab name="Chest" tag="chest" sheet="kenney" frame="8" hitbox="16x16" />
+  <qg:prefab name="Key" tag="key" sheet="dungeon" frame="8" hitbox="12x12" />
+  <qg:prefab name="Heart" tag="heart" sheet="dungeon" frame="9" hitbox="12x12" />
+  <qg:prefab name="Door" tag="door" sheet="dungeon" frame="2" hitbox="18x18" solid="true" />
+  <qg:prefab name="Gate" tag="gate" sheet="dungeon" frame="3" hitbox="18x18" solid="true" />
+  <qg:prefab name="Switch" tag="switch" sheet="dungeon" frame="4" hitbox="14x14" />
+  <qg:prefab name="SwitchOn" tag="switch-on" sheet="dungeon" frame="5" hitbox="14x14" />
+  <qg:prefab name="Sign" tag="sign" sheet="dungeon" frame="6" hitbox="18x18" solid="true" />
+  <qg:prefab name="Chest" tag="chest" sheet="dungeon" frame="7" hitbox="16x16" />
 
-  <qg:prefab name="Slime" tag="enemy" sheet="chars" frame="18" hitbox="14x14"
+  <qg:prefab name="Slime" tag="enemy" sheet="hero" frame="10" hitbox="14x14"
              ai="wander" speed="25">
-    <qg:animation name="walk" frames="18,19,20" fps="6" />
+    <qg:animation name="walk" frames="10,11,12,11" fps="6" />
   </qg:prefab>
-  <qg:prefab name="Bat" tag="enemy" sheet="chars" frame="24" hitbox="14x14"
+  <qg:prefab name="Bat" tag="enemy" sheet="hero" frame="13" hitbox="14x14"
              ai="chase" speed="40" sight="90">
-    <qg:animation name="walk" frames="24,25,26" fps="10" />
+    <qg:animation name="walk" frames="13,14,15,14" fps="10" />
   </qg:prefab>
 
   <!-- ===== Room 1: the entrance. East to room 2. ===== -->
@@ -1362,26 +1368,31 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </q:if>
     </q:function>
 
-    <qg:tilemap tileset="kenney" collision="true">
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,0
-25,0,0,0,0,0,0,0,0,0,0,0,0,0
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
+    <qg:tilemap tileset="dungeon" collision="true">
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,1
+2,1,1,1,1,1,1,1,1,1,1,1,1,1
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
     </qg:tilemap>
 
-    <qg:character id="player" controller="topdown" sheet="chars" frame="0"
+    <qg:character id="player" controller="topdown" sheet="hero" frame="0"
                   x="60" y="108" hitbox="14x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
+      <qg:animation name="walk-up" frames="3,4" fps="8" />
+      <qg:animation name="walk-down" frames="5,6" fps="8" />
+      <qg:animation name="attack" frames="7" />
+      <qg:animation name="attack-up" frames="8" />
+      <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="sign">
         <q:set name="message" value="THE KEY IS NORTH. THE SWITCH IS SOUTH." />
       </qg:on-collision>
@@ -1416,26 +1427,31 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </q:if>
     </q:function>
 
-    <qg:tilemap tileset="kenney" collision="true">
-25,25,25,25,25,25,0,0,25,25,25,25,25,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,25,25,25,25,25,0,0,25,25,25,25,25,25
+    <qg:tilemap tileset="dungeon" collision="true">
+2,2,2,2,2,2,1,1,2,2,2,2,2,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+1,1,1,1,1,1,1,1,1,1,1,1,1,1
+1,1,1,1,1,1,1,1,1,1,1,1,1,1
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,2,2,2,2,2,1,1,2,2,2,2,2,2
     </qg:tilemap>
 
-    <qg:character id="player" controller="topdown" sheet="chars" frame="0"
+    <qg:character id="player" controller="topdown" sheet="hero" frame="0"
                   x="126" y="108" hitbox="14x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
+      <qg:animation name="walk-up" frames="3,4" fps="8" />
+      <qg:animation name="walk-down" frames="5,6" fps="8" />
+      <qg:animation name="attack" frames="7" />
+      <qg:animation name="attack-up" frames="8" />
+      <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="enemy" cooldown="60">
         <q:call function="hurt" args="me" />
       </qg:on-collision>
@@ -1481,26 +1497,31 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </q:if>
     </q:function>
 
-    <qg:tilemap tileset="kenney" collision="true">
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,25,25,0,0,25,25,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,25,25,0,0,25,25,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,25,25,25,25,25,0,0,25,25,25,25,25,25
+    <qg:tilemap tileset="dungeon" collision="true">
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,2,2,1,1,2,2,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,2,2,1,1,2,2,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,2,2,2,2,2,1,1,2,2,2,2,2,2
     </qg:tilemap>
 
-    <qg:character id="player" controller="topdown" sheet="chars" frame="0"
+    <qg:character id="player" controller="topdown" sheet="hero" frame="0"
                   x="126" y="190" hitbox="14x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
+      <qg:animation name="walk-up" frames="3,4" fps="8" />
+      <qg:animation name="walk-down" frames="5,6" fps="8" />
+      <qg:animation name="attack" frames="7" />
+      <qg:animation name="attack-up" frames="8" />
+      <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="enemy" cooldown="60">
         <q:call function="hurt" args="me" />
       </qg:on-collision>
@@ -1545,26 +1566,31 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </q:if>
     </q:function>
 
-    <qg:tilemap tileset="kenney" collision="true">
-25,25,25,25,25,25,0,0,25,25,25,25,25,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
+    <qg:tilemap tileset="dungeon" collision="true">
+2,2,2,2,2,2,1,1,2,2,2,2,2,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
     </qg:tilemap>
 
-    <qg:character id="player" controller="topdown" sheet="chars" frame="0"
+    <qg:character id="player" controller="topdown" sheet="hero" frame="0"
                   x="126" y="36" hitbox="14x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
+      <qg:animation name="walk-up" frames="3,4" fps="8" />
+      <qg:animation name="walk-down" frames="5,6" fps="8" />
+      <qg:animation name="attack" frames="7" />
+      <qg:animation name="attack-up" frames="8" />
+      <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="enemy" cooldown="60">
         <q:call function="hurt" args="me" />
       </qg:on-collision>
@@ -1603,26 +1629,31 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </q:if>
     </q:function>
 
-    <qg:tilemap tileset="kenney" collision="true">
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,25,25,25,25,25
-0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0
-25,0,0,0,0,0,0,0,0,25,25,25,25,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
+    <qg:tilemap tileset="dungeon" collision="true">
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,2,2,2,2,2
+1,1,1,1,1,1,1,1,1,1,1,1,1,1
+1,1,1,1,1,1,1,1,1,1,1,1,1,1
+2,1,1,1,1,1,1,1,1,2,2,2,2,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
     </qg:tilemap>
 
-    <qg:character id="player" controller="topdown" sheet="chars" frame="0"
+    <qg:character id="player" controller="topdown" sheet="hero" frame="0"
                   x="36" y="108" hitbox="14x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
+      <qg:animation name="walk-up" frames="3,4" fps="8" />
+      <qg:animation name="walk-down" frames="5,6" fps="8" />
+      <qg:animation name="attack" frames="7" />
+      <qg:animation name="attack-up" frames="8" />
+      <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="enemy" cooldown="60">
         <q:call function="hurt" args="me" />
       </qg:on-collision>
@@ -1652,26 +1683,31 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== Room 6: the chest. ===== -->
 
   <qg:scene name="room-6" width="256" height="224" background="#2b2b3a" seed="6">
-    <qg:tilemap tileset="kenney" collision="true">
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-0,0,0,0,0,0,0,0,0,0,0,0,0,25
-0,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
+    <qg:tilemap tileset="dungeon" collision="true">
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+1,1,1,1,1,1,1,1,1,1,1,1,1,2
+1,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
     </qg:tilemap>
 
-    <qg:character id="player" controller="topdown" sheet="chars" frame="0"
+    <qg:character id="player" controller="topdown" sheet="hero" frame="0"
                   x="36" y="108" hitbox="14x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
+      <qg:animation name="walk-up" frames="3,4" fps="8" />
+      <qg:animation name="walk-down" frames="5,6" fps="8" />
+      <qg:animation name="attack" frames="7" />
+      <qg:animation name="attack-up" frames="8" />
+      <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="chest">
         <qg:play sound="win" />
         <q:set name="message" value="THE TREASURE OF THE KEEP IS YOURS." />
@@ -1726,15 +1762,18 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- Drift: the vertical shooter that drives the game language (PLAN_GAMES_2.md).
        A ship at the bottom of the screen, three waves of drones and tanks that
        come down and shoot, then a boss with two phases; lives, score, and a high
-       score kept between runs. Art and sounds: Kenney's Pixel Platformer (CC0),
-       pressed into service as spaceships. -->
+       score kept between runs. The ship, the drones, the tanks, the boss and the
+       sky are drawn for it by scripts/art/drift.py (CC0); the sounds are
+       Kenney's Pixel Platformer (CC0). -->
 
   <q:set name="score" value="0" type="number" />
   <q:set name="lives" value="3" type="number" />
   <q:set name="high_score" value="0" type="number" saved="true" />
 
-  <qg:tileset name="kenney" src="assets/kenney/tilemap_packed.png" tile="18" />
-  <qg:spritesheet name="chars" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
+  <!-- The ships, the boss and the sky are drawn for this game by scripts/art/drift.py (CC0). -->
+  <qg:spritesheet name="ships" src="assets/ships.png" tile="24" />
+  <qg:spritesheet name="boss" src="assets/boss.png" tile="40" />
+  <qg:spritesheet name="space" src="assets/space.png" tile="256x224" />
 
   <qg:sound name="shoot" src="assets/kenney/audio/jump.ogg" />
   <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
@@ -1743,7 +1782,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
 
   <!-- The ship's shot: flies up, gone after 80 ticks or when it leaves the screen. -->
-  <qg:prefab name="Shot" tag="shot" sheet="kenney" frame="151" hitbox="18x8"
+  <qg:prefab name="Shot" tag="shot" sheet="ships" frame="8" hitbox="18x8"
              ai="fly" heading="up" speed="240" lifetime="80">
     <qg:on-collision with="enemy">
       <qg:damage target="other" amount="1" />
@@ -1755,13 +1794,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:on-collision>
   </qg:prefab>
 
-  <qg:prefab name="EnemyShot" tag="enemy-shot" sheet="kenney" frame="128" hitbox="6x6"
+  <qg:prefab name="EnemyShot" tag="enemy-shot" sheet="ships" frame="9" hitbox="6x6"
              ai="fly" heading="down" speed="120" lifetime="150" />
 
   <!-- A drone: comes straight down, one hit. -->
-  <qg:prefab name="Drone" tag="enemy" sheet="chars" frame="18" hitbox="14x14"
+  <qg:prefab name="Drone" tag="enemy" sheet="ships" frame="2" hitbox="14x14"
              ai="fly" heading="down" speed="45" lifetime="400" health="1">
-    <qg:animation name="walk" frames="18,19,20" fps="6" />
+    <qg:animation name="walk" frames="2,3,4" fps="6" />
     <qg:on-death>
       <qg:play sound="boom" />
       <qg:burst at="me" color="#ffcc44" count="10" />
@@ -1770,10 +1809,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:prefab>
 
   <!-- A tank: slow, three hits, shoots. -->
-  <qg:prefab name="Tank" tag="enemy" sheet="chars" frame="24" hitbox="16x16"
+  <qg:prefab name="Tank" tag="enemy" sheet="ships" frame="5" hitbox="16x16"
              ai="fly" heading="down" speed="20" lifetime="900" health="3"
              fire-prefab="EnemyShot" fire-every="90">
-    <qg:animation name="walk" frames="24,25,26" fps="4" />
+    <qg:animation name="walk" frames="5,6,7" fps="8" />
     <qg:on-damage>
       <qg:play sound="hit" />
     </qg:on-damage>
@@ -1785,10 +1824,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:prefab>
 
   <!-- The boss: sways across the top, twenty hits; angry below half. -->
-  <qg:prefab name="Boss" tag="boss" sheet="chars" frame="9" hitbox="20x20"
+  <qg:prefab name="Boss" tag="boss" sheet="boss" frame="0" hitbox="20x20"
              ai="sway" speed="30" health="12" fire-prefab="EnemyShot" fire-every="90">
-    <qg:state name="calm" frame="9" speed="30" fire-every="90" initial="true" />
-    <qg:state name="angry" frame="12" speed="70" fire-every="60" />
+    <qg:state name="calm" frame="0" speed="30" fire-every="90" initial="true" />
+    <qg:state name="angry" frame="1" speed="70" fire-every="60" />
     <qg:on-damage>
       <qg:play sound="hit" />
       <q:if condition="{me.health <= 6 and me.state == 'calm'}">
@@ -1804,6 +1843,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:prefab>
 
   <qg:scene name="play" width="256" height="224" background="#0a0a1e" seed="3">
+    <qg:sprite sheet="space" x="128" y="112" />
     <q:set name="message" value="" />
     <q:set name="boss_down" value="false" type="boolean" />
 
@@ -1816,10 +1856,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </q:if>
     </q:function>
 
-    <qg:character id="ship" controller="ship" sheet="chars" frame="6" x="128" y="196" hitbox="12x12"
+    <qg:character id="ship" controller="ship" sheet="ships" frame="0" x="128" y="196" hitbox="12x12"
                   speed="120" bounds="scene"
                   fire-action="jump" fire-prefab="Shot" fire-every="8" fire-sound="shoot">
-      <qg:animation name="idle" frames="6" />
+      <qg:animation name="idle" frames="0,1" fps="12" />
       <qg:on-collision with="enemy" cooldown="90">
         <qg:destroy target="other" />
         <q:call function="hurt" args="me" />
@@ -1858,6 +1898,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:scene>
 
   <qg:scene name="victory" width="256" height="224" background="#102040">
+    <qg:sprite sheet="space" x="128" y="112" />
     <q:set name="title" value="THE DRIFT IS CLEAR. PRESS JUMP." />
     <q:if condition="{score > high_score}">
       <q:set name="high_score" value="{score}" />
@@ -1875,6 +1916,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:scene>
 
   <qg:scene name="game-over" width="256" height="224" background="#000000">
+    <qg:sprite sheet="space" x="128" y="112" />
     <q:set name="title" value="LOST IN THE DRIFT. PRESS JUMP." />
     <q:if condition="{score > high_score}">
       <q:set name="high_score" value="{score}" />
@@ -2446,7 +2488,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:prefab name="bB" tag="piece" sheet="pieces" frame="9" hitbox="60x60" />
   <qg:prefab name="bN" tag="piece" sheet="pieces" frame="10" hitbox="60x60" />
   <qg:prefab name="bP" tag="piece" sheet="pieces" frame="11" hitbox="60x60" />
-  <qg:prefab name="Marker" tag="marker" sheet="board" frame="1" hitbox="4x4" gd:modulate="#e0d040a0" gd:z_index="-1" />
+  <!-- What the board shows besides the pieces (assets/board.png): the picked square, a dot on each
+       square the picked piece may go to (a ring round a piece it may take), the last move, a king in check. -->
+  <qg:prefab name="Marker" tag="marker" sheet="board" frame="2" hitbox="4x4" />
+  <qg:prefab name="Dot" tag="dot" sheet="board" frame="3" hitbox="4x4" gd:z_index="1" />
+  <qg:prefab name="Ring" tag="dot" sheet="board" frame="4" hitbox="4x4" gd:z_index="1" />
+  <qg:prefab name="Last" tag="last" sheet="board" frame="6" hitbox="4x4" />
+  <qg:prefab name="Check" tag="check" sheet="board" frame="7" hitbox="4x4" />
 
   <!-- The title: both colours on one board, or white and black on two machines. -->
   <qg:scene name="title" width="496" height="540" background="#2a2520">
@@ -2463,7 +2511,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="legal" type="array" value="{[]}" />
     <q:set name="ep_col" value="-1" type="number" />
     <q:set name="moved" type="array" value="{[]}" />
-    <q:set name="status" value="White to move" />
+    <q:set name="status" value="White to move - click a piece, then where it goes" />
     <q:set name="finished" value="false" type="boolean" />
 
     <qg:tilemap tileset="board">
@@ -2476,9 +2524,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 1,2,1,2,1,2,1,2
 2,1,2,1,2,1,2,1
     </qg:tilemap>
-    <qg:cursor player="1" grid="62" />
+    <!-- the pointer: the mouse, or the arrows (Enter picks and puts); drawn as a frame round its square -->
+    <qg:cursor player="1" grid="62" sheet="board" frame="5" />
     <qg:cursor player="2" grid="62" />
-    <!-- the picked square's mark, kept off the board until a piece is picked -->
+    <!-- the marks, kept off the board until they mean something; under the pieces -->
+    <qg:instance prefab="Last" name="last_from" x="-100" y="-100" />
+    <qg:instance prefab="Last" name="last_to" x="-100" y="-100" />
+    <qg:instance prefab="Check" name="check_mark" x="-100" y="-100" />
     <qg:instance prefab="Marker" name="mark" x="-100" y="-100" />
 
     <qg:instance prefab="bR" x="31" y="31" /><qg:instance prefab="bN" x="93" y="31" /><qg:instance prefab="bB" x="155" y="31" /><qg:instance prefab="bQ" x="217" y="31" />
@@ -2633,14 +2685,31 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
     <q:function name="clear_mark">
       <qg:put target="mark" x="-100" y="-100" />
+      <q:loop var="m" items="{legal}">
+        <q:set name="d" value="{thing_at('dot', m[1] * 62 + 31, m[0] * 62 + 31)}" />
+        <q:if condition="{d != null}"><qg:destroy target="d" /></q:if>
+      </q:loop>
       <q:set name="sel_r" value="-1" />
       <q:set name="sel_c" value="-1" />
       <q:set name="legal" value="{[]}" />
     </q:function>
 
-    <!-- a click: pick up one of your pieces, or put the picked one on a legal square -->
+    <!-- the red glow under the king of the side to move, when it is in check -->
+    <q:function name="show_check">
+      <qg:put target="check_mark" x="-100" y="-100" />
+      <q:if condition="{in_check(turn)}">
+        <q:loop var="i" from="0" to="63">
+          <q:if condition="{board[i] == turn + 'K'}">
+            <qg:put target="check_mark" x="{(i % 8) * 62 + 31}" y="{(i // 8) * 62 + 31}" />
+          </q:if>
+        </q:loop>
+      </q:if>
+    </q:function>
+
+    <!-- a click: pick up one of your pieces, or put the picked one on a legal square. On one machine
+         the same pointer plays both colours; over the network each machine plays its own. -->
     <qg:on-select>
-      <q:if condition="{not finished and (cursor.player == 1 and turn == 'w' or cursor.player == 2 and turn == 'b')}">
+      <q:if condition="{not finished and (net_status() != 'playing' or cursor.player == 1 and turn == 'w' or cursor.player == 2 and turn == 'b')}">
         <q:set name="r" value="{cursor.row}" />
         <q:set name="c" value="{cursor.col}" />
         <q:set name="act" value="{'move' if sel_r &gt;= 0 and [r, c] in legal else ('pick' if own(at(r, c), turn) else 'clear')}" />
@@ -2671,8 +2740,11 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
           <q:if condition="{p[1:2] == 'R' and sel_c == 0}"><q:set name="moved" value="{moved + [turn + 'Ra']}" /></q:if>
           <q:if condition="{p[1:2] == 'R' and sel_c == 7}"><q:set name="moved" value="{moved + [turn + 'Rh']}" /></q:if>
           <q:set name="ep_col" value="{c if p[1:2] == 'P' and abs(r - sel_r) == 2 else -1}" />
+          <qg:put target="last_from" x="{sel_c * 62 + 31}" y="{sel_r * 62 + 31}" />
+          <qg:put target="last_to" x="{c * 62 + 31}" y="{r * 62 + 31}" />
           <q:set name="turn" value="{other_color(turn)}" />
           <q:call function="clear_mark" />
+          <q:call function="show_check" />
           <q:set name="status" value="{('White' if turn == 'w' else 'Black') + ' to move'}" />
           <q:if condition="{not any_legal(turn)}">
             <q:set name="finished" value="true" />
@@ -2688,6 +2760,16 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
           <q:set name="sel_c" value="{c}" />
           <q:set name="legal" value="{legal_moves(r, c)}" />
           <qg:put target="mark" x="{cursor.x}" y="{cursor.y}" />
+          <q:loop var="m" items="{legal}">
+            <q:if condition="{at(m[0], m[1]) == ''}">
+              <qg:spawn prefab="Dot" x="{m[1] * 62 + 31}" y="{m[0] * 62 + 31}" />
+            <q:else>
+              <qg:spawn prefab="Ring" x="{m[1] * 62 + 31}" y="{m[0] * 62 + 31}" />
+            </q:else>
+            </q:if>
+          </q:loop>
+          <q:set name="status" value="{('White' if turn == 'w' else 'Black') + (' to move' if len(legal) &gt; 0 else ' to move - that piece cannot move')}" />
+          <q:if condition="{len(legal) &gt; 0 and in_check(turn)}"><q:set name="status" value="{status + ' - check'}" /></q:if>
         </q:if>
         <q:if condition="{act == 'clear'}">
           <q:call function="clear_mark" />

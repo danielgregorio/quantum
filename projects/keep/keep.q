@@ -4,8 +4,9 @@
        Six rooms of a keep, seen from above. A character that walks in eight
        directions and swings a sword; slimes that wander and bats that chase;
        hearts; a key and a locked door; a switch that opens a gate in another
-       room; a chest at the end. Art and sounds: Kenney's Pixel Platformer (CC0),
-       pressed into service for walls and floors. -->
+       room; a chest at the end. The dungeon, the hero and the monsters are drawn
+       for it by scripts/art/keep.py (CC0); the sounds are Kenney's Pixel
+       Platformer (CC0). -->
 
   <!-- The game's state, kept across rooms. -->
   <q:set name="hearts" value="3" type="number" />
@@ -14,8 +15,11 @@
   <q:set name="opened" value="[]" type="array" />     <!-- doors and gates opened, by name -->
   <q:set name="message" value="" />
 
-  <qg:tileset name="kenney" src="assets/kenney/tilemap_packed.png" tile="18" />
-  <qg:spritesheet name="chars" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
+  <!-- 1 is the floor (walked on: no collision), 2 the wall. -->
+  <qg:tileset name="dungeon" src="assets/dungeon.png" tile="18">
+    <qg:tile frame="0" shape="none" />
+  </qg:tileset>
+  <qg:spritesheet name="hero" src="assets/hero.png" tile="24" />
 
   <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
   <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
@@ -23,22 +27,22 @@
   <qg:sound name="open" src="assets/kenney/audio/block.ogg" />
   <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
 
-  <qg:prefab name="Key" tag="key" sheet="kenney" frame="27" hitbox="12x12" />
-  <qg:prefab name="Heart" tag="heart" sheet="kenney" frame="44" hitbox="12x12" />
-  <qg:prefab name="Door" tag="door" sheet="kenney" frame="9" hitbox="18x18" solid="true" />
-  <qg:prefab name="Gate" tag="gate" sheet="kenney" frame="21" hitbox="18x18" solid="true" />
-  <qg:prefab name="Switch" tag="switch" sheet="kenney" frame="111" hitbox="14x14" />
-  <qg:prefab name="SwitchOn" tag="switch-on" sheet="kenney" frame="112" hitbox="14x14" />
-  <qg:prefab name="Sign" tag="sign" sheet="kenney" frame="86" hitbox="18x18" solid="true" />
-  <qg:prefab name="Chest" tag="chest" sheet="kenney" frame="8" hitbox="16x16" />
+  <qg:prefab name="Key" tag="key" sheet="dungeon" frame="8" hitbox="12x12" />
+  <qg:prefab name="Heart" tag="heart" sheet="dungeon" frame="9" hitbox="12x12" />
+  <qg:prefab name="Door" tag="door" sheet="dungeon" frame="2" hitbox="18x18" solid="true" />
+  <qg:prefab name="Gate" tag="gate" sheet="dungeon" frame="3" hitbox="18x18" solid="true" />
+  <qg:prefab name="Switch" tag="switch" sheet="dungeon" frame="4" hitbox="14x14" />
+  <qg:prefab name="SwitchOn" tag="switch-on" sheet="dungeon" frame="5" hitbox="14x14" />
+  <qg:prefab name="Sign" tag="sign" sheet="dungeon" frame="6" hitbox="18x18" solid="true" />
+  <qg:prefab name="Chest" tag="chest" sheet="dungeon" frame="7" hitbox="16x16" />
 
-  <qg:prefab name="Slime" tag="enemy" sheet="chars" frame="18" hitbox="14x14"
+  <qg:prefab name="Slime" tag="enemy" sheet="hero" frame="10" hitbox="14x14"
              ai="wander" speed="25">
-    <qg:animation name="walk" frames="18,19,20" fps="6" />
+    <qg:animation name="walk" frames="10,11,12,11" fps="6" />
   </qg:prefab>
-  <qg:prefab name="Bat" tag="enemy" sheet="chars" frame="24" hitbox="14x14"
+  <qg:prefab name="Bat" tag="enemy" sheet="hero" frame="13" hitbox="14x14"
              ai="chase" speed="40" sight="90">
-    <qg:animation name="walk" frames="24,25,26" fps="10" />
+    <qg:animation name="walk" frames="13,14,15,14" fps="10" />
   </qg:prefab>
 
   <!-- ===== Room 1: the entrance. East to room 2. ===== -->
@@ -52,26 +56,31 @@
       </q:if>
     </q:function>
 
-    <qg:tilemap tileset="kenney" collision="true">
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,0
-25,0,0,0,0,0,0,0,0,0,0,0,0,0
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
+    <qg:tilemap tileset="dungeon" collision="true">
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,1
+2,1,1,1,1,1,1,1,1,1,1,1,1,1
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
     </qg:tilemap>
 
-    <qg:character id="player" controller="topdown" sheet="chars" frame="0"
+    <qg:character id="player" controller="topdown" sheet="hero" frame="0"
                   x="60" y="108" hitbox="14x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
+      <qg:animation name="walk-up" frames="3,4" fps="8" />
+      <qg:animation name="walk-down" frames="5,6" fps="8" />
+      <qg:animation name="attack" frames="7" />
+      <qg:animation name="attack-up" frames="8" />
+      <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="sign">
         <q:set name="message" value="THE KEY IS NORTH. THE SWITCH IS SOUTH." />
       </qg:on-collision>
@@ -106,26 +115,31 @@
       </q:if>
     </q:function>
 
-    <qg:tilemap tileset="kenney" collision="true">
-25,25,25,25,25,25,0,0,25,25,25,25,25,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,25,25,25,25,25,0,0,25,25,25,25,25,25
+    <qg:tilemap tileset="dungeon" collision="true">
+2,2,2,2,2,2,1,1,2,2,2,2,2,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+1,1,1,1,1,1,1,1,1,1,1,1,1,1
+1,1,1,1,1,1,1,1,1,1,1,1,1,1
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,2,2,2,2,2,1,1,2,2,2,2,2,2
     </qg:tilemap>
 
-    <qg:character id="player" controller="topdown" sheet="chars" frame="0"
+    <qg:character id="player" controller="topdown" sheet="hero" frame="0"
                   x="126" y="108" hitbox="14x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
+      <qg:animation name="walk-up" frames="3,4" fps="8" />
+      <qg:animation name="walk-down" frames="5,6" fps="8" />
+      <qg:animation name="attack" frames="7" />
+      <qg:animation name="attack-up" frames="8" />
+      <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="enemy" cooldown="60">
         <q:call function="hurt" args="me" />
       </qg:on-collision>
@@ -171,26 +185,31 @@
       </q:if>
     </q:function>
 
-    <qg:tilemap tileset="kenney" collision="true">
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,25,25,0,0,25,25,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,25,25,0,0,25,25,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,25,25,25,25,25,0,0,25,25,25,25,25,25
+    <qg:tilemap tileset="dungeon" collision="true">
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,2,2,1,1,2,2,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,2,2,1,1,2,2,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,2,2,2,2,2,1,1,2,2,2,2,2,2
     </qg:tilemap>
 
-    <qg:character id="player" controller="topdown" sheet="chars" frame="0"
+    <qg:character id="player" controller="topdown" sheet="hero" frame="0"
                   x="126" y="190" hitbox="14x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
+      <qg:animation name="walk-up" frames="3,4" fps="8" />
+      <qg:animation name="walk-down" frames="5,6" fps="8" />
+      <qg:animation name="attack" frames="7" />
+      <qg:animation name="attack-up" frames="8" />
+      <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="enemy" cooldown="60">
         <q:call function="hurt" args="me" />
       </qg:on-collision>
@@ -235,26 +254,31 @@
       </q:if>
     </q:function>
 
-    <qg:tilemap tileset="kenney" collision="true">
-25,25,25,25,25,25,0,0,25,25,25,25,25,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
+    <qg:tilemap tileset="dungeon" collision="true">
+2,2,2,2,2,2,1,1,2,2,2,2,2,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
     </qg:tilemap>
 
-    <qg:character id="player" controller="topdown" sheet="chars" frame="0"
+    <qg:character id="player" controller="topdown" sheet="hero" frame="0"
                   x="126" y="36" hitbox="14x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
+      <qg:animation name="walk-up" frames="3,4" fps="8" />
+      <qg:animation name="walk-down" frames="5,6" fps="8" />
+      <qg:animation name="attack" frames="7" />
+      <qg:animation name="attack-up" frames="8" />
+      <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="enemy" cooldown="60">
         <q:call function="hurt" args="me" />
       </qg:on-collision>
@@ -293,26 +317,31 @@
       </q:if>
     </q:function>
 
-    <qg:tilemap tileset="kenney" collision="true">
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,25,25,25,25,25
-0,0,0,0,0,0,0,0,0,0,0,0,0,0
-0,0,0,0,0,0,0,0,0,0,0,0,0,0
-25,0,0,0,0,0,0,0,0,25,25,25,25,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
+    <qg:tilemap tileset="dungeon" collision="true">
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,2,2,2,2,2
+1,1,1,1,1,1,1,1,1,1,1,1,1,1
+1,1,1,1,1,1,1,1,1,1,1,1,1,1
+2,1,1,1,1,1,1,1,1,2,2,2,2,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
     </qg:tilemap>
 
-    <qg:character id="player" controller="topdown" sheet="chars" frame="0"
+    <qg:character id="player" controller="topdown" sheet="hero" frame="0"
                   x="36" y="108" hitbox="14x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
+      <qg:animation name="walk-up" frames="3,4" fps="8" />
+      <qg:animation name="walk-down" frames="5,6" fps="8" />
+      <qg:animation name="attack" frames="7" />
+      <qg:animation name="attack-up" frames="8" />
+      <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="enemy" cooldown="60">
         <q:call function="hurt" args="me" />
       </qg:on-collision>
@@ -342,26 +371,31 @@
   <!-- ===== Room 6: the chest. ===== -->
 
   <qg:scene name="room-6" width="256" height="224" background="#2b2b3a" seed="6">
-    <qg:tilemap tileset="kenney" collision="true">
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-0,0,0,0,0,0,0,0,0,0,0,0,0,25
-0,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,0,0,0,0,0,0,0,0,0,0,0,0,25
-25,25,25,25,25,25,25,25,25,25,25,25,25,25
+    <qg:tilemap tileset="dungeon" collision="true">
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+1,1,1,1,1,1,1,1,1,1,1,1,1,2
+1,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,1,1,1,1,1,1,1,1,1,1,1,1,2
+2,2,2,2,2,2,2,2,2,2,2,2,2,2
     </qg:tilemap>
 
-    <qg:character id="player" controller="topdown" sheet="chars" frame="0"
+    <qg:character id="player" controller="topdown" sheet="hero" frame="0"
                   x="36" y="108" hitbox="14x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
+      <qg:animation name="walk-up" frames="3,4" fps="8" />
+      <qg:animation name="walk-down" frames="5,6" fps="8" />
+      <qg:animation name="attack" frames="7" />
+      <qg:animation name="attack-up" frames="8" />
+      <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="chest">
         <qg:play sound="win" />
         <q:set name="message" value="THE TREASURE OF THE KEEP IS YOURS." />
