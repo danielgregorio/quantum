@@ -17,6 +17,9 @@ extends SceneTree
 #   {"op": "map"}     the scene's tilemap as a grid of what is solid ("#"), one-way ("-") or open (".")
 #   {"op": "view"}    the screen as text at the map's cell size: walls, characters, things, with a legend
 #   {"op": "frame", "path": "/tmp/x.png"}   the real picture (a session with a display only)
+#   {"op": "tape"}    the session's inputs so far, as a replay tape ({tick: [[action, pressed], ["cursor", [x, y]]]})
+#   {"op": "replay", "tape": {...}, "ticks": N, "held": [...]}   runs to tick N applying a tape: how a
+#                     snapshot is restored, in a fresh game, by the determinism every replay test relies on
 #   {"op": "end"}
 # Every answer to an act or an until carries the events of its ticks: what
 # the runtime reported (Q.event: touch, hit, step, bump, spawn, destroy,
@@ -47,6 +50,8 @@ var q: Node = null              # the Q autoload, which records the events
 var vars_before: Dictionary = {}  # the variables after the last tick, for the "set" events
 var scene_before := ""
 var map_sent := ""               # the scene whose map the agent has
+var log := {}                    # tick -> the input changes made on it: the session as a replay tape
+var replay_tape := {}            # tick -> input changes to make, while a "replay" runs
 
 
 func _initialize() -> void:
@@ -70,7 +75,7 @@ func _physics_process(_delta: float) -> bool:
 	if not taps.is_empty() and request.has("_first_done"):
 		for a in taps:
 			if not held.has(a):
-				Input.action_release(a)
+				_release(a)
 		taps = []
 	# Every frame this returns false from runs one tick of the game, so a frame
 	# either runs a tick that was asked for or waits here for the next request.
@@ -81,7 +86,7 @@ func _physics_process(_delta: float) -> bool:
 		_tick()
 		return false
 	if not request.is_empty():
-		_finish("ticks" if request.get("op") == "act" else "max_ticks")
+		_finish("max_ticks" if request.get("op") == "until" else "ticks")
 		if ended:
 			return true
 	# wait for the next request that runs ticks; answer the ones that do not
@@ -114,6 +119,25 @@ func _physics_process(_delta: float) -> bool:
 				return false
 			"map":
 				_answer({"tick": ticks, "map": game_map()})
+			"tape":
+				_answer({"tick": ticks, "tape": log, "held": held.keys()})
+			"replay":
+				if ticks != 0:
+					_answer({"error": "a replay starts a fresh game, at tick 0"})
+					continue
+				replay_tape = {}
+				var given: Dictionary = req.get("tape", {})
+				for k in given.keys():
+					replay_tape[int(k)] = given[k]
+				request = {"op": "replay"}
+				run_left = maxi(0, int(req.get("ticks", 0)))
+				for a in req.get("held", []):
+					held[str(a)] = true
+				if run_left == 0:
+					_finish("replayed")
+					continue
+				_tick()
+				return false
 			"view":
 				_answer(view())
 			"frame":
@@ -136,21 +160,21 @@ func _start(req: Dictionary) -> String:
 	request.erase("_first_done")
 	for a in req.get("release", []):
 		held.erase(str(a))
-		Input.action_release(str(a))
+		_release(str(a))
 	for a in req.get("press", []):
 		held[str(a)] = true
-		Input.action_press(str(a))
+		_press(str(a))
 	holds = []
 	for a in req.get("hold", []):
 		holds.append(str(a))
-		Input.action_press(str(a))
+		_press(str(a))
 	taps = []
 	for a in req.get("tap", []):
 		taps.append(str(a))
-		Input.action_press(str(a))
+		_press(str(a))
 	if req.has("cursor"):
 		var c: Array = req["cursor"]
-		root.get_node("Q").tape_cursor = Vector2(float(c[0]), float(c[1]))
+		_cursor(float(c[0]), float(c[1]))
 	if str(req["op"]) == "until":
 		run_left = maxi(0, int(req.get("max_ticks", 600)))
 		until_start = observation()
@@ -159,7 +183,38 @@ func _start(req: Dictionary) -> String:
 	return ""
 
 
+# Every input change goes through these, so the session is a tape (the log)
+# that replays the same game.
+func _press(a: String) -> void:
+	Input.action_press(a)
+	_log([a, true])
+
+
+func _release(a: String) -> void:
+	Input.action_release(a)
+	_log([a, false])
+
+
+func _cursor(x: float, y: float) -> void:
+	root.get_node("Q").tape_cursor = Vector2(x, y)
+	_log(["cursor", [x, y]])
+
+
+func _log(e: Array) -> void:
+	var at: Array = log.get(ticks, [])
+	at.append(e)
+	log[ticks] = at
+
+
 func _tick() -> void:
+	if replay_tape.has(ticks):
+		for e in replay_tape[ticks]:
+			if e[0] == "cursor":
+				_cursor(float(e[1][0]), float(e[1][1]))
+			elif e[1]:
+				_press(str(e[0]))
+			else:
+				_release(str(e[0]))
 	if q != null:
 		q.event_tick = ticks
 	run_left -= 1
@@ -212,8 +267,21 @@ func _scene_name() -> String:
 func _finish(why: String) -> void:
 	for a in holds:
 		if not held.has(a):
-			Input.action_release(a)
+			_release(a)
 	holds = []
+	if request.get("op") == "replay":
+		why = "replayed"
+		# the changes on the last tick itself (a hold let go as its request ended) are part of it
+		for e in replay_tape.get(ticks, []):
+			if e[0] == "cursor":
+				_cursor(float(e[1][0]), float(e[1][1]))
+			elif e[1]:
+				_press(str(e[0]))
+			else:
+				_release(str(e[0]))
+		replay_tape = {}
+		if q != null:
+			q.events.clear()   # what happened on the way back is not news
 	var obs := observation()
 	obs["stopped"] = why
 	if q != null:

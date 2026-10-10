@@ -247,3 +247,63 @@ def test_a_frame_is_the_picture_on_the_screen(rpg, godot, tmp_path):
     with PlaySession(rpg, binary=godot) as game:
         with pytest.raises(PlayError, match='headless'):
             game.frame(tmp_path / 'none.png')
+
+
+# --- phase 3: branching, and every session is a tape ---
+
+def _to_the_fight(game):
+    game.until('player.row == 7', hold=['down'])
+    game.until('talking', hold=['right'])
+    seen = game.observe()
+    while seen['scene'] == 'exploration':
+        seen = game.act(tap=['select'], ticks=2)
+    return seen
+
+
+def test_a_snapshot_is_come_back_to_and_branches_from(rpg, godot):
+    with PlaySession(rpg, binary=godot) as game:
+        fight = _to_the_fight(game)
+        assert fight['scene'] == 'combat'
+        snap = game.snapshot()
+        here = game.observe()
+        attacked = game.until(["turn == 'player'", 'changed scene'], tap=['select'], max_ticks=120)
+        back = game.restore(snap)
+        assert back['stopped'] == 'replayed' and back['tick'] == snap['ticks'] and back['events'] == []
+        assert back['state'] == here['state'] and back['screen'] == here['screen']   # where it was, exactly
+        game.act(tap=['down'], ticks=2)                                       # the other branch: Defend
+        defended = game.until(["turn == 'player'", 'changed scene'], tap=['select'], max_ticks=120)
+        assert (attacked['state']['foe_life'], attacked['state']['life']) == (5, 8)
+        assert (defended['state']['foe_life'], defended['state']['life']) == (7, 9)   # 3 less armor 2
+        game.restore(snap)                                                     # and the first branch again
+        again = game.until(["turn == 'player'", 'changed scene'], tap=['select'], max_ticks=120)
+        assert again['state'] == attacked['state'] and again['tick'] == attacked['tick']
+
+
+def test_what_is_held_stays_held_across_a_restore(rpg, godot):
+    with PlaySession(rpg, binary=godot) as game:
+        game.act(press=['down'], ticks=10)
+        snap = game.snapshot()
+        assert snap['held'] == ['down']
+        back = game.restore(snap)
+        assert back['held'] == ['down']
+        walked = game.act(ticks=40)                                            # still walking down
+        assert walked['state']['nodes']['player']['row'] == 8                  # 50 ticks held: 4 steps down
+
+
+def test_a_session_saved_as_a_tape_replays_as_a_test(rpg, godot, tmp_path):
+    """Phase 3's check: a session played by looking is a regression test as it is."""
+    import json
+    with PlaySession(rpg, binary=godot) as game:
+        seen = _to_the_fight(game)
+        while seen['scene'] == 'combat':
+            if seen['state']['turn'] == 'player':
+                seen = game.act(tap=['select'], ticks=2)
+            else:
+                seen = game.until(["turn == 'player'", 'changed scene'], max_ticks=120)
+        seen = game.until('talking', max_ticks=30)
+        saved = json.loads(game.save_tape(tmp_path / 'won.json').read_text())
+    assert saved['ticks'] == seen['tick']
+    tape = {int(k): [tuple(e) for e in v] for k, v in saved['tape'].items()}
+    replayed = replay(rpg, saved['ticks'], tape=tape, binary=godot)['exploration']
+    assert replayed['talking'] == 'won' and replayed['game']['outcome'] == 'won'
+    assert replayed['nodes'] == seen['state']['nodes'] and replayed['game'] == seen['state']['game']

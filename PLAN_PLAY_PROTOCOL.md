@@ -1,12 +1,14 @@
 # The play protocol: a game an agent can play
 
-> Status: phases 1 and 2 are built: `quantum/runtime/godot_play.gd` (the
+> Status: phases 1 to 3 are built: `quantum/runtime/godot_play.gd` (the
 > driver) and `quantum/runtime/godot_play.py` (`PlaySession`), checked by
 > `tests/godot/test_godot_play.py`. There an agent wins the RPG in 16
 > requests, plays Chess with the cursor, and leaves Keep's first room by the
-> map and the view alone; a fight's events tell each hit. The rest is the
-> plan: what to build, in what order, and how each step is checked. It
-> builds on what the replay harness, the lockstep and the rollback already do.
+> map and the view alone; a fight's events tell each hit; a fight branches
+> from a snapshot (attack or defend) and comes back; and a session saved as a
+> tape replays as a test. The rest is the plan: what to build, in what
+> order, and how each step is checked. It builds on what the replay harness,
+> the lockstep and the rollback already do.
 
 ## The problem
 
@@ -183,6 +185,11 @@ and its inputs. That gives two features almost for free:
 
   So an agent can try "attack" and "defend" from the same point and
   compare.
+
+  As built, every restore is by replay: a fresh game, replayed to the
+  snapshot's tick. It works for every game, and costs about a second. The
+  restore in memory, for the scenes the rollback can save, is an
+  optimization left for when a second is too long.
 - **Tapes.** `tape` returns the session's inputs in the replay format.
   Saved next to an expected state, a session is a regression test: "the
   agent won the RPG in 1240 ticks with this tape" goes into
@@ -247,7 +254,7 @@ get an opponent when no friend is around.
 |---|---|---|
 | 1. Driver (built) | `godot_play.gd`; `start`/`observe`/`act`/`until`/`end`; state and interface layers; Python client | a test plays the RPG to victory through the client, deciding each step from the last observation, in under 40 requests; another plays Chess (e2-e4, e7-e5) with the cursor |
 | 2. Perception (built) | events (one `Q.event()` call at each place the runtime already acts: scene change, handler, spawn, destroy, damage, dialogue, menu choice; it does nothing outside a session); the map; the text view; `frame` | Keep's room 1 is crossed to its exit using only the map and the view; the events of an RPG fight list each hit with its damage |
-| 3. Branching | `snapshot`/`restore` (in memory for rollback scenes, by replay otherwise); `tape` | restore-then-replay gives byte-identical state hashes, in both modes; a tape saved from a session passes as a test |
+| 3. Branching (built; restores by replay) | `snapshot`/`restore` (in memory for rollback scenes, by replay otherwise); `tape` | restore-then-replay gives byte-identical state hashes, in both modes; a tape saved from a session passes as a test |
 | 4. CLI and MCP | `quantum play` console; `quantum play --mcp`; `.mcp.json` | a Claude Code session on the repository is asked "play the RPG and win" and does it through the tools |
 | 5. Reflexes | the reflex grammar, in the step loop | in Pong the agent returns 10 balls in a row; in Drift it clears the first wave |
 | 6. Browser and people | the browser bridge; joining a lockstep game as player 2 | the agent plays Pong against a person on the web build |

@@ -86,8 +86,14 @@ class PlaySession:
         self.project_dir = Path(project_dir)
         self.timeout = timeout
         self._tmp = tempfile.TemporaryDirectory(prefix='quantum-play-')
-        persist = Path(persist_dir) if persist_dir else Path(self._tmp.name) / 'persist'
-        persist.mkdir(parents=True, exist_ok=True)
+        # what the game had saved when the session began: a restored game starts from it again
+        self._persist_origin = Path(self._tmp.name) / 'persist-origin'
+        if persist_dir and Path(persist_dir).is_dir():
+            shutil.copytree(persist_dir, self._persist_origin)
+        else:
+            self._persist_origin.mkdir(parents=True)
+        self._persist_dir = Path(persist_dir) if persist_dir else None
+        self._starts = 0
         self.log: List[str] = []      # what Godot printed besides the answers
         godot = [str(binary or ensure_godot())]
         if frames:
@@ -100,11 +106,23 @@ class PlaySession:
                      '--rendering-driver', 'opengl3', '--resolution', f'{width}x{height}']
         else:
             godot.append('--headless')
+        self._godot = godot
+        self.last: Optional[dict] = None
+        self._spawn()
+
+    def _spawn(self) -> None:
+        """A fresh game at tick 0, from the saved state the session began with."""
+        self._starts += 1
+        if self._persist_dir is not None and self._starts == 1:
+            persist = self._persist_dir
+        else:
+            persist = Path(self._tmp.name) / f'persist-{self._starts}'
+            shutil.copytree(self._persist_origin, persist)
+        persist.mkdir(parents=True, exist_ok=True)
         self._proc = subprocess.Popen(
-            [*godot, '--fixed-fps', '60', '--path', str(self.project_dir),
+            [*self._godot, '--fixed-fps', '60', '--path', str(self.project_dir),
              '-s', str(PLAY_SCRIPT), '--', f'--persist-dir={persist}'],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
-        self.last: Optional[dict] = None
 
     @classmethod
     def open(cls, game: Union[str, Path], **kwargs) -> 'PlaySession':
@@ -183,6 +201,37 @@ class PlaySession:
         """Saves the picture on the screen as a PNG (a session opened with ``frames=True``)."""
         return self.request({'op': 'frame', 'path': str(Path(path).resolve())})
 
+    # --- branching, and every session is a tape ---
+
+    def tape(self) -> dict:
+        """The session's inputs so far, as a replay tape: ``replay(project, ticks, tape=...)``
+        gives the same game (``quantum.runtime.godot_replay``)."""
+        answer = self.request({'op': 'tape'})
+        return {'ticks': answer['tick'], 'held': answer['held'],
+                'tape': {int(k): [tuple(e) for e in v] for k, v in answer['tape'].items()}}
+
+    def snapshot(self) -> dict:
+        """This point of the game, to come back to with ``restore``: its tick and the inputs
+        that led to it. It holds no state of its own; the game is deterministic."""
+        return self.tape()
+
+    def restore(self, snap: dict) -> dict:
+        """Back to a snapshot: a fresh game replayed to its tick, headless and fast, with
+        the actions it held still held. Answers the observation there."""
+        self._stop()
+        self._spawn()
+        tape = {str(k): [list(e) for e in v] for k, v in snap['tape'].items()}
+        return self.request({'op': 'replay', 'tape': tape, 'ticks': snap['ticks'], 'held': snap['held']})
+
+    def save_tape(self, path: Union[str, Path]) -> Path:
+        """The session as a replay test's input: ``{"ticks": N, "tape": {...}}`` in a JSON file."""
+        t = self.tape()
+        path = Path(path)
+        path.write_text(json.dumps({'ticks': t['ticks'], 'tape': {str(k): [list(e) for e in v]
+                                                                  for k, v in t['tape'].items()}}, indent=1),
+                        encoding='utf-8')
+        return path
+
     def _setting(self, key: str, default: int) -> int:
         text = (self.project_dir / 'project.godot').read_text(encoding='utf-8')
         m = re.search(rf'^{re.escape(key.split("/")[-1])}=(\d+)', text, re.M)
@@ -200,7 +249,7 @@ class PlaySession:
 
     # --- the end ---
 
-    def close(self) -> None:
+    def _stop(self) -> None:
         if self._proc.poll() is None:
             try:
                 self.request({'op': 'end'})
@@ -213,6 +262,9 @@ class PlaySession:
         for stream in (self._proc.stdin, self._proc.stdout):
             if stream:
                 stream.close()
+
+    def close(self) -> None:
+        self._stop()
         self._tmp.cleanup()
         build = getattr(self, '_build', None)
         if build:

@@ -10,6 +10,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the play protocol, phase 3: branching, and every session is a
+  tape. The driver records every input it applies, with its tick, in the
+  replay's format. `snapshot()` marks a point of the game. `restore()` comes
+  back to it in a fresh game replayed to that tick, with the saved state
+  the session began with and the actions it held still held. `tape()` and
+  `save_tape()` give the session as a replay tape: a game played by
+  looking is a regression test as it is. In the tests, a fight branches
+  from a snapshot (Attack, then Defend, then Attack again, the same to the
+  tick), and a won fight saved as a tape replays to the same state.
+
 - Laboratory: the play protocol, phase 2: perception. An answer to an act
   or an until now carries the events of its ticks: what the runtime reports
   through `Q.event()` (a touch, a hit, a step or a bump, a thing spawned or
