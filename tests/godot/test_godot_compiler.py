@@ -1510,3 +1510,66 @@ class TestWhatTheArtAsked:
     </qg:on-input></qg:scene>
 ''' + TAIL)
             assert message in str(err)
+
+
+class TestWhatTheRpgAsked:
+    """What Godot's "JRPG" demo made the language say (projects/rpg/README.md)."""
+
+    GRID = '''  <qg:scene name="main">
+    <qg:tilemap tileset="k">
+1,1,1
+    </qg:tilemap>
+    <qg:tilemap tileset="k" collision="true">
+0,2,0
+    </qg:tilemap>
+    <qg:character id="hero" controller="grid" diagonal="true" step-frames="10" sheet="c" x="9" y="9" hitbox="12x12">
+      <qg:on-collision with="coin">
+        <q:set name="col" value="{me.col}" />
+        <qg:say dialogue="hello" />
+      </qg:on-collision>
+    </qg:character>
+    <q:set name="col" value="0" type="number" />
+    <q:set name="who" value="A" />
+    <qg:dialogue name="hello" size="12">
+      <qg:line who="{who}" text="Hello." />
+      <qg:line text="{'Bye, ' + who}" />
+      <qg:on-end><q:set name="who" value="B" /></qg:on-end>
+    </qg:dialogue>
+    <qg:hud><qg:text value="{talking()}" /></qg:hud>
+  </qg:scene>
+'''
+
+    def test_tilemaps_are_layers_and_a_grid_walker_says_a_dialogue(self, tmp_path):
+        out = build(tmp_path, game(self.GRID))
+        nodes = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes']
+        tilemaps = [n for n in nodes if n['kind'] == 'tilemap']
+        assert len(tilemaps) == 1                                     # one map, drawn layer over layer
+        assert [(ly['rows'], bool(ly['collision'])) for ly in tilemaps[0]['layers']] == \
+            [([[1, 1, 1]], False), ([[0, 2, 0]], True)]
+        hero = next(n for n in nodes if n['kind'] == 'character')
+        assert (hero['controller'], hero['step_frames'], hero['diagonal']) == ('grid', 10, True)
+        box = next(n for n in nodes if n['kind'] == 'dialogue')
+        assert box['name'] == 'hello' and box['on_end'] == '_on_dialogue_hello_end'
+        assert box['lines'][0] == {'who_method': '_q_dialogue_hello_0_who', 'text': 'Hello.'}
+        assert box['lines'][1] == {'who': '', 'text_method': '_q_dialogue_hello_1_text'}
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.say(self, "hello")' in script and 'Q.talking(self)' in script
+        assert 'me.col' in script
+
+    def test_what_it_refuses(self, tmp_path):
+        for old, new, message in (
+                ('dialogue="hello"', 'dialogue="bye"', '<qg:say dialogue="bye">: no qg:dialogue of that name'),
+                ('<qg:tilemap tileset="k" collision="true">', '<qg:tilemap tileset="c" collision="true">',
+                 'the layers of a scene share one tileset'),
+                ('controller="grid" diagonal="true" step-frames="10"', 'controller="topdown" step-frames="10"',
+                 'step-frames= is for controller="grid"'),
+                ('step-frames="10"', 'step-frames="0"', 'step-frames=: 1 or more'),
+                ('<qg:line who="{who}" text="Hello." />\n      <qg:line text="{\'Bye, \' + who}" />', '',
+                 'needs at least one qg:line'),
+                ('<qg:on-end><q:set name="who" value="B" /></qg:on-end>',
+                 '<qg:on-end /><qg:on-end />', 'a qg:dialogue has one <qg:on-end>')):
+            assert old in self.GRID
+            err = refuse(tmp_path, game(self.GRID.replace(old, new)))
+            assert message in str(err), (message, str(err))
+        no_map = re.sub(r'<qg:tilemap.*?</qg:tilemap>', '', self.GRID, flags=re.S)
+        assert 'the scene has none' in str(refuse(tmp_path, game(no_map)))

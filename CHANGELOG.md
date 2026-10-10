@@ -10,6 +10,21 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: a tenth game, `projects/rpg/rpg.q`: Godot's "JRPG" demo
+  (`2d/role_playing_game`), transcribed with its own art and font. A slime
+  walks the demo's map cell by cell, reads a key, talks to another slime and
+  fights it turn by turn (Attack, Defend, Flee). The language grew three
+  things for it:
+  - `controller="grid"`: a character that steps from cell to cell of the
+    tilemap in `step-frames=` ticks. Walls bump it, and stepping into a thing
+    runs its `qg:on-collision`; `me.col` and `me.row` are its cell.
+  - `qg:dialogue` with `qg:line who= text=` and `qg:on-end`, opened by
+    `qg:say`. The scene pauses until the last line; `talking()` says when.
+  - Several `qg:tilemap`s in a scene are layers of one map.
+
+  A HUD at `top-right` now ends at the right edge of the screen; it began 84
+  px from it, and a wide bar was cut off (Arena's).
+
 - Laboratory: CI plays the games in a browser. A new job, `games-in-browser`,
   exports every game for the web and opens each one in a headless Chromium
   (`scripts/check-games-in-browser.py`). The game must start on its first

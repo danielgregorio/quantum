@@ -15,12 +15,15 @@ func setup(spec: Dictionary, scene: Node) -> void:
 	var viewport_h: int = ProjectSettings.get_setting("display/window/size/viewport_height", 224)
 	var position_ := str(spec.get("position", "top-left"))
 	var centered := position_ == "top-center" or position_ == "center" or position_ == "bottom-center"
+	var right := position_ == "top-right"
 	match position_:
 		"top-center":
 			box.position = Vector2(0, 4)
 			box.size = Vector2(viewport_w, 0)
 		"top-right":
-			box.position = Vector2(viewport_w - 84, 4)
+			# flush with the right edge, whatever the width of what it shows
+			box.position = Vector2(0, 4)
+			box.size = Vector2(viewport_w - 4, 0)
 		"center":
 			box.position = Vector2(0, 0)
 			box.size = Vector2(viewport_w, viewport_h)
@@ -44,7 +47,7 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			bar.show_percentage = false
 			bar.max_value = float(item.get("max", 100))
 			bar.custom_minimum_size = Vector2(int(item.get("width", 100)), int(item.get("height", 10)))
-			bar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			bar.size_flags_horizontal = Control.SIZE_SHRINK_END if right else Control.SIZE_SHRINK_BEGIN
 			var fill := StyleBoxFlat.new()
 			fill.bg_color = Color(str(item.get("color", "#e04040")))
 			bar.add_theme_stylebox_override("fill", fill)
@@ -60,8 +63,8 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			label.add_theme_font_size_override("font_size", int(item["size"]) if item.get("size") != null else size)
 			if font != null:
 				label.add_theme_font_override("font", font)
-			if centered:
-				label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			if centered or right:
+				label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if right else HORIZONTAL_ALIGNMENT_CENTER
 				label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			Q.apply_gd(label, item.get("gd"))
 			box.add_child(label)

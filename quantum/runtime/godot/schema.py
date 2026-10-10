@@ -187,7 +187,7 @@ TAGS: Dict[str, Tag] = {
          'controller': Attr('enum:platformer|map|topdown|ship|fighter|grid', required=True,
                             doc='grid: steps from cell to cell of the tilemap; the tiles of a layer with collision, '
                                 'and the things, stop it, and stepping into a thing runs its qg:on-collision '
-                                '(`me.col`, `me.row`: its cell)'),
+                                'with the thing\'s tag; `me.col` and `me.row` are its cell'),
          'step-frames': Attr('int', 15, doc='grid: ticks to walk one cell (a bump takes as long)'),
          'diagonal': Attr('bool', False, doc='grid: two directions held at once step diagonally'),
          'player': Attr('int', 1, doc='whose keys move it (qg:input player=); 1 has the defaults'),

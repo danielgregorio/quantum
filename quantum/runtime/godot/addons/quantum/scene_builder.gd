@@ -22,6 +22,8 @@ const Zone := preload("res://addons/quantum/zone.gd")
 const Cursor := preload("res://addons/quantum/cursor.gd")
 const FighterBody := preload("res://addons/quantum/fighter_body.gd")
 const Menu := preload("res://addons/quantum/menu.gd")
+const GridBody := preload("res://addons/quantum/grid_body.gd")
+const Dialogue := preload("res://addons/quantum/dialogue.gd")
 
 static var _textures: Dictionary = {}
 
@@ -173,6 +175,10 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 					var pointer := Cursor.new()
 					pointer.setup({"player": node_spec.get("player", 1), "step": 0.0}, scene)
 					scene.add_child(pointer)
+			"dialogue":
+				var box := Dialogue.new()
+				box.setup(node_spec, scene)
+				scene.add_child(box)
 			"hud":
 				var hud := Hud.new()
 				hud.setup(node_spec, scene)
@@ -224,6 +230,8 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 		body = ShipBody.new()
 	elif node_spec["controller"] == "fighter":
 		body = FighterBody.new()
+	elif node_spec["controller"] == "grid":
+		body = GridBody.new()
 	else:
 		body = PlatformerBody.new()
 	body.name = node_spec["id"]

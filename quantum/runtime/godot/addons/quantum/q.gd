@@ -293,6 +293,20 @@ static func paused(node) -> bool:
 	return scene != null and scene.q_paused
 
 
+# qg:say: opens a qg:dialogue of the scene (it pauses the scene until its last line).
+static func say(node, dialogue: String) -> void:
+	var scene := _current_scene(node)
+	var box = scene.get_node_or_null("Dialogue_" + dialogue) if scene != null else null
+	if box != null and not box.is_open():
+		box.open()
+
+
+# talking(): a qg:dialogue of the scene is open.
+static func talking(node) -> bool:
+	var scene := _current_scene(node)
+	return scene != null and scene.q_talking() != ""
+
+
 # Leaves the scene for another at the end of the tick (qg:goto-scene).
 static func goto_scene(scene: Node, name_: String) -> void:
 	var game := scene.get_parent()

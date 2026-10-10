@@ -7,7 +7,7 @@ outline: [2, 3]
 
 **[All the games on one page →](https://quantumframework.net/games/)**
 
-Nine games written in the game language, each a single `.q` file in
+Ten games written in the game language, each a single `.q` file in
 [`projects/`](https://github.com/danielgregorio/quantum/tree/main/projects), built by
 `quantum run`, replayed in CI from input tapes, and exported here by Godot
 4.4.1 for the browser, Linux and Windows. The browser builds run as
@@ -39,6 +39,7 @@ command line skips the title:
 | **Arena** | A one-on-one fighting game: moves with frame data, blocking, hit stun, rounds on a clock; two players on one keyboard or over the network | [browser](https://quantumframework.net/games/arena/) | [Linux](https://quantumframework.net/games/arena/arena-linux.zip) · [Windows](https://quantumframework.net/games/arena/arena-windows.zip) | [arena.q](https://github.com/danielgregorio/quantum/blob/main/projects/arena/arena.q) |
 | **Chess** | Chess, its rules written in the language: castling, en passant, promotion, check, mate, stalemate; white and black on one board or over the network | [browser](https://quantumframework.net/games/chess/) | [Linux](https://quantumframework.net/games/chess/chess-linux.zip) · [Windows](https://quantumframework.net/games/chess/chess-windows.zip) | [chess.q](https://github.com/danielgregorio/quantum/blob/main/projects/chess/chess.q) |
 | **Robot** | Godot's "Platformer 2D" demo transcribed: slopes and ledges, a robot that runs, jumps twice and shoots, crawling enemies, coins, lifts, a pause menu | [browser](https://quantumframework.net/games/robot/) | [Linux](https://quantumframework.net/games/robot/robot-linux.zip) · [Windows](https://quantumframework.net/games/robot/robot-windows.zip) | [robot.q](https://github.com/danielgregorio/quantum/blob/main/projects/robot/robot.q) |
+| **RPG** | Godot's "JRPG" demo transcribed: a slime walks a grassy map cell by cell, talks, and fights another slime turn by turn | [browser](https://quantumframework.net/games/rpg/) | [Linux](https://quantumframework.net/games/rpg/rpg-linux.zip) · [Windows](https://quantumframework.net/games/rpg/rpg-windows.zip) | [rpg.q](https://github.com/danielgregorio/quantum/blob/main/projects/rpg/rpg.q) |
 
 ## Controls
 
@@ -51,6 +52,7 @@ command line skips the title:
 - **Arena**: player 1 A/D, W jump, S crouch, J punch, K kick; player 2 the arrows, `.` punch, `/` kick. Hold away from the opponent to block.
 - **Chess**: click a piece, then a square (white first).
 - **Robot**: arrows or A/D; Up, W or the joypad's A jumps (again in the air); Space, Z or Ctrl shoots; Escape pauses.
+- **RPG**: arrows or WASD walk (two at once, diagonally); walk into someone to talk; Enter, Space or a click shows the next line; in the fight, Attack, Defend or Flee.
 
 A joypad works everywhere: the pad or the left stick moves, A jumps or
 selects, B cancels. Player 2 reads the second joypad.
