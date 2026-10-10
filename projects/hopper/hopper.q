@@ -12,6 +12,10 @@
   <q:set name="score" value="0" type="number" />
   <q:set name="cleared" value="[]" type="array" />
   <q:set name="map_at" value="level-1" />
+  <!-- the checkpoint reached: its level and where the character starts again there -->
+  <q:set name="check_at" value="" />
+  <q:set name="check_x" value="0" type="number" />
+  <q:set name="check_y" value="0" type="number" />
 
   <!-- Jump on space, Z, X, up or W; the other actions keep their default keys. -->
   <qg:input action="jump" keys="Space, Z, X, Up, W" />
@@ -70,6 +74,9 @@
   <!-- ===== Level 1 ===== -->
 
   <qg:scene name="level-1" width="256" height="224" background="#5c94fc" seed="7">
+    <q:if condition="{check_at == 'level-1'}">
+      <qg:put target="player" x="{check_x}" y="{check_y}" />
+    </q:if>
     <q:set name="coins" value="0" type="number" />
     <q:set name="message" value="" />
     <q:set name="time" value="99" type="number" />
@@ -79,6 +86,7 @@
       <q:set name="time" value="{time - 1}" />
       <q:if condition="{time <= 0}">
         <q:set name="lives" value="{lives - 1}" />
+        <q:set name="check_at" value="" />
         <qg:goto-scene name="map" />
       </q:if>
     </qg:timer>
@@ -89,7 +97,7 @@
       <q:if condition="{lives <= 0}">
         <qg:goto-scene name="game-over" />
       <q:else>
-        <qg:respawn target="me" />
+        <qg:goto-scene name="level-1" />   <!-- the level again, enemies and all: from the start or its checkpoint -->
       </q:else>
       </q:if>
     </q:function>
@@ -171,6 +179,9 @@
       <qg:on-collision with="checkpoint">
         <qg:checkpoint target="me" at="other" />
         <qg:swap target="other" prefab="CheckpointOn" />
+        <q:set name="check_at" value="level-1" />
+        <q:set name="check_x" value="297" />
+        <q:set name="check_y" value="169" />
       </qg:on-collision>
 
       <qg:on-collision with="flag" cooldown="100000">
@@ -178,6 +189,7 @@
         <q:set name="score" value="{score + 500}" />
         <q:set name="message" value="YOU WIN" />
         <q:set name="cleared" value="{cleared + ['level-1']}" />
+        <q:set name="check_at" value="" />
         <qg:goto-scene name="map" />
       </qg:on-collision>
 
@@ -190,7 +202,8 @@
     <qg:instance prefab="Coin" x="120" y="160" />
     <qg:instance prefab="Coin" x="171" y="96" />
     <qg:instance prefab="Walker" x="200" y="160" />
-    <qg:instance prefab="Checkpoint" x="297" y="171" />
+    <qg:instance prefab="Checkpoint" x="297" y="171" if="{check_at != 'level-1'}" />
+    <qg:instance prefab="CheckpointOn" x="297" y="171" if="{check_at == 'level-1'}" />
     <qg:instance prefab="Spikes" x="351" y="176" />
     <qg:instance prefab="Flag" x="405" y="171" />
 
@@ -208,6 +221,9 @@
   <!-- ===== Level 2: platforms and two walkers ===== -->
 
   <qg:scene name="level-2" width="256" height="224" background="#4a7cc9" seed="11">
+    <q:if condition="{check_at == 'level-2'}">
+      <qg:put target="player" x="{check_x}" y="{check_y}" />
+    </q:if>
     <q:set name="coins" value="0" type="number" />
 
     <q:function name="die" params="me">
@@ -216,7 +232,7 @@
       <q:if condition="{lives <= 0}">
         <qg:goto-scene name="game-over" />
       <q:else>
-        <qg:respawn target="me" />
+        <qg:goto-scene name="level-2" />   <!-- the level again, enemies and all: from the start or its checkpoint -->
       </q:else>
       </q:if>
     </q:function>
@@ -253,6 +269,7 @@
         <qg:play sound="win" />
         <q:set name="score" value="{score + 500}" />
         <q:set name="cleared" value="{cleared + ['level-2']}" />
+        <q:set name="check_at" value="" />
         <qg:goto-scene name="map" />
       </qg:on-collision>
       <qg:on-fall>
@@ -272,6 +289,9 @@
   <!-- ===== Level 3: the spikes gauntlet ===== -->
 
   <qg:scene name="level-3" width="256" height="224" background="#7a4fa8" seed="13">
+    <q:if condition="{check_at == 'level-3'}">
+      <qg:put target="player" x="{check_x}" y="{check_y}" />
+    </q:if>
     <q:set name="coins" value="0" type="number" />
 
     <q:function name="die" params="me">
@@ -280,7 +300,7 @@
       <q:if condition="{lives <= 0}">
         <qg:goto-scene name="game-over" />
       <q:else>
-        <qg:respawn target="me" />
+        <qg:goto-scene name="level-3" />   <!-- the level again, enemies and all: from the start or its checkpoint -->
       </q:else>
       </q:if>
     </q:function>
@@ -321,11 +341,15 @@
       <qg:on-collision with="checkpoint">
         <qg:checkpoint target="me" at="other" />
         <qg:swap target="other" prefab="CheckpointOn" />
+        <q:set name="check_at" value="level-3" />
+        <q:set name="check_x" value="207" />
+        <q:set name="check_y" value="169" />
       </qg:on-collision>
       <qg:on-collision with="flag" cooldown="100000">
         <qg:play sound="win" />
         <q:set name="score" value="{score + 1000}" />
         <q:set name="cleared" value="{cleared + ['level-3']}" />
+        <q:set name="check_at" value="" />
         <qg:goto-scene name="map" />
       </qg:on-collision>
       <qg:on-fall>
@@ -336,7 +360,8 @@
     <qg:instance prefab="Spikes" x="135" y="176" />
     <qg:instance prefab="Spikes" x="153" y="176" />
     <qg:instance prefab="Coin" x="144" y="96" />
-    <qg:instance prefab="Checkpoint" x="207" y="171" />
+    <qg:instance prefab="Checkpoint" x="207" y="171" if="{check_at != 'level-3'}" />
+    <qg:instance prefab="CheckpointOn" x="207" y="171" if="{check_at == 'level-3'}" />
     <qg:instance prefab="Spikes" x="243" y="176" />
     <qg:instance prefab="Spikes" x="261" y="176" />
     <qg:instance prefab="Spikes" x="279" y="176" />
@@ -361,6 +386,7 @@
       <q:set name="score" value="0" />
       <q:set name="cleared" value="[]" />
       <q:set name="map_at" value="level-1" />
+      <q:set name="check_at" value="" />
       <qg:goto-scene name="map" />
     </qg:on-input>
 

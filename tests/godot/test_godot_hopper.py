@@ -47,7 +47,7 @@ def test_the_game_starts_on_the_world_map(godot, hopper):
     assert list(state) == ['map']
     walker = state['map']['nodes']['player']
     assert walker['at'] == 'level-1' and walker['going_to'] == ''
-    assert state['map']['game'] == {'cleared': [], 'lives': 3, 'map_at': 'level-1', 'score': 0}
+    assert state['map']['game'] == {'cleared': [], 'lives': 3, 'map_at': 'level-1', 'score': 0, 'check_at': '', 'check_x': 0.0, 'check_y': 0.0}
 
 
 def test_a_path_that_requires_a_level_stays_shut(godot, hopper):
@@ -148,13 +148,17 @@ def test_landing_on_the_walker_stomps_it(godot, hopper):
     assert s['sounds'] == ['coin', 'jump', 'stomp']
 
 
-def test_falling_into_the_pit_costs_a_life(godot, hopper):
+def test_falling_into_the_pit_costs_a_life_and_starts_the_level_again(godot, hopper):
     # Stomp the walker, keep going: the pit is at columns 13-14.
-    state = replay(hopper, 300 + ENTER, level([('right', 0, 300), ('jump', 52, 72)]), binary=godot)
+    before = replay(hopper, 180 + ENTER, level([('right', 0, 300), ('jump', 52, 72)]), binary=godot)['level-1']
+    assert before['things'].get('enemy', 0) == 0 and before['game']['score'] == 110
+    state = replay(hopper, 200 + ENTER, level([('right', 0, 300), ('jump', 52, 72)]), binary=godot)
     s = state['level-1']
-    assert s['game']['lives'] == 2
-    assert s['sounds'][-1] == 'hurt'
-    assert player(state)['y'] == pytest.approx(REST_Y, abs=1)   # back on the ground
+    assert s['game']['lives'] == 2 and s['sounds'][-1] == 'hurt'
+    assert player(state)['y'] == pytest.approx(REST_Y, abs=1)   # back on the ground, at the start
+    assert player(state)['x'] < 80
+    # the level is new again: the walker back, the clock full, the score kept (it is the game's)
+    assert s['things']['enemy'] == 1 and s['time'] == 99 and s['game']['score'] == 110
 
 
 # --- the block, the power-up, the states ---
@@ -184,7 +188,7 @@ def test_the_power_up_makes_the_character_big_and_a_hit_makes_it_small_again(god
 # --- the checkpoint, the spikes, the flag ---
 
 CROSS_THE_PIT = [('jump', 30, 50), ('right', 60, 335), ('jump', 176, 200)]
-TO_THE_FLAG = CROSS_THE_PIT + [('jump', 284, 309)]
+TO_THE_FLAG = CROSS_THE_PIT + [('jump', 240, 265)]   # over the spikes, no life lost
 
 
 def test_the_checkpoint_is_where_the_spikes_send_you_back(godot, hopper):
@@ -194,7 +198,8 @@ def test_the_checkpoint_is_where_the_spikes_send_you_back(godot, hopper):
     hurt = replay(hopper, 275 + ENTER, level(CROSS_THE_PIT), binary=godot)['level-1']
     assert hurt['game']['lives'] == 2
     assert hurt['sounds'][-1] == 'hurt'
-    assert 297 <= hurt['nodes']['player']['x'] <= 340   # respawned at the checkpoint (x=297), walking on
+    assert 297 <= hurt['nodes']['player']['x'] <= 340   # the level again, from the checkpoint (x=297), walking on
+    assert hurt['things']['checkpoint-on'] == 1 and hurt['game']['check_at'] == 'level-1'   # still reached
 
 
 def test_reaching_the_flag_wins_the_level_and_opens_the_next_on_the_map(godot, hopper):
@@ -203,7 +208,8 @@ def test_reaching_the_flag_wins_the_level_and_opens_the_next_on_the_map(godot, h
     s = state['map']
     assert s['game']['cleared'] == ['level-1']
     assert s['game']['score'] == 50 + 10 + 500
-    assert s['game']['lives'] == 2
+    assert s['game']['lives'] == 3
+    assert s['game']['check_at'] == ''                 # a level won forgets its checkpoint
     assert s['sounds'][-1] == 'win'
     assert s['nodes']['player']['at'] == 'level-1'
     # the path to level-2 is open now: right walks there, jump enters it
@@ -228,13 +234,14 @@ def test_three_deaths_are_game_over_and_jump_starts_again(godot, hopper):
     assert over['game-over']['sounds'].count('hurt') == 3
     again = replay(hopper, 530, level([('right', 10, 500), ('jump', 520, 522)]), binary=godot)
     assert list(again) == ['map']
-    assert again['map']['game'] == {'cleared': [], 'lives': 3, 'map_at': 'level-1', 'score': 0}
+    assert again['map']['game'] == {'cleared': [], 'lives': 3, 'map_at': 'level-1', 'score': 0, 'check_at': '', 'check_x': 0.0, 'check_y': 0.0}
 
 
 # --- the clock, the keys, the ledge and the lift ---
 
 def test_the_clock_loses_a_second_every_sixty_ticks(godot, hopper):
-    state = replay(hopper, 120 + ENTER, level([('right', 0, 120)]), binary=godot)
+    # (the walker stomped first: a death would start the level, and its clock, again)
+    state = replay(hopper, 120 + ENTER, level([('jump', 30, 50), ('right', 60, 120)]), binary=godot)
     assert state['level-1']['time'] == 97
 
 

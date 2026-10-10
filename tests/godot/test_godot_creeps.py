@@ -44,12 +44,16 @@ def test_the_title_waits_for_the_start_key(godot, project):
 
 def test_the_start_button_is_clicked_like_the_demos(godot, project):
     from quantum.runtime.godot_replay import cursor_at
-    tape = tape_from_holds([('select', 8, 10)])
+    click = [('select', 8, 10), ('click', 8, 10)]
+    tape = tape_from_holds(click)
     cursor_at(tape, 3, 240, 680)       # the Start button, at the bottom of the screen
     assert list(replay(project, 14, tape=tape)) == ['play']
-    tape = tape_from_holds([('select', 8, 10)])
+    tape = tape_from_holds(click)
     cursor_at(tape, 3, 240, 100)       # the title text: no button there
     assert list(replay(project, 14, tape=tape)) == ['title']
+    tape = tape_from_holds([('select', 8, 10)])
+    cursor_at(tape, 3, 240, 100)       # Enter, the pointer resting on the title text: the focused Start
+    assert list(replay(project, 14, tape=tape)) == ['play']
 
 
 def test_get_ready_then_creeps_from_the_border_and_a_point_a_second(godot, project):

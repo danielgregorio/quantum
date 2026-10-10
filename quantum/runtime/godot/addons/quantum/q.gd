@@ -352,6 +352,27 @@ func _ready() -> void:
 func _physics_process(_delta: float) -> void:
 	if external_input:
 		return
+	set_input(sample_local())
+
+
+# The game's actions pressed and released again between two ticks: a quick
+# click, a tap on a screen. Sampling only what is held at each tick would lose
+# them; they count as pressed for the next tick.
+var _taps: Dictionary = {}
+
+
+func _input(event: InputEvent) -> void:
+	if not event.is_pressed() or event.is_echo():
+		return
+	for a in InputMap.get_actions():
+		var name_ := String(a)
+		if not name_.begins_with("ui_") and event.is_action_pressed(name_):
+			_taps[name_] = true
+
+
+# This machine's keys, for the tick: what is held, with its strength, and what
+# was tapped since the last tick. The lockstep sends it; alone, it is the input.
+func sample_local() -> Dictionary:
 	var next := {}
 	for a in InputMap.get_actions():
 		var name_ := String(a)
@@ -360,7 +381,11 @@ func _physics_process(_delta: float) -> void:
 		var v := Input.get_action_strength(name_)
 		if v > 0.0:
 			next[name_] = v
-	set_input(next)
+	for name_ in _taps.keys():
+		if not next.has(name_):
+			next[name_] = 1.0
+	_taps.clear()
+	return next
 
 
 # The input of the next tick: {action: strength}, only what is pressed.

@@ -1,0 +1,32 @@
+{
+  "_about": "The games of projects/, in the order the site shows them: what /games/ (scripts/export-games.py) says of each. The screenshot is projects/<name>/screenshot.png.",
+  "games": [
+    {"name": "robot", "title": "Robot", "players": "1 player",
+     "blurb": "Godot's \"Platformer 2D\" demo, transcribed: slopes and ledges, a robot that runs, jumps twice and shoots, crawling enemies, coins, lifts, a pause menu.",
+     "controls": "Arrows or A/D to run; Up, W or the joypad's A to jump (again in the air); Space, Z or Ctrl to shoot; Escape to pause."},
+    {"name": "arena", "title": "Arena", "players": "2 players · network",
+     "blurb": "A one-on-one fighting game: two martial artists, punches and kicks with frame data, blocking, rounds on a clock. On one keyboard or over the network, with rollback.",
+     "controls": "Player 1: A/D, W jump, S crouch, J punch, K kick. Player 2: the arrows, . punch, / kick. Hold away from the other to block."},
+    {"name": "chess", "title": "Chess", "players": "2 players · network",
+     "blurb": "Chess with its whole rules written in the language: castling, en passant, promotion, check, mate, stalemate. The board shows where a picked piece may go.",
+     "controls": "Click a piece, then a square (or the arrows and Enter). White first."},
+    {"name": "drift", "title": "Drift", "players": "1 player",
+     "blurb": "A vertical shooter: waves of drones and tanks, a boss that turns red when angry, a high score kept between runs.",
+     "controls": "Arrows or WASD to fly; Space to fire."},
+    {"name": "keep", "title": "Keep", "players": "1 player",
+     "blurb": "A top-down adventure through six rooms of a keep: slimes and bats, a sword, a key and a locked door, a switch that opens a gate elsewhere, a chest.",
+     "controls": "Arrows or WASD to walk; Space to swing the sword."},
+    {"name": "hopper", "title": "Hopper", "players": "1 player",
+     "blurb": "A platformer: a world map and three levels, a block with a power-up, walkers to stomp, pits, a checkpoint, spikes, a flag.",
+     "controls": "Arrows or WASD; Space, Z or X to jump. On the map, jump enters a level."},
+    {"name": "towers", "title": "Towers", "players": "2 players · network",
+     "blurb": "A tower defense: turrets that shoot the nearest dino, dinos down a road in waves, gold and a base to keep. Alone or two builders over the network.",
+     "controls": "The mouse (or the arrows) points, click or Enter builds; 1 and 2 choose the turret; click a turret to upgrade it."},
+    {"name": "creeps", "title": "Creeps", "players": "1 player",
+     "blurb": "Godot's \"Dodge the Creeps\" tutorial game, transcribed: creeps from the border at random speeds, a point a second.",
+     "controls": "Arrows or WASD to move; Space or Enter to start."},
+    {"name": "pong", "title": "Pong", "players": "2 players · network",
+     "blurb": "Godot's own Pong demo, transcribed tag for node: two paddles and a ball. On one keyboard or over the network.",
+     "controls": "W/S for the left paddle, the arrows for the right one."}
+  ]
+}

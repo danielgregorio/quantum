@@ -10,6 +10,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: https://quantumframework.net/games/ is a page of its own: every
+  game with a screenshot, what it is, its keys, and its links (play in the
+  browser, the Linux and Windows downloads, the `.q`). `scripts/export-games.py`
+  writes it after the builds, from `projects/games.json` and each game's
+  `projects/<name>/screenshot.png`.
+
 - Laboratory: the games are drawn. Drift has a ship, drones, tanks, a crab
   boss that turns red when angry and a starfield; Keep a stone dungeon seen
   from above, a hero who walks and swings a visible sword in four
@@ -69,6 +75,26 @@ alter the behaviour of an existing app is listed under **Breaking**.
   by keys and by the pointer.
 
 ### Fixed
+
+- Laboratory: Hopper was over in seconds for a player who stood still: a
+  death put the character back at the start while the walker that killed it
+  walked on, into it again. A death now starts the level again — the
+  enemies, the coins and the clock as they were — from its checkpoint when
+  one was reached (the game's `check_at`, `check_x`, `check_y`).
+
+- Laboratory: a quick click or tap was lost: the game reads its keys once a
+  tick, and a press released before the next tick was never seen — on the
+  site, Chess picked no piece and Towers built nothing for a brisk click.
+  `Q` keeps the presses that come between two ticks for the next one, the
+  lockstep and the rollback send them too (`Q.sample_local()`).
+- Laboratory: a menu chose nothing on Enter while the mouse rested off its
+  buttons (clicking the game to give it the keyboard leaves it there). A
+  new default action, `click` (the mouse button alone), tells a click from
+  Enter: a click chooses what is under the pointer, or nothing; Enter, or
+  the joypad's A, chooses the focused button.
+- Laboratory: Arena's fighters are drawn again, as one silhouette each
+  instead of separately outlined bones, in a guard with the fists up: they
+  read as fighters, and which way each faces.
 
 - Laboratory: Chess on one machine: black could not move. The board took
   black's click only from player 2's select, which no key presses on a

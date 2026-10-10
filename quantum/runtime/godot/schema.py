@@ -251,8 +251,10 @@ TAGS: Dict[str, Tag] = {
         parents=('scene',)),
     'menu': Tag(
         'A list of buttons (and text fields) over the scene. A player moves through it with up/down and '
-        'chooses with select (Enter, a click, the joypad\'s A), or points at a button with the mouse — the '
-        'pointer is that player\'s qg:cursor, so a click is replayed and travels in the lockstep like a key.',
+        'chooses with select (Enter, the joypad\'s A: the button that has the focus), or points at a button '
+        'with the mouse and clicks it (a click away from the buttons chooses nothing) — the pointer is that '
+        'player\'s qg:cursor and the click its "click" action, so a click is replayed and travels in the '
+        'lockstep like a key.',
         {'player': Attr('int', 1, doc='whose keys and pointer choose'),
          'if': Attr('expr', None, doc='shown, and choosable, only while this is true: paused(), a q:set...'),
          'position': Attr('enum:top-left|top-center|top-right|center|bottom-center', 'center'),

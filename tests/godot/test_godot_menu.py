@@ -74,12 +74,16 @@ def test_a_shown_button_once_its_condition_holds(godot, project):
 def test_the_pointer_focuses_and_a_click_chooses_what_is_under_it(godot, project):
     # the buttons are stacked around the scene's centre (160, 120); find the first one from the top
     for y in range(80, 130, 4):
-        scene, s = run(project, 20, [('select', 10, 12)], [(3, 160, y)])
+        scene, s = run(project, 20, [('select', 10, 12), ('click', 10, 12)], [(3, 160, y)])
         if s.get('clicks') == 1:
             break
     else:
         pytest.fail('no click on the first button between y=80 and y=130')
     assert s['menus'] == [0]
     # a click where there is no button chooses nothing, whatever has the focus
-    _, s = run(project, 20, [('select', 10, 12)], [(3, 10, 10)])
+    _, s = run(project, 20, [('select', 10, 12), ('click', 10, 12)], [(3, 10, 10)])
     assert s['clicks'] == 0
+    # but Enter chooses the focused button wherever the pointer rests: a page clicked to give the game
+    # the keyboard leaves the pointer off the buttons
+    _, s = run(project, 20, [('select', 10, 12)], [(3, 10, 10)])
+    assert s['clicks'] == 1

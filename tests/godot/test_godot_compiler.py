@@ -1122,7 +1122,8 @@ class TestWhatTowersAsked:
         data = json.loads((out / 'game.json').read_text())
         assert data['inputs']['buy'] == ['1', {'mouse_button': 2}]
         assert data['inputs']['select'] == ['Enter', {'mouse_button': 1}, {'joy_button': 0, 'device': 0}]
-        assert data['actions'] == ['left', 'right', 'up', 'down', 'jump', 'select', 'cancel', 'buy']
+        assert data['inputs']['click'] == [{'mouse_button': 1}]      # the mouse button alone: a menu's click
+        assert data['actions'] == ['left', 'right', 'up', 'down', 'jump', 'select', 'cancel', 'click', 'buy']
         assert set(data['scenes']['main']['on_input']) == {'buy', 'select'}
         err = refuse(tmp_path, game('  <qg:scene name="main"><qg:on-input action="fire"><q:set name="x" value="1" /></qg:on-input></qg:scene>\n'))
         assert '<qg:on-input action="fire">: no such action' in str(err)

@@ -5,6 +5,8 @@ outline: [2, 3]
 
 # Play the games
 
+**[All the games on one page →](https://quantumframework.net/games/)**
+
 Nine games written in the game language, each a single `.q` file in
 [`projects/`](https://github.com/danielgregorio/quantum/tree/main/projects), built by
 `quantum run`, replayed in CI from input tapes, and exported here by Godot
