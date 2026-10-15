@@ -91,7 +91,7 @@ jobs:
         # (tests/godot/). Cached by version; a miss downloads the release.
         id: godot-version
         run: echo "version=$(python scripts/godot.py version)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.cache/quantum/godot
           key: godot-${{ runner.os }}-${{ steps.godot-version.outputs.version }}
@@ -130,7 +130,7 @@ jobs:
 
       # The binary and the export templates (1.2 GB), with the same cache as
       # Deploy Docs, which exports the same games for the site.
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.cache/quantum
