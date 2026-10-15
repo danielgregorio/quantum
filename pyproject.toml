@@ -42,7 +42,7 @@ dev = [
     "pytest-xdist>=3.5",
     # Pinned to a minor version: `ruff check` blocks CI, and a new release
     # that adds checks must not turn main red with no change to the code.
-    "ruff>=0.16,<0.17",
+    "ruff>=0.16,<0.18",
 ]
 db = [
     "psycopg2-binary>=2.9.9",
