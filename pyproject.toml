@@ -34,6 +34,8 @@ dependencies = [
 play = [
     # `quantum play --mcp`: the play protocol's tools served to an agent (PLAN_PLAY_PROTOCOL.md)
     "mcp>=2.2",
+    # `quantum playtest`: a Claude agent plays each game toward its goal (projects/games.json)
+    "anthropic>=1.15",
 ]
 dev = [
     "pytest>=7.4.0",

@@ -370,6 +370,10 @@ Examples:
     play_parser.add_argument('--transport', choices=['enet', 'websocket'],
                              help="the network's transport (websocket: the one a browser joins)")
 
+    playtest_parser = subparsers.add_parser('playtest', help='An agent tries to finish each game (projects/games.json goals)')
+    from quantum.runtime.playtest import add_arguments as add_playtest_arguments
+    add_playtest_arguments(playtest_parser)
+
     # Admin command (the screens need the [admin] extra; checked when run)
     from quantum.cli.admin import create_admin_parser
     create_admin_parser(subparsers)
@@ -466,6 +470,10 @@ def main():
     elif args.command == 'play':
         from quantum.cli.play import main as play_main
         sys.exit(play_main(args))
+
+    elif args.command == 'playtest':
+        from quantum.runtime.playtest import main as playtest_main
+        sys.exit(playtest_main(args))
 
     elif args.command == 'admin':
         from quantum.cli.admin import handle_admin
