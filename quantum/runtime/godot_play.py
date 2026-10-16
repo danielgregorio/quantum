@@ -122,9 +122,23 @@ class PlaySession:
     """One running game, played request by request."""
 
     def __init__(self, project_dir: Union[str, Path], binary: Optional[Path] = None,
-                 persist_dir: Optional[Path] = None, timeout: float = 120, frames: bool = False):
+                 persist_dir: Optional[Path] = None, timeout: float = 120, frames: bool = False,
+                 live: bool = False, host: Optional[int] = None, join: Optional[str] = None,
+                 transport: Optional[str] = None):
+        """``live``: the game runs at its own speed, 60 ticks a second, and does not wait
+        for requests (against a person, or a peer that does not wait). ``host`` (a port) or
+        ``join`` (``"host:port"``) take a seat in a ``qg:multiplayer`` game, as the
+        game's ``--q-host``/``--q-join`` do; a networked session is always live."""
         self.project_dir = Path(project_dir)
         self.timeout = timeout
+        self.live = live or host is not None or join is not None
+        self._net = []
+        if host is not None:
+            self._net.append(f'--q-host={int(host)}')
+        if join is not None:
+            self._net.append(f'--q-join={join}')
+        if transport:
+            self._net.append(f'--q-transport={transport}')
         self._tmp = tempfile.TemporaryDirectory(prefix='quantum-play-')
         # what the game had saved when the session began: a restored game starts from it again
         self._persist_origin = Path(self._tmp.name) / 'persist-origin'
@@ -159,9 +173,11 @@ class PlaySession:
             persist = Path(self._tmp.name) / f'persist-{self._starts}'
             shutil.copytree(self._persist_origin, persist)
         persist.mkdir(parents=True, exist_ok=True)
+        # stepped, every frame is one tick of 1/60 s, as fast as it runs; live, the clock decides
+        pace = ['--live'] if self.live else []
         self._proc = subprocess.Popen(
-            [*self._godot, '--fixed-fps', '60', '--path', str(self.project_dir),
-             '-s', str(PLAY_SCRIPT), '--', f'--persist-dir={persist}'],
+            [*self._godot, *([] if self.live else ['--fixed-fps', '60']), '--path', str(self.project_dir),
+             '-s', str(PLAY_SCRIPT), '--', f'--persist-dir={persist}', *pace, *self._net],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
 
     @classmethod
@@ -263,6 +279,8 @@ class PlaySession:
     def restore(self, snap: dict) -> dict:
         """Back to a snapshot: a fresh game replayed to its tick, headless and fast, with
         the actions it held still held. Answers the observation there."""
+        if self.live:
+            raise PlayError('a live game cannot go back: it does not run the same twice')
         self._stop()
         self._spawn()
         tape = {str(k): [list(e) for e in v] for k, v in snap['tape'].items()}

@@ -30,8 +30,10 @@ destroy, damage, sound, scene, say, choose, set: a variable that changed) and wh
 screen as text. In an action game, give play_act or play_until `reflex` rules, which the game checks
 before every tick until you replace them ([] clears them): [{"when": "ball.y < left.y - 4", "hold":
 ["up"]}, {"when": "ball.y > left.y + 4", "hold": ["down"]}] keeps a paddle on the ball while you
-decide where it should go; a rule without "when" always holds. play_snapshot and play_restore try a
-choice and come back. play_tape saves the session
+decide where it should go; a rule without "when" always holds. play_start with join="host:port" takes
+the second seat of a person's networked game (live: it runs at the person's speed, so let reflexes play
+between calls; `net` in each answer says the seat and whether the game is playing). play_snapshot and
+play_restore try a choice and come back (not in a live game). play_tape saves the session
 as a replay test. Close what you open with play_end."""
 
 
@@ -71,10 +73,14 @@ def build_server(tools: Optional[PlayTools] = None):
 
     @server.tool()
     @_plays
-    def play_start(game: str) -> str:
+    def play_start(game: str, live: bool = False, host: Optional[int] = None, join: Optional[str] = None,
+                   transport: Optional[str] = None) -> str:
         """Opens a game by name (from play_games). Answers the session id, the game's actions,
-        the first observation and the scene's map."""
-        return _dump(tools.start(game))
+        the first observation and the scene's map. live: the game runs at its own speed (60
+        ticks a second) instead of waiting for each call. host (a port) or join ("host:port"):
+        take a seat in a networked game, with a person or another agent (always live);
+        transport "websocket" is the one a browser joins."""
+        return _dump(tools.start(game, live=live, host=host, join=join, transport=transport))
 
     @server.tool()
     @_plays

@@ -2,6 +2,7 @@
 
     quantum play rpg                 # a game of projects/, or a .q
     quantum play --mcp               # the same tools, as an MCP server over stdio
+    quantum play pong --join 127.0.0.1:7777   # the second seat of a networked game (live)
 
 The console is the play protocol for a person: what an agent sends as
 requests, typed as words, and what it gets back, printed short. It is how
@@ -78,10 +79,11 @@ def reflexes(text: str) -> List[dict]:
 
 
 def run_play(game: str, frames: bool = False, read: Callable[[str], str] = input,
-             write: Callable[[str], None] = print, tools: Optional[PlayTools] = None) -> int:
+             write: Callable[[str], None] = print, tools: Optional[PlayTools] = None,
+             net: Optional[dict] = None) -> int:
     tools = tools or PlayTools()
     try:
-        start = tools.start(game, frames=frames)
+        start = tools.start(game, frames=frames, **(net or {}))
     except PlayError as e:
         write(f'[ERROR] {e}')
         return 1
@@ -170,4 +172,5 @@ def main(args) -> int:
         tools = PlayTools()
         print('quantum play <game>: ' + ', '.join(g['game'] for g in tools.games()))
         return 2
-    return run_play(args.game, frames=args.frames)
+    net = {k: getattr(args, k, None) for k in ('live', 'host', 'join', 'transport')}
+    return run_play(args.game, frames=args.frames, net={k: v for k, v in net.items() if v})

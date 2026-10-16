@@ -58,6 +58,8 @@ func setup(spec: Dictionary, game_: Node, host_: String, port_: int) -> void:
 	delay = int(spec.get("delay", 3))
 	check_every = int(spec.get("check_every", 60))
 	transport = str(spec.get("transport", "enet"))
+	if OS.has_feature("web"):
+		transport = "websocket"   # a browser has no ENet: the web build joins a WebSocket host
 	host = host_
 	port = port_
 	name = "Lockstep"

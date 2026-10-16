@@ -451,3 +451,66 @@ def test_an_agent_clears_drifts_first_wave(drift, godot):
         assert dead == 8 and seen['tick'] < 500                              # before the tanks come
         assert (seen['state']['game']['score'], seen['state']['game']['lives']) == (800, 3)
         assert game.requests < 60
+
+
+# --- phase 6: live, and playing with people ---
+
+def test_a_live_game_does_not_wait(rpg, godot):
+    import time
+    with PlaySession(rpg, binary=godot, live=True) as game:
+        first = game.observe()['tick']
+        time.sleep(1.0)
+        later = game.observe()['tick']
+        assert 30 <= later - first <= 120                                    # about 60 ticks a second, by the clock
+        walked = game.until('player.row == 7', hold=['down'], max_ticks=600)
+        assert walked['stopped'] == 'condition'
+        with pytest.raises(PlayError, match='no tape'):
+            game.tape()
+        with pytest.raises(PlayError, match='cannot go back'):
+            game.restore({'ticks': 0, 'held': [], 'tape': {}})
+
+
+def _person(godot, project: Path, port: int, ticks: int, tmp: Path):
+    """A person at the other machine: a Godot that hosts the game and plays for `ticks` ticks,
+    in real time, pressing nothing."""
+    import subprocess
+    from quantum.runtime.godot_replay import REPLAY_SCRIPT
+    (tmp / 'tape.json').write_text('{}')
+    (tmp / 'persist').mkdir()
+    return subprocess.Popen(
+        [str(godot), '--headless', '--path', str(project), '-s', str(REPLAY_SCRIPT), '--', f'--ticks={ticks}',
+         f'--out={tmp / "state.json"}', f'--persist-dir={tmp / "persist"}', f'--tape={tmp / "tape.json"}',
+         f'--q-host={port}'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def test_an_agent_joins_a_persons_pong_and_never_misses(pong, godot, tmp_path):
+    """Phase 6's check, on the desktop: the agent takes the second seat of a networked game that runs at
+    the person's speed; reflexes keep its paddle on the ball, as no request could, every tick."""
+    import time
+    from quantum.runtime.godot_replay import free_port
+    port = free_port()
+    person = _person(godot, pong, port, 1500, tmp_path)
+    try:
+        time.sleep(1.0)                                                      # the person hosts first
+        with PlaySession(pong, binary=godot, join=f'127.0.0.1:{port}') as game:
+            seen = game.until("net.status == 'playing'", max_ticks=900)
+            assert (seen['scene'], seen['net']['player']) == ('court', 2)
+            game.act(ticks=0, reflex=[{'when': 'ball.y < right.y - 2', 'hold': ['up']},
+                                      {'when': 'ball.y > right.y + 2', 'hold': ['down']}])
+            touches = []
+            while seen['net']['status'] == 'playing':
+                seen = game.until(['event:touch with=ball', 'event:touch with=wall', "net.status != 'playing'"],
+                                  max_ticks=1200)
+                touches += [e['who'] if e['with'] == 'ball' else 'wall' for e in seen.get('events', [])
+                            if e['kind'] == 'touch' and e['with'] in ('ball', 'wall')]
+            assert not seen['net']['desync']
+        heading, missed = 'left', []                                         # the ball starts towards the person
+        for t in touches:
+            if t == 'wall':
+                missed.append('the agent' if heading == 'right' else 'the person')
+                heading = 'left'                                             # back to the middle, as it was
+            else:
+                heading = 'right' if t == 'left' else 'left'
+        assert touches.count('right') >= 2 and 'the agent' not in missed, touches
+    finally:
+        person.wait(timeout=60)

@@ -119,6 +119,10 @@ Play a game step by step (or serve it to an agent, --mcp).
 | `[game]` | a game of projects/ (rpg, chess...) or a .q |  |  |
 | `--mcp` | serve the play tools over MCP (stdio) |  |  |
 | `--frames` | draw on a virtual display, for "frame" |  |  |
+| `--live` | the game runs at its own speed, not request by request |  |  |
+| `--host` | host a networked game on this port (live) |  |  |
+| `--join` | join a networked game, a person's or another agent's (live) |  |  |
+| `--transport` | the network's transport (websocket: the one a browser joins) |  | `enet`, `websocket` |
 
 <a id="cli-admin"></a>
 
