@@ -31,7 +31,7 @@ jobs:
       # The games, for docs/targets/play.md: built by Godot from projects/*/*.q
       # into docs/public/games/ (never committed). The binary and the export
       # templates (1.2 GB) come from GitHub's releases, cached between runs.
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - run: pip install -e .
