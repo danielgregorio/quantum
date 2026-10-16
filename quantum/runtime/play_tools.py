@@ -84,15 +84,16 @@ class PlayTools:
         return self.compact(self._session(sid).observe())
 
     def act(self, sid: str, hold: List[str] = (), tap: List[str] = (), press: List[str] = (),
-            release: List[str] = (), cursor: Optional[List[float]] = None, ticks: int = 1) -> dict:
+            release: List[str] = (), cursor: Optional[List[float]] = None, ticks: int = 1,
+            reflex: Optional[List[dict]] = None) -> dict:
         return self.compact(self._session(sid).act(hold=hold, tap=tap, press=press, release=release,
-                                                   cursor=cursor, ticks=ticks))
+                                                   cursor=cursor, ticks=ticks, reflex=reflex))
 
     def until(self, sid: str, condition: Union[str, List[str], dict], hold: List[str] = (), tap: List[str] = (),
               press: List[str] = (), release: List[str] = (), cursor: Optional[List[float]] = None,
-              max_ticks: int = 600) -> dict:
+              max_ticks: int = 600, reflex: Optional[List[dict]] = None) -> dict:
         return self.compact(self._session(sid).until(condition, hold=hold, tap=tap, press=press, release=release,
-                                                     cursor=cursor, max_ticks=max_ticks))
+                                                     cursor=cursor, max_ticks=max_ticks, reflex=reflex))
 
     def view(self, sid: str) -> dict:
         return self._session(sid).view()

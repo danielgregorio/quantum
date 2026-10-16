@@ -1,6 +1,6 @@
 # The play protocol: a game an agent can play
 
-> Status: phases 1 to 4 are built: the driver (`quantum/runtime/godot_play.gd`),
+> Status: phases 1 to 5 are built: the driver (`quantum/runtime/godot_play.gd`),
 > its client (`godot_play.py`, `PlaySession`), the tools by session
 > (`play_tools.py`), the MCP server (`play_mcp.py`, declared in `.mcp.json`)
 > and the console (`quantum play`). In `tests/godot/test_godot_play.py` and
@@ -10,7 +10,9 @@
 > - leave Keep's first room using only the map and the view;
 > - read a fight's events hit by hit;
 > - branch a fight from a snapshot and come back;
-> - replay a session saved as a tape, as a test.
+> - replay a session saved as a tape, as a test;
+> - return 20 of Pong's balls in a row with reflexes, and clear Drift's
+>   first wave without losing a life.
 >
 > The rest is the plan: what to build, in what order, and how each step is
 > checked. It builds on what the replay harness, the lockstep and the
@@ -172,6 +174,23 @@ asks for everything. A typical answer should stay under 2 KB.
   and it sits outside the game: what it presses goes into the tape like any
   input, so a match played with reflexes replays the same. The agent plays
   the strategy; the reflexes hold the paddle.
+
+  As built, the rules ride on an `act` or an `until` (`"reflex": [...]`,
+  `[]` clears them, `ticks: 0` only sets them). The grammar is `until`'s
+  conditions, nothing more, with one addition: the right side of a
+  comparison may be another path, with a number added
+  (`{"path": "ball.y", "op": "<", "value": {"path": "left.y", "plus": -8}}`,
+  `"ball.y < left.y - 8"` in the short form). A rule without `when` always
+  holds (Drift's fire button). The rules are checked before each tick the
+  agent asks for, and the actions of every rule that holds are held for
+  that tick. A snapshot carries the rules, so a restore brings them back.
+
+  What it needed in practice: Pong's paddles that only follow the ball
+  lose it after about twelve returns, once it is fast. An agent that, after
+  each hit, works out where the ball will arrive and gives the paddles that
+  height as reflexes keeps the rally going (20 returns, three requests a
+  hit). The reflexes are what keeps the paddle there between the agent's
+  decisions.
 - **Real time** (later, for the browser). The same protocol against a game
   running at its own speed, for watching an agent play, or for an agent
   playing *with* a person (below).
@@ -262,7 +281,7 @@ get an opponent when no friend is around.
 | 2. Perception (built) | events (one `Q.event()` call at each place the runtime already acts: scene change, handler, spawn, destroy, damage, dialogue, menu choice; it does nothing outside a session); the map; the text view; `frame` | Keep's room 1 is crossed to its exit using only the map and the view; the events of an RPG fight list each hit with its damage |
 | 3. Branching (built; restores by replay) | `snapshot`/`restore` (in memory for rollback scenes, by replay otherwise); `tape` | restore-then-replay gives byte-identical state hashes, in both modes; a tape saved from a session passes as a test |
 | 4. CLI and MCP (built) | `quantum play` console; `quantum play --mcp`; `.mcp.json` | a Claude Code session on the repository is asked "play the RPG and win" and does it through the tools |
-| 5. Reflexes | the reflex grammar, in the step loop | in Pong the agent returns 10 balls in a row; in Drift it clears the first wave |
+| 5. Reflexes (built) | the reflex grammar, in the step loop | in Pong the agent returns 10 balls in a row; in Drift it clears the first wave |
 | 6. Browser and people | the browser bridge; joining a lockstep game as player 2 | the agent plays Pong against a person on the web build |
 | 7. Playtest job | `goal`s in `projects/games.json`; a scheduled job with a report | the job runs over every game and writes its report |
 
@@ -292,10 +311,12 @@ usable from a conversation. 5 to 7 build on top.
 
 ## Open questions
 
-1. Should the reflex grammar reuse the game language's expression syntax
-   (`{ball.y < left.y - 8}`), compiled by the same compiler into a separate
-   driver script? It reads naturally for anyone who writes `.q`, but it
-   must stay out of the game itself.
+1. ~~Should the reflex grammar reuse the game language's expression syntax,
+   compiled into a separate driver script?~~ Decided in phase 5: no. The
+   reflexes use `until`'s conditions, read by the driver, plus a path on
+   the right of a comparison. It is one grammar to learn, it needs no
+   compiler at play time, and Pong and Drift needed nothing more. If a game
+   ever does, the expression syntax is still the way to grow it.
 2. The playtest job needs an agent and an API key. Should it run on a
    schedule in this repository's CI, or only when someone starts it?
 3. Should observations be in English only, or should a game's texts carry

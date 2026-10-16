@@ -14,12 +14,18 @@ extends SceneTree
 #   {"op": "observe"}
 #   {"op": "act", "ticks": N, "hold": [...], "tap": [...], "press": [...], "release": [...], "cursor": [x, y]}
 #   {"op": "until", "max_ticks": N, "condition": {...}, ...the same actions as act}
+#   either may carry "reflex": [{"when": {...a condition...}, "hold": [...]}, ...], which replaces the
+#                     reflexes: rules checked before every tick the agent asks for, until replaced
+#                     ([] clears them). The actions of the rules whose condition holds are held for that
+#                     tick and let go when none wants them; they go into the tape like any input.
 #   {"op": "map"}     the scene's tilemap as a grid of what is solid ("#"), one-way ("-") or open (".")
 #   {"op": "view"}    the screen as text at the map's cell size: walls, characters, things, with a legend
 #   {"op": "frame", "path": "/tmp/x.png"}   the real picture (a session with a display only)
-#   {"op": "tape"}    the session's inputs so far, as a replay tape ({tick: [[action, pressed], ["cursor", [x, y]]]})
-#   {"op": "replay", "tape": {...}, "ticks": N, "held": [...]}   runs to tick N applying a tape: how a
-#                     snapshot is restored, in a fresh game, by the determinism every replay test relies on
+#   {"op": "tape"}    the session's inputs so far, as a replay tape ({tick: [[action, pressed], ["cursor", [x, y]]]}),
+#                     with the reflexes at that point and what they hold
+#   {"op": "replay", "tape": {...}, "ticks": N, "held": [...], "reflex": {...}}   runs to tick N applying a
+#                     tape: how a snapshot is restored, in a fresh game, by the determinism every replay
+#                     test relies on. The reflexes come back after it; on the way, the tape holds what they did.
 #   {"op": "end"}
 # Every answer to an act or an until carries the events of its ticks: what
 # the runtime reported (Q.event: touch, hit, step, bump, spawn, destroy,
@@ -31,11 +37,13 @@ extends SceneTree
 #
 # A condition, checked after every tick of an until:
 #   {"path": "player.col", "op": "==", "value": 11}   (==, !=, <, <=, >, >=; "truthy", "falsy")
+#   {"path": "ball.y", "op": "<", "value": {"path": "left.y", "plus": -8}}   (another path, and a number added)
 #   {"changed": "scene"}                              (differs from when the until began)
 #   {"event": "say"} / {"event": "touch", "with": "key"}  (one happened during the until)
-#   {"any": [...]} / {"all": [...]}
+#   {"any": [...]} / {"all": [...]}   ({"all": []} always holds)
 # A path is looked up in the observation, then in its state, the state's
-# nodes, the game's state, and the screen's views by kind ("dialogue.text").
+# nodes, its named things, the game's state, and the screen's views by kind
+# ("dialogue.text").
 
 var scene: Node
 var ticks := 0                # physics ticks run since the start
@@ -52,6 +60,8 @@ var scene_before := ""
 var map_sent := ""               # the scene whose map the agent has
 var log := {}                    # tick -> the input changes made on it: the session as a replay tape
 var replay_tape := {}            # tick -> input changes to make, while a "replay" runs
+var reflexes: Array = []         # [{"when": condition, "hold": [...]}], checked before each tick the agent asks for
+var reflex_held := {}            # the actions the reflexes press now
 
 
 func _initialize() -> void:
@@ -74,7 +84,7 @@ func _physics_process(_delta: float) -> bool:
 	_note_sets()
 	if not taps.is_empty() and request.has("_first_done"):
 		for a in taps:
-			if not held.has(a):
+			if not held.has(a) and not reflex_held.has(a):
 				_release(a)
 		taps = []
 	# Every frame this returns false from runs one tick of the game, so a frame
@@ -120,7 +130,8 @@ func _physics_process(_delta: float) -> bool:
 			"map":
 				_answer({"tick": ticks, "map": game_map()})
 			"tape":
-				_answer({"tick": ticks, "tape": log, "held": held.keys()})
+				_answer({"tick": ticks, "tape": log, "held": held.keys(),
+					"reflex": {"rules": reflexes, "held": reflex_held.keys()}})
 			"replay":
 				if ticks != 0:
 					_answer({"error": "a replay starts a fresh game, at tick 0"})
@@ -133,6 +144,10 @@ func _physics_process(_delta: float) -> bool:
 				run_left = maxi(0, int(req.get("ticks", 0)))
 				for a in req.get("held", []):
 					held[str(a)] = true
+				var back: Dictionary = req.get("reflex", {})
+				reflexes = back.get("rules", [])
+				for a in back.get("held", []):
+					reflex_held[str(a)] = true   # pressed again by the tape, as they were
 				if run_left == 0:
 					_finish("replayed")
 					continue
@@ -152,14 +167,25 @@ func _start(req: Dictionary) -> String:
 	var known := {}
 	for a in InputMap.get_actions():
 		known[String(a)] = true
+	var asked := []
 	for key in ["hold", "tap", "press", "release"]:
-		for a in req.get(key, []):
-			if not known.has(str(a)) or str(a).begins_with("ui_"):
-				return "no such action: %s (the game's actions: %s)" % [a, ", ".join(controls())]
+		asked += req.get(key, [])
+	var rules = req.get("reflex", [])
+	if not rules is Array:
+		return "reflex is a list of rules: [{\"when\": {...}, \"hold\": [...]}]"
+	for r in rules:
+		if not r is Dictionary or not r.get("hold", []) is Array or r.get("hold", []).is_empty() \
+				or not r.get("when", {}) is Dictionary:
+			return "a reflex is {\"when\": a condition, \"hold\": [actions]}: " + JSON.stringify(r).left(80)
+		asked += r["hold"]
+	for a in asked:
+		if not known.has(str(a)) or str(a).begins_with("ui_"):
+			return "no such action: %s (the game's actions: %s)" % [a, ", ".join(controls())]
 	request = req.duplicate(true)
 	request.erase("_first_done")
 	for a in req.get("release", []):
 		held.erase(str(a))
+		reflex_held.erase(str(a))   # let go now; a reflex that still wants it presses it again
 		_release(str(a))
 	for a in req.get("press", []):
 		held[str(a)] = true
@@ -180,7 +206,33 @@ func _start(req: Dictionary) -> String:
 		until_start = observation()
 	else:
 		run_left = maxi(0, int(req.get("ticks", 1)))
+	if req.has("reflex"):
+		reflexes = rules.duplicate(true)
+		_reflex()
 	return ""
+
+
+# What the reflexes hold on the tick about to run: the actions of every rule
+# whose condition holds now. An action no rule wants any more is let go,
+# unless the agent holds it itself.
+func _reflex() -> void:
+	var wanted := {}
+	if not reflexes.is_empty():
+		var obs := observation()
+		for r in reflexes:
+			if _holds(r.get("when", {"all": []}), obs):
+				for a in r["hold"]:
+					wanted[str(a)] = true
+	for a in wanted.keys():
+		if not reflex_held.has(a):
+			reflex_held[a] = true
+			if not held.has(a) and not a in holds:
+				_press(a)
+	for a in reflex_held.keys():
+		if not wanted.has(a):
+			reflex_held.erase(a)
+			if not held.has(a) and not a in holds:
+				_release(a)
 
 
 # Every input change goes through these, so the session is a tape (the log)
@@ -207,6 +259,8 @@ func _log(e: Array) -> void:
 
 
 func _tick() -> void:
+	if request.get("op") != "replay":
+		_reflex()
 	if replay_tape.has(ticks):
 		for e in replay_tape[ticks]:
 			if e[0] == "cursor":
@@ -266,7 +320,7 @@ func _scene_name() -> String:
 
 func _finish(why: String) -> void:
 	for a in holds:
-		if not held.has(a):
+		if not held.has(a) and not reflex_held.has(a):
 			_release(a)
 	holds = []
 	if request.get("op") == "replay":
@@ -365,6 +419,11 @@ func _holds(cond: Dictionary, obs: Dictionary) -> bool:
 		var v = lookup(obs, str(cond["path"]))
 		var op := str(cond.get("op", "truthy"))
 		var w = cond.get("value")
+		if w is Dictionary and w.has("path"):   # another path of the observation, and a number added
+			var plus = w.get("plus", 0)
+			w = lookup(obs, str(w["path"]))
+			if (w is float or w is int) and (plus is float or plus is int):
+				w = w + plus
 		match op:
 			"truthy":
 				return _truthy(v)
@@ -407,12 +466,12 @@ func _same(v, w) -> bool:
 
 
 # "player.col": the observation's own keys first, then the state, the
-# state's nodes, the game's state; "dialogue.text": the screen's view of
-# that kind.
+# state's nodes, its named things ("ball.y"), the game's state;
+# "dialogue.text": the screen's view of that kind.
 func lookup(obs: Dictionary, path: String):
 	var parts := path.split(".")
 	var bases := [obs, obs.get("state", {}), obs.get("state", {}).get("nodes", {}),
-		obs.get("state", {}).get("game", {})]
+		obs.get("state", {}).get("named", {}), obs.get("state", {}).get("game", {})]
 	var views := {}
 	for v in obs.get("screen", []):
 		if not views.has(v["kind"]):

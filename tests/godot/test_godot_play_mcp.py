@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from quantum.cli.play import describe, run_play
+from quantum.cli.play import describe, reflexes, run_play
 from quantum.runtime.play_tools import PlayTools
 
 REPO = Path(__file__).resolve().parents[2]
@@ -46,6 +46,22 @@ def test_describe_says_where_what_happened_and_what_is_shown():
                              '  hud: Player | life 8/10',
                              '  menu: Attack  [Defend]',
                              '  "Aha!" — OPPONENT']
+
+
+def test_the_console_types_reflexes_as_words():
+    assert reflexes('up if ball.y < left.y - 4, down if ball.y > left.y + 4') == [
+        {'hold': ['up'], 'when': 'ball.y < left.y - 4'}, {'hold': ['down'], 'when': 'ball.y > left.y + 4'}]
+    assert reflexes('jump') == [{'hold': ['jump']}]                              # always
+    assert reflexes('off') == []
+
+
+def test_the_console_runs_reflexes(godot):
+    typed = iter(['reflex down if player.row < 6', 'wait 100', 'reflex off', 'wait 40', 'quit'])
+    out = []
+    run_play('rpg', read=lambda _prompt: next(typed), write=out.append, tools=PlayTools(binary=godot))
+    text = '\n'.join(out)
+    assert 'reflexes: 1' in text and 'no reflexes' in text
+    assert 'player (3,6)' in text                                               # walked down to row 6, and stopped
 
 
 def test_repeated_events_are_told_once():
