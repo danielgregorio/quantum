@@ -11,6 +11,9 @@ it.
     right 32          hold "right" for 32 ticks (16 when not given)
     tap select        press "select" for one tick
     until talking with right     hold "right" until someone talks ("until event:say", ...)
+    wait 60           run 60 ticks pressing nothing (the reflexes still play)
+    reflex up if ball.y < left.y - 4, down if ball.y > left.y + 4
+                      hold an action every tick its condition holds ("reflex jump": always; "reflex off")
     look | view | map            the observation, the screen as text, the scene's tiles
     snap | back [name]           mark this point; come back to it (the last one by default)
     tape won.json | frame shot.png | help | quit
@@ -57,6 +60,21 @@ def describe(obs: dict) -> List[str]:
                 items.append(f'[{label}]' if i == v['focus'] else label)
             lines.append('  menu: ' + '  '.join(items))
     return lines
+
+
+def reflexes(text: str) -> List[dict]:
+    """``"up if ball.y < left.y - 4, down if ball.y > left.y + 4"`` as reflex rules; an
+    action without ``if`` is always held; ``"off"`` is none."""
+    if text.strip() == 'off':
+        return []
+    rules = []
+    for part in text.split(','):
+        action, _, when = part.strip().partition(' if ')
+        rule = {'hold': action.split()}
+        if when.strip():
+            rule['when'] = when.strip()
+        rules.append(rule)
+    return rules
 
 
 def run_play(game: str, frames: bool = False, read: Callable[[str], str] = input,
@@ -110,6 +128,12 @@ def run_play(game: str, frames: bool = False, read: Callable[[str], str] = input
                         i = args.index('with')
                         args, held = args[:i], args[i + 1:]
                     obs = tools.until(sid, ' '.join(args), hold=held)
+                elif cmd == 'wait':
+                    obs = tools.act(sid, ticks=int(args[0]) if args else 16)
+                elif cmd == 'reflex' and args:
+                    rules = reflexes(' '.join(args))
+                    obs = tools.act(sid, ticks=0, reflex=rules)
+                    write(f'  reflexes: {len(rules)}' if rules else '  no reflexes')
                 elif cmd == 'snap':
                     snaps.append(tools.snapshot(sid)['snapshot'])
                     write(f'  {snaps[-1]}')

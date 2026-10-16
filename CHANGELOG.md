@@ -10,6 +10,19 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the play protocol, phase 5: reflexes. `act` and `until` may
+  carry `reflex` rules, `[{"when": a condition, "hold": [actions]}]`, which
+  the driver checks before every tick until they are replaced (`[]` clears
+  them). The actions of the rules that hold are held for that tick and let
+  go when no rule wants them. What they press goes into the tape, so a
+  session played with reflexes replays the same, and a snapshot brings them
+  back. A comparison's right side may now be another path with a number
+  added (`"ball.y < left.y - 8"`), and a path reaches a scene's named things
+  (`ball`). The console has `reflex up if ..., down if ...`, `reflex off`
+  and `wait 60`; the MCP tools `play_act` and `play_until` take `reflex`. In
+  the tests, an agent works out where Pong's ball will arrive and leaves
+  the paddles to the reflexes (20 returns in a row), and clears Drift's
+  first wave without losing a life.
 - Laboratory: the play protocol's answers are quieter. A number that
   changes tick after tick (the RPG's `wait`, `hurt`) is told as one `set`,
   from its first value to its last, with `times` and `until`, instead of a

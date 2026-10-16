@@ -27,7 +27,11 @@ play_act presses actions (hold: for all its ticks; tap: one tick; press/release:
 a list means any of them. Every answer says what happened in `events` (touch, hit, step, bump, spawn,
 destroy, damage, sound, scene, say, choose, set: a variable that changed) and what the screen shows in
 `screen` (the HUD's texts, the menus' buttons and focus, the dialogue's line). play_view draws the
-screen as text. play_snapshot and play_restore try a choice and come back. play_tape saves the session
+screen as text. In an action game, give play_act or play_until `reflex` rules, which the game checks
+before every tick until you replace them ([] clears them): [{"when": "ball.y < left.y - 4", "hold":
+["up"]}, {"when": "ball.y > left.y + 4", "hold": ["down"]}] keeps a paddle on the ball while you
+decide where it should go; a rule without "when" always holds. play_snapshot and play_restore try a
+choice and come back. play_tape saves the session
 as a replay test. Close what you open with play_end."""
 
 
@@ -82,25 +86,29 @@ def build_server(tools: Optional[PlayTools] = None):
     @_plays
     def play_act(session: str, ticks: int = 16, hold: Optional[List[str]] = None,
                  tap: Optional[List[str]] = None, press: Optional[List[str]] = None,
-                 release: Optional[List[str]] = None, cursor: Optional[List[float]] = None) -> str:
+                 release: Optional[List[str]] = None, cursor: Optional[List[float]] = None,
+                 reflex: Optional[List[dict]] = None) -> str:
         """Applies actions and runs `ticks` ticks (60 a second). hold: pressed for these ticks;
         tap: pressed one tick; press/release: held across calls until released; cursor: [x, y]
-        where the player's pointer is (menus, boards)."""
+        where the player's pointer is (menus, boards); reflex: rules {"when": a condition,
+        "hold": [actions]} checked before every tick from now on ([] clears them; ticks=0
+        only sets them)."""
         return _dump(tools.act(session, hold=hold or [], tap=tap or [], press=press or [],
-                               release=release or [], cursor=cursor, ticks=ticks))
+                               release=release or [], cursor=cursor, ticks=ticks, reflex=reflex))
 
     @server.tool()
     @_plays
     def play_until(session: str, condition: List[str], max_ticks: int = 600,
                    hold: Optional[List[str]] = None, tap: Optional[List[str]] = None,
                    press: Optional[List[str]] = None, release: Optional[List[str]] = None,
-                   cursor: Optional[List[float]] = None) -> str:
+                   cursor: Optional[List[float]] = None, reflex: Optional[List[dict]] = None) -> str:
         """As play_act, but runs until any of the conditions holds or max_ticks have run.
         Conditions: "talking", "player.col == 11", "scene == 'combat'", "changed scene",
-        "not paused", "event:say", "event:touch with=key". The answer's `stopped` says which."""
+        "not paused", "event:say", "event:touch with=key", "ball.y < left.y - 8". The
+        answer's `stopped` says which."""
         cond = condition[0] if len(condition) == 1 else condition
         return _dump(tools.until(session, cond, hold=hold or [], tap=tap or [], press=press or [],
-                                 release=release or [], cursor=cursor, max_ticks=max_ticks))
+                                 release=release or [], cursor=cursor, max_ticks=max_ticks, reflex=reflex))
 
     @server.tool()
     @_plays

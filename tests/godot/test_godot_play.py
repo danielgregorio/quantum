@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from quantum.runtime.godot_bin import check_project
-from quantum.runtime.godot_play import PlayError, PlaySession, condition
+from quantum.runtime.godot_play import PlayError, PlaySession, condition, reflex
 from quantum.runtime.godot_replay import replay, tape_from_holds
 
 PROJECTS = Path(__file__).resolve().parents[2] / 'projects'
@@ -322,3 +322,132 @@ def test_a_session_saved_as_a_tape_replays_as_a_test(rpg, godot, tmp_path):
     replayed = replay(rpg, saved['ticks'], tape=tape, binary=godot)['exploration']
     assert replayed['talking'] == 'won' and replayed['game']['outcome'] == 'won'
     assert replayed['nodes'] == seen['state']['nodes'] and replayed['game'] == seen['state']['game']
+
+
+# --- phase 5: reflexes ---
+
+@pytest.fixture(scope='module')
+def pong(godot, tmp_path_factory) -> Path:
+    return _build(godot, tmp_path_factory, 'pong')
+
+
+@pytest.fixture(scope='module')
+def drift(godot, tmp_path_factory) -> Path:
+    return _build(godot, tmp_path_factory, 'drift')
+
+
+def _paddles(left, right):
+    """Reflexes that take each paddle to a height and keep it there."""
+    rules = []
+    for paddle, up, down, to in (('left', 'up', 'down', left), ('right', 'p2_up', 'p2_down', right)):
+        rules += [{'when': f'{paddle}.y > {to + 3}', 'hold': [up]}, {'when': f'{paddle}.y < {to - 3}', 'hold': [down]}]
+    return rules
+
+
+def _arrives(x, y, vx, vy, at_x, low=4, high=396):
+    """The ball's height when it reaches at_x, bouncing off the ceiling and the floor."""
+    span = high - low
+    y = (y + vy * (at_x - x) / vx - low) % (2 * span)
+    return low + (y if y <= span else 2 * span - y)
+
+
+def _rally(game, returns):
+    """An agent plays both paddles: after each hit it works out where the ball will
+    arrive, and hands the paddles to the reflexes until the next hit. Answers the
+    hits, in order, and what ended the rally."""
+    hits = []
+    while len(hits) < returns:
+        b = game.act(ticks=1)
+        x0 = x1 = b['state']['named']['ball']['x']
+        while x1 == x0:                                                      # two glances: where it goes
+            a, b = b, game.act(ticks=1)
+            x0, y0 = a['state']['named']['ball']['x'], a['state']['named']['ball']['y']
+            x1, y1 = b['state']['named']['ball']['x'], b['state']['named']['ball']['y']
+        nodes = b['state']['nodes']
+        if x1 < x0:
+            rules = _paddles(_arrives(x1, y1, x1 - x0, y1 - y0, nodes['left']['x'] + 8), 200)
+        else:
+            rules = _paddles(200, _arrives(x1, y1, x1 - x0, y1 - y0, nodes['right']['x'] - 8))
+        seen = game.until(['event:touch with=ball', 'event:touch with=wall'], reflex=rules, max_ticks=3000)
+        touched = [e for e in seen['events'] if e['kind'] == 'touch' and e.get('with') in ('ball', 'wall')]
+        if any(e['with'] == 'wall' for e in touched):
+            return hits, 'missed'
+        hits += [e['who'] for e in touched]
+    return hits, 'played'
+
+
+def test_reflexes_are_a_condition_and_what_it_holds():
+    assert condition('ball.y < left.y - 8') == {'path': 'ball.y', 'op': '<', 'value': {'path': 'left.y', 'plus': -8}}
+    assert condition('ship.x >= target.x') == {'path': 'ship.x', 'op': '>=', 'value': {'path': 'target.x'}}
+    assert condition("scene != combat") == {'path': 'scene', 'op': '!=', 'value': 'combat'}   # a bare word: a text
+    assert reflex([{'when': 'ball.y > left.y + 4', 'hold': ['down']}, {'hold': ['jump']}]) == [
+        {'hold': ['down'], 'when': {'path': 'ball.y', 'op': '>', 'value': {'path': 'left.y', 'plus': 4}}},
+        {'hold': ['jump']}]                                                    # no condition: always
+
+
+def test_a_reflex_follows_the_ball_every_tick(pong, godot):
+    with PlaySession(pong, binary=godot) as game:
+        court = game.act(tap=['select'], ticks=2)
+        assert court['scene'] == 'court'
+        follow = [{'when': 'ball.y < left.y - 2', 'hold': ['up']}, {'when': 'ball.y > left.y + 2', 'hold': ['down']}]
+        set_only = game.act(ticks=0, reflex=follow)
+        assert set_only['tick'] == court['tick']                               # ticks=0: set, nothing run
+        seen = game.act(ticks=100)
+        ball, left = seen['state']['named']['ball'], seen['state']['nodes']['left']
+        assert abs(ball['y'] - left['y']) <= 4                                 # it went where the ball is
+        assert seen['held'] == []                                              # the agent itself holds nothing
+        still = game.act(ticks=60, reflex=[])['state']['nodes']['left']['y']
+        assert game.act(ticks=60)['state']['nodes']['left']['y'] == still      # cleared: the paddle stays
+        with pytest.raises(PlayError, match='no such action: fly'):
+            game.act(reflex=[{'when': 'ball.y > 0', 'hold': ['fly']}])
+        with pytest.raises(PlayError, match='a reflex is'):
+            game.request({'op': 'act', 'reflex': [{'when': 'ball.y > 0'}]})
+
+
+def test_an_agent_returns_ten_balls_in_a_row_in_pong(pong, godot):
+    """Phase 5's check: the agent plays the strategy (where will the ball arrive?), the reflexes hold the paddles."""
+    with Counted(pong, binary=godot) as game:
+        game.act(tap=['select'], ticks=2)
+        hits, ended = _rally(game, 20)
+        assert ended == 'played' and hits.count('left') >= 10, hits         # the ball never got past
+        assert hits == ['left', 'right'] * (len(hits) // 2)
+        assert game.requests < 80                                            # 3 a hit: a glance, a glance, an until
+
+
+def test_a_session_with_reflexes_replays_as_its_tape(pong, godot):
+    with PlaySession(pong, binary=godot) as game:
+        game.act(tap=['select'], ticks=2)
+        hits, _ = _rally(game, 4)
+        snap = game.snapshot()
+        played = game.act(ticks=120)
+        assert snap['reflex']['rules'] and len(hits) == 4
+        back = game.restore(snap)                                            # the reflexes come back with it
+        assert back['tick'] == snap['ticks']
+        again = game.act(ticks=120)
+        assert again['state']['nodes'] == played['state']['nodes']
+        tape = game.tape()
+    replayed = replay(pong, tape['ticks'], tape=tape['tape'], binary=godot)['court']
+    assert replayed['nodes'] == again['state']['nodes'] and replayed['named'] == again['state']['named']
+
+
+def test_an_agent_clears_drifts_first_wave(drift, godot):
+    """Phase 5's check: every few ticks the agent picks the lowest drone; the reflexes steer under it and fire."""
+    def kills(seen):
+        return sum(1 for e in seen.get('events', []) if e['kind'] == 'death')
+
+    with PlaySession(drift, binary=godot) as game:
+        firing = game.act(hold=['jump'], ticks=420)                           # firing alone, not moving
+        assert kills(firing) < 8
+    with Counted(drift, binary=godot) as game:
+        seen, dead = game.observe(), 0
+        while dead < 8 and seen['tick'] < 600:
+            drones = [w for w in seen['state']['where'] if w[0] == 'enemy' and w[2] > 0]
+            to = max(drones, key=lambda w: w[2])[1] if drones else 128
+            seen = game.until(['event:death', 'changed lives'], max_ticks=12, reflex=[
+                {'hold': ['jump']},
+                {'when': f'ship.x < {to - 2}', 'hold': ['right']},
+                {'when': f'ship.x > {to + 2}', 'hold': ['left']}])
+            dead += kills(seen)
+        assert dead == 8 and seen['tick'] < 500                              # before the tanks come
+        assert (seen['state']['game']['score'], seen['state']['game']['lives']) == (800, 3)
+        assert game.requests < 60

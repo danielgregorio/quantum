@@ -19,6 +19,14 @@ answer to ``act`` or ``until`` also carries the ``events`` of its ticks
 change, the new scene's ``map``. ``view()`` draws the screen as text;
 ``frame()`` saves the real picture, in a session opened with ``frames=True``.
 
+An action game cannot wait for a decision every tick, so an agent may hand
+the driver ``reflex`` rules with any ``act`` or ``until``: before every tick,
+each rule whose condition holds holds its actions, until the rules are
+replaced. The agent plays the strategy; the reflexes hold the paddle::
+
+    game.act(ticks=600, reflex=[{'when': 'ball.y < left.y - 4', 'hold': ['up']},
+                                {'when': 'ball.y > left.y + 4', 'hold': ['down']}])
+
 A session is its inputs: ``snapshot()`` marks a point, ``restore(snap)``
 comes back to it (a fresh game replayed to that tick), and ``tape()`` or
 ``save_tape(path)`` give the session as a replay tape, which
@@ -52,6 +60,7 @@ class PlayError(RuntimeError):
 
 
 _COMPARE = re.compile(r'^\s*([\w.]+)\s*(==|!=|<=|>=|<|>)\s*(.+?)\s*$')
+_OTHER_PATH = re.compile(r'^([A-Za-z_]\w*(?:\.\w+)+)\s*(?:([+-])\s*(\d+(?:\.\d+)?))?$')
 
 
 def condition(spec: Union[str, dict, list]) -> dict:
@@ -60,7 +69,9 @@ def condition(spec: Union[str, dict, list]) -> dict:
     ``"player.col == 11"``, ``"scene != 'exploration'"``, ``"talking"`` (the
     path is truthy), ``"not talking"``, ``"changed scene"``, ``"event:say"``,
     ``"event:touch with=key"`` (such an event happened); a list is any of
-    them; a dict is passed as it is (``{"all": [...]}``).
+    them; a dict is passed as it is (``{"all": [...]}``). The right side of a
+    comparison may be another path, with a number added: ``"ball.y < left.y - 8"``
+    (a dotted name; a bare word is a text, as before).
     """
     if isinstance(spec, dict):
         return spec
@@ -85,8 +96,26 @@ def condition(spec: Union[str, dict, list]) -> dict:
             value = json.loads(raw.replace("'", '"'))
         except json.JSONDecodeError:
             value = raw
+            other = _OTHER_PATH.match(raw)
+            if other:
+                value = {'path': other.group(1)}
+                if other.group(3):
+                    n = json.loads(other.group(3))
+                    value['plus'] = -n if other.group(2) == '-' else n
         return {'path': m.group(1), 'op': m.group(2), 'value': value}
     return {'path': text, 'op': 'truthy'}
+
+
+def reflex(rules: Iterable[dict]) -> List[dict]:
+    """Reflex rules for the driver: each ``{"when": a condition (any form ``condition``
+    takes; none means always), "hold": [actions]}``."""
+    out = []
+    for r in rules:
+        rule = {'hold': list(r['hold'])}
+        if r.get('when') is not None:
+            rule['when'] = condition(r['when'])
+        out.append(rule)
+    return out
 
 
 class PlaySession:
@@ -179,24 +208,28 @@ class PlaySession:
         return self.request({'op': 'observe'})
 
     def act(self, hold: Iterable[str] = (), tap: Iterable[str] = (), press: Iterable[str] = (),
-            release: Iterable[str] = (), cursor: Optional[tuple] = None, ticks: int = 1) -> dict:
+            release: Iterable[str] = (), cursor: Optional[tuple] = None, ticks: int = 1,
+            reflex: Optional[Iterable[dict]] = None) -> dict:
         """Apply the actions on the first tick and run ``ticks`` ticks: ``hold`` is
-        released after them, ``tap`` after the first, ``press`` stays until a ``release``."""
-        return self.request(self._actions('act', hold, tap, press, release, cursor, ticks=ticks))
+        released after them, ``tap`` after the first, ``press`` stays until a ``release``.
+        ``reflex`` replaces the reflexes (``[]`` clears them); ``ticks=0`` only sets them."""
+        return self.request(self._actions('act', hold, tap, press, release, cursor, reflex, ticks=ticks))
 
     def until(self, cond: Union[str, dict, list], hold: Iterable[str] = (), tap: Iterable[str] = (),
               press: Iterable[str] = (), release: Iterable[str] = (), cursor: Optional[tuple] = None,
-              max_ticks: int = 600) -> dict:
+              max_ticks: int = 600, reflex: Optional[Iterable[dict]] = None) -> dict:
         """As ``act``, but runs until ``cond`` holds (checked after each tick) or
         ``max_ticks`` have run; the answer's ``stopped`` says which."""
-        return self.request(self._actions('until', hold, tap, press, release, cursor,
+        return self.request(self._actions('until', hold, tap, press, release, cursor, reflex,
                                           max_ticks=max_ticks, condition=condition(cond)))
 
     @staticmethod
-    def _actions(op, hold, tap, press, release, cursor, **more) -> dict:
+    def _actions(op, hold, tap, press, release, cursor, rules, **more) -> dict:
         req = {'op': op, 'hold': list(hold), 'tap': list(tap), 'press': list(press), 'release': list(release)}
         if cursor is not None:
             req['cursor'] = [float(cursor[0]), float(cursor[1])]
+        if rules is not None:
+            req['reflex'] = reflex(rules)
         req.update(more)
         return req
 
@@ -218,12 +251,13 @@ class PlaySession:
         """The session's inputs so far, as a replay tape: ``replay(project, ticks, tape=...)``
         gives the same game (``quantum.runtime.godot_replay``)."""
         answer = self.request({'op': 'tape'})
-        return {'ticks': answer['tick'], 'held': answer['held'],
+        return {'ticks': answer['tick'], 'held': answer['held'], 'reflex': answer['reflex'],
                 'tape': {int(k): [tuple(e) for e in v] for k, v in answer['tape'].items()}}
 
     def snapshot(self) -> dict:
-        """This point of the game, to come back to with ``restore``: its tick and the inputs
-        that led to it. It holds no state of its own; the game is deterministic."""
+        """This point of the game, to come back to with ``restore``: its tick, the inputs
+        that led to it and the reflexes then. It holds no state of its own; the game is
+        deterministic."""
         return self.tape()
 
     def restore(self, snap: dict) -> dict:
@@ -232,7 +266,8 @@ class PlaySession:
         self._stop()
         self._spawn()
         tape = {str(k): [list(e) for e in v] for k, v in snap['tape'].items()}
-        return self.request({'op': 'replay', 'tape': tape, 'ticks': snap['ticks'], 'held': snap['held']})
+        return self.request({'op': 'replay', 'tape': tape, 'ticks': snap['ticks'], 'held': snap['held'],
+                             'reflex': snap.get('reflex', {})})
 
     def save_tape(self, path: Union[str, Path]) -> Path:
         """The session as a replay test's input: ``{"ticks": N, "tape": {...}}`` in a JSON file."""
