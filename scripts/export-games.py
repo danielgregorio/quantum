@@ -21,6 +21,7 @@ version from GitHub (or takes a file) and unpacks it where Godot looks.
 
 import html
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -61,7 +62,14 @@ TEMPLATES_URL = (f'https://github.com/godotengine/godot/releases/download/{GODOT
 
 
 def templates_dir() -> Path:
-    return Path.home() / '.local' / 'share' / 'godot' / 'export_templates' / f'{GODOT_VERSION}.stable'
+    """Where Godot looks for its export templates, on this system."""
+    if sys.platform == 'win32':
+        base = Path(os.environ.get('APPDATA', Path.home() / 'AppData' / 'Roaming')) / 'Godot'
+    elif sys.platform == 'darwin':
+        base = Path.home() / 'Library' / 'Application Support' / 'Godot'
+    else:
+        base = Path.home() / '.local' / 'share' / 'godot'
+    return base / 'export_templates' / f'{GODOT_VERSION}.stable'
 
 
 def games() -> dict:
@@ -96,7 +104,7 @@ def install_templates(source: str = '') -> int:
 def preset_file(name: str, preset: str, target: Path) -> str:
     platform, _, options = PRESETS[preset]
     return (f'[preset.0]\n\nname="{preset}"\nplatform="{platform}"\nrunnable=true\n'
-            f'export_filter="all_resources"\ninclude_filter=""\nexclude_filter=""\nexport_path="{target}"\n'
+            f'export_filter="all_resources"\ninclude_filter=""\nexclude_filter=""\nexport_path="{target.as_posix()}"\n'
             f'\n[preset.0.options]\n\n{options}')
 
 

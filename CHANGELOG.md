@@ -10,6 +10,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the play protocol, phase 6: live, and playing with people.
+  `PlaySession(live=True)` (`quantum play --live`, `play_start(live=...)`)
+  runs the game at its own speed, 60 ticks a second, and serves requests
+  without stopping it; the reflexes play between them. `host=PORT` and
+  `join="host:port"` take a seat in a `qg:multiplayer` game, which is
+  always live, and each observation says the seat and the lockstep's state
+  under `net`. A live game has no tape and cannot be restored. In the
+  tests, an agent takes the second seat of a person's Pong and never lets
+  the ball past. In CI, an agent hosts Pong and the web build joins it from
+  Chromium (`scripts/check-agent-in-browser.py`).
 - Laboratory: the play protocol, phase 5: reflexes. `act` and `until` may
   carry `reflex` rules, `[{"when": a condition, "hold": [actions]}]`, which
   the driver checks before every tick until they are replaced (`[]` clears
@@ -194,6 +204,14 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- Laboratory: a web build could not join a networked game. A browser has
+  no ENet, which `qg:multiplayer` uses unless told otherwise, so the
+  title's Join in Pong's web build never reached anyone. In a browser the
+  lockstep now always joins over WebSocket; the host must offer it
+  (`transport="websocket"`, or `--q-transport=websocket`).
+- `scripts/export-games.py` exports on Windows: the templates go where
+  Godot looks for them there (and on macOS), and the export path is
+  written with forward slashes.
 - Laboratory: Hopper was over in seconds for a player who stood still: a
   death put the character back at the start while the walker that killed it
   walked on, into it again. A death now starts the level again — the

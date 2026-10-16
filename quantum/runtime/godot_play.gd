@@ -62,6 +62,10 @@ var log := {}                    # tick -> the input changes made on it: the ses
 var replay_tape := {}            # tick -> input changes to make, while a "replay" runs
 var reflexes: Array = []         # [{"when": condition, "hold": [...]}], checked before each tick the agent asks for
 var reflex_held := {}            # the actions the reflexes press now
+var live := false                # --live: the game does not wait for requests
+var inbox: Array = []            # live: the lines read, not served yet
+var inbox_lock := Mutex.new()
+var reader: Thread = null
 
 
 func _initialize() -> void:
@@ -70,6 +74,10 @@ func _initialize() -> void:
 		_answer({"error": "the project has no main scene"})
 		quit(2)
 		return
+	live = "--live" in OS.get_cmdline_user_args()
+	if live:
+		reader = Thread.new()
+		reader.start(_read_stdin)
 	scene = load(main).instantiate()
 	root.add_child(scene)
 
@@ -87,6 +95,8 @@ func _physics_process(_delta: float) -> bool:
 			if not held.has(a) and not reflex_held.has(a):
 				_release(a)
 		taps = []
+	if live:
+		return _live_frame()
 	# Every frame this returns false from runs one tick of the game, so a frame
 	# either runs a tick that was asked for or waits here for the next request.
 	if run_left > 0 and request.get("op") == "until" and request.has("_first_done") \
@@ -105,61 +115,118 @@ func _physics_process(_delta: float) -> bool:
 		if line == "":
 			ended = true   # stdin closed: the agent is gone
 			return true
-		var parsed = JSON.parse_string(line)
-		if typeof(parsed) != TYPE_DICTIONARY:
-			_answer({"error": "a request is a JSON object: " + line.left(80)})
-			continue
-		var req: Dictionary = parsed
-		match str(req.get("op", "")):
-			"observe":
-				_answer(observation())
+		match _serve(line):
 			"end":
-				_answer({"ended": true, "tick": ticks})
+				return true
+			"run":
+				_tick()
+				return false
+	return false
+
+
+# Live (--live): the game runs at its own speed, a tick every physics frame,
+# whether a request is being served or not, as it must against a person or
+# a peer that does not wait. The requests are read by a thread, so reading
+# never stops the game; the reflexes keep playing between them.
+func _live_frame() -> bool:
+	if not request.is_empty() and request.has("_first_done"):
+		if run_left > 0 and request.get("op") == "until" and _holds(request.get("condition", {}), observation()):
+			_finish("condition")
+		elif run_left <= 0:
+			_finish("max_ticks" if request.get("op") == "until" else "ticks")
+	if request.is_empty():
+		inbox_lock.lock()
+		var lines := inbox.duplicate()
+		inbox.clear()
+		inbox_lock.unlock()
+		for i in lines.size():
+			var line: String = lines[i]
+			if line == "":
 				ended = true
 				return true
-			"act", "until":
-				var error := _start(req)
-				if error != "":
-					_answer({"error": error})
-					continue
-				if run_left == 0:
-					_finish("ticks")
-					continue
-				_tick()
-				return false
-			"map":
-				_answer({"tick": ticks, "map": game_map()})
-			"tape":
-				_answer({"tick": ticks, "tape": log, "held": held.keys(),
-					"reflex": {"rules": reflexes, "held": reflex_held.keys()}})
-			"replay":
-				if ticks != 0:
-					_answer({"error": "a replay starts a fresh game, at tick 0"})
-					continue
-				replay_tape = {}
-				var given: Dictionary = req.get("tape", {})
-				for k in given.keys():
-					replay_tape[int(k)] = given[k]
-				request = {"op": "replay"}
-				run_left = maxi(0, int(req.get("ticks", 0)))
-				for a in req.get("held", []):
-					held[str(a)] = true
-				var back: Dictionary = req.get("reflex", {})
-				reflexes = back.get("rules", [])
-				for a in back.get("held", []):
-					reflex_held[str(a)] = true   # pressed again by the tape, as they were
-				if run_left == 0:
-					_finish("replayed")
-					continue
-				_tick()
-				return false
-			"view":
-				_answer(view())
-			"frame":
-				_answer(frame(str(req.get("path", "user://frame.png"))))
-			_:
-				_answer({"error": "no such request: " + str(req.get("op", ""))})
+			var done := _serve(line.strip_edges())
+			if done == "end":
+				return true
+			if done == "run":   # one at a time: the rest wait for its answer
+				inbox_lock.lock()
+				inbox = lines.slice(i + 1) + inbox
+				inbox_lock.unlock()
+				break
+	_tick()
 	return false
+
+
+func _read_stdin() -> void:
+	while true:
+		var line := OS.read_string_from_stdin(1 << 20)
+		inbox_lock.lock()
+		inbox.append(line if line != "" else "")
+		inbox_lock.unlock()
+		if line == "":
+			return
+
+
+# One request: answered at once ("wait": read the next), started ("run": it
+# runs ticks and is answered when they are done), or the end ("end").
+func _serve(line: String) -> String:
+	if line == "":
+		return "wait"
+	var parsed = JSON.parse_string(line)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		_answer({"error": "a request is a JSON object: " + line.left(80)})
+		return "wait"
+	var req: Dictionary = parsed
+	match str(req.get("op", "")):
+		"observe":
+			_answer(observation())
+		"end":
+			_answer({"ended": true, "tick": ticks})
+			ended = true
+			return "end"
+		"act", "until":
+			var error := _start(req)
+			if error != "":
+				_answer({"error": error})
+				return "wait"
+			if run_left == 0:
+				_finish("ticks")
+				return "wait"
+			return "run"
+		"map":
+			_answer({"tick": ticks, "map": game_map()})
+		"tape":
+			if live:
+				_answer({"error": "a live game has no tape: it does not run the same twice"})
+				return "wait"
+			_answer({"tick": ticks, "tape": log, "held": held.keys(),
+				"reflex": {"rules": reflexes, "held": reflex_held.keys()}})
+		"replay":
+			if ticks != 0 or live:
+				_answer({"error": "a replay starts a fresh game, at tick 0, not live"})
+				return "wait"
+			replay_tape = {}
+			var given: Dictionary = req.get("tape", {})
+			for k in given.keys():
+				replay_tape[int(k)] = given[k]
+			request = {"op": "replay"}
+			run_left = maxi(0, int(req.get("ticks", 0)))
+			for a in req.get("held", []):
+				held[str(a)] = true
+			var back: Dictionary = req.get("reflex", {})
+			reflexes = back.get("rules", [])
+			for a in back.get("held", []):
+				reflex_held[str(a)] = true   # pressed again by the tape, as they were
+			if run_left == 0:
+				_finish("replayed")
+				return "wait"
+			return "run"
+		"view":
+			_answer(view())
+		"frame":
+			_answer(frame(str(req.get("path", "user://frame.png"))))
+		_:
+			_answer({"error": "no such request: " + str(req.get("op", ""))})
+	return "wait"
 
 
 # The request's actions, applied on its first tick; an error, or "".
@@ -271,9 +338,10 @@ func _tick() -> void:
 				_release(str(e[0]))
 	if q != null:
 		q.event_tick = ticks
-	run_left -= 1
+	run_left = maxi(0, run_left - 1)
 	ticks += 1
-	request["_first_done"] = true
+	if not request.is_empty():
+		request["_first_done"] = true
 
 
 # A variable of the scene or the game that changed on the tick just run is a
@@ -379,6 +447,10 @@ func observation() -> Dictionary:
 			var v: Dictionary = n.quantum_view()
 			if not v.is_empty():
 				obs["screen"].append(v)
+	var lock = scene.get("lockstep") if scene != null else null
+	if lock != null and is_instance_valid(lock):   # a networked game: whose seat, and is it running
+		obs["net"] = {"status": lock.status, "player": lock.player, "tick": lock.tick,
+			"waiting": lock.stalled(), "desync": lock.desynced}
 	return obs
 
 

@@ -364,6 +364,11 @@ Examples:
     play_parser.add_argument('game', nargs='?', help='a game of projects/ (rpg, chess...) or a .q')
     play_parser.add_argument('--mcp', action='store_true', help='serve the play tools over MCP (stdio)')
     play_parser.add_argument('--frames', action='store_true', help='draw on a virtual display, for "frame"')
+    play_parser.add_argument('--live', action='store_true', help='the game runs at its own speed, not request by request')
+    play_parser.add_argument('--host', type=int, metavar='PORT', help='host a networked game on this port (live)')
+    play_parser.add_argument('--join', metavar='HOST:PORT', help="join a networked game, a person's or another agent's (live)")
+    play_parser.add_argument('--transport', choices=['enet', 'websocket'],
+                             help="the network's transport (websocket: the one a browser joins)")
 
     # Admin command (the screens need the [admin] extra; checked when run)
     from quantum.cli.admin import create_admin_parser
