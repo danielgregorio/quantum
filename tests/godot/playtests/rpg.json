@@ -1,0 +1,113 @@
+{
+ "game": "rpg",
+ "goal": "win the fight with the opponent who waits on the map",
+ "done": "game.outcome == 'won'",
+ "result": "reached",
+ "ticks": 230,
+ "tape": {
+  "0": [
+   [
+    "down",
+    true
+   ]
+  ],
+  "33": [
+   [
+    "down",
+    false
+   ],
+   [
+    "right",
+    true
+   ]
+  ],
+  "177": [
+   [
+    "right",
+    false
+   ],
+   [
+    "select",
+    true
+   ]
+  ],
+  "178": [
+   [
+    "select",
+    false
+   ]
+  ],
+  "179": [
+   [
+    "select",
+    true
+   ]
+  ],
+  "180": [
+   [
+    "select",
+    false
+   ]
+  ],
+  "181": [
+   [
+    "select",
+    true
+   ]
+  ],
+  "182": [
+   [
+    "select",
+    false
+   ]
+  ],
+  "183": [
+   [
+    "select",
+    true
+   ]
+  ],
+  "184": [
+   [
+    "select",
+    false
+   ]
+  ],
+  "198": [
+   [
+    "select",
+    true
+   ]
+  ],
+  "199": [
+   [
+    "select",
+    false
+   ]
+  ],
+  "213": [
+   [
+    "select",
+    true
+   ]
+  ],
+  "214": [
+   [
+    "select",
+    false
+   ]
+  ],
+  "228": [
+   [
+    "select",
+    true
+   ]
+  ],
+  "229": [
+   [
+    "select",
+    false
+   ]
+  ]
+ }
+}

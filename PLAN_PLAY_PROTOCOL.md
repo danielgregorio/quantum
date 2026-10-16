@@ -1,6 +1,6 @@
 # The play protocol: a game an agent can play
 
-> Status: phases 1 to 6 are built: the driver (`quantum/runtime/godot_play.gd`),
+> Status: phases 1 to 7 are built: the driver (`quantum/runtime/godot_play.gd`),
 > its client (`godot_play.py`, `PlaySession`), the tools by session
 > (`play_tools.py`), the MCP server (`play_mcp.py`, declared in `.mcp.json`)
 > and the console (`quantum play`). In `tests/godot/test_godot_play.py` and
@@ -17,7 +17,10 @@
 >   past; and, in CI, host Pong for the web build, which joins from
 >   Chromium (`scripts/check-agent-in-browser.py`).
 >
-> The rest is the plan: what to build, in what order, and how each step is
+> Phase 7 is `quantum playtest` (`quantum/runtime/playtest.py`) and the
+> `Playtest` workflow; its first kept goal is `tests/godot/playtests/rpg.json`.
+>
+> The rest is the plan as written: what to build, in what order, and how each step is
 > checked. It builds on what the replay harness, the lockstep and the
 > rollback already do.
 
@@ -306,7 +309,7 @@ above:
 | 4. CLI and MCP (built) | `quantum play` console; `quantum play --mcp`; `.mcp.json` | a Claude Code session on the repository is asked "play the RPG and win" and does it through the tools |
 | 5. Reflexes (built) | the reflex grammar, in the step loop | in Pong the agent returns 10 balls in a row; in Drift it clears the first wave |
 | 6. Browser and people (built, without the bridge) | the browser bridge; joining a lockstep game as player 2 | the agent plays Pong against a person on the web build |
-| 7. Playtest job | `goal`s in `projects/games.json`; a scheduled job with a report | the job runs over every game and writes its report |
+| 7. Playtest job (built; on demand) | `goal`s in `projects/games.json`; a scheduled job with a report | the job runs over every game and writes its report |
 
 Phases 1 to 3 are the core and are worth having alone. 4 is what makes it
 usable from a conversation. 5 to 7 build on top.
@@ -340,7 +343,11 @@ usable from a conversation. 5 to 7 build on top.
    the right of a comparison. It is one grammar to learn, it needs no
    compiler at play time, and Pong and Drift needed nothing more. If a game
    ever does, the expression syntax is still the way to grow it.
-2. The playtest job needs an agent and an API key. Should it run on a
-   schedule in this repository's CI, or only when someone starts it?
+2. ~~The playtest job needs an agent and an API key. Should it run on a
+   schedule in this repository's CI, or only when someone starts it?~~
+   Built as on demand (`workflow_dispatch`): a run spends API credit, and
+   the repository is public. Without the `ANTHROPIC_API_KEY` secret the
+   workflow says so and stops. The schedule is written in the workflow,
+   commented out, for the owner to turn on.
 3. Should observations be in English only, or should a game's texts carry
    their translations as the site's pages do?

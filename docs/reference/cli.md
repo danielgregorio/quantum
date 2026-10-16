@@ -124,6 +124,19 @@ Play a game step by step (or serve it to an agent, --mcp).
 | `--join` | join a networked game, a person's or another agent's (live) |  |  |
 | `--transport` | the network's transport (websocket: the one a browser joins) |  | `enet`, `websocket` |
 
+<a id="cli-playtest"></a>
+
+## `quantum playtest`
+
+An agent tries to finish each game (projects/games.json goals).
+
+| Argument | Meaning | Default | Values |
+|---|---|---|---|
+| `[games]` | games of projects/ with a goal (all, by default) |  |  |
+| `--out` | where the report and the tapes go (default ./playtest) | `playtest` |  |
+| `--model` | the Claude model that plays | `claude-opus-5-5` |  |
+| `--effort` | how hard the model thinks before each call | `medium` | `low`, `medium`, `high`, `xhigh`, `max` |
+
 <a id="cli-admin"></a>
 
 ## `quantum admin`

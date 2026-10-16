@@ -10,6 +10,17 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the play protocol, phase 7: `quantum playtest`. An agent tries
+  to finish each game toward the `goal` it has in `projects/games.json`
+  (what it is told, a condition the job checks after every call, and a
+  budget of calls). The report says reached, not reached, stuck (ten calls
+  that changed nothing) or error, with each session's tape. A reached
+  goal's tape, kept in `tests/godot/playtests/`, is replayed as a test.
+  The agent that plays is Claude (`claude-opus-5-5` by default, through the
+  Claude API; the `play` extra now brings `anthropic`). The `Playtest`
+  workflow runs it only when started by hand, and says so and stops when
+  there is no `ANTHROPIC_API_KEY` secret. Goals for now: the RPG, Keep,
+  Drift and Hopper.
 - Laboratory: the play protocol, phase 6: live, and playing with people.
   `PlaySession(live=True)` (`quantum play --live`, `play_start(live=...)`)
   runs the game at its own speed, 60 ticks a second, and serves requests
