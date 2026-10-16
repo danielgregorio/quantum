@@ -10,6 +10,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the play protocol's answers are quieter. A number that
+  changes tick after tick (the RPG's `wait`, `hurt`) is told as one `set`,
+  from its first value to its last, with `times` and `until`, instead of a
+  line a tick. A text (whose turn it is) is still told at each change, and
+  any other event between keeps the changes apart.
 - Laboratory: `<qg:sprite frame="{1 if hurt > 0 else 0}">`: a picture whose
   frame follows an expression, tick by tick (a number stays a fixed frame).
   In the RPG, a fighter just hit makes a surprised face for half a second,

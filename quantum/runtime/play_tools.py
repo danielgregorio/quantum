@@ -155,9 +155,13 @@ class PlayTools:
     @staticmethod
     def squeeze(events: List[dict]) -> List[dict]:
         """The same event again and again (a walker bumping a wall each step) as one, with
-        ``times`` and the tick of the last (``until``)."""
+        ``times`` and the tick of the last (``until``). A number that changes tick after tick
+        (a countdown) is one ``set`` too, from its first value to its last, even when other
+        variables change between; a text (whose turn it is) is told at each change."""
         out: List[dict] = []
         for e in events:
+            if e.get('kind') == 'set' and PlayTools._counter(e) and PlayTools._counts_on(out, e):
+                continue
             same = {k: v for k, v in e.items() if k != 'tick'}
             if out:
                 last = {k: v for k, v in out[-1].items() if k not in ('tick', 'times', 'until')}
@@ -167,3 +171,21 @@ class PlayTools:
                     continue
             out.append(dict(e))
         return out
+
+    @staticmethod
+    def _counter(e: dict) -> bool:
+        return all(isinstance(e.get(k), (int, float)) and not isinstance(e.get(k), bool) for k in ('from', 'to'))
+
+    @staticmethod
+    def _counts_on(out: List[dict], e: dict) -> bool:
+        """Folds a ``set`` into the last one of the same variable, back through the run of
+        ``set``s it ends (any other event between keeps them apart)."""
+        for told in reversed(out):
+            if told.get('kind') != 'set':
+                return False
+            if told.get('name') == e.get('name'):
+                told['to'] = e.get('to')
+                told['times'] = told.get('times', 1) + 1
+                told['until'] = e['tick']
+                return True
+        return False
