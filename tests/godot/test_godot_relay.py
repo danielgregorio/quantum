@@ -16,23 +16,25 @@ import pytest
 pytest.importorskip('websockets')
 
 from quantum.runtime.game_relay import GameRelay  # noqa: E402
-from quantum.runtime.godot_replay import free_port, replay_peers, tape_from_holds  # noqa: E402
+from quantum.runtime.godot_replay import replay_peers, tape_from_holds  # noqa: E402
 
 PROJECTS = Path(__file__).resolve().parents[2] / 'projects'
 
 
 @contextlib.contextmanager
 def serving(game_relay, cert=None, key=None):
-    """A relay on a free port, on its own event loop in a thread: it is made, served and
-    closed on that loop. Answers its address (ws:// or wss://)."""
+    """A relay on its own event loop in a thread: it is made, served and closed on that
+    loop. Answers its address (ws:// or wss://). It listens on a port the system gives it
+    (port 0): a port picked first and bound later could be taken in between by another
+    test's game, running alongside (a TLS client then reached a plain WebSocket)."""
     loop = asyncio.new_event_loop()
-    port = free_port()
     ready = threading.Event()
     box = {}
 
     def run():
         asyncio.set_event_loop(loop)
-        box['server'] = loop.run_until_complete(game_relay.serve('127.0.0.1', port, cert, key))
+        box['server'] = loop.run_until_complete(game_relay.serve('127.0.0.1', 0, cert, key))
+        box['port'] = next(iter(box['server'].sockets)).getsockname()[1]
         ready.set()
         loop.run_forever()
         box['server'].close()
@@ -43,7 +45,7 @@ def serving(game_relay, cert=None, key=None):
     thread.start()
     assert ready.wait(30)
     try:
-        yield f'{"wss" if cert else "ws"}://127.0.0.1:{port}'
+        yield f'{"wss" if cert else "ws"}://127.0.0.1:{box["port"]}'
     finally:
         loop.call_soon_threadsafe(loop.stop)
         thread.join(10)

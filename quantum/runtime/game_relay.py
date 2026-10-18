@@ -186,9 +186,16 @@ async def _listening(port: int, proc: subprocess.Popen, seconds: float = 20.0) -
             raise RuntimeError('the room could not start')
         try:
             with socket.create_connection(('127.0.0.1', port), timeout=0.2):
-                return
+                pass
         except OSError:
             await asyncio.sleep(0.1)
+            continue
+        # the port answers; it is the room's Godot only if that Godot still runs (one that
+        # found its port taken, by another program in between, gives up)
+        await asyncio.sleep(0.3)
+        if proc.poll() is not None:
+            raise RuntimeError('the room could not start')
+        return
     proc.kill()
     raise RuntimeError('the room did not start in time')
 

@@ -85,6 +85,19 @@ def free_port() -> int:
 
 
 def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], port: Optional[int] = None,
+                 **kwargs) -> List[dict]:
+    """``_replay_peers`` (below), on a free port; if another program took that port between
+    choosing it and binding it (tests running side by side), again on another, up to 3 times."""
+    for attempt in range(3):
+        try:
+            return _replay_peers(project_dir, ticks, tapes, port=port, **kwargs)
+        except ReplayError as e:
+            if port is not None or 'cannot host on port' not in str(e) or attempt == 2:
+                raise
+    raise AssertionError('unreachable')
+
+
+def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], port: Optional[int] = None,
                  binary: Optional[Path] = None, timeout: float = 300,
                  lobby_tapes: Optional[List[Optional[Tape]]] = None, transport: Optional[str] = None,
                  latency_ms: Optional[List[int]] = None, net_report: bool = False,
