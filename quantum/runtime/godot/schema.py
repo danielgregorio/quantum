@@ -123,10 +123,11 @@ TAGS: Dict[str, Tag] = {
          'sheet': Attr('ident', required=True, doc='a qg:spritesheet or qg:tileset'),
          'frame': Attr('int', 0),
          'hitbox': Attr('size', required=True),
-         'ai': Attr('enum:patrol|wander|chase|fly|sway|shuttle|path|turret', None,
+         'ai': Attr('enum:patrol|wander|chase|pathfind|fly|sway|shuttle|path|turret', None,
                     doc='patrol: walks under gravity, turns at walls (and at edges with turns-at); '
                         'wander: top-down, changes direction now and then (from the scene seed); '
-                        'chase: top-down, goes for the character within sight=; '
+                        'chase: top-down, goes for the character within sight=, straight at it; '
+                        'pathfind: as chase, but around the walls, by the shortest way over the tilemap\'s free cells; '
                         'fly: straight along heading=; sway: side to side across the scene; '
                         'shuttle: a solid that goes dx=,dy= and back every period= ticks, carrying what stands on it; '
                         'path: follows the qg:path it was spawned on (qg:spawn at="path"), then stands at its end; '
@@ -144,7 +145,7 @@ TAGS: Dict[str, Tag] = {
                                         'semicolons (-96,-21; 96,-21; 96,6; -96,6), instead of the hitbox'),
          'scale': Attr('float', 1.0, doc='the picture\'s size, times its frame (the hitbox stays as given)'),
          'walls': Attr('enum:pass|stop', 'pass', doc='fly: pass goes through the tiles; stop is gone on touching one'),
-         'sight': Attr('float', 80.0, doc='chase: pixels'),
+         'sight': Attr('float', 80.0, doc='chase, pathfind: pixels'),
          'heading': Attr('str', 'down', doc='fly: up, down, left, right, or a direction as x,y (-1,0.5)'),
          'accel': Attr('float', 0.0, doc='fly: pixels per second added to its speed every second'),
          'lifetime': Attr('int', 0, doc='fly: gone after this many ticks (0: never); any fly is gone off-screen'),

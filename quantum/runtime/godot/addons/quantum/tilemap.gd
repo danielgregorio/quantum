@@ -73,3 +73,62 @@ static func build(spec: Dictionary, sheet: Dictionary, texture_of: Callable) -> 
 
 func pixel_size() -> Vector2:
 	return Vector2(columns * tile, rows_count * tile)
+
+
+# --- the free cells, for ai="pathfind" ---
+
+var _blocked = null   # Vector2i -> true: a cell holding a solid tile (computed once)
+
+
+func blocked() -> Dictionary:
+	if _blocked != null:
+		return _blocked
+	_blocked = {}
+	for layer in get_children():
+		if not (layer is TileMapLayer) or layer.tile_set == null or layer.tile_set.get_physics_layers_count() == 0:
+			continue
+		for cell in layer.get_used_cells():
+			var data: TileData = layer.get_cell_tile_data(cell)
+			if data != null and data.get_collision_polygons_count(0) > 0:
+				_blocked[cell] = true
+	return _blocked
+
+
+func cell_of(p: Vector2) -> Vector2i:
+	return Vector2i(floori((p.x - position.x) / tile), floori((p.y - position.y) / tile))
+
+
+func centre_of(cell: Vector2i) -> Vector2:
+	return position + Vector2((cell.x + 0.5) * tile, (cell.y + 0.5) * tile)
+
+
+const _STEPS := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+
+
+# The cells from `from` to `to`, shortest first found over the free cells
+# (breadth first, the neighbours always in the same order: the same way on
+# every peer and in every replay); [] when there is none.
+func path(from: Vector2i, to: Vector2i, limit: int = 4096) -> Array:
+	var walls := blocked()
+	if from == to:
+		return [to]
+	var came := {from: from}
+	var todo: Array = [from]
+	var head := 0
+	while head < todo.size() and head < limit:
+		var at: Vector2i = todo[head]
+		head += 1
+		for step in _STEPS:
+			var next: Vector2i = at + step
+			if came.has(next) or walls.has(next):
+				continue
+			if next.x < 0 or next.y < 0 or next.x >= columns or next.y >= rows_count:
+				continue
+			came[next] = at
+			if next == to:
+				var out := [next]
+				while out[0] != from:
+					out.push_front(came[out[0]])
+				return out
+			todo.append(next)
+	return []
