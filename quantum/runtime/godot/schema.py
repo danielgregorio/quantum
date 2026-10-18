@@ -566,6 +566,17 @@ TAGS: Dict[str, Tag] = {
          'repeat': Attr('int', 0, doc='times it plays again (-1: for ever)'),
          'yoyo': Attr('bool', False, doc='each repeat goes back the other way')},
         parents=('handler',)),
+    'set-tile': Tag(
+        'Puts a tile in a cell of the scene\'s tilemap, or empties it: a block that breaks, a door drawn as tiles. '
+        'Its collision changes from the next tick, monsters that pathfind find their way again, and the cells changed '
+        'are part of the game\'s state (a replay, every peer). `tile_at(col, row)` reads a cell.',
+        {'col': Attr('expr', required=True, doc='the column, from 0 at the left'),
+         'row': Attr('expr', required=True, doc='the row, from 0 at the top'),
+         'tile': Attr('expr', '0', doc='as in the rows of qg:tilemap: 0 nothing, n tile n-1 of the tileset, '
+                      '-n the same flipped'),
+         'layer': Attr('str', None, doc='a layer\'s name (a Tiled map\'s); the first with collision, else the '
+                       'first, when not given')},
+        parents=('handler',)),
     'emit': Tag(
         'Plays a qg:particles effect once where a thing is. Only seen: the game\'s state never depends on it.',
         {'particles': Attr('ident', required=True),

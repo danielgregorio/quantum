@@ -326,7 +326,7 @@ class _Compiler:
         self._scenes_used.extend(self._prefab_scenes_used)
         self._scene_goes: Dict[str, List[str]] = {}
         self._scene_spawns: Dict[str, Optional[int]] = {}
-        self._scene_tweens: Dict[str, Optional[int]] = {}
+        self._scene_tweens: Dict[str, Optional[tuple]] = {}   # the first qg:tween or qg:set-tile
         for scene in g.scenes:
             scenes[scene.get('name')] = self._scene(scene, sheets, prefabs)
         if self.multiplayer is not None and self.multiplayer.get('rollback'):
@@ -941,7 +941,7 @@ class _Compiler:
         self._scenes_used.extend(script.scenes_used)
         self._scene_goes[name] = [s for s, _ in script.scenes_used]
         self._scene_spawns[name] = script.prefabs_used[0][1] if script.prefabs_used else None
-        self._scene_tweens[name] = script.tweens_used[0] if script.tweens_used else None
+        self._scene_tweens[name] = script.unrollable[0] if script.unrollable else None
         for pname, line in script.prefabs_used:
             if pname not in prefabs:
                 raise GameCompileError(
@@ -1027,7 +1027,7 @@ _ROLLBACK_KINDS = {'character', 'timer', 'hud', 'sprite', 'menu', 'camera'}
 
 
 def _check_rollback(start: str, scenes: dict, goes: Dict[str, List[str]], spawns: Dict[str, Optional[int]],
-                    line: Optional[int], tweens: Optional[Dict[str, Optional[int]]] = None) -> None:
+                    line: Optional[int], tweens: Optional[Dict[str, Optional[tuple]]] = None) -> None:
     reach, todo = set(), [start]
     while todo:
         s = todo.pop()
@@ -1047,8 +1047,9 @@ def _check_rollback(start: str, scenes: dict, goes: Dict[str, List[str]], spawns
             raise GameCompileError(f'<qg:multiplayer rollback=>: the scene {s!r} places prefabs (qg:spawn, qg:swap), '
                                    f'which rollback cannot take back', spawns[s])
         if (tweens or {}).get(s) is not None:
-            raise GameCompileError(f'<qg:multiplayer rollback=>: the scene {s!r} has a qg:tween, which rollback '
-                                   f'cannot take back yet', tweens[s])
+            tag, at = tweens[s]
+            raise GameCompileError(f'<qg:multiplayer rollback=>: the scene {s!r} has a qg:{tag}, which rollback '
+                                   f'cannot take back yet', at)
 
 
 def _el(tag: str, line: Optional[int], children=(), **attrs) -> Element:

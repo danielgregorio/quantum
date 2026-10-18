@@ -397,6 +397,17 @@ class TestScenesMapAndGameState:
                                   'seconds="0" /></qg:timer></qg:scene>\n'))
         assert 'more than 0' in e.message
 
+    def test_set_tile_and_tile_at(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="here" value="0" type="number" />
+    <qg:timer after="1"><qg:set-tile col="{1 + 2}" row="4" tile="0" />
+      <qg:set-tile col="1" row="1" tile="5" layer="walls" /><q:set name="here" value="{tile_at(3, 4)}" /></qg:timer>
+  </qg:scene>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\tQ.set_tile(self, (1 + 2), 4, 0)\n' in script and '\tQ.set_tile(self, 1, 1, 5, "walls")\n' in script
+        assert 'Q.tile_at(self, 3, 4)' in script
+
     def test_particles_must_be_declared(self, tmp_path):
         e = refuse(tmp_path, game('  <qg:scene name="t"><qg:character id="h" controller="topdown" sheet="k" frame="0" '
                                   'x="0" y="0" hitbox="8x8" /><qg:timer after="1"><qg:emit particles="nowhere" at="h" />'
@@ -1499,6 +1510,16 @@ class TestLobby:
 
 
 class TestRollback:
+    def test_a_set_tile_is_not_taken_under_rollback(self, tmp_path):
+        e = refuse(tmp_path, HEAD + '''  <qg:multiplayer players="2" rollback="6" start="fight" />
+  <qg:scene name="fight">
+    <qg:character id="a" controller="fighter" sheet="c" x="10" y="10" hitbox="8x8" />
+    <qg:character id="b" controller="fighter" player="2" sheet="c" x="40" y="10" hitbox="8x8" />
+    <qg:timer after="1"><qg:set-tile col="0" row="0" tile="0" /></qg:timer>
+  </qg:scene>
+''' + TAIL)
+        assert 'has a qg:set-tile, which rollback cannot take back yet' in e.message
+
     def test_a_tween_is_not_taken_under_rollback(self, tmp_path):
         e = refuse(tmp_path, HEAD + '''  <qg:multiplayer players="2" rollback="6" start="fight" />
   <qg:scene name="fight">

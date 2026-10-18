@@ -14,12 +14,12 @@ var tile: int = 16
 static func build(spec: Dictionary, sheet: Dictionary, texture_of: Callable) -> Node2D:
 	var map = load("res://addons/quantum/tilemap.gd").new()
 	map.name = "Tilemap"
+	map.process_physics_priority = -100   # first in a tick: the cells set in the last one take their shapes
 	var size := int(sheet["tile"][0])
 	map.tile = size
 	var texture: Texture2D = texture_of.call(sheet)
-	var per_row := maxi(1, int(texture.get_width()) / size)
-	var half := size / 2.0
-	var shapes: Dictionary = sheet.get("tiles", {})
+	map._per_row = maxi(1, int(texture.get_width()) / size)
+	map._shapes = sheet.get("tiles", {})
 	for layer_spec in spec["layers"]:
 		var layer := TileMapLayer.new()
 		layer.name = layer_spec.get("name", "layer")
@@ -31,44 +31,118 @@ static func build(spec: Dictionary, sheet: Dictionary, texture_of: Callable) -> 
 		var source := TileSetAtlasSource.new()
 		source.texture = texture
 		source.texture_region_size = Vector2i(size, size)
-		var source_id := set.add_source(source)
+		set.add_source(source)
 		layer.tile_set = set
+		layer.set_meta("q_collision", collision)
+		map.add_child(layer)
 		var rows: Array = layer_spec["rows"]
 		map.rows_count = maxi(map.rows_count, rows.size())
 		map.columns = maxi(map.columns, rows[0].size() if rows.size() > 0 else 0)
-		var created := {}
 		for y in rows.size():
 			var row: Array = rows[y]
 			for x in row.size():
 				var n := int(row[x])
-				if n == 0:
-					continue
-				var flip := n < 0
-				n = absi(n)
-				var coords := Vector2i((n - 1) % per_row, (n - 1) / per_row)
-				if not created.has(coords):
-					source.create_tile(coords)
-					var frame := str(n - 1)
-					if collision and not (shapes.has(frame) and shapes[frame]["shape"] == null):
-						var data := source.get_tile_data(coords, 0)
-						var points := PackedVector2Array([
-							Vector2(-half, -half), Vector2(half, -half),
-							Vector2(half, half), Vector2(-half, half)])
-						if shapes.has(frame):
-							# from the tile's top-left corner, as the .q gives them, to its centre
-							points = PackedVector2Array()
-							for p in shapes[frame]["shape"]:
-								points.append(Vector2(float(p[0]) - half, float(p[1]) - half))
-						data.add_collision_polygon(0)
-						data.set_collision_polygon_points(0, 0, points)
-						if shapes.has(frame) and shapes[frame].get("one_way", false):
-							data.set_collision_polygon_one_way(0, 0, true)
-					created[coords] = true
-				# a flipped tile: the transform flags of the alternative id; Godot flips its shape too
-				layer.set_cell(Vector2i(x, y), source_id, coords,
-					TileSetAtlasSource.TRANSFORM_FLIP_H if flip else 0)
-		map.add_child(layer)
+				if n != 0:
+					map._place(layer, Vector2i(x, y), n)
 	return map
+
+
+var _per_row := 1
+var _shapes: Dictionary = {}
+var _unshaped: Array = []   # layers with cells set whose collision is not made yet
+
+
+# The collision of the cells set since the last tick, made before anything of
+# this one moves. Not in set_tile itself: a qg:set-tile in a collision handler
+# runs while the physics server flushes its queries, when bodies may not change;
+# and not at the end of the frame, which runs many ticks while a rejoin catches up.
+func _physics_process(_delta: float) -> void:
+	for layer in _unshaped:
+		layer.update_internals()
+	_unshaped.clear()
+var changed: Dictionary = {}   # "col,row" (and ",layer" past the first) -> the tile a qg:set-tile put there
+
+
+# Puts tile n (1 is the tileset's first; -n the same flipped left to right; 0
+# nothing) in a cell of a layer. A tile of a layer with collision is a solid
+# square, unless the tileset's qg:tile gives that tile a shape of its own, or none.
+func _place(layer: TileMapLayer, cell: Vector2i, n: int) -> void:
+	if n == 0:
+		layer.erase_cell(cell)
+		return
+	var flip := n < 0
+	n = absi(n)
+	var coords := Vector2i((n - 1) % _per_row, (n - 1) / _per_row)
+	var source: TileSetAtlasSource = layer.tile_set.get_source(layer.tile_set.get_source_id(0))
+	if not source.has_tile(coords):
+		source.create_tile(coords)
+		var frame := str(n - 1)
+		var half := tile / 2.0
+		if layer.get_meta("q_collision", false) and not (_shapes.has(frame) and _shapes[frame]["shape"] == null):
+			var data := source.get_tile_data(coords, 0)
+			var points := PackedVector2Array([
+				Vector2(-half, -half), Vector2(half, -half),
+				Vector2(half, half), Vector2(-half, half)])
+			if _shapes.has(frame):
+				# from the tile's top-left corner, as the .q gives them, to its centre
+				points = PackedVector2Array()
+				for p in _shapes[frame]["shape"]:
+					points.append(Vector2(float(p[0]) - half, float(p[1]) - half))
+			data.add_collision_polygon(0)
+			data.set_collision_polygon_points(0, 0, points)
+			if _shapes.has(frame) and _shapes[frame].get("one_way", false):
+				data.set_collision_polygon_one_way(0, 0, true)
+	# a flipped tile: the transform flags of the alternative id; Godot flips its shape too
+	layer.set_cell(cell, layer.tile_set.get_source_id(0), coords,
+		TileSetAtlasSource.TRANSFORM_FLIP_H if flip else 0)
+
+
+# qg:set-tile: a cell of a layer (by name; the first with collision, else the
+# first, when none is given) gets tile n, at once; its collision, at the start
+# of the next tick (_physics_process), so that tick sees it on every peer,
+# however many ticks a frame runs.
+func set_tile(col: int, row: int, n: int, layer_name: String = "") -> void:
+	var layer := _layer(layer_name)
+	if layer == null or col < 0 or row < 0 or col >= columns or row >= rows_count:
+		return
+	_place(layer, Vector2i(col, row), n)
+	if not _unshaped.has(layer):
+		_unshaped.append(layer)
+	var key := "%d,%d" % [col, row]
+	if layer != _layer(""):
+		key += "," + String(layer.name)
+	changed[key] = n
+	_blocked = null   # the free cells are found again (ai="pathfind")
+
+
+# tile_at(): the tile in a cell (0: none), of the layer named, or the topmost that has one.
+func tile_at(col: int, row: int, layer_name: String = "") -> int:
+	var layers: Array = [_layer(layer_name)] if layer_name != "" else get_children()
+	layers.reverse()
+	for layer in layers:
+		if not (layer is TileMapLayer):
+			continue
+		var cell := Vector2i(col, row)
+		if layer.get_cell_source_id(cell) == -1:
+			continue
+		var c: Vector2i = layer.get_cell_atlas_coords(cell)
+		var n := c.y * _per_row + c.x + 1
+		return -n if layer.get_cell_alternative_tile(cell) & TileSetAtlasSource.TRANSFORM_FLIP_H else n
+	return 0
+
+
+func _layer(layer_name: String) -> TileMapLayer:
+	var first: TileMapLayer = null
+	for c in get_children():
+		if not (c is TileMapLayer):
+			continue
+		if layer_name != "" and String(c.name) == layer_name:
+			return c
+		if layer_name == "" and c.get_meta("q_collision", false):
+			return c
+		if first == null:
+			first = c
+	return null if layer_name != "" else first
 
 
 func pixel_size() -> Vector2:

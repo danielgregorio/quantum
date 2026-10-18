@@ -56,7 +56,7 @@ class SceneScript:
     function_names: List[str] = field(default_factory=list)
     sounds_played: List[str] = field(default_factory=list)
     prefabs_used: List[tuple] = field(default_factory=list)   # (name, line) from spawn/swap
-    tweens_used: List[int] = field(default_factory=list)      # lines of qg:tween (not under rollback)
+    unrollable: List[tuple] = field(default_factory=list)     # (tag, line): qg:tween, qg:set-tile (not under rollback)
     particles_used: List[tuple] = field(default_factory=list)  # (name, line) from qg:emit
     states_used: List[tuple] = field(default_factory=list)    # (name, line) from become
     scenes_used: List[tuple] = field(default_factory=list)    # (name, line) from goto-scene
@@ -426,6 +426,13 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     if el.tag == 'put':
         return (f'Q.put({target}, {compile_expression(el.get("x"), scope, el.line)}, '
                 f'{compile_expression(el.get("y"), scope, el.line)})')
+    if el.tag == 'set-tile':
+        script.unrollable.append(('set-tile', el.line))
+        args = [compile_expression(el.get('col'), scope, el.line), compile_expression(el.get('row'), scope, el.line),
+                compile_expression(el.get('tile'), scope, el.line)]
+        if el.get('layer'):
+            args.append(json.dumps(el.get('layer')))
+        return f'Q.set_tile(self, {", ".join(args)})'
     if el.tag == 'emit':
         at = el.get('at')
         if not scope.has(at):
@@ -437,7 +444,7 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     if el.tag == 'tween':
         if el.get('seconds') <= 0:
             raise GameCompileError(f'<qg:tween seconds="{el.get("seconds")}">: more than 0', el.line)
-        script.tweens_used.append(el.line)
+        script.unrollable.append(('tween', el.line))
         frm = el.get('from')
         args = [target, json.dumps(el.get('property')), compile_expression(el.get('to'), scope, el.line),
                 repr(float(el.get('seconds'))), json.dumps(el.get('trans')), json.dumps(el.get('ease')),

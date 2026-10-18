@@ -997,6 +997,19 @@ One text of the game, in a qg:language.
 
 Goes inside: `qg:language`.
 
+### `qg:set-tile`
+
+Puts a tile in a cell of the scene's tilemap, or empties it: a block that breaks, a door drawn as tiles. Its collision changes from the next tick, monsters that pathfind find their way again, and the cells changed are part of the game's state (a replay, every peer). `tile_at(col, row)` reads a cell.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `col` | an expression | required | the column, from 0 at the left |
+| `row` | an expression | required | the row, from 0 at the top |
+| `tile` | an expression | `0` | as in the rows of qg:tilemap: 0 nothing, n tile n-1 of the tileset, -n the same flipped |
+| `layer` | text |  | a layer's name (a Tiled map's); the first with collision, else the first, when not given |
+
+Goes inside: a handler.
+
 ### `qg:tile`
 
 One tile of a qg:tileset that is not a full solid square, for the tilemap layers with collision: a lower top, a thin ledge, a slope, a tile to jump through from below, or no collision at all. A flipped tile (a negative number in the tilemap) flips its shape too.
