@@ -54,6 +54,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
   a session picks one (`lang=`, `quantum play --lang`, `play_start`), and
   the game's own texts are the default. The RPG is in Portuguese and
   Spanish too.
+- Laboratory: `<qg:save scene="map">` and `<qg:continue>`: a game saved
+  to continue later. A save is the game state (every `q:set` of
+  `q:application`) and the scene to come back to, which starts over; one
+  per game, kept between runs (in a browser, by the browser). `has_save()`
+  says whether there is one, for a Continue button. A networked game is
+  not saved. Hopper opens on a title now (New game, Continue), and each
+  level cleared saves it.
 - Laboratory: every game is in Portuguese and Spanish too: Pong, Chess,
   Arena, Towers, Hopper, Keep, Drift, Creeps and Robot. A `qg:lobby`
   brings its own phrases in both (its buttons and its status line), and a

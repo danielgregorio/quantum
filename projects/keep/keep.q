@@ -45,8 +45,6 @@
     <qg:animation name="walk" frames="13,14,15,14" fps="10" />
   </qg:prefab>
 
-  <!-- ===== Room 1: the entrance. East to room 2. ===== -->
-
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
   <qg:language lang="pt" name="Português">
     <qg:phrase text="HEARTS" as="CORAÇÕES" />
@@ -68,6 +66,9 @@
     <qg:phrase text="THE TREASURE OF THE KEEP IS YOURS." as="EL TESORO DE LA FORTALEZA ES TUYO." />
     <qg:phrase text="YOU FELL. PRESS JUMP." as="HAS CAÍDO. PULSA SALTAR." />
   </qg:language>
+
+  <!-- ===== Room 1: the entrance. East to room 2. ===== -->
+
   <qg:scene name="room-1" width="256" height="224" background="#2b2b3a" seed="1">
     <q:function name="hurt" params="me">
       <qg:play sound="hurt" />

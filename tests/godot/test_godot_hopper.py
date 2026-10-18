@@ -7,13 +7,15 @@ what the .q promises (a 90 px/s run, a 64 px jump) and what the level is
 rests at y=169).
 """
 
+import json
 import shutil
 from pathlib import Path
 
 import pytest
 
 from quantum.runtime.godot_bin import check_project
-from quantum.runtime.godot_replay import replay, tape_from_holds
+from quantum.runtime import godot_replay
+from quantum.runtime.godot_replay import tape_from_holds
 
 HOPPER = Path(__file__).resolve().parents[2] / 'projects' / 'hopper' / 'hopper.q'
 REST_Y = 169.0
@@ -21,6 +23,18 @@ REST_Y = 169.0
 # The game starts on the world map; "jump" at tick 2 enters level-1 and the
 # level's first tick is tick 3. Level tapes are written in level ticks.
 ENTER = 4
+
+# Before the map, the title: New game is its first button. The tapes below are
+# written from the map's first tick; replay() presses New game and runs them
+# TITLE ticks later.
+TITLE = 2
+
+
+def replay(project, ticks, tape=None, **kwargs):
+    shifted = tape_from_holds([('select', 0, 1)])
+    for tick, events in (tape or {}).items():
+        shifted.setdefault(tick + TITLE, []).extend(events)
+    return godot_replay.replay(project, ticks + TITLE, shifted, **kwargs)
 
 
 def level(holds, extra=()):
@@ -218,6 +232,22 @@ def test_reaching_the_flag_wins_the_level_and_opens_the_next_on_the_map(godot, h
     entered = replay(hopper, 470, level(TO_THE_FLAG, [('right', 360, 362), ('jump', 460, 462)]), binary=godot)
     assert list(entered) == ['level-2']
     assert entered['level-2']['game']['map_at'] == 'level-2'
+
+
+def test_a_cleared_level_saves_the_game_and_the_title_continues_it(godot, hopper, tmp_path):
+    replay(hopper, 345, level(TO_THE_FLAG), binary=godot, persist_dir=tmp_path)
+    saved = json.loads((tmp_path / 'quantum-save.json').read_text())
+    assert saved['scene'] == 'map'
+    assert saved['game']['cleared'] == ['level-1'] and saved['game']['score'] == 560
+    # the next run: the title has Continue now; down to it, select
+    back = godot_replay.replay(hopper, 10, tape_from_holds([('down', 1, 2), ('select', 3, 4)]),
+                               binary=godot, persist_dir=tmp_path)
+    assert list(back) == ['map']
+    assert back['map']['game']['cleared'] == ['level-1'] and back['map']['game']['score'] == 560
+    assert back['map']['nodes']['player']['at'] == 'level-1'
+    # New game, with a save there, is a new game
+    fresh = godot_replay.replay(hopper, 10, tape_from_holds([('select', 1, 2)]), binary=godot, persist_dir=tmp_path)
+    assert fresh['map']['game']['cleared'] == [] and fresh['map']['game']['score'] == 0
 
 
 def test_level_two_is_a_tiled_map_whose_objects_are_the_things(godot, hopper):

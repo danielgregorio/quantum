@@ -40,7 +40,7 @@ class Tag:
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
-           'say')
+           'say', 'save', 'continue')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -577,6 +577,18 @@ TAGS: Dict[str, Tag] = {
         {'name': Attr('ident', required=True),
          'fade': Attr('float', 0.0, doc='seconds the new scene takes to come out of black (0: a cut); '
                       'only the picture fades, the game runs from its first tick as without it')},
+        parents=('handler',)),
+    'save': Tag(
+        'Saves the game to continue it later: the game state (every q:set of q:application) and a scene to '
+        'come back to. One save per game, kept between runs (in a browser, by the browser); a new qg:save '
+        'replaces it. `has_save()` says whether there is one. A networked game is not saved.',
+        {'scene': Attr('ident', None, doc='the scene to continue in (none: this one); it starts over, '
+                       'what was in it is not saved')},
+        parents=('handler',)),
+    'continue': Tag(
+        'Continues the saved game (qg:save): its game state back, and on to its scene. Nothing when there '
+        'is no save.',
+        {},
         parents=('handler',)),
 }
 

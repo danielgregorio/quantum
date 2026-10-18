@@ -432,6 +432,13 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         if fade:
             return f'Q.goto_scene(self, {json.dumps(el.get("name"))}, {float(fade)!r})'
         return f'Q.goto_scene(self, {json.dumps(el.get("name"))})'
+    if el.tag == 'save':
+        if el.get('scene'):
+            script.scenes_used.append((el.get('scene'), el.line))
+            return f'Q.save_game(self, {json.dumps(el.get("scene"))})'
+        return 'Q.save_game(self)'
+    if el.tag == 'continue':
+        return 'Q.continue_game(self)'
     if el.tag == 'checkpoint':
         at = el.get('at')
         if not scope.has(at):

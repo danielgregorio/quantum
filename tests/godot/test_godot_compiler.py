@@ -359,6 +359,22 @@ class TestScenesMapAndGameState:
         assert 'func _q_at_player():\n\treturn G.map_at\n' in (out / 'scripts' / 'scene_map.gd').read_text()
         assert data['scenes']['over']['on_input'] == {'jump': '_on_input_jump'}
 
+    def test_save_and_continue(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="title">
+    <qg:menu>
+      <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+    </qg:menu>
+    <qg:on-input action="jump"><qg:save scene="map" /><qg:save /></qg:on-input>
+  </qg:scene>
+  <qg:scene name="map" />
+'''))
+        script = (out / 'scripts' / 'scene_title.gd').read_text()
+        assert 'Q.has_save()' in script and '\tQ.continue_game(self)\n' in script
+        assert '\tQ.save_game(self, "map")\n' in script and '\tQ.save_game(self)\n' in script
+        e = refuse(tmp_path, game('  <qg:scene name="t"><qg:on-input action="jump"><qg:save scene="nowhere" />'
+                                  '</qg:on-input></qg:scene>\n'))
+        assert 'nowhere' in e.message
+
     def test_a_game_in_other_languages(self, tmp_path):
         out = build(tmp_path, game('''  <qg:language lang="pt" name="Português">
     <qg:phrase text="Attack" as="Atacar" />
