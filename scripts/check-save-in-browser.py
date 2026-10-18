@@ -60,10 +60,7 @@ def main(argv) -> int:
                 return _report([f'the game opened on {game.last["scene"]!r}, not the title'])
             if _shown(game.last, 'Continue'):
                 problems.append('a fresh page offers Continue')
-            for _ in range(5):                                       # New game (a press the page lost: again)
-                seen = game.until("scene == 'room-1'", tap=['select'], max_ticks=30)
-                if seen['scene'] == 'room-1':
-                    break
+            seen = _choose(page, game, 'New game', 'room-1')
             if seen['scene'] != 'room-1':
                 return _report([f'New game did not start it: {seen["scene"]}, {seen["screen"]}'] + _errors(logs))
             seen = game.until("scene == 'room-2'", hold=['right'], max_ticks=900)
@@ -77,10 +74,9 @@ def main(argv) -> int:
                 problems.append(f'after the reload the game opened on {game.last["scene"]!r}')
             if not _shown(game.last, 'Continue'):
                 problems.append(f'after the reload the title has no Continue: {game.last["screen"]}')
-            game.act(tap=['down'], ticks=4)
-            back = game.until("scene == 'room-2'", tap=['select'], max_ticks=60)
+            back = _choose(page, game, 'Continue', 'room-2')
             if back['scene'] != 'room-2':
-                problems.append(f'Continue went to {back["scene"]!r}, not room 2')
+                problems.append(f'Continue went to {back["scene"]!r}, not room 2: {back["screen"]}')
             elif back['state']['game']['hearts'] != hearts:
                 problems.append(f'hearts {back["state"]["game"]["hearts"]} after Continue, {hearts} saved')
             page.screenshot(path=str(root / 'keep' / 'save.png'))
@@ -90,6 +86,32 @@ def main(argv) -> int:
             browser.close()
     server.shutdown()
     return _report(problems)
+
+
+def _choose(page, game, label: str, scene: str) -> dict:
+    """Moves the title's focus to the button `label` and selects it, until the game is in `scene`.
+    A page just loaded can lose a key (it takes the keyboard on a click; a press that comes
+    as it gains it is let go): then it is pressed again, as a person would."""
+    page.mouse.click(4, 4)                       # the canvas takes the keyboard (the corner holds no button)
+    game.act(ticks=10)
+    seen = game.observe()
+    for _ in range(5):
+        for _ in range(4):
+            menu = _menu(seen)
+            items = menu.get('items', [])
+            focus = menu.get('focus', -1)
+            if 0 <= focus < len(items) and items[focus].get('button') == label:
+                break
+            seen = game.act(tap=['down'], ticks=4)
+        seen = game.until(f"scene == '{scene}'", tap=['select'], max_ticks=30)
+        if seen['scene'] == scene:
+            return seen
+    return seen
+
+
+def _menu(obs: dict) -> dict:
+    from quantum.runtime.web_play import WebPlaySession
+    return WebPlaySession.screen(obs, 'menu') or {}
 
 
 def _shown(obs: dict, label: str) -> bool:
