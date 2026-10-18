@@ -327,6 +327,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- Laboratory: `ai="pathfind"` lines up with the middle of its cell before
+  it steps into the next one, and does not overshoot where it aims. Cutting
+  the corner into a gap's row, a monster was a little off its middle and
+  hung on the corner of the wall beside the gap for seconds.
 - Laboratory: under `qg:multiplayer`, a peer waiting for the others' input
   froze its scene in a way that took the scene's collision objects out of the
   physics. When they came back, every overlap counted as a new touch, on
