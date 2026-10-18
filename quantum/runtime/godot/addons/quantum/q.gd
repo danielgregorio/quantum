@@ -519,6 +519,11 @@ static func url_param(name_: String, default_):
 # qg:language: the game's texts in the player's language. A Label, a Button
 # and the dialogue translate what they show by themselves (Godot's own
 # translation); tr(text) in an expression is this, for a text put together.
+# The game's ticks a second (common/physics_ticks_per_second, compiler.py). The
+# runtime counts in these, never in Engine.physics_ticks_per_second: a peer
+# that rejoins a networked game runs the engine faster while it catches up.
+const TICK_RATE := 60.0
+
 var languages: Array = []   # the game's languages besides its own
 var lang: String = ""       # the one shown; "" is the game's own
 var language_names: Dictionary = {}   # each language's own name for itself (qg:language name=)
