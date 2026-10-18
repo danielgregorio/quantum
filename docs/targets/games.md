@@ -2440,6 +2440,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Reached wave" as="Onda alcançada" />
     <qg:phrase text="Gatling" as="Metralhadora" />
     <qg:phrase text="Explosive" as="Explosiva" />
+    <qg:phrase text="1: Gatling (50)   2: Explosive (70)   click a cell to build, click a tower to upgrade (50)" as="1: Metralhadora (50)   2: Explosiva (70)   clique numa casa para construir, numa torre para melhorar (50)" />
     <qg:phrase text="The base stands. Press space to play again." as="A base resistiu. Aperte espaço para jogar de novo." />
     <qg:phrase text="The base fell. Press space to try again." as="A base caiu. Aperte espaço para tentar de novo." />
   </qg:language>
@@ -2454,6 +2455,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Reached wave" as="Oleada alcanzada" />
     <qg:phrase text="Gatling" as="Ametralladora" />
     <qg:phrase text="Explosive" as="Explosiva" />
+    <qg:phrase text="1: Gatling (50)   2: Explosive (70)   click a cell to build, click a tower to upgrade (50)" as="1: Ametralladora (50)   2: Explosiva (70)   haz clic en una casilla para construir, en una torre para mejorarla (50)" />
     <qg:phrase text="The base stands. Press space to play again." as="La base resiste. Pulsa espacio para jugar otra vez." />
     <qg:phrase text="The base fell. Press space to try again." as="La base cayó. Pulsa espacio para intentarlo otra vez." />
   </qg:language>
