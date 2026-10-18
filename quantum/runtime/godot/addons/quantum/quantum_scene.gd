@@ -128,6 +128,9 @@ func quantum_state() -> Dictionary:
 	state["named"] = named
 	where.sort()
 	state["where"] = where
+	var map := get_node_or_null("Tilemap")
+	if map != null and not map.changed.is_empty():
+		state["tiles"] = map.changed.duplicate()   # the cells a qg:set-tile changed
 	state["sounds"] = Q.sounds_played.duplicate()
 	if q_paused:
 		state["paused"] = true
