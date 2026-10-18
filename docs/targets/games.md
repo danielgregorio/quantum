@@ -329,6 +329,7 @@ A body the player moves: a platformer, or a walker on a world map.
 | `air-jump-boost` | number | `1.0` | platformer: an air jump multiplies the speed across by this |
 | `jump-cut` | number | `0.0` | platformer: releasing the button while rising multiplies the rise by this, once (0: the extra gravity of variable-jump instead) |
 | `scale` | number | `1.0` | the picture's size, times its frame (the hitbox stays as given) |
+| `if` | an expression |  | placed only when this is true as the scene is built: a second player's character only in a networked game, `net_status() != 'offline'` |
 
 Goes inside: `qg:scene`.
 
@@ -1018,7 +1019,7 @@ Goes inside: a handler.
 
 ### `qg:set-tile`
 
-Puts a tile in a cell of the scene's tilemap, or empties it: a block that breaks, a door drawn as tiles. Its collision changes at once, monsters that pathfind find their way again, and the cells changed are part of the game's state (a replay, every peer). `tile_at(col, row)` reads a cell.
+Puts a tile in a cell of the scene's tilemap, or empties it: a block that breaks, a door drawn as tiles. Its collision changes from the next tick, monsters that pathfind find their way again, and the cells changed are part of the game's state (a replay, every peer). `tile_at(col, row)` reads a cell.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|

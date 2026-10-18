@@ -14,6 +14,7 @@ var tile: int = 16
 static func build(spec: Dictionary, sheet: Dictionary, texture_of: Callable) -> Node2D:
 	var map = load("res://addons/quantum/tilemap.gd").new()
 	map.name = "Tilemap"
+	map.process_physics_priority = -100   # first in a tick: the cells set in the last one take their shapes
 	var size := int(sheet["tile"][0])
 	map.tile = size
 	var texture: Texture2D = texture_of.call(sheet)
@@ -48,6 +49,17 @@ static func build(spec: Dictionary, sheet: Dictionary, texture_of: Callable) -> 
 
 var _per_row := 1
 var _shapes: Dictionary = {}
+var _unshaped: Array = []   # layers with cells set whose collision is not made yet
+
+
+# The collision of the cells set since the last tick, made before anything of
+# this one moves. Not in set_tile itself: a qg:set-tile in a collision handler
+# runs while the physics server flushes its queries, when bodies may not change;
+# and not at the end of the frame, which runs many ticks while a rejoin catches up.
+func _physics_process(_delta: float) -> void:
+	for layer in _unshaped:
+		layer.update_internals()
+	_unshaped.clear()
 var changed: Dictionary = {}   # "col,row" (and ",layer" past the first) -> the tile a qg:set-tile put there
 
 
@@ -86,14 +98,16 @@ func _place(layer: TileMapLayer, cell: Vector2i, n: int) -> void:
 
 
 # qg:set-tile: a cell of a layer (by name; the first with collision, else the
-# first, when none is given) gets tile n, at once — its collision too, so the
-# tick after sees it on every peer, however many ticks a frame runs.
+# first, when none is given) gets tile n, at once; its collision, at the start
+# of the next tick (_physics_process), so that tick sees it on every peer,
+# however many ticks a frame runs.
 func set_tile(col: int, row: int, n: int, layer_name: String = "") -> void:
 	var layer := _layer(layer_name)
 	if layer == null or col < 0 or row < 0 or col >= columns or row >= rows_count:
 		return
 	_place(layer, Vector2i(col, row), n)
-	layer.update_internals()
+	if not _unshaped.has(layer):
+		_unshaped.append(layer)
 	var key := "%d,%d" % [col, row]
 	if layer != _layer(""):
 		key += "," + String(layer.name)

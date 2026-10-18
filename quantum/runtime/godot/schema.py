@@ -629,7 +629,7 @@ TAGS: Dict[str, Tag] = {
         parents=('handler',)),
     'set-tile': Tag(
         'Puts a tile in a cell of the scene\'s tilemap, or empties it: a block that breaks, a door drawn as tiles. '
-        'Its collision changes at once, monsters that pathfind find their way again, and the cells changed '
+        'Its collision changes from the next tick, monsters that pathfind find their way again, and the cells changed '
         'are part of the game\'s state (a replay, every peer). `tile_at(col, row)` reads a cell.',
         {'col': Attr('expr', required=True, doc='the column, from 0 at the left'),
          'row': Attr('expr', required=True, doc='the row, from 0 at the top'),
@@ -637,6 +637,12 @@ TAGS: Dict[str, Tag] = {
                       '-n the same flipped'),
          'layer': Attr('str', None, doc='a layer\'s name (a Tiled map\'s); the first with collision, else the '
                        'first, when not given')},
+        parents=('handler',)),
+    'emit': Tag(
+        'Plays a qg:particles effect once where a thing is. Only seen: the game\'s state never depends on it.',
+        {'particles': Attr('ident', required=True),
+         'at': Attr('ident', 'me', doc='me, other, a character id, or a q:set holding a thing'),
+         'dx': Attr('float', 0.0), 'dy': Attr('float', 0.0, doc='offset in pixels')},
         parents=('handler',)),
     'put': Tag(
         'Moves a thing or a character to a point, at once.',
