@@ -462,6 +462,14 @@ TAGS: Dict[str, Tag] = {
         'Plays a qg:sound. Directly in a scene: as the scene is entered.',
         {'sound': Attr('ident', required=True)},
         parents=('handler', 'scene')),
+    'music': Tag(
+        'The music of a scene: a looping qg:sound that plays while the scene is on. Going to a scene '
+        'with other music crossfades from one to the other; a scene with the same music lets it play on; '
+        'a scene with none fades it out.',
+        {'sound': Attr('ident', required=True, doc='a qg:sound with loop="true"'),
+         'fade': Attr('float', 1.0, doc='seconds the crossfade takes'),
+         'volume': Attr('float', 0.0, doc='decibels (0: as recorded; -6: half as loud)')},
+        parents=('scene',)),
     'stop': Tag(
         'Stops a qg:sound (a looping one, mostly). Directly in a scene: as the scene is entered.',
         {'sound': Attr('ident', required=True)},
@@ -532,7 +540,8 @@ TAGS: Dict[str, Tag] = {
         {'local': Attr('ident', None, doc='a scene to play on this machine alone (a button for it when given)'),
          'local-label': Attr('str', 'Play here'),
          'port': Attr('int', 7777),
-         'address': Attr('str', '127.0.0.1:7777', doc='what the address field starts with'),
+         'address': Attr('str', '127.0.0.1:7777',
+                         doc="what the address field starts with, unless the web page's address has ?join=..."),
          'font': Attr('str', None), 'size': Attr('int', 16)},
         parents=('scene',)),
     'host': Tag(
@@ -541,7 +550,8 @@ TAGS: Dict[str, Tag] = {
         {'port': Attr('int', 7777)},
         parents=('handler',)),
     'join': Tag(
-        'Joins a networked game at an address (host:port); this machine is the next player.',
+        'Joins a networked game at an address: host:port, or a quantum relay\'s room '
+        '(wss://relay.example/pong/ROOM, where two browsers meet); this machine is the next player.',
         {'address': Attr('expr', required=True, doc='an expression: a q:set a qg:field fills, or text')},
         parents=('handler',)),
     'leave': Tag(

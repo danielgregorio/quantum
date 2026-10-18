@@ -125,6 +125,21 @@ Play a game step by step (or serve it to an agent, --mcp).
 | `--lang` | the language of the game's texts, when it has it (pt, es...) |  |  |
 | `--transport` | the network's transport (websocket: the one a browser joins) |  | `enet`, `websocket` |
 
+<a id="cli-relay"></a>
+
+## `quantum relay`
+
+Where browsers meet to play a networked game (rooms over WebSocket).
+
+| Argument | Meaning | Default | Values |
+|---|---|---|---|
+| `--port` | the port players join (default 8765) | `8765` |  |
+| `--bind` | the address to listen on (default all) | `0.0.0.0` |  |
+| `--cert` | a TLS certificate (PEM): the relay is then wss://, as a page on HTTPS needs |  |  |
+| `--key` | the certificate's private key (PEM) |  |  |
+| `--projects` | the folder of games (default: projects/) |  |  |
+| `--max-rooms` | rooms open at once (default 50) | `50` |  |
+
 <a id="cli-playtest"></a>
 
 ## `quantum playtest`

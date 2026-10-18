@@ -42,6 +42,7 @@ _FUNCTIONS = {
     'net_status': 'Q.net_status()',          # offline, hosting, joining, connected, playing, failed, ended
     'net_players': 'Q.net_players()',        # how many are connected
     'net_player': 'Q.net_player()',          # this machine's player number (0: none yet)
+    'url_param': 'Q.url_param({0}, {1})',    # the web page's ?name=, or the default (a link that joins a room)
     'paused': 'Q.paused(self)',              # the scene is paused (qg:pause)
     'talking': 'Q.talking(self)',            # a qg:dialogue is open (qg:say)
     'tr': 'Q.translate({0})',                # a text in the player's language (qg:language)

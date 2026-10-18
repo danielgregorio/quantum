@@ -41,7 +41,7 @@ def describe(obs: dict) -> List[str]:
     head = f'tick {obs.get("tick")} · {obs.get("scene")}'
     if obs.get('stopped') and obs['stopped'] not in ('ticks',):
         head += f' · stopped: {obs["stopped"]}'
-    lines.append(head + (f' · {where}' if where else ''))
+    lines.append(head + (f' · {where}' if where else '') + (f' · ♪ {obs["music"]}' if obs.get('music') else ''))
     for e in obs.get('events', []):
         rest = ', '.join(f'{k}={v}' for k, v in e.items() if k not in ('kind', 'tick', 'times', 'until'))
         when = f'{e["tick"]}-{e["until"]} ×{e["times"]}' if e.get('times') else str(e['tick'])

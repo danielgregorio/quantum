@@ -189,6 +189,21 @@ def test_the_events_of_a_fight_tell_each_hit(rpg, godot):
         assert not seen.get('events_dropped')
 
 
+def test_each_scene_has_its_music(rpg, godot):
+    with PlaySession(rpg, binary=godot) as game:
+        assert game.observe()['music'] == 'meadow'
+        game.until('player.row == 7', hold=['down'])
+        game.until('talking', hold=['right'])
+        for _ in range(3):
+            fight = game.until("scene == 'combat'", tap=['select'], max_ticks=10)
+        assert fight['music'] == 'clash'
+        assert {'kind': 'music', 'name': 'clash', 'tick': fight['tick'] - 1} in fight['events']
+        fled = game.until("scene == 'exploration'", tap=['down'], max_ticks=10)
+        fled = game.until("scene == 'exploration'", tap=['down'], max_ticks=10)
+        fled = game.until("scene == 'exploration'", tap=['select'], max_ticks=10)   # Attack, Defend, Flee
+        assert (fled['scene'], fled['music']) == ('exploration', 'meadow')
+
+
 def test_the_game_in_the_players_language(rpg, godot):
     # the observation says what the screen shows, in the language it shows it in
     with PlaySession(rpg, binary=godot) as game:

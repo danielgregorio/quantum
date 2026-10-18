@@ -16,3 +16,7 @@ and 2007-2014 Juan Linietsky, Ariel Manzur), packed by `scripts/art/rpg.py`:
 `montserrat_extra_bold.otf` is the demo's font, Montserrat by Julieta
 Ulanovsky and the Montserrat project authors, under the SIL Open Font
 License 1.1 (https://openfontlicense.org).
+
+`meadow.ogg` (the map) and `clash.ogg` (the fight) are this project's own
+music, written and synthesized by `scripts/art/rpg_music.py`, and dedicated
+to the public domain (CC0).

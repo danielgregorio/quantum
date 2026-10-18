@@ -454,6 +454,9 @@ func observation() -> Dictionary:
 	if lock != null and is_instance_valid(lock):   # a networked game: whose seat, and is it running
 		obs["net"] = {"status": lock.status, "player": lock.player, "tick": lock.tick,
 			"waiting": lock.stalled(), "desync": lock.desynced}
+	var q = root.get_node_or_null("Q")
+	if q != null and q.music_playing != "":
+		obs["music"] = q.music_playing   # what is heard: the scene's qg:music
 	return obs
 
 

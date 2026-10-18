@@ -68,6 +68,9 @@
   <qg:spritesheet name="pawns" src="assets/pawns.png" tile="64" />
   <qg:spritesheet name="fighters" src="assets/fighters.png" tile="128" />
   <qg:spritesheet name="arena" src="assets/arena.png" tile="1280x720" />
+  <!-- beyond the demo: music of our own (scripts/art/rpg_music.py, CC0) -->
+  <qg:sound name="meadow" src="assets/meadow.ogg" loop="true" />
+  <qg:sound name="clash" src="assets/clash.ogg" loop="true" />
 
   <qg:prefab name="Opponent" tag="opponent" sheet="pawns" frame="2" hitbox="48x48" />
   <qg:prefab name="Key" tag="key" sheet="pawns" frame="3" hitbox="48x48" />
@@ -76,6 +79,7 @@
   <!-- ===== Exploration: grid_movement/exploration.tscn ===== -->
 
   <qg:scene name="exploration" width="1280" height="720" background="#62a033">
+    <qg:music sound="meadow" fade="0.6" volume="-4" />
     <qg:tilemap tileset="world">
 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
@@ -187,6 +191,7 @@
   <!-- ===== Combat: combat/combat.tscn, turn_queue.gd, combatant.gd, health.gd ===== -->
 
   <qg:scene name="combat" width="1280" height="720" background="#4a4a4a">
+    <qg:music sound="clash" fade="0.4" volume="-6" />
     <!-- player.tscn: 10 life, 2 damage, 1 defense, 1 base armor;
          opponent.tscn: 7 life, 3 damage, 1 defense, no armor. -->
     <q:set name="life" value="10" type="number" />

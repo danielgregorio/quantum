@@ -47,6 +47,12 @@ across fights:
   it has one: 5 life back, up to 10 (the demo's `health.gd` has a `heal`
   nothing calls), and the opponent's turn.
 
+The demo is silent. Here each scene has its music (`qg:music`), our own and
+CC0, written by `scripts/art/rpg_music.py`: a calm loop on the map and a
+driving one in the fight, crossfading as the scene changes. The fight
+comes out of black (`qg:goto-scene fade=`), and a fighter just hit makes
+a face for half a second (`qg:sprite frame=` an expression).
+
 The potion is drawn by `scripts/art/rpg.py` (CC0). All of it is the
 language as it was: game state, `qg:instance if=`, `qg:destroy`, `qg:menu`
 buttons with `if=`.

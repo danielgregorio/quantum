@@ -6,6 +6,7 @@ extends Node
 const SceneBuilder := preload("res://addons/quantum/scene_builder.gd")
 const Lockstep := preload("res://addons/quantum/lockstep.gd")
 const Rollback := preload("res://addons/quantum/rollback.gd")
+const WebPlay := preload("res://addons/quantum/web_play.gd")
 const Fade := preload("res://addons/quantum/fade.gd")
 
 var spec: Dictionary = {}
@@ -20,6 +21,8 @@ func _ready() -> void:
 		return
 	spec = JSON.parse_string(f.get_as_text())
 	_register_inputs(spec.get("inputs", {}))
+	if OS.has_feature("web"):
+		add_child(WebPlay.new())   # window.quantumPlay: an agent plays the exported game (web_play.py)
 	_languages(spec.get("languages", {}))
 	# qg:multiplayer, with --q-host=PORT or --q-join=HOST:PORT: the game waits
 	# for every player, and the local keys only reach it through the lockstep
@@ -29,16 +32,24 @@ func _ready() -> void:
 		if a.begins_with("--q-host="):
 			port = int(a.substr(9))
 		elif a.begins_with("--q-join="):
-			var parts: PackedStringArray = a.substr(9).split(":")
-			host = parts[0]
-			port = int(parts[1]) if parts.size() > 1 else -1
+			var address := a.substr(9)
+			if address.contains("://"):   # a relay's URL: wss://host/game/room
+				host = address
+				port = 0
+			else:
+				var parts: PackedStringArray = address.split(":")
+				host = parts[0]
+				port = int(parts[1]) if parts.size() > 1 else -1
+		elif a.begins_with("--q-relay="):
+			port = int(a.substr(10))
+			relay_override = true
 		elif a.begins_with("--q-port="):
 			port_override = int(a.substr(9))
 		elif a.begins_with("--q-transport="):
 			transport_override = a.substr(14)
 		elif a.begins_with("--q-latency="):
 			latency_override = int(a.substr(12))
-	if spec.has("multiplayer") and port > 0:
+	if spec.has("multiplayer") and (port > 0 or (port == 0 and host != "")):
 		_start_network(host, port).from_command_line = true
 		return
 	go_to_scene(spec["initial"])
@@ -51,9 +62,8 @@ func _languages(langs: Dictionary) -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--q-lang="):
 			wanted = a.substr(9)
-	if wanted == "" and OS.has_feature("web"):
-		var v = JavaScriptBridge.eval("new URLSearchParams(window.location.search).get('lang')")
-		wanted = str(v) if v != null else ""
+	if wanted == "":
+		wanted = str(Q.url_param("lang", ""))
 	if wanted == "":
 		wanted = OS.get_locale()
 	for code in langs.keys():
@@ -77,6 +87,7 @@ func _languages(langs: Dictionary) -> void:
 var port_override: int = -1
 var transport_override: String = ""
 var latency_override: int = 0
+var relay_override: bool = false   # --q-relay=PORT: quantum relay's seatless host
 
 
 func _start_network(host: String, port: int) -> Node:
@@ -89,6 +100,9 @@ func _start_network(host: String, port: int) -> Node:
 		mp["transport"] = transport_override
 	lockstep = Rollback.new() if int(mp.get("rollback", 0)) > 0 else Lockstep.new()
 	lockstep.latency_ms = latency_override
+	lockstep.relay = relay_override
+	if relay_override:
+		mp["transport"] = "websocket"   # browsers reach a relay
 	add_child(lockstep)
 	lockstep.setup(mp, self, host, port_override if port_override > 0 else port)
 	return lockstep
@@ -100,7 +114,11 @@ func net_host(port: int) -> void:
 
 
 func net_join(address: String) -> void:
-	var parts := address.strip_edges().split(":")
+	address = address.strip_edges()
+	if address.contains("://"):   # a relay's URL: wss://host/game/room
+		_start_network(address, 0)
+		return
+	var parts := address.split(":")
 	var port := int(parts[1]) if parts.size() > 1 else 7777
 	_start_network(parts[0], port)
 
@@ -171,6 +189,7 @@ func go_to_scene(scene_name: String, fade: float = 0.0) -> void:
 	add_child(current_scene)
 	Q.web_report("quantumScene", scene_name)
 	Q.event("scene", {"name": scene_name})
+	Q.music(scene_spec.get("music"))
 	if fade > 0.0:
 		_fade_in(fade)
 	if G.has_method("_q_save"):

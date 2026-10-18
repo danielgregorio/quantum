@@ -10,6 +10,31 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: `<qg:music sound="theme" fade="1" volume="-4">`, a scene's
+  music. Going to a scene with other music crossfades from one to the
+  other, a scene with the same music lets it play on, and a scene with none
+  fades it out. Only what is heard changes, so replays are as before. The
+  play protocol says what is heard (`music` in an observation, a `music`
+  event). The RPG has music of its own, written and synthesized by
+  `scripts/art/rpg_music.py` (CC0): a calm loop on the map, a driving one
+  in the fight.
+- Laboratory: `quantum relay`, where two browsers meet to play a
+  networked game. A web page cannot host, so each room
+  (`wss://relay.example/pong/ROOM`) runs the game in a headless Godot that
+  hosts without a seat (`--q-relay=PORT`) and passes the players' inputs
+  on. The relay carries WebSocket messages unchanged, and is `wss://` with
+  `--cert` and `--key`. A `qg:join` address (and `--q-join=`) may now be a
+  URL. `url_param("join", default)` reads a web page's `?join=`, and
+  `qg:lobby`'s address field starts with it, so a link carries the room.
+  A web page reports `window.quantumNet`. In CI, two Chromium pages play
+  Pong through a relay (`scripts/check-relay-in-browser.py`).
+- Laboratory: the play protocol's browser bridge. A web build publishes
+  `window.quantumPlay` (`observe`, `press`, `release`, `trace`), and
+  `WebPlaySession` (`quantum/runtime/web_play.py`) plays the exported game
+  from Playwright in real time. It offers `observe`, `act`, and `until`
+  with the same conditions as `PlaySession`, read in Python since the game
+  does not wait. In CI an agent wins the RPG's web build through it
+  (`scripts/check-play-in-browser.py`).
 - Laboratory: a game in several languages. `<qg:language lang="pt">` holds
   `qg:phrase`s (`text="Attack" as="Atacar"`), and `tr(text)` translates a
   text an expression puts together. Labels, buttons and the dialogue show
@@ -224,6 +249,15 @@ alter the behaviour of an existing app is listed under **Breaking**.
   by keys and by the pointer.
 
 ### Fixed
+
+- Laboratory: under `qg:multiplayer`, a peer waiting for the others' input
+  froze its scene in a way that took the scene's collision objects out of the
+  physics. When they came back, every overlap counted as a new touch, on
+  that peer alone. A paddle moving along the ball "hit" it again and drew
+  another random slant, and the two games diverged (a desync). The
+  lockstep and the rollback now keep the collision objects in the physics
+  while they wait. Two browsers playing through a relay wait often, and
+  that is how it showed.
 
 - Laboratory: a web build could not join a networked game. A browser has
   no ENet, which `qg:multiplayer` uses unless told otherwise, so the

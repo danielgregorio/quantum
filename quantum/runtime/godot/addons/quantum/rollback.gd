@@ -49,6 +49,8 @@ func net_report() -> Dictionary:
 
 @rpc("any_peer", "call_remote", "reliable")
 func _frame(p: int, t: int, mask: int, cx: float, cy: float) -> void:
+	if relay:
+		return
 	if not _frames.has(t):
 		_frames[t] = {}
 	var entry := [mask, cx, cy]
@@ -60,7 +62,7 @@ func _frame(p: int, t: int, mask: int, cx: float, cy: float) -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	if not started or desynced:
+	if not started or desynced or relay:
 		return
 	var scene: Node = game.current_scene
 	if scene == null:
@@ -125,7 +127,7 @@ func _stall(on: bool) -> void:
 	_stalled = on
 	var scene: Node = game.current_scene
 	if scene != null:
-		scene.process_mode = Node.PROCESS_MODE_DISABLED if on else Node.PROCESS_MODE_INHERIT
+		_freeze(scene, on)
 
 
 func stalled() -> bool:

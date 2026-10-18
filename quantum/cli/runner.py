@@ -371,6 +371,10 @@ Examples:
     play_parser.add_argument('--transport', choices=['enet', 'websocket'],
                              help="the network's transport (websocket: the one a browser joins)")
 
+    relay_parser = subparsers.add_parser('relay', help='Where browsers meet to play a networked game (rooms over WebSocket)')
+    from quantum.runtime.game_relay import add_arguments as add_relay_arguments
+    add_relay_arguments(relay_parser)
+
     playtest_parser = subparsers.add_parser('playtest', help='An agent tries to finish each game (projects/games.json goals)')
     from quantum.runtime.playtest import add_arguments as add_playtest_arguments
     add_playtest_arguments(playtest_parser)
@@ -471,6 +475,10 @@ def main():
     elif args.command == 'play':
         from quantum.cli.play import main as play_main
         sys.exit(play_main(args))
+
+    elif args.command == 'relay':
+        from quantum.runtime.game_relay import main as relay_main
+        sys.exit(relay_main(args))
 
     elif args.command == 'playtest':
         from quantum.runtime.playtest import main as playtest_main
