@@ -36,6 +36,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	scene.q_game = game
 	scene.q_seed = int(scene_spec.get("seed", 0))
 	Q.load_sounds(game.get("sounds", {}))
+	Q.particles_spec = game.get("particles", {})
 
 	var bg := ColorRect.new()
 	bg.name = "Background"
@@ -158,6 +159,13 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 					picture.follow(scene, node_spec["frame_method"])
 				Q.apply_gd(picture, node_spec.get("gd"))
 				scene.add_child(picture)
+			"emitter":
+				var fx: CPUParticles2D = load("res://addons/quantum/particles.gd").make(
+					game["particles"][node_spec["particles"]], float(node_spec.get("width", 0.0)))
+				fx.one_shot = false
+				fx.position = Vector2(node_spec["x"], node_spec["y"])
+				Q.apply_gd(fx, node_spec.get("gd"))
+				scene.add_child(fx)
 			"exit":
 				var exit := Exit.new()
 				exit.setup(node_spec, scene)
