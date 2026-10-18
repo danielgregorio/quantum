@@ -47,6 +47,27 @@
 
   <!-- ===== Room 1: the entrance. East to room 2. ===== -->
 
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="HEARTS" as="CORAÇÕES" />
+    <qg:phrase text="KEYS" as="CHAVES" />
+    <qg:phrase text="THE KEY IS NORTH. THE SWITCH IS SOUTH." as="A CHAVE ESTÁ AO NORTE. A ALAVANCA, AO SUL." />
+    <qg:phrase text="LOCKED. FIND THE KEY." as="TRANCADO. ACHE A CHAVE." />
+    <qg:phrase text="SOMETHING OPENED FAR AWAY." as="ALGO SE ABRIU AO LONGE." />
+    <qg:phrase text="A GATE. A SWITCH MUST OPEN IT." as="UM PORTÃO. UMA ALAVANCA DEVE ABRI-LO." />
+    <qg:phrase text="THE TREASURE OF THE KEEP IS YOURS." as="O TESOURO DA FORTALEZA É SEU." />
+    <qg:phrase text="YOU FELL. PRESS JUMP." as="VOCÊ CAIU. APERTE PULAR." />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="HEARTS" as="CORAZONES" />
+    <qg:phrase text="KEYS" as="LLAVES" />
+    <qg:phrase text="THE KEY IS NORTH. THE SWITCH IS SOUTH." as="LA LLAVE ESTÁ AL NORTE. LA PALANCA, AL SUR." />
+    <qg:phrase text="LOCKED. FIND THE KEY." as="CERRADO. BUSCA LA LLAVE." />
+    <qg:phrase text="SOMETHING OPENED FAR AWAY." as="ALGO SE ABRIÓ A LO LEJOS." />
+    <qg:phrase text="A GATE. A SWITCH MUST OPEN IT." as="UNA REJA. UNA PALANCA DEBE ABRIRLA." />
+    <qg:phrase text="THE TREASURE OF THE KEEP IS YOURS." as="EL TESORO DE LA FORTALEZA ES TUYO." />
+    <qg:phrase text="YOU FELL. PRESS JUMP." as="HAS CAÍDO. PULSA SALTAR." />
+  </qg:language>
   <qg:scene name="room-1" width="256" height="224" background="#2b2b3a" seed="1">
     <q:function name="hurt" params="me">
       <qg:play sound="hurt" />

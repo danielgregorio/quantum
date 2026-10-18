@@ -1422,6 +1422,19 @@ class TestLobby:
         assert '\tQ.net_host(9000)\n' in script and '\tQ.net_join(lobby_address)\n' in script
         assert 'Q.goto_scene(self, "play")' in script
 
+    def test_a_lobby_speaks_the_languages_its_game_declares(self, tmp_path):
+        out = build(tmp_path, HEAD + self.MP + '''  <qg:language lang="pt"><qg:phrase text="Join" as="Juntar-se" /></qg:language>
+  <qg:language lang="fr" />
+  <qg:scene name="title"><qg:lobby local="play" port="9000" /></qg:scene>
+  <qg:scene name="play" />
+''' + TAIL)
+        languages = json.loads((out / 'game.json').read_text())['languages']
+        assert languages['pt']['phrases']['Host a game'] == 'Criar uma partida'
+        assert languages['pt']['phrases']['Join'] == 'Juntar-se'            # the game's own wins
+        assert languages['fr']['phrases'] == {}                              # none written for it
+        script = (out / 'scripts' / 'scene_title.gd').read_text()
+        assert 'Q.translate("Waiting for the other players on port")' in script and 'Q.translate("Joining")' in script
+
     @pytest.mark.parametrize('source,message', [
         ('<qg:scene name="t"><qg:menu><qg:button label="H"><qg:host /></qg:button></qg:menu></qg:scene>',
          'qg:host, qg:join and qg:leave need a <qg:multiplayer>'),

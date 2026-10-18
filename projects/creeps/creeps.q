@@ -28,6 +28,19 @@
     <qg:animation name="walk" frames="4, 5" fps="4" />
   </qg:prefab>
 
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="Start" as="Começar" />
+    <qg:phrase text="Dodge the&#10;Creeps" as="Desvie das&#10;Criaturas" />
+    <qg:phrase text="Get Ready" as="Prepare-se" />
+    <qg:phrase text="Game Over" as="Fim de jogo" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="Start" as="Empezar" />
+    <qg:phrase text="Dodge the&#10;Creeps" as="Esquiva a las&#10;Criaturas" />
+    <qg:phrase text="Get Ready" as="Prepárate" />
+    <qg:phrase text="Game Over" as="Fin del juego" />
+  </qg:language>
   <qg:scene name="title" width="480" height="720" background="#385f61">
     <q:set name="message" value="Dodge the&#10;Creeps" />
     <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">

@@ -45,6 +45,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
   a session picks one (`lang=`, `quantum play --lang`, `play_start`), and
   the game's own texts are the default. The RPG is in Portuguese and
   Spanish too.
+- Laboratory: every game is in Portuguese and Spanish too: Pong, Chess,
+  Arena, Towers, Hopper, Keep, Drift, Creeps and Robot. A `qg:lobby`
+  brings its own phrases in both (its buttons and its status line), and a
+  game's `qg:phrase` wins over them. Only what is shown is translated: the
+  game's state stays as written, so networked players in different
+  languages still play the same game.
 - Laboratory: the play protocol, phase 7: `quantum playtest`. An agent tries
   to finish each game toward the `goal` it has in `projects/games.json`
   (what it is told, a condition the job checks after every call, and a

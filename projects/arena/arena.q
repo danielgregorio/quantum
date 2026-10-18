@@ -29,6 +29,37 @@
   <qg:multiplayer players="2" delay="2" rollback="8" start="fight" />
 
   <!-- The title: two on one keyboard, or one on each machine. -->
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="ARENA" as="ARENA" />
+    <qg:phrase text="Two players, one keyboard" as="Dois jogadores, um teclado" />
+    <qg:phrase text="ROUND 1 - FIGHT" as="ROUND 1 - LUTEM" />
+    <qg:phrase text="ROUND 2 - FIGHT" as="ROUND 2 - LUTEM" />
+    <qg:phrase text="ROUND 3 - FIGHT" as="ROUND 3 - LUTEM" />
+    <qg:phrase text="PLAYER 1 WINS THE ROUND" as="JOGADOR 1 VENCE O ROUND" />
+    <qg:phrase text="PLAYER 2 WINS THE ROUND" as="JOGADOR 2 VENCE O ROUND" />
+    <qg:phrase text="TIME - PLAYER 1 TAKES THE ROUND" as="TEMPO - O ROUND É DO JOGADOR 1" />
+    <qg:phrase text="TIME - PLAYER 2 TAKES THE ROUND" as="TEMPO - O ROUND É DO JOGADOR 2" />
+    <qg:phrase text="PLAYER 1 WINS - press jump" as="JOGADOR 1 VENCE - aperte pular" />
+    <qg:phrase text="PLAYER 2 WINS - press jump" as="JOGADOR 2 VENCE - aperte pular" />
+    <qg:phrase text="P1 rounds" as="Rounds J1" />
+    <qg:phrase text="P2 rounds" as="Rounds J2" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="ARENA" as="ARENA" />
+    <qg:phrase text="Two players, one keyboard" as="Dos jugadores, un teclado" />
+    <qg:phrase text="ROUND 1 - FIGHT" as="ASALTO 1 - A PELEAR" />
+    <qg:phrase text="ROUND 2 - FIGHT" as="ASALTO 2 - A PELEAR" />
+    <qg:phrase text="ROUND 3 - FIGHT" as="ASALTO 3 - A PELEAR" />
+    <qg:phrase text="PLAYER 1 WINS THE ROUND" as="EL JUGADOR 1 GANA EL ASALTO" />
+    <qg:phrase text="PLAYER 2 WINS THE ROUND" as="EL JUGADOR 2 GANA EL ASALTO" />
+    <qg:phrase text="TIME - PLAYER 1 TAKES THE ROUND" as="TIEMPO - EL ASALTO ES DEL JUGADOR 1" />
+    <qg:phrase text="TIME - PLAYER 2 TAKES THE ROUND" as="TIEMPO - EL ASALTO ES DEL JUGADOR 2" />
+    <qg:phrase text="PLAYER 1 WINS - press jump" as="GANA EL JUGADOR 1 - pulsa saltar" />
+    <qg:phrase text="PLAYER 2 WINS - press jump" as="GANA EL JUGADOR 2 - pulsa saltar" />
+    <qg:phrase text="P1 rounds" as="Asaltos J1" />
+    <qg:phrase text="P2 rounds" as="Asaltos J2" />
+  </qg:language>
   <qg:scene name="title" width="640" height="360" background="#201820">
     <qg:sprite sheet="stage" x="320" y="180" />
     <qg:hud position="top-center" size="40"><qg:text value="{'ARENA'}" /></qg:hud>

@@ -869,7 +869,7 @@ Goes inside: `qg:scene`.
 
 ### `qg:language`
 
-The game's texts in another language: each qg:phrase gives one text as written in the game, and what it is in this language. A text with no phrase stays as written. The language is ?lang= in a web page, --q-lang= on the command line, else the system's, when the game has it; `tr(text)` translates a text an expression puts together.
+The game's texts in another language: each qg:phrase gives one text as written in the game, and what it is in this language. A text with no phrase stays as written. The language is ?lang= in a web page, --q-lang= on the command line, else the system's, when the game has it; `tr(text)` translates a text an expression puts together. In pt and es, a qg:lobby's own texts come translated.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
@@ -1075,6 +1075,23 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- ===== The world map: the game starts here ===== -->
 
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="SCORE" as="PONTOS" />
+    <qg:phrase text="LIVES" as="VIDAS" />
+    <qg:phrase text="COINS" as="MOEDAS" />
+    <qg:phrase text="TIME" as="TEMPO" />
+    <qg:phrase text="YOU WIN" as="VOCÊ VENCEU" />
+    <qg:phrase text="GAME OVER - PRESS JUMP" as="FIM DE JOGO - APERTE PULAR" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="SCORE" as="PUNTOS" />
+    <qg:phrase text="LIVES" as="VIDAS" />
+    <qg:phrase text="COINS" as="MONEDAS" />
+    <qg:phrase text="TIME" as="TIEMPO" />
+    <qg:phrase text="YOU WIN" as="HAS GANADO" />
+    <qg:phrase text="GAME OVER - PRESS JUMP" as="FIN DEL JUEGO - PULSA SALTAR" />
+  </qg:language>
   <qg:scene name="map" width="256" height="224" background="#3b7d4f">
     <qg:map-node name="level-1" x="48" y="112" sheet="kenney" frame="153" scene="level-1" />
     <qg:map-node name="level-2" x="128" y="80" sheet="kenney" frame="153" scene="level-2" />
@@ -1475,6 +1492,27 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- ===== Room 1: the entrance. East to room 2. ===== -->
 
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="HEARTS" as="CORAÇÕES" />
+    <qg:phrase text="KEYS" as="CHAVES" />
+    <qg:phrase text="THE KEY IS NORTH. THE SWITCH IS SOUTH." as="A CHAVE ESTÁ AO NORTE. A ALAVANCA, AO SUL." />
+    <qg:phrase text="LOCKED. FIND THE KEY." as="TRANCADO. ACHE A CHAVE." />
+    <qg:phrase text="SOMETHING OPENED FAR AWAY." as="ALGO SE ABRIU AO LONGE." />
+    <qg:phrase text="A GATE. A SWITCH MUST OPEN IT." as="UM PORTÃO. UMA ALAVANCA DEVE ABRI-LO." />
+    <qg:phrase text="THE TREASURE OF THE KEEP IS YOURS." as="O TESOURO DA FORTALEZA É SEU." />
+    <qg:phrase text="YOU FELL. PRESS JUMP." as="VOCÊ CAIU. APERTE PULAR." />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="HEARTS" as="CORAZONES" />
+    <qg:phrase text="KEYS" as="LLAVES" />
+    <qg:phrase text="THE KEY IS NORTH. THE SWITCH IS SOUTH." as="LA LLAVE ESTÁ AL NORTE. LA PALANCA, AL SUR." />
+    <qg:phrase text="LOCKED. FIND THE KEY." as="CERRADO. BUSCA LA LLAVE." />
+    <qg:phrase text="SOMETHING OPENED FAR AWAY." as="ALGO SE ABRIÓ A LO LEJOS." />
+    <qg:phrase text="A GATE. A SWITCH MUST OPEN IT." as="UNA REJA. UNA PALANCA DEBE ABRIRLA." />
+    <qg:phrase text="THE TREASURE OF THE KEEP IS YOURS." as="EL TESORO DE LA FORTALEZA ES TUYO." />
+    <qg:phrase text="YOU FELL. PRESS JUMP." as="HAS CAÍDO. PULSA SALTAR." />
+  </qg:language>
   <qg:scene name="room-1" width="256" height="224" background="#2b2b3a" seed="1">
     <q:function name="hurt" params="me">
       <qg:play sound="hurt" />
@@ -1958,6 +1996,25 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:on-death>
   </qg:prefab>
 
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="SCORE" as="PONTOS" />
+    <qg:phrase text="LIVES" as="VIDAS" />
+    <qg:phrase text="HIGH" as="RECORDE" />
+    <qg:phrase text="HERE IT COMES" as="LÁ VEM" />
+    <qg:phrase text="THE DRIFT IS CLEAR" as="O CAMPO ESTÁ LIMPO" />
+    <qg:phrase text="THE DRIFT IS CLEAR. PRESS JUMP." as="O CAMPO ESTÁ LIMPO. APERTE PULAR." />
+    <qg:phrase text="LOST IN THE DRIFT. PRESS JUMP." as="PERDIDO NO CAMPO. APERTE PULAR." />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="SCORE" as="PUNTOS" />
+    <qg:phrase text="LIVES" as="VIDAS" />
+    <qg:phrase text="HIGH" as="RÉCORD" />
+    <qg:phrase text="HERE IT COMES" as="AHÍ VIENE" />
+    <qg:phrase text="THE DRIFT IS CLEAR" as="EL CAMPO ESTÁ DESPEJADO" />
+    <qg:phrase text="THE DRIFT IS CLEAR. PRESS JUMP." as="EL CAMPO ESTÁ DESPEJADO. PULSA SALTAR." />
+    <qg:phrase text="LOST IN THE DRIFT. PRESS JUMP." as="PERDIDO EN EL CAMPO. PULSA SALTAR." />
+  </qg:language>
   <qg:scene name="play" width="256" height="224" background="#0a0a1e" seed="3">
     <qg:sprite sheet="space" x="128" y="112" />
     <q:set name="message" value="" />
@@ -2093,6 +2150,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- The title: two on one keyboard, or one on each machine — host, or join at
        an address. The court starts on both machines once both are there. -->
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="PONG" as="PONG" />
+    <qg:phrase text="Two players, one keyboard" as="Dois jogadores, um teclado" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="PONG" as="PONG" />
+    <qg:phrase text="Two players, one keyboard" as="Dos jugadores, un teclado" />
+  </qg:language>
   <qg:scene name="title" width="640" height="400" background="#24272a">
     <qg:hud position="top-center" size="48"><qg:text value="{'PONG'}" /></qg:hud>
     <qg:lobby local="court" local-label="Two players, one keyboard" size="20" />
@@ -2162,6 +2228,19 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:animation name="walk" frames="4, 5" fps="4" />
   </qg:prefab>
 
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="Start" as="Começar" />
+    <qg:phrase text="Dodge the&#10;Creeps" as="Desvie das&#10;Criaturas" />
+    <qg:phrase text="Get Ready" as="Prepare-se" />
+    <qg:phrase text="Game Over" as="Fim de jogo" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="Start" as="Empezar" />
+    <qg:phrase text="Dodge the&#10;Creeps" as="Esquiva a las&#10;Criaturas" />
+    <qg:phrase text="Get Ready" as="Prepárate" />
+    <qg:phrase text="Game Over" as="Fin del juego" />
+  </qg:language>
   <qg:scene name="title" width="480" height="720" background="#385f61">
     <q:set name="message" value="Dodge the&#10;Creeps" />
     <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
@@ -2314,6 +2393,35 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:prefab>
 
   <!-- The title: alone, or two builders on two machines. -->
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="TOWERS" as="TORRES" />
+    <qg:phrase text="Play alone" as="Jogar sozinho" />
+    <qg:phrase text="Gold" as="Ouro" />
+    <qg:phrase text="Base" as="Base" />
+    <qg:phrase text="Wave" as="Onda" />
+    <qg:phrase text="Dinos" as="Dinos" />
+    <qg:phrase text="Gold left" as="Ouro restante" />
+    <qg:phrase text="Reached wave" as="Onda alcançada" />
+    <qg:phrase text="Gatling" as="Metralhadora" />
+    <qg:phrase text="Explosive" as="Explosiva" />
+    <qg:phrase text="The base stands. Press space to play again." as="A base resistiu. Aperte espaço para jogar de novo." />
+    <qg:phrase text="The base fell. Press space to try again." as="A base caiu. Aperte espaço para tentar de novo." />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="TOWERS" as="TORRES" />
+    <qg:phrase text="Play alone" as="Jugar solo" />
+    <qg:phrase text="Gold" as="Oro" />
+    <qg:phrase text="Base" as="Base" />
+    <qg:phrase text="Wave" as="Oleada" />
+    <qg:phrase text="Dinos" as="Dinos" />
+    <qg:phrase text="Gold left" as="Oro restante" />
+    <qg:phrase text="Reached wave" as="Oleada alcanzada" />
+    <qg:phrase text="Gatling" as="Ametralladora" />
+    <qg:phrase text="Explosive" as="Explosiva" />
+    <qg:phrase text="The base stands. Press space to play again." as="La base resiste. Pulsa espacio para jugar otra vez." />
+    <qg:phrase text="The base fell. Press space to try again." as="La base cayó. Pulsa espacio para intentarlo otra vez." />
+  </qg:language>
   <qg:scene name="title" width="1152" height="648" background="#1a1a1a">
     <qg:sprite sheet="map" x="578" y="372" gd:modulate="#ffffff60" />
     <qg:hud position="top-center" size="48"><qg:text value="{'TOWERS'}" /></qg:hud>
@@ -2462,6 +2570,37 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:multiplayer players="2" delay="2" rollback="8" start="fight" />
 
   <!-- The title: two on one keyboard, or one on each machine. -->
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="ARENA" as="ARENA" />
+    <qg:phrase text="Two players, one keyboard" as="Dois jogadores, um teclado" />
+    <qg:phrase text="ROUND 1 - FIGHT" as="ROUND 1 - LUTEM" />
+    <qg:phrase text="ROUND 2 - FIGHT" as="ROUND 2 - LUTEM" />
+    <qg:phrase text="ROUND 3 - FIGHT" as="ROUND 3 - LUTEM" />
+    <qg:phrase text="PLAYER 1 WINS THE ROUND" as="JOGADOR 1 VENCE O ROUND" />
+    <qg:phrase text="PLAYER 2 WINS THE ROUND" as="JOGADOR 2 VENCE O ROUND" />
+    <qg:phrase text="TIME - PLAYER 1 TAKES THE ROUND" as="TEMPO - O ROUND É DO JOGADOR 1" />
+    <qg:phrase text="TIME - PLAYER 2 TAKES THE ROUND" as="TEMPO - O ROUND É DO JOGADOR 2" />
+    <qg:phrase text="PLAYER 1 WINS - press jump" as="JOGADOR 1 VENCE - aperte pular" />
+    <qg:phrase text="PLAYER 2 WINS - press jump" as="JOGADOR 2 VENCE - aperte pular" />
+    <qg:phrase text="P1 rounds" as="Rounds J1" />
+    <qg:phrase text="P2 rounds" as="Rounds J2" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="ARENA" as="ARENA" />
+    <qg:phrase text="Two players, one keyboard" as="Dos jugadores, un teclado" />
+    <qg:phrase text="ROUND 1 - FIGHT" as="ASALTO 1 - A PELEAR" />
+    <qg:phrase text="ROUND 2 - FIGHT" as="ASALTO 2 - A PELEAR" />
+    <qg:phrase text="ROUND 3 - FIGHT" as="ASALTO 3 - A PELEAR" />
+    <qg:phrase text="PLAYER 1 WINS THE ROUND" as="EL JUGADOR 1 GANA EL ASALTO" />
+    <qg:phrase text="PLAYER 2 WINS THE ROUND" as="EL JUGADOR 2 GANA EL ASALTO" />
+    <qg:phrase text="TIME - PLAYER 1 TAKES THE ROUND" as="TIEMPO - EL ASALTO ES DEL JUGADOR 1" />
+    <qg:phrase text="TIME - PLAYER 2 TAKES THE ROUND" as="TIEMPO - EL ASALTO ES DEL JUGADOR 2" />
+    <qg:phrase text="PLAYER 1 WINS - press jump" as="GANA EL JUGADOR 1 - pulsa saltar" />
+    <qg:phrase text="PLAYER 2 WINS - press jump" as="GANA EL JUGADOR 2 - pulsa saltar" />
+    <qg:phrase text="P1 rounds" as="Asaltos J1" />
+    <qg:phrase text="P2 rounds" as="Asaltos J2" />
+  </qg:language>
   <qg:scene name="title" width="640" height="360" background="#201820">
     <qg:sprite sheet="stage" x="320" y="180" />
     <qg:hud position="top-center" size="40"><qg:text value="{'ARENA'}" /></qg:hud>
@@ -2613,6 +2752,39 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:prefab name="Check" tag="check" sheet="board" frame="7" hitbox="4x4" />
 
   <!-- The title: both colours on one board, or white and black on two machines. -->
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="CHESS" as="XADREZ" />
+    <qg:phrase text="Two players, one board" as="Dois jogadores, um tabuleiro" />
+    <qg:phrase text="White to move - click a piece, then where it goes" as="Brancas jogam - clique numa peça, depois aonde ela vai" />
+    <qg:phrase text="White to move" as="Brancas jogam" />
+    <qg:phrase text="Black to move" as="Pretas jogam" />
+    <qg:phrase text="White to move - check" as="Brancas jogam - xeque" />
+    <qg:phrase text="Black to move - check" as="Pretas jogam - xeque" />
+    <qg:phrase text="White to move - that piece cannot move" as="Brancas jogam - essa peça não pode se mover" />
+    <qg:phrase text="Black to move - that piece cannot move" as="Pretas jogam - essa peça não pode se mover" />
+    <qg:phrase text="White to move - that piece cannot move - check" as="Brancas jogam - essa peça não pode se mover - xeque" />
+    <qg:phrase text="Black to move - that piece cannot move - check" as="Pretas jogam - essa peça não pode se mover - xeque" />
+    <qg:phrase text="Checkmate - White wins" as="Xeque-mate - as brancas vencem" />
+    <qg:phrase text="Checkmate - Black wins" as="Xeque-mate - as pretas vencem" />
+    <qg:phrase text="Stalemate" as="Afogamento - empate" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="CHESS" as="AJEDREZ" />
+    <qg:phrase text="Two players, one board" as="Dos jugadores, un tablero" />
+    <qg:phrase text="White to move - click a piece, then where it goes" as="Juegan blancas - haz clic en una pieza y luego adónde va" />
+    <qg:phrase text="White to move" as="Juegan blancas" />
+    <qg:phrase text="Black to move" as="Juegan negras" />
+    <qg:phrase text="White to move - check" as="Juegan blancas - jaque" />
+    <qg:phrase text="Black to move - check" as="Juegan negras - jaque" />
+    <qg:phrase text="White to move - that piece cannot move" as="Juegan blancas - esa pieza no puede moverse" />
+    <qg:phrase text="Black to move - that piece cannot move" as="Juegan negras - esa pieza no puede moverse" />
+    <qg:phrase text="White to move - that piece cannot move - check" as="Juegan blancas - esa pieza no puede moverse - jaque" />
+    <qg:phrase text="Black to move - that piece cannot move - check" as="Juegan negras - esa pieza no puede moverse - jaque" />
+    <qg:phrase text="Checkmate - White wins" as="Jaque mate - ganan las blancas" />
+    <qg:phrase text="Checkmate - Black wins" as="Jaque mate - ganan las negras" />
+    <qg:phrase text="Stalemate" as="Rey ahogado - tablas" />
+  </qg:language>
   <qg:scene name="title" width="496" height="540" background="#2a2520">
     <qg:hud position="top-center" size="40"><qg:text value="{'CHESS'}" /></qg:hud>
     <qg:lobby local="game" local-label="Two players, one board" size="18" />
@@ -2972,6 +3144,17 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:prefab name="Ledge" tag="ledge" sheet="platform" frame="0" hitbox="192x27" solid="true"
              shape="-174.04,-0.43; -94.04,-23.61; 91.84,-28.64; 80.29,-5.16; -54.32,0.04; -179.99,26.44" />
 
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="COINS" as="MOEDAS" />
+    <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Restart" as="Recomeçar" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="COINS" as="MONEDAS" />
+    <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Restart" as="Reiniciar" />
+  </qg:language>
   <qg:scene name="level" width="800" height="480" background="#52c9ff">
     <!-- level/background/parallax_background.tscn: a base scale of 0.1 times each layer's -->
     <qg:parallax sheet="sky" scroll="0.02" />

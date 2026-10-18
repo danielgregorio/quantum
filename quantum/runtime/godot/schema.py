@@ -105,7 +105,7 @@ TAGS: Dict[str, Tag] = {
         'The game\'s texts in another language: each qg:phrase gives one text as written in the game, and '
         'what it is in this language. A text with no phrase stays as written. The language is ?lang= in a '
         'web page, --q-lang= on the command line, else the system\'s, when the game has it; `tr(text)` '
-        'translates a text an expression puts together.',
+        'translates a text an expression puts together. In pt and es, a qg:lobby\'s own texts come translated.',
         {'lang': Attr('str', required=True, doc='a language code: pt, es, zh, pt_BR...'),
          'name': Attr('str', '', doc='its own name for it (Português)')},
         parents=('application',)),

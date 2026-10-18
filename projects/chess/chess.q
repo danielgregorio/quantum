@@ -33,6 +33,39 @@
   <qg:prefab name="Check" tag="check" sheet="board" frame="7" hitbox="4x4" />
 
   <!-- The title: both colours on one board, or white and black on two machines. -->
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="CHESS" as="XADREZ" />
+    <qg:phrase text="Two players, one board" as="Dois jogadores, um tabuleiro" />
+    <qg:phrase text="White to move - click a piece, then where it goes" as="Brancas jogam - clique numa peça, depois aonde ela vai" />
+    <qg:phrase text="White to move" as="Brancas jogam" />
+    <qg:phrase text="Black to move" as="Pretas jogam" />
+    <qg:phrase text="White to move - check" as="Brancas jogam - xeque" />
+    <qg:phrase text="Black to move - check" as="Pretas jogam - xeque" />
+    <qg:phrase text="White to move - that piece cannot move" as="Brancas jogam - essa peça não pode se mover" />
+    <qg:phrase text="Black to move - that piece cannot move" as="Pretas jogam - essa peça não pode se mover" />
+    <qg:phrase text="White to move - that piece cannot move - check" as="Brancas jogam - essa peça não pode se mover - xeque" />
+    <qg:phrase text="Black to move - that piece cannot move - check" as="Pretas jogam - essa peça não pode se mover - xeque" />
+    <qg:phrase text="Checkmate - White wins" as="Xeque-mate - as brancas vencem" />
+    <qg:phrase text="Checkmate - Black wins" as="Xeque-mate - as pretas vencem" />
+    <qg:phrase text="Stalemate" as="Afogamento - empate" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="CHESS" as="AJEDREZ" />
+    <qg:phrase text="Two players, one board" as="Dos jugadores, un tablero" />
+    <qg:phrase text="White to move - click a piece, then where it goes" as="Juegan blancas - haz clic en una pieza y luego adónde va" />
+    <qg:phrase text="White to move" as="Juegan blancas" />
+    <qg:phrase text="Black to move" as="Juegan negras" />
+    <qg:phrase text="White to move - check" as="Juegan blancas - jaque" />
+    <qg:phrase text="Black to move - check" as="Juegan negras - jaque" />
+    <qg:phrase text="White to move - that piece cannot move" as="Juegan blancas - esa pieza no puede moverse" />
+    <qg:phrase text="Black to move - that piece cannot move" as="Juegan negras - esa pieza no puede moverse" />
+    <qg:phrase text="White to move - that piece cannot move - check" as="Juegan blancas - esa pieza no puede moverse - jaque" />
+    <qg:phrase text="Black to move - that piece cannot move - check" as="Juegan negras - esa pieza no puede moverse - jaque" />
+    <qg:phrase text="Checkmate - White wins" as="Jaque mate - ganan las blancas" />
+    <qg:phrase text="Checkmate - Black wins" as="Jaque mate - ganan las negras" />
+    <qg:phrase text="Stalemate" as="Rey ahogado - tablas" />
+  </qg:language>
   <qg:scene name="title" width="496" height="540" background="#2a2520">
     <qg:hud position="top-center" size="40"><qg:text value="{'CHESS'}" /></qg:hud>
     <qg:lobby local="game" local-label="Two players, one board" size="18" />

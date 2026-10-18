@@ -34,6 +34,15 @@
 
   <!-- The title: two on one keyboard, or one on each machine — host, or join at
        an address. The court starts on both machines once both are there. -->
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="PONG" as="PONG" />
+    <qg:phrase text="Two players, one keyboard" as="Dois jogadores, um teclado" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="PONG" as="PONG" />
+    <qg:phrase text="Two players, one keyboard" as="Dos jugadores, un teclado" />
+  </qg:language>
   <qg:scene name="title" width="640" height="400" background="#24272a">
     <qg:hud position="top-center" size="48"><qg:text value="{'PONG'}" /></qg:hud>
     <qg:lobby local="court" local-label="Two players, one keyboard" size="20" />

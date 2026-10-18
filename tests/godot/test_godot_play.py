@@ -223,6 +223,18 @@ def test_the_game_in_the_players_language(rpg, godot):
         assert game.observe()['lang'] == ''
 
 
+def test_the_lobby_and_the_board_in_the_players_language(pong, chess, godot):
+    # a game declaring pt or es has the lobby's own phrases too: its buttons, its status line
+    with PlaySession(pong, binary=godot, lang='pt') as game:
+        menu = PlaySession.screen(game.observe(), 'menu')['items']
+        assert [i.get('button') or i.get('field') for i in menu] == \
+            ['Dois jogadores, um teclado', 'Criar uma partida', 'Endereço', 'Entrar', 'Cancelar']
+    with PlaySession(chess, binary=godot, lang='es') as game:
+        seen = game.until("scene == 'game'", tap=['select'], max_ticks=10)
+        assert 'Juegan blancas - haz clic en una pieza y luego adónde va' in PlaySession.screen(seen, 'hud')['items']
+        assert seen['state']['status'] == 'White to move - click a piece, then where it goes'   # the state stays as written
+
+
 def test_the_fight_comes_out_of_black(rpg, godot):
     with PlaySession(rpg, binary=godot) as game:
         game.until('player.row == 7', hold=['down'])

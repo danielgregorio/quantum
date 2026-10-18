@@ -52,6 +52,23 @@
 
   <!-- ===== The world map: the game starts here ===== -->
 
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="SCORE" as="PONTOS" />
+    <qg:phrase text="LIVES" as="VIDAS" />
+    <qg:phrase text="COINS" as="MOEDAS" />
+    <qg:phrase text="TIME" as="TEMPO" />
+    <qg:phrase text="YOU WIN" as="VOCÊ VENCEU" />
+    <qg:phrase text="GAME OVER - PRESS JUMP" as="FIM DE JOGO - APERTE PULAR" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="SCORE" as="PUNTOS" />
+    <qg:phrase text="LIVES" as="VIDAS" />
+    <qg:phrase text="COINS" as="MONEDAS" />
+    <qg:phrase text="TIME" as="TIEMPO" />
+    <qg:phrase text="YOU WIN" as="HAS GANADO" />
+    <qg:phrase text="GAME OVER - PRESS JUMP" as="FIN DEL JUEGO - PULSA SALTAR" />
+  </qg:language>
   <qg:scene name="map" width="256" height="224" background="#3b7d4f">
     <qg:map-node name="level-1" x="48" y="112" sheet="kenney" frame="153" scene="level-1" />
     <qg:map-node name="level-2" x="128" y="80" sheet="kenney" frame="153" scene="level-2" />
