@@ -7,6 +7,7 @@ hosts.
 """
 
 import asyncio
+import contextlib
 import threading
 from pathlib import Path
 
@@ -20,28 +21,39 @@ from quantum.runtime.godot_replay import free_port, replay_peers, tape_from_hold
 PROJECTS = Path(__file__).resolve().parents[2] / 'projects'
 
 
-@pytest.fixture(scope='module')
-def relay(godot):
-    """A relay on a free port, on its own event loop in a thread."""
+@contextlib.contextmanager
+def serving(game_relay, cert=None, key=None):
+    """A relay on a free port, on its own event loop in a thread: it is made, served and
+    closed on that loop. Answers its address (ws:// or wss://)."""
     loop = asyncio.new_event_loop()
-    game_relay = GameRelay(projects=PROJECTS, binary=godot)
     port = free_port()
     ready = threading.Event()
+    box = {}
 
     def run():
         asyncio.set_event_loop(loop)
-        server = loop.run_until_complete(game_relay.serve('127.0.0.1', port))
+        box['server'] = loop.run_until_complete(game_relay.serve('127.0.0.1', port, cert, key))
         ready.set()
         loop.run_forever()
-        server.close()
-        loop.run_until_complete(server.wait_closed())
+        box['server'].close()
+        loop.run_until_complete(box['server'].wait_closed())
+        loop.close()
 
     thread = threading.Thread(target=run, daemon=True)
     thread.start()
-    ready.wait(10)
-    yield game_relay, f'ws://127.0.0.1:{port}'
-    loop.call_soon_threadsafe(loop.stop)
-    thread.join(10)
+    assert ready.wait(30)
+    try:
+        yield f'{"wss" if cert else "ws"}://127.0.0.1:{port}'
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join(10)
+
+
+@pytest.fixture(scope='module')
+def relay(godot):
+    game_relay = GameRelay(projects=PROJECTS, binary=godot)
+    with serving(game_relay) as url:
+        yield game_relay, url
     game_relay.shutdown()
 
 
@@ -87,21 +99,15 @@ def test_with_a_certificate_it_is_wss(godot, tmp_path):
     cert, key = tmp_path / 'cert.pem', tmp_path / 'key.pem'
     subprocess.run(['openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', '/CN=localhost',
                     '-keyout', str(key), '-out', str(cert)], check=True, capture_output=True)
-    loop = asyncio.new_event_loop()
     game_relay = GameRelay(projects=PROJECTS, binary=godot)
-    port = free_port()
-    server = loop.run_until_complete(game_relay.serve('127.0.0.1', port, str(cert), str(key)))
-    thread = threading.Thread(target=loop.run_forever, daemon=True)
-    thread.start()
     try:
-        trust = ssl.create_default_context(cafile=str(cert))
-        trust.check_hostname = False
-        with client.connect(f'wss://127.0.0.1:{port}/nowhere', ssl=trust) as ws:
-            with pytest.raises(Exception):
-                ws.recv(timeout=10)
-            assert ws.close_reason == 'the address is /game/room'
+        with serving(game_relay, str(cert), str(key)) as url:
+            assert url.startswith('wss://')
+            trust = ssl.create_default_context(cafile=str(cert))
+            trust.check_hostname = False
+            with client.connect(f'{url}/nowhere', ssl=trust, open_timeout=30) as ws:
+                with pytest.raises(Exception):
+                    ws.recv(timeout=10)
+                assert ws.close_reason == 'the address is /game/room'
     finally:
-        loop.call_soon_threadsafe(loop.stop)
-        thread.join(10)
-        server.close()
         game_relay.shutdown()
