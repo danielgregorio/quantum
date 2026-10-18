@@ -20,6 +20,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
   and without its effects and gets the same state. Hopper's coins sparkle,
   a stomped walker goes in a puff; Keep's key and heart twinkle, a slain
   monster smokes and the chest bursts into confetti.
+- Laboratory: `ai="pathfind"` on a prefab: as `chase`, it goes for the
+  character within `sight=`, but around the walls, by the shortest way over
+  the tilemap's free cells (breadth first, its neighbours always in the
+  same order, so every replay and every peer finds the same way). The way
+  is found again when the quarry changes cell; walled off, it waits.
 - Laboratory: `<qg:tween target="coin" property="y" to="100" seconds="1"
   trans="back" ease="out" repeat="-1" yoyo="true">`, a property of a thing
   eased to a value: its position (`x`, `y`, which collisions see), or its

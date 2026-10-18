@@ -268,6 +268,8 @@ func _physics_process(delta: float) -> void:
 			_wander()
 		"chase":
 			_chase()
+		"pathfind":
+			_pathfind()
 		"fly":
 			_fly(delta)
 		"sway":
@@ -409,6 +411,54 @@ func _chase() -> void:
 	velocity = (target.global_position - global_position).normalized() * speed
 	move_and_slide()
 	_face(velocity.x)
+
+
+# Top-down: as chase, but around the walls. The way is the shortest over
+# the tilemap's free cells, found again when the quarry changes cell; the
+# thing heads for the centre of the next cell on it, and straight at the
+# quarry once in the same cell.
+var _way: Array = []
+var _way_to := Vector2i(-1, -1)
+
+
+func _pathfind() -> void:
+	var target := _quarry()
+	var map = _scene_of().get_node_or_null("Tilemap") if _scene_of() != null else null
+	if target == null:
+		velocity = Vector2.ZERO
+		_way = []
+		return
+	if map == null or not map.has_method("path"):
+		_chase()
+		return
+	var here: Vector2i = map.cell_of(position)
+	var there: Vector2i = map.cell_of(target.position)
+	if there != _way_to or _way.is_empty() or not (here in _way):
+		_way = map.path(here, there)
+		_way_to = there
+	var aim: Vector2 = target.position
+	var i := _way.find(here)
+	if i >= 0 and i < _way.size() - 1:
+		aim = map.centre_of(_way[i + 1])
+	elif _way.is_empty():
+		velocity = Vector2.ZERO   # walled off: it waits
+		return
+	velocity = (aim - position).normalized() * speed
+	move_and_slide()
+	_face(velocity.x)
+
+
+# The nearest named character within sight, or null.
+func _quarry() -> Node2D:
+	var target: Node2D = null
+	var best := sight
+	for n in get_tree().get_nodes_in_group("q_named"):
+		if n is Node2D and n.get_parent() == get_parent():
+			var d := global_position.distance_to((n as Node2D).global_position)
+			if d < best:
+				best = d
+				target = n
+	return target
 
 
 # Straight along the heading; gone when old or out of the scene.

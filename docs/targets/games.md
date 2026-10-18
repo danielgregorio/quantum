@@ -160,7 +160,7 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `sheet` | a name | required | a qg:spritesheet or qg:tileset |
 | `frame` | integer | `0` |  |
 | `hitbox` | `WxH` pixels | required |  |
-| `ai` | `patrol` / `wander` / `chase` / `fly` / `sway` / `shuttle` / `path` / `turret` |  | patrol: walks under gravity, turns at walls (and at edges with turns-at); wander: top-down, changes direction now and then (from the scene seed); chase: top-down, goes for the character within sight=; fly: straight along heading=; sway: side to side across the scene; shuttle: a solid that goes dx=,dy= and back every period= ticks, carrying what stands on it; path: follows the qg:path it was spawned on (qg:spawn at="path"), then stands at its end; turret: stands, and fires fire-prefab at the nearest targets= within range= every fire-every |
+| `ai` | `patrol` / `wander` / `chase` / `pathfind` / `fly` / `sway` / `shuttle` / `path` / `turret` |  | patrol: walks under gravity, turns at walls (and at edges with turns-at); wander: top-down, changes direction now and then (from the scene seed); chase: top-down, goes for the character within sight=, straight at it; pathfind: as chase, but around the walls, by the shortest way over the tilemap's free cells; fly: straight along heading=; sway: side to side across the scene; shuttle: a solid that goes dx=,dy= and back every period= ticks, carrying what stands on it; path: follows the qg:path it was spawned on (qg:spawn at="path"), then stands at its end; turret: stands, and fires fire-prefab at the nearest targets= within range= every fire-every |
 | `range` | number | `100.0` | turret: pixels |
 | `targets` | a name |  | turret: the tag it shoots at |
 | `attack` | `shoot` / `area` | `shoot` | turret: shoot spawns fire-prefab headed at the target; area damages every target in range by damage= |
@@ -172,7 +172,7 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `shape` | text |  | solid: the solid part as x,y points from its centre, separated by semicolons (-96,-21; 96,-21; 96,6; -96,6), instead of the hitbox |
 | `scale` | number | `1.0` | the picture's size, times its frame (the hitbox stays as given) |
 | `walls` | `pass` / `stop` | `pass` | fly: pass goes through the tiles; stop is gone on touching one |
-| `sight` | number | `80.0` | chase: pixels |
+| `sight` | number | `80.0` | chase, pathfind: pixels |
 | `heading` | text | `down` | fly: up, down, left, right, or a direction as x,y (-1,0.5) |
 | `accel` | number | `0.0` | fly: pixels per second added to its speed every second |
 | `lifetime` | integer | `0` | fly: gone after this many ticks (0: never); any fly is gone off-screen |
