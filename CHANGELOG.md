@@ -10,6 +10,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: `ai="pathfind"` on a prefab: as `chase`, it goes for the
+  character within `sight=`, but around the walls, by the shortest way over
+  the tilemap's free cells (breadth first, its neighbours always in the
+  same order, so every replay and every peer finds the same way). The way
+  is found again when the quarry changes cell; walled off, it waits.
 - Laboratory: the relay, ready to deploy. `deploy/relay/Dockerfile` builds an
   image with Godot and the networked games compiled in, and
   `deploy/relay/fly.toml` runs it on Fly.io. `quantum relay` adds
