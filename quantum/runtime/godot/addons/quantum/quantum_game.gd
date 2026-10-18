@@ -141,6 +141,7 @@ func go_to_scene(scene_name: String, fade: float = 0.0) -> void:
 	add_child(current_scene)
 	Q.web_report("quantumScene", scene_name)
 	Q.event("scene", {"name": scene_name})
+	Q.music(scene_spec.get("music"))
 	if fade > 0.0:
 		_fade_in(fade)
 	if G.has_method("_q_save"):

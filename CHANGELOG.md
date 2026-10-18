@@ -10,6 +10,14 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: `<qg:music sound="theme" fade="1" volume="-4">`, a scene's
+  music. Going to a scene with other music crossfades from one to the
+  other, a scene with the same music lets it play on, and a scene with none
+  fades it out. Only what is heard changes, so replays are as before. The
+  play protocol says what is heard (`music` in an observation, a `music`
+  event). The RPG has music of its own, written and synthesized by
+  `scripts/art/rpg_music.py` (CC0): a calm loop on the map, a driving one
+  in the fight.
 - Laboratory: the play protocol, phase 7: `quantum playtest`. An agent tries
   to finish each game toward the `goal` it has in `projects/games.json`
   (what it is told, a condition the job checks after every call, and a
