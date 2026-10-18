@@ -68,6 +68,17 @@
   <qg:prefab name="Ledge" tag="ledge" sheet="platform" frame="0" hitbox="192x27" solid="true"
              shape="-174.04,-0.43; -94.04,-23.61; 91.84,-28.64; 80.29,-5.16; -54.32,0.04; -179.99,26.44" />
 
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="COINS" as="MOEDAS" />
+    <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Restart" as="Recomeçar" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="COINS" as="MONEDAS" />
+    <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Restart" as="Reiniciar" />
+  </qg:language>
   <qg:scene name="level" width="800" height="480" background="#52c9ff">
     <!-- level/background/parallax_background.tscn: a base scale of 0.1 times each layer's -->
     <qg:parallax sheet="sky" scroll="0.02" />

@@ -232,6 +232,8 @@ class _Compiler:
                 if ph.get('text') in phrases:
                     raise GameCompileError(f'<qg:phrase text="{ph.get("text")}">: twice in lang="{code}"', ph.line)
                 phrases[ph.get('text')] = ph.get('as')
+            if self.multiplayer is not None:
+                phrases = {**LOBBY_PHRASES.get(code.split('_')[0], {}), **phrases}
             languages[code] = {'name': lang_el.get('name') or code, 'phrases': phrases}
         prefabs = {}
         pscript = SceneScript('prefabs', game_state=self.game_state)
@@ -1025,6 +1027,19 @@ def _el(tag: str, line: Optional[int], children=(), **attrs) -> Element:
     return Element(tag, values, line, list(children))
 
 
+# What a qg:lobby shows, in the languages the repository's games speak: a game
+# declaring one of them has these phrases too (its own qg:phrase wins).
+LOBBY_PHRASES = {
+    'pt': {'Host a game': 'Criar uma partida', 'Address': 'Endereço', 'Join': 'Entrar', 'Cancel': 'Cancelar',
+           'Waiting for the other players on port': 'Esperando os outros jogadores na porta',
+           'Joining': 'Entrando em', 'Connected, starting...': 'Conectado, começando...',
+           'Could not connect': 'Não foi possível conectar'},
+    'es': {'Host a game': 'Crear una partida', 'Address': 'Dirección', 'Join': 'Unirse', 'Cancel': 'Cancelar',
+           'Waiting for the other players on port': 'Esperando a los demás jugadores en el puerto',
+           'Joining': 'Uniéndose a', 'Connected, starting...': 'Conectado, empezando...',
+           'Could not connect': 'No se pudo conectar'},
+}
+
 _BUSY = "net_status() == 'hosting' or net_status() == 'joining' or net_status() == 'connected'"
 _IDLE = "net_status() == 'offline' or net_status() == 'failed'"
 
@@ -1051,10 +1066,11 @@ def _expand_lobbies(children: list, multiplayer: Optional[dict]) -> list:
             _el('button', line, [_el('join', line, address='{lobby_address}')], label='Join', **{'if': '{' + _IDLE + '}'}),
             _el('button', line, [_el('leave', line)], label='Cancel', **{'if': '{' + _BUSY + '}'}),
         ]
-        status = ("{" + f"'Waiting for the other players on port {port}' if net_status() == 'hosting' else "
-                  "('Joining ' + lobby_address + '...' if net_status() == 'joining' else "
-                  "('Connected, starting...' if net_status() == 'connected' else "
-                  "('Could not connect' if net_status() == 'failed' else '')))" + "}")
+        # each part through tr(), in the player's language (LOBBY_PHRASES); the same text in English
+        status = ("{" + f"tr('Waiting for the other players on port') + ' {port}' if net_status() == 'hosting' else "
+                  "(tr('Joining') + ' ' + lobby_address + '...' if net_status() == 'joining' else "
+                  "(tr('Connected, starting...') if net_status() == 'connected' else "
+                  "(tr('Could not connect') if net_status() == 'failed' else '')))" + "}")
         # the address field starts with the page's ?join= (a link to a relay's room), else address=
         out.append(Statement('set', {'name': 'lobby_address',
                                      'value': '{url_param(' + json.dumps('join') + ', ' + json.dumps(str(el.get('address'))) + ')}'},

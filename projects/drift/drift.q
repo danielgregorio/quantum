@@ -83,6 +83,25 @@
     </qg:on-death>
   </qg:prefab>
 
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="SCORE" as="PONTOS" />
+    <qg:phrase text="LIVES" as="VIDAS" />
+    <qg:phrase text="HIGH" as="RECORDE" />
+    <qg:phrase text="HERE IT COMES" as="LÁ VEM" />
+    <qg:phrase text="THE DRIFT IS CLEAR" as="O CAMPO ESTÁ LIMPO" />
+    <qg:phrase text="THE DRIFT IS CLEAR. PRESS JUMP." as="O CAMPO ESTÁ LIMPO. APERTE PULAR." />
+    <qg:phrase text="LOST IN THE DRIFT. PRESS JUMP." as="PERDIDO NO CAMPO. APERTE PULAR." />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="SCORE" as="PUNTOS" />
+    <qg:phrase text="LIVES" as="VIDAS" />
+    <qg:phrase text="HIGH" as="RÉCORD" />
+    <qg:phrase text="HERE IT COMES" as="AHÍ VIENE" />
+    <qg:phrase text="THE DRIFT IS CLEAR" as="EL CAMPO ESTÁ DESPEJADO" />
+    <qg:phrase text="THE DRIFT IS CLEAR. PRESS JUMP." as="EL CAMPO ESTÁ DESPEJADO. PULSA SALTAR." />
+    <qg:phrase text="LOST IN THE DRIFT. PRESS JUMP." as="PERDIDO EN EL CAMPO. PULSA SALTAR." />
+  </qg:language>
   <qg:scene name="play" width="256" height="224" background="#0a0a1e" seed="3">
     <qg:sprite sheet="space" x="128" y="112" />
     <q:set name="message" value="" />
