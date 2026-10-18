@@ -568,7 +568,7 @@ TAGS: Dict[str, Tag] = {
         parents=('handler',)),
     'set-tile': Tag(
         'Puts a tile in a cell of the scene\'s tilemap, or empties it: a block that breaks, a door drawn as tiles. '
-        'Its collision changes at once, monsters that pathfind find their way again, and the cells changed '
+        'Its collision changes from the next tick, monsters that pathfind find their way again, and the cells changed '
         'are part of the game\'s state (a replay, every peer). `tile_at(col, row)` reads a cell.',
         {'col': Attr('expr', required=True, doc='the column, from 0 at the left'),
          'row': Attr('expr', required=True, doc='the row, from 0 at the top'),

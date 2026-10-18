@@ -12,8 +12,9 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 - Laboratory: `<qg:set-tile col= row= tile= layer=>` puts a tile in a cell
   of the scene's tilemap, or empties it (`tile="0"`): a block that breaks,
-  a door drawn as tiles. Its collision changes at once (the same tick on
-  every peer, however many ticks a frame runs), monsters that pathfind
+  a door drawn as tiles. Its collision changes from the next tick (the
+  same on every peer, however many ticks a frame runs; a collision handler
+  may set one too), monsters that pathfind
   find their way again, and the cells changed are in the game's state
   (`tiles`), so a replay and the lockstep's check see them. `tile_at(col,
   row)` reads a cell. Not under `rollback=` yet.

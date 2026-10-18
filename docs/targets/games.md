@@ -999,7 +999,7 @@ Goes inside: `qg:language`.
 
 ### `qg:set-tile`
 
-Puts a tile in a cell of the scene's tilemap, or empties it: a block that breaks, a door drawn as tiles. Its collision changes at once, monsters that pathfind find their way again, and the cells changed are part of the game's state (a replay, every peer). `tile_at(col, row)` reads a cell.
+Puts a tile in a cell of the scene's tilemap, or empties it: a block that breaks, a door drawn as tiles. Its collision changes from the next tick, monsters that pathfind find their way again, and the cells changed are part of the game's state (a replay, every peer). `tile_at(col, row)` reads a cell.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
