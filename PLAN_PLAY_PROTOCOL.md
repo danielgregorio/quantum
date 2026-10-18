@@ -15,7 +15,10 @@
 >   first wave without losing a life;
 > - take the second seat of a person's Pong, live, and never let the ball
 >   past; and, in CI, host Pong for the web build, which joins from
->   Chromium (`scripts/check-agent-in-browser.py`).
+>   Chromium (`scripts/check-agent-in-browser.py`);
+> - win the RPG's exported web build in Chromium, in real time, through
+>   the browser bridge (`window.quantumPlay`, `web_play.py`,
+>   `scripts/check-play-in-browser.py`).
 >
 > Phase 7 is `quantum playtest` (`quantum/runtime/playtest.py`) and the
 > `Playtest` workflow; its first kept goal is `tests/godot/playtests/rpg.json`.
@@ -247,10 +250,16 @@ One protocol, several ways to reach it, built in this order:
 
    With a `.mcp.json` in the repository, any Claude Code session opened on it
    can play the games directly, the way it calls GitHub's tools now.
-5. **Browser bridge** (later). The same requests against a web build through
-   Playwright, with the game reporting its observation through
-   `JavaScriptBridge`, as `window.quantumScene` already does. This checks
-   the exported builds, and it is the real-time mode.
+5. **Browser bridge** (built). The same requests against a web build through
+   Playwright. A web build publishes `window.quantumPlay`
+   (`addons/quantum/web_play.gd`): `observe()` leaves the observation in
+   `window.quantumObservation`, because a JavaScript callback cannot hand
+   back a value. `press`/`release` take the game's actions, and `trace`
+   starts recording the runtime's events. `WebPlaySession`
+   (`quantum/runtime/web_play.py`) plays it in real time with `observe`,
+   `act` and `until`. The game does not wait for the agent, so `until`'s
+   conditions are read in Python, as the driver reads them. This checks
+   the exported builds: CI wins the RPG's web build with it.
 
 ## Playing with people
 
@@ -274,12 +283,10 @@ above:
   this phase the web build could not join anyone at all: the lockstep used
   ENet, which a browser does not have. In a browser it now always uses
   WebSocket.
-- **The browser bridge is not built.** The agent plays through its own
-  Godot, never through the page. The person's browser is just the other
-  peer, and the lockstep's hash check every second confirms that both
-  games stay the same. Reading the observation from an exported build
-  (`JavaScriptBridge`) is still useful for checking exports, but no game
-  needed it to be played.
+- **The browser bridge came later** (transport 5). Here the agent plays
+  through its own Godot, never through the page. The person's browser is
+  just the other peer, and the lockstep's hash check every second confirms
+  that both games stay the same.
 
 ## What it is for
 
@@ -308,7 +315,7 @@ above:
 | 3. Branching (built; restores by replay) | `snapshot`/`restore` (in memory for rollback scenes, by replay otherwise); `tape` | restore-then-replay gives byte-identical state hashes, in both modes; a tape saved from a session passes as a test |
 | 4. CLI and MCP (built) | `quantum play` console; `quantum play --mcp`; `.mcp.json` | a Claude Code session on the repository is asked "play the RPG and win" and does it through the tools |
 | 5. Reflexes (built) | the reflex grammar, in the step loop | in Pong the agent returns 10 balls in a row; in Drift it clears the first wave |
-| 6. Browser and people (built, without the bridge) | the browser bridge; joining a lockstep game as player 2 | the agent plays Pong against a person on the web build |
+| 6. Browser and people (built; the bridge too) | the browser bridge; joining a lockstep game as player 2 | the agent plays Pong against a person on the web build |
 | 7. Playtest job (built; on demand) | `goal`s in `projects/games.json`; a scheduled job with a report | the job runs over every game and writes its report |
 
 Phases 1 to 3 are the core and are worth having alone. 4 is what makes it

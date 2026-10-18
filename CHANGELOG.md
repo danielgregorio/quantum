@@ -28,6 +28,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
   `qg:lobby`'s address field starts with it, so a link carries the room.
   A web page reports `window.quantumNet`. In CI, two Chromium pages play
   Pong through a relay (`scripts/check-relay-in-browser.py`).
+- Laboratory: the play protocol's browser bridge. A web build publishes
+  `window.quantumPlay` (`observe`, `press`, `release`, `trace`), and
+  `WebPlaySession` (`quantum/runtime/web_play.py`) plays the exported game
+  from Playwright in real time. It offers `observe`, `act`, and `until`
+  with the same conditions as `PlaySession`, read in Python since the game
+  does not wait. In CI an agent wins the RPG's web build through it
+  (`scripts/check-play-in-browser.py`).
 - Laboratory: the play protocol, phase 7: `quantum playtest`. An agent tries
   to finish each game toward the `goal` it has in `projects/games.json`
   (what it is told, a condition the job checks after every call, and a

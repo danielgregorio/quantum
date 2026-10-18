@@ -6,6 +6,7 @@ extends Node
 const SceneBuilder := preload("res://addons/quantum/scene_builder.gd")
 const Lockstep := preload("res://addons/quantum/lockstep.gd")
 const Rollback := preload("res://addons/quantum/rollback.gd")
+const WebPlay := preload("res://addons/quantum/web_play.gd")
 const Fade := preload("res://addons/quantum/fade.gd")
 
 var spec: Dictionary = {}
@@ -20,6 +21,8 @@ func _ready() -> void:
 		return
 	spec = JSON.parse_string(f.get_as_text())
 	_register_inputs(spec.get("inputs", {}))
+	if OS.has_feature("web"):
+		add_child(WebPlay.new())   # window.quantumPlay: an agent plays the exported game (web_play.py)
 	# qg:multiplayer, with --q-host=PORT or --q-join=HOST:PORT: the game waits
 	# for every player, and the local keys only reach it through the lockstep
 	var host := ""

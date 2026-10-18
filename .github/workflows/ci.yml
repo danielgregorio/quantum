@@ -155,6 +155,11 @@ jobs:
       - name: Two browsers play Pong through a relay
         run: python scripts/check-relay-in-browser.py "$RUNNER_TEMP/games"
 
+      # The play protocol's browser bridge: an agent wins the RPG's web
+      # build, in real time, through window.quantumPlay.
+      - name: An agent wins the RPG in the browser
+        run: python scripts/check-play-in-browser.py "$RUNNER_TEMP/games"
+
       - name: What each game showed (check.png, and Pong against the agent)
         if: always()
         uses: actions/upload-artifact@v7
@@ -164,6 +169,7 @@ jobs:
             ${{ runner.temp }}/games/*/check.png
             ${{ runner.temp }}/games/pong/agent.png
             ${{ runner.temp }}/games/pong/relay-*.png
+            ${{ runner.temp }}/games/rpg/bridge.png
           if-no-files-found: ignore
 
   docs:
