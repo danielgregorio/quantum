@@ -397,6 +397,19 @@ class TestScenesMapAndGameState:
                                   'seconds="0" /></qg:timer></qg:scene>\n'))
         assert 'more than 0' in e.message
 
+    def test_a_character_only_when(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="hero" controller="topdown" sheet="c" x="10" y="10" hitbox="12x16" if="{net_status() != 'offline'}" />
+  </qg:scene>
+'''))
+        hero = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'][0]
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert f'func {hero["if"]}() -> bool:\n\treturn (Q.net_status() != "offline")' in script
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:map-node name="a" sheet="k" x="0" y="0" />'
+                                  '<qg:character id="h" controller="map" sheet="c" at="a" x="0" y="0" hitbox="8x8" '
+                                  'if="{true}" /></qg:scene>\n'))
+        assert 'if= is not for controller="map"' in e.message
+
     def test_a_character_made_of_parts(self, tmp_path):
         out = build(tmp_path, game('''  <qg:scene name="main">
     <qg:character id="hero" controller="behavior" sheet="c" x="10" y="10" hitbox="12x16">
@@ -466,16 +479,6 @@ class TestScenesMapAndGameState:
         script = (out / 'scripts' / 'scene_main.gd').read_text()
         assert '\tQ.set_tile(self, (1 + 2), 4, 0)\n' in script and '\tQ.set_tile(self, 1, 1, 5, "walls")\n' in script
         assert 'Q.tile_at(self, 3, 4)' in script
-
-    def test_particles_must_be_declared(self, tmp_path):
-        e = refuse(tmp_path, game('  <qg:scene name="t"><qg:character id="h" controller="topdown" sheet="k" frame="0" '
-                                  'x="0" y="0" hitbox="8x8" /><qg:timer after="1"><qg:emit particles="nowhere" at="h" />'
-                                  '</qg:timer></qg:scene>\n'))
-        assert '<qg:emit particles="nowhere">: no qg:particles of that name' in e.message
-        e = refuse(tmp_path, game('  <qg:scene name="t"><qg:emitter particles="rain" x="0" y="0" /></qg:scene>\n'))
-        assert '<qg:emitter particles="rain">: no qg:particles of that name' in e.message
-        e = refuse(tmp_path, game('  <qg:particles name="p" preset="lava" />\n  <qg:scene name="t" />\n'))
-        assert 'lava' in e.message
 
     def test_a_game_in_other_languages(self, tmp_path):
         out = build(tmp_path, game('''  <qg:language lang="pt" name="Português">

@@ -10,6 +10,18 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: Delve (`projects/delve/delve.q`), a dungeon crawl that shows
+  the new tags together: three crypts, a wall a lever opens
+  (`qg:set-tile`) and the skeletons behind it that find their way through
+  it (`ai="pathfind"`), crushers that slide to and fro (`qg:tween`), a
+  vault two levers keep shut, torches and gems (`qg:particles`), each crypt
+  entered saved (Continue on the title), English, Portuguese and Spanish,
+  and a second delver over the network. Its art is drawn by
+  `scripts/art/delve.py` (CC0). A scripted run down to the vault is a
+  playtest tape (`tests/godot/playtests/delve.json`).
+- Laboratory: `if=` on `qg:character`, as on `qg:instance`: placed only when
+  it is true as the scene is built. Delve's second delver is there only in a
+  networked game: `if="{net_status() != 'offline'}"`.
 - Laboratory: `controller="behavior"`, a character made of parts: its
   `<qg:behavior>` lists them, and the body is what they add up to.
   `qg:gravity` (strength=, max-fall=), `qg:walk` (speed=, accel=,

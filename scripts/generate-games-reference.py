@@ -29,6 +29,9 @@ GAMES = [
      'a block with a power-up, walkers to stomp, a pit, a checkpoint, spikes, a flag, a game over'),
     ('Keep', 'projects/keep/keep.q', 'a top-down adventure: six rooms, slimes that wander and bats that '
      'chase, a sword, a key and a locked door, a switch that opens a gate in another room, a chest'),
+    ('Delve', 'projects/delve/delve.q', 'a dungeon crawl for one, or two over the network: a wall a lever opens '
+     'and the skeletons behind it that find their way through, crushers that slide to and fro, a vault two levers '
+     'keep shut; torches, gems, each crypt saved, three languages'),
     ('Drift', 'projects/drift/drift.q', 'a vertical shooter: three waves from the scene\'s seed, '
      'drones and tanks that shoot, a boss with two phases, a high score kept between runs'),
     ('Pong', 'projects/pong/pong.q', 'Godot\'s own Pong demo transcribed tag for node: two players, '

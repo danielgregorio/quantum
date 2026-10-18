@@ -448,14 +448,6 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         if el.get('layer'):
             args.append(json.dumps(el.get('layer')))
         return f'Q.set_tile(self, {", ".join(args)})'
-    if el.tag == 'emit':
-        at = el.get('at')
-        if not scope.has(at):
-            raise GameCompileError(f'<qg:emit at="{at}">: not me/other of this handler nor a character of the scene',
-                                   el.line)
-        script.particles_used.append((el.get('particles'), el.line))
-        return (f'Q.emit({scope.reference(at)}, {json.dumps(el.get("particles"))}, '
-                f'{float(el.get("dx"))!r}, {float(el.get("dy"))!r})')
     if el.tag == 'tween':
         if el.get('seconds') <= 0:
             raise GameCompileError(f'<qg:tween seconds="{el.get("seconds")}">: more than 0', el.line)

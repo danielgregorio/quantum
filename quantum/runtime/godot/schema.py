@@ -638,12 +638,6 @@ TAGS: Dict[str, Tag] = {
          'layer': Attr('str', None, doc='a layer\'s name (a Tiled map\'s); the first with collision, else the '
                        'first, when not given')},
         parents=('handler',)),
-    'emit': Tag(
-        'Plays a qg:particles effect once where a thing is. Only seen: the game\'s state never depends on it.',
-        {'particles': Attr('ident', required=True),
-         'at': Attr('ident', 'me', doc='me, other, a character id, or a q:set holding a thing'),
-         'dx': Attr('float', 0.0), 'dy': Attr('float', 0.0, doc='offset in pixels')},
-        parents=('handler',)),
     'put': Tag(
         'Moves a thing or a character to a point, at once.',
         {'target': Attr('ident', 'other', doc='me, other, a character id, or a q:set holding a thing (thing_at)'),
