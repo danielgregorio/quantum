@@ -44,6 +44,7 @@ _FUNCTIONS = {
     'net_player': 'Q.net_player()',          # this machine's player number (0: none yet)
     'paused': 'Q.paused(self)',              # the scene is paused (qg:pause)
     'talking': 'Q.talking(self)',            # a qg:dialogue is open (qg:say)
+    'tr': 'Q.translate({0})',                # a text in the player's language (qg:language)
 }
 
 _BIN = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*'}

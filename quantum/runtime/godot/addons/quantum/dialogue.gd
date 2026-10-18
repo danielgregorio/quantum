@@ -73,7 +73,7 @@ func quantum_view() -> Dictionary:
 	if line < 0:
 		return {}
 	return {"kind": "dialogue", "name": dialogue_name, "line": line, "lines": _lines.size(),
-		"who": _who.text, "text": _text.text}
+		"who": Q.translate(_who.text), "text": Q.translate(_text.text)}
 
 
 func _show() -> void:
@@ -81,7 +81,7 @@ func _show() -> void:
 	_who.text = _value(spec, "who")
 	_who.visible = _who.text != ""
 	_text.text = _value(spec, "text")
-	Q.event("say", {"dialogue": dialogue_name, "who": _who.text, "text": _text.text})
+	Q.event("say", {"dialogue": dialogue_name, "who": Q.translate(_who.text), "text": Q.translate(_text.text)})
 
 
 func _value(spec: Dictionary, key: String) -> String:

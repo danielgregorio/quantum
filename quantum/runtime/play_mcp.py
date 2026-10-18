@@ -74,13 +74,14 @@ def build_server(tools: Optional[PlayTools] = None):
     @server.tool()
     @_plays
     def play_start(game: str, live: bool = False, host: Optional[int] = None, join: Optional[str] = None,
-                   transport: Optional[str] = None) -> str:
+                   transport: Optional[str] = None, lang: Optional[str] = None) -> str:
         """Opens a game by name (from play_games). Answers the session id, the game's actions,
         the first observation and the scene's map. live: the game runs at its own speed (60
         ticks a second) instead of waiting for each call. host (a port) or join ("host:port"):
         take a seat in a networked game, with a person or another agent (always live);
-        transport "websocket" is the one a browser joins."""
-        return _dump(tools.start(game, live=live, host=host, join=join, transport=transport))
+        transport "websocket" is the one a browser joins. lang: the language of the game's texts,
+        when it has it (play_games lists them; "pt", "es"); by default the game's own."""
+        return _dump(tools.start(game, live=live, host=host, join=join, transport=transport, lang=lang))
 
     @server.tool()
     @_plays

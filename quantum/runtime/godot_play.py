@@ -124,8 +124,9 @@ class PlaySession:
     def __init__(self, project_dir: Union[str, Path], binary: Optional[Path] = None,
                  persist_dir: Optional[Path] = None, timeout: float = 120, frames: bool = False,
                  live: bool = False, host: Optional[int] = None, join: Optional[str] = None,
-                 transport: Optional[str] = None):
-        """``live``: the game runs at its own speed, 60 ticks a second, and does not wait
+                 transport: Optional[str] = None, lang: Optional[str] = None):
+        """``lang``: the language of the game's texts (a ``qg:language``: ``"pt"``); the game's
+        own texts by default, whatever this machine's language. ``live``: the game runs at its own speed, 60 ticks a second, and does not wait
         for requests (against a person, or a peer that does not wait). ``host`` (a port) or
         ``join`` (``"host:port"``) take a seat in a ``qg:multiplayer`` game, as the
         game's ``--q-host``/``--q-join`` do; a networked session is always live."""
@@ -139,6 +140,7 @@ class PlaySession:
             self._net.append(f'--q-join={join}')
         if transport:
             self._net.append(f'--q-transport={transport}')
+        self._net.append(f'--q-lang={lang or "en"}')   # an observation reads the same on every machine
         self._tmp = tempfile.TemporaryDirectory(prefix='quantum-play-')
         # what the game had saved when the session began: a restored game starts from it again
         self._persist_origin = Path(self._tmp.name) / 'persist-origin'

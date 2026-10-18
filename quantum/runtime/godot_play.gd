@@ -447,6 +447,9 @@ func observation() -> Dictionary:
 			var v: Dictionary = n.quantum_view()
 			if not v.is_empty():
 				obs["screen"].append(v)
+	var qn = root.get_node_or_null("Q")
+	if qn != null and not qn.languages.is_empty():   # the texts above are in this language ("" the game's own)
+		obs["lang"] = qn.lang
 	var lock = scene.get("lockstep") if scene != null else null
 	if lock != null and is_instance_valid(lock):   # a networked game: whose seat, and is it running
 		obs["net"] = {"status": lock.status, "player": lock.player, "tick": lock.tick,

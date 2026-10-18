@@ -101,6 +101,19 @@ TAGS: Dict[str, Tag] = {
          'src': Attr('str', required=True, doc='an .ogg or .wav'),
          'loop': Attr('bool', False, doc='plays until qg:stop (music)')},
         parents=('application',)),
+    'language': Tag(
+        'The game\'s texts in another language: each qg:phrase gives one text as written in the game, and '
+        'what it is in this language. A text with no phrase stays as written. The language is ?lang= in a '
+        'web page, --q-lang= on the command line, else the system\'s, when the game has it; `tr(text)` '
+        'translates a text an expression puts together.',
+        {'lang': Attr('str', required=True, doc='a language code: pt, es, zh, pt_BR...'),
+         'name': Attr('str', '', doc='its own name for it (Português)')},
+        parents=('application',)),
+    'phrase': Tag(
+        'One text of the game, in a qg:language.',
+        {'text': Attr('str', required=True, doc='the text exactly as the game shows it (a button, a line, a HUD text)'),
+         'as': Attr('str', required=True, doc='what it is in this language')},
+        parents=('language',)),
     'prefab': Tag(
         'A kind of thing the scene places with qg:instance. With ai= it moves.',
         {'name': Attr('ident', required=True),

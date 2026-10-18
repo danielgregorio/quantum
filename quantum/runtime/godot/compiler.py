@@ -220,6 +220,19 @@ class _Compiler:
             sounds[name] = {'src': self._asset(el.get('src'), el.line), 'loop': el.get('loop')}
             gdprops.attach(sounds[name], 'AudioStreamPlayer', el.gd, f'<qg:sound name="{name}">', el.line)
         self.sounds = sounds
+        languages = {}
+        for lang_el in g.languages:
+            code = str(lang_el.get('lang'))
+            if not re.match(r'^[a-z]{2,3}(_[A-Z]{2})?$', code):
+                raise GameCompileError(f'<qg:language lang="{code}">: a language code, as pt, es or pt_BR', lang_el.line)
+            phrases = {}
+            for ph in lang_el.children:
+                if not (isinstance(ph, Element) and ph.tag == 'phrase'):
+                    raise GameCompileError('<qg:language> holds qg:phrase', getattr(ph, 'line', lang_el.line))
+                if ph.get('text') in phrases:
+                    raise GameCompileError(f'<qg:phrase text="{ph.get("text")}">: twice in lang="{code}"', ph.line)
+                phrases[ph.get('text')] = ph.get('as')
+            languages[code] = {'name': lang_el.get('name') or code, 'phrases': phrases}
         prefabs = {}
         pscript = SceneScript('prefabs', game_state=self.game_state)
         for name, el in g.prefabs.items():
@@ -323,6 +336,7 @@ class _Compiler:
                 'multiplayer': self.multiplayer,
                 'sheets': sheets,
                 'sounds': sounds,
+                'languages': languages,
                 'prefabs': prefabs,
                 'scenes': scenes,
             },

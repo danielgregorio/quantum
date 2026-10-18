@@ -153,10 +153,10 @@ func quantum_view() -> Dictionary:
 		var spec: Dictionary = _items[i]["spec"]
 		var item := {"shown": _shown(i)}
 		if spec["kind"] == "button":
-			item["button"] = str(_scene.call(spec["label_method"])) if spec.get("label_method") != null \
-				else str(spec.get("label", ""))
+			item["button"] = Q.translate(_scene.call(spec["label_method"])) if spec.get("label_method") != null \
+				else Q.translate(spec.get("label", ""))
 		else:
-			item["field"] = str(spec.get("label", ""))
+			item["field"] = Q.translate(spec.get("label", ""))
 			item["value"] = str(_read(spec["bind"], spec.get("game", false)))
 		items.append(item)
 	return {"kind": "menu", "player": player, "shown": active(), "focus": focus, "items": items}

@@ -86,6 +86,12 @@ def test_a_countdown_is_one_set_from_its_first_value_to_its_last():
         {'kind': 'set', 'name': 'wait', 'from': 10, 'to': 0, 'tick': 5}]
 
 
+def test_the_games_list_says_their_languages():
+    games = {g['game']: g for g in PlayTools().games()}
+    assert games['rpg']['languages'] == ['pt', 'es']
+    assert 'languages' not in games['pong']
+
+
 def test_the_repository_declares_the_server():
     servers = json.loads((REPO / '.mcp.json').read_text())['mcpServers']
     assert servers['quantum-play']['args'] == ['-m', 'quantum.runtime.play_mcp']

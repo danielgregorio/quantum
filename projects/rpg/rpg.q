@@ -20,6 +20,50 @@
 
   <!-- Every tile of the three layers is a picture of its own; the Grid
        layer's are the ones that stop a walker. -->
+  <!-- beyond the demo: the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="Hey, it's a good time to have a JRPG fight, right?" as="Ei, é uma boa hora para uma luta de JRPG, não acha?" />
+    <qg:phrase text="Let me introduce myself, I'm your OPPONENT." as="Deixa eu me apresentar: sou o seu OPONENTE." />
+    <qg:phrase text="Enough talking. Let's fight!" as="Chega de conversa. Vamos lutar!" />
+    <qg:phrase text="Just a key..." as="Só uma chave..." />
+    <qg:phrase text="I'll keep it anyway." as="Vou guardar mesmo assim." />
+    <qg:phrase text="A potion! In a fight, it gives back 5 life." as="Uma poção! Numa luta, ela devolve 5 de vida." />
+    <qg:phrase text="Congratulations, you won!" as="Parabéns, você venceu!" />
+    <qg:phrase text="Aha! I won, maybe you can try again next time." as="Rá! Eu venci, quem sabe você tenta de novo outra vez." />
+    <qg:phrase text="UNKNOWN" as="DESCONHECIDO" />
+    <qg:phrase text="OPPONENT" as="OPONENTE" />
+    <qg:phrase text="PLAYER" as="JOGADOR" />
+    <qg:phrase text="Potions" as="Poções" />
+    <qg:phrase text="Keys" as="Chaves" />
+    <qg:phrase text="Player" as="Jogador" />
+    <qg:phrase text="Opponent" as="Oponente" />
+    <qg:phrase text="Attack" as="Atacar" />
+    <qg:phrase text="Defend" as="Defender" />
+    <qg:phrase text="Potion" as="Poção" />
+    <qg:phrase text="Flee" as="Fugir" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="Hey, it's a good time to have a JRPG fight, right?" as="Oye, es un buen momento para una pelea de JRPG, ¿no crees?" />
+    <qg:phrase text="Let me introduce myself, I'm your OPPONENT." as="Déjame presentarme: soy tu OPONENTE." />
+    <qg:phrase text="Enough talking. Let's fight!" as="Basta de charla. ¡A pelear!" />
+    <qg:phrase text="Just a key..." as="Solo una llave..." />
+    <qg:phrase text="I'll keep it anyway." as="Me la quedo de todos modos." />
+    <qg:phrase text="A potion! In a fight, it gives back 5 life." as="¡Una poción! En una pelea, devuelve 5 de vida." />
+    <qg:phrase text="Congratulations, you won!" as="¡Felicidades, ganaste!" />
+    <qg:phrase text="Aha! I won, maybe you can try again next time." as="¡Ajá! Gané, tal vez puedas intentarlo de nuevo la próxima vez." />
+    <qg:phrase text="UNKNOWN" as="DESCONOCIDO" />
+    <qg:phrase text="OPPONENT" as="OPONENTE" />
+    <qg:phrase text="PLAYER" as="JUGADOR" />
+    <qg:phrase text="Potions" as="Pociones" />
+    <qg:phrase text="Keys" as="Llaves" />
+    <qg:phrase text="Player" as="Jugador" />
+    <qg:phrase text="Opponent" as="Oponente" />
+    <qg:phrase text="Attack" as="Atacar" />
+    <qg:phrase text="Defend" as="Defender" />
+    <qg:phrase text="Potion" as="Poción" />
+    <qg:phrase text="Flee" as="Huir" />
+  </qg:language>
+
   <qg:tileset name="world" src="assets/tiles.png" tile="64" />
   <qg:spritesheet name="pawns" src="assets/pawns.png" tile="64" />
   <qg:spritesheet name="fighters" src="assets/fighters.png" tile="128" />
