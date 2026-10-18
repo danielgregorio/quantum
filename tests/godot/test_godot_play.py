@@ -254,6 +254,7 @@ def test_an_agent_leaves_keeps_first_room_by_the_map_and_the_view(keep, godot):
     """Phase 2's check: the way out found on the map, the player found in the view, nothing else."""
     from collections import deque
     with Counted(keep, binary=godot) as game:
+        assert game.until("scene == 'room-1'", tap=['select'], max_ticks=5)['scene'] == 'room-1'   # New game
         cells = game.map()['cells']
         seen = game.view()
         tile = int(seen['cell'])
@@ -293,7 +294,7 @@ def test_an_agent_leaves_keeps_first_room_by_the_map_and_the_view(keep, godot):
         if seen['scene'] == 'room-1':                                         # at the opening: on, out of the room
             seen = game.until('changed scene', hold=[names[step][0]], max_ticks=120)
         assert seen['scene'] == 'room-2', seen['scene']
-        assert game.requests < 12
+        assert game.requests < 13
 
 
 @pytest.mark.skipif(shutil.which('xvfb-run') is None, reason='frame needs a virtual display (xvfb-run)')
