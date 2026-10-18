@@ -6,14 +6,28 @@ are what the rooms are: the character walks 70 px/s (1.17 px per tick),
 rooms are 252 px wide, exits sit in the walls.
 """
 
+import json
 from pathlib import Path
 
 import pytest
 
 from quantum.runtime.godot_bin import check_project
-from quantum.runtime.godot_replay import replay, tape_from_holds
+from quantum.runtime import godot_replay
+from quantum.runtime.godot_replay import tape_from_holds
 
 KEEP = Path(__file__).resolve().parents[2] / 'projects' / 'keep' / 'keep.q'
+
+# Before room 1, the title: New game is its first button. The tapes below are
+# written from room 1's first tick; replay() presses New game and runs them
+# TITLE ticks later.
+TITLE = 2
+
+
+def replay(project, ticks, tape=None, **kwargs):
+    shifted = tape_from_holds([('select', 0, 1)])
+    for tick, events in (tape or {}).items():
+        shifted.setdefault(tick + TITLE, []).extend(events)
+    return godot_replay.replay(project, ticks + TITLE, shifted, **kwargs)
 
 
 @pytest.fixture(scope='module')
@@ -76,6 +90,17 @@ def test_walking_into_an_exit_changes_room_and_arrives_at_the_matching_exit(godo
     assert player(state)['y'] == 117.0
     assert 30 < player(state)['x'] < 60
     assert replay(keep, 230, tape_from_holds(TO_ROOM_2), binary=godot) and scene(state) == 'room-2'
+
+
+def test_each_room_entered_saves_the_game_and_the_title_continues_there(godot, keep, tmp_path):
+    replay(keep, 200, tape_from_holds(TO_ROOM_2), binary=godot, persist_dir=tmp_path)
+    saved = json.loads((tmp_path / 'quantum-save.json').read_text())
+    assert saved['scene'] == 'room-2' and saved['game']['hearts'] == 3
+    # the next run: down to Continue, select; room 2 starts over (a bat, the player where the room puts it)
+    back = godot_replay.replay(keep, 10, tape_from_holds([('down', 1, 2), ('select', 3, 4)]),
+                               binary=godot, persist_dir=tmp_path)
+    assert scene(back) == 'room-2'
+    assert game(back)['hearts'] == 3
 
 
 def test_the_bat_chases_within_sight_and_hurts_once_per_cooldown(godot, keep):

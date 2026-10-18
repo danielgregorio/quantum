@@ -63,6 +63,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
   every tick the same: the engine runs more ticks a second and slows its
   clock as much. Not under `rollback=`, where the game still ends. In CI a
   third Chromium page takes a free seat in Pong through the relay.
+- Laboratory: `<qg:scene save="true">`: entering the scene saves the game,
+  to continue there, as the rooms of an adventure do. Keep opens on a
+  title (New game, Continue), and each room entered saves it. In CI, the
+  save survives a page reload in Chromium (`scripts/check-save-in-browser.py`).
 - Laboratory: `<qg:save scene="map">` and `<qg:continue>`: a game saved
   to continue later. A save is the game state (every `q:set` of
   `q:application`) and the scene to come back to, which starts over; one
