@@ -14,9 +14,13 @@ room's Godot, which takes no seat. The check asserts that:
 - they play about 20 seconds, each moving its paddle, with no desync (the
   lockstep compares both games every second; a page reports
   ``window.quantumNet``);
-- when one page leaves, the relay closes the room.
+- when one page leaves, the other waits, and a third page that opens the
+  same link takes the free seat: it catches up the game so far and both
+  play on, with no desync;
+- when both leave, the relay closes the room.
 
-A screenshot of each page is left next to the build (relay-1.png, relay-2.png).
+A screenshot of each page is left next to the build (relay-1.png, relay-2.png,
+and relay-3.png of the one who came back).
 """
 
 import asyncio
@@ -128,14 +132,41 @@ def main(argv) -> int:
                     problems.append(f'page {i + 1} says {net!r} after {PLAY:.0f} s of play')
             pages[1].close()
             pages.pop()
-            for _ in range(100):
-                if not relay.rooms:
-                    break
-                pages[0].wait_for_timeout(100)
-            if _wait(pages[0], 'window.quantumNet === "ended"', 10) is False:
-                problems.append(f'page 1 did not see the other leave: {pages[0].evaluate("window.quantumNet")!r}')
-            pages[0].close()
-            pages.pop()
+            if not _wait(pages[0], 'window.quantumNet === "waiting"', 10):
+                problems.append(f'page 1 did not wait for the other: {pages[0].evaluate("window.quantumNet")!r}')
+            # someone opens the same link and joins: they take the free seat
+            page = browser.new_page(viewport={'width': 1280, 'height': 720})
+            page.on('console', lambda m: logs.append((3, m.type, m.text)))
+            page.goto(url)
+            pages.append(page)
+            if not _wait(page, 'window.quantumScene === "title"', BOOT):
+                return _report(problems + ['page 3 did not open on the title'] + _console(logs))
+            page.wait_for_timeout(1500)
+            page.mouse.click(4, 4)
+            page.wait_for_timeout(300)
+            for _ in range(3):
+                page.keyboard.press('s', delay=150)
+                page.wait_for_timeout(250)
+            page.keyboard.press('Enter', delay=150)
+            for i, p in enumerate(pages):
+                if not _wait(p, 'window.quantumNet === "playing"', 60):
+                    problems.append(f'after the rejoin page {i * 2 + 1} says {p.evaluate("window.quantumNet")!r}')
+            end, turn = time.monotonic() + 8.0, 0
+            while time.monotonic() < end:
+                for p in pages:
+                    p.keyboard.down('sw'[turn % 2])
+                pages[0].wait_for_timeout(700)
+                for p in pages:
+                    p.keyboard.up('sw'[turn % 2])
+                turn += 1
+            for i, p in enumerate(pages):
+                net = p.evaluate('window.quantumNet')
+                if net != 'playing':
+                    problems.append(f'page {i * 2 + 1} says {net!r} after playing on')
+            page.screenshot(path=str(root / 'pong' / 'relay-3.png'))
+            for p in list(pages):
+                p.close()
+                pages.remove(p)
             for _ in range(100):
                 if not relay.rooms:
                     break

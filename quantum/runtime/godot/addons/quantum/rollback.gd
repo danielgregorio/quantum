@@ -38,6 +38,12 @@ func setup(spec: Dictionary, game_: Node, host_: String, port_: int) -> void:
 	super.setup(spec, game_, host_, port_)
 
 
+# A rollback game ends when a player leaves: its snapshots are not kept from
+# the start, and its ticks run before their inputs are certain.
+func can_rejoin() -> bool:
+	return false
+
+
 func request_scene(name_: String, fade: float = 0.0) -> void:
 	if _pending == null:
 		_pending = [_sim_tick, name_, fade]
@@ -171,7 +177,7 @@ func _resimulate(from: int) -> void:
 	rollbacks += 1
 	Q.resimulating = true
 	_load(_snapshots[from])
-	var dt := 1.0 / Engine.physics_ticks_per_second
+	var dt := 1.0 / Q.TICK_RATE
 	var until := tick
 	for k in range(from, until):
 		_sim_tick = k

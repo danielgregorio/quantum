@@ -124,7 +124,7 @@ Goes inside: `q:application`.
 
 ### `qg:multiplayer`
 
-The game is played by several people, each on their own machine, in lockstep: every peer runs the whole game and a tick runs when every player's input for it has arrived. One hosts (`--q-host=PORT`, player 1), the others join (`--q-join=HOST:PORT`, players 2.. in order). The players' characters are told apart by player=; nobody declares keys for players 2..
+The game is played by several people, each on their own machine, in lockstep: every peer runs the whole game and a tick runs when every player's input for it has arrived. One hosts (`--q-host=PORT`, player 1), the others join (`--q-join=HOST:PORT`, players 2.. in order). The players' characters are told apart by player=; nobody declares keys for players 2... A player who leaves can come back: the others wait, and the next to join takes the seat, catching up the game so far (not under rollback=, where the game ends).
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|

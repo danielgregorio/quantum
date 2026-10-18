@@ -55,7 +55,7 @@ func setup(spec: Dictionary) -> void:
 	_on_ko = str(spec.get("on_ko", "")) if spec.get("on_ko") != null else ""
 	motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
 	collision_mask = 0
-	var half_step := gravity / (2.0 * Engine.physics_ticks_per_second)
+	var half_step := gravity / (2.0 * Q.TICK_RATE)
 	_jump_speed = half_step + sqrt(half_step * half_step + 2.0 * gravity * jump_height)
 
 
@@ -272,7 +272,7 @@ func _start_move(name_: String) -> void:
 
 func _advance_move(other: Node) -> void:
 	var frames: Array = _move["frames"]
-	var per_frame := maxi(1, int(round(Engine.physics_ticks_per_second / float(_move["fps"]))))
+	var per_frame := maxi(1, int(round(Q.TICK_RATE / float(_move["fps"]))))
 	var total := frames.size() * per_frame
 	var active_start := int(_move["active"]) * per_frame
 	if not _hit_done and _move_tick >= active_start and _move_tick < active_start + per_frame and other != null:

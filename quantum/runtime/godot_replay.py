@@ -101,7 +101,7 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
                  binary: Optional[Path] = None, timeout: float = 300,
                  lobby_tapes: Optional[List[Optional[Tape]]] = None, transport: Optional[str] = None,
                  latency_ms: Optional[List[int]] = None, net_report: bool = False,
-                 relay=False) -> List[dict]:
+                 relay=False, rejoin: Optional[Tuple[int, Optional[Tape]]] = None) -> List[dict]:
     """Run the project under qg:multiplayer: one Godot per player, on localhost.
 
     The first tape is player 1's, who hosts; the others join in order. Each
@@ -121,6 +121,10 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
     seatless Godot hosts (``--q-relay``, as ``quantum relay`` starts it) and
     every tape joins it, player 1 too, over WebSocket; a URL instead
     (``ws://host:port/pong/room``) is a ``quantum relay``'s room to join.
+    With ``rejoin=(tick, tape)``, the last peer leaves at that tick of the
+    networked game, and once it is gone another joins and takes its seat,
+    playing ``tape``: its state is the last of the states returned, in the
+    place of the one that left.
     """
     import subprocess
     import time
@@ -164,6 +168,8 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
                 peer_args.append(f'--q-latency={latency_ms[i]}')
             if net_report:
                 peer_args.append('--net-report')
+            if rejoin is not None and i == len(tapes) - 1:
+                peer_args.append(f'--leave-at={rejoin[0]}')
             log = open(Path(tmp) / f'log{i}.txt', 'w', encoding='utf-8')
             procs.append((subprocess.Popen(
                 [str(binary), '--headless', '--path', str(project_dir), '-s', str(REPLAY_SCRIPT), '--',
@@ -175,6 +181,34 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
                 # relay the seats go in the order the players arrive, so they arrive in order
                 time.sleep(1.0)
         deadline = time.time() + timeout
+        if rejoin is not None:
+            # the one who leaves goes; then someone joins in its place, with its own tape
+            leaver, leaver_log = procs[-1]
+            try:
+                leaver.wait(timeout=max(1.0, deadline - time.time()))
+            except subprocess.TimeoutExpired:
+                for p_, _ in procs:
+                    p_.kill()
+                raise ReplayError(f'the peer that leaves did not leave within {timeout}s')
+            leaver_log.close()
+            time.sleep(0.5)
+            i = len(tapes)
+            tape_path, out_path = Path(tmp) / f'tape{i}.json', Path(tmp) / f'state{i}.json'
+            (Path(tmp) / f'persist{i}').mkdir()
+            write(tape_path, rejoin[1])
+            join = [f'--q-join={relay_url or f"127.0.0.1:{port}"}'] + (['--q-transport=websocket'] if relay else [])
+            if transport:
+                join.append(f'--q-transport={transport}')
+            log = open(Path(tmp) / f'log{i}.txt', 'w', encoding='utf-8')
+            procs[-1] = (subprocess.Popen(
+                [str(binary), '--headless', '--path', str(project_dir), '-s', str(REPLAY_SCRIPT), '--',
+                 f'--ticks={ticks}', f'--out={out_path}', f'--persist-dir={Path(tmp) / f"persist{i}"}',
+                 f'--tape={tape_path}', *join],
+                stdout=log, stderr=subprocess.STDOUT), log)
+            outs[-1] = out_path
+            logs = list(range(len(tapes) - 1)) + [i]
+        else:
+            logs = list(range(len(tapes)))
         try:
             for proc, log in procs:
                 remaining = max(1.0, deadline - time.time())
@@ -191,7 +225,7 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
                 relay_proc.wait()
         states = []
         for i, out_path in enumerate(outs):
-            output = (Path(tmp) / f'log{i}.txt').read_text(encoding='utf-8')
+            output = (Path(tmp) / f'log{logs[i]}.txt').read_text(encoding='utf-8')
             errors = script_errors(output)
             if not out_path.is_file():
                 raise ReplayError(f'peer {i + 1} wrote no state' + (': ' + '; '.join(errors) if errors else f'\n{output}'))

@@ -53,6 +53,21 @@ def test_through_a_relay_that_takes_no_seat(godot, project):
     assert peers[0]['court'] == hosted[0]['court']
 
 
+@pytest.mark.parametrize('relay', [False, True], ids=['hosted', 'relay'])
+def test_a_player_who_leaves_can_come_back(godot, project, relay):
+    # player 2 leaves at tick 150; the game waits; someone joins in their place, catches up
+    # (the whole game so far, fast) and plays on: the same game on both, to the last tick
+    player1 = tape_from_holds([('down', 0, 60), ('up', 250, 280)])
+    player2 = tape_from_holds([('up', 0, 100)])
+    back = tape_from_holds([('down', 300, 360)])
+    peers = replay_peers(project, 420, [player1, player2], binary=godot, relay=relay, rejoin=(150, back))
+    assert peers[0] == peers[1]
+    right = peers[0]['court']['nodes']['right']['y']
+    stayed = replay_peers(project, 420, [player1, player2], binary=godot, relay=relay, rejoin=(150, {}))
+    assert stayed[0] == stayed[1]
+    assert right > stayed[0]['court']['nodes']['right']['y']   # the one who came back moved the paddle down
+
+
 FREEZE = """extends SceneTree
 # A tick every other frame, a wait (the lockstep's freeze) between: one area
 # slides into another and stays. It touched once, however often it waited.

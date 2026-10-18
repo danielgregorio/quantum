@@ -54,6 +54,15 @@ alter the behaviour of an existing app is listed under **Breaking**.
   a session picks one (`lang=`, `quantum play --lang`, `play_start`), and
   the game's own texts are the default. The RPG is in Portuguese and
   Spanish too.
+- Laboratory: a player who leaves a networked game can come back. The
+  host (or `quantum relay`) keeps every input of the game; the others wait
+  (`net_status()` is `waiting`), and the next to join, from the same
+  address or room link, takes the free seat: they get the inputs so far and
+  run the game from its start 16 times faster (`catching up`), checking
+  the state the players agreed on, then play on. Running faster keeps
+  every tick the same: the engine runs more ticks a second and slows its
+  clock as much. Not under `rollback=`, where the game still ends. In CI a
+  third Chromium page takes a free seat in Pong through the relay.
 - Laboratory: `<qg:save scene="map">` and `<qg:continue>`: a game saved
   to continue later. A save is the game state (every `q:set` of
   `q:application`) and the scene to come back to, which starts over; one

@@ -24,6 +24,7 @@ var lobby_ticks := 0         # with a game tape, the ticks before the networked 
 const LOBBY_LIMIT := 6000
 var out_path := ""
 var net_report := false      # --net-report: the rollback's own counts in the dump, under "_net"
+var leave_at := -1           # --leave-at=N: this peer leaves the networked game at its tick N, without a dump
 var scene: Node
 
 
@@ -57,6 +58,8 @@ func _initialize() -> void:
 			out_path = a.substr(6)
 		elif a == "--net-report":
 			net_report = true
+		elif a.begins_with("--leave-at="):
+			leave_at = int(a.substr(11))
 	var main: String = ProjectSettings.get_setting("application/run/main_scene", "")
 	if main == "":
 		push_error("replay: the project has no main scene")
@@ -105,6 +108,9 @@ func _physics_process(_delta: float) -> bool:
 		if lockstep.desynced:
 			return _finish(lockstep)
 		var t: int = lockstep.tick
+		if leave_at >= 0 and t >= leave_at:
+			lockstep.leave()
+			return true
 		if "confirmed" in lockstep:
 			# the rollback runs ahead on guesses: it stops at --ticks, and the state is
 			# dumped once every input up to there is known and every guess corrected
