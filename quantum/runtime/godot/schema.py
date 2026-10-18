@@ -258,7 +258,9 @@ TAGS: Dict[str, Tag] = {
          'air-jump-boost': Attr('float', 1.0, doc='platformer: an air jump multiplies the speed across by this'),
          'jump-cut': Attr('float', 0.0, doc='platformer: releasing the button while rising multiplies the rise by '
                                             'this, once (0: the extra gravity of variable-jump instead)'),
-         'scale': Attr('float', 1.0, doc='the picture\'s size, times its frame (the hitbox stays as given)')},
+         'scale': Attr('float', 1.0, doc='the picture\'s size, times its frame (the hitbox stays as given)'),
+         'if': Attr('expr', None, doc='placed only when this is true as the scene is built: a second player\'s '
+                                      'character only in a networked game, `net_status() != \'offline\'`')},
         parents=('scene',)),
     'instance': Tag(
         'A prefab placed in the scene.',
