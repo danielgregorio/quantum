@@ -96,6 +96,8 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 					characters[node_spec["id"]] = walker
 					scene.add_child(walker)
 				else:
+					if node_spec.get("if") != null and not scene.call(node_spec["if"]):
+						continue
 					var body := _character(node_spec, game, scene)
 					Q.apply_gd(body, node_spec.get("gd"))
 					characters[node_spec["id"]] = body

@@ -88,6 +88,7 @@ It makes a room of its own and a link to send to a friend.
 |---|---|---|---|---|
 | **Hopper** | A platformer: a world map, three levels (one drawn in Tiled), a block with a power-up, walkers to stomp, a pit, a checkpoint, spikes, a flag | [browser](https://quantumframework.net/games/hopper/) | [Linux](https://quantumframework.net/games/hopper/hopper-linux.zip) · [Windows](https://quantumframework.net/games/hopper/hopper-windows.zip) | [hopper.q](https://github.com/danielgregorio/quantum/blob/main/projects/hopper/hopper.q) |
 | **Keep** | A top-down adventure: six rooms, slimes and bats, a sword, a key and a locked door, a switch that opens a gate elsewhere, a chest | [browser](https://quantumframework.net/games/keep/) | [Linux](https://quantumframework.net/games/keep/keep-linux.zip) · [Windows](https://quantumframework.net/games/keep/keep-windows.zip) | [keep.q](https://github.com/danielgregorio/quantum/blob/main/projects/keep/keep.q) |
+| **Delve** | A dungeon crawl: a wall a lever opens and the skeletons that come through it, crushers, a vault two levers keep shut; alone, or two delvers over the network | [browser](https://quantumframework.net/games/delve/) | [Linux](https://quantumframework.net/games/delve/delve-linux.zip) · [Windows](https://quantumframework.net/games/delve/delve-windows.zip) | [delve.q](https://github.com/danielgregorio/quantum/blob/main/projects/delve/delve.q) |
 | **Drift** | A vertical shooter: three waves from the scene's seed, drones and tanks that shoot, a boss with two phases, a high score kept between runs | [browser](https://quantumframework.net/games/drift/) | [Linux](https://quantumframework.net/games/drift/drift-linux.zip) · [Windows](https://quantumframework.net/games/drift/drift-windows.zip) | [drift.q](https://github.com/danielgregorio/quantum/blob/main/projects/drift/drift.q) |
 | **Pong** | Godot's own Pong demo transcribed: two paddles, a ball that bounces; two players on one keyboard or over the network | [browser](https://quantumframework.net/games/pong/) | [Linux](https://quantumframework.net/games/pong/pong-linux.zip) · [Windows](https://quantumframework.net/games/pong/pong-windows.zip) | [pong.q](https://github.com/danielgregorio/quantum/blob/main/projects/pong/pong.q) |
 | **Creeps** | Godot's "Dodge the Creeps" tutorial game transcribed: creeps from the border at random speeds, a point a second | [browser](https://quantumframework.net/games/creeps/) | [Linux](https://quantumframework.net/games/creeps/creeps-linux.zip) · [Windows](https://quantumframework.net/games/creeps/creeps-windows.zip) | [creeps.q](https://github.com/danielgregorio/quantum/blob/main/projects/creeps/creeps.q) |
@@ -101,6 +102,7 @@ It makes a room of its own and a link to send to a friend.
 
 - **Hopper**: arrows or WASD, Space/Z/X to jump; on the map, jump enters a level.
 - **Keep**: arrows or WASD; Space swings the sword.
+- **Delve**: arrows or WASD; Space swings the sword; walk into a lever to pull it. Escape leaves the lobby.
 - **Drift**: arrows or WASD; Space fires.
 - **Pong**: W/S for the left paddle, the arrows for the right one.
 - **Creeps**: arrows or WASD; Space or Enter starts.

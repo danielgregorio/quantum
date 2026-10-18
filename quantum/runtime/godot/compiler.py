@@ -776,6 +776,14 @@ class _Compiler:
                 if el.get('bounds') is not None and el.get('controller') not in ('ship', 'topdown'):
                     raise GameCompileError('bounds= is for controller="ship" or "topdown"', el.line)
                 behavior = self._behavior(el)
+                condition = None
+                if el.get('if') is not None:
+                    if controller == 'map':
+                        raise GameCompileError('if= is not for controller="map"', el.line)
+                    conditions += 1
+                    condition = f'_q_if_{conditions}'
+                    expr = compile_expression(el.get('if'), script.scope(), el.line)
+                    script.functions.append(f'func {condition}() -> bool:\n\treturn {expr}\n')
                 nodes.append({
                     'kind': 'character', 'id': cid, 'controller': el.get('controller'),
                     'player': player, 'axis': el.get('axis'),
@@ -799,7 +807,7 @@ class _Compiler:
                     'on_collision': handlers, 'on_hit': hits, 'on_fall': on_fall,
                     'health': el.get('health'), 'facing': el.get('facing'), 'moves': moves, 'on_ko': on_ko,
                     'step_frames': el.get('step-frames'), 'diagonal': el.get('diagonal'),
-                    'behavior': behavior,
+                    'behavior': behavior, 'if': condition,
                 })
                 self._node_elements.append(el)
             elif el.tag == 'instance':
