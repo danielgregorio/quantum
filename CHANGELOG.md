@@ -10,6 +10,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: a networked game says on the screen when it cannot go on as
+  usual: waiting for the other player to come back, catching up, the
+  other player left, or the games differ. The notice is over the scene, in
+  the player's language (pt and es come with it), in the play protocol's
+  screen (`kind: notice`) and in a web page's `window.quantumNotice`. In
+  CI the waiting page of the relay check is asked for it.
 - Laboratory: `<qg:particles name="sparkle" preset="stars" color="#ffe060">`,
   a particle effect from a preset (puff, sparks, smoke, dust, fire, rain,
   snow, confetti, stars) and a few overrides (color, amount, lifetime,

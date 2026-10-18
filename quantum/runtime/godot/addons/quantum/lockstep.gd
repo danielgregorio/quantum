@@ -461,10 +461,66 @@ func _process(_delta: float) -> void:
 	if said != _reported:
 		_reported = said
 		Q.web_report("quantumNet", said)
+		_show_notice()
 	var now := Time.get_ticks_msec()
 	while not _outbox.is_empty() and int(_outbox[0][0]) <= now and not ended:
 		var f: Array = _outbox.pop_front()
 		_frame.rpc(f[1], f[2], f[3], f[4], f[5])
+
+
+# --- what the players are told while the game cannot go on as usual ---
+
+const NOTICES := {
+	"waiting": "Waiting for the other player to come back",
+	"catching up": "Catching up",
+	"ended": "The other player left",
+}
+var _notice: Label = null
+
+
+# The notice for where the network is, over the scene, in the player's
+# language ("" when the game goes on as usual). The relay shows nothing.
+func notice() -> String:
+	if relay or not started:
+		return ""
+	if desynced:
+		return "The games differ: the match stopped"
+	return NOTICES.get(status, "")
+
+
+func _show_notice() -> void:
+	var text := notice()
+	Q.web_report("quantumNotice", Q.translate(text))
+	if text == "":
+		if _notice != null:
+			_notice.get_parent().visible = false
+		return
+	if _notice == null:
+		var layer := CanvasLayer.new()
+		layer.layer = 100   # over the scene and its HUD
+		layer.name = "Notice"
+		var panel := PanelContainer.new()
+		panel.set_anchors_preset(Control.PRESET_CENTER)
+		var box := StyleBoxFlat.new()
+		box.bg_color = Color(0, 0, 0, 0.75)
+		box.set_content_margin_all(12)
+		panel.add_theme_stylebox_override("panel", box)
+		_notice = Label.new()
+		_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		panel.add_child(_notice)
+		layer.add_child(panel)
+		add_child(layer)
+	_notice.text = text   # a Label shows its text translated (qg:language)
+	var panel_node: Control = _notice.get_parent()
+	panel_node.reset_size()
+	panel_node.position = (get_viewport().get_visible_rect().size - panel_node.size) / 2.0
+	_notice.get_parent().get_parent().visible = true
+
+
+# What a player reads (the play protocol): the notice, while there is one.
+func quantum_view() -> Dictionary:
+	var text := notice()
+	return {} if text == "" else {"kind": "notice", "text": Q.translate(text)}
 
 
 @rpc("any_peer", "call_remote", "reliable")
