@@ -379,6 +379,24 @@ class TestScenesMapAndGameState:
                                   '</qg:on-input></qg:scene>\n'))
         assert 'nowhere' in e.message
 
+    def test_a_tween(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="hero" controller="topdown" sheet="k" frame="0" x="10" y="10" hitbox="8x8" />
+    <qg:timer after="1"><qg:tween target="hero" property="y" to="{40 + 2}" seconds="0.5" trans="back" ease="in-out" repeat="-1" yoyo="true" /></qg:timer>
+    <qg:timer after="2"><qg:tween target="hero" property="alpha" from="1" to="0" /></qg:timer>
+  </qg:scene>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.tween(get_node("hero"), "y", (40 + 2), 0.5, "back", "in-out", -1, true)' in script
+        assert 'Q.tween(get_node("hero"), "alpha", 0, 0.5, "sine", "out", 0, false, 1)' in script
+        e = refuse(tmp_path, game('  <qg:scene name="t"><qg:timer after="1"><qg:tween target="nobody" property="x" to="1" />'
+                                  '</qg:timer></qg:scene>\n'))
+        assert 'target="nobody"' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="t"><qg:character id="h" controller="topdown" sheet="k" frame="0" '
+                                  'x="0" y="0" hitbox="8x8" /><qg:timer after="1"><qg:tween target="h" property="x" to="1" '
+                                  'seconds="0" /></qg:timer></qg:scene>\n'))
+        assert 'more than 0' in e.message
+
     def test_a_game_in_other_languages(self, tmp_path):
         out = build(tmp_path, game('''  <qg:language lang="pt" name="Português">
     <qg:phrase text="Attack" as="Atacar" />
@@ -1471,6 +1489,16 @@ class TestLobby:
 
 
 class TestRollback:
+    def test_a_tween_is_not_taken_under_rollback(self, tmp_path):
+        e = refuse(tmp_path, HEAD + '''  <qg:multiplayer players="2" rollback="6" start="fight" />
+  <qg:scene name="fight">
+    <qg:character id="a" controller="fighter" sheet="c" x="10" y="10" hitbox="8x8" />
+    <qg:character id="b" controller="fighter" player="2" sheet="c" x="40" y="10" hitbox="8x8" />
+    <qg:timer after="1"><qg:tween target="a" property="scale" to="2" /></qg:timer>
+  </qg:scene>
+''' + TAIL)
+        assert 'has a qg:tween, which rollback cannot take back yet' in e.message
+
     def test_rollback_on_a_scene_of_fighters(self, tmp_path):
         out = build(tmp_path, HEAD + '''  <qg:input action="punch" keys="J" />
   <qg:multiplayer players="2" delay="1" rollback="6" start="fight" />

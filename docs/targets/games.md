@@ -980,6 +980,24 @@ Runs its handler after so many ticks, or every so many ticks, in this scene.
 
 Goes inside: `qg:scene`.
 
+### `qg:tween`
+
+Eases a property of a thing from what it is to a value, over some seconds: a coin that rises, a door that slides, a pulse. It runs in the game's ticks, so a replay and every peer see the same; it stops while the scene is paused, and a new tween of the same property replaces it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `target` | a name | `me` | me, other, a character id, or a q:set holding a thing |
+| `property` | `x` / `y` / `rotation` / `scale` / `alpha` | required | x, y: where it is (collisions see it); rotation (degrees), scale, alpha: its picture |
+| `to` | an expression | required |  |
+| `from` | an expression |  | where it starts (what it is now when not given) |
+| `seconds` | number | `0.5` |  |
+| `trans` | `linear` / `sine` / `quad` / `cubic` / `back` / `bounce` / `elastic` | `sine` | the curve |
+| `ease` | `in` / `out` / `in-out` | `out` | which end of the curve is slow |
+| `repeat` | integer | `0` | times it plays again (-1: for ever) |
+| `yoyo` | true / false | `false` | each repeat goes back the other way |
+
+Goes inside: a handler.
+
 ## Statements
 
 Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs.
@@ -1762,6 +1780,11 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
     <qg:instance prefab="Key" name="key-1" x="126" y="99" if="{'key-1' not in taken}" />
     <qg:instance prefab="Heart" name="heart-1" x="45" y="45" if="{'heart-1' not in taken}" />
+    <!-- what can be picked up breathes, so the eye finds it (only its picture: where it is stays) -->
+    <qg:timer after="1">
+      <qg:tween target="key-1" property="scale" to="1.3" seconds="0.6" repeat="-1" yoyo="true" />
+      <qg:tween target="heart-1" property="scale" to="1.3" seconds="0.6" repeat="-1" yoyo="true" />
+    </qg:timer>
     <qg:instance prefab="Slime" name="slime-3" x="190" y="99" if="{'slime-3' not in taken}" />
 
     <qg:exit name="south" x="117" y="220" width="36" height="8" to="room-2" at="north" />
@@ -1933,7 +1956,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </qg:on-collision>
     </qg:character>
 
-    <qg:instance prefab="Chest" x="190" y="108" />
+    <qg:instance prefab="Chest" name="chest" x="190" y="108" />
+    <qg:timer after="1">
+      <qg:tween target="chest" property="rotation" from="-8" to="8" seconds="0.4" repeat="-1" yoyo="true" />
+    </qg:timer>
 
     <qg:exit name="west" x="-4" y="99" width="8" height="36" to="room-5" at="east" />
 

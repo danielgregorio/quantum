@@ -56,6 +56,7 @@ class SceneScript:
     function_names: List[str] = field(default_factory=list)
     sounds_played: List[str] = field(default_factory=list)
     prefabs_used: List[tuple] = field(default_factory=list)   # (name, line) from spawn/swap
+    tweens_used: List[int] = field(default_factory=list)      # lines of qg:tween (not under rollback)
     states_used: List[tuple] = field(default_factory=list)    # (name, line) from become
     scenes_used: List[tuple] = field(default_factory=list)    # (name, line) from goto-scene
     paths_used: List[tuple] = field(default_factory=list)     # (name, line) from spawn at="path"
@@ -424,6 +425,17 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     if el.tag == 'put':
         return (f'Q.put({target}, {compile_expression(el.get("x"), scope, el.line)}, '
                 f'{compile_expression(el.get("y"), scope, el.line)})')
+    if el.tag == 'tween':
+        if el.get('seconds') <= 0:
+            raise GameCompileError(f'<qg:tween seconds="{el.get("seconds")}">: more than 0', el.line)
+        script.tweens_used.append(el.line)
+        frm = el.get('from')
+        args = [target, json.dumps(el.get('property')), compile_expression(el.get('to'), scope, el.line),
+                repr(float(el.get('seconds'))), json.dumps(el.get('trans')), json.dumps(el.get('ease')),
+                str(int(el.get('repeat'))), 'true' if el.get('yoyo') else 'false']
+        if frm is not None:
+            args.append(compile_expression(frm, scope, el.line))
+        return f'Q.tween({", ".join(args)})'
     if el.tag == 'goto-scene':
         script.scenes_used.append((el.get('name'), el.line))
         fade = el.get('fade') or 0.0

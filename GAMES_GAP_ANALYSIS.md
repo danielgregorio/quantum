@@ -64,7 +64,7 @@
 |---|---|---|
 | frames, fps, loop, `play/stop/pause` | `qg:animation` (frames, fps; chosen by what the body does) | covered for idle/walk/jump/walk; **gap**: `loop="false"` + `qg:on-animation-end` (attack, death frames), `qg:play-animation` action |
 | `animation_finished`, `frame_changed` | — | gap (same) |
-| `Tween` (26 methods: property, ease, trans, loops, chain, parallel) | — | gap: `qg:tween target= property= to= over= ease=` as an action; the most-asked "juice" primitive |
+| `Tween` (26 methods: property, ease, trans, loops, chain, parallel) | `qg:tween` | covered (2026-10): `x`, `y`, `rotation`, `scale`, `alpha`, trans/ease, `repeat`, `yoyo`, in the game's ticks; chains and parallel tracks by writing several |
 | `AnimationPlayer` (keyframed tracks, method calls) | — | by design: a tween action covers 90 %; keyframe timelines would be a `qg:timeline` for cutscenes |
 
 ## 6. Sound (`AudioStreamPlayer`, `AudioStreamPlayer2D`)
