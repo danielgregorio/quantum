@@ -550,7 +550,7 @@ The usual networked-game menu, ready made: play here (local=), host, an address 
 | `local` | a name |  | a scene to play on this machine alone (a button for it when given) |
 | `local-label` | text | `Play here` |  |
 | `port` | integer | `7777` |  |
-| `address` | text | `127.0.0.1:7777` | what the address field starts with |
+| `address` | text | `127.0.0.1:7777` | what the address field starts with, unless the web page's address has ?join=... |
 | `font` | text |  |  |
 | `size` | integer | `16` |  |
 
@@ -817,7 +817,7 @@ Goes inside: a handler.
 
 ### `qg:join`
 
-Joins a networked game at an address (host:port); this machine is the next player.
+Joins a networked game at an address: host:port, or a quantum relay's room (wss://relay.example/pong/ROOM, where two browsers meet); this machine is the next player.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|

@@ -118,11 +118,16 @@ No controller, prefab or handler knows multiplayer exists.
    the tick that asked for it is certain. Arena uses it, with an input
    delay of 2 ticks; its tests inject 30–120 ms of latency and check both
    peers end where one replay of both tapes ends.
-4. **Web export**: ENet is not in the browser. `transport="websocket"`
-   lets a desktop host take players over WebSocket, which a browser build
-   can open — but a page served over HTTPS may only open a secure one
-   (`wss://`), which needs a certificate on the host; and two browsers
-   cannot meet without a server between them (WebRTC through Godot's
-   `WebRTCMultiplayerPeer` and a signalling service).
+4. ~~**Web export**~~ — done: two browsers meet at `quantum relay`
+   (`quantum/runtime/game_relay.py`). A room is the game itself in a
+   headless Godot that hosts without a seat (`--q-relay=PORT`): every
+   player joins it, and Godot's multiplayer relays each one's inputs to the
+   others. The relay process carries WebSocket messages unchanged, and
+   with `--cert`/`--key` it is `wss://`, as a page on HTTPS needs. An
+   address may be a URL (`wss://relay.example/pong/ROOM`), and a web
+   page's `?join=` fills the title's address field (`url_param()`). A
+   WebRTC mesh would skip the relay but needs a signalling server anyway.
+   `scripts/check-relay-in-browser.py` runs two Chromium pages through a
+   relay in CI.
 5. **Three or more players in a game that uses it**: the runtime takes
    any `players`; only Pong (2) exercises it.

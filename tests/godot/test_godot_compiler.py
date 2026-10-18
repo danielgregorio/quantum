@@ -1395,7 +1395,7 @@ class TestLobby:
         assert menu['items'][2] == {'kind': 'field', 'bind': 'lobby_address', 'label': 'Address', 'max_length': 64, 'game': False}
         assert hud['position'] == 'bottom-center' and 'value_method' in hud['items'][0]
         script = (out / 'scripts' / 'scene_title.gd').read_text()
-        assert 'var lobby_address: Variant = "10.0.0.2:9000"' in script
+        assert 'var lobby_address: Variant = Q.url_param("join", "10.0.0.2:9000")' in script
         assert '\tQ.net_host(9000)\n' in script and '\tQ.net_join(lobby_address)\n' in script
         assert 'Q.goto_scene(self, "play")' in script
 

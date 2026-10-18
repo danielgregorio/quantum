@@ -18,15 +18,41 @@ they are; the desktop builds are a zip with one executable inside (on Linux,
 Pong, Arena, Chess and Towers are played by two, on one keyboard or over the
 network: on the title, one machine chooses **Host a game**, the other types
 the host's address and chooses **Join**, and both run the same game in
-lockstep (`PLAN_MULTIPLAYER.md` in the repository says how). Over the network
-it takes the desktop builds: a browser cannot host, and joining from a page
-served over HTTPS needs a secure WebSocket the games do not offer yet. The
-command line skips the title:
+lockstep (`PLAN_MULTIPLAYER.md` in the repository says how). The command
+line skips the title:
 
 ```
 ./pong.x86_64 -- --q-host=7777            # player 1 hosts on port 7777
 ./pong.x86_64 -- --q-join=HOST:7777       # player 2 joins
 ```
+
+### Two browsers, through a relay
+
+A web page cannot host, so two people in their browsers meet at a relay:
+`quantum relay`, a small server that opens a room for each name it is
+asked for. Each room runs the game itself in a headless Godot that takes
+no seat and passes each player's inputs on to the other. A page served
+over HTTPS, like this site, may only open a secure WebSocket, so the
+relay needs a domain and a certificate:
+
+```
+pip install "quantum[websocket]"
+quantum relay --port 443 --cert fullchain.pem --key privkey.pem
+```
+
+Then both players open the same link, with any room name they agree on,
+and choose **Join** on the title (the address field already holds the room):
+
+```
+https://quantumframework.net/games/pong/?join=wss://relay.example.com/pong/friday-night
+```
+
+The first to join is player 1. The relay never sees the game, only the
+inputs. Every second the lockstep compares the two games and reports any
+difference. When the last player leaves, the room closes. Without a
+certificate, `quantum relay --port 8765` serves `ws://`, which is enough
+on a local network with a page served over plain HTTP. A desktop build
+joins the same rooms: `--q-join=wss://relay.example.com/pong/friday-night`.
 
 | Game | What it is | Play | Download | Source |
 |---|---|---|---|---|

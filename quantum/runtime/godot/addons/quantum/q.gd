@@ -505,6 +505,17 @@ static func net_leave() -> void:
 		g.net_leave()
 
 
+# url_param("join", default): in a web build, the page address's ?join=...;
+# elsewhere (and when the page has none) the default. A link to the game can
+# so carry the room to join: pong/index.html?join=wss://relay.example/pong/ROOM.
+static func url_param(name_: String, default_):
+	if OS.has_feature("web"):
+		var v = JavaScriptBridge.eval("new URLSearchParams(window.location.search).get(%s)" % JSON.stringify(name_))
+		if v != null and str(v) != "":
+			return str(v)
+	return default_
+
+
 static func net_status() -> String:
 	var g := _game()
 	return g.net_status() if g != null else "offline"

@@ -18,6 +18,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
   event). The RPG has music of its own, written and synthesized by
   `scripts/art/rpg_music.py` (CC0): a calm loop on the map, a driving one
   in the fight.
+- Laboratory: `quantum relay`, where two browsers meet to play a
+  networked game. A web page cannot host, so each room
+  (`wss://relay.example/pong/ROOM`) runs the game in a headless Godot that
+  hosts without a seat (`--q-relay=PORT`) and passes the players' inputs
+  on. The relay carries WebSocket messages unchanged, and is `wss://` with
+  `--cert` and `--key`. A `qg:join` address (and `--q-join=`) may now be a
+  URL. `url_param("join", default)` reads a web page's `?join=`, and
+  `qg:lobby`'s address field starts with it, so a link carries the room.
+  A web page reports `window.quantumNet`. In CI, two Chromium pages play
+  Pong through a relay (`scripts/check-relay-in-browser.py`).
 - Laboratory: the play protocol, phase 7: `quantum playtest`. An agent tries
   to finish each game toward the `goal` it has in `projects/games.json`
   (what it is told, a condition the job checks after every call, and a
@@ -222,6 +232,15 @@ alter the behaviour of an existing app is listed under **Breaking**.
   by keys and by the pointer.
 
 ### Fixed
+
+- Laboratory: under `qg:multiplayer`, a peer waiting for the others' input
+  froze its scene in a way that took the scene's collision objects out of the
+  physics. When they came back, every overlap counted as a new touch, on
+  that peer alone. A paddle moving along the ball "hit" it again and drew
+  another random slant, and the two games diverged (a desync). The
+  lockstep and the rollback now keep the collision objects in the physics
+  while they wait. Two browsers playing through a relay wait often, and
+  that is how it showed.
 
 - Laboratory: a web build could not join a networked game. A browser has
   no ENet, which `qg:multiplayer` uses unless told otherwise, so the
