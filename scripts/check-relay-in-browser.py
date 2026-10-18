@@ -14,8 +14,8 @@ room's Godot, which takes no seat. The check asserts that:
 - they play about 20 seconds, each moving its paddle, with no desync (the
   lockstep compares both games every second; a page reports
   ``window.quantumNet``);
-- when one page leaves, the other waits, and a third page that opens the
-  same link takes the free seat: it catches up the game so far and both
+- when one page leaves, the other waits and says so on the screen, and a
+  third page that opens the same link takes the free seat: it catches up the game so far and both
   play on, with no desync;
 - when both leave, the relay closes the room.
 
@@ -134,6 +134,9 @@ def main(argv) -> int:
             pages.pop()
             if not _wait(pages[0], 'window.quantumNet === "waiting"', 10):
                 problems.append(f'page 1 did not wait for the other: {pages[0].evaluate("window.quantumNet")!r}')
+            elif not str(pages[0].evaluate('window.quantumNotice') or '').startswith('Waiting for the other player'):
+                problems.append(f'page 1 does not say it waits: {pages[0].evaluate("window.quantumNotice")!r}')
+            pages[0].screenshot(path=str(root / 'pong' / 'relay-waiting.png'))
             # someone opens the same link and joins: they take the free seat
             page = browser.new_page(viewport={'width': 1280, 'height': 720})
             page.on('console', lambda m: logs.append((3, m.type, m.text)))
@@ -163,6 +166,8 @@ def main(argv) -> int:
                 net = p.evaluate('window.quantumNet')
                 if net != 'playing':
                     problems.append(f'page {i * 2 + 1} says {net!r} after playing on')
+                if p.evaluate('window.quantumNotice'):
+                    problems.append(f'page {i * 2 + 1} still shows {p.evaluate("window.quantumNotice")!r}')
             page.screenshot(path=str(root / 'pong' / 'relay-3.png'))
             for p in list(pages):
                 p.close()
