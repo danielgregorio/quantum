@@ -283,6 +283,19 @@ static func count(scene: Node, tag: String) -> int:
 
 
 # thing_at(tag, x, y): the thing (or zone) of the tag whose box covers the point ("" for any thing), or null.
+# qg:set-tile and tile_at(): a cell of the scene's tilemap (tilemap.gd).
+static func set_tile(scene: Node, col, row, n, layer: String = "") -> void:
+	var map = scene.get_node_or_null("Tilemap") if scene != null else null
+	if map != null and map.has_method("set_tile"):
+		map.set_tile(int(col), int(row), int(n), layer)
+		event("tile", {"col": int(col), "row": int(row), "tile": int(n)})
+
+
+static func tile_at(scene: Node, col, row) -> int:
+	var map = scene.get_node_or_null("Tilemap") if scene != null else null
+	return map.tile_at(int(col), int(row)) if map != null and map.has_method("tile_at") else 0
+
+
 static func thing_at(scene: Node, tag: String, x: float, y: float):
 	var point := Vector2(x, y)
 	for t in scene.get_tree().get_nodes_in_group("q_thing"):
