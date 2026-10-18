@@ -149,6 +149,22 @@ A sound the game can play (qg:play).
 
 Goes inside: `q:application`.
 
+### `qg:particles`
+
+A particle effect the game can show: a preset and a few overrides. qg:emit plays it once where a thing is; qg:emitter keeps it going in a scene. Only seen: the game's state never depends on it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required |  |
+| `preset` | `puff` / `sparks` / `smoke` / `dust` / `fire` / `rain` / `snow` / `confetti` / `stars` | required | puff, sparks, smoke, dust, confetti and stars play once; fire, rain and snow keep going |
+| `color` | `#rrggbb` |  | the preset's own when not given (confetti is every colour) |
+| `amount` | integer |  | how many particles |
+| `lifetime` | number |  | seconds each one lives |
+| `speed` | number |  | pixels a second, about |
+| `size` | number |  | pixels, about |
+
+Goes inside: `q:application`.
+
 ### `qg:prefab`
 
 A kind of thing the scene places with qg:instance. With ai= it moves.
@@ -395,6 +411,19 @@ A prefab placed in the scene.
 | `y` | number | required |  |
 | `name` | a name |  | the node name (`other.name` in a handler); the prefab name otherwise |
 | `if` | an expression |  | placed only when this is true as the scene is built |
+
+Goes inside: `qg:scene`.
+
+### `qg:emitter`
+
+A qg:particles effect that keeps going in the scene: rain across its width, a fire on a spot.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `particles` | a name | required |  |
+| `x` | number | required |  |
+| `y` | number | required |  |
+| `width` | number | `0.0` | rain and snow: the band they fall across, pixels (0: a point) |
 
 Goes inside: `qg:scene`.
 
@@ -974,6 +1003,19 @@ Sets the speed of a character controller="behavior", in pixels per second: a das
 
 Goes inside: a handler.
 
+### `qg:emit`
+
+Plays a qg:particles effect once where a thing is. Only seen: the game's state never depends on it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `particles` | a name | required |  |
+| `at` | a name | `me` | me, other, a character id, or a q:set holding a thing |
+| `dx` | number | `0.0` |  |
+| `dy` | number | `0.0` | offset in pixels |
+
+Goes inside: a handler.
+
 ## Other tags
 
 ### `qg:dialogue`
@@ -1176,6 +1218,11 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:sound name="powerup" src="assets/kenney/audio/powerup.ogg" />
   <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
 
+  <!-- effects: only seen, the game's state never depends on them -->
+  <qg:particles name="sparkle" preset="stars" color="#ffe060" />
+  <qg:particles name="pop" preset="puff" color="#f0e0c0" />
+  <qg:particles name="power" preset="sparks" color="#ff7070" />
+
   <qg:prefab name="Coin" tag="coin" sheet="kenney" frame="151" hitbox="12x12" />
   <qg:prefab name="QBlock" tag="qblock" sheet="kenney" frame="10" hitbox="18x18" solid="true" />
   <qg:prefab name="UsedBlock" tag="usedblock" sheet="kenney" frame="11" hitbox="18x18" solid="true" />
@@ -1316,6 +1363,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </qg:state>
 
       <qg:on-collision with="coin">
+        <qg:emit particles="sparkle" at="other" />
         <qg:destroy target="other" />
         <qg:play sound="coin" />
         <q:set name="coins" value="{coins + 1}" />
@@ -1331,11 +1379,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:on-collision with="shroom">
         <qg:destroy target="other" />
         <qg:play sound="powerup" />
+        <qg:emit particles="power" at="me" />
         <qg:become target="me" state="big" />
         <q:set name="score" value="{score + 50}" />
       </qg:on-collision>
 
       <qg:on-collision with="enemy" side="top">
+        <qg:emit particles="pop" at="other" />
         <qg:destroy target="other" />
         <qg:bounce target="me" height="32" />
         <qg:play sound="stomp" />
@@ -1432,12 +1482,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:animation name="jump" frames="1" />
 
       <qg:on-collision with="coin">
+        <qg:emit particles="sparkle" at="other" />
         <qg:destroy target="other" />
         <qg:play sound="coin" />
         <q:set name="coins" value="{coins + 1}" />
         <q:set name="score" value="{score + 10}" />
       </qg:on-collision>
       <qg:on-collision with="enemy" side="top">
+        <qg:emit particles="pop" at="other" />
         <qg:destroy target="other" />
         <qg:bounce target="me" height="32" />
         <qg:play sound="stomp" />
@@ -1512,6 +1564,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:animation name="jump" frames="1" />
 
       <qg:on-collision with="coin">
+        <qg:emit particles="sparkle" at="other" />
         <qg:destroy target="other" />
         <qg:play sound="coin" />
         <q:set name="coins" value="{coins + 1}" />
@@ -1616,6 +1669,11 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:sound name="open" src="assets/kenney/audio/block.ogg" />
   <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
 
+  <!-- effects: only seen, the game's state never depends on them -->
+  <qg:particles name="sparkle" preset="stars" color="#fff0a0" />
+  <qg:particles name="slain" preset="smoke" color="#b0a0c0" />
+  <qg:particles name="treasure" preset="confetti" />
+
   <qg:prefab name="Key" tag="key" sheet="dungeon" frame="8" hitbox="12x12" />
   <qg:prefab name="Heart" tag="heart" sheet="dungeon" frame="9" hitbox="12x12" />
   <qg:prefab name="Door" tag="door" sheet="dungeon" frame="2" hitbox="18x18" solid="true" />
@@ -1716,6 +1774,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <q:call function="hurt" args="me" />
       </qg:on-collision>
       <qg:on-hit with="enemy">
+        <qg:emit particles="slain" at="other" />
         <qg:destroy target="other" />
       </qg:on-hit>
     </qg:character>
@@ -1772,6 +1831,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <q:call function="hurt" args="me" />
       </qg:on-collision>
       <qg:on-hit with="enemy">
+        <qg:emit particles="slain" at="other" />
         <qg:destroy target="other" />
       </qg:on-hit>
       <qg:on-collision with="door">
@@ -1842,16 +1902,19 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <q:call function="hurt" args="me" />
       </qg:on-collision>
       <qg:on-hit with="enemy">
+        <qg:emit particles="slain" at="other" />
         <qg:destroy target="other" />
       </qg:on-hit>
       <qg:on-collision with="key">
         <qg:play sound="pick" />
+        <qg:emit particles="sparkle" at="other" />
         <q:set name="keys" value="{keys + 1}" />
         <q:set name="taken" value="{taken + [other.name]}" />
         <qg:destroy target="other" />
       </qg:on-collision>
       <qg:on-collision with="heart">
         <qg:play sound="pick" />
+        <qg:emit particles="sparkle" at="other" />
         <q:set name="hearts" value="{hearts + 1}" />
         <q:set name="taken" value="{taken + [other.name]}" />
         <qg:destroy target="other" />
@@ -1916,6 +1979,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <q:call function="hurt" args="me" />
       </qg:on-collision>
       <qg:on-hit with="enemy">
+        <qg:emit particles="slain" at="other" />
         <qg:destroy target="other" />
       </qg:on-hit>
       <qg:on-hit with="switch">
@@ -1979,6 +2043,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <q:call function="hurt" args="me" />
       </qg:on-collision>
       <qg:on-hit with="enemy">
+        <qg:emit particles="slain" at="other" />
         <qg:destroy target="other" />
       </qg:on-hit>
       <qg:on-collision with="gate">
@@ -2031,6 +2096,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="chest">
         <qg:play sound="win" />
+        <qg:emit particles="treasure" at="other" />
         <q:set name="message" value="THE TREASURE OF THE KEEP IS YOURS." />
         <qg:goto-scene name="the-end" />
       </qg:on-collision>

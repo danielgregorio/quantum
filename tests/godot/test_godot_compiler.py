@@ -446,6 +446,16 @@ class TestScenesMapAndGameState:
         e = refuse(tmp_path, game('  <qg:scene name="main"><qg:gravity /></qg:scene>\n'))
         assert 'goes inside <qg:behavior>' in e.message
 
+    def test_particles_must_be_declared(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:scene name="t"><qg:character id="h" controller="topdown" sheet="k" frame="0" '
+                                  'x="0" y="0" hitbox="8x8" /><qg:timer after="1"><qg:emit particles="nowhere" at="h" />'
+                                  '</qg:timer></qg:scene>\n'))
+        assert '<qg:emit particles="nowhere">: no qg:particles of that name' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="t"><qg:emitter particles="rain" x="0" y="0" /></qg:scene>\n'))
+        assert '<qg:emitter particles="rain">: no qg:particles of that name' in e.message
+        e = refuse(tmp_path, game('  <qg:particles name="p" preset="lava" />\n  <qg:scene name="t" />\n'))
+        assert 'lava' in e.message
+
     def test_a_game_in_other_languages(self, tmp_path):
         out = build(tmp_path, game('''  <qg:language lang="pt" name="Português">
     <qg:phrase text="Attack" as="Atacar" />

@@ -57,6 +57,7 @@ class SceneScript:
     sounds_played: List[str] = field(default_factory=list)
     prefabs_used: List[tuple] = field(default_factory=list)   # (name, line) from spawn/swap
     tweens_used: List[int] = field(default_factory=list)      # lines of qg:tween (not under rollback)
+    particles_used: List[tuple] = field(default_factory=list)  # (name, line) from qg:emit
     states_used: List[tuple] = field(default_factory=list)    # (name, line) from become
     scenes_used: List[tuple] = field(default_factory=list)    # (name, line) from goto-scene
     paths_used: List[tuple] = field(default_factory=list)     # (name, line) from spawn at="path"
@@ -431,6 +432,14 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         x, y = (compile_expression(el.get(a), scope, el.line) if el.get(a) is not None else 'null'
                 for a in ('x', 'y'))
         return f'Q.velocity({target}, {x}, {y})'
+    if el.tag == 'emit':
+        at = el.get('at')
+        if not scope.has(at):
+            raise GameCompileError(f'<qg:emit at="{at}">: not me/other of this handler nor a character of the scene',
+                                   el.line)
+        script.particles_used.append((el.get('particles'), el.line))
+        return (f'Q.emit({scope.reference(at)}, {json.dumps(el.get("particles"))}, '
+                f'{float(el.get("dx"))!r}, {float(el.get("dy"))!r})')
     if el.tag == 'tween':
         if el.get('seconds') <= 0:
             raise GameCompileError(f'<qg:tween seconds="{el.get("seconds")}">: more than 0', el.line)
