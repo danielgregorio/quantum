@@ -439,11 +439,20 @@ func _pathfind() -> void:
 	var aim: Vector2 = target.position
 	var i := _way.find(here)
 	if i >= 0 and i < _way.size() - 1:
-		aim = map.centre_of(_way[i + 1])
+		var next: Vector2i = _way[i + 1]
+		aim = map.centre_of(next)
+		# Lined up with the middle of its cell across the step first: a body a little
+		# off it would catch the corner of the wall beside a gap.
+		var mid: Vector2 = map.centre_of(here)
+		if next.x != here.x and absf(position.y - mid.y) > 1.0:
+			aim = Vector2(position.x, mid.y)
+		elif next.y != here.y and absf(position.x - mid.x) > 1.0:
+			aim = Vector2(mid.x, position.y)
 	elif _way.is_empty():
 		velocity = Vector2.ZERO   # walled off: it waits
 		return
-	velocity = (aim - position).normalized() * speed
+	var to := aim - position
+	velocity = to.normalized() * minf(speed, to.length() * Q.TICK_RATE)   # not past the aim
 	move_and_slide()
 	_face(velocity.x)
 
