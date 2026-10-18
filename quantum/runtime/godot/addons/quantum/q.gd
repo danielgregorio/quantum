@@ -188,6 +188,13 @@ static func put(node, x: float, y: float) -> void:
 		(node as Node2D).position = Vector2(x, y)
 
 
+# Sets the speed of a character made of parts (qg:velocity); null keeps an axis.
+static func velocity(node, x, y) -> void:
+	node = _thing(node)
+	if node != null and node.has_method("set_velocity_from_rules"):
+		node.set_velocity_from_rules(x, y)
+
+
 # Changes a character to one of its states (qg:become).
 static func become(node, state: String) -> void:
 	node = _thing(node)

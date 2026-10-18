@@ -425,6 +425,12 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     if el.tag == 'put':
         return (f'Q.put({target}, {compile_expression(el.get("x"), scope, el.line)}, '
                 f'{compile_expression(el.get("y"), scope, el.line)})')
+    if el.tag == 'velocity':
+        if el.get('x') is None and el.get('y') is None:
+            raise GameCompileError('<qg:velocity> needs x=, y= or both (pixels per second)', el.line)
+        x, y = (compile_expression(el.get(a), scope, el.line) if el.get(a) is not None else 'null'
+                for a in ('x', 'y'))
+        return f'Q.velocity({target}, {x}, {y})'
     if el.tag == 'tween':
         if el.get('seconds') <= 0:
             raise GameCompileError(f'<qg:tween seconds="{el.get("seconds")}">: more than 0', el.line)

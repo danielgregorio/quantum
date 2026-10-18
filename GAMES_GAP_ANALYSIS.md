@@ -28,7 +28,7 @@
 
 | Godot | `qg:` | Verdict |
 |---|---|---|
-| `velocity`, `move_and_slide`, `is_on_floor/wall/ceiling`, floor snap, slopes | inside the three controllers; `run-speed`, `jump-height`, `gravity`, `max-fall`, `coyote-frames`, `variable-jump` | covered for the three genres; **gap**: `me.velocity`, `me.on_floor` in expressions |
+| `velocity`, `move_and_slide`, `is_on_floor/wall/ceiling`, floor snap, slopes | inside the controllers; `run-speed`, `jump-height`, `gravity`, `max-fall`, `coyote-frames`, `variable-jump`; `controller="behavior"`: `qg:gravity`, `qg:walk`, `qg:jump`, `qg:keep-inside`, `qg:wrap`, `qg:face`, `qg:velocity`, `me.vx`, `me.vy`, `me.on_floor` | covered (2026-10: a body made of parts, its speed set and read by the game's rules); `is_on_wall/ceiling` not yet read |
 | `floor_max_angle`, `floor_constant_speed` (slopes), `platform_on_leave` | — | gap when a level has slopes; the lift already carries |
 | `area_entered/exited`, `body_entered/exited` | `qg:on-collision` (enter + cooldown re-fire), `qg:exit` | covered; **gap**: an *on-leave* handler (`qg:on-separate`) — doors that close behind you |
 | `collision_layer/mask`, `one_way_collision` | fixed layers (1 characters, 2 things), `one-way=` | covered by convention; a `qg:collision-layer` only when a game needs things that pass through other things |
@@ -155,7 +155,12 @@ plan's closing notes: `qg:behavior` composed from tags, so a fourth
 controller is written in the language rather than in the runtime. Godot's
 `CharacterBody2D` surface (15 properties, 18 methods) is exactly the set
 such a behavior tag would expose, as `qg:gravity`, `qg:move`, `qg:jump`,
-`qg:face`, `qg:bounds`.
+`qg:face`, `qg:bounds`. Done (2026-10): `controller="behavior"` holds a
+`qg:behavior` of `qg:gravity`, `qg:walk`, `qg:jump`, `qg:keep-inside`,
+`qg:wrap` and `qg:face`; gravity, walk and jump with the platformer's numbers
+are the platformer, to the pixel (a test runs both on one floor), and
+`qg:velocity` with `me.vx`, `me.vy`, `me.on_floor` leaves a dash or a
+knock-back to the game's rules.
 
 ## Postscript: `gd:` attributes
 
