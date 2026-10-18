@@ -272,6 +272,11 @@
 
     <qg:instance prefab="Key" name="key-1" x="126" y="99" if="{'key-1' not in taken}" />
     <qg:instance prefab="Heart" name="heart-1" x="45" y="45" if="{'heart-1' not in taken}" />
+    <!-- what can be picked up breathes, so the eye finds it (only its picture: where it is stays) -->
+    <qg:timer after="1">
+      <qg:tween target="key-1" property="scale" to="1.3" seconds="0.6" repeat="-1" yoyo="true" />
+      <qg:tween target="heart-1" property="scale" to="1.3" seconds="0.6" repeat="-1" yoyo="true" />
+    </qg:timer>
     <qg:instance prefab="Slime" name="slime-3" x="190" y="99" if="{'slime-3' not in taken}" />
 
     <qg:exit name="south" x="117" y="220" width="36" height="8" to="room-2" at="north" />
@@ -443,7 +448,10 @@
       </qg:on-collision>
     </qg:character>
 
-    <qg:instance prefab="Chest" x="190" y="108" />
+    <qg:instance prefab="Chest" name="chest" x="190" y="108" />
+    <qg:timer after="1">
+      <qg:tween target="chest" property="rotation" from="-8" to="8" seconds="0.4" repeat="-1" yoyo="true" />
+    </qg:timer>
 
     <qg:exit name="west" x="-4" y="99" width="8" height="36" to="room-5" at="east" />
 

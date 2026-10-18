@@ -100,10 +100,13 @@ No controller, prefab or handler knows multiplayer exists.
    scenes before it run on each machine alone) and `qg:lobby`, the usual
    menu written by the compiler. Game state set before the start scene is
    each machine's own: the hash check would report a difference.
-2. **Rejoin and spectate**: a peer that leaves ends the game for the rest
-   (the others run out their known ticks and stop). Rejoining means
-   replaying the input history, which the model allows and the runtime
-   does not yet keep.
+2. ~~**Rejoin**~~ — done: the host (or the relay) keeps every input of
+   the game; when a player leaves the others wait, and the next to join
+   takes the seat, gets the inputs so far and runs the game from its start
+   16 times faster (the engine runs 16x the ticks with time_scale 16, so a
+   tick still steps 1/60 s), checking the hashes the players agreed on.
+   Not under rollback. **Spectate** is still open: the same history, to a
+   peer that takes no seat.
 3. ~~**Rollback**~~ — done, for the scenes it can take:
    `<qg:multiplayer rollback="8" />`. Each tick runs at once with the
    others' input guessed (what they last pressed); a snapshot of the state

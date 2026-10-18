@@ -10,6 +10,14 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: `<qg:tween target="coin" property="y" to="100" seconds="1"
+  trans="back" ease="out" repeat="-1" yoyo="true">`, a property of a thing
+  eased to a value: its position (`x`, `y`, which collisions see), or its
+  picture's `rotation`, `scale` and `alpha`. It runs in the game's ticks,
+  so a replay and every peer of a networked game see the same; it stops
+  while the scene is paused, and a new tween of the same property replaces
+  the old one. Not under `rollback=` yet. Keep's key and heart breathe and
+  its chest wobbles.
 - Laboratory: the relay, ready to deploy. `deploy/relay/Dockerfile` builds an
   image with Godot and the networked games compiled in, and
   `deploy/relay/fly.toml` runs it on Fly.io. `quantum relay` adds

@@ -195,6 +195,30 @@ static func become(node, state: String) -> void:
 		node.become(state)
 
 
+# qg:tween: a property of a thing, eased to a value over so many seconds of
+# ticks (tween.gd). A new tween of the same property replaces the old one.
+const TRANS := {"linear": Tween.TRANS_LINEAR, "sine": Tween.TRANS_SINE, "quad": Tween.TRANS_QUAD,
+		"cubic": Tween.TRANS_CUBIC, "back": Tween.TRANS_BACK, "bounce": Tween.TRANS_BOUNCE,
+		"elastic": Tween.TRANS_ELASTIC}
+const EASE := {"in": Tween.EASE_IN, "out": Tween.EASE_OUT, "in-out": Tween.EASE_IN_OUT}
+
+
+static func tween(node, property: String, to: float, seconds: float, trans: String, ease: String,
+		repeat: int = 0, yoyo: bool = false, from = null) -> void:
+	node = _thing(node)
+	if node == null or not (node is Node2D):
+		return
+	var old: Node = node.get_node_or_null("Tween_" + property)
+	if old != null:
+		node.remove_child(old)
+		old.queue_free()
+	var t = load("res://addons/quantum/tween.gd").new()
+	t.start(node, property, to, seconds, TRANS[trans], EASE[ease], repeat, yoyo, from)
+	node.add_child(t)
+	node.set_meta("q_tweened", true)
+	event("tween", {"property": property, "to": to})
+
+
 # Places a prefab where `at` is, offset (qg:spawn).
 static func spawn(scene: Node, prefab: String, at, dx: float, dy: float) -> Node:
 	at = _thing(at)
