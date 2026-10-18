@@ -55,7 +55,7 @@
 | physics per tile, `collision_enabled` | per layer (`collision=`) | gap: per-tile kinds — solid, one-way, ladder, water, ice, hurt — from Tiled tile properties (`class`) |
 | terrains / auto-tiling (`set_cells_terrain_*`) | — | gap, authoring: Tiled does it; the compiler reads the result |
 | navigation layers (`NavigationAgent2D`, 26 props) | `ai="pathfind"` | covered (2026-10): the shortest way over the tilemap's free cells, deterministic; solid things on the way are not yet seen as walls |
-| `erase_cell`, `set_cell` at run time | — | gap: a `qg:set-tile` action (breakable terrain, doors drawn as tiles) |
+| `erase_cell`, `set_cell` at run time | `qg:set-tile`, `tile_at()` | covered (2026-10): collision at once, pathfinding follows, the cells changed in the state |
 | `get_used_rect`, `local_to_map` | pixel size for the camera and the fall line | covered internally |
 
 ## 5. Animation (`AnimatedSprite2D`, `AnimationPlayer`, `Tween`)

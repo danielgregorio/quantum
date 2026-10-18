@@ -31,6 +31,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
   and without its effects and gets the same state. Hopper's coins sparkle,
   a stomped walker goes in a puff; Keep's key and heart twinkle, a slain
   monster smokes and the chest bursts into confetti.
+- Laboratory: `<qg:set-tile col= row= tile= layer=>` puts a tile in a cell
+  of the scene's tilemap, or empties it (`tile="0"`): a block that breaks,
+  a door drawn as tiles. Its collision changes at once (the same tick on
+  every peer, however many ticks a frame runs), monsters that pathfind
+  find their way again, and the cells changed are in the game's state
+  (`tiles`), so a replay and the lockstep's check see them. `tile_at(col,
+  row)` reads a cell. Not under `rollback=` yet.
 - Laboratory: `ai="pathfind"` on a prefab: as `chase`, it goes for the
   character within `sight=`, but around the walls, by the shortest way over
   the tilemap's free cells (breadth first, its neighbours always in the

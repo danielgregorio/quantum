@@ -56,8 +56,8 @@ class SceneScript:
     function_names: List[str] = field(default_factory=list)
     sounds_played: List[str] = field(default_factory=list)
     prefabs_used: List[tuple] = field(default_factory=list)   # (name, line) from spawn/swap
-    tweens_used: List[int] = field(default_factory=list)      # lines of qg:tween (not under rollback)
     particles_used: List[tuple] = field(default_factory=list)  # (name, line) from qg:emit
+    unrollable: List[tuple] = field(default_factory=list)     # (tag, line): qg:tween, qg:set-tile (not under rollback)
     states_used: List[tuple] = field(default_factory=list)    # (name, line) from become
     scenes_used: List[tuple] = field(default_factory=list)    # (name, line) from goto-scene
     paths_used: List[tuple] = field(default_factory=list)     # (name, line) from spawn at="path"
@@ -440,10 +440,17 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         script.particles_used.append((el.get('particles'), el.line))
         return (f'Q.emit({scope.reference(at)}, {json.dumps(el.get("particles"))}, '
                 f'{float(el.get("dx"))!r}, {float(el.get("dy"))!r})')
+    if el.tag == 'set-tile':
+        script.unrollable.append(('set-tile', el.line))
+        args = [compile_expression(el.get('col'), scope, el.line), compile_expression(el.get('row'), scope, el.line),
+                compile_expression(el.get('tile'), scope, el.line)]
+        if el.get('layer'):
+            args.append(json.dumps(el.get('layer')))
+        return f'Q.set_tile(self, {", ".join(args)})'
     if el.tag == 'tween':
         if el.get('seconds') <= 0:
             raise GameCompileError(f'<qg:tween seconds="{el.get("seconds")}">: more than 0', el.line)
-        script.tweens_used.append(el.line)
+        script.unrollable.append(('tween', el.line))
         frm = el.get('from')
         args = [target, json.dumps(el.get('property')), compile_expression(el.get('to'), scope, el.line),
                 repr(float(el.get('seconds'))), json.dumps(el.get('trans')), json.dumps(el.get('ease')),
