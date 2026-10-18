@@ -93,7 +93,7 @@ func setup(spec: Dictionary) -> void:
 
 
 func _speed_for_height(height: float) -> float:
-	var half_step := gravity / (2.0 * Engine.physics_ticks_per_second)
+	var half_step := gravity / (2.0 * Q.TICK_RATE)
 	return half_step + sqrt(half_step * half_step + 2.0 * gravity * height)
 
 

@@ -49,7 +49,10 @@ https://quantumframework.net/games/pong/?join=wss://relay.example.com/pong/frida
 
 The first to join is player 1. The relay never sees the game, only the
 inputs. Every second the lockstep compares the two games and reports any
-difference. When the last player leaves, the room closes. Without a
+difference. A player who leaves (a closed tab, a lost connection) can come
+back: the other waits, and whoever opens the same link and joins takes the
+seat, catching up the game so far in a few seconds. When the last player
+leaves, the room closes. Without a
 certificate, `quantum relay --port 8765` serves `ws://`, which is enough
 on a local network with a page served over plain HTTP. A desktop build
 joins the same rooms: `--q-join=wss://relay.example.com/pong/friday-night`.

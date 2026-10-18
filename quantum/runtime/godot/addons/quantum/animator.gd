@@ -51,7 +51,7 @@ func _physics_process(_delta: float) -> void:
 	var frames: Array = anim["frames"]
 	if frames.size() < 2:
 		return
-	_ticks += float(anim.get("fps", 8.0)) / Engine.physics_ticks_per_second
+	_ticks += float(anim.get("fps", 8.0)) / Q.TICK_RATE
 	while _ticks >= 1.0:
 		_ticks -= 1.0
 		_index = (_index + 1) % frames.size()
