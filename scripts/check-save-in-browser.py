@@ -60,7 +60,12 @@ def main(argv) -> int:
                 return _report([f'the game opened on {game.last["scene"]!r}, not the title'])
             if _shown(game.last, 'Continue'):
                 problems.append('a fresh page offers Continue')
-            seen = game.until("scene == 'room-1'", tap=['select'], max_ticks=60)        # New game
+            for _ in range(5):                                       # New game (a press the page lost: again)
+                seen = game.until("scene == 'room-1'", tap=['select'], max_ticks=30)
+                if seen['scene'] == 'room-1':
+                    break
+            if seen['scene'] != 'room-1':
+                return _report([f'New game did not start it: {seen["scene"]}, {seen["screen"]}'] + _errors(logs))
             seen = game.until("scene == 'room-2'", hold=['right'], max_ticks=900)
             if seen['scene'] != 'room-2':
                 return _report([f'never reached room 2: {seen["scene"]}, {seen["state"].get("nodes", {})}'] + _errors(logs))
