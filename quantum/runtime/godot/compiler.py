@@ -948,6 +948,8 @@ class _Compiler:
             'nodes': nodes, 'map_paths': map_paths, 'on_input': on_input, 'on_death': on_death,
             'on_select': on_select, 'music': music,
         }
+        if scene.get('save'):
+            spec['save'] = True
         gdprops.attach(spec, 'Node2D', scene.gd, f'<qg:scene name="{name}">', scene.line)
         return spec
 
