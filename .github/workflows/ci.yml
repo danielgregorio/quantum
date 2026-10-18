@@ -160,6 +160,11 @@ jobs:
       - name: An agent wins the RPG in the browser
         run: python scripts/check-play-in-browser.py "$RUNNER_TEMP/games"
 
+      # A saved game survives the page: Keep's web build saves on entering
+      # room 2, the page reloads, and Continue brings it back there.
+      - name: A saved game survives a reload
+        run: python scripts/check-save-in-browser.py "$RUNNER_TEMP/games"
+
       - name: What each game showed (check.png, and Pong against the agent)
         if: always()
         uses: actions/upload-artifact@v7
@@ -168,6 +173,7 @@ jobs:
           path: |
             ${{ runner.temp }}/games/*/check.png
             ${{ runner.temp }}/games/pong/agent.png
+            ${{ runner.temp }}/games/keep/save.png
             ${{ runner.temp }}/games/pong/relay-*.png
             ${{ runner.temp }}/games/rpg/bridge.png
           if-no-files-found: ignore

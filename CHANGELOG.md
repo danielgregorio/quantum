@@ -57,8 +57,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 - Laboratory: `<qg:next-language>` shows the game in its next language,
   after its own, and the choice is kept for the next run; `language()` is
   the name of the one shown. A `qg:lobby` of a game in several languages
-  has a button for it, and Hopper's title too
+  has a button for it, and Hopper's and Keep's titles too
   (`label="{tr('Language') + ': ' + language()}"`).
+- Laboratory: `<qg:scene save="true">`: entering the scene saves the game,
+  to continue there, as the rooms of an adventure do. Keep opens on a
+  title (New game, Continue), and each room entered saves it. In CI, the
+  save survives a page reload in Chromium (`scripts/check-save-in-browser.py`).
 - Laboratory: `<qg:save scene="map">` and `<qg:continue>`: a game saved
   to continue later. A save is the game state (every `q:set` of
   `q:application`) and the scene to come back to, which starts over; one

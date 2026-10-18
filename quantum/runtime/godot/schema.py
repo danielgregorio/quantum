@@ -184,7 +184,9 @@ TAGS: Dict[str, Tag] = {
         {'name': Attr('ident', required=True),
          'width': Attr('int', 256), 'height': Attr('int', 224),
          'background': Attr('color', '#000000'),
-         'seed': Attr('int', 0, doc='the random seed; the same seed gives the same game')},
+         'seed': Attr('int', 0, doc='the random seed; the same seed gives the same game'),
+         'save': Attr('bool', False, doc='entering the scene saves the game to continue here (qg:save), '
+                      'as a room of an adventure does')},
         parents=('application',)),
     'tilemap': Tag(
         'The level: CSV rows of tile numbers (0 is empty, n is tile n-1 of the tileset), '

@@ -201,6 +201,8 @@ func go_to_scene(scene_name: String, fade: float = 0.0) -> void:
 		_fade_in(fade)
 	if G.has_method("_q_save"):
 		G._q_save()
+	if scene_spec.get("save", false):
+		Q.save_game(current_scene)
 
 
 func _fade_in(seconds: float) -> void:

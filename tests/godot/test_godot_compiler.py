@@ -371,6 +371,10 @@ class TestScenesMapAndGameState:
         script = (out / 'scripts' / 'scene_title.gd').read_text()
         assert 'Q.has_save()' in script and '\tQ.continue_game(self)\n' in script
         assert '\tQ.save_game(self, "map")\n' in script and '\tQ.save_game(self)\n' in script
+        (tmp_path / 'room').mkdir()
+        room = build(tmp_path / 'room', game('  <qg:scene name="a" save="true" />\n  <qg:scene name="b" />\n'))
+        scenes = json.loads((room / 'game.json').read_text())['scenes']
+        assert scenes['a']['save'] is True and 'save' not in scenes['b']
         e = refuse(tmp_path, game('  <qg:scene name="t"><qg:on-input action="jump"><qg:save scene="nowhere" />'
                                   '</qg:on-input></qg:scene>\n'))
         assert 'nowhere' in e.message
