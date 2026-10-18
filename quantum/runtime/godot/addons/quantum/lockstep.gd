@@ -47,6 +47,7 @@ var _hashes: Dictionary = {}   # tick -> {player: hash}
 var _peers: Dictionary = {}    # peer id -> player number (host only)
 var _retries: int = 0
 var _stalled: bool = false
+var relay: bool = false          # --q-relay=PORT: host with no seat, passing the players' inputs on (quantum relay)
 var latency_ms: int = 0          # --q-latency=MS: this peer's frames leave that much later (tests)
 var _outbox: Array = []          # [due msec, player, tick, mask, cx, cy]
 
@@ -62,6 +63,8 @@ func setup(spec: Dictionary, game_: Node, host_: String, port_: int) -> void:
 		transport = "websocket"   # a browser has no ENet: the web build joins a WebSocket host
 	host = host_
 	port = port_
+	if host.contains("://"):
+		transport = "websocket"   # a relay's URL
 	name = "Lockstep"
 	process_physics_priority = -100   # before every node of the scene
 	if host == "":
@@ -81,13 +84,17 @@ func setup(spec: Dictionary, game_: Node, host_: String, port_: int) -> void:
 			if from_command_line:
 				get_tree().quit(2)
 			return
-		player = 1
-		_peers[1] = 1
-		connected_players = 1
 		status = "hosting"
 		multiplayer.peer_connected.connect(_on_peer_connected)
 		multiplayer.peer_disconnected.connect(_on_peer_gone)
 		multiplayer.multiplayer_peer = peer
+		if relay:
+			# no seat: every player joins, and the peer passes their frames on (server relay)
+			print("quantum: relaying on port %d, waiting for %d player(s)" % [port, players])
+			return
+		player = 1
+		_peers[1] = 1
+		connected_players = 1
 		print("quantum: hosting on port %d, waiting for %d more player(s)" % [port, players - 1])
 	else:
 		status = "joining"
@@ -104,7 +111,8 @@ func _connect() -> void:
 		multiplayer.multiplayer_peer = enet
 	else:
 		var ws := WebSocketMultiplayerPeer.new()
-		ws.create_client("ws://%s:%d" % [host, port])
+		# an address may be a whole URL: wss://relay.example/pong/ROOM (quantum relay)
+		ws.create_client(host if host.contains("://") else "ws://%s:%d" % [host, port])
 		multiplayer.multiplayer_peer = ws
 
 
@@ -125,8 +133,10 @@ func leave() -> void:
 # --- joining ---
 
 func _on_peer_connected(id: int) -> void:
-	var n := _peers.size() + 1
-	if n > players:
+	var n := 1
+	while n in _peers.values():   # the lowest free seat
+		n += 1
+	if n > players or (relay and started):
 		multiplayer.multiplayer_peer.disconnect_peer(id)
 		return
 	_peers[id] = n
@@ -135,7 +145,11 @@ func _on_peer_connected(id: int) -> void:
 	_count.rpc(connected_players)
 	print("quantum: player %d joined" % n)
 	if _peers.size() == players:
-		_begin()
+		if relay:
+			started = true   # the players play; the relay only passes their frames on
+			status = "relaying"
+		else:
+			_begin()
 		_start.rpc()
 
 
@@ -153,6 +167,15 @@ func _on_connection_failed() -> void:
 
 
 func _on_peer_gone(_id: int) -> void:
+	if relay:
+		_peers.erase(_id)
+		connected_players = _peers.size()
+		if started:
+			_gone.rpc()   # the others cannot hear a peer leave: the relay tells them
+			status = "ended"
+		else:
+			_count.rpc(connected_players)
+		return
 	push_warning("quantum: a player left at tick %d" % tick)
 	ended = true
 	if started:
@@ -166,6 +189,37 @@ func _on_peer_gone(_id: int) -> void:
 		ended = false
 	else:
 		status = "failed"
+
+
+# A tick waits for the others' input: the scene stands still. Its collision
+# objects stay in the physics while it does (they would leave it, the default
+# for a disabled node, and coming back would report every overlap as new: a
+# paddle would hit a ball it already hit, on one peer and not the other).
+var _kept: Dictionary = {}   # collision object -> its own disable_mode
+
+
+func _freeze(scene: Node, on: bool) -> void:
+	if on:
+		_kept.clear()
+		for n in _collision_objects(scene):
+			_kept[n] = n.disable_mode
+			n.disable_mode = CollisionObject2D.DISABLE_MODE_KEEP_ACTIVE
+		scene.process_mode = Node.PROCESS_MODE_DISABLED
+	else:
+		scene.process_mode = Node.PROCESS_MODE_INHERIT
+		for n in _kept.keys():
+			if is_instance_valid(n):
+				n.disable_mode = _kept[n]
+		_kept.clear()
+
+
+static func _collision_objects(n: Node) -> Array:
+	var out := []
+	if n is CollisionObject2D:
+		out.append(n)
+	for c in n.get_children():
+		out += _collision_objects(c)
+	return out
 
 
 func stalled() -> bool:
@@ -187,6 +241,11 @@ func _start() -> void:
 	_begin()
 
 
+@rpc("authority", "call_remote", "reliable")
+func _gone() -> void:
+	_on_peer_gone(0)
+
+
 func _begin() -> void:
 	# the first `delay` ticks have no input from anyone: the pipeline fills
 	for t in range(delay):
@@ -203,7 +262,7 @@ func _begin() -> void:
 # --- every tick ---
 
 func _physics_process(_delta: float) -> void:
-	if not started or desynced:
+	if not started or desynced or relay:
 		return
 	var scene: Node = game.current_scene
 	if scene == null:
@@ -227,11 +286,11 @@ func _physics_process(_delta: float) -> void:
 	if frame.size() < players:
 		if not _stalled:
 			_stalled = true
-			scene.process_mode = Node.PROCESS_MODE_DISABLED
+			_freeze(scene, true)
 		return
 	if _stalled:
 		_stalled = false
-		scene.process_mode = Node.PROCESS_MODE_INHERIT
+		_freeze(scene, false)
 	var input := {}
 	for p in range(1, players + 1):
 		var entry: Array = frame[p]
@@ -258,7 +317,15 @@ func _send_frame(p: int, t: int, mask: int, cx: float, cy: float) -> void:
 		_outbox.append([Time.get_ticks_msec() + latency_ms, p, t, mask, cx, cy])
 
 
+var _reported: String = ""
+
+
 func _process(_delta: float) -> void:
+	# a web page says where its network is (window.quantumNet): "playing", "playing desync"...
+	var said := status + (" desync" if desynced else "")
+	if said != _reported:
+		_reported = said
+		Q.web_report("quantumNet", said)
 	var now := Time.get_ticks_msec()
 	while not _outbox.is_empty() and int(_outbox[0][0]) <= now and not ended:
 		var f: Array = _outbox.pop_front()
@@ -267,6 +334,8 @@ func _process(_delta: float) -> void:
 
 @rpc("any_peer", "call_remote", "reliable")
 func _frame(p: int, t: int, mask: int, cx: float, cy: float) -> void:
+	if relay:
+		return   # passed on by the multiplayer API itself; nothing to keep here
 	if not _frames.has(t):
 		_frames[t] = {}
 	_frames[t][p] = [mask, cx, cy]
@@ -274,7 +343,8 @@ func _frame(p: int, t: int, mask: int, cx: float, cy: float) -> void:
 
 @rpc("any_peer", "call_remote", "reliable")
 func _hash(p: int, t: int, h: int) -> void:
-	_report(t, p, h)
+	if not relay:
+		_report(t, p, h)
 
 
 func _report(t: int, p: int, h: int) -> void:

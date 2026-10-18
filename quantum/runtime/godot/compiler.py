@@ -389,6 +389,7 @@ class _Compiler:
         nodes: List[dict] = []
         ids: Dict[str, int] = {}
         tilemap: Optional[dict] = None
+        music: Optional[dict] = None
         map_nodes: Dict[str, dict] = {}
         map_paths: List[dict] = []
         on_input: Dict[str, str] = {}
@@ -842,6 +843,20 @@ class _Compiler:
                 self._node_elements.append(el)
             elif el.tag in ('play', 'stop'):
                 pass   # an enter statement, read above
+            elif el.tag == 'music':
+                if music is not None:
+                    raise GameCompileError('<qg:music>: one per scene', el.line)
+                sound = el.get('sound')
+                if sound not in self.sounds:
+                    raise GameCompileError(
+                        f'<qg:music sound="{sound}">: no qg:sound of that name '
+                        f'(declared: {", ".join(sorted(self.sounds)) or "none"})', el.line)
+                if not self.sounds[sound].get('loop'):
+                    raise GameCompileError(f'<qg:music sound="{sound}">: music loops; give the qg:sound loop="true"',
+                                           el.line)
+                if el.get('fade') < 0:
+                    raise GameCompileError('<qg:music fade=>: the seconds of a fade cannot be negative', el.line)
+                music = {'sound': sound, 'fade': el.get('fade'), 'volume': el.get('volume')}
             else:
                 raise GameCompileError(f'<qg:{el.tag}> cannot go directly inside a scene', el.line)
         # 3. references between nodes
@@ -915,7 +930,7 @@ class _Compiler:
             'width': scene.get('width'), 'height': scene.get('height'),
             'background': scene.get('background'), 'seed': scene.get('seed'),
             'nodes': nodes, 'map_paths': map_paths, 'on_input': on_input, 'on_death': on_death,
-            'on_select': on_select,
+            'on_select': on_select, 'music': music,
         }
         gdprops.attach(spec, 'Node2D', scene.gd, f'<qg:scene name="{name}">', scene.line)
         return spec
@@ -1026,7 +1041,10 @@ def _expand_lobbies(children: list, multiplayer: Optional[dict]) -> list:
                   "('Joining ' + lobby_address + '...' if net_status() == 'joining' else "
                   "('Connected, starting...' if net_status() == 'connected' else "
                   "('Could not connect' if net_status() == 'failed' else '')))" + "}")
-        out.append(Statement('set', {'name': 'lobby_address', 'value': str(el.get('address'))}, line))
+        # the address field starts with the page's ?join= (a link to a relay's room), else address=
+        out.append(Statement('set', {'name': 'lobby_address',
+                                     'value': '{url_param(' + json.dumps('join') + ', ' + json.dumps(str(el.get('address'))) + ')}'},
+                             line))
         out.append(_el('menu', line, buttons, font=el.get('font'), size=el.get('size')))
         out.append(_el('hud', line, [_el('text', line, value=status)], position='bottom-center', size=el.get('size')))
     return out

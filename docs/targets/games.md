@@ -550,7 +550,7 @@ The usual networked-game menu, ready made: play here (local=), host, an address 
 | `local` | a name |  | a scene to play on this machine alone (a button for it when given) |
 | `local-label` | text | `Play here` |  |
 | `port` | integer | `7777` |  |
-| `address` | text | `127.0.0.1:7777` | what the address field starts with |
+| `address` | text | `127.0.0.1:7777` | what the address field starts with, unless the web page's address has ?join=... |
 | `font` | text |  |  |
 | `size` | integer | `16` |  |
 
@@ -817,7 +817,7 @@ Goes inside: a handler.
 
 ### `qg:join`
 
-Joins a networked game at an address (host:port); this machine is the next player.
+Joins a networked game at an address: host:port, or a quantum relay's room (wss://relay.example/pong/ROOM, where two browsers meet); this machine is the next player.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
@@ -877,6 +877,18 @@ One line of a qg:dialogue: who says it, and what.
 | `text` | text | required | the line, or an expression ({...}) read as it is shown |
 
 Goes inside: `qg:dialogue`.
+
+### `qg:music`
+
+The music of a scene: a looping qg:sound that plays while the scene is on. Going to a scene with other music crossfades from one to the other; a scene with the same music lets it play on; a scene with none fades it out.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `sound` | a name | required | a qg:sound with loop="true" |
+| `fade` | number | `1.0` | seconds the crossfade takes |
+| `volume` | number | `0.0` | decibels (0: as recorded; -6: half as loud) |
+
+Goes inside: `qg:scene`.
 
 ### `qg:on-end`
 
@@ -3085,6 +3097,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:spritesheet name="pawns" src="assets/pawns.png" tile="64" />
   <qg:spritesheet name="fighters" src="assets/fighters.png" tile="128" />
   <qg:spritesheet name="arena" src="assets/arena.png" tile="1280x720" />
+  <!-- beyond the demo: music of our own (scripts/art/rpg_music.py, CC0) -->
+  <qg:sound name="meadow" src="assets/meadow.ogg" loop="true" />
+  <qg:sound name="clash" src="assets/clash.ogg" loop="true" />
 
   <qg:prefab name="Opponent" tag="opponent" sheet="pawns" frame="2" hitbox="48x48" />
   <qg:prefab name="Key" tag="key" sheet="pawns" frame="3" hitbox="48x48" />
@@ -3093,6 +3108,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== Exploration: grid_movement/exploration.tscn ===== -->
 
   <qg:scene name="exploration" width="1280" height="720" background="#62a033">
+    <qg:music sound="meadow" fade="0.6" volume="-4" />
     <qg:tilemap tileset="world">
 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
@@ -3204,6 +3220,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== Combat: combat/combat.tscn, turn_queue.gd, combatant.gd, health.gd ===== -->
 
   <qg:scene name="combat" width="1280" height="720" background="#4a4a4a">
+    <qg:music sound="clash" fade="0.4" volume="-6" />
     <!-- player.tscn: 10 life, 2 damage, 1 defense, 1 base armor;
          opponent.tscn: 7 life, 3 damage, 1 defense, no armor. -->
     <q:set name="life" value="10" type="number" />
