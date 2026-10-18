@@ -54,6 +54,33 @@ certificate, `quantum relay --port 8765` serves `ws://`, which is enough
 on a local network with a page served over plain HTTP. A desktop build
 joins the same rooms: `--q-join=wss://relay.example.com/pong/friday-night`.
 
+### Running the relay
+
+`deploy/relay/Dockerfile` is the relay as a container. It holds Godot and
+the networked games, compiled when the image is built, and listens on
+plain `ws://` on port 8080. The host in front of it gives it HTTPS. A
+request without a WebSocket upgrade (`GET /health`) answers what the relay
+holds, as JSON, for the host's health checks.
+
+On [Fly.io](https://fly.io), from the repository's root
+(`deploy/relay/fly.toml` says the same):
+
+```
+fly launch --no-deploy --copy-config --config deploy/relay/fly.toml --name my-quantum-relay
+fly deploy --config deploy/relay/fly.toml --dockerfile deploy/relay/Dockerfile
+fly scale count 1 --config deploy/relay/fly.toml
+```
+
+The players then join `wss://my-quantum-relay.fly.dev/pong/ROOM`. Keep one
+machine: a room lives on the machine its first player reached. Any host
+that runs a container and terminates TLS works the same way (Render,
+Railway, a server behind Caddy or nginx).
+
+To give the games page a **Play online** button on each networked game,
+set the repository variable `QUANTUM_RELAY_URL` to the relay's address
+(`wss://my-quantum-relay.fly.dev`). The site's next build adds the button.
+It makes a room of its own and a link to send to a friend.
+
 | Game | What it is | Play | Download | Source |
 |---|---|---|---|---|
 | **Hopper** | A platformer: a world map, three levels (one drawn in Tiled), a block with a power-up, walkers to stomp, a pit, a checkpoint, spikes, a flag | [browser](https://quantumframework.net/games/hopper/) | [Linux](https://quantumframework.net/games/hopper/hopper-linux.zip) · [Windows](https://quantumframework.net/games/hopper/hopper-windows.zip) | [hopper.q](https://github.com/danielgregorio/quantum/blob/main/projects/hopper/hopper.q) |

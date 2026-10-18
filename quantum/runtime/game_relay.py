@@ -23,6 +23,7 @@ room's Godot, unchanged. It compiles each game of ``projects/`` (those with
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import re
 import shutil
@@ -53,13 +54,18 @@ class Room:
 class GameRelay:
     """Rooms of networked games, each a seatless Godot that the players join."""
 
-    def __init__(self, projects: Optional[Path] = None, binary: Optional[Path] = None, max_rooms: int = 50):
+    def __init__(self, projects: Optional[Path] = None, binary: Optional[Path] = None, max_rooms: int = 50,
+                 builds: Optional[Path] = None):
+        """``builds``: a folder that keeps the compiled games between runs (a container image
+        builds them once, ``--prebuild``); a temporary one by default."""
         self.projects = Path(projects) if projects else REPO / 'projects'
         self.binary = binary
         self.max_rooms = max_rooms
         self.rooms: Dict[str, Room] = {}
         self.builds: Dict[str, Path] = {}
-        self._tmp = Path(tempfile.mkdtemp(prefix='quantum-relay-'))
+        self._keep = builds is not None
+        self._tmp = Path(builds) if builds else Path(tempfile.mkdtemp(prefix='quantum-relay-'))
+        self._tmp.mkdir(parents=True, exist_ok=True)
         self._lock = asyncio.Lock()
 
     # --- the games ---
@@ -77,6 +83,10 @@ class GameRelay:
         text = source.read_text(encoding='utf-8')
         if '<qg:multiplayer' not in text:
             raise LookupError(f'{game} is not a networked game')
+        built = self._tmp / game
+        if self._keep and (built / '.godot').is_dir() and (built / 'game.json').is_file():
+            self.builds[game] = built   # compiled by an earlier run (--prebuild)
+            return built
         out = Path(compile_game(QuantumParser(use_cache=False).parse_file(str(source)),
                                 str(self._tmp / game), source_dir=str(source.parent)))
         errors = check_project(out, binary=self.binary)
@@ -151,12 +161,30 @@ class GameRelay:
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             context.load_cert_chain(cert, key)
         # open_timeout: a TLS opening on a busy machine can take more than websockets' 10 s
-        return await websockets.serve(self.handle, host, port, ssl=context, max_size=None, open_timeout=30)
+        return await websockets.serve(self.handle, host, port, ssl=context, max_size=None, open_timeout=30,
+                                      process_request=self.health)
+
+    def networked_games(self) -> list:
+        """The games of the projects folder that a relay can hold (those with qg:multiplayer)."""
+        return sorted(q.stem for q in self.projects.glob('*/*.q')
+                      if q.stem == q.parent.name and '<qg:multiplayer' in q.read_text(encoding='utf-8'))
+
+    def health(self, connection, request):
+        """A plain HTTP request (no WebSocket upgrade): a host's health check, or a person
+        opening the address. Answers what the relay holds; a WebSocket goes on to `handle`."""
+        import http
+        if request.headers.get('Upgrade', '').lower() == 'websocket':
+            return None
+        body = json.dumps({'relay': 'quantum', 'rooms': len(self.rooms), 'games': self.networked_games()})
+        response = connection.respond(http.HTTPStatus.OK, body + '\n')
+        response.headers['Content-Type'] = 'application/json'
+        return response
 
     def shutdown(self) -> None:
         for room in list(self.rooms.values()):
             self.close_room(room)
-        shutil.rmtree(self._tmp, ignore_errors=True)
+        if not self._keep:
+            shutil.rmtree(self._tmp, ignore_errors=True)
 
 
 async def _pump(a, b) -> None:
@@ -211,7 +239,13 @@ def main(args) -> int:
         print('quantum relay: --cert and --key go together')
         return 2
     logging.basicConfig(level=logging.INFO, format='%(message)s')
-    relay = GameRelay(projects=Path(args.projects) if args.projects else None, max_rooms=args.max_rooms)
+    relay = GameRelay(projects=Path(args.projects) if args.projects else None, max_rooms=args.max_rooms,
+                      builds=Path(args.builds) if args.builds else None)
+    if args.prebuild or args.prebuild_only:
+        for game in relay.networked_games():
+            print(f'quantum relay: {game} built in {relay.build(game)}')
+        if args.prebuild_only:
+            return 0
 
     async def run():
         server = await relay.serve(args.bind, args.port, args.cert, args.key)
@@ -236,3 +270,6 @@ def add_arguments(parser) -> None:
     parser.add_argument('--key', help="the certificate's private key (PEM)")
     parser.add_argument('--projects', help='the folder of games (default: projects/)')
     parser.add_argument('--max-rooms', type=int, default=50, help='rooms open at once (default 50)')
+    parser.add_argument('--builds', help='a folder that keeps the compiled games between runs')
+    parser.add_argument('--prebuild', action='store_true', help='compile every networked game before serving')
+    parser.add_argument('--prebuild-only', action='store_true', help='compile them, then stop (a container image)')

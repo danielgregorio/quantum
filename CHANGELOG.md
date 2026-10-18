@@ -10,6 +10,15 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the relay, ready to deploy. `deploy/relay/Dockerfile` builds an
+  image with Godot and the networked games compiled in, and
+  `deploy/relay/fly.toml` runs it on Fly.io. `quantum relay` adds
+  `--builds` (keep the compiled games between runs) and `--prebuild` /
+  `--prebuild-only`. A plain HTTP request is a health check that answers
+  in JSON. With a relay address (`QUANTUM_RELAY_URL`, or `relay` in
+  `projects/games.json`), the games page gives each networked game a
+  **Play online** button that makes a room and a link to send to a friend.
+  CI builds the image and checks its health.
 - Laboratory: `<qg:music sound="theme" fade="1" volume="-4">`, a scene's
   music. Going to a scene with other music crossfades from one to the
   other, a scene with the same music lets it play on, and a scene with none

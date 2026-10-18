@@ -1,5 +1,6 @@
 {
-  "_about": "The games of projects/, in the order the site shows them: what /games/ (scripts/export-games.py) says of each. The screenshot is projects/<name>/screenshot.png. \"check\" is what scripts/check-games-in-browser.py expects of the web build: the scene it opens on, and after pressing the keys of \"press\", the scene it goes to (\"then\") or the actions the game saw (\"actions\").",
+  "_about": "The games of projects/, in the order the site shows them: what /games/ (scripts/export-games.py) says of each. The screenshot is projects/<name>/screenshot.png. \"check\" is what scripts/check-games-in-browser.py expects of the web build: the scene it opens on, and after pressing the keys of \"press\", the scene it goes to (\"then\") or the actions the game saw (\"actions\"). \"relay\" is a quantum relay's address (wss://...): when set, or when QUANTUM_RELAY_URL is, each networked game gets \"Play online\", a room's link to send to a friend.",
+  "relay": "",
   "games": [
     {"name": "robot", "title": "Robot", "players": "1 player",
      "blurb": "Godot's \"Platformer 2D\" demo, transcribed: slopes and ledges, a robot that runs, jumps twice and shoots, crawling enemies, coins, lifts, a pause menu.",

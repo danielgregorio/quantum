@@ -83,3 +83,16 @@ def test_what_the_browser_check_expects_is_in_each_game(tmp_path):
             assert check['then'] in game['scenes'], g['name']
         for action in check.get('actions', []):
             assert action in game['actions'], (g['name'], action)
+
+
+def test_with_a_relay_each_networked_game_can_be_played_online(tmp_path, monkeypatch):
+    eg = load()
+    for name in eg.games():
+        (tmp_path / name).mkdir()
+        (tmp_path / name / 'index.html').write_text('x')
+    monkeypatch.delenv('QUANTUM_RELAY_URL', raising=False)
+    assert 'class="online"' not in eg.write_index(tmp_path).read_text(encoding='utf-8')   # no relay: no button
+    monkeypatch.setenv('QUANTUM_RELAY_URL', 'wss://relay.example/')
+    page = eg.write_index(tmp_path).read_text(encoding='utf-8')
+    online = {name for name in eg.games() if f'data-game="{name}" data-relay="wss://relay.example"' in page}
+    assert online == {'arena', 'chess', 'pong', 'towers'}                  # the games with qg:multiplayer

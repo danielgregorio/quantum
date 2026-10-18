@@ -139,6 +139,9 @@ Where browsers meet to play a networked game (rooms over WebSocket).
 | `--key` | the certificate's private key (PEM) |  |  |
 | `--projects` | the folder of games (default: projects/) |  |  |
 | `--max-rooms` | rooms open at once (default 50) | `50` |  |
+| `--builds` | a folder that keeps the compiled games between runs |  |  |
+| `--prebuild` | compile every networked game before serving |  |  |
+| `--prebuild-only` | compile them, then stop (a container image) |  |  |
 
 <a id="cli-playtest"></a>
 
