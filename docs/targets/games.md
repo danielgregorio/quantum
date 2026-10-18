@@ -316,6 +316,74 @@ A body the player moves: a platformer, or a walker on a world map.
 
 Goes inside: `qg:scene`.
 
+### `qg:behavior`
+
+What a character controller="behavior" is made of: parts, each a small rule. A platformer is qg:gravity, qg:walk and qg:jump; a top-down walker is qg:walk axis="both"; a flapping bird is qg:gravity and a qg:jump with air=; a ship that comes back round the screen is qg:walk axis="both" and qg:wrap. Each tick, whatever their order: walk and jump read the keys, gravity pulls, the body moves, then keep-inside, wrap and face. `me.vx`, `me.vy` and `me.on_floor` read it; qg:velocity sets its speed from the game's rules (a dash, a knock-back), so what no part covers is written in the game.
+
+Goes inside: `qg:character`.
+
+### `qg:gravity`
+
+A part: it falls, and stands on floors (without it, the body floats: top-down).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `strength` | number | `900.0` | pixels per second squared |
+| `max-fall` | number | `300.0` | the speed it falls at most, pixels per second |
+
+Goes inside: `qg:behavior`.
+
+### `qg:walk`
+
+A part: left and right (and up and down, with axis="both") set its speed.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `speed` | number | `90.0` | pixels per second |
+| `accel` | number | `0.0` | pixels per second squared towards the speed (0: at once) |
+| `axis` | `x` / `both` | `x` | x: across only (with gravity); both: in eight directions |
+
+Goes inside: `qg:behavior`.
+
+### `qg:jump`
+
+A part: a press on the floor leaps; with air=, also in the air. It needs qg:gravity.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `action` | a name | `jump` | a default action, or one a qg:input declares |
+| `height` | number | `64.0` | pixels, with the button held |
+| `speed` | number |  | the take-off speed, pixels per second, instead of height= |
+| `coyote` | integer | `6` | ticks after leaving a ledge in which a jump still works |
+| `air` | integer | `0` | jumps it may take in the air before landing again |
+| `variable` | true / false | `true` | letting go while rising cuts the leap |
+| `cut` | number | `0.0` | letting go multiplies the rise by this, once (0: three times the gravity while it rises instead) |
+| `sound` | a name |  | a qg:sound, played on take-off |
+
+Goes inside: `qg:behavior`.
+
+### `qg:keep-inside`
+
+A part: the scene's edges stop it.
+
+Goes inside: `qg:behavior`.
+
+### `qg:wrap`
+
+A part: past an edge of the scene, it comes back on the other side.
+
+Goes inside: `qg:behavior`.
+
+### `qg:face`
+
+A part: its picture turns left or right the way it goes.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `by` | `velocity` / `input` | `velocity` | velocity: the way it moves; input: the way it is pushed (it faces while it walks into a wall) |
+
+Goes inside: `qg:behavior`.
+
 ### `qg:instance`
 
 A prefab placed in the scene.
@@ -876,6 +944,24 @@ Shows the game in its next language (qg:language), after its own: a button for i
 
 Goes inside: a handler.
 
+### `qg:tween`
+
+Eases a property of a thing from what it is to a value, over some seconds: a coin that rises, a door that slides, a pulse. It runs in the game's ticks, so a replay and every peer see the same; it stops while the scene is paused, and a new tween of the same property replaces it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `target` | a name | `me` | me, other, a character id, or a q:set holding a thing |
+| `property` | `x` / `y` / `rotation` / `scale` / `alpha` | required | x, y: where it is (collisions see it); rotation (degrees), scale, alpha: its picture |
+| `to` | an expression | required |  |
+| `from` | an expression |  | where it starts (what it is now when not given) |
+| `seconds` | number | `0.5` |  |
+| `trans` | `linear` / `sine` / `quad` / `cubic` / `back` / `bounce` / `elastic` | `sine` | the curve |
+| `ease` | `in` / `out` / `in-out` | `out` | which end of the curve is slow |
+| `repeat` | integer | `0` | times it plays again (-1: for ever) |
+| `yoyo` | true / false | `false` | each repeat goes back the other way |
+
+Goes inside: a handler.
+
 ### `qg:velocity`
 
 Sets the speed of a character controller="behavior", in pixels per second: a dash, a knock-back, a wind, a spring. An axis not given keeps its speed. Its parts go on from there (gravity pulls it back down; walk sets the speed across again on the next tick, unless it has accel=).
@@ -890,12 +976,6 @@ Goes inside: a handler.
 
 ## Other tags
 
-### `qg:behavior`
-
-What a character controller="behavior" is made of: parts, each a small rule. A platformer is qg:gravity, qg:walk and qg:jump; a top-down walker is qg:walk axis="both"; a flapping bird is qg:gravity and a qg:jump with air=; a ship that comes back round the screen is qg:walk axis="both" and qg:wrap. Each tick, whatever their order: walk and jump read the keys, gravity pulls, the body moves, then keep-inside, wrap and face. `me.vx`, `me.vy` and `me.on_floor` read it; qg:velocity sets its speed from the game's rules (a dash, a knock-back), so what no part covers is written in the game.
-
-Goes inside: `qg:character`.
-
 ### `qg:dialogue`
 
 Lines someone says, shown one at a time in a box at the bottom of the screen (qg:say opens it).
@@ -907,50 +987,6 @@ Lines someone says, shown one at a time in a box at the bottom of the screen (qg
 | `size` | integer | `24` | font size |
 
 Goes inside: `qg:scene`.
-
-### `qg:face`
-
-A part: its picture turns left or right the way it goes.
-
-| Attribute | Type | Default | Meaning |
-|---|---|---|---|
-| `by` | `velocity` / `input` | `velocity` | velocity: the way it moves; input: the way it is pushed (it faces while it walks into a wall) |
-
-Goes inside: `qg:behavior`.
-
-### `qg:gravity`
-
-A part: it falls, and stands on floors (without it, the body floats: top-down).
-
-| Attribute | Type | Default | Meaning |
-|---|---|---|---|
-| `strength` | number | `900.0` | pixels per second squared |
-| `max-fall` | number | `300.0` | the speed it falls at most, pixels per second |
-
-Goes inside: `qg:behavior`.
-
-### `qg:jump`
-
-A part: a press on the floor leaps; with air=, also in the air. It needs qg:gravity.
-
-| Attribute | Type | Default | Meaning |
-|---|---|---|---|
-| `action` | a name | `jump` | a default action, or one a qg:input declares |
-| `height` | number | `64.0` | pixels, with the button held |
-| `speed` | number |  | the take-off speed, pixels per second, instead of height= |
-| `coyote` | integer | `6` | ticks after leaving a ledge in which a jump still works |
-| `air` | integer | `0` | jumps it may take in the air before landing again |
-| `variable` | true / false | `true` | letting go while rising cuts the leap |
-| `cut` | number | `0.0` | letting go multiplies the rise by this, once (0: three times the gravity while it rises instead) |
-| `sound` | a name |  | a qg:sound, played on take-off |
-
-Goes inside: `qg:behavior`.
-
-### `qg:keep-inside`
-
-A part: the scene's edges stop it.
-
-Goes inside: `qg:behavior`.
 
 ### `qg:language`
 
@@ -1041,42 +1077,6 @@ Runs its handler after so many ticks, or every so many ticks, in this scene.
 | `count` | integer | `0` | every: stop after this many runs (0: never) |
 
 Goes inside: `qg:scene`.
-
-### `qg:tween`
-
-Eases a property of a thing from what it is to a value, over some seconds: a coin that rises, a door that slides, a pulse. It runs in the game's ticks, so a replay and every peer see the same; it stops while the scene is paused, and a new tween of the same property replaces it.
-
-| Attribute | Type | Default | Meaning |
-|---|---|---|---|
-| `target` | a name | `me` | me, other, a character id, or a q:set holding a thing |
-| `property` | `x` / `y` / `rotation` / `scale` / `alpha` | required | x, y: where it is (collisions see it); rotation (degrees), scale, alpha: its picture |
-| `to` | an expression | required |  |
-| `from` | an expression |  | where it starts (what it is now when not given) |
-| `seconds` | number | `0.5` |  |
-| `trans` | `linear` / `sine` / `quad` / `cubic` / `back` / `bounce` / `elastic` | `sine` | the curve |
-| `ease` | `in` / `out` / `in-out` | `out` | which end of the curve is slow |
-| `repeat` | integer | `0` | times it plays again (-1: for ever) |
-| `yoyo` | true / false | `false` | each repeat goes back the other way |
-
-Goes inside: a handler.
-
-### `qg:walk`
-
-A part: left and right (and up and down, with axis="both") set its speed.
-
-| Attribute | Type | Default | Meaning |
-|---|---|---|---|
-| `speed` | number | `90.0` | pixels per second |
-| `accel` | number | `0.0` | pixels per second squared towards the speed (0: at once) |
-| `axis` | `x` / `both` | `x` | x: across only (with gravity); both: in eight directions |
-
-Goes inside: `qg:behavior`.
-
-### `qg:wrap`
-
-A part: past an edge of the scene, it comes back on the other side.
-
-Goes inside: `qg:behavior`.
 
 ## Statements
 

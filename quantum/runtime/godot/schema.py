@@ -40,7 +40,7 @@ class Tag:
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
-           'say', 'save', 'continue', 'next-language', 'velocity')
+           'say', 'save', 'continue', 'next-language', 'tween', 'velocity')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(

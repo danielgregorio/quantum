@@ -230,7 +230,7 @@ def build() -> str:
          ['tileset', 'spritesheet', 'input', 'multiplayer', 'sound', 'prefab', 'animation', 'state', 'move',
           'scene']),
         ('What a scene holds', 'The level, the character, the things placed in it, and what the screen shows.',
-         ['tilemap', 'character', 'instance', 'spawner', 'zone', 'sprite', 'path', 'cursor', 'exit', 'map-node',
+         ['tilemap', 'character', 'behavior', 'gravity', 'walk', 'jump', 'keep-inside', 'wrap', 'face', 'instance', 'spawner', 'zone', 'sprite', 'path', 'cursor', 'exit', 'map-node',
           'map-path', 'camera', 'hud', 'counter', 'text', 'bar', 'menu', 'button', 'field', 'lobby']),
         ('Handlers', 'Where the logic goes: actions and statements, with `me` and `other` '
          '(`cursor` and `other` in qg:on-select).',
