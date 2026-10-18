@@ -67,6 +67,7 @@ var catch_up_to: int = -1        # a rejoining player runs fast up to this tick,
 
 const CATCH_UP_SPEED := 16       # a power of two: 1/(60*16)*16 is exactly 1/60
 const LOG_PART := 200            # ticks of inputs a message carries to a rejoining player
+const WS_BUFFER := 1 << 24       # bytes a WebSocket peer holds in each direction
 
 
 func setup(spec: Dictionary, game_: Node, host_: String, port_: int) -> void:
@@ -92,7 +93,7 @@ func setup(spec: Dictionary, game_: Node, host_: String, port_: int) -> void:
 			err = enet.create_server(port, players - 1)
 			peer = enet
 		else:
-			var ws := WebSocketMultiplayerPeer.new()
+			var ws := _websocket()
 			err = ws.create_server(port)
 			peer = ws
 		if err != OK:
@@ -121,13 +122,23 @@ func setup(spec: Dictionary, game_: Node, host_: String, port_: int) -> void:
 		_connect()
 
 
+# A WebSocket peer with room for a rejoining player's inputs: the host sends
+# them all at once, and the default buffers (64 KiB) would drop some.
+func _websocket() -> WebSocketMultiplayerPeer:
+	var ws := WebSocketMultiplayerPeer.new()
+	ws.inbound_buffer_size = WS_BUFFER
+	ws.outbound_buffer_size = WS_BUFFER
+	ws.max_queued_packets = 65536
+	return ws
+
+
 func _connect() -> void:
 	if transport == "enet":
 		var enet := ENetMultiplayerPeer.new()
 		enet.create_client(host, port)
 		multiplayer.multiplayer_peer = enet
 	else:
-		var ws := WebSocketMultiplayerPeer.new()
+		var ws := _websocket()
 		# an address may be a whole URL: wss://relay.example/pong/ROOM (quantum relay)
 		ws.create_client(host if host.contains("://") else "ws://%s:%d" % [host, port])
 		multiplayer.multiplayer_peer = ws
@@ -314,7 +325,7 @@ func _send_log(id: int) -> void:
 			part = {}
 	if not part.is_empty():
 		_log_part.rpc_id(id, part)
-	_log_done.rpc_id(id, _agreed)
+	_log_done.rpc_id(id, _agreed, _log.size())
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -324,7 +335,12 @@ func _log_part(part: Dictionary) -> void:
 
 
 @rpc("authority", "call_remote", "reliable")
-func _log_done(agreed: Dictionary) -> void:
+func _log_done(agreed: Dictionary, count: int) -> void:
+	if _log.size() != count:
+		# a part was lost on the way: the game cannot be caught up, say so rather than wait
+		push_error("quantum: rejoining got %d ticks of inputs of %d" % [_log.size(), count])
+		status = "failed"
+		return
 	for t in agreed:
 		_agreed[int(t)] = int(agreed[t])
 	var last := -1
