@@ -28,6 +28,11 @@
   <qg:sound name="open" src="assets/kenney/audio/block.ogg" />
   <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
 
+  <!-- effects: only seen, the game's state never depends on them -->
+  <qg:particles name="sparkle" preset="stars" color="#fff0a0" />
+  <qg:particles name="slain" preset="smoke" color="#b0a0c0" />
+  <qg:particles name="treasure" preset="confetti" />
+
   <qg:prefab name="Key" tag="key" sheet="dungeon" frame="8" hitbox="12x12" />
   <qg:prefab name="Heart" tag="heart" sheet="dungeon" frame="9" hitbox="12x12" />
   <qg:prefab name="Door" tag="door" sheet="dungeon" frame="2" hitbox="18x18" solid="true" />
@@ -128,6 +133,7 @@
         <q:call function="hurt" args="me" />
       </qg:on-collision>
       <qg:on-hit with="enemy">
+        <qg:emit particles="slain" at="other" />
         <qg:destroy target="other" />
       </qg:on-hit>
     </qg:character>
@@ -184,6 +190,7 @@
         <q:call function="hurt" args="me" />
       </qg:on-collision>
       <qg:on-hit with="enemy">
+        <qg:emit particles="slain" at="other" />
         <qg:destroy target="other" />
       </qg:on-hit>
       <qg:on-collision with="door">
@@ -254,16 +261,19 @@
         <q:call function="hurt" args="me" />
       </qg:on-collision>
       <qg:on-hit with="enemy">
+        <qg:emit particles="slain" at="other" />
         <qg:destroy target="other" />
       </qg:on-hit>
       <qg:on-collision with="key">
         <qg:play sound="pick" />
+        <qg:emit particles="sparkle" at="other" />
         <q:set name="keys" value="{keys + 1}" />
         <q:set name="taken" value="{taken + [other.name]}" />
         <qg:destroy target="other" />
       </qg:on-collision>
       <qg:on-collision with="heart">
         <qg:play sound="pick" />
+        <qg:emit particles="sparkle" at="other" />
         <q:set name="hearts" value="{hearts + 1}" />
         <q:set name="taken" value="{taken + [other.name]}" />
         <qg:destroy target="other" />
@@ -328,6 +338,7 @@
         <q:call function="hurt" args="me" />
       </qg:on-collision>
       <qg:on-hit with="enemy">
+        <qg:emit particles="slain" at="other" />
         <qg:destroy target="other" />
       </qg:on-hit>
       <qg:on-hit with="switch">
@@ -391,6 +402,7 @@
         <q:call function="hurt" args="me" />
       </qg:on-collision>
       <qg:on-hit with="enemy">
+        <qg:emit particles="slain" at="other" />
         <qg:destroy target="other" />
       </qg:on-hit>
       <qg:on-collision with="gate">
@@ -443,6 +455,7 @@
       <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="chest">
         <qg:play sound="win" />
+        <qg:emit particles="treasure" at="other" />
         <q:set name="message" value="THE TREASURE OF THE KEEP IS YOURS." />
         <qg:goto-scene name="the-end" />
       </qg:on-collision>
