@@ -33,16 +33,6 @@ alter the behaviour of an existing app is listed under **Breaking**.
   `<qg:velocity target="me" x="..." y="...">` sets its speed from the game's
   rules (a dash, a knock-back, a spring), and `me.vx`, `me.vy`, `me.on_floor`
   read it.
-- Laboratory: `<qg:particles name="sparkle" preset="stars" color="#ffe060">`,
-  a particle effect from a preset (puff, sparks, smoke, dust, fire, rain,
-  snow, confetti, stars) and a few overrides (color, amount, lifetime,
-  speed, size), never the 68 knobs of `CPUParticles2D`. `<qg:emit
-  particles= at= dx= dy=>` plays one once where a thing is;
-  `<qg:emitter particles= x= y= width=>` keeps one going in a scene (rain
-  across its width, a fire on a spot). Only seen: a test plays a game with
-  and without its effects and gets the same state. Hopper's coins sparkle,
-  a stomped walker goes in a puff; Keep's key and heart twinkle, a slain
-  monster smokes and the chest bursts into confetti.
 - Laboratory: `<qg:set-tile col= row= tile= layer=>` puts a tile in a cell
   of the scene's tilemap, or empties it (`tile="0"`): a block that breaks,
   a door drawn as tiles. Its collision changes from the next tick (the

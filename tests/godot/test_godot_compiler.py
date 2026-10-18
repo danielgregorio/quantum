@@ -459,16 +459,6 @@ class TestScenesMapAndGameState:
         e = refuse(tmp_path, game('  <qg:scene name="main"><qg:gravity /></qg:scene>\n'))
         assert 'goes inside <qg:behavior>' in e.message
 
-    def test_particles_must_be_declared(self, tmp_path):
-        e = refuse(tmp_path, game('  <qg:scene name="t"><qg:character id="h" controller="topdown" sheet="k" frame="0" '
-                                  'x="0" y="0" hitbox="8x8" /><qg:timer after="1"><qg:emit particles="nowhere" at="h" />'
-                                  '</qg:timer></qg:scene>\n'))
-        assert '<qg:emit particles="nowhere">: no qg:particles of that name' in e.message
-        e = refuse(tmp_path, game('  <qg:scene name="t"><qg:emitter particles="rain" x="0" y="0" /></qg:scene>\n'))
-        assert '<qg:emitter particles="rain">: no qg:particles of that name' in e.message
-        e = refuse(tmp_path, game('  <qg:particles name="p" preset="lava" />\n  <qg:scene name="t" />\n'))
-        assert 'lava' in e.message
-
     def test_set_tile_and_tile_at(self, tmp_path):
         out = build(tmp_path, game('''  <qg:scene name="main">
     <q:set name="here" value="0" type="number" />
@@ -479,6 +469,16 @@ class TestScenesMapAndGameState:
         script = (out / 'scripts' / 'scene_main.gd').read_text()
         assert '\tQ.set_tile(self, (1 + 2), 4, 0)\n' in script and '\tQ.set_tile(self, 1, 1, 5, "walls")\n' in script
         assert 'Q.tile_at(self, 3, 4)' in script
+
+    def test_particles_must_be_declared(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:scene name="t"><qg:character id="h" controller="topdown" sheet="k" frame="0" '
+                                  'x="0" y="0" hitbox="8x8" /><qg:timer after="1"><qg:emit particles="nowhere" at="h" />'
+                                  '</qg:timer></qg:scene>\n'))
+        assert '<qg:emit particles="nowhere">: no qg:particles of that name' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="t"><qg:emitter particles="rain" x="0" y="0" /></qg:scene>\n'))
+        assert '<qg:emitter particles="rain">: no qg:particles of that name' in e.message
+        e = refuse(tmp_path, game('  <qg:particles name="p" preset="lava" />\n  <qg:scene name="t" />\n'))
+        assert 'lava' in e.message
 
     def test_a_game_in_other_languages(self, tmp_path):
         out = build(tmp_path, game('''  <qg:language lang="pt" name="Português">

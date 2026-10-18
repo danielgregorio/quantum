@@ -56,7 +56,6 @@ class SceneScript:
     function_names: List[str] = field(default_factory=list)
     sounds_played: List[str] = field(default_factory=list)
     prefabs_used: List[tuple] = field(default_factory=list)   # (name, line) from spawn/swap
-    particles_used: List[tuple] = field(default_factory=list)  # (name, line) from qg:emit
     unrollable: List[tuple] = field(default_factory=list)     # (tag, line): qg:tween, qg:set-tile (not under rollback)
     particles_used: List[tuple] = field(default_factory=list)  # (name, line) from qg:emit
     states_used: List[tuple] = field(default_factory=list)    # (name, line) from become
@@ -433,6 +432,13 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         x, y = (compile_expression(el.get(a), scope, el.line) if el.get(a) is not None else 'null'
                 for a in ('x', 'y'))
         return f'Q.velocity({target}, {x}, {y})'
+    if el.tag == 'set-tile':
+        script.unrollable.append(('set-tile', el.line))
+        args = [compile_expression(el.get('col'), scope, el.line), compile_expression(el.get('row'), scope, el.line),
+                compile_expression(el.get('tile'), scope, el.line)]
+        if el.get('layer'):
+            args.append(json.dumps(el.get('layer')))
+        return f'Q.set_tile(self, {", ".join(args)})'
     if el.tag == 'emit':
         at = el.get('at')
         if not scope.has(at):
@@ -441,13 +447,6 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         script.particles_used.append((el.get('particles'), el.line))
         return (f'Q.emit({scope.reference(at)}, {json.dumps(el.get("particles"))}, '
                 f'{float(el.get("dx"))!r}, {float(el.get("dy"))!r})')
-    if el.tag == 'set-tile':
-        script.unrollable.append(('set-tile', el.line))
-        args = [compile_expression(el.get('col'), scope, el.line), compile_expression(el.get('row'), scope, el.line),
-                compile_expression(el.get('tile'), scope, el.line)]
-        if el.get('layer'):
-            args.append(json.dumps(el.get('layer')))
-        return f'Q.set_tile(self, {", ".join(args)})'
     if el.tag == 'tween':
         if el.get('seconds') <= 0:
             raise GameCompileError(f'<qg:tween seconds="{el.get("seconds")}">: more than 0', el.line)
