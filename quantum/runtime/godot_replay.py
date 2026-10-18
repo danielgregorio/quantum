@@ -87,7 +87,8 @@ def free_port() -> int:
 def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], port: Optional[int] = None,
                  binary: Optional[Path] = None, timeout: float = 300,
                  lobby_tapes: Optional[List[Optional[Tape]]] = None, transport: Optional[str] = None,
-                 latency_ms: Optional[List[int]] = None, net_report: bool = False) -> List[dict]:
+                 latency_ms: Optional[List[int]] = None, net_report: bool = False,
+                 relay=False) -> List[dict]:
     """Run the project under qg:multiplayer: one Godot per player, on localhost.
 
     The first tape is player 1's, who hosts; the others join in order. Each
@@ -103,7 +104,10 @@ def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], por
     first tick. ``transport`` overrides qg:multiplayer's (``websocket``).
     ``latency_ms`` holds back each peer's frames that long (one number per
     peer), so a rollback game has guesses to correct; ``net_report`` adds
-    each peer's own counts (rollbacks) under ``_net``.
+    each peer's own counts (rollbacks) under ``_net``. With ``relay``, a
+    seatless Godot hosts (``--q-relay``, as ``quantum relay`` starts it) and
+    every tape joins it, player 1 too, over WebSocket; a URL instead
+    (``ws://host:port/pong/room``) is a ``quantum relay``'s room to join.
     """
     import subprocess
     import time
@@ -114,6 +118,13 @@ def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], por
     with tempfile.TemporaryDirectory(prefix='quantum-peers-') as tmp:
         procs = []
         outs = []
+        relay_proc = None
+        relay_url = relay if isinstance(relay, str) else None   # a quantum relay's room: everyone joins it
+        if relay and not relay_url:
+            relay_proc = subprocess.Popen([str(binary), '--headless', '--path', str(project_dir), '--',
+                                           f'--q-relay={port}'],
+                                          stdout=open(Path(tmp) / 'relay.txt', 'w'), stderr=subprocess.STDOUT)
+            time.sleep(1.0)
         def write(path: Path, tape: Optional[Tape]) -> None:
             path.write_text(json.dumps({str(k): [list(e) for e in v] for k, v in (tape or {}).items()}),
                             encoding='utf-8')
@@ -130,7 +141,10 @@ def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], por
                 peer_args = [f'--tape={lobby_path}', f'--game-tape={tape_path}', f'--q-port={port}']
             else:
                 peer_args = [f'--tape={tape_path}',
-                             f'--q-host={port}' if i == 0 else f'--q-join=127.0.0.1:{port}']
+                             f'--q-host={port}' if i == 0 and not relay
+                             else f'--q-join={relay_url or f"127.0.0.1:{port}"}']
+                if relay:
+                    peer_args.append('--q-transport=websocket')
             if transport:
                 peer_args.append(f'--q-transport={transport}')
             if latency_ms and latency_ms[i]:
@@ -143,18 +157,25 @@ def replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], por
                  f'--ticks={ticks}', f'--out={out_path}', f'--persist-dir={persist}', *peer_args],
                 stdout=log, stderr=subprocess.STDOUT), log))
             outs.append(out_path)
-            if i == 0 and lobby_tapes is None:
-                time.sleep(1.0)   # the host listens before anyone joins (a lobby tape times it itself)
+            if i < len(tapes) - 1 and lobby_tapes is None and (i == 0 or relay):
+                # the host listens before anyone joins (a lobby tape times it itself); through a
+                # relay the seats go in the order the players arrive, so they arrive in order
+                time.sleep(1.0)
         deadline = time.time() + timeout
-        for proc, log in procs:
-            remaining = max(1.0, deadline - time.time())
-            try:
-                proc.wait(timeout=remaining)
-            except subprocess.TimeoutExpired:
-                for p_, _ in procs:
-                    p_.kill()
-                raise ReplayError(f'a peer did not finish within {timeout}s')
-            log.close()
+        try:
+            for proc, log in procs:
+                remaining = max(1.0, deadline - time.time())
+                try:
+                    proc.wait(timeout=remaining)
+                except subprocess.TimeoutExpired:
+                    for p_, _ in procs:
+                        p_.kill()
+                    raise ReplayError(f'a peer did not finish within {timeout}s')
+                log.close()
+        finally:
+            if relay_proc is not None:
+                relay_proc.kill()
+                relay_proc.wait()
         states = []
         for i, out_path in enumerate(outs):
             output = (Path(tmp) / f'log{i}.txt').read_text(encoding='utf-8')

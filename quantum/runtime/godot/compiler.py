@@ -1026,7 +1026,10 @@ def _expand_lobbies(children: list, multiplayer: Optional[dict]) -> list:
                   "('Joining ' + lobby_address + '...' if net_status() == 'joining' else "
                   "('Connected, starting...' if net_status() == 'connected' else "
                   "('Could not connect' if net_status() == 'failed' else '')))" + "}")
-        out.append(Statement('set', {'name': 'lobby_address', 'value': str(el.get('address'))}, line))
+        # the address field starts with the page's ?join= (a link to a relay's room), else address=
+        out.append(Statement('set', {'name': 'lobby_address',
+                                     'value': '{url_param(' + json.dumps('join') + ', ' + json.dumps(str(el.get('address'))) + ')}'},
+                             line))
         out.append(_el('menu', line, buttons, font=el.get('font'), size=el.get('size')))
         out.append(_el('hud', line, [_el('text', line, value=status)], position='bottom-center', size=el.get('size')))
     return out
