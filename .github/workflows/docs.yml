@@ -44,6 +44,10 @@ jobs:
       - run: python scripts/godot.py install
       - run: python scripts/export-games.py --install-templates
       - name: Export every game for the browser, Linux and Windows
+        # QUANTUM_RELAY_URL (a repository variable, wss://...): where the games page's
+        # "Play online" sends two players; unset, the page has no such button
+        env:
+          QUANTUM_RELAY_URL: ${{ vars.QUANTUM_RELAY_URL }}
         run: python scripts/export-games.py
 
       - run: npm run docs:build

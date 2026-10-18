@@ -172,6 +172,21 @@ jobs:
             ${{ runner.temp }}/games/rpg/bridge.png
           if-no-files-found: ignore
 
+  relay-image:
+    # The relay as it is deployed (deploy/relay/Dockerfile): the image builds,
+    # compiles the networked games, and answers its health check.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the relay's image
+        run: docker build -f deploy/relay/Dockerfile -t quantum-relay .
+      - name: It starts and says what it holds
+        run: |
+          docker run -d --name relay -p 8080:8080 quantum-relay
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8080/health && break; sleep 1; done
+          curl -sf http://127.0.0.1:8080/health | grep '"pong"'
+          docker logs relay
+
   docs:
     # The docs site, on every push and pull request. "Deploy Docs" builds it
     # too, but only after a change to docs/ has reached main -- a broken link

@@ -182,6 +182,8 @@ main {{ max-width: 1180px; margin: 0 auto; padding: 24px 16px 56px;
 .links a:hover {{ border-color: var(--accent); }}
 footer {{ max-width: 1180px; margin: 0 auto; padding: 0 16px 40px; color: var(--muted); font-size: .875rem; }}
 footer a {{ color: var(--accent); }}
+.room {{ display: none; margin-top: 10px; font-size: .875rem; }}
+.room input {{ width: 100%; font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); }}
 </style>
 </head>
 <body>
@@ -196,14 +198,35 @@ the browser, or downloaded for Linux and Windows. Two-player games run on one ke
 </main>
 <footer>The game language: <a href="../targets/games.html">its reference</a>. The source of every game:
 <a href="https://github.com/danielgregorio/quantum/tree/main/projects">projects/</a>.</footer>
+<script>
+// "Play online": a room of its own at the relay, as a link to send to a friend; both open it
+// and choose Join on the title (the address field already holds the room).
+for (const a of document.querySelectorAll('a.online')) {{
+  a.addEventListener('click', (e) => {{
+    e.preventDefault();
+    const room = Math.random().toString(36).slice(2, 8);
+    const link = new URL(a.dataset.game + '/?join=' + a.dataset.relay + '/' + a.dataset.game + '/' + room, location.href).href;
+    const box = a.closest('.body').querySelector('.room');
+    box.querySelector('input').value = link;
+    box.querySelector('a').href = link;
+    box.style.display = 'block';
+    if (navigator.clipboard) navigator.clipboard.writeText(link).catch(() => {{}});
+  }});
+}}
+</script>
 </body>
 </html>
 """
 
 
 def write_index(out_root: Path) -> Path:
-    """games/index.html: every game that is built under out_root, in the order of projects/games.json."""
-    meta = json.loads((REPO / 'projects' / 'games.json').read_text(encoding='utf-8'))['games']
+    """games/index.html: every game that is built under out_root, in the order of projects/games.json.
+
+    With a relay (projects/games.json's "relay", or QUANTUM_RELAY_URL: wss://relay.example), each
+    networked game also has "Play online", which makes a room's link to send to a friend."""
+    listing = json.loads((REPO / 'projects' / 'games.json').read_text(encoding='utf-8'))
+    meta = listing['games']
+    relay = (os.environ.get('QUANTUM_RELAY_URL') or listing.get('relay') or '').rstrip('/')
     cards = []
     for g in meta:
         name = g['name']
@@ -216,6 +239,10 @@ def write_index(out_root: Path) -> Path:
         links = []
         if (folder / 'index.html').is_file():
             links.append(f'<a class="play" href="{name}/">Play in the browser</a>')
+            source = REPO / 'projects' / name / f'{name}.q'
+            if relay and '<qg:multiplayer' in source.read_text(encoding='utf-8'):
+                links.append(f'<a class="online" href="#" data-game="{name}" data-relay="{html.escape(relay)}">'
+                             'Play online with a friend</a>')
         for preset, label in (('linux', 'Linux'), ('windows', 'Windows')):
             if (folder / f'{name}-{preset}.zip').is_file():
                 links.append(f'<a href="{name}/{name}-{preset}.zip">{label}</a>')
@@ -229,6 +256,8 @@ def write_index(out_root: Path) -> Path:
 <p class="blurb">{html.escape(g['blurb'])}</p>
 <p class="keys">{html.escape(g['controls'])}</p>
 <div class="links">{' '.join(links)}</div>
+<div class="room">Send this link to your friend (it is copied), then both choose Join:
+<input readonly> <a href="#">Open the room</a></div>
 </div>
 </article>""")
     out_root.mkdir(parents=True, exist_ok=True)

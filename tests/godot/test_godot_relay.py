@@ -125,3 +125,15 @@ def test_with_a_certificate_it_is_wss(godot, tmp_path, caplog):
                         raise
     finally:
         game_relay.shutdown()
+
+
+def test_a_plain_request_is_a_health_check(relay):
+    # what a host (Fly.io, Render) asks to know the relay is up: no WebSocket, an answer in JSON
+    import json
+    import urllib.request
+    game_relay, url = relay
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with opener.open(url.replace('ws://', 'http://') + '/health', timeout=10) as answer:
+        health = json.loads(answer.read())
+    assert health['relay'] == 'quantum' and health['games'] == ['arena', 'chess', 'pong', 'towers']
+    assert health['rooms'] == len(game_relay.rooms)
