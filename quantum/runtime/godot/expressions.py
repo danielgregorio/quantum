@@ -46,6 +46,7 @@ _FUNCTIONS = {
     'paused': 'Q.paused(self)',              # the scene is paused (qg:pause)
     'talking': 'Q.talking(self)',            # a qg:dialogue is open (qg:say)
     'tr': 'Q.translate({0})',                # a text in the player's language (qg:language)
+    'language': 'Q.language_name()',         # the name of the language shown, in it (English: the game's own)
     'has_save': 'Q.has_save()',              # a qg:save is there to continue
 }
 

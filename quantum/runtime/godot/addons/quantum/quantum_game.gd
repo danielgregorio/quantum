@@ -55,8 +55,9 @@ func _ready() -> void:
 	go_to_scene(spec["initial"])
 
 
-# qg:language: --q-lang=pt, else the web page's ?lang=pt, else the system's
-# language, when the game has it; else the game's own texts.
+# qg:language: --q-lang=pt, else the web page's ?lang=pt, else the one chosen
+# in an earlier run (qg:next-language), else the system's language, when the
+# game has it; else the game's own texts.
 func _languages(langs: Dictionary) -> void:
 	var wanted := ""
 	for a in OS.get_cmdline_user_args():
@@ -65,6 +66,10 @@ func _languages(langs: Dictionary) -> void:
 	if wanted == "":
 		wanted = str(Q.url_param("lang", ""))
 	if wanted == "":
+		wanted = Q.chosen_language()
+	if wanted == "-":
+		wanted = ""
+	elif wanted == "":
 		wanted = OS.get_locale()
 	for code in langs.keys():
 		var t := Translation.new()
@@ -74,6 +79,8 @@ func _languages(langs: Dictionary) -> void:
 			t.add_message(text, phrases[text])
 		TranslationServer.add_translation(t)
 	Q.languages = langs.keys()
+	for code in langs.keys():
+		Q.language_names[code] = str(langs[code].get("name", code))
 	if langs.has(wanted):
 		Q.lang = wanted
 	elif langs.has(wanted.split("_")[0]):

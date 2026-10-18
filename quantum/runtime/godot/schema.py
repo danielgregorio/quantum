@@ -40,7 +40,7 @@ class Tag:
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
-           'say', 'save', 'continue')
+           'say', 'save', 'continue', 'next-language')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -584,6 +584,12 @@ TAGS: Dict[str, Tag] = {
         'replaces it. `has_save()` says whether there is one. A networked game is not saved.',
         {'scene': Attr('ident', None, doc='the scene to continue in (none: this one); it starts over, '
                        'what was in it is not saved')},
+        parents=('handler',)),
+    'next-language': Tag(
+        'Shows the game in its next language (qg:language), after its own: a button for it is '
+        '`<qg:button label="{tr(\'Language\') + \': \' + language()}">`. The choice is kept for the next run. '
+        'Only what is shown changes.',
+        {},
         parents=('handler',)),
     'continue': Tag(
         'Continues the saved game (qg:save): its game state back, and on to its scene. Nothing when there '

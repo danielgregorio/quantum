@@ -54,6 +54,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
   a session picks one (`lang=`, `quantum play --lang`, `play_start`), and
   the game's own texts are the default. The RPG is in Portuguese and
   Spanish too.
+- Laboratory: `<qg:next-language>` shows the game in its next language,
+  after its own, and the choice is kept for the next run; `language()` is
+  the name of the one shown. A `qg:lobby` of a game in several languages
+  has a button for it, and Hopper's title too
+  (`label="{tr('Language') + ': ' + language()}"`).
 - Laboratory: `<qg:save scene="map">` and `<qg:continue>`: a game saved
   to continue later. A save is the game state (every `q:set` of
   `q:application`) and the scene to come back to, which starts over; one

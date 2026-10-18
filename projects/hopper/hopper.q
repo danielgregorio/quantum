@@ -61,6 +61,7 @@
     <qg:phrase text="GAME OVER - PRESS JUMP" as="FIM DE JOGO - APERTE PULAR" />
     <qg:phrase text="New game" as="Novo jogo" />
     <qg:phrase text="Continue" as="Continuar" />
+    <qg:phrase text="Language" as="Idioma" />
   </qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="SCORE" as="PUNTOS" />
@@ -71,6 +72,7 @@
     <qg:phrase text="GAME OVER - PRESS JUMP" as="FIN DEL JUEGO - PULSA SALTAR" />
     <qg:phrase text="New game" as="Nueva partida" />
     <qg:phrase text="Continue" as="Continuar" />
+    <qg:phrase text="Language" as="Idioma" />
   </qg:language>
 
   <!-- ===== The title: a new game, or the saved one (each level cleared saves it) ===== -->
@@ -80,6 +82,7 @@
     <qg:menu position="center">
       <qg:button label="New game"><qg:goto-scene name="map" /></qg:button>
       <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+      <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
     </qg:menu>
   </qg:scene>
 
