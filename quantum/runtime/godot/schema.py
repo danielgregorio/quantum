@@ -40,7 +40,7 @@ class Tag:
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
-           'say', 'save', 'continue', 'next-language', 'tween', 'velocity')
+           'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -102,6 +102,18 @@ TAGS: Dict[str, Tag] = {
         {'name': Attr('ident', required=True),
          'src': Attr('str', required=True, doc='an .ogg or .wav'),
          'loop': Attr('bool', False, doc='plays until qg:stop (music)')},
+        parents=('application',)),
+    'particles': Tag(
+        'A particle effect the game can show: a preset and a few overrides. qg:emit plays it once where a thing '
+        'is; qg:emitter keeps it going in a scene. Only seen: the game\'s state never depends on it.',
+        {'name': Attr('ident', required=True),
+         'preset': Attr('enum:puff|sparks|smoke|dust|fire|rain|snow|confetti|stars', required=True,
+                        doc='puff, sparks, smoke, dust, confetti and stars play once; fire, rain and snow keep going'),
+         'color': Attr('color', None, doc='the preset\'s own when not given (confetti is every colour)'),
+         'amount': Attr('int', None, doc='how many particles'),
+         'lifetime': Attr('float', None, doc='seconds each one lives'),
+         'speed': Attr('float', None, doc='pixels a second, about'),
+         'size': Attr('float', None, doc='pixels, about')},
         parents=('application',)),
     'language': Tag(
         'The game\'s texts in another language: each qg:phrase gives one text as written in the game, and '
@@ -336,6 +348,12 @@ TAGS: Dict[str, Tag] = {
          'frame': Attr('expr', '0', doc='a number, or an expression the picture follows tick by tick: '
                        '`{1 if hurt > 0 else 0}`'),
          'x': Attr('float', required=True), 'y': Attr('float', required=True)},
+        parents=('scene',)),
+    'emitter': Tag(
+        'A qg:particles effect that keeps going in the scene: rain across its width, a fire on a spot.',
+        {'particles': Attr('ident', required=True),
+         'x': Attr('float', required=True), 'y': Attr('float', required=True),
+         'width': Attr('float', 0.0, doc='rain and snow: the band they fall across, pixels (0: a point)')},
         parents=('scene',)),
     'exit': Tag(
         'A rectangle that leads to another scene; the character arrives at the exit named at= there.',
@@ -600,6 +618,12 @@ TAGS: Dict[str, Tag] = {
         'down; walk sets the speed across again on the next tick, unless it has accel=).',
         {'target': Attr('ident', 'me', doc='me, other, or a character id'),
          'x': Attr('expr', None), 'y': Attr('expr', None)},
+        parents=('handler',)),
+    'emit': Tag(
+        'Plays a qg:particles effect once where a thing is. Only seen: the game\'s state never depends on it.',
+        {'particles': Attr('ident', required=True),
+         'at': Attr('ident', 'me', doc='me, other, a character id, or a q:set holding a thing'),
+         'dx': Attr('float', 0.0), 'dy': Attr('float', 0.0, doc='offset in pixels')},
         parents=('handler',)),
     'put': Tag(
         'Moves a thing or a character to a point, at once.',

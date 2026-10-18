@@ -81,7 +81,7 @@
 | Godot | `qg:` | Verdict |
 |---|---|---|
 | one-shot burst | `qg:burst` (color, count) | covered, minimally |
-| continuous emitters (fire, rain, smoke), gravity, spread, scale/color curves, texture | — | gap: a `qg:particles` *declaration* (named presets: puff, sparks, smoke, rain) and `qg:emit name=` — never the 68 knobs |
+| continuous emitters (fire, rain, smoke), gravity, spread, scale/color curves, texture | `qg:particles`, `qg:emit`, `qg:emitter` | covered (2026-10): nine presets and five overrides, never the 68 knobs |
 
 ## 8. Time (`Timer`, `SceneTree.paused`, `Engine.time_scale`)
 

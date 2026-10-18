@@ -220,6 +220,13 @@ class _Compiler:
             sounds[name] = {'src': self._asset(el.get('src'), el.line), 'loop': el.get('loop')}
             gdprops.attach(sounds[name], 'AudioStreamPlayer', el.gd, f'<qg:sound name="{name}">', el.line)
         self.sounds = sounds
+        particles = {}
+        for name, el in g.particles.items():
+            particles[name] = {'preset': el.get('preset')}
+            for k in ('color', 'amount', 'lifetime', 'speed', 'size'):
+                if el.get(k) is not None:
+                    particles[name][k] = el.get(k)
+        self.particles = particles
         languages = {}
         for lang_el in g.languages:
             code = str(lang_el.get('lang'))
@@ -300,6 +307,9 @@ class _Compiler:
         for played in pscript.sounds_played:
             if played not in sounds:
                 raise GameCompileError(f'<qg:play sound="{played}">: no qg:sound of that name', None)
+        for pname, line in pscript.particles_used:
+            if pname not in self.particles:
+                raise GameCompileError(f'<qg:emit particles="{pname}">: no qg:particles of that name', line)
         tags = {p['tag'] for p in prefabs.values()} | self._zone_tags
         for p_ in prefabs.values():
             for h in p_['on_collision']:
@@ -340,6 +350,7 @@ class _Compiler:
                 'multiplayer': self.multiplayer,
                 'sheets': sheets,
                 'sounds': sounds,
+                'particles': particles,
                 'languages': languages,
                 'prefabs': prefabs,
                 'scenes': scenes,
@@ -521,6 +532,13 @@ class _Compiler:
                     nodes[-1]['frame_method'] = f'_q_sprite_{len(nodes) - 1}_frame'
                     script.functions.append(f'func {nodes[-1]["frame_method"]}():\n'
                                             f'\treturn int({compile_expression(frame, script.scope(), el.line)})\n')
+                self._node_elements.append(el)
+            elif el.tag == 'emitter':
+                if el.get('particles') not in self.particles:
+                    raise GameCompileError(f'<qg:emitter particles="{el.get("particles")}">: no qg:particles of that name',
+                                           el.line)
+                nodes.append({'kind': 'emitter', 'particles': el.get('particles'), 'x': el.get('x'), 'y': el.get('y'),
+                              'width': el.get('width')})
                 self._node_elements.append(el)
             elif el.tag == 'exit':
                 ename = el.get('name')
@@ -980,6 +998,11 @@ class _Compiler:
             if pname not in prefabs:
                 raise GameCompileError(
                     f'no qg:prefab named {pname!r} (declared: {", ".join(sorted(prefabs)) or "none"})', line)
+        for pname, line in script.particles_used:
+            if pname not in self.particles:
+                raise GameCompileError(
+                    f'<qg:emit particles="{pname}">: no qg:particles of that name '
+                    f'(declared: {", ".join(sorted(self.particles)) or "none"})', line)
         for played in script.sounds_played:
             if played not in self.sounds:
                 raise GameCompileError(

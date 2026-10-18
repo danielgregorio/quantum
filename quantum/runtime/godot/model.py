@@ -70,6 +70,7 @@ class Game:
     inputs: List[Element] = field(default_factory=list)
     multiplayer: Optional[Element] = None
     languages: List[Element] = field(default_factory=list)
+    particles: Dict[str, Element] = field(default_factory=dict)
 
 
 def _local(element: ET.Element) -> tuple:
@@ -292,6 +293,7 @@ def read_game(app) -> Game:
     inputs: List[Element] = []
     multiplayer: Optional[Element] = None
     languages: List[Element] = []
+    particles: Dict[str, Element] = {}
     try:
         for child in root:
             ns, name = _local(child)
@@ -305,6 +307,8 @@ def read_game(app) -> Game:
                     _unique(prefabs, el, 'prefab')
                 elif el.tag == 'sound':
                     _unique(sounds, el, 'sound')
+                elif el.tag == 'particles':
+                    _unique(particles, el, 'particles')
                 elif el.tag == 'input':
                     inputs.append(el)
                 elif el.tag == 'language':
@@ -335,7 +339,7 @@ def read_game(app) -> Game:
     if not scenes:
         raise GameCompileError('a game needs at least one <qg:scene>', file=source_path)
     return Game(getattr(app, 'app_id', 'game'), tilesets, sheets, prefabs, scenes, source_path, sounds,
-                game_state, inputs, multiplayer, languages)
+                game_state, inputs, multiplayer, languages, particles)
 
 
 def _unique(table: Dict[str, Element], el: Element, what: str) -> None:
