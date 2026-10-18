@@ -58,6 +58,7 @@
     <qg:phrase text="YOU FELL. PRESS JUMP." as="VOCÊ CAIU. APERTE PULAR." />
     <qg:phrase text="New game" as="Novo jogo" />
     <qg:phrase text="Continue" as="Continuar" />
+    <qg:phrase text="Language" as="Idioma" />
   </qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="HEARTS" as="CORAZONES" />
@@ -70,6 +71,7 @@
     <qg:phrase text="YOU FELL. PRESS JUMP." as="HAS CAÍDO. PULSA SALTAR." />
     <qg:phrase text="New game" as="Nueva partida" />
     <qg:phrase text="Continue" as="Continuar" />
+    <qg:phrase text="Language" as="Idioma" />
   </qg:language>
 
   <!-- ===== The title: a new game, or the saved one (each room entered saves it) ===== -->
@@ -79,6 +81,7 @@
     <qg:menu position="center">
       <qg:button label="New game"><qg:goto-scene name="room-1" /></qg:button>
       <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+      <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
     </qg:menu>
   </qg:scene>
 

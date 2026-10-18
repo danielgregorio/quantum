@@ -439,6 +439,8 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         return 'Q.save_game(self)'
     if el.tag == 'continue':
         return 'Q.continue_game(self)'
+    if el.tag == 'next-language':
+        return 'Q.next_language()'
     if el.tag == 'checkpoint':
         at = el.get('at')
         if not scope.has(at):

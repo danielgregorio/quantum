@@ -526,6 +526,49 @@ const TICK_RATE := 60.0
 
 var languages: Array = []   # the game's languages besides its own
 var lang: String = ""       # the one shown; "" is the game's own
+var language_names: Dictionary = {}   # each language's own name for itself (qg:language name=)
+
+
+# qg:next-language: the next of the game's languages, after its own; the
+# choice is kept for the next run (next to the q:sets with saved="true").
+# Only what is shown changes, so a networked game is played as before.
+static func next_language() -> void:
+	var q := _q_node()
+	if q == null or q.languages.is_empty():
+		return
+	var order: Array = [""] + q.languages
+	set_language(order[(order.find(q.lang) + 1) % order.size()])
+
+
+static func set_language(code: String) -> void:
+	var q := _q_node()
+	if q == null:
+		return
+	q.lang = code if code in q.languages else ""
+	TranslationServer.set_locale(q.lang if q.lang != "" else "en")
+	var f := FileAccess.open(_language_path(), FileAccess.WRITE)
+	if f != null:
+		f.store_string(q.lang if q.lang != "" else "-")
+		f.close()
+	event("language", {"lang": q.lang})
+
+
+# The language chosen in an earlier run ("" none; "-" the game's own).
+static func chosen_language() -> String:
+	var f := FileAccess.open(_language_path(), FileAccess.READ)
+	return f.get_as_text().strip_edges() if f != null else ""
+
+
+static func _language_path() -> String:
+	return _persist_file("quantum-language.txt")
+
+
+# language(): the name of the language shown, in that language.
+static func language_name() -> String:
+	var q := _q_node()
+	if q == null or q.lang == "":
+		return "English"
+	return str(q.language_names.get(q.lang, q.lang))
 
 
 static func translate(text) -> String:
@@ -603,11 +646,15 @@ static func _q_node() -> Node:
 
 
 static func _save_path() -> String:
+	return _persist_file("quantum-save.json")
+
+
+static func _persist_file(file: String) -> String:
 	var q := _q_node()
 	var base: String = q.persist_dir if q != null and q.persist_dir != "" else "user://"
 	if not base.ends_with("/"):
 		base += "/"
-	return base + "quantum-save.json"
+	return base + file
 
 
 static func _networked(scene: Node) -> bool:

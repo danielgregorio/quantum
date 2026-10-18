@@ -54,6 +54,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
   a session picks one (`lang=`, `quantum play --lang`, `play_start`), and
   the game's own texts are the default. The RPG is in Portuguese and
   Spanish too.
+- Laboratory: `<qg:next-language>` shows the game in its next language,
+  after its own, and the choice is kept for the next run; `language()` is
+  the name of the one shown. A `qg:lobby` of a game in several languages
+  has a button for it, and Hopper's and Keep's titles too
+  (`label="{tr('Language') + ': ' + language()}"`).
 - Laboratory: a player who leaves a networked game can come back. The
   host (or `quantum relay`) keeps every input of the game; the others wait
   (`net_status()` is `waiting`), and the next to join, from the same

@@ -235,6 +235,7 @@ class _Compiler:
             if self.multiplayer is not None:
                 phrases = {**LOBBY_PHRASES.get(code.split('_')[0], {}), **phrases}
             languages[code] = {'name': lang_el.get('name') or code, 'phrases': phrases}
+        self.languages = languages
         prefabs = {}
         pscript = SceneScript('prefabs', game_state=self.game_state)
         for name, el in g.prefabs.items():
@@ -374,7 +375,7 @@ class _Compiler:
 
     def _scene(self, scene: Element, sheets: dict, prefabs: dict) -> dict:
         name = scene.get('name')
-        scene.children = _expand_lobbies(scene.children, self.multiplayer)
+        scene.children = _expand_lobbies(scene.children, self.multiplayer, bool(self.languages))
         script = SceneScript(name, game_state=self.game_state)
         self._states_checked: list = []
         # the characters, by id: names in the scene's expressions, targets of its actions
@@ -1032,21 +1033,24 @@ def _el(tag: str, line: Optional[int], children=(), **attrs) -> Element:
 # What a qg:lobby shows, in the languages the repository's games speak: a game
 # declaring one of them has these phrases too (its own qg:phrase wins).
 LOBBY_PHRASES = {
-    'pt': {'Host a game': 'Criar uma partida', 'Address': 'Endereço', 'Join': 'Entrar', 'Cancel': 'Cancelar',
+    'pt': {'Language': 'Idioma', 'Host a game': 'Criar uma partida', 'Address': 'Endereço', 'Join': 'Entrar', 'Cancel': 'Cancelar',
            'Waiting for the other players on port': 'Esperando os outros jogadores na porta',
            'Joining': 'Entrando em', 'Connected, starting...': 'Conectado, começando...',
            'Could not connect': 'Não foi possível conectar'},
-    'es': {'Host a game': 'Crear una partida', 'Address': 'Dirección', 'Join': 'Unirse', 'Cancel': 'Cancelar',
+    'es': {'Language': 'Idioma', 'Host a game': 'Crear una partida', 'Address': 'Dirección', 'Join': 'Unirse', 'Cancel': 'Cancelar',
            'Waiting for the other players on port': 'Esperando a los demás jugadores en el puerto',
            'Joining': 'Uniéndose a', 'Connected, starting...': 'Conectado, empezando...',
            'Could not connect': 'No se pudo conectar'},
 }
 
+# The label of a button for qg:next-language: "Language: English".
+LANGUAGE_LABEL = "{tr('Language') + ': ' + language()}"
+
 _BUSY = "net_status() == 'hosting' or net_status() == 'joining' or net_status() == 'connected'"
 _IDLE = "net_status() == 'offline' or net_status() == 'failed'"
 
 
-def _expand_lobbies(children: list, multiplayer: Optional[dict]) -> list:
+def _expand_lobbies(children: list, multiplayer: Optional[dict], languages: bool = False) -> list:
     """qg:lobby, written out: a q:set for the address, a qg:menu, a qg:hud with the status line."""
     out: list = []
     for node in children:
@@ -1068,6 +1072,8 @@ def _expand_lobbies(children: list, multiplayer: Optional[dict]) -> list:
             _el('button', line, [_el('join', line, address='{lobby_address}')], label='Join', **{'if': '{' + _IDLE + '}'}),
             _el('button', line, [_el('leave', line)], label='Cancel', **{'if': '{' + _BUSY + '}'}),
         ]
+        if languages:   # a game in several languages: a button to show the next one
+            buttons.append(_el('button', line, [_el('next-language', line)], label=LANGUAGE_LABEL))
         # each part through tr(), in the player's language (LOBBY_PHRASES); the same text in English
         status = ("{" + f"tr('Waiting for the other players on port') + ' {port}' if net_status() == 'hosting' else "
                   "(tr('Joining') + ' ' + lobby_address + '...' if net_status() == 'joining' else "

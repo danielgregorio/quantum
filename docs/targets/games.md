@@ -870,6 +870,12 @@ Continues the saved game (qg:save): its game state back, and on to its scene. No
 
 Goes inside: a handler.
 
+### `qg:next-language`
+
+Shows the game in its next language (qg:language), after its own: a button for it is `<qg:button label="{tr('Language') + ': ' + language()}">`. The choice is kept for the next run. Only what is shown changes.
+
+Goes inside: a handler.
+
 ## Other tags
 
 ### `qg:dialogue`
@@ -1101,6 +1107,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="GAME OVER - PRESS JUMP" as="FIM DE JOGO - APERTE PULAR" />
     <qg:phrase text="New game" as="Novo jogo" />
     <qg:phrase text="Continue" as="Continuar" />
+    <qg:phrase text="Language" as="Idioma" />
   </qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="SCORE" as="PUNTOS" />
@@ -1111,6 +1118,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="GAME OVER - PRESS JUMP" as="FIN DEL JUEGO - PULSA SALTAR" />
     <qg:phrase text="New game" as="Nueva partida" />
     <qg:phrase text="Continue" as="Continuar" />
+    <qg:phrase text="Language" as="Idioma" />
   </qg:language>
 
   <!-- ===== The title: a new game, or the saved one (each level cleared saves it) ===== -->
@@ -1120,6 +1128,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:menu position="center">
       <qg:button label="New game"><qg:goto-scene name="map" /></qg:button>
       <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+      <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
     </qg:menu>
   </qg:scene>
 
@@ -1539,6 +1548,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="YOU FELL. PRESS JUMP." as="VOCÊ CAIU. APERTE PULAR." />
     <qg:phrase text="New game" as="Novo jogo" />
     <qg:phrase text="Continue" as="Continuar" />
+    <qg:phrase text="Language" as="Idioma" />
   </qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="HEARTS" as="CORAZONES" />
@@ -1551,6 +1561,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="YOU FELL. PRESS JUMP." as="HAS CAÍDO. PULSA SALTAR." />
     <qg:phrase text="New game" as="Nueva partida" />
     <qg:phrase text="Continue" as="Continuar" />
+    <qg:phrase text="Language" as="Idioma" />
   </qg:language>
 
   <!-- ===== The title: a new game, or the saved one (each room entered saves it) ===== -->
@@ -1560,6 +1571,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:menu position="center">
       <qg:button label="New game"><qg:goto-scene name="room-1" /></qg:button>
       <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+      <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
     </qg:menu>
   </qg:scene>
 

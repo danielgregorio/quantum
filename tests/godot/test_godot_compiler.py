@@ -1452,6 +1452,10 @@ class TestLobby:
         assert languages['pt']['phrases']['Host a game'] == 'Criar uma partida'
         assert languages['pt']['phrases']['Join'] == 'Juntar-se'            # the game's own wins
         assert languages['fr']['phrases'] == {}                              # none written for it
+        menu = json.loads((out / 'game.json').read_text())['scenes']['title']['nodes'][0]
+        assert 'label_method' in menu['items'][-1]                            # Language: English
+        script = (out / 'scripts' / 'scene_title.gd').read_text()
+        assert 'Q.translate("Language")' in script and 'Q.language_name()' in script and '\tQ.next_language()\n' in script
         script = (out / 'scripts' / 'scene_title.gd').read_text()
         assert 'Q.translate("Waiting for the other players on port")' in script and 'Q.translate("Joining")' in script
 

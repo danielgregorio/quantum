@@ -228,11 +228,37 @@ def test_the_lobby_and_the_board_in_the_players_language(pong, chess, godot):
     with PlaySession(pong, binary=godot, lang='pt') as game:
         menu = PlaySession.screen(game.observe(), 'menu')['items']
         assert [i.get('button') or i.get('field') for i in menu] == \
-            ['Dois jogadores, um teclado', 'Criar uma partida', 'Endereço', 'Entrar', 'Cancelar']
+            ['Dois jogadores, um teclado', 'Criar uma partida', 'Endereço', 'Entrar', 'Cancelar', 'Idioma: Português']
     with PlaySession(chess, binary=godot, lang='es') as game:
         seen = game.until("scene == 'game'", tap=['select'], max_ticks=10)
         assert 'Juegan blancas - haz clic en una pieza y luego adónde va' in PlaySession.screen(seen, 'hud')['items']
         assert seen['state']['status'] == 'White to move - click a piece, then where it goes'   # the state stays as written
+
+
+def test_the_language_button_shows_the_next_language(pong, godot):
+    # the lobby's last button: English, then each of the game's languages, then English again
+    with PlaySession(pong, binary=godot) as game:
+        for _ in range(4):                                   # past the local game, Host, Address, Join
+            game.act(tap=['down'], ticks=2)
+        shown = []
+        for _ in range(3):
+            seen = game.act(tap=['select'], ticks=2)
+            menu = PlaySession.screen(seen, 'menu')['items']
+            shown.append((seen.get('lang'), menu[0]['button'], menu[-1]['button']))
+        assert shown == [('pt', 'Dois jogadores, um teclado', 'Idioma: Português'),
+                         ('es', 'Dos jugadores, un teclado', 'Idioma: Español'),
+                         ('', 'Two players, one keyboard', 'Language: English')]
+        assert [e['lang'] for e in seen['events'] if e['kind'] == 'language'] == ['']
+
+
+def test_the_language_chosen_is_kept_for_the_next_run(pong, godot, tmp_path):
+    from quantum.runtime.godot_replay import replay, tape_from_holds
+    to_the_button = [('down', t, t + 1) for t in (1, 3, 5, 7)]
+    replay(pong, 12, tape_from_holds(to_the_button + [('select', 9, 10)]), binary=godot, persist_dir=tmp_path)
+    assert (tmp_path / 'quantum-language.txt').read_text() == 'pt'
+    # the next run starts in pt, so the button shows the one after it
+    replay(pong, 12, tape_from_holds(to_the_button + [('select', 9, 10)]), binary=godot, persist_dir=tmp_path)
+    assert (tmp_path / 'quantum-language.txt').read_text() == 'es'
 
 
 def test_the_fight_comes_out_of_black(rpg, godot):
