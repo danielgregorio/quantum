@@ -1119,17 +1119,24 @@ def _el(tag: str, line: Optional[int], children=(), **attrs) -> Element:
     return Element(tag, values, line, list(children))
 
 
-# What a qg:lobby shows, in the languages the repository's games speak: a game
-# declaring one of them has these phrases too (its own qg:phrase wins).
+# What a qg:lobby shows, and the notices of a networked game (lockstep.gd), in
+# the languages the repository's games speak: a game declaring one of them has
+# these phrases too (its own qg:phrase wins).
 LOBBY_PHRASES = {
     'pt': {'Language': 'Idioma', 'Host a game': 'Criar uma partida', 'Address': 'Endereço', 'Join': 'Entrar', 'Cancel': 'Cancelar',
            'Waiting for the other players on port': 'Esperando os outros jogadores na porta',
            'Joining': 'Entrando em', 'Connected, starting...': 'Conectado, começando...',
-           'Could not connect': 'Não foi possível conectar'},
+           'Could not connect': 'Não foi possível conectar',
+           'Waiting for the other player to come back': 'Esperando o outro jogador voltar',
+           'Catching up': 'Alcançando a partida', 'The other player left': 'O outro jogador saiu',
+           'The games differ: the match stopped': 'Os jogos divergiram: a partida parou'},
     'es': {'Language': 'Idioma', 'Host a game': 'Crear una partida', 'Address': 'Dirección', 'Join': 'Unirse', 'Cancel': 'Cancelar',
            'Waiting for the other players on port': 'Esperando a los demás jugadores en el puerto',
            'Joining': 'Uniéndose a', 'Connected, starting...': 'Conectado, empezando...',
-           'Could not connect': 'No se pudo conectar'},
+           'Could not connect': 'No se pudo conectar',
+           'Waiting for the other player to come back': 'Esperando a que el otro jugador vuelva',
+           'Catching up': 'Poniéndose al día', 'The other player left': 'El otro jugador se fue',
+           'The games differ: the match stopped': 'Las partidas difieren: el juego se detuvo'},
 }
 
 # The label of a button for qg:next-language: "Language: English".
