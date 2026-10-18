@@ -586,6 +586,64 @@ func save_persisted(state: Node, names: Array) -> void:
 	f.store_string(JSON.stringify(data))
 
 
+# --- saving: qg:save, qg:continue, has_save() ---
+#
+# One save per game, next to the q:sets with saved="true": the game's state
+# (every q:set of <q:application>) and the scene to come back to. The scene
+# starts over when it is continued; what was in it is not kept. A networked
+# game is not saved: each machine would keep its own.
+
+static func _q_node() -> Node:
+	return (Engine.get_main_loop() as SceneTree).root.get_node_or_null("Q")
+
+
+static func _save_path() -> String:
+	var q := _q_node()
+	var base: String = q.persist_dir if q != null and q.persist_dir != "" else "user://"
+	if not base.ends_with("/"):
+		base += "/"
+	return base + "quantum-save.json"
+
+
+static func _networked(scene: Node) -> bool:
+	var game := scene.get_parent() if scene != null else null
+	var net = game.get("lockstep") if game != null else null
+	return net != null and net.started
+
+
+static func save_game(scene: Node, at: String = "") -> void:
+	if _networked(scene):
+		return
+	var where := at if at != "" else String(scene.name)
+	var f := FileAccess.open(_save_path(), FileAccess.WRITE)
+	if f == null:
+		push_warning("quantum: cannot write " + _save_path())
+		return
+	f.store_string(JSON.stringify({"scene": where, "game": G.quantum_state()}))
+	f.close()
+	event("save", {"scene": where})
+
+
+static func has_save() -> bool:
+	return FileAccess.file_exists(_save_path())
+
+
+static func continue_game(scene: Node) -> void:
+	if _networked(scene) or not has_save():
+		return
+	var f := FileAccess.open(_save_path(), FileAccess.READ)
+	var data = JSON.parse_string(f.get_as_text()) if f != null else null
+	if typeof(data) != TYPE_DICTIONARY or typeof(data.get("game")) != TYPE_DICTIONARY:
+		push_warning("quantum: the save " + _save_path() + " cannot be read")
+		return
+	var known: Dictionary = G.quantum_state()
+	for n in data["game"]:
+		if known.has(n):   # a save from an older version of the game: what it still has
+			G.set(n, data["game"][n])
+	event("continue", {"scene": str(data.get("scene", ""))})
+	goto_scene(scene, str(data.get("scene", "")))
+
+
 # --- sounds (an instance method: Q is an autoload node) ---
 
 # --- the game's files: images, sounds, fonts ---

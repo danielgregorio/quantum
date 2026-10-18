@@ -32,7 +32,6 @@
   <qg:prefab name="Last" tag="last" sheet="board" frame="6" hitbox="4x4" />
   <qg:prefab name="Check" tag="check" sheet="board" frame="7" hitbox="4x4" />
 
-  <!-- The title: both colours on one board, or white and black on two machines. -->
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
   <qg:language lang="pt" name="Português">
     <qg:phrase text="CHESS" as="XADREZ" />
@@ -66,6 +65,8 @@
     <qg:phrase text="Checkmate - Black wins" as="Jaque mate - ganan las negras" />
     <qg:phrase text="Stalemate" as="Rey ahogado - tablas" />
   </qg:language>
+
+  <!-- The title: both colours on one board, or white and black on two machines. -->
   <qg:scene name="title" width="496" height="540" background="#2a2520">
     <qg:hud position="top-center" size="40"><qg:text value="{'CHESS'}" /></qg:hud>
     <qg:lobby local="game" local-label="Two players, one board" size="18" />

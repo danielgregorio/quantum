@@ -28,7 +28,6 @@
   <qg:input player="2" action="kick" keys="Slash" />
   <qg:multiplayer players="2" delay="2" rollback="8" start="fight" />
 
-  <!-- The title: two on one keyboard, or one on each machine. -->
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
   <qg:language lang="pt" name="Português">
     <qg:phrase text="ARENA" as="ARENA" />
@@ -60,6 +59,8 @@
     <qg:phrase text="P1 rounds" as="Asaltos J1" />
     <qg:phrase text="P2 rounds" as="Asaltos J2" />
   </qg:language>
+
+  <!-- The title: two on one keyboard, or one on each machine. -->
   <qg:scene name="title" width="640" height="360" background="#201820">
     <qg:sprite sheet="stage" x="320" y="180" />
     <qg:hud position="top-center" size="40"><qg:text value="{'ARENA'}" /></qg:hud>

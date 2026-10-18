@@ -853,6 +853,22 @@ Opens a qg:dialogue of the scene: its lines one at a time, select for the next. 
 
 Goes inside: a handler.
 
+### `qg:save`
+
+Saves the game to continue it later: the game state (every q:set of q:application) and a scene to come back to. One save per game, kept between runs (in a browser, by the browser); a new qg:save replaces it. `has_save()` says whether there is one. A networked game is not saved.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `scene` | a name |  | the scene to continue in (none: this one); it starts over, what was in it is not saved |
+
+Goes inside: a handler.
+
+### `qg:continue`
+
+Continues the saved game (qg:save): its game state back, and on to its scene. Nothing when there is no save.
+
+Goes inside: a handler.
+
 ## Other tags
 
 ### `qg:dialogue`
@@ -1024,7 +1040,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 <q:application id="hopper" type="game">
 
   <!-- Hopper: the platformer that drives the game language (PLAN_GAMES_2.md).
-       A world map and three levels. A character that walks and jumps on a
+       A title (a new game, or the saved one), a world map and three
+       levels. A character that walks and jumps on a
        tilemap, blocks with power-ups in them, coins, walkers to stomp or be
        hurt by, pits, checkpoints, spikes, a flag at the end of each level, a
        game over. Art and sounds: Kenney's Pixel Platformer (CC0), in
@@ -1073,8 +1090,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:animation name="walk" frames="18,19,20" fps="6" />
   </qg:prefab>
 
-  <!-- ===== The world map: the game starts here ===== -->
-
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
   <qg:language lang="pt" name="Português">
     <qg:phrase text="SCORE" as="PONTOS" />
@@ -1083,6 +1098,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="TIME" as="TEMPO" />
     <qg:phrase text="YOU WIN" as="VOCÊ VENCEU" />
     <qg:phrase text="GAME OVER - PRESS JUMP" as="FIM DE JOGO - APERTE PULAR" />
+    <qg:phrase text="New game" as="Novo jogo" />
+    <qg:phrase text="Continue" as="Continuar" />
   </qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="SCORE" as="PUNTOS" />
@@ -1091,7 +1108,22 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="TIME" as="TIEMPO" />
     <qg:phrase text="YOU WIN" as="HAS GANADO" />
     <qg:phrase text="GAME OVER - PRESS JUMP" as="FIN DEL JUEGO - PULSA SALTAR" />
+    <qg:phrase text="New game" as="Nueva partida" />
+    <qg:phrase text="Continue" as="Continuar" />
   </qg:language>
+
+  <!-- ===== The title: a new game, or the saved one (each level cleared saves it) ===== -->
+
+  <qg:scene name="title" width="256" height="224" background="#3b7d4f">
+    <qg:hud position="top-center" size="32"><qg:text value="{'HOPPER'}" /></qg:hud>
+    <qg:menu position="center">
+      <qg:button label="New game"><qg:goto-scene name="map" /></qg:button>
+      <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <!-- ===== The world map ===== -->
+
   <qg:scene name="map" width="256" height="224" background="#3b7d4f">
     <qg:map-node name="level-1" x="48" y="112" sheet="kenney" frame="153" scene="level-1" />
     <qg:map-node name="level-2" x="128" y="80" sheet="kenney" frame="153" scene="level-2" />
@@ -1230,6 +1262,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <q:set name="message" value="YOU WIN" />
         <q:set name="cleared" value="{cleared + ['level-1']}" />
         <q:set name="check_at" value="" />
+        <qg:save scene="map" />
         <qg:goto-scene name="map" />
       </qg:on-collision>
 
@@ -1310,6 +1343,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <q:set name="score" value="{score + 500}" />
         <q:set name="cleared" value="{cleared + ['level-2']}" />
         <q:set name="check_at" value="" />
+        <qg:save scene="map" />
         <qg:goto-scene name="map" />
       </qg:on-collision>
       <qg:on-fall>
@@ -1390,6 +1424,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <q:set name="score" value="{score + 1000}" />
         <q:set name="cleared" value="{cleared + ['level-3']}" />
         <q:set name="check_at" value="" />
+        <qg:save scene="map" />
         <qg:goto-scene name="map" />
       </qg:on-collision>
       <qg:on-fall>
@@ -1490,8 +1525,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:animation name="walk" frames="13,14,15,14" fps="10" />
   </qg:prefab>
 
-  <!-- ===== Room 1: the entrance. East to room 2. ===== -->
-
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
   <qg:language lang="pt" name="Português">
     <qg:phrase text="HEARTS" as="CORAÇÕES" />
@@ -1513,6 +1546,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="THE TREASURE OF THE KEEP IS YOURS." as="EL TESORO DE LA FORTALEZA ES TUYO." />
     <qg:phrase text="YOU FELL. PRESS JUMP." as="HAS CAÍDO. PULSA SALTAR." />
   </qg:language>
+
+  <!-- ===== Room 1: the entrance. East to room 2. ===== -->
+
   <qg:scene name="room-1" width="256" height="224" background="#2b2b3a" seed="1">
     <q:function name="hurt" params="me">
       <qg:play sound="hurt" />
@@ -2392,7 +2428,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:on-death><q:set name="gold" value="{gold + 10}" /></qg:on-death>
   </qg:prefab>
 
-  <!-- The title: alone, or two builders on two machines. -->
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
   <qg:language lang="pt" name="Português">
     <qg:phrase text="TOWERS" as="TORRES" />
@@ -2422,6 +2457,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="The base stands. Press space to play again." as="La base resiste. Pulsa espacio para jugar otra vez." />
     <qg:phrase text="The base fell. Press space to try again." as="La base cayó. Pulsa espacio para intentarlo otra vez." />
   </qg:language>
+
+  <!-- The title: alone, or two builders on two machines. -->
   <qg:scene name="title" width="1152" height="648" background="#1a1a1a">
     <qg:sprite sheet="map" x="578" y="372" gd:modulate="#ffffff60" />
     <qg:hud position="top-center" size="48"><qg:text value="{'TOWERS'}" /></qg:hud>
@@ -2569,7 +2606,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:input player="2" action="kick" keys="Slash" />
   <qg:multiplayer players="2" delay="2" rollback="8" start="fight" />
 
-  <!-- The title: two on one keyboard, or one on each machine. -->
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
   <qg:language lang="pt" name="Português">
     <qg:phrase text="ARENA" as="ARENA" />
@@ -2601,6 +2637,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="P1 rounds" as="Asaltos J1" />
     <qg:phrase text="P2 rounds" as="Asaltos J2" />
   </qg:language>
+
+  <!-- The title: two on one keyboard, or one on each machine. -->
   <qg:scene name="title" width="640" height="360" background="#201820">
     <qg:sprite sheet="stage" x="320" y="180" />
     <qg:hud position="top-center" size="40"><qg:text value="{'ARENA'}" /></qg:hud>
@@ -2751,7 +2789,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:prefab name="Last" tag="last" sheet="board" frame="6" hitbox="4x4" />
   <qg:prefab name="Check" tag="check" sheet="board" frame="7" hitbox="4x4" />
 
-  <!-- The title: both colours on one board, or white and black on two machines. -->
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
   <qg:language lang="pt" name="Português">
     <qg:phrase text="CHESS" as="XADREZ" />
@@ -2785,6 +2822,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Checkmate - Black wins" as="Jaque mate - ganan las negras" />
     <qg:phrase text="Stalemate" as="Rey ahogado - tablas" />
   </qg:language>
+
+  <!-- The title: both colours on one board, or white and black on two machines. -->
   <qg:scene name="title" width="496" height="540" background="#2a2520">
     <qg:hud position="top-center" size="40"><qg:text value="{'CHESS'}" /></qg:hud>
     <qg:lobby local="game" local-label="Two players, one board" size="18" />

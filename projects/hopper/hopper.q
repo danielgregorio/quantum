@@ -1,7 +1,8 @@
 <q:application id="hopper" type="game">
 
   <!-- Hopper: the platformer that drives the game language (PLAN_GAMES_2.md).
-       A world map and three levels. A character that walks and jumps on a
+       A title (a new game, or the saved one), a world map and three
+       levels. A character that walks and jumps on a
        tilemap, blocks with power-ups in them, coins, walkers to stomp or be
        hurt by, pits, checkpoints, spikes, a flag at the end of each level, a
        game over. Art and sounds: Kenney's Pixel Platformer (CC0), in
@@ -50,8 +51,6 @@
     <qg:animation name="walk" frames="18,19,20" fps="6" />
   </qg:prefab>
 
-  <!-- ===== The world map: the game starts here ===== -->
-
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
   <qg:language lang="pt" name="Português">
     <qg:phrase text="SCORE" as="PONTOS" />
@@ -60,6 +59,8 @@
     <qg:phrase text="TIME" as="TEMPO" />
     <qg:phrase text="YOU WIN" as="VOCÊ VENCEU" />
     <qg:phrase text="GAME OVER - PRESS JUMP" as="FIM DE JOGO - APERTE PULAR" />
+    <qg:phrase text="New game" as="Novo jogo" />
+    <qg:phrase text="Continue" as="Continuar" />
   </qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="SCORE" as="PUNTOS" />
@@ -68,7 +69,22 @@
     <qg:phrase text="TIME" as="TIEMPO" />
     <qg:phrase text="YOU WIN" as="HAS GANADO" />
     <qg:phrase text="GAME OVER - PRESS JUMP" as="FIN DEL JUEGO - PULSA SALTAR" />
+    <qg:phrase text="New game" as="Nueva partida" />
+    <qg:phrase text="Continue" as="Continuar" />
   </qg:language>
+
+  <!-- ===== The title: a new game, or the saved one (each level cleared saves it) ===== -->
+
+  <qg:scene name="title" width="256" height="224" background="#3b7d4f">
+    <qg:hud position="top-center" size="32"><qg:text value="{'HOPPER'}" /></qg:hud>
+    <qg:menu position="center">
+      <qg:button label="New game"><qg:goto-scene name="map" /></qg:button>
+      <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <!-- ===== The world map ===== -->
+
   <qg:scene name="map" width="256" height="224" background="#3b7d4f">
     <qg:map-node name="level-1" x="48" y="112" sheet="kenney" frame="153" scene="level-1" />
     <qg:map-node name="level-2" x="128" y="80" sheet="kenney" frame="153" scene="level-2" />
@@ -207,6 +223,7 @@
         <q:set name="message" value="YOU WIN" />
         <q:set name="cleared" value="{cleared + ['level-1']}" />
         <q:set name="check_at" value="" />
+        <qg:save scene="map" />
         <qg:goto-scene name="map" />
       </qg:on-collision>
 
@@ -287,6 +304,7 @@
         <q:set name="score" value="{score + 500}" />
         <q:set name="cleared" value="{cleared + ['level-2']}" />
         <q:set name="check_at" value="" />
+        <qg:save scene="map" />
         <qg:goto-scene name="map" />
       </qg:on-collision>
       <qg:on-fall>
@@ -367,6 +385,7 @@
         <q:set name="score" value="{score + 1000}" />
         <q:set name="cleared" value="{cleared + ['level-3']}" />
         <q:set name="check_at" value="" />
+        <qg:save scene="map" />
         <qg:goto-scene name="map" />
       </qg:on-collision>
       <qg:on-fall>

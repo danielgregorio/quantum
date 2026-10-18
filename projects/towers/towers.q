@@ -67,7 +67,6 @@
     <qg:on-death><q:set name="gold" value="{gold + 10}" /></qg:on-death>
   </qg:prefab>
 
-  <!-- The title: alone, or two builders on two machines. -->
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
   <qg:language lang="pt" name="Português">
     <qg:phrase text="TOWERS" as="TORRES" />
@@ -97,6 +96,8 @@
     <qg:phrase text="The base stands. Press space to play again." as="La base resiste. Pulsa espacio para jugar otra vez." />
     <qg:phrase text="The base fell. Press space to try again." as="La base cayó. Pulsa espacio para intentarlo otra vez." />
   </qg:language>
+
+  <!-- The title: alone, or two builders on two machines. -->
   <qg:scene name="title" width="1152" height="648" background="#1a1a1a">
     <qg:sprite sheet="map" x="578" y="372" gd:modulate="#ffffff60" />
     <qg:hud position="top-center" size="48"><qg:text value="{'TOWERS'}" /></qg:hud>
