@@ -150,7 +150,8 @@ class GameRelay:
         if cert:
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             context.load_cert_chain(cert, key)
-        return await websockets.serve(self.handle, host, port, ssl=context, max_size=None)
+        # open_timeout: a TLS opening on a busy machine can take more than websockets' 10 s
+        return await websockets.serve(self.handle, host, port, ssl=context, max_size=None, open_timeout=30)
 
     def shutdown(self) -> None:
         for room in list(self.rooms.values()):

@@ -8,6 +8,7 @@ hosts.
 
 import asyncio
 import contextlib
+import logging
 import threading
 from pathlib import Path
 
@@ -92,12 +93,14 @@ def test_what_it_refuses(relay):
             assert reason in (ws.close_reason or '')
 
 
-def test_with_a_certificate_it_is_wss(godot, tmp_path):
+def test_with_a_certificate_it_is_wss(godot, tmp_path, caplog):
     # a page served over HTTPS may only open wss://: given a certificate, the relay speaks TLS
     import ssl
     import subprocess
 
+    import websockets
     import websockets.sync.client as client
+    caplog.set_level(logging.DEBUG, logger='websockets')
     cert, key = tmp_path / 'cert.pem', tmp_path / 'key.pem'
     subprocess.run(['openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', '/CN=localhost',
                     '-keyout', str(key), '-out', str(cert)], check=True, capture_output=True)
@@ -107,9 +110,18 @@ def test_with_a_certificate_it_is_wss(godot, tmp_path):
             assert url.startswith('wss://')
             trust = ssl.create_default_context(cafile=str(cert))
             trust.check_hostname = False
-            with client.connect(f'{url}/nowhere', ssl=trust, open_timeout=30) as ws:
-                with pytest.raises(Exception):
-                    ws.recv(timeout=10)
-                assert ws.close_reason == 'the address is /game/room'
+            # a loaded CI runner (tests side by side, Godots running) has dropped a TLS opening
+            # once in a while: the connection is tried three times, and the server's own log
+            # (websockets.server) is in the report if it still fails
+            for attempt in range(3):
+                try:
+                    with client.connect(f'{url}/nowhere', ssl=trust, open_timeout=30) as ws:
+                        with pytest.raises(Exception):
+                            ws.recv(timeout=10)
+                        assert ws.close_reason == 'the address is /game/room'
+                    break
+                except (OSError, websockets.exceptions.InvalidMessage):
+                    if attempt == 2:
+                        raise
     finally:
         game_relay.shutdown()
