@@ -380,6 +380,27 @@ class TestScenesMapAndGameState:
         assert (f'func {follows["frame_method"]}():\n\treturn int((1 if (hurt > 0) else 0))\n'
                 in (out / 'scripts' / 'scene_main.gd').read_text())
 
+    MUSIC = '''  <qg:sound name="theme" src="assets/kenney/audio/coin.ogg" loop="true" />
+  <qg:sound name="ding" src="assets/kenney/audio/coin.ogg" />
+'''
+
+    def test_a_scene_with_music(self, tmp_path):
+        out = build(tmp_path, game(self.MUSIC + '''  <qg:scene name="main"><qg:music sound="theme" fade="0.5" /></qg:scene>
+  <qg:scene name="quiet" />
+'''))
+        scenes = json.loads((out / 'game.json').read_text())['scenes']
+        assert scenes['main']['music'] == {'sound': 'theme', 'fade': 0.5, 'volume': 0.0}
+        assert scenes['quiet']['music'] is None
+
+    def test_music_that_does_not_loop_or_is_not_there(self, tmp_path):
+        e = refuse(tmp_path, game(self.MUSIC + '  <qg:scene name="main"><qg:music sound="ding" /></qg:scene>\n'))
+        assert 'music loops; give the qg:sound loop="true"' in e.message
+        e = refuse(tmp_path, game(self.MUSIC + '  <qg:scene name="main"><qg:music sound="song" /></qg:scene>\n'))
+        assert '<qg:music sound="song">: no qg:sound of that name (declared: ding, theme)' in e.message
+        e = refuse(tmp_path, game(self.MUSIC + '  <qg:scene name="main"><qg:music sound="theme" />'
+                                                '<qg:music sound="theme" /></qg:scene>\n'))
+        assert '<qg:music>: one per scene' in e.message
+
     def test_a_scene_change_with_a_fade(self, tmp_path):
         out = build(tmp_path, game('''  <qg:scene name="main">
     <qg:on-input action="jump"><qg:goto-scene name="main" fade="0.5" /></qg:on-input>

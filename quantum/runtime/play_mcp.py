@@ -26,7 +26,8 @@ play_act presses actions (hold: for all its ticks; tap: one tick; press/release:
 "talking", "player.row == 7", "scene == 'combat'", "changed scene", "event:say", "event:touch with=key";
 a list means any of them. Every answer says what happened in `events` (touch, hit, step, bump, spawn,
 destroy, damage, sound, scene, say, choose, set: a variable that changed) and what the screen shows in
-`screen` (the HUD's texts, the menus' buttons and focus, the dialogue's line). play_view draws the
+`screen` (the HUD's texts, the menus' buttons and focus, the dialogue's line), and `music` what
+is heard. play_view draws the
 screen as text. In an action game, give play_act or play_until `reflex` rules, which the game checks
 before every tick until you replace them ([] clears them): [{"when": "ball.y < left.y - 4", "hold":
 ["up"]}, {"when": "ball.y > left.y + 4", "hold": ["down"]}] keeps a paddle on the ball while you

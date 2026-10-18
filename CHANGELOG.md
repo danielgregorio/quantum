@@ -10,6 +10,14 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: `<qg:music sound="theme" fade="1" volume="-4">`, a scene's
+  music. Going to a scene with other music crossfades from one to the
+  other, a scene with the same music lets it play on, and a scene with none
+  fades it out. Only what is heard changes, so replays are as before. The
+  play protocol says what is heard (`music` in an observation, a `music`
+  event). The RPG has music of its own, written and synthesized by
+  `scripts/art/rpg_music.py` (CC0): a calm loop on the map, a driving one
+  in the fight.
 - Laboratory: `quantum relay`, where two browsers meet to play a
   networked game. A web page cannot host, so each room
   (`wss://relay.example/pong/ROOM`) runs the game in a headless Godot that

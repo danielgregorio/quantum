@@ -449,6 +449,14 @@ TAGS: Dict[str, Tag] = {
         'Plays a qg:sound. Directly in a scene: as the scene is entered.',
         {'sound': Attr('ident', required=True)},
         parents=('handler', 'scene')),
+    'music': Tag(
+        'The music of a scene: a looping qg:sound that plays while the scene is on. Going to a scene '
+        'with other music crossfades from one to the other; a scene with the same music lets it play on; '
+        'a scene with none fades it out.',
+        {'sound': Attr('ident', required=True, doc='a qg:sound with loop="true"'),
+         'fade': Attr('float', 1.0, doc='seconds the crossfade takes'),
+         'volume': Attr('float', 0.0, doc='decibels (0: as recorded; -6: half as loud)')},
+        parents=('scene',)),
     'stop': Tag(
         'Stops a qg:sound (a looping one, mostly). Directly in a scene: as the scene is entered.',
         {'sound': Attr('ident', required=True)},

@@ -668,6 +668,52 @@ func play(name_: String) -> void:
 		player.play()
 
 
+# qg:music: the scene's music. Another one crossfades in over `fade` seconds,
+# the same one plays on, none fades it out. Only what is heard changes: the
+# game's state does not know the music, so replays are as before.
+var music_playing: String = ""
+var _music_tweens: Array = []
+
+
+func music(spec) -> void:
+	var to: String = "" if spec == null else str(spec["sound"])
+	if to == music_playing:
+		return
+	var fade: float = 1.0 if spec == null else float(spec.get("fade", 1.0))
+	for t in _music_tweens:
+		t.kill()
+	_music_tweens.clear()
+	var old: AudioStreamPlayer = _sounds.get(music_playing)
+	if old != null:
+		_music_to(old, -80.0, fade, true)
+	music_playing = to
+	event("music", {"name": to})
+	var player: AudioStreamPlayer = _sounds.get(to)
+	if player == null:
+		return
+	var volume: float = float(spec.get("volume", 0.0))
+	if fade <= 0.0:
+		player.volume_db = volume
+		player.play()
+		return
+	player.volume_db = -80.0
+	player.play()
+	_music_to(player, volume, fade, false)
+
+
+func _music_to(player: AudioStreamPlayer, db: float, seconds: float, then_stop: bool) -> void:
+	if seconds <= 0.0:
+		player.volume_db = db
+		if then_stop:
+			player.stop()
+		return
+	var tween := create_tween()
+	tween.tween_property(player, "volume_db", db, seconds)
+	if then_stop:
+		tween.tween_callback(player.stop)
+	_music_tweens.append(tween)
+
+
 # qg:stop: the sound is silent (the replay state records it as "-name").
 func stop(name_: String) -> void:
 	sounds_played.append("-" + name_)
