@@ -195,6 +195,31 @@ static func become(node, state: String) -> void:
 		node.become(state)
 
 
+# qg:emit: a qg:particles effect, once, where a thing is (offset dx, dy).
+# Only seen: the game's state does not depend on it.
+var particles_spec: Dictionary = {}   # the game's qg:particles, by name (scene_builder sets it)
+
+
+static func emit(node, name_: String, dx: float = 0.0, dy: float = 0.0) -> void:
+	node = _thing(node)
+	var q := _q_node()
+	if node == null or not (node is Node2D) or q == null or not q.particles_spec.has(name_):
+		return
+	var scene := (node as Node).get_parent()
+	if scene == null:
+		return
+	var fx: CPUParticles2D = load("res://addons/quantum/particles.gd").make(q.particles_spec[name_])
+	fx.position = (node as Node2D).position + Vector2(dx, dy)
+	if fx.one_shot:
+		fx.finished.connect(fx.queue_free)
+	else:
+		# a continuing effect, emitted once: it plays for a while and goes
+		scene.get_tree().create_timer(fx.lifetime * 2.0).timeout.connect(fx.queue_free)
+		scene.get_tree().create_timer(fx.lifetime).timeout.connect(func(): fx.emitting = false)
+	scene.call_deferred("add_child", fx)
+	event("emit", {"particles": name_})
+
+
 # qg:tween: a property of a thing, eased to a value over so many seconds of
 # ticks (tween.gd). A new tween of the same property replaces the old one.
 const TRANS := {"linear": Tween.TRANS_LINEAR, "sine": Tween.TRANS_SINE, "quad": Tween.TRANS_QUAD,

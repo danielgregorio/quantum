@@ -32,6 +32,11 @@
   <qg:sound name="powerup" src="assets/kenney/audio/powerup.ogg" />
   <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
 
+  <!-- effects: only seen, the game's state never depends on them -->
+  <qg:particles name="sparkle" preset="stars" color="#ffe060" />
+  <qg:particles name="pop" preset="puff" color="#f0e0c0" />
+  <qg:particles name="power" preset="sparks" color="#ff7070" />
+
   <qg:prefab name="Coin" tag="coin" sheet="kenney" frame="151" hitbox="12x12" />
   <qg:prefab name="QBlock" tag="qblock" sheet="kenney" frame="10" hitbox="18x18" solid="true" />
   <qg:prefab name="UsedBlock" tag="usedblock" sheet="kenney" frame="11" hitbox="18x18" solid="true" />
@@ -172,6 +177,7 @@
       </qg:state>
 
       <qg:on-collision with="coin">
+        <qg:emit particles="sparkle" at="other" />
         <qg:destroy target="other" />
         <qg:play sound="coin" />
         <q:set name="coins" value="{coins + 1}" />
@@ -187,11 +193,13 @@
       <qg:on-collision with="shroom">
         <qg:destroy target="other" />
         <qg:play sound="powerup" />
+        <qg:emit particles="power" at="me" />
         <qg:become target="me" state="big" />
         <q:set name="score" value="{score + 50}" />
       </qg:on-collision>
 
       <qg:on-collision with="enemy" side="top">
+        <qg:emit particles="pop" at="other" />
         <qg:destroy target="other" />
         <qg:bounce target="me" height="32" />
         <qg:play sound="stomp" />
@@ -288,12 +296,14 @@
       <qg:animation name="jump" frames="1" />
 
       <qg:on-collision with="coin">
+        <qg:emit particles="sparkle" at="other" />
         <qg:destroy target="other" />
         <qg:play sound="coin" />
         <q:set name="coins" value="{coins + 1}" />
         <q:set name="score" value="{score + 10}" />
       </qg:on-collision>
       <qg:on-collision with="enemy" side="top">
+        <qg:emit particles="pop" at="other" />
         <qg:destroy target="other" />
         <qg:bounce target="me" height="32" />
         <qg:play sound="stomp" />
@@ -368,6 +378,7 @@
       <qg:animation name="jump" frames="1" />
 
       <qg:on-collision with="coin">
+        <qg:emit particles="sparkle" at="other" />
         <qg:destroy target="other" />
         <qg:play sound="coin" />
         <q:set name="coins" value="{coins + 1}" />
