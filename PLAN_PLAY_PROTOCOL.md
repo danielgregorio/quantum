@@ -356,5 +356,13 @@ usable from a conversation. 5 to 7 build on top.
    the repository is public. Without the `ANTHROPIC_API_KEY` secret the
    workflow says so and stops. The schedule is written in the workflow,
    commented out, for the owner to turn on.
-3. Should observations be in English only, or should a game's texts carry
-   their translations as the site's pages do?
+3. ~~Should observations be in English only, or should a game's texts carry
+   their translations as the site's pages do?~~ Decided: an observation
+   says what the screen shows, in the language it shows it in. A game
+   carries its translations (`qg:language` with `qg:phrase`s, read by
+   Godot's own `TranslationServer`). A session picks one: `lang="pt"`,
+   `--lang pt` in the console, `lang` in `play_start`. The game's own texts
+   are the default whatever the machine's language, so an observation
+   reads the same everywhere, and `lang` in the observation says which
+   one it is. The state (the variables, the events' names) is never
+   translated: only the texts on the screen and the lines said.

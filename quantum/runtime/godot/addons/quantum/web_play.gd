@@ -90,6 +90,8 @@ func observation() -> Dictionary:
 	if q != null:
 		if "music_playing" in q and q.music_playing != "":
 			obs["music"] = q.music_playing
+		if not q.languages.is_empty():
+			obs["lang"] = q.lang   # the texts above are in this language ("" the game's own)
 		if q.tracing:
 			obs["events"] = q.events.duplicate()
 			q.events.clear()

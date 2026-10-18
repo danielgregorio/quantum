@@ -45,6 +45,7 @@ _FUNCTIONS = {
     'url_param': 'Q.url_param({0}, {1})',    # the web page's ?name=, or the default (a link that joins a room)
     'paused': 'Q.paused(self)',              # the scene is paused (qg:pause)
     'talking': 'Q.talking(self)',            # a qg:dialogue is open (qg:say)
+    'tr': 'Q.translate({0})',                # a text in the player's language (qg:language)
 }
 
 _BIN = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*'}

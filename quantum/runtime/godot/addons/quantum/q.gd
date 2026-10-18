@@ -516,6 +516,17 @@ static func url_param(name_: String, default_):
 	return default_
 
 
+# qg:language: the game's texts in the player's language. A Label, a Button
+# and the dialogue translate what they show by themselves (Godot's own
+# translation); tr(text) in an expression is this, for a text put together.
+var languages: Array = []   # the game's languages besides its own
+var lang: String = ""       # the one shown; "" is the game's own
+
+
+static func translate(text) -> String:
+	return String(TranslationServer.translate(str(text)))
+
+
 static func net_status() -> String:
 	var g := _game()
 	return g.net_status() if g != null else "offline"

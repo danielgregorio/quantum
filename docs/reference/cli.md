@@ -122,6 +122,7 @@ Play a game step by step (or serve it to an agent, --mcp).
 | `--live` | the game runs at its own speed, not request by request |  |  |
 | `--host` | host a networked game on this port (live) |  |  |
 | `--join` | join a networked game, a person's or another agent's (live) |  |  |
+| `--lang` | the language of the game's texts, when it has it (pt, es...) |  |  |
 | `--transport` | the network's transport (websocket: the one a browser joins) |  | `enet`, `websocket` |
 
 <a id="cli-relay"></a>

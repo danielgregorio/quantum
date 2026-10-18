@@ -204,6 +204,25 @@ def test_each_scene_has_its_music(rpg, godot):
         assert (fled['scene'], fled['music']) == ('exploration', 'meadow')
 
 
+def test_the_game_in_the_players_language(rpg, godot):
+    # the observation says what the screen shows, in the language it shows it in
+    with PlaySession(rpg, binary=godot) as game:
+        assert game.observe()['lang'] == ''                                  # the game's own texts
+    with PlaySession(rpg, binary=godot, lang='pt') as game:
+        seen = game.observe()
+        assert seen['lang'] == 'pt'
+        assert PlaySession.screen(seen, 'hud')['items'] == ['Poções 0', 'Chaves 0']
+        game.until('player.row == 7', hold=['down'])
+        said = game.until('event:say', hold=['right'])
+        assert PlaySession.screen(said, 'dialogue')['text'] == 'Ei, é uma boa hora para uma luta de JRPG, não acha?'
+        assert [e['who'] for e in said['events'] if e['kind'] == 'say'] == ['DESCONHECIDO']
+        for _ in range(3):
+            fight = game.until("scene == 'combat'", tap=['select'], max_ticks=10)
+        assert [i['button'] for i in PlaySession.screen(fight, 'menu')['items']] == ['Atacar', 'Defender', 'Poção', 'Fugir']
+    with PlaySession(rpg, binary=godot, lang='fr') as game:                 # a language it has not: its own
+        assert game.observe()['lang'] == ''
+
+
 def test_the_fight_comes_out_of_black(rpg, godot):
     with PlaySession(rpg, binary=godot) as game:
         game.until('player.row == 7', hold=['down'])

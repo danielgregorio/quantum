@@ -86,7 +86,7 @@ func quantum_view() -> Dictionary:
 		if entry.has("bar"):
 			shown.append({"bar": entry["bind"], "value": entry["bar"].value, "max": entry["bar"].max_value})
 		else:
-			shown.append(entry["label"].text)
+			shown.append(Q.translate(entry["label"].text))   # as shown: in the player's language
 	return {"kind": "hud", "items": shown}
 
 
@@ -115,4 +115,5 @@ func _refresh() -> void:
 		var text: String = str(value)
 		if value is float and value == floorf(value):
 			text = str(int(value))
-		entry["label"].text = (entry["prefix"] + " " if entry["prefix"] != "" else "") + text
+		# a counter's label in the player's language (qg:language), its number as it is
+		entry["label"].text = (Q.translate(entry["prefix"]) + " " if entry["prefix"] != "" else "") + text

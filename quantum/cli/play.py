@@ -172,5 +172,5 @@ def main(args) -> int:
         tools = PlayTools()
         print('quantum play <game>: ' + ', '.join(g['game'] for g in tools.games()))
         return 2
-    net = {k: getattr(args, k, None) for k in ('live', 'host', 'join', 'transport')}
+    net = {k: getattr(args, k, None) for k in ('live', 'host', 'join', 'transport', 'lang')}
     return run_play(args.game, frames=args.frames, net={k: v for k, v in net.items() if v})

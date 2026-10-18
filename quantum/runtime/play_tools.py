@@ -14,6 +14,7 @@ enough to read in a conversation. Nothing here imports the MCP package.
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -47,8 +48,10 @@ class PlayTools:
             if q.stem != q.parent.name:
                 continue
             g = about.get(q.stem, {})
+            langs = re.findall(r'<qg:language\s+lang="([^"]+)"', q.read_text(encoding='utf-8'))
             out.append({'game': q.stem, 'title': g.get('title', q.stem), 'players': g.get('players', ''),
-                        'about': g.get('blurb', ''), 'controls': g.get('controls', '')})
+                        'about': g.get('blurb', ''), 'controls': g.get('controls', ''),
+                        **({'languages': langs} if langs else {})})
         return out
 
     def _source(self, game: str) -> Path:
@@ -64,12 +67,12 @@ class PlayTools:
     # --- sessions ---
 
     def start(self, game: str, frames: bool = False, live: bool = False, host: Optional[int] = None,
-              join: Optional[str] = None, transport: Optional[str] = None) -> dict:
+              join: Optional[str] = None, transport: Optional[str] = None, lang: Optional[str] = None) -> dict:
         """Opens a game (a name from ``games()``, or a .q) and answers its first observation,
         with the game's actions and its first scene's map. ``live``, ``host``, ``join``:
-        as ``PlaySession``'s (a networked game is live)."""
+        as ``PlaySession``'s (a networked game is live). ``lang``: the language of its texts."""
         session = PlaySession.open(self._source(game), binary=self.binary, frames=frames, live=live,
-                                   host=host, join=join, transport=transport)
+                                   host=host, join=join, transport=transport, lang=lang)
         self._count += 1
         sid = f's{self._count}'
         self.sessions[sid] = session

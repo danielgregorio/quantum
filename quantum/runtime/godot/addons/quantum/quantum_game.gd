@@ -23,6 +23,7 @@ func _ready() -> void:
 	_register_inputs(spec.get("inputs", {}))
 	if OS.has_feature("web"):
 		add_child(WebPlay.new())   # window.quantumPlay: an agent plays the exported game (web_play.py)
+	_languages(spec.get("languages", {}))
 	# qg:multiplayer, with --q-host=PORT or --q-join=HOST:PORT: the game waits
 	# for every player, and the local keys only reach it through the lockstep
 	var host := ""
@@ -52,6 +53,34 @@ func _ready() -> void:
 		_start_network(host, port).from_command_line = true
 		return
 	go_to_scene(spec["initial"])
+
+
+# qg:language: --q-lang=pt, else the web page's ?lang=pt, else the system's
+# language, when the game has it; else the game's own texts.
+func _languages(langs: Dictionary) -> void:
+	var wanted := ""
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--q-lang="):
+			wanted = a.substr(9)
+	if wanted == "":
+		wanted = str(Q.url_param("lang", ""))
+	if wanted == "":
+		wanted = OS.get_locale()
+	for code in langs.keys():
+		var t := Translation.new()
+		t.locale = code
+		var phrases: Dictionary = langs[code].get("phrases", {})
+		for text in phrases.keys():
+			t.add_message(text, phrases[text])
+		TranslationServer.add_translation(t)
+	Q.languages = langs.keys()
+	if langs.has(wanted):
+		Q.lang = wanted
+	elif langs.has(wanted.split("_")[0]):
+		Q.lang = wanted.split("_")[0]
+	else:
+		Q.lang = ""
+	TranslationServer.set_locale(Q.lang if Q.lang != "" else "en")
 
 
 # Overrides for tests (several games on one machine): --q-port=N, --q-transport=websocket.

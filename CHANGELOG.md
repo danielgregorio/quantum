@@ -35,6 +35,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
   with the same conditions as `PlaySession`, read in Python since the game
   does not wait. In CI an agent wins the RPG's web build through it
   (`scripts/check-play-in-browser.py`).
+- Laboratory: a game in several languages. `<qg:language lang="pt">` holds
+  `qg:phrase`s (`text="Attack" as="Atacar"`), and `tr(text)` translates a
+  text an expression puts together. Labels, buttons and the dialogue show
+  the player's language through Godot's own translation. The language is
+  the web page's `?lang=`, `--q-lang=`, or the system's when the game has
+  it, and the game's own texts otherwise. The play protocol's observations
+  say what the screen shows in the language it shows it in, with `lang`;
+  a session picks one (`lang=`, `quantum play --lang`, `play_start`), and
+  the game's own texts are the default. The RPG is in Portuguese and
+  Spanish too.
 - Laboratory: the play protocol, phase 7: `quantum playtest`. An agent tries
   to finish each game toward the `goal` it has in `projects/games.json`
   (what it is told, a condition the job checks after every call, and a

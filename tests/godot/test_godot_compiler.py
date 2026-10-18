@@ -359,6 +359,29 @@ class TestScenesMapAndGameState:
         assert 'func _q_at_player():\n\treturn G.map_at\n' in (out / 'scripts' / 'scene_map.gd').read_text()
         assert data['scenes']['over']['on_input'] == {'jump': '_on_input_jump'}
 
+    def test_a_game_in_other_languages(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:language lang="pt" name="Português">
+    <qg:phrase text="Attack" as="Atacar" />
+  </qg:language>
+  <qg:language lang="pt_BR"><qg:phrase text="Attack" as="Atacar" /></qg:language>
+  <qg:scene name="main">
+    <qg:hud><qg:text value="{tr('Attack') + '!'}" /></qg:hud>
+  </qg:scene>
+'''))
+        data = json.loads((out / 'game.json').read_text())
+        assert data['languages'] == {'pt': {'name': 'Português', 'phrases': {'Attack': 'Atacar'}},
+                                     'pt_BR': {'name': 'pt_BR', 'phrases': {'Attack': 'Atacar'}}}
+        assert 'Q.translate("Attack")' in (out / 'scripts' / 'scene_main.gd').read_text()
+
+    def test_what_a_language_refuses(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:language lang="Portuguese" />\n  <qg:scene name="main" />\n'))
+        assert 'a language code, as pt, es or pt_BR' in e.message
+        e = refuse(tmp_path, game('  <qg:language lang="pt"><qg:phrase text="A" as="B" /><qg:phrase text="A" as="C" />'
+                                  '</qg:language>\n  <qg:scene name="main" />\n'))
+        assert '<qg:phrase text="A">: twice in lang="pt"' in e.message
+        e = refuse(tmp_path, game('  <qg:language lang="pt" /><qg:language lang="pt" />\n  <qg:scene name="main" />\n'))
+        assert 'two <qg:language lang="pt">' in e.message
+
     def test_a_scene_nobody_declared(self, tmp_path):
         e = refuse(tmp_path, game('''  <qg:scene name="main">
     <qg:on-input action="jump"><qg:goto-scene name="credits" /></qg:on-input>

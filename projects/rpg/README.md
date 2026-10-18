@@ -83,3 +83,11 @@ Every number above is checked in Godot by `tests/godot/test_godot_rpg.py`:
 - four attacks that win, and the line on the map from where the fight started;
 - Flee, which loses;
 - a potion picked up, and drunk in the fight.
+
+## In other languages
+
+The demo is in English. Here the game is also in Portuguese and Spanish
+(`qg:language`): every line, name, button and HUD text has its phrase. The
+web build takes `?lang=pt` or `?lang=es`, a desktop build takes
+`--q-lang=pt`, and otherwise the system's language is used when the game
+has it.
