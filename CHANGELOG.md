@@ -10,6 +10,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: a networked game says on the screen when it cannot go on as
+  usual: waiting for the other player to come back, catching up, the
+  other player left, or the games differ. The notice is over the scene, in
+  the player's language (pt and es come with it), in the play protocol's
+  screen (`kind: notice`) and in a web page's `window.quantumNotice`. In
+  CI the waiting page of the relay check is asked for it.
 - Laboratory: `ai="pathfind"` on a prefab: as `chase`, it goes for the
   character within `sight=`, but around the walls, by the shortest way over
   the tilemap's free cells (breadth first, its neighbours always in the
