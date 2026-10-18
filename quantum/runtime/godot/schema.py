@@ -533,6 +533,21 @@ TAGS: Dict[str, Tag] = {
          'frames': Attr('int', 10),
          'strength': Attr('float', 3.0, doc='pixels')},
         parents=('handler',)),
+    'tween': Tag(
+        'Eases a property of a thing from what it is to a value, over some seconds: a coin that rises, a door '
+        'that slides, a pulse. It runs in the game\'s ticks, so a replay and every peer see the same; it stops '
+        'while the scene is paused, and a new tween of the same property replaces it.',
+        {'target': Attr('ident', 'me', doc='me, other, a character id, or a q:set holding a thing'),
+         'property': Attr('enum:x|y|rotation|scale|alpha', required=True,
+                          doc='x, y: where it is (collisions see it); rotation (degrees), scale, alpha: its picture'),
+         'to': Attr('expr', required=True),
+         'from': Attr('expr', None, doc='where it starts (what it is now when not given)'),
+         'seconds': Attr('float', 0.5),
+         'trans': Attr('enum:linear|sine|quad|cubic|back|bounce|elastic', 'sine', doc='the curve'),
+         'ease': Attr('enum:in|out|in-out', 'out', doc='which end of the curve is slow'),
+         'repeat': Attr('int', 0, doc='times it plays again (-1: for ever)'),
+         'yoyo': Attr('bool', False, doc='each repeat goes back the other way')},
+        parents=('handler',)),
     'put': Tag(
         'Moves a thing or a character to a point, at once.',
         {'target': Attr('ident', 'other', doc='me, other, a character id, or a q:set holding a thing (thing_at)'),

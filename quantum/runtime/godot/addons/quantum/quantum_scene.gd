@@ -86,6 +86,16 @@ func _q_state() -> Dictionary:
 	return {}
 
 
+# A thing a qg:tween has touched also says how it looks: its picture's scale
+# and rotation, and its alpha.
+static func _look(n: Node, entry: Dictionary) -> void:
+	if not n.has_meta("q_tweened"):
+		return
+	var tween = load("res://addons/quantum/tween.gd")
+	for prop in ["scale", "rotation", "alpha"]:
+		entry[prop] = snappedf(tween.read(n, prop), 0.001)
+
+
 # What the replay harness records: the state variables, and the position
 # of every named node (characters), rounded so a dump reads clean.
 func quantum_state() -> Dictionary:
@@ -96,6 +106,7 @@ func quantum_state() -> Dictionary:
 			var entry := {"x": snappedf(n.position.x, 0.01), "y": snappedf(n.position.y, 0.01)}
 			if n.has_method("quantum_node_state"):
 				entry.merge(n.quantum_node_state())
+			_look(n, entry)
 			nodes[n.name] = entry
 	var things := {}
 	var named := {}
@@ -111,6 +122,7 @@ func quantum_state() -> Dictionary:
 			# names Godot makes up for a second thing of the same prefab are not.
 			if n.has_meta("q_named"):
 				named[n.name] = {"x": snappedf(n.position.x, 0.01), "y": snappedf(n.position.y, 0.01)}
+				_look(n, named[n.name])
 	state["nodes"] = nodes
 	state["things"] = things
 	state["named"] = named
