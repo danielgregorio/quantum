@@ -40,7 +40,7 @@ class Tag:
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
-           'say', 'save', 'continue', 'next-language')
+           'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -214,10 +214,11 @@ TAGS: Dict[str, Tag] = {
     'character': Tag(
         'A body the player moves: a platformer, or a walker on a world map.',
         {'id': Attr('ident', required=True),
-         'controller': Attr('enum:platformer|map|topdown|ship|fighter|grid', required=True,
+         'controller': Attr('enum:platformer|map|topdown|ship|fighter|grid|behavior', required=True,
                             doc='grid: steps from cell to cell of the tilemap; the tiles of a layer with collision, '
                                 'and the things, stop it, and stepping into a thing runs its qg:on-collision '
-                                'with the thing\'s tag; `me.col` and `me.row` are its cell'),
+                                'with the thing\'s tag; `me.col` and `me.row` are its cell. behavior: made of the '
+                                'parts its qg:behavior lists'),
          'step-frames': Attr('int', 15, doc='grid: ticks to walk one cell (a bump takes as long)'),
          'diagonal': Attr('bool', False, doc='grid: two directions held at once step diagonally'),
          'player': Attr('int', 1, doc='whose keys move it (qg:input player=); 1 has the defaults'),
@@ -459,6 +460,51 @@ TAGS: Dict[str, Tag] = {
          'at': Attr('str', '0,0', doc='the hit box\'s centre from the body\'s, dx,dy; dx is forward'),
          'damage': Attr('int', 5), 'stun': Attr('int', 12), 'push': Attr('float', 40.0)},
         parents=('character',)),
+    'behavior': Tag(
+        'What a character controller="behavior" is made of: parts, each a small rule. A platformer is '
+        'qg:gravity, qg:walk and qg:jump; a top-down walker is qg:walk axis="both"; a flapping bird is qg:gravity '
+        'and a qg:jump with air=; a ship that comes back round the screen is qg:walk axis="both" and qg:wrap. '
+        'Each tick, whatever their order: walk and jump read the keys, gravity pulls, the body moves, then '
+        'keep-inside, wrap and face. `me.vx`, `me.vy` and `me.on_floor` read it; qg:velocity sets its speed '
+        'from the game\'s rules (a dash, a knock-back), so what no part covers is written in the game.',
+        {},
+        parents=('character',)),
+    'gravity': Tag(
+        'A part: it falls, and stands on floors (without it, the body floats: top-down).',
+        {'strength': Attr('float', 900.0, doc='pixels per second squared'),
+         'max-fall': Attr('float', 300.0, doc='the speed it falls at most, pixels per second')},
+        parents=('behavior',)),
+    'walk': Tag(
+        'A part: left and right (and up and down, with axis="both") set its speed.',
+        {'speed': Attr('float', 90.0, doc='pixels per second'),
+         'accel': Attr('float', 0.0, doc='pixels per second squared towards the speed (0: at once)'),
+         'axis': Attr('enum:x|both', 'x', doc='x: across only (with gravity); both: in eight directions')},
+        parents=('behavior',)),
+    'jump': Tag(
+        'A part: a press on the floor leaps; with air=, also in the air. It needs qg:gravity.',
+        {'action': Attr('ident', 'jump', doc='a default action, or one a qg:input declares'),
+         'height': Attr('float', 64.0, doc='pixels, with the button held'),
+         'speed': Attr('float', None, doc='the take-off speed, pixels per second, instead of height='),
+         'coyote': Attr('int', 6, doc='ticks after leaving a ledge in which a jump still works'),
+         'air': Attr('int', 0, doc='jumps it may take in the air before landing again'),
+         'variable': Attr('bool', True, doc='letting go while rising cuts the leap'),
+         'cut': Attr('float', 0.0, doc='letting go multiplies the rise by this, once (0: three times the '
+                                       'gravity while it rises instead)'),
+         'sound': Attr('ident', None, doc='a qg:sound, played on take-off')},
+        parents=('behavior',)),
+    'keep-inside': Tag(
+        'A part: the scene\'s edges stop it.',
+        {},
+        parents=('behavior',)),
+    'wrap': Tag(
+        'A part: past an edge of the scene, it comes back on the other side.',
+        {},
+        parents=('behavior',)),
+    'face': Tag(
+        'A part: its picture turns left or right the way it goes.',
+        {'by': Attr('enum:velocity|input', 'velocity', doc='velocity: the way it moves; input: the way it is '
+                                                         'pushed (it faces while it walks into a wall)')},
+        parents=('behavior',)),
     'on-ko': Tag(
         'What happens when this fighter\'s health reaches 0. Holds actions and statements; `me` is the loser, '
         '`other` the winner.',
@@ -565,6 +611,13 @@ TAGS: Dict[str, Tag] = {
          'ease': Attr('enum:in|out|in-out', 'out', doc='which end of the curve is slow'),
          'repeat': Attr('int', 0, doc='times it plays again (-1: for ever)'),
          'yoyo': Attr('bool', False, doc='each repeat goes back the other way')},
+        parents=('handler',)),
+    'velocity': Tag(
+        'Sets the speed of a character controller="behavior", in pixels per second: a dash, a knock-back, a '
+        'wind, a spring. An axis not given keeps its speed. Its parts go on from there (gravity pulls it back '
+        'down; walk sets the speed across again on the next tick, unless it has accel=).',
+        {'target': Attr('ident', 'me', doc='me, other, or a character id'),
+         'x': Attr('expr', None), 'y': Attr('expr', None)},
         parents=('handler',)),
     'set-tile': Tag(
         'Puts a tile in a cell of the scene\'s tilemap, or empties it: a block that breaks, a door drawn as tiles. '

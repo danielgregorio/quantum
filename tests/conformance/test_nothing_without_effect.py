@@ -42,7 +42,6 @@ EXCEPTIONS = {
     "FunctionNode.access": REFUSED, "FunctionNode.async_func": REFUSED, "FunctionNode.memoize": REFUSED,
     "FunctionNode.rest_config": REFUSED, "FunctionNode.validate_params": REFUSED,
     "HTMLNode.has_events": INTERNAL,
-    "ImportNode.behavior": LAB,
     "InvokeNode.transform": REFUSED,
     "PyExprNode.format_spec": LAB,
     "QuantumParam.validation": REFUSED,

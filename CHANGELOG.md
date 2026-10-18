@@ -10,6 +10,17 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: `controller="behavior"`, a character made of parts: its
+  `<qg:behavior>` lists them, and the body is what they add up to.
+  `qg:gravity` (strength=, max-fall=), `qg:walk` (speed=, accel=,
+  axis="x|both"), `qg:jump` (action=, height= or speed=, coyote=, air=,
+  variable=, cut=, sound=), `qg:keep-inside`, `qg:wrap` and `qg:face`
+  (by="velocity|input"). Gravity, walk and jump with the platformer's
+  numbers make the platformer, to the pixel; walk on both axes is a
+  top-down walker; walk and wrap, a ship that comes back round the screen.
+  `<qg:velocity target="me" x="..." y="...">` sets its speed from the game's
+  rules (a dash, a knock-back, a spring), and `me.vx`, `me.vy`, `me.on_floor`
+  read it.
 - Laboratory: `<qg:set-tile col= row= tile= layer=>` puts a tile in a cell
   of the scene's tilemap, or empties it (`tile="0"`): a block that breaks,
   a door drawn as tiles. Its collision changes from the next tick (the

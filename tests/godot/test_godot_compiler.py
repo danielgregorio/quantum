@@ -397,6 +397,55 @@ class TestScenesMapAndGameState:
                                   'seconds="0" /></qg:timer></qg:scene>\n'))
         assert 'more than 0' in e.message
 
+    def test_a_character_made_of_parts(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="hero" controller="behavior" sheet="c" x="10" y="10" hitbox="12x16">
+      <qg:behavior>
+        <qg:gravity strength="700" />
+        <qg:walk speed="80" accel="400" />
+        <qg:jump height="48" air="1" cut="0.5" />
+        <qg:face />
+      </qg:behavior>
+    </qg:character>
+    <qg:timer after="1"><qg:velocity target="hero" x="{hero.vx * 2}" /></qg:timer>
+  </qg:scene>
+'''))
+        hero = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'][0]
+        assert [p['part'] for p in hero['behavior']] == ['gravity', 'walk', 'jump', 'face']
+        assert hero['behavior'][0] == {'part': 'gravity', 'strength': 700.0, 'max_fall': 300.0}
+        assert hero['behavior'][2]['action'] == 'jump' and hero['behavior'][2]['cut'] == 0.5
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.velocity(get_node("hero"), (get_node("hero").vx * 2), null)' in script
+
+    def test_what_a_behavior_refuses(self, tmp_path):
+        def parts(inner, controller='behavior', after=''):
+            return game(f'''  <qg:scene name="main">
+    <qg:character id="hero" controller="{controller}" sheet="c" x="10" y="10" hitbox="12x16">
+      <qg:behavior>{inner}</qg:behavior>
+    </qg:character>{after}
+  </qg:scene>
+''')
+        cases = [
+            (parts('<qg:walk />', controller='topdown'), 'is for controller="behavior"'),
+            (parts(''), 'is empty'),
+            (parts('<qg:walk /><qg:walk />'), 'two <qg:walk>'),
+            (parts('<qg:walk /><qg:jump />'), 'needs <qg:gravity>'),
+            (parts('<qg:gravity /><qg:jump action="dash" />'), 'action="dash"'),
+            (parts('<qg:gravity /><qg:jump sound="boing" />'), 'sound="boing"'),
+            (parts('<qg:walk axis="both" /><qg:keep-inside /><qg:wrap />'), 'not both'),
+            (parts('<qg:gravity /><qg:jump cut="2" />'), 'between 0 and 1'),
+            (parts('<q:set name="n" value="1" />'), 'not statements'),
+            (parts('<qg:walk />', after='<qg:timer after="1"><qg:velocity target="hero" /></qg:timer>'),
+             'needs x=, y='),
+        ]
+        for source, says in cases:
+            assert says in refuse(tmp_path, source).message, says
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:character id="hero" controller="behavior" sheet="c" '
+                                  'x="0" y="0" hitbox="8x8" /></qg:scene>\n'))
+        assert 'holds one <qg:behavior>' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:gravity /></qg:scene>\n'))
+        assert 'goes inside <qg:behavior>' in e.message
+
     def test_set_tile_and_tile_at(self, tmp_path):
         out = build(tmp_path, game('''  <qg:scene name="main">
     <q:set name="here" value="0" type="number" />

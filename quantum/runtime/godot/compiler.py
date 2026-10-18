@@ -379,6 +379,56 @@ class _Compiler:
         self.assets[rel] = self._find(rel, line)
         return rel
 
+    def _behavior(self, el: Element) -> list:
+        """The parts of a character controller="behavior" (its qg:behavior), checked."""
+        found = el.find_all('behavior')
+        if el.get('controller') != 'behavior':
+            if found:
+                raise GameCompileError('<qg:behavior> is for controller="behavior"', found[0].line)
+            return []
+        if len(found) != 1:
+            raise GameCompileError('<qg:character controller="behavior"> holds one <qg:behavior> (its parts)',
+                                   found[1].line if found else el.line)
+        parts, seen = [], {}
+        for p in found[0].children:
+            if not isinstance(p, Element):
+                raise GameCompileError('<qg:behavior> holds parts (qg:gravity, qg:walk...), not statements', p.line)
+            if p.tag in seen:
+                raise GameCompileError(f'two <qg:{p.tag}> in one qg:behavior', p.line)
+            seen[p.tag] = p.line
+            part = {'part': p.tag}
+            for name in TAGS[p.tag].attrs:
+                part[name.replace('-', '_')] = p.get(name)
+            parts.append(part)
+        if not parts:
+            raise GameCompileError('<qg:behavior> is empty: give it parts (qg:gravity, qg:walk, qg:jump...)',
+                                   found[0].line)
+        by = {p['part']: p for p in parts}
+        if 'keep-inside' in by and 'wrap' in by:
+            raise GameCompileError('a qg:behavior has qg:keep-inside or qg:wrap, not both', seen['wrap'])
+        if 'gravity' in by and (by['gravity']['strength'] < 0 or by['gravity']['max_fall'] <= 0):
+            raise GameCompileError('<qg:gravity>: strength= 0 or more, max-fall= more than 0', seen['gravity'])
+        if 'walk' in by and (by['walk']['speed'] < 0 or by['walk']['accel'] < 0):
+            raise GameCompileError('<qg:walk>: speed= and accel= 0 or more', seen['walk'])
+        if 'jump' in by:
+            j, line = by['jump'], seen['jump']
+            if 'gravity' not in by:
+                raise GameCompileError('<qg:jump> needs <qg:gravity> in the same qg:behavior (what brings it down)',
+                                       line)
+            if j['action'] not in self.actions:
+                raise GameCompileError(
+                    f'<qg:jump action="{j["action"]}">: no such action — declare it with '
+                    f'<qg:input action="{j["action"]}" keys="..." />', line)
+            if j['sound'] and j['sound'] not in self.sounds:
+                raise GameCompileError(f'<qg:jump sound="{j["sound"]}">: no qg:sound of that name', line)
+            if j['height'] <= 0 or (j['speed'] is not None and j['speed'] <= 0):
+                raise GameCompileError('<qg:jump>: height= and speed= more than 0', line)
+            if j['coyote'] < 0 or j['air'] < 0:
+                raise GameCompileError('<qg:jump>: coyote= and air= 0 or more', line)
+            if not 0 <= j['cut'] <= 1:
+                raise GameCompileError('<qg:jump cut=>: between 0 and 1', line)
+        return parts
+
     @staticmethod
     def _sheet_exists(name: str, sheets: dict, line: Optional[int]) -> None:
         if name not in sheets:
@@ -725,6 +775,7 @@ class _Compiler:
                     raise GameCompileError('step-frames=: 1 or more', el.line)
                 if el.get('bounds') is not None and el.get('controller') not in ('ship', 'topdown'):
                     raise GameCompileError('bounds= is for controller="ship" or "topdown"', el.line)
+                behavior = self._behavior(el)
                 nodes.append({
                     'kind': 'character', 'id': cid, 'controller': el.get('controller'),
                     'player': player, 'axis': el.get('axis'),
@@ -748,6 +799,7 @@ class _Compiler:
                     'on_collision': handlers, 'on_hit': hits, 'on_fall': on_fall,
                     'health': el.get('health'), 'facing': el.get('facing'), 'moves': moves, 'on_ko': on_ko,
                     'step_frames': el.get('step-frames'), 'diagonal': el.get('diagonal'),
+                    'behavior': behavior,
                 })
                 self._node_elements.append(el)
             elif el.tag == 'instance':

@@ -25,6 +25,7 @@ const FighterBody := preload("res://addons/quantum/fighter_body.gd")
 const Menu := preload("res://addons/quantum/menu.gd")
 const GridBody := preload("res://addons/quantum/grid_body.gd")
 const Dialogue := preload("res://addons/quantum/dialogue.gd")
+const BehaviorBody := preload("res://addons/quantum/behavior_body.gd")
 
 static var _textures: Dictionary = {}
 
@@ -262,6 +263,8 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 		body = FighterBody.new()
 	elif node_spec["controller"] == "grid":
 		body = GridBody.new()
+	elif node_spec["controller"] == "behavior":
+		body = BehaviorBody.new()
 	else:
 		body = PlatformerBody.new()
 	body.name = node_spec["id"]

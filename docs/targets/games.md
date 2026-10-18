@@ -149,6 +149,22 @@ A sound the game can play (qg:play).
 
 Goes inside: `q:application`.
 
+### `qg:particles`
+
+A particle effect the game can show: a preset and a few overrides. qg:emit plays it once where a thing is; qg:emitter keeps it going in a scene. Only seen: the game's state never depends on it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required |  |
+| `preset` | `puff` / `sparks` / `smoke` / `dust` / `fire` / `rain` / `snow` / `confetti` / `stars` | required | puff, sparks, smoke, dust, confetti and stars play once; fire, rain and snow keep going |
+| `color` | `#rrggbb` |  | the preset's own when not given (confetti is every colour) |
+| `amount` | integer |  | how many particles |
+| `lifetime` | number |  | seconds each one lives |
+| `speed` | number |  | pixels a second, about |
+| `size` | number |  | pixels, about |
+
+Goes inside: `q:application`.
+
 ### `qg:prefab`
 
 A kind of thing the scene places with qg:instance. With ai= it moves.
@@ -277,7 +293,7 @@ A body the player moves: a platformer, or a walker on a world map.
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `id` | a name | required |  |
-| `controller` | `platformer` / `map` / `topdown` / `ship` / `fighter` / `grid` | required | grid: steps from cell to cell of the tilemap; the tiles of a layer with collision, and the things, stop it, and stepping into a thing runs its qg:on-collision with the thing's tag; `me.col` and `me.row` are its cell |
+| `controller` | `platformer` / `map` / `topdown` / `ship` / `fighter` / `grid` / `behavior` | required | grid: steps from cell to cell of the tilemap; the tiles of a layer with collision, and the things, stop it, and stepping into a thing runs its qg:on-collision with the thing's tag; `me.col` and `me.row` are its cell. behavior: made of the parts its qg:behavior lists |
 | `step-frames` | integer | `15` | grid: ticks to walk one cell (a bump takes as long) |
 | `diagonal` | true / false | `false` | grid: two directions held at once step diagonally |
 | `player` | integer | `1` | whose keys move it (qg:input player=); 1 has the defaults |
@@ -316,6 +332,74 @@ A body the player moves: a platformer, or a walker on a world map.
 
 Goes inside: `qg:scene`.
 
+### `qg:behavior`
+
+What a character controller="behavior" is made of: parts, each a small rule. A platformer is qg:gravity, qg:walk and qg:jump; a top-down walker is qg:walk axis="both"; a flapping bird is qg:gravity and a qg:jump with air=; a ship that comes back round the screen is qg:walk axis="both" and qg:wrap. Each tick, whatever their order: walk and jump read the keys, gravity pulls, the body moves, then keep-inside, wrap and face. `me.vx`, `me.vy` and `me.on_floor` read it; qg:velocity sets its speed from the game's rules (a dash, a knock-back), so what no part covers is written in the game.
+
+Goes inside: `qg:character`.
+
+### `qg:gravity`
+
+A part: it falls, and stands on floors (without it, the body floats: top-down).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `strength` | number | `900.0` | pixels per second squared |
+| `max-fall` | number | `300.0` | the speed it falls at most, pixels per second |
+
+Goes inside: `qg:behavior`.
+
+### `qg:walk`
+
+A part: left and right (and up and down, with axis="both") set its speed.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `speed` | number | `90.0` | pixels per second |
+| `accel` | number | `0.0` | pixels per second squared towards the speed (0: at once) |
+| `axis` | `x` / `both` | `x` | x: across only (with gravity); both: in eight directions |
+
+Goes inside: `qg:behavior`.
+
+### `qg:jump`
+
+A part: a press on the floor leaps; with air=, also in the air. It needs qg:gravity.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `action` | a name | `jump` | a default action, or one a qg:input declares |
+| `height` | number | `64.0` | pixels, with the button held |
+| `speed` | number |  | the take-off speed, pixels per second, instead of height= |
+| `coyote` | integer | `6` | ticks after leaving a ledge in which a jump still works |
+| `air` | integer | `0` | jumps it may take in the air before landing again |
+| `variable` | true / false | `true` | letting go while rising cuts the leap |
+| `cut` | number | `0.0` | letting go multiplies the rise by this, once (0: three times the gravity while it rises instead) |
+| `sound` | a name |  | a qg:sound, played on take-off |
+
+Goes inside: `qg:behavior`.
+
+### `qg:keep-inside`
+
+A part: the scene's edges stop it.
+
+Goes inside: `qg:behavior`.
+
+### `qg:wrap`
+
+A part: past an edge of the scene, it comes back on the other side.
+
+Goes inside: `qg:behavior`.
+
+### `qg:face`
+
+A part: its picture turns left or right the way it goes.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `by` | `velocity` / `input` | `velocity` | velocity: the way it moves; input: the way it is pushed (it faces while it walks into a wall) |
+
+Goes inside: `qg:behavior`.
+
 ### `qg:instance`
 
 A prefab placed in the scene.
@@ -327,6 +411,19 @@ A prefab placed in the scene.
 | `y` | number | required |  |
 | `name` | a name |  | the node name (`other.name` in a handler); the prefab name otherwise |
 | `if` | an expression |  | placed only when this is true as the scene is built |
+
+Goes inside: `qg:scene`.
+
+### `qg:emitter`
+
+A qg:particles effect that keeps going in the scene: rain across its width, a fire on a spot.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `particles` | a name | required |  |
+| `x` | number | required |  |
+| `y` | number | required |  |
+| `width` | number | `0.0` | rain and snow: the band they fall across, pixels (0: a point) |
 
 Goes inside: `qg:scene`.
 
@@ -876,19 +973,35 @@ Shows the game in its next language (qg:language), after its own: a button for i
 
 Goes inside: a handler.
 
-## Other tags
+### `qg:tween`
 
-### `qg:dialogue`
-
-Lines someone says, shown one at a time in a box at the bottom of the screen (qg:say opens it).
+Eases a property of a thing from what it is to a value, over some seconds: a coin that rises, a door that slides, a pulse. It runs in the game's ticks, so a replay and every peer see the same; it stops while the scene is paused, and a new tween of the same property replaces it.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `name` | a name | required |  |
-| `font` | text |  | a .ttf, relative to the .q or a folder above it |
-| `size` | integer | `24` | font size |
+| `target` | a name | `me` | me, other, a character id, or a q:set holding a thing |
+| `property` | `x` / `y` / `rotation` / `scale` / `alpha` | required | x, y: where it is (collisions see it); rotation (degrees), scale, alpha: its picture |
+| `to` | an expression | required |  |
+| `from` | an expression |  | where it starts (what it is now when not given) |
+| `seconds` | number | `0.5` |  |
+| `trans` | `linear` / `sine` / `quad` / `cubic` / `back` / `bounce` / `elastic` | `sine` | the curve |
+| `ease` | `in` / `out` / `in-out` | `out` | which end of the curve is slow |
+| `repeat` | integer | `0` | times it plays again (-1: for ever) |
+| `yoyo` | true / false | `false` | each repeat goes back the other way |
 
-Goes inside: `qg:scene`.
+Goes inside: a handler.
+
+### `qg:velocity`
+
+Sets the speed of a character controller="behavior", in pixels per second: a dash, a knock-back, a wind, a spring. An axis not given keeps its speed. Its parts go on from there (gravity pulls it back down; walk sets the speed across again on the next tick, unless it has accel=).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `target` | a name | `me` | me, other, or a character id |
+| `x` | an expression |  |  |
+| `y` | an expression |  |  |
+
+Goes inside: a handler.
 
 ### `qg:emit`
 
@@ -903,16 +1016,30 @@ Plays a qg:particles effect once where a thing is. Only seen: the game's state n
 
 Goes inside: a handler.
 
-### `qg:emitter`
+### `qg:set-tile`
 
-A qg:particles effect that keeps going in the scene: rain across its width, a fire on a spot.
+Puts a tile in a cell of the scene's tilemap, or empties it: a block that breaks, a door drawn as tiles. Its collision changes from the next tick, monsters that pathfind find their way again, and the cells changed are part of the game's state (a replay, every peer). `tile_at(col, row)` reads a cell.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `particles` | a name | required |  |
-| `x` | number | required |  |
-| `y` | number | required |  |
-| `width` | number | `0.0` | rain and snow: the band they fall across, pixels (0: a point) |
+| `col` | an expression | required | the column, from 0 at the left |
+| `row` | an expression | required | the row, from 0 at the top |
+| `tile` | an expression | `0` | as in the rows of qg:tilemap: 0 nothing, n tile n-1 of the tileset, -n the same flipped |
+| `layer` | text |  | a layer's name (a Tiled map's); the first with collision, else the first, when not given |
+
+Goes inside: a handler.
+
+## Other tags
+
+### `qg:dialogue`
+
+Lines someone says, shown one at a time in a box at the bottom of the screen (qg:say opens it).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required |  |
+| `font` | text |  | a .ttf, relative to the .q or a folder above it |
+| `size` | integer | `24` | font size |
 
 Goes inside: `qg:scene`.
 
@@ -970,22 +1097,6 @@ A backdrop behind the level that the camera scrolls slower than the level: a sky
 
 Goes inside: `qg:scene`.
 
-### `qg:particles`
-
-A particle effect the game can show: a preset and a few overrides. qg:emit plays it once where a thing is; qg:emitter keeps it going in a scene. Only seen: the game's state never depends on it.
-
-| Attribute | Type | Default | Meaning |
-|---|---|---|---|
-| `name` | a name | required |  |
-| `preset` | `puff` / `sparks` / `smoke` / `dust` / `fire` / `rain` / `snow` / `confetti` / `stars` | required | puff, sparks, smoke, dust, confetti and stars play once; fire, rain and snow keep going |
-| `color` | `#rrggbb` |  | the preset's own when not given (confetti is every colour) |
-| `amount` | integer |  | how many particles |
-| `lifetime` | number |  | seconds each one lives |
-| `speed` | number |  | pixels a second, about |
-| `size` | number |  | pixels, about |
-
-Goes inside: `q:application`.
-
 ### `qg:phrase`
 
 One text of the game, in a qg:language.
@@ -996,19 +1107,6 @@ One text of the game, in a qg:language.
 | `as` | text | required | what it is in this language |
 
 Goes inside: `qg:language`.
-
-### `qg:set-tile`
-
-Puts a tile in a cell of the scene's tilemap, or empties it: a block that breaks, a door drawn as tiles. Its collision changes from the next tick, monsters that pathfind find their way again, and the cells changed are part of the game's state (a replay, every peer). `tile_at(col, row)` reads a cell.
-
-| Attribute | Type | Default | Meaning |
-|---|---|---|---|
-| `col` | an expression | required | the column, from 0 at the left |
-| `row` | an expression | required | the row, from 0 at the top |
-| `tile` | an expression | `0` | as in the rows of qg:tilemap: 0 nothing, n tile n-1 of the tileset, -n the same flipped |
-| `layer` | text |  | a layer's name (a Tiled map's); the first with collision, else the first, when not given |
-
-Goes inside: a handler.
 
 ### `qg:tile`
 
@@ -1034,24 +1132,6 @@ Runs its handler after so many ticks, or every so many ticks, in this scene.
 | `count` | integer | `0` | every: stop after this many runs (0: never) |
 
 Goes inside: `qg:scene`.
-
-### `qg:tween`
-
-Eases a property of a thing from what it is to a value, over some seconds: a coin that rises, a door that slides, a pulse. It runs in the game's ticks, so a replay and every peer see the same; it stops while the scene is paused, and a new tween of the same property replaces it.
-
-| Attribute | Type | Default | Meaning |
-|---|---|---|---|
-| `target` | a name | `me` | me, other, a character id, or a q:set holding a thing |
-| `property` | `x` / `y` / `rotation` / `scale` / `alpha` | required | x, y: where it is (collisions see it); rotation (degrees), scale, alpha: its picture |
-| `to` | an expression | required |  |
-| `from` | an expression |  | where it starts (what it is now when not given) |
-| `seconds` | number | `0.5` |  |
-| `trans` | `linear` / `sine` / `quad` / `cubic` / `back` / `bounce` / `elastic` | `sine` | the curve |
-| `ease` | `in` / `out` / `in-out` | `out` | which end of the curve is slow |
-| `repeat` | integer | `0` | times it plays again (-1: for ever) |
-| `yoyo` | true / false | `false` | each repeat goes back the other way |
-
-Goes inside: a handler.
 
 ## Statements
 
