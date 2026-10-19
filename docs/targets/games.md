@@ -566,12 +566,18 @@ Goes inside: `qg:scene`.
 
 ### `qg:camera`
 
-What the screen shows.
+What the screen shows: it follows a character, or the middle of several, in the game's ticks (a replay and every peer frame the same). Only seen: nothing in the game's state depends on it.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `follow` | a name | required | a character id |
+| `follow` | text | required | a character id, or several: "p1, p2" (their middle) |
 | `bounds` | `tilemap` / `none` | `tilemap` |  |
+| `zoom` | number | `1.0` | 2: twice as close |
+| `dead-zone` | `WxH` pixels |  | WxH: the box about the middle of the screen in which the followed one moves before the camera does |
+| `lead` | number | `0.0` | pixels it looks ahead, the way the followed one goes |
+| `smooth` | number | `0.0` | how fast it catches up, per second (0: at once) |
+| `fit` | true / false | `false` | several followed: it zooms out to keep them all on the screen, down to zoom-min, and back in as they come together |
+| `zoom-min` | number | `0.5` | fit: as far out as it goes |
 
 Goes inside: `qg:scene`.
 
@@ -805,11 +811,14 @@ Goes inside: a handler.
 
 ### `qg:play`
 
-Plays a qg:sound. Directly in a scene: as the scene is entered.
+Plays a qg:sound. Directly in a scene: as the scene is entered. With volume=, pitch= or vary=, it plays in a voice of its own, so the same sound can overlap itself. Only heard: the game's state records the sound's name, never how it was played.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `sound` | a name | required |  |
+| `volume` | number | `0.0` | decibels added (-6: about half as loud) |
+| `pitch` | number | `1.0` | 2: an octave up, 0.5: an octave down |
+| `vary` | number | `0.0` | a random pitch between pitch - vary and pitch + vary, each time: twenty hits that do not sound the same |
 
 Goes inside: a handler, `qg:scene`.
 
@@ -1540,7 +1549,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:instance prefab="Spikes" x="351" y="176" />
     <qg:instance prefab="Flag" x="405" y="171" />
 
-    <qg:camera follow="player" bounds="tilemap" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
+    <qg:camera follow="player" bounds="tilemap" smooth="8" lead="32" dead-zone="16x56" />
 
     <qg:hud position="top-left">
       <qg:counter bind="score" label="SCORE" />
@@ -1614,7 +1623,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:character>
 
 
-    <qg:camera follow="player" bounds="tilemap" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
+    <qg:camera follow="player" bounds="tilemap" smooth="8" lead="32" dead-zone="16x56" />
     <qg:hud position="top-left">
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="coins" label="COINS" />
@@ -1706,7 +1715,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:instance prefab="Coin" x="252" y="96" />
     <qg:instance prefab="Flag" x="405" y="171" />
 
-    <qg:camera follow="player" bounds="tilemap" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
+    <qg:camera follow="player" bounds="tilemap" smooth="8" lead="32" dead-zone="16x56" />
     <qg:hud position="top-left">
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="coins" label="COINS" />
@@ -2258,7 +2267,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
        two levers keep shut, and its treasure. Torches burn and gems sparkle
        (qg:particles). Each crypt entered is saved (Continue, alone); the
        game speaks English, Portuguese and Spanish. The art is drawn for it by
-       scripts/art/delve.py (CC0); the sounds are Kenney's (CC0). -->
+       scripts/art/delve.py and the music written by scripts/art/delve_music.py
+       (CC0); the sounds are Kenney's (CC0). -->
 
   <!-- The delve's state, kept from crypt to crypt; the first crypt starts it anew. -->
   <q:set name="hearts" value="5" type="number" />
@@ -2282,6 +2292,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:sound name="heal" src="assets/kenney/audio/powerup.ogg" />
   <qg:sound name="open" src="assets/kenney/audio/block.ogg" />
   <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound name="torchlight" src="assets/torchlight.ogg" loop="true" />
+  <qg:sound name="crypt" src="assets/crypt.ogg" loop="true" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="torch" preset="fire" amount="20" size="3" lifetime="0.7" speed="30" />
@@ -2362,6 +2374,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== The title: alone, together, or the saved delve ===== -->
 
   <qg:scene name="title" width="256" height="224" background="#16141e">
+    <qg:music sound="torchlight" />
     <qg:sprite sheet="delvers" frame="0" x="34" y="150" gd:scale="2,2" />
     <qg:sprite sheet="delvers" frame="10" x="222" y="150" gd:scale="2,2" gd:flip_h="true" />
     <qg:emitter particles="torch" x="34" y="100" />
@@ -2379,6 +2392,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- Two machines: one hosts, the other joins its address; the delve starts in crypt-1. -->
   <qg:scene name="together" width="256" height="224" background="#16141e">
+    <qg:music sound="torchlight" />
     <qg:hud position="top-center" size="10"><qg:text value="{tr('TWO DELVERS, TWO MACHINES. ESCAPE: BACK.')}" /></qg:hud>
     <qg:lobby local="crypt-1" local-label="Play alone" size="12" />
     <qg:on-input action="cancel">
@@ -2390,6 +2404,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== Crypt 1: a sealed wall, and what waits behind it. Down the stairs to crypt 2. ===== -->
 
   <qg:scene name="crypt-1" width="256" height="224" background="#100e16" seed="1" save="true">
+    <qg:music sound="crypt" />
     <!-- the delve starts here anew -->
     <q:set name="hearts" value="5" />
     <q:set name="gems" value="0" />
@@ -2398,7 +2413,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="leaving" value="false" type="boolean" />
 
     <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
+      <qg:play sound="hurt" vary="0.1" />
       <qg:shake at="me" frames="8" strength="2" />
       <q:set name="hearts" value="{hearts - 1}" />
       <q:if condition="{hearts <= 0}">
@@ -2406,18 +2421,18 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </q:if>
     </q:function>
     <q:function name="gem" params="it">
-      <qg:play sound="pick" />
+      <qg:play sound="pick" pitch="1.1" vary="0.08" />
       <qg:emit particles="sparkle" at="it" />
       <q:set name="gems" value="{gems + 1}" />
       <q:set name="taken" value="{taken + [it.name]}" />
       <qg:destroy target="it" />
     </q:function>
     <q:function name="slay" params="foe">
-      <qg:play sound="hit" />
+      <qg:play sound="hit" vary="0.15" />
       <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">
-      <qg:play sound="open" />
+      <qg:play sound="open" pitch="0.75" />
       <qg:swap target="lever" prefab="LeverOn" />
       <qg:set-tile col="8" row="5" tile="12" />
       <qg:set-tile col="8" row="6" tile="12" />
@@ -2502,11 +2517,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== Crypt 2: three crushers slide across the way. Down the stairs to crypt 3. ===== -->
 
   <qg:scene name="crypt-2" width="256" height="224" background="#100e16" seed="2" save="true">
+    <qg:music sound="crypt" />
     <q:set name="message" value="THE CRUSHERS. MIND THEIR TIME." />
     <q:set name="leaving" value="false" type="boolean" />
 
     <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
+      <qg:play sound="hurt" vary="0.1" />
       <qg:shake at="me" frames="8" strength="2" />
       <q:set name="hearts" value="{hearts - 1}" />
       <q:if condition="{hearts <= 0}">
@@ -2514,7 +2530,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </q:if>
     </q:function>
     <q:function name="gem" params="it">
-      <qg:play sound="pick" />
+      <qg:play sound="pick" pitch="1.1" vary="0.08" />
       <qg:emit particles="sparkle" at="it" />
       <q:set name="gems" value="{gems + 1}" />
       <q:set name="taken" value="{taken + [it.name]}" />
@@ -2528,7 +2544,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:destroy target="it" />
     </q:function>
     <q:function name="slay" params="foe">
-      <qg:play sound="hit" />
+      <qg:play sound="hit" vary="0.15" />
       <qg:emit particles="slain" at="foe" />
       <qg:destroy target="foe" />
     </q:function>
@@ -2620,12 +2636,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== Crypt 3: the vault, which two levers keep shut. ===== -->
 
   <qg:scene name="crypt-3" width="256" height="224" background="#100e16" seed="3" save="true">
+    <qg:music sound="crypt" />
     <q:set name="message" value="THE VAULT. TWO LEVERS HOLD IT SHUT." />
     <q:set name="pulled" value="0" type="number" />
     <q:set name="won" value="false" type="boolean" />
 
     <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
+      <qg:play sound="hurt" vary="0.1" />
       <qg:shake at="me" frames="8" strength="2" />
       <q:set name="hearts" value="{hearts - 1}" />
       <q:if condition="{hearts <= 0}">
@@ -2633,18 +2650,18 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </q:if>
     </q:function>
     <q:function name="gem" params="it">
-      <qg:play sound="pick" />
+      <qg:play sound="pick" pitch="1.1" vary="0.08" />
       <qg:emit particles="sparkle" at="it" />
       <q:set name="gems" value="{gems + 1}" />
       <q:set name="taken" value="{taken + [it.name]}" />
       <qg:destroy target="it" />
     </q:function>
     <q:function name="slay" params="foe">
-      <qg:play sound="hit" />
+      <qg:play sound="hit" vary="0.15" />
       <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">
-      <qg:play sound="open" />
+      <qg:play sound="open" pitch="0.75" />
       <qg:swap target="lever" prefab="LeverOn" />
       <q:set name="pulled" value="{pulled + 1}" />
       <q:if condition="{pulled == 2}">
@@ -2741,6 +2758,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== The end, and the fall ===== -->
 
   <qg:scene name="the-end" width="256" height="224" background="#141020">
+    <qg:music sound="torchlight" />
     <qg:emitter particles="treasure" x="128" y="150" />
     <qg:sprite sheet="crypt" frame="7" x="128" y="120" gd:scale="3,3" />
     <qg:hud position="top-center" size="16">
