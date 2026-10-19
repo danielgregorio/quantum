@@ -146,7 +146,7 @@
     },
     "game-tag-self-closing": {
       "name": "meta.tag.game.self-closing",
-      "begin": "(<)(qg:)(scene|sprite|physics|collider|animation|camera|input|sound|particle|timer|spawn|hud|tween|tilemap|layer|behavior|use|prefab|instance|group|statemachine|state|transition)(?=\\s|/>)",
+      "begin": "(<)(qg:)(animation|bar|become|behavior|bounce|burst|button|camera|character|checkpoint|continue|counter|cursor|damage|deflect|destroy|dialogue|emit|emitter|exit|face|field|flee|give|goto-scene|gravity|host|hud|input|instance|inventory|item|join|jump|keep-distance|keep-inside|language|leap|leave|line|lobby|map-node|map-path|menu|move|multiplayer|music|next-language|on-animation-end|on-collision|on-damage|on-death|on-end|on-fall|on-hit|on-input|on-ko|on-locked|on-select|on-tile|parallax|particles|path|patrol|pause|phrase|play|play-animation|prefab|put|reset-items|respawn|resume|save|say|scene|seek|set-tile|shake|shoot|sound|spawn|spawner|sprite|spritesheet|stand|state|stop|swap|take|text|tile|tilemap|tileset|timer|tween|velocity|walk|wander|wrap|zone)(?=\\s|/>)",
       "end": "/>",
       "beginCaptures": {
         "1": { "name": "punctuation.definition.tag.begin.game" },
@@ -162,7 +162,7 @@
     },
     "game-tag-open": {
       "name": "meta.tag.game.open",
-      "begin": "(<)(qg:)(scene|sprite|physics|collider|animation|camera|input|sound|particle|timer|spawn|hud|tween|tilemap|layer|behavior|use|prefab|instance|group|statemachine|state|transition)(?=\\s|>)",
+      "begin": "(<)(qg:)(animation|bar|become|behavior|bounce|burst|button|camera|character|checkpoint|continue|counter|cursor|damage|deflect|destroy|dialogue|emit|emitter|exit|face|field|flee|give|goto-scene|gravity|host|hud|input|instance|inventory|item|join|jump|keep-distance|keep-inside|language|leap|leave|line|lobby|map-node|map-path|menu|move|multiplayer|music|next-language|on-animation-end|on-collision|on-damage|on-death|on-end|on-fall|on-hit|on-input|on-ko|on-locked|on-select|on-tile|parallax|particles|path|patrol|pause|phrase|play|play-animation|prefab|put|reset-items|respawn|resume|save|say|scene|seek|set-tile|shake|shoot|sound|spawn|spawner|sprite|spritesheet|stand|state|stop|swap|take|text|tile|tilemap|tileset|timer|tween|velocity|walk|wander|wrap|zone)(?=\\s|>)",
       "end": ">",
       "beginCaptures": {
         "1": { "name": "punctuation.definition.tag.begin.game" },
@@ -178,7 +178,7 @@
     },
     "game-tag-close": {
       "name": "meta.tag.game.close",
-      "match": "(</)(qg:)(scene|sprite|physics|collider|animation|camera|input|sound|particle|timer|spawn|hud|tween|tilemap|layer|behavior|use|prefab|instance|group|statemachine|state|transition)(>)",
+      "match": "(</)(qg:)(animation|bar|become|behavior|bounce|burst|button|camera|character|checkpoint|continue|counter|cursor|damage|deflect|destroy|dialogue|emit|emitter|exit|face|field|flee|give|goto-scene|gravity|host|hud|input|instance|inventory|item|join|jump|keep-distance|keep-inside|language|leap|leave|line|lobby|map-node|map-path|menu|move|multiplayer|music|next-language|on-animation-end|on-collision|on-damage|on-death|on-end|on-fall|on-hit|on-input|on-ko|on-locked|on-select|on-tile|parallax|particles|path|patrol|pause|phrase|play|play-animation|prefab|put|reset-items|respawn|resume|save|say|scene|seek|set-tile|shake|shoot|sound|spawn|spawner|sprite|spritesheet|stand|state|stop|swap|take|text|tile|tilemap|tileset|timer|tween|velocity|walk|wander|wrap|zone)(>)",
       "captures": {
         "1": { "name": "punctuation.definition.tag.begin.game" },
         "2": { "name": "entity.name.tag.namespace.game" },

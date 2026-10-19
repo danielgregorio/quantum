@@ -7,6 +7,7 @@ Complete schema for all Quantum framework tags organized by namespace.
 from typing import Dict, List, Optional
 from .types import TagInfo, AttributeInfo, AttributeType
 from .core_tags import CORE_AI_TAGS
+from .game_tags import GAME_TAGS
 
 
 def _attr(
@@ -843,6 +844,9 @@ QUANTUM_TAGS: Dict[str, TagInfo] = {
     "q:dump": Q_DUMP,
     "q:onEvent": Q_ONEVENT,
     "q:dispatchEvent": Q_DISPATCHEVENT,
+
+    # Game tags (qg:): quantum/runtime/godot/schema.py, through game_tags.py
+    **GAME_TAGS,
 
     # UI engine tags (ui:)
     "ui:window": UI_WINDOW,
