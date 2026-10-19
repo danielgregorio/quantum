@@ -195,6 +195,14 @@ static func velocity(node, x, y) -> void:
 		node.set_velocity_from_rules(x, y)
 
 
+# qg:play-animation: an animation of a thing or a character, from its first frame.
+static func play_animation(node, name_: String) -> void:
+	node = _thing(node)
+	var animator = node.get_node_or_null("Animator") if node != null else null
+	if animator != null:
+		animator.force(name_)
+
+
 # Changes a character to one of its states (qg:become).
 static func become(node, state: String) -> void:
 	node = _thing(node)

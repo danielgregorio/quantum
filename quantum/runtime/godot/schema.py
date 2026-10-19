@@ -40,7 +40,8 @@ class Tag:
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
-           'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile')
+           'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
+           'play-animation')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -192,7 +193,9 @@ TAGS: Dict[str, Tag] = {
         '"attack", or "attack-up" and "attack-down" by where it faces); a prefab plays "walk".',
         {'name': Attr('ident', required=True),
          'frames': Attr('str', required=True, doc='comma-separated frame numbers'),
-         'fps': Attr('float', 8.0)},
+         'fps': Attr('float', 8.0),
+         'loop': Attr('bool', True, doc='false: it plays once, stays on its last frame, and its '
+                                       'qg:on-animation-end runs (an attack, a fall, a death)')},
         parents=('character', 'prefab', 'state')),
     'scene': Tag(
         'A screen of the game. The first one is where the game starts.',
@@ -507,6 +510,11 @@ TAGS: Dict[str, Tag] = {
         {'by': Attr('enum:velocity|input', 'velocity', doc='velocity: the way it moves; input: the way it is '
                                                          'pushed (it faces while it walks into a wall)')},
         parents=('behavior',)),
+    'on-animation-end': Tag(
+        'What happens when an animation of this character or prefab with loop="false" has played to its last '
+        'frame. Holds actions and statements; `me` is whose animation it is.',
+        {'name': Attr('ident', required=True, doc='the animation')},
+        parents=('character', 'prefab')),
     'on-ko': Tag(
         'What happens when this fighter\'s health reaches 0. Holds actions and statements; `me` is the loser, '
         '`other` the winner.',
@@ -528,6 +536,13 @@ TAGS: Dict[str, Tag] = {
         'Throws the character up, as after a stomp.',
         {'target': Attr('enum:me', 'me'),
          'height': Attr('float', 32.0, doc='pixels')},
+        parents=('handler',)),
+    'play-animation': Tag(
+        'Plays an animation of a thing or a character from its first frame. Its own animations (idle, walk...) '
+        'wait until it ends; a looping one holds until the next qg:play-animation, and name="" gives it its own '
+        'animations back.',
+        {'target': Attr('ident', 'me', doc='me, other, a character id, or a q:set holding a thing'),
+         'name': Attr('str', required=True, doc='an animation of the target (empty: back to its own)')},
         parents=('handler',)),
     'play': Tag(
         'Plays a qg:sound. Directly in a scene: as the scene is entered. With volume=, pitch= or vary=, it plays '

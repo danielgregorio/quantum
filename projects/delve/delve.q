@@ -56,6 +56,14 @@
              ai="pathfind" speed="30" sight="400">
     <qg:animation name="walk" frames="20,21,20,22" fps="6" />
   </qg:prefab>
+  <!-- a slain skeleton falls to a heap of bones, once, and the heap goes up in smoke -->
+  <qg:prefab name="Fallen" tag="fallen" sheet="delvers" frame="26" hitbox="8x8">
+    <qg:animation name="walk" frames="26,27,28,28,28" fps="8" loop="false" />
+    <qg:on-animation-end name="walk">
+      <qg:emit particles="slain" at="me" />
+      <qg:destroy target="me" />
+    </qg:on-animation-end>
+  </qg:prefab>
   <qg:prefab name="Bat" tag="enemy" sheet="delvers" frame="23" hitbox="14x12"
              ai="chase" speed="42" sight="110">
     <qg:animation name="walk" frames="23,24,25,24" fps="10" />
@@ -161,8 +169,7 @@
     </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
-      <qg:emit particles="slain" at="foe" />
-      <qg:destroy target="foe" />
+      <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">
       <qg:play sound="open" pitch="0.75" />
@@ -391,8 +398,7 @@
     </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
-      <qg:emit particles="slain" at="foe" />
-      <qg:destroy target="foe" />
+      <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">
       <qg:play sound="open" pitch="0.75" />

@@ -214,6 +214,7 @@ Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what
 | `name` | a name | required |  |
 | `frames` | text | required | comma-separated frame numbers |
 | `fps` | number | `8.0` |  |
+| `loop` | true / false | `true` | false: it plays once, stays on its last frame, and its qg:on-animation-end runs (an attack, a fall, a death) |
 
 Goes inside: `qg:character`, `qg:prefab`, `qg:state`.
 
@@ -729,6 +730,16 @@ What happens when this prefab's health reaches 0, before it goes. In a scene, wi
 
 Goes inside: `qg:prefab`, `qg:scene`.
 
+### `qg:on-animation-end`
+
+What happens when an animation of this character or prefab with loop="false" has played to its last frame. Holds actions and statements; `me` is whose animation it is.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required | the animation |
+
+Goes inside: `qg:character`, `qg:prefab`.
+
 ## Actions
 
 What a handler can do, besides `q:set`, `q:if`, `q:loop`, `q:call` and `q:return`.
@@ -1030,6 +1041,17 @@ Puts a tile in a cell of the scene's tilemap, or empties it: a block that breaks
 | `row` | an expression | required | the row, from 0 at the top |
 | `tile` | an expression | `0` | as in the rows of qg:tilemap: 0 nothing, n tile n-1 of the tileset, -n the same flipped |
 | `layer` | text |  | a layer's name (a Tiled map's); the first with collision, else the first, when not given |
+
+Goes inside: a handler.
+
+### `qg:play-animation`
+
+Plays an animation of a thing or a character from its first frame. Its own animations (idle, walk...) wait until it ends; a looping one holds until the next qg:play-animation, and name="" gives it its own animations back.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `target` | a name | `me` | me, other, a character id, or a q:set holding a thing |
+| `name` | text | required | an animation of the target (empty: back to its own) |
 
 Goes inside: a handler.
 
@@ -2222,6 +2244,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
              ai="pathfind" speed="30" sight="400">
     <qg:animation name="walk" frames="20,21,20,22" fps="6" />
   </qg:prefab>
+  <!-- a slain skeleton falls to a heap of bones, once, and the heap goes up in smoke -->
+  <qg:prefab name="Fallen" tag="fallen" sheet="delvers" frame="26" hitbox="8x8">
+    <qg:animation name="walk" frames="26,27,28,28,28" fps="8" loop="false" />
+    <qg:on-animation-end name="walk">
+      <qg:emit particles="slain" at="me" />
+      <qg:destroy target="me" />
+    </qg:on-animation-end>
+  </qg:prefab>
   <qg:prefab name="Bat" tag="enemy" sheet="delvers" frame="23" hitbox="14x12"
              ai="chase" speed="42" sight="110">
     <qg:animation name="walk" frames="23,24,25,24" fps="10" />
@@ -2327,8 +2357,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
-      <qg:emit particles="slain" at="foe" />
-      <qg:destroy target="foe" />
+      <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">
       <qg:play sound="open" pitch="0.75" />
@@ -2557,8 +2586,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
-      <qg:emit particles="slain" at="foe" />
-      <qg:destroy target="foe" />
+      <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">
       <qg:play sound="open" pitch="0.75" />
