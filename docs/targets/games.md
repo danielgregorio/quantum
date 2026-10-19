@@ -1413,7 +1413,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
 ### Hopper
 
-`projects/hopper/hopper.q` — a platformer: a world map, three levels (one drawn in Tiled), a block with a power-up, walkers to stomp, a pit, a checkpoint, spikes, a flag, a game over.
+`projects/hopper/hopper.q` — a platformer: a world map, four levels (one drawn in Tiled), a block with a power-up, walkers to stomp, a pit, a checkpoint, spikes, a flag, a game over; the fourth has water to swim, snow slid on, a ladder, spike tiles and an enemy made of parts that hops.
 
 ```xml
 <q:application id="hopper" type="game">
@@ -1439,7 +1439,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- Jump on space, Z, X, up or W; the other actions keep their default keys. -->
   <qg:input action="jump" keys="Space, Z, X, Up, W" />
 
-  <qg:tileset name="kenney" src="assets/kenney/tilemap_packed.png" tile="18" />
+  <!-- level 4's tiles of a kind (qg:tile kind=): a ladder, water, snow slid on as ice, spikes that hurt -->
+  <qg:tileset name="kenney" src="assets/kenney/tilemap_packed.png" tile="18">
+    <qg:tile frame="71" kind="ladder" />
+    <qg:tile frame="33" kind="water" />
+    <qg:tile frame="74" kind="water" />
+    <qg:tile frame="81" kind="ice" />
+    <qg:tile frame="68" kind="hurt" shape="0,10; 18,10; 18,18; 0,18" />
+  </qg:tileset>
   <qg:spritesheet name="chars" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
 
   <qg:sound name="jump" src="assets/kenney/audio/jump.ogg" />
@@ -1469,6 +1476,16 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:prefab name="Lift" tag="lift" sheet="kenney" frame="43" hitbox="18x8" solid="true"
              ai="shuttle" dy="-80" period="240" />
 
+  <!-- an enemy made of parts: it hops to and fro on the snow, and over what it bumps -->
+  <qg:prefab name="Bouncer" tag="enemy" sheet="chars" frame="11" hitbox="18x18" ai="behavior" speed="36"
+             turns-at="edge">
+    <qg:animation name="walk" frames="11,12" fps="4" />
+    <qg:behavior>
+      <qg:gravity />
+      <qg:leap height="20" every="45" when="{true}" />
+      <qg:patrol heading="left" distance="18" />
+    </qg:behavior>
+  </qg:prefab>
   <qg:prefab name="Walker" tag="enemy" sheet="chars" frame="18" hitbox="18x18"
              ai="patrol" speed="30" direction="left" turns-at="edge">
     <qg:animation name="walk" frames="18,19,20" fps="6" />
@@ -1515,8 +1532,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:map-node name="level-1" x="48" y="112" sheet="kenney" frame="153" scene="level-1" />
     <qg:map-node name="level-2" x="128" y="80" sheet="kenney" frame="153" scene="level-2" />
     <qg:map-node name="level-3" x="208" y="112" sheet="kenney" frame="153" scene="level-3" />
+    <qg:map-node name="level-4" x="128" y="168" sheet="kenney" frame="153" scene="level-4" />
     <qg:map-path from="level-1" to="level-2" requires="level-1" />
     <qg:map-path from="level-2" to="level-3" requires="level-2" />
+    <qg:map-path from="level-3" to="level-4" requires="level-3" />
 
     <qg:character id="player" controller="map" sheet="chars" frame="0" at="{map_at}" speed="60"
                   x="0" y="0" hitbox="18x22">
@@ -1834,6 +1853,95 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:instance prefab="Spikes" x="261" y="176" />
     <qg:instance prefab="Spikes" x="279" y="176" />
     <qg:instance prefab="Coin" x="252" y="96" />
+    <qg:instance prefab="Flag" x="405" y="171" />
+
+    <qg:camera follow="player" bounds="tilemap" smooth="8" lead="32" dead-zone="16x56" />
+    <qg:hud position="top-left">
+      <qg:counter bind="score" label="SCORE" />
+      <qg:counter bind="coins" label="COINS" />
+      <qg:counter bind="lives" label="LIVES" />
+    </qg:hud>
+  </qg:scene>
+
+  <!-- ===== Level 4: the falls. Water to swim, snow that slides, a ladder up a wall, spikes below it. ===== -->
+
+  <qg:scene name="level-4" width="256" height="224" background="#4f8fb0" seed="17">
+    <q:set name="coins" value="0" type="number" />
+
+    <q:function name="die" params="me">
+      <qg:play sound="hurt" />
+      <q:set name="lives" value="{lives - 1}" />
+      <q:if condition="{lives <= 0}">
+        <qg:goto-scene name="game-over" />
+      <q:else>
+        <qg:goto-scene name="level-4" />
+      </q:else>
+      </q:if>
+    </q:function>
+
+    <!-- 23 grass, 25 dirt; 34 and 75 water (a pool two tiles deep), 82 snow (ice), 72 the ladder up
+         the wall at columns 15-16, 69 the spikes beyond it. -->
+    <qg:tilemap tileset="kenney" collision="true">
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,72,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,72,23,23,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,72,25,25,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,72,25,25,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,72,25,25,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,72,25,25,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,72,25,25,0,0,0,0,0,0,0
+23,23,23,23,23,23,34,34,34,34,82,82,82,82,23,25,25,69,69,69,69,23,23,23
+25,25,25,25,25,25,75,75,75,75,25,25,25,25,25,25,25,25,25,25,25,25,25,25
+25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25
+    </qg:tilemap>
+
+    <qg:character id="player" controller="platformer" sheet="chars" frame="0"
+                  x="40" y="160" hitbox="18x22"
+                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6"
+                  jump-sound="jump">
+      <qg:animation name="idle" frames="0" />
+      <qg:animation name="walk" frames="1,2" fps="8" />
+      <qg:animation name="jump" frames="1" />
+
+      <qg:on-collision with="coin">
+        <qg:emit particles="sparkle" at="other" />
+        <qg:destroy target="other" />
+        <qg:play sound="coin" />
+        <q:set name="coins" value="{coins + 1}" />
+        <q:set name="score" value="{score + 10}" />
+      </qg:on-collision>
+      <qg:on-collision with="enemy" side="top">
+        <qg:emit particles="pop" at="other" />
+        <qg:destroy target="other" />
+        <qg:bounce target="me" height="32" />
+        <qg:play sound="stomp" />
+        <q:set name="score" value="{score + 100}" />
+      </qg:on-collision>
+      <qg:on-collision with="enemy" side="any" cooldown="60">
+        <q:call function="die" args="me" />
+      </qg:on-collision>
+      <!-- the spikes are tiles of a kind, not things: touching one is qg:on-tile -->
+      <qg:on-tile kind="hurt" cooldown="60">
+        <q:call function="die" args="me" />
+      </qg:on-tile>
+      <qg:on-collision with="flag" cooldown="100000">
+        <qg:play sound="win" />
+        <q:set name="score" value="{score + 1500}" />
+        <q:set name="cleared" value="{cleared + ['level-4']}" />
+        <q:set name="check_at" value="" />
+        <qg:save scene="map" />
+        <qg:goto-scene name="map" />
+      </qg:on-collision>
+      <qg:on-fall>
+        <q:call function="die" args="me" />
+      </qg:on-fall>
+    </qg:character>
+
+    <qg:instance prefab="Coin" x="144" y="200" />
+    <qg:instance prefab="Bouncer" x="225" y="171" />
+    <qg:instance prefab="Coin" x="279" y="54" />
     <qg:instance prefab="Flag" x="405" y="171" />
 
     <qg:camera follow="player" bounds="tilemap" smooth="8" lead="32" dead-zone="16x56" />
@@ -2376,7 +2484,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
 ### Delve
 
-`projects/delve/delve.q` — a dungeon crawl for one, or two over the network: a wall a lever opens and the skeletons behind it that find their way through, crushers that slide to and fro, a vault two levers keep shut; torches, gems, each crypt saved, three languages.
+`projects/delve/delve.q` — a dungeon crawl for one, or two over the network: a wall a lever opens and the skeletons behind it that find their way through, crushers that slide to and fro, a vault two levers keep shut, bats that flutter until they see a delver and a skeleton archer, both made of parts; torches, hearts and gems carried as items and shown by the inventory, each crypt saved, three languages.
 
 ```xml
 <q:application id="delve" type="game">
@@ -2386,15 +2494,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
        the skeletons behind it that find their way through as soon as it does
        (ai="pathfind"); crushers that slide to and fro (qg:tween); a vault
        two levers keep shut, and its treasure. Torches burn and gems sparkle
-       (qg:particles). Each crypt entered is saved (Continue, alone); the
+       (qg:particles). A skeleton archer, made of parts, keeps its distance and
+       shoots. The hearts and the gems are what the delvers carry
+       (qg:item), shown by the HUD's inventory. Each crypt entered is saved (Continue, alone); the
        game speaks English, Portuguese and Spanish. The art is drawn for it by
        scripts/art/delve.py and the music written by scripts/art/delve_music.py
        (CC0); the sounds are Kenney's (CC0). -->
 
   <!-- The delve's state, kept from crypt to crypt; the first crypt starts it anew. -->
-  <q:set name="hearts" value="5" type="number" />
-  <q:set name="gems" value="0" type="number" />
-  <q:set name="taken" value="[]" type="array" />      <!-- the gems and hearts picked up, by name -->
   <q:set name="message" value="" />
 
   <!-- Two players, each on their own machine: the delve starts in crypt-1 once both are there. -->
@@ -2413,6 +2520,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:sound name="heal" src="assets/kenney/audio/powerup.ogg" />
   <qg:sound name="open" src="assets/kenney/audio/block.ogg" />
   <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound name="twang" src="assets/kenney/audio/jump.ogg" />
   <qg:sound name="torchlight" src="assets/torchlight.ogg" loop="true" />
   <qg:sound name="crypt" src="assets/crypt.ogg" loop="true" />
 
@@ -2425,8 +2533,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:particles name="treasure" preset="confetti" />
   <qg:particles name="dust" preset="snow" color="#6a6478" amount="16" speed="8" size="1" />
 
-  <qg:prefab name="Gem" tag="gem" sheet="crypt" frame="5" hitbox="10x12" />
-  <qg:prefab name="Heart" tag="heart" sheet="crypt" frame="6" hitbox="12x12" />
+  <!-- What the delvers carry, kept from crypt to crypt and in a save: hearts (five at most; one
+       less at each wound, and none is the fall) and gems. A heart picked up at five stays where it is. -->
+  <qg:item name="heart" label="HEARTS" sheet="crypt" frame="6" start="5" max="5" sound="heal" particles="glow" />
+  <qg:item name="gem" label="GEMS" sheet="crypt" frame="5" sound="pick" particles="sparkle" />
+
+  <qg:prefab name="Gem" tag="gem" sheet="crypt" frame="5" hitbox="10x12" gives="gem" />
+  <qg:prefab name="Heart" tag="heart" sheet="crypt" frame="6" hitbox="12x12" gives="heart" />
   <qg:prefab name="Lever" tag="lever" sheet="crypt" frame="3" hitbox="14x14" />
   <qg:prefab name="LeverOn" tag="lever-on" sheet="crypt" frame="4" hitbox="14x14" />
   <qg:prefab name="Stairs" tag="stairs" sheet="crypt" frame="8" hitbox="10x10" />
@@ -2445,10 +2558,28 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:destroy target="me" />
     </qg:on-animation-end>
   </qg:prefab>
+  <!-- a bat flutters about until it sees a delver, then dives at it -->
   <qg:prefab name="Bat" tag="enemy" sheet="delvers" frame="23" hitbox="14x12"
-             ai="chase" speed="42" sight="110">
+             ai="behavior" speed="42" sight="110">
     <qg:animation name="walk" frames="23,24,25,24" fps="10" />
+    <qg:behavior>
+      <qg:seek way="straight" />
+      <qg:wander speed="16" />
+    </qg:behavior>
   </qg:prefab>
+  <!-- an enemy made of parts: it keeps its distance from the nearest delver it sees, shoots
+       at one within range, and wanders while it sees none -->
+  <qg:prefab name="Archer" tag="enemy" sheet="delvers" frame="29" hitbox="12x14"
+             ai="behavior" speed="26" sight="150">
+    <qg:animation name="walk" frames="29,30,29,31" fps="6" />
+    <qg:behavior>
+      <qg:keep-distance min="54" max="90" />
+      <qg:shoot prefab="Arrow" every="90" range="130" sound="twang" />
+      <qg:wander speed="12" />
+    </qg:behavior>
+  </qg:prefab>
+  <qg:prefab name="Arrow" tag="arrow" sheet="delvers" frame="32" hitbox="6x4"
+             ai="fly" speed="100" walls="stop" rotate="true" lifetime="180" />
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
   <qg:language lang="pt" name="Português">
@@ -2526,27 +2657,19 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <qg:scene name="crypt-1" width="256" height="224" background="#100e16" seed="1" save="true">
     <qg:music sound="crypt" />
-    <!-- the delve starts here anew -->
-    <q:set name="hearts" value="5" />
-    <q:set name="gems" value="0" />
-    <q:set name="taken" value="[]" />
+    <!-- the delve starts here anew: five hearts, no gems, every gem back in its place -->
+    <q:function name="anew" params=""><qg:reset-items /></q:function>
+    <q:call function="anew" />
     <q:set name="message" value="A SEALED WALL. A LEVER MUST OPEN IT." />
     <q:set name="leaving" value="false" type="boolean" />
 
     <q:function name="hurt" params="me">
       <qg:play sound="hurt" vary="0.1" />
       <qg:shake at="me" frames="8" strength="2" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
+      <qg:take item="heart" />
+      <q:if condition="{held('heart') <= 0}">
         <qg:goto-scene name="fallen" fade="0.6" />
       </q:if>
-    </q:function>
-    <q:function name="gem" params="it">
-      <qg:play sound="pick" pitch="1.1" vary="0.08" />
-      <qg:emit particles="sparkle" at="it" />
-      <q:set name="gems" value="{gems + 1}" />
-      <q:set name="taken" value="{taken + [it.name]}" />
-      <qg:destroy target="it" />
     </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
@@ -2598,7 +2721,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:animation name="attack-up" frames="8" />
       <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="enemy" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
-      <qg:on-collision with="gem"><q:call function="gem" args="other" /></qg:on-collision>
       <qg:on-collision with="lever"><q:call function="pull" args="other" /></qg:on-collision>
       <qg:on-collision with="stairs"><q:call function="down" /></qg:on-collision>
       <qg:on-hit with="enemy"><q:call function="slay" args="other" /></qg:on-hit>
@@ -2614,23 +2736,21 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:animation name="attack-up" frames="18" />
       <qg:animation name="attack-down" frames="19" />
       <qg:on-collision with="enemy" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
-      <qg:on-collision with="gem"><q:call function="gem" args="other" /></qg:on-collision>
       <qg:on-collision with="lever"><q:call function="pull" args="other" /></qg:on-collision>
       <qg:on-collision with="stairs"><q:call function="down" /></qg:on-collision>
       <qg:on-hit with="enemy"><q:call function="slay" args="other" /></qg:on-hit>
     </qg:character>
 
     <qg:instance prefab="Lever" name="lever" x="81" y="171" />
-    <qg:instance prefab="Gem" name="gem-1" x="99" y="45" if="{'gem-1' not in taken}" />
-    <qg:instance prefab="Gem" name="gem-2" x="117" y="153" if="{'gem-2' not in taken}" />
-    <qg:instance prefab="Gem" name="gem-3" x="225" y="45" if="{'gem-3' not in taken}" />
+    <qg:instance prefab="Gem" name="gem-1" x="99" y="45" />
+    <qg:instance prefab="Gem" name="gem-2" x="117" y="153" />
+    <qg:instance prefab="Gem" name="gem-3" x="225" y="45" />
     <qg:instance prefab="Skeleton" name="skeleton-1" x="190" y="72" />
     <qg:instance prefab="Skeleton" name="skeleton-2" x="190" y="144" />
     <qg:instance prefab="Stairs" name="stairs" x="225" y="171" />
 
     <qg:hud position="top-left" size="10">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="gems" label="GEMS" />
+      <qg:inventory />
       <qg:text bind="message" />
     </qg:hud>
   </qg:scene>
@@ -2645,24 +2765,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:function name="hurt" params="me">
       <qg:play sound="hurt" vary="0.1" />
       <qg:shake at="me" frames="8" strength="2" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
+      <qg:take item="heart" />
+      <q:if condition="{held('heart') <= 0}">
         <qg:goto-scene name="fallen" fade="0.6" />
       </q:if>
-    </q:function>
-    <q:function name="gem" params="it">
-      <qg:play sound="pick" pitch="1.1" vary="0.08" />
-      <qg:emit particles="sparkle" at="it" />
-      <q:set name="gems" value="{gems + 1}" />
-      <q:set name="taken" value="{taken + [it.name]}" />
-      <qg:destroy target="it" />
-    </q:function>
-    <q:function name="heal" params="it">
-      <qg:play sound="heal" />
-      <qg:emit particles="glow" at="it" />
-      <q:set name="hearts" value="{min(hearts + 1, 5)}" />
-      <q:set name="taken" value="{taken + [it.name]}" />
-      <qg:destroy target="it" />
     </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
@@ -2707,8 +2813,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="enemy" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
       <qg:on-collision with="slab" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
-      <qg:on-collision with="gem"><q:call function="gem" args="other" /></qg:on-collision>
-      <qg:on-collision with="heart"><q:call function="heal" args="other" /></qg:on-collision>
       <qg:on-collision with="stairs"><q:call function="down" /></qg:on-collision>
       <qg:on-hit with="enemy"><q:call function="slay" args="other" /></qg:on-hit>
     </qg:character>
@@ -2724,8 +2828,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:animation name="attack-down" frames="19" />
       <qg:on-collision with="enemy" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
       <qg:on-collision with="slab" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
-      <qg:on-collision with="gem"><q:call function="gem" args="other" /></qg:on-collision>
-      <qg:on-collision with="heart"><q:call function="heal" args="other" /></qg:on-collision>
       <qg:on-collision with="stairs"><q:call function="down" /></qg:on-collision>
       <qg:on-hit with="enemy"><q:call function="slay" args="other" /></qg:on-hit>
     </qg:character>
@@ -2740,16 +2842,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:tween target="slab-3" property="y" to="189" seconds="2" trans="sine" ease="in-out" repeat="-1" yoyo="true" />
     </qg:timer>
 
-    <qg:instance prefab="Heart" name="heart-1" x="162" y="108" if="{'heart-1' not in taken}" />
-    <qg:instance prefab="Gem" name="gem-4" x="108" y="189" if="{'gem-4' not in taken}" />
-    <qg:instance prefab="Gem" name="gem-5" x="162" y="45" if="{'gem-5' not in taken}" />
+    <qg:instance prefab="Heart" name="heart-1" x="162" y="108" />
+    <qg:instance prefab="Gem" name="gem-4" x="108" y="189" />
+    <qg:instance prefab="Gem" name="gem-5" x="162" y="45" />
     <qg:instance prefab="Bat" name="bat-1" x="216" y="54" />
     <qg:instance prefab="Bat" name="bat-2" x="216" y="171" />
     <qg:instance prefab="Stairs" name="stairs" x="225" y="117" />
 
     <qg:hud position="top-left" size="10">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="gems" label="GEMS" />
+      <qg:inventory />
       <qg:text bind="message" />
     </qg:hud>
   </qg:scene>
@@ -2765,17 +2866,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:function name="hurt" params="me">
       <qg:play sound="hurt" vary="0.1" />
       <qg:shake at="me" frames="8" strength="2" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
+      <qg:take item="heart" />
+      <q:if condition="{held('heart') <= 0}">
         <qg:goto-scene name="fallen" fade="0.6" />
       </q:if>
-    </q:function>
-    <q:function name="gem" params="it">
-      <qg:play sound="pick" pitch="1.1" vary="0.08" />
-      <qg:emit particles="sparkle" at="it" />
-      <q:set name="gems" value="{gems + 1}" />
-      <q:set name="taken" value="{taken + [it.name]}" />
-      <qg:destroy target="it" />
     </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
@@ -2835,9 +2929,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:animation name="attack-up" frames="8" />
       <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="enemy" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
-      <qg:on-collision with="gem"><q:call function="gem" args="other" /></qg:on-collision>
       <qg:on-collision with="lever"><q:call function="pull" args="other" /></qg:on-collision>
       <qg:on-collision with="chest"><q:call function="treasure" args="other" /></qg:on-collision>
+      <qg:on-collision with="arrow"><qg:destroy target="other" /><q:call function="hurt" args="me" /></qg:on-collision>
       <qg:on-hit with="enemy"><q:call function="slay" args="other" /></qg:on-hit>
     </qg:character>
     <qg:character id="p2" controller="topdown" player="2" sheet="delvers" frame="10"
@@ -2851,9 +2945,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:animation name="attack-up" frames="18" />
       <qg:animation name="attack-down" frames="19" />
       <qg:on-collision with="enemy" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
-      <qg:on-collision with="gem"><q:call function="gem" args="other" /></qg:on-collision>
       <qg:on-collision with="lever"><q:call function="pull" args="other" /></qg:on-collision>
       <qg:on-collision with="chest"><q:call function="treasure" args="other" /></qg:on-collision>
+      <qg:on-collision with="arrow"><qg:destroy target="other" /><q:call function="hurt" args="me" /></qg:on-collision>
       <qg:on-hit with="enemy"><q:call function="slay" args="other" /></qg:on-hit>
     </qg:character>
 
@@ -2863,15 +2957,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:timer after="1">
       <qg:tween target="chest" property="y" to="176" seconds="0.8" trans="sine" ease="in-out" repeat="-1" yoyo="true" />
     </qg:timer>
-    <qg:instance prefab="Gem" name="gem-6" x="225" y="27" if="{'gem-6' not in taken}" />
-    <qg:instance prefab="Gem" name="gem-7" x="126" y="99" if="{'gem-7' not in taken}" />
+    <qg:instance prefab="Gem" name="gem-6" x="225" y="27" />
+    <qg:instance prefab="Gem" name="gem-7" x="126" y="99" />
     <qg:instance prefab="Skeleton" name="skeleton-1" x="126" y="63" />
     <qg:instance prefab="Skeleton" name="skeleton-2" x="81" y="117" />
     <qg:instance prefab="Skeleton" name="skeleton-3" x="171" y="117" />
+    <qg:instance prefab="Archer" name="archer" x="207" y="81" />
 
     <qg:hud position="top-left" size="10">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="gems" label="GEMS" />
+      <qg:inventory />
       <qg:text bind="message" />
     </qg:hud>
   </qg:scene>
@@ -2884,7 +2978,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:sprite sheet="crypt" frame="7" x="128" y="120" gd:scale="3,3" />
     <qg:hud position="top-center" size="16">
       <qg:text bind="message" />
-      <qg:counter bind="gems" label="GEMS" />
+      <qg:counter item="gem" label="GEMS" />
     </qg:hud>
     <qg:menu position="bottom-center">
       <qg:button label="To the title"><qg:leave /><qg:goto-scene name="title" /></qg:button>
