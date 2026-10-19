@@ -146,7 +146,7 @@ sudo target/debug/hive-lab                       # by hand: {"op":"start"}, {"op
 sudo target/debug/hive-lab --record my.jsonl     # a session becomes a tape; --play runs it again
 ```
 
-A behaviour worth keeping is a tape: add it to `crates/hive-lab/tapes/` and CI plays it. Use the ISO lab below only for what needs the real system (boot, the installer, what nerves notice and what actions do).
+A behaviour worth keeping is a tape: add it to `crates/hive-lab/tapes/` and CI plays it. The same lab is an MCP server (`hive-lab` in the repository's `.mcp.json`: `hive_start`, `hive_request`, `hive_view`, `hive_tape`, `hive_end`). Use the ISO lab below only for what needs the real system (boot, the installer, what nerves notice and what actions do).
 
 ### ISO Lab (build → boot → install → e2e, on Forge with KVM)
 

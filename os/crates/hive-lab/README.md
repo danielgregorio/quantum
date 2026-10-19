@@ -49,6 +49,20 @@ The ops:
 | `log_until` (`daemon`, `contains`), `log` (`daemon`, `lines`) | the daemons' logs |
 | `end` | stops everything and removes the lab's directory |
 
+## As MCP tools
+
+`os/scripts/lab/hive_mcp.py` serves the lab to an agent, declared in `.mcp.json` at the repository's root as `hive-lab`:
+
+| Tool | Does |
+|---|---|
+| `hive_start` | starts the lab, building `os/` first if needed |
+| `hive_request` | sends any request above |
+| `hive_view` | shows the real dashboard's or grove's screen |
+| `hive_tape` | saves the session's requests as a tape here, for CI to play |
+| `hive_end` | stops the lab |
+
+It runs the lab with `sudo -n` when it is not root. `python os/scripts/lab/hive_mcp.py --selftest` checks it end to end without an MCP client.
+
 ## Tapes
 
 A tape is a file of requests, one per line, with `//` comments. `--play` runs it and exits 1 when a request fails, such as an `until` that times out or a `none` that sees something arrive. `--record FILE` turns a hand-played session into a tape.
