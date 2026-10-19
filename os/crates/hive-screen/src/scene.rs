@@ -92,6 +92,7 @@ struct NodeInfo {
     width: Option<u32>,
     rows: Option<u32>,
     focus: Option<String>,
+    level: Option<u32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -203,6 +204,9 @@ pub enum Node {
         x: i32,
         y: i32,
         width: u32,
+        /// The presentation level it plays from: 1 with the effects, 2 at
+        /// the fine level only (level.rs).
+        level: u32,
     },
     Offers {
         x: i32,
@@ -421,6 +425,10 @@ impl Scene {
                         x: need(&n.x, "x", "emitter")?,
                         y: need(&n.y, "y", "emitter")?,
                         width: n.width.unwrap_or(0),
+                        level: match n.level.unwrap_or(1) {
+                            l @ (1 | 2) => l,
+                            other => bail!("emitter level {} is not 1 or 2", other),
+                        },
                     }
                 }
                 "offers" => Node::Offers {

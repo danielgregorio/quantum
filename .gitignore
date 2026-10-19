@@ -282,3 +282,6 @@ quantum_admin/session_secret
 quantum_admin/admin.pid
 # The games exported for the site (scripts/export-games.py): built by Deploy Docs, never committed
 docs/public/games/
+
+# a frame of hive-screen that differed from its reference (tests/screens/*.actual.png)
+*.actual.png

@@ -208,6 +208,24 @@
       "tags": [
         "rules"
       ]
+    },
+    {
+      "id": "hive-screen-bad-013",
+      "intent": "An emitter of a level there is not",
+      "input": {
+        "natural_language": "Snow at level 3",
+        "quantum_code": "<q:application id=\"bad\" type=\"screen\">\n  <qs:particles name=\"snow\" preset=\"snow\" />\n  <qs:scene width=\"128\" height=\"96\">\n    <qs:emitter particles=\"snow\" x=\"0\" y=\"0\" width=\"128\" level=\"3\" />\n  </qs:scene>\n</q:application>"
+      },
+      "expected_error": {
+        "type": "ScreenCompileError",
+        "message": "<qs:emitter> level= is 1 (with the effects) or 2 (the fine level only)"
+      },
+      "why_invalid": "The daemon has three presentation levels, and particles play from the second: an emitter plays from level 1 or from level 2.",
+      "correction": "level=\"2\" for an effect the fine level affords; leave it out for one that plays with the effects.",
+      "tags": [
+        "scene",
+        "levels"
+      ]
     }
   ]
 }

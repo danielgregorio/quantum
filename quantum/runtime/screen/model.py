@@ -346,6 +346,8 @@ def _check_node(kind: str, attrs: Dict[str, object], screen: Screen, line: Optio
                 f'(there are: {", ".join(screen.particles) or "none"})', line)
         if attrs['width'] < 0:
             raise ScreenCompileError('<qs:emitter> width= is 0 or more', line)
+        if attrs['level'] not in (1, 2):
+            raise ScreenCompileError('<qs:emitter> level= is 1 (with the effects) or 2 (the fine level only)', line)
     elif kind in ('offers', 'notices'):
         if any(n.kind == kind for n in screen.nodes):
             raise ScreenCompileError(f'one <qs:{kind}> per screen', line)

@@ -37,6 +37,10 @@ intention:
       scenario: "Someone edits os/config/screen/screen.toml"
       behaviour: "tests/screen/test_screen_config_is_generated.py fails; hive-screen refuses a file that is not what the compiler writes, whole."
 
+    - case: "A level the machine cannot afford"
+      scenario: "The VM has two cores, and the scene keeps snow for the fine level (qs:emitter level=\"2\")"
+      behaviour: "The snow waits: the daemon plays at the effects level. With four cores online and twenty cheap frames measured it climbs to fine and the snow falls; the ticks are the same at every level, and a frame at a level is the same picture however many threads draw it."
+
     - case: "A frame that differs by a pixel"
       scenario: "A curve or a particle rounds differently on another machine"
       behaviour: "It does not: sin, cos and 2^x are plain arithmetic in the daemon and the particles' random numbers come from a fixed seed, so the reference frames compare exactly."

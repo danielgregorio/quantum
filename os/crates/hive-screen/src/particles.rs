@@ -3,7 +3,7 @@
 //! own random numbers come from a fixed seed, so a frame is the same on
 //! every run.
 
-use crate::canvas::Canvas;
+use crate::canvas::Band;
 use crate::image::{alpha, argb, blue, green, parse_color, red};
 use crate::math::{atan2, cos, sin};
 
@@ -327,7 +327,7 @@ impl Emitter {
         self.particles.retain(|q| q.age < q.life);
     }
 
-    pub fn draw(&self, canvas: &mut Canvas) {
+    pub fn draw(&self, canvas: &mut Band) {
         let p = &self.preset;
         for q in &self.particles {
             let t = (q.age / q.life).clamp(0.0, 1.0);
@@ -344,27 +344,14 @@ impl Emitter {
                 alpha(q.color)
             };
             let color = argb(a, red(q.color), green(q.color), blue(q.color));
-            let s = size.round().max(1.0) as u32;
             if p.streak {
                 let len = 3;
                 let (dx, dy) = (q.vx.signum(), q.vy.signum());
                 for i in 0..len {
-                    canvas.fill_rect(
-                        (q.x - dx * i as f32).round() as i32,
-                        (q.y - dy * i as f32).round() as i32,
-                        s,
-                        s,
-                        color,
-                    );
+                    canvas.fill_rect_f(q.x - dx * i as f32, q.y - dy * i as f32, size, size, color);
                 }
             } else {
-                canvas.fill_rect(
-                    (q.x - size / 2.0).round() as i32,
-                    (q.y - size / 2.0).round() as i32,
-                    s,
-                    s,
-                    color,
-                );
+                canvas.fill_rect_f(q.x - size / 2.0, q.y - size / 2.0, size, size, color);
             }
         }
     }

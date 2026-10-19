@@ -51,6 +51,20 @@ name = "dust"
 preset = "dust"
 color = "#8a7a5a"
 
+[[particles]]
+name = "snow"
+preset = "snow"
+color = "#c8d0f0"
+amount = 24
+
+[[nodes]]
+kind = "emitter"
+particles = "snow"
+x = 0
+y = 0
+width = 320
+level = 2
+
 [[nodes]]
 kind = "text"
 value = "Quantum OS"

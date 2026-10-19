@@ -39,7 +39,7 @@ intention:
       qs:scene width= height= background=
         qs:sprite name= sheet= frame= x= y= animation= hidden=
         qs:text value= x= y= color= align=
-        qs:emitter particles= x= y= width=
+        qs:emitter particles= x= y= width= level=
         qs:offers x= y= width= rows=     the Hive's offers, built in
         qs:notices x= y= width= rows=    the last notices, built in
       qs:on event="..."                  one rule per event

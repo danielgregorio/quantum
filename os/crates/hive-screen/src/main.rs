@@ -10,9 +10,12 @@
 //!
 //! As a daemon it draws the scene on the console through DRM/KMS
 //! (display.rs), reads the keyboard from /dev/input (input.rs) and keeps
-//! the kernel's text console off its terminal (vt.rs). `--play` drives it
-//! from stdin instead (play.rs): the lab and the tests use it, with no
-//! display.
+//! the kernel's text console off its terminal (vt.rs). How much it shows
+//! (particles, two pixels to the scene's one) is a presentation level
+//! (level.rs), chosen by the frame time it measures under the ceiling the
+//! machine's cores set; a frame is drawn in bands, one thread a core.
+//! `--play` drives it from stdin instead (play.rs): the lab and the tests
+//! use it, with no display and at the level they ask for.
 
 mod canvas;
 mod display;
@@ -20,6 +23,7 @@ mod ease;
 mod hive;
 mod image;
 mod input;
+mod level;
 mod math;
 mod particles;
 mod play;
@@ -129,7 +133,27 @@ fn main() -> Result<()> {
     };
     stop_on_signal();
     hive_common::systemd::report_ready();
-    let mut canvas = canvas::Canvas::new(size.0, size.1);
+    // HIVE_SCREEN_LEVEL pins the level (0 plain, 1 effects, 2 fine), for an
+    // administrator who knows the machine better than the measure
+    let pinned = std::env::var("HIVE_SCREEN_LEVEL")
+        .ok()
+        .and_then(|s| s.trim().parse::<usize>().ok());
+    let mut chooser = match pinned {
+        Some(l) => level::Chooser::pinned(l, cores(), Instant::now()),
+        None => level::Chooser::new(cores(), Instant::now()),
+    };
+    runtime.world.set_level(chooser.level());
+    if pinned.is_some() {
+        tracing::info!("level {} pinned by HIVE_SCREEN_LEVEL", chooser.level());
+    }
+    let mut canvas = canvas::Canvas::new(size.0, size.1, level::LEVELS[chooser.level()].scale);
+    tracing::info!(
+        "level {} ({}): {}; {} cores",
+        chooser.level(),
+        level::LEVELS[chooser.level()].name,
+        level::LEVELS[chooser.level()].describe(size),
+        chooser.cores()
+    );
     let started = Instant::now();
     let mut last_drawn = Instant::now() - Duration::from_secs(1);
     let mut n: u64 = 0;
@@ -139,13 +163,48 @@ fn main() -> Result<()> {
         }
         runtime.step()?;
         n += 1;
-        // at most 30 pictures a second, and none while nothing moves
-        if runtime.world.take_dirty() && last_drawn.elapsed() >= Duration::from_millis(33) {
-            runtime.world.draw(&mut canvas);
+        // the cores, twice a second: a vCPU plugged in counts at once
+        if n % 30 == 0 && chooser.set_cores(cores(), Instant::now()) {
+            tracing::info!(
+                "cores: {}, level up to {}",
+                chooser.cores(),
+                level::ceiling(chooser.cores())
+            );
+        }
+        if chooser.level() != runtime.world.level() {
+            let lv = chooser.level();
+            runtime.world.set_level(lv);
+            canvas = canvas::Canvas::new(size.0, size.1, level::LEVELS[lv].scale);
+            tracing::info!(
+                "level {} ({}): {}; {} cores, {:.1} ms a frame before",
+                lv,
+                level::LEVELS[lv].name,
+                level::LEVELS[lv].describe(size),
+                chooser.cores(),
+                chooser.before_ms()
+            );
+        }
+        // at most as many pictures a second as the level says, and none
+        // while nothing moves
+        if last_drawn.elapsed() >= level::LEVELS[chooser.level()].period()
+            && runtime.world.take_dirty()
+        {
+            let t0 = Instant::now();
+            runtime.world.render(&mut canvas, chooser.threads());
             if let Some(d) = display.as_mut() {
-                d.present(&canvas.image)?;
+                d.present(&canvas.image, chooser.threads())?;
             }
             last_drawn = Instant::now();
+            chooser.frame(last_drawn - t0, last_drawn);
+            if let Some(cost) = chooser.take_judged_ms() {
+                tracing::info!(
+                    "level {} ({}): {:.1} ms a frame over the first {} frames",
+                    chooser.level(),
+                    level::LEVELS[chooser.level()].name,
+                    cost,
+                    level::FRAMES_TO_JUDGE
+                );
+            }
         }
         let due = started + Duration::from_secs_f64(n as f64 / world::TICK_RATE as f64);
         if let Some(wait) = due.checked_duration_since(Instant::now()) {
@@ -156,6 +215,14 @@ fn main() -> Result<()> {
     display.take();
     console.release();
     Ok(())
+}
+
+/// The cores the daemon may run on now: what the kernel lets it (a vCPU
+/// plugged in, once online, is one more; a cgroup quota, fewer).
+fn cores() -> usize {
+    std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1)
 }
 
 static STOP: AtomicBool = AtomicBool::new(false);
