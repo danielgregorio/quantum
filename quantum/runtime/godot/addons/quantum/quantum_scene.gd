@@ -122,6 +122,8 @@ func quantum_state() -> Dictionary:
 			# names Godot makes up for a second thing of the same prefab are not.
 			if n.has_meta("q_named"):
 				named[n.name] = {"x": snappedf(n.position.x, 0.01), "y": snappedf(n.position.y, 0.01)}
+				if "doing" in n and n.doing != "":
+					named[n.name]["doing"] = n.doing   # the part that moves an enemy of parts
 				_look(n, named[n.name])
 	state["nodes"] = nodes
 	state["things"] = things

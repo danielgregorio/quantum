@@ -1847,3 +1847,73 @@ def test_a_parallax_backdrop(tmp_path):
     err = refuse(tmp_path, game('  <qg:scene name="main"><qg:parallax sheet="k" scroll="2" /></qg:scene>\n'))
     assert 'between 0 (still) and 1' in str(err)
     assert 'no' in str(refuse(tmp_path, game('  <qg:scene name="main"><qg:parallax sheet="nope" /></qg:scene>\n')))
+
+
+class TestEnemiesOfParts:
+    PARTS = '''  <qg:sound name="twang" src="assets/kenney/audio/stomp.ogg" />
+  <q:set name="brave" value="true" type="boolean" />
+  <qg:prefab name="Arrow" tag="arrow" sheet="k" hitbox="4x4" ai="fly" speed="120" />
+  <qg:prefab name="Archer" tag="archer" sheet="k" hitbox="12x12" ai="behavior" speed="30">
+    <qg:behavior>
+      <qg:flee from="hero" sight="40" when="{not brave and me.health < 2}" />
+      <qg:keep-distance from="hero" min="40" max="60" />
+      <qg:shoot prefab="Arrow" at="hero" every="45" sound="twang" />
+      <qg:wander speed="10" />
+    </qg:behavior>
+  </qg:prefab>
+  <qg:scene name="main">
+    <qg:character id="hero" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12" />
+    <qg:instance prefab="Archer" x="90" y="10" />
+  </qg:scene>
+'''
+
+    def test_the_parts_and_their_when(self, tmp_path):
+        out = build(tmp_path, game(self.PARTS))
+        archer = json.loads((out / 'game.json').read_text())['prefabs']['Archer']
+        assert [p['kind'] for p in archer['parts']] == ['flee', 'keep-distance', 'shoot', 'wander']
+        flee, keep, shoot, wander = archer['parts']
+        assert flee == {'kind': 'flee', 'from': 'hero', 'sight': 40.0, 'through_walls': False, 'speed': None,
+                        'when': '_Archer_when_0'}
+        assert (keep['min'], keep['max'], keep['sight'], keep['when']) == (40.0, 60.0, None, None)
+        assert (shoot['prefab'], shoot['at'], shoot['every'], shoot['range'], shoot['sound']) == \
+            ('Arrow', 'hero', 45, 100.0, 'twang')
+        assert wander['speed'] == 10.0
+        assert 'parts' not in json.loads((out / 'game.json').read_text())['prefabs']['Arrow']
+        p = (out / 'scripts' / 'prefabs.gd').read_text()
+        assert 'func _Archer_when_0(me) -> bool:\n\treturn true if ((not G.brave) and (me.health < 2)) else false' in p
+
+    def test_queries_in_expressions(self, tmp_path):
+        scope = Scope(['a', 'b'])
+        assert compile_expression("distance(a, nearest(a, 'coin'))", scope) == 'Q.distance(a, Q.nearest(a, "coin"))'
+        assert compile_expression('sees(a, b)', scope) == 'Q.sees(a, b)'
+        with pytest.raises(GameCompileError, match=r'nearest\(\) takes 2 argument'):
+            compile_expression("nearest('coin')", scope)
+
+    def test_what_it_refuses(self, tmp_path):
+        for old, new, message in (
+                ('<qg:wander speed="10" />', '<qg:wander speed="10" /><qg:walk />',
+                 '<qg:walk> is a part of a character controller="behavior"'),
+                ('from="hero" sight="40"', 'from="ghost" sight="40"',
+                 '<qg:flee from="ghost">: no character has that id, nor a prefab that tag'),
+                ('prefab="Arrow" at="hero"', 'prefab="Bolt" at="hero"', "no qg:prefab named 'Bolt'"),
+                ('sound="twang"', 'sound="boom"', '<qg:shoot sound="boom">: no qg:sound'),
+                ('every="45"', 'every="0"', '<qg:shoot every=>: 1 or more'),
+                ('min="40" max="60"', 'min="60" max="40"', 'max= more than min='),
+                ('sight="40"', 'sight="0"', '<qg:flee sight=>: more than 0'),
+                ('<qg:wander speed="10" />', '<qg:wander speed="-1" />', '<qg:wander speed=>: 0 or more'),
+                ('{not brave and me.health < 2}', '{scared}', "'scared' is not declared"),
+                ('ai="behavior" speed="30"', 'ai="wander" speed="30"', '<qg:behavior> in a prefab is for ai="behavior"')):
+            assert old in self.PARTS, old
+            err = refuse(tmp_path, game(self.PARTS.replace(old, new)))
+            assert message in str(err), (message, str(err))
+        empty = re.sub(r'<qg:behavior>.*?</qg:behavior>', '<qg:behavior />', self.PARTS, flags=re.S)
+        assert '<qg:behavior> is empty' in str(refuse(tmp_path, game(empty)))
+        none = re.sub(r'<qg:behavior>.*?</qg:behavior>', '', self.PARTS, flags=re.S)
+        assert 'holds one <qg:behavior>' in str(refuse(tmp_path, game(none)))
+        character = game('''  <qg:scene name="main">
+    <qg:character id="hero" controller="behavior" sheet="c" x="10" y="10" hitbox="12x12">
+      <qg:behavior><qg:walk /><qg:seek /></qg:behavior>
+    </qg:character>
+  </qg:scene>
+''')
+        assert '<qg:seek> is a part of an enemy' in str(refuse(tmp_path, character))

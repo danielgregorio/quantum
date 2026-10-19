@@ -49,6 +49,9 @@ _FUNCTIONS = {
     'tr': 'Q.translate({0})',                # a text in the player's language (qg:language)
     'language': 'Q.language_name()',         # the name of the language shown, in it (English: the game's own)
     'has_save': 'Q.has_save()',              # a qg:save is there to continue
+    'distance': 'Q.distance({0}, {1})',      # pixels between two things or characters (INF when one is gone)
+    'nearest': 'Q.nearest({0}, {1})',        # the character of that id, or thing of that tag, nearest the first
+    'sees': 'Q.sees({0}, {1})',              # no solid tile of the tilemap between the two
 }
 
 _BIN = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*'}

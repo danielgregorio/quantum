@@ -10,6 +10,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: enemies made of parts. A `<qg:prefab ai="behavior">` lists
+  its parts in a `<qg:behavior>`: `qg:seek` (around the walls, or
+  `way="straight"`), `qg:flee`, `qg:keep-distance min= max=`, `qg:patrol`
+  (to and fro, turning at walls or after `distance=`), `qg:wander` and
+  `qg:stand`. The first one in order whose `when=` holds and that has
+  something to do moves it; `qg:shoot` parts fire besides. A part notices
+  only what it sees (no solid tile between) unless `through-walls="true"`,
+  and looks for a character by id or a thing by tag. `me.doing` reads the
+  part that moved it. Expressions gain `distance(a, b)`, `nearest(a, who)`
+  and `sees(a, b)`.
 - Laboratory: animations with an end. `<qg:animation loop="false">` plays
   once and stays on its last frame; `<qg:on-animation-end name=>` on a
   character or a prefab runs as it ends (`me` is whose it is), and an
