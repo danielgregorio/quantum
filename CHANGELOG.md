@@ -10,6 +10,14 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: `qg:camera` has `zoom=`, `dead-zone="WxH"` (the box the
+  followed one moves in before the camera does), `lead=` (pixels it looks
+  ahead, the way the followed one goes), `smooth=`, and follows several
+  characters (`follow="p1, p2"`: their middle), with `fit="true"` zooming
+  out to keep them all on the screen (down to `zoom-min=`). It runs in the
+  game's ticks and is only seen; the play protocol reports it as a screen
+  view (`kind: camera`, where it looks and how close). Hopper's camera
+  looks ahead and lets a jump rise before it follows.
 - Laboratory: Delve (`projects/delve/delve.q`), a dungeon crawl that shows
   the new tags together: three crypts, a wall a lever opens
   (`qg:set-tile`) and the skeletons behind it that find their way through

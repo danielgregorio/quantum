@@ -410,6 +410,23 @@ class TestScenesMapAndGameState:
                                   'if="{true}" /></qg:scene>\n'))
         assert 'if= is not for controller="map"' in e.message
 
+    def test_a_camera_with_zoom_dead_zone_lead_and_several_followed(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="a" controller="topdown" sheet="c" x="10" y="10" hitbox="12x16" />
+    <qg:character id="b" controller="topdown" sheet="c" x="90" y="10" hitbox="12x16" />
+    <qg:camera follow="a, b" bounds="none" zoom="2" dead-zone="32x48" lead="24" smooth="6" fit="true" />
+  </qg:scene>
+'''))
+        cam = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'][2]
+        assert cam == {'kind': 'camera', 'follow': ['a', 'b'], 'bounds': 'none', 'zoom': 2.0, 'dead_zone': [32, 48],
+                       'lead': 24.0, 'smooth': 6.0, 'fit': True, 'zoom_min': 0.5}
+        one = '  <qg:scene name="main"><qg:character id="a" controller="topdown" sheet="c" x="0" y="0" hitbox="8x8" />'
+        cases = [('<qg:camera follow="a, nobody" bounds="none" />', 'follow="nobody"'),
+                 ('<qg:camera follow="a" bounds="none" fit="true" />', 'for a camera that follows several'),
+                 ('<qg:camera follow="a" bounds="none" zoom="0" />', 'zoom= and zoom-min= more than 0')]
+        for camera, says in cases:
+            assert says in refuse(tmp_path, game(one + camera + '</qg:scene>\n')).message, says
+
     def test_a_character_made_of_parts(self, tmp_path):
         out = build(tmp_path, game('''  <qg:scene name="main">
     <qg:character id="hero" controller="behavior" sheet="c" x="10" y="10" hitbox="12x16">

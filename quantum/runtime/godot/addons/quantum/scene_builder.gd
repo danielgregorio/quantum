@@ -26,6 +26,7 @@ const Menu := preload("res://addons/quantum/menu.gd")
 const GridBody := preload("res://addons/quantum/grid_body.gd")
 const Dialogue := preload("res://addons/quantum/dialogue.gd")
 const BehaviorBody := preload("res://addons/quantum/behavior_body.gd")
+const Camera := preload("res://addons/quantum/camera.gd")
 
 static var _textures: Dictionary = {}
 
@@ -54,6 +55,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	var tilemap: Node = null
 	var characters: Dictionary = {}
 	var exits: Dictionary = {}
+	var cameras: Array = []
 	var map_nodes: Dictionary = {}
 	var map_paths: Array = scene_spec.get("map_paths", [])
 	for node_spec in scene_spec["nodes"]:
@@ -176,22 +178,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				scene.add_child(exit)
 				exits[node_spec["name"]] = exit
 			"camera":
-				var cam := Camera2D.new()
-				cam.name = "Camera"
-				cam.position_smoothing_enabled = false
-				if node_spec.get("bounds", "tilemap") == "tilemap" and tilemap != null:
-					var size: Vector2 = tilemap.pixel_size()
-					cam.limit_left = 0
-					cam.limit_top = 0
-					cam.limit_right = int(size.x)
-					cam.limit_bottom = int(size.y)
-				Q.apply_gd(cam, node_spec.get("gd"))
-				var target: Node = characters.get(node_spec["follow"])
-				if target != null:
-					target.add_child(cam)
-				else:
-					scene.add_child(cam)
-				scene.q_camera = cam
+				cameras.append(node_spec)   # made last: where its characters stand, after an arrival
 			"menu":
 				var menu := Menu.new()
 				menu.setup(node_spec, scene)
@@ -224,6 +211,18 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				c.position = exits[arrive_at].position
 		exits[arrive_at].disarm()
 	G.set("_q_arrive_at", "")
+	for node_spec in cameras:
+		var cam := Camera.new()
+		cam.setup(node_spec, characters)
+		if node_spec.get("bounds", "tilemap") == "tilemap" and tilemap != null:
+			var size: Vector2 = tilemap.pixel_size()
+			cam.limit_left = 0
+			cam.limit_top = 0
+			cam.limit_right = int(size.x)
+			cam.limit_bottom = int(size.y)
+		Q.apply_gd(cam, node_spec.get("gd"))
+		scene.add_child(cam)
+		scene.q_camera = cam
 	return scene
 
 

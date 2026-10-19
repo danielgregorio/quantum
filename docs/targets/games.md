@@ -544,12 +544,18 @@ Goes inside: `qg:scene`.
 
 ### `qg:camera`
 
-What the screen shows.
+What the screen shows: it follows a character, or the middle of several, in the game's ticks (a replay and every peer frame the same). Only seen: nothing in the game's state depends on it.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `follow` | a name | required | a character id |
+| `follow` | text | required | a character id, or several: "p1, p2" (their middle) |
 | `bounds` | `tilemap` / `none` | `tilemap` |  |
+| `zoom` | number | `1.0` | 2: twice as close |
+| `dead-zone` | `WxH` pixels |  | WxH: the box about the middle of the screen in which the followed one moves before the camera does |
+| `lead` | number | `0.0` | pixels it looks ahead, the way the followed one goes |
+| `smooth` | number | `0.0` | how fast it catches up, per second (0: at once) |
+| `fit` | true / false | `false` | several followed: it zooms out to keep them all on the screen, down to zoom-min, and back in as they come together |
+| `zoom-min` | number | `0.5` | fit: as far out as it goes |
 
 Goes inside: `qg:scene`.
 
@@ -1452,7 +1458,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:instance prefab="Spikes" x="351" y="176" />
     <qg:instance prefab="Flag" x="405" y="171" />
 
-    <qg:camera follow="player" bounds="tilemap" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
+    <qg:camera follow="player" bounds="tilemap" smooth="8" lead="32" dead-zone="16x56" />
 
     <qg:hud position="top-left">
       <qg:counter bind="score" label="SCORE" />
@@ -1526,7 +1532,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:character>
 
 
-    <qg:camera follow="player" bounds="tilemap" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
+    <qg:camera follow="player" bounds="tilemap" smooth="8" lead="32" dead-zone="16x56" />
     <qg:hud position="top-left">
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="coins" label="COINS" />
@@ -1618,7 +1624,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:instance prefab="Coin" x="252" y="96" />
     <qg:instance prefab="Flag" x="405" y="171" />
 
-    <qg:camera follow="player" bounds="tilemap" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
+    <qg:camera follow="player" bounds="tilemap" smooth="8" lead="32" dead-zone="16x56" />
     <qg:hud position="top-left">
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="coins" label="COINS" />
