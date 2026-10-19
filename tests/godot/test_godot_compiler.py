@@ -410,6 +410,36 @@ class TestScenesMapAndGameState:
                                   'if="{true}" /></qg:scene>\n'))
         assert 'if= is not for controller="map"' in e.message
 
+    def test_a_sound_played_louder_higher_or_varied(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
+  <qg:scene name="main">
+    <qg:timer after="1"><qg:play sound="hit" /><qg:play sound="hit" volume="-6" pitch="0.5" vary="0.1" /></qg:timer>
+  </qg:scene>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\tQ.play("hit")\n' in script and '\tQ.play("hit", -6.0, 0.5, 0.1)\n' in script
+        for attrs in ('pitch="0"', 'vary="-1"', 'pitch="0.5" vary="0.5"'):
+            e = refuse(tmp_path, game('  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />\n  <qg:scene name="main">'
+                                      f'<qg:timer after="1"><qg:play sound="hit" {attrs} /></qg:timer></qg:scene>\n'))
+            assert 'pitch= more than 0, vary= 0 or more and less than pitch=' in e.message, attrs
+
+    def test_a_camera_with_zoom_dead_zone_lead_and_several_followed(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="a" controller="topdown" sheet="c" x="10" y="10" hitbox="12x16" />
+    <qg:character id="b" controller="topdown" sheet="c" x="90" y="10" hitbox="12x16" />
+    <qg:camera follow="a, b" bounds="none" zoom="2" dead-zone="32x48" lead="24" smooth="6" fit="true" />
+  </qg:scene>
+'''))
+        cam = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'][2]
+        assert cam == {'kind': 'camera', 'follow': ['a', 'b'], 'bounds': 'none', 'zoom': 2.0, 'dead_zone': [32, 48],
+                       'lead': 24.0, 'smooth': 6.0, 'fit': True, 'zoom_min': 0.5}
+        one = '  <qg:scene name="main"><qg:character id="a" controller="topdown" sheet="c" x="0" y="0" hitbox="8x8" />'
+        cases = [('<qg:camera follow="a, nobody" bounds="none" />', 'follow="nobody"'),
+                 ('<qg:camera follow="a" bounds="none" fit="true" />', 'for a camera that follows several'),
+                 ('<qg:camera follow="a" bounds="none" zoom="0" />', 'zoom= and zoom-min= more than 0')]
+        for camera, says in cases:
+            assert says in refuse(tmp_path, game(one + camera + '</qg:scene>\n')).message, says
+
     def test_animations_that_play_once(self, tmp_path):
         out = build(tmp_path, game('''  <qg:prefab name="Pop" tag="pop" sheet="k" frame="1" hitbox="8x8">
     <qg:animation name="walk" frames="1,2,3" fps="30" loop="false" />

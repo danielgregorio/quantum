@@ -98,3 +98,12 @@ def test_the_title_in_portuguese(delve, godot):
         assert [i['button'] for i in menu['items'] if i.get('shown', True)][:2] == ['Jogar sozinho', 'Jogar junto']
     finally:
         game.close()
+
+
+def test_the_music_of_each_place(delve, godot):
+    game = PlaySession(delve, binary=godot)
+    try:
+        assert game.observe()['music'] == 'torchlight'                      # the title
+        assert game.until("scene == 'crypt-1'", tap=['select'], max_ticks=60)['music'] == 'crypt'
+    finally:
+        game.close()
