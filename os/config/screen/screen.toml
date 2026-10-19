@@ -1,0 +1,367 @@
+# Written by Quantum from screen.q: the Hive's screen. Do not edit; edit the .q and run it again (`quantum run screen.q`).
+
+[meta]
+version = 1
+
+[scene]
+width = 320
+height = 180
+background = "#1a1a2e"
+
+[font]
+src = "font.png"
+cell = [6, 10]
+
+[[sheets]]
+name = "cell"
+src = "art/cells.png"
+tile = [24, 24]
+frames = 8
+
+[[sheets.animations]]
+name = "smoke"
+frames = [2, 3, 4, 5, 6, 2]
+fps = 4.0
+loop = false
+
+[[sheets.animations]]
+name = "worry"
+frames = [7, 1]
+fps = 2.0
+loop = true
+
+[[sheets]]
+name = "bee"
+src = "art/bee.png"
+tile = [16, 16]
+frames = 2
+
+[[sheets.animations]]
+name = "fly"
+frames = [0, 1]
+fps = 10.0
+loop = true
+
+[[particles]]
+name = "stars"
+preset = "stars"
+
+[[particles]]
+name = "dust"
+preset = "dust"
+color = "#8a7a5a"
+
+[[nodes]]
+kind = "text"
+value = "Quantum OS"
+x = 6
+y = 4
+color = "#ffd34d"
+align = "left"
+
+[[nodes]]
+kind = "text"
+value = "the Hive"
+x = 72
+y = 4
+color = "#8a8aa0"
+align = "left"
+
+[[nodes]]
+kind = "sprite"
+name = "bee"
+sheet = "bee"
+frame = 0
+x = 296
+y = 2
+animation = "fly"
+hidden = false
+
+[[nodes]]
+kind = "sprite"
+name = "nginx"
+sheet = "cell"
+frame = 1
+x = 6
+y = 22
+hidden = false
+
+[[nodes]]
+kind = "text"
+value = "nginx"
+x = 34
+y = 29
+color = "#ffffff"
+align = "left"
+
+[[nodes]]
+kind = "sprite"
+name = "apache2"
+sheet = "cell"
+frame = 1
+x = 6
+y = 52
+hidden = false
+
+[[nodes]]
+kind = "text"
+value = "apache2"
+x = 34
+y = 59
+color = "#ffffff"
+align = "left"
+
+[[nodes]]
+kind = "sprite"
+name = "postgresql"
+sheet = "cell"
+frame = 1
+x = 6
+y = 82
+hidden = false
+
+[[nodes]]
+kind = "text"
+value = "postgresql"
+x = 34
+y = 89
+color = "#ffffff"
+align = "left"
+
+[[nodes]]
+kind = "sprite"
+name = "mysql"
+sheet = "cell"
+frame = 1
+x = 6
+y = 112
+hidden = false
+
+[[nodes]]
+kind = "text"
+value = "mysql"
+x = 34
+y = 119
+color = "#ffffff"
+align = "left"
+
+[[nodes]]
+kind = "sprite"
+name = "redis-server"
+sheet = "cell"
+frame = 1
+x = 102
+y = 22
+hidden = false
+
+[[nodes]]
+kind = "text"
+value = "redis"
+x = 130
+y = 29
+color = "#ffffff"
+align = "left"
+
+[[nodes]]
+kind = "sprite"
+name = "mongodb"
+sheet = "cell"
+frame = 1
+x = 102
+y = 52
+hidden = false
+
+[[nodes]]
+kind = "text"
+value = "mongodb"
+x = 130
+y = 59
+color = "#ffffff"
+align = "left"
+
+[[nodes]]
+kind = "sprite"
+name = "docker"
+sheet = "cell"
+frame = 1
+x = 102
+y = 82
+hidden = false
+
+[[nodes]]
+kind = "text"
+value = "docker"
+x = 130
+y = 89
+color = "#ffffff"
+align = "left"
+
+[[nodes]]
+kind = "sprite"
+name = "containerd"
+sheet = "cell"
+frame = 1
+x = 102
+y = 112
+hidden = false
+
+[[nodes]]
+kind = "text"
+value = "containerd"
+x = 130
+y = 119
+color = "#ffffff"
+align = "left"
+
+[[nodes]]
+kind = "text"
+value = "Offers"
+x = 196
+y = 22
+color = "#ffd34d"
+align = "left"
+
+[[nodes]]
+kind = "offers"
+x = 196
+y = 34
+width = 118
+rows = 8
+color = "#ffffff"
+focus = "#ffd34d"
+
+[[nodes]]
+kind = "notices"
+x = 6
+y = 142
+width = 308
+rows = 2
+color = "#c0c0c0"
+
+[[rules]]
+event = "service-crash"
+
+[[rules.actions]]
+kind = "animate"
+target = "{service}"
+name = "smoke"
+
+[[rules.actions]]
+kind = "emit"
+particles = "dust"
+at = "{service}"
+dx = 12
+dy = 12
+
+[[rules.actions]]
+kind = "say"
+text = "{service} stopped (exit {exit_code})"
+seconds = 4.0
+
+[[rules]]
+event = "log-anomaly"
+
+[[rules.actions]]
+kind = "animate"
+target = "{service}"
+name = "worry"
+
+[[rules.actions]]
+kind = "say"
+text = "{service} is logging errors"
+seconds = 4.0
+
+[[rules]]
+event = "port-conflict"
+
+[[rules.actions]]
+kind = "say"
+text = "port {port}: {requester} wanted it, {holder} holds it"
+seconds = 4.0
+
+[[rules]]
+event = "disk-low"
+
+[[rules.actions]]
+kind = "say"
+text = "{mount} is {percent}% full, {free_mb} MB free"
+seconds = 4.0
+
+[[rules]]
+event = "memory-pressure"
+
+[[rules.actions]]
+kind = "say"
+text = "memory: {free_mb} of {total_mb} MB free"
+seconds = 4.0
+
+[[rules]]
+event = "command-observed"
+
+[[rules.actions]]
+kind = "say"
+text = "watched: {cmd}"
+seconds = 4.0
+
+[[rules]]
+event = "command-not-found"
+
+[[rules.actions]]
+kind = "say"
+text = "{command}: not installed; {package} would provide it"
+seconds = 4.0
+
+[[rules]]
+event = "notice"
+
+[[rules.actions]]
+kind = "say"
+text = "{title}: {body}"
+seconds = 4.0
+
+[[rules]]
+event = "offer"
+
+[[rules.actions]]
+kind = "emit"
+particles = "stars"
+at = "bee"
+dx = 8
+dy = 8
+
+[[rules.actions]]
+kind = "tween"
+target = "bee"
+property = "y"
+to = 8.0
+from = 2.0
+seconds = 0.4
+trans = "sine"
+ease = "in-out"
+repeat = 3
+yoyo = true
+
+[[rules.actions]]
+kind = "say"
+text = "the Hive offers {count}: up and down choose, Enter approves, Escape dismisses"
+seconds = 6.0
+
+[[rules]]
+event = "done"
+
+[[rules.actions]]
+kind = "frame"
+target = "{service}"
+frame = 0
+
+[[rules.actions]]
+kind = "emit"
+particles = "stars"
+at = "{service}"
+dx = 12
+dy = 12
+
+[[rules.actions]]
+kind = "say"
+text = "{action}: {success}"
+seconds = 4.0

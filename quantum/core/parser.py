@@ -244,6 +244,8 @@ class QuantumParser:
         'qg': 'https://quantum.lang/game',
         # qh: the Hive's rules (Quantum OS): quantum/runtime/hive
         'qh': 'https://quantum.lang/hive',
+        # qs: the Hive's screen (Quantum OS): quantum/runtime/screen
+        'qs': 'https://quantum.lang/screen',
         'qt': 'https://quantum.lang/terminal',
         # APP-2: the removed testing engine's prefix is still declared, so a
         # qtest: tag reaches the removal message instead of "unbound prefix".
@@ -297,6 +299,7 @@ class QuantumParser:
         for attribute, prefix in (('type="game"', 'qg'),
                                   ('type="game"', 'gd'),   # gd: is used as attributes, which the scan above does not see
                                   ('type="hive"', 'qh'),
+                                  ('type="screen"', 'qs'),
                                   ('type="terminal"', 'qt'),
                                   ('type="ui"', 'ui')):
             if attribute in content and f'xmlns:{prefix}=' not in content:
