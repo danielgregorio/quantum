@@ -42,7 +42,7 @@ The ops:
 | `ask` (`text`), `not_found` (`command`, `package`), `anonymous` (`on`) | grove |
 | `approve`, `dismiss` (`notification`, `suggestion`, `as`) | the dashboard; by default, the latest offer |
 | `observe` | everything each role received since the last look |
-| `until` (`to`, `type`, `contains`, `timeout`) | waits for a matching message |
+| `until` (`to`, `type`, `contains`, `excludes`, `timeout`) | waits for a matching message; `excludes` is text it must not hold |
 | `none` (`to`, `type`, `contains`, `within`) | nothing matching arrives, for example an action nobody approved |
 | `log_until` (`daemon`, `contains`), `log` (`daemon`, `lines`) | the daemons' logs |
 | `end` | stops everything and removes the lab's directory |
