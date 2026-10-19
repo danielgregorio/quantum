@@ -1,0 +1,11 @@
+## DruidOS: let hive-nerve-process see every program run from a login
+## session - SSH, console, and sudo from those (auid set) - but not daemons,
+## cron or package scripts (auid unset).
+##
+## The records carry argv captured by the kernel at exec time, so even a
+## millisecond-long `rm -rf` is seen; polling /proc misses those. The nerve
+## reads them over the audit multicast socket with CAP_AUDIT_READ only.
+## Like all audit records they are also written to /var/log/audit/audit.log
+## (root-only), which therefore holds the command lines users run.
+-a always,exit -F arch=b64 -S execve,execveat -F auid!=unset -F key=hive-exec
+-a always,exit -F arch=b32 -S execve,execveat -F auid!=unset -F key=hive-exec

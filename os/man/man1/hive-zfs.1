@@ -1,0 +1,60 @@
+.\" Man page for hive-zfs
+.TH HIVE-ZFS 1 "September 2026" "DruidOS 0.1.0" "DruidOS Hive Stack"
+
+.SH NAME
+hive-zfs \- housekeeping of the Hive's ZFS safety snapshots
+
+.SH SYNOPSIS
+.B hive-zfs prune
+
+.SH DESCRIPTION
+DruidOS installs onto ZFS. Before a package changes -
+.BR hive-apt (1)
+install, remove, upgrade or autoremove, or a package action approved in
+.BR hive-dashboard (1)
+- the system datasets (the ones mounted at / and /boot) are snapshotted
+recursively, as
+.IR dataset @hive-before- change - YYYYmmdd - HHMMSS
+(UTC). If that snapshot can't be taken, the change doesn't happen.
+.PP
+.B hive-zfs prune
+keeps those snapshots from piling up. It is run daily, as root, by
+.BR hive-zfs-prune.timer .
+
+.SH COMMANDS
+.TP
+.B prune
+For each system dataset, destroy (recursively) its
+.B hive-*
+snapshots older than
+.B prune_after_days
+days, except the
+.B keep_newest
+most recent ones, whatever their age. A snapshot's age is read from the
+timestamp in its name. Snapshots not named by the Hive are never touched.
+
+.SH FILES
+.TP
+.I /etc/hive/config.toml
+.B [zfs]
+.B prune_after_days
+(default 14) and
+.B keep_newest
+(default 3).
+.B [actuator] snapshot_dataset
+replaces the detected system datasets with one dataset.
+.TP
+.I /etc/systemd/system/hive-zfs-prune.timer
+The daily schedule.
+
+.SH EXAMPLES
+.TP
+The Hive's snapshots:
+.B zfs list -t snapshot -o name,creation | grep @hive-
+.TP
+Prune now:
+.B sudo systemctl start hive-zfs-prune.service
+
+.SH SEE ALSO
+.BR zfs (8),
+.BR hive-apt (1)

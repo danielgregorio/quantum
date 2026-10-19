@@ -1,0 +1,42 @@
+[package]
+name = "hive-nerve-journal"
+description = "Journald observer for DruidOS Hive Stack"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "hive-nerve-journal"
+path = "src/main.rs"
+
+[dependencies]
+hive-common = { path = "../hive-common" }
+
+# Async runtime
+tokio = { workspace = true, features = ["full"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Systemd journal access
+systemd-journal-logger = "2"
+libsystemd = "0.7"
+
+# System
+nix = { workspace = true }
+
+# Text processing
+regex = { workspace = true }
+
+# Time
+chrono = { workspace = true }

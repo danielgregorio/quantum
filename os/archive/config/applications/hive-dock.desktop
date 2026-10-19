@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Hive Dock
+Comment=DruidOS Application Dock
+GenericName=Dock
+Exec=hive-dock
+Icon=preferences-desktop-launch
+Terminal=false
+Categories=System;
+Keywords=dock;launcher;panel;
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-GNOME-AutoRestart=true

@@ -1,0 +1,10 @@
+// nginx keeps crashing: everyone is told, the Hive offers a restart, an administrator approves, the actuator is asked
+{"op":"start"}
+{"op":"crash","service":"nginx.service","exit_code":1,"restarts":5,"logs":["bind() to 0.0.0.0:80 failed (98: Address already in use)"]}
+{"op":"until","to":"shell","type":"Notification","contains":"nginx.service exited with code 1"}
+{"op":"until","to":"dashboard","type":"Notification","contains":"Restart nginx","timeout":10}
+{"op":"none","to":"actuator","within":0.5}
+{"op":"approve"}
+{"op":"until","to":"actuator","type":"ActionRequest","contains":"\"RestartService\":{\"name\":\"nginx\"}"}
+{"op":"until","to":"dashboard","type":"ActionResponse","contains":"not executed"}
+{"op":"end"}

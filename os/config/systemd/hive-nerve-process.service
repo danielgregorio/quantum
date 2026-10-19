@@ -1,0 +1,51 @@
+[Unit]
+Description=DruidOS Hive Nerve - Process Observer
+Documentation=https://druidos.org/docs/hive-nerve-process
+After=hive-cortex.service
+Requires=hive-cortex.service
+PartOf=hive-cortex.service
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/hive-nerve-process
+Restart=always
+RestartSec=5
+
+# Read-only access user
+User=_hive-sense
+Group=hive
+
+# Environment
+Environment=RUST_LOG=info
+Environment=HIVE_CONFIG=/etc/hive/config.toml
+
+# Security - very restricted
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+
+# One capability: CAP_AUDIT_READ, to receive the kernel audit log's exec
+# records (config/audit/60-druidos-hive-exec.rules). It can only read audit
+# records - not change audit rules or anything else.
+CapabilityBoundingSet=CAP_AUDIT_READ
+AmbientCapabilities=CAP_AUDIT_READ
+
+# Read access to proc for process info
+ReadOnlyPaths=/proc /run/hive
+
+# System call filtering
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @mount
+
+[Install]
+WantedBy=multi-user.target

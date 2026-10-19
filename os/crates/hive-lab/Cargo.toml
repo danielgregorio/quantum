@@ -1,0 +1,22 @@
+[package]
+name = "hive-lab"
+description = "The Hive in a box: the real cortex and synapse, with the nerves, the actuator, grove and the dashboard played by a driver, for iterating without a VM"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+hive-common = { path = "../hive-common" }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+# mount and sched: the daemons run in a private mount namespace, where the
+# lab's own /etc/passwd and /etc/group (with the Hive's service users) are
+# bound over the machine's.
+nix = { version = "0.27", features = ["mount", "sched", "user", "process"] }

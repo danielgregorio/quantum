@@ -1,0 +1,56 @@
+[Unit]
+Description=DruidOS Hive Actuator - Action Executor
+Documentation=https://druidos.org/docs/hive-actuator
+After=hive-cortex.service
+Requires=hive-cortex.service
+PartOf=hive-cortex.service
+
+[Service]
+Type=notify
+# As root ("+"): delegate ZFS snapshot permission on the system datasets to
+# _hive-act, so it can snapshot before package changes. A failure here is
+# logged but doesn't keep the actuator down ("-"): package changes are then
+# refused, since their snapshot fails.
+ExecStartPre=-+/usr/bin/hive-actuator delegate-snapshots
+ExecStart=/usr/bin/hive-actuator
+Restart=always
+RestartSec=5
+
+# Limited privilege user
+User=_hive-act
+Group=hive
+
+# Environment
+Environment=RUST_LOG=info
+Environment=HIVE_CONFIG=/etc/hive/config.toml
+
+# Package actions run pkcon, which hands packagekitd (outside this sandbox)
+# a debconf socket it creates under $TMPDIR: that can't be the private /tmp
+# below, or packagekitd fails with "frontend-socket does not exist".
+RuntimeDirectory=hive-actuator
+RuntimeDirectoryMode=0700
+Environment=TMPDIR=/run/hive-actuator
+
+# Security
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+
+# Needs to execute whitelisted commands
+# These are tightly controlled by the whitelist
+CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_KILL CAP_SYS_NICE
+
+# Rate limiting
+IPAccounting=yes
+
+# Access to cortex socket
+ReadOnlyPaths=/run/hive
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+// what a user's shell may not do: send an action itself, or approve a suggestion (only an administrator's dashboard may)
+{"op":"start"}
+{"op":"send","as":"shell","message":{"ActionRequest":{"request_id":"00000000-0000-0000-0000-000000000001","action":{"RestartService":{"name":"ssh"}},"requires_confirmation":false,"timeout_secs":0}}}
+{"op":"log_until","daemon":"cortex","contains":"Rejecting ActionRequest from user connection"}
+{"op":"none","to":"actuator","within":0.5}
+{"op":"crash","service":"nginx.service","exit_code":1,"restarts":5}
+{"op":"until","to":"dashboard","type":"Notification","contains":"Restart nginx","timeout":10}
+{"op":"approve","as":"shell"}
+{"op":"log_until","daemon":"cortex","contains":"Rejecting UserAction from user connection"}
+{"op":"none","to":"actuator","within":0.5}
+{"op":"end"}

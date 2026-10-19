@@ -1,0 +1,299 @@
+/* DruidOS Dark Theme for GTK4 */
+/* "The Swarm is watching. The Swarm is learning." */
+
+@define-color bg_base #0D0D0D;
+@define-color bg_surface #1A1A1A;
+@define-color bg_elevated #262626;
+@define-color border_color #333333;
+
+@define-color text_primary #FFFFFF;
+@define-color text_secondary #A0A0A0;
+@define-color text_muted #666666;
+
+@define-color accent #7B5CFF;
+@define-color accent_light #9D85FF;
+@define-color accent_dark #5A3DD6;
+
+@define-color success #4ADE80;
+@define-color warning #FBBF24;
+@define-color error #F87171;
+@define-color info #60A5FA;
+
+/* Window */
+window {
+    background-color: @bg_base;
+    color: @text_primary;
+}
+
+/* Header bar */
+headerbar {
+    background-color: @bg_surface;
+    border-bottom: 1px solid @border_color;
+    padding: 6px;
+    min-height: 40px;
+}
+
+headerbar title {
+    font-weight: 600;
+    color: @text_primary;
+}
+
+/* Buttons */
+button {
+    background-color: @bg_elevated;
+    border: 1px solid @border_color;
+    border-radius: 8px;
+    padding: 8px 16px;
+    color: @text_primary;
+    transition: all 150ms ease-out;
+}
+
+button:hover {
+    background-color: @accent_dark;
+    border-color: @accent;
+}
+
+button:active {
+    background-color: @accent;
+}
+
+button.suggested-action {
+    background-color: @accent;
+    border-color: @accent;
+    color: @text_primary;
+}
+
+button.suggested-action:hover {
+    background-color: @accent_light;
+}
+
+button.destructive-action {
+    background-color: @error;
+    border-color: @error;
+}
+
+/* Entry fields */
+entry {
+    background-color: @bg_surface;
+    border: 1px solid @border_color;
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: @text_primary;
+    caret-color: @accent;
+}
+
+entry:focus {
+    border-color: @accent;
+    box-shadow: 0 0 0 2px alpha(@accent, 0.3);
+}
+
+/* Lists */
+listview, list {
+    background-color: @bg_base;
+}
+
+listview > row, list > row {
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin: 2px 4px;
+}
+
+listview > row:hover, list > row:hover {
+    background-color: @bg_surface;
+}
+
+listview > row:selected, list > row:selected {
+    background-color: @accent_dark;
+}
+
+/* Scrollbars */
+scrollbar {
+    background-color: transparent;
+}
+
+scrollbar slider {
+    background-color: @bg_elevated;
+    border-radius: 4px;
+    min-width: 8px;
+    min-height: 8px;
+}
+
+scrollbar slider:hover {
+    background-color: @accent_dark;
+}
+
+/* Check and radio buttons */
+checkbutton, radiobutton {
+    color: @text_primary;
+}
+
+checkbutton check, radiobutton radio {
+    background-color: @bg_surface;
+    border: 2px solid @border_color;
+    border-radius: 4px;
+}
+
+checkbutton check:checked, radiobutton radio:checked {
+    background-color: @accent;
+    border-color: @accent;
+}
+
+radiobutton radio {
+    border-radius: 50%;
+}
+
+/* Switches */
+switch {
+    background-color: @bg_elevated;
+    border-radius: 12px;
+}
+
+switch:checked {
+    background-color: @accent;
+}
+
+switch slider {
+    background-color: @text_primary;
+    border-radius: 50%;
+}
+
+/* Popovers and menus */
+popover, menu {
+    background-color: @bg_surface;
+    border: 1px solid @border_color;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+popover > contents, menu > contents {
+    padding: 8px;
+}
+
+menuitem {
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+menuitem:hover {
+    background-color: @accent_dark;
+}
+
+/* Tooltips */
+tooltip {
+    background-color: @bg_elevated;
+    border: 1px solid @border_color;
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: @text_primary;
+}
+
+/* Progress bars */
+progressbar {
+    background-color: @bg_surface;
+    border-radius: 4px;
+}
+
+progressbar progress {
+    background-color: @accent;
+    border-radius: 4px;
+}
+
+/* Scales/sliders */
+scale {
+    padding: 12px 0;
+}
+
+scale trough {
+    background-color: @bg_surface;
+    border-radius: 4px;
+    min-height: 6px;
+}
+
+scale highlight {
+    background-color: @accent;
+    border-radius: 4px;
+}
+
+scale slider {
+    background-color: @text_primary;
+    border-radius: 50%;
+    min-width: 16px;
+    min-height: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Notebooks/tabs */
+notebook > header {
+    background-color: @bg_surface;
+    border-bottom: 1px solid @border_color;
+}
+
+notebook > header > tabs > tab {
+    padding: 8px 16px;
+    border-radius: 8px 8px 0 0;
+    color: @text_secondary;
+}
+
+notebook > header > tabs > tab:checked {
+    background-color: @bg_base;
+    color: @text_primary;
+    border-bottom: 2px solid @accent;
+}
+
+/* Dialogs */
+dialog {
+    background-color: @bg_surface;
+    border-radius: 16px;
+}
+
+messagedialog {
+    background-color: @bg_surface;
+}
+
+/* Info bars */
+infobar {
+    border-radius: 8px;
+    padding: 8px;
+}
+
+infobar.info {
+    background-color: alpha(@info, 0.2);
+    color: @info;
+}
+
+infobar.warning {
+    background-color: alpha(@warning, 0.2);
+    color: @warning;
+}
+
+infobar.error {
+    background-color: alpha(@error, 0.2);
+    color: @error;
+}
+
+/* Separators */
+separator {
+    background-color: @border_color;
+    min-height: 1px;
+    min-width: 1px;
+}
+
+/* Links */
+link, *:link {
+    color: @accent_light;
+}
+
+link:hover, *:link:hover {
+    color: @accent;
+}
+
+/* Selection */
+selection {
+    background-color: @accent;
+    color: @text_primary;
+}
+
+/* Placeholder text */
+placeholder {
+    color: @text_muted;
+}

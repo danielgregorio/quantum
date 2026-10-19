@@ -286,7 +286,8 @@ quantum/
 ├── examples/        # runnable .q examples
 ├── tests/           # pytest suite; conformance/ cites SPEC.md
 ├── scripts/         # dev tools
-└── docs/            # VitePress documentation
+├── docs/            # VitePress documentation
+└── os/              # Quantum OS (experimental): a VM-first Ubuntu Server with the Hive, from DruidOS
 ```
 
 Adding a tag is one parser + one executor + a registry entry — see

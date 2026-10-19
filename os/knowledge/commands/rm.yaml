@@ -1,0 +1,116 @@
+# rm Command Knowledge
+# Used by hive-nerve-process to detect dangerous operations
+
+command: rm
+description: "Remove files or directories"
+risk_level: high
+
+patterns:
+  - pattern: "rm -rf /"
+    severity: critical
+    message: "This will destroy your ENTIRE system. Do not run this."
+    block: true
+
+  - pattern: "rm -rf /*"
+    severity: critical
+    message: "This will delete everything in your root directory."
+    block: true
+
+  - pattern: "rm -rf ~"
+    severity: critical
+    message: "This will delete your entire home directory."
+    auto_snapshot: true
+
+  - pattern: "rm -rf /home"
+    severity: critical
+    message: "This will delete all user home directories."
+    auto_snapshot: true
+
+  - pattern: "rm -rf /etc"
+    severity: critical
+    message: "This will delete system configuration. System will become unbootable."
+    auto_snapshot: true
+    block: true
+
+  - pattern: "rm -rf /var"
+    severity: critical
+    message: "This will delete logs, databases, and application data."
+    auto_snapshot: true
+
+  - pattern: "rm -rf /usr"
+    severity: critical
+    message: "This will delete most installed programs. System will be broken."
+    auto_snapshot: true
+    block: true
+
+  - pattern: "rm -rf /boot"
+    severity: critical
+    message: "This will prevent the system from booting."
+    auto_snapshot: true
+    block: true
+
+  - pattern: "rm -rf /lib"
+    severity: critical
+    message: "This will break the system immediately."
+    block: true
+
+  - pattern: "rm -rf \\."
+    severity: high
+    message: "This will delete the current directory recursively."
+    auto_snapshot: true
+
+  - pattern: "rm -rf \\*"
+    severity: high
+    message: "This will delete all files in current directory recursively."
+    auto_snapshot: true
+
+  - pattern: "rm.*--no-preserve-root"
+    severity: critical
+    message: "The --no-preserve-root flag bypasses safety checks. Extremely dangerous."
+    block: true
+
+  - pattern: "rm -rf /dev/null"
+    severity: medium
+    message: "/dev/null is a special device, not a regular file."
+
+  - pattern: "rm -rf node_modules"
+    severity: low
+    message: "Deleting node_modules. This can be reinstalled with 'npm install'."
+
+  - pattern: "rm -rf \\.git"
+    severity: high
+    message: "This will delete Git history. Consider 'git stash' or backup first."
+    auto_snapshot: true
+
+suggestions:
+  - trigger: "rm -rf"
+    suggest: |
+      Consider safer alternatives:
+      - Use `trash-cli` for recoverable deletion: trash FILE
+      - Preview first: ls -la PATH
+      - Use -i flag for confirmation: rm -ri PATH
+
+  - trigger: "rm *.log"
+    suggest: "Consider rotating logs with logrotate instead of deleting"
+
+  - trigger: "rm -rf /tmp"
+    suggest: "Let the system manage /tmp. Files are auto-cleaned on reboot."
+
+safe_alternatives:
+  - name: trash-cli
+    command: "trash FILE"
+    description: "Move to trash instead of permanent deletion"
+
+  - name: rm -i
+    command: "rm -i FILE"
+    description: "Interactive mode - confirms each file"
+
+  - name: rm -I
+    command: "rm -I FILES"
+    description: "Prompts once before removing more than 3 files"
+
+recovery_tips:
+  - "If using ZFS, check snapshots: zfs list -t snapshot"
+  - "For ext4, try extundelete or testdisk (success not guaranteed)"
+  - "Immediately unmount the filesystem to prevent overwriting"
+  - "Professional data recovery may be needed for critical data"

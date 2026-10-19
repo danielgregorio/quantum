@@ -1,0 +1,114 @@
+# PostgreSQL Package Knowledge
+# Used by hive-apt to provide intelligent installation guidance
+
+package: postgresql
+aliases:
+  - postgres
+  - pg
+  - postgresql-16
+  - postgresql-15
+  - postgresql-14
+
+description: "PostgreSQL is a powerful, open source object-relational database system"
+
+category: database
+
+install_notes:
+  - "Default port: 5432"
+  - "Config location: /etc/postgresql/{version}/main/"
+  - "Data directory: /var/lib/postgresql/{version}/main/"
+  - "Default superuser: postgres (system user)"
+  - "Connect locally: sudo -u postgres psql"
+
+post_install:
+  - command: "sudo systemctl enable postgresql"
+    description: "Enable PostgreSQL to start on boot"
+  - command: "sudo -u postgres createuser --interactive"
+    description: "Create a new database user"
+
+warnings:
+  - type: resource
+    message: "PostgreSQL can consume significant memory. Default shared_buffers is conservative."
+    severity: medium
+  - type: security
+    message: "By default, PostgreSQL only accepts local connections (pg_hba.conf)"
+    severity: low
+  - type: backup
+    message: "Consider setting up regular backups with pg_dump or pg_basebackup"
+    severity: medium
+
+common_issues:
+  - pattern: "FATAL: role .* does not exist"
+    solution: "Create the role: sudo -u postgres createuser {username}"
+    auto_suggest: true
+
+  - pattern: "FATAL: database .* does not exist"
+    solution: "Create the database: sudo -u postgres createdb {dbname}"
+    auto_suggest: true
+
+  - pattern: "could not connect to server: Connection refused"
+    solution: |
+      1. Check if PostgreSQL is running: systemctl status postgresql
+      2. Verify port 5432 is listening: ss -tlnp | grep 5432
+      3. Check pg_hba.conf for connection rules
+    auto_suggest: true
+
+  - pattern: "FATAL: Peer authentication failed"
+    solution: |
+      Peer authentication requires matching system and database usernames.
+      Options:
+      1. Use: sudo -u postgres psql
+      2. Or modify pg_hba.conf to use md5/scram-sha-256 authentication
+    auto_suggest: true
+
+  - pattern: "could not extend file.*No space left on device"
+    solution: |
+      Disk is full. Free space or expand storage.
+      Check: df -h /var/lib/postgresql
+    auto_suggest: true
+    severity: high
+
+tuning_tips:
+  - name: shared_buffers
+    description: "Memory for caching data. Set to ~25% of RAM."
+    default: "128MB"
+    recommended: "25% of RAM"
+
+  - name: work_mem
+    description: "Memory for sorting/hashing per operation"
+    default: "4MB"
+    recommended: "64MB-256MB depending on workload"
+
+  - name: effective_cache_size
+    description: "Estimate of OS cache available. Set to ~75% of RAM."
+    default: "4GB"
+    recommended: "75% of RAM"
+
+alternatives:
+  - name: mariadb
+    reason: "If you need MySQL compatibility"
+  - name: sqlite3
+    reason: "For embedded/simple use cases"
+  - name: cockroachdb
+    reason: "For distributed SQL needs"
+
+related_packages:
+  - postgresql-contrib
+  - pgcli
+  - pgadmin4
+
+related_commands:
+  - psql
+  - pg_dump
+  - pg_restore
+  - createuser
+  - createdb
+
+dependencies:
+  - libpq5
+  - ssl-cert
+
+ports:
+  - port: 5432
+    protocol: tcp
+    description: "PostgreSQL default port"

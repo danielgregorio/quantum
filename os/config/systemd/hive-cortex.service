@@ -1,0 +1,45 @@
+[Unit]
+Description=DruidOS Hive Cortex - Central Orchestrator
+Documentation=https://druidos.org/docs/hive-cortex
+After=local-fs.target network.target
+Wants=hive-synapse.service hive-actuator.service
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/hive-cortex
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=5
+
+# Runs as root to manage other hive components
+User=root
+Group=hive
+
+# Runtime directory for sockets
+RuntimeDirectory=hive
+RuntimeDirectoryMode=0755
+
+# State directory for persistent data
+StateDirectory=hive
+StateDirectoryMode=0755
+
+# Environment
+Environment=RUST_LOG=info
+Environment=HIVE_CONFIG=/etc/hive/config.toml
+
+# Security hardening (root still needs some capabilities)
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+
+# Allow socket creation and IPC
+ReadWritePaths=/run/hive
+
+[Install]
+WantedBy=multi-user.target

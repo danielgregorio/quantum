@@ -1,0 +1,82 @@
+.\" Man page for hive-cortex
+.TH HIVE-CORTEX 1 "January 2025" "DruidOS 0.1.0" "DruidOS Hive Stack"
+
+.SH NAME
+hive-cortex \- DruidOS Hive Stack central orchestrator daemon
+
+.SH SYNOPSIS
+.B hive-cortex
+[\fIOPTIONS\fR]
+
+.SH DESCRIPTION
+.B hive-cortex
+is the central orchestrator daemon for the DruidOS Hive Stack. It coordinates
+communication between all Hive components including nerves (observers), synapse
+(AI inference), actuator (action executor), and desktop components.
+
+The cortex runs as root and manages Unix socket connections for all components,
+routing messages and maintaining system state.
+
+.SH OPTIONS
+.TP
+.BR \-c ", " \-\-config " " \fIFILE\fR
+Path to configuration file. Default: /etc/hive/config.toml
+
+.TP
+.BR \-l ", " \-\-log-level " " \fILEVEL\fR
+Set log level. Values: trace, debug, info, warn, error. Default: info
+
+.TP
+.BR \-f ", " \-\-foreground
+Run in foreground instead of daemonizing.
+
+.TP
+.BR \-s ", " \-\-socket " " \fIPATH\fR
+Unix socket path for IPC. Default: /run/hive/cortex.sock
+
+.TP
+.BR \-h ", " \-\-help
+Display help message and exit.
+
+.TP
+.BR \-V ", " \-\-version
+Display version information and exit.
+
+.SH FILES
+.TP
+.I /etc/hive/config.toml
+Main configuration file.
+
+.TP
+.I /run/hive/cortex.sock
+Unix socket for component connections.
+
+.TP
+.I /var/lib/hive/
+Data directory for state and models.
+
+.SH SIGNALS
+.TP
+.B SIGHUP
+Reload configuration file.
+
+.TP
+.B SIGTERM
+Graceful shutdown.
+
+.SH SECURITY
+The cortex runs as root to manage child processes and Unix sockets. It creates
+separate users (_hive-ai, _hive-sense, _hive-act) for component privilege
+separation.
+
+.SH SEE ALSO
+.BR hive-synapse (1),
+.BR hive-actuator (1),
+.BR hive-shell (1),
+.BR hive-term (1)
+
+.SH AUTHOR
+DruidOS Team <team@druidos.org>
+
+.SH COPYRIGHT
+Copyright \(co 2024-2025 DruidOS Team. MIT License.

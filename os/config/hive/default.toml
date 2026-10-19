@@ -1,0 +1,211 @@
+# ============================================================================
+# DruidOS Hive Stack Configuration
+# /etc/hive/config.toml
+# ============================================================================
+
+[general]
+# Log level: trace, debug, info, warn, error
+log_level = "info"
+
+# Global anonymous mode (disables all Hive observation)
+anonymous_mode = false
+
+# Data directory for knowledge base, models, etc.
+# data_dir = "/var/lib/hive"
+
+# ============================================================================
+# Cortex (Central Orchestrator)
+# ============================================================================
+
+[cortex]
+# Unix socket path for IPC
+socket_path = "/run/hive/cortex.sock"
+
+# Maximum concurrent connections from nerves/components
+max_connections = 100
+
+# User to run as (cortex runs as root to manage other components)
+user = "root"
+group = "hive"
+
+# ============================================================================
+# Synapse (SLM Inference)
+# ============================================================================
+
+[synapse]
+# Path to the model file (GGUF format)
+# model_path = "/var/lib/hive/models/qwen2.5-0.5b-instruct-q4_k_m.gguf"
+
+# Model to download if not present
+model_name = "Qwen/Qwen2.5-0.5B-Instruct-GGUF"
+
+# Context window size (tokens)
+context_size = 2048
+
+# Maximum tokens to generate per response
+max_tokens = 128
+
+# Temperature for generation (0.0 = deterministic, 1.0 = creative)
+temperature = 0.7
+
+# Preload model at startup (vs lazy loading on first query)
+preload = false
+
+# Memory limit in MB (helps prevent OOM)
+memory_limit_mb = 512
+
+# User to run as (isolated, no network access)
+user = "_hive-ai"
+
+# ============================================================================
+# Actuator (Action Executor)
+# ============================================================================
+
+[actuator]
+# Path to action whitelist configuration
+whitelist_path = "/etc/hive/whitelist.toml"
+
+# Rate limit: maximum actions per minute
+rate_limit = 30
+
+# Require user confirmation for dangerous actions
+confirm_dangerous = true
+
+# User to run as (limited privileges)
+user = "_hive-act"
+
+# Snapshot the system (ZFS) before installing, removing or upgrading
+# packages. A package change whose snapshot fails is refused.
+auto_snapshot = true
+
+# ZFS dataset to snapshot, recursively. Leave unset to snapshot whatever
+# the system is mounted from - the datasets at / and /boot, as named by the
+# installer (e.g. rpool/ROOT/ubuntu_ab12cd and bpool/BOOT/ubuntu_ab12cd).
+# snapshot_dataset = "rpool/ROOT/druidos"
+
+# ============================================================================
+# ZFS safety snapshots: housekeeping
+# ============================================================================
+
+[zfs]
+# `hive-zfs prune` (daily, hive-zfs-prune.timer) removes the Hive's own
+# hive-* snapshots once they are this many days old...
+prune_after_days = 14
+
+# ...but always keeps this many of the newest, whatever their age.
+# Snapshots not named hive-* are never touched.
+keep_newest = 3
+
+# ============================================================================
+# Shell (Desktop UI)
+# ============================================================================
+
+[shell]
+# Show desktop notifications
+notifications_enabled = true
+
+# Auto-dismiss notifications after seconds (0 = manual dismiss only)
+notification_timeout = 10
+
+# Theme name
+theme = "default"
+
+# Overlay position: TopLeft, TopRight, BottomLeft, BottomRight
+overlay_position = "TopRight"
+
+# Enable dock bar
+dock_enabled = true
+
+# Dock position: Left, Right, Top, Bottom
+dock_position = "Bottom"
+
+# ============================================================================
+# Nerve: Process Observer
+# ============================================================================
+
+[nerves.process]
+# Enable command interception for dangerous commands
+intercept_enabled = true
+
+# Commands to always intercept and analyze
+intercept_commands = [
+    "rm",
+    "chmod",
+    "chown",
+    "dd",
+    "mkfs",
+    "fdisk",
+    "parted",
+    "mv",      # When moving to /dev/null or system dirs
+]
+
+# User to run as (read-only access to process info)
+user = "_hive-sense"
+
+# ============================================================================
+# Nerve: Journal Observer
+# ============================================================================
+
+[nerves.journal]
+# Minimum priority level to report (0=emerg, 7=debug)
+# 4 = warning and above
+min_priority = 4
+
+# Specific services to watch (empty = all services)
+watch_services = []
+
+# User to run as
+user = "_hive-sense"
+
+# ============================================================================
+# Nerve: Network Observer
+# ============================================================================
+
+[nerves.network]
+# A port conflict is a service failing to bind a port something else already
+# holds ("Address already in use" in the journal). Report conflicts only on
+# these ports, e.g. [80, 443]; empty means every port.
+watch_ports = []
+
+# User to run as
+user = "_hive-sense"
+
+# ============================================================================
+# Nerve: Filesystem Observer
+# ============================================================================
+
+[nerves.filesystem]
+# Directories to watch for changes
+watch_paths = [
+    "/etc",
+    "/home",
+]
+
+# Glob patterns to ignore
+ignore_patterns = [
+    "*.swp",
+    "*.swo",
+    "*.tmp",
+    "*~",
+    ".git/*",
+    "node_modules/*",
+    "__pycache__/*",
+    "*.pyc",
+]
+
+# User to run as
+user = "_hive-sense"
+
+# ============================================================================
+# Knowledge Base
+# ============================================================================
+
+[knowledge]
+# Path to knowledge base YAML files
+path = "/var/lib/hive/knowledge"
+
+# Reload knowledge base on file changes
+auto_reload = true
+
+# Embedded patterns for common issues (loaded even without external files)
+embedded_patterns = true

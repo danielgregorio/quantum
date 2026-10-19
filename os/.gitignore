@@ -1,0 +1,10 @@
+/target/
+/build/
+/dist/
+/output/
+/qemu-workspace/
+*.swp
+*.swo
+*~
+.DS_Store
+

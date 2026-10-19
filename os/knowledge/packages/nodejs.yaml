@@ -1,0 +1,110 @@
+# Node.js Package Knowledge
+# Used by hive-apt to provide intelligent installation guidance
+
+package: nodejs
+aliases:
+  - node
+  - npm
+
+description: "JavaScript runtime built on Chrome's V8 engine"
+
+category: development
+
+install_notes:
+  - "Binary location: /usr/bin/node"
+  - "NPM included with Node.js"
+  - "Global packages: /usr/lib/node_modules/"
+  - "User packages: ~/.npm/"
+  - "Consider using nvm for version management"
+
+post_install:
+  - command: "node --version"
+    description: "Check Node.js version"
+  - command: "npm --version"
+    description: "Check npm version"
+
+warnings:
+  - type: security
+    message: "Audit packages regularly: npm audit"
+    severity: medium
+  - type: security
+    message: "Avoid running npm as root. Use --unsafe-perm only when necessary."
+    severity: medium
+  - type: resource
+    message: "node_modules can be very large. Consider using pnpm for disk efficiency."
+    severity: low
+
+common_issues:
+  - pattern: "EACCES.*permission denied"
+    solution: |
+      NPM permission issue. Options:
+      1. Use nvm (recommended): curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+      2. Change npm prefix: npm config set prefix ~/.npm-global
+      3. Fix permissions: sudo chown -R $USER ~/.npm
+    auto_suggest: true
+    severity: medium
+
+  - pattern: "ENOENT.*package.json"
+    solution: |
+      No package.json found. Create one with:
+      npm init
+      Or for quick setup:
+      npm init -y
+    auto_suggest: true
+
+  - pattern: "ERR!.*peer dep"
+    solution: |
+      Peer dependency conflict. Options:
+      1. Use --legacy-peer-deps flag
+      2. Update conflicting packages
+      3. Check package compatibility
+    auto_suggest: true
+
+  - pattern: "ENOSPC.*no space left"
+    solution: |
+      Disk full or inotify limit reached:
+      1. Clean npm cache: npm cache clean --force
+      2. Remove node_modules: rm -rf node_modules
+      3. Increase inotify: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
+    auto_suggest: true
+
+  - pattern: "MODULE_NOT_FOUND"
+    solution: |
+      Module not found. Try:
+      1. npm install (to install dependencies)
+      2. Delete node_modules and reinstall
+      3. Check if module is in package.json
+    auto_suggest: true
+
+  - pattern: "EADDRINUSE.*:3000"
+    solution: |
+      Port 3000 already in use. Find the process:
+      lsof -i :3000
+      Or use a different port:
+      PORT=3001 npm start
+    auto_suggest: true
+
+tuning_tips:
+  - name: NODE_OPTIONS
+    description: "Node.js runtime options"
+    recommended: "--max-old-space-size=4096 for large apps"
+
+  - name: npm config
+    description: "NPM configuration"
+    recommended: "npm config set save-exact true"
+
+alternatives:
+  - name: deno
+    reason: "Secure by default, TypeScript native"
+  - name: bun
+    reason: "Faster runtime and package manager"
+
+related_packages:
+  - npm
+  - yarn
+  - pnpm
+
+ports:
+  - port: 3000
+    protocol: tcp
+    description: "Common Node.js development port"

@@ -1,0 +1,33 @@
+[package]
+name = "grove"
+version = "0.1.0"
+edition = "2021"
+authors = ["DruidOS Team"]
+description = "Interactive shell for DruidOS - natural language interface"
+license = "MIT"
+repository = "https://github.com/danielgregorio/druidos"
+
+[[bin]]
+name = "grove"
+path = "src/main.rs"
+
+[features]
+default = ["std"]
+std = []
+
+[dependencies]
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Process execution (pipes, signals)
+libc = "0.2"
+
+# Filename globbing
+glob = "0.3"
+
+# The Hive: messages and the IPC wire format
+hive-common = { path = "../crates/hive-common" }
+
+[dev-dependencies]
+tempfile = "3"

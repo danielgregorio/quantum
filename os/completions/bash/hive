@@ -1,0 +1,251 @@
+# Bash completion for DruidOS Hive Stack commands
+# Source this file or place in /etc/bash_completion.d/
+
+# hive-cortex completion
+_hive_cortex() {
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    opts="--help --version --config --log-level --foreground --socket"
+
+    case "${prev}" in
+        --config|-c)
+            COMPREPLY=( $(compgen -f -- "${cur}") )
+            return 0
+            ;;
+        --log-level|-l)
+            COMPREPLY=( $(compgen -W "trace debug info warn error" -- "${cur}") )
+            return 0
+            ;;
+        --socket|-s)
+            COMPREPLY=( $(compgen -f -- "${cur}") )
+            return 0
+            ;;
+    esac
+
+    COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+}
+complete -F _hive_cortex hive-cortex
+
+# hive-synapse completion
+_hive_synapse() {
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    opts="--help --version --config --model --context-size --max-tokens --temperature --test-model"
+
+    case "${prev}" in
+        --config|-c)
+            COMPREPLY=( $(compgen -f -- "${cur}") )
+            return 0
+            ;;
+        --model|-m)
+            COMPREPLY=( $(compgen -f -X '!*.gguf' -- "${cur}") )
+            return 0
+            ;;
+        --context-size)
+            COMPREPLY=( $(compgen -W "512 1024 2048 4096" -- "${cur}") )
+            return 0
+            ;;
+        --test-model)
+            COMPREPLY=( $(compgen -f -X '!*.gguf' -- "${cur}") )
+            return 0
+            ;;
+    esac
+
+    COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+}
+complete -F _hive_synapse hive-synapse
+
+# hive-apt completion
+_hive_apt() {
+    local cur prev opts cmds
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    cmds="install remove update upgrade search show info autoremove clean"
+    opts="--help --version --yes --no-snapshot --quiet"
+
+    case "${prev}" in
+        install|remove|show|info)
+            # Complete with package names (uses apt-cache)
+            COMPREPLY=( $(apt-cache --no-generate pkgnames "${cur}" 2>/dev/null | head -20) )
+            return 0
+            ;;
+        search)
+            return 0
+            ;;
+    esac
+
+    if [[ ${COMP_CWORD} -eq 1 ]]; then
+        COMPREPLY=( $(compgen -W "${cmds}" -- "${cur}") )
+    else
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+    fi
+}
+complete -F _hive_apt hive-apt
+
+# hive-zfs completion
+_hive_zfs() {
+    local cur prev opts cmds
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    cmds="snapshot rollback list destroy clean status"
+    opts="--help --version --dataset --recursive --keep --older-than"
+
+    case "${prev}" in
+        snapshot|rollback|destroy)
+            # Complete with ZFS datasets/snapshots
+            if command -v zfs &>/dev/null; then
+                COMPREPLY=( $(zfs list -H -o name 2>/dev/null | grep "^${cur}") )
+            fi
+            return 0
+            ;;
+        --dataset|-d)
+            if command -v zfs &>/dev/null; then
+                COMPREPLY=( $(zfs list -H -o name -t filesystem 2>/dev/null | grep "^${cur}") )
+            fi
+            return 0
+            ;;
+        --keep|-k)
+            COMPREPLY=( $(compgen -W "1 3 5 7 10 14 30" -- "${cur}") )
+            return 0
+            ;;
+        --older-than|-o)
+            COMPREPLY=( $(compgen -W "1d 7d 14d 30d 90d" -- "${cur}") )
+            return 0
+            ;;
+    esac
+
+    if [[ ${COMP_CWORD} -eq 1 ]]; then
+        COMPREPLY=( $(compgen -W "${cmds}" -- "${cur}") )
+    else
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+    fi
+}
+complete -F _hive_zfs hive-zfs
+
+# hive-shell completion
+_hive_shell() {
+    local cur prev opts cmds
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    cmds="toggle show hide quiet detach full test-notification status"
+    opts="--help --version --config"
+
+    case "${prev}" in
+        test-notification)
+            return 0
+            ;;
+        --config|-c)
+            COMPREPLY=( $(compgen -f -- "${cur}") )
+            return 0
+            ;;
+    esac
+
+    if [[ ${COMP_CWORD} -eq 1 ]]; then
+        COMPREPLY=( $(compgen -W "${cmds}" -- "${cur}") )
+    else
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+    fi
+}
+complete -F _hive_shell hive-shell
+
+# hive-term completion
+_hive_term() {
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    opts="--help --version --config --command --working-directory --anonymous --class --title"
+
+    case "${prev}" in
+        --config|-c)
+            COMPREPLY=( $(compgen -f -- "${cur}") )
+            return 0
+            ;;
+        --command|-e)
+            COMPREPLY=( $(compgen -c -- "${cur}") )
+            return 0
+            ;;
+        --working-directory|-d)
+            COMPREPLY=( $(compgen -d -- "${cur}") )
+            return 0
+            ;;
+        --anonymous|-a)
+            COMPREPLY=( $(compgen -W "quiet detach full" -- "${cur}") )
+            return 0
+            ;;
+    esac
+
+    COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+}
+complete -F _hive_term hive-term
+
+# hive-dock completion
+_hive_dock() {
+    local cur prev opts cmds
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    cmds="show hide toggle reload pin unpin"
+    opts="--help --version --config --position"
+
+    case "${prev}" in
+        --config|-c)
+            COMPREPLY=( $(compgen -f -- "${cur}") )
+            return 0
+            ;;
+        --position|-p)
+            COMPREPLY=( $(compgen -W "bottom top left right" -- "${cur}") )
+            return 0
+            ;;
+        pin|unpin)
+            # Complete with .desktop files
+            COMPREPLY=( $(compgen -W "$(ls /usr/share/applications/*.desktop 2>/dev/null | xargs -n1 basename .desktop)" -- "${cur}") )
+            return 0
+            ;;
+    esac
+
+    if [[ ${COMP_CWORD} -eq 1 ]]; then
+        COMPREPLY=( $(compgen -W "${cmds}" -- "${cur}") )
+    else
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+    fi
+}
+complete -F _hive_dock hive-dock
+
+# hive-actuator completion
+_hive_actuator() {
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    opts="--help --version --config --whitelist --dry-run --log-level"
+
+    case "${prev}" in
+        --config|-c|--whitelist|-w)
+            COMPREPLY=( $(compgen -f -- "${cur}") )
+            return 0
+            ;;
+        --log-level|-l)
+            COMPREPLY=( $(compgen -W "trace debug info warn error" -- "${cur}") )
+            return 0
+            ;;
+    esac
+
+    COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+}
+complete -F _hive_actuator hive-actuator

@@ -1,0 +1,228 @@
+/* DruidOS Waybar Theme */
+/* "The Swarm is watching. The Swarm is learning." */
+
+/* Base colors matching DruidOS design system */
+@define-color bg-base #0D0D0D;
+@define-color bg-surface #1A1A1A;
+@define-color bg-elevated #262626;
+@define-color border #333333;
+
+@define-color text-primary #FFFFFF;
+@define-color text-secondary #A0A0A0;
+@define-color text-muted #666666;
+
+@define-color accent #7B5CFF;
+@define-color accent-light #9D85FF;
+@define-color accent-dark #5A3DD6;
+
+@define-color success #4ADE80;
+@define-color warning #FBBF24;
+@define-color error #F87171;
+@define-color info #60A5FA;
+
+/* Global */
+* {
+    border: none;
+    border-radius: 0;
+    font-family: "Inter", "JetBrains Mono", sans-serif;
+    font-size: 13px;
+    min-height: 0;
+}
+
+window#waybar {
+    background: transparent;
+}
+
+window#waybar > box {
+    background: alpha(@bg-surface, 0.9);
+    border: 1px solid @border;
+    border-radius: 12px;
+    margin: 0;
+    padding: 2px 8px;
+}
+
+/* Modules */
+#workspaces,
+#window,
+#clock,
+#custom-hive-status,
+#pulseaudio,
+#network,
+#cpu,
+#memory,
+#battery,
+#tray {
+    padding: 0 12px;
+    color: @text-primary;
+}
+
+/* Workspaces */
+#workspaces {
+    background: @bg-elevated;
+    border-radius: 8px;
+    margin: 4px 0;
+    padding: 0 4px;
+}
+
+#workspaces button {
+    padding: 0 8px;
+    color: @text-secondary;
+    background: transparent;
+    border-radius: 6px;
+    margin: 2px;
+    transition: all 150ms ease-out;
+}
+
+#workspaces button:hover {
+    background: alpha(@accent, 0.3);
+    color: @text-primary;
+}
+
+#workspaces button.active {
+    background: @accent;
+    color: @text-primary;
+}
+
+#workspaces button.urgent {
+    background: @error;
+    color: @text-primary;
+}
+
+/* Window title */
+#window {
+    color: @text-secondary;
+    font-weight: 500;
+}
+
+/* Clock */
+#clock {
+    font-weight: 600;
+    color: @text-primary;
+}
+
+/* Hive status indicator */
+#custom-hive-status {
+    background: alpha(@accent, 0.2);
+    color: @accent-light;
+    border-radius: 8px;
+    padding: 2px 12px;
+    margin: 4px 0;
+    font-weight: 500;
+}
+
+#custom-hive-status.active {
+    background: alpha(@success, 0.2);
+    color: @success;
+}
+
+#custom-hive-status.quiet {
+    background: alpha(@warning, 0.2);
+    color: @warning;
+}
+
+#custom-hive-status.detached {
+    background: alpha(@text-muted, 0.2);
+    color: @text-muted;
+}
+
+/* System modules */
+#pulseaudio,
+#network,
+#cpu,
+#memory,
+#battery {
+    background: @bg-elevated;
+    border-radius: 8px;
+    margin: 4px 2px;
+    padding: 2px 10px;
+}
+
+#pulseaudio {
+    color: @info;
+}
+
+#pulseaudio.muted {
+    color: @text-muted;
+}
+
+#network {
+    color: @success;
+}
+
+#network.disconnected {
+    color: @error;
+}
+
+#cpu {
+    color: @accent-light;
+}
+
+#cpu.warning {
+    color: @warning;
+}
+
+#cpu.critical {
+    color: @error;
+}
+
+#memory {
+    color: @accent;
+}
+
+#memory.warning {
+    color: @warning;
+}
+
+#memory.critical {
+    color: @error;
+}
+
+#battery {
+    color: @success;
+}
+
+#battery.charging {
+    color: @info;
+}
+
+#battery.warning:not(.charging) {
+    color: @warning;
+}
+
+#battery.critical:not(.charging) {
+    color: @error;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Tray */
+#tray {
+    background: @bg-elevated;
+    border-radius: 8px;
+    margin: 4px 0;
+    padding: 2px 8px;
+}
+
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+}
+
+/* Tooltips */
+tooltip {
+    background: @bg-surface;
+    border: 1px solid @border;
+    border-radius: 8px;
+}
+
+tooltip label {
+    color: @text-primary;
+    padding: 8px;
+}

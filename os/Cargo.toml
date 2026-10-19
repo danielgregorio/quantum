@@ -1,0 +1,92 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "grove",     # Interactive Shell (primary user interface)
+    "installer", # TUI installer
+
+    # Hive Stack (AI Consciousness Layer)
+    "crates/hive-common",
+    "crates/hive-cortex",
+    "crates/hive-synapse",
+    "crates/hive-actuator",
+    "crates/hive-apt",
+    "crates/hive-zfs",
+    "crates/hive-nerve-process",
+    "crates/hive-nerve-journal",
+    "crates/hive-nerve-network",
+    "crates/hive-nerve-fs",
+    "crates/hive-dashboard", # TUI panel for notifications/suggestions
+    "crates/hive-lab",       # The Hive in a box: drive cortex+synapse without a VM
+
+    # GUI components (bark, spore, hive-shell, hive-dock, hive-term) were
+    # paused when the project target was redefined to TUI-only; the code
+    # lives in archive/ (not a workspace member) in case GUI comes back.
+]
+
+# Exclude archived crates so they don't need to satisfy this workspace's
+# resolver, and so `cargo` commands run from inside archive/* don't error
+# with "believes it's in a workspace when it's not".
+exclude = ["archive"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/danielgregorio/druidos"
+rust-version = "1.75"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+bincode = "1"
+toml = "0.8"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-journald = "0.3"
+
+# Error handling
+anyhow = "1"
+thiserror = "1"
+
+# System interfaces
+nix = { version = "0.27", features = ["fs", "ioctl", "mman", "time", "user", "socket", "process"] }
+libc = "0.2"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+dirs = "5"
+
+# Process/System monitoring
+procfs = "0.16"
+netstat2 = "0.9"
+notify = "6"
+
+# D-Bus
+zbus = "4"
+
+# Additional utilities
+regex = "1"
+which = "6"
+
+# TUI (installer, dashboard)
+ratatui = "0.28"
+crossterm = "0.28"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.dev]
+# Faster incremental builds
+incremental = true

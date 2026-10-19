@@ -1,0 +1,131 @@
+# Nginx Package Knowledge
+# Used by hive-apt to provide intelligent installation guidance
+
+package: nginx
+aliases:
+  - nginx-full
+  - nginx-light
+  - nginx-extras
+
+description: "nginx is a high-performance HTTP server and reverse proxy"
+
+category: web-server
+
+install_notes:
+  - "Default port: 80 (HTTP), 443 (HTTPS)"
+  - "Config location: /etc/nginx/"
+  - "Main config: /etc/nginx/nginx.conf"
+  - "Sites available: /etc/nginx/sites-available/"
+  - "Sites enabled: /etc/nginx/sites-enabled/"
+  - "Document root: /var/www/html/"
+  - "Logs: /var/log/nginx/"
+
+post_install:
+  - command: "sudo systemctl enable nginx"
+    description: "Enable nginx to start on boot"
+  - command: "sudo nginx -t"
+    description: "Test configuration syntax"
+
+warnings:
+  - type: security
+    message: "Default server exposes nginx version. Add 'server_tokens off;' to hide it."
+    severity: low
+  - type: port
+    message: "Port 80/443 may conflict with Apache or other web servers"
+    severity: medium
+  - type: security
+    message: "Consider enabling TLS with Let's Encrypt: certbot --nginx"
+    severity: medium
+
+common_issues:
+  - pattern: "bind.*failed.*Address already in use"
+    solution: |
+      Another service is using the port. Check with:
+      sudo lsof -i :80
+      sudo lsof -i :443
+
+      Common culprits: apache2, another nginx instance
+    auto_suggest: true
+    severity: high
+
+  - pattern: "nginx: \\[emerg\\] unknown directive"
+    solution: |
+      Syntax error in configuration. Check with:
+      sudo nginx -t
+
+      Common causes:
+      - Missing semicolon at end of line
+      - Typo in directive name
+      - Directive not available in this nginx build
+    auto_suggest: true
+
+  - pattern: "connect\\(\\) failed.*Connection refused.*upstream"
+    solution: |
+      Backend server is not responding. Check:
+      1. Is the backend service running?
+      2. Is the proxy_pass URL correct?
+      3. Is the backend listening on the specified port?
+    auto_suggest: true
+
+  - pattern: "permission denied.*client_body_temp"
+    solution: |
+      nginx worker can't write to temp directory:
+      sudo chown -R www-data:www-data /var/lib/nginx
+    auto_suggest: true
+
+  - pattern: "SSL_CTX_use_certificate.*error"
+    solution: |
+      Certificate issue. Check:
+      1. Certificate path is correct
+      2. Certificate format is valid (PEM)
+      3. Certificate chain is complete
+    auto_suggest: true
+
+tuning_tips:
+  - name: worker_processes
+    description: "Number of worker processes"
+    default: "auto"
+    recommended: "auto (equals CPU cores)"
+
+  - name: worker_connections
+    description: "Max connections per worker"
+    default: "768"
+    recommended: "1024-4096"
+
+  - name: keepalive_timeout
+    description: "How long to keep connections open"
+    default: "65"
+    recommended: "65 for general, lower for high-traffic"
+
+  - name: gzip
+    description: "Enable response compression"
+    default: "off"
+    recommended: "on"
+
+alternatives:
+  - name: apache2
+    reason: "More flexible configuration, .htaccess support"
+  - name: caddy
+    reason: "Automatic HTTPS, simpler configuration"
+  - name: traefik
+    reason: "Dynamic configuration, container-native"
+
+related_packages:
+  - certbot
+  - python3-certbot-nginx
+  - nginx-extras
+  - libnginx-mod-http-lua
+
+related_commands:
+  - nginx
+  - systemctl
+
+dependencies: []
+
+ports:
+  - port: 80
+    protocol: tcp
+    description: "HTTP"
+  - port: 443
+    protocol: tcp
+    description: "HTTPS"

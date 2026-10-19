@@ -1,0 +1,44 @@
+[Unit]
+Description=DruidOS Hive Nerve - Filesystem Observer
+Documentation=https://druidos.org/docs/hive-nerve-fs
+After=hive-cortex.service local-fs.target
+Requires=hive-cortex.service
+PartOf=hive-cortex.service
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/hive-nerve-fs
+Restart=always
+RestartSec=5
+
+# Read-only access user
+User=_hive-sense
+Group=hive
+
+# Environment
+Environment=RUST_LOG=info
+Environment=HIVE_CONFIG=/etc/hive/config.toml
+
+# Security
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+
+# Needs inotify capabilities for watching
+CapabilityBoundingSet=
+
+# Read access to watched paths
+ReadOnlyPaths=/etc /home /run/hive
+
+# System call filtering
+SystemCallFilter=@system-service @file-system
+SystemCallFilter=~@privileged @resources @mount
+
+[Install]
+WantedBy=multi-user.target

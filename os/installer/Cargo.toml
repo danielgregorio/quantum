@@ -1,0 +1,29 @@
+[package]
+name = "druidos-installer"
+version = "0.1.0"
+edition = "2021"
+description = "DruidOS TUI Installer"
+license = "MIT OR Apache-2.0"
+
+[[bin]]
+name = "druidos-installer"
+path = "src/main.rs"
+
+[dependencies]
+# TUI
+ratatui = { workspace = true }
+crossterm = { workspace = true }
+
+# Async
+tokio = { version = "1", features = ["full"] }
+
+# Error handling
+anyhow = "1"
+thiserror = "1"
+
+# System
+nix = { version = "0.29", features = ["user", "fs"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
