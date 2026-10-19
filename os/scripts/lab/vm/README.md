@@ -32,7 +32,7 @@ Only what changed is installed: when nothing but binaries changed, they are copi
 |---|---|---|
 | making the base (once) | ~5 min | 18 s |
 | restoring `hive` | ~2 s | under a second |
-| the tapes (five) | ~95 s | ~40 s, the first install included |
+| the six tapes | ~115 s | ~60 s, the first install included |
 
 Everything lives in `~/.cache/quantum-os-lab`, or `QUANTUM_LAB_CACHE`. A run's evidence is in `run/` there: `serial.log`, `qemu.cmdline`.
 

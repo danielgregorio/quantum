@@ -23,12 +23,11 @@ da Hive lab.
 
 **Tempos, medidos aqui sem KVM:** a base sai em ~5 min (quase tudo é o
 primeiro boot). Subir a VM a partir de `hive` leva ~7 s, e um restore
-~2 s. As cinco fitas levam ~95 s juntas. Só o que mudou é instalado: se
+~2 s. As seis fitas levam ~115 s juntas. Só o que mudou é instalado: se
 mudaram só binários, eles são copiados e só as units deles reiniciam
 (grove 6 s, um nerve 9 s, o cortex 20 s, contra 60 s da instalação
-completa). **No CI, com KVM:** a base sai em 18 s, e as cinco fitas,
-com a primeira instalação, em ~40 s (a de instalação de pacote em
-1,6 s).
+completa). **No CI, com KVM:** a base sai em 18 a 25 s, e as seis fitas,
+com a primeira instalação, em ~60 s (sem ela, de 2 a 7 s cada).
 
 **Fitas:**
 - `crash-restart`: uma unit real em loop de crash aparece uma vez no
