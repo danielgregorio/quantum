@@ -20,6 +20,24 @@ alter the behaviour of an existing app is listed under **Breaking**.
   character runs as it comes to touch a tile of that kind (stands on it, is
   in it or bumps it), and again each cooldown while it still does; a
   `tile-touch` event reaches the play protocol.
+- Laboratory: `<qg:play sound= volume= pitch= vary=>`: decibels added, a
+  pitch (2: an octave up), and a random spread of pitch each time, so twenty
+  hits do not sound the same. Such a play is a voice of its own, so the
+  sound can overlap itself. Only heard: the state records the sound's name,
+  and the random pitch comes from a generator of its own.
+- Laboratory: Delve has music of its own, written and synthesized by
+  `scripts/art/delve_music.py` (CC0, with `scripts/art/rpg_music.py`'s
+  voices): `torchlight` for the title and the end, `crypt`, darker and
+  slower, for the three crypts. Its hits vary in pitch, its gems ring a
+  little higher, and the wall a lever opens sounds deeper.
+- Laboratory: `qg:camera` has `zoom=`, `dead-zone="WxH"` (the box the
+  followed one moves in before the camera does), `lead=` (pixels it looks
+  ahead, the way the followed one goes), `smooth=`, and follows several
+  characters (`follow="p1, p2"`: their middle), with `fit="true"` zooming
+  out to keep them all on the screen (down to `zoom-min=`). It runs in the
+  game's ticks and is only seen; the play protocol reports it as a screen
+  view (`kind: camera`, where it looks and how close). Hopper's camera
+  looks ahead and lets a jump rise before it follows.
 - Laboratory: animations with an end. `<qg:animation loop="false">` plays
   once and stays on its last frame; `<qg:on-animation-end name=>` on a
   character or a prefab runs as it ends (`me` is whose it is), and an

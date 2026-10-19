@@ -881,7 +881,18 @@ class _Compiler:
                               'name': el.get('name'), 'if': condition})
                 self._node_elements.append(el)
             elif el.tag == 'camera':
-                nodes.append({'kind': 'camera', 'follow': el.get('follow'), 'bounds': el.get('bounds')})
+                follow = [f.strip() for f in str(el.get('follow')).split(',') if f.strip()]
+                if not follow:
+                    raise GameCompileError('<qg:camera follow=>: a character id, or several', el.line)
+                if el.get('zoom') <= 0 or el.get('zoom-min') <= 0 or el.get('lead') < 0 or el.get('smooth') < 0:
+                    raise GameCompileError('<qg:camera>: zoom= and zoom-min= more than 0; lead= and smooth= 0 or more',
+                                           el.line)
+                if el.get('fit') and len(follow) < 2:
+                    raise GameCompileError('<qg:camera fit="true">: for a camera that follows several', el.line)
+                nodes.append({'kind': 'camera', 'follow': follow, 'bounds': el.get('bounds'), 'zoom': el.get('zoom'),
+                              'dead_zone': list(el.get('dead-zone')) if el.get('dead-zone') else None,
+                              'lead': el.get('lead'), 'smooth': el.get('smooth'), 'fit': el.get('fit'),
+                              'zoom_min': el.get('zoom-min')})
                 self._node_elements.append(el)
             elif el.tag == 'menu':
                 menus += 1
@@ -1022,8 +1033,9 @@ class _Compiler:
             if n['kind'] == 'character' and n['controller'] == 'map' and not map_nodes:
                 raise GameCompileError('<qg:character controller="map"> in a scene without qg:map-node', scene.line)
         for n in nodes:
-            if n['kind'] == 'camera' and n['follow'] not in ids:
-                raise GameCompileError(f'<qg:camera follow="{n["follow"]}">: no character with that id', scene.line)
+            for f in (n['follow'] if n['kind'] == 'camera' else []):
+                if f not in ids:
+                    raise GameCompileError(f'<qg:camera follow="{f}">: no character with that id', scene.line)
             if n['kind'] == 'camera' and n['bounds'] == 'tilemap' and tilemap is None:
                 raise GameCompileError('<qg:camera bounds="tilemap"> in a scene without a tilemap', scene.line)
         tags = {p['tag'] for p in prefabs.values()}
