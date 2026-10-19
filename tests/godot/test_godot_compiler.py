@@ -1917,3 +1917,41 @@ class TestEnemiesOfParts:
   </qg:scene>
 ''')
         assert '<qg:seek> is a part of an enemy' in str(refuse(tmp_path, character))
+
+
+class TestPlatformEnemies:
+    HOUND = '''  <qg:prefab name="Hound" tag="hound" sheet="k" hitbox="12x12" ai="behavior" turns-at="edge">
+    <qg:behavior>
+      <qg:gravity strength="600" />
+      <qg:leap height="30" every="20" when="{true}" />
+      <qg:patrol heading="left" />
+    </qg:behavior>
+  </qg:prefab>
+  <qg:scene name="main"><qg:instance prefab="Hound" x="10" y="10" /></qg:scene>
+'''
+
+    def test_gravity_and_leap_in_an_enemy(self, tmp_path):
+        out = build(tmp_path, game(self.HOUND))
+        parts = json.loads((out / 'game.json').read_text())['prefabs']['Hound']['parts']
+        assert [p['kind'] for p in parts] == ['gravity', 'leap', 'patrol']
+        assert (parts[0]['strength'], parts[0]['max_fall']) == (600.0, 300.0)
+        assert (parts[1]['height'], parts[1]['at_wall'], parts[1]['every'], parts[1]['when']) == \
+            (30.0, True, 20, '_Hound_when_1')
+
+    def test_what_it_refuses(self, tmp_path):
+        for old, new, message in (
+                ('<qg:gravity strength="600" />', '', '<qg:leap> needs qg:gravity'),
+                ('heading="left"', 'heading="up"', 'an enemy with qg:gravity walks left and right'),
+                ('<qg:gravity strength="600" />', '<qg:gravity /><qg:gravity />', 'one qg:gravity and one qg:leap'),
+                ('height="30"', 'height="0"', '<qg:leap>: height= more than 0'),
+                ('<qg:leap height="30"', '<qg:leap sound="boing" height="30"', '<qg:leap sound="boing">: no qg:sound')):
+            assert old in self.HOUND, old
+            err = refuse(tmp_path, game(self.HOUND.replace(old, new)))
+            assert message in str(err), (message, str(err))
+        character = game('''  <qg:scene name="main">
+    <qg:character id="hero" controller="behavior" sheet="c" x="10" y="10" hitbox="12x12">
+      <qg:behavior><qg:gravity /><qg:leap /></qg:behavior>
+    </qg:character>
+  </qg:scene>
+''')
+        assert '<qg:leap> is a part of an enemy' in str(refuse(tmp_path, character))

@@ -476,11 +476,15 @@ TAGS: Dict[str, Tag] = {
         'In a qg:prefab ai="behavior", an enemy\'s parts instead: what it moves by is the first of qg:seek, '
         'qg:flee, qg:keep-distance, qg:patrol, qg:wander and qg:stand, in their order, whose when= holds and '
         'that has something to do (a seek with nothing in sight has not); it stands when none has. Its '
-        'qg:shoot parts fire besides. `me.doing` reads the part that moved it ("" for none).',
+        'qg:shoot parts fire besides. `me.doing` reads the part that moved it ("" for none). With qg:gravity '
+        'the enemy walks on floors: the parts move it left and right only, a seek goes straight, the prefab\'s '
+        'turns-at="edge" keeps it from walking off a ledge, and qg:leap jumps; `me.on_floor` reads whether it '
+        'stands.',
         {},
         parents=('character', 'prefab')),
     'gravity': Tag(
-        'A part: it falls, and stands on floors (without it, the body floats: top-down).',
+        'A part: it falls, and stands on floors (without it, the body floats: top-down). A character\'s or an '
+        'enemy\'s.',
         {'strength': Attr('float', 900.0, doc='pixels per second squared'),
          'max-fall': Attr('float', 300.0, doc='the speed it falls at most, pixels per second')},
         parents=('behavior',)),
@@ -555,6 +559,15 @@ TAGS: Dict[str, Tag] = {
         'An enemy\'s part: a new heading every 30 to 90 ticks (from the scene seed), and at once on bumping a wall.',
         {'speed': Attr('float', None),
          'when': Attr('expr', None)},
+        parents=('behavior',)),
+    'leap': Tag(
+        'An enemy\'s part, with qg:gravity: it jumps, from the floor, when it bumps a wall as it walks (a step '
+        'to climb) or while its when= holds; at most once every every= ticks.',
+        {'height': Attr('float', 40.0, doc='pixels'),
+         'at-wall': Attr('bool', True, doc='it jumps on bumping a wall as it walks'),
+         'every': Attr('int', 30, doc='ticks between two leaps at least'),
+         'sound': Attr('ident', None),
+         'when': Attr('expr', None, doc='it jumps while this is true too (`me` is the enemy)')},
         parents=('behavior',)),
     'stand': Tag(
         'An enemy\'s part: it stands still; the parts after it wait.',

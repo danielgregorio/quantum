@@ -300,6 +300,20 @@ An enemy's part: it fires prefab= at the nearest target within range=, headed at
 
 Goes inside: `qg:behavior`.
 
+### `qg:leap`
+
+An enemy's part, with qg:gravity: it jumps, from the floor, when it bumps a wall as it walks (a step to climb) or while its when= holds; at most once every every= ticks.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `height` | number | `40.0` | pixels |
+| `at-wall` | true / false | `true` | it jumps on bumping a wall as it walks |
+| `every` | integer | `30` | ticks between two leaps at least |
+| `sound` | a name |  |  |
+| `when` | an expression |  | it jumps while this is true too (`me` is the enemy) |
+
+Goes inside: `qg:behavior`.
+
 ### `qg:animation`
 
 Frames of the sheet, cycled. A character plays "idle", "walk" and "jump" by what it does (a platformer "fall" while it comes down, when it has one; a topdown one "walk-up" and "walk-down" when it has them, "walk-up" upside down for down, and while it swings "attack", or "attack-up" and "attack-down" by where it faces); a prefab plays "walk".
@@ -431,13 +445,13 @@ Goes inside: `qg:scene`.
 
 ### `qg:behavior`
 
-What a character controller="behavior" is made of: parts, each a small rule. A platformer is qg:gravity, qg:walk and qg:jump; a top-down walker is qg:walk axis="both"; a flapping bird is qg:gravity and a qg:jump with air=; a ship that comes back round the screen is qg:walk axis="both" and qg:wrap. Each tick, whatever their order: walk and jump read the keys, gravity pulls, the body moves, then keep-inside, wrap and face. `me.vx`, `me.vy` and `me.on_floor` read it; qg:velocity sets its speed from the game's rules (a dash, a knock-back), so what no part covers is written in the game. In a qg:prefab ai="behavior", an enemy's parts instead: what it moves by is the first of qg:seek, qg:flee, qg:keep-distance, qg:patrol, qg:wander and qg:stand, in their order, whose when= holds and that has something to do (a seek with nothing in sight has not); it stands when none has. Its qg:shoot parts fire besides. `me.doing` reads the part that moved it ("" for none).
+What a character controller="behavior" is made of: parts, each a small rule. A platformer is qg:gravity, qg:walk and qg:jump; a top-down walker is qg:walk axis="both"; a flapping bird is qg:gravity and a qg:jump with air=; a ship that comes back round the screen is qg:walk axis="both" and qg:wrap. Each tick, whatever their order: walk and jump read the keys, gravity pulls, the body moves, then keep-inside, wrap and face. `me.vx`, `me.vy` and `me.on_floor` read it; qg:velocity sets its speed from the game's rules (a dash, a knock-back), so what no part covers is written in the game. In a qg:prefab ai="behavior", an enemy's parts instead: what it moves by is the first of qg:seek, qg:flee, qg:keep-distance, qg:patrol, qg:wander and qg:stand, in their order, whose when= holds and that has something to do (a seek with nothing in sight has not); it stands when none has. Its qg:shoot parts fire besides. `me.doing` reads the part that moved it ("" for none). With qg:gravity the enemy walks on floors: the parts move it left and right only, a seek goes straight, the prefab's turns-at="edge" keeps it from walking off a ledge, and qg:leap jumps; `me.on_floor` reads whether it stands.
 
 Goes inside: `qg:character`, `qg:prefab`.
 
 ### `qg:gravity`
 
-A part: it falls, and stands on floors (without it, the body floats: top-down).
+A part: it falls, and stands on floors (without it, the body floats: top-down). A character's or an enemy's.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|

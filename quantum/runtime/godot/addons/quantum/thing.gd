@@ -44,6 +44,7 @@ var state: String = ""
 var stops_at_walls: bool = false
 var parts: Array = []
 var doing: String = ""            # the part that moved it this tick (ai="behavior"), "" for none
+var on_floor: bool = false        # an enemy of parts with qg:gravity: it stands on something
 
 var _heading: Vector2 = Vector2.ZERO
 var _rethink: int = 0
@@ -82,7 +83,12 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 	damage = int(prefab.get("damage", 1))
 	ai = str(prefab.get("ai", "patrol"))
 	sight = float(prefab.get("sight", 80.0))
-	if ai != "patrol":
+	for p in prefab.get("parts", []):
+		if p["kind"] == "gravity":
+			_fall = p
+		elif p["kind"] == "leap":
+			_leap = p
+	if ai != "patrol" and _fall.is_empty():
 		motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
 	if ai == "fly" or ai == "sway" or ai == "path" or ai == "turret":
 		collision_mask = 0   # through everything: a shot or a drone is stopped by nothing
@@ -286,7 +292,7 @@ func _physics_process(delta: float) -> void:
 		"turret":
 			_turret()
 		"behavior":
-			_behave()
+			_behave(delta)
 		_:
 			_patrol(delta)
 	_fire()
@@ -476,6 +482,8 @@ func _aim_around(target: Node2D, map: Node):
 
 # The velocity that heads for `aim` at `speed`, but not past it in one tick.
 func _towards(aim: Vector2, speed_: float) -> Vector2:
+	if not _fall.is_empty():
+		aim.y = position.y   # walking on floors: only across
 	var to := aim - position
 	return to.normalized() * minf(speed_, to.length() * Q.TICK_RATE)
 
@@ -483,16 +491,20 @@ func _towards(aim: Vector2, speed_: float) -> Vector2:
 # --- ai="behavior": an enemy made of parts ---
 
 var _part_state: Dictionary = {}   # part index -> what it keeps (a patrol's way, a shot's next tick)
+var _fall: Dictionary = {}         # its qg:gravity: it walks on floors
+var _leap: Dictionary = {}         # its qg:leap
+var _leap_next: int = 0
+var _bumped: bool = false
 
 
 # The first moving part whose when= holds and that has something to do moves
 # it; the shoot parts fire besides.
-func _behave() -> void:
+func _behave(delta: float) -> void:
 	var chosen := -1
 	var v := Vector2.ZERO
 	for i in parts.size():
 		var p: Dictionary = parts[i]
-		if p["kind"] == "shoot" or not _part_on(p):
+		if p["kind"] in ["shoot", "gravity", "leap"] or not _part_on(p):
 			continue
 		var got = _part_velocity(i, p)
 		if got != null:
@@ -500,6 +512,17 @@ func _behave() -> void:
 			v = got
 			break
 	doing = parts[chosen]["kind"] if chosen >= 0 else ""
+	if not _fall.is_empty():
+		_walk_and_fall(chosen, v.x, delta)
+	else:
+		_float(chosen, v)
+	for i in parts.size():
+		if parts[i]["kind"] == "shoot" and _part_on(parts[i]):
+			_part_shoot(i, parts[i])
+
+
+# Top-down: the part's velocity, as it is.
+func _float(chosen: int, v: Vector2) -> void:
 	velocity = v
 	if v != Vector2.ZERO:
 		move_and_slide()
@@ -510,9 +533,43 @@ func _behave() -> void:
 			elif doing == "wander":
 				_rethink = 0
 	_face(velocity.x)
-	for i in parts.size():
-		if parts[i]["kind"] == "shoot" and _part_on(parts[i]):
-			_part_shoot(i, parts[i])
+
+
+# With qg:gravity: the part says left or right; gravity pulls; turns-at="edge"
+# keeps it on its ledge (a patrol turns, the others wait); qg:leap jumps.
+func _walk_and_fall(chosen: int, vx: float, delta: float) -> void:
+	if absf(vx) < 0.01:
+		vx = 0.0
+	if vx != 0.0 and turns_at_edge and is_on_floor() and not _ground_ahead_at(int(signf(vx))):
+		if doing == "patrol":
+			_part_state[chosen]["dir"] = -_part_state[chosen]["dir"]
+			_part_state[chosen]["walked"] = 0.0
+		vx = 0.0
+	velocity.x = vx
+	var g := float(_fall["strength"])
+	velocity.y = minf(velocity.y + g * delta, float(_fall["max_fall"]))
+	if not _leap.is_empty() and is_on_floor() and _ticks >= _leap_next:
+		var wall := bool(_leap["at_wall"]) and _bumped and vx != 0.0
+		if wall or (_leap.get("when") != null and _part_on(_leap)):
+			velocity.y = -sqrt(2.0 * g * float(_leap["height"]))
+			_leap_next = _ticks + int(_leap["every"])
+			Q.event("leap", {"who": Q.who(self)})
+			if _leap.get("sound") != null:
+				Q.play(str(_leap["sound"]))
+	move_and_slide()
+	on_floor = is_on_floor()
+	_bumped = is_on_wall()
+	if _bumped and doing == "patrol" and not _leap_climbs():
+		_part_state[chosen]["dir"] = -_part_state[chosen]["dir"]
+		_part_state[chosen]["walked"] = 0.0
+	elif _bumped and doing == "wander":
+		_rethink = 0
+	_face(velocity.x)
+
+
+# A patrol that can leap tries the wall first: it turns only when the leap has not got it over.
+func _leap_climbs() -> bool:
+	return not _leap.is_empty() and bool(_leap["at_wall"]) and _ticks >= _leap_next
 
 
 func _part_on(p: Dictionary) -> bool:
@@ -542,6 +599,8 @@ func _part_velocity(i: int, p: Dictionary):
 				_heading = Vector2(cos(angle), sin(angle))
 				_rethink = rng.randi_range(30, 90)
 			_rethink -= 1
+			if not _fall.is_empty():
+				return Vector2(signf(_heading.x), 0.0) * _part_speed(p)
 			return _heading * _part_speed(p)
 		"patrol":
 			if not _part_state.has(i):
@@ -560,7 +619,7 @@ func _part_velocity(i: int, p: Dictionary):
 			if t == null:
 				return null
 			var aim = t.position
-			if p.get("way", "around") == "around":
+			if p.get("way", "around") == "around" and _fall.is_empty():
 				var map = _scene_of().get_node_or_null("Tilemap")
 				if map != null and map.has_method("path"):
 					aim = _aim_around(t, map)
@@ -587,6 +646,8 @@ func _part_velocity(i: int, p: Dictionary):
 
 func _away_from(t: Node2D) -> Vector2:
 	var away := position - t.position
+	if not _fall.is_empty():
+		away.y = 0.0
 	return away.normalized() if away.length() > 0.0 else Vector2.RIGHT
 
 
@@ -673,8 +734,12 @@ func _face(vx: float) -> void:
 
 
 func _ground_ahead() -> bool:
+	return _ground_ahead_at(direction)
+
+
+func _ground_ahead_at(dir: int) -> bool:
 	var space := get_world_2d().direct_space_state
-	var from := global_position + Vector2(direction * hitbox_size.x / 2.0, 0)
+	var from := global_position + Vector2(dir * hitbox_size.x / 2.0, 0)
 	var to := from + Vector2(0, hitbox_size.y / 2.0 + 4.0)
 	var query := PhysicsRayQueryParameters2D.create(from, to)
 	query.exclude = [get_rid()]

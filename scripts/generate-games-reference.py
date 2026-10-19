@@ -232,7 +232,7 @@ def build() -> str:
     groups = [
         ('What a game is made of', 'Declared once, in `q:application`.',
          ['tileset', 'spritesheet', 'input', 'multiplayer', 'sound', 'particles', 'prefab', 'seek', 'flee',
-          'keep-distance', 'patrol', 'wander', 'stand', 'shoot', 'animation', 'state', 'move', 'scene']),
+          'keep-distance', 'patrol', 'wander', 'stand', 'shoot', 'leap', 'animation', 'state', 'move', 'scene']),
         ('What a scene holds', 'The level, the character, the things placed in it, and what the screen shows.',
          ['tilemap', 'character', 'behavior', 'gravity', 'walk', 'jump', 'keep-inside', 'wrap', 'face',
           'instance', 'emitter', 'spawner', 'zone', 'sprite', 'path', 'cursor', 'exit', 'map-node',

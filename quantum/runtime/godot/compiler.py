@@ -425,9 +425,10 @@ class _Compiler:
         for i, p in enumerate(found[0].children):
             if not isinstance(p, Element):
                 raise GameCompileError('<qg:behavior> holds parts (qg:seek, qg:wander...), not statements', p.line)
-            if p.tag not in _ENEMY_PARTS:
+            if p.tag not in _ENEMY_PARTS + ('gravity',):
                 raise GameCompileError(f'<qg:{p.tag}> is a part of a character controller="behavior"; an enemy\'s '
-                                       f'parts are {", ".join("qg:" + t for t in _ENEMY_PARTS)}', p.line)
+                                       f'parts are qg:gravity, {", ".join("qg:" + t for t in _ENEMY_PARTS)}',
+                                       p.line)
             part = {'kind': p.tag}
             for attr in TAGS[p.tag].attrs:
                 if attr != 'when':
@@ -440,6 +441,13 @@ class _Compiler:
                     raise GameCompileError(f'<qg:{p.tag} {attr}=>: 0 or more', p.line)
             if p.tag == 'keep-distance' and part['max'] <= part['min']:
                 raise GameCompileError('<qg:keep-distance>: max= more than min=', p.line)
+            if p.tag == 'gravity' and (part['strength'] < 0 or part['max_fall'] <= 0):
+                raise GameCompileError('<qg:gravity>: strength= 0 or more, max-fall= more than 0', p.line)
+            if p.tag == 'leap':
+                if part['height'] <= 0 or part['every'] < 1:
+                    raise GameCompileError('<qg:leap>: height= more than 0, every= 1 or more', p.line)
+                if part['sound'] and part['sound'] not in self.sounds:
+                    raise GameCompileError(f'<qg:leap sound="{part["sound"]}">: no qg:sound of that name', p.line)
             if p.tag == 'shoot':
                 if part['every'] < 1:
                     raise GameCompileError('<qg:shoot every=>: 1 or more ticks', p.line)
@@ -457,6 +465,17 @@ class _Compiler:
             parts.append(part)
         if not parts:
             raise GameCompileError('<qg:behavior> is empty: give it parts (qg:seek, qg:wander...)', found[0].line)
+        kinds = [p['kind'] for p in parts]
+        if kinds.count('gravity') > 1 or kinds.count('leap') > 1:
+            raise GameCompileError('a qg:behavior has one qg:gravity and one qg:leap at most', found[0].line)
+        if 'gravity' in kinds:
+            for p in parts:
+                if p['kind'] == 'patrol' and p['heading'] in ('up', 'down'):
+                    raise GameCompileError('<qg:patrol heading=>: an enemy with qg:gravity walks left and right',
+                                           found[0].line)
+        elif 'leap' in kinds:
+            raise GameCompileError('<qg:leap> needs qg:gravity in the same qg:behavior (what brings it down)',
+                                   found[0].line)
         return parts
 
     def _behavior(self, el: Element) -> list:
@@ -1166,7 +1185,7 @@ def action_name(player: int, action: str) -> str:
 _HEADINGS = {'up': (0.0, -1.0), 'down': (0.0, 1.0), 'left': (-1.0, 0.0), 'right': (1.0, 0.0)}
 
 # The parts an enemy (a qg:prefab ai="behavior") is made of; a character's are the others.
-_ENEMY_PARTS = ('seek', 'flee', 'keep-distance', 'patrol', 'wander', 'stand', 'shoot')
+_ENEMY_PARTS = ('seek', 'flee', 'keep-distance', 'patrol', 'wander', 'stand', 'shoot', 'leap')
 
 
 # What a scene the rollback reaches may hold: nodes that save and load their whole state

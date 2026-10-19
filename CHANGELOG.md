@@ -10,6 +10,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: enemies of parts that walk on floors. `<qg:gravity>` in a
+  prefab's `qg:behavior` (as in a character's) makes it fall and stand:
+  its parts then move it left and right only, a seek goes straight at its
+  target, and the prefab's `turns-at="edge"` keeps it on its ledge (a
+  patrol turns, the other parts wait). `<qg:leap height= every= at-wall=
+  when= sound=>` jumps from the floor on bumping a wall as it walks (a step
+  to climb) or while `when=` holds. `me.on_floor` reads whether it stands.
 - Laboratory: enemies made of parts. A `<qg:prefab ai="behavior">` lists
   its parts in a `<qg:behavior>`: `qg:seek` (around the walls, or
   `way="straight"`), `qg:flee`, `qg:keep-distance min= max=`, `qg:patrol`
