@@ -1,0 +1,69 @@
+{
+ "dataset_type": "positive",
+ "feature": "hive_rules",
+ "category": "offers",
+ "description": "What the Hive offers when an event happens: rules with offers, filled in from the event",
+ "examples": [
+  {
+   "id": "hive-rules-001",
+   "intent": "The rules Quantum OS ships",
+   "input": {
+    "natural_language": "When a service crashes offer to restart it and to show its logs; on a log anomaly the logs; on a full disk the disk usage; on a missing program its package; on a port conflict the listening ports",
+    "context": {
+     "target": "hive",
+     "file": "hive-rules-001.q"
+    }
+   },
+   "expected_output": {
+    "quantum_code": "<q:application id=\"hive\" type=\"hive\">\n  <qh:on event=\"service-crash\">\n    <qh:offer title=\"Restart {service}\"\n              description=\"{unit} stopped unexpectedly. Run `systemctl restart {service}`.\"\n              action=\"restart-service\" service=\"{service}\" />\n    <qh:offer title=\"Show recent logs for {service}\"\n              description=\"The last 50 journal lines from {service}, to see why it failed.\"\n              action=\"run-command\" cmd=\"journalctl\" args=\"-n 50 -u {service}\" />\n  </qh:on>\n  <qh:on event=\"log-anomaly\">\n    <qh:offer title=\"Show recent logs for {service}\"\n              action=\"run-command\" cmd=\"journalctl\" args=\"-n 50 -u {service}\" />\n  </qh:on>\n  <qh:on event=\"disk-low\">\n    <qh:offer title=\"Show disk usage\" description=\"See how full {mount} and the other mounts are.\"\n              action=\"run-command\" cmd=\"df\" args=\"-h\" />\n  </qh:on>\n  <qh:on event=\"command-not-found\">\n    <qh:offer title=\"Install {package}\" description=\"`{command}` isn't installed; the {package} package provides it.\"\n              action=\"install-package\" package=\"{package}\" />\n  </qh:on>\n  <qh:on event=\"port-conflict\">\n    <qh:offer title=\"Show listening ports\" description=\"See which process is holding port {port}.\"\n              action=\"run-command\" cmd=\"ss\" args=\"-tlnp\" />\n  </qh:on>\n\n  <qh:allow command=\"df\" args=\"-h\" />\n  <qh:allow command=\"ss\" args=\"-tlnp\" />\n  <qh:allow command=\"journalctl\" args=\"-n 50 -u *\" />\n  <qh:allow service=\"nginx apache2 postgresql redis-server\" />\n  <qh:block service=\"hive-* systemd-* dbus sshd\" />\n  <qh:block package=\"systemd linux-image-* libc6 apt dpkg\" />\n  <qh:limit action=\"install-package\" per-minute=\"5\" />\n</q:application>",
+    "runtime_behavior": "rules.toml holds five rules; hive-synapse fills {service}, {unit}, {mount}, {package}, {command} and {port} from each event. whitelist.toml permits exactly the three commands and four services, and blocks the Hive's own units. A crash of init.scope, which is no .service, gets no offer."
+   },
+   "tags": [
+    "offers",
+    "placeholders",
+    "whitelist"
+   ]
+  },
+  {
+   "id": "hive-rules-002",
+   "intent": "Memory pressure and dangerous commands",
+   "input": {
+    "natural_language": "Under memory pressure show what is free and offer to clean the package cache; when a user runs something dangerous offer a ZFS snapshot named after the program, and to list the snapshots",
+    "context": {
+     "target": "hive",
+     "file": "hive-rules-002.q"
+    }
+   },
+   "expected_output": {
+    "quantum_code": "<q:application id=\"watchful\" type=\"hive\">\n  <qh:on event=\"memory-pressure\">\n    <qh:offer title=\"Show memory use\" description=\"{free_mb} MB of {total_mb} MB are free.\"\n              action=\"run-command\" cmd=\"free\" args=\"-h\" />\n    <qh:offer title=\"Clean the package cache\" action=\"clean-package-cache\" />\n  </qh:on>\n  <qh:on event=\"command-observed\">\n    <qh:offer title=\"Snapshot the system before `{program}` goes further\"\n              description=\"A ZFS snapshot to roll back to, if `{cmd}` does harm.\"\n              action=\"create-snapshot\" dataset=\"rpool/ROOT/system\" name=\"hive-before-{program}\" />\n    <qh:offer title=\"List the snapshots\" action=\"list-snapshots\" dataset=\"rpool/ROOT/system\" />\n  </qh:on>\n\n  <qh:allow command=\"free\" args=\"-h\" />\n  <qh:allow dataset=\"rpool/ROOT/*\" />\n  <qh:allow delete-snapshot=\"hive-*\" />\n  <qh:limit action=\"create-snapshot\" per-minute=\"10\" />\n</q:application>",
+    "runtime_behavior": "A memory-pressure event offers `free -h` with the megabytes in the description and a cache clean. A command-observed event offers a snapshot of rpool/ROOT/system named hive-before-<program>, which the whitelist permits (the dataset matches rpool/ROOT/*), and a listing."
+   },
+   "tags": [
+    "offers",
+    "snapshots",
+    "memory"
+   ]
+  },
+  {
+   "id": "hive-rules-003",
+   "intent": "Ports and services",
+   "input": {
+    "natural_language": "On a port conflict offer the listening ports and to end the holder; on a crash offer start, reload and disabling at boot; on a full disk the package list refresh, an upgrade, stopping bluetooth, enabling cups and removing snapd",
+    "context": {
+     "target": "hive",
+     "file": "hive-rules-003.q"
+    }
+   },
+   "expected_output": {
+    "quantum_code": "<q:application id=\"ports\" type=\"hive\">\n  <qh:on event=\"port-conflict\">\n    <qh:offer title=\"Show listening ports\" action=\"run-command\" cmd=\"ss\" args=\"-tlnp\" />\n    <qh:offer title=\"End {holder} on port {port}\"\n              description=\"{requester} could not bind port {port}: {holder} holds it.\"\n              action=\"kill-port-process\" port=\"{port}\" />\n  </qh:on>\n  <qh:on event=\"service-crash\">\n    <qh:offer title=\"Start {service}\" action=\"start-service\" service=\"{service}\" />\n    <qh:offer title=\"Reload {service}\" action=\"reload-service\" service=\"{service}\" />\n    <qh:offer title=\"Keep {service} from starting at boot\" action=\"disable-service\" service=\"{service}\" now=\"false\" />\n  </qh:on>\n  <qh:on event=\"disk-low\">\n    <qh:offer title=\"Refresh the package lists\" action=\"update-package-lists\" />\n    <qh:offer title=\"Upgrade everything\" action=\"upgrade-packages\" />\n    <qh:offer title=\"Stop bluetooth\" action=\"stop-service\" service=\"bluetooth\" />\n    <qh:offer title=\"Enable cups\" action=\"enable-service\" service=\"cups\" />\n    <qh:offer title=\"Remove snapd\" action=\"remove-package\" package=\"snapd\" purge=\"true\" />\n  </qh:on>\n\n  <qh:allow command=\"ss\" args=\"-tlnp\" />\n  <qh:allow service=\"bluetooth cups nginx\" />\n  <qh:allow action=\"kill-port-process\" />\n  <qh:block package=\"systemd libc6\" />\n  <qh:limit action=\"kill-port-process\" per-minute=\"10\" />\n  <qh:limit action=\"remove-package\" per-minute=\"3\" />\n</q:application>",
+    "runtime_behavior": "kill-port-process takes {port}, a number field, and needs the permission the file gives. The literal services (bluetooth, cups) are checked against the allow at compile time; {service} is checked by the actuator at run time. remove-package is dangerous, so the dashboard asks twice."
+   },
+   "tags": [
+    "offers",
+    "services",
+    "packages",
+    "ports"
+   ]
+  }
+ ]
+}

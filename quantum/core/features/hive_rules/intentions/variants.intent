@@ -1,0 +1,54 @@
+intention:
+  name: "The Hive's rules: variants"
+  version: "1.0.0"
+  category: "hive"
+
+  description: |
+    The shapes a hive file takes, from the OS's own rules to a whitelist alone.
+
+  variants:
+    - name: "The rules the OS ships"
+      description: "Five events, each with the offers the dashboard shows; the whitelist that makes them runnable"
+      example: |
+        <qh:on event="service-crash">
+          <qh:offer title="Restart {service}" action="restart-service" service="{service}" />
+          <qh:offer title="Show recent logs for {service}" action="run-command" cmd="journalctl" args="-n 50 -u {service}" />
+        </qh:on>
+        <qh:allow command="journalctl" args="-n 50 -u *" />
+        <qh:allow service="nginx apache2 postgresql" />
+
+    - name: "A literal service"
+      description: "An offer that names a service outright is checked against the allows and blocks when it compiles; one with {service} is checked by the actuator when it runs"
+      example: |
+        <qh:on event="disk-low">
+          <qh:offer title="Stop bluetooth" action="stop-service" service="bluetooth" />
+        </qh:on>
+        <qh:allow service="bluetooth" />
+
+    - name: "A number from the event"
+      description: "A number parameter takes a number or a field that is one: {port} of port-conflict, never {holder}"
+      example: |
+        <qh:on event="port-conflict">
+          <qh:offer title="End {holder} on port {port}" action="kill-port-process" port="{port}" />
+        </qh:on>
+        <qh:allow action="kill-port-process" />
+
+    - name: "A whitelist alone"
+      description: "No qh:on: synapse offers nothing it could act on, only the model's text, and the file is the actuator's whole policy"
+      example: |
+        <qh:allow command="uptime" />
+        <qh:allow service="nginx" />
+        <qh:block service="hive-* systemd-*" />
+        <qh:limit action="install-package" per-minute="5" />
+
+    - name: "Nothing at all"
+      description: "An empty hive compiles: an empty, fail-closed whitelist, and no rules"
+      example: |
+        <q:application id="quiet" type="hive"></q:application>
+
+    - name: "Several names in one allow"
+      description: "service=, path= and dataset= take names separated by spaces; command= takes one program, its arguments in args="
+      example: |
+        <qh:allow service="nginx apache2 postgresql" />
+        <qh:allow path="/home/* /tmp/*" />
+        <qh:allow command="systemctl" args="status *" />

@@ -88,6 +88,9 @@ def test_dataset_example(feature, polarity, example, json_path, tmp_path):
     if feature == "game_engine":
         _test_game(polarity, example, tmp_path)       # a whole game, compiled to a Godot project
         return
+    if feature == "hive_rules":
+        _test_hive(polarity, example, tmp_path)       # the Hive's rules, compiled to what the daemons load
+        return
 
     parser = QuantumParser()
 
@@ -126,6 +129,31 @@ def _test_game(polarity: str, example: dict, tmp_path: Path):
         source.write_text(example["expected_output"]["quantum_code"], encoding="utf-8")
         build()
         assert (tmp_path / "godot" / "project.godot").is_file()
+    else:
+        expected = example["expected_error"]
+        source.write_text(example["input"]["quantum_code"], encoding="utf-8")
+        with pytest.raises(Exception) as info:
+            build()
+        assert type(info.value).__name__ == expected["type"]
+        assert expected["message"] in str(info.value)
+
+
+def _test_hive(polarity: str, example: dict, tmp_path: Path):
+    """A positive example compiles to rules.toml and whitelist.toml; a negative one is refused
+    with the message it gives."""
+    from quantum.core.parser import QuantumParser
+    from quantum.runtime.hive import compile_hive
+
+    source = tmp_path / f"{example['id']}.q"
+
+    def build():
+        app = QuantumParser(use_cache=False).parse_file(str(source))
+        return compile_hive(app, str(tmp_path / "hive"))
+
+    if polarity == "positive":
+        source.write_text(example["expected_output"]["quantum_code"], encoding="utf-8")
+        written = build()
+        assert Path(written["rules.toml"]).is_file() and Path(written["whitelist.toml"]).is_file()
     else:
         expected = example["expected_error"]
         source.write_text(example["input"]["quantum_code"], encoding="utf-8")

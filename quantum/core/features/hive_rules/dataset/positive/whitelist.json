@@ -1,0 +1,47 @@
+{
+ "dataset_type": "positive",
+ "feature": "hive_rules",
+ "category": "whitelist",
+ "description": "What the actuator may do at all: allows, blocks and limits, with or without rules",
+ "examples": [
+  {
+   "id": "hive-wl-001",
+   "intent": "A whitelist alone",
+   "input": {
+    "natural_language": "Let the actuator run uptime, systemctl status of anything and the snapshot list, manage nginx and postgresql but never the Hive's units, change files under home and tmp but never dotfiles or the system, snapshot the root and home datasets, open URLs, and bound deletes and restores",
+    "context": {
+     "target": "hive",
+     "file": "hive-wl-001.q"
+    }
+   },
+   "expected_output": {
+    "quantum_code": "<q:application id=\"policy\" type=\"hive\">\n  <qh:allow command=\"uptime\" />\n  <qh:allow command=\"systemctl\" args=\"status *\" />\n  <qh:allow command=\"zfs\" args=\"list -t snapshot\" />\n  <qh:allow service=\"nginx postgresql\" />\n  <qh:block service=\"hive-* systemd-* dbus sshd\" />\n  <qh:block package=\"systemd linux-image-* grub-* hive-* zfs-* libc6 apt dpkg\" />\n  <qh:allow path=\"/home/* /tmp/* /var/tmp/*\" />\n  <qh:block path=\"/home/*/.ssh/* /home/*/.gnupg/* /etc/* /usr/* /boot/* /root/*\" />\n  <qh:allow dataset=\"rpool/ROOT/* rpool/home/*\" />\n  <qh:allow delete-snapshot=\"hive-*\" />\n  <qh:allow action=\"open-url\" />\n  <qh:limit action=\"delete-file\" per-minute=\"20\" />\n  <qh:limit action=\"restore-snapshot\" per-minute=\"10\" />\n</q:application>",
+    "runtime_behavior": "rules.toml holds no rule: synapse offers nothing it could act on, only the model's text. whitelist.toml is the actuator's whole policy; everything not written here is denied."
+   },
+   "tags": [
+    "whitelist",
+    "blocks",
+    "limits"
+   ]
+  },
+  {
+   "id": "hive-wl-002",
+   "intent": "The least a hive can be",
+   "input": {
+    "natural_language": "A hive that offers nothing and permits nothing",
+    "context": {
+     "target": "hive",
+     "file": "hive-wl-002.q"
+    }
+   },
+   "expected_output": {
+    "quantum_code": "<q:application id=\"quiet\" type=\"hive\">\n</q:application>",
+    "runtime_behavior": "Both files are written. The whitelist fails closed: every table is empty and every permission false, so the actuator refuses every action."
+   },
+   "tags": [
+    "whitelist",
+    "empty"
+   ]
+  }
+ ]
+}

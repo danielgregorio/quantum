@@ -1,0 +1,70 @@
+intention:
+  name: "The Hive's rules in tags with qh: (Quantum OS)"
+  version: "1.0.0"
+  category: "hive"
+  goal: |
+    Let a person declare, in one file, what the Hive of Quantum OS offers
+    when something happens on the system and what its actuator may do at
+    all, and get the two files the daemons load, with every promise in the
+    file checked before anything runs.
+
+  principles:
+    - "One schema (quantum/runtime/hive/schema.py) is the language: a tag, an attribute, an event or an action it does not list is a compile error naming the line"
+    - "Declarations only: there are no statements and no expressions; text where a tag goes is refused ('a hive file is declarations, not script')"
+    - "A {field} is a field of the event the rule is on, of the right type, filled in by hive-synapse from the event itself and never from the model's text"
+    - "An offer the file's own whitelist would refuse does not compile: the administrator never approves something that fails"
+    - "The whitelist fails closed: what no <qh:allow> permits is denied, a <qh:block> wins over an allow, and rebooting, shutting down and suspending have no switch"
+
+  capabilities:
+    - "Declare, per event, the offers the dashboard shows and an administrator approves"
+    - "Fill titles, descriptions and parameters from the event: the service, the unit, the port, the package, the mount"
+    - "Permit commands argument for argument, services, paths, datasets, snapshot deletion and the switch-only permissions"
+    - "Block services, packages and paths whatever is allowed"
+    - "Bound how many of an action may run a minute"
+
+  triggers:
+    - '<q:application type="hive">'
+    - "qh:on"
+    - "qh:offer"
+    - "qh:allow"
+    - "the Hive's rules, the whitelist, what the Hive offers, what the actuator may do"
+
+  structure: |
+    <q:application id="hive" type="hive">
+      qh:on event="..."              one rule per event
+        qh:offer                     what an administrator may approve, with {field}s of the event
+      qh:allow                       what the actuator may do: command= args=, service=, path=, dataset=, action=, delete-snapshot=
+      qh:block                       what it may never do: service=, package=, path=
+      qh:limit                       at most per-minute= of an action
+    </q:application>
+
+  semantics:
+    # --- the tags ---
+    - "qh:on holds the offers for one event (event=); one qh:on per event, its offers in order"
+    - "qh:offer is one thing to approve: title= and description= (shown on the dashboard), action= (what runs) and the attributes that action takes; any of them may hold {field}"
+    - "qh:allow permits one kind of thing: command= with args= (`*` is any one argument, the count must match), service= (names), path= (patterns), dataset= (patterns), action= (kill-port-process, open-url, firewall) or delete-snapshot= (a pattern)"
+    - "qh:block forbids whatever is allowed: service= (patterns), package= (never removed; patterns) or path= (patterns)"
+    - "qh:limit caps an action at per-minute= runs, under the actuator's overall limit"
+
+    # --- the events, and their fields ---
+    - "service-crash: a unit stopped unexpectedly; unit (nginx.service), service (nginx; absent when the unit is no .service, and the offers that need it are left out), exit_code"
+    - "log-anomaly: a unit logs an unusual number of errors; unit, service"
+    - "port-conflict: a program could not bind a port another holds; port, requester, holder"
+    - "disk-low: a filesystem is nearly full; mount, percent, free_mb"
+    - "memory-pressure: the system is low on memory; free_mb, total_mb"
+    - "command-observed: a user ran a command the Hive judges dangerous; cmd, program"
+    - "command-not-found: a user ran a program that is not installed and a package of that name exists; command, package (absent for an invalid name)"
+
+    # --- the actions an offer may name (the kebab-case of hive-actuator's variants) ---
+    - "run-command runs cmd= with args=; it must match a qh:allow command= of the file"
+    - "start-service, stop-service, restart-service and reload-service act on service=, which must be allowed and not blocked"
+    - "enable-service and disable-service set a service at boot, and act now unless now=false"
+    - "install-package installs package= through PackageKit after a safety snapshot; any valid name, bounded by the limit"
+    - "remove-package removes package= (never one a qh:block package= names), with purge=; dangerous, so the dashboard asks twice"
+    - "update-package-lists, upgrade-packages (packages=, all when empty) and clean-package-cache take no name"
+    - "kill-port-process ends the process on port= (a number, or a number field) with signal=; needs qh:allow action=\"kill-port-process\""
+    - "create-snapshot snapshots dataset= as name= (recursive= true); list-snapshots lists dataset='s, or all; the dataset must match a qh:allow dataset="
+
+    # --- what the files are ---
+    - "rules.toml: the rules, every offer parameter a string, for hive-synapse, which also embeds the committed one as its built-in rules"
+    - "whitelist.toml: hive-actuator's whitelist in the format it reads; version 2"
