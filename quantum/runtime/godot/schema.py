@@ -57,7 +57,13 @@ TAGS: Dict[str, Tag] = {
         {'frame': Attr('int', required=True, doc='which tile: its number in the tilemap is frame+1'),
          'shape': Attr('str', None, doc='the solid part, as x,y points from the tile\'s top-left corner '
                                         'separated by semicolons (0,10; 64,10; 64,64; 0,64); none: not solid'),
-         'one-way': Attr('bool', False, doc='stood on from above, jumped through from below')},
+         'one-way': Attr('bool', False, doc='stood on from above, jumped through from below'),
+         'kind': Attr('enum:ladder|water|ice|hurt', None,
+                      doc='ladder: passed through, climbed with up and down, let go of with jump; water: passed '
+                          'through, slow to sink in, a jump is a stroke, slower to walk; ice: slid on (a solid '
+                          'tile to stand on in a platformer, a floor in a top-down game); hurt: a '
+                          'character\'s qg:on-tile kind="hurt" runs while it touches one. In a Tiled tileset: a '
+                          'tile\'s class, or its kind property')},
         parents=('tileset',)),
     'spritesheet': Tag(
         'A sheet of equal frames for characters and items.',
@@ -542,6 +548,13 @@ TAGS: Dict[str, Tag] = {
         {'by': Attr('enum:velocity|input', 'velocity', doc='velocity: the way it moves; input: the way it is '
                                                          'pushed (it faces while it walks into a wall)')},
         parents=('behavior',)),
+    'on-tile': Tag(
+        'What happens while this character touches a tile of a kind (qg:tile kind=): stands on it, is in it, or '
+        'bumps it. Holds actions and statements; `me` is the character. Without a cooldown, once as it comes to '
+        'touch one; with one, again each time the cooldown runs out while it still does.',
+        {'kind': Attr('enum:ladder|water|ice|hurt', required=True),
+         'cooldown': Attr('int', 0, doc='ticks before it may run again while still touching')},
+        parents=('character',)),
     'on-animation-end': Tag(
         'What happens when an animation of this character or prefab with loop="false" has played to its last '
         'frame. Holds actions and statements; `me` is whose animation it is.',

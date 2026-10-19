@@ -200,6 +200,11 @@ class _Compiler:
                 if t.get('frame') < 0:
                     raise GameCompileError('<qg:tile frame=>: 0 or more', t.line)
                 shape = t.get('shape')
+                if t.get('kind') in ('ladder', 'water'):
+                    if shape is not None and str(shape).strip() != 'none' or t.get('one-way'):
+                        raise GameCompileError(f'<qg:tile kind="{t.get("kind")}"> is passed through: no shape= '
+                                               f'or one-way=', t.line)
+                    shape = 'none'
                 if shape is not None and str(shape).strip() == 'none':
                     if t.get('one-way'):
                         raise GameCompileError('<qg:tile shape="none"> is not solid: one-way= means nothing', t.line)
@@ -212,6 +217,8 @@ class _Compiler:
                     if len(points) < 3:
                         raise GameCompileError('<qg:tile shape=>: at least three points', t.line)
                 tiles[str(t.get('frame'))] = {'shape': points, 'one_way': t.get('one-way')}
+                if t.get('kind'):
+                    tiles[str(t.get('frame'))]['kind'] = t.get('kind')
             if tiles:
                 sheets[name]['tiles'] = tiles
         sounds = {}
@@ -385,6 +392,23 @@ class _Compiler:
         rel = rel.replace('\\', '/').lstrip('/')
         self.assets[rel] = self._find(rel, line)
         return rel
+
+    @staticmethod
+    def _tiled_kinds(sheet: dict, name: str, kinds: dict, line: Optional[int]) -> None:
+        """A Tiled tileset's tile kinds, onto the qg:tileset's tiles: a ladder or water tile is passed through."""
+        size = float(sheet['tile'][0])
+        tiles = sheet.setdefault('tiles', {})
+        for frame, kind in kinds.items():
+            have = tiles.get(str(frame))
+            if have is not None and have.get('kind') not in (None, kind):
+                raise GameCompileError(f'tile {frame} of {name!r} is of kind {have["kind"]!r} in the .q and {kind!r} '
+                                       f'in the Tiled map', line)
+            if have is None:
+                square = [[0.0, 0.0], [size, 0.0], [size, size], [0.0, size]]
+                have = tiles[str(frame)] = {'shape': None if kind in ('ladder', 'water') else square, 'one_way': False}
+            elif kind in ('ladder', 'water'):
+                have['shape'] = None
+            have['kind'] = kind
 
     def _animations_known(self, played: list) -> None:
         """qg:play-animation names an animation some character or prefab of the game has."""
@@ -720,6 +744,7 @@ class _Compiler:
                             f'{el.get("tileset")!r} has {tile}x{tile}', el.line)
                     layers = [{'name': ly.name, 'rows': ly.rows, 'collision': ly.collision or el.get('collision')}
                               for ly in tmx.layers]
+                    self._tiled_kinds(sheets[el.get('tileset')], el.get('tileset'), tmx.kinds, el.line)
                     for obj in tmx.objects:
                         if obj.prefab not in prefabs:
                             raise GameCompileError(
@@ -863,6 +888,12 @@ class _Compiler:
                 if el.get('bounds') is not None and el.get('controller') not in ('ship', 'topdown'):
                     raise GameCompileError('bounds= is for controller="ship" or "topdown"', el.line)
                 behavior = self._behavior(el)
+                for h in el.find_all('on-tile'):
+                    if controller not in ('platformer', 'topdown', 'behavior'):
+                        raise GameCompileError('<qg:on-tile> is for controller="platformer", "topdown" or '
+                                               '"behavior"', h.line)
+                    if h.get('cooldown') < 0:
+                        raise GameCompileError('<qg:on-tile cooldown=>: 0 or more', h.line)
                 condition = None
                 if el.get('if') is not None:
                     if controller == 'map':
@@ -895,6 +926,10 @@ class _Compiler:
                     'health': el.get('health'), 'facing': el.get('facing'), 'moves': moves, 'on_ko': on_ko,
                     'step_frames': el.get('step-frames'), 'diagonal': el.get('diagonal'),
                     'behavior': behavior, 'if': condition,
+                    'on_tile': [{'kind': h.get('kind'), 'cooldown': h.get('cooldown'),
+                                 'handler': compile_handler(script, f'_on_{_ident(cid)}_tile_{i}', h.children,
+                                                            h.line)}
+                                for i, h in enumerate(el.find_all('on-tile'))],
                     'on_animation_end': _animation_ends(el, script, f'_on_{_ident(cid)}'),
                 })
                 self._node_elements.append(el)
