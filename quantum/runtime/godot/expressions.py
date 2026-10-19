@@ -52,6 +52,7 @@ _FUNCTIONS = {
     'distance': 'Q.distance({0}, {1})',      # pixels between two things or characters (INF when one is gone)
     'nearest': 'Q.nearest({0}, {1})',        # the character of that id, or thing of that tag, nearest the first
     'sees': 'Q.sees({0}, {1})',              # no solid tile of the tilemap between the two
+    'held': 'Q.items_held({0})',             # how many of a qg:item the players hold
 }
 
 _BIN = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*'}

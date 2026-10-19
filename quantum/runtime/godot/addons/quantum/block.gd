@@ -5,6 +5,9 @@ extends StaticBody2D
 
 var prefab_name: String = ""
 var tag: String = ""
+var opens_with: String = ""   # a qg:item that opens it, a door (Q.touched)
+var keeps: bool = false
+var on_locked: String = ""
 
 
 func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -> void:
@@ -12,6 +15,9 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 	tag = prefab["tag"]
 	name = name_
 	add_to_group("q_thing")
+	opens_with = str(prefab.get("opens_with", "")) if prefab.get("opens_with") != null else ""
+	keeps = bool(prefab.get("keeps", false))
+	on_locked = str(prefab.get("on_locked", "")) if prefab.get("on_locked") != null else ""
 	collision_layer = 1
 	collision_mask = 0
 	var sprite := Sprite2D.new()
