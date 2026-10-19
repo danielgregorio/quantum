@@ -55,8 +55,10 @@ CORE_ATTRIBUTES = frozenset({"require_auth", "require_role"})
 # codegen) stays in the repository on purpose — games press on the language
 # and surface features and bugs the core needs — but it carries no stability
 # promise and is not part of the pitch. Its tests run in the main suite, so a
-# core change that breaks a game shows up in CI.
-LAB_APP_TYPES = frozenset({"game"})
+# core change that breaks a game shows up in CI. The Hive's rules (qh:, the
+# rules and whitelist of Quantum OS's daemons, in os/) are laboratory for the
+# same reason.
+LAB_APP_TYPES = frozenset({"game", "hive"})
 EXPERIMENTAL_APP_TYPES = frozenset({"terminal", "ui"})
 
 # Removed in 0.11 (APP-1), because they never worked: `quantum run` on a

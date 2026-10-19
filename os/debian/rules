@@ -38,6 +38,7 @@ override_dh_auto_install:
 	# Configuration files
 	install -D -m 644 config/hive/default.toml $(CURDIR)/debian/druidos-config/etc/hive/config.toml
 	install -D -m 644 config/hive/whitelist.toml $(CURDIR)/debian/druidos-config/etc/hive/whitelist.toml
+	install -D -m 644 config/hive/rules.toml $(CURDIR)/debian/druidos-config/etc/hive/rules.toml
 
 	# Knowledge base
 	mkdir -p $(CURDIR)/debian/druidos-knowledge/var/lib/hive/knowledge

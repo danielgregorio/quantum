@@ -1,0 +1,50 @@
+intention:
+  name: "The Hive's rules: edge cases"
+  version: "1.0.0"
+  category: "hive"
+
+  description: |
+    What the hive compiler refuses, what the daemons do with what it
+    cannot check, and the cases where the obvious reading is not what
+    happens.
+
+  edge_cases:
+    - case: "An offer the whitelist would refuse"
+      scenario: "A qh:offer runs `journalctl -n 50 -u {service}` and no qh:allow command= lists journalctl"
+      behaviour: "Refused at compile time ('which no <qh:allow command=> permits'): an administrator would otherwise approve something that fails. A {field} argument needs a `*` in its place in the allow."
+
+    - case: "A field the event lacks"
+      scenario: "title=\"Restart {svc}\" on service-crash"
+      behaviour: "Refused, listing the event's fields: the placeholder could never be filled in."
+
+    - case: "A unit that is not a service"
+      scenario: "init.scope or docker.socket crashes; the rule's offers use {service}"
+      behaviour: "Not a compile matter: hive-synapse leaves out every offer that needs {service}, since there is no service name for such a unit; offers on {unit} alone still show."
+
+    - case: "A package name that could be an option"
+      scenario: "grove reports `--allow-downgrades` as a missing program"
+      behaviour: "hive-cortex already refuses it; were it to reach synapse, {package} is absent for an invalid name and the install offer is left out."
+
+    - case: "A value that is not what the action takes"
+      scenario: "port=\"{holder}\" compiles nowhere, but a hand-edited rules.toml says so"
+      behaviour: "hive-synapse refuses the file at start (the same checks as the compiler) and uses the rules the build was made with; a value that still turns out wrong at run time leaves that one offer out."
+
+    - case: "A statement, an expression, a script"
+      scenario: "q:set, {count + 1}, or text inside a qh:on"
+      behaviour: "Refused: a hive file is declarations. {field} is a field's name, not an expression."
+
+    - case: "Two rules on one event"
+      scenario: "Two <qh:on event=\"disk-low\">"
+      behaviour: "Refused: the order of an event's offers lives in one place."
+
+    - case: "A block and an allow of the same service"
+      scenario: "qh:allow service=\"sshd\" and qh:block service=\"ssh*\""
+      behaviour: "The block wins, at compile time for a literal offer and in the actuator for any action."
+
+    - case: "Rebooting, shutting down, suspending"
+      scenario: "An offer to reboot"
+      behaviour: "Not an action an offer can name, and the actuator has no switch for them: never."
+
+    - case: "The files edited by hand"
+      scenario: "Someone edits os/config/hive/whitelist.toml"
+      behaviour: "tests/hive/test_hive_config_is_generated.py fails: the files are written from hive.q, and the fix is to edit hive.q and run scripts/generate-hive-config.py."

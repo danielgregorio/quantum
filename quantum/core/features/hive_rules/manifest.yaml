@@ -1,0 +1,60 @@
+feature:
+  name: "hive_rules"
+  display_name: "The Hive's rules (qh: namespace, Quantum OS)"
+  version: "1.0.0"
+  status: "laboratory"
+  migration_type: "option_c"  # the language lives in quantum/runtime/hive, not in this folder
+
+description: |
+  A q:application type="hive" is the Hive's rules in tags: what the Hive of
+  Quantum OS offers when an event happens (a crash, a full disk, a missing
+  program), and what its actuator may do at all. It compiles to rules.toml,
+  which hive-synapse loads, and whitelist.toml, which hive-actuator loads.
+  A {field} is filled in from the event, never from the model's text, and
+  an offer the file's own whitelist would refuse does not compile: the
+  same discipline as the games, for the daemons of an operating system.
+
+tags:
+  - "hive"
+  - "quantum-os"
+  - "rules"
+  - "policy"
+  - "declarative"
+
+maintainers:
+  - "Daniel"
+  - "Claude"
+
+dependencies:
+  required: []
+
+capabilities:
+  syntax:
+    - "Every qh: tag, attribute, event and action is declared in one schema; nothing else exists"
+    - "No statements and no expressions: a hive file is declarations only, with nothing to compute"
+    - "{field} placeholders, checked against the event's fields and their types at compile time"
+    - "Action and limit names are the kebab-case of hive-actuator's Action variants, so the two cannot drift"
+
+  runtime:
+    - "hive-synapse fills the offers in from the event and puts them ahead of the model's text"
+    - "hive-actuator's whitelist fails closed; the compiler checks every literal offer against it"
+    - "An offer whose value is not what its action takes (a port that is not a number) is left out, never guessed"
+
+api:
+  schema: "quantum/runtime/hive/schema.py"              # TAGS, EVENTS, ACTIONS, LIMITS: the language
+  model: "quantum/runtime/hive/model.py::read_hive"     # reads app.xml_root against the schema
+  compiler: "quantum/runtime/hive/compiler.py::compile_hive"
+  generator: "scripts/generate-hive-config.py"          # os/config/hive/hive.q -> rules.toml, whitelist.toml
+  consumers: "os/crates/hive-synapse/src/rules.rs, os/crates/hive-actuator/src/whitelist.rs"
+  reference: "docs/targets/hive.md"                     # generated from the schema
+
+testing:
+  compiler: "tests/hive/"                                # what compiles, what is refused, the OS's files are current
+  dataset: "tests/dataset/test_dataset_features.py"     # every positive compiles, every negative is refused
+  registered: "tests/dataset/test_hive_rules_feature.py"  # every tag, event and action has an intention and an example
+
+migration_notes: |
+  The parser keeps a hive's XML on ApplicationNode.xml_root, as for games,
+  and quantum/runtime/hive reads every qh: element against its schema. The
+  daemons' own rule table (hive-synapse's actions.rs) was replaced by the
+  compiled rules.toml, which the build embeds as its built-in rules.

@@ -1,0 +1,20 @@
+{
+  "feature": "hive_rules",
+  "version": "1.0.0",
+  "description": "The Hive's rules in qh: tags: each positive example compiles to rules.toml and whitelist.toml; each negative one is refused with the message given",
+  "maintainers": [
+    "Daniel",
+    "Claude"
+  ],
+  "statistics": {
+    "total_examples": 17,
+    "positive_examples": 5,
+    "negative_examples": 12,
+    "categories": {
+      "offers": 3,
+      "whitelist": 2,
+      "compile_errors": 12
+    }
+  },
+  "checked_by": "tests/dataset/test_dataset_features.py (compiles each example) and tests/dataset/test_hive_rules_feature.py (every tag, event and action has an intention and an example)"
+}

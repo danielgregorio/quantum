@@ -1,27 +1,8 @@
-# ============================================================================
-# DruidOS Hive Actuator Whitelist
-# /etc/hive/whitelist.toml
-#
-# Governs which Action variants hive-actuator will execute. This file
-# fails closed: anything not explicitly listed below — including entire
-# tables left out — is denied. If this file is missing entirely, every
-# action is denied.
-#
-# Each table here corresponds directly to a variant (or family of
-# variants) of the Action enum in crates/hive-common/src/actions.rs — see
-# crates/hive-actuator/src/whitelist.rs for the matching logic.
-# ============================================================================
+# Written by Quantum from hive.q: hive-actuator's whitelist, which fails closed. Do not edit; edit the .q and run it again (`quantum run hive.q`).
 
 [meta]
 version = 2
 
-# ============================================================================
-# RUN_COMMAND (Action::RunCommand)
-# Each entry matches (command, args) exactly — "*" matches any single
-# argument at that position, but the argument count must match exactly.
-# There is no prefix matching: an entry for "ip" does NOT authorize
-# "iptables".
-# ============================================================================
 [run_command]
 allowed = [
     { command = "df", args = ["-h"] },
@@ -41,74 +22,58 @@ allowed = [
     { command = "zfs", args = ["list", "-t", "snapshot"] },
 ]
 
-# ============================================================================
-# SERVICE (Action::StartService / StopService / RestartService /
-# ReloadService / EnableService / DisableService)
-# `blocked` always wins over `allowed`, even if a name is (mistakenly)
-# present in both.
-# ============================================================================
 [service]
 allowed = [
-    "nginx", "apache2", "postgresql", "mysql", "mariadb",
-    "redis-server", "mongodb", "docker", "containerd",
-    "NetworkManager", "cups", "bluetooth",
+    "nginx",
+    "apache2",
+    "postgresql",
+    "mysql",
+    "mariadb",
+    "redis-server",
+    "mongodb",
+    "docker",
+    "containerd",
+    "NetworkManager",
+    "cups",
+    "bluetooth",
 ]
 blocked = ["hive-*", "systemd-*", "dbus", "sshd"]
 
-# ============================================================================
-# PACKAGE MANAGEMENT
-# InstallPackage/UpdatePackageLists/UpgradePackages/CleanPackageCache have
-# no per-call restriction here — throughput is capped by [rate_limits]
-# below instead. RemovePackage is blocked for anything system-critical.
-# ============================================================================
 [apt_remove]
 blocked_packages = [
-    "systemd", "linux-image-*", "grub-*", "hive-*",
-    "zfs-*", "libc6", "apt", "dpkg",
+    "systemd",
+    "linux-image-*",
+    "grub-*",
+    "hive-*",
+    "zfs-*",
+    "libc6",
+    "apt",
+    "dpkg",
 ]
 
-# ============================================================================
-# FILE OPERATIONS (Action::CreateDirectory / MoveFile / CopyFile /
-# DeleteFile / ChangePermissions)
-# Checked against the destination path (`to` for Move/Copy, `path`
-# otherwise). Both an allowed_paths match AND no blocked_paths match are
-# required.
-# ============================================================================
 [file_ops]
 allowed_paths = ["/home/*", "/tmp/*", "/var/tmp/*"]
 blocked_paths = [
-    "/home/*/.ssh/*", "/home/*/.gnupg/*",
-    "/etc/*", "/usr/*", "/bin/*", "/sbin/*", "/lib/*", "/boot/*", "/root/*",
+    "/home/*/.ssh/*",
+    "/home/*/.gnupg/*",
+    "/etc/*",
+    "/usr/*",
+    "/bin/*",
+    "/sbin/*",
+    "/lib/*",
+    "/boot/*",
+    "/root/*",
 ]
 
-# ============================================================================
-# ZFS (Action::CreateSnapshot / RestoreSnapshot / ListSnapshots /
-# DeleteSnapshot)
-# ============================================================================
 [zfs]
 allowed_datasets = ["rpool/ROOT/*", "rpool/home/*"]
-# DeleteSnapshot additionally requires the snapshot name to match this —
-# only allows deleting snapshots the Hive itself created.
 destroy_snapshot_pattern = "hive-*"
 
-# ============================================================================
-# MISC (Action::KillPortProcess / OpenUrl / AddFirewallRule)
-# ============================================================================
 [misc]
 kill_port_process = true
 open_url = true
 firewall = false
 
-# Action::Reboot / Shutdown / Suspend have no config knob — always denied,
-# on purpose (see crates/hive-actuator/src/whitelist.rs).
-
-# ============================================================================
-# RATE LIMITS
-# Per-action-type overrides, keyed by Action::type_name() (PascalCase,
-# e.g. "InstallPackage"). Anything not listed here still falls back to the
-# actuator's global rate_limit (config/hive/config.toml, actuator section)
-# — this table only tightens specific types further.
-# ============================================================================
 [rate_limits]
 KillPortProcess = 10
 InstallPackage = 5

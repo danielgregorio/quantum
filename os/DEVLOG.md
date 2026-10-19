@@ -1,5 +1,47 @@
 # DruidOS Development Log
 
+## 2026-10-19 - As regras da Hive declaradas em Quantum (qh:)
+
+O que une os dois projetos de verdade. O que a Hive oferece quando algo
+acontece (reiniciar o serviço que caiu, mostrar os logs, instalar o pacote
+que o usuário pediu) vivia em código Rust na synapse (`actions.rs`), e o
+whitelist do actuator num TOML à parte. Agora as duas coisas são um
+arquivo Quantum, `config/hive/hive.q`, com tags `qh:`:
+
+- `qh:on event="service-crash"` segura as ofertas de um evento;
+  `qh:offer` é uma oferta com título, descrição, `action=` (o nome em
+  kebab-case da variante de `Action` do actuator) e os atributos dessa
+  ação. Qualquer um pode ter `{campo}`: um campo do evento, que a synapse
+  preenche a partir do próprio evento, nunca do texto do modelo.
+- `qh:allow`, `qh:block` e `qh:limit` são o whitelist: o que o actuator
+  pode fazer, o que nunca pode, e quantas vezes por minuto.
+
+**O compilador recusa o que o arquivo não pode cumprir:** um evento, uma
+ação ou um atributo que não existem; um `{campo}` que o evento não tem, ou
+texto onde vai número (`port="{holder}"`); uma oferta que o próprio
+whitelist do arquivo recusaria (um comando sem `qh:allow command=`, um
+serviço bloqueado, um `kill-port-process` sem a permissão); statements,
+expressões ou script. Vinte e dois casos em `tests/hive/`.
+
+**O que sai:** `config/hive/rules.toml` (novo; a synapse carrega de
+`/etc/hive/rules.toml`, e o build embute o arquivo commitado como regra
+padrão) e `config/hive/whitelist.toml` (o mesmo formato de antes, agora
+gerado). `python scripts/generate-hive-config.py` escreve os dois; um
+teste falha se forem editados à mão ou se o `hive.q` mudar sem regenerar.
+O whitelist gerado é idêntico ao que existia (comparado como TOML). A
+synapse ganhou `rules.rs`, que faz as mesmas checagens ao carregar e cai
+para as regras embutidas se o arquivo for inválido; uma oferta cujo valor
+não é o que a ação aceita em tempo de execução é deixada de fora, nunca
+adivinhada.
+
+**Ao redor:** a linguagem é laboratory, como os jogos; `docs/targets/hive.md`
+é gerado do schema; o feature module `hive_rules` tem intenções e dataset
+(5 positivos, 12 negativos), e um teste garante que cada tag, evento e ação
+tem intenção e exemplo. A Hive lab ganhou a fita `log-anomaly`: a quinta
+regra, que não tinha fita. O que ficou de fora: a janela de 5 minutos do
+cortex (`report-interval`) continua constante no código; vira atributo
+quando o cortex carregar o arquivo também.
+
 ## 2026-10-19 - VM Lab: o sistema real, restaurado em um segundo
 
 A segunda camada do play protocol do OS. A Hive lab valida o que a Hive

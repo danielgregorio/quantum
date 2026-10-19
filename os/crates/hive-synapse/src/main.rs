@@ -9,14 +9,15 @@
 //! - Runs as `_hive-ai` user with minimal privileges
 //! - No network access (seccomp restricted)
 //! - Only receives context, only returns suggestions: text from the model,
-//!   plus typed actions from fixed rules on the triggering event (never
-//!   parsed out of model output; see the `actions` module)
+//!   plus typed actions from the Hive's rules on the triggering event (never
+//!   parsed out of model output; see the `rules` module)
 //! - Communicates exclusively with hive-cortex via Unix socket
 
 mod actions;
 mod inference;
 mod prompt;
 mod queue;
+mod rules;
 
 use anyhow::{Context, Result};
 use hive_common::config::SynapseConfig;
@@ -60,6 +61,12 @@ async fn main() -> Result<()> {
 
     // Load configuration
     let config = load_config().await?;
+
+    // The rules: what to offer on an event (config/hive/hive.q, compiled).
+    match rules::Rules::load(&config.rules_path) {
+        Ok(rules) => rules::install(rules),
+        Err(e) => error!("{:#}; using the rules this build was made with", e),
+    }
 
     // Drop privileges if running as root
     if nix::unistd::geteuid().is_root() {

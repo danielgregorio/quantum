@@ -57,6 +57,7 @@ install -m 0644 "$SRC"/config/systemd/*.service "$SRC"/config/systemd/*.timer /e
 mkdir -p /etc/hive
 install -m 0644 "$SRC/config/hive/default.toml" /etc/hive/config.toml
 install -m 0644 "$SRC/config/hive/whitelist.toml" /etc/hive/whitelist.toml
+install -m 0644 "$SRC/config/hive/rules.toml" /etc/hive/rules.toml
 mkdir -p /etc/polkit-1/rules.d /etc/audit/rules.d
 install -m 0644 "$SRC"/config/polkit/*.rules /etc/polkit-1/rules.d/
 install -m 0640 "$SRC"/config/audit/*.rules /etc/audit/rules.d/

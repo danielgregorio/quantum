@@ -1,0 +1,215 @@
+{
+ "dataset_type": "negative",
+ "feature": "hive_rules",
+ "category": "compile_errors",
+ "description": "What the hive compiler refuses, and the message it gives",
+ "examples": [
+  {
+   "id": "hive-bad-001",
+   "intent": "A field the event does not have",
+   "input": {
+    "natural_language": "Offer to restart the crashed service, naming it",
+    "quantum_code": "<q:application id=\"bad\" type=\"hive\">\n  <qh:on event=\"service-crash\">\n    <qh:offer title=\"Restart {svc}\" action=\"restart-service\" service=\"{service}\" />\n  </qh:on>\n  <qh:allow service=\"nginx\" />\n</q:application>"
+   },
+   "expected_error": {
+    "type": "HiveCompileError",
+    "message": "not a field of service-crash (it has: unit, service, exit_code)"
+   },
+   "why_invalid": "{svc} could never be filled in: service-crash has unit, service and exit_code.",
+   "correction": "Write {service}.",
+   "tags": [
+    "placeholders"
+   ]
+  },
+  {
+   "id": "hive-bad-002",
+   "intent": "An offer the whitelist would refuse",
+   "input": {
+    "natural_language": "Offer the recent logs of a crashed service",
+    "quantum_code": "<q:application id=\"bad\" type=\"hive\">\n  <qh:on event=\"service-crash\">\n    <qh:offer title=\"Show recent logs\" action=\"run-command\" cmd=\"journalctl\" args=\"-n 50 -u {service}\" />\n  </qh:on>\n</q:application>"
+   },
+   "expected_error": {
+    "type": "HiveCompileError",
+    "message": "which no <qh:allow command=> permits"
+   },
+   "why_invalid": "No <qh:allow command=> lets the actuator run journalctl: the admin would approve an offer that fails.",
+   "correction": "Add <qh:allow command=\"journalctl\" args=\"-n 50 -u *\" /> (a `*` where the {service} goes).",
+   "tags": [
+    "whitelist"
+   ]
+  },
+  {
+   "id": "hive-bad-003",
+   "intent": "A service a block names",
+   "input": {
+    "natural_language": "Offer to restart sshd",
+    "quantum_code": "<q:application id=\"bad\" type=\"hive\">\n  <qh:on event=\"service-crash\">\n    <qh:offer title=\"Restart sshd\" action=\"restart-service\" service=\"sshd\" />\n  </qh:on>\n  <qh:allow service=\"sshd\" />\n  <qh:block service=\"ssh*\" />\n</q:application>"
+   },
+   "expected_error": {
+    "type": "HiveCompileError",
+    "message": "which a <qh:block service=> blocks"
+   },
+   "why_invalid": "A block always wins over an allow; the actuator would refuse the restart.",
+   "correction": "Leave sshd to its administrator, or remove the block.",
+   "tags": [
+    "whitelist",
+    "blocks"
+   ]
+  },
+  {
+   "id": "hive-bad-004",
+   "intent": "A text field where a number goes",
+   "input": {
+    "natural_language": "End the process holding the port",
+    "quantum_code": "<q:application id=\"bad\" type=\"hive\">\n  <qh:on event=\"port-conflict\">\n    <qh:offer title=\"End it\" action=\"kill-port-process\" port=\"{holder}\" />\n  </qh:on>\n  <qh:allow action=\"kill-port-process\" />\n</q:application>"
+   },
+   "expected_error": {
+    "type": "HiveCompileError",
+    "message": "port= is a number; {holder} of port-conflict is text"
+   },
+   "why_invalid": "port= takes a number, and {holder} is a program's name.",
+   "correction": "Write port=\"{port}\".",
+   "tags": [
+    "placeholders",
+    "types"
+   ]
+  },
+  {
+   "id": "hive-bad-005",
+   "intent": "A permission the file does not give",
+   "input": {
+    "natural_language": "End the process holding the port",
+    "quantum_code": "<q:application id=\"bad\" type=\"hive\">\n  <qh:on event=\"port-conflict\">\n    <qh:offer title=\"End it\" action=\"kill-port-process\" port=\"{port}\" />\n  </qh:on>\n</q:application>"
+   },
+   "expected_error": {
+    "type": "HiveCompileError",
+    "message": "needs <qh:allow action=\"kill-port-process\"/>"
+   },
+   "why_invalid": "kill-port-process is a permission with no list behind it, off unless the file switches it on.",
+   "correction": "Add <qh:allow action=\"kill-port-process\" />.",
+   "tags": [
+    "whitelist",
+    "permissions"
+   ]
+  },
+  {
+   "id": "hive-bad-006",
+   "intent": "An event the Hive does not report",
+   "input": {
+    "natural_language": "Offer something at the full moon",
+    "quantum_code": "<q:application id=\"bad\" type=\"hive\">\n  <qh:on event=\"full-moon\">\n    <qh:offer title=\"Howl\" action=\"update-package-lists\" />\n  </qh:on>\n</q:application>"
+   },
+   "expected_error": {
+    "type": "HiveCompileError",
+    "message": "event=\"full-moon\" is not one of"
+   },
+   "why_invalid": "The events are the observations the nerves report; a rule on anything else would never fire.",
+   "correction": "Use one of the events listed in the message.",
+   "tags": [
+    "events"
+   ]
+  },
+  {
+   "id": "hive-bad-007",
+   "intent": "An action the actuator does not have",
+   "input": {
+    "natural_language": "Offer a reboot when the disk is full",
+    "quantum_code": "<q:application id=\"bad\" type=\"hive\">\n  <qh:on event=\"disk-low\">\n    <qh:offer title=\"Reboot\" action=\"reboot\" />\n  </qh:on>\n</q:application>"
+   },
+   "expected_error": {
+    "type": "HiveCompileError",
+    "message": "is not an action the actuator has"
+   },
+   "why_invalid": "Rebooting, shutting down and suspending are never offered: the actuator has no switch for them.",
+   "correction": "Offer something the actuator may do, such as run-command df -h.",
+   "tags": [
+    "actions"
+   ]
+  },
+  {
+   "id": "hive-bad-008",
+   "intent": "A parameter the action needs",
+   "input": {
+    "natural_language": "Offer a restart without saying of what",
+    "quantum_code": "<q:application id=\"bad\" type=\"hive\">\n  <qh:on event=\"service-crash\">\n    <qh:offer title=\"Restart\" action=\"restart-service\" />\n  </qh:on>\n</q:application>"
+   },
+   "expected_error": {
+    "type": "HiveCompileError",
+    "message": "needs service="
+   },
+   "why_invalid": "restart-service restarts a named service.",
+   "correction": "Add service=\"{service}\".",
+   "tags": [
+    "actions"
+   ]
+  },
+  {
+   "id": "hive-bad-009",
+   "intent": "A statement in a hive",
+   "input": {
+    "natural_language": "Count the crashes",
+    "quantum_code": "<q:application id=\"bad\" type=\"hive\">\n  <q:set name=\"crashes\" value=\"0\" type=\"number\" />\n</q:application>"
+   },
+   "expected_error": {
+    "type": "HiveCompileError",
+    "message": "not part of the hive language"
+   },
+   "why_invalid": "A hive is declarations: events, offers and permissions. There is nothing to compute in it.",
+   "correction": "Remove the q:set; what the Hive remembers is the daemons' own.",
+   "tags": [
+    "statements"
+   ]
+  },
+  {
+   "id": "hive-bad-010",
+   "intent": "Script where declarations go",
+   "input": {
+    "natural_language": "Clean up when the disk is full",
+    "quantum_code": "<q:application id=\"bad\" type=\"hive\">\n  <qh:on event=\"disk-low\">\n    if full then apt clean\n  </qh:on>\n</q:application>"
+   },
+   "expected_error": {
+    "type": "HiveCompileError",
+    "message": "declarations, not script"
+   },
+   "why_invalid": "Text inside a tag is script, and the language has no escape hatch.",
+   "correction": "Write the offer as a tag: <qh:offer title=\"Clean the package cache\" action=\"clean-package-cache\" />.",
+   "tags": [
+    "script"
+   ]
+  },
+  {
+   "id": "hive-bad-011",
+   "intent": "Two rules on one event",
+   "input": {
+    "natural_language": "Offer the disk usage, and elsewhere a cache clean, on a full disk",
+    "quantum_code": "<q:application id=\"bad\" type=\"hive\">\n  <qh:on event=\"disk-low\">\n    <qh:offer title=\"Clean the package cache\" action=\"clean-package-cache\" />\n  </qh:on>\n  <qh:on event=\"disk-low\">\n    <qh:offer title=\"Refresh the lists\" action=\"update-package-lists\" />\n  </qh:on>\n</q:application>"
+   },
+   "expected_error": {
+    "type": "HiveCompileError",
+    "message": "two <qh:on event=\"disk-low\">"
+   },
+   "why_invalid": "One rule per event keeps the order of its offers in one place.",
+   "correction": "Put both offers in one <qh:on event=\"disk-low\">.",
+   "tags": [
+    "rules"
+   ]
+  },
+  {
+   "id": "hive-bad-012",
+   "intent": "An allow of two things at once",
+   "input": {
+    "natural_language": "Allow nginx and the home directories",
+    "quantum_code": "<q:application id=\"bad\" type=\"hive\">\n  <qh:allow service=\"nginx\" path=\"/home/*\" />\n</q:application>"
+   },
+   "expected_error": {
+    "type": "HiveCompileError",
+    "message": "takes exactly one of"
+   },
+   "why_invalid": "Each <qh:allow> permits one kind of thing, so a reader sees at a glance what each line allows.",
+   "correction": "Write two <qh:allow>s.",
+   "tags": [
+    "whitelist"
+   ]
+  }
+ ]
+}

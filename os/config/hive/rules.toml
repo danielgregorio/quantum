@@ -1,0 +1,59 @@
+# Written by Quantum from hive.q: the Hive's rules. Do not edit; edit the .q and run it again (`quantum run hive.q`).
+
+[meta]
+version = 1
+
+[[rules]]
+event = "service-crash"
+
+[[rules.offers]]
+title = "Restart {service}"
+description = "{unit} stopped unexpectedly. Run `systemctl restart {service}`."
+action = "restart-service"
+service = "{service}"
+
+[[rules.offers]]
+title = "Show recent logs for {service}"
+description = "The last 50 journal lines from {service}, to see why it failed."
+action = "run-command"
+cmd = "journalctl"
+args = "-n 50 -u {service}"
+
+[[rules]]
+event = "log-anomaly"
+
+[[rules.offers]]
+title = "Show recent logs for {service}"
+description = "The last 50 journal lines from {service}, to see why it failed."
+action = "run-command"
+cmd = "journalctl"
+args = "-n 50 -u {service}"
+
+[[rules]]
+event = "disk-low"
+
+[[rules.offers]]
+title = "Show disk usage"
+description = "See how full {mount} and the other mounts are."
+action = "run-command"
+cmd = "df"
+args = "-h"
+
+[[rules]]
+event = "command-not-found"
+
+[[rules.offers]]
+title = "Install {package}"
+description = "`{command}` isn't installed; the {package} package provides it."
+action = "install-package"
+package = "{package}"
+
+[[rules]]
+event = "port-conflict"
+
+[[rules.offers]]
+title = "Show listening ports"
+description = "See which process is holding port {port}."
+action = "run-command"
+cmd = "ss"
+args = "-tlnp"

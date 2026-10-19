@@ -136,6 +136,10 @@ CI (`.github/workflows/os.yml` at the repository root) runs `fmt`/`clippy`/`test
 
 Cargo can't cross-compile this workspace from Windows; `bash scripts/test-on-forge.sh` runs `scripts/check.sh` on the Forge homelab host instead.
 
+### The Hive's rules (`config/hive/hive.q`)
+
+What the Hive offers on an event, and what the actuator may do, are declared in Quantum: `config/hive/hive.q` (`q:application type="hive"`, the `qh:` tags; `docs/targets/hive.md` at the repository's root is the reference). `python scripts/generate-hive-config.py` (from the repository's root) writes `config/hive/rules.toml`, which hive-synapse loads (`crates/hive-synapse/src/rules.rs`, which also embeds the committed file as its built-in rules), and `config/hive/whitelist.toml`, which hive-actuator loads. Both are committed as written and checked in CI (`tests/hive/`): edit `hive.q`, never them. A `{field}` is filled in from the event, never from the model's text; an offer the whitelist would refuse does not compile. A rule worth keeping has a tape in the Hive lab below.
+
 ### Hive Lab (the Hive in a box: seconds, no VM)
 
 Start here for anything the Hive decides: rules, suggestions, notifications, approvals, what a user may send, and how grove and the dashboard show it (the real programs run in a pseudo-terminal and their screens are read as text). `crates/hive-lab` runs the real `hive-cortex` and `hive-synapse` and plays the nerves, the actuator (which records actions and runs none), grove and the dashboard, under the binary names and users cortex checks, in a private mount namespace (root, as in a container). See `crates/hive-lab/README.md`.
