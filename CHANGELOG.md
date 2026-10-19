@@ -416,6 +416,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- Laboratory: a game that adds to a name nobody declared, in a handler or a
+  `q:function` (`<q:set name="score" value="{score + 1}" />` without a
+  `q:set` of `score` in the scene or the game), is refused at compile time:
+  its first `q:set` reads it before it has a value. It compiled to a
+  variable of the handler that started as nothing, and the game stopped
+  with a script error when the handler ran.
 - Laboratory: `ai="pathfind"` lines up with the middle of its cell before
   it steps into the next one, and does not overshoot where it aims. Cutting
   the corner into a gap's row, a monster was a little off its middle and
