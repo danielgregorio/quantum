@@ -1,5 +1,57 @@
 # DruidOS Development Log
 
+## 2026-10-19 - A tela da Hive: pixel art no console, declarada em Quantum (qs:)
+
+A interface gráfica do OS, decidida depois de pesar o Godot na VM (Mesa
+llvmpipe, um compositor, ~300 MB e um motor C++ como cliente que aprova
+ações) contra um runtime próprio: ficou o runtime próprio, sem overhead
+nenhum. O que o console mostra é um `q:application type="screen"`,
+`config/screen/screen.q`, com tags `qs:`:
+
+- `qs:sheet` e `qs:animation` são as folhas de quadros e seus ciclos;
+  `qs:particles` um efeito (os mesmos presets dos jogos); `qs:scene` o
+  que está na tela: `qs:sprite`, `qs:text`, `qs:emitter`, e dois widgets
+  embutidos, `qs:offers` (as ofertas da Hive, que o administrador aprova
+  com o teclado; uma ação perigosa pede Enter duas vezes) e `qs:notices`.
+- `qs:on event="..."` diz o que acontece na cena quando um evento chega:
+  `qs:animate`, `qs:frame`, `qs:show`, `qs:tween` (as mesmas curvas dos
+  jogos), `qs:emit`, `qs:say`. Os eventos são os das regras `qh:`, com os
+  mesmos `{campos}`, mais `notice`, `offer`, `done` e `failed`. O nome de
+  um sprite é como uma regra o alcança: `{service}` em `service-crash`
+  acha o sprite chamado `nginx`, e ele solta fumaça.
+- Nada de statements nem expressões. O compilador (`quantum/runtime/screen`)
+  recusa com a linha o que o arquivo não pode cumprir: folha que não
+  existe, quadro que ela não tem, campo que o evento não tem, alvo que
+  nenhum sprite se chama.
+- A fonte é nossa: 5×7 pixels em células de 6×10, ASCII e Latin-1 com os
+  acentos compostos das letras base, escrita como `font.png` ao lado da
+  cena. A arte (favos de uma colmeia, uma célula por serviço, uma abelha)
+  é de `scripts/art/hive_screen.py`, CC0.
+
+O daemon é `crates/hive-screen`: carrega `screen.toml` e as folhas (PNG),
+toca a cena a 60 ticks por segundo num canvas, e é cliente do socket de
+usuário do cortex como o dashboard (o cortex o aceita como um). Para a tela
+reagir ao que aconteceu e não às palavras, `Notification` passou a levar
+`kind` e `fields`: a tabela de eventos que vivia na synapse foi para
+`hive-common` (`events.rs`), e o cortex preenche os campos em cada aviso.
+A resposta do actuator vira `done` ou `failed`, com o nome da ação e o
+serviço ou pacote.
+
+Determinismo: seno, cosseno e 2^x são aritmética pura no daemon, e as
+partículas usam uma semente fixa, então um quadro é igual pixel a pixel em
+qualquer máquina. O teste do daemon (`tests/play.rs`) toca a tela do OS
+pelo play protocol (stdin, como o driver dos jogos) e compara quatro
+quadros com referências; o Hive lab roda o `hive-screen` de verdade sem
+tela (`{"op":"screen"}`) e lê o que ele mostra como dados: a fita
+`screen-crash.jsonl` segue o nginx caindo, a fumaça na célula, a oferta,
+o Enter, o actuator e o mel de volta na célula.
+
+Ficou para as próximas fatias: desenhar no console de verdade (DRM/KMS,
+teclado por evdev, unit do systemd com usuário `_hive-screen`), a VM do lab
+com `virtio-gpu` e `screendump`, e os níveis de apresentação pelo orçamento
+de quadro, para a cena ganhar resolução e efeitos com os núcleos que a VM
+der.
+
 ## 2026-10-19 - As regras da Hive declaradas em Quantum (qh:)
 
 O que une os dois projetos de verdade. O que a Hive oferece quando algo

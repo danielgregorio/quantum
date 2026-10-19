@@ -13,6 +13,7 @@
 
 use anyhow::{bail, Context as _, Result};
 use hive_common::actions::{is_valid_package_name, Action};
+use hive_common::events::{fields_of, fill, placeholders, valid_service_name, Event};
 use hive_common::messages::HiveMessage;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -61,138 +62,6 @@ struct OfferToml {
     /// placeholder, typed when the action is built).
     #[serde(flatten)]
     params: BTreeMap<String, String>,
-}
-
-// ---------------------------------------------------------------- events
-
-/// The observations a rule can be on, and the fields each one offers.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Event {
-    ServiceCrash,
-    LogAnomaly,
-    PortConflict,
-    DiskLow,
-    MemoryPressure,
-    CommandObserved,
-    CommandNotFound,
-}
-
-impl Event {
-    pub fn parse(name: &str) -> Option<Event> {
-        Some(match name {
-            "service-crash" => Event::ServiceCrash,
-            "log-anomaly" => Event::LogAnomaly,
-            "port-conflict" => Event::PortConflict,
-            "disk-low" => Event::DiskLow,
-            "memory-pressure" => Event::MemoryPressure,
-            "command-observed" => Event::CommandObserved,
-            "command-not-found" => Event::CommandNotFound,
-            _ => return None,
-        })
-    }
-
-    /// The fields an offer on this event may hold. `service` and `package`
-    /// are only given for a valid name, so an offer that needs one is left
-    /// out otherwise (see `fields_of`).
-    pub fn fields(self) -> &'static [&'static str] {
-        match self {
-            Event::ServiceCrash => &["unit", "service", "exit_code"],
-            Event::LogAnomaly => &["unit", "service"],
-            Event::PortConflict => &["port", "requester", "holder"],
-            Event::DiskLow => &["mount", "percent", "free_mb"],
-            Event::MemoryPressure => &["free_mb", "total_mb"],
-            Event::CommandObserved => &["cmd", "program"],
-            Event::CommandNotFound => &["command", "package"],
-        }
-    }
-}
-
-type Fields = BTreeMap<&'static str, String>;
-
-/// The event a message is, and its fields' values.
-fn fields_of(trigger: &HiveMessage) -> Option<(Event, Fields)> {
-    let mut f = Fields::new();
-    let event = match trigger {
-        HiveMessage::ServiceCrash {
-            service, exit_code, ..
-        } => {
-            f.insert("unit", service.clone());
-            if let Some(name) = service_name(service) {
-                f.insert("service", name.to_string());
-            }
-            f.insert("exit_code", exit_code.to_string());
-            Event::ServiceCrash
-        }
-        HiveMessage::LogAnomaly { service, .. } => {
-            f.insert("unit", service.clone());
-            if let Some(name) = service_name(service) {
-                f.insert("service", name.to_string());
-            }
-            Event::LogAnomaly
-        }
-        HiveMessage::PortConflict {
-            port,
-            requested_by,
-            held_by,
-        } => {
-            f.insert("port", port.to_string());
-            f.insert("requester", requested_by.name.clone());
-            f.insert("holder", held_by.name.clone());
-            Event::PortConflict
-        }
-        HiveMessage::DiskSpaceLow {
-            mount,
-            usage_percent,
-            available_bytes,
-            ..
-        } => {
-            f.insert("mount", mount.display().to_string());
-            f.insert("percent", (usage_percent.round() as i64).to_string());
-            f.insert("free_mb", (available_bytes / (1024 * 1024)).to_string());
-            Event::DiskLow
-        }
-        HiveMessage::MemoryPressure {
-            available_bytes,
-            total_bytes,
-            ..
-        } => {
-            f.insert("free_mb", (available_bytes / (1024 * 1024)).to_string());
-            f.insert("total_mb", (total_bytes / (1024 * 1024)).to_string());
-            Event::MemoryPressure
-        }
-        HiveMessage::CommandObserved { process, cmd, .. } => {
-            f.insert("cmd", cmd.clone());
-            f.insert("program", process.name.clone());
-            Event::CommandObserved
-        }
-        HiveMessage::CommandNotFound { command, package } => {
-            f.insert("command", command.clone());
-            if is_valid_package_name(package) {
-                f.insert("package", package.clone());
-            }
-            Event::CommandNotFound
-        }
-        _ => return None,
-    };
-    Some((event, f))
-}
-
-/// `nginx.service` -> `nginx`, the form hive-actuator's whitelist uses.
-///
-/// Only service units qualify (restarting `init.scope` or a `.socket` isn't
-/// a meaningful suggestion), and only names made of the characters systemd
-/// allows in unit names — nothing that could read as an option or a glob.
-pub fn service_name(unit: &str) -> Option<&str> {
-    let name = unit.strip_suffix(".service")?;
-    valid_service_name(name).then_some(name)
-}
-
-fn valid_service_name(name: &str) -> bool {
-    !name.is_empty()
-        && !name.starts_with('-')
-        && name
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '@' | '.' | '_' | ':' | '-'))
 }
 
 // ---------------------------------------------------------------- actions
@@ -463,39 +332,6 @@ impl Rules {
     }
 }
 
-/// The `{field}`s of a text.
-fn placeholders(text: &str) -> Vec<&str> {
-    let mut out = Vec::new();
-    let mut rest = text;
-    while let Some(start) = rest.find('{') {
-        let after = &rest[start + 1..];
-        match after.find('}') {
-            Some(end) => {
-                out.push(&after[..end]);
-                rest = &after[end + 1..];
-            }
-            None => break,
-        }
-    }
-    out
-}
-
-/// The text with every `{field}` replaced; None when the event does not
-/// provide one of them.
-fn fill(text: &str, fields: &Fields) -> Option<String> {
-    let mut out = String::with_capacity(text.len());
-    let mut rest = text;
-    while let Some(start) = rest.find('{') {
-        out.push_str(&rest[..start]);
-        let after = &rest[start + 1..];
-        let end = after.find('}')?;
-        out.push_str(fields.get(&after[..end])?);
-        rest = &after[end + 1..];
-    }
-    out.push_str(rest);
-    Some(out)
-}
-
 static RULES: OnceLock<Rules> = OnceLock::new();
 
 /// Makes `rules` the daemon's; the built-in rules serve until then.
@@ -515,26 +351,6 @@ mod tests {
     fn the_committed_rules_are_this_builds_rules() {
         let rules = Rules::builtin();
         assert!(!rules.rules.is_empty());
-    }
-
-    #[test]
-    fn placeholders_are_found_and_filled() {
-        assert_eq!(
-            placeholders("Restart {service} on {port}"),
-            vec!["service", "port"]
-        );
-        let mut fields = Fields::new();
-        fields.insert("service", "nginx".into());
-        assert_eq!(
-            fill("Restart {service}", &fields).as_deref(),
-            Some("Restart nginx")
-        );
-        assert_eq!(
-            fill("Port {port}", &fields),
-            None,
-            "a field the event lacks"
-        );
-        assert_eq!(fill("no fields", &fields).as_deref(), Some("no fields"));
     }
 
     #[test]

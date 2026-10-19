@@ -60,7 +60,7 @@ impl ComponentType {
         match name {
             "hive-synapse" => ComponentType::Synapse,
             "hive-actuator" => ComponentType::Actuator,
-            "hive-dashboard" => ComponentType::Dashboard,
+            "hive-dashboard" | "hive-screen" => ComponentType::Dashboard,
             "hive-nerve-process" => ComponentType::NerveProcess,
             "hive-nerve-journal" => ComponentType::NerveJournal,
             "hive-nerve-network" => ComponentType::NerveNetwork,
@@ -369,8 +369,8 @@ async fn handle_connection(
             ComponentType::Dashboard if is_administrator(creds.uid) => ComponentType::Dashboard,
             ComponentType::Dashboard => {
                 warn!(
-                    "Refusing hive-dashboard for uid {}: acting on the Hive's suggestions takes \
-                     root or membership in {}",
+                    "Refusing a dashboard (hive-dashboard, hive-screen) for uid {}: acting on the \
+                     Hive's suggestions takes root or membership in {}",
                     creds.uid,
                     ADMIN_GROUPS.join(", ")
                 );
@@ -696,6 +696,8 @@ mod tests {
                 severity: Severity::Info,
                 actions: vec![],
                 timeout_secs: 0,
+                kind: None,
+                fields: Default::default(),
             },
             HiveMessage::UserDismiss {
                 notification_id: uuid::Uuid::new_v4(),

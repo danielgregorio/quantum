@@ -1,0 +1,42 @@
+intention:
+  name: "The Hive's screen: edge cases"
+  version: "1.0.0"
+  category: "screen"
+
+  description: |
+    What the screen compiler refuses, what the daemon does with what it
+    cannot check, and the cases where the obvious reading is not what
+    happens.
+
+  edge_cases:
+    - case: "A target no sprite is named"
+      scenario: "qs:frame target=\"apache\" when the scene has no sprite named apache"
+      behaviour: "Refused at compile time, listing the named sprites. A target that is a {field} is resolved when the event comes: no sprite of that name, nothing happens, quietly."
+
+    - case: "A field in the scene"
+      scenario: "qs:text value=\"{title}\" inside qs:scene"
+      behaviour: "Refused: the scene is fixed; a {field} is filled in from an event, so it goes in a qs:on (qs:say shows what an event says)."
+
+    - case: "A unit that is not a service"
+      scenario: "docker.socket crashes; the rule animates {service}"
+      behaviour: "Not a compile matter: the event has no service field, so hive-screen leaves that action out; a qs:say on {unit} still shows."
+
+    - case: "An animation the target's sheet lacks"
+      scenario: "qs:animate target=\"nginx\" name=\"run\" when the cell sheet has smoke and worry"
+      behaviour: "Refused for a literal target; for a {field} target, refused only when no sheet at all has the animation, and left out at run time for a sprite whose sheet lacks it."
+
+    - case: "A dangerous offer"
+      scenario: "The Hive offers to remove a package; the administrator presses Enter"
+      behaviour: "The row asks for Enter again; moving the focus away disarms it. Only the second Enter sends the approval, as on the dashboard."
+
+    - case: "Two rows of one offer"
+      scenario: "A notification carried two suggestions; Escape on one"
+      behaviour: "Dismissing one dismisses the notification, so both rows go, as on the dashboard."
+
+    - case: "A screen.toml edited by hand"
+      scenario: "Someone edits os/config/screen/screen.toml"
+      behaviour: "tests/screen/test_screen_config_is_generated.py fails; hive-screen refuses a file that is not what the compiler writes, whole."
+
+    - case: "A frame that differs by a pixel"
+      scenario: "A curve or a particle rounds differently on another machine"
+      behaviour: "It does not: sin, cos and 2^x are plain arithmetic in the daemon and the particles' random numbers come from a fixed seed, so the reference frames compare exactly."

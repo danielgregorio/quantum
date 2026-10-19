@@ -169,6 +169,7 @@ export default defineConfig({
             { text: 'Desktop (quantum desktop)', link: '/targets/desktop' },
             { text: 'Games (Laboratory)', link: '/targets/games' },
             { text: "The Hive's rules (Laboratory)", link: '/targets/hive' },
+            { text: "The Hive's screen (Laboratory)", link: '/targets/screen' },
             { text: 'Play the games', link: '/targets/play' }
           ]
         }

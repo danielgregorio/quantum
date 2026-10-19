@@ -273,6 +273,8 @@ async fn report_event(cortex: &mut IpcSocket, event: FsEvent) -> Result<()> {
         severity,
         actions: vec![],
         timeout_secs: 10,
+        kind: None,
+        fields: Default::default(),
     };
 
     cortex.send(&msg).await?;
@@ -320,6 +322,8 @@ async fn check_disk_space(cortex: &mut IpcSocket, config: &NerveFsConfig) -> Res
                         severity,
                         actions: vec![],
                         timeout_secs: 30,
+                        kind: None,
+                        fields: Default::default(),
                     };
 
                     cortex.send(&msg).await?;

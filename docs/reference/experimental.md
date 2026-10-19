@@ -92,6 +92,6 @@ The editor schema does not describe these yet: `q:class`, `q:decorator`, `q:job`
 
 ## Application types
 
-`q:application type=` — Laboratory: `game`, `hive`; Experimental: `terminal`, `ui` (APP-1). A web application is pages in `components/`.
+`q:application type=` — Laboratory: `game`, `hive`, `screen`; Experimental: `terminal`, `ui` (APP-1). A web application is pages in `components/`.
 
 :::

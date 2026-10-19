@@ -1,0 +1,15 @@
+// the Hive's screen (the real hive-screen, no display, read as data): nginx crashes and its cell smokes,
+// the offer appears, Enter approves it, the actuator is asked, the answer fills the cell with honey
+{"op":"start"}
+{"op":"screen"}
+{"op":"crash","service":"nginx.service","exit_code":1,"restarts":5}
+{"op":"screen","play":{"op":"until","sprite":"nginx","frame":3,"max_ticks":300}}
+{"op":"screen","play":{"op":"until","notice":"nginx stopped (exit 1)","max_ticks":60}}
+{"op":"screen","play":{"op":"until","offer":"Restart nginx","max_ticks":600}}
+{"op":"none","to":"actuator","within":0.5}
+{"op":"screen","play":{"op":"act","tap":["enter"],"ticks":1}}
+{"op":"until","to":"actuator","type":"ActionRequest","contains":"\"RestartService\":{\"name\":\"nginx\"}"}
+{"op":"screen","play":{"op":"until","event":"done","max_ticks":600}}
+{"op":"screen","play":{"op":"until","sprite":"nginx","frame":0,"max_ticks":60}}
+{"op":"screen","play":{"op":"until","notice":"restart-service: done","max_ticks":60}}
+{"op":"end"}

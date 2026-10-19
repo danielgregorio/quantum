@@ -285,6 +285,8 @@ Não integrado ainda:
 
 ## Próxima Sessão
 
+> **Nota (tela da Hive, 2026-10):** o console ganhou uma tela, `hive-screen`, declarada em Quantum (`config/screen/screen.q`) e desenhada em CPU, sem motor, sem compositor e sem GPU. Não é a trilha gráfica arquivada voltando: é um daemon pequeno, como os outros. Veja o DEVLOG.
+>
 > **Nota (pivot de alvo):** o projeto foi redefinido para TUI-only — sem GUI.
 > bark/spore/hive-shell/hive-dock/hive-term foram movidos para `archive/`.
 > Ver `DEVLOG.md` (entrada mais recente) e `CLAUDE.md`. A antiga "Opção B:

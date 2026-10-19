@@ -32,6 +32,7 @@
 pub mod actions;
 pub mod anonymous;
 pub mod config;
+pub mod events;
 pub mod ipc;
 pub mod logging;
 pub mod messages;

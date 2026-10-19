@@ -57,7 +57,8 @@ impl MessageRouter {
                 // Forward to synapse for analysis
                 self.forward_to_synapse(msg.clone(), from_conn).await?;
                 // Notify the dashboard immediately
-                self.notify_dashboard(
+                self.notify_about(
+                    &msg,
                     "Port Conflict Detected",
                     &with_held(
                         format!(
@@ -79,7 +80,8 @@ impl MessageRouter {
                 };
                 self.forward_to_synapse(msg.clone(), from_conn).await?;
                 if severity.requires_notification() {
-                    self.notify_dashboard(
+                    self.notify_about(
+                        &msg,
                         "Log Anomaly Detected",
                         &with_held(format!("Issues detected in {}", service), held),
                         *severity,
@@ -95,7 +97,8 @@ impl MessageRouter {
                     return Ok(());
                 };
                 self.forward_to_synapse(msg.clone(), from_conn).await?;
-                self.notify_dashboard(
+                self.notify_about(
+                    &msg,
                     "Service Crashed",
                     &with_held(format!("{} exited with code {}", service, exit_code), held),
                     Severity::Error,
@@ -112,7 +115,8 @@ impl MessageRouter {
                     return Ok(());
                 };
                 self.forward_to_synapse(msg.clone(), from_conn).await?;
-                self.notify_dashboard(
+                self.notify_about(
+                    &msg,
                     "Low Disk Space",
                     &with_held(
                         format!("{} is {:.1}% full", mount.display(), usage_percent),
@@ -128,7 +132,8 @@ impl MessageRouter {
                     return Ok(());
                 }
                 self.forward_to_synapse(msg.clone(), from_conn).await?;
-                self.notify_dashboard(
+                self.notify_about(
+                    &msg,
                     "Memory Pressure",
                     "System is running low on memory",
                     Severity::Warning,
@@ -555,7 +560,21 @@ impl MessageRouter {
     }
 
     async fn notify_dashboard(&self, title: &str, body: &str, severity: Severity) -> Result<()> {
-        self.notify_dashboard_for_pid(title, body, severity, None)
+        self.notify_dashboard_for_pid(title, body, severity, None, None)
+            .await
+    }
+
+    /// A notice about an observation: it carries the event's name and
+    /// fields (hive_common::events), so a client can act on what happened
+    /// rather than on the words.
+    async fn notify_about(
+        &self,
+        about: &HiveMessage,
+        title: &str,
+        body: &str,
+        severity: Severity,
+    ) -> Result<()> {
+        self.notify_dashboard_for_pid(title, body, severity, None, Some(about))
             .await
     }
 
@@ -565,8 +584,13 @@ impl MessageRouter {
         body: &str,
         severity: Severity,
         pid: Option<u32>,
+        about: Option<&HiveMessage>,
     ) -> Result<()> {
         let state = self.state.read().await;
+        let (kind, fields) = about
+            .and_then(hive_common::events::fields_of)
+            .map(|(event, fields)| (Some(event.name().to_string()), fields))
+            .unwrap_or_default();
 
         // Check if notifications should be suppressed for this PID
         if state.anonymous.should_suppress_notifications(pid) {
@@ -581,6 +605,8 @@ impl MessageRouter {
             severity,
             actions: vec![],
             timeout_secs: 10,
+            kind,
+            fields,
         };
         // Every administrator's dashboard, not the first one found: with two
         // open, which one that was depended on a HashMap's order.
@@ -611,6 +637,7 @@ impl MessageRouter {
         }
 
         let notification_id = Uuid::new_v4();
+        let count = suggestions.len();
         {
             let mut state = self.state.write().await;
             state
@@ -630,6 +657,8 @@ impl MessageRouter {
             severity: Severity::Info,
             actions: suggestions,
             timeout_secs: 0,
+            kind: Some("offer".to_string()),
+            fields: [("count".to_string(), count.to_string())].into(),
         };
         // Offered to every administrator's dashboard; the first to approve
         // takes it (act_on_suggestion removes it), so it never runs twice.
@@ -1140,6 +1169,8 @@ mod tests {
             severity: Severity::Notice,
             actions,
             timeout_secs: 10,
+            kind: None,
+            fields: Default::default(),
         }
     }
 

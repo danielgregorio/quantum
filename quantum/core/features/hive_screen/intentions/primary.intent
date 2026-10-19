@@ -1,0 +1,47 @@
+intention:
+  name: "The Hive's screen in tags with qs: (Quantum OS)"
+  version: "1.0.0"
+  category: "screen"
+  goal: |
+    Let a person declare, in one file, what the Hive of Quantum OS shows on
+    the machine's screen and what happens in it when something happens on
+    the system, and get the scene a small daemon draws on the console with
+    no engine and no GPU, every promise in the file checked before it runs.
+
+  principles:
+    - "One schema (quantum/runtime/screen/schema.py) is the language: a tag, an attribute, an event or an action it does not list is a compile error naming the line"
+    - "Declarations only: there are no statements and no expressions; text where a tag goes is refused ('a screen file is declarations, not script')"
+    - "A {field} is a field of the event the rule is on, filled in by hive-screen from the event itself; in the scene it is refused, because the scene is fixed"
+    - "A sprite's name is how a rule reaches it: a target that is a {field} finds the sprite of that name, or nothing happens"
+    - "The scene's vocabulary is the games': qs:sheet, qs:animation, qs:sprite, qs:tween with the same trans and ease, qs:particles with the same presets, qs:emit, qs:emitter"
+    - "Approving is never declared: qs:offers is built in, with the dashboard's semantics, and hive-cortex decides who may"
+    - "A frame is the same on every machine: what a test compares is pixels in the daemon's own test, and data (what the screen shows) everywhere else"
+
+  capabilities:
+    - "Declare the sheets (qs:sheet, qs:animation) and the effects (qs:particles) a screen uses"
+    - "Lay out the scene (qs:scene): qs:sprite, qs:text, qs:emitter, the built-in qs:offers and qs:notices"
+    - "Per event (qs:on): qs:animate, qs:frame, qs:show, qs:tween, qs:emit, qs:say, with {field}s of the event"
+    - "React to every observation the rules know: service-crash, log-anomaly, port-conflict, disk-low, memory-pressure, command-observed, command-not-found"
+    - "React to the screen's own events: notice, offer, done, failed"
+
+  triggers:
+    - '<q:application type="screen">'
+    - "qs:scene"
+    - "qs:sprite"
+    - "qs:on"
+    - "the Hive's screen, what the Hive shows, the console, pixel art for Quantum OS"
+
+  structure: |
+    <q:application id="screen" type="screen">
+      qs:sheet name= src= tile=          a PNG of frames
+        qs:animation name= frames= fps= loop=
+      qs:particles name= preset= ...     an effect
+      qs:scene width= height= background=
+        qs:sprite name= sheet= frame= x= y= animation= hidden=
+        qs:text value= x= y= color= align=
+        qs:emitter particles= x= y= width=
+        qs:offers x= y= width= rows=     the Hive's offers, built in
+        qs:notices x= y= width= rows=    the last notices, built in
+      qs:on event="..."                  one rule per event
+        qs:animate / qs:frame / qs:show / qs:tween / qs:emit / qs:say
+    </q:application>

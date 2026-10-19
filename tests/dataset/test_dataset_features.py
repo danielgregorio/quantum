@@ -91,6 +91,9 @@ def test_dataset_example(feature, polarity, example, json_path, tmp_path):
     if feature == "hive_rules":
         _test_hive(polarity, example, tmp_path)       # the Hive's rules, compiled to what the daemons load
         return
+    if feature == "hive_screen":
+        _test_screen(polarity, example, tmp_path)     # the Hive's screen, compiled to what hive-screen draws
+        return
 
     parser = QuantumParser()
 
@@ -157,6 +160,49 @@ def _test_hive(polarity: str, example: dict, tmp_path: Path):
     else:
         expected = example["expected_error"]
         source.write_text(example["input"]["quantum_code"], encoding="utf-8")
+        with pytest.raises(Exception) as info:
+            build()
+        assert type(info.value).__name__ == expected["type"]
+        assert expected["message"] in str(info.value)
+
+
+def _test_screen(polarity: str, example: dict, tmp_path: Path):
+    """A positive example compiles to screen.toml, the font and its sheets (the OS's own art, or a blank
+    sheet of the right size for a name the art does not have); a negative one is refused with the
+    message it gives."""
+    import re
+
+    from quantum.core.parser import QuantumParser
+    from quantum.runtime.screen import compile_screen, png
+
+    source = tmp_path / f"{example['id']}.q"
+    art = Path(__file__).resolve().parents[2] / "os" / "config" / "screen" / "art"
+
+    def sheets(code: str):
+        for src in set(re.findall(r'src="([^"]+)"', code)):
+            target = tmp_path / src
+            target.parent.mkdir(parents=True, exist_ok=True)
+            real = art / Path(src).name
+            if real.is_file():
+                target.write_bytes(real.read_bytes())
+            else:
+                png.write(target, 96, 24, [b"\x00" * (96 * 4)] * 24)
+
+    def build():
+        app = QuantumParser(use_cache=False).parse_file(str(source))
+        return compile_screen(app, str(tmp_path / "screen"))
+
+    if polarity == "positive":
+        code = example["expected_output"]["quantum_code"]
+        sheets(code)
+        source.write_text(code, encoding="utf-8")
+        written = build()
+        assert Path(written["screen.toml"]).is_file() and Path(written["font.png"]).is_file()
+    else:
+        expected = example["expected_error"]
+        code = example["input"]["quantum_code"]
+        sheets(code)
+        source.write_text(code, encoding="utf-8")
         with pytest.raises(Exception) as info:
             build()
         assert type(info.value).__name__ == expected["type"]

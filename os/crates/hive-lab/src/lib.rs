@@ -117,11 +117,19 @@ struct Ids {
     user_gid: u32,
 }
 
+/// hive-screen, driven through its play protocol on stdin and stdout.
+pub struct ScreenDriver {
+    child: Child,
+    stdin: ChildStdin,
+    lines: tokio::io::Lines<BufReader<tokio::process::ChildStdout>>,
+}
+
 pub struct Lab {
     dir: PathBuf,
     bin_dir: PathBuf,
     ids: Ids,
     tuis: HashMap<String, tui::Tui>,
+    screen: Option<ScreenDriver>,
     cortex: Child,
     synapse: Option<Child>,
     stdins: HashMap<Role, ChildStdin>,
@@ -192,6 +200,7 @@ impl Lab {
             bin_dir: opts.bin_dir.clone(),
             ids,
             tuis: HashMap::new(),
+            screen: None,
             cortex,
             synapse: None,
             stdins: HashMap::new(),
@@ -417,6 +426,73 @@ impl Lab {
         self.wait_registered(registered, before + 1).await
     }
 
+    /// Starts the real hive-screen (as root: an administrator) with no
+    /// display, driven through its play protocol, on the scene Quantum
+    /// compiled (config/screen/screen.toml), and waits until cortex has it.
+    pub async fn start_screen(&mut self, scene: &Path) -> Result<()> {
+        if self.screen.is_some() {
+            bail!("the screen is already running");
+        }
+        let path = self.bin_dir.join("hive-screen");
+        if !path.is_file() {
+            bail!("no hive-screen in {}", self.bin_dir.display());
+        }
+        if !scene.is_file() {
+            bail!(
+                "no scene at {} (python scripts/generate-screen-config.py)",
+                scene.display()
+            );
+        }
+        let before = self.registered("Dashboard");
+        let mut cmd = Command::new(&path);
+        cmd.arg("--scene")
+            .arg(scene)
+            .arg("--play")
+            .env("HIVE_USER_SOCKET", self.dir.join("run/user.sock"))
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .kill_on_drop(true);
+        let passwd = CString::new(self.dir.join("passwd").as_os_str().as_encoded_bytes())?;
+        let group = CString::new(self.dir.join("group").as_os_str().as_encoded_bytes())?;
+        // SAFETY: runs in the child between fork and exec; only syscalls.
+        unsafe {
+            cmd.pre_exec(move || enter_namespace(&passwd, &group));
+        }
+        let mut child = cmd.spawn().context("cannot start hive-screen")?;
+        let stdin = child.stdin.take().context("hive-screen stdin")?;
+        let stdout = child.stdout.take().context("hive-screen stdout")?;
+        self.screen = Some(ScreenDriver {
+            child,
+            stdin,
+            lines: BufReader::new(stdout).lines(),
+        });
+        self.wait_registered("Dashboard", before + 1).await
+    }
+
+    /// A request of the screen's play protocol (observe, act, until,
+    /// frame, inject), and its answer.
+    pub async fn screen_request(&mut self, req: &Value) -> Result<Value> {
+        let screen = self
+            .screen
+            .as_mut()
+            .context("the screen is not running: start it with {\"op\": \"screen\"}")?;
+        screen.stdin.write_all(req.to_string().as_bytes()).await?;
+        screen.stdin.write_all(b"\n").await?;
+        screen.stdin.flush().await?;
+        let answer = tokio::time::timeout(Duration::from_secs(60), async {
+            while let Some(line) = screen.lines.next_line().await? {
+                if let Some(rest) = line.strip_prefix("QPP ") {
+                    return serde_json::from_str::<Value>(rest).context("hive-screen's answer");
+                }
+            }
+            bail!("hive-screen ended")
+        })
+        .await
+        .context("hive-screen did not answer within 60 s")??;
+        Ok(answer)
+    }
+
     fn tui(&mut self, app: &str) -> Result<&mut tui::Tui> {
         self.tuis
             .get_mut(app)
@@ -459,6 +535,9 @@ impl Lab {
     pub async fn end(mut self) {
         for (_, tui) in self.tuis.drain() {
             tui.stop().await;
+        }
+        if let Some(mut screen) = self.screen.take() {
+            let _ = screen.child.kill().await;
         }
         self.stdins.clear(); // the agents see their stdin close and leave
         for mut child in self.agents.drain(..) {

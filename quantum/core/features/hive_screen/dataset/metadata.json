@@ -1,0 +1,19 @@
+{
+  "feature": "hive_screen",
+  "version": "1.0.0",
+  "description": "The Hive's screen in qs: tags: each positive example compiles to screen.toml, the font and the sheets; each negative one is refused with the message given",
+  "maintainers": [
+    "Daniel",
+    "Claude"
+  ],
+  "statistics": {
+    "total_examples": 15,
+    "positive_examples": 3,
+    "negative_examples": 12,
+    "categories": {
+      "scene": 3,
+      "compile_errors": 12
+    }
+  },
+  "checked_by": "tests/dataset/test_dataset_features.py (compiles each example) and tests/dataset/test_hive_screen_feature.py (every tag, event and action has an intention and an example)"
+}

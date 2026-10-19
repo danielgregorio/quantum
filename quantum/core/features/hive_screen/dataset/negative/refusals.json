@@ -1,0 +1,213 @@
+{
+  "dataset_type": "negative",
+  "feature": "hive_screen",
+  "category": "compile_errors",
+  "description": "Screens the compiler refuses, each with the message it gives",
+  "examples": [
+    {
+      "id": "hive-screen-bad-001",
+      "intent": "A field the event does not have",
+      "input": {
+        "natural_language": "Say which service crashed",
+        "quantum_code": "<q:application id=\"bad\" type=\"screen\">\n  <qs:scene width=\"128\" height=\"96\" />\n  <qs:on event=\"service-crash\">\n    <qs:say text=\"{svc} stopped\" />\n  </qs:on>\n</q:application>"
+      },
+      "expected_error": {
+        "type": "ScreenCompileError",
+        "message": "not a field of service-crash"
+      },
+      "why_invalid": "{svc} could never be filled in: service-crash has unit, service, exit_code, title, body and severity.",
+      "correction": "Write {service}.",
+      "tags": [
+        "placeholders"
+      ]
+    },
+    {
+      "id": "hive-screen-bad-002",
+      "intent": "A field in the scene",
+      "input": {
+        "natural_language": "Show the last notice's title as a fixed text",
+        "quantum_code": "<q:application id=\"bad\" type=\"screen\">\n  <qs:scene width=\"128\" height=\"96\">\n    <qs:text value=\"{title}\" x=\"0\" y=\"0\" />\n  </qs:scene>\n</q:application>"
+      },
+      "expected_error": {
+        "type": "ScreenCompileError",
+        "message": "goes in a <qs:on>, not in the scene"
+      },
+      "why_invalid": "The scene is fixed; a {field} is filled in from an event.",
+      "correction": "Use <qs:say text=\"{title}\"/> in a <qs:on>, or the <qs:notices>.",
+      "tags": [
+        "placeholders",
+        "scene"
+      ]
+    },
+    {
+      "id": "hive-screen-bad-003",
+      "intent": "A target no sprite is named",
+      "input": {
+        "natural_language": "Reset apache's cell when an action is done",
+        "quantum_code": "<q:application id=\"bad\" type=\"screen\">\n  <qs:sheet name=\"cell\" src=\"art/cells.png\" tile=\"24\" />\n  <qs:scene width=\"128\" height=\"96\">\n    <qs:sprite name=\"nginx\" sheet=\"cell\" x=\"0\" y=\"0\" />\n  </qs:scene>\n  <qs:on event=\"done\">\n    <qs:frame target=\"apache\" frame=\"0\" />\n  </qs:on>\n</q:application>"
+      },
+      "expected_error": {
+        "type": "ScreenCompileError",
+        "message": "no <qs:sprite name=\"apache\"> in the scene"
+      },
+      "why_invalid": "A literal target must be a sprite of the scene.",
+      "correction": "Name a sprite apache, or write target=\"{service}\".",
+      "tags": [
+        "targets"
+      ]
+    },
+    {
+      "id": "hive-screen-bad-004",
+      "intent": "A sprite of a sheet that is not there",
+      "input": {
+        "natural_language": "A sprite of a sheet the file never declares",
+        "quantum_code": "<q:application id=\"bad\" type=\"screen\">\n  <qs:scene width=\"128\" height=\"96\">\n    <qs:sprite sheet=\"ghost\" x=\"0\" y=\"0\" />\n  </qs:scene>\n</q:application>"
+      },
+      "expected_error": {
+        "type": "ScreenCompileError",
+        "message": "no <qs:sheet> of that name"
+      },
+      "why_invalid": "Every sprite is a frame of a declared sheet.",
+      "correction": "Declare <qs:sheet name=\"ghost\" .../>.",
+      "tags": [
+        "sheets"
+      ]
+    },
+    {
+      "id": "hive-screen-bad-005",
+      "intent": "A frame the sheet does not have",
+      "input": {
+        "natural_language": "Show frame 9 of an 8-frame sheet",
+        "quantum_code": "<q:application id=\"bad\" type=\"screen\">\n  <qs:sheet name=\"cell\" src=\"art/cells.png\" tile=\"24\" />\n  <qs:scene width=\"128\" height=\"96\">\n    <qs:sprite sheet=\"cell\" frame=\"9\" x=\"0\" y=\"0\" />\n  </qs:scene>\n</q:application>"
+      },
+      "expected_error": {
+        "type": "ScreenCompileError",
+        "message": "sheet cell has 8 frames"
+      },
+      "why_invalid": "The compiler counts the sheet's frames from the PNG.",
+      "correction": "Use a frame from 0 to 7.",
+      "tags": [
+        "sheets"
+      ]
+    },
+    {
+      "id": "hive-screen-bad-006",
+      "intent": "An animation the sheet lacks",
+      "input": {
+        "natural_language": "Play 'run' on the cell",
+        "quantum_code": "<q:application id=\"bad\" type=\"screen\">\n  <qs:sheet name=\"cell\" src=\"art/cells.png\" tile=\"24\">\n    <qs:animation name=\"smoke\" frames=\"2,3\" />\n  </qs:sheet>\n  <qs:scene width=\"128\" height=\"96\">\n    <qs:sprite name=\"nginx\" sheet=\"cell\" x=\"0\" y=\"0\" />\n  </qs:scene>\n  <qs:on event=\"done\">\n    <qs:animate target=\"nginx\" name=\"run\" />\n  </qs:on>\n</q:application>"
+      },
+      "expected_error": {
+        "type": "ScreenCompileError",
+        "message": "has no animation of that name"
+      },
+      "why_invalid": "An animation belongs to a sheet; the target's sheet has only smoke.",
+      "correction": "Declare <qs:animation name=\"run\"> in the sheet.",
+      "tags": [
+        "animations"
+      ]
+    },
+    {
+      "id": "hive-screen-bad-007",
+      "intent": "Particles that are not declared",
+      "input": {
+        "natural_language": "Rain over the scene with no qs:particles",
+        "quantum_code": "<q:application id=\"bad\" type=\"screen\">\n  <qs:scene width=\"128\" height=\"96\">\n    <qs:emitter particles=\"rain\" x=\"0\" y=\"0\" width=\"128\" />\n  </qs:scene>\n</q:application>"
+      },
+      "expected_error": {
+        "type": "ScreenCompileError",
+        "message": "no <qs:particles> of that name"
+      },
+      "why_invalid": "An effect is declared once, then used.",
+      "correction": "Add <qs:particles name=\"rain\" preset=\"rain\"/>.",
+      "tags": [
+        "particles"
+      ]
+    },
+    {
+      "id": "hive-screen-bad-008",
+      "intent": "A statement",
+      "input": {
+        "natural_language": "Count the crashes",
+        "quantum_code": "<q:application id=\"bad\" type=\"screen\">\n  <qs:scene width=\"128\" height=\"96\" />\n  <q:set name=\"crashes\" value=\"0\" />\n</q:application>"
+      },
+      "expected_error": {
+        "type": "ScreenCompileError",
+        "message": "not part of the screen language"
+      },
+      "why_invalid": "A screen file is declarations: nothing to compute.",
+      "correction": "Leave the counting to the Hive; the screen shows.",
+      "tags": [
+        "statements"
+      ]
+    },
+    {
+      "id": "hive-screen-bad-009",
+      "intent": "Text where a tag goes",
+      "input": {
+        "natural_language": "A script inside a rule",
+        "quantum_code": "<q:application id=\"bad\" type=\"screen\">\n  <qs:scene width=\"128\" height=\"96\" />\n  <qs:on event=\"done\">print(\"done\")<qs:say text=\"done\" /></qs:on>\n</q:application>"
+      },
+      "expected_error": {
+        "type": "ScreenCompileError",
+        "message": "declarations, not script"
+      },
+      "why_invalid": "Text inside a tag is refused.",
+      "correction": "Use the tags.",
+      "tags": [
+        "statements"
+      ]
+    },
+    {
+      "id": "hive-screen-bad-010",
+      "intent": "Two rules on one event",
+      "input": {
+        "natural_language": "Two rules for a crash",
+        "quantum_code": "<q:application id=\"bad\" type=\"screen\">\n  <qs:scene width=\"128\" height=\"96\" />\n  <qs:on event=\"service-crash\"><qs:say text=\"a\" /></qs:on>\n  <qs:on event=\"service-crash\"><qs:say text=\"b\" /></qs:on>\n</q:application>"
+      },
+      "expected_error": {
+        "type": "ScreenCompileError",
+        "message": "two <qs:on event=\"service-crash\">"
+      },
+      "why_invalid": "The order of an event's actions lives in one place.",
+      "correction": "Put both actions in one <qs:on>.",
+      "tags": [
+        "rules"
+      ]
+    },
+    {
+      "id": "hive-screen-bad-011",
+      "intent": "A screen with no scene",
+      "input": {
+        "natural_language": "Only rules, nothing to draw on",
+        "quantum_code": "<q:application id=\"bad\" type=\"screen\">\n  <qs:on event=\"done\"><qs:say text=\"done\" /></qs:on>\n</q:application>"
+      },
+      "expected_error": {
+        "type": "ScreenCompileError",
+        "message": "a screen needs a <qs:scene>"
+      },
+      "why_invalid": "The scene is what the daemon draws; a screen without one is nothing.",
+      "correction": "Add <qs:scene/>.",
+      "tags": [
+        "scene"
+      ]
+    },
+    {
+      "id": "hive-screen-bad-012",
+      "intent": "An event that is not one",
+      "input": {
+        "natural_language": "React to a reboot",
+        "quantum_code": "<q:application id=\"bad\" type=\"screen\">\n  <qs:scene width=\"128\" height=\"96\" />\n  <qs:on event=\"reboot\"><qs:say text=\"bye\" /></qs:on>\n</q:application>"
+      },
+      "expected_error": {
+        "type": "ScreenCompileError",
+        "message": "event=\"reboot\" is not one of"
+      },
+      "why_invalid": "The events are the Hive's: the schema lists them.",
+      "correction": "Use one of the listed events.",
+      "tags": [
+        "rules"
+      ]
+    }
+  ]
+}

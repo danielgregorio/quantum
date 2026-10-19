@@ -176,6 +176,8 @@ class QuantumRunner:
             return self._build_game(app, debug)
         elif app.app_type == 'hive':
             return self._build_hive(app, debug)
+        elif app.app_type == 'screen':
+            return self._build_screen(app, debug)
         elif app.app_type == 'terminal':
             return self._build_terminal(app, debug)
         elif app.app_type == 'ui':
@@ -229,6 +231,19 @@ class QuantumRunner:
                 print(f"[SUCCESS] {name} written: {path}")
             return 0
         except HiveCompileError as e:
+            print(f"[ERROR] {e}")
+            return 1
+
+    def _build_screen(self, app: ApplicationNode, debug: bool = False) -> int:
+        """Write screen.toml, the font and the sheets from a screen application."""
+        from quantum.runtime.screen import ScreenCompileError, compile_screen
+        try:
+            output_dir = getattr(self, '_output_dir', None) or f'projects/{app.app_id}/screen'
+            written = compile_screen(app, output_dir, source_dir=getattr(self, '_source_dir', None))
+            for name, path in written.items():
+                print(f"[SUCCESS] {name} written: {path}")
+            return 0
+        except ScreenCompileError as e:
             print(f"[ERROR] {e}")
             return 1
 
@@ -335,7 +350,8 @@ Examples:
     run_parser.add_argument('--target', type=_ui_target, choices=['html', 'textual', 'mobile'], default='html',
                             help='UI target (for type="ui" apps): html, textual, or mobile')
     run_parser.add_argument('--out', metavar='DIR',
-                            help='For a hive: write rules.toml and whitelist.toml here (projects/<id>/hive by default)')
+                            help='For a hive or a screen: write what it compiles to here (projects/<id>/hive or '
+                                 'projects/<id>/screen by default)')
     run_parser.add_argument('--check', action='store_true',
                             help='For a game: after the build, open the Godot project headless and '
                                  'fail on any script error (needs Godot; `python scripts/godot.py install`)')

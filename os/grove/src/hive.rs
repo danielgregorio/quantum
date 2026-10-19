@@ -264,6 +264,8 @@ mod tests {
             severity: Severity::Error,
             actions: vec![],
             timeout_secs: 10,
+            kind: None,
+            fields: Default::default(),
         };
         assert_eq!(
             notice_line(&notice).as_deref(),
@@ -298,6 +300,8 @@ mod tests {
                 severity: Severity::Warning,
                 actions: vec![],
                 timeout_secs: 10,
+                kind: None,
+                fields: Default::default(),
             })
             .unwrap();
             conn.send(&HiveMessage::SuggestionResponse {
