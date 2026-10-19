@@ -165,6 +165,23 @@ A particle effect the game can show: a preset and a few overrides. qg:emit plays
 
 Goes inside: `q:application`.
 
+### `qg:item`
+
+A kind of thing the players carry: keys, gems, potions. How many they hold is the game's state, kept across scenes and in a qg:save; `held('key')` reads it. A prefab with gives= is picked up as one; a solid prefab with opens-with= opens for one; qg:give and qg:take add and spend them; qg:inventory shows them.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required |  |
+| `label` | text |  | what a player reads (else its name), in the HUD |
+| `sheet` | a name |  | a qg:spritesheet or qg:tileset: its picture in qg:inventory |
+| `frame` | integer | `0` |  |
+| `max` | integer | `0` | the most they can hold (0: no limit) |
+| `start` | integer | `0` | how many they hold when the game starts |
+| `sound` | a name |  | a qg:sound, played as one is picked up |
+| `particles` | a name |  | a qg:particles, burst where one is picked up |
+
+Goes inside: `q:application`.
+
 ### `qg:prefab`
 
 A kind of thing the scene places with qg:instance. With ai= it moves.
@@ -202,6 +219,10 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `turns-at` | `wall` / `edge` | `wall` | edge: also turns before falling off |
 | `gravity` | number | `900.0` |  |
 | `solid` | true / false | `false` | characters stand on it and bump it (a block) |
+| `gives` | a name |  | a qg:item: a character that touches it picks it up (amount= of them) and it is gone; a named instance stays gone when the scene is entered again |
+| `amount` | integer | `1` | gives=: how many |
+| `opens-with` | a name |  | solid: a qg:item. A character that bumps it holding one spends it and it opens (it is gone; a named one stays gone); without one, its qg:on-locked runs |
+| `keeps` | true / false | `false` | opens-with=: the item is not spent (a key for every door) |
 
 Goes inside: `q:application`.
 
@@ -568,11 +589,12 @@ Goes inside: `qg:scene`.
 
 ### `qg:counter`
 
-A number from the scene state, in the HUD.
+A number from the scene state, or how many of an item the players hold, in the HUD.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `bind` | a name | required | a q:set of the scene |
+| `bind` | a name |  | a q:set of the scene or the game (or item=) |
+| `item` | a name |  | a qg:item: how many are held (or bind=) |
 | `label` | text | `` | text before the number |
 | `size` | integer |  | font size |
 
@@ -601,6 +623,16 @@ A bar in the HUD: a number against its maximum — a q:set, or a fighter's healt
 | `width` | integer | `100` |  |
 | `height` | integer | `10` |  |
 | `color` | `#rrggbb` | `#e04040` |  |
+
+Goes inside: `qg:hud`.
+
+### `qg:inventory`
+
+In the HUD: the items held, each its picture (the qg:item's sheet= and frame=) and how many, in a row; an item held 0 times is not shown.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `size` | integer |  | the font size of the numbers |
 
 Goes inside: `qg:hud`.
 
@@ -729,6 +761,12 @@ What happens when this prefab's health reaches 0, before it goes. In a scene, wi
 | `of` | a name |  | scene: the tag |
 
 Goes inside: `qg:prefab`, `qg:scene`.
+
+### `qg:on-locked`
+
+What happens when a character bumps this prefab (opens-with=) without the item. Holds actions and statements; `me` is the locked thing, `other` the character.
+
+Goes inside: `qg:prefab`.
 
 ### `qg:on-animation-end`
 
@@ -1049,6 +1087,28 @@ Plays an animation of a thing or a character from its first frame. Its own anima
 |---|---|---|---|
 | `target` | a name | `me` | me, other, a character id, or a q:set holding a thing |
 | `name` | text | required | an animation of the target (empty: back to its own) |
+
+Goes inside: a handler.
+
+### `qg:give`
+
+The players get some of an item (up to its max=).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `item` | a name | required | a qg:item |
+| `amount` | integer | `1` |  |
+
+Goes inside: a handler.
+
+### `qg:take`
+
+The players spend some of an item (not below 0): a potion drunk, a key used.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `item` | a name | required | a qg:item |
+| `amount` | integer | `1` |  |
 
 Goes inside: a handler.
 

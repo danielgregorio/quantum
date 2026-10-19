@@ -1847,3 +1847,71 @@ def test_a_parallax_backdrop(tmp_path):
     err = refuse(tmp_path, game('  <qg:scene name="main"><qg:parallax sheet="k" scroll="2" /></qg:scene>\n'))
     assert 'between 0 (still) and 1' in str(err)
     assert 'no' in str(refuse(tmp_path, game('  <qg:scene name="main"><qg:parallax sheet="nope" /></qg:scene>\n')))
+
+
+class TestItems:
+    ITEMS = '''  <qg:sound name="pick" src="assets/kenney/audio/stomp.ogg" />
+  <qg:item name="key" label="KEY" sheet="k" frame="27" sound="pick" />
+  <qg:item name="gem" max="3" start="1" />
+  <qg:prefab name="Key" tag="key" sheet="k" hitbox="12x12" gives="key" />
+  <qg:prefab name="Gems" tag="gems" sheet="k" hitbox="12x12" gives="gem" amount="2" />
+  <qg:prefab name="Door" tag="door" sheet="k" hitbox="18x18" solid="true" opens-with="key">
+    <qg:on-locked><qg:play sound="pick" /></qg:on-locked>
+  </qg:prefab>
+  <qg:scene name="main">
+    <qg:character id="hero" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12">
+      <qg:on-collision with="coin"><qg:give item="gem" /><qg:take item="key" amount="2" /></qg:on-collision>
+    </qg:character>
+    <qg:hud><qg:counter item="gem" label="GEMS" /><qg:inventory size="10" /></qg:hud>
+    <qg:instance prefab="Key" name="key-1" x="40" y="10" />
+  </qg:scene>
+'''
+
+    def test_items_their_prefabs_and_the_state_they_live_in(self, tmp_path):
+        out = build(tmp_path, game(self.ITEMS))
+        data = json.loads((out / 'game.json').read_text())
+        assert data['items'] == {
+            'key': {'label': 'KEY', 'sheet': 'k', 'frame': 27, 'max': 0, 'start': 0, 'sound': 'pick', 'particles': None},
+            'gem': {'label': 'gem', 'sheet': None, 'frame': 0, 'max': 3, 'start': 1, 'sound': None, 'particles': None}}
+        prefabs = data['prefabs']
+        assert (prefabs['Key']['gives'], prefabs['Key']['amount'], prefabs['Gems']['amount']) == ('key', 1, 2)
+        assert (prefabs['Door']['opens_with'], prefabs['Door']['keeps'], prefabs['Door']['on_locked']) == \
+            ('key', False, '_Door_on_locked')
+        assert 'gives' not in prefabs['Coin'] and 'opens_with' not in prefabs['Coin']
+        hud = data['scenes']['main']['nodes'][1]
+        assert hud['items'] == [{'kind': 'counter', 'item': 'gem', 'label': 'GEMS', 'size': None},
+                                {'kind': 'inventory', 'size': 10}]
+        g = (out / 'scripts' / 'game_state.gd').read_text()
+        assert 'var q_items: Dictionary = {"key": 0, "gem": 1}' in g and 'var q_gone: Array = []' in g
+        assert '"q_items": q_items, "q_gone": q_gone' in g
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.give_item("gem", 1)' in script and 'Q.take_item("key", 2)' in script
+        assert compile_expression("held('key') > 0", Scope()) == '(Q.items_held("key") > 0)'
+
+    def test_a_game_without_items_keeps_its_state_as_it_was(self, tmp_path):
+        out = build(tmp_path, game(SCENE))
+        assert 'q_items' not in (out / 'scripts' / 'game_state.gd').read_text()
+        assert json.loads((out / 'game.json').read_text())['items'] == {}
+
+    def test_what_it_refuses(self, tmp_path):
+        for old, new, message in (
+                ('gives="key" />', 'gives="lockpick" />', "no qg:item named 'lockpick'"),
+                ('<qg:give item="gem" />', '<qg:give item="coin" />', "no qg:item named 'coin'"),
+                ('<qg:counter item="gem"', '<qg:counter item="gold"', "no qg:item named 'gold'"),
+                ('<qg:counter item="gem"', '<qg:counter bind="x" item="gem"', 'takes bind= or item=, one of them'),
+                ('hitbox="12x12" gives="key"', 'hitbox="12x12" gives="key" solid="true"', 'gives= is for a prefab that'),
+                ('gives="gem" amount="2"', 'gives="gem" amount="0"', '<qg:prefab amount=>: 1 or more'),
+                ('hitbox="12x12" gives="key" />', 'hitbox="12x12" amount="2" />', 'amount= is for gives='),
+                ('solid="true" opens-with="key"', 'opens-with="key"', 'opens-with= is for a solid prefab'),
+                ('solid="true" opens-with="key"', 'solid="true"', '<qg:on-locked> is for a prefab with opens-with='),
+                ('max="3" start="1"', 'max="3" start="4"', 'start= not over max='),
+                ('sound="pick" />\n  <qg:item name="gem"', 'sound="boom" />\n  <qg:item name="gem"',
+                 '<qg:item sound="boom">: no qg:sound'),
+                ('<qg:take item="key" amount="2" />', '<qg:take item="key" amount="0" />',
+                 '<qg:take amount=>: 1 or more')):
+            assert old in self.ITEMS, old
+            err = refuse(tmp_path, game(self.ITEMS.replace(old, new)))
+            assert message in str(err), (message, str(err))
+        no_pictures = self.ITEMS.replace('sheet="k" frame="27" ', '')
+        assert '<qg:inventory> shows the qg:items by their pictures' in str(refuse(tmp_path, game(no_pictures)))
+        assert 'two items named' in str(refuse(tmp_path, game('  <qg:item name="key" />\n' + self.ITEMS)))

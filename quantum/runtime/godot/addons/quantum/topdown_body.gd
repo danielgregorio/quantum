@@ -77,6 +77,8 @@ func respawn() -> void:
 
 
 func _on_area_entered(area: Area2D) -> void:
+	if area.has_method("quantum_tag"):
+		Q.touched(self, area.quantum_owner() if area.has_method("quantum_owner") else area)
 	_touch(area)
 
 

@@ -107,6 +107,8 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 			"instance":
 				if node_spec.get("if") != null and not scene.call(node_spec["if"]):
 					continue
+				if node_spec.get("name") != null and Q.gone(str(scene_spec["name"]), str(node_spec["name"])):
+					continue   # picked up or opened before: it stays gone
 				var made := instance(game, scene, node_spec["prefab"], Vector2(node_spec["x"], node_spec["y"]))
 				if node_spec.get("name") != null:
 					made.name = node_spec["name"]

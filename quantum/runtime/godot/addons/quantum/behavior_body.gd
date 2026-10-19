@@ -298,6 +298,7 @@ func _on_area_entered(area: Area2D) -> void:
 		return
 	var tag: String = area.quantum_tag()
 	var other: Node = area.quantum_owner() if area.has_method("quantum_owner") else area
+	Q.touched(self, other)
 	var on_top := _is_on_top_of(other)
 	var from_below := _is_below(other)
 	var matched := false

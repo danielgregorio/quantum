@@ -148,7 +148,6 @@ class _Compiler:
         for st in g.state:
             declare_state(game_script, st)
         self.game_state: Dict[str, StateVar] = game_script.state
-        self.scripts['game_state.gd'] = game_state_source(self.game_state)
         inputs = {k: [_key(name, 1, None) for name in v] for k, v in DEFAULT_INPUTS.items()}
         for el in g.inputs:
             keys = [k.strip() for k in str(el.get('keys')).split(',') if k.strip()]
@@ -227,6 +226,8 @@ class _Compiler:
                 if el.get(k) is not None:
                     particles[name][k] = el.get(k)
         self.particles = particles
+        self.items = self._items(sheets)
+        self.scripts['game_state.gd'] = game_state_source(self.game_state, self.items)
         languages = {}
         for lang_el in g.languages:
             code = str(lang_el.get('lang'))
@@ -279,6 +280,7 @@ class _Compiler:
                 if h.get('of'):
                     raise GameCompileError('of= is for a <qg:on-death> in a scene', h.line)
                 on_death = compile_handler(pscript, f'_{_ident(name)}_on_death', h.children, h.line)
+            carry = self._prefab_items(el, name, pscript)
             prefabs[name] = {'tag': el.get('tag') or name.lower(), 'sheet': el.get('sheet'),
                              'frame': el.get('frame'), 'hitbox': list(el.get('hitbox')),
                              'ai': el.get('ai'), 'speed': _speed(el.get('speed'), el.line), 'sight': el.get('sight'),
@@ -298,6 +300,7 @@ class _Compiler:
                              'on_collision': handlers, 'on_damage': on_damage, 'on_death': on_death,
                              'animations': _animations(el),
                              'on_animation_end': _animation_ends(el, pscript, f'_{_ident(name)}_on')}
+            prefabs[name].update(carry)
             gdprops.attach(prefabs[name], gdprops.PREFAB_CLASS[gdprops.prefab_kind(prefabs[name])], el.gd,
                            f'<qg:prefab name="{name}">', el.line)
         for pname, line in pscript.prefabs_used + [(p['fire_prefab'], el.line) for p in prefabs.values()
@@ -312,6 +315,7 @@ class _Compiler:
             if pname not in self.particles:
                 raise GameCompileError(f'<qg:emit particles="{pname}">: no qg:particles of that name', line)
         self._animations_known(pscript.animations_played)
+        self._items_known(pscript.items_used)
         tags = {p['tag'] for p in prefabs.values()} | self._zone_tags
         for p_ in prefabs.values():
             for h in p_['on_collision']:
@@ -353,6 +357,7 @@ class _Compiler:
                 'sheets': sheets,
                 'sounds': sounds,
                 'particles': particles,
+                'items': self.items,
                 'languages': languages,
                 'prefabs': prefabs,
                 'scenes': scenes,
@@ -399,6 +404,64 @@ class _Compiler:
             if name and name not in self._animation_names:
                 raise GameCompileError(f'<qg:play-animation name="{name}">: no qg:animation of that name in the game '
                                        f'(it has: {", ".join(sorted(self._animation_names)) or "none"})', line)
+
+    def _items(self, sheets: dict) -> dict:
+        """The qg:items the players carry, checked."""
+        items = {}
+        for name, el in self.game.items.items():
+            if el.get('sheet') is not None:
+                self._sheet_exists(el.get('sheet'), sheets, el.line)
+            if el.get('sound') is not None and el.get('sound') not in self.sounds:
+                raise GameCompileError(f'<qg:item sound="{el.get("sound")}">: no qg:sound of that name', el.line)
+            if el.get('particles') is not None and el.get('particles') not in self.particles:
+                raise GameCompileError(f'<qg:item particles="{el.get("particles")}">: no qg:particles of that name',
+                                       el.line)
+            if el.get('max') < 0 or el.get('start') < 0 or (el.get('max') and el.get('start') > el.get('max')):
+                raise GameCompileError('<qg:item>: max= and start= 0 or more, start= not over max=', el.line)
+            items[name] = {'label': el.get('label') or name, 'sheet': el.get('sheet'), 'frame': el.get('frame'),
+                           'max': el.get('max'), 'start': el.get('start'), 'sound': el.get('sound'),
+                           'particles': el.get('particles')}
+        for reserved in ('q_items', 'q_gone'):
+            if items and reserved in self.game_state:
+                raise GameCompileError(f'{reserved!r} is the runtime\'s name for what the players carry: '
+                                       f'name the q:set otherwise', None)
+        return items
+
+    def _items_known(self, used: list) -> None:
+        for item, line in used:
+            if item not in self.items:
+                raise GameCompileError(f'no qg:item named {item!r} (declared: {", ".join(sorted(self.items)) or "none"})',
+                                       line)
+
+    def _prefab_items(self, el: Element, name: str, script: SceneScript) -> dict:
+        """A prefab picked up as an item (gives=) or opened by one (opens-with=), checked."""
+        out = {}
+        if el.get('gives') is not None:
+            if el.get('ai') or el.get('solid'):
+                raise GameCompileError('gives= is for a prefab that is picked up: no ai=, not solid', el.line)
+            if el.get('amount') < 1:
+                raise GameCompileError('<qg:prefab amount=>: 1 or more', el.line)
+            self._items_known([(el.get('gives'), el.line)])
+            out.update(gives=el.get('gives'), amount=el.get('amount'))
+        elif el.get('amount') != 1:
+            raise GameCompileError('amount= is for gives=', el.line)
+        locked = el.find_all('on-locked')
+        if el.get('opens-with') is not None:
+            if not el.get('solid') or el.get('ai'):
+                raise GameCompileError('opens-with= is for a solid prefab without ai= (a door)', el.line)
+            self._items_known([(el.get('opens-with'), el.line)])
+            out.update(opens_with=el.get('opens-with'), keeps=el.get('keeps'))
+            if len(locked) > 1:
+                raise GameCompileError('a qg:prefab has one <qg:on-locked>', locked[1].line)
+            if locked:
+                out['on_locked'] = compile_handler(script, f'_{_ident(name)}_on_locked', locked[0].children,
+                                                   locked[0].line)
+        else:
+            if el.get('keeps'):
+                raise GameCompileError('keeps= is for opens-with=', el.line)
+            if locked:
+                raise GameCompileError('<qg:on-locked> is for a prefab with opens-with=', locked[0].line)
+        return out
 
     def _behavior(self, el: Element) -> list:
         """The parts of a character controller="behavior" (its qg:behavior), checked."""
@@ -906,9 +969,24 @@ class _Compiler:
                                       'height': c.get('height'), 'color': c.get('color')})
                         gdprops.attach(items[-1], 'ProgressBar', c.gd, '<qg:bar>', c.line)
                         continue
+                    if isinstance(c, Element) and c.tag == 'inventory':
+                        if not any(i['sheet'] for i in self.items.values()):
+                            raise GameCompileError('<qg:inventory> shows the qg:items by their pictures: give one '
+                                                   'a sheet=', c.line)
+                        items.append({'kind': 'inventory', 'size': c.get('size')})
+                        gdprops.attach(items[-1], 'HBoxContainer', c.gd, '<qg:inventory>', c.line)
+                        continue
                     if isinstance(c, Element) and c.tag in ('counter', 'text'):
                         if c.tag == 'text' and (c.get('bind') is None) == (c.get('value') is None):
                             raise GameCompileError('<qg:text> takes bind= or value=, one of them', c.line)
+                        if c.tag == 'counter' and (c.get('bind') is None) == (c.get('item') is None):
+                            raise GameCompileError('<qg:counter> takes bind= or item=, one of them', c.line)
+                        if c.tag == 'counter' and c.get('item') is not None:
+                            self._items_known([(c.get('item'), c.line)])
+                            items.append({'kind': 'counter', 'item': c.get('item'), 'label': c.get('label', ''),
+                                          'size': c.get('size')})
+                            gdprops.attach(items[-1], 'Label', c.gd, '<qg:counter>', c.line)
+                            continue
                         if c.get('bind') is not None and c.get('bind') not in script.state and c.get('bind') not in self.game_state:
                             raise GameCompileError(
                                 f'<qg:{c.tag} bind="{c.get("bind")}">: no q:set of that name in the scene '
@@ -922,7 +1000,8 @@ class _Compiler:
                                 f'func _q_text_{texts}():\n\treturn Q.to_str({compile_expression(c.get("value"), script.scope(), c.line)})\n')
                         gdprops.attach(items[-1], 'Label', c.gd, f'<qg:{c.tag}>', c.line)
                     else:
-                        raise GameCompileError('<qg:hud> holds qg:counter, qg:text and qg:bar', getattr(c, 'line', el.line))
+                        raise GameCompileError('<qg:hud> holds qg:counter, qg:text, qg:bar and qg:inventory',
+                                               getattr(c, 'line', el.line))
                 font = self._asset(el.get('font'), el.line) if el.get('font') else None
                 nodes.append({'kind': 'hud', 'position': el.get('position'), 'items': items,
                               'font': font, 'size': el.get('size')})
@@ -1034,6 +1113,7 @@ class _Compiler:
                     f'<qg:emit particles="{pname}">: no qg:particles of that name '
                     f'(declared: {", ".join(sorted(self.particles)) or "none"})', line)
         self._animations_known(script.animations_played)
+        self._items_known(script.items_used)
         for played in script.sounds_played:
             if played not in self.sounds:
                 raise GameCompileError(

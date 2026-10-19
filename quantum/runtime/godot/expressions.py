@@ -49,6 +49,7 @@ _FUNCTIONS = {
     'tr': 'Q.translate({0})',                # a text in the player's language (qg:language)
     'language': 'Q.language_name()',         # the name of the language shown, in it (English: the game's own)
     'has_save': 'Q.has_save()',              # a qg:save is there to continue
+    'held': 'Q.items_held({0})',             # how many of a qg:item the players hold
 }
 
 _BIN = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*'}

@@ -281,6 +281,72 @@ static func spawn_on_path(scene: Node, prefab: String, path_name: String) -> Nod
 	return made
 
 
+# --- what the players carry (qg:item): G.q_items, G.q_gone ---
+
+# held(item) in an expression: how many the players hold.
+static func items_held(item: String) -> int:
+	return int(G.q_items.get(item, 0)) if "q_items" in G else 0
+
+
+# qg:give: up to the item's max= (0: no limit).
+static func give_item(item: String, amount: int = 1) -> void:
+	if not ("q_items" in G) or not G.Q_ITEMS.has(item):
+		return
+	var most := int(G.Q_ITEMS[item]["max"])
+	var now := items_held(item) + amount
+	G.q_items[item] = mini(now, most) if most > 0 else now
+	event("item", {"item": item, "held": int(G.q_items[item])})
+
+
+# qg:take: not below 0.
+static func take_item(item: String, amount: int = 1) -> void:
+	if not ("q_items" in G) or not G.Q_ITEMS.has(item):
+		return
+	G.q_items[item] = maxi(0, items_held(item) - amount)
+	event("item", {"item": item, "held": int(G.q_items[item])})
+
+
+# A named thing picked up or opened stays gone: the scene leaves it out when it is built again.
+static func gone(scene_name: String, name_: String) -> bool:
+	return "q_gone" in G and G.q_gone.has(scene_name + "/" + name_)
+
+
+static func _gone(node: Node) -> void:
+	if node.has_meta("q_named") and node.get_parent() != null:
+		G.q_gone.append(String(node.get_parent().name) + "/" + String(node.name))
+
+
+# What a character's touch does before its own handlers: it picks up a thing
+# that gives= an item, and opens one that opens-with= an item it holds (or
+# runs the thing's on-locked).
+static func touched(body: Node, other) -> void:
+	other = _thing(other)
+	if other == null or other.is_queued_for_deletion() or not ("q_items" in G):
+		return
+	if "gives" in other and other.gives != "":
+		var spec: Dictionary = G.Q_ITEMS.get(other.gives, {})
+		if int(spec.get("max", 0)) > 0 and items_held(other.gives) >= int(spec["max"]):
+			return   # they hold the most: it stays where it is
+		give_item(other.gives, other.amount)
+		event("pickup", {"who": who(body), "item": other.gives, "held": items_held(other.gives)})
+		if spec.get("sound") != null and _q_node() != null:
+			_q_node().play(str(spec["sound"]))
+		if spec.get("particles") != null:
+			emit(other, str(spec["particles"]))
+		_gone(other)
+		destroy(other)
+	elif "opens_with" in other and other.opens_with != "":
+		if items_held(other.opens_with) > 0:
+			if not other.keeps:
+				take_item(other.opens_with)
+			event("open", {"who": who(body), "what": who(other), "item": other.opens_with})
+			_gone(other)
+			destroy(other)
+		elif other.on_locked != "" and P.has_method(other.on_locked):
+			event("locked", {"who": who(body), "what": who(other), "item": other.opens_with})
+			P.call(other.on_locked, other, body)
+
+
 # count(tag): how many things of the tag are in the scene (zones are not things).
 static func count(scene: Node, tag: String) -> int:
 	var n := 0
