@@ -213,19 +213,23 @@ impl InferenceEngine {
         let prompt_lower = prompt.to_lowercase();
 
         // Analyze prompt and generate contextual mock responses
-        if prompt_lower.contains("port") && prompt_lower.contains("conflict") {
-            Ok(self.suggest_port_conflict())
+        // describe_trigger says a port is "already held by" its holder
+        let port_conflict = prompt_lower.contains("port")
+            && (prompt_lower.contains("conflict") || prompt_lower.contains("already held by"));
+        let text = if port_conflict {
+            self.suggest_port_conflict()
         } else if prompt_lower.contains("error") || prompt_lower.contains("failed") {
-            Ok(self.suggest_error_recovery())
+            self.suggest_error_recovery()
         } else if prompt_lower.contains("rm -rf") || prompt_lower.contains("dangerous") {
-            Ok(self.suggest_dangerous_command())
+            self.suggest_dangerous_command()
         } else if prompt_lower.contains("install") {
-            Ok(self.suggest_package_install())
+            self.suggest_package_install()
         } else if prompt_lower.contains("disk") && prompt_lower.contains("space") {
-            Ok(self.suggest_disk_space())
+            self.suggest_disk_space()
         } else {
-            Ok(self.suggest_general())
-        }
+            self.suggest_general()
+        };
+        Ok(fill_mock_names(&text, prompt))
     }
 
     fn suggest_port_conflict(&self) -> String {
@@ -298,6 +302,47 @@ impl InferenceEngine {
     pub fn max_tokens(&self) -> usize {
         self.config.max_tokens as usize
     }
+}
+
+/// The names a mock suggestion leaves as PACKAGE, SERVICE, PORT and KEYWORD,
+/// filled in from the event the prompt describes (`prompt::describe_trigger`
+/// writes it). A line whose name the prompt does not give is left out: a
+/// user must never be told to run `apt show PACKAGE`.
+fn fill_mock_names(text: &str, prompt: &str) -> String {
+    fn between<'a>(text: &'a str, start: &str, end: &str) -> Option<&'a str> {
+        let rest = &text[text.find(start)? + start.len()..];
+        Some(&rest[..rest.find(end)?])
+    }
+    let logging = prompt
+        .find(" is logging an unusual number of errors")
+        .map(|end| {
+            let start = prompt[..end].rfind('\n').map_or(0, |i| i + 1);
+            &prompt[start..end]
+        });
+    let service = between(prompt, "The service ", " crashed")
+        .or(logging)
+        .map(|s| s.trim().trim_end_matches(".service"));
+    let port = between(prompt, "listening on port ", ":");
+    let package = between(prompt, "; the ", " package provides it");
+    let command = between(prompt, "A user tried to run `", "`");
+    let names = [
+        ("PACKAGE", package),
+        ("SERVICE", service),
+        ("PORT", port),
+        ("KEYWORD", command),
+    ];
+    text.lines()
+        .filter_map(|line| {
+            let mut line = line.to_string();
+            for (placeholder, value) in names {
+                if line.contains(placeholder) {
+                    line = line.replace(placeholder, value?);
+                }
+            }
+            Some(line)
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// The local model, loaded on first use, shared with blocking tasks.
@@ -625,6 +670,7 @@ pub mod candle_backend {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hive_common::messages::HiveMessage;
 
     #[tokio::test]
     async fn test_mock_generation() {
@@ -639,6 +685,57 @@ mod tests {
             .await
             .unwrap();
         assert!(response.contains("port") || response.contains("lsof"));
+    }
+
+    #[tokio::test]
+    async fn the_mock_names_what_the_event_names_and_leaves_out_what_it_does_not() {
+        let config = SynapseConfig {
+            backend: "mock".to_string(),
+            ..Default::default()
+        };
+        let engine = InferenceEngine::new(&config).await.unwrap();
+        let ask = |trigger: HiveMessage| {
+            let engine = &engine;
+            async move {
+                let prompt = crate::prompt::describe_trigger(&trigger);
+                engine.generate("You are the Hive.", &prompt).await.unwrap()
+            }
+        };
+        let install = ask(HiveMessage::CommandNotFound {
+            command: "htop".into(),
+            package: "htop".into(),
+        })
+        .await;
+        assert!(install.contains("`apt show htop`"), "{install}");
+        assert!(install.contains("`apt search htop`"), "{install}");
+        let conflict = ask(HiveMessage::PortConflict {
+            port: 8080,
+            requested_by: process("app"),
+            held_by: process("nginx"),
+        })
+        .await;
+        assert!(conflict.contains("`lsof -i :8080`"), "{conflict}");
+        // nothing to name the service with: that line goes, the others stay
+        assert!(
+            !conflict.contains("SERVICE") && conflict.contains("`ss -tlnp`"),
+            "{conflict}"
+        );
+        for text in [install, conflict] {
+            for placeholder in ["PACKAGE", "SERVICE", "PORT", "KEYWORD"] {
+                assert!(!text.contains(placeholder), "{placeholder} left in: {text}");
+            }
+        }
+    }
+
+    fn process(name: &str) -> hive_common::messages::ProcessInfo {
+        hive_common::messages::ProcessInfo {
+            pid: 1,
+            uid: 0,
+            name: name.into(),
+            cmdline: vec![name.into()],
+            cwd: None,
+            ppid: None,
+        }
     }
 
     #[tokio::test]

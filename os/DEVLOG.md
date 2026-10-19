@@ -27,9 +27,16 @@ socket de usuário (o grove não envia ação nem aprova sugestão). Uma
 sessão feita à mão vira fita com `--record`. `scripts/lab/hive-tapes.sh`
 roda todas, e o CI ganhou esse passo.
 
-**O que o lab já encontrou:** sem o modelo, o synapse responde
-"Check package info with `apt show PACKAGE`" com `PACKAGE` literal
-(`inference.rs:264`, o texto do modo mock). Não corrigido aqui.
+**O que o lab já encontrou:** sem o modelo, o synapse respondia
+"Check package info with `apt show PACKAGE`" com `PACKAGE` literal, e o
+mesmo com `SERVICE`, `PORT` e `KEYWORD` (o texto do modo mock). Num
+conflito de porta ele nem escolhia o texto de porta, porque a descrição do
+evento diz "already held by" e não "conflict". Corrigido:
+`fill_mock_names` preenche os nomes a partir do evento que o prompt
+descreve, e a linha que ficaria sem nome é omitida. As fitas
+`command-not-found` e `port-conflict` agora exigem `apt show htop` e
+`lsof -i :80` sem nenhum placeholder (`excludes`), e falham com o código
+antigo.
 
 **Próximas camadas:** a fronteira deste lab é o que o sistema real faz. O
 que os nerves percebem num sistema rodando e o que uma ação faz pedem uma

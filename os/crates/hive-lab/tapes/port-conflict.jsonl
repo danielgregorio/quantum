@@ -2,5 +2,5 @@
 {"op":"start"}
 {"op":"port_conflict","port":80,"requested_by":"app","held_by":"nginx"}
 {"op":"until","to":"shell","type":"Notification","contains":"app could not bind port 80: already held by nginx"}
-{"op":"until","to":"dashboard","type":"Notification","contains":"Show listening ports","timeout":10}
+{"op":"until","to":"dashboard","type":"Notification","contains":"lsof -i :80","excludes":"SERVICE","timeout":10}
 {"op":"end"}
