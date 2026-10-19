@@ -306,6 +306,16 @@ static func take_item(item: String, amount: int = 1) -> void:
 	event("item", {"item": item, "held": int(G.q_items[item])})
 
 
+# qg:reset-items: a new game. Each item back to its start=, and the gone things come back.
+static func reset_items() -> void:
+	if not ("q_items" in G):
+		return
+	for item in G.Q_ITEMS:
+		G.q_items[item] = int(G.Q_ITEMS[item]["start"])
+	G.q_gone.clear()
+	event("item", {"item": "", "held": 0})
+
+
 # A named thing picked up or opened stays gone: the scene leaves it out when it is built again.
 static func gone(scene_name: String, name_: String) -> bool:
 	return "q_gone" in G and G.q_gone.has(scene_name + "/" + name_)

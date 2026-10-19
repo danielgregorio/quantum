@@ -429,7 +429,10 @@ class _Compiler:
 
     def _items_known(self, used: list) -> None:
         for item, line in used:
-            if item not in self.items:
+            if item is None:   # qg:reset-items
+                if not self.items:
+                    raise GameCompileError('<qg:reset-items>: the game declares no qg:item', line)
+            elif item not in self.items:
                 raise GameCompileError(f'no qg:item named {item!r} (declared: {", ".join(sorted(self.items)) or "none"})',
                                        line)
 

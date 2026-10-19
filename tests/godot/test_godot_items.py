@@ -73,6 +73,7 @@ def pickups(tmp_path_factory, godot):
     <qg:instance prefab="Key" name="key-1" x="125" y="63" />
     <qg:timer after="150"><qg:take item="gem" amount="2" /><qg:give item="potion" amount="5" /></qg:timer>
     <qg:timer after="200"><qg:goto-scene name="room" /></qg:timer>
+    <qg:on-input action="jump"><qg:reset-items /></qg:on-input>
     <qg:hud><qg:counter item="gem" label="GEMS" /><qg:inventory /></qg:hud>'''
     return build(tmp_path_factory, godot, 'pickups', prefabs, things)
 
@@ -94,6 +95,12 @@ def test_a_named_thing_picked_up_does_not_come_back(pickups, godot):
     room = at(pickups, godot, 260, [('right', 1, 110)])
     assert room['things'] == {'gem': 4}                 # the room built again: its gems, not its key
     assert room['game']['q_items']['key'] == 1
+
+
+def test_reset_items_is_a_new_game(pickups, godot):
+    game = at(pickups, godot, 240, [('right', 1, 110), ('jump', 235, 236)])['game']
+    assert game['q_items'] == {'key': 0, 'gem': 0, 'potion': 2}     # each back to its start=
+    assert game['q_gone'] == []
 
 
 def test_the_hud_shows_what_is_held(pickups, godot):

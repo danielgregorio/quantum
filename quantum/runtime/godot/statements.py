@@ -458,6 +458,9 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         script.particles_used.append((el.get('particles'), el.line))
         return (f'Q.emit({scope.reference(at)}, {json.dumps(el.get("particles"))}, '
                 f'{float(el.get("dx"))!r}, {float(el.get("dy"))!r})')
+    if el.tag == 'reset-items':
+        script.items_used.append((None, el.line))
+        return 'Q.reset_items()'
     if el.tag in ('give', 'take'):
         if el.get('amount') < 1:
             raise GameCompileError(f'<qg:{el.tag} amount=>: 1 or more', el.line)

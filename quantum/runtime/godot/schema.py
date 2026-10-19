@@ -41,7 +41,7 @@ class Tag:
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
            'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
-           'play-animation', 'give', 'take')
+           'play-animation', 'give', 'take', 'reset-items')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -570,6 +570,10 @@ TAGS: Dict[str, Tag] = {
         'The players spend some of an item (not below 0): a potion drunk, a key used.',
         {'item': Attr('ident', required=True, doc='a qg:item'),
          'amount': Attr('int', 1)},
+        parents=('handler',)),
+    'reset-items': Tag(
+        'A new game: every qg:item back to its start=, and the named things picked up or opened come back.',
+        {},
         parents=('handler',)),
     'destroy': Tag(
         'Removes a thing from the scene.',

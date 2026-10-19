@@ -1915,3 +1915,5 @@ class TestItems:
         no_pictures = self.ITEMS.replace('sheet="k" frame="27" ', '')
         assert '<qg:inventory> shows the qg:items by their pictures' in str(refuse(tmp_path, game(no_pictures)))
         assert 'two items named' in str(refuse(tmp_path, game('  <qg:item name="key" />\n' + self.ITEMS)))
+        bare = game('  <qg:scene name="main"><qg:timer after="1"><qg:reset-items /></qg:timer></qg:scene>\n')
+        assert '<qg:reset-items>: the game declares no qg:item' in str(refuse(tmp_path, bare))

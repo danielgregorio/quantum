@@ -1112,6 +1112,12 @@ The players spend some of an item (not below 0): a potion drunk, a key used.
 
 Goes inside: a handler.
 
+### `qg:reset-items`
+
+A new game: every qg:item back to its start=, and the named things picked up or opened come back.
+
+Goes inside: a handler.
+
 ## Other tags
 
 ### `qg:dialogue`

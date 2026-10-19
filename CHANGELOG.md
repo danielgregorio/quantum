@@ -19,7 +19,8 @@ alter the behaviour of an existing app is listed under **Breaking**.
   unless `keeps="true"`, and runs its `<qg:on-locked>` without one. A named
   instance picked up or opened stays gone when its scene is entered again,
   with no `taken` list and `if=` to write. `<qg:give item= amount=>` and
-  `<qg:take item= amount=>` add and spend them, `held('key')` reads them,
+  `<qg:take item= amount=>` add and spend them, `<qg:reset-items>` starts a
+  new game (each item back to its `start=`, the gone things back), `held('key')` reads them,
   `<qg:counter item=>` counts one in the HUD and `<qg:inventory>` shows
   what is held, each its picture and how many. `pickup`, `open`, `locked`
   and `item` events reach the play protocol.
