@@ -1,0 +1,65 @@
+feature:
+  name: "hive_screen"
+  display_name: "The Hive's screen (qs: namespace, Quantum OS)"
+  version: "1.0.0"
+  status: "laboratory"
+  migration_type: "option_c"  # the language lives in quantum/runtime/screen, not in this folder
+
+description: |
+  A q:application type="screen" is what the Hive of Quantum OS shows on
+  the machine's screen: sheets of frames with their animations, particle
+  effects, a scene of sprites and text with the built-in offers and
+  notices, and per event of the Hive what happens in it. It compiles to
+  screen.toml, a font sheet and the sprite sheets, which hive-screen
+  draws on the console with no engine, no compositor and no GPU. The
+  vocabulary of the scene is the games' (qg:); what moves it are the
+  Hive's events, the same the rules (qh:) are on, with the same {field}s.
+
+tags:
+  - "hive"
+  - "quantum-os"
+  - "screen"
+  - "pixel-art"
+  - "declarative"
+
+maintainers:
+  - "Daniel"
+  - "Claude"
+
+dependencies:
+  required: []
+
+capabilities:
+  syntax:
+    - "Every qs: tag, attribute, event and action is declared in one schema; nothing else exists"
+    - "No statements and no expressions: a screen file is declarations only, with nothing to compute"
+    - "{field} placeholders in a rule, checked against the event's fields at compile time; refused in the scene"
+    - "A sprite's name is how a rule reaches it: {service} on service-crash finds the sprite named after the service"
+    - "The same animation, tween (curves and eases) and particle presets as the games, with the same meaning"
+
+  runtime:
+    - "hive-screen fills a rule's texts and targets in from the event; an action it cannot fill in or whose target no sprite is named is left out"
+    - "Offers are listed by the built-in qs:offers: up and down choose, Enter approves (twice for a dangerous action), Escape dismisses; cortex decides who may"
+    - "A frame is the same pixel for pixel on every machine: the curves and the particles use plain arithmetic and a fixed seed"
+
+api:
+  schema: "quantum/runtime/screen/schema.py"              # TAGS, EVENTS, ACTIONS: the language
+  model: "quantum/runtime/screen/model.py::read_screen"   # reads app.xml_root against the schema
+  compiler: "quantum/runtime/screen/compiler.py::compile_screen"
+  font: "quantum/runtime/screen/font.py"                  # the 5x7 face, Latin-1 composed
+  generator: "scripts/generate-screen-config.py"          # os/config/screen/screen.q -> screen.toml, font.png
+  consumer: "os/crates/hive-screen"
+  reference: "docs/targets/screen.md"                     # generated from the schema
+
+testing:
+  compiler: "tests/screen/"                                # what compiles, what is refused, the OS's files are current
+  dataset: "tests/dataset/test_dataset_features.py"       # every positive compiles, every negative is refused
+  registered: "tests/dataset/test_hive_screen_feature.py" # every tag, event and action has an intention and an example
+  daemon: "os/crates/hive-screen/tests/play.rs"           # the OS's screen played, frames compared with references
+  lab: "os/crates/hive-lab/tapes/screen-crash.jsonl"      # the real daemon with the real cortex and synapse
+
+migration_notes: |
+  The parser keeps a screen's XML on ApplicationNode.xml_root, as for games
+  and hives, and quantum/runtime/screen reads every qs: element against its
+  schema. The daemon reads only what the compiler writes and refuses the
+  rest whole.

@@ -6,7 +6,7 @@ This document provides essential context for AI assistants working on Quantum OS
 
 DruidOS is a Linux distribution designed for virtualization (VM-first) with an integrated Small Language Model (SLM) that acts as a living consciousness observing the system in real-time. The OS provides quality-of-life improvements without hiding Unix complexity.
 
-**Target: TUI-only.** DruidOS has no graphical desktop goal. The primary (and only) user interface is `grove`, an interactive terminal shell. A prior GUI track (Wayland/Hyprland desktop, and a separate direct-framebuffer engine) was paused and moved to `archive/` — see [Directory Structure](#directory-structure).
+**Target: a terminal, and one screen.** DruidOS has no desktop goal: no window system, no compositor, no GPU stack. `grove`, an interactive terminal shell, is where work is done, and everything the Hive surfaces works over a plain terminal. What the machine's console shows besides is **the Hive's screen**: a small pixel-art scene declared in Quantum (`config/screen/screen.q`) and drawn by `hive-screen`, a daemon of a few hundred kilobytes that draws on the CPU, lists the Hive's offers for an administrator to approve with the keyboard, and scales with the cores the VM gives it. A prior GUI track (Wayland/Hyprland desktop, and a separate direct-framebuffer engine) was paused and moved to `archive/` — see [Directory Structure](#directory-structure); the screen is not that track come back, it is one program with no stack under it.
 
 **Tagline:** "The Swarm is watching. The Swarm is learning."
 
@@ -20,7 +20,7 @@ DruidOS is a Linux distribution designed for virtualization (VM-first) with an i
 4. **Rust Everywhere**: Memory safety, performance, modernity
 5. **Transparency**: User sees what the Hive sees
 6. **Escape Hatch**: Anonymous mode when user wants to fly solo
-7. **Terminal-First**: No GUI goal. `grove` is the interface; everything the Hive surfaces has to work over a plain terminal/console
+7. **Terminal-First**: No desktop goal. `grove` is the interface; everything the Hive surfaces has to work over a plain terminal/console. The Hive's screen (`hive-screen`) is a view of the same things on the console, never the only way to them
 
 ## Technical Stack
 
@@ -49,10 +49,11 @@ DruidOS is a Linux distribution designed for virtualization (VM-first) with an i
 ### Interface
 - **Shell**: `grove` — interactive shell, the only user-facing surface for running commands. Runs in any terminal (local tty, serial console, SSH); no display server required. Talks to the Hive over cortex's user socket (`/run/hive/user.sock`, any local user): `? question` asks in plain language (answered as text by synapse, never an action), system notices (crashed service, port conflict, low disk) print at the next prompt, and `anon [on|off]` makes cortex ignore what that shell runs (its children too, by process ancestry). Without a reachable Hive it is just a shell.
 - **Notifications/suggestions**: `hive-dashboard` — a separate ratatui TUI tool the user runs manually (like `top`), not a systemd service. It connects to the user socket, where cortex only accepts it from an administrator (root, or a member of sudo/admin/wheel, from the account's groups) and refuses anyone else with a clear message. Approving a suggestion sends `HiveMessage::UserAction`, which `hive-cortex` turns into an `ActionRequest` to `hive-actuator` on the user's behalf.
+- **The screen**: `hive-screen` — the Hive's screen on the machine's console, declared in Quantum (`config/screen/screen.q`, `q:application type="screen"`, the `qs:` tags; `docs/targets/screen.md` is the reference) and compiled to `config/screen/screen.toml`, a font sheet and the sprite sheets. It connects to the user socket as the dashboard does, and cortex lets it in as one (by its binary name and an administrator's uid): every notice reaches it with the event's name and fields, and every offer, which it lists for the keyboard to approve (a dangerous action asks for Enter twice) or dismiss. Today it draws to a canvas and is driven through a play protocol on stdin (`--play`, no display): the Hive lab runs it that way. The next slices: drawing on the console through DRM/KMS with evdev input and a systemd unit under a `_hive-screen` user, the VM lab with a `virtio-gpu` and `screendump`, and presentation levels chosen by the frame budget so the scene gains resolution and effects with the cores the VM gives it.
 - **Missing programs**: when grove can't find a program but `apt-cache policy` shows an installable package of that exact name, grove says so and sends `CommandNotFound`; synapse offers "Install <package>" (a typed `InstallPackage`), which an administrator can approve in the dashboard. Offered at most once per package per 10 minutes.
 
 ### Archived: GUI Track
-A Wayland/Hyprland desktop (`hive-shell`, `hive-dock`, `hive-term`, Mesa+LLVMpipe) and a separate direct-framebuffer engine (`bark` HAL + `spore` 2D renderer) were explored but never integrated end-to-end. Both are paused in `archive/`, outside the Cargo workspace. Not on the roadmap unless the GUI target comes back.
+A Wayland/Hyprland desktop (`hive-shell`, `hive-dock`, `hive-term`, Mesa+LLVMpipe) and a separate direct-framebuffer engine (`bark` HAL + `spore` 2D renderer) were explored but never integrated end-to-end. Both are paused in `archive/`, outside the Cargo workspace, and stay there: `hive-screen` is written fresh (what held up in `spore` was taken as ideas, not as a dependency), and a desktop is not on the roadmap.
 
 ## Directory Structure
 
@@ -77,6 +78,7 @@ druidos/
 │   ├── hive-nerve-process/       # Process observer
 │   ├── hive-nerve-fs/            # Filesystem observer
 │   ├── hive-actuator/            # Action executor
+│   ├── hive-screen/              # The Hive's screen: the compiled scene on the console
 │   ├── hive-apt/                 # APT wrapper
 │   └── hive-zfs/                 # ZFS integration
 │
@@ -96,7 +98,8 @@ druidos/
 │   └── commands/                 # Command-specific knowledge
 │
 ├── config/
-│   └── hive/
+│   ├── hive/                     # hive.q and what it compiles to (rules.toml, whitelist.toml)
+│   └── screen/                   # screen.q and what it compiles to (screen.toml, font.png, art/)
 │
 ├── scripts/
 │   ├── build-kernel.sh
@@ -140,9 +143,13 @@ Cargo can't cross-compile this workspace from Windows; `bash scripts/test-on-for
 
 What the Hive offers on an event, and what the actuator may do, are declared in Quantum: `config/hive/hive.q` (`q:application type="hive"`, the `qh:` tags; `docs/targets/hive.md` at the repository's root is the reference). `python scripts/generate-hive-config.py` (from the repository's root) writes `config/hive/rules.toml`, which hive-synapse loads (`crates/hive-synapse/src/rules.rs`, which also embeds the committed file as its built-in rules), and `config/hive/whitelist.toml`, which hive-actuator loads. Both are committed as written and checked in CI (`tests/hive/`): edit `hive.q`, never them. A `{field}` is filled in from the event, never from the model's text; an offer the whitelist would refuse does not compile. A rule worth keeping has a tape in the Hive lab below.
 
+### The Hive's screen (`config/screen/screen.q`)
+
+What the console shows is declared in Quantum too: `config/screen/screen.q` (`q:application type="screen"`, the `qs:` tags; `docs/targets/screen.md` at the repository's root is the reference). The scene's vocabulary is the games' (sheets, animations, tweens with the same curves, the same particle presets); what moves it are the Hive's events, the same the rules are on, with the same `{field}`s (`hive_common::events` is the one table behind both, kept equal to `quantum/runtime/hive/schema.py` by a test). `python scripts/generate-screen-config.py` writes `config/screen/screen.toml` and `font.png` next to the art `scripts/art/hive_screen.py` draws (CC0, `config/screen/art/`); all committed as written and checked in CI (`tests/screen/`): edit `screen.q`, never them. A sprite named after a service is the one `{service}` reaches; an action the event cannot fill in, or whose target no sprite is named, is left out. `crates/hive-screen/tests/play.rs` plays the OS's screen and compares frames pixel for pixel with `tests/screens/` (`UPDATE_SCREENS=1` rewrites them); a behaviour worth keeping has a tape in the Hive lab (`screen-crash.jsonl`), which reads what the screen shows as data, never pixels.
+
 ### Hive Lab (the Hive in a box: seconds, no VM)
 
-Start here for anything the Hive decides: rules, suggestions, notifications, approvals, what a user may send, and how grove and the dashboard show it (the real programs run in a pseudo-terminal and their screens are read as text). `crates/hive-lab` runs the real `hive-cortex` and `hive-synapse` and plays the nerves, the actuator (which records actions and runs none), grove and the dashboard, under the binary names and users cortex checks, in a private mount namespace (root, as in a container). See `crates/hive-lab/README.md`.
+Start here for anything the Hive decides: rules, suggestions, notifications, approvals, what a user may send, and how grove, the dashboard and the screen show it (the real programs run in a pseudo-terminal and their screens are read as text; the real `hive-screen` runs with no display and is read through its play protocol). `crates/hive-lab` runs the real `hive-cortex` and `hive-synapse` and plays the nerves, the actuator (which records actions and runs none), grove and the dashboard, under the binary names and users cortex checks, in a private mount namespace (root, as in a container). See `crates/hive-lab/README.md`.
 
 ```bash
 scripts/lab/hive-tapes.sh                        # every tape in crates/hive-lab/tapes/, ~4 s
@@ -254,6 +261,10 @@ pub enum HiveMessage {
     ActionResult { action: Action, success: bool, output: Option<String> },
 }
 ```
+
+### What a notice carries
+
+`HiveMessage::Notification` carries, besides its title and body, the event behind it as the rules and the screen name it (`kind`: `service-crash`, `disk-low`, ..., `offer` for a suggestion with its `count`; `None` for a plain notice) and its `fields` (`service`, `port`, `mount`...), filled in by cortex from the observation through `hive_common::events::fields_of`. A client acts on what happened, not on the words; the dashboard still shows the words.
 
 ### Serialization
 

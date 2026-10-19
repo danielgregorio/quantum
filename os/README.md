@@ -22,6 +22,8 @@ They also share a way of working. Quantum's games have a play protocol, through 
 
 The Hive's rules are declared in Quantum: `config/hive/hive.q` says what the Hive offers on an event and what the actuator may do, and compiles to `rules.toml` and `whitelist.toml`, which the daemons load. A `{field}` is filled in from the event, never from the model; an offer the whitelist would refuse does not compile.
 
+So is the Hive's screen: `config/screen/screen.q` says what the machine's console shows, a small pixel-art scene with the vocabulary of Quantum's games, and what happens in it on each event of the Hive. It compiles to `screen.toml`, a font and the sprite sheets, which `hive-screen` draws on the CPU with no engine, no compositor and no GPU, and where an administrator approves the Hive's offers with the keyboard.
+
 ## Working on it
 
 ```bash

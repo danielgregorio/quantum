@@ -1,0 +1,49 @@
+intention:
+  name: "The Hive's screen: variants"
+  version: "1.0.0"
+  category: "screen"
+
+  description: |
+    The shapes a screen file takes, from the OS's own honeycomb to a scene
+    that only says what happens.
+
+  variants:
+    - name: "The screen the OS ships"
+      description: "A honeycomb with a cell per service the whitelist names, a bee, the offers and the notices; a crash smokes the cell, an approval fills it with honey"
+      example: |
+        <qs:sheet name="cell" src="art/cells.png" tile="24">
+          <qs:animation name="smoke" frames="2,3,4,5,6,2" fps="4" loop="false" />
+        </qs:sheet>
+        <qs:scene width="320" height="180" background="#1a1a2e">
+          <qs:sprite name="nginx" sheet="cell" frame="1" x="6" y="22" />
+          <qs:offers x="186" y="34" width="130" rows="8" />
+        </qs:scene>
+        <qs:on event="service-crash">
+          <qs:animate target="{service}" name="smoke" />
+        </qs:on>
+
+    - name: "Words only"
+      description: "A scene with no sprites: the notices, the offers and what each event says"
+      example: |
+        <qs:scene width="320" height="180">
+          <qs:notices x="6" y="6" width="308" rows="10" />
+          <qs:offers x="6" y="120" width="308" rows="4" />
+        </qs:scene>
+        <qs:on event="disk-low">
+          <qs:say text="{mount} is {percent}% full" />
+        </qs:on>
+
+    - name: "A literal target"
+      description: "A rule may name a sprite outright, checked when it compiles; one with {service} is found when the event comes"
+      example: |
+        <qs:on event="offer">
+          <qs:tween target="bee" property="y" to="8" seconds="0.4" trans="sine" ease="in-out" repeat="3" yoyo="true" />
+        </qs:on>
+
+    - name: "An effect that keeps going"
+      description: "qs:emitter in the scene plays fire, rain or snow for ever; qs:emit in a rule plays an effect once where a sprite is"
+      example: |
+        <qs:particles name="snow" preset="snow" amount="20" />
+        <qs:scene width="320" height="180">
+          <qs:emitter particles="snow" x="0" y="0" width="320" />
+        </qs:scene>
