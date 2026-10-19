@@ -281,6 +281,82 @@ static func spawn_on_path(scene: Node, prefab: String, path_name: String) -> Nod
 	return made
 
 
+# --- what the players carry (qg:item): G.q_items, G.q_gone ---
+
+# held(item) in an expression: how many the players hold.
+static func items_held(item: String) -> int:
+	return int(G.q_items.get(item, 0)) if "q_items" in G else 0
+
+
+# qg:give: up to the item's max= (0: no limit).
+static func give_item(item: String, amount: int = 1) -> void:
+	if not ("q_items" in G) or not G.Q_ITEMS.has(item):
+		return
+	var most := int(G.Q_ITEMS[item]["max"])
+	var now := items_held(item) + amount
+	G.q_items[item] = mini(now, most) if most > 0 else now
+	event("item", {"item": item, "held": int(G.q_items[item])})
+
+
+# qg:take: not below 0.
+static func take_item(item: String, amount: int = 1) -> void:
+	if not ("q_items" in G) or not G.Q_ITEMS.has(item):
+		return
+	G.q_items[item] = maxi(0, items_held(item) - amount)
+	event("item", {"item": item, "held": int(G.q_items[item])})
+
+
+# qg:reset-items: a new game. Each item back to its start=, and the gone things come back.
+static func reset_items() -> void:
+	if not ("q_items" in G):
+		return
+	for item in G.Q_ITEMS:
+		G.q_items[item] = int(G.Q_ITEMS[item]["start"])
+	G.q_gone.clear()
+	event("item", {"item": "", "held": 0})
+
+
+# A named thing picked up or opened stays gone: the scene leaves it out when it is built again.
+static func gone(scene_name: String, name_: String) -> bool:
+	return "q_gone" in G and G.q_gone.has(scene_name + "/" + name_)
+
+
+static func _gone(node: Node) -> void:
+	if node.has_meta("q_named") and node.get_parent() != null:
+		G.q_gone.append(String(node.get_parent().name) + "/" + String(node.name))
+
+
+# What a character's touch does before its own handlers: it picks up a thing
+# that gives= an item, and opens one that opens-with= an item it holds (or
+# runs the thing's on-locked).
+static func touched(body: Node, other) -> void:
+	other = _thing(other)
+	if other == null or other.is_queued_for_deletion() or not ("q_items" in G):
+		return
+	if "gives" in other and other.gives != "":
+		var spec: Dictionary = G.Q_ITEMS.get(other.gives, {})
+		if int(spec.get("max", 0)) > 0 and items_held(other.gives) >= int(spec["max"]):
+			return   # they hold the most: it stays where it is
+		give_item(other.gives, other.amount)
+		event("pickup", {"who": who(body), "item": other.gives, "held": items_held(other.gives)})
+		if spec.get("sound") != null and _q_node() != null:
+			_q_node().play(str(spec["sound"]))
+		if spec.get("particles") != null:
+			emit(other, str(spec["particles"]))
+		_gone(other)
+		destroy(other)
+	elif "opens_with" in other and other.opens_with != "":
+		if items_held(other.opens_with) > 0:
+			if not other.keeps:
+				take_item(other.opens_with)
+			event("open", {"who": who(body), "what": who(other), "item": other.opens_with})
+			_gone(other)
+			destroy(other)
+		elif other.on_locked != "" and P.has_method(other.on_locked):
+			event("locked", {"who": who(body), "what": who(other), "item": other.opens_with})
+			P.call(other.on_locked, other, body)
+
+
 # count(tag): how many things of the tag are in the scene (zones are not things).
 static func count(scene: Node, tag: String) -> int:
 	var n := 0
@@ -288,6 +364,62 @@ static func count(scene: Node, tag: String) -> int:
 		if t.get_parent() == scene and t.quantum_tag() == tag and not t.is_queued_for_deletion():
 			n += 1
 	return n
+
+
+# nearest(from, who) in an expression, and the parts of an enemy: the
+# character whose id is `who`, or thing whose tag is ("": any character), nearest
+# `from` in its scene; within `within` pixels, and seen (no solid tile
+# between) when `seen`. The first in the scene's order on a tie; null for none.
+static func nearest(from, who: String, within: float = INF, seen: bool = false):
+	from = _thing(from)
+	if from == null or not (from is Node2D) or from.get_parent() == null:
+		return null
+	var best = null
+	var best_d := within
+	for n in from.get_parent().get_children():
+		if n == from or not (n is Node2D) or n.is_queued_for_deletion():
+			continue
+		var named: bool = n.is_in_group("q_named") and (who == "" or String(n.name) == who)
+		var tagged: bool = who != "" and n.is_in_group("q_thing") and n.quantum_tag() == who
+		if not named and not tagged:
+			continue
+		var d := (from as Node2D).position.distance_to((n as Node2D).position)
+		if d > within or (best != null and d >= best_d):
+			continue
+		if seen and not sees(from, n):
+			continue
+		best = n
+		best_d = d
+	return best
+
+
+# distance(a, b): pixels between two things or characters of a scene; INF when one is gone.
+static func distance(a, b) -> float:
+	a = _thing(a)
+	b = _thing(b)
+	if a == null or b == null or not (a is Node2D) or not (b is Node2D):
+		return INF
+	return (a as Node2D).position.distance_to((b as Node2D).position)
+
+
+# sees(a, b): no solid tile of the scene's tilemap on the line between them,
+# looked at every quarter of a tile.
+static func sees(a, b) -> bool:
+	a = _thing(a)
+	b = _thing(b)
+	if a == null or b == null or not (a is Node2D) or not (b is Node2D):
+		return false
+	var map = a.get_parent().get_node_or_null("Tilemap") if a.get_parent() != null else null
+	if map == null or not map.has_method("blocked"):
+		return true
+	var walls: Dictionary = map.blocked()
+	var from: Vector2 = (a as Node2D).position
+	var to: Vector2 = (b as Node2D).position
+	var steps := ceili(from.distance_to(to) / (float(map.tile) / 4.0))
+	for i in range(1, steps):
+		if walls.has(map.cell_of(from.lerp(to, float(i) / steps))):
+			return false
+	return true
 
 
 # thing_at(tag, x, y): the thing (or zone) of the tag whose box covers the point ("" for any thing), or null.
@@ -856,14 +988,33 @@ func load_sounds(sounds: Dictionary) -> void:
 var resimulating: bool = false   # the rollback replays old ticks: record sounds, play none
 
 
-func play(name_: String) -> void:
+# qg:play. Plain, the sound's own player starts it again. With a volume, a
+# pitch or a vary, it plays in a voice of its own (the same sound can then
+# overlap itself), freed when it has played. Only heard: the state records the
+# name, and the random pitch comes from a generator of its own, never the game's.
+func play(name_: String, volume: float = 0.0, pitch: float = 1.0, vary: float = 0.0) -> void:
 	sounds_played.append(name_)
 	event("sound", {"name": name_})
 	if resimulating:
 		return
 	var player: AudioStreamPlayer = _sounds.get(name_)
-	if player != null:
+	if player == null:
+		return
+	if volume == 0.0 and pitch == 1.0 and vary == 0.0:
 		player.play()
+		return
+	var voice := AudioStreamPlayer.new()
+	voice.stream = player.stream
+	voice.bus = player.bus
+	voice.volume_db = player.volume_db + volume
+	voice.pitch_scale = maxf(0.05, pitch + (_voices.randf_range(-vary, vary) if vary > 0.0 else 0.0))
+	add_child(voice)
+	voice.play()
+	var length := player.stream.get_length() if player.stream != null else 1.0
+	get_tree().create_timer(length / voice.pitch_scale + 0.1).timeout.connect(voice.queue_free)
+
+
+var _voices := RandomNumberGenerator.new()   # the pitch of a voice: heard only, so not the game's generator
 
 
 # qg:music: the scene's music. Another one crossfades in over `fade` seconds,

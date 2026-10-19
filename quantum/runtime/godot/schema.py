@@ -38,14 +38,14 @@ class Tag:
 
 
 # The tags that hold a handler: actions (and q: statements), run when it fires.
-HANDLERS = ('on-collision', 'on-fall', 'on-input', 'on-select', 'on-hit', 'on-ko', 'on-death', 'on-animation-end',
-            'on-damage', 'timer', 'button', 'on-end')
+HANDLERS = ('on-collision', 'on-fall', 'on-input', 'on-select', 'on-hit', 'on-ko', 'on-death', 'on-tile',
+            'on-animation-end', 'on-locked', 'on-damage', 'timer', 'button', 'on-end')
 
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
            'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
-           'play-animation')
+           'play-animation', 'give', 'take', 'reset-items')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -61,7 +61,13 @@ TAGS: Dict[str, Tag] = {
         {'frame': Attr('int', required=True, doc='which tile: its number in the tilemap is frame+1'),
          'shape': Attr('str', None, doc='the solid part, as x,y points from the tile\'s top-left corner '
                                         'separated by semicolons (0,10; 64,10; 64,64; 0,64); none: not solid'),
-         'one-way': Attr('bool', False, doc='stood on from above, jumped through from below')},
+         'one-way': Attr('bool', False, doc='stood on from above, jumped through from below'),
+         'kind': Attr('enum:ladder|water|ice|hurt', None,
+                      doc='ladder: passed through, climbed with up and down, let go of with jump; water: passed '
+                          'through, slow to sink in, a jump is a stroke, slower to walk; ice: slid on (a solid '
+                          'tile to stand on in a platformer, a floor in a top-down game); hurt: a '
+                          'character\'s qg:on-tile kind="hurt" runs while it touches one. In a Tiled tileset: a '
+                          'tile\'s class, or its kind property')},
         parents=('tileset',)),
     'spritesheet': Tag(
         'A sheet of equal frames for characters and items.',
@@ -133,6 +139,20 @@ TAGS: Dict[str, Tag] = {
         {'text': Attr('str', required=True, doc='the text exactly as the game shows it (a button, a line, a HUD text)'),
          'as': Attr('str', required=True, doc='what it is in this language')},
         parents=('language',)),
+    'item': Tag(
+        'A kind of thing the players carry: keys, gems, potions. How many they hold is the game\'s state, kept '
+        'across scenes and in a qg:save; `held(\'key\')` reads it. A prefab with gives= is picked up as one; a '
+        'solid prefab with opens-with= opens for one; qg:give and qg:take add and spend them; qg:inventory '
+        'shows them.',
+        {'name': Attr('ident', required=True),
+         'label': Attr('str', None, doc='what a player reads (else its name), in the HUD'),
+         'sheet': Attr('ident', None, doc='a qg:spritesheet or qg:tileset: its picture in qg:inventory'),
+         'frame': Attr('int', 0),
+         'max': Attr('int', 0, doc='the most they can hold (0: no limit)'),
+         'start': Attr('int', 0, doc='how many they hold when the game starts'),
+         'sound': Attr('ident', None, doc='a qg:sound, played as one is picked up'),
+         'particles': Attr('ident', None, doc='a qg:particles, burst where one is picked up')},
+        parents=('application',)),
     'prefab': Tag(
         'A kind of thing the scene places with qg:instance. With ai= it moves.',
         {'name': Attr('ident', required=True),
@@ -140,7 +160,7 @@ TAGS: Dict[str, Tag] = {
          'sheet': Attr('ident', required=True, doc='a qg:spritesheet or qg:tileset'),
          'frame': Attr('int', 0),
          'hitbox': Attr('size', required=True),
-         'ai': Attr('enum:patrol|wander|chase|pathfind|fly|sway|shuttle|path|turret', None,
+         'ai': Attr('enum:patrol|wander|chase|pathfind|fly|sway|shuttle|path|turret|behavior', None,
                     doc='patrol: walks under gravity, turns at walls (and at edges with turns-at); '
                         'wander: top-down, changes direction now and then (from the scene seed); '
                         'chase: top-down, goes for the character within sight=, straight at it; '
@@ -148,7 +168,8 @@ TAGS: Dict[str, Tag] = {
                         'fly: straight along heading=; sway: side to side across the scene; '
                         'shuttle: a solid that goes dx=,dy= and back every period= ticks, carrying what stands on it; '
                         'path: follows the qg:path it was spawned on (qg:spawn at="path"), then stands at its end; '
-                        'turret: stands, and fires fire-prefab at the nearest targets= within range= every fire-every'),
+                        'turret: stands, and fires fire-prefab at the nearest targets= within range= every fire-every; '
+                        'behavior: top-down, made of the parts its qg:behavior lists (qg:seek, qg:flee...)'),
          'range': Attr('float', 100.0, doc='turret: pixels'),
          'targets': Attr('ident', None, doc='turret: the tag it shoots at'),
          'attack': Attr('enum:shoot|area', 'shoot', doc='turret: shoot spawns fire-prefab headed at the target; '
@@ -162,7 +183,7 @@ TAGS: Dict[str, Tag] = {
                                         'semicolons (-96,-21; 96,-21; 96,6; -96,6), instead of the hitbox'),
          'scale': Attr('float', 1.0, doc='the picture\'s size, times its frame (the hitbox stays as given)'),
          'walls': Attr('enum:pass|stop', 'pass', doc='fly: pass goes through the tiles; stop is gone on touching one'),
-         'sight': Attr('float', 80.0, doc='chase, pathfind: pixels'),
+         'sight': Attr('float', 80.0, doc='chase, pathfind, and the parts of a behavior: pixels'),
          'heading': Attr('str', 'down', doc='fly: up, down, left, right, or a direction as x,y (-1,0.5)'),
          'accel': Attr('float', 0.0, doc='fly: pixels per second added to its speed every second'),
          'lifetime': Attr('int', 0, doc='fly: gone after this many ticks (0: never); any fly is gone off-screen'),
@@ -176,7 +197,15 @@ TAGS: Dict[str, Tag] = {
          'direction': Attr('enum:left|right', 'left', doc='where it walks first'),
          'turns-at': Attr('enum:wall|edge', 'wall', doc='edge: also turns before falling off'),
          'gravity': Attr('float', 900.0),
-         'solid': Attr('bool', False, doc='characters stand on it and bump it (a block)')},
+         'solid': Attr('bool', False, doc='characters stand on it and bump it (a block)'),
+         'gives': Attr('ident', None, doc='a qg:item: a character that touches it picks it up (amount= of '
+                                          'them) and it is gone; a named instance stays gone when the scene '
+                                          'is entered again'),
+         'amount': Attr('int', 1, doc='gives=: how many'),
+         'opens-with': Attr('ident', None, doc='solid: a qg:item. A character that bumps it holding one '
+                                               'spends it and it opens (it is gone; a named one stays gone); '
+                                               'without one, its qg:on-locked runs'),
+         'keeps': Attr('bool', False, doc='opens-with=: the item is not spent (a key for every door)')},
         parents=('application',)),
     'state': Tag(
         'A form of a character or a prefab (small, big; calm, angry): hitbox, frame, animations, '
@@ -372,9 +401,18 @@ TAGS: Dict[str, Tag] = {
          'to': Attr('ident', required=True), 'at': Attr('ident', required=True)},
         parents=('scene',)),
     'camera': Tag(
-        'What the screen shows.',
-        {'follow': Attr('ident', required=True, doc='a character id'),
-         'bounds': Attr('enum:tilemap|none', 'tilemap')},
+        'What the screen shows: it follows a character, or the middle of several, in the game\'s ticks (a replay '
+        'and every peer frame the same). Only seen: nothing in the game\'s state depends on it.',
+        {'follow': Attr('str', required=True, doc='a character id, or several: "p1, p2" (their middle)'),
+         'bounds': Attr('enum:tilemap|none', 'tilemap'),
+         'zoom': Attr('float', 1.0, doc='2: twice as close'),
+         'dead-zone': Attr('size', None, doc='WxH: the box about the middle of the screen in which the followed one '
+                                             'moves before the camera does'),
+         'lead': Attr('float', 0.0, doc='pixels it looks ahead, the way the followed one goes'),
+         'smooth': Attr('float', 0.0, doc='how fast it catches up, per second (0: at once)'),
+         'fit': Attr('bool', False, doc='several followed: it zooms out to keep them all on the screen, down to '
+                                        'zoom-min, and back in as they come together'),
+         'zoom-min': Attr('float', 0.5, doc='fit: as far out as it goes')},
         parents=('scene',)),
     'hud': Tag(
         'Text over the game.',
@@ -383,8 +421,9 @@ TAGS: Dict[str, Tag] = {
          'size': Attr('int', 8, doc='the font size of its items, unless an item says otherwise')},
         parents=('scene',)),
     'counter': Tag(
-        'A number from the scene state, in the HUD.',
-        {'bind': Attr('ident', required=True, doc='a q:set of the scene'),
+        'A number from the scene state, or how many of an item the players hold, in the HUD.',
+        {'bind': Attr('ident', None, doc='a q:set of the scene or the game (or item=)'),
+         'item': Attr('ident', None, doc='a qg:item: how many are held (or bind=)'),
          'label': Attr('str', '', doc='text before the number'),
          'size': Attr('int', None, doc='font size')},
         parents=('hud',)),
@@ -475,11 +514,19 @@ TAGS: Dict[str, Tag] = {
         'and a qg:jump with air=; a ship that comes back round the screen is qg:walk axis="both" and qg:wrap. '
         'Each tick, whatever their order: walk and jump read the keys, gravity pulls, the body moves, then '
         'keep-inside, wrap and face. `me.vx`, `me.vy` and `me.on_floor` read it; qg:velocity sets its speed '
-        'from the game\'s rules (a dash, a knock-back), so what no part covers is written in the game.',
+        'from the game\'s rules (a dash, a knock-back), so what no part covers is written in the game. '
+        'In a qg:prefab ai="behavior", an enemy\'s parts instead: what it moves by is the first of qg:seek, '
+        'qg:flee, qg:keep-distance, qg:patrol, qg:wander and qg:stand, in their order, whose when= holds and '
+        'that has something to do (a seek with nothing in sight has not); it stands when none has. Its '
+        'qg:shoot parts fire besides. `me.doing` reads the part that moved it ("" for none). With qg:gravity '
+        'the enemy walks on floors: the parts move it left and right only, a seek goes straight, the prefab\'s '
+        'turns-at="edge" keeps it from walking off a ledge, and qg:leap jumps; `me.on_floor` reads whether it '
+        'stands.',
         {},
-        parents=('character',)),
+        parents=('character', 'prefab')),
     'gravity': Tag(
-        'A part: it falls, and stands on floors (without it, the body floats: top-down).',
+        'A part: it falls, and stands on floors (without it, the body floats: top-down). A character\'s or an '
+        'enemy\'s.',
         {'strength': Attr('float', 900.0, doc='pixels per second squared'),
          'max-fall': Attr('float', 300.0, doc='the speed it falls at most, pixels per second')},
         parents=('behavior',)),
@@ -514,6 +561,78 @@ TAGS: Dict[str, Tag] = {
         {'by': Attr('enum:velocity|input', 'velocity', doc='velocity: the way it moves; input: the way it is '
                                                          'pushed (it faces while it walks into a wall)')},
         parents=('behavior',)),
+    'seek': Tag(
+        'An enemy\'s part: it goes for the nearest target it notices, around the walls by the shortest way over '
+        'the tilemap\'s free cells (way="straight": straight at it).',
+        {'target': Attr('str', None, doc='a character\'s id or a thing\'s tag; none: any character'),
+         'sight': Attr('float', None, doc='pixels it notices a target within (else the prefab\'s sight=)'),
+         'through-walls': Attr('bool', False, doc='it notices a target behind a solid tile (else only one it sees)'),
+         'way': Attr('enum:around|straight', 'around'),
+         'speed': Attr('float', None, doc='pixels per second (else the prefab\'s speed=)'),
+         'when': Attr('expr', None, doc='only while this is true (`me` is the enemy)')},
+        parents=('behavior',)),
+    'flee': Tag(
+        'An enemy\'s part: it runs from the nearest one it notices, straight away from it.',
+        {'from': Attr('str', None, doc='a character\'s id or a thing\'s tag; none: any character'),
+         'sight': Attr('float', None, doc='pixels (else the prefab\'s sight=)'),
+         'through-walls': Attr('bool', False),
+         'speed': Attr('float', None),
+         'when': Attr('expr', None)},
+        parents=('behavior',)),
+    'keep-distance': Tag(
+        'An enemy\'s part: it keeps between min= and max= pixels from the nearest one it notices: away when '
+        'closer, towards it when farther, and still in between.',
+        {'from': Attr('str', None, doc='a character\'s id or a thing\'s tag; none: any character'),
+         'min': Attr('float', required=True),
+         'max': Attr('float', required=True),
+         'sight': Attr('float', None, doc='pixels (else the prefab\'s sight=)'),
+         'through-walls': Attr('bool', False),
+         'speed': Attr('float', None),
+         'when': Attr('expr', None)},
+        parents=('behavior',)),
+    'patrol': Tag(
+        'An enemy\'s part: to and fro along a line, turning at walls (and after distance= pixels).',
+        {'heading': Attr('enum:left|right|up|down', None, doc='where it goes first (else the prefab\'s direction=)'),
+         'distance': Attr('float', 0.0, doc='pixels before it turns (0: only at walls)'),
+         'speed': Attr('float', None),
+         'when': Attr('expr', None)},
+        parents=('behavior',)),
+    'wander': Tag(
+        'An enemy\'s part: a new heading every 30 to 90 ticks (from the scene seed), and at once on bumping a wall.',
+        {'speed': Attr('float', None),
+         'when': Attr('expr', None)},
+        parents=('behavior',)),
+    'leap': Tag(
+        'An enemy\'s part, with qg:gravity: it jumps, from the floor, when it bumps a wall as it walks (a step '
+        'to climb) or while its when= holds; at most once every every= ticks.',
+        {'height': Attr('float', 40.0, doc='pixels'),
+         'at-wall': Attr('bool', True, doc='it jumps on bumping a wall as it walks'),
+         'every': Attr('int', 30, doc='ticks between two leaps at least'),
+         'sound': Attr('ident', None),
+         'when': Attr('expr', None, doc='it jumps while this is true too (`me` is the enemy)')},
+        parents=('behavior',)),
+    'stand': Tag(
+        'An enemy\'s part: it stands still; the parts after it wait.',
+        {'when': Attr('expr', None)},
+        parents=('behavior',)),
+    'shoot': Tag(
+        'An enemy\'s part: it fires prefab= at the nearest target within range=, headed at it, at most once '
+        'every every= ticks. It shoots whatever part moves it.',
+        {'prefab': Attr('ident', required=True, doc='what it fires: a prefab with ai="fly"'),
+         'at': Attr('str', None, doc='a character\'s id or a thing\'s tag; none: any character'),
+         'every': Attr('int', 60, doc='ticks between shots'),
+         'range': Attr('float', 100.0, doc='pixels'),
+         'through-walls': Attr('bool', False, doc='it fires at a target behind a solid tile (else only one it sees)'),
+         'sound': Attr('ident', None),
+         'when': Attr('expr', None)},
+        parents=('behavior',)),
+    'on-tile': Tag(
+        'What happens while this character touches a tile of a kind (qg:tile kind=): stands on it, is in it, or '
+        'bumps it. Holds actions and statements; `me` is the character. Without a cooldown, once as it comes to '
+        'touch one; with one, again each time the cooldown runs out while it still does.',
+        {'kind': Attr('enum:ladder|water|ice|hurt', required=True),
+         'cooldown': Attr('int', 0, doc='ticks before it may run again while still touching')},
+        parents=('character',)),
     'on-animation-end': Tag(
         'What happens when an animation of this character or prefab with loop="false" has played to its last '
         'frame. Holds actions and statements; `me` is whose animation it is.',
@@ -524,6 +643,11 @@ TAGS: Dict[str, Tag] = {
         '`other` the winner.',
         {},
         parents=('character',)),
+    'inventory': Tag(
+        'In the HUD: the items held, each its picture (the qg:item\'s sheet= and frame=) and how many, in a row; '
+        'an item held 0 times is not shown.',
+        {'size': Attr('int', None, doc='the font size of the numbers')},
+        parents=('hud',)),
     'bar': Tag(
         'A bar in the HUD: a number against its maximum — a q:set, or a fighter\'s health as `id.health`.',
         {'bind': Attr('str', required=True, doc='a q:set of the scene or the game, or a fighter\'s id and .health (p1.health)'),
@@ -531,7 +655,26 @@ TAGS: Dict[str, Tag] = {
          'width': Attr('int', 100), 'height': Attr('int', 10),
          'color': Attr('color', '#e04040')},
         parents=('hud',)),
+    'on-locked': Tag(
+        'What happens when a character bumps this prefab (opens-with=) without the item. Holds actions and '
+        'statements; `me` is the locked thing, `other` the character.',
+        {},
+        parents=('prefab',)),
     # actions
+    'give': Tag(
+        'The players get some of an item (up to its max=).',
+        {'item': Attr('ident', required=True, doc='a qg:item'),
+         'amount': Attr('int', 1)},
+        parents=('handler',)),
+    'take': Tag(
+        'The players spend some of an item (not below 0): a potion drunk, a key used.',
+        {'item': Attr('ident', required=True, doc='a qg:item'),
+         'amount': Attr('int', 1)},
+        parents=('handler',)),
+    'reset-items': Tag(
+        'A new game: every qg:item back to its start=, and the named things picked up or opened come back.',
+        {},
+        parents=('handler',)),
     'destroy': Tag(
         'Removes a thing from the scene.',
         {'target': Attr('ident', 'other', doc='other, me, or a q:set holding a thing (thing_at)')},
@@ -549,8 +692,14 @@ TAGS: Dict[str, Tag] = {
          'name': Attr('str', required=True, doc='an animation of the target (empty: back to its own)')},
         parents=('handler',)),
     'play': Tag(
-        'Plays a qg:sound. Directly in a scene: as the scene is entered.',
-        {'sound': Attr('ident', required=True)},
+        'Plays a qg:sound. Directly in a scene: as the scene is entered. With volume=, pitch= or vary=, it plays '
+        'in a voice of its own, so the same sound can overlap itself. Only heard: the game\'s state records the '
+        'sound\'s name, never how it was played.',
+        {'sound': Attr('ident', required=True),
+         'volume': Attr('float', 0.0, doc='decibels added (-6: about half as loud)'),
+         'pitch': Attr('float', 1.0, doc='2: an octave up, 0.5: an octave down'),
+         'vary': Attr('float', 0.0, doc='a random pitch between pitch - vary and pitch + vary, each time: '
+                                        'twenty hits that do not sound the same')},
         parents=('handler', 'scene')),
     'music': Tag(
         'The music of a scene: a looping qg:sound that plays while the scene is on. Going to a scene '

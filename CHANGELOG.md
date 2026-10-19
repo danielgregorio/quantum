@@ -18,6 +18,65 @@ alter the behaviour of an existing app is listed under **Breaking**.
   warns "Unknown tag" on every tag of a game, nor on its `gd:` attributes.
   A conformance test checks that every game in `projects/` is clean in the
   editor.
+- Laboratory: enemies of parts that walk on floors. `<qg:gravity>` in a
+  prefab's `qg:behavior` (as in a character's) makes it fall and stand:
+  its parts then move it left and right only, a seek goes straight at its
+  target, and the prefab's `turns-at="edge"` keeps it on its ledge (a
+  patrol turns, the other parts wait). `<qg:leap height= every= at-wall=
+  when= sound=>` jumps from the floor on bumping a wall as it walks (a step
+  to climb) or while `when=` holds. `me.on_floor` reads whether it stands.
+- Laboratory: enemies made of parts. A `<qg:prefab ai="behavior">` lists
+  its parts in a `<qg:behavior>`: `qg:seek` (around the walls, or
+  `way="straight"`), `qg:flee`, `qg:keep-distance min= max=`, `qg:patrol`
+  (to and fro, turning at walls or after `distance=`), `qg:wander` and
+  `qg:stand`. The first one in order whose `when=` holds and that has
+  something to do moves it; `qg:shoot` parts fire besides. A part notices
+  only what it sees (no solid tile between) unless `through-walls="true"`,
+  and looks for a character by id or a thing by tag. `me.doing` reads the
+  part that moved it. Expressions gain `distance(a, b)`, `nearest(a, who)`
+  and `sees(a, b)`.
+- Laboratory: what the players carry. `<qg:item name= label= sheet= frame=
+  max= start= sound= particles=>` declares a kind of item; how many are
+  held is the game's state (kept across scenes, saved with `qg:save`, in
+  every replay and peer's hash). A prefab with `gives="key"` (and
+  `amount=`) is picked up by a character's touch, unless they hold the
+  most; a solid one with `opens-with="key"` opens for one, spending it
+  unless `keeps="true"`, and runs its `<qg:on-locked>` without one. A named
+  instance picked up or opened stays gone when its scene is entered again,
+  with no `taken` list and `if=` to write. `<qg:give item= amount=>` and
+  `<qg:take item= amount=>` add and spend them, `<qg:reset-items>` starts a
+  new game (each item back to its `start=`, the gone things back), `held('key')` reads them,
+  `<qg:counter item=>` counts one in the HUD and `<qg:inventory>` shows
+  what is held, each its picture and how many. `pickup`, `open`, `locked`
+  and `item` events reach the play protocol.
+- Laboratory: tile kinds. `<qg:tile kind=>` makes a tile a `ladder`
+  (passed through; up and down climb it, jump lets go), `water` (passed
+  through; slow to sink in, a jump is a stroke, slower to walk), `ice`
+  (slid on, in a platformer and on a top-down floor) or `hurt`. In a Tiled
+  map, a tileset tile's class or `kind` property does the same, in the
+  map's own tileset or an external `.tsx`. The platformer, top-down and
+  behavior controllers feel them. `<qg:on-tile kind= cooldown=>` on a
+  character runs as it comes to touch a tile of that kind (stands on it, is
+  in it or bumps it), and again each cooldown while it still does; a
+  `tile-touch` event reaches the play protocol.
+- Laboratory: `<qg:play sound= volume= pitch= vary=>`: decibels added, a
+  pitch (2: an octave up), and a random spread of pitch each time, so twenty
+  hits do not sound the same. Such a play is a voice of its own, so the
+  sound can overlap itself. Only heard: the state records the sound's name,
+  and the random pitch comes from a generator of its own.
+- Laboratory: Delve has music of its own, written and synthesized by
+  `scripts/art/delve_music.py` (CC0, with `scripts/art/rpg_music.py`'s
+  voices): `torchlight` for the title and the end, `crypt`, darker and
+  slower, for the three crypts. Its hits vary in pitch, its gems ring a
+  little higher, and the wall a lever opens sounds deeper.
+- Laboratory: `qg:camera` has `zoom=`, `dead-zone="WxH"` (the box the
+  followed one moves in before the camera does), `lead=` (pixels it looks
+  ahead, the way the followed one goes), `smooth=`, and follows several
+  characters (`follow="p1, p2"`: their middle), with `fit="true"` zooming
+  out to keep them all on the screen (down to `zoom-min=`). It runs in the
+  game's ticks and is only seen; the play protocol reports it as a screen
+  view (`kind: camera`, where it looks and how close). Hopper's camera
+  looks ahead and lets a jump rise before it follows.
 - Laboratory: animations with an end. `<qg:animation loop="false">` plays
   once and stays on its last frame; `<qg:on-animation-end name=>` on a
   character or a prefab runs as it ends (`me` is whose it is), and an

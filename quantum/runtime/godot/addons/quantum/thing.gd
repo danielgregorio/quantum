@@ -6,9 +6,11 @@ extends CharacterBody2D
 # ai: patrol walks under gravity and turns at walls (and edges);
 # wander and chase are top-down; fly goes straight along `heading` and is
 # gone after `lifetime` ticks or off-screen; sway goes side to side across
-# the scene. health is taken by qg:damage: on-damage runs while it lives,
-# on-death when it reaches 0, then it goes. States (qg:state) change its
-# frame, speed and fire-every.
+# the scene; behavior is made of the parts its qg:behavior lists (an enemy
+# of parts: seek, flee, keep-distance, patrol, wander, stand, shoot).
+# health is taken by qg:damage: on-damage runs while it lives, on-death
+# when it reaches 0, then it goes. States (qg:state) change its frame, speed
+# and fire-every.
 
 const Animator := preload("res://addons/quantum/animator.gd")
 
@@ -40,6 +42,9 @@ var fire_every: int = 0
 var fire_sound: String = ""
 var state: String = ""
 var stops_at_walls: bool = false
+var parts: Array = []
+var doing: String = ""            # the part that moved it this tick (ai="behavior"), "" for none
+var on_floor: bool = false        # an enemy of parts with qg:gravity: it stands on something
 
 var _heading: Vector2 = Vector2.ZERO
 var _rethink: int = 0
@@ -78,7 +83,12 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 	damage = int(prefab.get("damage", 1))
 	ai = str(prefab.get("ai", "patrol"))
 	sight = float(prefab.get("sight", 80.0))
-	if ai != "patrol":
+	for p in prefab.get("parts", []):
+		if p["kind"] == "gravity":
+			_fall = p
+		elif p["kind"] == "leap":
+			_leap = p
+	if ai != "patrol" and _fall.is_empty():
 		motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
 	if ai == "fly" or ai == "sway" or ai == "path" or ai == "turret":
 		collision_mask = 0   # through everything: a shot or a drone is stopped by nothing
@@ -102,6 +112,7 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 	_on_damage = str(prefab.get("on_damage", "")) if prefab.get("on_damage") != null else ""
 	_on_death = str(prefab.get("on_death", "")) if prefab.get("on_death") != null else ""
 	_states = prefab.get("states", {})
+	parts = prefab.get("parts", [])
 	_base = {"frame": int(prefab.get("frame", 0)), "speed": speed, "fire_every": fire_every, "heading": heading,
 		"fire_prefab": fire_prefab, "range": range_}
 
@@ -280,6 +291,8 @@ func _physics_process(delta: float) -> void:
 			_follow_path(delta)
 		"turret":
 			_turret()
+		"behavior":
+			_behave(delta)
 		_:
 			_patrol(delta)
 	_fire()
@@ -433,6 +446,18 @@ func _pathfind() -> void:
 	if map == null or not map.has_method("path"):
 		_chase()
 		return
+	var aim = _aim_around(target, map)
+	if aim == null:
+		velocity = Vector2.ZERO   # walled off: it waits
+		return
+	velocity = _towards(aim, speed)
+	move_and_slide()
+	_face(velocity.x)
+
+
+# Where to head for next on the way to `target` around the walls; null when
+# it is walled off from it.
+func _aim_around(target: Node2D, map: Node):
 	var here: Vector2i = map.cell_of(position)
 	var there: Vector2i = map.cell_of(target.position)
 	if there != _way_to or _way.is_empty() or not (here in _way):
@@ -451,12 +476,197 @@ func _pathfind() -> void:
 		elif next.y != here.y and absf(position.x - mid.x) > 1.0:
 			aim = Vector2(mid.x, position.y)
 	elif _way.is_empty():
-		velocity = Vector2.ZERO   # walled off: it waits
-		return
+		return null
+	return aim
+
+
+# The velocity that heads for `aim` at `speed`, but not past it in one tick.
+func _towards(aim: Vector2, speed_: float) -> Vector2:
+	if not _fall.is_empty():
+		aim.y = position.y   # walking on floors: only across
 	var to := aim - position
-	velocity = to.normalized() * minf(speed, to.length() * Q.TICK_RATE)   # not past the aim
-	move_and_slide()
+	return to.normalized() * minf(speed_, to.length() * Q.TICK_RATE)
+
+
+# --- ai="behavior": an enemy made of parts ---
+
+var _part_state: Dictionary = {}   # part index -> what it keeps (a patrol's way, a shot's next tick)
+var _fall: Dictionary = {}         # its qg:gravity: it walks on floors
+var _leap: Dictionary = {}         # its qg:leap
+var _leap_next: int = 0
+var _bumped: bool = false
+
+
+# The first moving part whose when= holds and that has something to do moves
+# it; the shoot parts fire besides.
+func _behave(delta: float) -> void:
+	var chosen := -1
+	var v := Vector2.ZERO
+	for i in parts.size():
+		var p: Dictionary = parts[i]
+		if p["kind"] in ["shoot", "gravity", "leap"] or not _part_on(p):
+			continue
+		var got = _part_velocity(i, p)
+		if got != null:
+			chosen = i
+			v = got
+			break
+	doing = parts[chosen]["kind"] if chosen >= 0 else ""
+	if not _fall.is_empty():
+		_walk_and_fall(chosen, v.x, delta)
+	else:
+		_float(chosen, v)
+	for i in parts.size():
+		if parts[i]["kind"] == "shoot" and _part_on(parts[i]):
+			_part_shoot(i, parts[i])
+
+
+# Top-down: the part's velocity, as it is.
+func _float(chosen: int, v: Vector2) -> void:
+	velocity = v
+	if v != Vector2.ZERO:
+		move_and_slide()
+		if get_slide_collision_count() > 0:
+			if doing == "patrol":
+				_part_state[chosen]["dir"] = -_part_state[chosen]["dir"]
+				_part_state[chosen]["walked"] = 0.0
+			elif doing == "wander":
+				_rethink = 0
 	_face(velocity.x)
+
+
+# With qg:gravity: the part says left or right; gravity pulls; turns-at="edge"
+# keeps it on its ledge (a patrol turns, the others wait); qg:leap jumps.
+func _walk_and_fall(chosen: int, vx: float, delta: float) -> void:
+	if absf(vx) < 0.01:
+		vx = 0.0
+	if vx != 0.0 and turns_at_edge and is_on_floor() and not _ground_ahead_at(int(signf(vx))):
+		if doing == "patrol":
+			_part_state[chosen]["dir"] = -_part_state[chosen]["dir"]
+			_part_state[chosen]["walked"] = 0.0
+		vx = 0.0
+	velocity.x = vx
+	var g := float(_fall["strength"])
+	velocity.y = minf(velocity.y + g * delta, float(_fall["max_fall"]))
+	if not _leap.is_empty() and is_on_floor() and _ticks >= _leap_next:
+		var wall := bool(_leap["at_wall"]) and _bumped and vx != 0.0
+		if wall or (_leap.get("when") != null and _part_on(_leap)):
+			velocity.y = -sqrt(2.0 * g * float(_leap["height"]))
+			_leap_next = _ticks + int(_leap["every"])
+			Q.event("leap", {"who": Q.who(self)})
+			if _leap.get("sound") != null:
+				Q.play(str(_leap["sound"]))
+	move_and_slide()
+	on_floor = is_on_floor()
+	_bumped = is_on_wall()
+	if _bumped and doing == "patrol" and not _leap_climbs():
+		_part_state[chosen]["dir"] = -_part_state[chosen]["dir"]
+		_part_state[chosen]["walked"] = 0.0
+	elif _bumped and doing == "wander":
+		_rethink = 0
+	_face(velocity.x)
+
+
+# A patrol that can leap tries the wall first: it turns only when the leap has not got it over.
+func _leap_climbs() -> bool:
+	return not _leap.is_empty() and bool(_leap["at_wall"]) and _ticks >= _leap_next
+
+
+func _part_on(p: Dictionary) -> bool:
+	return p.get("when") == null or P.call(p["when"], self)
+
+
+func _part_speed(p: Dictionary) -> float:
+	return float(p["speed"]) if p.get("speed") != null else speed
+
+
+# Whom a part looks for: the nearest it notices, or null.
+func _part_target(p: Dictionary, who_key: String, within: float) -> Node2D:
+	var who = p.get(who_key)
+	return Q.nearest(self, "" if who == null else str(who), within, not bool(p.get("through_walls", false)))
+
+
+func _part_velocity(i: int, p: Dictionary):
+	var sight_: float = float(p["sight"]) if p.get("sight") != null else sight
+	match p["kind"]:
+		"stand":
+			return Vector2.ZERO
+		"wander":
+			var scene := _scene_of()
+			if _rethink <= 0:
+				var rng: RandomNumberGenerator = scene.rng if "rng" in scene else RandomNumberGenerator.new()
+				var angle := rng.randf_range(0.0, TAU)
+				_heading = Vector2(cos(angle), sin(angle))
+				_rethink = rng.randi_range(30, 90)
+			_rethink -= 1
+			if not _fall.is_empty():
+				return Vector2(signf(_heading.x), 0.0) * _part_speed(p)
+			return _heading * _part_speed(p)
+		"patrol":
+			if not _part_state.has(i):
+				var first: String = str(p["heading"]) if p.get("heading") != null else ("left" if direction < 0 else "right")
+				var dirs := {"left": Vector2.LEFT, "right": Vector2.RIGHT, "up": Vector2.UP, "down": Vector2.DOWN}
+				_part_state[i] = {"dir": dirs[first], "walked": 0.0}
+			var st: Dictionary = _part_state[i]
+			var step := _part_speed(p) / Q.TICK_RATE
+			if float(p["distance"]) > 0.0 and float(st["walked"]) + step > float(p["distance"]):
+				st["dir"] = -st["dir"]
+				st["walked"] = 0.0
+			st["walked"] = float(st["walked"]) + step
+			return st["dir"] * _part_speed(p)
+		"seek":
+			var t := _part_target(p, "target", sight_)
+			if t == null:
+				return null
+			var aim = t.position
+			if p.get("way", "around") == "around" and _fall.is_empty():
+				var map = _scene_of().get_node_or_null("Tilemap")
+				if map != null and map.has_method("path"):
+					aim = _aim_around(t, map)
+					if aim == null:
+						return null   # walled off from it: the next part's turn
+			return _towards(aim, _part_speed(p))
+		"flee":
+			var t := _part_target(p, "from", sight_)
+			if t == null:
+				return null
+			return _away_from(t) * _part_speed(p)
+		"keep-distance":
+			var t := _part_target(p, "from", sight_)
+			if t == null:
+				return null
+			var d := position.distance_to(t.position)
+			if d < float(p["min"]):
+				return _away_from(t) * _part_speed(p)
+			if d > float(p["max"]):
+				return _towards(t.position, minf(_part_speed(p), (d - float(p["max"])) * Q.TICK_RATE))
+			return Vector2.ZERO
+	return null
+
+
+func _away_from(t: Node2D) -> Vector2:
+	var away := position - t.position
+	if not _fall.is_empty():
+		away.y = 0.0
+	return away.normalized() if away.length() > 0.0 else Vector2.RIGHT
+
+
+# A shoot part: at the nearest target within range, once every `every` ticks at most.
+func _part_shoot(i: int, p: Dictionary) -> void:
+	if _ticks < int(_part_state.get(i, {}).get("next", 0)):
+		return
+	var t := _part_target(p, "at", float(p["range"]))
+	var scene := _scene_of()
+	if t == null or scene == null:
+		return
+	_part_state[i] = {"next": _ticks + int(p["every"])}
+	var shot = Q.spawn_at(scene, str(p["prefab"]), position)
+	if shot != null and "heading" in shot:
+		shot.heading = (t.position - position).normalized()
+		if "rotate" in shot and shot.rotate:
+			shot.call_deferred("_face_heading")
+	if p.get("sound") != null:
+		Q.play(str(p["sound"]))
 
 
 # The nearest named character within sight, or null.
@@ -524,8 +734,12 @@ func _face(vx: float) -> void:
 
 
 func _ground_ahead() -> bool:
+	return _ground_ahead_at(direction)
+
+
+func _ground_ahead_at(dir: int) -> bool:
 	var space := get_world_2d().direct_space_state
-	var from := global_position + Vector2(direction * hitbox_size.x / 2.0, 0)
+	var from := global_position + Vector2(dir * hitbox_size.x / 2.0, 0)
 	var to := from + Vector2(0, hitbox_size.y / 2.0 + 4.0)
 	var query := PhysicsRayQueryParameters2D.create(from, to)
 	query.exclude = [get_rid()]

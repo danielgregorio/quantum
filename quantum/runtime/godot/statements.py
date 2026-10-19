@@ -59,6 +59,7 @@ class SceneScript:
     unrollable: List[tuple] = field(default_factory=list)     # (tag, line): qg:tween, qg:set-tile (not under rollback)
     particles_used: List[tuple] = field(default_factory=list)  # (name, line) from qg:emit
     animations_played: List[tuple] = field(default_factory=list)  # (name, line) from qg:play-animation
+    items_used: List[tuple] = field(default_factory=list)  # (item, line) from qg:give and qg:take
     states_used: List[tuple] = field(default_factory=list)    # (name, line) from become
     scenes_used: List[tuple] = field(default_factory=list)    # (name, line) from goto-scene
     paths_used: List[tuple] = field(default_factory=list)     # (name, line) from spawn at="path"
@@ -215,18 +216,27 @@ def compile_function(script: SceneScript, st: Statement) -> None:
     script.functions.append(f'func {name}({", ".join(params)}):\n' + head + body)
 
 
-def game_state_source(state: Dict[str, StateVar]) -> str:
-    """The autoload G: the q:sets of <q:application>, kept across scenes."""
+def game_state_source(state: Dict[str, StateVar], items: Optional[dict] = None) -> str:
+    """The autoload G: the q:sets of <q:application>, kept across scenes; and what the players carry."""
     lines = ['extends Node', '# Compiled by Quantum from the q:sets of <q:application>; do not edit.', '',
              '# Where the character arrives after a qg:exit (the runtime\'s, not the game\'s).',
              'var _q_arrive_at: String = ""', '']
     for var in state.values():
         lines.append(f'var {var.name}: {var.gd_type} = {var.initial}')
+    names = [v.name for v in state.values()]
+    if items:
+        lines.append('')
+        lines.append('# What the players carry (qg:item): how many of each; and the named things picked up or')
+        lines.append('# opened, as "scene/name", which do not come back. Part of the state: saved, replayed.')
+        lines.append(f'const Q_ITEMS := {json.dumps(items)}')
+        lines.append(f'var q_items: Dictionary = {json.dumps({k: v["start"] for k, v in items.items()})}')
+        lines.append('var q_gone: Array = []')
+        names += ['q_items', 'q_gone']
     lines.append('')
     lines.append('func quantum_state() -> Dictionary:')
-    if state:
-        items = ', '.join(f'"{v.name}": {v.name}' for v in state.values())
-        lines.append(f'{_INDENT}return {{{items}}}')
+    if names:
+        listed = ', '.join(f'"{n}": {n}' for n in names)
+        lines.append(f'{_INDENT}return {{{listed}}}')
     else:
         lines.append(f'{_INDENT}return {{}}')
     persisted = [v.name for v in state.values() if v.persist]
@@ -351,7 +361,12 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         return f'Q.respawn({target})'
     if el.tag == 'play':
         script.sounds_played.append(el.get('sound'))
-        return f'Q.play({json.dumps(el.get("sound"))})'
+        volume, pitch, vary = float(el.get('volume')), float(el.get('pitch')), float(el.get('vary'))
+        if pitch <= 0 or vary < 0 or vary >= pitch:
+            raise GameCompileError('<qg:play>: pitch= more than 0, vary= 0 or more and less than pitch=', el.line)
+        if (volume, pitch, vary) == (0.0, 1.0, 0.0):
+            return f'Q.play({json.dumps(el.get("sound"))})'
+        return f'Q.play({json.dumps(el.get("sound"))}, {volume!r}, {pitch!r}, {vary!r})'
     if el.tag == 'stop':
         script.sounds_played.append(el.get('sound'))
         return f'Q.stop({json.dumps(el.get("sound"))})'
@@ -448,6 +463,14 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         script.particles_used.append((el.get('particles'), el.line))
         return (f'Q.emit({scope.reference(at)}, {json.dumps(el.get("particles"))}, '
                 f'{float(el.get("dx"))!r}, {float(el.get("dy"))!r})')
+    if el.tag == 'reset-items':
+        script.items_used.append((None, el.line))
+        return 'Q.reset_items()'
+    if el.tag in ('give', 'take'):
+        if el.get('amount') < 1:
+            raise GameCompileError(f'<qg:{el.tag} amount=>: 1 or more', el.line)
+        script.items_used.append((el.get('item'), el.line))
+        return f'Q.{el.tag}_item({json.dumps(el.get("item"))}, {el.get("amount")})'
     if el.tag == 'play-animation':
         script.animations_played.append((el.get('name'), el.line))
         return f'Q.play_animation({target}, {json.dumps(el.get("name"))})'

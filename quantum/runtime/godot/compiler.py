@@ -148,7 +148,6 @@ class _Compiler:
         for st in g.state:
             declare_state(game_script, st)
         self.game_state: Dict[str, StateVar] = game_script.state
-        self.scripts['game_state.gd'] = game_state_source(self.game_state)
         inputs = {k: [_key(name, 1, None) for name in v] for k, v in DEFAULT_INPUTS.items()}
         for el in g.inputs:
             keys = [k.strip() for k in str(el.get('keys')).split(',') if k.strip()]
@@ -201,6 +200,11 @@ class _Compiler:
                 if t.get('frame') < 0:
                     raise GameCompileError('<qg:tile frame=>: 0 or more', t.line)
                 shape = t.get('shape')
+                if t.get('kind') in ('ladder', 'water'):
+                    if shape is not None and str(shape).strip() != 'none' or t.get('one-way'):
+                        raise GameCompileError(f'<qg:tile kind="{t.get("kind")}"> is passed through: no shape= '
+                                               f'or one-way=', t.line)
+                    shape = 'none'
                 if shape is not None and str(shape).strip() == 'none':
                     if t.get('one-way'):
                         raise GameCompileError('<qg:tile shape="none"> is not solid: one-way= means nothing', t.line)
@@ -213,6 +217,8 @@ class _Compiler:
                     if len(points) < 3:
                         raise GameCompileError('<qg:tile shape=>: at least three points', t.line)
                 tiles[str(t.get('frame'))] = {'shape': points, 'one_way': t.get('one-way')}
+                if t.get('kind'):
+                    tiles[str(t.get('frame'))]['kind'] = t.get('kind')
             if tiles:
                 sheets[name]['tiles'] = tiles
         sounds = {}
@@ -227,6 +233,8 @@ class _Compiler:
                 if el.get(k) is not None:
                     particles[name][k] = el.get(k)
         self.particles = particles
+        self.items = self._items(sheets)
+        self.scripts['game_state.gd'] = game_state_source(self.game_state, self.items)
         languages = {}
         for lang_el in g.languages:
             code = str(lang_el.get('lang'))
@@ -244,6 +252,7 @@ class _Compiler:
             languages[code] = {'name': lang_el.get('name') or code, 'phrases': phrases}
         self.languages = languages
         prefabs = {}
+        self._part_targets: List[tuple] = []
         pscript = SceneScript('prefabs', game_state=self.game_state)
         for name, el in g.prefabs.items():
             self._sheet_exists(el.get('sheet'), sheets, el.line)
@@ -279,6 +288,8 @@ class _Compiler:
                 if h.get('of'):
                     raise GameCompileError('of= is for a <qg:on-death> in a scene', h.line)
                 on_death = compile_handler(pscript, f'_{_ident(name)}_on_death', h.children, h.line)
+            parts = self._prefab_parts(el, name, pscript)
+            carry = self._prefab_items(el, name, pscript)
             prefabs[name] = {'tag': el.get('tag') or name.lower(), 'sheet': el.get('sheet'),
                              'frame': el.get('frame'), 'hitbox': list(el.get('hitbox')),
                              'ai': el.get('ai'), 'speed': _speed(el.get('speed'), el.line), 'sight': el.get('sight'),
@@ -298,6 +309,9 @@ class _Compiler:
                              'on_collision': handlers, 'on_damage': on_damage, 'on_death': on_death,
                              'animations': _animations(el),
                              'on_animation_end': _animation_ends(el, pscript, f'_{_ident(name)}_on')}
+            if parts:
+                prefabs[name]['parts'] = parts
+            prefabs[name].update(carry)
             gdprops.attach(prefabs[name], gdprops.PREFAB_CLASS[gdprops.prefab_kind(prefabs[name])], el.gd,
                            f'<qg:prefab name="{name}">', el.line)
         for pname, line in pscript.prefabs_used + [(p['fire_prefab'], el.line) for p in prefabs.values()
@@ -312,6 +326,7 @@ class _Compiler:
             if pname not in self.particles:
                 raise GameCompileError(f'<qg:emit particles="{pname}">: no qg:particles of that name', line)
         self._animations_known(pscript.animations_played)
+        self._items_known(pscript.items_used)
         tags = {p['tag'] for p in prefabs.values()} | self._zone_tags
         for p_ in prefabs.values():
             for h in p_['on_collision']:
@@ -334,6 +349,13 @@ class _Compiler:
         if self.multiplayer is not None and self.multiplayer.get('rollback'):
             _check_rollback(self.multiplayer.get('start') or g.scenes[0].get('name'), scenes,
                             self._scene_goes, self._scene_spawns, g.multiplayer.line, self._scene_tweens)
+        characters = {n['id'] for sc in scenes.values() for n in sc['nodes'] if n['kind'] == 'character'}
+        tags = {p['tag'] for p in prefabs.values()}
+        for who, tag, attr, line in self._part_targets:
+            if who not in characters and who not in tags:
+                raise GameCompileError(f'<qg:{tag} {attr}="{who}">: no character has that id, nor a prefab that tag '
+                                       f'(characters: {", ".join(sorted(characters)) or "none"}; tags: '
+                                       f'{", ".join(sorted(tags))})', line)
         for sname, line in self._scenes_used:
             if sname not in scenes:
                 raise GameCompileError(
@@ -353,6 +375,7 @@ class _Compiler:
                 'sheets': sheets,
                 'sounds': sounds,
                 'particles': particles,
+                'items': self.items,
                 'languages': languages,
                 'prefabs': prefabs,
                 'scenes': scenes,
@@ -381,6 +404,23 @@ class _Compiler:
         self.assets[rel] = self._find(rel, line)
         return rel
 
+    @staticmethod
+    def _tiled_kinds(sheet: dict, name: str, kinds: dict, line: Optional[int]) -> None:
+        """A Tiled tileset's tile kinds, onto the qg:tileset's tiles: a ladder or water tile is passed through."""
+        size = float(sheet['tile'][0])
+        tiles = sheet.setdefault('tiles', {})
+        for frame, kind in kinds.items():
+            have = tiles.get(str(frame))
+            if have is not None and have.get('kind') not in (None, kind):
+                raise GameCompileError(f'tile {frame} of {name!r} is of kind {have["kind"]!r} in the .q and {kind!r} '
+                                       f'in the Tiled map', line)
+            if have is None:
+                square = [[0.0, 0.0], [size, 0.0], [size, size], [0.0, size]]
+                have = tiles[str(frame)] = {'shape': None if kind in ('ladder', 'water') else square, 'one_way': False}
+            elif kind in ('ladder', 'water'):
+                have['shape'] = None
+            have['kind'] = kind
+
     def _animations_known(self, played: list) -> None:
         """qg:play-animation names an animation some character or prefab of the game has."""
         if not played:
@@ -400,6 +440,134 @@ class _Compiler:
                 raise GameCompileError(f'<qg:play-animation name="{name}">: no qg:animation of that name in the game '
                                        f'(it has: {", ".join(sorted(self._animation_names)) or "none"})', line)
 
+    def _prefab_parts(self, el: Element, name: str, script: SceneScript) -> list:
+        """The parts of an enemy, a prefab ai="behavior" (its qg:behavior), checked; their when= go into P."""
+        found = el.find_all('behavior')
+        if el.get('ai') != 'behavior':
+            if found:
+                raise GameCompileError('<qg:behavior> in a prefab is for ai="behavior"', found[0].line)
+            return []
+        if len(found) != 1:
+            raise GameCompileError('<qg:prefab ai="behavior"> holds one <qg:behavior> (its parts)',
+                                   found[1].line if found else el.line)
+        parts = []
+        for i, p in enumerate(found[0].children):
+            if not isinstance(p, Element):
+                raise GameCompileError('<qg:behavior> holds parts (qg:seek, qg:wander...), not statements', p.line)
+            if p.tag not in _ENEMY_PARTS + ('gravity',):
+                raise GameCompileError(f'<qg:{p.tag}> is a part of a character controller="behavior"; an enemy\'s '
+                                       f'parts are qg:gravity, {", ".join("qg:" + t for t in _ENEMY_PARTS)}',
+                                       p.line)
+            part = {'kind': p.tag}
+            for attr in TAGS[p.tag].attrs:
+                if attr != 'when':
+                    part[attr.replace('-', '_')] = p.get(attr)
+            for attr in ('sight', 'range'):
+                if part.get(attr) is not None and part[attr] <= 0:
+                    raise GameCompileError(f'<qg:{p.tag} {attr}=>: more than 0', p.line)
+            for attr in ('speed', 'distance', 'min'):
+                if part.get(attr) is not None and part[attr] < 0:
+                    raise GameCompileError(f'<qg:{p.tag} {attr}=>: 0 or more', p.line)
+            if p.tag == 'keep-distance' and part['max'] <= part['min']:
+                raise GameCompileError('<qg:keep-distance>: max= more than min=', p.line)
+            if p.tag == 'gravity' and (part['strength'] < 0 or part['max_fall'] <= 0):
+                raise GameCompileError('<qg:gravity>: strength= 0 or more, max-fall= more than 0', p.line)
+            if p.tag == 'leap':
+                if part['height'] <= 0 or part['every'] < 1:
+                    raise GameCompileError('<qg:leap>: height= more than 0, every= 1 or more', p.line)
+                if part['sound'] and part['sound'] not in self.sounds:
+                    raise GameCompileError(f'<qg:leap sound="{part["sound"]}">: no qg:sound of that name', p.line)
+            if p.tag == 'shoot':
+                if part['every'] < 1:
+                    raise GameCompileError('<qg:shoot every=>: 1 or more ticks', p.line)
+                script.prefabs_used.append((part['prefab'], p.line))
+                if part['sound'] and part['sound'] not in self.sounds:
+                    raise GameCompileError(f'<qg:shoot sound="{part["sound"]}">: no qg:sound of that name', p.line)
+            for attr in ('target', 'from', 'at'):
+                if part.get(attr):
+                    self._part_targets.append((part[attr], p.tag, attr, p.line))
+            part['when'] = None
+            if p.get('when') is not None:
+                part['when'] = f'_{_ident(name)}_when_{i}'
+                expr = compile_expression(p.get('when'), script.scope().child(('me',)), p.line)
+                script.handlers.append(f'func {part["when"]}(me) -> bool:\n\treturn true if {expr} else false\n')
+            parts.append(part)
+        if not parts:
+            raise GameCompileError('<qg:behavior> is empty: give it parts (qg:seek, qg:wander...)', found[0].line)
+        kinds = [p['kind'] for p in parts]
+        if kinds.count('gravity') > 1 or kinds.count('leap') > 1:
+            raise GameCompileError('a qg:behavior has one qg:gravity and one qg:leap at most', found[0].line)
+        if 'gravity' in kinds:
+            for p in parts:
+                if p['kind'] == 'patrol' and p['heading'] in ('up', 'down'):
+                    raise GameCompileError('<qg:patrol heading=>: an enemy with qg:gravity walks left and right',
+                                           found[0].line)
+        elif 'leap' in kinds:
+            raise GameCompileError('<qg:leap> needs qg:gravity in the same qg:behavior (what brings it down)',
+                                   found[0].line)
+        return parts
+
+    def _items(self, sheets: dict) -> dict:
+        """The qg:items the players carry, checked."""
+        items = {}
+        for name, el in self.game.items.items():
+            if el.get('sheet') is not None:
+                self._sheet_exists(el.get('sheet'), sheets, el.line)
+            if el.get('sound') is not None and el.get('sound') not in self.sounds:
+                raise GameCompileError(f'<qg:item sound="{el.get("sound")}">: no qg:sound of that name', el.line)
+            if el.get('particles') is not None and el.get('particles') not in self.particles:
+                raise GameCompileError(f'<qg:item particles="{el.get("particles")}">: no qg:particles of that name',
+                                       el.line)
+            if el.get('max') < 0 or el.get('start') < 0 or (el.get('max') and el.get('start') > el.get('max')):
+                raise GameCompileError('<qg:item>: max= and start= 0 or more, start= not over max=', el.line)
+            items[name] = {'label': el.get('label') or name, 'sheet': el.get('sheet'), 'frame': el.get('frame'),
+                           'max': el.get('max'), 'start': el.get('start'), 'sound': el.get('sound'),
+                           'particles': el.get('particles')}
+        for reserved in ('q_items', 'q_gone'):
+            if items and reserved in self.game_state:
+                raise GameCompileError(f'{reserved!r} is the runtime\'s name for what the players carry: '
+                                       f'name the q:set otherwise', None)
+        return items
+
+    def _items_known(self, used: list) -> None:
+        for item, line in used:
+            if item is None:   # qg:reset-items
+                if not self.items:
+                    raise GameCompileError('<qg:reset-items>: the game declares no qg:item', line)
+            elif item not in self.items:
+                raise GameCompileError(f'no qg:item named {item!r} (declared: {", ".join(sorted(self.items)) or "none"})',
+                                       line)
+
+    def _prefab_items(self, el: Element, name: str, script: SceneScript) -> dict:
+        """A prefab picked up as an item (gives=) or opened by one (opens-with=), checked."""
+        out = {}
+        if el.get('gives') is not None:
+            if el.get('ai') or el.get('solid'):
+                raise GameCompileError('gives= is for a prefab that is picked up: no ai=, not solid', el.line)
+            if el.get('amount') < 1:
+                raise GameCompileError('<qg:prefab amount=>: 1 or more', el.line)
+            self._items_known([(el.get('gives'), el.line)])
+            out.update(gives=el.get('gives'), amount=el.get('amount'))
+        elif el.get('amount') != 1:
+            raise GameCompileError('amount= is for gives=', el.line)
+        locked = el.find_all('on-locked')
+        if el.get('opens-with') is not None:
+            if not el.get('solid') or el.get('ai'):
+                raise GameCompileError('opens-with= is for a solid prefab without ai= (a door)', el.line)
+            self._items_known([(el.get('opens-with'), el.line)])
+            out.update(opens_with=el.get('opens-with'), keeps=el.get('keeps'))
+            if len(locked) > 1:
+                raise GameCompileError('a qg:prefab has one <qg:on-locked>', locked[1].line)
+            if locked:
+                out['on_locked'] = compile_handler(script, f'_{_ident(name)}_on_locked', locked[0].children,
+                                                   locked[0].line)
+        else:
+            if el.get('keeps'):
+                raise GameCompileError('keeps= is for opens-with=', el.line)
+            if locked:
+                raise GameCompileError('<qg:on-locked> is for a prefab with opens-with=', locked[0].line)
+        return out
+
     def _behavior(self, el: Element) -> list:
         """The parts of a character controller="behavior" (its qg:behavior), checked."""
         found = el.find_all('behavior')
@@ -414,6 +582,9 @@ class _Compiler:
         for p in found[0].children:
             if not isinstance(p, Element):
                 raise GameCompileError('<qg:behavior> holds parts (qg:gravity, qg:walk...), not statements', p.line)
+            if p.tag in _ENEMY_PARTS:
+                raise GameCompileError(f'<qg:{p.tag}> is a part of an enemy (a qg:prefab ai="behavior"), not of a '
+                                       f'character', p.line)
             if p.tag in seen:
                 raise GameCompileError(f'two <qg:{p.tag}> in one qg:behavior', p.line)
             seen[p.tag] = p.line
@@ -654,6 +825,7 @@ class _Compiler:
                             f'{el.get("tileset")!r} has {tile}x{tile}', el.line)
                     layers = [{'name': ly.name, 'rows': ly.rows, 'collision': ly.collision or el.get('collision')}
                               for ly in tmx.layers]
+                    self._tiled_kinds(sheets[el.get('tileset')], el.get('tileset'), tmx.kinds, el.line)
                     for obj in tmx.objects:
                         if obj.prefab not in prefabs:
                             raise GameCompileError(
@@ -797,6 +969,12 @@ class _Compiler:
                 if el.get('bounds') is not None and el.get('controller') not in ('ship', 'topdown'):
                     raise GameCompileError('bounds= is for controller="ship" or "topdown"', el.line)
                 behavior = self._behavior(el)
+                for h in el.find_all('on-tile'):
+                    if controller not in ('platformer', 'topdown', 'behavior'):
+                        raise GameCompileError('<qg:on-tile> is for controller="platformer", "topdown" or '
+                                               '"behavior"', h.line)
+                    if h.get('cooldown') < 0:
+                        raise GameCompileError('<qg:on-tile cooldown=>: 0 or more', h.line)
                 condition = None
                 if el.get('if') is not None:
                     if controller == 'map':
@@ -829,6 +1007,10 @@ class _Compiler:
                     'health': el.get('health'), 'facing': el.get('facing'), 'moves': moves, 'on_ko': on_ko,
                     'step_frames': el.get('step-frames'), 'diagonal': el.get('diagonal'),
                     'behavior': behavior, 'if': condition,
+                    'on_tile': [{'kind': h.get('kind'), 'cooldown': h.get('cooldown'),
+                                 'handler': compile_handler(script, f'_on_{_ident(cid)}_tile_{i}', h.children,
+                                                            h.line)}
+                                for i, h in enumerate(el.find_all('on-tile'))],
                     'on_animation_end': _animation_ends(el, script, f'_on_{_ident(cid)}'),
                 })
                 self._node_elements.append(el)
@@ -846,7 +1028,18 @@ class _Compiler:
                               'name': el.get('name'), 'if': condition})
                 self._node_elements.append(el)
             elif el.tag == 'camera':
-                nodes.append({'kind': 'camera', 'follow': el.get('follow'), 'bounds': el.get('bounds')})
+                follow = [f.strip() for f in str(el.get('follow')).split(',') if f.strip()]
+                if not follow:
+                    raise GameCompileError('<qg:camera follow=>: a character id, or several', el.line)
+                if el.get('zoom') <= 0 or el.get('zoom-min') <= 0 or el.get('lead') < 0 or el.get('smooth') < 0:
+                    raise GameCompileError('<qg:camera>: zoom= and zoom-min= more than 0; lead= and smooth= 0 or more',
+                                           el.line)
+                if el.get('fit') and len(follow) < 2:
+                    raise GameCompileError('<qg:camera fit="true">: for a camera that follows several', el.line)
+                nodes.append({'kind': 'camera', 'follow': follow, 'bounds': el.get('bounds'), 'zoom': el.get('zoom'),
+                              'dead_zone': list(el.get('dead-zone')) if el.get('dead-zone') else None,
+                              'lead': el.get('lead'), 'smooth': el.get('smooth'), 'fit': el.get('fit'),
+                              'zoom_min': el.get('zoom-min')})
                 self._node_elements.append(el)
             elif el.tag == 'menu':
                 menus += 1
@@ -906,9 +1099,24 @@ class _Compiler:
                                       'height': c.get('height'), 'color': c.get('color')})
                         gdprops.attach(items[-1], 'ProgressBar', c.gd, '<qg:bar>', c.line)
                         continue
+                    if isinstance(c, Element) and c.tag == 'inventory':
+                        if not any(i['sheet'] for i in self.items.values()):
+                            raise GameCompileError('<qg:inventory> shows the qg:items by their pictures: give one '
+                                                   'a sheet=', c.line)
+                        items.append({'kind': 'inventory', 'size': c.get('size')})
+                        gdprops.attach(items[-1], 'HBoxContainer', c.gd, '<qg:inventory>', c.line)
+                        continue
                     if isinstance(c, Element) and c.tag in ('counter', 'text'):
                         if c.tag == 'text' and (c.get('bind') is None) == (c.get('value') is None):
                             raise GameCompileError('<qg:text> takes bind= or value=, one of them', c.line)
+                        if c.tag == 'counter' and (c.get('bind') is None) == (c.get('item') is None):
+                            raise GameCompileError('<qg:counter> takes bind= or item=, one of them', c.line)
+                        if c.tag == 'counter' and c.get('item') is not None:
+                            self._items_known([(c.get('item'), c.line)])
+                            items.append({'kind': 'counter', 'item': c.get('item'), 'label': c.get('label', ''),
+                                          'size': c.get('size')})
+                            gdprops.attach(items[-1], 'Label', c.gd, '<qg:counter>', c.line)
+                            continue
                         if c.get('bind') is not None and c.get('bind') not in script.state and c.get('bind') not in self.game_state:
                             raise GameCompileError(
                                 f'<qg:{c.tag} bind="{c.get("bind")}">: no q:set of that name in the scene '
@@ -922,7 +1130,8 @@ class _Compiler:
                                 f'func _q_text_{texts}():\n\treturn Q.to_str({compile_expression(c.get("value"), script.scope(), c.line)})\n')
                         gdprops.attach(items[-1], 'Label', c.gd, f'<qg:{c.tag}>', c.line)
                     else:
-                        raise GameCompileError('<qg:hud> holds qg:counter, qg:text and qg:bar', getattr(c, 'line', el.line))
+                        raise GameCompileError('<qg:hud> holds qg:counter, qg:text, qg:bar and qg:inventory',
+                                               getattr(c, 'line', el.line))
                 font = self._asset(el.get('font'), el.line) if el.get('font') else None
                 nodes.append({'kind': 'hud', 'position': el.get('position'), 'items': items,
                               'font': font, 'size': el.get('size')})
@@ -987,8 +1196,9 @@ class _Compiler:
             if n['kind'] == 'character' and n['controller'] == 'map' and not map_nodes:
                 raise GameCompileError('<qg:character controller="map"> in a scene without qg:map-node', scene.line)
         for n in nodes:
-            if n['kind'] == 'camera' and n['follow'] not in ids:
-                raise GameCompileError(f'<qg:camera follow="{n["follow"]}">: no character with that id', scene.line)
+            for f in (n['follow'] if n['kind'] == 'camera' else []):
+                if f not in ids:
+                    raise GameCompileError(f'<qg:camera follow="{f}">: no character with that id', scene.line)
             if n['kind'] == 'camera' and n['bounds'] == 'tilemap' and tilemap is None:
                 raise GameCompileError('<qg:camera bounds="tilemap"> in a scene without a tilemap', scene.line)
         tags = {p['tag'] for p in prefabs.values()}
@@ -1034,6 +1244,7 @@ class _Compiler:
                     f'<qg:emit particles="{pname}">: no qg:particles of that name '
                     f'(declared: {", ".join(sorted(self.particles)) or "none"})', line)
         self._animations_known(script.animations_played)
+        self._items_known(script.items_used)
         for played in script.sounds_played:
             if played not in self.sounds:
                 raise GameCompileError(
@@ -1102,6 +1313,9 @@ def action_name(player: int, action: str) -> str:
 
 
 _HEADINGS = {'up': (0.0, -1.0), 'down': (0.0, 1.0), 'left': (-1.0, 0.0), 'right': (1.0, 0.0)}
+
+# The parts an enemy (a qg:prefab ai="behavior") is made of; a character's are the others.
+_ENEMY_PARTS = ('seek', 'flee', 'keep-distance', 'patrol', 'wander', 'stand', 'shoot', 'leap')
 
 
 # What a scene the rollback reaches may hold: nodes that save and load their whole state

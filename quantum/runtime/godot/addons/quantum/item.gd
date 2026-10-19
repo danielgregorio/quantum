@@ -7,6 +7,8 @@ const Animator := preload("res://addons/quantum/animator.gd")
 
 var prefab_name: String = ""
 var tag: String = ""
+var gives: String = ""      # a qg:item a character picks up by touching it (Q.touched)
+var amount: int = 1
 
 
 func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -> void:
@@ -14,6 +16,8 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 	tag = prefab["tag"]
 	name = name_
 	add_to_group("q_thing")
+	gives = str(prefab.get("gives", "")) if prefab.get("gives") != null else ""
+	amount = int(prefab.get("amount", 1))
 	var sprite := Sprite2D.new()
 	sprite.name = "Sprite"
 	sprite.texture = texture

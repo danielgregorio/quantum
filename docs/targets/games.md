@@ -165,6 +165,23 @@ A particle effect the game can show: a preset and a few overrides. qg:emit plays
 
 Goes inside: `q:application`.
 
+### `qg:item`
+
+A kind of thing the players carry: keys, gems, potions. How many they hold is the game's state, kept across scenes and in a qg:save; `held('key')` reads it. A prefab with gives= is picked up as one; a solid prefab with opens-with= opens for one; qg:give and qg:take add and spend them; qg:inventory shows them.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required |  |
+| `label` | text |  | what a player reads (else its name), in the HUD |
+| `sheet` | a name |  | a qg:spritesheet or qg:tileset: its picture in qg:inventory |
+| `frame` | integer | `0` |  |
+| `max` | integer | `0` | the most they can hold (0: no limit) |
+| `start` | integer | `0` | how many they hold when the game starts |
+| `sound` | a name |  | a qg:sound, played as one is picked up |
+| `particles` | a name |  | a qg:particles, burst where one is picked up |
+
+Goes inside: `q:application`.
+
 ### `qg:prefab`
 
 A kind of thing the scene places with qg:instance. With ai= it moves.
@@ -176,7 +193,7 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `sheet` | a name | required | a qg:spritesheet or qg:tileset |
 | `frame` | integer | `0` |  |
 | `hitbox` | `WxH` pixels | required |  |
-| `ai` | `patrol` / `wander` / `chase` / `pathfind` / `fly` / `sway` / `shuttle` / `path` / `turret` |  | patrol: walks under gravity, turns at walls (and at edges with turns-at); wander: top-down, changes direction now and then (from the scene seed); chase: top-down, goes for the character within sight=, straight at it; pathfind: as chase, but around the walls, by the shortest way over the tilemap's free cells; fly: straight along heading=; sway: side to side across the scene; shuttle: a solid that goes dx=,dy= and back every period= ticks, carrying what stands on it; path: follows the qg:path it was spawned on (qg:spawn at="path"), then stands at its end; turret: stands, and fires fire-prefab at the nearest targets= within range= every fire-every |
+| `ai` | `patrol` / `wander` / `chase` / `pathfind` / `fly` / `sway` / `shuttle` / `path` / `turret` / `behavior` |  | patrol: walks under gravity, turns at walls (and at edges with turns-at); wander: top-down, changes direction now and then (from the scene seed); chase: top-down, goes for the character within sight=, straight at it; pathfind: as chase, but around the walls, by the shortest way over the tilemap's free cells; fly: straight along heading=; sway: side to side across the scene; shuttle: a solid that goes dx=,dy= and back every period= ticks, carrying what stands on it; path: follows the qg:path it was spawned on (qg:spawn at="path"), then stands at its end; turret: stands, and fires fire-prefab at the nearest targets= within range= every fire-every; behavior: top-down, made of the parts its qg:behavior lists (qg:seek, qg:flee...) |
 | `range` | number | `100.0` | turret: pixels |
 | `targets` | a name |  | turret: the tag it shoots at |
 | `attack` | `shoot` / `area` | `shoot` | turret: shoot spawns fire-prefab headed at the target; area damages every target in range by damage= |
@@ -188,7 +205,7 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `shape` | text |  | solid: the solid part as x,y points from its centre, separated by semicolons (-96,-21; 96,-21; 96,6; -96,6), instead of the hitbox |
 | `scale` | number | `1.0` | the picture's size, times its frame (the hitbox stays as given) |
 | `walls` | `pass` / `stop` | `pass` | fly: pass goes through the tiles; stop is gone on touching one |
-| `sight` | number | `80.0` | chase, pathfind: pixels |
+| `sight` | number | `80.0` | chase, pathfind, and the parts of a behavior: pixels |
 | `heading` | text | `down` | fly: up, down, left, right, or a direction as x,y (-1,0.5) |
 | `accel` | number | `0.0` | fly: pixels per second added to its speed every second |
 | `lifetime` | integer | `0` | fly: gone after this many ticks (0: never); any fly is gone off-screen |
@@ -202,8 +219,121 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `turns-at` | `wall` / `edge` | `wall` | edge: also turns before falling off |
 | `gravity` | number | `900.0` |  |
 | `solid` | true / false | `false` | characters stand on it and bump it (a block) |
+| `gives` | a name |  | a qg:item: a character that touches it picks it up (amount= of them) and it is gone; a named instance stays gone when the scene is entered again |
+| `amount` | integer | `1` | gives=: how many |
+| `opens-with` | a name |  | solid: a qg:item. A character that bumps it holding one spends it and it opens (it is gone; a named one stays gone); without one, its qg:on-locked runs |
+| `keeps` | true / false | `false` | opens-with=: the item is not spent (a key for every door) |
 
 Goes inside: `q:application`.
+
+### `qg:seek`
+
+An enemy's part: it goes for the nearest target it notices, around the walls by the shortest way over the tilemap's free cells (way="straight": straight at it).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `target` | text |  | a character's id or a thing's tag; none: any character |
+| `sight` | number |  | pixels it notices a target within (else the prefab's sight=) |
+| `through-walls` | true / false | `false` | it notices a target behind a solid tile (else only one it sees) |
+| `way` | `around` / `straight` | `around` |  |
+| `speed` | number |  | pixels per second (else the prefab's speed=) |
+| `when` | an expression |  | only while this is true (`me` is the enemy) |
+
+Goes inside: `qg:behavior`.
+
+### `qg:flee`
+
+An enemy's part: it runs from the nearest one it notices, straight away from it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `from` | text |  | a character's id or a thing's tag; none: any character |
+| `sight` | number |  | pixels (else the prefab's sight=) |
+| `through-walls` | true / false | `false` |  |
+| `speed` | number |  |  |
+| `when` | an expression |  |  |
+
+Goes inside: `qg:behavior`.
+
+### `qg:keep-distance`
+
+An enemy's part: it keeps between min= and max= pixels from the nearest one it notices: away when closer, towards it when farther, and still in between.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `from` | text |  | a character's id or a thing's tag; none: any character |
+| `min` | number | required |  |
+| `max` | number | required |  |
+| `sight` | number |  | pixels (else the prefab's sight=) |
+| `through-walls` | true / false | `false` |  |
+| `speed` | number |  |  |
+| `when` | an expression |  |  |
+
+Goes inside: `qg:behavior`.
+
+### `qg:patrol`
+
+An enemy's part: to and fro along a line, turning at walls (and after distance= pixels).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `heading` | `left` / `right` / `up` / `down` |  | where it goes first (else the prefab's direction=) |
+| `distance` | number | `0.0` | pixels before it turns (0: only at walls) |
+| `speed` | number |  |  |
+| `when` | an expression |  |  |
+
+Goes inside: `qg:behavior`.
+
+### `qg:wander`
+
+An enemy's part: a new heading every 30 to 90 ticks (from the scene seed), and at once on bumping a wall.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `speed` | number |  |  |
+| `when` | an expression |  |  |
+
+Goes inside: `qg:behavior`.
+
+### `qg:stand`
+
+An enemy's part: it stands still; the parts after it wait.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `when` | an expression |  |  |
+
+Goes inside: `qg:behavior`.
+
+### `qg:shoot`
+
+An enemy's part: it fires prefab= at the nearest target within range=, headed at it, at most once every every= ticks. It shoots whatever part moves it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `prefab` | a name | required | what it fires: a prefab with ai="fly" |
+| `at` | text |  | a character's id or a thing's tag; none: any character |
+| `every` | integer | `60` | ticks between shots |
+| `range` | number | `100.0` | pixels |
+| `through-walls` | true / false | `false` | it fires at a target behind a solid tile (else only one it sees) |
+| `sound` | a name |  |  |
+| `when` | an expression |  |  |
+
+Goes inside: `qg:behavior`.
+
+### `qg:leap`
+
+An enemy's part, with qg:gravity: it jumps, from the floor, when it bumps a wall as it walks (a step to climb) or while its when= holds; at most once every every= ticks.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `height` | number | `40.0` | pixels |
+| `at-wall` | true / false | `true` | it jumps on bumping a wall as it walks |
+| `every` | integer | `30` | ticks between two leaps at least |
+| `sound` | a name |  |  |
+| `when` | an expression |  | it jumps while this is true too (`me` is the enemy) |
+
+Goes inside: `qg:behavior`.
 
 ### `qg:animation`
 
@@ -336,13 +466,13 @@ Goes inside: `qg:scene`.
 
 ### `qg:behavior`
 
-What a character controller="behavior" is made of: parts, each a small rule. A platformer is qg:gravity, qg:walk and qg:jump; a top-down walker is qg:walk axis="both"; a flapping bird is qg:gravity and a qg:jump with air=; a ship that comes back round the screen is qg:walk axis="both" and qg:wrap. Each tick, whatever their order: walk and jump read the keys, gravity pulls, the body moves, then keep-inside, wrap and face. `me.vx`, `me.vy` and `me.on_floor` read it; qg:velocity sets its speed from the game's rules (a dash, a knock-back), so what no part covers is written in the game.
+What a character controller="behavior" is made of: parts, each a small rule. A platformer is qg:gravity, qg:walk and qg:jump; a top-down walker is qg:walk axis="both"; a flapping bird is qg:gravity and a qg:jump with air=; a ship that comes back round the screen is qg:walk axis="both" and qg:wrap. Each tick, whatever their order: walk and jump read the keys, gravity pulls, the body moves, then keep-inside, wrap and face. `me.vx`, `me.vy` and `me.on_floor` read it; qg:velocity sets its speed from the game's rules (a dash, a knock-back), so what no part covers is written in the game. In a qg:prefab ai="behavior", an enemy's parts instead: what it moves by is the first of qg:seek, qg:flee, qg:keep-distance, qg:patrol, qg:wander and qg:stand, in their order, whose when= holds and that has something to do (a seek with nothing in sight has not); it stands when none has. Its qg:shoot parts fire besides. `me.doing` reads the part that moved it ("" for none). With qg:gravity the enemy walks on floors: the parts move it left and right only, a seek goes straight, the prefab's turns-at="edge" keeps it from walking off a ledge, and qg:leap jumps; `me.on_floor` reads whether it stands.
 
-Goes inside: `qg:character`.
+Goes inside: `qg:character`, `qg:prefab`.
 
 ### `qg:gravity`
 
-A part: it falls, and stands on floors (without it, the body floats: top-down).
+A part: it falls, and stands on floors (without it, the body floats: top-down). A character's or an enemy's.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
@@ -545,12 +675,18 @@ Goes inside: `qg:scene`.
 
 ### `qg:camera`
 
-What the screen shows.
+What the screen shows: it follows a character, or the middle of several, in the game's ticks (a replay and every peer frame the same). Only seen: nothing in the game's state depends on it.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `follow` | a name | required | a character id |
+| `follow` | text | required | a character id, or several: "p1, p2" (their middle) |
 | `bounds` | `tilemap` / `none` | `tilemap` |  |
+| `zoom` | number | `1.0` | 2: twice as close |
+| `dead-zone` | `WxH` pixels |  | WxH: the box about the middle of the screen in which the followed one moves before the camera does |
+| `lead` | number | `0.0` | pixels it looks ahead, the way the followed one goes |
+| `smooth` | number | `0.0` | how fast it catches up, per second (0: at once) |
+| `fit` | true / false | `false` | several followed: it zooms out to keep them all on the screen, down to zoom-min, and back in as they come together |
+| `zoom-min` | number | `0.5` | fit: as far out as it goes |
 
 Goes inside: `qg:scene`.
 
@@ -568,11 +704,12 @@ Goes inside: `qg:scene`.
 
 ### `qg:counter`
 
-A number from the scene state, in the HUD.
+A number from the scene state, or how many of an item the players hold, in the HUD.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `bind` | a name | required | a q:set of the scene |
+| `bind` | a name |  | a q:set of the scene or the game (or item=) |
+| `item` | a name |  | a qg:item: how many are held (or bind=) |
 | `label` | text | `` | text before the number |
 | `size` | integer |  | font size |
 
@@ -601,6 +738,16 @@ A bar in the HUD: a number against its maximum — a q:set, or a fighter's healt
 | `width` | integer | `100` |  |
 | `height` | integer | `10` |  |
 | `color` | `#rrggbb` | `#e04040` |  |
+
+Goes inside: `qg:hud`.
+
+### `qg:inventory`
+
+In the HUD: the items held, each its picture (the qg:item's sheet= and frame=) and how many, in a row; an item held 0 times is not shown.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `size` | integer |  | the font size of the numbers |
 
 Goes inside: `qg:hud`.
 
@@ -688,6 +835,17 @@ What happens when this character falls below the tilemap. Holds actions and stat
 
 Goes inside: `qg:character`.
 
+### `qg:on-tile`
+
+What happens while this character touches a tile of a kind (qg:tile kind=): stands on it, is in it, or bumps it. Holds actions and statements; `me` is the character. Without a cooldown, once as it comes to touch one; with one, again each time the cooldown runs out while it still does.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `kind` | `ladder` / `water` / `ice` / `hurt` | required |  |
+| `cooldown` | integer | `0` | ticks before it may run again while still touching |
+
+Goes inside: `qg:character`.
+
 ### `qg:on-ko`
 
 What happens when this fighter's health reaches 0. Holds actions and statements; `me` is the loser, `other` the winner.
@@ -730,6 +888,12 @@ What happens when this prefab's health reaches 0, before it goes. In a scene, wi
 
 Goes inside: `qg:prefab`, `qg:scene`.
 
+### `qg:on-locked`
+
+What happens when a character bumps this prefab (opens-with=) without the item. Holds actions and statements; `me` is the locked thing, `other` the character.
+
+Goes inside: `qg:prefab`.
+
 ### `qg:on-animation-end`
 
 What happens when an animation of this character or prefab with loop="false" has played to its last frame. Holds actions and statements; `me` is whose animation it is.
@@ -767,11 +931,14 @@ Goes inside: a handler.
 
 ### `qg:play`
 
-Plays a qg:sound. Directly in a scene: as the scene is entered.
+Plays a qg:sound. Directly in a scene: as the scene is entered. With volume=, pitch= or vary=, it plays in a voice of its own, so the same sound can overlap itself. Only heard: the game's state records the sound's name, never how it was played.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `sound` | a name | required |  |
+| `volume` | number | `0.0` | decibels added (-6: about half as loud) |
+| `pitch` | number | `1.0` | 2: an octave up, 0.5: an octave down |
+| `vary` | number | `0.0` | a random pitch between pitch - vary and pitch + vary, each time: twenty hits that do not sound the same |
 
 Goes inside: a handler, `qg:scene`.
 
@@ -1052,6 +1219,34 @@ Plays an animation of a thing or a character from its first frame. Its own anima
 
 Goes inside: a handler.
 
+### `qg:give`
+
+The players get some of an item (up to its max=).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `item` | a name | required | a qg:item |
+| `amount` | integer | `1` |  |
+
+Goes inside: a handler.
+
+### `qg:take`
+
+The players spend some of an item (not below 0): a potion drunk, a key used.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `item` | a name | required | a qg:item |
+| `amount` | integer | `1` |  |
+
+Goes inside: a handler.
+
+### `qg:reset-items`
+
+A new game: every qg:item back to its start=, and the named things picked up or opened come back.
+
+Goes inside: a handler.
+
 ## Other tags
 
 ### `qg:dialogue`
@@ -1140,6 +1335,7 @@ One tile of a qg:tileset that is not a full solid square, for the tilemap layers
 | `frame` | integer | required | which tile: its number in the tilemap is frame+1 |
 | `shape` | text |  | the solid part, as x,y points from the tile's top-left corner separated by semicolons (0,10; 64,10; 64,64; 0,64); none: not solid |
 | `one-way` | true / false | `false` | stood on from above, jumped through from below |
+| `kind` | `ladder` / `water` / `ice` / `hurt` |  | ladder: passed through, climbed with up and down, let go of with jump; water: passed through, slow to sink in, a jump is a stroke, slower to walk; ice: slid on (a solid tile to stand on in a platformer, a floor in a top-down game); hurt: a character's qg:on-tile kind="hurt" runs while it touches one. In a Tiled tileset: a tile's class, or its kind property |
 
 Goes inside: `qg:tileset`.
 
@@ -1158,7 +1354,7 @@ Goes inside: `qg:scene`.
 
 ## Statements
 
-Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs.
+Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `language()`, `has_save()`, `distance()`, `nearest()`, `sees()`, `held()`.
 
 ## `gd:` attributes
 
@@ -1474,7 +1670,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:instance prefab="Spikes" x="351" y="176" />
     <qg:instance prefab="Flag" x="405" y="171" />
 
-    <qg:camera follow="player" bounds="tilemap" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
+    <qg:camera follow="player" bounds="tilemap" smooth="8" lead="32" dead-zone="16x56" />
 
     <qg:hud position="top-left">
       <qg:counter bind="score" label="SCORE" />
@@ -1548,7 +1744,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:character>
 
 
-    <qg:camera follow="player" bounds="tilemap" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
+    <qg:camera follow="player" bounds="tilemap" smooth="8" lead="32" dead-zone="16x56" />
     <qg:hud position="top-left">
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="coins" label="COINS" />
@@ -1640,7 +1836,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:instance prefab="Coin" x="252" y="96" />
     <qg:instance prefab="Flag" x="405" y="171" />
 
-    <qg:camera follow="player" bounds="tilemap" gd:position_smoothing_enabled="true" gd:position_smoothing_speed="8" />
+    <qg:camera follow="player" bounds="tilemap" smooth="8" lead="32" dead-zone="16x56" />
     <qg:hud position="top-left">
       <qg:counter bind="score" label="SCORE" />
       <qg:counter bind="coins" label="COINS" />
@@ -2192,7 +2388,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
        two levers keep shut, and its treasure. Torches burn and gems sparkle
        (qg:particles). Each crypt entered is saved (Continue, alone); the
        game speaks English, Portuguese and Spanish. The art is drawn for it by
-       scripts/art/delve.py (CC0); the sounds are Kenney's (CC0). -->
+       scripts/art/delve.py and the music written by scripts/art/delve_music.py
+       (CC0); the sounds are Kenney's (CC0). -->
 
   <!-- The delve's state, kept from crypt to crypt; the first crypt starts it anew. -->
   <q:set name="hearts" value="5" type="number" />
@@ -2216,6 +2413,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:sound name="heal" src="assets/kenney/audio/powerup.ogg" />
   <qg:sound name="open" src="assets/kenney/audio/block.ogg" />
   <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound name="torchlight" src="assets/torchlight.ogg" loop="true" />
+  <qg:sound name="crypt" src="assets/crypt.ogg" loop="true" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="torch" preset="fire" amount="20" size="3" lifetime="0.7" speed="30" />
@@ -2296,6 +2495,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== The title: alone, together, or the saved delve ===== -->
 
   <qg:scene name="title" width="256" height="224" background="#16141e">
+    <qg:music sound="torchlight" />
     <qg:sprite sheet="delvers" frame="0" x="34" y="150" gd:scale="2,2" />
     <qg:sprite sheet="delvers" frame="10" x="222" y="150" gd:scale="2,2" gd:flip_h="true" />
     <qg:emitter particles="torch" x="34" y="100" />
@@ -2313,6 +2513,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- Two machines: one hosts, the other joins its address; the delve starts in crypt-1. -->
   <qg:scene name="together" width="256" height="224" background="#16141e">
+    <qg:music sound="torchlight" />
     <qg:hud position="top-center" size="10"><qg:text value="{tr('TWO DELVERS, TWO MACHINES. ESCAPE: BACK.')}" /></qg:hud>
     <qg:lobby local="crypt-1" local-label="Play alone" size="12" />
     <qg:on-input action="cancel">
@@ -2324,6 +2525,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== Crypt 1: a sealed wall, and what waits behind it. Down the stairs to crypt 2. ===== -->
 
   <qg:scene name="crypt-1" width="256" height="224" background="#100e16" seed="1" save="true">
+    <qg:music sound="crypt" />
     <!-- the delve starts here anew -->
     <q:set name="hearts" value="5" />
     <q:set name="gems" value="0" />
@@ -2332,7 +2534,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="leaving" value="false" type="boolean" />
 
     <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
+      <qg:play sound="hurt" vary="0.1" />
       <qg:shake at="me" frames="8" strength="2" />
       <q:set name="hearts" value="{hearts - 1}" />
       <q:if condition="{hearts <= 0}">
@@ -2340,18 +2542,18 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </q:if>
     </q:function>
     <q:function name="gem" params="it">
-      <qg:play sound="pick" />
+      <qg:play sound="pick" pitch="1.1" vary="0.08" />
       <qg:emit particles="sparkle" at="it" />
       <q:set name="gems" value="{gems + 1}" />
       <q:set name="taken" value="{taken + [it.name]}" />
       <qg:destroy target="it" />
     </q:function>
     <q:function name="slay" params="foe">
-      <qg:play sound="hit" />
+      <qg:play sound="hit" vary="0.15" />
       <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">
-      <qg:play sound="open" />
+      <qg:play sound="open" pitch="0.75" />
       <qg:swap target="lever" prefab="LeverOn" />
       <qg:set-tile col="8" row="5" tile="12" />
       <qg:set-tile col="8" row="6" tile="12" />
@@ -2436,11 +2638,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== Crypt 2: three crushers slide across the way. Down the stairs to crypt 3. ===== -->
 
   <qg:scene name="crypt-2" width="256" height="224" background="#100e16" seed="2" save="true">
+    <qg:music sound="crypt" />
     <q:set name="message" value="THE CRUSHERS. MIND THEIR TIME." />
     <q:set name="leaving" value="false" type="boolean" />
 
     <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
+      <qg:play sound="hurt" vary="0.1" />
       <qg:shake at="me" frames="8" strength="2" />
       <q:set name="hearts" value="{hearts - 1}" />
       <q:if condition="{hearts <= 0}">
@@ -2448,7 +2651,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </q:if>
     </q:function>
     <q:function name="gem" params="it">
-      <qg:play sound="pick" />
+      <qg:play sound="pick" pitch="1.1" vary="0.08" />
       <qg:emit particles="sparkle" at="it" />
       <q:set name="gems" value="{gems + 1}" />
       <q:set name="taken" value="{taken + [it.name]}" />
@@ -2462,7 +2665,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:destroy target="it" />
     </q:function>
     <q:function name="slay" params="foe">
-      <qg:play sound="hit" />
+      <qg:play sound="hit" vary="0.15" />
       <qg:emit particles="slain" at="foe" />
       <qg:destroy target="foe" />
     </q:function>
@@ -2554,12 +2757,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== Crypt 3: the vault, which two levers keep shut. ===== -->
 
   <qg:scene name="crypt-3" width="256" height="224" background="#100e16" seed="3" save="true">
+    <qg:music sound="crypt" />
     <q:set name="message" value="THE VAULT. TWO LEVERS HOLD IT SHUT." />
     <q:set name="pulled" value="0" type="number" />
     <q:set name="won" value="false" type="boolean" />
 
     <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
+      <qg:play sound="hurt" vary="0.1" />
       <qg:shake at="me" frames="8" strength="2" />
       <q:set name="hearts" value="{hearts - 1}" />
       <q:if condition="{hearts <= 0}">
@@ -2567,18 +2771,18 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </q:if>
     </q:function>
     <q:function name="gem" params="it">
-      <qg:play sound="pick" />
+      <qg:play sound="pick" pitch="1.1" vary="0.08" />
       <qg:emit particles="sparkle" at="it" />
       <q:set name="gems" value="{gems + 1}" />
       <q:set name="taken" value="{taken + [it.name]}" />
       <qg:destroy target="it" />
     </q:function>
     <q:function name="slay" params="foe">
-      <qg:play sound="hit" />
+      <qg:play sound="hit" vary="0.15" />
       <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">
-      <qg:play sound="open" />
+      <qg:play sound="open" pitch="0.75" />
       <qg:swap target="lever" prefab="LeverOn" />
       <q:set name="pulled" value="{pulled + 1}" />
       <q:if condition="{pulled == 2}">
@@ -2675,6 +2879,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== The end, and the fall ===== -->
 
   <qg:scene name="the-end" width="256" height="224" background="#141020">
+    <qg:music sound="torchlight" />
     <qg:emitter particles="treasure" x="128" y="150" />
     <qg:sprite sheet="crypt" frame="7" x="128" y="120" gd:scale="3,3" />
     <qg:hud position="top-center" size="16">

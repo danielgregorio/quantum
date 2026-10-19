@@ -63,6 +63,7 @@ func _touch(area: Area2D) -> void:
 		return
 	var tag: String = area.quantum_tag()
 	var other: Node = area.quantum_owner() if area.has_method("quantum_owner") else area
+	Q.touched(self, other)
 	for h in _handlers:
 		if h["with"] == tag:
 			_fire_handler(h, other)
