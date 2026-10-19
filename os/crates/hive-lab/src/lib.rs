@@ -16,6 +16,7 @@
 //! takes root, as in a container or a throwaway VM.
 
 pub mod agent;
+pub mod tui;
 
 use anyhow::{bail, Context as _, Result};
 use chrono::Utc;
@@ -117,6 +118,9 @@ struct Ids {
 
 pub struct Lab {
     dir: PathBuf,
+    bin_dir: PathBuf,
+    ids: Ids,
+    tuis: HashMap<String, tui::Tui>,
     cortex: Child,
     synapse: Option<Child>,
     stdins: HashMap<Role, ChildStdin>,
@@ -184,6 +188,9 @@ impl Lab {
 
         let mut lab = Lab {
             dir: dir.clone(),
+            bin_dir: opts.bin_dir.clone(),
+            ids,
+            tuis: HashMap::new(),
             cortex,
             synapse: None,
             stdins: HashMap::new(),
@@ -346,6 +353,102 @@ impl Lab {
         }
     }
 
+    /// Starts the real `dashboard` (hive-dashboard, as root: an
+    /// administrator) or `grove` (as the lab's user `druid`) in a
+    /// pseudo-terminal of `rows` x `cols`, and waits until cortex has it.
+    pub async fn start_tui(&mut self, app: &str, rows: u16, cols: u16) -> Result<()> {
+        let (bin, registered) = match app {
+            "dashboard" => ("hive-dashboard", "Dashboard"),
+            "grove" => ("grove", "Shell"),
+            _ => bail!("app: dashboard or grove"),
+        };
+        if self.tuis.contains_key(app) {
+            bail!("{} is already running", app);
+        }
+        let mut path = self.bin_dir.join(bin);
+        if !path.is_file() {
+            bail!("no {} in {}", bin, self.bin_dir.display());
+        }
+        let before = self.registered(registered);
+        let mut cmd = Command::new(&path);
+        cmd.env("HIVE_USER_SOCKET", self.dir.join("run/user.sock"))
+            .env(
+                "PATH",
+                "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            );
+        let passwd = CString::new(self.dir.join("passwd").as_os_str().as_encoded_bytes())?;
+        let group = CString::new(self.dir.join("group").as_os_str().as_encoded_bytes())?;
+        let as_user = (app == "grove").then_some((self.ids.user, self.ids.user_gid));
+        if let Some((uid, gid)) = as_user {
+            // the lab's user may not reach the binary where it was built
+            let copy = self.dir.join(bin);
+            if std::fs::hard_link(&path, &copy).is_err() {
+                std::fs::copy(&path, &copy)?;
+            }
+            set_mode(&copy, 0o755)?;
+            path = copy;
+            cmd = Command::new(&path);
+            cmd.env("HIVE_USER_SOCKET", self.dir.join("run/user.sock"))
+                .env(
+                    "PATH",
+                    "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                );
+            let home = self.dir.join("home");
+            std::fs::create_dir_all(&home)?;
+            nix::unistd::chown(
+                &home,
+                Some(nix::unistd::Uid::from_raw(uid)),
+                Some(nix::unistd::Gid::from_raw(gid)),
+            )?;
+            cmd.env("HOME", &home)
+                .env("USER", "druid")
+                .env("LOGNAME", "druid")
+                .current_dir(&home);
+        }
+        let tui = tui::Tui::spawn(cmd, rows, cols, move || {
+            enter_namespace(&passwd, &group)?;
+            if let Some((uid, gid)) = as_user {
+                become_user(uid, gid)?;
+            }
+            Ok(())
+        })?;
+        self.tuis.insert(app.to_string(), tui);
+        self.wait_registered(registered, before + 1).await
+    }
+
+    fn tui(&mut self, app: &str) -> Result<&mut tui::Tui> {
+        self.tuis
+            .get_mut(app)
+            .with_context(|| format!("{} is not running: start it with tui", app))
+    }
+
+    /// What the program's screen shows now.
+    pub fn screen(&mut self, app: &str) -> Result<tui::Screen> {
+        Ok(self.tui(app)?.screen())
+    }
+
+    pub fn keys(&mut self, app: &str, keys: &[String]) -> Result<()> {
+        self.tui(app)?.keys(keys)
+    }
+
+    pub async fn until_screen(
+        &mut self,
+        app: &str,
+        text: &str,
+        excludes: Option<&str>,
+        timeout: Duration,
+    ) -> Result<tui::Screen> {
+        self.tui(app)?.until(text, excludes, timeout).await
+    }
+
+    fn registered(&self, component: &str) -> usize {
+        let needle = format!(" as {}", component);
+        log_text(&self.dir, "cortex")
+            .lines()
+            .filter(|l| l.contains("Registered connection") && l.ends_with(&needle))
+            .count()
+    }
+
     /// The last lines a daemon logged ("cortex" or "synapse").
     pub fn log(&self, daemon: &str, lines: usize) -> String {
         tail(&self.dir, daemon, lines)
@@ -353,6 +456,9 @@ impl Lab {
 
     /// Stops everything and removes the lab's directory.
     pub async fn end(mut self) {
+        for (_, tui) in self.tuis.drain() {
+            tui.stop().await;
+        }
         self.stdins.clear(); // the agents see their stdin close and leave
         for mut child in self.agents.drain(..) {
             let _ = tokio::time::timeout(Duration::from_secs(2), child.wait()).await;
@@ -558,6 +664,16 @@ fn enter_namespace(passwd: &std::ffi::CStr, group: &std::ffi::CStr) -> std::io::
         None::<&str>,
     )
     .map_err(io)?;
+    Ok(())
+}
+
+/// Drops root for the lab's user, in a child before exec.
+fn become_user(uid: u32, gid: u32) -> std::io::Result<()> {
+    use nix::unistd::{setgid, setgroups, setuid, Gid, Uid};
+    let io = |e: nix::errno::Errno| std::io::Error::from_raw_os_error(e as i32);
+    setgroups(&[Gid::from_raw(gid)]).map_err(io)?;
+    setgid(Gid::from_raw(gid)).map_err(io)?;
+    setuid(Uid::from_raw(uid)).map_err(io)?;
     Ok(())
 }
 

@@ -1,0 +1,15 @@
+// the real grove in a pseudo-terminal, as the lab's user: it runs commands, answers a question in
+// plain language, and prints a system notice at the next prompt
+{"op":"start"}
+{"op":"tui","app":"grove","rows":24,"cols":100}
+{"op":"until_screen","app":"grove","contains":"grove>"}
+{"op":"keys","app":"grove","keys":["echo hello from grove","Enter"]}
+{"op":"until_screen","app":"grove","contains":"\nhello from grove"}
+{"op":"keys","app":"grove","keys":["? why did nginx stop","Enter"]}
+{"op":"until_screen","app":"grove","contains":"[hive] Check system status with `systemctl status`","timeout":10}
+{"op":"crash","service":"nginx.service","exit_code":1,"restarts":5}
+{"op":"until","to":"shell","type":"Notification","contains":"nginx.service exited"}
+{"op":"keys","app":"grove","keys":["Enter"]}
+{"op":"until_screen","app":"grove","contains":"[hive] Service Crashed: nginx.service exited with code 1"}
+{"op":"none","to":"actuator","within":0.3}
+{"op":"end"}

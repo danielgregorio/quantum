@@ -138,7 +138,7 @@ Cargo can't cross-compile this workspace from Windows; `bash scripts/test-on-for
 
 ### Hive Lab (the Hive in a box: seconds, no VM)
 
-Start here for anything the Hive decides: rules, suggestions, notifications, approvals, what a user may send. `crates/hive-lab` runs the real `hive-cortex` and `hive-synapse` and plays the nerves, the actuator (which records actions and runs none), grove and the dashboard, under the binary names and users cortex checks, in a private mount namespace (root, as in a container). See `crates/hive-lab/README.md`.
+Start here for anything the Hive decides: rules, suggestions, notifications, approvals, what a user may send, and how grove and the dashboard show it (the real programs run in a pseudo-terminal and their screens are read as text). `crates/hive-lab` runs the real `hive-cortex` and `hive-synapse` and plays the nerves, the actuator (which records actions and runs none), grove and the dashboard, under the binary names and users cortex checks, in a private mount namespace (root, as in a container). See `crates/hive-lab/README.md`.
 
 ```bash
 scripts/lab/hive-tapes.sh                        # every tape in crates/hive-lab/tapes/, ~4 s
