@@ -71,6 +71,7 @@ class Game:
     multiplayer: Optional[Element] = None
     languages: List[Element] = field(default_factory=list)
     particles: Dict[str, Element] = field(default_factory=dict)
+    items: Dict[str, Element] = field(default_factory=dict)
 
 
 def _local(element: ET.Element) -> tuple:
@@ -214,7 +215,7 @@ def _read_element(element: ET.Element, parent_tag: str) -> Element:
         return node
     _no_raw_text(element, f'<qg:{tag}>')
     child_parent = 'handler' if tag in ('on-collision', 'on-fall', 'on-input', 'on-select', 'on-hit', 'on-ko', 'on-death',
-                                        'on-tile', 'on-animation-end',
+                                        'on-tile', 'on-animation-end', 'on-locked',
                                         'on-damage', 'timer', 'button', 'on-end') else tag
     node.children = _read_children(element, child_parent, f'<qg:{tag}>')
     return node
@@ -295,6 +296,7 @@ def read_game(app) -> Game:
     multiplayer: Optional[Element] = None
     languages: List[Element] = []
     particles: Dict[str, Element] = {}
+    items: Dict[str, Element] = {}
     try:
         for child in root:
             ns, name = _local(child)
@@ -310,6 +312,8 @@ def read_game(app) -> Game:
                     _unique(sounds, el, 'sound')
                 elif el.tag == 'particles':
                     _unique(particles, el, 'particles')
+                elif el.tag == 'item':
+                    _unique(items, el, 'item')
                 elif el.tag == 'input':
                     inputs.append(el)
                 elif el.tag == 'language':
@@ -340,7 +344,7 @@ def read_game(app) -> Game:
     if not scenes:
         raise GameCompileError('a game needs at least one <qg:scene>', file=source_path)
     return Game(getattr(app, 'app_id', 'game'), tilesets, sheets, prefabs, scenes, source_path, sounds,
-                game_state, inputs, multiplayer, languages, particles)
+                game_state, inputs, multiplayer, languages, particles, items)
 
 
 def _unique(table: Dict[str, Element], el: Element, what: str) -> None:

@@ -230,16 +230,16 @@ def build() -> str:
     parts = [INTRO]
     groups = [
         ('What a game is made of', 'Declared once, in `q:application`.',
-         ['tileset', 'spritesheet', 'input', 'multiplayer', 'sound', 'particles', 'prefab', 'animation', 'state',
+         ['tileset', 'spritesheet', 'input', 'multiplayer', 'sound', 'particles', 'item', 'prefab', 'animation', 'state',
           'move', 'scene']),
         ('What a scene holds', 'The level, the character, the things placed in it, and what the screen shows.',
          ['tilemap', 'character', 'behavior', 'gravity', 'walk', 'jump', 'keep-inside', 'wrap', 'face',
           'instance', 'emitter', 'spawner', 'zone', 'sprite', 'path', 'cursor', 'exit', 'map-node',
-          'map-path', 'camera', 'hud', 'counter', 'text', 'bar', 'menu', 'button', 'field', 'lobby']),
+          'map-path', 'camera', 'hud', 'counter', 'text', 'bar', 'inventory', 'menu', 'button', 'field', 'lobby']),
         ('Handlers', 'Where the logic goes: actions and statements, with `me` and `other` '
          '(`cursor` and `other` in qg:on-select).',
          ['on-collision', 'on-hit', 'on-fall', 'on-tile', 'on-ko', 'on-input', 'on-select', 'on-damage', 'on-death',
-          'on-animation-end']),
+          'on-locked', 'on-animation-end']),
         ('Actions', 'What a handler can do, besides `q:set`, `q:if`, `q:loop`, `q:call` and `q:return`.',
          list(ACTIONS)),
     ]

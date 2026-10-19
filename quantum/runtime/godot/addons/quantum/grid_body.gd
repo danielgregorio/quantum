@@ -149,6 +149,9 @@ func _physics_process(_delta: float) -> void:
 	var target := cell() + dir
 	var thing := _thing_in(target)
 	if thing != null:
+		Q.touched(self, thing)
+		if thing.is_queued_for_deletion():
+			return   # picked up, or a door it opened: the next step goes in
 		var fired := false
 		if thing.has_method("quantum_tag"):
 			for h in _handlers:

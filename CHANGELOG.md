@@ -10,6 +10,20 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: what the players carry. `<qg:item name= label= sheet= frame=
+  max= start= sound= particles=>` declares a kind of item; how many are
+  held is the game's state (kept across scenes, saved with `qg:save`, in
+  every replay and peer's hash). A prefab with `gives="key"` (and
+  `amount=`) is picked up by a character's touch, unless they hold the
+  most; a solid one with `opens-with="key"` opens for one, spending it
+  unless `keeps="true"`, and runs its `<qg:on-locked>` without one. A named
+  instance picked up or opened stays gone when its scene is entered again,
+  with no `taken` list and `if=` to write. `<qg:give item= amount=>` and
+  `<qg:take item= amount=>` add and spend them, `<qg:reset-items>` starts a
+  new game (each item back to its `start=`, the gone things back), `held('key')` reads them,
+  `<qg:counter item=>` counts one in the HUD and `<qg:inventory>` shows
+  what is held, each its picture and how many. `pickup`, `open`, `locked`
+  and `item` events reach the play protocol.
 - Laboratory: tile kinds. `<qg:tile kind=>` makes a tile a `ladder`
   (passed through; up and down climb it, jump lets go), `water` (passed
   through; slow to sink in, a jump is a stroke, slower to walk), `ice`

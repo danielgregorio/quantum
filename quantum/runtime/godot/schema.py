@@ -41,7 +41,7 @@ class Tag:
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
            'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
-           'play-animation')
+           'play-animation', 'give', 'take', 'reset-items')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -135,6 +135,20 @@ TAGS: Dict[str, Tag] = {
         {'text': Attr('str', required=True, doc='the text exactly as the game shows it (a button, a line, a HUD text)'),
          'as': Attr('str', required=True, doc='what it is in this language')},
         parents=('language',)),
+    'item': Tag(
+        'A kind of thing the players carry: keys, gems, potions. How many they hold is the game\'s state, kept '
+        'across scenes and in a qg:save; `held(\'key\')` reads it. A prefab with gives= is picked up as one; a '
+        'solid prefab with opens-with= opens for one; qg:give and qg:take add and spend them; qg:inventory '
+        'shows them.',
+        {'name': Attr('ident', required=True),
+         'label': Attr('str', None, doc='what a player reads (else its name), in the HUD'),
+         'sheet': Attr('ident', None, doc='a qg:spritesheet or qg:tileset: its picture in qg:inventory'),
+         'frame': Attr('int', 0),
+         'max': Attr('int', 0, doc='the most they can hold (0: no limit)'),
+         'start': Attr('int', 0, doc='how many they hold when the game starts'),
+         'sound': Attr('ident', None, doc='a qg:sound, played as one is picked up'),
+         'particles': Attr('ident', None, doc='a qg:particles, burst where one is picked up')},
+        parents=('application',)),
     'prefab': Tag(
         'A kind of thing the scene places with qg:instance. With ai= it moves.',
         {'name': Attr('ident', required=True),
@@ -178,7 +192,15 @@ TAGS: Dict[str, Tag] = {
          'direction': Attr('enum:left|right', 'left', doc='where it walks first'),
          'turns-at': Attr('enum:wall|edge', 'wall', doc='edge: also turns before falling off'),
          'gravity': Attr('float', 900.0),
-         'solid': Attr('bool', False, doc='characters stand on it and bump it (a block)')},
+         'solid': Attr('bool', False, doc='characters stand on it and bump it (a block)'),
+         'gives': Attr('ident', None, doc='a qg:item: a character that touches it picks it up (amount= of '
+                                          'them) and it is gone; a named instance stays gone when the scene '
+                                          'is entered again'),
+         'amount': Attr('int', 1, doc='gives=: how many'),
+         'opens-with': Attr('ident', None, doc='solid: a qg:item. A character that bumps it holding one '
+                                               'spends it and it opens (it is gone; a named one stays gone); '
+                                               'without one, its qg:on-locked runs'),
+         'keeps': Attr('bool', False, doc='opens-with=: the item is not spent (a key for every door)')},
         parents=('application',)),
     'state': Tag(
         'A form of a character or a prefab (small, big; calm, angry): hitbox, frame, animations, '
@@ -394,8 +416,9 @@ TAGS: Dict[str, Tag] = {
          'size': Attr('int', 8, doc='the font size of its items, unless an item says otherwise')},
         parents=('scene',)),
     'counter': Tag(
-        'A number from the scene state, in the HUD.',
-        {'bind': Attr('ident', required=True, doc='a q:set of the scene'),
+        'A number from the scene state, or how many of an item the players hold, in the HUD.',
+        {'bind': Attr('ident', None, doc='a q:set of the scene or the game (or item=)'),
+         'item': Attr('ident', None, doc='a qg:item: how many are held (or bind=)'),
          'label': Attr('str', '', doc='text before the number'),
          'size': Attr('int', None, doc='font size')},
         parents=('hud',)),
@@ -542,6 +565,11 @@ TAGS: Dict[str, Tag] = {
         '`other` the winner.',
         {},
         parents=('character',)),
+    'inventory': Tag(
+        'In the HUD: the items held, each its picture (the qg:item\'s sheet= and frame=) and how many, in a row; '
+        'an item held 0 times is not shown.',
+        {'size': Attr('int', None, doc='the font size of the numbers')},
+        parents=('hud',)),
     'bar': Tag(
         'A bar in the HUD: a number against its maximum — a q:set, or a fighter\'s health as `id.health`.',
         {'bind': Attr('str', required=True, doc='a q:set of the scene or the game, or a fighter\'s id and .health (p1.health)'),
@@ -549,7 +577,26 @@ TAGS: Dict[str, Tag] = {
          'width': Attr('int', 100), 'height': Attr('int', 10),
          'color': Attr('color', '#e04040')},
         parents=('hud',)),
+    'on-locked': Tag(
+        'What happens when a character bumps this prefab (opens-with=) without the item. Holds actions and '
+        'statements; `me` is the locked thing, `other` the character.',
+        {},
+        parents=('prefab',)),
     # actions
+    'give': Tag(
+        'The players get some of an item (up to its max=).',
+        {'item': Attr('ident', required=True, doc='a qg:item'),
+         'amount': Attr('int', 1)},
+        parents=('handler',)),
+    'take': Tag(
+        'The players spend some of an item (not below 0): a potion drunk, a key used.',
+        {'item': Attr('ident', required=True, doc='a qg:item'),
+         'amount': Attr('int', 1)},
+        parents=('handler',)),
+    'reset-items': Tag(
+        'A new game: every qg:item back to its start=, and the named things picked up or opened come back.',
+        {},
+        parents=('handler',)),
     'destroy': Tag(
         'Removes a thing from the scene.',
         {'target': Attr('ident', 'other', doc='other, me, or a q:set holding a thing (thing_at)')},
