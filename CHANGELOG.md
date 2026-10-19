@@ -10,6 +10,14 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the game language is a feature of its own,
+  `quantum/core/features/game_engine/`, like the others: a manifest, three
+  intentions (`primary`, with a line for every `qg:` tag, statement and
+  expression function; `variants`; `edge_cases`) and a dataset of 39 whole
+  games and 24 refusals with their messages. Each game compiles and each
+  refusal says what it says (`tests/dataset/test_dataset_features.py`), and
+  a tag added to the schema without its line in the primary intention and a
+  game that uses it fails `tests/dataset/test_game_engine_feature.py`.
 - Laboratory: the new tags in the games. In Delve, hearts and gems are
   items: the inventory is in the HUD, a hit takes a heart, and a new game
   starts with `qg:reset-items`. A skeleton archer, made of parts, keeps its
@@ -431,6 +439,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- Laboratory: a game that adds to a name nobody declared, in a handler or a
+  `q:function` (`<q:set name="score" value="{score + 1}" />` without a
+  `q:set` of `score` in the scene or the game), is refused at compile time:
+  its first `q:set` reads it before it has a value. It compiled to a
+  variable of the handler that started as nothing, and the game stopped
+  with a script error when the handler ran.
 - Laboratory: `ai="pathfind"` lines up with the middle of its cell before
   it steps into the next one, and does not overshoot where it aims. Cutting
   the corner into a gap's row, a monster was a little off its middle and

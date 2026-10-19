@@ -167,11 +167,18 @@ def local_names(body: List[Node], scope: Scope) -> List[str]:
     # a variable set and never read is a misspelt state, not a variable
     read = _texts_read(body)
     for name in out:
-        if not any(re.search(rf'(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])', text) for text in read):
+        mentioned = re.compile(rf'(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])')
+        if not any(mentioned.search(text) for text in read):
             line = next((n.line for n in _sets(body) if n.attrs['name'] == name), None)
             raise GameCompileError(
                 f'{name!r} is set and never read: a state of the scene is declared with <q:set name="{name}" .../> '
                 f'in the scene; a variable of the function or handler is read somewhere in it', line)
+        # ...and one whose first q:set reads it (score + 1) is a state never declared: it would start as null
+        first = next(n for n in _sets(body) if n.attrs['name'] == name)
+        if mentioned.search(str(first.attrs.get('value', ''))):
+            raise GameCompileError(
+                f'{name!r} is not declared: its first <q:set> reads it before it has a value; a state of the '
+                f'scene or the game is declared with <q:set name="{name}" .../> there', first.line)
     return out
 
 

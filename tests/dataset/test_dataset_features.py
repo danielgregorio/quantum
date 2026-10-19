@@ -78,12 +78,15 @@ _ALL_EXAMPLES = list(_collect_dataset_examples())
 
 @pytest.mark.dataset
 @pytest.mark.parametrize("feature,polarity,example,json_path", _ALL_EXAMPLES)
-def test_dataset_example(feature, polarity, example, json_path):
+def test_dataset_example(feature, polarity, example, json_path, tmp_path):
     """Validate a single dataset example (positive or negative)."""
     from quantum.core.parser import QuantumParser
 
     if feature == "native_testing":
         _test_native_testing(polarity, example)       # a *.test.q, not a page
+        return
+    if feature == "game_engine":
+        _test_game(polarity, example, tmp_path)       # a whole game, compiled to a Godot project
         return
 
     parser = QuantumParser()
@@ -104,6 +107,32 @@ def _test_native_testing(polarity: str, example: dict):
     else:
         with pytest.raises(TestParseError, match=example["error"]):
             parse_test_source(code)
+
+
+def _test_game(polarity: str, example: dict, tmp_path: Path):
+    """A positive example compiles to a Godot project (no Godot needed); a negative one is refused
+    with the message it gives, by the parser or the game compiler."""
+    from quantum.core.parser import QuantumParser
+    from quantum.runtime.godot import compile_game
+
+    source = tmp_path / f"{example['id']}.q"
+    repo = _FEATURES_DIR.parents[2]
+
+    def build():
+        app = QuantumParser(use_cache=False).parse_file(str(source))
+        compile_game(app, str(tmp_path / "godot"), source_dir=str(repo))
+
+    if polarity == "positive":
+        source.write_text(example["expected_output"]["quantum_code"], encoding="utf-8")
+        build()
+        assert (tmp_path / "godot" / "project.godot").is_file()
+    else:
+        expected = example["expected_error"]
+        source.write_text(example["input"]["quantum_code"], encoding="utf-8")
+        with pytest.raises(Exception) as info:
+            build()
+        assert type(info.value).__name__ == expected["type"]
+        assert expected["message"] in str(info.value)
 
 
 def _extract_code(example: dict, positive: bool = True) -> str | None:

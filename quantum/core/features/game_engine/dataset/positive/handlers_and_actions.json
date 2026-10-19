@@ -1,0 +1,120 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "handlers",
+  "description": "Handlers and the actions they run",
+  "examples": [
+    {
+      "id": "game-act-001",
+      "intent": "Checkpoints, lives and falling",
+      "input": {
+        "natural_language": "A platformer with lives: falling in a pit costs a life and puts you back at the last checkpoint; at zero lives, game over",
+        "context": {
+          "target": "godot",
+          "file": "game-act-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"lives\" type=\"game\">\n  <q:set name=\"lives\" value=\"3\" type=\"number\" />\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Checkpoint\" tag=\"checkpoint\" sheet=\"tiles\" frame=\"111\" hitbox=\"18x18\" />\n  <qg:prefab name=\"CheckpointOn\" tag=\"checkpoint-on\" sheet=\"tiles\" frame=\"112\" hitbox=\"18x18\" />\n\n  <qg:scene name=\"level\" width=\"270\" height=\"144\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,0,0,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"14x18\">\n      <qg:on-collision with=\"checkpoint\">\n        <qg:checkpoint />\n        <qg:swap prefab=\"CheckpointOn\" />\n      </qg:on-collision>\n      <qg:on-fall>\n        <q:set name=\"lives\" value=\"{lives - 1}\" />\n        <q:if condition=\"{lives > 0}\">\n          <qg:respawn />\n        <q:else>\n          <qg:goto-scene name=\"game-over\" />\n        </q:else>\n        </q:if>\n      </qg:on-fall>\n    </qg:character>\n    <qg:instance prefab=\"Checkpoint\" x=\"160\" y=\"117\" />\n    <qg:hud><qg:counter bind=\"lives\" label=\"LIVES \" /></qg:hud>\n  </qg:scene>\n\n  <qg:scene name=\"game-over\">\n    <qg:hud position=\"center\"><qg:text value=\"{'GAME OVER'}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Touching the checkpoint makes its position the respawn point and swaps it for the lit one in place. Falling below the map costs a life and respawns there, still; at 0 the game goes to game-over."
+      },
+      "tags": [
+        "checkpoint",
+        "swap",
+        "on-fall",
+        "respawn",
+        "lives"
+      ]
+    },
+    {
+      "id": "game-act-002",
+      "intent": "A boss with health that gets angry and explodes",
+      "input": {
+        "natural_language": "A boss that takes five hits, gets faster and angry after the third, flashes when hit and explodes at the end",
+        "context": {
+          "target": "godot",
+          "file": "game-act-002.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"boss\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:particles name=\"boom\" preset=\"sparks\" color=\"#ffa040\" amount=\"40\" />\n  <qg:prefab name=\"Shot\" tag=\"shot\" sheet=\"tiles\" frame=\"151\" hitbox=\"4x4\" ai=\"fly\" heading=\"right\" speed=\"200\" />\n  <qg:prefab name=\"Boss\" tag=\"boss\" sheet=\"chars\" frame=\"24\" hitbox=\"24x24\" ai=\"sway\" speed=\"30\" health=\"5\">\n    <qg:state name=\"calm\" frame=\"24\" speed=\"30\" initial=\"true\" />\n    <qg:state name=\"angry\" frame=\"25\" speed=\"70\" />\n    <qg:on-collision with=\"shot\">\n      <qg:destroy target=\"other\" />\n      <qg:damage target=\"me\" amount=\"1\" />\n    </qg:on-collision>\n    <qg:on-damage>\n      <qg:tween target=\"me\" property=\"alpha\" from=\"0.2\" to=\"1\" seconds=\"0.3\" />\n      <q:if condition=\"{me.health <= 2}\">\n        <qg:become target=\"me\" state=\"angry\" />\n      </q:if>\n    </qg:on-damage>\n    <qg:on-death>\n      <qg:emit particles=\"boom\" at=\"me\" />\n    </qg:on-death>\n  </qg:prefab>\n\n  <qg:scene name=\"arena\" width=\"270\" height=\"144\">\n    <qg:character id=\"hero\" controller=\"ship\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"72\" hitbox=\"12x12\"\n                  axis=\"vertical\" speed=\"90\" fire-action=\"jump\" fire-prefab=\"Shot\" fire-every=\"15\" />\n    <qg:instance prefab=\"Boss\" x=\"220\" y=\"72\" />\n    <qg:on-death of=\"boss\">\n      <qg:goto-scene name=\"arena\" fade=\"1\" />\n    </qg:on-death>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Each shot that reaches the boss takes 1 health: on-damage fades it in from 0.2 alpha and, at 2 health or less, it becomes angry (faster, another frame). At 0 its on-death bursts the sparks where it was; then the scene's on-death of=\"boss\" starts the arena again."
+      },
+      "tags": [
+        "health",
+        "damage",
+        "on-damage",
+        "on-death",
+        "become",
+        "tween",
+        "emit"
+      ]
+    },
+    {
+      "id": "game-act-003",
+      "intent": "Pong: paddles, walls and goals",
+      "input": {
+        "natural_language": "Pong for two players: the paddles send the ball back at an angle, it bounces off the top and bottom, and a goal scores and puts the ball back in the middle",
+        "context": {
+          "target": "godot",
+          "file": "game-act-003.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"pong-ball\" type=\"game\">\n  <q:set name=\"left_score\" value=\"0\" type=\"number\" />\n  <q:set name=\"right_score\" value=\"0\" type=\"number\" />\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"paddle\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"8x32\" />\n  <qg:input action=\"up\" keys=\"W\" player=\"1\" />\n  <qg:input action=\"down\" keys=\"S\" player=\"1\" />\n  <qg:input action=\"up\" keys=\"Up\" player=\"2\" />\n  <qg:input action=\"down\" keys=\"Down\" player=\"2\" />\n  <qg:prefab name=\"Ball\" tag=\"ball\" sheet=\"tiles\" frame=\"151\" hitbox=\"8x8\" ai=\"fly\" heading=\"-1,0.3\" speed=\"150\">\n    <qg:on-collision with=\"wall\">\n      <qg:deflect target=\"me\" axis=\"y\" />\n    </qg:on-collision>\n    <qg:on-collision with=\"left-goal\">\n      <q:set name=\"right_score\" value=\"{right_score + 1}\" />\n      <qg:respawn target=\"me\" />\n    </qg:on-collision>\n    <qg:on-collision with=\"right-goal\">\n      <q:set name=\"left_score\" value=\"{left_score + 1}\" />\n      <qg:respawn target=\"me\" />\n    </qg:on-collision>\n  </qg:prefab>\n\n  <qg:scene name=\"court\" width=\"320\" height=\"180\" seed=\"5\">\n    <qg:character id=\"left\" controller=\"ship\" player=\"1\" axis=\"vertical\" speed=\"110\"\n                  sheet=\"paddle\" x=\"16\" y=\"90\" hitbox=\"8x32\">\n      <qg:on-collision with=\"ball\">\n        <qg:deflect target=\"other\" dx=\"1\" dy=\"{random(-1, 1)}\" />\n      </qg:on-collision>\n    </qg:character>\n    <qg:character id=\"right\" controller=\"ship\" player=\"2\" axis=\"vertical\" speed=\"110\"\n                  sheet=\"paddle\" x=\"304\" y=\"90\" hitbox=\"8x32\">\n      <qg:on-collision with=\"ball\">\n        <qg:deflect target=\"other\" dx=\"-1\" dy=\"{random(-1, 1)}\" />\n      </qg:on-collision>\n    </qg:character>\n    <qg:zone name=\"top\" tag=\"wall\" x=\"0\" y=\"-8\" width=\"320\" height=\"8\" />\n    <qg:zone name=\"bottom\" tag=\"wall\" x=\"0\" y=\"180\" width=\"320\" height=\"8\" />\n    <qg:zone name=\"left-goal\" tag=\"left-goal\" x=\"-16\" y=\"0\" width=\"8\" height=\"180\" />\n    <qg:zone name=\"right-goal\" tag=\"right-goal\" x=\"328\" y=\"0\" width=\"8\" height=\"180\" />\n    <qg:instance prefab=\"Ball\" x=\"160\" y=\"90\" />\n    <qg:hud position=\"top-center\" size=\"16\">\n      <qg:text value=\"{str(left_score) + '   ' + str(right_score)}\" />\n    </qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "A paddle sends the ball back the other way at an angle drawn from the seed; a wall (a zone tagged wall) flips its vertical heading. In a goal, the other side scores (game state: a prefab's handler reaches only the game state) and the ball goes back to where it was placed, with its first heading and speed."
+      },
+      "tags": [
+        "deflect",
+        "respawn",
+        "zone",
+        "prefab-handler",
+        "two-players",
+        "pong"
+      ]
+    },
+    {
+      "id": "game-act-004",
+      "intent": "A door that slides open and a teleporter",
+      "input": {
+        "natural_language": "A switch that slides a door up out of the way, and a teleporter pad that moves you to the other side of the room",
+        "context": {
+          "target": "godot",
+          "file": "game-act-004.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"door\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Switch\" tag=\"switch\" sheet=\"tiles\" frame=\"64\" hitbox=\"18x18\" />\n  <qg:prefab name=\"Door\" tag=\"door\" sheet=\"tiles\" frame=\"56\" hitbox=\"18x36\" solid=\"true\" />\n  <qg:prefab name=\"Pad\" tag=\"pad\" sheet=\"tiles\" frame=\"62\" hitbox=\"18x6\" />\n\n  <qg:scene name=\"room\" width=\"270\" height=\"144\">\n    <q:set name=\"door\" value=\"null\" />\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"14x18\">\n      <qg:on-collision with=\"switch\" cooldown=\"60\">\n        <q:set name=\"door\" value=\"{thing_at('door', 180, 108)}\" />\n        <q:if condition=\"{door != null}\">\n          <qg:tween target=\"door\" property=\"y\" to=\"70\" seconds=\"1\" trans=\"quad\" ease=\"in-out\" />\n        </q:if>\n      </qg:on-collision>\n      <qg:on-collision with=\"pad\" cooldown=\"30\">\n        <qg:put target=\"me\" x=\"240\" y=\"110\" />\n      </qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Switch\" x=\"80\" y=\"117\" />\n    <qg:instance prefab=\"Door\" x=\"180\" y=\"108\" />\n    <qg:instance prefab=\"Pad\" x=\"120\" y=\"123\" />\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Touching the switch finds the door with thing_at and eases its y up 38 px over a second, in the game's ticks (collisions follow it). The pad puts the hero at (240, 110) at once; cooldown= keeps it from firing again for 30 ticks."
+      },
+      "tags": [
+        "tween",
+        "put",
+        "thing_at",
+        "cooldown",
+        "solid"
+      ]
+    },
+    {
+      "id": "game-act-005",
+      "intent": "Waves on a timer until the enemies are all gone",
+      "input": {
+        "natural_language": "Spawn enemies from the edges of the screen heading inwards, and win when none are left after the last wave",
+        "context": {
+          "target": "godot",
+          "file": "game-act-005.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"waves\" type=\"game\">\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Creep\" tag=\"creep\" sheet=\"chars\" frame=\"18\" hitbox=\"14x14\" ai=\"fly\" speed=\"30..60\" />\n  <qg:scene name=\"field\" width=\"256\" height=\"224\" seed=\"21\">\n    <q:set name=\"wave_over\" value=\"false\" type=\"boolean\" />\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"chars\" frame=\"0\" x=\"128\" y=\"112\" hitbox=\"14x14\"\n                  speed=\"90\" bounds=\"scene\" attack-action=\"jump\">\n      <qg:on-hit with=\"creep\"><qg:destroy target=\"other\" /></qg:on-hit>\n      <qg:on-collision with=\"creep\"><qg:goto-scene name=\"field\" /></qg:on-collision>\n    </qg:character>\n    <qg:spawner prefab=\"Creep\" from=\"60\" every=\"45\" count=\"12\" along=\"edges\" heading=\"inward\" spread=\"30\" />\n    <qg:timer after=\"660\"><q:set name=\"wave_over\" value=\"true\" /></qg:timer>\n    <qg:timer every=\"30\">\n      <q:if condition=\"{wave_over and count('creep') == 0}\">\n        <qg:goto-scene name=\"won\" />\n      </q:if>\n    </qg:timer>\n  </qg:scene>\n  <qg:scene name=\"won\">\n    <qg:hud position=\"center\"><qg:text value=\"{'CLEARED'}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Twelve creeps appear at points of the border drawn from the seed, heading into the scene turned by up to 30 degrees. After tick 660 the wave is over; every 30 ticks a timer checks count('creep') and goes on when none is left."
+      },
+      "tags": [
+        "spawner",
+        "timer",
+        "count",
+        "along-edges"
+      ]
+    }
+  ]
+}

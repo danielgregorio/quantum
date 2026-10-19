@@ -1,0 +1,53 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "items",
+  "description": "Items the players carry: pickups, locks, the inventory",
+  "examples": [
+    {
+      "id": "game-item-001",
+      "intent": "Keys that open doors",
+      "input": {
+        "natural_language": "Keys lying around open doors; a door you bump without a key says it is locked; show the keys held on screen",
+        "context": {
+          "target": "godot",
+          "file": "game-item-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"keys\" type=\"game\">\n  <q:set name=\"message\" value=\"\" />\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"pick\" src=\"assets/kenney/audio/coin.ogg\" />\n  <qg:particles name=\"glint\" preset=\"stars\" color=\"#ffe060\" />\n  <qg:item name=\"key\" label=\"KEYS\" sheet=\"tiles\" frame=\"27\" sound=\"pick\" particles=\"glint\" />\n\n  <qg:prefab name=\"Key\" tag=\"key\" sheet=\"tiles\" frame=\"27\" hitbox=\"12x12\" gives=\"key\" />\n  <qg:prefab name=\"Door\" tag=\"door\" sheet=\"tiles\" frame=\"56\" hitbox=\"18x36\" solid=\"true\" opens-with=\"key\">\n    <qg:on-locked>\n      <q:set name=\"message\" value=\"Locked. A key would open it.\" />\n    </qg:on-locked>\n  </qg:prefab>\n\n  <qg:scene name=\"vault\" width=\"270\" height=\"144\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"14x18\" />\n    <qg:instance prefab=\"Door\" x=\"120\" y=\"108\" name=\"first-door\" />\n    <qg:instance prefab=\"Key\" x=\"60\" y=\"80\" name=\"first-key\" />\n    <qg:hud>\n      <qg:inventory size=\"8\" />\n      <qg:text bind=\"message\" />\n      <qg:text value=\"{'You have a key' if held('key') > 0 else ''}\" />\n    </qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Touching the key picks it up (sound and sparkle) and it is gone; a named one stays gone when the scene is entered again. Bumping the door with a key spends it and the door opens for good; without one its on-locked runs. The inventory shows each item held with its picture and how many; held() reads it."
+      },
+      "tags": [
+        "item",
+        "gives",
+        "opens-with",
+        "on-locked",
+        "inventory",
+        "held"
+      ]
+    },
+    {
+      "id": "game-item-002",
+      "intent": "Hearts as an item, potions that give them back, and a new game",
+      "input": {
+        "natural_language": "The player has hearts: a hit takes one, a potion gives one back up to the maximum, and at zero a new game starts with full hearts",
+        "context": {
+          "target": "godot",
+          "file": "game-item-002.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"hearts\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:item name=\"heart\" label=\"HEARTS\" sheet=\"tiles\" frame=\"44\" start=\"3\" max=\"5\" />\n  <qg:item name=\"gem\" label=\"GEMS\" sheet=\"tiles\" frame=\"67\" />\n  <qg:prefab name=\"Potion\" tag=\"potion\" sheet=\"tiles\" frame=\"114\" hitbox=\"10x12\" />\n  <qg:prefab name=\"Gem\" tag=\"gem\" sheet=\"tiles\" frame=\"67\" hitbox=\"12x12\" gives=\"gem\" amount=\"2\" />\n  <qg:prefab name=\"Spikes\" tag=\"spikes\" sheet=\"tiles\" frame=\"68\" hitbox=\"18x8\" />\n\n  <qg:scene name=\"cave\" width=\"270\" height=\"144\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"14x18\">\n      <qg:on-collision with=\"spikes\" cooldown=\"45\">\n        <qg:take item=\"heart\" />\n        <q:if condition=\"{held('heart') <= 0}\">\n          <qg:reset-items />\n          <qg:goto-scene name=\"cave\" />\n        </q:if>\n      </qg:on-collision>\n      <qg:on-collision with=\"potion\">\n        <qg:destroy />\n        <qg:give item=\"heart\" amount=\"2\" />\n      </qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Potion\" x=\"70\" y=\"114\" />\n    <qg:instance prefab=\"Gem\" x=\"100\" y=\"110\" name=\"cave-gem\" />\n    <qg:instance prefab=\"Spikes\" x=\"160\" y=\"122\" />\n    <qg:hud>\n      <qg:counter item=\"heart\" label=\"HEARTS \" />\n      <qg:counter item=\"gem\" label=\"GEMS \" />\n    </qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Hearts start at 3 and never pass 5. The spikes take one every 45 ticks while touched; the potion gives two back, up to the max; the gem gives two gems. At 0 hearts, reset-items puts every item back to its start= and the named gem back in place, and the cave starts over."
+      },
+      "tags": [
+        "item",
+        "give",
+        "take",
+        "reset-items",
+        "counter-item"
+      ]
+    }
+  ]
+}

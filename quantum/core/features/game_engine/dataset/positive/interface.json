@@ -1,0 +1,95 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "interface",
+  "description": "HUD, menus, text fields, pause, dialogue and the pointer",
+  "examples": [
+    {
+      "id": "game-ui-001",
+      "intent": "A title menu and a pause menu",
+      "input": {
+        "natural_language": "A title screen with Play and Options buttons, and a pause menu on Escape with Resume and Quit to title",
+        "context": {
+          "target": "godot",
+          "file": "game-ui-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"menus\" type=\"game\">\n  <q:set name=\"volume\" value=\"5\" type=\"number\" />\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:input action=\"cancel\" keys=\"Escape, JoyStart\" />\n\n  <qg:scene name=\"title\" width=\"270\" height=\"144\">\n    <qg:menu position=\"center\" size=\"14\">\n      <qg:button label=\"Play\"><qg:goto-scene name=\"level\" fade=\"0.4\" /></qg:button>\n      <qg:button label=\"{'Volume: ' + str(volume)}\">\n        <q:set name=\"volume\" value=\"{(volume + 1) % 11}\" />\n      </qg:button>\n    </qg:menu>\n  </qg:scene>\n\n  <qg:scene name=\"level\" width=\"270\" height=\"144\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"14x18\" />\n    <qg:on-input action=\"cancel\">\n      <q:if condition=\"{paused()}\">\n        <qg:resume />\n      <q:else>\n        <qg:pause />\n      </q:else>\n      </q:if>\n    </qg:on-input>\n    <qg:menu if=\"{paused()}\" position=\"center\">\n      <qg:button label=\"Resume\"><qg:resume /></qg:button>\n      <qg:button label=\"Quit to title\"><qg:goto-scene name=\"title\" /></qg:button>\n    </qg:menu>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Up and down move the focus, select or a click chooses. The volume button's label is an expression read every frame. Escape pauses the level (characters, things and timers stop, menus and on-input go on) and shows the pause menu, which exists only while paused()."
+      },
+      "tags": [
+        "menu",
+        "button",
+        "pause",
+        "resume",
+        "paused"
+      ]
+    },
+    {
+      "id": "game-ui-002",
+      "intent": "A HUD with a counter, a text and a bar",
+      "input": {
+        "natural_language": "Show the score, the level name and an energy bar on screen",
+        "context": {
+          "target": "godot",
+          "file": "game-ui-002.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"hud\" type=\"game\">\n  <q:set name=\"score\" value=\"0\" type=\"number\" />\n  <q:set name=\"energy\" value=\"80\" type=\"number\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\" width=\"256\" height=\"224\">\n    <q:set name=\"level_name\" value=\"Forest 1-1\" />\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"chars\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"14x14\" />\n    <qg:timer every=\"60\">\n      <q:set name=\"score\" value=\"{score + 1}\" />\n      <q:set name=\"energy\" value=\"{max(0, energy - 5)}\" />\n    </qg:timer>\n    <qg:hud position=\"top-left\" size=\"10\">\n      <qg:counter bind=\"score\" label=\"SCORE \" />\n      <qg:text bind=\"level_name\" size=\"8\" />\n    </qg:hud>\n    <qg:hud position=\"top-right\">\n      <qg:bar bind=\"energy\" max=\"100\" width=\"80\" height=\"8\" color=\"#40e060\" />\n    </qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The counter shows the score, the text shows the scene's level_name, and the bar shows energy against 100. A timer changes both once a second; the HUD follows."
+      },
+      "tags": [
+        "hud",
+        "counter",
+        "text",
+        "bar",
+        "timer"
+      ]
+    },
+    {
+      "id": "game-ui-003",
+      "intent": "Typing a name, and a conversation that waits for the player",
+      "input": {
+        "natural_language": "Ask the player for their name in a text box, then a character greets them by name in a dialogue",
+        "context": {
+          "target": "godot",
+          "file": "game-ui-003.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"names\" type=\"game\">\n  <q:set name=\"player_name\" value=\"\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n\n  <qg:scene name=\"ask\" width=\"270\" height=\"144\">\n    <qg:menu position=\"center\" size=\"12\">\n      <qg:field bind=\"player_name\" label=\"Your name: \" max-length=\"12\" />\n      <qg:button label=\"Start\"><qg:goto-scene name=\"meet\" /></qg:button>\n    </qg:menu>\n  </qg:scene>\n\n  <qg:scene name=\"meet\" width=\"270\" height=\"144\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"chars\" frame=\"0\" x=\"60\" y=\"72\" hitbox=\"14x14\" />\n    <qg:dialogue name=\"greeting\" size=\"12\">\n      <qg:line who=\"Elder\" text=\"{'Welcome, ' + player_name + '.'}\" />\n      <qg:line who=\"{player_name}\" text=\"Thank you.\" />\n      <qg:on-end>\n        <qg:goto-scene name=\"ask\" />\n      </qg:on-end>\n    </qg:dialogue>\n    <qg:timer after=\"30\"><qg:say dialogue=\"greeting\" /></qg:timer>\n    <qg:hud position=\"top-right\"><qg:text value=\"{'talking' if talking() else ''}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The field writes what is typed into player_name (game state, so the next scene reads it). After half a second the dialogue opens; who= and text= are expressions read as each line is shown. While it is open the scene is paused and talking() is true."
+      },
+      "tags": [
+        "field",
+        "dialogue",
+        "line",
+        "on-end",
+        "talking"
+      ]
+    },
+    {
+      "id": "game-ui-004",
+      "intent": "Placing towers with the pointer",
+      "input": {
+        "natural_language": "A tower defense where you click on the grass to place a tower, if you have enough gold",
+        "context": {
+          "target": "godot",
+          "file": "game-ui-004.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"towers\" type=\"game\">\n  <q:set name=\"gold\" value=\"100\" type=\"number\" />\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:prefab name=\"Tower\" tag=\"tower\" sheet=\"tiles\" frame=\"12\" hitbox=\"18x18\"\n             ai=\"turret\" targets=\"creep\" range=\"60\" attack=\"area\" damage=\"1\" fire-every=\"30\" />\n\n  <qg:scene name=\"field\" width=\"270\" height=\"144\" background=\"#3a6a2a\">\n    <qg:cursor player=\"1\" grid=\"18\" step=\"18\" sheet=\"tiles\" frame=\"61\" />\n    <qg:on-select>\n      <q:if condition=\"{gold >= 25 and other == null}\">\n        <qg:spawn prefab=\"Tower\" at=\"cursor\" />\n        <q:set name=\"gold\" value=\"{gold - 25}\" />\n      </q:if>\n    </qg:on-select>\n    <qg:hud><qg:counter bind=\"gold\" label=\"GOLD \" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The pointer is the mouse, also moved 18 px a tick by the direction keys, snapped to cell centres. Select (or a click) on a free cell with 25 gold places a tower there; other is the thing under the cursor, or null. A tower damages every creep within 60 px every 30 ticks."
+      },
+      "tags": [
+        "cursor",
+        "on-select",
+        "turret",
+        "area"
+      ]
+    }
+  ]
+}

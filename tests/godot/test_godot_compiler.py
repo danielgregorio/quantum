@@ -1009,6 +1009,31 @@ class TestWhatItRefuses:
 '''))
         assert "'score' is set and never read" in e.message
 
+    def test_adding_to_an_undeclared_variable(self, tmp_path):
+        # read by its own first q:set, it is no variable of the handler: it would start as null
+        e = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p" controller="platformer" sheet="c" x="0" y="0" hitbox="1x1">
+      <qg:on-collision with="coin"><q:set name="score" value="{score + 1}" /></qg:on-collision>
+    </qg:character>
+  </qg:scene>
+'''))
+        assert "'score' is not declared: its first <q:set> reads it" in e.message
+        assert e.line == 7
+
+    def test_a_variable_of_a_handler_set_before_it_is_read(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="coins" value="0" type="number" />
+    <qg:character id="p" controller="platformer" sheet="c" x="0" y="0" hitbox="1x1">
+      <qg:on-collision with="coin">
+        <q:set name="bonus" value="1" />
+        <q:set name="bonus" value="{bonus * 2}" />
+        <q:set name="coins" value="{coins + bonus}" />
+      </qg:on-collision>
+    </qg:character>
+  </qg:scene>
+'''))
+        assert 'var bonus = null' in (out / 'scripts' / 'scene_main.gd').read_text()
+
     def test_a_collision_with_a_tag_no_prefab_has(self, tmp_path):
         e = refuse(tmp_path, game('''  <qg:scene name="main">
     <qg:character id="p" controller="platformer" sheet="c" x="0" y="0" hitbox="1x1">

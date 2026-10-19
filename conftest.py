@@ -132,7 +132,8 @@ def pytest_sessionfinish(session, exitstatus):
 # React Native target. Their tests stay in the suite (decision D1) but run in a
 # CI job of their own, so a red build says at once whether the Core or the
 # Laboratory broke. Marked here, by file, so a new test cannot forget it.
-LABORATORY = ("test_game_", "test_godot_", "test_mobile_target", "game_engine_2d", "test-mobile.q")
+LABORATORY = ("test_game_", "test_godot_", "test_mobile_target", "game_engine_2d", "test-mobile.q",
+              "[game_engine/")   # the game feature's dataset examples (tests/dataset)
 
 
 def pytest_collection_modifyitems(config, items):

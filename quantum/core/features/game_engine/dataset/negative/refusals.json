@@ -1,0 +1,428 @@
+{
+  "dataset_type": "negative",
+  "feature": "game_engine",
+  "category": "compile_errors",
+  "description": "What the game compiler refuses, and the message it gives",
+  "examples": [
+    {
+      "id": "game-bad-001",
+      "intent": "Script code in a handler",
+      "input": {
+        "natural_language": "Run some code when the hero touches a coin",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" x=\"20\" y=\"20\" hitbox=\"14x18\">\n      <qg:on-collision with=\"coin\">\n        score += 1; coin.queue_free()\n      </qg:on-collision>\n    </qg:character>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "a game is written in tags, not in script"
+      },
+      "why_invalid": "There is no escape hatch: a handler holds actions and q: statements only.",
+      "correction": "Write <q:set name=\"score\" value=\"{score + 1}\" /> and <qg:destroy /> (score declared with q:set).",
+      "tags": [
+        "script",
+        "escape-hatch"
+      ]
+    },
+    {
+      "id": "game-bad-002",
+      "intent": "A tag the language does not have",
+      "input": {
+        "natural_language": "Make the hero fly with a fly tag",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" x=\"20\" y=\"20\" hitbox=\"14x18\">\n      <qg:fly speed=\"100\" />\n    </qg:character>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "is not a game tag"
+      },
+      "why_invalid": "Every qg: tag is in the schema; qg:fly is not one of them.",
+      "correction": "Use controller=\"behavior\" with qg:walk axis=\"both\" (a body without qg:gravity floats).",
+      "tags": [
+        "unknown-tag"
+      ]
+    },
+    {
+      "id": "game-bad-003",
+      "intent": "An attribute the tag does not have",
+      "input": {
+        "natural_language": "Give the character a jump power of 300",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" x=\"20\" y=\"20\" hitbox=\"14x18\"\n                  jump-power=\"300\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "has no attribute 'jump-power'"
+      },
+      "why_invalid": "The message lists the attributes the tag has.",
+      "correction": "Use jump-speed=\"300\" (pixels per second) or jump-height= (pixels).",
+      "tags": [
+        "unknown-attribute"
+      ]
+    },
+    {
+      "id": "game-bad-004",
+      "intent": "A required attribute missing",
+      "input": {
+        "natural_language": "Put a character in the scene",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" x=\"20\" y=\"20\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:character> needs hitbox="
+      },
+      "why_invalid": "A character collides by its hitbox, which has no default.",
+      "correction": "Add hitbox=\"14x18\".",
+      "tags": [
+        "required-attribute"
+      ]
+    },
+    {
+      "id": "game-bad-005",
+      "intent": "A value not among those an attribute takes",
+      "input": {
+        "natural_language": "A character that swims",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"swimmer\" sheet=\"chars\" x=\"20\" y=\"20\" hitbox=\"14x18\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "controller=\"swimmer\": must be one of"
+      },
+      "why_invalid": "controller= is an enum: platformer, map, topdown, ship, fighter, grid, behavior.",
+      "correction": "Use controller=\"platformer\" with water tiles (qg:tile kind=\"water\").",
+      "tags": [
+        "enum"
+      ]
+    },
+    {
+      "id": "game-bad-006",
+      "intent": "A tag in the wrong place",
+      "input": {
+        "natural_language": "Put a HUD counter straight in the scene",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:counter bind=\"score\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:counter> cannot go inside <scene>"
+      },
+      "why_invalid": "A counter goes inside a qg:hud; the message names where it goes.",
+      "correction": "Wrap it: <qg:hud><qg:counter bind=\"score\" /></qg:hud>.",
+      "tags": [
+        "parent"
+      ]
+    },
+    {
+      "id": "game-bad-007",
+      "intent": "An action outside a handler",
+      "input": {
+        "natural_language": "Destroy the coins when the scene starts",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:destroy target=\"coin\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "cannot go inside <scene>"
+      },
+      "why_invalid": "An action runs when something happens: it goes inside a handler (qg:on-collision, qg:timer, q:if...).",
+      "correction": "Put it in a qg:timer after=\"1\", or do not place the coins.",
+      "tags": [
+        "action",
+        "handler"
+      ]
+    },
+    {
+      "id": "game-bad-008",
+      "intent": "A name no q:set declared",
+      "input": {
+        "natural_language": "Add one to the score when a coin is touched",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:instance prefab=\"Coin\" x=\"60\" y=\"20\" />\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" x=\"20\" y=\"20\" hitbox=\"14x18\">\n      <qg:on-collision with=\"coin\">\n        <q:set name=\"score\" value=\"{score + 1}\" />\n      </qg:on-collision>\n    </qg:character>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "'score' is not declared: its first <q:set> reads it"
+      },
+      "why_invalid": "Every name is declared: there are no silent defaults.",
+      "correction": "Declare it first: <q:set name=\"score\" value=\"0\" type=\"number\" /> in q:application (game state) or the scene.",
+      "tags": [
+        "undeclared",
+        "q:set"
+      ]
+    },
+    {
+      "id": "game-bad-009",
+      "intent": "A game with no scene",
+      "input": {
+        "natural_language": "A game that only declares its pictures",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "a game needs at least one <qg:scene>"
+      },
+      "why_invalid": "The first scene is where the game starts.",
+      "correction": "Add <qg:scene name=\"main\">...</qg:scene>.",
+      "tags": [
+        "scene"
+      ]
+    },
+    {
+      "id": "game-bad-010",
+      "intent": "Two scenes with the same name",
+      "input": {
+        "natural_language": "Two levels",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"level\" />\n  <qg:scene name=\"level\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "two scenes named 'level'"
+      },
+      "why_invalid": "goto-scene and exits find a scene by its name.",
+      "correction": "Name them level-1 and level-2.",
+      "tags": [
+        "scene",
+        "duplicate"
+      ]
+    },
+    {
+      "id": "game-bad-011",
+      "intent": "A q:function outside a scene",
+      "input": {
+        "natural_language": "A function the whole game can call",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <q:function name=\"reset\"><q:set name=\"score\" value=\"0\" /></q:function>\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "goes inside a <qg:scene>"
+      },
+      "why_invalid": "Only q:set (game state) goes directly in q:application; functions belong to a scene.",
+      "correction": "Put the q:function directly inside the qg:scene that calls it.",
+      "tags": [
+        "q:function"
+      ]
+    },
+    {
+      "id": "game-bad-012",
+      "intent": "A spawn with x but no y",
+      "input": {
+        "natural_language": "Spawn a coin at x 100",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:timer after=\"10\">\n      <qg:spawn prefab=\"Coin\" x=\"100\" />\n    </qg:timer>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:spawn> takes x= and y= together"
+      },
+      "why_invalid": "A point needs both coordinates.",
+      "correction": "Write x=\"100\" y=\"50\", or at=\"me\".",
+      "tags": [
+        "spawn"
+      ]
+    },
+    {
+      "id": "game-bad-013",
+      "intent": "A set without a value in a handler",
+      "input": {
+        "natural_language": "Reset the score when jump is pressed",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <q:set name=\"score\" value=\"0\" type=\"number\" />\n  <qg:scene name=\"main\">\n    <qg:on-input action=\"jump\">\n      <q:set name=\"score\" />\n    </qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<q:set> in a handler needs value="
+      },
+      "why_invalid": "In a handler q:set assigns; the value is not optional.",
+      "correction": "Write <q:set name=\"score\" value=\"0\" />.",
+      "tags": [
+        "q:set"
+      ]
+    },
+    {
+      "id": "game-bad-014",
+      "intent": "A tween that takes no time",
+      "input": {
+        "natural_language": "Move the door up instantly with a tween",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:on-input action=\"jump\">\n      <qg:tween target=\"me\" property=\"y\" to=\"10\" seconds=\"0\" />\n    </qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "more than 0"
+      },
+      "why_invalid": "A tween eases over some seconds.",
+      "correction": "To move at once use <qg:put x= y= />; otherwise give seconds=\"0.5\".",
+      "tags": [
+        "tween"
+      ]
+    },
+    {
+      "id": "game-bad-015",
+      "intent": "A deflect told both how to flip and where to go",
+      "input": {
+        "natural_language": "Bounce the ball off the paddle",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" x=\"20\" y=\"20\" hitbox=\"14x18\">\n      <qg:on-collision with=\"ball\">\n        <qg:deflect axis=\"x\" dx=\"1\" dy=\"0\" />\n      </qg:on-collision>\n    </qg:character>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "axis=, or dx= and dy=, not both"
+      },
+      "why_invalid": "Flipping an axis and setting a heading are two different deflects.",
+      "correction": "Keep one: axis=\"x\", or dx=\"1\" dy=\"{random(-1, 1)}\".",
+      "tags": [
+        "deflect"
+      ]
+    },
+    {
+      "id": "game-bad-016",
+      "intent": "A velocity with no speed",
+      "input": {
+        "natural_language": "Stop the character",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:on-input action=\"jump\">\n      <qg:velocity target=\"me\" />\n    </qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:velocity> needs x=, y= or both"
+      },
+      "why_invalid": "An axis not given keeps its speed, so a velocity with neither does nothing.",
+      "correction": "Write <qg:velocity target=\"hero\" x=\"0\" y=\"0\" />.",
+      "tags": [
+        "velocity"
+      ]
+    },
+    {
+      "id": "game-bad-017",
+      "intent": "A part that needs min= and max=",
+      "input": {
+        "natural_language": "An archer that keeps away from the player",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:prefab name=\"Archer\" tag=\"archer\" sheet=\"chars\" hitbox=\"16x16\" ai=\"behavior\">\n    <qg:behavior>\n      <qg:keep-distance from=\"hero\" />\n    </qg:behavior>\n  </qg:prefab>\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:keep-distance> needs min="
+      },
+      "why_invalid": "keep-distance keeps between min= and max= pixels: both are required.",
+      "correction": "Write <qg:keep-distance from=\"hero\" min=\"50\" max=\"90\" />.",
+      "tags": [
+        "behavior",
+        "keep-distance"
+      ]
+    },
+    {
+      "id": "game-bad-018",
+      "intent": "An item a prefab gives that was never declared",
+      "input": {
+        "natural_language": "A gem the player picks up",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:prefab name=\"Gem\" tag=\"gem\" sheet=\"tiles\" frame=\"67\" hitbox=\"12x12\" gives=\"gem\" />\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "gem"
+      },
+      "why_invalid": "gives= names a qg:item, which says how many can be held and how it looks in the inventory.",
+      "correction": "Declare <qg:item name=\"gem\" /> in q:application.",
+      "tags": [
+        "item",
+        "gives"
+      ]
+    },
+    {
+      "id": "game-bad-019",
+      "intent": "A tile kind that does not exist",
+      "input": {
+        "natural_language": "Lava tiles that hurt",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\">\n    <qg:tile frame=\"68\" kind=\"lava\" />\n  </qg:tileset>\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "kind=\"lava\": must be one of ladder, water, ice, hurt"
+      },
+      "why_invalid": "The kinds are ladder, water, ice and hurt; what lava does is the game's own.",
+      "correction": "Use kind=\"hurt\" and a qg:on-tile kind=\"hurt\" on the character.",
+      "tags": [
+        "qg:tile",
+        "kind"
+      ]
+    },
+    {
+      "id": "game-bad-020",
+      "intent": "A q:if without its condition",
+      "input": {
+        "natural_language": "If the player has a key, open the door",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:on-input action=\"jump\">\n      <q:if><qg:pause /></q:if>\n    </qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<q:if> needs condition="
+      },
+      "why_invalid": "q:if chooses by a condition.",
+      "correction": "Write <q:if condition=\"{held('key') > 0}\">.",
+      "tags": [
+        "q:if"
+      ]
+    },
+    {
+      "id": "game-bad-021",
+      "intent": "A handler for a tag nothing has",
+      "input": {
+        "natural_language": "When the hero touches a coin, add a point",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <q:set name=\"score\" value=\"0\" type=\"number\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" x=\"20\" y=\"20\" hitbox=\"14x18\">\n      <qg:on-collision with=\"coin\">\n        <q:set name=\"score\" value=\"{score + 1}\" />\n      </qg:on-collision>\n    </qg:character>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "no prefab or zone has that tag"
+      },
+      "why_invalid": "with= names a tag of a prefab or a zone; a tag nothing carries is a typo or a missing prefab.",
+      "correction": "Declare <qg:prefab name=\"Coin\" tag=\"coin\" ... /> and place it with qg:instance.",
+      "tags": [
+        "on-collision",
+        "tag"
+      ]
+    },
+    {
+      "id": "game-bad-022",
+      "intent": "An elseif after an inner q:if",
+      "input": {
+        "natural_language": "Dig a block (every fifth leaves a gem), or else put one back",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"dug\" value=\"0\" type=\"number\" />\n    <qg:on-input action=\"jump\">\n      <q:if condition=\"{tile_at(1, 1) != 0}\">\n        <qg:set-tile col=\"1\" row=\"1\" tile=\"0\" />\n        <q:if condition=\"{dug % 5 == 0}\">\n          <qg:spawn prefab=\"Coin\" at=\"me\" />\n        </q:if>\n      <q:elseif condition=\"{dug > 0}\">\n        <qg:set-tile col=\"1\" row=\"1\" tile=\"23\" />\n      </q:elseif>\n      </q:if>\n    </qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "QuantumParseError",
+        "message": "is ambiguous"
+      },
+      "why_invalid": "Right after an inner </q:if>, a q:elseif reads as the outer q:if's branch by nesting but looks like the inner one's: the parser refuses to guess (a QuantumParseError, before the game compiler).",
+      "correction": "Put the inner q:if before the other statements of its branch, or move the elseif inside the q:if it belongs to.",
+      "tags": [
+        "q:if",
+        "q:elseif",
+        "parser"
+      ]
+    },
+    {
+      "id": "game-bad-023",
+      "intent": "A state named like a property of every Godot node",
+      "input": {
+        "natural_language": "Keep the player's health as a number",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <q:set name=\"health\" value=\"100\" type=\"number\" />\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "'health' is a property of every Godot node"
+      },
+      "why_invalid": "Game and scene states become properties of Godot nodes; health, position, rotation, scale, visible and the like are taken.",
+      "correction": "Name it hp or energy.",
+      "tags": [
+        "q:set",
+        "reserved-name"
+      ]
+    },
+    {
+      "id": "game-bad-024",
+      "intent": "Rollback for a scene that goes through physics",
+      "input": {
+        "natural_language": "Online co-op for the platformer, with rollback so it feels responsive",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:multiplayer players=\"2\" rollback=\"8\" />\n  <qg:scene name=\"level\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0\n23,23,23\n    </qg:tilemap>\n    <qg:character id=\"p1\" controller=\"platformer\" player=\"1\" sheet=\"chars\" x=\"10\" y=\"10\" hitbox=\"14x18\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "rollback takes fighters, timers, menus, the HUD, pictures"
+      },
+      "why_invalid": "Rolling back re-runs ticks from a saved state; what goes through Godot's physics keeps no state to roll back.",
+      "correction": "Use plain lockstep: <qg:multiplayer players=\"2\" delay=\"3\" /> (no rollback=).",
+      "tags": [
+        "multiplayer",
+        "rollback"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "controllers",
+  "description": "The ready-made controllers of qg:character",
+  "examples": [
+    {
+      "id": "game-char-001",
+      "intent": "A tuned platformer that grows when it eats a mushroom",
+      "input": {
+        "natural_language": "A platformer hero with a double jump, coyote time and a jump sound, who grows big after touching a mushroom",
+        "context": {
+          "target": "godot",
+          "file": "game-char-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"grow\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"jump\" src=\"assets/kenney/audio/jump.ogg\" />\n  <qg:sound name=\"powerup\" src=\"assets/kenney/audio/powerup.ogg\" />\n  <qg:prefab name=\"Shroom\" tag=\"shroom\" sheet=\"tiles\" frame=\"128\" hitbox=\"12x12\"\n             ai=\"patrol\" speed=\"40\" direction=\"right\" />\n\n  <qg:scene name=\"main\" width=\"270\" height=\"144\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"14x18\"\n                  run-speed=\"100\" jump-height=\"56\" coyote-frames=\"8\" air-jumps=\"1\" accel=\"600\"\n                  jump-sound=\"jump\">\n      <qg:state name=\"small\" hitbox=\"14x18\" frame=\"0\" initial=\"true\">\n        <qg:animation name=\"idle\" frames=\"0\" />\n        <qg:animation name=\"walk\" frames=\"0,1\" fps=\"8\" />\n        <qg:animation name=\"jump\" frames=\"1\" />\n      </qg:state>\n      <qg:state name=\"big\" hitbox=\"16x22\" frame=\"2\">\n        <qg:animation name=\"idle\" frames=\"2\" />\n        <qg:animation name=\"walk\" frames=\"2,3\" fps=\"8\" />\n        <qg:animation name=\"jump\" frames=\"3\" />\n      </qg:state>\n      <qg:on-collision with=\"shroom\">\n        <qg:destroy />\n        <q:if condition=\"{me.state == 'small'}\">\n          <qg:become state=\"big\" />\n          <qg:play sound=\"powerup\" />\n        </q:if>\n      </qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Shroom\" x=\"120\" y=\"117\" />\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The hero accelerates to 100 px/s, jumps 56 px (and once more in the air), still jumps for 8 ticks after leaving a ledge, and plays the jump sound on take-off. Touching the mushroom while small becomes the big state: a taller hitbox and other frames."
+      },
+      "tags": [
+        "platformer",
+        "qg:state",
+        "qg:become",
+        "qg:animation"
+      ]
+    },
+    {
+      "id": "game-char-002",
+      "intent": "A top-down hero with a sword swing",
+      "input": {
+        "natural_language": "A top-down hero who swings a sword with the jump key; slimes take two hits and drop a coin",
+        "context": {
+          "target": "godot",
+          "file": "game-char-002.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"sword\" type=\"game\">\n  <q:set name=\"coins\" value=\"0\" type=\"number\" />\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"swing\" src=\"assets/kenney/audio/block.ogg\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:prefab name=\"Slime\" tag=\"slime\" sheet=\"chars\" frame=\"20\" hitbox=\"16x14\"\n             ai=\"wander\" speed=\"20\" health=\"2\">\n    <qg:on-damage>\n      <qg:burst at=\"me\" color=\"#80ff80\" count=\"6\" />\n    </qg:on-damage>\n    <qg:on-death>\n      <qg:spawn prefab=\"Coin\" at=\"me\" />\n    </qg:on-death>\n  </qg:prefab>\n\n  <qg:scene name=\"field\" width=\"270\" height=\"144\" seed=\"4\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"chars\" frame=\"0\" x=\"60\" y=\"72\" hitbox=\"14x14\"\n                  speed=\"70\" attack-action=\"jump\" attack-reach=\"18\" attack-frames=\"12\" attack-sound=\"swing\">\n      <qg:animation name=\"attack\" frames=\"1\" />\n      <qg:on-hit with=\"slime\">\n        <qg:damage target=\"other\" />\n      </qg:on-hit>\n      <qg:on-collision with=\"coin\">\n        <qg:destroy />\n        <q:set name=\"coins\" value=\"{coins + 1}\" />\n      </qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Slime\" x=\"160\" y=\"60\" />\n    <qg:instance prefab=\"Slime\" x=\"200\" y=\"100\" />\n    <qg:hud><qg:counter bind=\"coins\" label=\"COINS \" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Jump swings 18 px in front of the hero for 12 ticks. A slime hit loses 1 health and puffs green; at 0 its on-death drops a coin where it was, and it is gone. Slimes wander from the scene seed."
+      },
+      "tags": [
+        "topdown",
+        "attack",
+        "on-hit",
+        "damage",
+        "on-death"
+      ]
+    },
+    {
+      "id": "game-char-003",
+      "intent": "A shooter ship and falling rocks",
+      "input": {
+        "natural_language": "A space shooter: the ship moves along the bottom and shoots up; rocks fall from the top and break when hit",
+        "context": {
+          "target": "godot",
+          "file": "game-char-003.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"rocks\" type=\"game\">\n  <q:set name=\"score\" value=\"0\" type=\"number\" />\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"shoot\" src=\"assets/kenney/audio/jump.ogg\" />\n  <qg:prefab name=\"Shot\" tag=\"shot\" sheet=\"tiles\" frame=\"151\" hitbox=\"4x8\"\n             ai=\"fly\" heading=\"up\" speed=\"240\" />\n  <qg:prefab name=\"Rock\" tag=\"rock\" sheet=\"tiles\" frame=\"4\" hitbox=\"16x16\"\n             ai=\"fly\" heading=\"down\" speed=\"40..80\">\n    <qg:on-collision with=\"shot\">\n      <qg:destroy target=\"me\" />\n      <qg:destroy target=\"other\" />\n      <q:set name=\"score\" value=\"{score + 1}\" />\n    </qg:on-collision>\n  </qg:prefab>\n\n  <qg:scene name=\"space\" width=\"256\" height=\"224\" background=\"#05051a\" seed=\"11\">\n    <qg:character id=\"ship\" controller=\"ship\" sheet=\"chars\" frame=\"0\" x=\"128\" y=\"200\" hitbox=\"12x12\"\n                  speed=\"120\" axis=\"horizontal\" fire-action=\"jump\" fire-prefab=\"Shot\" fire-every=\"10\"\n                  fire-sound=\"shoot\">\n      <qg:on-collision with=\"rock\">\n        <qg:goto-scene name=\"space\" />\n      </qg:on-collision>\n    </qg:character>\n    <qg:spawner prefab=\"Rock\" from=\"30\" every=\"40\" count=\"0\" x=\"random\" y=\"-12\" />\n    <qg:hud position=\"top-right\"><qg:counter bind=\"score\" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The ship slides left and right inside the scene and, while jump is held, fires a shot up every 10 ticks. A rock falls every 40 ticks from a random x at 40 to 80 px/s (both from the seed); a shot breaks it and scores. A rock that reaches the ship restarts the scene; the score is game state."
+      },
+      "tags": [
+        "ship",
+        "fly",
+        "spawner",
+        "shooter"
+      ]
+    },
+    {
+      "id": "game-char-004",
+      "intent": "A grid hero who talks to a villager",
+      "input": {
+        "natural_language": "A role-playing game hero who walks cell by cell; stepping into the villager starts a conversation",
+        "context": {
+          "target": "godot",
+          "file": "game-char-004.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"village\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Villager\" tag=\"villager\" sheet=\"chars\" frame=\"6\" hitbox=\"18x18\" />\n\n  <qg:scene name=\"village\" width=\"270\" height=\"144\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"grid\" step-frames=\"12\" sheet=\"chars\" frame=\"0\"\n                  x=\"45\" y=\"45\" hitbox=\"18x18\">\n      <qg:on-collision with=\"villager\">\n        <qg:say dialogue=\"hello\" />\n      </qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Villager\" x=\"153\" y=\"81\" />\n    <qg:dialogue name=\"hello\" size=\"10\">\n      <qg:line who=\"Villager\" text=\"Welcome to the village.\" />\n      <qg:line who=\"Villager\" text=\"The well is to the north.\" />\n      <qg:on-end>\n        <qg:shake at=\"me\" frames=\"6\" strength=\"1\" />\n      </qg:on-end>\n    </qg:dialogue>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The hero steps one 18 px cell per press in 12 ticks; walls and the villager stop it. Stepping into the villager opens the dialogue (the scene pauses), select shows the next line, and after the last one its on-end runs."
+      },
+      "tags": [
+        "grid",
+        "dialogue",
+        "say",
+        "rpg"
+      ]
+    },
+    {
+      "id": "game-char-005",
+      "intent": "Two fighters with punches, health bars and a KO",
+      "input": {
+        "natural_language": "A fighting game for two players on one keyboard: each has a punch and a kick, health bars on top, and a KO screen",
+        "context": {
+          "target": "godot",
+          "file": "game-char-005.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"duel\" type=\"game\">\n  <q:set name=\"winner\" value=\"\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:input action=\"left\" keys=\"A\" player=\"1\" />\n  <qg:input action=\"right\" keys=\"D\" player=\"1\" />\n  <qg:input action=\"up\" keys=\"W\" player=\"1\" />\n  <qg:input action=\"punch\" keys=\"F\" player=\"1\" />\n  <qg:input action=\"kick\" keys=\"G\" player=\"1\" />\n  <qg:input action=\"left\" keys=\"Left\" player=\"2\" />\n  <qg:input action=\"right\" keys=\"Right\" player=\"2\" />\n  <qg:input action=\"up\" keys=\"Up\" player=\"2\" />\n  <qg:input action=\"punch\" keys=\"K\" player=\"2\" />\n  <qg:input action=\"kick\" keys=\"L\" player=\"2\" />\n\n  <qg:scene name=\"fight\" width=\"320\" height=\"180\" background=\"#402030\">\n    <qg:character id=\"p1\" controller=\"fighter\" player=\"1\" sheet=\"chars\" frame=\"0\" x=\"100\" y=\"150\"\n                  hitbox=\"20x40\" speed=\"100\" health=\"100\" facing=\"right\">\n      <qg:animation name=\"idle\" frames=\"0\" />\n      <qg:move name=\"jab\" action=\"punch\" frames=\"1,2,1\" active=\"1\" reach=\"20x10\" at=\"18,-8\" damage=\"5\" />\n      <qg:move name=\"sweep\" action=\"kick\" frames=\"3,4,3\" fps=\"10\" active=\"1\" reach=\"26x10\" at=\"20,12\"\n               damage=\"8\" stun=\"18\" push=\"60\" />\n      <qg:on-ko>\n        <q:set name=\"winner\" value=\"Player 2\" />\n        <qg:goto-scene name=\"ko\" />\n      </qg:on-ko>\n    </qg:character>\n    <qg:character id=\"p2\" controller=\"fighter\" player=\"2\" sheet=\"chars\" frame=\"0\" x=\"220\" y=\"150\"\n                  hitbox=\"20x40\" speed=\"100\" health=\"100\" facing=\"left\">\n      <qg:animation name=\"idle\" frames=\"0\" />\n      <qg:move name=\"jab\" action=\"punch\" frames=\"1,2,1\" active=\"1\" reach=\"20x10\" at=\"18,-8\" damage=\"5\" />\n      <qg:move name=\"sweep\" action=\"kick\" frames=\"3,4,3\" fps=\"10\" active=\"1\" reach=\"26x10\" at=\"20,12\"\n               damage=\"8\" stun=\"18\" push=\"60\" />\n      <qg:on-ko>\n        <q:set name=\"winner\" value=\"Player 1\" />\n        <qg:goto-scene name=\"ko\" />\n      </qg:on-ko>\n    </qg:character>\n    <qg:hud position=\"top-left\"><qg:bar bind=\"p1.health\" max=\"100\" width=\"120\" /></qg:hud>\n    <qg:hud position=\"top-right\"><qg:bar bind=\"p2.health\" max=\"100\" width=\"120\" color=\"#4080e0\" /></qg:hud>\n  </qg:scene>\n\n  <qg:scene name=\"ko\" width=\"320\" height=\"180\">\n    <qg:hud position=\"center\" size=\"20\"><qg:text value=\"{'K.O. ' + winner + ' wins'}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Each fighter faces the other; a move plays its frames and on its active frame tests its hit box once: a hit takes damage, stuns and pushes; holding away blocks. The bars follow p1.health and p2.health. At 0 the loser's on-ko names the winner and goes to the KO scene."
+      },
+      "tags": [
+        "fighter",
+        "qg:move",
+        "qg:bar",
+        "on-ko",
+        "two-players"
+      ]
+    }
+  ]
+}

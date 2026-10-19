@@ -1,0 +1,116 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "presentation",
+  "description": "Sound, music, particles, animations, camera and backdrops",
+  "examples": [
+    {
+      "id": "game-show-001",
+      "intent": "Music per scene, sounds that vary, and a sound stopped on entry",
+      "input": {
+        "natural_language": "Background music for the level that crossfades into the boss music, hit sounds that do not all sound the same, and silence on the title",
+        "context": {
+          "target": "godot",
+          "file": "game-show-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"music\" type=\"game\">\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"calm\" src=\"projects/delve/assets/crypt.ogg\" loop=\"true\" />\n  <qg:sound name=\"fight\" src=\"projects/delve/assets/torchlight.ogg\" loop=\"true\" />\n  <qg:sound name=\"hit\" src=\"assets/kenney/audio/hurt.ogg\" />\n  <qg:sound name=\"win\" src=\"assets/kenney/audio/win.ogg\" />\n\n  <qg:scene name=\"title\">\n    <qg:stop sound=\"calm\" />\n    <qg:on-input action=\"select\"><qg:goto-scene name=\"level\" /></qg:on-input>\n  </qg:scene>\n  <qg:scene name=\"level\" width=\"256\" height=\"224\">\n    <qg:music sound=\"calm\" fade=\"2\" volume=\"-4\" />\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"chars\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"14x14\" />\n    <qg:on-input action=\"jump\">\n      <qg:play sound=\"hit\" pitch=\"1\" vary=\"0.15\" volume=\"-3\" />\n    </qg:on-input>\n    <qg:on-input action=\"select\"><qg:goto-scene name=\"boss\" /></qg:on-input>\n  </qg:scene>\n  <qg:scene name=\"boss\" width=\"256\" height=\"224\">\n    <qg:music sound=\"fight\" fade=\"1\" />\n    <qg:play sound=\"win\" />\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The level's music plays while it is on; going to the boss crossfades to its music over a second; a scene with the same music would let it play on. Each jump plays the hit sound in a voice of its own, its pitch drawn between 0.85 and 1.15. qg:play and qg:stop directly in a scene run as it is entered."
+      },
+      "tags": [
+        "sound",
+        "music",
+        "play",
+        "stop",
+        "pitch",
+        "vary"
+      ]
+    },
+    {
+      "id": "game-show-002",
+      "intent": "Rain, sparkles on pickup and a hit that shakes the screen",
+      "input": {
+        "natural_language": "Rain falling over the whole level, sparkles when a gem is picked up, and the screen shaking when the hero is hurt",
+        "context": {
+          "target": "godot",
+          "file": "game-show-002.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"weather\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:particles name=\"rain\" preset=\"rain\" color=\"#a0c8ff\" amount=\"80\" />\n  <qg:particles name=\"sparkle\" preset=\"stars\" color=\"#ffe060\" lifetime=\"0.6\" speed=\"40\" size=\"2\" />\n  <qg:particles name=\"campfire\" preset=\"fire\" />\n  <qg:prefab name=\"Gem\" tag=\"gem\" sheet=\"tiles\" frame=\"67\" hitbox=\"12x12\" />\n  <qg:prefab name=\"Spikes\" tag=\"spikes\" sheet=\"tiles\" frame=\"68\" hitbox=\"18x8\" />\n\n  <qg:scene name=\"night\" width=\"270\" height=\"144\" background=\"#101830\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:emitter particles=\"rain\" x=\"0\" y=\"0\" width=\"270\" />\n    <qg:emitter particles=\"campfire\" x=\"230\" y=\"122\" />\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"14x18\">\n      <qg:on-collision with=\"gem\">\n        <qg:emit particles=\"sparkle\" at=\"other\" dy=\"-4\" />\n        <qg:destroy />\n      </qg:on-collision>\n      <qg:on-collision with=\"spikes\" cooldown=\"30\">\n        <qg:shake at=\"me\" frames=\"12\" strength=\"3\" />\n        <qg:burst at=\"me\" color=\"#ff4040\" count=\"10\" />\n      </qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Gem\" x=\"100\" y=\"110\" />\n    <qg:instance prefab=\"Spikes\" x=\"160\" y=\"122\" />\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Rain falls across the scene's width and the fire keeps burning on its spot. Picking up the gem plays the sparkle once where it was; the spikes shake the scene and puff red. All of it is only seen: the game's state never depends on it."
+      },
+      "tags": [
+        "particles",
+        "emitter",
+        "emit",
+        "burst",
+        "shake"
+      ]
+    },
+    {
+      "id": "game-show-003",
+      "intent": "An attack animation that ends, and an animation on demand",
+      "input": {
+        "natural_language": "A character whose attack animation plays once and then does the damage, and a chest that opens with an animation",
+        "context": {
+          "target": "godot",
+          "file": "game-show-003.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"anims\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Chest\" tag=\"chest\" sheet=\"tiles\" frame=\"88\" hitbox=\"16x14\">\n    <qg:animation name=\"open\" frames=\"88,89,90\" fps=\"10\" loop=\"false\" />\n    <qg:on-animation-end name=\"open\">\n      <qg:destroy target=\"me\" />\n    </qg:on-animation-end>\n  </qg:prefab>\n\n  <qg:scene name=\"room\" width=\"270\" height=\"144\">\n    <q:set name=\"swings\" value=\"0\" type=\"number\" />\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"chars\" frame=\"0\" x=\"60\" y=\"72\" hitbox=\"14x14\">\n      <qg:animation name=\"idle\" frames=\"0\" />\n      <qg:animation name=\"walk\" frames=\"0,1\" fps=\"8\" />\n      <qg:animation name=\"cheer\" frames=\"2,3,2\" fps=\"8\" loop=\"false\" />\n      <qg:on-animation-end name=\"cheer\">\n        <q:set name=\"swings\" value=\"{swings + 1}\" />\n      </qg:on-animation-end>\n      <qg:on-collision with=\"chest\">\n        <qg:play-animation target=\"other\" name=\"open\" />\n      </qg:on-collision>\n    </qg:character>\n    <qg:on-input action=\"jump\">\n      <qg:play-animation target=\"hero\" name=\"cheer\" />\n    </qg:on-input>\n    <qg:instance prefab=\"Chest\" x=\"200\" y=\"72\" />\n    <qg:hud><qg:counter bind=\"swings\" label=\"CHEERS \" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Jump plays the hero's cheer from its first frame; its own idle and walk wait until it ends, and then its on-animation-end counts it. Touching the chest plays its open animation once; at the last frame the chest is gone."
+      },
+      "tags": [
+        "animation",
+        "loop-false",
+        "on-animation-end",
+        "play-animation"
+      ]
+    },
+    {
+      "id": "game-show-004",
+      "intent": "A camera that looks ahead, and one that keeps two players on screen",
+      "input": {
+        "natural_language": "A camera that follows the hero with a dead zone and looks ahead where they run; and for two players, one that zooms out to keep both in view",
+        "context": {
+          "target": "godot",
+          "file": "game-show-004.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"cameras\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:input action=\"left\" keys=\"A\" player=\"2\" />\n  <qg:input action=\"right\" keys=\"D\" player=\"2\" />\n  <qg:input action=\"jump\" keys=\"W\" player=\"2\" />\n\n  <qg:scene name=\"solo\" width=\"1080\" height=\"144\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"14x18\" />\n    <qg:camera follow=\"hero\" zoom=\"1.5\" dead-zone=\"40x30\" lead=\"32\" smooth=\"6\" bounds=\"tilemap\" />\n    <qg:on-input action=\"select\"><qg:goto-scene name=\"duo\" /></qg:on-input>\n  </qg:scene>\n\n  <qg:scene name=\"duo\" width=\"1080\" height=\"144\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"p1\" controller=\"platformer\" player=\"1\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"14x18\" />\n    <qg:character id=\"p2\" controller=\"platformer\" player=\"2\" sheet=\"chars\" frame=\"2\" x=\"60\" y=\"110\" hitbox=\"14x18\" />\n    <qg:camera follow=\"p1, p2\" fit=\"true\" zoom=\"2\" zoom-min=\"0.5\" />\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "In solo the camera is 1.5 times as close, lets the hero move inside a 40x30 box before it moves, looks 32 px ahead the way the hero runs, catches up smoothly and never shows past the tilemap. In duo it frames the middle of both players, zooming out down to 0.5 as they part. Only seen: nothing in the game's state depends on it."
+      },
+      "tags": [
+        "camera",
+        "dead-zone",
+        "lead",
+        "zoom",
+        "fit"
+      ]
+    },
+    {
+      "id": "game-show-005",
+      "intent": "A sky behind the level and a sign that changes",
+      "input": {
+        "natural_language": "Hills in the background that scroll slower than the level, and a sign whose picture shows whether the door is open",
+        "context": {
+          "target": "godot",
+          "file": "game-show-005.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"sky\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:spritesheet name=\"backdrops\" src=\"assets/kenney/tilemap-backgrounds_packed.png\" tile=\"24\" />\n  <qg:scene name=\"hills\" width=\"540\" height=\"144\">\n    <q:set name=\"open\" value=\"false\" type=\"boolean\" />\n    <qg:parallax sheet=\"backdrops\" frame=\"0\" y=\"0\" scroll=\"0.2\" />\n    <qg:parallax sheet=\"backdrops\" frame=\"5\" y=\"60\" scroll=\"0.5\" repeat=\"true\" />\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:sprite sheet=\"tiles\" frame=\"{86 if open else 85}\" x=\"120\" y=\"110\" />\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"14x18\" />\n    <qg:on-input action=\"select\"><q:set name=\"open\" value=\"{not open}\" /></qg:on-input>\n    <qg:camera follow=\"hero\" />\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Two backdrops repeat across behind the level: the far one moves at a fifth of the camera's speed, the near one at half. The sign is a picture with no behaviour whose frame follows the open state tick by tick."
+      },
+      "tags": [
+        "parallax",
+        "sprite",
+        "frame-expression"
+      ]
+    }
+  ]
+}

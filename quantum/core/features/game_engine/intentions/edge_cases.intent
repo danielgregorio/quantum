@@ -1,0 +1,87 @@
+intention:
+  name: "Games in tags: edge cases"
+  version: "1.0.0"
+  category: "game"
+
+  description: |
+    What the game language refuses, what it guarantees, and the cases where
+    the obvious reading is not what happens.
+
+  edge_cases:
+    - case: "Script where statements go"
+      scenario: "A handler holds code text instead of tags"
+      behaviour: "Refused at compile time: 'a game is written in tags, not in script'. There is no escape hatch."
+
+    - case: "A name nobody declared"
+      scenario: "A handler sets or reads a name no q:set of the scene or the game declared"
+      behaviour: |
+        Read in an expression: refused ('is not declared'). Set in a handler or a q:function and read
+        later in it: a variable of that handler, local to the call. Set and never read: refused as a
+        misspelt state. Set by a first q:set that reads it (value="{score + 1}"): refused, it would start
+        as nothing.
+
+    - case: "A name Godot already uses"
+      scenario: "<q:set name=\"health\" ...> or position, rotation, scale, visible..."
+      behaviour: "Refused: a property of every Godot node needs another name (hp, energy, spot)."
+
+    - case: "A handler for a tag nothing has"
+      scenario: "<qg:on-collision with=\"coin\"> when no prefab or zone has tag=\"coin\""
+      behaviour: "Refused, listing the tags the game has: a typo would otherwise never fire."
+
+    - case: "q:elseif right after an inner q:if"
+      scenario: "<q:if>...<q:if>...</q:if><q:elseif>"
+      behaviour: "Refused by the parser as ambiguous: put the inner q:if before the branch's other statements."
+
+    - case: "Randomness"
+      scenario: "Something should vary: where a rock falls, which way a bat turns"
+      behaviour: |
+        random(a, b), speed="150..250", spawner x="random" and qg:wander all draw from the scene's seed=:
+        the same inputs give the same game, which is what replays, tests and lockstep play rely on.
+
+    - case: "What is only seen or heard"
+      scenario: "Particles, burst, shake, the camera, a sound's volume and pitch"
+      behaviour: "They never change the game's state; a replay or another peer may skip them and agree."
+
+    - case: "Typing"
+      scenario: "A qg:field in a networked game or a replay"
+      behaviour: "Typing is local to the machine: a replay cannot type and the lockstep does not carry it (an address, a name)."
+
+    - case: "Handlers of a prefab"
+      scenario: "A prefab's on-collision wants a scene's q:set"
+      behaviour: "A prefab's handlers reach only the game state (q:set in q:application), since the prefab is placed in many scenes."
+
+    - case: "Two handlers for one touch"
+      scenario: "on-collision with=\"enemy\" side=\"top\" and another with no side"
+      behaviour: "The side handler runs first and the 'any' one then does not: a stomp is not also a hurt."
+
+    - case: "Touching a tile of a kind"
+      scenario: "qg:on-tile kind=\"hurt\" while standing on spikes"
+      behaviour: "Without cooldown=, once as it comes to touch one; with it, again each time the cooldown runs out while it still does."
+
+    - case: "Changing the map"
+      scenario: "qg:set-tile empties a cell the character stands on"
+      behaviour: "The collision changes from the next tick; pathfinding enemies find their way again; the cells changed are part of the state."
+
+    - case: "Leaving a scene"
+      scenario: "qg:goto-scene, then more statements in the same handler"
+      behaviour: "The rest of the handler runs: the scene changes at the end of the tick. Scene state is lost, game state stays."
+
+    - case: "Two tweens of one property"
+      scenario: "A second qg:tween of y while the first runs"
+      behaviour: "The new one replaces it. Tweens stop while the scene is paused."
+
+    - case: "Items and coming back"
+      scenario: "A named key instance picked up, then the scene entered again"
+      behaviour: "It stays gone (a named instance); an unnamed one comes back. qg:reset-items brings them all back with the items' start=."
+
+    - case: "Rollback scenes"
+      scenario: "qg:multiplayer rollback= with a platformer level"
+      behaviour: "Refused: under rollback the networked scenes may hold only fighters, timers, menus, the HUD, pictures and a camera."
+
+    - case: "Saving a networked game"
+      scenario: "qg:save while online"
+      behaviour: "A networked game is not saved. One save per game; a new qg:save replaces it."
+
+    - case: "Player 2's keys"
+      scenario: "A second character with player=\"2\" and no qg:input"
+      behaviour: "Player 1 has default keys; every action of players 2 and on is declared with qg:input player=."

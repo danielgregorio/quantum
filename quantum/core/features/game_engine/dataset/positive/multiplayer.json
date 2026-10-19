@@ -1,0 +1,73 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "multiplayer",
+  "description": "Several people, each on their own machine",
+  "examples": [
+    {
+      "id": "game-net-001",
+      "intent": "Two players online, or both on one keyboard",
+      "input": {
+        "natural_language": "Make the platformer playable by two people over the network, with a lobby, and also by two on the same keyboard",
+        "context": {
+          "target": "godot",
+          "file": "game-net-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"coop\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:multiplayer players=\"2\" delay=\"3\" check-every=\"60\" start=\"level\" />\n  <qg:input action=\"left\" keys=\"A\" player=\"2\" />\n  <qg:input action=\"right\" keys=\"D\" player=\"2\" />\n  <qg:input action=\"jump\" keys=\"W\" player=\"2\" />\n\n  <qg:scene name=\"lobby\" width=\"320\" height=\"180\">\n    <qg:lobby local=\"level\" local-label=\"Two players, one keyboard\" port=\"7777\" size=\"14\" />\n  </qg:scene>\n\n  <qg:scene name=\"level\" width=\"270\" height=\"144\" seed=\"2\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"p1\" controller=\"platformer\" player=\"1\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"14x18\" />\n    <qg:character id=\"p2\" controller=\"platformer\" player=\"2\" sheet=\"chars\" frame=\"2\" x=\"50\" y=\"110\" hitbox=\"14x18\" />\n    <qg:camera follow=\"p1, p2\" />\n    <qg:hud position=\"top-right\"><qg:text value=\"{net_status()}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The lobby offers playing here, hosting, an address field and joining. Online, every machine runs the whole game in lockstep: a tick runs when both inputs for it have arrived, 3 ticks after the press, and the state is compared every 60 ticks. Player 2 has no default keys, so its keys are declared."
+      },
+      "tags": [
+        "multiplayer",
+        "lockstep",
+        "lobby",
+        "net_status"
+      ]
+    },
+    {
+      "id": "game-net-002",
+      "intent": "A lobby of your own, for browsers through a relay",
+      "input": {
+        "natural_language": "A custom online menu: an address box, host, join and leave buttons, how many are connected; browsers meet through a relay room",
+        "context": {
+          "target": "godot",
+          "file": "game-net-002.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"relay\" type=\"game\">\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:multiplayer players=\"2\" transport=\"websocket\" start=\"play\" />\n\n  <qg:scene name=\"menu\" width=\"320\" height=\"180\">\n    <q:set name=\"address\" value=\"{url_param('join', 'wss://relay.example/relay/ROOM')}\" />\n    <qg:menu position=\"center\" size=\"12\">\n      <qg:field bind=\"address\" label=\"Room: \" max-length=\"80\" />\n      <qg:button label=\"Host\" if=\"{net_status() == 'offline'}\"><qg:host port=\"7777\" /></qg:button>\n      <qg:button label=\"Join\" if=\"{net_status() == 'offline'}\"><qg:join address=\"{address}\" /></qg:button>\n      <qg:button label=\"Cancel\" if=\"{net_status() != 'offline'}\"><qg:leave /></qg:button>\n    </qg:menu>\n    <qg:hud position=\"bottom-center\">\n      <qg:text value=\"{net_status() + ' (' + str(net_players()) + ' connected)'}\" />\n    </qg:hud>\n  </qg:scene>\n\n  <qg:scene name=\"play\" width=\"320\" height=\"180\">\n    <qg:character id=\"p1\" controller=\"topdown\" player=\"1\" sheet=\"chars\" frame=\"0\" x=\"60\" y=\"90\" hitbox=\"14x14\" />\n    <qg:character id=\"p2\" controller=\"topdown\" player=\"2\" sheet=\"chars\" frame=\"2\" x=\"260\" y=\"90\" hitbox=\"14x14\"\n                  if=\"{net_status() != 'offline'}\" />\n    <qg:hud><qg:text value=\"{'You are player ' + str(net_player())}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The address starts from the page's ?join= when there is one. Host waits for the other player; Join connects to host:port or to a relay's wss:// room where two browsers meet; Cancel leaves. When both are there the game starts in play on both machines. Player 2's character is placed only in a networked game."
+      },
+      "tags": [
+        "multiplayer",
+        "websocket",
+        "host",
+        "join",
+        "leave",
+        "field",
+        "url_param"
+      ]
+    },
+    {
+      "id": "game-net-003",
+      "intent": "A fighting game with rollback",
+      "input": {
+        "natural_language": "Make the fighting game feel responsive online: run ahead on a guess of the other player's input and correct it",
+        "context": {
+          "target": "godot",
+          "file": "game-net-003.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"rollback\" type=\"game\">\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:multiplayer players=\"2\" delay=\"2\" rollback=\"8\" start=\"fight\" />\n  <qg:input action=\"punch\" keys=\"F\" />\n  <qg:input action=\"left\" keys=\"Left\" player=\"2\" />\n  <qg:input action=\"right\" keys=\"Right\" player=\"2\" />\n  <qg:input action=\"punch\" keys=\"K\" player=\"2\" />\n\n  <qg:scene name=\"lobby\" width=\"320\" height=\"180\">\n    <qg:lobby local=\"fight\" />\n  </qg:scene>\n\n  <qg:scene name=\"fight\" width=\"320\" height=\"180\">\n    <qg:character id=\"p1\" controller=\"fighter\" player=\"1\" sheet=\"chars\" frame=\"0\" x=\"100\" y=\"150\"\n                  hitbox=\"20x40\" facing=\"right\">\n      <qg:move name=\"jab\" action=\"punch\" frames=\"1,2,1\" reach=\"20x10\" at=\"18,-8\" />\n      <qg:on-ko><qg:goto-scene name=\"fight\" /></qg:on-ko>\n    </qg:character>\n    <qg:character id=\"p2\" controller=\"fighter\" player=\"2\" sheet=\"chars\" frame=\"0\" x=\"220\" y=\"150\"\n                  hitbox=\"20x40\" facing=\"left\">\n      <qg:move name=\"jab\" action=\"punch\" frames=\"1,2,1\" reach=\"20x10\" at=\"18,-8\" />\n      <qg:on-ko><qg:goto-scene name=\"fight\" /></qg:on-ko>\n    </qg:character>\n    <qg:hud position=\"top-left\"><qg:bar bind=\"p1.health\" /></qg:hud>\n    <qg:hud position=\"top-right\"><qg:bar bind=\"p2.health\" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "With rollback=\"8\" a machine runs up to 8 ticks ahead on a guess of the other's input and runs them again when the guess was wrong. The scenes it reaches hold only fighters, the HUD, menus, timers, pictures and a camera: nothing that goes through physics."
+      },
+      "tags": [
+        "multiplayer",
+        "rollback",
+        "fighter"
+      ]
+    }
+  ]
+}

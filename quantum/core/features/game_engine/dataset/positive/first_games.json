@@ -1,0 +1,71 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "whole_games",
+  "description": "Small complete games: the shape of a game from top to bottom",
+  "examples": [
+    {
+      "id": "game-first-001",
+      "intent": "A platformer level with coins, a walker and a flag",
+      "input": {
+        "natural_language": "Make a platformer level: coins to collect for points, an enemy to stomp, and a flag that ends the level",
+        "context": {
+          "target": "godot",
+          "file": "game-first-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"coins\" type=\"game\">\n  <q:set name=\"score\" value=\"0\" type=\"number\" />\n\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"coin\" src=\"assets/kenney/audio/coin.ogg\" />\n  <qg:sound name=\"stomp\" src=\"assets/kenney/audio/stomp.ogg\" />\n\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:prefab name=\"Walker\" tag=\"enemy\" sheet=\"chars\" frame=\"18\" hitbox=\"18x18\"\n             ai=\"patrol\" speed=\"30\" direction=\"left\" turns-at=\"edge\" />\n  <qg:prefab name=\"Flag\" tag=\"flag\" sheet=\"tiles\" frame=\"153\" hitbox=\"18x18\" />\n\n  <qg:scene name=\"level-1\" width=\"540\" height=\"144\" background=\"#8fd3ff\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,23,23,23,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,0,0,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"16x20\">\n      <qg:on-collision with=\"coin\">\n        <qg:destroy />\n        <qg:play sound=\"coin\" />\n        <q:set name=\"score\" value=\"{score + 10}\" />\n      </qg:on-collision>\n      <qg:on-collision with=\"enemy\" side=\"top\">\n        <qg:destroy />\n        <qg:bounce height=\"24\" />\n        <qg:play sound=\"stomp\" />\n        <q:set name=\"score\" value=\"{score + 50}\" />\n      </qg:on-collision>\n      <qg:on-collision with=\"enemy\">\n        <qg:respawn />\n      </qg:on-collision>\n      <qg:on-fall>\n        <qg:respawn />\n      </qg:on-fall>\n      <qg:on-collision with=\"flag\">\n        <qg:goto-scene name=\"the-end\" fade=\"0.5\" />\n      </qg:on-collision>\n    </qg:character>\n\n    <qg:instance prefab=\"Coin\" x=\"198\" y=\"80\" />\n    <qg:instance prefab=\"Coin\" x=\"216\" y=\"80\" />\n    <qg:instance prefab=\"Walker\" x=\"250\" y=\"117\" />\n    <qg:instance prefab=\"Flag\" x=\"500\" y=\"117\" />\n\n    <qg:camera follow=\"hero\" />\n    <qg:hud><qg:counter bind=\"score\" label=\"SCORE \" /></qg:hud>\n  </qg:scene>\n\n  <qg:scene name=\"the-end\" width=\"270\" height=\"144\">\n    <qg:hud position=\"center\" size=\"16\">\n      <qg:text value=\"{'YOU WIN! SCORE ' + str(score)}\" />\n    </qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The hero runs and jumps; coins add 10, a stomp from above destroys the walker and adds 50, touching it from the side or falling in the pit puts the hero back at the start, and the flag fades to the end scene, which shows the score (game state, kept across scenes)."
+      },
+      "tags": [
+        "platformer",
+        "coins",
+        "stomp",
+        "hud",
+        "goto-scene"
+      ]
+    },
+    {
+      "id": "game-first-002",
+      "intent": "A top-down adventure of two rooms joined by exits",
+      "input": {
+        "natural_language": "Two rooms of a top-down game; walking through a doorway leads to the other room, and a sign tells where you are",
+        "context": {
+          "target": "godot",
+          "file": "game-first-002.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"rooms\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n\n  <qg:scene name=\"hall\" width=\"270\" height=\"144\">\n    <q:set name=\"where\" value=\"The hall\" />\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"chars\" frame=\"0\" x=\"40\" y=\"72\"\n                  hitbox=\"14x14\" speed=\"70\">\n      <qg:animation name=\"idle\" frames=\"0\" />\n      <qg:animation name=\"walk\" frames=\"0,1\" fps=\"6\" />\n    </qg:character>\n    <qg:exit name=\"east\" x=\"266\" y=\"63\" width=\"8\" height=\"36\" to=\"garden\" at=\"west\" />\n    <qg:hud><qg:text bind=\"where\" /></qg:hud>\n  </qg:scene>\n\n  <qg:scene name=\"garden\" width=\"270\" height=\"144\" background=\"#2d6a2d\">\n    <q:set name=\"where\" value=\"The garden\" />\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"chars\" frame=\"0\" x=\"40\" y=\"72\"\n                  hitbox=\"14x14\" speed=\"70\" />\n    <qg:exit name=\"west\" x=\"4\" y=\"63\" width=\"8\" height=\"36\" to=\"hall\" at=\"east\" />\n    <qg:hud><qg:text bind=\"where\" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The hero walks in eight directions inside the walls. The hall's east exit leads to the garden, where the hero arrives at the exit named west, and back. Each room's q:set is scene state."
+      },
+      "tags": [
+        "topdown",
+        "exit",
+        "scenes"
+      ]
+    },
+    {
+      "id": "game-first-003",
+      "intent": "A world map whose paths open as levels are cleared",
+      "input": {
+        "natural_language": "A world map with three levels; the path to the next level opens only after the one before is cleared",
+        "context": {
+          "target": "godot",
+          "file": "game-first-003.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"world\" type=\"game\">\n  <q:set name=\"cleared\" value=\"[]\" type=\"array\" />\n  <q:set name=\"map_at\" value=\"level-1\" />\n\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n\n  <qg:scene name=\"map\" width=\"270\" height=\"144\" background=\"#3c8c3c\">\n    <qg:map-node name=\"level-1\" x=\"40\" y=\"100\" sheet=\"tiles\" frame=\"45\" scene=\"level-1\" />\n    <qg:map-node name=\"level-2\" x=\"130\" y=\"60\" sheet=\"tiles\" frame=\"45\" scene=\"level-2\" />\n    <qg:map-node name=\"castle\" x=\"230\" y=\"40\" sheet=\"tiles\" frame=\"46\" />\n    <qg:map-path from=\"level-1\" to=\"level-2\" requires=\"level-1\" />\n    <qg:map-path from=\"level-2\" to=\"castle\" requires=\"level-2\" />\n    <qg:character id=\"walker\" controller=\"map\" sheet=\"chars\" frame=\"0\" at=\"{map_at}\" speed=\"60\"\n                  x=\"0\" y=\"0\" hitbox=\"18x22\" />\n  </qg:scene>\n\n  <qg:scene name=\"level-1\" width=\"270\" height=\"144\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"16x20\" />\n    <qg:on-input action=\"select\">\n      <q:set name=\"cleared\" value=\"{cleared + ['level-1']}\" />\n      <q:set name=\"map_at\" value=\"level-1\" />\n      <qg:goto-scene name=\"map\" />\n    </qg:on-input>\n  </qg:scene>\n\n  <qg:scene name=\"level-2\" width=\"270\" height=\"144\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"16x20\" />\n    <qg:on-input action=\"select\">\n      <q:set name=\"cleared\" value=\"{cleared + ['level-2']}\" />\n      <q:set name=\"map_at\" value=\"level-2\" />\n      <qg:goto-scene name=\"map\" />\n    </qg:on-input>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The walker starts on the node map_at names and moves along paths with the arrows; a path whose requires= scene is not in cleared stays shut. Jump on a node with scene= enters that level; there, select marks it cleared and returns to the map."
+      },
+      "tags": [
+        "map",
+        "map-node",
+        "map-path",
+        "game-state"
+      ]
+    }
+  ]
+}

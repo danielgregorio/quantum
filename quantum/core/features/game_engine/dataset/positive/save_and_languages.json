@@ -1,0 +1,51 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "persistence",
+  "description": "Saving, continuing, a best score kept between runs, and translations",
+  "examples": [
+    {
+      "id": "game-save-001",
+      "intent": "Continue from where you left off",
+      "input": {
+        "natural_language": "A title screen with New game and Continue (only when there is a save); every room saves on entry, and the best score is kept between runs",
+        "context": {
+          "target": "godot",
+          "file": "game-save-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"saves\" type=\"game\">\n  <q:set name=\"score\" value=\"0\" type=\"number\" />\n  <q:set name=\"best\" value=\"0\" type=\"number\" saved=\"true\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n\n  <qg:scene name=\"title\" width=\"270\" height=\"144\">\n    <qg:menu>\n      <qg:button label=\"New game\">\n        <q:set name=\"score\" value=\"0\" />\n        <qg:goto-scene name=\"room-1\" />\n      </qg:button>\n      <qg:button label=\"Continue\" if=\"{has_save()}\"><qg:continue /></qg:button>\n    </qg:menu>\n    <qg:hud position=\"bottom-center\"><qg:counter bind=\"best\" label=\"BEST \" /></qg:hud>\n  </qg:scene>\n\n  <qg:scene name=\"room-1\" width=\"270\" height=\"144\" save=\"true\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"chars\" frame=\"0\" x=\"40\" y=\"72\" hitbox=\"14x14\" />\n    <qg:on-input action=\"jump\">\n      <q:set name=\"score\" value=\"{score + 1}\" />\n      <q:set name=\"best\" value=\"{max(best, score)}\" />\n    </qg:on-input>\n    <qg:on-input action=\"select\">\n      <qg:save scene=\"room-2\" />\n      <qg:goto-scene name=\"room-2\" />\n    </qg:on-input>\n  </qg:scene>\n\n  <qg:scene name=\"room-2\" width=\"270\" height=\"144\" save=\"true\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"chars\" frame=\"0\" x=\"40\" y=\"72\" hitbox=\"14x14\" />\n    <qg:on-input action=\"cancel\"><qg:goto-scene name=\"title\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Entering a room with save=\"true\" saves the game state and that room. Continue shows only when has_save() is true and brings the game state back and goes to the saved room. best has saved=\"true\": it is kept between runs even without a save."
+      },
+      "tags": [
+        "save",
+        "continue",
+        "has_save",
+        "saved",
+        "scene-save"
+      ]
+    },
+    {
+      "id": "game-lang-001",
+      "intent": "The game in Portuguese and Spanish",
+      "input": {
+        "natural_language": "Translate the game's texts to Portuguese and Spanish, with a menu button that switches the language",
+        "context": {
+          "target": "godot",
+          "file": "game-lang-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"langs\" type=\"game\">\n  <q:set name=\"coins\" value=\"0\" type=\"number\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:language lang=\"pt\" name=\"Português\">\n    <qg:phrase text=\"Play\" as=\"Jogar\" />\n    <qg:phrase text=\"Language\" as=\"Idioma\" />\n    <qg:phrase text=\"COINS\" as=\"MOEDAS\" />\n    <qg:phrase text=\"Hello!\" as=\"Olá!\" />\n  </qg:language>\n  <qg:language lang=\"es\" name=\"Español\">\n    <qg:phrase text=\"Play\" as=\"Jugar\" />\n    <qg:phrase text=\"Language\" as=\"Idioma\" />\n    <qg:phrase text=\"COINS\" as=\"MONEDAS\" />\n    <qg:phrase text=\"Hello!\" as=\"¡Hola!\" />\n  </qg:language>\n\n  <qg:scene name=\"title\" width=\"270\" height=\"144\">\n    <qg:menu>\n      <qg:button label=\"Play\"><qg:goto-scene name=\"main\" /></qg:button>\n      <qg:button label=\"{tr('Language') + ': ' + language()}\"><qg:next-language /></qg:button>\n    </qg:menu>\n  </qg:scene>\n\n  <qg:scene name=\"main\" width=\"270\" height=\"144\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"chars\" frame=\"0\" x=\"40\" y=\"72\" hitbox=\"14x14\" />\n    <qg:hud>\n      <qg:counter bind=\"coins\" label=\"COINS\" />\n      <qg:text value=\"{tr('Hello!')}\" />\n    </qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Texts written in the game (a button's label, a counter's label) are shown in the player's language when a phrase gives them; tr() translates a text an expression puts together. The language button cycles English, Português, Español and the choice is kept for the next run."
+      },
+      "tags": [
+        "language",
+        "phrase",
+        "tr",
+        "next-language"
+      ]
+    }
+  ]
+}
