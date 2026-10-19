@@ -20,12 +20,19 @@
 //!   out; `as`: dashboard, or shell to see a user refused) and `dismiss`
 //!   (`notification`): the dashboard's answers.
 //! - `observe`: what every role received since the last look.
-//! - `until` (`to`, `type`, `contains`, `timeout`: 5): waits for the first
-//!   new message that matches; with `--play`, a miss fails the tape.
+//! - `until` (`to`, `type`, `contains`, `excludes`, `timeout`: 5): waits for
+//!   the first new message that matches; with `--play`, a miss fails the
+//!   tape. `excludes` is text the message must not hold (exact case).
 //! - `none` (`to`, `type`, `contains`, `within`: 1): nothing that matches
 //!   arrives in that time (what must not happen: an action nobody approved).
 //! - `log_until` (`daemon`, `contains`, `timeout`: 5): a daemon logs a line
 //!   with that text.
+//! - `tui` (`app`: dashboard|grove, `rows`: 30, `cols`: 100): the real
+//!   program in a pseudo-terminal (grove as the lab's user, the dashboard
+//!   as root). `view` (`app`): its screen as text. `keys` (`app`, `keys`:
+//!   ["Down", "Enter", "text"...]): typing. `until_screen` (`app`,
+//!   `contains`, `excludes`, `timeout`: 5): waits until the screen shows
+//!   it (and not `excludes`).
 //! - `log` (`daemon`: cortex|synapse, `lines`: 30).
 //! - `end`.
 //!
@@ -334,6 +341,51 @@ impl Driver {
                     tokio::time::sleep(Duration::from_millis(25)).await;
                 }
             }
+            "tui" => {
+                let app = s("app")
+                    .context("tui needs app: dashboard or grove")?
+                    .to_string();
+                let rows = n("rows").unwrap_or(30.0) as u16;
+                let cols = n("cols").unwrap_or(100.0) as u16;
+                self.lab()?.start_tui(&app, rows, cols).await?;
+                Ok(json!({"ok": true, "app": app, "rows": rows, "cols": cols}))
+            }
+            "view" => {
+                let screen = self.lab()?.screen(s("app").context("view needs app")?)?;
+                Ok(json!({"ok": true, "screen": screen.text, "cursor": screen.cursor}))
+            }
+            "keys" => {
+                let app = s("app").context("keys needs app")?.to_string();
+                let mut keys: Vec<String> = req
+                    .get("keys")
+                    .and_then(Value::as_array)
+                    .map(|a| {
+                        a.iter()
+                            .filter_map(|v| v.as_str().map(str::to_string))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                if let Some(text) = s("text") {
+                    keys.push(text.to_string());
+                }
+                self.lab()?.keys(&app, &keys)?;
+                Ok(json!({"ok": true, "typed": keys.len()}))
+            }
+            "until_screen" => {
+                let app = s("app").context("until_screen needs app")?.to_string();
+                let text = s("contains")
+                    .context("until_screen needs contains")?
+                    .to_string();
+                let timeout = Duration::from_secs_f64(n("timeout").unwrap_or(5.0));
+                match self
+                    .lab()?
+                    .until_screen(&app, &text, s("excludes"), timeout)
+                    .await
+                {
+                    Ok(screen) => Ok(json!({"ok": true, "screen": screen.text})),
+                    Err(e) => Ok(json!({"ok": false, "error": format!("{:#}", e)})),
+                }
+            }
             "log" => {
                 let daemon = s("daemon").unwrap_or("cortex").to_string();
                 let lines = n("lines").unwrap_or(30.0) as usize;
@@ -357,7 +409,8 @@ impl Driver {
 }
 
 /// What `until` and `none` look for: who received it (`to`), the message's
-/// variant (`type`) and a piece of its JSON (`contains`, any case).
+/// variant (`type`), a piece of its JSON (`contains`, any case) and a piece
+/// it must not hold (`excludes`, exact case).
 fn matcher(req: &Value) -> Result<impl Fn(&Event) -> bool> {
     let s = |k: &str| req.get(k).and_then(Value::as_str);
     let to = s("to")
@@ -365,12 +418,16 @@ fn matcher(req: &Value) -> Result<impl Fn(&Event) -> bool> {
         .transpose()?;
     let kind = s("type").map(str::to_string);
     let contains = s("contains").map(str::to_lowercase);
+    let excludes = s("excludes").map(str::to_string);
     Ok(move |e: &Event| {
         to.map_or(true, |r| e.to == r)
             && kind.as_ref().map_or(true, |k| &e.kind == k)
             && contains
                 .as_ref()
                 .map_or(true, |c| e.message.to_string().to_lowercase().contains(c))
+            && excludes
+                .as_ref()
+                .map_or(true, |x| !e.message.to_string().contains(x.as_str()))
     })
 }
 

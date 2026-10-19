@@ -138,7 +138,7 @@ Cargo can't cross-compile this workspace from Windows; `bash scripts/test-on-for
 
 ### Hive Lab (the Hive in a box: seconds, no VM)
 
-Start here for anything the Hive decides: rules, suggestions, notifications, approvals, what a user may send. `crates/hive-lab` runs the real `hive-cortex` and `hive-synapse` and plays the nerves, the actuator (which records actions and runs none), grove and the dashboard, under the binary names and users cortex checks, in a private mount namespace (root, as in a container). See `crates/hive-lab/README.md`.
+Start here for anything the Hive decides: rules, suggestions, notifications, approvals, what a user may send, and how grove and the dashboard show it (the real programs run in a pseudo-terminal and their screens are read as text). `crates/hive-lab` runs the real `hive-cortex` and `hive-synapse` and plays the nerves, the actuator (which records actions and runs none), grove and the dashboard, under the binary names and users cortex checks, in a private mount namespace (root, as in a container). See `crates/hive-lab/README.md`.
 
 ```bash
 scripts/lab/hive-tapes.sh                        # every tape in crates/hive-lab/tapes/, ~4 s
@@ -146,7 +146,7 @@ sudo target/debug/hive-lab                       # by hand: {"op":"start"}, {"op
 sudo target/debug/hive-lab --record my.jsonl     # a session becomes a tape; --play runs it again
 ```
 
-A behaviour worth keeping is a tape: add it to `crates/hive-lab/tapes/` and CI plays it. Use the ISO lab below only for what needs the real system (boot, the installer, what nerves notice and what actions do).
+A behaviour worth keeping is a tape: add it to `crates/hive-lab/tapes/` and CI plays it. The same lab is an MCP server (`hive-lab` in the repository's `.mcp.json`: `hive_start`, `hive_request`, `hive_view`, `hive_tape`, `hive_end`). Use the ISO lab below only for what needs the real system (boot, the installer, what nerves notice and what actions do).
 
 ### ISO Lab (build → boot → install → e2e, on Forge with KVM)
 

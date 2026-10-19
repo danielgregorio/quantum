@@ -57,3 +57,7 @@ jobs:
       # as root in a private mount namespace (crates/hive-lab/README.md).
       - name: Play the Hive lab's tapes
         run: scripts/lab/hive-tapes.sh
+
+      # The MCP server's wrapper, end to end (no MCP client needed)
+      - name: Hive lab MCP selftest
+        run: python3 scripts/lab/hive_mcp.py --selftest
