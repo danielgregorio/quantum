@@ -37,6 +37,10 @@ class Tag:
     text: Optional[str] = None   # what the element's text is, if it may have any
 
 
+# The tags that hold a handler: actions (and q: statements), run when it fires.
+HANDLERS = ('on-collision', 'on-fall', 'on-input', 'on-select', 'on-hit', 'on-ko', 'on-death', 'on-animation-end',
+            'on-damage', 'timer', 'button', 'on-end')
+
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',

@@ -10,6 +10,14 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Editors: the game tags (`qg:`). The language server and the VS Code
+  extension read them from the game compiler's own schema
+  (`quantum/runtime/godot/schema.py`): completion, hover, required
+  attributes and the values an attribute takes, for every `qg:` tag the
+  compiler accepts, and highlighting for all of them. VS Code no longer
+  warns "Unknown tag" on every tag of a game, nor on its `gd:` attributes.
+  A conformance test checks that every game in `projects/` is clean in the
+  editor.
 - Laboratory: animations with an end. `<qg:animation loop="false">` plays
   once and stays on its last frame; `<qg:on-animation-end name=>` on a
   character or a prefab runs as it ends (`me` is whose it is), and an
