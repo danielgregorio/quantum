@@ -42,6 +42,10 @@ com a primeira instalação, em ~40 s (a de instalação de pacote em
   agente dá loginuid aos comandos do usuário, como um login daria).
 - `crash-loop`: uma unit em loop de crash aparece, e a oferta de restart
   também, uma vez só.
+- `anonymous-shell`: com o grove real em modo anônimo, um comando perigoso
+  chega ao nerve de processo pelo audit, e o cortex, subindo a árvore real
+  de processos até o shell, não repassa nada. Fora do modo anônimo, o
+  mesmo comando volta a ser julgado.
 - `install-on-request`: o usuário chama o htop no grove real, o dashboard
   oferece a instalação, e a aprovação faz o actuator sem privilégio
   instalar pelo PackageKit e polkit, a partir de um repositório assinado

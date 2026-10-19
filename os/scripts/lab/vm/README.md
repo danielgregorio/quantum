@@ -32,7 +32,7 @@ Only what changed is installed: when nothing but binaries changed, they are copi
 |---|---|---|
 | making the base (once) | ~5 min | 18 s |
 | restoring `hive` | ~2 s | under a second |
-| the five tapes | ~95 s | ~40 s, the first install included |
+| the tapes (five) | ~95 s | ~40 s, the first install included |
 
 Everything lives in `~/.cache/quantum-os-lab`, or `QUANTUM_LAB_CACHE`. A run's evidence is in `run/` there: `serial.log`, `qemu.cmdline`.
 
@@ -62,6 +62,7 @@ The same shape as the Hive lab's: `{"op": ...}` in, `{"ok": true, ...}` or `{"ok
 |---|---|
 | `crash-restart` | a real unit crashes: the journal nerve sees it, the real dashboard offers a restart, nothing runs on its own, and the real actuator restarts it through polkit once it is approved with the keyboard |
 | `crash-loop` | a unit crashing again and again (`Restart=on-failure`) is shown, and its restart offered, once |
+| `anonymous-shell` | a dangerous command from an anonymous grove reaches the process nerve, and hive-cortex, walking the real process tree up to the shell, passes nothing on; out of anonymous mode it is judged again |
 | `install-on-request` | a user reaches for a missing program: grove says which package provides it, the dashboard offers it, and the approval has the unprivileged actuator install it through PackageKit and polkit; the user's next try runs it |
 | `port-conflict` | a real process holds a port and a unit keeps failing to bind it: the network nerve names both, once; listing the ports runs once approved |
 | `dangerous-command` | a logged-in user's `rm -rf /srv` goes from the kernel's audit log through the process nerve to the real dashboard, whose advice claims nothing was done; a routine delete and a daemon's own commands are not reported |
