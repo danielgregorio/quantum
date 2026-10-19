@@ -24,6 +24,8 @@ extends CharacterBody2D
 # when none did do the "any" handlers run.
 
 const Animator := preload("res://addons/quantum/animator.gd")
+const TileSense := preload("res://addons/quantum/tile_sense.gd")
+const ICE_ACCEL := 200.0   # on ice the run speed comes and goes this slowly, pixels/s²
 
 var run_speed: float = 90.0
 var jump_height: float = 64.0
@@ -65,6 +67,9 @@ var _ticks: int = 0
 # The velocity before move_and_slide, which zeroes it on a floor or a
 # ceiling: the side of a touch is judged by where the body was going.
 var _moving: Vector2 = Vector2.ZERO
+var _tiles := TileSense.new()   # the kinds of the tiles about it, and its qg:on-tile handlers
+var _climbing := false
+var _stroke := false       # rising from a stroke in water: no jump, so letting go does not cut it
 
 
 func setup(spec: Dictionary) -> void:
@@ -99,6 +104,7 @@ func _speed_for_height(height: float) -> float:
 
 func wire(sensor: Area2D, spec: Dictionary, scene: Node, sprite: Sprite2D) -> void:
 	_handlers = spec.get("on_collision", [])
+	_tiles.setup(spec, scene)
 	_on_fall = str(spec.get("on_fall", "")) if spec.get("on_fall") != null else ""
 	_scene = scene
 	sensor.area_entered.connect(_on_area_entered)
@@ -214,15 +220,30 @@ func _is_on_top_of(other: Node) -> bool:
 
 func _physics_process(delta: float) -> void:
 	_ticks += 1
+	var about: Dictionary = _tiles.sense(self, hitbox_size, _ticks)
+	var wet: bool = about["in"] == "water"
 	var dir := 0
 	if Q.held(_a("right")):
 		dir += 1
 	if Q.held(_a("left")):
 		dir -= 1
-	if accel > 0.0:
-		velocity.x = move_toward(velocity.x, dir * run_speed, accel * delta)
+	# a ladder: up or down takes hold of it, jump lets go
+	var climb := Q.strength(_a("down")) - Q.strength(_a("up"))
+	if not (about["in"] == "ladder" or (about["under"] == "ladder" and climb > 0.0)):
+		_climbing = false
+	elif climb != 0.0:
+		_climbing = true
+	if _climbing:
+		_climb(dir, climb)
+		return
+	var run := run_speed * (0.6 if wet else 1.0)
+	var ease_ := accel
+	if about["under"] == "ice" and is_on_floor():
+		ease_ = ICE_ACCEL if accel <= 0.0 else minf(accel, ICE_ACCEL)
+	if ease_ > 0.0:
+		velocity.x = move_toward(velocity.x, dir * run, ease_ * delta)
 	else:
-		velocity.x = dir * run_speed
+		velocity.x = dir * run
 
 	if is_on_floor():
 		_coyote = maxi(coyote_frames, 1)   # standing, a jump works whatever coyote-frames says
@@ -231,7 +252,10 @@ func _physics_process(delta: float) -> void:
 		_coyote -= 1
 
 	if Q.tapped(_a("jump")):
-		if _coyote > 0:
+		if wet:
+			velocity.y = -_jump_speed * 0.65   # in water a jump is a stroke, as often as it is pressed
+			_stroke = true
+		elif _coyote > 0:
 			_jump()
 			_coyote = 0
 		elif _air_jumps_left > 0:
@@ -240,14 +264,20 @@ func _physics_process(delta: float) -> void:
 			_jump()
 
 	var g := gravity
+	var fall_max := max_fall
 	var holding := Q.held(_a("jump"))
-	if variable_jump and velocity.y < 0.0 and not holding:
+	if velocity.y >= 0.0:
+		_stroke = false
+	if wet:   # water holds it up: it sinks slowly
+		g *= 0.25
+		fall_max *= 0.35
+	elif variable_jump and velocity.y < 0.0 and not holding and not _stroke:
 		if jump_cut <= 0.0:
 			g *= 3.0
 		elif _jump_was_held:
 			velocity.y *= jump_cut
 	_jump_was_held = holding
-	velocity.y = minf(velocity.y + g * delta, max_fall)
+	velocity.y = minf(velocity.y + g * delta, fall_max)
 
 	if not is_zero_approx(velocity.x):
 		facing = 1 if velocity.x > 0.0 else -1
@@ -280,8 +310,27 @@ func _physics_process(delta: float) -> void:
 			_scene.call(_on_fall, self, null)
 
 
+# On a ladder: up and down climb, left and right sidle, no gravity; at its top
+# it stops (a step sideways leaves it); jump lets go with a jump.
+func _climb(dir: int, climb: float) -> void:
+	velocity = Vector2(dir * run_speed * 0.5, climb * run_speed * 0.6)
+	if climb < 0.0 and _scene != null:
+		var map := _scene.get_node_or_null("Tilemap")
+		if map != null and map.kind_at(position - Vector2(0, 2)) != "ladder":
+			velocity.y = 0.0
+	if Q.tapped(_a("jump")):
+		_climbing = false
+		_jump()
+	_coyote = 0
+	_moving = velocity
+	move_and_slide()
+	if animator != null:
+		animator.play("climb" if animator.has("climb") else "idle")
+
+
 func _jump() -> void:
 	velocity.y = -_jump_speed
+	_stroke = false
 	if jump_sound != "":
 		Q.play(jump_sound)
 

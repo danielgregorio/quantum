@@ -7,6 +7,8 @@ extends CharacterBody2D
 # _physics_process at the fixed tick.
 
 const Animator := preload("res://addons/quantum/animator.gd")
+const TileSense := preload("res://addons/quantum/tile_sense.gd")
+const ICE_ACCEL := 160.0   # on an ice floor the speed comes and goes this slowly, pixels/s²
 
 var speed: float = 70.0
 var attack_action: String = ""
@@ -25,6 +27,7 @@ var _hits: Array = []
 var _cooldowns: Dictionary = {}
 var _scene: Node = null
 var _ticks: int = 0
+var _tiles := TileSense.new()   # the kinds of the tiles about it, and its qg:on-tile handlers
 var _swing: Area2D = null
 var _swing_shape: CollisionShape2D = null
 var _swinging: int = 0
@@ -44,6 +47,7 @@ func setup(spec: Dictionary) -> void:
 
 
 func wire(sensor: Area2D, spec: Dictionary, scene: Node, sprite: Sprite2D) -> void:
+	_tiles.setup(spec, scene)
 	_handlers = spec.get("on_collision", [])
 	_hits = spec.get("on_hit", [])
 	_scene = scene
@@ -146,7 +150,12 @@ func _physics_process(delta: float) -> void:
 		var sprite := get_node_or_null("Sprite")
 		if sprite != null and dir.x != 0:
 			sprite.flip_h = dir.x < 0
-	velocity = dir * speed
+	var about: Dictionary = _tiles.sense(self, hitbox_size, _ticks)
+	var target := dir * speed * (0.5 if about["in"] == "water" else 1.0)   # wading
+	if about["in"] == "ice":
+		velocity = velocity.move_toward(target, ICE_ACCEL * delta)   # sliding
+	else:
+		velocity = target
 	move_and_slide()
 	if bounds and "q_spec" in _scene:
 		var w := float(_scene.q_spec.get("width", 256))

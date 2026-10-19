@@ -10,6 +10,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: tile kinds. `<qg:tile kind=>` makes a tile a `ladder`
+  (passed through; up and down climb it, jump lets go), `water` (passed
+  through; slow to sink in, a jump is a stroke, slower to walk), `ice`
+  (slid on, in a platformer and on a top-down floor) or `hurt`. In a Tiled
+  map, a tileset tile's class or `kind` property does the same, in the
+  map's own tileset or an external `.tsx`. The platformer, top-down and
+  behavior controllers feel them. `<qg:on-tile kind= cooldown=>` on a
+  character runs as it comes to touch a tile of that kind (stands on it, is
+  in it or bumps it), and again each cooldown while it still does; a
+  `tile-touch` event reaches the play protocol.
 - Laboratory: `<qg:play sound= volume= pitch= vary=>`: decibels added, a
   pitch (2: an octave up), and a random spread of pitch each time, so twenty
   hits do not sound the same. Such a play is a voice of its own, so the
