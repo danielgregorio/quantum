@@ -1,0 +1,93 @@
+# git Command Knowledge
+# Used by hive-nerve-process to detect dangerous operations
+
+command: git
+description: "Distributed version control system"
+risk_level: medium
+
+patterns:
+  - pattern: "git reset --hard"
+    severity: high
+    message: "This will DISCARD all uncommitted changes permanently."
+    auto_snapshot: true
+
+  - pattern: "git clean -fd"
+    severity: high
+    message: "This will DELETE untracked files and directories."
+    auto_snapshot: true
+
+  - pattern: "git push.*--force"
+    severity: high
+    message: "Force push overwrites remote history. Others may lose work."
+
+  - pattern: "git push.*-f"
+    severity: high
+    message: "Force push (-f) overwrites remote history. Use --force-with-lease instead."
+
+  - pattern: "git rebase.*main"
+    severity: medium
+    message: "Rebasing on main branch. Ensure you understand the implications."
+
+  - pattern: "git rebase.*master"
+    severity: medium
+    message: "Rebasing on master branch. Ensure you understand the implications."
+
+  - pattern: "git checkout -- \\."
+    severity: high
+    message: "This discards all local changes in the current directory."
+
+  - pattern: "git stash drop"
+    severity: medium
+    message: "This permanently deletes stashed changes."
+
+  - pattern: "git branch -D"
+    severity: medium
+    message: "Force deleting branch regardless of merge status."
+
+  - pattern: "git filter-branch"
+    severity: high
+    message: "Rewriting history. Dangerous for shared repositories."
+
+  - pattern: "git push origin :main"
+    severity: critical
+    message: "This will DELETE the main branch on remote!"
+    block: true
+
+  - pattern: "git push origin :master"
+    severity: critical
+    message: "This will DELETE the master branch on remote!"
+    block: true
+
+suggestions:
+  - trigger: "git push --force"
+    suggest: |
+      Instead of --force, consider:
+      - git push --force-with-lease (safer, checks for upstream changes)
+      - Communicate with team before force pushing
+
+  - trigger: "git reset --hard"
+    suggest: |
+      Before reset --hard:
+      - git stash (to save changes temporarily)
+      - git reflog (to see reset history if needed later)
+      - Consider git reset --soft or --mixed
+
+  - trigger: "git rebase"
+    suggest: |
+      Rebasing tips:
+      - Never rebase shared/pushed commits
+      - Use git pull --rebase for cleaner history
+      - Interactive rebase: git rebase -i HEAD~N
+
+recovery_tips:
+  - "Use git reflog to find lost commits"
+  - "git stash list shows all stashes"
+  - "Deleted branches can be recovered with: git checkout -b branch SHA"
+  - "Reset operations can be undone via reflog within 30 days"
+
+safe_alternatives:
+  - name: "git revert"
+    description: "Create new commit that undoes changes (safe for shared repos)"
+
+  - name: "git push --force-with-lease"
+    description: "Force push that fails if remote has new commits"

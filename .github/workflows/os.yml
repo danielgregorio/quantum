@@ -1,0 +1,59 @@
+name: Quantum OS
+
+# os/ is a Rust workspace of its own (the Hive, grove, the installer). It is
+# checked only when a change touches it.
+on:
+  push:
+    branches: [main]
+    paths: ['os/**', '.github/workflows/os.yml']
+  pull_request:
+    paths: ['os/**', '.github/workflows/os.yml']
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+defaults:
+  run:
+    working-directory: os
+
+jobs:
+  check:
+    name: fmt, clippy, test, Hive lab
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            os/target/
+          key: ${{ runner.os }}-os-cargo-${{ hashFiles('os/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-os-cargo-
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Build
+        run: cargo build --workspace
+
+      - name: Test
+        run: cargo test --workspace
+
+      # The real hive-cortex and hive-synapse, the rest played by hive-lab,
+      # as root in a private mount namespace (crates/hive-lab/README.md).
+      - name: Play the Hive lab's tapes
+        run: scripts/lab/hive-tapes.sh

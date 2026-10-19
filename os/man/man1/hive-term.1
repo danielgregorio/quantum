@@ -1,0 +1,164 @@
+.\" Man page for hive-term
+.TH HIVE-TERM 1 "January 2025" "DruidOS 0.1.0" "DruidOS Hive Stack"
+
+.SH NAME
+hive-term \- DruidOS integrated terminal emulator with Hive Stack integration
+
+.SH SYNOPSIS
+.B hive-term
+[\fIOPTIONS\fR] [\fI-e COMMAND\fR]
+
+.SH DESCRIPTION
+.B hive-term
+is a GPU-accelerated terminal emulator built for DruidOS. It integrates with
+the Hive Stack to provide AI-assisted command-line interaction, anonymous mode
+support, and visual feedback from the system consciousness.
+
+Based on VTE (Virtual Terminal Emulator) technology with a modern Rust
+implementation, hive-term provides high performance while maintaining full
+compatibility with existing terminal applications.
+
+.SH OPTIONS
+.TP
+.BR \-c ", " \-\-config " " \fIFILE\fR
+Path to configuration file. Default: ~/.config/hive-term/config.toml
+
+.TP
+.BR \-e ", " \-\-command " " \fICOMMAND\fR
+Execute command instead of shell.
+
+.TP
+.BR \-d ", " \-\-working-directory " " \fIDIR\fR
+Set initial working directory.
+
+.TP
+.BR \-a ", " \-\-anonymous " " \fILEVEL\fR
+Start in anonymous mode. Values: quiet, detach, full
+
+.TP
+.BR \-\-class " " \fICLASS\fR
+Set window class for window manager.
+
+.TP
+.BR \-\-title " " \fITITLE\fR
+Set initial window title.
+
+.TP
+.BR \-h ", " \-\-help
+Display help message and exit.
+
+.TP
+.BR \-V ", " \-\-version
+Display version information and exit.
+
+.SH ANONYMOUS MODES
+.TP
+.B quiet
+Hive observes but doesn't show notifications in this terminal.
+
+.TP
+.B detach
+This terminal is invisible to Hive. Commands are not observed.
+
+.TP
+.B full
+Complete isolation. New namespace with no logging or interception.
+
+.SH KEY BINDINGS
+.TP
+.B Ctrl+Shift+C
+Copy selection to clipboard.
+
+.TP
+.B Ctrl+Shift+V
+Paste from clipboard.
+
+.TP
+.B Ctrl+Shift+N
+Open new terminal window.
+
+.TP
+.B Ctrl+Shift+A
+Toggle anonymous mode.
+
+.TP
+.B Ctrl+Plus
+Increase font size.
+
+.TP
+.B Ctrl+Minus
+Decrease font size.
+
+.TP
+.B Ctrl+0
+Reset font size.
+
+.SH HIVE INTEGRATION
+When connected to the Hive cortex, hive-term provides:
+
+.IP \(bu 2
+Command observation and AI suggestions
+.IP \(bu 2
+Dangerous command warnings
+.IP \(bu 2
+Context-aware help
+.IP \(bu 2
+Automatic ZFS snapshots before risky operations
+
+The Hive integration can be disabled per-terminal using anonymous modes.
+
+.SH CONFIGURATION
+Configuration file format (TOML):
+
+.RS
+.nf
+[font]
+family = "JetBrains Mono"
+size = 13
+
+[colors]
+background = "#0D0D0D"
+foreground = "#FFFFFF"
+
+[cursor]
+style = "block"
+blinking = true
+
+[behavior]
+scrollback_lines = 10000
+copy_on_select = false
+.fi
+.RE
+
+.SH FILES
+.TP
+.I ~/.config/hive-term/config.toml
+User configuration file.
+
+.TP
+.I /etc/hive/term.toml
+System-wide configuration.
+
+.SH ENVIRONMENT
+.TP
+.B TERM
+Set to "xterm-256color" by default.
+
+.TP
+.B SHELL
+User's shell, used if no command specified.
+
+.TP
+.B HIVE_ANONYMOUS
+If set, starts in the specified anonymous mode.
+
+.SH SEE ALSO
+.BR hive-shell (1),
+.BR hive-cortex (1),
+.BR alacritty (1)
+
+.SH AUTHOR
+DruidOS Team <team@druidos.org>
+
+.SH COPYRIGHT
+Copyright \(co 2024-2025 DruidOS Team. MIT License.

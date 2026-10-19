@@ -1,0 +1,53 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        # Create hive group if it doesn't exist
+        if ! getent group hive >/dev/null; then
+            addgroup --system hive
+        fi
+
+        # Create service users
+        if ! getent passwd _hive-ai >/dev/null; then
+            adduser --system --ingroup hive --no-create-home --disabled-login \
+                --home /nonexistent --shell /usr/sbin/nologin \
+                --gecos "Hive AI Service" _hive-ai
+        fi
+
+        if ! getent passwd _hive-sense >/dev/null; then
+            adduser --system --ingroup hive --no-create-home --disabled-login \
+                --home /nonexistent --shell /usr/sbin/nologin \
+                --gecos "Hive Sensor Service" _hive-sense
+        fi
+
+        if ! getent passwd _hive-act >/dev/null; then
+            adduser --system --ingroup hive --no-create-home --disabled-login \
+                --home /nonexistent --shell /usr/sbin/nologin \
+                --gecos "Hive Actuator Service" _hive-act
+        fi
+
+        # Create directories
+        mkdir -p /run/hive
+        chown root:hive /run/hive
+        chmod 750 /run/hive
+
+        mkdir -p /var/lib/hive/models
+        chown _hive-ai:hive /var/lib/hive/models
+        chmod 750 /var/lib/hive/models
+
+        mkdir -p /var/lib/hive/knowledge
+        chown root:hive /var/lib/hive/knowledge
+        chmod 755 /var/lib/hive/knowledge
+
+        # Enable and start service
+        if [ -d /run/systemd/system ]; then
+            systemctl daemon-reload
+            systemctl enable hive-cortex.service || true
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

@@ -1,0 +1,8 @@
+// grove cannot find htop: the Hive offers to install the package of that name, and installs it only when approved
+{"op":"start"}
+{"op":"not_found","command":"htop","package":"htop"}
+{"op":"until","to":"dashboard","type":"Notification","contains":"Install htop","timeout":10}
+{"op":"none","to":"actuator","within":0.5}
+{"op":"approve"}
+{"op":"until","to":"actuator","type":"ActionRequest","contains":"\"InstallPackage\":{\"assume_yes\":true,\"name\":\"htop\"}"}
+{"op":"end"}

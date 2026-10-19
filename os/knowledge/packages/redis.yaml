@@ -1,0 +1,103 @@
+# Redis Package Knowledge
+# Used by hive-apt to provide intelligent installation guidance
+
+package: redis-server
+aliases:
+  - redis
+  - redis-tools
+
+description: "In-memory data structure store, used as database, cache, and message broker"
+
+category: database
+
+install_notes:
+  - "Default port: 6379"
+  - "Config location: /etc/redis/redis.conf"
+  - "Data directory: /var/lib/redis/"
+  - "Logs: /var/log/redis/"
+  - "Default: binds to localhost only (secure by default)"
+
+post_install:
+  - command: "sudo systemctl enable redis-server"
+    description: "Enable Redis to start on boot"
+  - command: "redis-cli ping"
+    description: "Test Redis is responding"
+
+warnings:
+  - type: security
+    message: "By default Redis has no authentication. Set requirepass in redis.conf for production."
+    severity: high
+  - type: security
+    message: "Never expose Redis to the internet without authentication and TLS"
+    severity: critical
+  - type: resource
+    message: "Redis stores all data in memory. Monitor memory usage carefully."
+    severity: medium
+
+common_issues:
+  - pattern: "Connection refused"
+    solution: |
+      Redis not running or wrong port. Check:
+      sudo systemctl status redis-server
+      redis-cli -h HOST -p PORT ping
+    auto_suggest: true
+
+  - pattern: "NOAUTH Authentication required"
+    solution: |
+      Redis requires password. Connect with:
+      redis-cli -a PASSWORD
+      Or set AUTH in your application
+    auto_suggest: true
+
+  - pattern: "OOM command not allowed"
+    solution: |
+      Redis is out of memory. Options:
+      1. Increase maxmemory in redis.conf
+      2. Set maxmemory-policy to evict old keys
+      3. Add more RAM to the system
+    auto_suggest: true
+    severity: high
+
+  - pattern: "MISCONF Redis is configured to save RDB snapshots"
+    solution: |
+      Redis can't write to disk (permissions or disk full):
+      1. Check /var/lib/redis permissions
+      2. Check disk space: df -h
+      3. Disable persistence temporarily: CONFIG SET stop-writes-on-bgsave-error no
+    auto_suggest: true
+
+tuning_tips:
+  - name: maxmemory
+    description: "Maximum memory Redis can use"
+    default: "0 (unlimited)"
+    recommended: "Set to 70-80% of available RAM"
+
+  - name: maxmemory-policy
+    description: "How to handle max memory"
+    default: "noeviction"
+    recommended: "volatile-lru for cache, noeviction for persistent data"
+
+  - name: appendonly
+    description: "Enable AOF persistence"
+    default: "no"
+    recommended: "yes for data durability"
+
+alternatives:
+  - name: memcached
+    reason: "Simpler caching, multi-threaded"
+  - name: keydb
+    reason: "Redis fork with multi-threading"
+  - name: dragonfly
+    reason: "Redis-compatible, better memory efficiency"
+
+related_packages:
+  - redis-tools
+  - redis-sentinel
+
+ports:
+  - port: 6379
+    protocol: tcp
+    description: "Redis server"
+  - port: 26379
+    protocol: tcp
+    description: "Redis Sentinel"

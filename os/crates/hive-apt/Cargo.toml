@@ -1,0 +1,40 @@
+[package]
+name = "hive-apt"
+description = "Intelligent apt wrapper for DruidOS Hive Stack"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "hive-apt"
+path = "src/main.rs"
+
+[dependencies]
+hive-common = { path = "../hive-common" }
+
+# Async runtime
+tokio = { workspace = true, features = ["full", "process"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# System
+nix = { workspace = true }
+
+# Terminal
+colored = "2"

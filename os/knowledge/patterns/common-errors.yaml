@@ -1,0 +1,259 @@
+# Common Error Patterns
+# Used by hive-nerve-journal and hive-synapse for error detection and suggestions
+
+version: 1
+description: "Common system error patterns and their solutions"
+
+# ============================================================================
+# SYSTEMD / SERVICE ERRORS
+# ============================================================================
+
+systemd_errors:
+  - pattern: "Failed to start (.+)\\.service"
+    category: service
+    severity: high
+    extract:
+      service: "$1"
+    suggestions:
+      - "Check service status: systemctl status $service"
+      - "View full logs: journalctl -u $service -n 50"
+      - "Check config: systemctl cat $service"
+
+  - pattern: "(.+)\\.service: Main process exited, code=exited, status=(\\d+)"
+    category: service
+    severity: high
+    extract:
+      service: "$1"
+      exit_code: "$2"
+    suggestions:
+      - "Service $service exited with code $exit_code"
+      - "Check logs: journalctl -u $service -n 50"
+    exit_codes:
+      1: "General error - check application logs"
+      2: "Misuse of shell command"
+      126: "Permission problem or not executable"
+      127: "Command not found - check ExecStart path"
+      137: "SIGKILL (likely OOM killed)"
+      139: "Segmentation fault"
+      143: "SIGTERM (normal termination signal)"
+
+  - pattern: "(.+)\\.service: Failed with result '(.+)'"
+    category: service
+    severity: high
+    extract:
+      service: "$1"
+      result: "$2"
+    results:
+      exit-code: "Process exited with non-zero status"
+      signal: "Process killed by signal"
+      timeout: "Service took too long to start"
+      core-dump: "Process crashed and dumped core"
+      oom-kill: "Out of memory - killed by OOM killer"
+
+# ============================================================================
+# PERMISSION ERRORS
+# ============================================================================
+
+permission_errors:
+  - pattern: "Permission denied"
+    category: permissions
+    severity: medium
+    suggestions:
+      - "Check file permissions: ls -la PATH"
+      - "May need sudo for system files"
+      - "Check SELinux/AppArmor if enabled"
+
+  - pattern: "Operation not permitted"
+    category: permissions
+    severity: medium
+    suggestions:
+      - "Operation requires elevated privileges"
+      - "May need specific capability (check capabilities)"
+
+  - pattern: "EACCES"
+    category: permissions
+    severity: medium
+    suggestions:
+      - "Access denied - check permissions and ownership"
+
+# ============================================================================
+# DISK / FILESYSTEM ERRORS
+# ============================================================================
+
+disk_errors:
+  - pattern: "No space left on device"
+    category: disk
+    severity: critical
+    suggestions:
+      - "Check disk usage: df -h"
+      - "Find large files: du -sh /* | sort -hr | head -20"
+      - "Clean package cache: apt clean"
+      - "Remove old kernels: apt autoremove"
+      - "Check for large logs: du -sh /var/log/*"
+
+  - pattern: "Read-only file system"
+    category: disk
+    severity: critical
+    suggestions:
+      - "Filesystem may have errors - check dmesg"
+      - "Try remounting: mount -o remount,rw /"
+      - "May need fsck (requires reboot for root)"
+
+  - pattern: "Input/output error"
+    category: disk
+    severity: critical
+    suggestions:
+      - "Possible disk failure - check dmesg for errors"
+      - "Run SMART diagnostics: smartctl -a /dev/sdX"
+      - "BACKUP DATA IMMEDIATELY if disk is failing"
+
+  - pattern: "Structure needs cleaning"
+    category: disk
+    severity: high
+    suggestions:
+      - "Filesystem corruption detected"
+      - "Run fsck on unmounted filesystem"
+      - "For root: fsck.ext4 -y /dev/xxx in recovery mode"
+
+# ============================================================================
+# NETWORK ERRORS
+# ============================================================================
+
+network_errors:
+  - pattern: "Connection refused"
+    category: network
+    severity: medium
+    suggestions:
+      - "Service not running or not listening on that port"
+      - "Check if service is running: systemctl status SERVICE"
+      - "Check listening ports: ss -tlnp"
+
+  - pattern: "Connection timed out"
+    category: network
+    severity: medium
+    suggestions:
+      - "Network unreachable or firewall blocking"
+      - "Check connectivity: ping HOST"
+      - "Check firewall: iptables -L or nft list ruleset"
+
+  - pattern: "Name or service not known"
+    category: network
+    severity: medium
+    suggestions:
+      - "DNS resolution failed"
+      - "Check /etc/resolv.conf"
+      - "Try: systemd-resolve --status"
+      - "Test with IP address instead of hostname"
+
+  - pattern: "Address already in use"
+    category: network
+    severity: high
+    suggestions:
+      - "Port already bound by another process"
+      - "Find process: lsof -i :PORT or ss -tlnp | grep PORT"
+      - "Either stop the other process or use a different port"
+
+  - pattern: "Network is unreachable"
+    category: network
+    severity: high
+    suggestions:
+      - "No route to destination"
+      - "Check network interface: ip addr"
+      - "Check routing: ip route"
+      - "Check default gateway"
+
+# ============================================================================
+# MEMORY ERRORS
+# ============================================================================
+
+memory_errors:
+  - pattern: "Out of memory"
+    category: memory
+    severity: critical
+    suggestions:
+      - "System ran out of memory"
+      - "Check memory usage: free -h"
+      - "Find memory hogs: ps aux --sort=-%mem | head -10"
+      - "Consider adding swap or increasing RAM"
+
+  - pattern: "oom-kill"
+    category: memory
+    severity: critical
+    suggestions:
+      - "OOM killer terminated a process"
+      - "Check which process: dmesg | grep -i oom"
+      - "Increase memory or reduce workload"
+
+  - pattern: "Cannot allocate memory"
+    category: memory
+    severity: high
+    suggestions:
+      - "Memory allocation failed"
+      - "Check: free -h"
+      - "Check: cat /proc/meminfo"
+
+# ============================================================================
+# AUTHENTICATION ERRORS
+# ============================================================================
+
+auth_errors:
+  - pattern: "Authentication failure"
+    category: auth
+    severity: medium
+    suggestions:
+      - "Wrong password or credentials"
+      - "Check /var/log/auth.log for details"
+
+  - pattern: "Too many authentication failures"
+    category: auth
+    severity: high
+    suggestions:
+      - "Multiple failed login attempts"
+      - "May be locked out - check PAM configuration"
+      - "For SSH: check fail2ban status"
+
+  - pattern: "sudo: (.+): command not found"
+    category: auth
+    extract:
+      command: "$1"
+    severity: low
+    suggestions:
+      - "Command '$command' not installed or not in PATH"
+      - "Try: which $command or apt search $command"
+
+# ============================================================================
+# PACKAGE MANAGEMENT ERRORS
+# ============================================================================
+
+package_errors:
+  - pattern: "dpkg was interrupted"
+    category: package
+    severity: medium
+    suggestions:
+      - "Run: sudo dpkg --configure -a"
+
+  - pattern: "Unable to locate package (.+)"
+    category: package
+    severity: low
+    extract:
+      package: "$1"
+    suggestions:
+      - "Package '$package' not found"
+      - "Update package list: apt update"
+      - "Check spelling or search: apt search KEYWORD"
+
+  - pattern: "Unmet dependencies"
+    category: package
+    severity: medium
+    suggestions:
+      - "Dependencies cannot be resolved"
+      - "Try: apt --fix-broken install"
+      - "Or: apt install -f"
+
+  - pattern: "E: Could not get lock"
+    category: package
+    severity: medium
+    suggestions:
+      - "Another package manager is running"
+      - "Wait for it to finish, or check: ps aux | grep -E 'apt|dpkg'"
+      - "If stuck: sudo rm /var/lib/dpkg/lock-frontend (last resort)"

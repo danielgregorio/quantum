@@ -1,0 +1,32 @@
+[package]
+name = "bark"
+version = "0.1.0"
+edition = "2021"
+authors = ["DruidOS Team"]
+description = "Hardware Abstraction Layer for DruidOS - VirtIO device abstractions"
+license = "MIT"
+repository = "https://github.com/danielgregorio/druidos"
+
+[features]
+default = ["std"]
+std = []
+# For future no_std support
+# no_std = []
+
+[dependencies]
+# Error handling
+thiserror = "1.0"
+
+# Linux interfaces
+libc = "0.2"
+nix = { version = "0.27", features = ["fs", "ioctl", "mman", "time"] }
+
+# Memory mapping for framebuffer
+memmap2 = "0.9"
+
+# Input event parsing
+input-linux = "0.6"
+
+[dev-dependencies]
+# For testing
+tempfile = "3"

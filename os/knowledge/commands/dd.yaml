@@ -1,0 +1,129 @@
+# dd Command Knowledge
+# Used by hive-nerve-process to detect dangerous disk operations
+
+command: dd
+description: "Convert and copy files (disk destroyer when misused)"
+risk_level: critical
+
+patterns:
+  - pattern: "dd.*of=/dev/sd[a-z]$"
+    severity: critical
+    message: "Writing directly to a disk device will DESTROY all data on it."
+    auto_snapshot: true
+    confirm_required: true
+
+  - pattern: "dd.*of=/dev/nvme"
+    severity: critical
+    message: "Writing directly to NVMe device will DESTROY all data."
+    auto_snapshot: true
+    confirm_required: true
+
+  - pattern: "dd.*of=/dev/vd[a-z]"
+    severity: critical
+    message: "Writing directly to VirtIO disk will DESTROY all data."
+    auto_snapshot: true
+    confirm_required: true
+
+  - pattern: "dd.*if=/dev/zero.*of=/dev"
+    severity: critical
+    message: "This will overwrite the disk with zeros. Data will be unrecoverable."
+    confirm_required: true
+
+  - pattern: "dd.*if=/dev/random.*of=/dev"
+    severity: critical
+    message: "This will overwrite the disk with random data. Data will be unrecoverable."
+    confirm_required: true
+
+  - pattern: "dd.*if=/dev/urandom.*of=/dev"
+    severity: critical
+    message: "This will overwrite the disk with random data. Data will be unrecoverable."
+    confirm_required: true
+
+  - pattern: "dd.*of=/dev/sd[a-z][0-9]"
+    severity: high
+    message: "Writing to a partition will destroy its filesystem."
+    auto_snapshot: true
+
+  - pattern: "dd.*conv=noerror"
+    severity: medium
+    message: "noerror continues on read errors - useful for recovery, but verify results."
+
+  - pattern: "dd.*bs=1"
+    severity: low
+    message: "Block size of 1 is very slow. Consider bs=4M or bs=1M for better performance."
+
+suggestions:
+  - trigger: "dd if="
+    suggest: |
+      dd is powerful but dangerous. Tips:
+      - Always double-check the 'of=' target
+      - Use 'status=progress' to see progress
+      - Consider using 'pv' for progress: pv INPUT | dd of=OUTPUT
+
+  - trigger: "dd.*of=/dev/sd"
+    suggest: |
+      DANGER: You're about to write to a disk device.
+
+      Triple-check:
+      1. Is the target device correct? (lsblk to verify)
+      2. Is the device unmounted?
+      3. Do you have a backup?
+
+  - trigger: "dd.*if=/dev/sd"
+    suggest: |
+      Reading from disk device. If creating an image:
+      - Ensure target has enough space
+      - Use conv=sync,noerror for failing disks
+      - Consider using ddrescue for damaged disks
+
+safe_practices:
+  - name: "Always verify target"
+    command: "lsblk"
+    description: "List block devices to confirm target"
+
+  - name: "Show progress"
+    command: "dd if=INPUT of=OUTPUT bs=4M status=progress"
+    description: "The status=progress flag shows transfer progress"
+
+  - name: "Use optimal block size"
+    command: "bs=4M or bs=1M"
+    description: "Larger block sizes are much faster than default 512 bytes"
+
+  - name: "Sync after write"
+    command: "dd ... && sync"
+    description: "Ensure all data is written to disk"
+
+alternatives:
+  - name: cp
+    use_case: "Copying regular files"
+    command: "cp SOURCE DEST"
+
+  - name: pv
+    use_case: "Pipe with progress"
+    command: "pv INPUT > OUTPUT"
+
+  - name: ddrescue
+    use_case: "Recovering data from failing disks"
+    command: "ddrescue /dev/sda image.img logfile"
+
+  - name: rsync
+    use_case: "Copying with resume capability"
+    command: "rsync -avP SOURCE DEST"
+
+common_use_cases:
+  - name: "Create bootable USB"
+    command: "dd if=image.iso of=/dev/sdX bs=4M status=progress && sync"
+    warning: "Replace sdX with your USB device"
+
+  - name: "Backup MBR"
+    command: "dd if=/dev/sda of=mbr.img bs=512 count=1"
+
+  - name: "Create disk image"
+    command: "dd if=/dev/sda of=disk.img bs=4M status=progress"
+
+  - name: "Wipe disk securely"
+    command: "dd if=/dev/urandom of=/dev/sdX bs=4M status=progress"
+    warning: "Data will be UNRECOVERABLE"
+
+  - name: "Test disk speed"
+    command: "dd if=/dev/zero of=testfile bs=1G count=1 oflag=direct"

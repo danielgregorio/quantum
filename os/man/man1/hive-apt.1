@@ -1,0 +1,140 @@
+.\" Man page for hive-apt
+.TH HIVE-APT 1 "January 2025" "DruidOS 0.1.0" "DruidOS Hive Stack"
+
+.SH NAME
+hive-apt \- intelligent apt wrapper with AI assistance and ZFS integration
+
+.SH SYNOPSIS
+.B hive-apt
+\fICOMMAND\fR [\fIOPTIONS\fR] [\fIPACKAGES\fR...]
+
+.SH DESCRIPTION
+.B hive-apt
+is an intelligent wrapper around apt that integrates with the Hive Stack to
+provide AI-assisted package management. It automatically creates ZFS snapshots
+before operations, provides installation guidance from the knowledge base, and
+warns about potential issues.
+
+.SH COMMANDS
+.TP
+.B install \fIPACKAGE\fR...
+Install one or more packages. Creates a ZFS snapshot before installation.
+
+.TP
+.B remove \fIPACKAGE\fR...
+Remove one or more packages. Creates a ZFS snapshot before removal.
+
+.TP
+.B update
+Update package lists from repositories.
+
+.TP
+.B upgrade
+Upgrade all installed packages to latest versions.
+
+.TP
+.B search \fIPATTERN\fR
+Search for packages matching the pattern.
+
+.TP
+.B show \fIPACKAGE\fR
+Display detailed information about a package.
+
+.TP
+.B info \fIPACKAGE\fR
+Display package information from the Hive knowledge base.
+
+.TP
+.B autoremove
+Remove automatically installed packages that are no longer needed.
+
+.TP
+.B clean
+Clean the package cache.
+
+.SH OPTIONS
+.TP
+.BR \-y ", " \-\-yes
+Assume yes to all prompts.
+
+.TP
+.BR \-\-no-snapshot
+Skip creating ZFS snapshot before operation.
+
+.TP
+.BR \-q ", " \-\-quiet
+Quiet mode, minimal output.
+
+.TP
+.BR \-h ", " \-\-help
+Display help message and exit.
+
+.TP
+.BR \-V ", " \-\-version
+Display version information and exit.
+
+.SH EXAMPLES
+.TP
+Install a package with AI guidance:
+.B hive-apt install postgresql
+
+.TP
+Upgrade system with automatic snapshot:
+.B hive-apt upgrade
+
+.TP
+Search for web servers:
+.B hive-apt search nginx
+
+.TP
+Get Hive knowledge about a package:
+.B hive-apt info docker
+
+.SH KNOWLEDGE BASE
+The Hive knowledge base provides:
+.IP \(bu 2
+Installation notes and post-install steps
+.IP \(bu 2
+Security warnings
+.IP \(bu 2
+Resource requirements
+.IP \(bu 2
+Common issues and solutions
+.IP \(bu 2
+Alternative packages
+
+Knowledge files are stored in /var/lib/hive/knowledge/packages/.
+
+.SH ZFS INTEGRATION
+Before package operations that modify the system, hive-apt creates an automatic
+ZFS snapshot with the naming convention:
+
+.RS
+hive-apt-YYYYMMDD-HHMMSS-{operation}
+.RE
+
+Use
+.B hive-zfs list
+to view snapshots and
+.B hive-zfs rollback
+to restore if needed.
+
+.SH FILES
+.TP
+.I /var/lib/hive/knowledge/packages/
+Package knowledge YAML files.
+
+.TP
+.I /etc/hive/config.toml
+Configuration including ZFS dataset settings.
+
+.SH SEE ALSO
+.BR apt (8),
+.BR hive-zfs (1),
+.BR hive-cortex (1)
+
+.SH AUTHOR
+DruidOS Team <team@druidos.org>
+
+.SH COPYRIGHT
+Copyright \(co 2024-2025 DruidOS Team. MIT License.

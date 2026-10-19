@@ -1,0 +1,156 @@
+# Docker Package Knowledge
+# Used by hive-apt to provide intelligent installation guidance
+
+package: docker.io
+aliases:
+  - docker
+  - docker-ce
+  - docker-engine
+
+description: "Docker is a platform for developing, shipping, and running applications in containers"
+
+category: containerization
+
+install_notes:
+  - "Daemon socket: /var/run/docker.sock"
+  - "Config location: /etc/docker/daemon.json"
+  - "Data directory: /var/lib/docker/"
+  - "Add user to docker group to run without sudo"
+  - "Log driver default: json-file (can fill disk!)"
+
+post_install:
+  - command: "sudo usermod -aG docker $USER"
+    description: "Add current user to docker group (logout required)"
+  - command: "sudo systemctl enable docker"
+    description: "Enable Docker to start on boot"
+  - command: "newgrp docker"
+    description: "Activate docker group without logout"
+
+warnings:
+  - type: security
+    message: "Docker group grants root-equivalent access. Only add trusted users."
+    severity: high
+  - type: storage
+    message: "Docker images and containers can consume significant disk space. Monitor /var/lib/docker/"
+    severity: medium
+  - type: network
+    message: "Docker modifies iptables rules. May affect firewall configuration."
+    severity: medium
+  - type: zfs
+    message: "If using ZFS, configure Docker to use the zfs storage driver"
+    severity: low
+
+common_issues:
+  - pattern: "permission denied.*docker.sock"
+    solution: |
+      User not in docker group. Fix with:
+      sudo usermod -aG docker $USER
+      newgrp docker  # or logout and back in
+    auto_suggest: true
+
+  - pattern: "Cannot connect to the Docker daemon"
+    solution: |
+      Docker daemon not running. Start with:
+      sudo systemctl start docker
+
+      Check status:
+      sudo systemctl status docker
+    auto_suggest: true
+
+  - pattern: "no space left on device"
+    solution: |
+      Docker storage full. Clean up with:
+      docker system prune -a        # Remove all unused data
+      docker volume prune           # Remove unused volumes
+      docker image prune -a         # Remove unused images
+    auto_suggest: true
+    severity: high
+
+  - pattern: "port is already allocated"
+    solution: |
+      Port conflict. Check what's using the port:
+      sudo lsof -i :PORT
+
+      Or use a different port:
+      docker run -p DIFFERENT_PORT:CONTAINER_PORT ...
+    auto_suggest: true
+
+  - pattern: "OCI runtime create failed"
+    solution: |
+      Container failed to start. Common causes:
+      1. Missing executable in image
+      2. Incompatible image architecture
+      3. AppArmor/SELinux policy issue
+
+      Check logs: docker logs CONTAINER_ID
+    auto_suggest: true
+
+  - pattern: "image.*not found"
+    solution: |
+      Image doesn't exist locally or in registry. Try:
+      docker pull IMAGE_NAME
+
+      Check spelling and registry URL.
+    auto_suggest: true
+
+tuning_tips:
+  - name: storage-driver
+    description: "Backend storage driver"
+    default: "overlay2"
+    recommended: "overlay2 (or zfs if using ZFS)"
+
+  - name: log-driver
+    description: "Default logging driver"
+    default: "json-file"
+    recommended: "json-file with max-size limit, or journald"
+
+  - name: max-size
+    description: "Max log file size (json-file driver)"
+    default: "unlimited"
+    recommended: "10m or 100m"
+
+  - name: max-file
+    description: "Max number of log files"
+    default: "1"
+    recommended: "3-5"
+
+zfs_setup: |
+  # Configure Docker for ZFS
+  sudo zfs create -o mountpoint=/var/lib/docker rpool/docker
+
+  # /etc/docker/daemon.json
+  {
+    "storage-driver": "zfs"
+  }
+
+  sudo systemctl restart docker
+
+alternatives:
+  - name: podman
+    reason: "Daemonless, rootless containers, Docker-compatible CLI"
+  - name: containerd
+    reason: "Lower-level runtime, used by Kubernetes"
+  - name: lxd
+    reason: "System containers (full OS), not application containers"
+
+related_packages:
+  - docker-compose
+  - docker-buildx
+
+related_commands:
+  - docker
+  - docker-compose
+  - dockerd
+
+dependencies:
+  - containerd
+  - runc
+  - iptables
+
+ports:
+  - port: 2375
+    protocol: tcp
+    description: "Docker API (unencrypted - don't expose!)"
+  - port: 2376
+    protocol: tcp
+    description: "Docker API (TLS)"

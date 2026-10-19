@@ -1,0 +1,25 @@
+[Unit]
+Description=DruidOS Hive - prune old ZFS safety snapshots
+Documentation=man:hive-zfs(1)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/hive-zfs prune
+
+# As root: destroying snapshots is delegated to no one. Only the Hive's own
+# hive-* snapshots of the system datasets are considered (see [zfs] in the
+# config).
+Environment=RUST_LOG=info
+Environment=HIVE_CONFIG=/etc/hive/config.toml
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateNetwork=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes

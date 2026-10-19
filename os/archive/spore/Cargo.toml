@@ -1,0 +1,23 @@
+[package]
+name = "spore"
+version = "0.1.0"
+edition = "2021"
+authors = ["DruidOS Team"]
+description = "CPU-based 2D rendering engine for DruidOS"
+license = "MIT"
+repository = "https://github.com/danielgregorio/druidos"
+
+[features]
+default = ["std"]
+std = []
+
+[dependencies]
+# HAL for framebuffer access
+bark = { path = "../bark" }
+
+# Error handling
+thiserror = "1.0"
+
+[[example]]
+name = "fb-test"
+path = "../examples/fb-test.rs"

@@ -1,0 +1,6 @@
+// grove asks in plain language: the answer comes back to that shell as text, never as an action
+{"op":"start"}
+{"op":"ask","text":"why did nginx stop?"}
+{"op":"until","to":"shell","type":"SuggestionResponse","timeout":10}
+{"op":"none","to":"actuator","within":0.5}
+{"op":"end"}

@@ -1,0 +1,59 @@
+Source: druidos
+Section: admin
+Priority: optional
+Maintainer: DruidOS Team <team@druidos.org>
+Build-Depends: debhelper-compat (= 13),
+               cargo,
+               rustc,
+               libssl-dev,
+               pkg-config
+Standards-Version: 4.6.2
+Homepage: https://druidos.org
+Vcs-Browser: https://github.com/druidos/druidos
+Vcs-Git: https://github.com/druidos/druidos.git
+Rules-Requires-Root: no
+
+Package: druidos-hive
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: zfsutils-linux
+Suggests: druidos-hive-docs
+Description: DruidOS Hive Stack - AI-assisted system monitoring
+ DruidOS is a Linux distribution with an integrated Small Language Model
+ that acts as a living consciousness observing the system in real-time.
+ .
+ This package contains the core Hive Stack components:
+  - hive-cortex: Central orchestrator daemon
+  - hive-synapse: SLM inference daemon
+  - hive-actuator: Action executor
+  - hive-nerve-*: System observers
+  - hive-apt: Intelligent apt wrapper
+  - hive-zfs: ZFS snapshot management
+  - grove: Interactive shell (primary user interface)
+  - hive-dashboard: Interactive TUI panel for notifications/suggestions
+
+Package: druidos-hive-docs
+Architecture: all
+Description: DruidOS Hive Stack Documentation
+ Documentation for the DruidOS Hive Stack including:
+  - Architecture overview
+  - Security model
+  - User guide
+  - API documentation
+
+Package: druidos-config
+Architecture: all
+Depends: druidos-hive
+Description: DruidOS Default Configuration
+ Default configuration files for DruidOS including:
+  - Hive Stack configuration
+  - Systemd service files
+
+Package: druidos-knowledge
+Architecture: all
+Depends: druidos-hive
+Description: DruidOS Knowledge Base
+ Knowledge base files for the Hive Stack including:
+  - Package knowledge (installation notes, warnings)
+  - Command patterns (dangerous command detection)
+  - Error patterns (common issue recognition)

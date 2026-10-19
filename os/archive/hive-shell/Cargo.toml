@@ -1,0 +1,50 @@
+[package]
+name = "hive-shell"
+description = "Layer-shell overlay for DruidOS Hive Stack suggestions and notifications"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "hive-shell"
+path = "src/main.rs"
+
+[dependencies]
+hive-common = { path = "../../crates/hive-common" }
+
+# Async runtime
+tokio = { workspace = true, features = ["full"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Wayland (optional - requires system libraries)
+wayland-client = { version = "0.31", optional = true }
+wayland-protocols = { version = "0.31", features = ["client", "unstable"], optional = true }
+wayland-protocols-wlr = { version = "0.2", features = ["client"], optional = true }
+smithay-client-toolkit = { version = "0.18", optional = true }
+
+# Graphics
+tiny-skia = "0.11"
+fontdue = "0.8"
+
+# System
+nix = { workspace = true }
+
+# Time
+chrono = { workspace = true }
+
+[features]
+default = []
+wayland = ["dep:wayland-client", "dep:wayland-protocols", "dep:wayland-protocols-wlr", "dep:smithay-client-toolkit"]

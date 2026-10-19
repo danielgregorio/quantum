@@ -1,0 +1,116 @@
+# chmod Command Knowledge
+# Used by hive-nerve-process to detect dangerous permission changes
+
+command: chmod
+description: "Change file mode (permissions)"
+risk_level: medium
+
+patterns:
+  - pattern: "chmod 777"
+    severity: high
+    message: "777 makes files world-readable, writable, and executable. Security risk."
+
+  - pattern: "chmod -R 777"
+    severity: critical
+    message: "Recursively setting 777 is a major security vulnerability."
+    auto_snapshot: true
+
+  - pattern: "chmod.*777.*/etc"
+    severity: critical
+    message: "Making /etc world-writable compromises system security."
+    block: true
+
+  - pattern: "chmod.*777.*/var"
+    severity: high
+    message: "Making /var world-writable can expose sensitive data."
+    auto_snapshot: true
+
+  - pattern: "chmod 000"
+    severity: high
+    message: "This removes all permissions. Files will be inaccessible."
+    auto_snapshot: true
+
+  - pattern: "chmod -R 000"
+    severity: critical
+    message: "Recursively removing all permissions can break the system."
+    auto_snapshot: true
+
+  - pattern: "chmod.*\\+s"
+    severity: high
+    message: "Setting setuid/setgid bit. This runs the file with owner's privileges."
+
+  - pattern: "chmod.*4755"
+    severity: high
+    message: "Setting setuid bit. Be sure you trust this executable."
+
+  - pattern: "chmod.*2755"
+    severity: medium
+    message: "Setting setgid bit on this file/directory."
+
+  - pattern: "chmod -R.*/home"
+    severity: high
+    message: "Recursively changing permissions in /home affects all user files."
+    auto_snapshot: true
+
+  - pattern: "chmod.*--reference=/dev/null"
+    severity: high
+    message: "Copying permissions from /dev/null may have unexpected results."
+
+suggestions:
+  - trigger: "chmod 777"
+    suggest: |
+      777 is rarely needed. Consider:
+      - 755 for directories and executables
+      - 644 for regular files
+      - 600 for sensitive files (SSH keys, configs with passwords)
+
+  - trigger: "chmod +x"
+    suggest: "Making file executable. Verify the file content is safe to execute."
+
+  - trigger: "chmod -R"
+    suggest: |
+      Recursive permission changes can be dangerous. Consider:
+      - Using find to target specific file types
+      - find DIR -type f -exec chmod 644 {} \;  (files)
+      - find DIR -type d -exec chmod 755 {} \;  (directories)
+
+common_permissions:
+  - mode: "644"
+    meaning: "rw-r--r--"
+    use_case: "Regular files (owner can edit, others can read)"
+
+  - mode: "755"
+    meaning: "rwxr-xr-x"
+    use_case: "Executables and directories"
+
+  - mode: "600"
+    meaning: "rw-------"
+    use_case: "Private files (SSH keys, credentials)"
+
+  - mode: "700"
+    meaning: "rwx------"
+    use_case: "Private directories (.ssh, .gnupg)"
+
+  - mode: "750"
+    meaning: "rwxr-x---"
+    use_case: "Group-shared executables/directories"
+
+  - mode: "640"
+    meaning: "rw-r-----"
+    use_case: "Group-readable sensitive files"
+
+special_bits:
+  - bit: "setuid (4xxx)"
+    meaning: "Execute as file owner"
+    risk: "high"
+    example: "/usr/bin/passwd"
+
+  - bit: "setgid (2xxx)"
+    meaning: "Execute as file group / inherit directory group"
+    risk: "medium"
+    example: "/usr/bin/wall"
+
+  - bit: "sticky (1xxx)"
+    meaning: "Only owner can delete files (for directories)"
+    risk: "low"
+    example: "/tmp"

@@ -1,0 +1,12 @@
+[Unit]
+Description=DruidOS Hive - daily pruning of old ZFS safety snapshots
+Documentation=man:hive-zfs(1)
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=1h
+# A VM that was off at midnight prunes when it next boots.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

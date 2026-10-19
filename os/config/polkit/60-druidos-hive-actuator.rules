@@ -1,0 +1,45 @@
+// DruidOS: let hive-actuator control services and packages.
+//
+// hive-actuator runs as the unprivileged _hive-act user (NoNewPrivileges,
+// no sudo), so `systemctl restart nginx` from it needs polkit's permission.
+// Which services it may touch is decided by its own whitelist
+// (/etc/hive/whitelist.toml); this rule is the OS-level ceiling underneath
+// that: only start/stop/restart/reload, only .service units, and never the
+// Hive itself or the units that keep the machine reachable and manageable.
+polkit.addRule(function (action, subject) {
+    if (action.id !== "org.freedesktop.systemd1.manage-units" || subject.user !== "_hive-act") {
+        return polkit.Result.NOT_HANDLED;
+    }
+
+    var unit = action.lookup("unit") || "";
+    var verb = action.lookup("verb") || "";
+
+    var verbs = ["start", "stop", "restart", "reload-or-restart", "reload", "try-restart"];
+    var protectedUnit = /^(hive-|systemd-|dbus|polkit|ssh|getty|serial-getty|user@|init\.scope)/;
+
+    if (verbs.indexOf(verb) >= 0 && /\.service$/.test(unit) && !protectedUnit.test(unit)) {
+        return polkit.Result.YES;
+    }
+    return polkit.Result.NOT_HANDLED;
+});
+
+// Packages, through PackageKit: an approved "Install nginx" runs as _hive-act
+// too, and apt/dpkg would refuse it (they need root). Which packages is again
+// the actuator's whitelist; this is the ceiling: install, remove and update
+// packages from the configured, trusted sources - never untrusted packages,
+// and never changes to the sources themselves.
+polkit.addRule(function (action, subject) {
+    if (subject.user !== "_hive-act") {
+        return polkit.Result.NOT_HANDLED;
+    }
+    var allowed = [
+        "org.freedesktop.packagekit.package-install",
+        "org.freedesktop.packagekit.package-remove",
+        "org.freedesktop.packagekit.system-update",
+        "org.freedesktop.packagekit.system-sources-refresh"
+    ];
+    if (allowed.indexOf(action.id) >= 0) {
+        return polkit.Result.YES;
+    }
+    return polkit.Result.NOT_HANDLED;
+});

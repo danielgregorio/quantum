@@ -1,0 +1,142 @@
+// DruidOS Waybar Configuration
+// "The Swarm is watching. The Swarm is learning."
+{
+    "layer": "top",
+    "position": "top",
+    "height": 32,
+    "spacing": 4,
+    "margin-top": 4,
+    "margin-left": 8,
+    "margin-right": 8,
+
+    "modules-left": [
+        "hyprland/workspaces",
+        "hyprland/window"
+    ],
+
+    "modules-center": [
+        "clock"
+    ],
+
+    "modules-right": [
+        "custom/hive-status",
+        "pulseaudio",
+        "network",
+        "cpu",
+        "memory",
+        "battery",
+        "tray"
+    ],
+
+    // Module configurations
+
+    "hyprland/workspaces": {
+        "format": "{icon}",
+        "format-icons": {
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7",
+            "8": "8",
+            "9": "9",
+            "10": "0",
+            "urgent": "!",
+            "default": "+"
+        },
+        "on-scroll-up": "hyprctl dispatch workspace e+1",
+        "on-scroll-down": "hyprctl dispatch workspace e-1",
+        "persistent-workspaces": {
+            "*": 4
+        }
+    },
+
+    "hyprland/window": {
+        "max-length": 50,
+        "separate-outputs": true
+    },
+
+    "clock": {
+        "format": "{:%H:%M}",
+        "format-alt": "{:%A, %B %d, %Y}",
+        "tooltip-format": "<tt>{calendar}</tt>",
+        "calendar": {
+            "mode": "month",
+            "weeks-pos": "right",
+            "format": {
+                "months": "<span color='#7B5CFF'><b>{}</b></span>",
+                "days": "<span color='#FFFFFF'>{}</span>",
+                "weeks": "<span color='#666666'>W{}</span>",
+                "weekdays": "<span color='#A0A0A0'>{}</span>",
+                "today": "<span color='#4ADE80'><b><u>{}</u></b></span>"
+            }
+        }
+    },
+
+    "custom/hive-status": {
+        "exec": "echo '{\"text\": \"Hive\", \"class\": \"active\", \"tooltip\": \"The Swarm is watching\"}'",
+        "return-type": "json",
+        "interval": 10,
+        "format": "{}",
+        "on-click": "hive-shell toggle"
+    },
+
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-muted": " Muted",
+        "format-icons": {
+            "headphone": "",
+            "default": ["", "", ""]
+        },
+        "on-click": "pavucontrol",
+        "tooltip-format": "{desc}"
+    },
+
+    "network": {
+        "format-wifi": " {essid}",
+        "format-ethernet": " {ipaddr}",
+        "format-linked": " No IP",
+        "format-disconnected": " Offline",
+        "format-alt": " {bandwidthUpBits}  {bandwidthDownBits}",
+        "tooltip-format": "{ifname}: {ipaddr}/{cidr}\nGateway: {gwaddr}",
+        "on-click-right": "nm-connection-editor"
+    },
+
+    "cpu": {
+        "format": " {usage}%",
+        "interval": 2,
+        "tooltip-format": "CPU Usage: {usage}%\nLoad: {load}",
+        "states": {
+            "warning": 70,
+            "critical": 90
+        }
+    },
+
+    "memory": {
+        "format": " {percentage}%",
+        "interval": 5,
+        "tooltip-format": "RAM: {used:0.1f}GiB / {total:0.1f}GiB\nSwap: {swapUsed:0.1f}GiB / {swapTotal:0.1f}GiB",
+        "states": {
+            "warning": 70,
+            "critical": 90
+        }
+    },
+
+    "battery": {
+        "states": {
+            "warning": 30,
+            "critical": 15
+        },
+        "format": "{icon} {capacity}%",
+        "format-charging": " {capacity}%",
+        "format-plugged": " {capacity}%",
+        "format-icons": ["", "", "", "", ""]
+    },
+
+    "tray": {
+        "icon-size": 16,
+        "spacing": 8
+    }
+}

@@ -1,0 +1,89 @@
+# sudo Command Knowledge
+# Used by hive-nerve-process to detect dangerous operations
+
+command: sudo
+description: "Execute a command as another user (typically root)"
+risk_level: high
+
+patterns:
+  - pattern: "sudo su -"
+    severity: medium
+    message: "Switching to root shell. Be careful with privileged commands."
+
+  - pattern: "sudo -i"
+    severity: medium
+    message: "Starting root login shell."
+
+  - pattern: "sudo bash"
+    severity: medium
+    message: "Starting root bash shell."
+
+  - pattern: "sudo rm -rf /"
+    severity: critical
+    message: "This will destroy your ENTIRE system."
+    block: true
+
+  - pattern: "sudo chmod -R 777"
+    severity: high
+    message: "Setting world-writable permissions is a security risk."
+    auto_snapshot: true
+
+  - pattern: "sudo chmod 777 /"
+    severity: critical
+    message: "This will break system security completely."
+    block: true
+
+  - pattern: "sudo chown -R.*/"
+    severity: high
+    message: "Recursive ownership change on root can break the system."
+    auto_snapshot: true
+
+  - pattern: "sudo dd if=.*/dev/"
+    severity: high
+    message: "Writing directly to a device. Double-check the target."
+    auto_snapshot: true
+
+  - pattern: "sudo mkfs"
+    severity: critical
+    message: "Creating filesystem will DESTROY all data on the device."
+    auto_snapshot: true
+
+  - pattern: "sudo fdisk"
+    severity: critical
+    message: "Modifying partition table. Backup data first."
+    auto_snapshot: true
+
+  - pattern: "sudo visudo"
+    severity: high
+    message: "Editing sudoers file. Syntax errors can lock you out."
+
+  - pattern: "sudo.*NOPASSWD"
+    severity: high
+    message: "Adding NOPASSWD is a security risk. Use with caution."
+
+  - pattern: "sudo pip install"
+    severity: medium
+    message: "Installing Python packages system-wide. Consider using a virtual environment instead."
+
+  - pattern: "sudo npm install -g"
+    severity: medium
+    message: "Installing npm packages globally as root. Consider using nvm instead."
+
+suggestions:
+  - trigger: "sudo"
+    suggest: |
+      Before using sudo:
+      - Verify the command does what you expect
+      - Consider if elevated privileges are necessary
+      - For package installs, use proper package managers (apt, snap)
+
+safe_alternatives:
+  - name: "Use package managers"
+    description: "apt, snap, flatpak handle permissions properly"
+
+  - name: "Use virtual environments"
+    description: "For Python/Node, avoid global installs"
+
+  - name: "Use doas"
+    command: "doas COMMAND"
+    description: "Simpler sudo alternative (if configured)"

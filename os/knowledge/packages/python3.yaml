@@ -1,0 +1,103 @@
+# Python 3 Package Knowledge
+# Used by hive-apt to provide intelligent installation guidance
+
+package: python3
+aliases:
+  - python
+  - python3-pip
+  - python3-venv
+
+description: "High-level programming language"
+
+category: development
+
+install_notes:
+  - "Binary location: /usr/bin/python3"
+  - "pip location: /usr/bin/pip3"
+  - "Site packages: /usr/lib/python3/dist-packages/"
+  - "User packages: ~/.local/lib/python3.x/site-packages/"
+  - "Always use virtual environments for projects"
+
+post_install:
+  - command: "python3 --version"
+    description: "Check Python version"
+  - command: "pip3 --version"
+    description: "Check pip version"
+
+warnings:
+  - type: security
+    message: "Always use virtual environments to isolate project dependencies"
+    severity: medium
+  - type: compatibility
+    message: "Some packages may require python3-dev for compilation"
+    severity: low
+
+common_issues:
+  - pattern: "ModuleNotFoundError"
+    solution: |
+      Module not installed. Install with:
+      pip3 install MODULE_NAME
+
+      If using virtual env, ensure it's activated:
+      source venv/bin/activate
+    auto_suggest: true
+
+  - pattern: "pip.*externally-managed-environment"
+    solution: |
+      System Python is protected. Options:
+      1. Use virtual environment (recommended):
+         python3 -m venv venv
+         source venv/bin/activate
+         pip install PACKAGE
+
+      2. Use pipx for CLI tools:
+         pipx install PACKAGE
+
+      3. Force install (not recommended):
+         pip install --break-system-packages PACKAGE
+    auto_suggest: true
+    severity: medium
+
+  - pattern: "Permission denied.*site-packages"
+    solution: |
+      Don't use sudo with pip. Instead:
+      1. Use virtual environment
+      2. Install to user directory: pip install --user PACKAGE
+    auto_suggest: true
+
+  - pattern: "error: command 'gcc' failed"
+    solution: |
+      Missing build tools. Install:
+      sudo apt install python3-dev build-essential
+
+      For specific libraries you may need:
+      - libffi-dev
+      - libssl-dev
+      - libpq-dev (for psycopg2)
+    auto_suggest: true
+
+  - pattern: "version.*not supported"
+    solution: |
+      Python version mismatch. Check project requirements.
+      Consider using pyenv for version management:
+      curl https://pyenv.run | bash
+    auto_suggest: true
+
+tuning_tips:
+  - name: PYTHONDONTWRITEBYTECODE
+    description: "Prevent .pyc file creation"
+    recommended: "Set to 1 in development containers"
+
+  - name: PYTHONUNBUFFERED
+    description: "Unbuffered output"
+    recommended: "Set to 1 for Docker containers"
+
+alternatives:
+  - name: pypy3
+    reason: "JIT-compiled, faster for long-running programs"
+
+related_packages:
+  - python3-pip
+  - python3-venv
+  - python3-dev
+  - pipx

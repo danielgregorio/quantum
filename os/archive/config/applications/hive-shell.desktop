@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Hive Shell
+Comment=DruidOS Hive notification overlay
+GenericName=Notification Overlay
+Exec=hive-shell
+Icon=preferences-system-notifications
+Terminal=false
+Categories=System;
+Keywords=notifications;overlay;hive;
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-GNOME-AutoRestart=true

@@ -1,0 +1,10 @@
+druidos (0.1.0-1) unstable; urgency=medium
+
+  * Initial release
+  * Core Hive Stack components
+  * Desktop integration (shell, dock, terminal)
+  * Knowledge base for package and command awareness
+  * ZFS snapshot integration
+  * Anonymous mode support
+
+ -- DruidOS Team <team@druidos.org>  Fri, 24 Jan 2025 00:00:00 +0000

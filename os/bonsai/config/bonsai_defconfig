@@ -1,0 +1,374 @@
+# =============================================================================
+# BONSAI - DruidOS Minimal Paravirtualized Kernel Configuration
+# =============================================================================
+#
+# Target: <15MB kernel image, <1 second boot
+# Platform: QEMU/KVM, Proxmox, Firecracker (VirtIO only)
+#
+# Build with:
+#   make ARCH=x86_64 defconfig
+#   scripts/kconfig/merge_config.sh .config bonsai.config
+#   make -j$(nproc)
+#
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# General Setup - Minimal
+# -----------------------------------------------------------------------------
+CONFIG_LOCALVERSION="-bonsai"
+CONFIG_DEFAULT_HOSTNAME="druidos"
+
+# Initramfs/initrd support (REQUIRED for boot)
+CONFIG_BLK_DEV_INITRD=y
+CONFIG_INITRAMFS_SOURCE=""
+CONFIG_RD_GZIP=y
+CONFIG_RD_BZIP2=y
+CONFIG_RD_LZMA=y
+CONFIG_RD_XZ=y
+CONFIG_RD_LZO=y
+CONFIG_RD_LZ4=y
+CONFIG_RD_ZSTD=y
+
+# Disable unnecessary features
+# CONFIG_SWAP is not set
+# CONFIG_SYSVIPC is not set
+# CONFIG_POSIX_MQUEUE is not set
+# CONFIG_USELIB is not set
+# CONFIG_AUDIT is not set
+
+# Keep essential
+CONFIG_MULTIUSER=y
+CONFIG_SYSFS=y
+CONFIG_PROC_FS=y
+CONFIG_FUTEX=y
+CONFIG_EPOLL=y
+CONFIG_SIGNALFD=y
+CONFIG_TIMERFD=y
+CONFIG_EVENTFD=y
+
+# Minimal printk
+CONFIG_PRINTK=y
+# CONFIG_PRINTK_TIME is not set
+
+# No modules - everything builtin
+# CONFIG_MODULES is not set
+
+# -----------------------------------------------------------------------------
+# Processor - x86_64 Paravirtualized
+# -----------------------------------------------------------------------------
+CONFIG_64BIT=y
+CONFIG_X86_64=y
+CONFIG_SMP=y
+CONFIG_NR_CPUS=16
+CONFIG_PREEMPT_VOLUNTARY=y
+
+# Paravirtualization
+CONFIG_PARAVIRT=y
+CONFIG_PARAVIRT_SPINLOCKS=y
+CONFIG_KVM_GUEST=y
+CONFIG_PARAVIRT_TIME_ACCOUNTING=y
+
+# x86-64 userspace support (REQUIRED for binaries to work)
+CONFIG_IA32_EMULATION=n
+CONFIG_X86_VSYSCALL_EMULATION=y
+CONFIG_LEGACY_VSYSCALL_XONLY=y
+
+# Disable physical CPU features we don't need
+# CONFIG_X86_MCE is not set
+# CONFIG_MICROCODE is not set
+# CONFIG_X86_CPUID is not set
+# CONFIG_X86_MSR is not set
+
+# Disable frequency scaling (VM handles this)
+# CONFIG_CPU_FREQ is not set
+
+# Disable NUMA (keep it simple)
+# CONFIG_NUMA is not set
+
+# -----------------------------------------------------------------------------
+# Memory - Simple
+# -----------------------------------------------------------------------------
+CONFIG_MMU=y
+CONFIG_SPARSEMEM=y
+CONFIG_SPARSEMEM_VMEMMAP=y
+
+# Disable memory debugging
+# CONFIG_DEBUG_PAGEALLOC is not set
+# CONFIG_SLUB_DEBUG is not set
+# CONFIG_PAGE_POISONING is not set
+
+# No huge pages complexity
+# CONFIG_HUGETLBFS is not set
+# CONFIG_TRANSPARENT_HUGEPAGE is not set
+
+# No memory hotplug
+# CONFIG_MEMORY_HOTPLUG is not set
+
+# -----------------------------------------------------------------------------
+# Block Devices - VirtIO Only
+# -----------------------------------------------------------------------------
+CONFIG_BLOCK=y
+CONFIG_BLK_DEV=y
+
+# VirtIO Block
+CONFIG_VIRTIO_BLK=y
+
+# Disable all other block devices
+# CONFIG_BLK_DEV_FD is not set
+# CONFIG_BLK_DEV_LOOP is not set
+# CONFIG_BLK_DEV_RAM is not set
+# CONFIG_BLK_DEV_SD is not set
+# CONFIG_BLK_DEV_SR is not set
+# CONFIG_BLK_DEV_NVME is not set
+# CONFIG_ATA is not set
+# CONFIG_SCSI is not set
+
+# -----------------------------------------------------------------------------
+# Networking - VirtIO Only
+# -----------------------------------------------------------------------------
+CONFIG_NET=y
+CONFIG_INET=y
+CONFIG_IPV6=y
+CONFIG_PACKET=y
+CONFIG_UNIX=y
+
+# VirtIO Network
+CONFIG_VIRTIO_NET=y
+
+# TCP/IP essentials
+CONFIG_TCP_CONG_CUBIC=y
+CONFIG_DEFAULT_TCP_CONG="cubic"
+
+# Disable all physical network drivers
+# CONFIG_ETHERNET is not set
+# CONFIG_WLAN is not set
+# CONFIG_NET_VENDOR_INTEL is not set
+# CONFIG_NET_VENDOR_REALTEK is not set
+
+# Disable unused network features
+# CONFIG_NETFILTER is not set
+# CONFIG_BRIDGE is not set
+# CONFIG_VLAN_8021Q is not set
+# CONFIG_NET_SCHED is not set
+
+# -----------------------------------------------------------------------------
+# Graphics - VirtIO GPU
+# -----------------------------------------------------------------------------
+CONFIG_DRM=y
+CONFIG_DRM_VIRTIO_GPU=y
+
+# Framebuffer (fallback)
+CONFIG_FB=y
+CONFIG_FB_SIMPLE=y
+
+# Disable all physical GPU drivers
+# CONFIG_DRM_I915 is not set
+# CONFIG_DRM_AMDGPU is not set
+# CONFIG_DRM_NOUVEAU is not set
+# CONFIG_DRM_RADEON is not set
+
+# Console support (both VGA and VirtIO)
+CONFIG_VGA_CONSOLE=y
+CONFIG_DUMMY_CONSOLE=y
+
+# -----------------------------------------------------------------------------
+# Input - VirtIO Input + Legacy Keyboard
+# -----------------------------------------------------------------------------
+CONFIG_INPUT=y
+CONFIG_INPUT_EVDEV=y
+
+# VirtIO Input
+CONFIG_VIRTIO_INPUT=y
+
+# Legacy keyboard support (for non-VirtIO VMs)
+CONFIG_INPUT_KEYBOARD=y
+CONFIG_KEYBOARD_ATKBD=y
+
+# Disable other physical input devices
+# CONFIG_INPUT_MOUSE is not set
+# CONFIG_INPUT_JOYSTICK is not set
+# CONFIG_INPUT_TOUCHSCREEN is not set
+CONFIG_SERIO=y
+CONFIG_SERIO_I8042=y
+# CONFIG_SERIO_SERPORT is not set
+
+# -----------------------------------------------------------------------------
+# Serial/Console - VirtIO Console + Legacy TTY
+# -----------------------------------------------------------------------------
+CONFIG_TTY=y
+CONFIG_VT=y
+CONFIG_CONSOLE_TRANSLATIONS=y
+CONFIG_VT_CONSOLE=y
+CONFIG_VT_HW_CONSOLE_BINDING=y
+CONFIG_HW_CONSOLE=y
+CONFIG_UNIX98_PTYS=y
+
+# VirtIO Console (hvc0)
+CONFIG_VIRTIO_CONSOLE=y
+
+# Serial console for QEMU -nographic mode (ttyS0)
+# Required for boot messages when not using virtio-serial
+CONFIG_SERIAL_8250=y
+CONFIG_SERIAL_8250_CONSOLE=y
+CONFIG_SERIAL_8250_NR_UARTS=4
+CONFIG_SERIAL_8250_RUNTIME_UARTS=2
+# CONFIG_SERIAL_8250_EXTENDED is not set
+# CONFIG_SERIAL_NONSTANDARD is not set
+
+# -----------------------------------------------------------------------------
+# Character Devices - Minimal
+# -----------------------------------------------------------------------------
+CONFIG_DEVTMPFS=y
+CONFIG_DEVTMPFS_MOUNT=y
+
+# Random number generator
+CONFIG_HW_RANDOM=y
+CONFIG_HW_RANDOM_VIRTIO=y
+
+# Disable unnecessary char devices
+# CONFIG_PRINTER is not set
+# CONFIG_WATCHDOG is not set
+
+# -----------------------------------------------------------------------------
+# File Systems - Minimal
+# -----------------------------------------------------------------------------
+# Essential pseudo filesystems
+CONFIG_PROC_FS=y
+CONFIG_SYSFS=y
+CONFIG_TMPFS=y
+CONFIG_DEVTMPFS=y
+
+# Root filesystem options (choose one or more)
+CONFIG_EXT4_FS=y
+CONFIG_EXT4_USE_FOR_EXT2=y
+# CONFIG_EXT4_FS_POSIX_ACL is not set
+
+# Alternative: squashfs for read-only root
+CONFIG_SQUASHFS=y
+CONFIG_SQUASHFS_ZSTD=y
+
+# Disable unused filesystems
+# CONFIG_XFS_FS is not set
+# CONFIG_BTRFS_FS is not set
+# CONFIG_F2FS_FS is not set
+# CONFIG_NTFS_FS is not set
+# CONFIG_FAT_FS is not set
+# CONFIG_ISO9660_FS is not set
+# CONFIG_UDF_FS is not set
+# CONFIG_NFS_FS is not set
+# CONFIG_CIFS is not set
+# CONFIG_FUSE_FS is not set
+
+# -----------------------------------------------------------------------------
+# VirtIO Core
+# -----------------------------------------------------------------------------
+CONFIG_VIRTIO=y
+CONFIG_VIRTIO_PCI=y
+CONFIG_VIRTIO_MMIO=y
+CONFIG_VIRTIO_BALLOON=y
+# CONFIG_VIRTIO_MEM is not set (requires ACPI)
+
+# PCI (required for virtio-pci)
+CONFIG_PCI=y
+CONFIG_PCI_HOST_GENERIC=y
+# CONFIG_PCIEPORTBUS is not set
+
+# -----------------------------------------------------------------------------
+# Power Management - Minimal for VM
+# -----------------------------------------------------------------------------
+# CONFIG_ACPI is not set
+# CONFIG_APM is not set
+CONFIG_PM=y
+CONFIG_PM_SLEEP=y
+CONFIG_SUSPEND=y
+
+# -----------------------------------------------------------------------------
+# Security - Minimal
+# -----------------------------------------------------------------------------
+# Disable security modules for now (smaller image)
+# CONFIG_SECURITY is not set
+# CONFIG_SECURITYFS is not set
+# CONFIG_SECURITY_SELINUX is not set
+# CONFIG_SECURITY_APPARMOR is not set
+
+# Dmesg restriction (doesn't require SECURITY module)
+# CONFIG_SECURITY_DMESG_RESTRICT is not set
+
+# -----------------------------------------------------------------------------
+# Debugging - Disabled for Production
+# -----------------------------------------------------------------------------
+# CONFIG_DEBUG_KERNEL is not set
+# CONFIG_DEBUG_INFO is not set
+# CONFIG_MAGIC_SYSRQ is not set
+# CONFIG_DEBUG_FS is not set
+# CONFIG_FTRACE is not set
+# CONFIG_KPROBES is not set
+
+# Panic behavior
+CONFIG_PANIC_ON_OOPS=y
+CONFIG_PANIC_TIMEOUT=5
+
+# -----------------------------------------------------------------------------
+# Compression - For smaller image
+# -----------------------------------------------------------------------------
+CONFIG_KERNEL_ZSTD=y
+
+# -----------------------------------------------------------------------------
+# Init - Support for simple init
+# -----------------------------------------------------------------------------
+CONFIG_BINFMT_ELF=y
+CONFIG_BINFMT_SCRIPT=y
+# CONFIG_BINFMT_MISC is not set
+
+# Default init
+CONFIG_DEFAULT_INIT="/sbin/init"
+
+# -----------------------------------------------------------------------------
+# Disable Everything Else
+# -----------------------------------------------------------------------------
+# USB
+# CONFIG_USB_SUPPORT is not set
+# CONFIG_USB is not set
+
+# Sound
+# CONFIG_SOUND is not set
+
+# Bluetooth
+# CONFIG_BT is not set
+
+# Wireless
+# CONFIG_WIRELESS is not set
+# CONFIG_CFG80211 is not set
+
+# Crypto (keep minimal)
+CONFIG_CRYPTO=y
+CONFIG_CRYPTO_SHA256=y
+CONFIG_CRYPTO_AES=y
+# CONFIG_CRYPTO_MANAGER is not set
+
+# Firmware
+# CONFIG_FIRMWARE_IN_KERNEL is not set
+# CONFIG_EXTRA_FIRMWARE is not set
+
+# I2C, SPI, GPIO (hardware)
+# CONFIG_I2C is not set
+# CONFIG_SPI is not set
+# CONFIG_GPIO_SYSFS is not set
+
+# Hardware monitoring
+# CONFIG_HWMON is not set
+
+# Power supply
+# CONFIG_POWER_SUPPLY is not set
+
+# Thermal
+# CONFIG_THERMAL is not set
+
+# Media
+# CONFIG_MEDIA_SUPPORT is not set
+
+# Accessibility
+# CONFIG_ACCESSIBILITY is not set
+
+# Staging drivers
+# CONFIG_STAGING is not set

@@ -1,0 +1,46 @@
+[package]
+name = "hive-nerve-fs"
+description = "Filesystem observer for DruidOS Hive Stack"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "hive-nerve-fs"
+path = "src/main.rs"
+
+[dependencies]
+hive-common = { path = "../hive-common" }
+
+# Async runtime
+tokio = { workspace = true, features = ["full"] }
+
+# Serialization
+serde = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# File watching
+notify = "6"
+
+# System
+nix = { workspace = true }
+
+# Time
+chrono = { workspace = true }
+
+# Username detection
+whoami = "1.4"
+
+# UUID generation
+uuid = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

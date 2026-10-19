@@ -1,0 +1,60 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export CARGO_HOME = $(CURDIR)/debian/cargo
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	cargo build --workspace --release
+
+override_dh_auto_install:
+	# Core hive binaries
+	install -D -m 755 target/release/hive-cortex $(CURDIR)/debian/druidos-hive/usr/bin/hive-cortex
+	install -D -m 755 target/release/hive-synapse $(CURDIR)/debian/druidos-hive/usr/bin/hive-synapse
+	install -D -m 755 target/release/hive-actuator $(CURDIR)/debian/druidos-hive/usr/bin/hive-actuator
+	install -D -m 755 target/release/hive-nerve-process $(CURDIR)/debian/druidos-hive/usr/bin/hive-nerve-process
+	install -D -m 755 target/release/hive-nerve-journal $(CURDIR)/debian/druidos-hive/usr/bin/hive-nerve-journal
+	install -D -m 755 target/release/hive-nerve-network $(CURDIR)/debian/druidos-hive/usr/bin/hive-nerve-network
+	install -D -m 755 target/release/hive-nerve-fs $(CURDIR)/debian/druidos-hive/usr/bin/hive-nerve-fs
+	install -D -m 755 target/release/hive-apt $(CURDIR)/debian/druidos-hive/usr/bin/hive-apt
+	install -D -m 755 target/release/hive-zfs $(CURDIR)/debian/druidos-hive/usr/bin/hive-zfs
+	install -D -m 755 target/release/grove $(CURDIR)/debian/druidos-hive/usr/bin/grove
+	install -D -m 755 target/release/hive-dashboard $(CURDIR)/debian/druidos-hive/usr/bin/hive-dashboard
+
+	# Desktop binaries/entries (hive-shell, hive-dock, hive-term) removed:
+	# GUI track archived, see archive/ and CLAUDE.md.
+
+	# Systemd services
+	install -D -m 644 config/systemd/hive-cortex.service $(CURDIR)/debian/druidos-hive/lib/systemd/system/hive-cortex.service
+	install -D -m 644 config/systemd/hive-synapse.service $(CURDIR)/debian/druidos-hive/lib/systemd/system/hive-synapse.service
+	install -D -m 644 config/systemd/hive-actuator.service $(CURDIR)/debian/druidos-hive/lib/systemd/system/hive-actuator.service
+	install -D -m 644 config/systemd/hive-nerve-process.service $(CURDIR)/debian/druidos-hive/lib/systemd/system/hive-nerve-process.service
+	install -D -m 644 config/systemd/hive-nerve-journal.service $(CURDIR)/debian/druidos-hive/lib/systemd/system/hive-nerve-journal.service
+	install -D -m 644 config/systemd/hive-nerve-network.service $(CURDIR)/debian/druidos-hive/lib/systemd/system/hive-nerve-network.service
+	install -D -m 644 config/systemd/hive-nerve-fs.service $(CURDIR)/debian/druidos-hive/lib/systemd/system/hive-nerve-fs.service
+
+	# Configuration files
+	install -D -m 644 config/hive/default.toml $(CURDIR)/debian/druidos-config/etc/hive/config.toml
+	install -D -m 644 config/hive/whitelist.toml $(CURDIR)/debian/druidos-config/etc/hive/whitelist.toml
+
+	# Knowledge base
+	mkdir -p $(CURDIR)/debian/druidos-knowledge/var/lib/hive/knowledge
+	cp -r knowledge/* $(CURDIR)/debian/druidos-knowledge/var/lib/hive/knowledge/
+
+	# Documentation
+	install -D -m 644 docs/architecture.md $(CURDIR)/debian/druidos-hive-docs/usr/share/doc/druidos/architecture.md
+	install -D -m 644 docs/security-model.md $(CURDIR)/debian/druidos-hive-docs/usr/share/doc/druidos/security-model.md
+	install -D -m 644 docs/user-guide.md $(CURDIR)/debian/druidos-hive-docs/usr/share/doc/druidos/user-guide.md
+	install -D -m 644 README.md $(CURDIR)/debian/druidos-hive-docs/usr/share/doc/druidos/README.md
+
+override_dh_auto_test:
+	cargo test --workspace
+
+override_dh_auto_clean:
+	cargo clean || true
+	rm -rf $(CARGO_HOME)
+
+override_dh_installsystemd:
+	dh_installsystemd --name=hive-cortex

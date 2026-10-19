@@ -1,0 +1,6 @@
+// the root filesystem is 96% full: a warning, and the Hive offers df -h
+{"op":"start"}
+{"op":"disk_low","mount":"/","percent":96}
+{"op":"until","to":"shell","type":"Notification","contains":"/ is 96.0% full"}
+{"op":"until","to":"dashboard","type":"Notification","contains":"Show disk usage","timeout":10}
+{"op":"end"}
