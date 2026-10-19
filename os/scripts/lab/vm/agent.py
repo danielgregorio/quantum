@@ -48,15 +48,32 @@ def op_clock(req):
     return {'time': time.time()}
 
 
+def logged_in_as(user):
+    """For a program run as `user`: the session's login uid, as a login
+    (pam_loginuid) would set it. The kernel audit rule the process nerve
+    reads (auid!=-1) only records programs of someone who logged in, and a
+    daemon's child (this agent's) has none."""
+    if not user:
+        return None
+    import pwd
+    uid = pwd.getpwnam(user).pw_uid
+
+    def setup():
+        with open('/proc/self/loginuid', 'w') as f:
+            f.write(str(uid))
+    return setup
+
+
 def op_exec(req):
-    """Runs argv (or `sh` through /bin/sh -c), as `user` if given."""
+    """Runs argv (or `sh` through /bin/sh -c), as `user` (logged in) if given."""
     argv = req.get('argv') or ['/bin/sh', '-c', req['sh']]
     if req.get('user'):
         argv = ['runuser', '-u', req['user'], '--'] + argv
     env = dict(os.environ, **req.get('env', {}))
     try:
         done = subprocess.run(argv, input=req.get('input', '').encode(), capture_output=True,
-                              timeout=req.get('timeout', 60), env=env, cwd=req.get('cwd', '/'))
+                              timeout=req.get('timeout', 60), env=env, cwd=req.get('cwd', '/'),
+                              preexec_fn=logged_in_as(req.get('user')))
     except subprocess.TimeoutExpired as e:
         return {'code': None, 'timeout': True,
                 'stdout': (e.stdout or b'').decode(errors='replace'),
@@ -143,7 +160,7 @@ def op_proc_start(req):
         raise RuntimeError(f'{name} is already running')
     PROCS[name] = subprocess.Popen(req['argv'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                    stderr=subprocess.DEVNULL, env=dict(os.environ, **req.get('env', {})),
-                                   cwd=req.get('cwd', '/'))
+                                   cwd=req.get('cwd', '/'), preexec_fn=logged_in_as(req.get('login')))
     return {'pid': PROCS[name].pid}
 
 

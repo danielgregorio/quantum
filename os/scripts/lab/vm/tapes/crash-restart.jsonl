@@ -18,6 +18,6 @@
 {"op": "keys_until", "app": "dashboard", "keys": ["Down"], "contains": "nginx.service stopped unexpectedly"}
 {"op": "keys", "app": "dashboard", "keys": ["Enter"]}
 {"op": "until_journal", "unit": "hive-actuator.service", "contains": "nginx", "timeout": 20}
-{"op": "until_sh", "sh": "systemctl is-active nginx", "contains": "active", "timeout": 20}
+{"op": "until_sh", "sh": "systemctl is-active nginx", "timeout": 20}
 {"op": "until_screen", "app": "dashboard", "contains": "Restart nginx (done)", "timeout": 20}
 {"op": "end"}

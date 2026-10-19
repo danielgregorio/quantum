@@ -489,6 +489,7 @@ class Lab:
             how = 'installed'
         self.apps = {}
         self.cursor = self.machine.agent({'op': 'journal', 'lines': 0})['cursor']
+        self.machine.agent({'op': 'exec', 'sh': 'date "+%Y-%m-%d %H:%M:%S" > /run/lab-tape-start'})
         return {'hive': how, 'seconds': round(time.monotonic() - started, 2)}
 
     def install(self) -> None:
@@ -638,18 +639,20 @@ class Lab:
 
     # -- the real dashboard and grove, in a terminal in the guest
 
+    # app -> (who logged in, the program)
     APPS = {
-        'dashboard': ['/usr/bin/hive-dashboard'],
-        'grove': ['runuser', '-l', 'druid', '-c', '/usr/bin/grove'],
+        'dashboard': (None, ['/usr/bin/hive-dashboard']),
+        'grove': ('druid', ['runuser', '-l', 'druid', '-c', '/usr/bin/grove']),
     }
 
     def op_tui(self, req):
         app = req['app']
         if app not in self.APPS:
             raise LabError(f'tui app: one of {", ".join(self.APPS)}')
+        login, program = self.APPS[app]
         argv = ['/usr/local/lib/quantum-lab/hive-lab', 'term', '--rows', str(req.get('rows', 30)),
-                '--cols', str(req.get('cols', 100)), '--', *self.APPS[app]]
-        answer = self.m.agent({'op': 'proc_start', 'name': app, 'argv': argv})
+                '--cols', str(req.get('cols', 100)), '--', *program]
+        answer = self.m.agent({'op': 'proc_start', 'name': app, 'argv': argv, 'login': login})
         if answer.get('ok'):
             self.apps[app] = True
         return answer
@@ -725,6 +728,21 @@ def answer_line(lab: Lab, line: str) -> dict:
     return answer
 
 
+def evidence(lab: Lab) -> str:
+    """What the guest's journal says since the tape started, for a failure
+    seen where nobody can look into the guest afterwards (CI)."""
+    if not lab.machine or not lab.machine.alive():
+        return '      (no VM to ask)'
+    try:
+        answer = lab.machine.agent({'op': 'exec', 'sh': (
+            "journalctl --no-pager -o short-precise --since \"$(cat /run/lab-tape-start 2>/dev/null || echo '-2min')\" "
+            "| grep -v -e quantum-lab-agent -e 'kernel:' | tail -n 80")}, 30)
+        return '      the guest\'s journal:\n' + '\n'.join(
+            '        ' + line for line in answer.get('stdout', '').splitlines())
+    except LabError as e:
+        return f'      (the guest did not answer: {e})'
+
+
 def play(lab: Lab, tapes: list) -> int:
     """Plays tapes one after the other on one machine: each starts from a
     fresh Hive (its `start` restores "hive"), and the machine stops after
@@ -741,6 +759,7 @@ def play(lab: Lab, tapes: list) -> int:
                 answer = answer_line(lab, line)
                 if not answer.get('ok'):
                     print(f'FAIL  {Path(tape).name}:{n}  {line.strip()}\n      {json.dumps(answer)[:2000]}')
+                    print(evidence(lab))
                     failed += 1
                     break
             else:
