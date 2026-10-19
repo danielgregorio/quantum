@@ -187,7 +187,7 @@ class Machine:
     """One QEMU process: the disk, the agent's port, QMP, the shares."""
 
     def __init__(self, run: Path, disk: Path, shares: Optional[dict] = None,
-                 seed: Optional[Path] = None, memory: int = 2048, cpus: int = 2):
+                 seed: Optional[Path] = None, memory: int = 2048, cpus: int = 4):
         self.run, self.disk, self.shares, self.seed = run, disk, shares or {}, seed
         self.memory, self.cpus = memory, cpus
         self.qmp: Optional[Qmp] = None
@@ -345,7 +345,7 @@ QUIET = ['apt-daily.timer', 'apt-daily-upgrade.timer', 'motd-news.timer', 'dpkg-
 REPO_PACKAGES = ['htop']
 
 # Bumped when make_base changes what the base holds.
-BASE_VERSION = 4
+BASE_VERSION = 6
 
 
 def base_fingerprint() -> str:
@@ -764,6 +764,27 @@ class Lab:
 
     QCODES = {'enter': 'ret', 'return': 'ret', 'escape': 'esc', 'esc': 'esc', 'up': 'up', 'down': 'down'}
 
+    def op_cpus(self, req):
+        """Leaves `count` of the machine's vCPUs online in the guest (1 to 4;
+        the others go offline, which is what a vCPU unplugged comes to for
+        a program): what hive-screen's presentation level follows. QEMU's
+        own CPU hotplug is not used: this guest kernel boots with no
+        hotpluggable slots (`smpboot: Allowing 2 CPUs, 0 hotplug CPUs`
+        under `-smp 2,maxcpus=4`)."""
+        count = int(req['count'])
+        if not 1 <= count <= self.m.cpus:
+            raise LabError(f'the machine has {self.m.cpus} vCPUs: 1 to {self.m.cpus} of them online, not {count}')
+        self.m.sh(' '.join(f'echo {1 if n < count else 0} > /sys/devices/system/cpu/cpu{n}/online;'
+                           for n in range(1, self.m.cpus)))
+        deadline = time.monotonic() + req.get('timeout', 20)
+        while True:
+            seen = self.m.sh('nproc', check=False).get('stdout', '').strip()
+            if seen == str(count):
+                return {'cpus': count}
+            if time.monotonic() > deadline:
+                return {'ok': False, 'error': f'the guest sees {seen or "?"} CPUs online, not {count}'}
+            time.sleep(0.3)
+
     def op_press(self, req):
         """Presses `keys` on the machine's keyboard (up, down, enter, escape):
         what hive-screen reads from /dev/input."""
@@ -785,6 +806,12 @@ class Lab:
         if 'has' in req:
             wanted = int(req['has'].lstrip('#'), 16)
             answer['has'] = counts.get(wanted, 0) >= req.get('min', 1)
+        if 'lacks' in req:
+            # a colour that must not be on it: the snow before the fine level
+            unwanted = int(req['lacks'].lstrip('#'), 16)
+            answer['lacks'] = counts.get(unwanted, 0) == 0
+            if not answer['lacks']:
+                answer.update(ok=False, error=f'the display shows {req["lacks"]} ({counts[unwanted]} pixels)')
         return answer
 
     def op_until_shot(self, req):
@@ -910,7 +937,12 @@ def play(lab: Lab, tapes: list) -> int:
     try:
         for tape in tapes:
             started = time.monotonic()
-            for n, line in enumerate(Path(tape).read_text().splitlines(), 1):
+            text = Path(tape).read_text()
+            if re.search(r'^//\s*needs:\s*kvm\b', text, re.M) and not kvm_usable():
+                # a frame budget measured under emulation is the emulator's, not the machine's
+                print(f'skip  {Path(tape).name}  (needs KVM, and /dev/kvm is not usable here)')
+                continue
+            for n, line in enumerate(text.splitlines(), 1):
                 if not line.strip() or line.lstrip().startswith('//'):
                     continue
                 if json.loads(line).get('op') == 'end':

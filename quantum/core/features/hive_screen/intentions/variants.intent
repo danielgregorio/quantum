@@ -47,3 +47,11 @@ intention:
         <qs:scene width="320" height="180">
           <qs:emitter particles="snow" x="0" y="0" width="320" />
         </qs:scene>
+
+    - name: "An effect the machine affords"
+      description: "qs:emitter level=\"2\" plays only at the daemon's fine level (two pixels to the scene's one), which it climbs to with four cores and frames that prove cheap; level=\"1\", the default, plays whenever the effects are on (two cores). A level changes how the scene shows, never what happens in it"
+      example: |
+        <qs:particles name="snow" preset="snow" amount="24" color="#c8d0f0" />
+        <qs:scene width="320" height="180">
+          <qs:emitter particles="snow" x="0" y="0" width="320" level="2" />
+        </qs:scene>

@@ -154,7 +154,9 @@ TAGS: Dict[str, Tag] = {
         {'particles': Attr('ident', required=True),
          'x': Attr('int', required=True),
          'y': Attr('int', required=True),
-         'width': Attr('int', 0, doc='for rain and snow, how wide a band they fall across')},
+         'width': Attr('int', 0, doc='for rain and snow, how wide a band they fall across'),
+         'level': Attr('int', 1, doc='the presentation level it plays from: 1 whenever the effects are on, '
+                                     '2 only at the fine level, which the daemon affords with the cores')},
         parents=('scene',)),
     'offers': Tag(
         'Where the Hive\'s offers are listed, one a row, for an administrator to approve: up and down move, '

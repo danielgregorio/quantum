@@ -183,6 +183,37 @@ fn a_crash_an_offer_an_approval_and_its_result() {
 }
 
 #[test]
+fn the_fine_level_draws_two_pixels_to_the_scene_s_one_the_same_in_any_number_of_bands() {
+    let mut s = Screen::start();
+    let obs = s.request(json!({"op": "act", "ticks": 30}));
+    assert_eq!(obs["level"], 1, "the scene as declared, with its effects");
+    assert_eq!(obs["level_name"], "effects");
+    assert_eq!(obs["effects"], 0, "the snow is kept for the fine level");
+    let obs = s.request(json!({"op": "level", "level": 2}));
+    assert_eq!(obs["level_name"], "fine");
+    assert_eq!(obs["effects"], 1, "the snow emitter plays");
+    let obs = s.request(json!({"op": "act", "ticks": 90}));
+    assert_eq!(obs["tick"], 120);
+    // the same frame, drawn whole and in bands: the reference is 640x360
+    for bands in [1, 3, 8] {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/screens/fine.png");
+        let v = s.request(json!({"op": "frame", "expect": path, "bands": bands}));
+        assert_eq!(v["ok"], true, "the fine frame in {} bands: {}", bands, v);
+    }
+    // plain: no particles at all, and a burst asked for does not start
+    let obs = s.request(json!({"op": "level", "level": 0}));
+    assert_eq!(obs["effects"], 0);
+    let obs = s.request(json!({"op": "inject", "message": crash()}));
+    assert_eq!(
+        obs["sprites"]["nginx"]["animation"], "smoke",
+        "what happens does not change"
+    );
+    assert_eq!(obs["effects"], 0, "how it shows does: no dust");
+    let obs = s.request(json!({"op": "level", "level": 1}));
+    assert_eq!(obs["effects"], 0, "a burst missed is not made up");
+}
+
+#[test]
 fn until_waits_for_a_condition_and_a_plain_notice_is_said() {
     let mut s = Screen::start();
     let notice = json!({"Notification": {

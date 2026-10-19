@@ -203,6 +203,7 @@ Goes inside `<qs:scene>`.
 | `x=` | int | required |  |
 | `y=` | int | required |  |
 | `width=` | int | `0` | for rain and snow, how wide a band they fall across |
+| `level=` | int | `1` | the presentation level it plays from: 1 whenever the effects are on, 2 only at the fine level, which the daemon affords with the cores |
 
 ### `qs:offers`
 
@@ -487,6 +488,24 @@ runs the real `hive-screen` with no display and reads what it shows as
 data (`{"op":"screen","play":{"op":"until","offer":"Restart nginx"}}`); a
 test of the daemon compares its frames pixel for pixel with references.
 
+## The levels
+
+How much the daemon shows is a presentation level, chosen as it runs by the
+frame time it measures, never above what the machine's cores allow (read as
+it runs: a vCPU plugged in counts within half a second):
+
+| Level | Needs | Shows |
+|---|---|---|
+| 0 `plain` | 1 core | the scene as declared, no particles, at most 15 pictures a second |
+| 1 `effects` | 2 cores | the particles too (`qs:emit`, and every `qs:emitter` of `level="1"`), at most 30 a second |
+| 2 `fine` | 4 cores | two pixels to the scene's one: a tween or a particle lands on its own pixel, the font's pixels are blocks; and the emitters of `level="2"` |
+
+A level changes how the scene shows, never what happens in it: the same
+ticks run at every level, and a rule's actions run the same. The frame is
+drawn in bands, one thread a core, and is the same picture whatever their
+number. A scene at rest costs nothing at any level. The lab, the tests and
+`--play` play at level 1 unless asked (`{"op":"level","level":2}`).
+
 ## The screen Quantum OS ships
 
 `os/config/screen/screen.q`, whole: a honeycomb with a cell per service the whitelist names, a bee, the offers and the notices.
@@ -508,8 +527,11 @@ test of the daemon compares its frames pixel for pixel with references.
 
   <qs:particles name="stars" preset="stars" />
   <qs:particles name="dust" preset="dust" color="#8a7a5a" />
+  <qs:particles name="snow" preset="snow" amount="24" color="#c8d0f0" />
 
   <qs:scene width="320" height="180" background="#1a1a2e">
+    <!-- the fine level, which the daemon affords with the machine's cores: snow over the scene -->
+    <qs:emitter particles="snow" x="0" y="0" width="320" level="2" />
     <qs:text value="Quantum OS" x="6" y="4" color="#ffd34d" />
     <qs:text value="the Hive" x="72" y="4" color="#8a8aa0" />
     <qs:sprite name="bee" sheet="bee" x="296" y="2" animation="fly" />

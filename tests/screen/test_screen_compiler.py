@@ -159,6 +159,8 @@ REFUSED = [
      lambda tmp: wrapped('', scene='<qs:offers x="0" y="0" width="100" /><qs:offers x="0" y="0" width="100" />')),
     ('an emitter of no particles', 'no <qs:particles> of that name',
      lambda tmp: wrapped('', scene='<qs:emitter particles="rain" x="0" y="0" />')),
+    ('an emitter of a level there is not', '<qs:emitter> level= is 1 (with the effects) or 2',
+     lambda tmp: wrapped('', scene='<qs:emitter particles="puff" x="0" y="0" level="3" />')),
     # the rules
     ('a field the event lacks', 'not a field of service-crash (it has: unit, service, exit_code, title, body, severity)',
      lambda tmp: wrapped('<qs:on event="service-crash"><qs:say text="{svc}" /></qs:on>')),

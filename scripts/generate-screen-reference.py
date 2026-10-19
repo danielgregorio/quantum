@@ -168,6 +168,24 @@ runs the real `hive-screen` with no display and reads what it shows as
 data (`{"op":"screen","play":{"op":"until","offer":"Restart nginx"}}`); a
 test of the daemon compares its frames pixel for pixel with references.
 
+## The levels
+
+How much the daemon shows is a presentation level, chosen as it runs by the
+frame time it measures, never above what the machine's cores allow (read as
+it runs: a vCPU plugged in counts within half a second):
+
+| Level | Needs | Shows |
+|---|---|---|
+| 0 `plain` | 1 core | the scene as declared, no particles, at most 15 pictures a second |
+| 1 `effects` | 2 cores | the particles too (`qs:emit`, and every `qs:emitter` of `level="1"`), at most 30 a second |
+| 2 `fine` | 4 cores | two pixels to the scene's one: a tween or a particle lands on its own pixel, the font's pixels are blocks; and the emitters of `level="2"` |
+
+A level changes how the scene shows, never what happens in it: the same
+ticks run at every level, and a rule's actions run the same. The frame is
+drawn in bands, one thread a core, and is the same picture whatever their
+number. A scene at rest costs nothing at any level. The lab, the tests and
+`--play` play at level 1 unless asked (`{"op":"level","level":2}`).
+
 '''
 
 

@@ -1,5 +1,85 @@
 # DruidOS Development Log
 
+## 2026-10-19 - A tela cresce com os núcleos: níveis de apresentação
+
+A terceira fatia da tela, o requisito experimental: a interface escala com
+os núcleos que a VM dá. Não é "fazer uma GPU", é flexibilidade. O quanto o
+`hive-screen` mostra é um **nível de apresentação** (`level.rs`), escolhido
+enquanto roda pelo tempo de quadro que mede, nunca acima do teto que os
+núcleos permitem:
+
+| nível | precisa | mostra |
+|---|---|---|
+| 0 `plain` | 1 núcleo | a cena como declarada, sem partículas, no máximo 15 quadros por segundo |
+| 1 `effects` | 2 núcleos | as partículas (`qs:emit` e os `qs:emitter` de `level="1"`), no máximo 30 |
+| 2 `fine` | 4 núcleos | dois pixels para cada um da cena: um tween ou uma partícula cai no seu próprio pixel, a fonte vira blocos; e os `qs:emitter` de `level="2"`, a neve que a cena do OS guarda para esse nível |
+
+Um nível muda como a cena aparece, nunca o que acontece nela: os mesmos
+ticks rodam em qualquer nível, as regras fazem o mesmo. Quem escolhe é o
+`Chooser`: a média móvel do custo de um quadro (desenhar mais apresentar)
+abaixo de 15% do período do nível, por pelo menos 20 quadros e 2 segundos,
+sobe um nível, se os núcleos deixam; acima de 60% desce, e o nível que se
+provou caro só é tentado de novo meio minuto depois. Os núcleos vêm de
+`available_parallelism` duas vezes por segundo (a afinidade do processo e a
+cota do cgroup): uma vCPU que entra por hotplug conta em meio segundo, uma
+que sai derruba o nível na hora. Uma cena parada continua não custando
+nada em nenhum nível: só se mede quadro desenhado.
+
+O quadro é desenhado por faixas de linhas, uma thread por núcleo (até oito,
+`std::thread::scope`): cada faixa desenha a mesma lista de nós recortada
+às suas linhas, então a imagem é a mesma com uma faixa ou quarenta, e o
+teste prova isso pixel a pixel em ×1 e em ×2. A ampliação para o dumb
+buffer do DRM também vai por faixas. No nível fino o canvas tem `scale`
+pixels por pixel da cena, e as primitivas recebem coordenadas da cena:
+`fill_rect_f` para as partículas (posição e tamanho fracionários), `blit`
+e `text` multiplicam. Em ×1 a conta é exatamente a de antes: a cena de
+`main` desenhada pelo daemon novo bate com as referências antigas pixel a
+pixel (as referências `crash` e `offer` mudaram só porque a cena ganhou um
+emissor e as sementes das rajadas andaram uma casa).
+
+Na linguagem, uma coisa: `qs:emitter level="1|2"`, o nível mais baixo em
+que o emissor toca (1 por padrão; 3 é recusado com a linha). A cena do OS
+ganha `<qs:emitter particles="snow" level="2">`. O play protocol ganha
+`{"op":"level","level":N}` e `frame` aceita `bands` (o teste desenha o
+quadro fino inteiro e em 3 e em 8 faixas contra a mesma referência).
+
+No VM lab a máquina passa a 4 vCPUs (`BASE_VERSION` 6) e o op `cpus`
+deixa 1 a 4 delas online no guest (`/sys/devices/system/cpu/cpuN/online`),
+esperando o `nproc` concordar: para um programa, uma vCPU offline é o que
+uma desligada seria, e um `restore` traz de volta as do snapshot sem
+cerimônia. O hotplug do QEMU foi a primeira tentativa (`-smp 2,maxcpus=4`,
+`device_add` dos slots de `query-hotpluggable-cpus`): o `device_add` passa,
+mas o kernel deste guest sobe com `smpboot: Allowing 2 CPUs, 0 hotplug
+CPUs` e nunca vê a nova. `shot` ganha `lacks`, a cor que não pode estar na
+tela. A fita `screen-levels.jsonl` segue o nível com os núcleos: 2 online
+e `cores: 2, level up to 1`, a tela sem neve; 4 online e `cores: 4, level
+up to 2`, depois `level 2 (fine)`, a cena a ×2 no display e a cor da neve
+no `screendump`; 2 de novo, nível 1 e a cena a ×4 outra vez. Essa fita
+diz `// needs: kvm` e o lab a pula onde `/dev/kvm` não serve (o CI tem):
+sob emulação só apresentar o buffer de 1280×800 custa 80 ms por quadro, o
+orçamento é do emulador e não da máquina, e a tela fica honestamente em
+`plain` com qualquer número de núcleos (o teto, `cores: 4, level up to 2`,
+aparece do mesmo jeito). Para quem sabe mais que a medida, ou para tirar
+uma captura, `HIVE_SCREEN_LEVEL=N` no ambiente da unit prega o nível.
+
+De quebra, três coisas. O buffer de scanout era mapeado (`mmap`) a cada
+quadro, e um mapeamento novo custa uma page fault por página: sob emulação
+eram 128 ms por quadro, que derrubavam a tela para `plain` com dois
+núcleos; agora é mapeado uma vez, pela vida do display (`drm-ffi` dá o
+offset, `libc::mmap` o resto). O laço do daemon consumia o `dirty` antes
+de olhar o relógio, então uma mudança única dentro dos 33 ms depois de um
+quadro se perdia até a próxima (as animações mascaravam); agora o relógio
+vem primeiro. E um `done.actual.png` que tinha ido parar no repositório
+saiu, com `*.actual.png` no `.gitignore`. O daemon diz no journal, uma vez
+por visita a um nível, quanto custa um quadro ali. E a fita do console
+espera a rachadura da célula (`#1c140c`, cor de nenhum outro quadro, que
+fica até o mel voltar) em vez da fumaça, que dura 1,5 s e as consultas ao
+journal sob emulação às vezes perdiam.
+
+Limite desta fatia: não há nível acima do fino; mais núcleos que quatro
+só dão mais faixas. Um nível `smooth` a 60 quadros por segundo caberia na
+mesma tabela quando houver o que mostrar com ele.
+
 ## 2026-10-19 - A tela da Hive no console de verdade (DRM, teclado, unit)
 
 A segunda fatia da tela: o `hive-screen` desenha no console da VM. Sem X,

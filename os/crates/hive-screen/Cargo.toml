@@ -25,6 +25,8 @@ chrono = { workspace = true }
 # scene; frames for the tests are PNGs too.
 png = "0.17"
 drm = "0.15"
+# the scanout buffer is mapped once, for the display's life (the crate maps it a frame at a time)
+drm-ffi = "0.9"
 libc.workspace = true
 
 [dev-dependencies]

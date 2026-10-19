@@ -7,8 +7,9 @@
 //! sent back comes out as [`Outgoing`]. That is what makes it the same
 //! on the console, in the lab and in a test.
 
-use crate::canvas::Canvas;
+use crate::canvas::{Band, Canvas};
 use crate::ease::{interpolate, Ease, Trans};
+use crate::level::{self, LEVELS};
 use crate::particles::Emitter;
 use crate::scene::{Action, Align, Node, Property, Scene};
 use hive_common::actions::Action as HiveAction;
@@ -116,11 +117,17 @@ impl Key {
 /// Where the toast (`qs:say`) sits: a strip at the bottom of the scene.
 const TOAST_HEIGHT: u32 = 12;
 
+/// An emitter the scene keeps going, from the presentation level it names.
+struct Ambient {
+    level: u32,
+    emitter: Emitter,
+}
+
 pub struct World {
     pub scene: Scene,
     pub sprites: Vec<Sprite>,
     tweens: Vec<Tween>,
-    emitters: Vec<Emitter>,
+    emitters: Vec<Ambient>,
     bursts: Vec<Emitter>,
     pub offers: Vec<Offer>,
     pub focus: usize,
@@ -132,6 +139,8 @@ pub struct World {
     pub events: Vec<Value>,
     /// Whether the picture changed since the last draw.
     dirty: bool,
+    /// The presentation level it plays at (level.rs).
+    level: usize,
 }
 
 impl World {
@@ -181,15 +190,19 @@ impl World {
                     x,
                     y,
                     width,
+                    level,
                 } => {
                     seeds += 1;
-                    emitters.push(Emitter::new(
-                        scene.particles[particles].clone(),
-                        *x as f32,
-                        *y as f32,
-                        *width as f32,
-                        seeds,
-                    ));
+                    emitters.push(Ambient {
+                        level: *level,
+                        emitter: Emitter::new(
+                            scene.particles[particles].clone(),
+                            *x as f32,
+                            *y as f32,
+                            *width as f32,
+                            seeds,
+                        ),
+                    });
                 }
                 _ => {}
             }
@@ -208,7 +221,40 @@ impl World {
             seeds,
             events: Vec::new(),
             dirty: true,
+            level: level::DEFAULT,
         }
+    }
+
+    // ---------------------------------------------------------------- the level
+
+    /// The presentation level it plays at (level.rs).
+    pub fn level(&self) -> usize {
+        self.level
+    }
+
+    /// Whether particles play at this level.
+    pub fn effects(&self) -> bool {
+        LEVELS[self.level].effects
+    }
+
+    /// Plays at another level: the picture changes, what happens does
+    /// not. Without effects the bursts going are dropped, and an emitter
+    /// plays only from the level it names.
+    pub fn set_level(&mut self, level: usize) {
+        let level = level.min(LEVELS.len() - 1);
+        if level == self.level {
+            return;
+        }
+        self.level = level;
+        if !self.effects() {
+            self.bursts.clear();
+        }
+        self.dirty = true;
+    }
+
+    /// Whether an emitter of the scene plays at this level.
+    fn plays(&self, ambient: &Ambient) -> bool {
+        self.effects() && ambient.level as usize <= self.level
     }
 
     /// Whether the picture changed since the last call: a display draws
@@ -313,6 +359,9 @@ impl World {
                 dx,
                 dy,
             } => {
+                if !self.effects() {
+                    return;
+                }
                 let Some(i) = self.target(at, fields) else {
                     return;
                 };
@@ -497,7 +546,10 @@ impl World {
     /// One tick: animations, tweens, effects and the toast advance.
     pub fn tick(&mut self) {
         self.tick += 1;
-        if !self.tweens.is_empty() || !self.bursts.is_empty() || !self.emitters.is_empty() {
+        if !self.tweens.is_empty()
+            || !self.bursts.is_empty()
+            || self.emitters.iter().any(|a| self.plays(a))
+        {
             self.dirty = true;
         }
         for sprite in &mut self.sprites {
@@ -563,8 +615,11 @@ impl World {
             self.events
                 .push(json!({"kind": "tween-end", "sprite": self.sprites[tw.sprite].name}));
         }
-        for e in &mut self.emitters {
-            e.tick();
+        let (effects, level) = (self.effects(), self.level as u32);
+        for a in &mut self.emitters {
+            if effects && a.level <= level {
+                a.emitter.tick();
+            }
         }
         for b in &mut self.bursts {
             b.tick();
@@ -581,7 +636,23 @@ impl World {
 
     // ---------------------------------------------------------------- the picture
 
-    pub fn draw(&self, canvas: &mut Canvas) {
+    /// The picture, drawn in `threads` bands at once (in this thread when
+    /// there is one): the same picture whatever the count.
+    pub fn render(&self, canvas: &mut Canvas, threads: usize) {
+        if threads <= 1 {
+            self.draw(&mut canvas.band());
+            return;
+        }
+        let mut bands = canvas.bands(threads);
+        std::thread::scope(|s| {
+            for band in &mut bands {
+                s.spawn(move || self.draw(band));
+            }
+        });
+    }
+
+    /// One band of the picture: every node in order, clipped to its rows.
+    pub fn draw(&self, canvas: &mut Band) {
         canvas.clear(self.scene.background);
         let font = &self.scene.font;
         let mut sprite_index = 0;
@@ -624,8 +695,11 @@ impl World {
                     canvas.text(font, value, x, *y, *color);
                 }
                 Node::Emitter { .. } => {
-                    self.emitters[emitter_index].draw(canvas);
+                    let a = &self.emitters[emitter_index];
                     emitter_index += 1;
+                    if self.plays(a) {
+                        a.emitter.draw(canvas);
+                    }
                 }
                 Node::Offers {
                     x,
@@ -679,7 +753,7 @@ impl World {
     #[allow(clippy::too_many_arguments)]
     fn draw_offers(
         &self,
-        canvas: &mut Canvas,
+        canvas: &mut Band,
         x: i32,
         y: i32,
         width: u32,
@@ -759,12 +833,14 @@ impl World {
             .collect();
         json!({
             "tick": self.tick,
+            "level": self.level,
+            "level_name": LEVELS[self.level].name,
             "sprites": sprites,
             "offers": offers,
             "notices": self.notices.iter().collect::<Vec<_>>(),
             "toast": self.toast.as_ref().map(|(t, _)| t.clone()),
             "tweens": self.tweens.len(),
-            "effects": self.bursts.len() + self.emitters.len(),
+            "effects": self.bursts.len() + self.emitters.iter().filter(|a| self.plays(a)).count(),
         })
     }
 

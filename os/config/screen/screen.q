@@ -14,8 +14,11 @@
 
   <qs:particles name="stars" preset="stars" />
   <qs:particles name="dust" preset="dust" color="#8a7a5a" />
+  <qs:particles name="snow" preset="snow" amount="24" color="#c8d0f0" />
 
   <qs:scene width="320" height="180" background="#1a1a2e">
+    <!-- the fine level, which the daemon affords with the machine's cores: snow over the scene -->
+    <qs:emitter particles="snow" x="0" y="0" width="320" level="2" />
     <qs:text value="Quantum OS" x="6" y="4" color="#ffd34d" />
     <qs:text value="the Hive" x="72" y="4" color="#8a8aa0" />
     <qs:sprite name="bee" sheet="bee" x="296" y="2" animation="fly" />

@@ -1644,6 +1644,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "drm",
+ "drm-ffi",
  "hive-common",
  "libc",
  "png",

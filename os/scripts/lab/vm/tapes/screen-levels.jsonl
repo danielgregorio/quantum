@@ -1,0 +1,24 @@
+// needs: kvm (a frame budget measured under emulation is the emulator's: the present of a 1280x800 buffer
+// alone costs 80 ms a frame under TCG, which keeps the screen at plain whatever the cores)
+// the Hive's screen scales with the cores: with two of the machine's vCPUs online it plays at level 1 (the effects
+// at 320x180, no snow); all four online raise the ceiling, the frames prove cheap, and the fine level follows
+// (640x360 with two pixels to the scene's one, and the snow the scene keeps for it); two again bring it back down
+{"op": "start"}
+{"op": "until_sh", "sh": "systemctl is-active hive-screen", "timeout": 20}
+{"op": "sh", "sh": "journalctl -b -u hive-screen --no-pager -o cat", "contains": "level 1 (effects): 320x180, effects on, 30 fps; 4 cores"}
+{"op": "cpus", "count": 2}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "cores: 2, level up to 1", "timeout": 10}
+{"op": "until_shot", "has": "#ffd34d", "timeout": 15}
+{"op": "shot", "lacks": "#c8d0f0"}
+{"op": "cpus", "count": 4}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "cores: 4, level up to 2", "timeout": 10}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "level 2 (fine): 640x360, effects on, 30 fps; 4 cores", "timeout": 30}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "the scene 640x360 at x2", "timeout": 10}
+{"op": "until_shot", "has": "#c8d0f0", "timeout": 15}
+{"op": "cpus", "count": 2}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "cores: 2, level up to 1", "timeout": 10}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "level 1 (effects): 320x180, effects on, 30 fps; 2 cores", "timeout": 10}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "the scene 320x180 at x4", "timeout": 10}
+{"op": "until_shot", "has": "#ffd34d", "timeout": 15}
+{"op": "shot", "lacks": "#c8d0f0"}
+{"op": "end"}

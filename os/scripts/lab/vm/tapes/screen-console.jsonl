@@ -1,5 +1,6 @@
 // the Hive's screen on the real console: hive-screen draws the scene on the VM's display through DRM, a real
-// crash smokes nginx's cell, the offer reaches the screen, Enter on the machine's keyboard approves it, and the
+// crash smokes and cracks nginx's cell (the crack's colour, #1c140c, is on no other frame and outlasts the smoke), the
+// offer reaches the screen, Enter on the machine's keyboard approves it, and the
 // real actuator's restart fills the cell with honey
 {"op": "start"}
 {"op": "until_sh", "sh": "systemctl is-active hive-screen", "timeout": 20}
@@ -11,7 +12,7 @@
 {"op": "sh", "sh": "mkdir -p /run/lab && touch /run/lab/broken && systemctl daemon-reload && systemctl start nginx"}
 {"op": "until_journal", "unit": "hive-nerve-journal.service", "contains": "Reported service crash: nginx.service"}
 {"op": "until_journal", "unit": "hive-screen.service", "contains": "event: service-crash"}
-{"op": "until_shot", "has": "#787880", "timeout": 10}
+{"op": "until_shot", "has": "#1c140c", "timeout": 10}
 {"op": "until_journal", "unit": "hive-screen.service", "contains": "offer: Restart nginx", "timeout": 20}
 {"op": "none_journal", "unit": "hive-actuator.service", "contains": "nginx", "within": 0.5}
 {"op": "sh", "sh": "rm /run/lab/broken"}

@@ -10,6 +10,8 @@
 //! {"op":"until","notice":"stopped"}
 //! {"op":"frame","path":"out.png"}                    the picture of now
 //! {"op":"frame","expect":"ref.png"}                  compared with a reference, pixel for pixel
+//! {"op":"frame","expect":"ref.png","bands":4}        drawn in that many bands at once, as the daemon does
+//! {"op":"level","level":2}                           the presentation level to play at (0 plain, 1 effects, 2 fine)
 //! {"op":"inject","message":{...}}                    a HiveMessage, as if the Hive sent it
 //! {"op":"end"}
 //! ```
@@ -145,8 +147,11 @@ fn handle(runtime: &mut Runtime, req: &Value) -> Result<Option<Value>> {
             Ok(Some(obs))
         }
         "frame" => {
-            let mut canvas = Canvas::new(runtime.world.scene.width, runtime.world.scene.height);
-            runtime.world.draw(&mut canvas);
+            let scale = crate::level::LEVELS[runtime.world.level()].scale;
+            let mut canvas =
+                Canvas::new(runtime.world.scene.width, runtime.world.scene.height, scale);
+            let bands = req.get("bands").and_then(Value::as_u64).unwrap_or(1) as usize;
+            runtime.world.render(&mut canvas, bands.max(1));
             if let Some(path) = req.get("path").and_then(Value::as_str) {
                 canvas.image.save(std::path::Path::new(path))?;
             }
@@ -185,6 +190,21 @@ fn handle(runtime: &mut Runtime, req: &Value) -> Result<Option<Value>> {
             .context("inject: not a HiveMessage")?;
             runtime.incoming(msg)?;
             Ok(Some(observation(runtime, "injected")))
+        }
+        "level" => {
+            let level = req
+                .get("level")
+                .and_then(Value::as_u64)
+                .context("level needs level")? as usize;
+            if level >= crate::level::LEVELS.len() {
+                anyhow::bail!(
+                    "no level {} (0 to {})",
+                    level,
+                    crate::level::LEVELS.len() - 1
+                );
+            }
+            runtime.world.set_level(level);
+            Ok(Some(observation(runtime, "level")))
         }
         "end" => Ok(None),
         other => anyhow::bail!("no such op: {}", other),

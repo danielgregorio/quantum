@@ -11,6 +11,7 @@ The Hive lab (`crates/hive-lab`) runs the real hive-cortex and hive-synapse and 
 | the speed | the guest boots once. The snapshot `base` keeps it booted with its packages, and `hive` keeps it with the Hive installed from the build. Restoring one takes about a second, with or without KVM |
 | the screens | the real hive-dashboard and grove run in a terminal in the guest. `hive-lab term` renders them with the same terminal emulator as the Hive lab |
 | the display | a `virtio-gpu`, on which the real `hive-screen` draws the Hive's screen through DRM; the host reads it with QMP `screendump` and presses its keys with `send-key` |
+| the cores | 4 vCPUs; `cpus` leaves 1 to 4 of them online: the screen's levels are measured at 2 and at 4 |
 
 ## Playing it
 
@@ -55,9 +56,10 @@ The same shape as the Hive lab's: `{"op": ...}` in, `{"ok": true, ...}` or `{"ok
 | `view` (`app`), `keys` (`app`, `keys`) | its screen as text, typing (`Enter`, `Down`, `Esc`, ... or text) |
 | `until_screen` (`app`, `contains`, `excludes`, `count`, `timeout`: 5) | waits until the screen shows it (exactly `count` times, if given) |
 | `keys_until` (`app`, `keys`, `contains`, `max`: 20) | presses keys until the screen shows the text: moves a selection to a row by what it says |
-| `shot` (`path`, `has`: `#rrggbb`, `min`: 1) | the display as a PNG, its size and its commonest colours; with `has`, whether that colour is on it |
+| `shot` (`path`, `has`: `#rrggbb`, `min`: 1, `lacks`: `#rrggbb`) | the display as a PNG, its size and its commonest colours; with `has`, whether that colour is on it; with `lacks`, fails when that colour is |
 | `until_shot` (`has`, `min`, `timeout`: 10) | takes the display until that colour is on it: the smoke over a cell, the honey in it |
 | `press` (`keys`: up, down, enter, escape) | the machine's keyboard, which `hive-screen` reads from `/dev/input` |
+| `cpus` (`count`: 1 to 4, `timeout`: 20) | leaves that many of the machine's 4 vCPUs online in the guest (the others go offline, as a vCPU unplugged comes to) and waits for `nproc` to agree: `hive-screen`'s presentation level follows the cores. A restore brings the snapshot's own back |
 | `end` | stops the VM |
 
 ## Tapes
@@ -70,10 +72,12 @@ The same shape as the Hive lab's: `{"op": ...}` in, `{"ok": true, ...}` or `{"ok
 | `install-on-request` | a user reaches for a missing program: grove says which package provides it, the dashboard offers it, and the approval has the unprivileged actuator install it through PackageKit and polkit; the user's next try runs it |
 | `port-conflict` | a real process holds a port and a unit keeps failing to bind it: the network nerve names both, once; listing the ports runs once approved |
 | `dangerous-command` | a logged-in user's `rm -rf /srv` goes from the kernel's audit log through the process nerve to the real dashboard, whose advice claims nothing was done; a routine delete and a daemon's own commands are not reported |
+| `screen-console` | the Hive's screen on the real display: a real crash smokes nginx's cell, Enter on the machine's keyboard approves the offer, the real actuator's restart fills the cell with honey |
+| `screen-levels` (needs KVM) | the screen's presentation level follows the cores: two online, level 1 and no snow; four, the fine level at 640x360 with the snow; two again, back down |
 
 A user's commands (`sh` with `user`, grove) carry a login uid, as a real login gives them: the audit rule the process nerve reads records only programs of someone who logged in. A failing tape prints the guest's journal since it started, for failures seen where nobody can look into the guest afterwards (CI).
 
-`--play` runs tapes one after the other on one VM. Each tape's `start` restores a fresh Hive.
+`--play` runs tapes one after the other on one VM. Each tape's `start` restores a fresh Hive. A tape whose first lines say `// needs: kvm` is skipped where `/dev/kvm` is not usable (CI has it): a frame budget measured under emulation is the emulator's, not the machine's, and `screen-levels` measures one.
 
 ## What it found
 
