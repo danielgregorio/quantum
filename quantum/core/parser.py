@@ -242,6 +242,8 @@ class QuantumParser:
     _NAMESPACES = {
         'q': 'https://quantum.lang/ns',
         'qg': 'https://quantum.lang/game',
+        # qh: the Hive's rules (Quantum OS): quantum/runtime/hive
+        'qh': 'https://quantum.lang/hive',
         'qt': 'https://quantum.lang/terminal',
         # APP-2: the removed testing engine's prefix is still declared, so a
         # qtest: tag reaches the removal message instead of "unbound prefix".
@@ -294,6 +296,7 @@ class QuantumParser:
         # on — behaviour that already existed.
         for attribute, prefix in (('type="game"', 'qg'),
                                   ('type="game"', 'gd'),   # gd: is used as attributes, which the scan above does not see
+                                  ('type="hive"', 'qh'),
                                   ('type="terminal"', 'qt'),
                                   ('type="ui"', 'ui')):
             if attribute in content and f'xmlns:{prefix}=' not in content:
@@ -1024,7 +1027,8 @@ class QuantumParser:
         self._parse_application_quantum_children(root, app)
 
         # A game's qg: elements are read by its compiler (quantum/runtime/godot)
-        # from app.xml_root, against the game schema.
+        # from app.xml_root, against the game schema; a hive's qh: elements by
+        # quantum/runtime/hive the same way.
 
         # Terminal Engine: parse terminal children when type="terminal"
         if app_type == 'terminal':
