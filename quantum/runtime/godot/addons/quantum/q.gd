@@ -366,6 +366,62 @@ static func count(scene: Node, tag: String) -> int:
 	return n
 
 
+# nearest(from, who) in an expression, and the parts of an enemy: the
+# character whose id is `who`, or thing whose tag is ("": any character), nearest
+# `from` in its scene; within `within` pixels, and seen (no solid tile
+# between) when `seen`. The first in the scene's order on a tie; null for none.
+static func nearest(from, who: String, within: float = INF, seen: bool = false):
+	from = _thing(from)
+	if from == null or not (from is Node2D) or from.get_parent() == null:
+		return null
+	var best = null
+	var best_d := within
+	for n in from.get_parent().get_children():
+		if n == from or not (n is Node2D) or n.is_queued_for_deletion():
+			continue
+		var named: bool = n.is_in_group("q_named") and (who == "" or String(n.name) == who)
+		var tagged: bool = who != "" and n.is_in_group("q_thing") and n.quantum_tag() == who
+		if not named and not tagged:
+			continue
+		var d := (from as Node2D).position.distance_to((n as Node2D).position)
+		if d > within or (best != null and d >= best_d):
+			continue
+		if seen and not sees(from, n):
+			continue
+		best = n
+		best_d = d
+	return best
+
+
+# distance(a, b): pixels between two things or characters of a scene; INF when one is gone.
+static func distance(a, b) -> float:
+	a = _thing(a)
+	b = _thing(b)
+	if a == null or b == null or not (a is Node2D) or not (b is Node2D):
+		return INF
+	return (a as Node2D).position.distance_to((b as Node2D).position)
+
+
+# sees(a, b): no solid tile of the scene's tilemap on the line between them,
+# looked at every quarter of a tile.
+static func sees(a, b) -> bool:
+	a = _thing(a)
+	b = _thing(b)
+	if a == null or b == null or not (a is Node2D) or not (b is Node2D):
+		return false
+	var map = a.get_parent().get_node_or_null("Tilemap") if a.get_parent() != null else null
+	if map == null or not map.has_method("blocked"):
+		return true
+	var walls: Dictionary = map.blocked()
+	var from: Vector2 = (a as Node2D).position
+	var to: Vector2 = (b as Node2D).position
+	var steps := ceili(from.distance_to(to) / (float(map.tile) / 4.0))
+	for i in range(1, steps):
+		if walls.has(map.cell_of(from.lerp(to, float(i) / steps))):
+			return false
+	return true
+
+
 # thing_at(tag, x, y): the thing (or zone) of the tag whose box covers the point ("" for any thing), or null.
 # qg:set-tile and tile_at(): a cell of the scene's tilemap (tilemap.gd).
 static func set_tile(scene: Node, col, row, n, layer: String = "") -> void:

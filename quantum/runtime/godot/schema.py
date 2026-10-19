@@ -156,7 +156,7 @@ TAGS: Dict[str, Tag] = {
          'sheet': Attr('ident', required=True, doc='a qg:spritesheet or qg:tileset'),
          'frame': Attr('int', 0),
          'hitbox': Attr('size', required=True),
-         'ai': Attr('enum:patrol|wander|chase|pathfind|fly|sway|shuttle|path|turret', None,
+         'ai': Attr('enum:patrol|wander|chase|pathfind|fly|sway|shuttle|path|turret|behavior', None,
                     doc='patrol: walks under gravity, turns at walls (and at edges with turns-at); '
                         'wander: top-down, changes direction now and then (from the scene seed); '
                         'chase: top-down, goes for the character within sight=, straight at it; '
@@ -164,7 +164,8 @@ TAGS: Dict[str, Tag] = {
                         'fly: straight along heading=; sway: side to side across the scene; '
                         'shuttle: a solid that goes dx=,dy= and back every period= ticks, carrying what stands on it; '
                         'path: follows the qg:path it was spawned on (qg:spawn at="path"), then stands at its end; '
-                        'turret: stands, and fires fire-prefab at the nearest targets= within range= every fire-every'),
+                        'turret: stands, and fires fire-prefab at the nearest targets= within range= every fire-every; '
+                        'behavior: top-down, made of the parts its qg:behavior lists (qg:seek, qg:flee...)'),
          'range': Attr('float', 100.0, doc='turret: pixels'),
          'targets': Attr('ident', None, doc='turret: the tag it shoots at'),
          'attack': Attr('enum:shoot|area', 'shoot', doc='turret: shoot spawns fire-prefab headed at the target; '
@@ -178,7 +179,7 @@ TAGS: Dict[str, Tag] = {
                                         'semicolons (-96,-21; 96,-21; 96,6; -96,6), instead of the hitbox'),
          'scale': Attr('float', 1.0, doc='the picture\'s size, times its frame (the hitbox stays as given)'),
          'walls': Attr('enum:pass|stop', 'pass', doc='fly: pass goes through the tiles; stop is gone on touching one'),
-         'sight': Attr('float', 80.0, doc='chase, pathfind: pixels'),
+         'sight': Attr('float', 80.0, doc='chase, pathfind, and the parts of a behavior: pixels'),
          'heading': Attr('str', 'down', doc='fly: up, down, left, right, or a direction as x,y (-1,0.5)'),
          'accel': Attr('float', 0.0, doc='fly: pixels per second added to its speed every second'),
          'lifetime': Attr('int', 0, doc='fly: gone after this many ticks (0: never); any fly is gone off-screen'),
@@ -509,11 +510,19 @@ TAGS: Dict[str, Tag] = {
         'and a qg:jump with air=; a ship that comes back round the screen is qg:walk axis="both" and qg:wrap. '
         'Each tick, whatever their order: walk and jump read the keys, gravity pulls, the body moves, then '
         'keep-inside, wrap and face. `me.vx`, `me.vy` and `me.on_floor` read it; qg:velocity sets its speed '
-        'from the game\'s rules (a dash, a knock-back), so what no part covers is written in the game.',
+        'from the game\'s rules (a dash, a knock-back), so what no part covers is written in the game. '
+        'In a qg:prefab ai="behavior", an enemy\'s parts instead: what it moves by is the first of qg:seek, '
+        'qg:flee, qg:keep-distance, qg:patrol, qg:wander and qg:stand, in their order, whose when= holds and '
+        'that has something to do (a seek with nothing in sight has not); it stands when none has. Its '
+        'qg:shoot parts fire besides. `me.doing` reads the part that moved it ("" for none). With qg:gravity '
+        'the enemy walks on floors: the parts move it left and right only, a seek goes straight, the prefab\'s '
+        'turns-at="edge" keeps it from walking off a ledge, and qg:leap jumps; `me.on_floor` reads whether it '
+        'stands.',
         {},
-        parents=('character',)),
+        parents=('character', 'prefab')),
     'gravity': Tag(
-        'A part: it falls, and stands on floors (without it, the body floats: top-down).',
+        'A part: it falls, and stands on floors (without it, the body floats: top-down). A character\'s or an '
+        'enemy\'s.',
         {'strength': Attr('float', 900.0, doc='pixels per second squared'),
          'max-fall': Attr('float', 300.0, doc='the speed it falls at most, pixels per second')},
         parents=('behavior',)),
@@ -547,6 +556,71 @@ TAGS: Dict[str, Tag] = {
         'A part: its picture turns left or right the way it goes.',
         {'by': Attr('enum:velocity|input', 'velocity', doc='velocity: the way it moves; input: the way it is '
                                                          'pushed (it faces while it walks into a wall)')},
+        parents=('behavior',)),
+    'seek': Tag(
+        'An enemy\'s part: it goes for the nearest target it notices, around the walls by the shortest way over '
+        'the tilemap\'s free cells (way="straight": straight at it).',
+        {'target': Attr('str', None, doc='a character\'s id or a thing\'s tag; none: any character'),
+         'sight': Attr('float', None, doc='pixels it notices a target within (else the prefab\'s sight=)'),
+         'through-walls': Attr('bool', False, doc='it notices a target behind a solid tile (else only one it sees)'),
+         'way': Attr('enum:around|straight', 'around'),
+         'speed': Attr('float', None, doc='pixels per second (else the prefab\'s speed=)'),
+         'when': Attr('expr', None, doc='only while this is true (`me` is the enemy)')},
+        parents=('behavior',)),
+    'flee': Tag(
+        'An enemy\'s part: it runs from the nearest one it notices, straight away from it.',
+        {'from': Attr('str', None, doc='a character\'s id or a thing\'s tag; none: any character'),
+         'sight': Attr('float', None, doc='pixels (else the prefab\'s sight=)'),
+         'through-walls': Attr('bool', False),
+         'speed': Attr('float', None),
+         'when': Attr('expr', None)},
+        parents=('behavior',)),
+    'keep-distance': Tag(
+        'An enemy\'s part: it keeps between min= and max= pixels from the nearest one it notices: away when '
+        'closer, towards it when farther, and still in between.',
+        {'from': Attr('str', None, doc='a character\'s id or a thing\'s tag; none: any character'),
+         'min': Attr('float', required=True),
+         'max': Attr('float', required=True),
+         'sight': Attr('float', None, doc='pixels (else the prefab\'s sight=)'),
+         'through-walls': Attr('bool', False),
+         'speed': Attr('float', None),
+         'when': Attr('expr', None)},
+        parents=('behavior',)),
+    'patrol': Tag(
+        'An enemy\'s part: to and fro along a line, turning at walls (and after distance= pixels).',
+        {'heading': Attr('enum:left|right|up|down', None, doc='where it goes first (else the prefab\'s direction=)'),
+         'distance': Attr('float', 0.0, doc='pixels before it turns (0: only at walls)'),
+         'speed': Attr('float', None),
+         'when': Attr('expr', None)},
+        parents=('behavior',)),
+    'wander': Tag(
+        'An enemy\'s part: a new heading every 30 to 90 ticks (from the scene seed), and at once on bumping a wall.',
+        {'speed': Attr('float', None),
+         'when': Attr('expr', None)},
+        parents=('behavior',)),
+    'leap': Tag(
+        'An enemy\'s part, with qg:gravity: it jumps, from the floor, when it bumps a wall as it walks (a step '
+        'to climb) or while its when= holds; at most once every every= ticks.',
+        {'height': Attr('float', 40.0, doc='pixels'),
+         'at-wall': Attr('bool', True, doc='it jumps on bumping a wall as it walks'),
+         'every': Attr('int', 30, doc='ticks between two leaps at least'),
+         'sound': Attr('ident', None),
+         'when': Attr('expr', None, doc='it jumps while this is true too (`me` is the enemy)')},
+        parents=('behavior',)),
+    'stand': Tag(
+        'An enemy\'s part: it stands still; the parts after it wait.',
+        {'when': Attr('expr', None)},
+        parents=('behavior',)),
+    'shoot': Tag(
+        'An enemy\'s part: it fires prefab= at the nearest target within range=, headed at it, at most once '
+        'every every= ticks. It shoots whatever part moves it.',
+        {'prefab': Attr('ident', required=True, doc='what it fires: a prefab with ai="fly"'),
+         'at': Attr('str', None, doc='a character\'s id or a thing\'s tag; none: any character'),
+         'every': Attr('int', 60, doc='ticks between shots'),
+         'range': Attr('float', 100.0, doc='pixels'),
+         'through-walls': Attr('bool', False, doc='it fires at a target behind a solid tile (else only one it sees)'),
+         'sound': Attr('ident', None),
+         'when': Attr('expr', None)},
         parents=('behavior',)),
     'on-tile': Tag(
         'What happens while this character touches a tile of a kind (qg:tile kind=): stands on it, is in it, or '

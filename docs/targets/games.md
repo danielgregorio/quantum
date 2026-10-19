@@ -193,7 +193,7 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `sheet` | a name | required | a qg:spritesheet or qg:tileset |
 | `frame` | integer | `0` |  |
 | `hitbox` | `WxH` pixels | required |  |
-| `ai` | `patrol` / `wander` / `chase` / `pathfind` / `fly` / `sway` / `shuttle` / `path` / `turret` |  | patrol: walks under gravity, turns at walls (and at edges with turns-at); wander: top-down, changes direction now and then (from the scene seed); chase: top-down, goes for the character within sight=, straight at it; pathfind: as chase, but around the walls, by the shortest way over the tilemap's free cells; fly: straight along heading=; sway: side to side across the scene; shuttle: a solid that goes dx=,dy= and back every period= ticks, carrying what stands on it; path: follows the qg:path it was spawned on (qg:spawn at="path"), then stands at its end; turret: stands, and fires fire-prefab at the nearest targets= within range= every fire-every |
+| `ai` | `patrol` / `wander` / `chase` / `pathfind` / `fly` / `sway` / `shuttle` / `path` / `turret` / `behavior` |  | patrol: walks under gravity, turns at walls (and at edges with turns-at); wander: top-down, changes direction now and then (from the scene seed); chase: top-down, goes for the character within sight=, straight at it; pathfind: as chase, but around the walls, by the shortest way over the tilemap's free cells; fly: straight along heading=; sway: side to side across the scene; shuttle: a solid that goes dx=,dy= and back every period= ticks, carrying what stands on it; path: follows the qg:path it was spawned on (qg:spawn at="path"), then stands at its end; turret: stands, and fires fire-prefab at the nearest targets= within range= every fire-every; behavior: top-down, made of the parts its qg:behavior lists (qg:seek, qg:flee...) |
 | `range` | number | `100.0` | turret: pixels |
 | `targets` | a name |  | turret: the tag it shoots at |
 | `attack` | `shoot` / `area` | `shoot` | turret: shoot spawns fire-prefab headed at the target; area damages every target in range by damage= |
@@ -205,7 +205,7 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `shape` | text |  | solid: the solid part as x,y points from its centre, separated by semicolons (-96,-21; 96,-21; 96,6; -96,6), instead of the hitbox |
 | `scale` | number | `1.0` | the picture's size, times its frame (the hitbox stays as given) |
 | `walls` | `pass` / `stop` | `pass` | fly: pass goes through the tiles; stop is gone on touching one |
-| `sight` | number | `80.0` | chase, pathfind: pixels |
+| `sight` | number | `80.0` | chase, pathfind, and the parts of a behavior: pixels |
 | `heading` | text | `down` | fly: up, down, left, right, or a direction as x,y (-1,0.5) |
 | `accel` | number | `0.0` | fly: pixels per second added to its speed every second |
 | `lifetime` | integer | `0` | fly: gone after this many ticks (0: never); any fly is gone off-screen |
@@ -225,6 +225,115 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `keeps` | true / false | `false` | opens-with=: the item is not spent (a key for every door) |
 
 Goes inside: `q:application`.
+
+### `qg:seek`
+
+An enemy's part: it goes for the nearest target it notices, around the walls by the shortest way over the tilemap's free cells (way="straight": straight at it).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `target` | text |  | a character's id or a thing's tag; none: any character |
+| `sight` | number |  | pixels it notices a target within (else the prefab's sight=) |
+| `through-walls` | true / false | `false` | it notices a target behind a solid tile (else only one it sees) |
+| `way` | `around` / `straight` | `around` |  |
+| `speed` | number |  | pixels per second (else the prefab's speed=) |
+| `when` | an expression |  | only while this is true (`me` is the enemy) |
+
+Goes inside: `qg:behavior`.
+
+### `qg:flee`
+
+An enemy's part: it runs from the nearest one it notices, straight away from it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `from` | text |  | a character's id or a thing's tag; none: any character |
+| `sight` | number |  | pixels (else the prefab's sight=) |
+| `through-walls` | true / false | `false` |  |
+| `speed` | number |  |  |
+| `when` | an expression |  |  |
+
+Goes inside: `qg:behavior`.
+
+### `qg:keep-distance`
+
+An enemy's part: it keeps between min= and max= pixels from the nearest one it notices: away when closer, towards it when farther, and still in between.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `from` | text |  | a character's id or a thing's tag; none: any character |
+| `min` | number | required |  |
+| `max` | number | required |  |
+| `sight` | number |  | pixels (else the prefab's sight=) |
+| `through-walls` | true / false | `false` |  |
+| `speed` | number |  |  |
+| `when` | an expression |  |  |
+
+Goes inside: `qg:behavior`.
+
+### `qg:patrol`
+
+An enemy's part: to and fro along a line, turning at walls (and after distance= pixels).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `heading` | `left` / `right` / `up` / `down` |  | where it goes first (else the prefab's direction=) |
+| `distance` | number | `0.0` | pixels before it turns (0: only at walls) |
+| `speed` | number |  |  |
+| `when` | an expression |  |  |
+
+Goes inside: `qg:behavior`.
+
+### `qg:wander`
+
+An enemy's part: a new heading every 30 to 90 ticks (from the scene seed), and at once on bumping a wall.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `speed` | number |  |  |
+| `when` | an expression |  |  |
+
+Goes inside: `qg:behavior`.
+
+### `qg:stand`
+
+An enemy's part: it stands still; the parts after it wait.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `when` | an expression |  |  |
+
+Goes inside: `qg:behavior`.
+
+### `qg:shoot`
+
+An enemy's part: it fires prefab= at the nearest target within range=, headed at it, at most once every every= ticks. It shoots whatever part moves it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `prefab` | a name | required | what it fires: a prefab with ai="fly" |
+| `at` | text |  | a character's id or a thing's tag; none: any character |
+| `every` | integer | `60` | ticks between shots |
+| `range` | number | `100.0` | pixels |
+| `through-walls` | true / false | `false` | it fires at a target behind a solid tile (else only one it sees) |
+| `sound` | a name |  |  |
+| `when` | an expression |  |  |
+
+Goes inside: `qg:behavior`.
+
+### `qg:leap`
+
+An enemy's part, with qg:gravity: it jumps, from the floor, when it bumps a wall as it walks (a step to climb) or while its when= holds; at most once every every= ticks.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `height` | number | `40.0` | pixels |
+| `at-wall` | true / false | `true` | it jumps on bumping a wall as it walks |
+| `every` | integer | `30` | ticks between two leaps at least |
+| `sound` | a name |  |  |
+| `when` | an expression |  | it jumps while this is true too (`me` is the enemy) |
+
+Goes inside: `qg:behavior`.
 
 ### `qg:animation`
 
@@ -357,13 +466,13 @@ Goes inside: `qg:scene`.
 
 ### `qg:behavior`
 
-What a character controller="behavior" is made of: parts, each a small rule. A platformer is qg:gravity, qg:walk and qg:jump; a top-down walker is qg:walk axis="both"; a flapping bird is qg:gravity and a qg:jump with air=; a ship that comes back round the screen is qg:walk axis="both" and qg:wrap. Each tick, whatever their order: walk and jump read the keys, gravity pulls, the body moves, then keep-inside, wrap and face. `me.vx`, `me.vy` and `me.on_floor` read it; qg:velocity sets its speed from the game's rules (a dash, a knock-back), so what no part covers is written in the game.
+What a character controller="behavior" is made of: parts, each a small rule. A platformer is qg:gravity, qg:walk and qg:jump; a top-down walker is qg:walk axis="both"; a flapping bird is qg:gravity and a qg:jump with air=; a ship that comes back round the screen is qg:walk axis="both" and qg:wrap. Each tick, whatever their order: walk and jump read the keys, gravity pulls, the body moves, then keep-inside, wrap and face. `me.vx`, `me.vy` and `me.on_floor` read it; qg:velocity sets its speed from the game's rules (a dash, a knock-back), so what no part covers is written in the game. In a qg:prefab ai="behavior", an enemy's parts instead: what it moves by is the first of qg:seek, qg:flee, qg:keep-distance, qg:patrol, qg:wander and qg:stand, in their order, whose when= holds and that has something to do (a seek with nothing in sight has not); it stands when none has. Its qg:shoot parts fire besides. `me.doing` reads the part that moved it ("" for none). With qg:gravity the enemy walks on floors: the parts move it left and right only, a seek goes straight, the prefab's turns-at="edge" keeps it from walking off a ledge, and qg:leap jumps; `me.on_floor` reads whether it stands.
 
-Goes inside: `qg:character`.
+Goes inside: `qg:character`, `qg:prefab`.
 
 ### `qg:gravity`
 
-A part: it falls, and stands on floors (without it, the body floats: top-down).
+A part: it falls, and stands on floors (without it, the body floats: top-down). A character's or an enemy's.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
@@ -1245,7 +1354,7 @@ Goes inside: `qg:scene`.
 
 ## Statements
 
-Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs.
+Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `language()`, `has_save()`, `distance()`, `nearest()`, `sees()`, `held()`.
 
 ## `gd:` attributes
 

@@ -20,6 +20,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
 from quantum.runtime.godot import gd  # noqa: E402
+from quantum.runtime.godot.expressions import _FUNCTIONS as FUNCTIONS  # noqa: E402
 from quantum.runtime.godot.schema import ACTIONS, STATEMENTS, TAGS  # noqa: E402
 from quantum.runtime.godot_bin import GODOT_VERSION  # noqa: E402
 
@@ -230,8 +231,8 @@ def build() -> str:
     parts = [INTRO]
     groups = [
         ('What a game is made of', 'Declared once, in `q:application`.',
-         ['tileset', 'spritesheet', 'input', 'multiplayer', 'sound', 'particles', 'item', 'prefab', 'animation', 'state',
-          'move', 'scene']),
+         ['tileset', 'spritesheet', 'input', 'multiplayer', 'sound', 'particles', 'item', 'prefab', 'seek', 'flee',
+          'keep-distance', 'patrol', 'wander', 'stand', 'shoot', 'leap', 'animation', 'state', 'move', 'scene']),
         ('What a scene holds', 'The level, the character, the things placed in it, and what the screen shows.',
          ['tilemap', 'character', 'behavior', 'gravity', 'walk', 'jump', 'keep-inside', 'wrap', 'face',
           'instance', 'emitter', 'spawner', 'zone', 'sprite', 'path', 'cursor', 'exit', 'map-node',
@@ -259,7 +260,7 @@ def build() -> str:
                  ', '.join(f'`q:{s}`' for s in STATEMENTS if s not in ('else', 'elseif')) +
                  ' (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the '
                  'scene\'s state; in `q:application`, the game\'s, kept across scenes — with `saved="true"`, '
-                 'between runs.\n')
+                 'between runs. An expression may call ' + ', '.join(f'`{f}()`' for f in FUNCTIONS) + '.\n')
     parts.append(gd_section())
     parts.append('## The games\n\nEach one is written in these tags and nothing else, and replayed '
                  'in CI from input tapes (`tests/godot/test_godot_<name>.py`).\n')

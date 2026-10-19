@@ -252,6 +252,7 @@ class _Compiler:
             languages[code] = {'name': lang_el.get('name') or code, 'phrases': phrases}
         self.languages = languages
         prefabs = {}
+        self._part_targets: List[tuple] = []
         pscript = SceneScript('prefabs', game_state=self.game_state)
         for name, el in g.prefabs.items():
             self._sheet_exists(el.get('sheet'), sheets, el.line)
@@ -287,6 +288,7 @@ class _Compiler:
                 if h.get('of'):
                     raise GameCompileError('of= is for a <qg:on-death> in a scene', h.line)
                 on_death = compile_handler(pscript, f'_{_ident(name)}_on_death', h.children, h.line)
+            parts = self._prefab_parts(el, name, pscript)
             carry = self._prefab_items(el, name, pscript)
             prefabs[name] = {'tag': el.get('tag') or name.lower(), 'sheet': el.get('sheet'),
                              'frame': el.get('frame'), 'hitbox': list(el.get('hitbox')),
@@ -307,6 +309,8 @@ class _Compiler:
                              'on_collision': handlers, 'on_damage': on_damage, 'on_death': on_death,
                              'animations': _animations(el),
                              'on_animation_end': _animation_ends(el, pscript, f'_{_ident(name)}_on')}
+            if parts:
+                prefabs[name]['parts'] = parts
             prefabs[name].update(carry)
             gdprops.attach(prefabs[name], gdprops.PREFAB_CLASS[gdprops.prefab_kind(prefabs[name])], el.gd,
                            f'<qg:prefab name="{name}">', el.line)
@@ -345,6 +349,13 @@ class _Compiler:
         if self.multiplayer is not None and self.multiplayer.get('rollback'):
             _check_rollback(self.multiplayer.get('start') or g.scenes[0].get('name'), scenes,
                             self._scene_goes, self._scene_spawns, g.multiplayer.line, self._scene_tweens)
+        characters = {n['id'] for sc in scenes.values() for n in sc['nodes'] if n['kind'] == 'character'}
+        tags = {p['tag'] for p in prefabs.values()}
+        for who, tag, attr, line in self._part_targets:
+            if who not in characters and who not in tags:
+                raise GameCompileError(f'<qg:{tag} {attr}="{who}">: no character has that id, nor a prefab that tag '
+                                       f'(characters: {", ".join(sorted(characters)) or "none"}; tags: '
+                                       f'{", ".join(sorted(tags))})', line)
         for sname, line in self._scenes_used:
             if sname not in scenes:
                 raise GameCompileError(
@@ -429,6 +440,73 @@ class _Compiler:
                 raise GameCompileError(f'<qg:play-animation name="{name}">: no qg:animation of that name in the game '
                                        f'(it has: {", ".join(sorted(self._animation_names)) or "none"})', line)
 
+    def _prefab_parts(self, el: Element, name: str, script: SceneScript) -> list:
+        """The parts of an enemy, a prefab ai="behavior" (its qg:behavior), checked; their when= go into P."""
+        found = el.find_all('behavior')
+        if el.get('ai') != 'behavior':
+            if found:
+                raise GameCompileError('<qg:behavior> in a prefab is for ai="behavior"', found[0].line)
+            return []
+        if len(found) != 1:
+            raise GameCompileError('<qg:prefab ai="behavior"> holds one <qg:behavior> (its parts)',
+                                   found[1].line if found else el.line)
+        parts = []
+        for i, p in enumerate(found[0].children):
+            if not isinstance(p, Element):
+                raise GameCompileError('<qg:behavior> holds parts (qg:seek, qg:wander...), not statements', p.line)
+            if p.tag not in _ENEMY_PARTS + ('gravity',):
+                raise GameCompileError(f'<qg:{p.tag}> is a part of a character controller="behavior"; an enemy\'s '
+                                       f'parts are qg:gravity, {", ".join("qg:" + t for t in _ENEMY_PARTS)}',
+                                       p.line)
+            part = {'kind': p.tag}
+            for attr in TAGS[p.tag].attrs:
+                if attr != 'when':
+                    part[attr.replace('-', '_')] = p.get(attr)
+            for attr in ('sight', 'range'):
+                if part.get(attr) is not None and part[attr] <= 0:
+                    raise GameCompileError(f'<qg:{p.tag} {attr}=>: more than 0', p.line)
+            for attr in ('speed', 'distance', 'min'):
+                if part.get(attr) is not None and part[attr] < 0:
+                    raise GameCompileError(f'<qg:{p.tag} {attr}=>: 0 or more', p.line)
+            if p.tag == 'keep-distance' and part['max'] <= part['min']:
+                raise GameCompileError('<qg:keep-distance>: max= more than min=', p.line)
+            if p.tag == 'gravity' and (part['strength'] < 0 or part['max_fall'] <= 0):
+                raise GameCompileError('<qg:gravity>: strength= 0 or more, max-fall= more than 0', p.line)
+            if p.tag == 'leap':
+                if part['height'] <= 0 or part['every'] < 1:
+                    raise GameCompileError('<qg:leap>: height= more than 0, every= 1 or more', p.line)
+                if part['sound'] and part['sound'] not in self.sounds:
+                    raise GameCompileError(f'<qg:leap sound="{part["sound"]}">: no qg:sound of that name', p.line)
+            if p.tag == 'shoot':
+                if part['every'] < 1:
+                    raise GameCompileError('<qg:shoot every=>: 1 or more ticks', p.line)
+                script.prefabs_used.append((part['prefab'], p.line))
+                if part['sound'] and part['sound'] not in self.sounds:
+                    raise GameCompileError(f'<qg:shoot sound="{part["sound"]}">: no qg:sound of that name', p.line)
+            for attr in ('target', 'from', 'at'):
+                if part.get(attr):
+                    self._part_targets.append((part[attr], p.tag, attr, p.line))
+            part['when'] = None
+            if p.get('when') is not None:
+                part['when'] = f'_{_ident(name)}_when_{i}'
+                expr = compile_expression(p.get('when'), script.scope().child(('me',)), p.line)
+                script.handlers.append(f'func {part["when"]}(me) -> bool:\n\treturn true if {expr} else false\n')
+            parts.append(part)
+        if not parts:
+            raise GameCompileError('<qg:behavior> is empty: give it parts (qg:seek, qg:wander...)', found[0].line)
+        kinds = [p['kind'] for p in parts]
+        if kinds.count('gravity') > 1 or kinds.count('leap') > 1:
+            raise GameCompileError('a qg:behavior has one qg:gravity and one qg:leap at most', found[0].line)
+        if 'gravity' in kinds:
+            for p in parts:
+                if p['kind'] == 'patrol' and p['heading'] in ('up', 'down'):
+                    raise GameCompileError('<qg:patrol heading=>: an enemy with qg:gravity walks left and right',
+                                           found[0].line)
+        elif 'leap' in kinds:
+            raise GameCompileError('<qg:leap> needs qg:gravity in the same qg:behavior (what brings it down)',
+                                   found[0].line)
+        return parts
+
     def _items(self, sheets: dict) -> dict:
         """The qg:items the players carry, checked."""
         items = {}
@@ -504,6 +582,9 @@ class _Compiler:
         for p in found[0].children:
             if not isinstance(p, Element):
                 raise GameCompileError('<qg:behavior> holds parts (qg:gravity, qg:walk...), not statements', p.line)
+            if p.tag in _ENEMY_PARTS:
+                raise GameCompileError(f'<qg:{p.tag}> is a part of an enemy (a qg:prefab ai="behavior"), not of a '
+                                       f'character', p.line)
             if p.tag in seen:
                 raise GameCompileError(f'two <qg:{p.tag}> in one qg:behavior', p.line)
             seen[p.tag] = p.line
@@ -1232,6 +1313,9 @@ def action_name(player: int, action: str) -> str:
 
 
 _HEADINGS = {'up': (0.0, -1.0), 'down': (0.0, 1.0), 'left': (-1.0, 0.0), 'right': (1.0, 0.0)}
+
+# The parts an enemy (a qg:prefab ai="behavior") is made of; a character's are the others.
+_ENEMY_PARTS = ('seek', 'flee', 'keep-distance', 'patrol', 'wander', 'stand', 'shoot', 'leap')
 
 
 # What a scene the rollback reaches may hold: nodes that save and load their whole state

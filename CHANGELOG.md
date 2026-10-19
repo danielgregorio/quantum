@@ -10,6 +10,23 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: enemies of parts that walk on floors. `<qg:gravity>` in a
+  prefab's `qg:behavior` (as in a character's) makes it fall and stand:
+  its parts then move it left and right only, a seek goes straight at its
+  target, and the prefab's `turns-at="edge"` keeps it on its ledge (a
+  patrol turns, the other parts wait). `<qg:leap height= every= at-wall=
+  when= sound=>` jumps from the floor on bumping a wall as it walks (a step
+  to climb) or while `when=` holds. `me.on_floor` reads whether it stands.
+- Laboratory: enemies made of parts. A `<qg:prefab ai="behavior">` lists
+  its parts in a `<qg:behavior>`: `qg:seek` (around the walls, or
+  `way="straight"`), `qg:flee`, `qg:keep-distance min= max=`, `qg:patrol`
+  (to and fro, turning at walls or after `distance=`), `qg:wander` and
+  `qg:stand`. The first one in order whose `when=` holds and that has
+  something to do moves it; `qg:shoot` parts fire besides. A part notices
+  only what it sees (no solid tile between) unless `through-walls="true"`,
+  and looks for a character by id or a thing by tag. `me.doing` reads the
+  part that moved it. Expressions gain `distance(a, b)`, `nearest(a, who)`
+  and `sees(a, b)`.
 - Laboratory: what the players carry. `<qg:item name= label= sheet= frame=
   max= start= sound= particles=>` declares a kind of item; how many are
   held is the game's state (kept across scenes, saved with `qg:save`, in
