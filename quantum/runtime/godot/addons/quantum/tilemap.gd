@@ -168,6 +168,37 @@ func blocked() -> Dictionary:
 	return _blocked
 
 
+# The kind (qg:tile kind=: ladder, water, ice, hurt) of the tile at a point
+# of the scene, from the topmost layer that has one there; "" for none.
+func kind_at(p: Vector2) -> String:
+	var cell := cell_of(p)
+	var layers := get_children()
+	layers.reverse()
+	for layer in layers:
+		if not (layer is TileMapLayer) or layer.get_cell_source_id(cell) == -1:
+			continue
+		var coords: Vector2i = layer.get_cell_atlas_coords(cell)
+		var frame := str(coords.x + coords.y * _per_row)
+		if _shapes.has(frame) and _shapes[frame].get("kind") != null:
+			return str(_shapes[frame]["kind"])
+	return ""
+
+
+# The kinds a body of `size` centred at `p` touches: what it is in (its
+# middle), what it stands on (just under its feet), and what it bumps (just
+# past each side and its head). {"in": kind, "under": kind, "touching": [kinds]}.
+func kinds_about(p: Vector2, size: Vector2) -> Dictionary:
+	var half := size / 2.0
+	var in_ := kind_at(p)
+	var under := kind_at(p + Vector2(0, half.y + 1))
+	var touching := []
+	for k in [in_, under, kind_at(p - Vector2(0, half.y + 1)), kind_at(p + Vector2(half.x + 1, 0)),
+			kind_at(p - Vector2(half.x + 1, 0))]:
+		if k != "" and not touching.has(k):
+			touching.append(k)
+	return {"in": in_, "under": under, "touching": touching}
+
+
 func cell_of(p: Vector2) -> Vector2i:
 	return Vector2i(floori((p.x - position.x) / tile), floori((p.y - position.y) / tile))
 

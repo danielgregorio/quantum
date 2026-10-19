@@ -28,6 +28,8 @@ extends CharacterBody2D
 # cooldown fires again while the thing is still there.
 
 const Animator := preload("res://addons/quantum/animator.gd")
+const TileSense := preload("res://addons/quantum/tile_sense.gd")
+const ICE_ACCEL := 200.0   # on ice the walk speed comes and goes this slowly, pixels/s²
 
 var parts: Dictionary = {}   # part name -> its attributes
 var hitbox_size: Vector2 = Vector2(14, 14)
@@ -62,6 +64,9 @@ var _jump_speed: float = 0.0
 var _jump_was_held: bool = false
 var _leaping: bool = false        # rising from a jump or a bounce: letting go cuts it
 var _moving: Vector2 = Vector2.ZERO   # the velocity of the last move: the side of a touch
+var _tiles := TileSense.new()   # the kinds of the tiles about it (qg:tile kind=), its qg:on-tile handlers
+var _about := {"in": "", "under": "", "touching": []}
+var _climbing := false
 
 
 func setup(spec: Dictionary) -> void:
@@ -82,6 +87,7 @@ func setup(spec: Dictionary) -> void:
 
 func wire(sensor: Area2D, spec: Dictionary, scene: Node, sprite: Sprite2D) -> void:
 	_handlers = spec.get("on_collision", [])
+	_tiles.setup(spec, scene)
 	_on_fall = str(spec.get("on_fall", "")) if spec.get("on_fall") != null else ""
 	_scene = scene
 	sensor.area_entered.connect(_on_area_entered)
@@ -158,6 +164,13 @@ func become(name_: String) -> void:
 
 func _physics_process(delta: float) -> void:
 	_ticks += 1
+	_about = _tiles.sense(self, hitbox_size, _ticks)
+	if parts.has("gravity") and _ladder():
+		_moving = velocity
+		move_and_slide()
+		_animate()
+		_still_touching()
+		return
 	if parts.has("walk"):
 		_walk(parts["walk"], delta)
 	if parts.has("jump"):
@@ -187,8 +200,10 @@ func _walk(p: Dictionary, delta: float) -> void:
 		dir.y = Q.strength(_a("down")) - Q.strength(_a("up"))
 		if dir.length() > 1.0:
 			dir = dir.normalized()   # no faster on a diagonal
-	var target := dir * float(p["speed"])
+	var target := dir * float(p["speed"]) * (0.6 if _about["in"] == "water" else 1.0)
 	var accel := float(p["accel"])
+	if _about["under"] == "ice" and is_on_floor() or not parts.has("gravity") and _about["in"] == "ice":
+		accel = ICE_ACCEL if accel <= 0.0 else minf(accel, ICE_ACCEL)   # sliding
 	if accel > 0.0:
 		velocity.x = move_toward(velocity.x, target.x, accel * delta)
 		if both:
@@ -207,6 +222,9 @@ func _jump(p: Dictionary) -> void:
 		_coyote -= 1
 	if not Q.tapped(_a(str(p["action"]))):
 		return
+	if _about["in"] == "water":
+		velocity.y = -_jump_speed * 0.55   # in water a jump is a stroke, as often as it is pressed
+		return
 	if _coyote > 0:
 		_coyote = 0
 	elif _airs > 0:
@@ -223,9 +241,13 @@ func _jump(p: Dictionary) -> void:
 # the rise multiplied by cut= once.
 func _gravity(p: Dictionary, delta: float) -> void:
 	var g := float(p["strength"])
+	var fall_max := float(p["max_fall"])
 	if velocity.y >= 0.0:
 		_leaping = false
-	if parts.has("jump"):
+	if _about["in"] == "water":   # water holds it up: it sinks slowly
+		g *= 0.25
+		fall_max *= 0.35
+	elif parts.has("jump"):
 		var j: Dictionary = parts["jump"]
 		var holding := Q.held(_a(str(j["action"])))
 		if bool(j["variable"]) and _leaping and not holding:
@@ -234,7 +256,32 @@ func _gravity(p: Dictionary, delta: float) -> void:
 			elif _jump_was_held:
 				velocity.y *= float(j["cut"])
 		_jump_was_held = holding
-	velocity.y = minf(velocity.y + g * delta, float(p["max_fall"]))
+	velocity.y = minf(velocity.y + g * delta, fall_max)
+
+
+# A body with gravity on a ladder: up or down takes hold of it, left and right
+# sidle, no gravity; at its top it stops; the jump part's action lets go with a
+# jump. True while it climbs (the tick's velocity is set).
+func _ladder() -> bool:
+	var climb := Q.strength(_a("down")) - Q.strength(_a("up"))
+	if not (_about["in"] == "ladder" or (_about["under"] == "ladder" and climb > 0.0)):
+		_climbing = false
+	elif climb != 0.0:
+		_climbing = true
+	if not _climbing:
+		return false
+	var speed := float(parts["walk"]["speed"]) if parts.has("walk") else 60.0
+	var dir := Q.strength(_a("right")) - Q.strength(_a("left"))
+	velocity = Vector2(dir * speed * 0.5, climb * speed * 0.6)
+	var map := _scene.get_node_or_null("Tilemap") if _scene != null else null
+	if climb < 0.0 and map != null and map.kind_at(position - Vector2(0, 2)) != "ladder":
+		velocity.y = 0.0
+	if parts.has("jump") and Q.tapped(_a(str(parts["jump"]["action"]))):
+		_climbing = false
+		velocity.y = -_jump_speed
+		_leaping = true
+	_coyote = 0
+	return true
 
 
 # The take-off speed that peaks at `height` pixels under the gravity part:

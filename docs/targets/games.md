@@ -687,6 +687,17 @@ What happens when this character falls below the tilemap. Holds actions and stat
 
 Goes inside: `qg:character`.
 
+### `qg:on-tile`
+
+What happens while this character touches a tile of a kind (qg:tile kind=): stands on it, is in it, or bumps it. Holds actions and statements; `me` is the character. Without a cooldown, once as it comes to touch one; with one, again each time the cooldown runs out while it still does.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `kind` | `ladder` / `water` / `ice` / `hurt` | required |  |
+| `cooldown` | integer | `0` | ticks before it may run again while still touching |
+
+Goes inside: `qg:character`.
+
 ### `qg:on-ko`
 
 What happens when this fighter's health reaches 0. Holds actions and statements; `me` is the loser, `other` the winner.
@@ -1118,6 +1129,7 @@ One tile of a qg:tileset that is not a full solid square, for the tilemap layers
 | `frame` | integer | required | which tile: its number in the tilemap is frame+1 |
 | `shape` | text |  | the solid part, as x,y points from the tile's top-left corner separated by semicolons (0,10; 64,10; 64,64; 0,64); none: not solid |
 | `one-way` | true / false | `false` | stood on from above, jumped through from below |
+| `kind` | `ladder` / `water` / `ice` / `hurt` |  | ladder: passed through, climbed with up and down, let go of with jump; water: passed through, slow to sink in, a jump is a stroke, slower to walk; ice: slid on (a solid tile to stand on in a platformer, a floor in a top-down game); hurt: a character's qg:on-tile kind="hurt" runs while it touches one. In a Tiled tileset: a tile's class, or its kind property |
 
 Goes inside: `qg:tileset`.
 

@@ -1817,3 +1817,98 @@ def test_a_parallax_backdrop(tmp_path):
     err = refuse(tmp_path, game('  <qg:scene name="main"><qg:parallax sheet="k" scroll="2" /></qg:scene>\n'))
     assert 'between 0 (still) and 1' in str(err)
     assert 'no' in str(refuse(tmp_path, game('  <qg:scene name="main"><qg:parallax sheet="nope" /></qg:scene>\n')))
+
+
+class TestTileKinds:
+    KINDS = HEAD.replace('tile="18" />', '''tile="18">
+    <qg:tile frame="0" kind="ladder" />
+    <qg:tile frame="1" kind="water" />
+    <qg:tile frame="2" kind="ice" shape="0,4; 18,4; 18,18; 0,18" />
+    <qg:tile frame="3" kind="hurt" />
+  </qg:tileset>''', 1)
+    HERO = '''  <qg:scene name="main">
+    <qg:character id="hero" controller="platformer" sheet="c" x="10" y="10" hitbox="12x16">
+      <qg:on-tile kind="hurt" cooldown="30"><qg:play sound="ouch" /></qg:on-tile>
+      <qg:on-tile kind="water"><q:set name="wet" value="true" /></qg:on-tile>
+    </qg:character>
+    <q:set name="wet" value="false" type="boolean" />
+  </qg:scene>
+'''
+
+    def test_kinds_on_tiles_and_on_tile_handlers(self, tmp_path):
+        source = self.KINDS.replace('<qg:prefab', '<qg:sound name="ouch" src="assets/kenney/audio/stomp.ogg" />\n'
+                                    '  <qg:prefab', 1) + self.HERO + TAIL
+        out = build(tmp_path, source)
+        data = json.loads((out / 'game.json').read_text())
+        tiles = data['sheets']['k']['tiles']
+        assert tiles['0'] == {'shape': None, 'one_way': False, 'kind': 'ladder'}    # passed through
+        assert tiles['1'] == {'shape': None, 'one_way': False, 'kind': 'water'}
+        assert tiles['2']['kind'] == 'ice' and tiles['2']['shape'][0] == [0.0, 4.0]  # solid, its own shape
+        assert tiles['3']['kind'] == 'hurt' and len(tiles['3']['shape']) == 4       # solid, the full square
+        hero = data['scenes']['main']['nodes'][0]
+        assert hero['on_tile'] == [{'kind': 'hurt', 'cooldown': 30, 'handler': '_on_hero_tile_0'},
+                                   {'kind': 'water', 'cooldown': 0, 'handler': '_on_hero_tile_1'}]
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'func _on_hero_tile_0(' in script and 'func _on_hero_tile_1(' in script
+
+    def test_what_it_refuses(self, tmp_path):
+        for tile, message in (('<qg:tile frame="0" kind="ladder" shape="0,0; 18,0; 18,18" />', 'is passed through'),
+                              ('<qg:tile frame="0" kind="water" one-way="true" />', 'is passed through'),
+                              ('<qg:tile frame="0" kind="lava" />', 'lava')):
+            err = refuse(tmp_path, HEAD.replace('tile="18" />', f'tile="18">{tile}</qg:tileset>', 1)
+                         + '  <qg:scene name="main" />\n' + TAIL)
+            assert message in str(err), (message, str(err))
+        hero = self.HERO.replace('<qg:play sound="ouch" />', '')
+        for old, new, message in (('cooldown="30"', 'cooldown="-1"', 'cooldown=>: 0 or more'),
+                                  ('controller="platformer"', 'controller="grid"', 'is for controller="platformer"'),
+                                  ('kind="water"', 'kind="sand"', 'sand')):
+            err = refuse(tmp_path, self.KINDS + hero.replace(old, new) + TAIL)
+            assert message in str(err), (message, str(err))
+
+
+class TestTiledTileKinds:
+    TILESET = ''' <tileset firstgid="1" name="kenney" tilewidth="18" tileheight="18" tilecount="180" columns="20">
+  <image source="x.png" width="360" height="162"/>
+  <tile id="2" class="ladder"/>
+  <tile id="3"><properties><property name="kind" value="water"/></properties></tile>
+  <tile id="4" class="Crate"/>
+  <tile id="22" type="ice"/>
+ </tileset>
+'''
+
+    def tmx(self, tileset):
+        start = TMX.index(' <tileset')
+        end = TMX.index('</tileset>\n') + len('</tileset>\n')
+        return TMX[:start] + tileset + TMX[end:]
+
+    def kinds(self, tmp_path, tmx, tileset='k" '):
+        (tmp_path / 'level.tmx').write_text(tmx, encoding='utf-8')
+        out = build(tmp_path, game(f'  <qg:scene name="main">\n    <qg:tilemap tileset="{tileset}src="level.tmx" />'
+                                   '\n  </qg:scene>\n'))
+        return json.loads((out / 'game.json').read_text())['sheets']['k']['tiles']
+
+    def test_a_class_or_a_kind_property_in_the_map_s_own_tileset(self, tmp_path):
+        tiles = self.kinds(tmp_path, self.tmx(self.TILESET))
+        assert tiles['2'] == {'shape': None, 'one_way': False, 'kind': 'ladder'}
+        assert tiles['3'] == {'shape': None, 'one_way': False, 'kind': 'water'}
+        assert tiles['22']['kind'] == 'ice' and len(tiles['22']['shape']) == 4     # the ground tile, still solid
+        assert '4' not in tiles                                                     # a class of the game's own
+
+    def test_in_an_external_tsx(self, tmp_path):
+        inner = self.TILESET.replace(' <tileset firstgid="1"', '<tileset').replace('\n ', '\n')
+        (tmp_path / 'kenney.tsx').write_text('<?xml version="1.0" encoding="UTF-8"?>\n' + inner, encoding='utf-8')
+        tiles = self.kinds(tmp_path, self.tmx(' <tileset firstgid="1" source="kenney.tsx"/>\n'))
+        assert tiles['2']['kind'] == 'ladder' and tiles['22']['kind'] == 'ice'
+
+    def test_what_it_refuses(self, tmp_path):
+        bad = self.TILESET.replace('value="water"', 'value="lava"')
+        (tmp_path / 'level.tmx').write_text(self.tmx(bad), encoding='utf-8')
+        err = refuse(tmp_path, game('  <qg:scene name="main"><qg:tilemap tileset="k" src="level.tmx" /></qg:scene>\n'))
+        assert "tile 3 is of kind 'lava'" in str(err)
+        (tmp_path / 'level.tmx').write_text(self.tmx(self.TILESET), encoding='utf-8')
+        source = HEAD.replace('tile="18" />', 'tile="18"><qg:tile frame="2" kind="water" /></qg:tileset>', 1) \
+            + '  <qg:scene name="main"><qg:tilemap tileset="k" src="level.tmx" /></qg:scene>\n' + TAIL
+        assert "tile 2 of 'k' is of kind 'water' in the .q and 'ladder' in the Tiled map" in str(refuse(tmp_path, source))
+        (tmp_path / 'level.tmx').write_text(self.tmx(' <tileset firstgid="1" source="none.tsx"/>\n'), encoding='utf-8')
+        err = refuse(tmp_path, game('  <qg:scene name="main"><qg:tilemap tileset="k" src="level.tmx" /></qg:scene>\n'))
+        assert "cannot read the tileset 'none.tsx'" in str(err)
