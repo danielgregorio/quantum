@@ -7,6 +7,7 @@
 //! and the actuator's answer comes back as `done`.
 //!
 //!     hive-screen [--scene PATH] [--card /dev/dri/card0] [--no-display] [--no-hive] [--play]
+//!                 [--pixel-socket PATH | --no-pixel]
 //!
 //! As a daemon it draws the scene on the console through DRM/KMS
 //! (display.rs), reads the keyboard from /dev/input (input.rs) and keeps
@@ -14,8 +15,11 @@
 //! (particles, two pixels to the scene's one) is a presentation level
 //! (level.rs), chosen by the frame time it measures under the ceiling the
 //! machine's cores set; a frame is drawn in bands, one thread a core.
-//! `--play` drives it from stdin instead (play.rs): the lab and the tests
-//! use it, with no display and at the level they ask for.
+//! A page of a Quantum application comes in over the pixel socket
+//! (pixel.rs, from `quantum pixel`) and is drawn over the scene
+//! (window.rs), the keyboard its own while it shows. `--play` drives it
+//! from stdin instead (play.rs): the lab and the tests use it, with no
+//! display and at the level they ask for.
 
 mod canvas;
 mod display;
@@ -26,10 +30,12 @@ mod input;
 mod level;
 mod math;
 mod particles;
+mod pixel;
 mod play;
 mod runtime;
 mod scene;
 mod vt;
+mod window;
 mod world;
 
 use anyhow::{bail, Result};
@@ -45,6 +51,9 @@ struct Args {
     play: bool,
     hive: bool,
     display: bool,
+    /// The pixel socket: the daemon's by default, a test's where it says,
+    /// none in play mode unless asked.
+    pixel: Option<PathBuf>,
 }
 
 fn parse_args() -> Result<Args> {
@@ -54,7 +63,9 @@ fn parse_args() -> Result<Args> {
         play: false,
         hive: true,
         display: true,
+        pixel: Some(PathBuf::from(pixel::DEFAULT_PATH)),
     };
+    let mut pixel_given = false;
     let mut it = std::env::args().skip(1);
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -76,12 +87,26 @@ fn parse_args() -> Result<Args> {
             }
             "--no-hive" => args.hive = false,
             "--no-display" => args.display = false,
+            "--pixel-socket" => {
+                args.pixel =
+                    Some(PathBuf::from(it.next().ok_or_else(|| {
+                        anyhow::anyhow!("--pixel-socket needs a path")
+                    })?));
+                pixel_given = true;
+            }
+            "--no-pixel" => {
+                args.pixel = None;
+                pixel_given = true;
+            }
             "--help" | "-h" => {
-                println!("hive-screen [--scene PATH] [--card /dev/dri/card0] [--no-display] [--no-hive] [--play]");
+                println!("hive-screen [--scene PATH] [--card /dev/dri/card0] [--no-display] [--no-hive] [--play] [--pixel-socket PATH | --no-pixel]");
                 std::process::exit(0);
             }
             other => bail!("unknown argument {} (hive-screen --help)", other),
         }
+    }
+    if args.play && !pixel_given {
+        args.pixel = None;
     }
     Ok(args)
 }
@@ -111,7 +136,19 @@ fn main() -> Result<()> {
     } else {
         None
     };
-    let mut runtime = runtime::Runtime::new(world, hive);
+    // the pixel socket: without it the scene still shows, with no page
+    let pixel = match &args.pixel {
+        Some(path) => match pixel::PixelSocket::bind(path) {
+            Ok(s) => Some(s),
+            Err(e) if args.play => return Err(e),
+            Err(e) => {
+                tracing::warn!("no pixel socket, so no page on the screen: {:#}", e);
+                None
+            }
+        },
+        None => None,
+    };
+    let mut runtime = runtime::Runtime::new(world, hive, pixel);
     if args.play {
         return play::run(&mut runtime);
     }

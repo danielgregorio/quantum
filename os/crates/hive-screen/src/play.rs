@@ -13,8 +13,17 @@
 //! {"op":"frame","expect":"ref.png","bands":4}        drawn in that many bands at once, as the daemon does
 //! {"op":"level","level":2}                           the presentation level to play at (0 plain, 1 effects, 2 fine)
 //! {"op":"inject","message":{...}}                    a HiveMessage, as if the Hive sent it
+//! {"op":"show","page":{"title":"...","view":[...]}}  a page on the screen, as quantum pixel sends it
+//! {"op":"close"}                                     the page goes
+//! {"op":"act","type":"Ana","tap":["enter"]}          text typed, then keys by name (window.rs says which keys do what)
+//! {"op":"until","pixel":"submit"}                    until the window sent that event (click, submit, change, navigate, close)
+//! {"op":"until","text":"Saved"} / {"op":"until","shown":2}   until the page shows that text / the page was shown so many times
 //! {"op":"end"}
 //! ```
+//!
+//! With `--pixel-socket PATH`, `quantum pixel` connects as it does to the
+//! daemon, and its page shows here: the parity test drives the keys from
+//! stdin and the page's runtime over the socket.
 
 use crate::canvas::Canvas;
 use crate::image::Image;
@@ -59,6 +68,7 @@ fn observation(runtime: &mut Runtime, stopped: &str) -> Value {
     let mut obs = runtime.world.observe();
     obs["stopped"] = json!(stopped);
     obs["events"] = Value::Array(runtime.world.take_events());
+    obs["pixel"] = json!(runtime.pixel.as_ref().is_some_and(|p| p.connected()));
     obs
 }
 
@@ -94,6 +104,20 @@ fn holds(runtime: &Runtime, req: &Value, events: &[Value]) -> bool {
     if let Some(n) = req.get("offers").and_then(Value::as_u64) {
         return world.offers.len() as u64 >= n;
     }
+    if let Some(name) = s("pixel") {
+        return events.iter().any(|e| {
+            e.get("kind").and_then(Value::as_str) == Some("pixel")
+                && e.get("event").and_then(Value::as_str) == Some(name)
+        });
+    }
+    if let Some(text) = s("text") {
+        return world
+            .window()
+            .is_some_and(|w| w.texts().iter().any(|t| t.contains(text)));
+    }
+    if let Some(n) = req.get("shown").and_then(Value::as_u64) {
+        return world.window().is_some_and(|w| w.shown >= n);
+    }
     false
 }
 
@@ -114,6 +138,9 @@ fn handle(runtime: &mut Runtime, req: &Value) -> Result<Option<Value>> {
                         .collect()
                 })
                 .unwrap_or_default();
+            if let Some(text) = req.get("type").and_then(Value::as_str) {
+                runtime.type_text(text)?;
+            }
             for key in keys {
                 runtime.key(&key)?;
             }
@@ -144,6 +171,7 @@ fn handle(runtime: &mut Runtime, req: &Value) -> Result<Option<Value>> {
             let mut obs = runtime.world.observe();
             obs["stopped"] = json!(stopped);
             obs["events"] = Value::Array(seen);
+            obs["pixel"] = json!(runtime.pixel.as_ref().is_some_and(|p| p.connected()));
             Ok(Some(obs))
         }
         "frame" => {
@@ -205,6 +233,10 @@ fn handle(runtime: &mut Runtime, req: &Value) -> Result<Option<Value>> {
             }
             runtime.world.set_level(level);
             Ok(Some(observation(runtime, "level")))
+        }
+        "show" | "close" => {
+            runtime.pixel_request(req)?;
+            Ok(Some(observation(runtime, op)))
         }
         "end" => Ok(None),
         other => anyhow::bail!("no such op: {}", other),

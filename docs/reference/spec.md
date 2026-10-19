@@ -1081,14 +1081,14 @@ in the action.
 <p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a> · <a href="./ui#ui-checkbox"><code>&lt;ui:checkbox&gt;</code></a> · <a href="./ui#ui-radio"><code>&lt;ui:radio&gt;</code></a> · <a href="./ui#ui-switch"><code>&lt;ui:switch&gt;</code></a> · <a href="./ui#ui-select"><code>&lt;ui:select&gt;</code></a></p>
 
 <a id="UI-7"></a>**[UI-7](#UI-7)** — The Core set of `ui:*` is drawn with the same meaning by every
-renderer (browser, console, desktop): `window`, `hbox`, `vbox`, `grid`,
+renderer (browser, console, desktop, the Hive's screen): `window`, `hbox`, `vbox`, `grid`,
 `panel`, `section`, `scrollbox`, `spacer`, `rule`, `header`, `footer`, `card`
 (`card-header`, `card-body`, `card-footer`), `tabpanel`/`tab`, `text`, `badge`,
 `alert`, `link`, `image`, `progress`, `table`/`column`, `list`/`item`, `form`,
 `formitem`, `input`, `checkbox`, `switch`, `radio`, `select`/`option`,
 `button`, `pager` ([UI-11](#UI-11)), `history` ([DB-11](#DB-11)) and `stream` ([IA-7](#IA-7)). The same
-script (look, fill in, check, choose, click) passes the same in the browser and
-in the console. `ui:section` is a titled group, always open; the title of a
+script (look, fill in, check, choose, click) passes the same in the browser,
+in the console and on the screen. `ui:section` is a titled group, always open; the title of a
 `ui:card` shows even next to a `ui:card-header`. The other `ui:*` tags work
 only in the browser (Experimental), and the console shows that it does not draw
 them instead of drawing something else in their place.
@@ -1190,6 +1190,23 @@ posts without it. `submit="…"` adds that button to a form that has none, also
 when the form has fields of its own.
 
 <p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a></p>
+
+<a id="UI-15"></a>**[UI-15](#UI-15)** — `quantum pixel` opens the application's pages on the Hive's screen,
+the console of a Quantum OS machine, the way `quantum console` opens them in
+the terminal ([UI-3](#UI-3)): it starts the application's server in its process, asks
+each page for its view tree, and sends what the user did as the same actions
+the browser sends, with a session. The drawing is `hive-screen`'s: it lays the
+view tree out in cells of its font over the Hive's scene and reads the keyboard
+alone — Tab and Shift+Tab between the elements that react, in the page's order,
+the arrows inside one, Enter acts (in a field, sends its form), Space marks,
+Esc closes the page and ends the command, and the last line says the keys that
+apply to what has the focus. Any local user may; one page shows at a time. The
+page's runtime and the screen speak JSON lines over a Unix socket
+(`/run/hive-screen/pixel.sock`): `show` with the page, and the events `click`,
+`submit` (with the form's fields as a browser would post them), `change` (a
+search field after its pause, [UI-12](#UI-12)), `navigate`, `reload` and `close` back.
+
+<p class="spec-cited">Referenced by: <a href="./cli#cli-console"><code>quantum console</code></a> · <a href="./cli#cli-pixel"><code>quantum pixel</code></a> · <a href="./config#cfg-server"><code>server.reload</code></a></p>
 
 ## 11. Development
 

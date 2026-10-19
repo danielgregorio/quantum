@@ -181,7 +181,7 @@ Specified by: [AUTH-4](./spec#AUTH-4) · [CFG-2](./spec#CFG-2)
 | `debug` | bool | `False` | [CFG-3](./spec#CFG-3) |
 | `host` | str | `127.0.0.1` | [CFG-3](./spec#CFG-3) · [MAIL-1](./spec#MAIL-1) |
 | `port` | int | `8080` | [CFG-3](./spec#CFG-3) · [MAIL-1](./spec#MAIL-1) |
-| `reload` | bool | `True` | [CFG-3](./spec#CFG-3) |
+| `reload` | bool | `True` | [CFG-3](./spec#CFG-3) · [UI-15](./spec#UI-15) |
 
 Another key in this section is warned about when the configuration is loaded ([CFG-2](./spec#CFG-2), [CFG-3](./spec#CFG-3)).
 

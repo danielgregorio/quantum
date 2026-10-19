@@ -1,5 +1,51 @@
 # DruidOS Development Log
 
+## 2026-10-19 - Páginas na tela: `quantum pixel`, a fatia 4a
+
+A tela da Hive agora também mostra as aplicações da máquina. `quantum
+pixel`, rodado por qualquer usuário local na pasta de um projeto, é o
+quarto renderizador de uma página Quantum, ao lado do navegador, do
+console e do desktop: o mesmo runtime (o servidor da aplicação, aberto no
+próprio processo como o `quantum console` faz), só o desenho muda.
+
+**Como funciona.** O `quantum pixel` conecta no socket do daemon
+(`/run/hive-screen/pixel.sock`, modo 0666 num `RuntimeDirectory` da unit),
+manda cada página como a árvore de visão em JSON (`show`, inteira, a cada
+mudança) e recebe o que o usuário fez, uma linha por evento: `click`,
+`submit` (com os campos do formulário como um navegador postaria),
+`change` (campo de busca, depois da pausa), `navigate`, `reload` e
+`close`. O daemon (`window.rs`) deita a página em células da fonte (53 por
+17 em 320×180), desenha por cima da cena e fica dono do teclado enquanto
+ela mostra. O teclado agora é lido inteiro de `/dev/input` (layout US,
+Shift, Caps Lock, repetição); ABNT2 e teclas mortas ficam para a 4b.
+
+**Sem mouse.** Quatro regras, e nenhuma tecla além das do console: Tab e
+Shift+Tab entre os elementos que reagem, na ordem da página (o focado em
+mel); setas dentro de um (cursor no campo, opção do radio/select, linha e
+botão da tabela, aba); Enter aciona (num campo, envia o formulário);
+Espaço marca; Esc fecha a página e a cena volta inteira, o `quantum
+pixel` termina. A última linha diz as teclas que valem para o que tem o
+foco. Uma página mostrada de novo depois de uma ação mantém o foco no
+mesmo elemento, reconhecido pelo que ele é (tipo e `bind`/texto), não pelo
+número, que muda quando um flash ou um erro entra na árvore.
+
+**Como se prova.** O teste de paridade UI-7 roda o mesmo roteiro (vê,
+preenche, marca, escolhe, clica) num terceiro driver, o da tela: o
+`hive-screen` em modo play com `--pixel-socket`, as teclas pelo protocolo
+e o `quantum pixel` como runtime da página numa thread; o workflow do OS
+roda esse teste contra o binário recém-construído. `tests/play.rs` guarda
+um quadro de referência de uma página (`window.png`); o laboratório da
+Hive lê uma página como dados (`screen-page.jsonl`, com `contains` na op
+`screen` para afirmar um campo de um evento); o laboratório da VM leva uma
+página de um programa de usuário comum até a tela de verdade, digita nela
+pelo teclado real e vê o formulário voltar com o que foi digitado
+(`screen-pixel.jsonl`; `press` aceita agora todas as teclas e `type`).
+
+**O que ficou de fora.** Fonte maior no nível fino e reflow por nível,
+ABNT2 e teclas mortas, rolagem mais polida (4b); F1 com as ofertas da
+Hive por cima da app, um app de ajustes do OS, várias janelas, ofertas
+que abrem páginas (4c).
+
 ## 2026-10-19 - A tela apresenta só o que mudou, e divide o console
 
 Duas consolidações da tela, depois das três fatias.

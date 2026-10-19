@@ -1,24 +1,39 @@
 //! The screen running: the world, the Hive's messages turned into its
-//! events and offers, keys turned into approvals, a tick at a time.
+//! events and offers, keys turned into approvals, a page brought by
+//! `quantum pixel` and its events sent back, a tick at a time.
 
 use crate::hive::Hive;
+use crate::pixel::PixelSocket;
 use crate::world::{Key, Outgoing, World};
-use anyhow::{bail, Result};
+use anyhow::{bail, Context as _, Result};
 use hive_common::messages::{HiveMessage, Severity};
+use serde_json::Value;
 use std::sync::mpsc::TryRecvError;
 
 pub struct Runtime {
     pub world: World,
     pub hive: Option<Hive>,
+    pub pixel: Option<PixelSocket>,
 }
 
 impl Runtime {
-    pub fn new(world: World, hive: Option<Hive>) -> Runtime {
-        Runtime { world, hive }
+    pub fn new(world: World, hive: Option<Hive>, pixel: Option<PixelSocket>) -> Runtime {
+        Runtime { world, hive, pixel }
     }
 
-    /// One tick: what the Hive sent meanwhile, then the world's tick.
+    /// One tick: what the Hive and the pixel socket sent meanwhile, the
+    /// world's tick, then the window's events to the socket.
     pub fn step(&mut self) -> Result<()> {
+        if let Some(socket) = &mut self.pixel {
+            for req in socket.poll() {
+                if let Err(e) = self.pixel_request(&req) {
+                    tracing::warn!("pixel socket: {:#}", e);
+                    if let Some(socket) = &mut self.pixel {
+                        socket.send(&serde_json::json!({"error": format!("{:#}", e)}));
+                    }
+                }
+            }
+        }
         loop {
             let next = match &self.hive {
                 Some(h) => h.incoming.try_recv(),
@@ -33,7 +48,41 @@ impl Runtime {
             }
         }
         self.world.tick();
+        self.flush_pixel();
         Ok(())
+    }
+
+    /// A request of the pixel socket (or of the play driver): `show` a
+    /// page, `close` it.
+    pub fn pixel_request(&mut self, req: &Value) -> Result<()> {
+        match req.get("op").and_then(Value::as_str) {
+            Some("show") => {
+                let page = req.get("page").context("show needs page")?;
+                if !page.is_object() {
+                    bail!("show: page is not an object");
+                }
+                let title = page.get("title").and_then(Value::as_str).unwrap_or("");
+                tracing::info!("page: {}", title);
+                self.world.show(page);
+            }
+            Some("close") => {
+                tracing::info!("page closed by its runtime");
+                self.world.close_window();
+            }
+            Some(other) => bail!("no such op: {}", other),
+            None => bail!("a request needs op"),
+        }
+        Ok(())
+    }
+
+    /// The window's events, to the page's runtime.
+    fn flush_pixel(&mut self) {
+        let events = self.world.take_pixel_events();
+        if let Some(socket) = &mut self.pixel {
+            for e in &events {
+                socket.send(e);
+            }
+        }
     }
 
     /// A message of the Hive: a notice becomes the event it is about (and
@@ -84,12 +133,32 @@ impl Runtime {
         Ok(())
     }
 
-    /// A key, by name (up, down, enter, escape).
+    /// A key, by name (up, down, left, right, enter, escape, tab,
+    /// shift-tab, home, end, backspace, delete, space, pgup, pgdn, f1, f5,
+    /// ctrl-u, or one character).
     pub fn key(&mut self, name: &str) -> Result<()> {
         let Some(key) = Key::parse(name) else {
-            bail!("no such key: {} (up, down, enter, escape)", name);
+            bail!(
+                "no such key: {} (up, down, left, right, enter, escape, tab, shift-tab, home, end, backspace, delete, space, pgup, pgdn, f1, f5, ctrl-u, or one character)",
+                name
+            );
         };
         self.press(key)
+    }
+
+    /// Text typed, a character a key (a space is the Space key).
+    pub fn type_text(&mut self, text: &str) -> Result<()> {
+        for c in text.chars() {
+            let key = match c {
+                ' ' => Key::Space,
+                '\n' => Key::Enter,
+                '\t' => Key::Tab,
+                c if c.is_control() => continue,
+                c => Key::Char(c),
+            };
+            self.press(key)?;
+        }
+        Ok(())
     }
 
     /// A key.
@@ -113,6 +182,7 @@ impl Runtime {
                 h.send(&msg)?;
             }
         }
+        self.flush_pixel();
         Ok(())
     }
 }

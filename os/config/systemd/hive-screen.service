@@ -62,6 +62,10 @@ DeviceAllow=/dev/tty1 rw
 
 # The scene and the Hive's socket
 ReadOnlyPaths=/run/hive /etc/hive/screen
+# Its own socket, where `quantum pixel` brings a page to the screen: any
+# local user may (the socket is 0666), as any may run `quantum console`
+RuntimeDirectory=hive-screen
+RuntimeDirectoryMode=0755
 
 # System call filtering
 SystemCallFilter=@system-service

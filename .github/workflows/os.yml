@@ -5,9 +5,9 @@ name: Quantum OS
 on:
   push:
     branches: [main]
-    paths: ['os/**', '.github/workflows/os.yml']
+    paths: ['os/**', '.github/workflows/os.yml', 'quantum/runtime/ui_pixel.py', 'tests/apps/test_ui_parity_script.py']
   pull_request:
-    paths: ['os/**', '.github/workflows/os.yml']
+    paths: ['os/**', '.github/workflows/os.yml', 'quantum/runtime/ui_pixel.py', 'tests/apps/test_ui_parity_script.py']
 
 env:
   CARGO_TERM_COLOR: always
@@ -54,6 +54,20 @@ jobs:
 
       - name: Test
         run: cargo test --workspace
+
+      # A Quantum page on the Hive's screen: the UI parity test's one script
+      # on hive-screen (this build, no display), with `quantum pixel` as the
+      # page's runtime (docs/guide/ui.md). The Python workflow skips it
+      # without the binary; here it runs.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - name: The parity test on the screen
+        working-directory: .
+        run: |
+          pip install -e ".[dev]"
+          HIVE_SCREEN=os/target/debug/hive-screen pytest tests/apps/test_ui_parity_script.py -k pixel -p no:cacheprovider
 
       # The real hive-cortex and hive-synapse, the rest played by hive-lab,
       # as root in a private mount namespace (crates/hive-lab/README.md).

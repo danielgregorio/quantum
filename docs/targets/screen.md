@@ -506,6 +506,37 @@ drawn in bands, one thread a core, and is the same picture whatever their
 number. A scene at rest costs nothing at any level. The lab, the tests and
 `--play` play at level 1 unless asked (`{"op":"level","level":2}`).
 
+## Pages on the screen
+
+The screen is also where the machine's applications show: `quantum pixel`,
+run by any local user in a project's folder, brings the application's
+pages over the scene ([one app, many screens](/guide/ui)). The page's
+runtime is the application's own server, started in that process as
+`quantum console` starts it; it connects to `hive-screen`'s pixel socket
+(`/run/hive-screen/pixel.sock`, anyone's) and sends each page's view tree
+as JSON (`{"op":"show","page":{...}}`), whole, every time it changes. The
+screen lays it out in cells of its font (53 by 17 at 320×180), draws it
+over the scene with the keyboard its own, and sends back what the user
+did, one JSON line an event: `click` and `submit` (with the form's fields,
+as a browser would post them), `change` (a search field, after its
+pause), `navigate` (a link), `reload` (F5) and `close` (Esc, after which
+the page's runtime ends). Only one page shows at a time; a second
+`quantum pixel` is told so. Keyboard only: Tab and Shift+Tab between the
+elements that react, the arrows inside one, Enter acts, Space marks, Esc
+closes; the last line says the keys that apply.
+
+In the play protocol (`--play`), `{"op":"show","page":{...}}` shows a
+page with no runtime, `act` takes `type` (a text) and every key by name
+(`tab`, `shift-tab`, `left`, `right`, `home`, `end`, `backspace`,
+`delete`, `space`, `pgup`, `pgdn`, `f1`, `f5`, `ctrl-u`, or one
+character), `until` takes `pixel` (an event), `text` (shown on the page)
+and `shown` (how many times a page was shown), and the observation's
+`window` says the page as data: its title, flash, the elements that react
+in order with their state and which has the focus, the texts, the help
+line. `--pixel-socket PATH` gives a test the socket too: the UI parity
+test runs its one script on the screen with `quantum pixel` as the
+page's runtime.
+
 ## The screen Quantum OS ships
 
 `os/config/screen/screen.q`, whole: a honeycomb with a cell per service the whitelist names, a bee, the offers and the notices.

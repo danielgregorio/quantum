@@ -376,6 +376,13 @@ Examples:
     console_parser.add_argument('path', nargs='?', default='/', help='Page to open (default: /)')
     console_parser.add_argument('--config', default='quantum.config.yaml', help='Config file')
 
+    # Pixel: the application's pages on the Hive's screen, the console (UI-15)
+    pixel_parser = subparsers.add_parser('pixel', help="Open the application's pages on the Hive's screen (the machine's console)")
+    pixel_parser.add_argument('path', nargs='?', default='/', help='Page to open (default: /)')
+    pixel_parser.add_argument('--config', default='quantum.config.yaml', help='Config file')
+    pixel_parser.add_argument('--socket', default='/run/hive-screen/pixel.sock',
+                              help="hive-screen's pixel socket (default: /run/hive-screen/pixel.sock)")
+
     # Check: pages parse, queries compile, fields exist (M8, DEV-3)
     check_parser = subparsers.add_parser('check', help='Check pages, SQL and query fields against the database')
     check_parser.add_argument('--config', default='quantum.config.yaml', help='Config file')
@@ -492,6 +499,10 @@ def main():
     elif args.command == 'console':
         from quantum.runtime.ui_console import run_console
         sys.exit(run_console(args.config, args.path))
+
+    elif args.command == 'pixel':
+        from quantum.runtime.ui_pixel import run_pixel
+        sys.exit(run_pixel(args.config, args.path, args.socket))
 
     elif args.command == 'check':
         from quantum.cli.check import run_check
