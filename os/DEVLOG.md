@@ -1,5 +1,35 @@
 # DruidOS Development Log
 
+## 2026-10-19 - A tela apresenta só o que mudou, e divide o console
+
+Duas consolidações da tela, depois das três fatias.
+
+**Só as linhas que mudaram.** Uma cena em repouso não é parada: a abelha
+bate asas dez vezes por segundo, e cada batida custava um quadro inteiro,
+1280×720 pixels (4 MB) escritos no buffer de scanout e transferidos pela
+`virtio-gpu`. Agora o display guarda o último quadro apresentado e compara
+linha a linha (`changed_rows`): só a faixa entre a primeira e a última
+linha diferente é ampliada, escrita e marcada suja. A abelha custa 16
+linhas de 180. Um quadro igual ao anterior não toca o buffer. O nível fino
+com neve continua custando o quadro inteiro, como deve: lá tudo muda.
+Medido no VM lab sob emulação, onde nada é rápido: o quadro da abelha no
+nível 1 custava 75 a 100 ms e passou a 20 ms (a linha que o daemon diz no
+journal, `ms a frame over the first 20 frames`). Ainda é o limite do
+orçamento a 30 fps sob TCG, então a fita dos níveis segue exigindo KVM;
+numa máquina de verdade a diferença é a mesma proporção sobre custos dez
+vezes menores.
+
+**O console é dividido.** Até aqui o `hive-screen` segurava o `tty1` e não
+tratava Ctrl+Alt+F2: o console serial e o SSH eram o caminho para o grove.
+Agora o terminal fica em modo `VT_PROCESS`: o kernel manda um sinal antes
+de trocar, o daemon solta o DRM (`DROP_MASTER`, para o console de texto
+poder desenhar na mesma placa), responde `VT_RELDISP` e fica esperando sem
+desenhar e sem aceitar teclas; no sinal de volta, retoma o master (quem foi
+master pode voltar a ser sem privilégio), põe o modo de novo e desenha o
+quadro inteiro. A fita `screen-vt.jsonl` faz `chvt 2` no guest, espera o
+mel sumir do `screendump`, `chvt 1`, e espera o mel voltar. `until_shot`
+ganhou `lacks`, esperar uma cor sumir.
+
 ## 2026-10-19 - A tela cresce com os núcleos: níveis de apresentação
 
 A terceira fatia da tela, o requisito experimental: a interface escala com

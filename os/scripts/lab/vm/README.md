@@ -57,7 +57,7 @@ The same shape as the Hive lab's: `{"op": ...}` in, `{"ok": true, ...}` or `{"ok
 | `until_screen` (`app`, `contains`, `excludes`, `count`, `timeout`: 5) | waits until the screen shows it (exactly `count` times, if given) |
 | `keys_until` (`app`, `keys`, `contains`, `max`: 20) | presses keys until the screen shows the text: moves a selection to a row by what it says |
 | `shot` (`path`, `has`: `#rrggbb`, `min`: 1, `lacks`: `#rrggbb`) | the display as a PNG, its size and its commonest colours; with `has`, whether that colour is on it; with `lacks`, fails when that colour is |
-| `until_shot` (`has`, `min`, `timeout`: 10) | takes the display until that colour is on it: the smoke over a cell, the honey in it |
+| `until_shot` (`has` or `lacks`, `min`, `timeout`: 10) | takes the display until that colour is on it (the smoke over a cell, the honey in it), or until it is gone |
 | `press` (`keys`: up, down, enter, escape) | the machine's keyboard, which `hive-screen` reads from `/dev/input` |
 | `cpus` (`count`: 1 to 4, `timeout`: 20) | leaves that many of the machine's 4 vCPUs online in the guest (the others go offline, as a vCPU unplugged comes to) and waits for `nproc` to agree: `hive-screen`'s presentation level follows the cores. A restore brings the snapshot's own back |
 | `end` | stops the VM |
@@ -74,6 +74,7 @@ The same shape as the Hive lab's: `{"op": ...}` in, `{"ok": true, ...}` or `{"ok
 | `dangerous-command` | a logged-in user's `rm -rf /srv` goes from the kernel's audit log through the process nerve to the real dashboard, whose advice claims nothing was done; a routine delete and a daemon's own commands are not reported |
 | `screen-console` | the Hive's screen on the real display: a real crash smokes nginx's cell, Enter on the machine's keyboard approves the offer, the real actuator's restart fills the cell with honey |
 | `screen-levels` (needs KVM) | the screen's presentation level follows the cores: two online, level 1 and no snow; four, the fine level at 640x360 with the snow; two again, back down |
+| `screen-vt` | the console is shared: `chvt 2` takes it to a text terminal and the scene lets the display go (the honey leaves the screendump); `chvt 1` brings it back whole |
 
 A user's commands (`sh` with `user`, grove) carry a login uid, as a real login gives them: the audit rule the process nerve reads records only programs of someone who logged in. A failing tape prints the guest's journal since it started, for failures seen where nobody can look into the guest afterwards (CI).
 

@@ -158,8 +158,30 @@ fn main() -> Result<()> {
     let mut last_drawn = Instant::now() - Duration::from_secs(1);
     let mut n: u64 = 0;
     while !STOP.load(Ordering::Relaxed) {
+        // another terminal asked for the console: let the display go and
+        // say so; when it comes back, take the display and draw whole
+        if console.release_asked() {
+            if let Some(d) = display.as_mut() {
+                d.suspend();
+            }
+            console.allow_release();
+            tracing::info!("the console went to another terminal: the scene waits");
+        }
+        if console.acquire_asked() {
+            console.acknowledge_acquire();
+            match display.as_mut().map(|d| d.resume()) {
+                Some(Err(e)) => {
+                    tracing::warn!("the console is ours again, but the display is not: {:#}", e)
+                }
+                _ => tracing::info!("the console is ours again"),
+            }
+            runtime.world.touch();
+        }
+        let active = display.as_ref().map_or(true, |d| d.is_active());
         for key in keyboards.poll() {
-            runtime.press(key)?;
+            if active {
+                runtime.press(key)?;
+            }
         }
         runtime.step()?;
         n += 1;
@@ -184,9 +206,10 @@ fn main() -> Result<()> {
                 chooser.before_ms()
             );
         }
-        // at most as many pictures a second as the level says, and none
-        // while nothing moves
-        if last_drawn.elapsed() >= level::LEVELS[chooser.level()].period()
+        // at most as many pictures a second as the level says, none while
+        // nothing moves, and none while another terminal has the console
+        if active
+            && last_drawn.elapsed() >= level::LEVELS[chooser.level()].period()
             && runtime.world.take_dirty()
         {
             let t0 = Instant::now();

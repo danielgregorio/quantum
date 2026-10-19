@@ -1,0 +1,13 @@
+// the console is shared: Ctrl+Alt+F2 (chvt 2 here) asks for the terminal, hive-screen lets the display go and the
+// text console draws there, the scene waits; Ctrl+Alt+F1 (chvt 1) brings it back whole
+{"op": "start"}
+{"op": "until_sh", "sh": "systemctl is-active hive-screen", "timeout": 20}
+{"op": "sh", "sh": "journalctl -b -u hive-screen --no-pager -o cat", "contains": "the terminal switches with us"}
+{"op": "until_shot", "has": "#ffd34d", "timeout": 15}
+{"op": "sh", "sh": "chvt 2"}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "the console went to another terminal", "timeout": 10}
+{"op": "until_shot", "lacks": "#ffd34d", "timeout": 15}
+{"op": "sh", "sh": "chvt 1"}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "the console is ours again", "timeout": 10}
+{"op": "until_shot", "has": "#ffd34d", "timeout": 15}
+{"op": "end"}
