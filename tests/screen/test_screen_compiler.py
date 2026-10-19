@@ -226,7 +226,8 @@ def test_every_event_has_the_common_fields_and_the_hive_s_own():
     for name, event in HIVE.items():
         assert set(EVENTS[name].fields) == set(event.fields) | {'title', 'body', 'severity'}
     assert set(EVENTS['offer'].fields) == {'count', 'title', 'body', 'severity'}
-    assert set(EVENTS['done'].fields) == {'action', 'service', 'package', 'success', 'output'}
+    assert set(EVENTS['done'].fields) == {'action', 'service', 'package', 'output'}
+    assert set(EVENTS['failed'].fields) == set(EVENTS['done'].fields)
 
 
 def test_every_action_is_a_tag_inside_on_and_every_node_a_tag_inside_scene():

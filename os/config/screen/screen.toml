@@ -216,16 +216,16 @@ align = "left"
 [[nodes]]
 kind = "text"
 value = "Offers"
-x = 196
+x = 186
 y = 22
 color = "#ffd34d"
 align = "left"
 
 [[nodes]]
 kind = "offers"
-x = 196
+x = 186
 y = 34
-width = 118
+width = 130
 rows = 8
 color = "#ffffff"
 focus = "#ffd34d"
@@ -363,5 +363,13 @@ dy = 12
 
 [[rules.actions]]
 kind = "say"
-text = "{action}: {success}"
+text = "{action}: done"
 seconds = 4.0
+
+[[rules]]
+event = "failed"
+
+[[rules.actions]]
+kind = "say"
+text = "{action} failed: {output}"
+seconds = 8.0

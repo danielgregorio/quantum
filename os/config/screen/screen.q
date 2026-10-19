@@ -38,8 +38,8 @@
     <qs:sprite name="containerd" sheet="cell" frame="1" x="102" y="112" />
     <qs:text value="containerd" x="130" y="119" />
 
-    <qs:text value="Offers" x="196" y="22" color="#ffd34d" />
-    <qs:offers x="196" y="34" width="118" rows="8" />
+    <qs:text value="Offers" x="186" y="22" color="#ffd34d" />
+    <qs:offers x="186" y="34" width="130" rows="8" />
     <qs:notices x="6" y="142" width="308" rows="2" />
   </qs:scene>
 
@@ -78,6 +78,9 @@
   <qs:on event="done">
     <qs:frame target="{service}" frame="0" />
     <qs:emit particles="stars" at="{service}" dx="12" dy="12" />
-    <qs:say text="{action}: {success}" />
+    <qs:say text="{action}: done" />
+  </qs:on>
+  <qs:on event="failed">
+    <qs:say text="{action} failed: {output}" seconds="8" />
   </qs:on>
 </q:application>

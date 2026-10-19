@@ -358,6 +358,23 @@ impl Driver {
                 self.lab()?.start_tui(&app, rows, cols).await?;
                 Ok(json!({"ok": true, "app": app, "rows": rows, "cols": cols}))
             }
+            "screen" => {
+                if let Some(play) = req.get("play") {
+                    let answer = self.lab()?.screen_request(play).await?;
+                    // a frame that differs, an until that ran out: the tape fails
+                    let ok = answer.get("error").is_none()
+                        && answer.get("ok") != Some(&Value::Bool(false))
+                        && answer.get("stopped").and_then(Value::as_str) != Some("max_ticks");
+                    return Ok(json!({"ok": ok, "screen": answer}));
+                }
+                let scene = match s("scene") {
+                    Some(p) => PathBuf::from(p),
+                    None => self.bin_dir.join("../../config/screen/screen.toml"),
+                };
+                let scene = scene.canonicalize().unwrap_or(scene);
+                self.lab()?.start_screen(&scene).await?;
+                Ok(json!({"ok": true, "scene": scene.display().to_string()}))
+            }
             "view" => {
                 let screen = self.lab()?.screen(s("app").context("view needs app")?)?;
                 Ok(json!({"ok": true, "screen": screen.text, "cursor": screen.cursor}))

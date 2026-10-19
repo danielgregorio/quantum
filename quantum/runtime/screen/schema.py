@@ -76,12 +76,17 @@ EVENTS.update({
         'The Hive offered something an administrator may approve; the qs:offers lists it.',
         {'count': Field('int', 'how many offers came together'), **COMMON}, 'screen'),
     'done': ScreenEvent(
-        'An action an administrator approved on this screen finished.',
+        'An action an administrator approved on this screen ran and succeeded.',
         {'action': Field('text', 'what ran: the action\'s name (restart-service)'),
          'service': Field('text', 'the service it was on, when it was on one'),
          'package': Field('text', 'the package it was about, when it was about one'),
-         'success': Field('text', 'true or false'),
          'output': Field('text', 'what it printed, if anything')}, 'screen'),
+    'failed': ScreenEvent(
+        'An action an administrator approved on this screen ran and failed.',
+        {'action': Field('text', 'what ran: the action\'s name (restart-service)'),
+         'service': Field('text', 'the service it was on, when it was on one'),
+         'package': Field('text', 'the package it was about, when it was about one'),
+         'output': Field('text', 'what it said, if anything')}, 'screen'),
 })
 
 # ---------------------------------------------------------------- tags

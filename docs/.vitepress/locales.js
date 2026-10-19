@@ -209,7 +209,7 @@ const TOOLS_SIDEBAR = {
   tools: ['tools', [['cli', '/tools/cli'], ['hotReload', '/tools/hot-reload'], ['devPanel', '/tools/dev-panel'],
     ['errorPages', '/tools/error-pages'], ['check', '/tools/check'], ['vscode', '/tools/vscode-extension'],
     ['lsp', '/tools/lsp-server']]],
-  targets: ['targets', [['desktop', '/targets/desktop'], ['games', '/targets/games'], ['hive', '/targets/hive']]],
+  targets: ['targets', [['desktop', '/targets/desktop'], ['games', '/targets/games'], ['hive', '/targets/hive'], ['screen', '/targets/screen']]],
 }
 
 const TOOLS_TEXT = {

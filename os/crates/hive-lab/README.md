@@ -46,6 +46,7 @@ The ops:
 | `none` (`to`, `type`, `contains`, `within`) | nothing matching arrives, for example an action nobody approved |
 | `tui` (`app`: dashboard or grove, `rows`, `cols`) | the **real** program in a pseudo-terminal: hive-dashboard as root, grove as the lab's user |
 | `view` (`app`), `keys` (`app`, `keys`: ["Down", "Enter", "text"]), `until_screen` (`app`, `contains`, `excludes`) | its screen as text, through a terminal emulator: what a person sees, with no screenshot and no OCR |
+| `screen` (`scene`), `screen` (`play`: a request) | the **real** hive-screen (the Hive's screen, `config/screen/screen.q`) with no display, as root, on the compiled scene; then its play protocol: `{"op":"until","offer":"Restart nginx"}`, `{"op":"act","tap":["enter"]}`, `{"op":"until","sprite":"nginx","frame":0}`, `{"op":"frame","path":"..."}` — what it shows as data, never pixels |
 | `log_until` (`daemon`, `contains`), `log` (`daemon`, `lines`) | the daemons' logs |
 | `end` | stops everything and removes the lab's directory |
 

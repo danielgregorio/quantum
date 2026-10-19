@@ -293,6 +293,14 @@ pub enum HiveMessage {
         actions: Vec<Suggestion>,
         /// Auto-dismiss after seconds (0 = manual dismiss)
         timeout_secs: u32,
+        /// The event behind it, as the rules and the screen name it
+        /// (`service-crash`, `offer`...); None for a plain notice.
+        #[serde(default)]
+        kind: Option<String>,
+        /// Its fields (`service`, `port`, `count`...), as `{field}`s are
+        /// filled in from them.
+        #[serde(default)]
+        fields: std::collections::BTreeMap<String, String>,
     },
 
     // =========================================================================

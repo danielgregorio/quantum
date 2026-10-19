@@ -1,0 +1,29 @@
+[package]
+name = "hive-screen"
+description = "The Hive's screen: a pixel-art scene on the machine's console, driven by the Hive's events, where an administrator approves its offers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "hive-screen"
+path = "src/main.rs"
+
+[dependencies]
+hive-common = { path = "../hive-common" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+# The sprite sheets and the font are PNGs the compiler leaves next to the
+# scene; frames for the tests are PNGs too.
+png = "0.17"
+
+[dev-dependencies]
+tempfile = "3"
