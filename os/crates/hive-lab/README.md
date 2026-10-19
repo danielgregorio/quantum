@@ -75,6 +75,7 @@ sudo target/debug/hive-lab --play crates/hive-lab/tapes/crash-restart.jsonl
 | Tape | What it holds the Hive to |
 |---|---|
 | `crash-restart` | a crash reaches grove and the dashboard; a restart is offered; nothing runs until approved; then the actuator is asked |
+| `crash-loop` | a service crashing again and again is reported and offered once, not once per crash; another service's crash still is |
 | `command-not-found` | a missing program gets an install offer; the install is asked only once approved |
 | `port-conflict` | the shell is told who holds the port; listing the ports is offered |
 | `disk-low` | a warning; `df -h` is offered |
@@ -85,6 +86,10 @@ sudo target/debug/hive-lab --play crates/hive-lab/tapes/crash-restart.jsonl
 
 `cargo test -p hive-lab` plays them too when it runs as root, and skips them otherwise, saying why.
 
+## Programs in a terminal, elsewhere
+
+`hive-lab term -- PROGRAM ARGS...` runs one program in a pseudo-terminal and answers `{"op":"view"}`, `{"op":"keys","keys":[...]}` and `{"op":"until","contains":...}`, one JSON line each, without starting a Hive. The VM lab uses it to read the real dashboard and grove in its guest with this lab's terminal emulator.
+
 ## What it does not cover
 
-The dashboard and grove are the real programs (`tui`), but they run against the lab's Hive. The nerves are not the real ones, so the lab does not test what they notice in a running system. The actuator runs nothing, so it does not test what an action does to the system. Both need the system itself. That is the job of a VM driven by a guest agent, which is the next layer, and, for boot and the installer, of the ISO lab in `scripts/lab/`.
+The dashboard and grove are the real programs (`tui`), but they run against the lab's Hive. The nerves are not the real ones, so the lab does not test what they notice in a running system. The actuator runs nothing, so it does not test what an action does to the system. Both need the system itself: that is the VM lab (`scripts/lab/vm`), which restores the real system from a snapshot in about a second. Boot and the installer are the ISO lab's (`scripts/lab/lab.sh`).

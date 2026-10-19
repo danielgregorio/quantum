@@ -16,6 +16,7 @@
 //! takes root, as in a container or a throwaway VM.
 
 pub mod agent;
+pub mod term;
 pub mod tui;
 
 use anyhow::{bail, Context as _, Result};

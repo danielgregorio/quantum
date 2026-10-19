@@ -38,6 +38,10 @@
 //!
 //! With `--record FILE`, every request is also appended to FILE: a session
 //! becomes a tape that `--play` runs again as a test.
+//!
+//! `hive-lab term -- PROGRAM ARGS...` runs one program in a pseudo-terminal
+//! instead, driven the same way (see term.rs): the VM lab reads the guest's
+//! dashboard and grove with it.
 
 mod agent;
 
@@ -55,6 +59,9 @@ async fn main() -> Result<()> {
     if std::env::var_os("HIVE_LAB_AGENT").is_some() {
         return agent::run().await;
     }
+    if std::env::args().nth(1).as_deref() == Some("term") {
+        return hive_lab::term::run(std::env::args().skip(2).collect()).await;
+    }
     let mut args = std::env::args().skip(1);
     let (mut play, mut record, mut bin_dir) = (None, None, None);
     while let Some(arg) = args.next() {
@@ -64,6 +71,7 @@ async fn main() -> Result<()> {
             "--bin-dir" => bin_dir = args.next().map(PathBuf::from),
             "-h" | "--help" => {
                 println!("hive-lab [--bin-dir DIR] [--record FILE] [--play FILE]  (requests on stdin, one JSON per line)");
+                println!("hive-lab term [--rows N] [--cols N] -- PROGRAM ARGS...  (one program in a pseudo-terminal)");
                 return Ok(());
             }
             other => bail!("unknown argument {}", other),
