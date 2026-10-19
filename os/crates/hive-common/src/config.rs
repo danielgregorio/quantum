@@ -201,10 +201,20 @@ pub struct SynapseConfig {
     /// `backend = "ollama"`.
     #[serde(default)]
     pub ollama_model: Option<String>,
+
+    /// The Hive's rules: what synapse offers on an event, written by Quantum
+    /// from config/hive/hive.q (config/hive/rules.toml). When the file is
+    /// missing, the rules this build was made with are used.
+    #[serde(default = "default_rules_path")]
+    pub rules_path: PathBuf,
 }
 
 fn default_synapse_backend() -> String {
     "candle".to_string()
+}
+
+fn default_rules_path() -> PathBuf {
+    PathBuf::from("/etc/hive/rules.toml")
 }
 
 impl Default for SynapseConfig {
@@ -222,6 +232,7 @@ impl Default for SynapseConfig {
             backend: default_synapse_backend(),
             ollama_url: None,
             ollama_model: None,
+            rules_path: default_rules_path(),
         }
     }
 }

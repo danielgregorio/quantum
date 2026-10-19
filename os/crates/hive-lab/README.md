@@ -79,6 +79,7 @@ sudo target/debug/hive-lab --play crates/hive-lab/tapes/crash-restart.jsonl
 | `command-not-found` | a missing program gets an install offer; the install is asked only once approved |
 | `port-conflict` | the shell is told who holds the port; listing the ports is offered |
 | `disk-low` | a warning; `df -h` is offered |
+| `log-anomaly` | a unit's recent logs are offered, and nothing else |
 | `question` | grove's question is answered as text, never as an action |
 | `user-socket-boundary` | a user's shell cannot send an action, nor approve a suggestion |
 | `dashboard-screen` | the real dashboard shows the crash and its offers, a plain notice is not shown as awaiting confirmation, Enter approves; a second dashboard's approval runs nothing again |

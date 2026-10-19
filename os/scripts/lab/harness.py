@@ -937,7 +937,8 @@ class GuestSession:
         units = config_files(src, "systemd", ".service")
         timers = config_files(src, "systemd", ".timer")
         polkit_rules = config_files(src, "polkit", ".rules")
-        hive_config = [os.path.join(src, "config", "hive", f) for f in ("default.toml", "whitelist.toml")]
+        hive_config = [os.path.join(src, "config", "hive", f)
+                       for f in ("default.toml", "whitelist.toml", "rules.toml")]
         stage = "/tmp/druidos-hotswap"
         result = self.ssh(f"rm -rf {stage} && mkdir -p {stage}")
         if result.returncode != 0:
@@ -966,6 +967,7 @@ class GuestSession:
             f"{install_rules}"
             "install -m 0644 default.toml /etc/hive/config.toml; "
             "install -m 0644 whitelist.toml /etc/hive/whitelist.toml; "
+            "install -m 0644 rules.toml /etc/hive/rules.toml; "
             f"systemctl daemon-reload; systemctl reset-failed {' '.join(HIVE_UNITS)} || true; "
             f"{enable_timers}"
             f"systemctl start --no-block {' '.join(HIVE_UNITS)}'",

@@ -1,0 +1,7 @@
+// a unit logging an unusual number of errors: the rule on log-anomaly (config/hive/hive.q) offers its
+// recent logs, and nothing else; nothing runs until approved
+{"op":"start"}
+{"op":"inject","message":{"LogAnomaly":{"service":"redis-server.service","severity":"Error","lines":[],"pattern":null}}}
+{"op":"until","to":"dashboard","type":"Notification","contains":"Show recent logs for redis-server","timeout":10}
+{"op":"none","to":"actuator","within":0.5}
+{"op":"end"}

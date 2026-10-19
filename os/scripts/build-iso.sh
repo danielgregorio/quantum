@@ -356,6 +356,7 @@ install_hive_stack() {
     mkdir -p "$chroot_dir/etc/hive"
     install -m 0644 "$PROJECT_ROOT/config/hive/default.toml" "$chroot_dir/etc/hive/config.toml"
     install -m 0644 "$PROJECT_ROOT/config/hive/whitelist.toml" "$chroot_dir/etc/hive/whitelist.toml"
+    install -m 0644 "$PROJECT_ROOT/config/hive/rules.toml" "$chroot_dir/etc/hive/rules.toml"
 
     # hive-actuator runs unprivileged; polkit is what lets it control
     # services (within the rule's own ceiling - see the rules file).

@@ -57,6 +57,10 @@ memory_limit_mb = 512
 # User to run as (isolated, no network access)
 user = "_hive-ai"
 
+# The Hive's rules: what synapse offers on an event, written by Quantum from
+# config/hive/hive.q. Without the file, the rules this build was made with.
+rules_path = "/etc/hive/rules.toml"
+
 # ============================================================================
 # Actuator (Action Executor)
 # ============================================================================

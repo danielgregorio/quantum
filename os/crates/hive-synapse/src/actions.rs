@@ -1,117 +1,31 @@
 //! Actionable suggestions derived from the event that triggered a request.
 //!
 //! The model (and the mock backend) only ever produce text. Anything a user
-//! can approve for hive-actuator to execute comes from here instead: fixed
-//! rules mapping a *typed* trigger (a crashed unit, a full disk, ...) to a
-//! *typed* `Action`, with parameters taken from the event itself — never
-//! parsed out of model output. hive-actuator's whitelist still has the final
-//! word on whether any of them may run.
+//! can approve for hive-actuator to execute comes from the Hive's rules
+//! instead (the `rules` module): typed offers on a *typed* trigger (a crashed
+//! unit, a full disk, ...), written in Quantum (config/hive/hive.q) and
+//! compiled to rules.toml, with their parameters taken from the event
+//! itself — never parsed out of model output. hive-actuator's whitelist
+//! still has the final word on whether any of them may run.
 
-use hive_common::actions::{is_valid_package_name, Action};
-use hive_common::messages::{Context, HiveMessage};
+use hive_common::messages::Context;
 
-/// An approvable suggestion, before it gets its id.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ActionSuggestion {
-    pub title: String,
-    pub description: String,
-    pub action: Action,
-}
+pub use crate::rules::ActionSuggestion;
 
-/// The actionable suggestions for whatever triggered this request, most
-/// directly useful first.
+/// The actionable suggestions for whatever triggered this request, in the
+/// order the rules give them, from the rules the daemon loaded.
 pub fn for_context(context: &Context) -> Vec<ActionSuggestion> {
     match context.trigger.as_deref() {
-        Some(HiveMessage::ServiceCrash { service, .. }) => match service_name(service) {
-            Some(name) => vec![restart_service(service, name), recent_logs(name)],
-            None => vec![],
-        },
-        Some(HiveMessage::LogAnomaly { service, .. }) => {
-            service_name(service).map(recent_logs).into_iter().collect()
-        }
-        Some(HiveMessage::DiskSpaceLow { mount, .. }) => vec![run_command(
-            "Show disk usage",
-            format!("See how full {} and the other mounts are.", mount.display()),
-            "df",
-            &["-h"],
-        )],
-        Some(HiveMessage::CommandNotFound { command, package }) => {
-            if is_valid_package_name(package) {
-                vec![ActionSuggestion {
-                    title: format!("Install {package}"),
-                    description: format!(
-                        "`{command}` isn't installed; the {package} package provides it."
-                    ),
-                    action: Action::InstallPackage {
-                        name: package.clone(),
-                        assume_yes: true,
-                    },
-                }]
-            } else {
-                vec![]
-            }
-        }
-        Some(HiveMessage::PortConflict { port, .. }) => vec![run_command(
-            "Show listening ports",
-            format!("See which process is holding port {port}."),
-            "ss",
-            &["-tlnp"],
-        )],
-        _ => vec![],
+        Some(trigger) => crate::rules::current().offers(trigger),
+        None => vec![],
     }
-}
-
-fn restart_service(unit: &str, name: &str) -> ActionSuggestion {
-    ActionSuggestion {
-        title: format!("Restart {name}"),
-        description: format!("{unit} stopped unexpectedly. Run `systemctl restart {name}`."),
-        action: Action::RestartService {
-            name: name.to_string(),
-        },
-    }
-}
-
-fn recent_logs(name: &str) -> ActionSuggestion {
-    run_command(
-        &format!("Show recent logs for {name}"),
-        format!("The last 50 journal lines from {name}, to see why it failed."),
-        "journalctl",
-        &["-n", "50", "-u", name],
-    )
-}
-
-fn run_command(title: &str, description: String, cmd: &str, args: &[&str]) -> ActionSuggestion {
-    ActionSuggestion {
-        title: title.to_string(),
-        description,
-        action: Action::RunCommand {
-            cmd: cmd.to_string(),
-            args: args.iter().map(|a| a.to_string()).collect(),
-            cwd: None,
-            env: vec![],
-        },
-    }
-}
-
-/// `nginx.service` -> `nginx`, the form hive-actuator's whitelist uses.
-///
-/// Only service units qualify (restarting `init.scope` or a `.socket` isn't
-/// a meaningful suggestion), and only names made of the characters systemd
-/// allows in unit names — nothing that could read as an option or a glob.
-fn service_name(unit: &str) -> Option<&str> {
-    let name = unit.strip_suffix(".service")?;
-    let valid = !name.is_empty()
-        && !name.starts_with('-')
-        && name
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '@' | '.' | '_' | ':' | '-'));
-    valid.then_some(name)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hive_common::messages::Severity;
+    use hive_common::actions::Action;
+    use hive_common::messages::{HiveMessage, Severity};
     use std::path::PathBuf;
 
     fn context(trigger: Option<HiveMessage>) -> Context {
