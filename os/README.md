@@ -14,9 +14,13 @@ It starts as [DruidOS](https://github.com/danielgregorio/druidos), whose history
 
 ## Why it lives in the Quantum repository
 
-The two share an idea. In Quantum, a game is written in tags with no script, and the compiler refuses anything its schema does not declare. In Quantum OS, the Hive acts only through typed actions on a whitelist that fails closed, and the model's text never becomes an action. The work ahead brings them together:
-- the Hive's rules declared in Quantum and compiled to what the daemons load;
-- a play protocol for the system, like the one Quantum's games have, so an agent iterates on the OS in seconds instead of ISO builds.
+The two share an idea. In Quantum, a game is written in tags with no script, and the compiler refuses anything its schema does not declare. In Quantum OS, the Hive acts only through typed actions on a whitelist that fails closed, and the model's text never becomes an action.
+
+They also share a way of working. Quantum's games have a play protocol, through which an agent plays a game and turns the session into a test. Quantum OS has two labs that do the same for the system, without ISO builds:
+- the Hive lab (`crates/hive-lab`) runs the real hive-cortex and hive-synapse and plays the rest, in a fraction of a second;
+- the VM lab (`scripts/lab/vm`) runs the whole system for real in a VM, restored from a snapshot in about a second.
+
+Next is declaring the Hive's rules in Quantum and compiling them to what the daemons load.
 
 ## Working on it
 
