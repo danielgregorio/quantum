@@ -38,6 +38,23 @@ descreve, e a linha que ficaria sem nome é omitida. As fitas
 `lsof -i :80` sem nenhum placeholder (`excludes`), e falham com o código
 antigo.
 
+**Telas como texto (mesmo dia):** o lab roda o `hive-dashboard` e o
+`grove` de verdade num pseudo-terminal, e lê a tela por um emulador de
+terminal (crate `vt100`): `tui`, `view`, `keys`, `until_screen`. Nada de
+screenshot nem OCR. Na primeira olhada ao dashboard real, dois defeitos:
+
+1. Todo aviso sem sugestão aparecia em vermelho com "(CONFIRM? press
+   Enter again)": `armed == r.suggestion.map(...)` dá verdadeiro quando os
+   dois lados são `None`. Agora `is_armed()` exige os dois `Some`.
+2. O cortex mandava avisos e sugestões só para o **primeiro** dashboard
+   do HashMap. Com dois administradores, qual deles via dependia da ordem
+   do HashMap. Agora vão para todos. A primeira aprovação leva
+   (`pending_suggestions.remove`), então nada roda duas vezes. Há um teste
+   no router, que falhava antes.
+
+Fitas novas: `dashboard-screen` (falha com o dashboard antigo, conferido)
+e `grove-screen`. As 8 rodam em ~5 s.
+
 **Próximas camadas:** a fronteira deste lab é o que o sistema real faz. O
 que os nerves percebem num sistema rodando e o que uma ação faz pedem uma
 VM leve (imagem cloud do Ubuntu, um agente via vsock com observações

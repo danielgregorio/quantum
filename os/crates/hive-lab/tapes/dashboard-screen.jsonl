@@ -1,0 +1,13 @@
+// the real hive-dashboard in a pseudo-terminal, read as text: a crash and its offers on the screen,
+// a plain notice not shown as awaiting confirmation, a restart approved with the keyboard
+{"op":"start"}
+{"op":"tui","app":"dashboard","rows":24,"cols":100}
+{"op":"crash","service":"nginx.service","exit_code":1,"restarts":5}
+{"op":"until_screen","app":"dashboard","contains":"Hive Suggestion — Restart nginx","excludes":"CONFIRM?","timeout":10}
+{"op":"keys","app":"dashboard","keys":["Down","Enter"]}
+{"op":"until","to":"actuator","type":"ActionRequest","contains":"\"RestartService\":{\"name\":\"nginx\"}"}
+{"op":"until_screen","app":"dashboard","contains":"Restart nginx (done)"}
+// every administrator's dashboard was offered it; the lab's own approves too, and nothing runs twice
+{"op":"approve"}
+{"op":"none","to":"actuator","within":0.5}
+{"op":"end"}
