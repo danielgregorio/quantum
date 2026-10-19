@@ -135,6 +135,8 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 	animator = Animator.new()
 	animator.name = "Animator"
 	animator.setup(sprite, prefab.get("animations", {}))
+	animator.ends = prefab.get("on_animation_end", [])
+	animator.caller = P
 	add_child(animator)
 	animator.play("walk")
 	if prefab.get("initial_state") != null:

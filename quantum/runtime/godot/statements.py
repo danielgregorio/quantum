@@ -58,6 +58,7 @@ class SceneScript:
     prefabs_used: List[tuple] = field(default_factory=list)   # (name, line) from spawn/swap
     unrollable: List[tuple] = field(default_factory=list)     # (tag, line): qg:tween, qg:set-tile (not under rollback)
     particles_used: List[tuple] = field(default_factory=list)  # (name, line) from qg:emit
+    animations_played: List[tuple] = field(default_factory=list)  # (name, line) from qg:play-animation
     states_used: List[tuple] = field(default_factory=list)    # (name, line) from become
     scenes_used: List[tuple] = field(default_factory=list)    # (name, line) from goto-scene
     paths_used: List[tuple] = field(default_factory=list)     # (name, line) from spawn at="path"
@@ -447,6 +448,9 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         script.particles_used.append((el.get('particles'), el.line))
         return (f'Q.emit({scope.reference(at)}, {json.dumps(el.get("particles"))}, '
                 f'{float(el.get("dx"))!r}, {float(el.get("dy"))!r})')
+    if el.tag == 'play-animation':
+        script.animations_played.append((el.get('name'), el.line))
+        return f'Q.play_animation({target}, {json.dumps(el.get("name"))})'
     if el.tag == 'tween':
         if el.get('seconds') <= 0:
             raise GameCompileError(f'<qg:tween seconds="{el.get("seconds")}">: more than 0', el.line)
