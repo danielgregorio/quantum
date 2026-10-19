@@ -2,7 +2,10 @@
 //! Wayland and no GPU driver on our side. One connected connector, its
 //! preferred mode, one dumb buffer the CPU writes into (mapped once: a
 //! mapping a frame costs a page fault a page), and the scene scaled up by
-//! a whole number in the middle of it, black around.
+//! a whole number in the middle of it, black around. Only the rows that
+//! changed since the last picture are written: a scene at rest moves a
+//! bee, not a screen. While another terminal has the console, the display
+//! is let go (the text console draws there) and taken back whole after.
 
 use crate::image::Image;
 use anyhow::{bail, Context as _, Result};
@@ -66,6 +69,10 @@ pub struct Display {
     fit_for: (u32, u32),
     /// Whether the screen is to be cleared before the next picture.
     clear: bool,
+    /// The last picture presented, to present only the rows that change.
+    last: Option<Image>,
+    /// Whether the display is ours: not while another terminal is up.
+    active: bool,
 }
 
 impl Display {
@@ -182,18 +189,65 @@ impl Display {
             fit,
             fit_for: scene,
             clear: false,
+            last: None,
+            active: true,
         })
     }
 
-    /// The scene's picture, scaled up and put on the screen, its rows in
-    /// `threads` bands at once. A picture of another size (another level)
-    /// is fitted again, and the screen cleared around it.
+    /// Whether the display is ours now: not while another terminal is up.
+    pub fn is_active(&self) -> bool {
+        self.active
+    }
+
+    /// Lets the display go: another terminal is coming up, and the text
+    /// console draws there once we are not the card's master.
+    pub fn suspend(&mut self) {
+        if !self.active {
+            return;
+        }
+        let _ = self.card.release_master_lock();
+        self.active = false;
+    }
+
+    /// Takes the display back: the card's master again (we were before, so
+    /// no privilege is needed), the mode set again, the next picture whole.
+    pub fn resume(&mut self) -> Result<()> {
+        if self.active {
+            return Ok(());
+        }
+        self.card
+            .acquire_master_lock()
+            .context("cannot be the card's master again")?;
+        self.card
+            .set_crtc(
+                self.crtc,
+                Some(self.fb),
+                (0, 0),
+                &[self.connector],
+                Some(self.mode),
+            )
+            .context("cannot set the mode again")?;
+        self.active = true;
+        self.clear = true;
+        self.last = None;
+        Ok(())
+    }
+
+    /// The scene's picture, scaled up and put on the screen: only the rows
+    /// that changed since the last picture (a scene at rest moves a bee,
+    /// not a screen), in `threads` bands at once. A picture of another
+    /// size (another level) is fitted again, and the screen cleared around
+    /// it. Nothing is drawn while another terminal has the console.
     pub fn present(&mut self, image: &Image, threads: usize) -> Result<()> {
+        if !self.active {
+            return Ok(());
+        }
         let (sw, sh) = (image.width, image.height);
         if self.fit_for != (sw, sh) {
             self.fit = fit((self.width, self.height), (sw, sh));
             self.fit_for = (sw, sh);
             self.clear = true;
+            self.last = None;
             tracing::info!(
                 "the scene {}x{} at x{} from ({}, {})",
                 sw,
@@ -203,6 +257,13 @@ impl Display {
                 self.fit.y
             );
         }
+        let (y0, y1) = match &self.last {
+            Some(last) if !self.clear => match changed_rows(last, image) {
+                Some(rows) => rows,
+                None => return Ok(()),
+            },
+            _ => (0, sh as usize),
+        };
         let fit = self.fit;
         // SAFETY: the mapping lives as long as the display, and only this
         // method writes it; the bands below get disjoint parts of it.
@@ -214,57 +275,90 @@ impl Display {
         let scale = fit.scale as usize;
         let out_w = (sw as usize * scale).min(self.width as usize - fit.x as usize);
         let rows_available = self.height as usize - fit.y as usize;
-        // the source rows that land on the screen, in bands of whole rows,
-        // each band its own stretch of the buffer
-        let rows = (sh as usize).min(rows_available.div_ceil(scale));
-        let bands = threads.clamp(1, rows.max(1));
-        let per = rows.div_ceil(bands).max(1);
-        let x_off = fit.x as usize * 4;
-        let region = &mut bytes[fit.y as usize * pitch..];
-        std::thread::scope(|s| {
-            for (b, chunk) in region.chunks_mut(per * scale * pitch).enumerate() {
-                let (y0, y1) = (b * per, ((b + 1) * per).min(rows));
-                if y0 >= y1 {
-                    break;
-                }
-                let mut work = move || {
-                    let mut row = vec![0u8; out_w * 4];
-                    for y in y0..y1 {
-                        let src = &image.pixels[y * sw as usize..(y + 1) * sw as usize];
-                        for (i, px) in row.chunks_exact_mut(4).enumerate() {
-                            let p = src[(i / scale).min(sw as usize - 1)];
-                            px.copy_from_slice(&(p & 0x00FF_FFFF).to_le_bytes());
-                        }
-                        for k in 0..scale {
-                            if y * scale + k >= rows_available {
-                                break;
-                            }
-                            let start = ((y - y0) * scale + k) * pitch + x_off;
-                            if start + row.len() > chunk.len() {
-                                break;
-                            }
-                            chunk[start..start + row.len()].copy_from_slice(&row);
-                        }
+        // the changed source rows that land on the screen, in bands of
+        // whole rows, each band its own stretch of the buffer
+        let end = y1.min(rows_available.div_ceil(scale));
+        if y0 < end {
+            let rows = end - y0;
+            let bands = threads.clamp(1, rows);
+            let per = rows.div_ceil(bands).max(1);
+            let x_off = fit.x as usize * 4;
+            let region = &mut bytes[(fit.y as usize + y0 * scale) * pitch..];
+            std::thread::scope(|s| {
+                for (b, chunk) in region.chunks_mut(per * scale * pitch).enumerate() {
+                    let (ya, yb) = (y0 + b * per, (y0 + (b + 1) * per).min(end));
+                    if ya >= yb {
+                        break;
                     }
-                };
-                if bands == 1 {
-                    work();
-                } else {
-                    s.spawn(work);
+                    let mut work = move || {
+                        let mut row = vec![0u8; out_w * 4];
+                        for y in ya..yb {
+                            let src = &image.pixels[y * sw as usize..(y + 1) * sw as usize];
+                            for (i, px) in row.chunks_exact_mut(4).enumerate() {
+                                let p = src[(i / scale).min(sw as usize - 1)];
+                                px.copy_from_slice(&(p & 0x00FF_FFFF).to_le_bytes());
+                            }
+                            for k in 0..scale {
+                                if y * scale + k >= rows_available {
+                                    break;
+                                }
+                                let start = ((y - ya) * scale + k) * pitch + x_off;
+                                if start + row.len() > chunk.len() {
+                                    break;
+                                }
+                                chunk[start..start + row.len()].copy_from_slice(&row);
+                            }
+                        }
+                    };
+                    if bands == 1 {
+                        work();
+                    } else {
+                        s.spawn(work);
+                    }
                 }
-            }
-        });
-        let x2 = (fit.x as usize + out_w).min(u16::MAX as usize) as u16;
-        let y2 = (fit.y as usize + (sh as usize * scale).min(rows_available)).min(u16::MAX as usize)
-            as u16;
-        // a driver that has no dirty-rectangle support answers ENOSYS: the
-        // scanout buffer is live, so the picture is there anyway
-        let _ = self.card.dirty_framebuffer(
-            self.fb,
-            &[ClipRect::new(fit.x as u16, fit.y as u16, x2, y2)],
-        );
+            });
+            let clip = |v: usize| v.min(u16::MAX as usize) as u16;
+            let x2 = clip(fit.x as usize + out_w);
+            let ya_px = clip(fit.y as usize + y0 * scale);
+            let yb_px = clip(fit.y as usize + (end * scale).min(rows_available));
+            // a driver that has no dirty-rectangle support answers ENOSYS: the
+            // scanout buffer is live, so the picture is there anyway
+            let _ = self
+                .card
+                .dirty_framebuffer(self.fb, &[ClipRect::new(fit.x as u16, ya_px, x2, yb_px)]);
+        }
+        self.remember(image);
         Ok(())
     }
+
+    /// Keeps the picture just presented, to present only what changes next.
+    fn remember(&mut self, image: &Image) {
+        match &mut self.last {
+            Some(last) if last.width == image.width && last.height == image.height => {
+                last.pixels.copy_from_slice(&image.pixels);
+            }
+            _ => {
+                let mut copy = Image::new(image.width, image.height);
+                copy.pixels.copy_from_slice(&image.pixels);
+                self.last = Some(copy);
+            }
+        }
+    }
+}
+
+/// The rows of `now` that differ from `before`: the first and one past the
+/// last; None when the pictures are the same. Pictures of another size
+/// differ whole.
+pub fn changed_rows(before: &Image, now: &Image) -> Option<(usize, usize)> {
+    let w = now.width as usize;
+    let rows = now.height as usize;
+    if w == 0 || before.width != now.width || before.height != now.height {
+        return Some((0, rows));
+    }
+    let differs = |y: usize| before.pixels[y * w..(y + 1) * w] != now.pixels[y * w..(y + 1) * w];
+    let first = (0..rows).find(|&y| differs(y))?;
+    let last = (first..rows).rev().find(|&y| differs(y)).unwrap_or(first);
+    Some((first, last + 1))
 }
 
 impl Drop for Display {
@@ -287,6 +381,36 @@ impl Drop for Display {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_the_rows_that_changed_are_presented() {
+        let mut a = Image::new(4, 12);
+        a.pixels.fill(0xFF000000);
+        let mut b = Image::new(4, 12);
+        b.pixels.fill(0xFF000000);
+        assert_eq!(
+            changed_rows(&a, &b),
+            None,
+            "the same picture: nothing to present"
+        );
+        b.pixels[5 * 4 + 2] = 0xFFFFFFFF;
+        assert_eq!(changed_rows(&a, &b), Some((5, 6)));
+        b.pixels[2 * 4] = 0xFFFF0000;
+        b.pixels[9 * 4 + 3] = 0xFF00FF00;
+        assert_eq!(
+            changed_rows(&a, &b),
+            Some((2, 10)),
+            "from the first changed row to past the last"
+        );
+        a.pixels[0] = 0xFF123456;
+        assert_eq!(changed_rows(&a, &b), Some((0, 10)));
+        let other = Image::new(4, 6);
+        assert_eq!(
+            changed_rows(&other, &b),
+            Some((0, 12)),
+            "another size: whole"
+        );
+    }
 
     #[test]
     fn the_scene_fits_the_screen_by_a_whole_number_and_sits_in_the_middle() {

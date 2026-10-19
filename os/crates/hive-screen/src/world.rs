@@ -252,6 +252,12 @@ impl World {
         self.dirty = true;
     }
 
+    /// The picture is to be drawn again whatever moved: the display came
+    /// back from another terminal.
+    pub fn touch(&mut self) {
+        self.dirty = true;
+    }
+
     /// Whether an emitter of the scene plays at this level.
     fn plays(&self, ambient: &Ambient) -> bool {
         self.effects() && ambient.level as usize <= self.level

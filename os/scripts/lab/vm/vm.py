@@ -815,15 +815,19 @@ class Lab:
         return answer
 
     def op_until_shot(self, req):
-        """Takes the display until the colour `has` is on it (`timeout`: 10)."""
+        """Takes the display until the colour `has` is on it, or the colour
+        `lacks` is gone (`timeout`: 10)."""
         deadline = time.monotonic() + req.get('timeout', 10)
+        wanted = 'has' if 'has' in req else 'lacks'
         while True:
-            answer = self.op_shot(req)
-            if answer.get('has'):
+            answer = self.op_shot({k: v for k, v in req.items() if k != 'lacks'} if wanted == 'has' else req)
+            if wanted == 'has' and answer.get('has'):
                 return answer
+            if wanted == 'lacks' and answer.get('lacks'):
+                return {**answer, 'ok': True, 'error': None} if 'error' in answer else answer
             if time.monotonic() > deadline:
-                return {**answer, 'ok': False,
-                        'error': f'the display never showed {req["has"]}; it shows {answer["colors"]}'}
+                what = f'never showed {req["has"]}' if wanted == 'has' else f'kept showing {req["lacks"]}'
+                return {**answer, 'ok': False, 'error': f'the display {what}; it shows {answer["colors"]}'}
             time.sleep(0.3)
 
     def op_keys_until(self, req):
