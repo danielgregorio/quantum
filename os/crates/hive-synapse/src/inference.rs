@@ -255,7 +255,6 @@ impl InferenceEngine {
     fn suggest_dangerous_command(&self) -> String {
         r#"Warning: This command could be destructive.
 
-- A ZFS snapshot has been created for safety
 - Consider using `trash-cli` instead of `rm` for recoverable deletion
 - Double-check the path before proceeding
 - Use `rm -i` for interactive confirmation"#
@@ -725,6 +724,32 @@ mod tests {
                 assert!(!text.contains(placeholder), "{placeholder} left in: {text}");
             }
         }
+    }
+
+    #[tokio::test]
+    async fn the_mock_never_says_something_was_done_that_was_not() {
+        // Found in the VM lab: after `rm -rf /srv`, the dashboard said "A ZFS
+        // snapshot has been created for safety", on a system without ZFS.
+        // Nothing takes a snapshot when a command is observed.
+        let config = SynapseConfig {
+            backend: "mock".to_string(),
+            ..Default::default()
+        };
+        let engine = InferenceEngine::new(&config).await.unwrap();
+        let prompt = crate::prompt::describe_trigger(&HiveMessage::CommandObserved {
+            process: process("rm"),
+            cmd: "rm -rf /srv".into(),
+            timestamp: chrono::Utc::now(),
+        });
+        let text = engine.generate("You are the Hive.", &prompt).await.unwrap();
+        assert!(
+            text.contains("trash-cli"),
+            "the dangerous command advice: {text}"
+        );
+        assert!(
+            !text.contains("has been"),
+            "claims something was done: {text}"
+        );
     }
 
     fn process(name: &str) -> hive_common::messages::ProcessInfo {
