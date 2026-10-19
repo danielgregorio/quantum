@@ -1,0 +1,23 @@
+// a real unit crash-loops: the real journal nerve sees it, the real dashboard shows it once and
+// offers a restart, and approving it with the keyboard has the real actuator restart the unit
+// through polkit, after its cause is gone
+{"op": "start"}
+{"op": "put", "path": "/usr/local/sbin/nginx", "mode": "755", "text": "#!/bin/sh\n# the VM lab's stand-in for nginx: fails while /run/lab/broken exists\nif [ -e /run/lab/broken ]; then\n    echo 'nginx: [emerg] unknown directive \"lab\" in /etc/nginx/nginx.conf:1' >&2\n    exit 1\nfi\nexec sleep infinity\n"}
+{"op": "put", "path": "/etc/systemd/system/nginx.service", "text": "[Unit]\nDescription=the VM lab's stand-in for nginx\nStartLimitIntervalSec=0\n\n[Service]\nExecStart=/usr/local/sbin/nginx\nRestart=on-failure\nRestartSec=1\n"}
+{"op": "sh", "sh": "mkdir -p /run/lab && touch /run/lab/broken && systemctl daemon-reload"}
+{"op": "tui", "app": "dashboard", "rows": 30, "cols": 110}
+{"op": "until_screen", "app": "dashboard", "contains": "Waiting for Hive activity"}
+{"op": "sh", "sh": "systemctl start nginx"}
+{"op": "until_journal", "unit": "hive-nerve-journal.service", "contains": "Reported service crash: nginx.service"}
+{"op": "until_screen", "app": "dashboard", "contains": "Hive Suggestion — Restart nginx", "timeout": 15}
+{"op": "until_sh", "sh": "test $(systemctl show -p NRestarts --value nginx) -ge 4", "timeout": 30}
+{"op": "until_screen", "app": "dashboard", "contains": "Service Crashed", "count": 1}
+{"op": "until_screen", "app": "dashboard", "contains": "Hive Suggestion — Restart nginx", "count": 1}
+{"op": "none_journal", "unit": "hive-actuator.service", "contains": "nginx", "within": 0.5}
+{"op": "sh", "sh": "rm /run/lab/broken"}
+{"op": "keys_until", "app": "dashboard", "keys": ["Down"], "contains": "nginx.service stopped unexpectedly"}
+{"op": "keys", "app": "dashboard", "keys": ["Enter"]}
+{"op": "until_journal", "unit": "hive-actuator.service", "contains": "nginx", "timeout": 20}
+{"op": "until_sh", "sh": "systemctl is-active nginx", "contains": "active", "timeout": 20}
+{"op": "until_screen", "app": "dashboard", "contains": "Restart nginx (done)", "timeout": 20}
+{"op": "end"}

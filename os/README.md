@@ -23,12 +23,13 @@ The two share an idea. In Quantum, a game is written in tags with no script, and
 ```bash
 cd os
 cargo build --workspace
-scripts/lab/hive-tapes.sh        # the Hive in a box: the real cortex and synapse, no VM, ~4 s
+scripts/lab/hive-tapes.sh        # the Hive in a box: the real cortex and synapse, no VM, ~5 s
+python3 scripts/lab/vm/vm.py --play   # the real system in a VM restored from a snapshot
 ./scripts/check.sh               # fmt, clippy, tests
 ```
 
 - `CLAUDE.md` is the development guide: the architecture, the security model, the conventions and the labs.
-- `crates/hive-lab/README.md` describes the Hive lab.
+- `crates/hive-lab/README.md` describes the Hive lab, and `scripts/lab/vm/README.md` the VM lab.
 - `DEVLOG.md` and `STATUS.md` are DruidOS's history (in Portuguese); new entries go at the top of the DEVLOG.
 
 ## License

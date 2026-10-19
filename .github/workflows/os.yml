@@ -19,8 +19,10 @@ defaults:
 
 jobs:
   check:
-    name: fmt, clippy, test, Hive lab
-    runs-on: ubuntu-latest
+    name: fmt, clippy, test, Hive lab, VM lab
+    # 24.04: the VM lab's guest is Ubuntu 24.04, and the host downloads its
+    # packages for it
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -61,3 +63,20 @@ jobs:
       # The MCP server's wrapper, end to end (no MCP client needed)
       - name: Hive lab MCP selftest
         run: python3 scripts/lab/hive_mcp.py --selftest
+
+      # The real system: Ubuntu's cloud image in QEMU, the Hive installed from
+      # this build, restored from a snapshot for each tape
+      # (scripts/lab/vm/README.md). The runner's KVM makes the first boot quick.
+      - name: VM lab setup (QEMU, KVM)
+        run: |
+          sudo apt-get install -y qemu-system-x86 qemu-utils genisoimage
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Play the VM lab's tapes
+        run: python3 scripts/lab/vm/vm.py --play
+
+      - name: VM lab evidence
+        if: failure()
+        run: tail -n 150 ~/.cache/quantum-os-lab/run/serial.log || true

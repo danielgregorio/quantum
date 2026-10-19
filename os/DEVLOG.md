@@ -1,5 +1,50 @@
 # DruidOS Development Log
 
+## 2026-10-19 - VM Lab: o sistema real, restaurado em um segundo
+
+A segunda camada do play protocol do OS. A Hive lab valida o que a Hive
+decide, mas não o que só o sistema rodando mostra: o que os nerves reais
+veem no journal, no audit e no `/proc`, e o que o actuator real faz via
+polkit e systemd. O lab da ISO cobria isso com ISO, instalação, OCR e o
+Forge, a minutos por volta.
+
+**O que é (`scripts/lab/vm/`, documentado no README de lá e no
+CLAUDE.md):** a imagem cloud mínima do Ubuntu 24.04 (a release que o OS
+remasteriza) num overlay qcow2, no QEMU (KVM quando há, emulação quando
+não). O cloud-init só instala um agente: `agent.py`, que fala JSON lines
+numa porta virtio-serial, sem rede, sem SSH e sem chaves. A base bota uma
+vez e vira o snapshot `base`, com polkit, PackageKit e auditd. Esses
+pacotes o host baixa com o dpkg status do próprio guest, e o guest instala
+offline por 9p. A Hive do working tree (binários sem debug, `config/`) é
+instalada como a ISO instala (`install-hive.sh`) e vira o snapshot `hive`.
+Cada fita restaura `hive`. O dashboard e o grove reais rodam num terminal
+dentro do guest, e o novo `hive-lab term` lê as telas com o mesmo emulador
+da Hive lab.
+
+**Tempos, medidos aqui sem KVM:** a base sai em ~5 min (quase tudo é o
+primeiro boot). Subir a VM a partir de `hive` leva ~7 s, e um restore
+~2 s. As duas fitas levam ~50 s juntas, quase tudo esperando o loop de
+crash. No CI o runner tem KVM.
+
+**Fitas:** `crash-restart` (uma unit real em loop de crash aparece uma vez
+no dashboard real, e só depois de aprovada no teclado o actuator real
+reinicia a unit via polkit) e `port-conflict` (um processo real segura a
+porta, o nerve de rede real nomeia os dois uma vez, e o actuator roda
+`ss -tlnp` aprovado). As mesmas operações são ferramentas MCP (`vm_start`,
+`vm_request`, `vm_view`, `vm_tape`, `vm_end`).
+
+**O que o lab encontrou:**
+- Uma unit em loop de crash inundava a Hive. Cada crash ia para o modelo e
+  empilhava "Service Crashed" e as ofertas em todo dashboard (42
+  reinícios, 42 avisos e mais um conflito de porta com ofertas para cada
+  um). Agora o cortex passa um mesmo problema adiante uma vez a cada 5
+  min, e o reporte seguinte diz quantos segurou, como já fazia com as
+  ofertas de pacote. Há um teste no router e uma fita `crash-loop` na Hive
+  lab.
+- O nerve de rede já tinha uma janela de 5 min, mas a chave levava o pid,
+  que muda a cada reinício, então nunca segurava nada. Agora a chave é a
+  unit (ou o programa), com teste.
+
 ## 2026-10-19 - Hive Lab: a Hive numa caixa, sem VM (início do Quantum OS)
 
 Pedido do usuário: começar o Quantum OS a partir do DruidOS pelo que mais
