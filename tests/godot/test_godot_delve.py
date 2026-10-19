@@ -47,7 +47,8 @@ def skeletons(crypt: dict) -> list:
 def test_alone_one_delver_goes_down(delve, godot):
     crypt = replay(delve, CRYPT_1, tape_from_holds([('select', 0, 1)]), binary=godot)['crypt-1']
     assert list(crypt['nodes']) == ['p1']                       # the second delver is there only over the network
-    assert crypt['game'] == {'hearts': 5, 'gems': 0, 'taken': [], 'message': 'A SEALED WALL. A LEVER MUST OPEN IT.'}
+    assert crypt['game'] == {'message': 'A SEALED WALL. A LEVER MUST OPEN IT.',
+                             'q_items': {'heart': 5, 'gem': 0}, 'q_gone': []}
     assert crypt['things'] == {'enemy': 2, 'gem': 3, 'lever': 1, 'stairs': 1}
 
 
@@ -75,11 +76,12 @@ def test_each_crypt_entered_is_saved_and_continue_goes_back_there(delve, godot, 
     there = replay(delve, 800, stored_tape(800), binary=godot, persist_dir=tmp_path)
     assert list(there) == ['crypt-2']
     saved = json.loads((tmp_path / 'quantum-save.json').read_text())
-    assert saved['scene'] == 'crypt-2' and saved['game']['gems'] == 3
+    assert saved['scene'] == 'crypt-2' and saved['game']['q_items']['gem'] == 3
+    assert sorted(saved['game']['q_gone']) == ['crypt-1/gem-1', 'crypt-1/gem-2', 'crypt-1/gem-3']   # they stay gone
     # the next run: Continue is the third button now
     back = replay(delve, 40, tape_from_holds([('down', 1, 2), ('down', 4, 5), ('select', 7, 8)]),
                   binary=godot, persist_dir=tmp_path)
-    assert list(back) == ['crypt-2'] and back['crypt-2']['game']['gems'] == 3
+    assert list(back) == ['crypt-2'] and back['crypt-2']['game']['q_items']['gem'] == 3
 
 
 def test_the_crushers_slide_the_same_every_time(delve, godot):
@@ -107,3 +109,11 @@ def test_the_music_of_each_place(delve, godot):
         assert game.until("scene == 'crypt-1'", tap=['select'], max_ticks=60)['music'] == 'crypt'
     finally:
         game.close()
+
+
+def test_the_archer_keeps_its_distance_and_shoots(delve, godot):
+    # crypt 3 on the stored run: the skeleton archer, made of parts, backs off and fires
+    crypt = replay(delve, 3200, stored_tape(3200), binary=godot)['crypt-3']
+    assert crypt['named']['archer']['doing'] == 'keep-distance'
+    assert crypt['sounds'].count('twang') == 1
+    assert crypt['game']['q_items']['heart'] == 3

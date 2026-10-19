@@ -10,6 +10,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the new tags in the games. In Delve, hearts and gems are
+  items: the inventory is in the HUD, a hit takes a heart, and a new game
+  starts with `qg:reset-items`. A skeleton archer, made of parts, keeps its
+  distance and shoots arrows; the bats are made of parts too and flutter
+  until they see a delver. Hopper has a fourth level, the falls, with water
+  to swim in, snow to slide on, a ladder, spike tiles and a hopping enemy
+  made of parts.
 - Editors: the game tags (`qg:`). The language server and the VS Code
   extension read them from the game compiler's own schema
   (`quantum/runtime/godot/schema.py`): completion, hover, required

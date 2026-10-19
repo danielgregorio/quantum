@@ -26,13 +26,15 @@ from quantum.runtime.godot_bin import GODOT_VERSION  # noqa: E402
 
 OUT = REPO / 'docs' / 'targets' / 'games.md'
 GAMES = [
-    ('Hopper', 'projects/hopper/hopper.q', 'a platformer: a world map, three levels (one drawn in Tiled), '
-     'a block with a power-up, walkers to stomp, a pit, a checkpoint, spikes, a flag, a game over'),
+    ('Hopper', 'projects/hopper/hopper.q', 'a platformer: a world map, four levels (one drawn in Tiled), '
+     'a block with a power-up, walkers to stomp, a pit, a checkpoint, spikes, a flag, a game over; the fourth '
+     'has water to swim, snow slid on, a ladder, spike tiles and an enemy made of parts that hops'),
     ('Keep', 'projects/keep/keep.q', 'a top-down adventure: six rooms, slimes that wander and bats that '
      'chase, a sword, a key and a locked door, a switch that opens a gate in another room, a chest'),
     ('Delve', 'projects/delve/delve.q', 'a dungeon crawl for one, or two over the network: a wall a lever opens '
      'and the skeletons behind it that find their way through, crushers that slide to and fro, a vault two levers '
-     'keep shut; torches, gems, each crypt saved, three languages'),
+     'keep shut, bats that flutter until they see a delver and a skeleton archer, both made of parts; torches, '
+     'hearts and gems carried as items and shown by the inventory, each crypt saved, three languages'),
     ('Drift', 'projects/drift/drift.q', 'a vertical shooter: three waves from the scene\'s seed, '
      'drones and tanks that shoot, a boss with two phases, a high score kept between runs'),
     ('Pong', 'projects/pong/pong.q', 'Godot\'s own Pong demo transcribed tag for node: two players, '

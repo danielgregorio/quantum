@@ -302,3 +302,67 @@ def test_the_lift_carries_whoever_stands_on_it(godot, hopper):
     assert high['nodes']['player']['x'] == low['nodes']['player']['x']    # standing still on it
     assert high['nodes']['player']['y'] < low['nodes']['player']['y'] - 30   # carried up
     assert high['nodes']['player']['y'] == pytest.approx(lift[2] - 4 - 11, abs=1)   # on its top
+
+
+# --- level 4, the falls: water, snow slid on as ice, a ladder, spikes that are tiles (qg:tile kind=) ---
+
+BOUNCER = '    <qg:instance prefab="Bouncer" x="225" y="171" />\n'
+
+
+def level_four(tmp_path_factory, name, without=(), start=None):
+    """Hopper with the map starting at level 4 (jump on the map enters it), less the lines in ``without``,
+    and its player starting at ``start`` (x, y) when given."""
+    from quantum.core.parser import QuantumParser
+    from quantum.runtime.godot import compile_game
+    source = HOPPER.read_text(encoding='utf-8').replace('<q:set name="map_at" value="level-1" />',
+                                                        '<q:set name="map_at" value="level-4" />')
+    for line in without:
+        assert line in source
+        source = source.replace(line, '')
+    if start is not None:
+        at = source.index('<qg:scene name="level-4"')
+        source = source[:at] + source[at:].replace('x="40" y="160"', f'x="{start[0]}" y="{start[1]}"', 1)
+    src = HOPPER.parent / f'{name}.q'
+    src.write_text(source, encoding='utf-8')
+    try:
+        out = tmp_path_factory.mktemp(name) / 'godot'
+        compile_game(QuantumParser(use_cache=False).parse_file(str(src)), str(out), source_dir=str(HOPPER.parent))
+    finally:
+        src.unlink()
+    return out
+
+
+# into the pool, one stroke out, over the snow to the ladder, up it, onto the wall, over the spikes to the flag
+THE_FALLS = [('right', 20, 130), ('jump', 130, 131), ('right', 131, 215), ('up', 215, 375), ('right', 375, 495),
+             ('jump', 405, 485)]
+
+
+def test_level_four_is_swum_climbed_and_jumped_through(godot, tmp_path_factory):
+    project = level_four(tmp_path_factory, 'falls-clear', without=[BOUNCER])
+    tape = level(THE_FALLS)
+    swimming = replay(project, 129, tape, binary=godot)['level-4']['nodes']['player']
+    assert swimming['y'] == pytest.approx(205, abs=1)                      # sunk to the pool's floor (y 216)
+    at_the_ladder = replay(project, 214, tape, binary=godot)['level-4']['nodes']['player']
+    assert at_the_ladder['x'] == pytest.approx(261, abs=1) and at_the_ladder['y'] == pytest.approx(169, abs=0.5)
+    top = replay(project, 374, tape, binary=godot)['level-4']
+    assert top['nodes']['player']['y'] < 60                                # up the ladder, above the wall (y 72)
+    state = replay(project, 495, tape, binary=godot)
+    assert list(state) == ['map'] and 'level-4' in state['map']['game']['cleared']
+
+
+def test_the_spikes_of_level_four_are_tiles_that_hurt(godot, tmp_path_factory):
+    # put over the spikes, the player lands on them: its qg:on-tile kind="hurt" costs a life
+    project = level_four(tmp_path_factory, 'falls-spikes', without=[BOUNCER], start=(342, 120))
+    assert replay(project, 15, level([]), binary=godot)['level-4']['game']['lives'] == 3   # still falling
+    assert replay(project, 40, level([]), binary=godot)['level-4']['game']['lives'] == 2   # landed on them
+
+
+def test_the_bouncer_hops_on_the_snow(godot, tmp_path_factory):
+    project = level_four(tmp_path_factory, 'falls-bouncer')
+    heights, xs = set(), set()
+    for ticks in (30, 50, 70, 90, 110):
+        enemy = [w for w in replay(project, ticks, level([]), binary=godot)['level-4']['where'] if w[0] == 'enemy'][0]
+        heights.add(enemy[2] < 170)
+        xs.add(enemy[1])
+    assert heights == {True, False}                                         # now up, now down: it hops
+    assert all(205 <= x <= 227 for x in xs)                                 # to and fro on its bit of snow
