@@ -350,7 +350,12 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         return f'Q.respawn({target})'
     if el.tag == 'play':
         script.sounds_played.append(el.get('sound'))
-        return f'Q.play({json.dumps(el.get("sound"))})'
+        volume, pitch, vary = float(el.get('volume')), float(el.get('pitch')), float(el.get('vary'))
+        if pitch <= 0 or vary < 0 or vary >= pitch:
+            raise GameCompileError('<qg:play>: pitch= more than 0, vary= 0 or more and less than pitch=', el.line)
+        if (volume, pitch, vary) == (0.0, 1.0, 0.0):
+            return f'Q.play({json.dumps(el.get("sound"))})'
+        return f'Q.play({json.dumps(el.get("sound"))}, {volume!r}, {pitch!r}, {vary!r})'
     if el.tag == 'stop':
         script.sounds_played.append(el.get('sound'))
         return f'Q.stop({json.dumps(el.get("sound"))})'

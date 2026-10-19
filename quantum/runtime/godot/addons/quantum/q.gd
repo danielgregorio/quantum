@@ -848,14 +848,33 @@ func load_sounds(sounds: Dictionary) -> void:
 var resimulating: bool = false   # the rollback replays old ticks: record sounds, play none
 
 
-func play(name_: String) -> void:
+# qg:play. Plain, the sound's own player starts it again. With a volume, a
+# pitch or a vary, it plays in a voice of its own (the same sound can then
+# overlap itself), freed when it has played. Only heard: the state records the
+# name, and the random pitch comes from a generator of its own, never the game's.
+func play(name_: String, volume: float = 0.0, pitch: float = 1.0, vary: float = 0.0) -> void:
 	sounds_played.append(name_)
 	event("sound", {"name": name_})
 	if resimulating:
 		return
 	var player: AudioStreamPlayer = _sounds.get(name_)
-	if player != null:
+	if player == null:
+		return
+	if volume == 0.0 and pitch == 1.0 and vary == 0.0:
 		player.play()
+		return
+	var voice := AudioStreamPlayer.new()
+	voice.stream = player.stream
+	voice.bus = player.bus
+	voice.volume_db = player.volume_db + volume
+	voice.pitch_scale = maxf(0.05, pitch + (_voices.randf_range(-vary, vary) if vary > 0.0 else 0.0))
+	add_child(voice)
+	voice.play()
+	var length := player.stream.get_length() if player.stream != null else 1.0
+	get_tree().create_timer(length / voice.pitch_scale + 0.1).timeout.connect(voice.queue_free)
+
+
+var _voices := RandomNumberGenerator.new()   # the pitch of a voice: heard only, so not the game's generator
 
 
 # qg:music: the scene's music. Another one crossfades in over `fade` seconds,

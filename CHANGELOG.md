@@ -10,6 +10,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: `<qg:play sound= volume= pitch= vary=>`: decibels added, a
+  pitch (2: an octave up), and a random spread of pitch each time, so twenty
+  hits do not sound the same. Such a play is a voice of its own, so the
+  sound can overlap itself. Only heard: the state records the sound's name,
+  and the random pitch comes from a generator of its own.
+- Laboratory: Delve has music of its own, written and synthesized by
+  `scripts/art/delve_music.py` (CC0, with `scripts/art/rpg_music.py`'s
+  voices): `torchlight` for the title and the end, `crypt`, darker and
+  slower, for the three crypts. Its hits vary in pitch, its gems ring a
+  little higher, and the wall a lever opens sounds deeper.
 - Laboratory: Delve (`projects/delve/delve.q`), a dungeon crawl that shows
   the new tags together: three crypts, a wall a lever opens
   (`qg:set-tile`) and the skeletons behind it that find their way through
