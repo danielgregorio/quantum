@@ -1,0 +1,119 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "enemies",
+  "description": "Things that move: prefab ai= and enemies made of parts",
+  "examples": [
+    {
+      "id": "game-enemy-001",
+      "intent": "Ready-made movements for prefabs",
+      "input": {
+        "natural_language": "A level with a patrolling guard, a bat that chases you around walls, a moving platform and a turret",
+        "context": {
+          "target": "godot",
+          "file": "game-enemy-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"movers\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Guard\" tag=\"enemy\" sheet=\"chars\" frame=\"18\" hitbox=\"18x18\"\n             ai=\"patrol\" speed=\"30\" direction=\"right\" turns-at=\"edge\" />\n  <qg:prefab name=\"Bat\" tag=\"enemy\" sheet=\"chars\" frame=\"24\" hitbox=\"14x10\"\n             ai=\"pathfind\" sight=\"120\" speed=\"40\" />\n  <qg:prefab name=\"Lift\" tag=\"lift\" sheet=\"tiles\" frame=\"43\" hitbox=\"36x8\" solid=\"true\"\n             ai=\"shuttle\" dy=\"-60\" period=\"240\" />\n  <qg:prefab name=\"Ledge\" tag=\"ledge\" sheet=\"tiles\" frame=\"23\" hitbox=\"36x6\" solid=\"true\" one-way=\"true\" />\n  <qg:prefab name=\"Dart\" tag=\"dart\" sheet=\"tiles\" frame=\"151\" hitbox=\"4x4\"\n             ai=\"fly\" speed=\"120\" walls=\"stop\" lifetime=\"120\" rotate=\"true\" />\n  <qg:prefab name=\"Turret\" tag=\"turret\" sheet=\"tiles\" frame=\"12\" hitbox=\"18x18\"\n             ai=\"turret\" targets=\"hero\" range=\"110\" fire-prefab=\"Dart\" fire-every=\"60\" />\n\n  <qg:scene name=\"main\" width=\"270\" height=\"144\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"14x18\">\n      <qg:on-collision with=\"enemy\"><qg:respawn /></qg:on-collision>\n      <qg:on-collision with=\"dart\"><qg:destroy /><qg:respawn /></qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Guard\" x=\"100\" y=\"117\" />\n    <qg:instance prefab=\"Bat\" x=\"230\" y=\"30\" />\n    <qg:instance prefab=\"Lift\" x=\"160\" y=\"110\" />\n    <qg:instance prefab=\"Ledge\" x=\"60\" y=\"80\" />\n    <qg:instance prefab=\"Turret\" x=\"250\" y=\"117\" />\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The guard walks and turns before the edge; the bat goes for the hero within 120 px by the shortest way around the walls; the lift rises 60 px and comes back every 240 ticks, carrying the hero; the ledge is jumped through from below; the turret fires a dart at the hero within range every 60 ticks."
+      },
+      "tags": [
+        "ai",
+        "patrol",
+        "pathfind",
+        "shuttle",
+        "turret",
+        "fly",
+        "one-way"
+      ]
+    },
+    {
+      "id": "game-enemy-002",
+      "intent": "Creeps that walk a path, spawned in waves",
+      "input": {
+        "natural_language": "Tower defense creeps that walk along a road; a wave of ten comes in, one each second",
+        "context": {
+          "target": "godot",
+          "file": "game-enemy-002.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"road\" type=\"game\">\n  <q:set name=\"lives\" value=\"10\" type=\"number\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Creep\" tag=\"creep\" sheet=\"chars\" frame=\"18\" hitbox=\"14x14\" ai=\"path\" speed=\"40\" />\n\n  <qg:scene name=\"road\" width=\"320\" height=\"180\" background=\"#3a5a2a\">\n    <qg:path name=\"road\" points=\"0,40; 200,40; 200,140; 320,140\" />\n    <qg:timer every=\"60\" from=\"30\" count=\"10\">\n      <qg:spawn prefab=\"Creep\" at=\"path\" path=\"road\" />\n    </qg:timer>\n    <qg:zone name=\"gate\" tag=\"gate\" x=\"312\" y=\"130\" width=\"8\" height=\"20\" />\n    <qg:hud><qg:counter bind=\"lives\" label=\"LIVES \" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "From tick 30, every 60 ticks and ten times, a creep is placed at the start of the road and follows its points at 40 px/s; at the end it stands."
+      },
+      "tags": [
+        "path",
+        "spawn",
+        "timer",
+        "tower-defense"
+      ]
+    },
+    {
+      "id": "game-enemy-003",
+      "intent": "A guard made of parts: it chases what it sees, else patrols",
+      "input": {
+        "natural_language": "An enemy that patrols a corridor, but runs after the player when it sees them, and stops to rest every so often",
+        "context": {
+          "target": "godot",
+          "file": "game-enemy-003.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"guard\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Guard\" tag=\"enemy\" sheet=\"chars\" frame=\"18\" hitbox=\"16x16\" ai=\"behavior\" speed=\"30\"\n             sight=\"100\">\n    <qg:behavior>\n      <qg:stand when=\"{me.doing == 'patrol' and random(0, 100) < 1}\" />\n      <qg:seek target=\"hero\" way=\"around\" speed=\"55\" />\n      <qg:patrol heading=\"right\" distance=\"80\" />\n    </qg:behavior>\n  </qg:prefab>\n\n  <qg:scene name=\"hall\" width=\"270\" height=\"144\" seed=\"3\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"chars\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"14x14\" speed=\"70\">\n      <qg:on-collision with=\"enemy\"><qg:respawn /></qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Guard\" x=\"200\" y=\"100\" />\n    <qg:hud><qg:text value=\"{'the guard: ' + nearest(hero, 'enemy').doing}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Each tick the first part whose when= holds and that has something to do moves the guard: seek while the hero is within 100 px and in sight, else patrol 80 px to and fro. me.doing names the part that moved it."
+      },
+      "tags": [
+        "behavior",
+        "seek",
+        "patrol",
+        "stand",
+        "nearest"
+      ]
+    },
+    {
+      "id": "game-enemy-004",
+      "intent": "An archer that keeps its distance and shoots",
+      "input": {
+        "natural_language": "An archer who stays out of reach of the player and shoots arrows at them; a rabbit that runs away",
+        "context": {
+          "target": "godot",
+          "file": "game-enemy-004.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"archer\" type=\"game\">\n  <q:set name=\"hearts\" value=\"3\" type=\"number\" />\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"twang\" src=\"assets/kenney/audio/jump.ogg\" />\n  <qg:prefab name=\"Arrow\" tag=\"arrow\" sheet=\"tiles\" frame=\"151\" hitbox=\"6x2\"\n             ai=\"fly\" speed=\"100\" walls=\"stop\" rotate=\"true\" lifetime=\"180\" />\n  <qg:prefab name=\"Archer\" tag=\"archer\" sheet=\"chars\" frame=\"20\" hitbox=\"16x16\" ai=\"behavior\" speed=\"30\"\n             sight=\"140\">\n    <qg:behavior>\n      <qg:keep-distance from=\"hero\" min=\"54\" max=\"90\" />\n      <qg:shoot prefab=\"Arrow\" at=\"hero\" every=\"90\" range=\"130\" sound=\"twang\" />\n      <qg:wander speed=\"12\" />\n    </qg:behavior>\n  </qg:prefab>\n  <qg:prefab name=\"Rabbit\" tag=\"rabbit\" sheet=\"chars\" frame=\"22\" hitbox=\"12x12\" ai=\"behavior\" speed=\"50\">\n    <qg:behavior>\n      <qg:flee from=\"hero\" sight=\"60\" through-walls=\"true\" />\n      <qg:wander speed=\"10\" />\n    </qg:behavior>\n  </qg:prefab>\n\n  <qg:scene name=\"woods\" width=\"270\" height=\"144\" seed=\"9\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,0,0,0,0,0,0,0,0,0,0,0,0,0,23\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"chars\" frame=\"0\" x=\"40\" y=\"72\" hitbox=\"14x14\" speed=\"70\">\n      <qg:on-collision with=\"arrow\">\n        <qg:destroy />\n        <q:set name=\"hearts\" value=\"{hearts - 1}\" />\n      </qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Archer\" x=\"200\" y=\"72\" />\n    <qg:instance prefab=\"Rabbit\" x=\"120\" y=\"40\" />\n    <qg:hud><qg:counter bind=\"hearts\" label=\"HEARTS \" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The archer backs away when the hero is nearer than 54 px, comes closer beyond 90, and stands in between, wandering slowly when it notices nobody; it fires an arrow at the hero within 130 px every 90 ticks, whatever moves it. The rabbit runs straight away from the hero within 60 px, even behind walls."
+      },
+      "tags": [
+        "behavior",
+        "keep-distance",
+        "shoot",
+        "flee",
+        "wander"
+      ]
+    },
+    {
+      "id": "game-enemy-005",
+      "intent": "A hound that runs and leaps on a platform level",
+      "input": {
+        "natural_language": "A platformer enemy that runs at the player and jumps over the steps in its way",
+        "context": {
+          "target": "godot",
+          "file": "game-enemy-005.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"hound\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Hound\" tag=\"enemy\" sheet=\"chars\" frame=\"18\" hitbox=\"16x14\" ai=\"behavior\" speed=\"50\"\n             sight=\"150\" turns-at=\"edge\">\n    <qg:behavior>\n      <qg:gravity />\n      <qg:leap height=\"30\" at-wall=\"true\" every=\"30\" />\n      <qg:seek target=\"hero\" way=\"straight\" through-walls=\"true\" />\n      <qg:patrol />\n    </qg:behavior>\n  </qg:prefab>\n\n  <qg:scene name=\"main\" width=\"270\" height=\"144\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,23,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"14x18\">\n      <qg:on-collision with=\"enemy\"><qg:respawn /></qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Hound\" x=\"230\" y=\"117\" />\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "With qg:gravity the hound walks on floors and its parts move it left and right only. It runs straight at the hero within 150 px, leaps 30 px when it bumps the step, and patrols when it notices nobody; turns-at=\"edge\" keeps it from walking off a ledge."
+      },
+      "tags": [
+        "behavior",
+        "gravity",
+        "leap",
+        "seek",
+        "platformer-enemy"
+      ]
+    }
+  ]
+}

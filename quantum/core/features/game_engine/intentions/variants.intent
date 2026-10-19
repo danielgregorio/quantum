@@ -1,0 +1,139 @@
+intention:
+  name: "Games in tags: variants"
+  version: "1.0.0"
+  category: "game"
+
+  description: |
+    Several valid ways to write the same thing in a game, and when each fits.
+    The ready-made form is shorter; the composed form says more and changes
+    more easily.
+
+  variants:
+    - scenario: "A platformer character"
+      approaches:
+        - description: "The ready-made controller: one tag, its settings as attributes"
+          code: |
+            <qg:character id="hero" controller="platformer" sheet="chars" x="20" y="110" hitbox="14x18"
+                          run-speed="90" jump-height="64" air-jumps="1" />
+        - description: "Made of parts: the same body, each rule a tag; add qg:wrap or drop qg:jump freely"
+          code: |
+            <qg:character id="hero" controller="behavior" sheet="chars" x="20" y="110" hitbox="14x18">
+              <qg:behavior>
+                <qg:gravity />
+                <qg:walk speed="90" />
+                <qg:jump height="64" air="1" />
+                <qg:face />
+              </qg:behavior>
+            </qg:character>
+      choose: "controller=platformer for the usual; behavior when it needs qg:velocity (a dash, a knock-back) or an unusual mix"
+
+    - scenario: "An enemy that goes for the player"
+      approaches:
+        - description: "ai=chase: straight at the character within sight"
+          code: |
+            <qg:prefab name="Bat" tag="enemy" sheet="chars" frame="24" hitbox="14x10" ai="chase" sight="100" speed="40" />
+        - description: "ai=pathfind: the same, around the walls"
+          code: |
+            <qg:prefab name="Bat" tag="enemy" sheet="chars" frame="24" hitbox="14x10" ai="pathfind" sight="100" speed="40" />
+        - description: "Made of parts: seek, and something to do when nobody is in sight"
+          code: |
+            <qg:prefab name="Bat" tag="enemy" sheet="chars" frame="24" hitbox="14x10" ai="behavior" speed="40">
+              <qg:behavior>
+                <qg:seek target="hero" sight="100" way="around" />
+                <qg:wander speed="15" />
+              </qg:behavior>
+            </qg:prefab>
+      choose: "parts when it should also flee, keep its distance, stand, leap or shoot, or change what it does by when="
+
+    - scenario: "A number on the HUD"
+      approaches:
+        - description: "A q:set, by name"
+          code: |
+            <qg:hud><qg:counter bind="coins" label="COINS " /></qg:hud>
+        - description: "An item, by name: how many the players hold"
+          code: |
+            <qg:hud><qg:counter item="key" label="KEYS " /></qg:hud>
+        - description: "Every item at once, with its picture"
+          code: |
+            <qg:hud><qg:inventory /></qg:hud>
+        - description: "A text put together by an expression"
+          code: |
+            <qg:hud><qg:text value="{'x' + str(lives)}" /></qg:hud>
+
+    - scenario: "Collecting keys and opening doors"
+      approaches:
+        - description: "Items: gives= and opens-with= do the bookkeeping, held() reads it, saves keep it"
+          code: |
+            <qg:item name="key" />
+            <qg:prefab name="Key" tag="key" sheet="tiles" frame="27" hitbox="12x12" gives="key" />
+            <qg:prefab name="Door" tag="door" sheet="tiles" frame="56" hitbox="18x36" solid="true" opens-with="key" />
+        - description: "By hand: a game state, an on-collision that counts, another that checks"
+          code: |
+            <q:set name="keys" value="0" type="number" />
+            <!-- in the character: -->
+            <qg:on-collision with="key"><qg:destroy /><q:set name="keys" value="{keys + 1}" /></qg:on-collision>
+            <qg:on-collision with="door">
+              <q:if condition="{keys > 0}"><q:set name="keys" value="{keys - 1}" /><qg:destroy /></q:if>
+            </qg:on-collision>
+      choose: "items, unless the rule is unusual; by hand, a picked-up key comes back when the scene is entered again"
+
+    - scenario: "The level's map"
+      approaches:
+        - description: "CSV rows in the .q: small levels, visible in one file"
+          code: |
+            <qg:tilemap tileset="tiles" collision="true">
+            0,0,0
+            23,23,23
+            </qg:tilemap>
+        - description: "A Tiled map: tile layers draw it, object layers place prefabs by class"
+          code: |
+            <qg:tilemap tileset="tiles" src="levels/level-2.tmx" />
+        - description: "Several layers of one map, drawn in order"
+          code: |
+            <qg:tilemap tileset="tiles">...the floor...</qg:tilemap>
+            <qg:tilemap tileset="tiles" collision="true">...the walls...</qg:tilemap>
+
+    - scenario: "Going to another scene"
+      approaches:
+        - description: "qg:exit: a doorway, arriving at the other scene's exit of that name"
+          code: |
+            <qg:exit name="east" x="266" y="63" width="8" height="36" to="garden" at="west" />
+        - description: "qg:goto-scene in a handler: a flag, a menu button, a game over"
+          code: |
+            <qg:on-collision with="flag"><qg:goto-scene name="level-2" fade="0.5" /></qg:on-collision>
+        - description: "A world map: nodes enter their scene= with jump"
+          code: |
+            <qg:map-node name="level-1" x="40" y="100" sheet="tiles" frame="45" scene="level-1" />
+
+    - scenario: "Things that appear over time"
+      approaches:
+        - description: "qg:spawner: count= of a prefab, every= ticks, at a random x or along the edges"
+          code: |
+            <qg:spawner prefab="Rock" every="40" count="0" />
+        - description: "qg:timer with qg:spawn: any place, any rule"
+          code: |
+            <qg:timer every="60" count="10"><qg:spawn prefab="Creep" at="path" path="road" /></qg:timer>
+
+    - scenario: "Saving"
+      approaches:
+        - description: "A room that saves as it is entered"
+          code: |
+            <qg:scene name="room-2" save="true">...</qg:scene>
+        - description: "qg:save in a handler, naming the scene to come back to"
+          code: |
+            <qg:on-collision with="shrine"><qg:save scene="village" /></qg:on-collision>
+        - description: "A single value kept between runs, save or not"
+          code: |
+            <q:set name="best" value="0" type="number" saved="true" />
+
+    - scenario: "Playing online"
+      approaches:
+        - description: "Lockstep: any game; every tick waits for every player's input"
+          code: |
+            <qg:multiplayer players="2" delay="3" start="level" />
+        - description: "Rollback: fighters, menus and the HUD only; runs ahead on a guess and corrects it"
+          code: |
+            <qg:multiplayer players="2" delay="2" rollback="8" start="fight" />
+        - description: "From a browser: websocket, through a relay's room"
+          code: |
+            <qg:multiplayer players="2" transport="websocket" start="play" />

@@ -1,0 +1,72 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "composed_controllers",
+  "description": "Characters made of parts with controller=\"behavior\"",
+  "examples": [
+    {
+      "id": "game-behavior-001",
+      "intent": "A platformer made of parts",
+      "input": {
+        "natural_language": "A platformer character built from parts: gravity, walking, jumping, facing where it goes, and the scene edges",
+        "context": {
+          "target": "godot",
+          "file": "game-behavior-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"parts\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\" width=\"270\" height=\"144\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"behavior\" sheet=\"chars\" frame=\"0\" x=\"40\" y=\"110\" hitbox=\"14x18\">\n      <qg:behavior>\n        <qg:gravity strength=\"900\" max-fall=\"300\" />\n        <qg:walk speed=\"90\" accel=\"900\" />\n        <qg:jump height=\"48\" coyote=\"6\" variable=\"true\" />\n        <qg:face by=\"velocity\" />\n        <qg:keep-inside />\n      </qg:behavior>\n    </qg:character>\n    <qg:hud><qg:text value=\"{'on floor' if hero.on_floor else 'in the air'}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Each tick walk and jump read the keys, gravity pulls, the body moves, then keep-inside and face. It plays like controller=\"platformer\"; hero.on_floor, hero.vx and hero.vy read it."
+      },
+      "tags": [
+        "behavior",
+        "gravity",
+        "walk",
+        "jump",
+        "face",
+        "keep-inside"
+      ]
+    },
+    {
+      "id": "game-behavior-002",
+      "intent": "A flapping bird",
+      "input": {
+        "natural_language": "A bird that flaps up with every press and falls between flaps, and passes from one side of the screen to the other",
+        "context": {
+          "target": "godot",
+          "file": "game-behavior-002.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"flap\" type=\"game\">\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"sky\" width=\"256\" height=\"224\" background=\"#70c0ff\">\n    <qg:character id=\"bird\" controller=\"behavior\" sheet=\"chars\" frame=\"8\" x=\"60\" y=\"100\" hitbox=\"14x12\">\n      <qg:behavior>\n        <qg:gravity strength=\"600\" max-fall=\"240\" />\n        <qg:walk speed=\"60\" />\n        <qg:jump speed=\"200\" air=\"999\" variable=\"false\" />\n        <qg:wrap />\n        <qg:face by=\"input\" />\n      </qg:behavior>\n    </qg:character>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Every press of jump sets the rise to 200 px/s, in the air too (air= jumps before landing); gravity pulls it down between flaps; past the left or right edge it comes back on the other side."
+      },
+      "tags": [
+        "behavior",
+        "air-jump",
+        "wrap"
+      ]
+    },
+    {
+      "id": "game-behavior-003",
+      "intent": "A dash on a key of its own",
+      "input": {
+        "natural_language": "Add a dash: pressing shift throws the character forward fast for a moment",
+        "context": {
+          "target": "godot",
+          "file": "game-behavior-003.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"dash\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:input action=\"dash\" keys=\"Shift, JoyR\" />\n  <qg:scene name=\"main\" width=\"270\" height=\"144\">\n    <q:set name=\"facing\" value=\"1\" type=\"number\" />\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"behavior\" sheet=\"chars\" frame=\"0\" x=\"40\" y=\"110\" hitbox=\"14x18\">\n      <qg:behavior>\n        <qg:gravity />\n        <qg:walk speed=\"90\" accel=\"400\" />\n        <qg:jump />\n        <qg:face />\n      </qg:behavior>\n    </qg:character>\n    <qg:on-input action=\"left\"><q:set name=\"facing\" value=\"-1\" /></qg:on-input>\n    <qg:on-input action=\"right\"><q:set name=\"facing\" value=\"1\" /></qg:on-input>\n    <qg:on-input action=\"dash\">\n      <qg:velocity target=\"hero\" x=\"{facing * 320}\" y=\"0\" />\n    </qg:on-input>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Shift (or the joypad's R) sets the hero's speed across to 320 px/s the way it last faced; walk's accel= brings it back to 90 over the next ticks, so the dash fades out. What no part covers is written in the game with qg:velocity."
+      },
+      "tags": [
+        "behavior",
+        "velocity",
+        "qg:input",
+        "on-input"
+      ]
+    }
+  ]
+}

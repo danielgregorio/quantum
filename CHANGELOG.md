@@ -10,6 +10,14 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the game language is a feature of its own,
+  `quantum/core/features/game_engine/`, like the others: a manifest, three
+  intentions (`primary`, with a line for every `qg:` tag, statement and
+  expression function; `variants`; `edge_cases`) and a dataset of 39 whole
+  games and 24 refusals with their messages. Each game compiles and each
+  refusal says what it says (`tests/dataset/test_dataset_features.py`), and
+  a tag added to the schema without its line in the primary intention and a
+  game that uses it fails `tests/dataset/test_game_engine_feature.py`.
 - Laboratory: enemies of parts that walk on floors. `<qg:gravity>` in a
   prefab's `qg:behavior` (as in a character's) makes it fall and stand:
   its parts then move it left and right only, a seek goes straight at its

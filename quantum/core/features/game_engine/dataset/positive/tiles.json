@@ -1,0 +1,55 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "tiles",
+  "description": "Tile shapes, one-way tiles, tile kinds and changing the map",
+  "examples": [
+    {
+      "id": "game-tile-001",
+      "intent": "Slopes, ledges and tiles of a kind",
+      "input": {
+        "natural_language": "A level with a slope, a thin ledge you can jump through, a ladder, water to swim in, ice, and spikes that hurt",
+        "context": {
+          "target": "godot",
+          "file": "game-tile-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"kinds\" type=\"game\">\n  <q:set name=\"lives\" value=\"3\" type=\"number\" />\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\">\n    <qg:tile frame=\"40\" shape=\"0,18; 18,0; 18,18\" />\n    <qg:tile frame=\"41\" shape=\"0,0; 18,0; 18,4; 0,4\" one-way=\"true\" />\n    <qg:tile frame=\"71\" kind=\"ladder\" />\n    <qg:tile frame=\"33\" kind=\"water\" />\n    <qg:tile frame=\"81\" kind=\"ice\" />\n    <qg:tile frame=\"68\" kind=\"hurt\" shape=\"0,10; 18,10; 18,18; 0,18\" />\n    <qg:tile frame=\"120\" shape=\"none\" />\n  </qg:tileset>\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n\n  <qg:scene name=\"main\" width=\"270\" height=\"144\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,72,0,0,0,0,0,0,0,0,0\n0,0,42,42,0,72,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,72,0,0,0,0,0,0,0,0,0\n0,0,0,0,41,72,0,0,0,0,0,121,0,0,0\n0,0,0,41,23,23,34,34,34,23,0,0,0,0,0\n23,23,23,23,23,23,34,34,34,23,82,82,69,69,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"14x18\">\n      <qg:on-tile kind=\"hurt\" cooldown=\"40\">\n        <q:set name=\"lives\" value=\"{lives - 1}\" />\n        <qg:shake at=\"me\" frames=\"8\" strength=\"2\" />\n        <q:if condition=\"{lives <= 0}\">\n          <qg:goto-scene name=\"main\" />\n        </q:if>\n      </qg:on-tile>\n      <qg:on-tile kind=\"water\">\n        <qg:burst at=\"me\" color=\"#80c0ff\" count=\"8\" />\n      </qg:on-tile>\n    </qg:character>\n    <qg:hud><qg:counter bind=\"lives\" label=\"LIVES \" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "Tile 41 is a slope, 42 a 4 px ledge stood on from above and jumped through from below, 121 a picture with no collision. The ladder is climbed with up and down and let go of with jump; in water the hero sinks slowly and a jump is a stroke; on ice it slides. Touching the spikes costs a life every 40 ticks while touched; entering water splashes once."
+      },
+      "tags": [
+        "qg:tile",
+        "shape",
+        "one-way",
+        "ladder",
+        "water",
+        "ice",
+        "hurt",
+        "on-tile"
+      ]
+    },
+    {
+      "id": "game-tile-002",
+      "intent": "Digging and building cell by cell",
+      "input": {
+        "natural_language": "Click on a cell to dig it out if it has a block, or to put a block there if it is empty and nothing stands there",
+        "context": {
+          "target": "godot",
+          "file": "game-tile-002.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"dig\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Gem\" tag=\"gem\" sheet=\"tiles\" frame=\"67\" hitbox=\"12x12\" />\n  <qg:scene name=\"mine\" width=\"270\" height=\"144\">\n    <q:set name=\"dug\" value=\"0\" type=\"number\" />\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:cursor player=\"1\" grid=\"18\" sheet=\"tiles\" frame=\"61\" />\n    <qg:on-select>\n      <q:if condition=\"{tile_at(cursor.col, cursor.row) != 0}\">\n        <q:set name=\"dug\" value=\"{dug + 1}\" />\n        <q:if condition=\"{dug % 5 == 0}\">\n          <qg:spawn prefab=\"Gem\" at=\"cursor\" />\n        </q:if>\n        <qg:set-tile col=\"{cursor.col}\" row=\"{cursor.row}\" tile=\"0\" />\n      <q:elseif condition=\"{thing_at('gem', cursor.x, cursor.y) == null}\">\n        <qg:set-tile col=\"{cursor.col}\" row=\"{cursor.row}\" tile=\"23\" />\n      </q:elseif>\n      </q:if>\n    </qg:on-select>\n    <qg:hud><qg:counter bind=\"dug\" label=\"DUG \" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The cursor snaps to 18 px cells. Select on a block empties the cell (its collision goes from the next tick) and every fifth one leaves a gem; select on an empty cell with no gem puts a block back. The changed cells are part of the game's state, so a replay sees the same map."
+      },
+      "tags": [
+        "set-tile",
+        "tile_at",
+        "thing_at",
+        "cursor",
+        "on-select"
+      ]
+    }
+  ]
+}

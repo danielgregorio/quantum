@@ -1,0 +1,75 @@
+feature:
+  name: "game_engine"
+  display_name: "Game Engine (qg: namespace, Godot 4)"
+  version: "1.0.0"
+  status: "laboratory"
+  migration_type: "option_c"  # the language lives in quantum/runtime/godot, not in this folder
+
+description: |
+  A q:application type="game" is a game written in tags: scenes, tilemaps,
+  characters, prefabs and what happens when things touch. It compiles to a
+  Godot 4.4.1 project: game.json holds what is declarative, one GDScript per
+  scene holds the statements (q:set, q:if, q:loop, q:function and the action
+  tags), and addons/quantum/ is the runtime, the same in every game. There is
+  no script of the author's own anywhere, and the same inputs give the same
+  game: logic runs on the fixed physics tick and the only random source is
+  seeded per scene.
+
+tags:
+  - "game"
+  - "godot"
+  - "2d"
+  - "deterministic"
+  - "multiplayer"
+
+maintainers:
+  - "Daniel"
+  - "Claude"
+
+dependencies:
+  required:
+    - feature: "state_management"
+      version: ">=1.0.0"
+      reason: "q:set declares game and scene state"
+    - feature: "conditionals"
+      version: ">=1.0.0"
+      reason: "q:if inside handlers"
+    - feature: "functions"
+      version: ">=1.0.0"
+      reason: "q:function and q:call inside a scene"
+
+capabilities:
+  syntax:
+    - "Every qg: tag, attribute and parent is declared in one schema; nothing else exists"
+    - "Handlers hold actions (qg:destroy, qg:spawn...) and q: statements, never script text"
+    - "Expressions read state, `me`, `other`, characters by id and built-in functions"
+
+  runtime:
+    - "Platformer, top-down, grid, ship, fighter, world-map and composed (behavior) controllers"
+    - "Prefabs with ready-made movement (ai=) or made of parts (qg:behavior)"
+    - "Tile shapes, one-way tiles and tile kinds (ladder, water, ice, hurt)"
+    - "HUD, menus, dialogue, items and inventory, save and continue, languages"
+    - "Sound, music, particles, animations with an end, tweens, camera"
+    - "Lockstep and rollback multiplayer over ENet or WebSocket, with a relay for browsers"
+    - "Replays and a play protocol that drive a build tick by tick"
+
+api:
+  schema: "quantum/runtime/godot/schema.py"            # TAGS, ACTIONS, STATEMENTS: the language
+  model: "quantum/runtime/godot/model.py::read_game"   # reads app.xml_root against the schema
+  compiler: "quantum/runtime/godot/compiler.py::compile_game"
+  expressions: "quantum/runtime/godot/expressions.py"
+  runtime: "quantum/runtime/godot/addons/quantum/"
+  replay: "quantum/runtime/godot_replay.py::replay"
+  reference: "docs/targets/games.md"                   # generated from the schema
+
+testing:
+  dataset: "tests/dataset/test_dataset_features.py"    # every positive compiles, every negative is refused
+  registered: "tests/dataset/test_game_engine_feature.py"  # every tag has an intention and an example
+  laboratory: "tests/godot/"                           # the games, played in headless Godot
+
+migration_notes: |
+  The parser and the runtime stay in quantum/runtime/godot. The core
+  QuantumParser keeps a game's XML on ApplicationNode.xml_root and the game
+  model reads every qg: element against quantum/runtime/godot/schema.py.
+  The old game_engine_2d feature (JavaScript bodies, an HTML canvas target)
+  was removed when this language replaced it.
