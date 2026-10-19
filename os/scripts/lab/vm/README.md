@@ -23,7 +23,16 @@ python3 scripts/lab/vm/vm.py                         # the driver: one JSON requ
 It needs `qemu-system-x86_64`, `qemu-img`, `genisoimage` and `gpg`. It uses KVM when `/dev/kvm` is usable and plain emulation otherwise. The first run downloads the cloud image (260 MB) and makes `base`. On a host without KVM this takes a few minutes, mostly the first boot. The guest's missing packages (polkit, PackageKit and pkcon, auditd, and the repository's) are downloaded by the host's apt for the guest's own dpkg status, so the guest needs no network; this needs an Ubuntu 24.04 host. After that:
 
 - an unchanged build restores `hive` (about a second);
-- a changed build (any binary, `config/`, `install-hive.sh`) restores `base`, installs and saves `hive` again.
+- a changed build restores `hive`, installs what changed and saves `hive` again;
+- a new base (its packages, the image) installs everything on `base`.
+
+Only what changed is installed: when nothing but binaries changed, they are copied and their units restarted (measured without KVM: grove 6 s, a nerve 9 s, hive-cortex 20 s, a full install 60 s).
+
+| Measured | without KVM (this lab's container) | with KVM (CI) |
+|---|---|---|
+| making the base (once) | ~5 min | 18 s |
+| restoring `hive` | ~2 s | under a second |
+| the five tapes | ~95 s | ~40 s, the first install included |
 
 Everything lives in `~/.cache/quantum-os-lab`, or `QUANTUM_LAB_CACHE`. A run's evidence is in `run/` there: `serial.log`, `qemu.cmdline`.
 
@@ -35,7 +44,7 @@ The same shape as the Hive lab's: `{"op": ...}` in, `{"ok": true, ...}` or `{"ok
 |---|---|
 | `start` | a fresh Hive: restores `hive`, installing first when the build changed |
 | `restore` (`snapshot`: hive), `save` (`snapshot`) | go back to a snapshot; keep one of your own to try something and come back |
-| `install` | stage the build again and install it in place (the fast loop after `cargo build`) |
+| `install` | after `cargo build`: installs what changed, as `start` does |
 | `sh` (`sh`, `user`, `timeout`; expects `code`: 0 or null for any, `contains`, `excludes`) | a command in the guest, as root or `user` |
 | `until_sh` (same, `timeout`: 10) | runs it again until it meets the expectations |
 | `journal` (`units`) | the journal since the last look |

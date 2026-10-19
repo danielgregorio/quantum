@@ -9,22 +9,49 @@
 #
 # The binaries come from SRC/target/vm-lab/bin, where the host stages them
 # (without debug sections: what the ISO ships is a release build).
+#
+# The lab installs incrementally on a guest that has the Hive already:
+# with HIVE_BINARIES set, only those binaries are copied (everything else is
+# installed every time); with HIVE_ONLY_BINARIES instead, only those are
+# copied and only the units that run them restarted, nothing else.
 set -eu
 
 SRC=${1:-/mnt/lab}
 BIN=$SRC/target/vm-lab/bin
-BINARIES="hive-cortex hive-synapse hive-actuator hive-nerve-process hive-nerve-journal
-hive-nerve-network hive-nerve-fs hive-apt hive-zfs hive-dashboard grove"
+ALL="hive-cortex hive-synapse hive-actuator hive-nerve-process hive-nerve-journal
+hive-nerve-network hive-nerve-fs hive-apt hive-zfs hive-dashboard grove hive-lab"
+
+copy() {
+    case $1 in
+        hive-lab) install -m 0755 "$BIN/hive-lab" /usr/local/lib/quantum-lab/hive-lab ;;
+        *) install -m 0755 "$BIN/$1" "/usr/bin/$1" ;;
+    esac
+}
+
+if [ -n "${HIVE_ONLY_BINARIES-}" ]; then
+    restart=""
+    for b in $HIVE_ONLY_BINARIES; do
+        copy "$b"
+        if [ -f "/etc/systemd/system/$b.service" ]; then
+            restart="$restart $b.service"
+        fi
+    done
+    # Type=notify: this returns once each unit is ready again (restarting
+    # hive-cortex restarts the rest of the Hive with it: PartOf)
+    if [ -n "$restart" ]; then
+        systemctl restart $restart
+    fi
+    exit 0
+fi
 
 units=$(cd "$SRC/config/systemd" && grep -l '^\[Install\]' *.service *.timer | xargs)
 
 # a reinstall replaces a running Hive
 systemctl stop hive-cortex.service $units 2>/dev/null || true
 
-for b in $BINARIES; do
-    install -m 0755 "$BIN/$b" "/usr/bin/$b"
+for b in ${HIVE_BINARIES-$ALL}; do
+    copy "$b"
 done
-install -m 0755 "$BIN/hive-lab" /usr/local/lib/quantum-lab/hive-lab
 
 install -m 0644 "$SRC"/config/systemd/*.service "$SRC"/config/systemd/*.timer /etc/systemd/system/
 mkdir -p /etc/hive

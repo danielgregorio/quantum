@@ -467,30 +467,29 @@ BINARIES = ['hive-cortex', 'hive-synapse', 'hive-actuator', 'hive-nerve-process'
 COMPONENTS = ['Synapse', 'Actuator', 'NerveProcess', 'NerveJournal', 'NerveNetwork', 'NerveFs']
 
 
-def stage(profile: str = 'debug') -> str:
+def stage(profile: str = 'debug') -> dict:
     """Copies the workspace's binaries, without their debug sections, to
     target/vm-lab/bin, where the guest installs them from (what the ISO
     ships is a release build; debug sections would only slow the copy).
-    Answers a digest of everything the guest installs: when it is unchanged,
-    the snapshot with the Hive installed still holds."""
+    Answers a digest of every file the guest installs, by path: what changed
+    since the snapshot "hive" was saved is all that needs installing."""
     src = OS_DIR / 'target' / profile
     out = OS_DIR / 'target' / 'vm-lab' / 'bin'
     out.mkdir(parents=True, exist_ok=True)
     missing = [b for b in BINARIES if not (src / b).is_file()]
     if missing:
         raise LabError(f'missing in {src}: {", ".join(missing)} (cargo build --workspace)')
-    h = hashlib.sha256()
+    files = {}
     for b in BINARIES:
         built, staged = src / b, out / b
         if not staged.is_file() or staged.stat().st_mtime < built.stat().st_mtime:
             subprocess.run(['objcopy', '--strip-debug', str(built), str(staged)], check=True)
-        h.update(staged.read_bytes())
+        files[f'bin/{b}'] = hashlib.sha256(staged.read_bytes()).hexdigest()
     for f in sorted([*(OS_DIR / 'config').rglob('*'), *(OS_DIR / 'knowledge').rglob('*'),
                      HERE / 'install-hive.sh', HERE / 'agent.py']):
         if f.is_file():
-            h.update(str(f.relative_to(OS_DIR)).encode())
-            h.update(f.read_bytes())
-    return h.hexdigest()[:16]
+            files[str(f.relative_to(OS_DIR))] = hashlib.sha256(f.read_bytes()).hexdigest()
+    return files
 
 
 class Lab:
@@ -528,10 +527,17 @@ class Lab:
                 self.machine = None
             make_base(self.disk, self.run)
             (self.run / 'hive.json').unlink(missing_ok=True)
-        digest = stage(self.profile)
+        files = stage(self.profile)
         hive = self.run / 'hive.json'
-        installed = hive.is_file() and json.loads(hive.read_text()).get('stage') == digest
-        snapshot = 'hive' if installed else 'base'
+        held = json.loads(hive.read_text()).get('files', {}) if hive.is_file() else {}
+        if held:
+            # the snapshot "hive" and what changed since: the binaries are
+            # the bulk of an install, so only the changed ones are copied
+            changed = [b for b in BINARIES if files[f'bin/{b}'] != held.get(f'bin/{b}')]
+            others = any(files[f] != held.get(f) for f in files if not f.startswith('bin/'))
+            snapshot = 'hive'
+        else:
+            changed, others, snapshot = list(BINARIES), True, 'base'
         if self.machine and self.machine.alive():
             self.machine.restore(snapshot)
         else:
@@ -540,28 +546,36 @@ class Lab:
             self.machine.wait_agent(60)
             self.machine.agent({'op': 'clock', 'epoch': time.time()})
         how = 'restored'
-        if not installed:
-            self.install()
-            hive.write_text(json.dumps({'stage': digest}))
-            how = 'installed'
+        if changed or others:
+            self.install(changed, only_binaries=snapshot == 'hive' and not others)
+            hive.write_text(json.dumps({'files': files}))
+            how = f'installed {", ".join(changed)}' if changed and snapshot == 'hive' else 'installed'
         self.apps = {}
         self.cursor = self.machine.agent({'op': 'journal', 'lines': 0})['cursor']
         self.machine.agent({'op': 'exec', 'sh': 'date "+%Y-%m-%d %H:%M:%S" > /run/lab-tape-start'})
         return {'hive': how, 'seconds': round(time.monotonic() - started, 2)}
 
-    def install(self) -> None:
-        """Installs the staged Hive (as the ISO does), waits until every
-        component has registered with hive-cortex, saves "hive"."""
+    def install(self, binaries: list, only_binaries: bool = False) -> None:
+        """Installs the staged Hive (as the ISO does; of the binaries, only
+        `binaries`), waits until every component has registered with
+        hive-cortex, saves "hive". With `only_binaries`, nothing but those
+        binaries changed: they are copied and their units restarted."""
         m = self.m
+        env = {'HIVE_ONLY_BINARIES' if only_binaries else 'HIVE_BINARIES': ' '.join(binaries)}
         m.agent({'op': 'mount', 'tag': 'lab'})
         try:
-            m.sh('sh /mnt/lab/scripts/lab/vm/install-hive.sh /mnt/lab', timeout=600)
-            m.sh('cmp -s /mnt/lab/scripts/lab/vm/agent.py /usr/local/lib/quantum-lab/agent.py || '
-                 'install -m 0755 /mnt/lab/scripts/lab/vm/agent.py /usr/local/lib/quantum-lab/agent.py')
+            done = m.agent({'op': 'exec', 'sh': 'sh /mnt/lab/scripts/lab/vm/install-hive.sh /mnt/lab',
+                            'env': env, 'timeout': 600}, 610)
+            if done.get('code') != 0:
+                raise LabError(f'install-hive.sh failed: {done.get("stderr") or done.get("error")}')
+            if not only_binaries:
+                m.sh('cmp -s /mnt/lab/scripts/lab/vm/agent.py /usr/local/lib/quantum-lab/agent.py || '
+                     'install -m 0755 /mnt/lab/scripts/lab/vm/agent.py /usr/local/lib/quantum-lab/agent.py')
         finally:
             m.agent({'op': 'umount', 'tag': 'lab'})
-        m.agent({'op': 'restart'})
-        m.wait_agent(30)
+        if not only_binaries:
+            m.agent({'op': 'restart'})
+            m.wait_agent(30)
         deadline = time.monotonic() + 120
         while True:
             log_text = m.sh('journalctl -u hive-cortex --no-pager -o cat '
@@ -618,15 +632,9 @@ class Lab:
         return {}
 
     def op_install(self, req):
-        """Stages the working tree's build again and installs it into the
-        running guest (the snapshot "hive" follows)."""
-        digest = stage(self.profile)
-        self.m.restore('base')
-        self.install()
-        (self.run / 'hive.json').write_text(json.dumps({'stage': digest}))
-        self.apps = {}
-        self.cursor = self.m.agent({'op': 'journal', 'lines': 0})['cursor']
-        return {}
+        """After a rebuild: what `start` does, which installs what changed
+        (the snapshot "hive" follows)."""
+        return self.start()
 
     def op_sh(self, req):
         """A command as root (or `user`). Expects exit code `code` (0; null
