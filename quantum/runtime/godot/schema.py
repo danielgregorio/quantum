@@ -368,9 +368,18 @@ TAGS: Dict[str, Tag] = {
          'to': Attr('ident', required=True), 'at': Attr('ident', required=True)},
         parents=('scene',)),
     'camera': Tag(
-        'What the screen shows.',
-        {'follow': Attr('ident', required=True, doc='a character id'),
-         'bounds': Attr('enum:tilemap|none', 'tilemap')},
+        'What the screen shows: it follows a character, or the middle of several, in the game\'s ticks (a replay '
+        'and every peer frame the same). Only seen: nothing in the game\'s state depends on it.',
+        {'follow': Attr('str', required=True, doc='a character id, or several: "p1, p2" (their middle)'),
+         'bounds': Attr('enum:tilemap|none', 'tilemap'),
+         'zoom': Attr('float', 1.0, doc='2: twice as close'),
+         'dead-zone': Attr('size', None, doc='WxH: the box about the middle of the screen in which the followed one '
+                                             'moves before the camera does'),
+         'lead': Attr('float', 0.0, doc='pixels it looks ahead, the way the followed one goes'),
+         'smooth': Attr('float', 0.0, doc='how fast it catches up, per second (0: at once)'),
+         'fit': Attr('bool', False, doc='several followed: it zooms out to keep them all on the screen, down to '
+                                        'zoom-min, and back in as they come together'),
+         'zoom-min': Attr('float', 0.5, doc='fit: as far out as it goes')},
         parents=('scene',)),
     'hud': Tag(
         'Text over the game.',
