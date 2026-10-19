@@ -410,6 +410,19 @@ class TestScenesMapAndGameState:
                                   'if="{true}" /></qg:scene>\n'))
         assert 'if= is not for controller="map"' in e.message
 
+    def test_a_sound_played_louder_higher_or_varied(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
+  <qg:scene name="main">
+    <qg:timer after="1"><qg:play sound="hit" /><qg:play sound="hit" volume="-6" pitch="0.5" vary="0.1" /></qg:timer>
+  </qg:scene>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\tQ.play("hit")\n' in script and '\tQ.play("hit", -6.0, 0.5, 0.1)\n' in script
+        for attrs in ('pitch="0"', 'vary="-1"', 'pitch="0.5" vary="0.5"'):
+            e = refuse(tmp_path, game('  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />\n  <qg:scene name="main">'
+                                      f'<qg:timer after="1"><qg:play sound="hit" {attrs} /></qg:timer></qg:scene>\n'))
+            assert 'pitch= more than 0, vary= 0 or more and less than pitch=' in e.message, attrs
+
     def test_a_camera_with_zoom_dead_zone_lead_and_several_followed(self, tmp_path):
         out = build(tmp_path, game('''  <qg:scene name="main">
     <qg:character id="a" controller="topdown" sheet="c" x="10" y="10" hitbox="12x16" />

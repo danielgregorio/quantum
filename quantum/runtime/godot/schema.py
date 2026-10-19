@@ -554,8 +554,14 @@ TAGS: Dict[str, Tag] = {
          'name': Attr('str', required=True, doc='an animation of the target (empty: back to its own)')},
         parents=('handler',)),
     'play': Tag(
-        'Plays a qg:sound. Directly in a scene: as the scene is entered.',
-        {'sound': Attr('ident', required=True)},
+        'Plays a qg:sound. Directly in a scene: as the scene is entered. With volume=, pitch= or vary=, it plays '
+        'in a voice of its own, so the same sound can overlap itself. Only heard: the game\'s state records the '
+        'sound\'s name, never how it was played.',
+        {'sound': Attr('ident', required=True),
+         'volume': Attr('float', 0.0, doc='decibels added (-6: about half as loud)'),
+         'pitch': Attr('float', 1.0, doc='2: an octave up, 0.5: an octave down'),
+         'vary': Attr('float', 0.0, doc='a random pitch between pitch - vary and pitch + vary, each time: '
+                                        'twenty hits that do not sound the same')},
         parents=('handler', 'scene')),
     'music': Tag(
         'The music of a scene: a looping qg:sound that plays while the scene is on. Going to a scene '
