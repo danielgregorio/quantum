@@ -10,6 +10,7 @@ The Hive lab (`crates/hive-lab`) runs the real hive-cortex and hive-synapse and 
 | packages | the guest's only package source is a signed repository in the guest, made by the host, with what a test may install (`REPO_PACKAGES`: htop): an approved install goes through PackageKit as on the real system, with no network |
 | the speed | the guest boots once. The snapshot `base` keeps it booted with its packages, and `hive` keeps it with the Hive installed from the build. Restoring one takes about a second, with or without KVM |
 | the screens | the real hive-dashboard and grove run in a terminal in the guest. `hive-lab term` renders them with the same terminal emulator as the Hive lab |
+| the display | a `virtio-gpu`, on which the real `hive-screen` draws the Hive's screen through DRM; the host reads it with QMP `screendump` and presses its keys with `send-key` |
 
 ## Playing it
 
@@ -54,6 +55,9 @@ The same shape as the Hive lab's: `{"op": ...}` in, `{"ok": true, ...}` or `{"ok
 | `view` (`app`), `keys` (`app`, `keys`) | its screen as text, typing (`Enter`, `Down`, `Esc`, ... or text) |
 | `until_screen` (`app`, `contains`, `excludes`, `count`, `timeout`: 5) | waits until the screen shows it (exactly `count` times, if given) |
 | `keys_until` (`app`, `keys`, `contains`, `max`: 20) | presses keys until the screen shows the text: moves a selection to a row by what it says |
+| `shot` (`path`, `has`: `#rrggbb`, `min`: 1) | the display as a PNG, its size and its commonest colours; with `has`, whether that colour is on it |
+| `until_shot` (`has`, `min`, `timeout`: 10) | takes the display until that colour is on it: the smoke over a cell, the honey in it |
+| `press` (`keys`: up, down, enter, escape) | the machine's keyboard, which `hive-screen` reads from `/dev/input` |
 | `end` | stops the VM |
 
 ## Tapes

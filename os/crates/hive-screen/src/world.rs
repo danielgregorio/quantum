@@ -130,6 +130,8 @@ pub struct World {
     seeds: u32,
     /// What happened since the last look: for a test and the lab.
     pub events: Vec<Value>,
+    /// Whether the picture changed since the last draw.
+    dirty: bool,
 }
 
 impl World {
@@ -205,7 +207,14 @@ impl World {
             tick: 0,
             seeds,
             events: Vec::new(),
+            dirty: true,
         }
+    }
+
+    /// Whether the picture changed since the last call: a display draws
+    /// only then, so a scene at rest costs nothing.
+    pub fn take_dirty(&mut self) -> bool {
+        std::mem::replace(&mut self.dirty, false)
     }
 
     fn sprite_named(&self, name: &str) -> Option<usize> {
@@ -223,6 +232,7 @@ impl World {
     pub fn event(&mut self, kind: &str, fields: &Fields) {
         self.events
             .push(json!({"kind": "event", "event": kind, "fields": fields}));
+        self.dirty = true;
         let Some(rule) = self.scene.rule(kind) else {
             return;
         };
@@ -382,6 +392,7 @@ impl World {
             outcome: None,
         });
         self.events.push(json!({"kind": "offer", "title": title}));
+        self.dirty = true;
     }
 
     /// The actuator answered: the offer it was about is done, or failed.
@@ -401,6 +412,7 @@ impl World {
         } else {
             Outcome::Failed
         });
+        self.dirty = true;
         let mut fields = action_fields(action);
         fields.insert("output".into(), output.unwrap_or("").to_string());
         Some(fields)
@@ -408,6 +420,7 @@ impl World {
 
     /// A key from the administrator: moves the focus, approves, dismisses.
     pub fn key(&mut self, key: Key) -> Option<Outgoing> {
+        self.dirty = true;
         self.events
             .push(json!({"kind": "key", "key": format!("{:?}", key).to_lowercase()}));
         match key {
@@ -484,6 +497,9 @@ impl World {
     /// One tick: animations, tweens, effects and the toast advance.
     pub fn tick(&mut self) {
         self.tick += 1;
+        if !self.tweens.is_empty() || !self.bursts.is_empty() || !self.emitters.is_empty() {
+            self.dirty = true;
+        }
         for sprite in &mut self.sprites {
             if let Some(anim) = &mut sprite.anim {
                 if anim.done {
@@ -503,7 +519,10 @@ impl World {
                         break;
                     }
                 }
-                sprite.frame = anim.frames[anim.index];
+                if sprite.frame != anim.frames[anim.index] {
+                    sprite.frame = anim.frames[anim.index];
+                    self.dirty = true;
+                }
             }
         }
         let mut finished = Vec::new();
@@ -555,6 +574,7 @@ impl World {
             *left -= 1;
             if *left == 0 {
                 self.toast = None;
+                self.dirty = true;
             }
         }
     }

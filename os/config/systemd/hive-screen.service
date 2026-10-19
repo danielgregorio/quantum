@@ -1,0 +1,71 @@
+[Unit]
+Description=DruidOS Hive Screen - the Hive's screen on the console
+Documentation=https://druidos.org/docs/hive-screen
+After=hive-cortex.service systemd-udevd.service
+Requires=hive-cortex.service
+PartOf=hive-cortex.service
+# the first console is the screen's; a login prompt there would draw over it
+Conflicts=getty@tty1.service
+After=getty@tty1.service
+# a machine with no display adapter has no screen to draw on
+ConditionPathExists=/dev/dri/card0
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/hive-screen
+Restart=always
+RestartSec=5
+
+# Its own user: a member of video (the display) and input (the keyboard),
+# and nothing else; hive-cortex lets hive-screen in as a dashboard from this
+# user alone (and from an administrator).
+User=_hive-screen
+Group=hive
+SupplementaryGroups=video input
+
+# The console it draws on, as its standard input: that makes it the
+# terminal's owner, so it may put it into graphics mode and back.
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+
+# Environment
+Environment=RUST_LOG=info
+Environment=HIVE_CONFIG=/etc/hive/config.toml
+
+# Below the Hive's inference in the queue: the scene yields to the model.
+Nice=5
+CPUWeight=50
+
+# Security
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+CapabilityBoundingSet=
+DevicePolicy=closed
+DeviceAllow=/dev/dri/card0 rw
+DeviceAllow=char-input rw
+DeviceAllow=/dev/tty1 rw
+
+# The scene and the Hive's socket
+ReadOnlyPaths=/run/hive /etc/hive/screen
+
+# System call filtering
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @mount
+
+[Install]
+WantedBy=multi-user.target

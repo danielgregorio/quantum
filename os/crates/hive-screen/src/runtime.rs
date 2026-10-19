@@ -56,10 +56,12 @@ impl Runtime {
                 fields.insert("severity".into(), severity_name(severity).into());
                 if actions.is_empty() {
                     let kind = kind.unwrap_or_else(|| "notice".to_string());
+                    tracing::info!("event: {} ({})", kind, title);
                     self.world.event(&kind, &fields);
                 } else {
                     let count = actions.len();
                     for s in actions {
+                        tracing::info!("offer: {}", s.title);
                         self.world.offer(id, s.id, s.title, s.action);
                     }
                     fields.insert("count".into(), count.to_string());
@@ -87,6 +89,11 @@ impl Runtime {
         let Some(key) = Key::parse(name) else {
             bail!("no such key: {} (up, down, enter, escape)", name);
         };
+        self.press(key)
+    }
+
+    /// A key.
+    pub fn press(&mut self, key: Key) -> Result<()> {
         if let Some(out) = self.world.key(key) {
             let msg = match out {
                 Outgoing::Approve {
