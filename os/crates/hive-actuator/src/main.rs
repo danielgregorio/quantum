@@ -403,7 +403,15 @@ async fn handle_message(
 
             match result {
                 Ok((output, exit_code)) => {
-                    info!("Action completed with exit code {:?}", exit_code);
+                    if exit_code.map_or(true, |c| c == 0) {
+                        info!("Action completed with exit code {:?}", exit_code);
+                    } else {
+                        warn!(
+                            "Action failed with exit code {:?}: {}",
+                            exit_code,
+                            output.as_deref().unwrap_or("")
+                        );
+                    }
                     send_response(
                         cortex,
                         request_id,
@@ -470,6 +478,16 @@ async fn package_kit(args: &[&str], timeout: Duration) -> Result<(Option<String>
         format!("{stdout}\n{stderr}")
     };
     Ok((Some(combined), output.status.code()))
+}
+
+/// `systemctl ARGS`: its exit code and, when it fails, what it said
+/// (polkit's "Access denied", "Job for nginx.service failed because..."):
+/// a failed action tells the administrator why.
+async fn systemctl(args: &[&str]) -> Result<(Option<String>, Option<i32>)> {
+    let output = Command::new("systemctl").args(args).output().await?;
+    let said = (!output.status.success())
+        .then(|| String::from_utf8_lossy(&output.stderr).trim().to_string());
+    Ok((said, output.status.code()))
 }
 
 async fn execute_action(
@@ -592,41 +610,13 @@ async fn execute_action(
             package_kit(&args, timeout).await
         }
 
-        Action::StartService { name } => {
-            let output = Command::new("systemctl")
-                .args(["start", name])
-                .output()
-                .await?;
+        Action::StartService { name } => systemctl(&["start", name]).await,
 
-            Ok((None, output.status.code()))
-        }
+        Action::StopService { name } => systemctl(&["stop", name]).await,
 
-        Action::StopService { name } => {
-            let output = Command::new("systemctl")
-                .args(["stop", name])
-                .output()
-                .await?;
+        Action::RestartService { name } => systemctl(&["restart", name]).await,
 
-            Ok((None, output.status.code()))
-        }
-
-        Action::RestartService { name } => {
-            let output = Command::new("systemctl")
-                .args(["restart", name])
-                .output()
-                .await?;
-
-            Ok((None, output.status.code()))
-        }
-
-        Action::ReloadService { name } => {
-            let output = Command::new("systemctl")
-                .args(["reload", name])
-                .output()
-                .await?;
-
-            Ok((None, output.status.code()))
-        }
+        Action::ReloadService { name } => systemctl(&["reload", name]).await,
 
         Action::EnableService { name, now } => {
             let mut args = vec!["enable"];
@@ -634,10 +624,7 @@ async fn execute_action(
                 args.push("--now");
             }
             args.push(name);
-
-            let output = Command::new("systemctl").args(&args).output().await?;
-
-            Ok((None, output.status.code()))
+            systemctl(&args).await
         }
 
         Action::DisableService { name, now } => {
@@ -646,10 +633,7 @@ async fn execute_action(
                 args.push("--now");
             }
             args.push(name);
-
-            let output = Command::new("systemctl").args(&args).output().await?;
-
-            Ok((None, output.status.code()))
+            systemctl(&args).await
         }
 
         Action::KillPortProcess { port, signal } => {
