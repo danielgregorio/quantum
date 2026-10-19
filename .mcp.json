@@ -3,6 +3,10 @@
     "quantum-play": {
       "command": "python",
       "args": ["-m", "quantum.runtime.play_mcp"]
+    },
+    "hive-lab": {
+      "command": "python",
+      "args": ["os/scripts/lab/hive_mcp.py"]
     }
   }
 }
