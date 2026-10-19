@@ -1,0 +1,22 @@
+// a user reaches for a program that is not installed: the real grove says which package provides it,
+// the real dashboard offers to install it, nothing is installed on its own, and the administrator's
+// approval has the unprivileged actuator install it through PackageKit and polkit, from the guest's
+// signed repository; the user's next try runs it
+{"op":"start"}
+{"op":"tui","app":"dashboard","rows":24,"cols":110}
+{"op":"until_screen","app":"dashboard","contains":"Waiting for Hive activity"}
+{"op":"tui","app":"grove","rows":16,"cols":110}
+{"op":"until_screen","app":"grove","contains":"grove>","timeout":15}
+{"op":"keys","app":"grove","keys":["htop","Enter"]}
+{"op":"until_screen","app":"grove","contains":"the package htop would provide it"}
+{"op":"until_screen","app":"dashboard","contains":"Hive Suggestion — Install htop","timeout":15}
+{"op":"none_journal","unit":"hive-actuator.service","contains":"htop","within":0.5}
+{"op":"sh","sh":"dpkg -s htop","code":1}
+{"op":"keys_until","app":"dashboard","keys":["Down"],"contains":"`htop` isn't installed"}
+{"op":"keys","app":"dashboard","keys":["Enter"]}
+{"op":"until_screen","app":"dashboard","contains":"Install htop (done)","timeout":180}
+{"op":"until_journal","unit":"hive-actuator.service","contains":"Action completed with exit code Some(0)"}
+{"op":"sh","sh":"dpkg -s htop","contains":"Status: install ok installed"}
+{"op":"keys","app":"grove","keys":["htop --version","Enter"]}
+{"op":"until_screen","app":"grove","contains":"htop 3."}
+{"op":"end"}

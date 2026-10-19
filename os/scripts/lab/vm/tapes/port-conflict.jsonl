@@ -1,5 +1,5 @@
 // a real process holds a port and a unit retrying to bind it fails every second: the real network
-// nerve names both, once; listening the ports, once approved, is run by the real actuator
+// nerve names both, once; listing the ports, once approved, is run by the real actuator
 {"op": "start"}
 {"op": "sh", "sh": "systemd-run --unit=lab-holder python3 -m http.server 8080 --bind 0.0.0.0"}
 {"op": "until_sh", "sh": "ss -tlnH 'sport = :8080'", "contains": "8080"}

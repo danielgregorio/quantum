@@ -23,14 +23,32 @@ da Hive lab.
 
 **Tempos, medidos aqui sem KVM:** a base sai em ~5 min (quase tudo é o
 primeiro boot). Subir a VM a partir de `hive` leva ~7 s, e um restore
-~2 s. As duas fitas levam ~50 s juntas, quase tudo esperando o loop de
-crash. No CI o runner tem KVM.
+~2 s. As cinco fitas levam ~95 s juntas. No CI, com KVM, a base sai em
+~25 s.
 
-**Fitas:** `crash-restart` (uma unit real em loop de crash aparece uma vez
-no dashboard real, e só depois de aprovada no teclado o actuator real
-reinicia a unit via polkit) e `port-conflict` (um processo real segura a
-porta, o nerve de rede real nomeia os dois uma vez, e o actuator roda
-`ss -tlnp` aprovado). As mesmas operações são ferramentas MCP (`vm_start`,
+**Fitas:**
+- `crash-restart`: uma unit real em loop de crash aparece uma vez no
+  dashboard real, e só depois de aprovada no teclado o actuator real
+  reinicia a unit via polkit.
+- `port-conflict`: um processo real segura a porta, o nerve de rede real
+  nomeia os dois uma vez, e o actuator roda `ss -tlnp` aprovado.
+- `dangerous-command`: o `rm -rf /srv` de um usuário logado vai do audit
+  do kernel ao dashboard real. Um delete de rotina e os comandos de daemons
+  não são reportados (a regra do audit só registra quem tem loginuid, e o
+  agente dá loginuid aos comandos do usuário, como um login daria).
+- `crash-loop`: uma unit em loop de crash aparece, e a oferta de restart
+  também, uma vez só.
+- `install-on-request`: o usuário chama o htop no grove real, o dashboard
+  oferece a instalação, e a aprovação faz o actuator sem privilégio
+  instalar pelo PackageKit e polkit, a partir de um repositório assinado
+  dentro do guest (a única fonte de pacotes dele, montada pelo host). Na
+  segunda tentativa o grove roda o htop.
+
+Uma fita que misturava o loop de crash com a aprovação falhou uma vez no
+CI com KVM: o auto-restart do systemd e o restart aprovado disputavam a
+mesma janela. Aprovar logo depois de corrigir a causa, com o serviço
+voltando sozinho, é uma corrida legítima. Por isso o loop e o restart
+viraram fitas separadas, e o restart parte de uma unit que caiu uma vez. As mesmas operações são ferramentas MCP (`vm_start`,
 `vm_request`, `vm_view`, `vm_tape`, `vm_end`).
 
 **O que o lab encontrou:**
@@ -44,6 +62,18 @@ porta, o nerve de rede real nomeia os dois uma vez, e o actuator roda
 - O nerve de rede já tinha uma janela de 5 min, mas a chave levava o pid,
   que muda a cada reinício, então nunca segurava nada. Agora a chave é a
   unit (ou o programa), com teste.
+- Depois de um `rm -rf /srv`, o dashboard dizia "A ZFS snapshot has been
+  created for safety", num sistema sem ZFS. O texto do mock da synapse
+  afirmava algo que nada faz. A linha saiu, e um teste segura o mock a não
+  afirmar nada.
+- Uma ação de serviço que falhava chegava ao dashboard como "(failed)" e
+  ao journal como um código de saída, porque o que o systemctl dizia era
+  descartado. Agora isso vira a saída da ação.
+- O pacote druidos-hive não dependia do que a Hive usa. Num sistema sem
+  `packagekit-tools`, a instalação aprovada falhava com "Failed to run
+  pkcon", e a ISO só funcionava porque trazia esse pacote por acaso. O
+  `debian/control` agora depende de polkitd, packagekit,
+  packagekit-tools e auditd.
 
 ## 2026-10-19 - Hive Lab: a Hive numa caixa, sem VM (início do Quantum OS)
 

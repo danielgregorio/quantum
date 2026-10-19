@@ -322,9 +322,9 @@ class Machine:
 # ------------------------------------------------------------------ the base
 
 # What the Hive needs from the system that the minimal image lacks: polkit
-# (the actuator acts through it), PackageKit (installs) and auditd (the
-# process nerve reads program executions from the audit log).
-PACKAGES = ['polkitd', 'packagekit', 'auditd']
+# (the actuator acts through it), PackageKit and its pkcon (installs) and
+# auditd (the process nerve reads program executions from the audit log).
+PACKAGES = ['polkitd', 'packagekit', 'packagekit-tools', 'auditd']
 
 # Timers that would act on their own during a test: a test must see only
 # what it caused.
@@ -332,8 +332,14 @@ QUIET = ['apt-daily.timer', 'apt-daily-upgrade.timer', 'motd-news.timer', 'dpkg-
          'e2scrub_all.timer', 'fstrim.timer', 'systemd-tmpfiles-clean.timer']
 
 
+# What a user may reach for and the Hive may offer to install: served by a
+# signed repository in the guest, its only package source, so that grove
+# finds them with apt and an approved install goes through PackageKit as on
+# the real system, with no network.
+REPO_PACKAGES = ['htop']
+
 # Bumped when make_base changes what the base holds.
-BASE_VERSION = 1
+BASE_VERSION = 3
 
 
 def base_fingerprint() -> str:
@@ -343,11 +349,11 @@ def base_fingerprint() -> str:
     install brings the working tree's."""
     h = hashlib.sha256()
     h.update(json.dumps([BASE_VERSION, IMAGE_DIR, IMAGE_NAME, AGENT_UNIT, PACKAGES, QUIET,
-                         kvm_usable()]).encode())
+                         REPO_PACKAGES, kvm_usable()]).encode())
     return h.hexdigest()[:16]
 
 
-def fetch_debs(guest_status: Path, out: Path) -> list:
+def fetch_debs(guest_status: Path, out: Path, packages: list) -> list:
     """Downloads, on the host, the packages the guest lacks, with the
     guest's own dpkg status: apt works out what to fetch for the guest. The
     host must run the guest's release (CI and this lab's containers do); the
@@ -358,13 +364,47 @@ def fetch_debs(guest_status: Path, out: Path) -> list:
     (out / 'partial').mkdir(parents=True, exist_ok=True)
     cmd = ['apt-get', '-q', '-y', '--download-only', '--no-install-recommends',
            '-o', f'Dir::State::status={guest_status}', '-o', f'Dir::Cache::archives={out}',
-           '-o', 'Debug::NoLocking=1', 'install', *PACKAGES]
+           '-o', 'Debug::NoLocking=1', 'install', *packages]
     if os.geteuid() != 0:
         cmd = ['sudo', '-n', *cmd]
     done = subprocess.run(cmd, capture_output=True, text=True)
     if done.returncode != 0:
-        raise LabError(f'apt-get could not download {PACKAGES}: {done.stdout[-500:]}{done.stderr[-500:]}')
+        raise LabError(f'apt-get could not download {packages}: {done.stdout[-500:]}{done.stderr[-500:]}')
     return sorted(out.glob('*.deb'))
+
+
+def make_repo(repo: Path) -> None:
+    """A flat apt repository of the .debs in `repo`, signed with a key made
+    for it (the key goes in the guest; no one else trusts it)."""
+    entries = []
+    for deb in sorted(repo.glob('*.deb')):
+        control = subprocess.run(['dpkg-deb', '-f', str(deb)], capture_output=True, text=True,
+                                 check=True).stdout.rstrip('\n')
+        data = deb.read_bytes()
+        entries.append(f'{control}\nFilename: ./{deb.name}\nSize: {len(data)}\n'
+                       f'SHA256: {hashlib.sha256(data).hexdigest()}\n')
+    packages = '\n'.join(entries).encode()
+    (repo / 'Packages').write_bytes(packages)
+    date = time.strftime('%a, %d %b %Y %H:%M:%S UTC', time.gmtime())
+    (repo / 'Release').write_text(
+        f'Origin: quantum-lab\nLabel: quantum-lab\nSuite: lab\nDate: {date}\nArchitectures: amd64 all\n'
+        f'SHA256:\n {hashlib.sha256(packages).hexdigest()} {len(packages)} Packages\n')
+    gnupg = repo / '.gnupg'
+    gnupg.mkdir(mode=0o700)
+    gpg = ['gpg', '--batch', '--quiet', '--homedir', str(gnupg), '--pinentry-mode', 'loopback', '--passphrase', '']
+    subprocess.run([*gpg, '--quick-gen-key', 'Quantum OS VM lab <lab@quantum.invalid>', 'ed25519', 'sign',
+                    'never'], check=True, capture_output=True)
+    subprocess.run([*gpg, '--clearsign', '--output', str(repo / 'InRelease'), str(repo / 'Release')],
+                   check=True, capture_output=True)
+    subprocess.run([*gpg, '--output', str(repo / 'quantum-lab.gpg'), '--export'], check=True, capture_output=True)
+    shutil.rmtree(gnupg)
+
+
+REPO_SOURCE = """Types: deb
+URIs: file:/var/lib/quantum-lab/repo
+Suites: ./
+Signed-By: /etc/apt/keyrings/quantum-lab.gpg
+"""
 
 
 def make_base(disk: Path, run: Path) -> None:
@@ -385,10 +425,27 @@ def make_base(disk: Path, run: Path) -> None:
         machine.wait_agent(900)
         status = run / 'guest-dpkg-status'
         status.write_bytes(base64.b64decode(machine.agent({'op': 'get', 'path': '/var/lib/dpkg/status'})['data']))
-        names = [d.name for d in fetch_debs(status, debs)]
+        names = [d.name for d in fetch_debs(status, debs, PACKAGES)]
         log(f'installing {len(names)} packages: {", ".join(PACKAGES)} and what they need')
         machine.agent({'op': 'mount', 'tag': 'debs'})
         machine.sh('DEBIAN_FRONTEND=noninteractive dpkg -i /mnt/debs/*.deb', timeout=900)
+        machine.agent({'op': 'umount', 'tag': 'debs'})
+        # the repository: what the guest lacks for REPO_PACKAGES, once the
+        # packages above are in (packagekitd is stopped after: its cache
+        # would predate the repository)
+        status.write_bytes(base64.b64decode(machine.agent({'op': 'get', 'path': '/var/lib/dpkg/status'})['data']))
+        fetch_debs(status, debs / 'repo', REPO_PACKAGES)
+        make_repo(debs / 'repo')
+        log(f'a signed repository in the guest, its only package source: {", ".join(REPO_PACKAGES)}')
+        machine.agent({'op': 'mount', 'tag': 'debs'})
+        machine.agent({'op': 'put', 'path': '/etc/apt/sources.list.d/quantum-lab.sources',
+                       'data': base64.b64encode(REPO_SOURCE.encode()).decode()})
+        machine.sh('mkdir -p /var/lib/quantum-lab/repo /etc/apt/keyrings && '
+                   'cp /mnt/debs/repo/*.deb /mnt/debs/repo/Packages /mnt/debs/repo/Release '
+                   '/mnt/debs/repo/InRelease /var/lib/quantum-lab/repo/ && '
+                   'install -m 0644 /mnt/debs/repo/quantum-lab.gpg /etc/apt/keyrings/ && '
+                   'mv /etc/apt/sources.list.d/ubuntu.sources /etc/apt/ubuntu.sources.offline && '
+                   'apt-get update -q && systemctl stop packagekit', timeout=300)
         machine.agent({'op': 'umount', 'tag': 'debs'})
         machine.sh(f'systemctl mask --now {" ".join(QUIET)}')
         # a guest that waits for nothing at the next restore
