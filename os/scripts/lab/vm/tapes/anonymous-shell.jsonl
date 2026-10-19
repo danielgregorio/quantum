@@ -1,0 +1,17 @@
+// a user's real grove goes anonymous: a dangerous command it runs reaches the process nerve through
+// the kernel's audit log, and hive-cortex, walking the real process tree up to the anonymous shell,
+// passes nothing on; out of anonymous mode, the same command is judged again
+{"op":"start"}
+{"op":"tui","app":"grove","rows":16,"cols":110}
+{"op":"until_screen","app":"grove","contains":"grove>","timeout":15}
+{"op":"keys","app":"grove","keys":["anon on","Enter"]}
+{"op":"until_screen","app":"grove","contains":"(anon) grove>"}
+{"op":"until_journal","unit":"hive-cortex.service","contains":"Anonymous mode entered"}
+{"op":"keys","app":"grove","keys":["rm -rf /srv/.","Enter"]}
+{"op":"until_journal","unit":"hive-cortex.service","contains":"Skipping observation for anonymous process"}
+{"op":"none_journal","unit":"hive-synapse.service","contains":"Received suggestion request","within":1}
+{"op":"keys","app":"grove","keys":["anon off","Enter"]}
+{"op":"until_screen","app":"grove","contains":"anonymous mode off"}
+{"op":"keys","app":"grove","keys":["rm -rf /srv/.","Enter"]}
+{"op":"until_journal","unit":"hive-synapse.service","contains":"Received suggestion request"}
+{"op":"end"}

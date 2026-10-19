@@ -105,6 +105,10 @@ struct CortexState {
     pending_queries: HashMap<MessageId, (u64, MessageId)>,
     // package -> when it was last offered for a missing command
     offered_packages: HashMap<String, std::time::Instant>,
+    // a problem a nerve reported ("crash nginx.service") -> when it was last
+    // passed on, and how many reports of it were held since
+    reported_problems: HashMap<String, (std::time::Instant, u32)>,
+    problem_report_interval: std::time::Duration,
     anonymous: AnonymousManager,
 }
 
@@ -122,6 +126,8 @@ impl CortexState {
             pending_suggestions: HashMap::new(),
             pending_queries: HashMap::new(),
             offered_packages: HashMap::new(),
+            reported_problems: HashMap::new(),
+            problem_report_interval: router::PROBLEM_REPORT_INTERVAL,
             anonymous,
         }
     }

@@ -132,7 +132,7 @@ cargo build --workspace --release
 ./scripts/check.sh
 ```
 
-CI (`.github/workflows/os.yml` at the repository root) runs `fmt`/`clippy`/`test` and the Hive lab's tapes on every pull request that touches `os/`. DruidOS's ISO build and release workflows were not brought over (a release workflow there would fire on Quantum's own tags); the ISO is built with `scripts/build-iso.sh` and the ISO lab below.
+CI (`.github/workflows/os.yml` at the repository root) runs `fmt`/`clippy`/`test`, the Hive lab's tapes and the VM lab's tapes on every pull request that touches `os/`. DruidOS's ISO build and release workflows were not brought over (a release workflow there would fire on Quantum's own tags); the ISO is built with `scripts/build-iso.sh` and the ISO lab below.
 
 Cargo can't cross-compile this workspace from Windows; `bash scripts/test-on-forge.sh` runs `scripts/check.sh` on the Forge homelab host instead.
 
@@ -146,7 +146,19 @@ sudo target/debug/hive-lab                       # by hand: {"op":"start"}, {"op
 sudo target/debug/hive-lab --record my.jsonl     # a session becomes a tape; --play runs it again
 ```
 
-A behaviour worth keeping is a tape: add it to `crates/hive-lab/tapes/` and CI plays it. The same lab is an MCP server (`hive-lab` in the repository's `.mcp.json`: `hive_start`, `hive_request`, `hive_view`, `hive_tape`, `hive_end`). Use the ISO lab below only for what needs the real system (boot, the installer, what nerves notice and what actions do).
+A behaviour worth keeping is a tape: add it to `crates/hive-lab/tapes/` and CI plays it. The same lab is an MCP server (`hive-lab` in the repository's `.mcp.json`: `hive_start`, `hive_request`, `hive_view`, `hive_tape`, `hive_end`).
+
+### VM Lab (the real system, restored from a snapshot in a second)
+
+For what only the running system shows: what the real nerves notice (the journal, the audit log, `/proc`), what the real actuator does through polkit and systemd, how the units, their sandboxes and users behave together. `scripts/lab/vm/vm.py` runs Ubuntu 24.04's minimal cloud image in QEMU (KVM when available, emulation otherwise), installs the Hive from the working tree's build as the ISO does, and saves snapshots: `base` (booted, with polkit, PackageKit and auditd) and `hive` (with this build installed). A tape restores `hive` in about a second; a new build is installed on `base` again. A guest agent answers over virtio-serial (no network, no SSH); the real dashboard and grove run in a terminal in the guest and are read as text with `hive-lab term`. See `scripts/lab/vm/README.md`.
+
+```bash
+cargo build --workspace
+python3 scripts/lab/vm/vm.py --play              # every tape in scripts/lab/vm/tapes/
+python3 scripts/lab/vm/vm.py                     # by hand: {"op":"start"}, {"op":"sh","sh":"..."}, {"op":"tui","app":"dashboard"}
+```
+
+Its MCP tools are in the same server: `vm_start`, `vm_request`, `vm_view`, `vm_tape`, `vm_end`. Use the ISO lab below only for the image itself: boot, the installer, ZFS on root.
 
 ### ISO Lab (build → boot → install → e2e, on Forge with KVM)
 

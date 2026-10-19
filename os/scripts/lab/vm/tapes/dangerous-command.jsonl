@@ -1,0 +1,15 @@
+// a logged-in user runs a dangerous command: the kernel's audit log tells the real process nerve,
+// and the real dashboard gets advice that claims nothing was done; a routine delete and a daemon's
+// own commands are not reported
+{"op":"start"}
+{"op":"tui","app":"dashboard","rows":24,"cols":110}
+{"op":"until_screen","app":"dashboard","contains":"Waiting for Hive activity"}
+{"op":"sh","user":"druid","sh":"mkdir -p ~/old && rm -rf ~/old"}
+// (rm refuses "/srv/.", and the nerve would judge it dangerous from a logged-in user)
+{"op":"sh","sh":"rm -rf /srv/.","code":1}
+{"op":"none_journal","unit":"hive-nerve-process.service","contains":"Detected dangerous command","within":1.5}
+{"op":"sh","user":"druid","sh":"rm -rf /srv","code":1,"contains":"Permission denied"}
+{"op":"until_journal","unit":"hive-nerve-process.service","contains":"Detected dangerous command 'rm': rm -rf /srv (recursively deletes /srv)"}
+{"op":"until_screen","app":"dashboard","contains":"trash-cli","excludes":"has been created","timeout":15}
+{"op":"until_sh","sh":"test -d /srv"}
+{"op":"end"}

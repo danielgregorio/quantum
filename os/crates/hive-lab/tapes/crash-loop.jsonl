@@ -1,0 +1,15 @@
+// a service in a restart loop: its first crash is reported and offered, the next ones are held
+// (found in the VM lab, where a unit with Restart=on-failure stacked the same notice and offers on
+// the dashboard every second)
+{"op":"start"}
+{"op":"crash","service":"nginx.service","exit_code":1,"restarts":1}
+{"op":"until","to":"dashboard","type":"Notification","contains":"nginx.service exited with code 1"}
+{"op":"until","to":"dashboard","contains":"Restart nginx","timeout":10}
+{"op":"crash","service":"nginx.service","exit_code":1,"restarts":2}
+{"op":"crash","service":"nginx.service","exit_code":1,"restarts":3}
+{"op":"none","to":"dashboard","within":1}
+{"op":"none","to":"shell","contains":"nginx","within":0.2}
+// another service's crash is still news
+{"op":"crash","service":"postgresql.service","exit_code":1,"restarts":1}
+{"op":"until","to":"dashboard","type":"Notification","contains":"postgresql.service exited with code 1"}
+{"op":"end"}

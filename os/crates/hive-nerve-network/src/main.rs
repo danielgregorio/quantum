@@ -172,12 +172,18 @@ async fn handle_journal_line(
     if !config.watch_ports.is_empty() && !config.watch_ports.contains(&failure.port) {
         return Ok(());
     }
-    if !recent.should_report(failure.port, &failure.requester(), Instant::now()) {
+    if !is_news(recent, &failure, Instant::now()) {
         return Ok(());
     }
 
     let holders = proc_net::holders_of(failure.port);
     report_conflict(cortex, &failure, &holders).await
+}
+
+/// Whether a bind failure is news: a service that keeps retrying is reported
+/// once per window, whatever pid each retry has.
+fn is_news(recent: &mut RecentReports, failure: &BindFailure, now: Instant) -> bool {
+    recent.should_report(failure.port, failure.retrier(), now)
 }
 
 async fn report_conflict(
@@ -248,6 +254,33 @@ fn describe_holders(holders: &[Socket], lookup: impl Fn(u32) -> Option<String>) 
 mod tests {
     use super::*;
     use crate::proc_net::Protocol;
+
+    #[test]
+    fn a_service_retrying_under_new_pids_is_reported_once() {
+        // Found in the VM lab: a unit retrying every second was reported on
+        // every retry, since each retry has a new pid.
+        let retry = |pid: u32| BindFailure {
+            port: 80,
+            pid,
+            uid: 0,
+            comm: "nginx".into(),
+            cmdline: vec![],
+            unit: Some("nginx.service".into()),
+        };
+        let mut recent = RecentReports::new(REPORT_WINDOW);
+        let now = Instant::now();
+        assert!(is_news(&mut recent, &retry(100), now));
+        assert!(!is_news(
+            &mut recent,
+            &retry(200),
+            now + Duration::from_secs(1)
+        ));
+        assert!(!is_news(
+            &mut recent,
+            &retry(300),
+            now + Duration::from_secs(2)
+        ));
+    }
 
     fn socket(uid: u32, inode: u64) -> Socket {
         Socket {

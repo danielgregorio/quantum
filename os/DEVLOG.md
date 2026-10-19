@@ -1,5 +1,87 @@
 # DruidOS Development Log
 
+## 2026-10-19 - VM Lab: o sistema real, restaurado em um segundo
+
+A segunda camada do play protocol do OS. A Hive lab valida o que a Hive
+decide, mas não o que só o sistema rodando mostra: o que os nerves reais
+veem no journal, no audit e no `/proc`, e o que o actuator real faz via
+polkit e systemd. O lab da ISO cobria isso com ISO, instalação, OCR e o
+Forge, a minutos por volta.
+
+**O que é (`scripts/lab/vm/`, documentado no README de lá e no
+CLAUDE.md):** a imagem cloud mínima do Ubuntu 24.04 (a release que o OS
+remasteriza) num overlay qcow2, no QEMU (KVM quando há, emulação quando
+não). O cloud-init só instala um agente: `agent.py`, que fala JSON lines
+numa porta virtio-serial, sem rede, sem SSH e sem chaves. A base bota uma
+vez e vira o snapshot `base`, com polkit, PackageKit e auditd. Esses
+pacotes o host baixa com o dpkg status do próprio guest, e o guest instala
+offline por 9p. A Hive do working tree (binários sem debug, `config/`) é
+instalada como a ISO instala (`install-hive.sh`) e vira o snapshot `hive`.
+Cada fita restaura `hive`. O dashboard e o grove reais rodam num terminal
+dentro do guest, e o novo `hive-lab term` lê as telas com o mesmo emulador
+da Hive lab.
+
+**Tempos, medidos aqui sem KVM:** a base sai em ~5 min (quase tudo é o
+primeiro boot). Subir a VM a partir de `hive` leva ~7 s, e um restore
+~2 s. As seis fitas levam ~115 s juntas. Só o que mudou é instalado: se
+mudaram só binários, eles são copiados e só as units deles reiniciam
+(grove 6 s, um nerve 9 s, o cortex 20 s, contra 60 s da instalação
+completa). **No CI, com KVM:** a base sai em 18 a 25 s, e as seis fitas,
+com a primeira instalação, em ~60 s (sem ela, de 2 a 7 s cada).
+
+**Fitas:**
+- `crash-restart`: uma unit real em loop de crash aparece uma vez no
+  dashboard real, e só depois de aprovada no teclado o actuator real
+  reinicia a unit via polkit.
+- `port-conflict`: um processo real segura a porta, o nerve de rede real
+  nomeia os dois uma vez, e o actuator roda `ss -tlnp` aprovado.
+- `dangerous-command`: o `rm -rf /srv` de um usuário logado vai do audit
+  do kernel ao dashboard real. Um delete de rotina e os comandos de daemons
+  não são reportados (a regra do audit só registra quem tem loginuid, e o
+  agente dá loginuid aos comandos do usuário, como um login daria).
+- `crash-loop`: uma unit em loop de crash aparece, e a oferta de restart
+  também, uma vez só.
+- `anonymous-shell`: com o grove real em modo anônimo, um comando perigoso
+  chega ao nerve de processo pelo audit, e o cortex, subindo a árvore real
+  de processos até o shell, não repassa nada. Fora do modo anônimo, o
+  mesmo comando volta a ser julgado.
+- `install-on-request`: o usuário chama o htop no grove real, o dashboard
+  oferece a instalação, e a aprovação faz o actuator sem privilégio
+  instalar pelo PackageKit e polkit, a partir de um repositório assinado
+  dentro do guest (a única fonte de pacotes dele, montada pelo host). Na
+  segunda tentativa o grove roda o htop.
+
+Uma fita que misturava o loop de crash com a aprovação falhou uma vez no
+CI com KVM: o auto-restart do systemd e o restart aprovado disputavam a
+mesma janela. Aprovar logo depois de corrigir a causa, com o serviço
+voltando sozinho, é uma corrida legítima. Por isso o loop e o restart
+viraram fitas separadas, e o restart parte de uma unit que caiu uma vez. As mesmas operações são ferramentas MCP (`vm_start`,
+`vm_request`, `vm_view`, `vm_tape`, `vm_end`).
+
+**O que o lab encontrou:**
+- Uma unit em loop de crash inundava a Hive. Cada crash ia para o modelo e
+  empilhava "Service Crashed" e as ofertas em todo dashboard (42
+  reinícios, 42 avisos e mais um conflito de porta com ofertas para cada
+  um). Agora o cortex passa um mesmo problema adiante uma vez a cada 5
+  min, e o reporte seguinte diz quantos segurou, como já fazia com as
+  ofertas de pacote. Há um teste no router e uma fita `crash-loop` na Hive
+  lab.
+- O nerve de rede já tinha uma janela de 5 min, mas a chave levava o pid,
+  que muda a cada reinício, então nunca segurava nada. Agora a chave é a
+  unit (ou o programa), com teste.
+- Depois de um `rm -rf /srv`, o dashboard dizia "A ZFS snapshot has been
+  created for safety", num sistema sem ZFS. O texto do mock da synapse
+  afirmava algo que nada faz. A linha saiu, e um teste segura o mock a não
+  afirmar nada.
+- Uma ação de serviço que falhava chegava ao dashboard como "(failed)" e
+  ao journal como um código de saída, porque o que o systemctl dizia era
+  descartado. Agora isso vira a saída da ação.
+- O pacote druidos-hive não dependia do que a Hive usa. Num sistema sem
+  `packagekit-tools`, a instalação aprovada falhava com "Failed to run
+  pkcon", e a ISO só funcionava porque trazia esse pacote por acaso. O
+  `debian/control` agora depende de polkitd, packagekit,
+  packagekit-tools e auditd.
+
 ## 2026-10-19 - Hive Lab: a Hive numa caixa, sem VM (início do Quantum OS)
 
 Pedido do usuário: começar o Quantum OS a partir do DruidOS pelo que mais

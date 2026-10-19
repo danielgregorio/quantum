@@ -1,0 +1,15 @@
+// a real unit crashes again and again (Restart=on-failure): the real dashboard shows it, and offers
+// its restart, once; nothing runs on its own
+{"op": "start"}
+{"op": "put", "path": "/usr/local/sbin/nginx", "mode": "755", "text": "#!/bin/sh\n# the VM lab's stand-in for nginx: fails while /run/lab/broken exists\nif [ -e /run/lab/broken ]; then\n    echo 'nginx: [emerg] unknown directive \"lab\" in /etc/nginx/nginx.conf:1' >&2\n    exit 1\nfi\nexec sleep infinity\n"}
+{"op": "put", "path": "/etc/systemd/system/nginx.service", "text": "[Unit]\nDescription=the VM lab's stand-in for nginx\nStartLimitIntervalSec=0\n\n[Service]\nExecStart=/usr/local/sbin/nginx\nRestart=on-failure\nRestartSec=1\n"}
+{"op": "sh", "sh": "mkdir -p /run/lab && touch /run/lab/broken && systemctl daemon-reload"}
+{"op": "tui", "app": "dashboard", "rows": 30, "cols": 110}
+{"op": "until_screen", "app": "dashboard", "contains": "Waiting for Hive activity"}
+{"op": "sh", "sh": "systemctl start nginx"}
+{"op": "until_screen", "app": "dashboard", "contains": "Hive Suggestion — Restart nginx", "timeout": 15}
+{"op": "until_sh", "sh": "test $(systemctl show -p NRestarts --value nginx) -ge 4", "timeout": 30}
+{"op": "until_screen", "app": "dashboard", "contains": "Service Crashed", "count": 1}
+{"op": "until_screen", "app": "dashboard", "contains": "Hive Suggestion — Restart nginx", "count": 1}
+{"op": "none_journal", "unit": "hive-actuator.service", "contains": "nginx", "within": 0.5}
+{"op": "end"}

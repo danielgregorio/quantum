@@ -15,7 +15,11 @@ Rules-Requires-Root: no
 
 Package: druidos-hive
 Architecture: amd64
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends},
+         polkitd,
+         packagekit,
+         packagekit-tools,
+         auditd
 Recommends: zfsutils-linux
 Suggests: druidos-hive-docs
 Description: DruidOS Hive Stack - AI-assisted system monitoring

@@ -1,13 +1,17 @@
-"""The Hive lab as an MCP server: an agent drives the Hive through tools.
+"""The Hive lab and the VM lab as an MCP server: an agent drives Quantum OS through tools.
 
     python os/scripts/lab/hive_mcp.py            # over stdio, as .mcp.json at the repository's root declares it
     python os/scripts/lab/hive_mcp.py --selftest # a crash, an offer, an approval: no MCP client needed
 
-The tools wrap hive-lab (os/crates/hive-lab), which runs the real hive-cortex and
+The hive_* tools wrap hive-lab (os/crates/hive-lab), which runs the real hive-cortex and
 hive-synapse and plays the nerves, the actuator, grove and the dashboard; it can also run
 the real dashboard and grove in a pseudo-terminal and read their screens as text. The lab
 needs root (its users live in a private mount namespace): the server runs it with
 `sudo -n` when it is not root. It builds the workspace first if the binaries are missing.
+
+The vm_* tools wrap the VM lab (os/scripts/lab/vm): the whole system for real, in a VM
+restored from a snapshot in about a second.
+
 Needs the `mcp` package for the server itself (pip install mcp); --selftest does not.
 """
 
@@ -42,7 +46,20 @@ lab request and answers it; the ops:
 - the real programs: {"op":"tui","app":"dashboard"} or "grove", then hive_view(app),
   {"op":"keys","app":"dashboard","keys":["Down","Enter"]}, {"op":"until_screen","app":"grove","contains":"..."}.
 hive_tape saves the requests of this session as a tape in os/crates/hive-lab/tapes/, which CI plays.
-hive_end stops the lab."""
+hive_end stops the lab.
+
+The vm_* tools run the whole system for real instead: Ubuntu's cloud image in QEMU, with the Hive
+installed from this working tree's build (cargo build --workspace first), restored from a snapshot
+in about a second. Use them for what only the running system shows: what the real nerves notice,
+what the real actuator does through polkit and systemd. vm_start gives a fresh Hive (the first run
+makes the base, minutes without KVM). vm_request ops: {"op":"sh","sh":"...","user":"druid","code":0,
+"contains":"..."}, {"op":"until_sh",...,"timeout":10}, {"op":"put","path":"...","text":"...","mode":"755"},
+{"op":"journal","units":[...]}, {"op":"until_journal","unit":"hive-cortex.service","contains":"..."},
+{"op":"none_journal",...,"within":1}, {"op":"tui","app":"dashboard"} or "grove" then vm_view(app),
+{"op":"keys","app":...,"keys":[...]}, {"op":"until_screen","app":...,"contains":"...","count":1},
+{"op":"keys_until","app":...,"keys":["Down"],"contains":"..."}, {"op":"save","snapshot":"try"} and
+{"op":"restore","snapshot":"try"} to try something and come back, {"op":"install"} after a rebuild.
+vm_tape saves the session as a tape in os/scripts/lab/vm/tapes/, which CI plays; vm_end stops the VM."""
 
 # What a tape keeps: the requests that make or check a behaviour, not the looks.
 NOT_TAPED = {'observe', 'view', 'log'}
@@ -107,10 +124,54 @@ class HiveLab:
         return answer
 
 
+class VmLab:
+    """The VM lab, in this process (scripts/lab/vm/vm.py)."""
+
+    NOT_TAPED = {'view', 'journal'}
+
+    def __init__(self) -> None:
+        sys.path.insert(0, str(OS_DIR / 'scripts' / 'lab' / 'vm'))
+        import vm
+        self.vm = vm
+        self.lab = vm.Lab()
+        self.taped: List[dict] = []
+
+    def request(self, req: dict) -> dict:
+        answer = self.vm.answer_line(self.lab, json.dumps(req))
+        if req.get('op') not in self.NOT_TAPED:
+            self.taped.append(req)
+        return answer
+
+    def start(self) -> dict:
+        self.taped = []
+        return self.request({'op': 'start'})
+
+    def tape(self, name: str, about: str) -> dict:
+        if not self.taped:
+            raise RuntimeError('nothing to tape: vm_start and send requests first')
+        if not name.replace('-', '').isalnum():
+            raise RuntimeError('name: letters, digits and dashes (it becomes <name>.jsonl)')
+        lines = [f'// {about}'] + [json.dumps(r, ensure_ascii=False) for r in self.taped]
+        if self.taped[-1].get('op') != 'end':
+            lines.append('{"op":"end"}')
+        path = OS_DIR / 'scripts' / 'lab' / 'vm' / 'tapes' / f'{name}.jsonl'
+        path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+        return {'ok': True, 'tape': str(path.relative_to(OS_DIR.parent)), 'requests': len(lines) - 1}
+
+    def end(self) -> dict:
+        return self.request({'op': 'end'})
+
+
 def build_server(lab: Optional[HiveLab] = None):
     from mcp.server.mcpserver import MCPServer
 
     lab = lab or HiveLab()
+    machine: List[VmLab] = []
+
+    def vm() -> VmLab:
+        if not machine:
+            machine.append(VmLab())
+        return machine[0]
     server = MCPServer('hive-lab', instructions=INSTRUCTIONS)
     dump = lambda value: json.dumps(value, separators=(',', ':'), ensure_ascii=False)  # noqa: E731
 
@@ -141,6 +202,34 @@ def build_server(lab: Optional[HiveLab] = None):
     def hive_end() -> str:
         """Stops the lab."""
         return dump(lab.end())
+
+    @server.tool()
+    def vm_start() -> str:
+        """The whole system for real: a VM with the Hive installed from this working tree's build,
+        restored fresh from a snapshot (installed first when the build changed)."""
+        return dump(vm().start())
+
+    @server.tool()
+    def vm_request(request: dict) -> str:
+        """Sends one VM lab request ({"op": ...}, see the server's instructions) and answers it."""
+        return dump(vm().request(request))
+
+    @server.tool()
+    def vm_view(app: str) -> str:
+        """The screen of the real dashboard or grove in the VM (started with {"op":"tui","app":...})."""
+        answer = vm().request({'op': 'view', 'app': app})
+        return answer.get('screen') or dump(answer)
+
+    @server.tool()
+    def vm_tape(name: str, about: str) -> str:
+        """Saves this VM session's requests as os/scripts/lab/vm/tapes/<name>.jsonl, with `about`
+        as its first line: what the tape holds the system to. CI plays it."""
+        return dump(vm().tape(name, about))
+
+    @server.tool()
+    def vm_end() -> str:
+        """Stops the VM."""
+        return dump(vm().end())
 
     return server
 
