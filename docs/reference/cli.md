@@ -68,7 +68,21 @@ Open the application's pages in the terminal.
 | `[path]` | Page to open (default: /) | `/` |  |
 | `--config` | Config file | `quantum.config.yaml` |  |
 
-Specified by: [UI-3](./spec#UI-3)
+Specified by: [UI-3](./spec#UI-3) · [UI-15](./spec#UI-15)
+
+<a id="cli-pixel"></a>
+
+## `quantum pixel`
+
+Open the application's pages on the Hive's screen (the machine's console).
+
+| Argument | Meaning | Default | Values |
+|---|---|---|---|
+| `[path]` | Page to open (default: /) | `/` |  |
+| `--config` | Config file | `quantum.config.yaml` |  |
+| `--socket` | hive-screen's pixel socket (default: /run/hive-screen/pixel.sock) | `/run/hive-screen/pixel.sock` |  |
+
+Specified by: [UI-15](./spec#UI-15)
 
 <a id="cli-check"></a>
 

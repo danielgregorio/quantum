@@ -765,7 +765,20 @@ class Lab:
 
     # -- the Hive's screen on the display
 
-    QCODES = {'enter': 'ret', 'return': 'ret', 'escape': 'esc', 'esc': 'esc', 'up': 'up', 'down': 'down'}
+    QCODES = {'enter': 'ret', 'return': 'ret', 'escape': 'esc', 'esc': 'esc', 'space': 'spc',
+              'pgup': 'pgup', 'pgdn': 'pgdn', 'shift-tab': ('shift', 'tab'), 'ctrl-u': ('ctrl', 'u')}
+
+    def qcodes(self, key: str) -> list:
+        """QEMU's key codes for a key as hive-screen names it (up, down, left,
+        right, enter, escape, tab, shift-tab, home, end, backspace, delete,
+        space, pgup, pgdn, f1, f5, ctrl-u) or one character (a capital is
+        Shift and the letter)."""
+        if len(key) == 1:
+            if key.isupper():
+                return ['shift', key.lower()]
+            return [{'.': 'dot', ',': 'comma', '-': 'minus', '/': 'slash'}.get(key, key)]
+        codes = self.QCODES.get(key.lower(), key.lower())
+        return list(codes) if isinstance(codes, tuple) else [codes]
 
     def op_cpus(self, req):
         """Leaves `count` of the machine's vCPUs online in the guest (1 to 4;
@@ -789,13 +802,14 @@ class Lab:
             time.sleep(0.3)
 
     def op_press(self, req):
-        """Presses `keys` on the machine's keyboard (up, down, enter, escape):
-        what hive-screen reads from /dev/input."""
-        for key in req.get('keys', []):
-            code = self.QCODES.get(key.lower(), key.lower())
-            self.m.qmp.execute('send-key', keys=[{'type': 'qcode', 'data': code}])
+        """Presses `keys` on the machine's keyboard, as hive-screen names them
+        (see `qcodes`): what it reads from /dev/input. `type` presses a text
+        first, a character a key, then `keys` (a text, then Enter)."""
+        keys = [c if c != ' ' else 'space' for c in req.get('type', '')] + list(req.get('keys', []))
+        for key in keys:
+            self.m.qmp.execute('send-key', keys=[{'type': 'qcode', 'data': code} for code in self.qcodes(key)])
             time.sleep(0.08)
-        return {'pressed': len(req.get('keys', []))}
+        return {'pressed': len(keys)}
 
     def op_shot(self, req):
         """The display, as QEMU shows it: a PNG at `path` (run/shot.png), its

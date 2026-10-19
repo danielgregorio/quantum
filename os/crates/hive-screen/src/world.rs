@@ -12,6 +12,7 @@ use crate::ease::{interpolate, Ease, Trans};
 use crate::level::{self, LEVELS};
 use crate::particles::Emitter;
 use crate::scene::{Action, Align, Node, Property, Scene};
+use crate::window::Window;
 use hive_common::actions::Action as HiveAction;
 use hive_common::events::{fill, Fields};
 use serde_json::{json, Value};
@@ -94,23 +95,79 @@ pub enum Outgoing {
     },
 }
 
+/// A key, as the keyboard (input.rs), the play driver and a test name
+/// it. The scene takes Up, Down, Enter and Escape; a page on the screen
+/// (window.rs) takes them all.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Key {
     Up,
     Down,
+    Left,
+    Right,
     Enter,
     Escape,
+    Tab,
+    ShiftTab,
+    Home,
+    End,
+    Backspace,
+    Delete,
+    Space,
+    PageUp,
+    PageDown,
+    F1,
+    F5,
+    CtrlU,
+    /// A printable character, as the keyboard's layout and its shift
+    /// give it.
+    Char(char),
 }
 
 impl Key {
+    /// A key by name: `up`, `down`, `left`, `right`, `enter`, `escape`,
+    /// `tab`, `shift-tab`, `home`, `end`, `backspace`, `delete`, `space`,
+    /// `pgup`, `pgdn`, `f1`, `f5`, `ctrl-u`, or one character.
     pub fn parse(name: &str) -> Option<Key> {
-        Some(match name.to_ascii_lowercase().as_str() {
+        let lower = name.to_ascii_lowercase();
+        Some(match lower.as_str() {
             "up" => Key::Up,
             "down" => Key::Down,
+            "left" => Key::Left,
+            "right" => Key::Right,
             "enter" | "return" => Key::Enter,
             "escape" | "esc" => Key::Escape,
-            _ => return None,
+            "tab" => Key::Tab,
+            "shift-tab" | "shift+tab" | "backtab" => Key::ShiftTab,
+            "home" => Key::Home,
+            "end" => Key::End,
+            "backspace" => Key::Backspace,
+            "delete" | "del" => Key::Delete,
+            "space" => Key::Space,
+            "pgup" | "pageup" => Key::PageUp,
+            "pgdn" | "pagedown" => Key::PageDown,
+            "f1" => Key::F1,
+            "f5" => Key::F5,
+            "ctrl-u" | "ctrl+u" => Key::CtrlU,
+            _ => {
+                let mut chars = name.chars();
+                match (chars.next(), chars.next()) {
+                    (Some(c), None) if !c.is_control() => Key::Char(c),
+                    _ => return None,
+                }
+            }
         })
+    }
+
+    /// The name `parse` takes back.
+    pub fn name(&self) -> String {
+        match self {
+            Key::Char(c) => c.to_string(),
+            Key::ShiftTab => "shift-tab".into(),
+            Key::PageUp => "pgup".into(),
+            Key::PageDown => "pgdn".into(),
+            Key::CtrlU => "ctrl-u".into(),
+            other => format!("{:?}", other).to_lowercase(),
+        }
     }
 }
 
@@ -141,6 +198,11 @@ pub struct World {
     dirty: bool,
     /// The presentation level it plays at (level.rs).
     level: usize,
+    /// A page on the screen (`quantum pixel`), over the scene.
+    window: Option<Window>,
+    /// What the page's runtime is to hear: the window's events, until
+    /// the socket takes them.
+    pixel_out: Vec<Value>,
 }
 
 impl World {
@@ -222,6 +284,8 @@ impl World {
             events: Vec::new(),
             dirty: true,
             level: level::DEFAULT,
+            window: None,
+            pixel_out: Vec::new(),
         }
     }
 
@@ -473,11 +537,17 @@ impl World {
         Some(fields)
     }
 
-    /// A key from the administrator: moves the focus, approves, dismisses.
+    /// A key from the administrator: with a page open, the page's (the
+    /// keyboard is its alone); on the scene, it moves the focus, approves,
+    /// dismisses.
     pub fn key(&mut self, key: Key) -> Option<Outgoing> {
         self.dirty = true;
-        self.events
-            .push(json!({"kind": "key", "key": format!("{:?}", key).to_lowercase()}));
+        self.events.push(json!({"kind": "key", "key": key.name()}));
+        if let Some(w) = &mut self.window {
+            w.key(key, self.tick);
+            self.drain_window();
+            return None;
+        }
         match key {
             Key::Up => {
                 self.focus = self.focus.saturating_sub(1);
@@ -535,6 +605,7 @@ impl World {
                     notification: offer.notification,
                 })
             }
+            _ => None,
         }
     }
 
@@ -545,6 +616,66 @@ impl World {
                 o.armed = false;
             }
         }
+    }
+
+    // ---------------------------------------------------------------- a page on the screen
+
+    /// A page to show over the scene, as `quantum pixel` sends it (title,
+    /// flash, view tree). The same page shown again (after an action)
+    /// keeps the focus on the element it was on, when the new page has it.
+    pub fn show(&mut self, page: &Value) {
+        let mut window = Window::new(page);
+        if let Some(old) = &self.window {
+            window.shown = old.shown + 1;
+            if let Some((kind, identity)) = old.focused_identity() {
+                window.focus_on(&kind, &identity);
+            }
+        }
+        self.events
+            .push(json!({"kind": "show", "title": window.title, "shown": window.shown}));
+        self.window = Some(window);
+        self.dirty = true;
+    }
+
+    /// The page goes: the scene is whole again.
+    pub fn close_window(&mut self) {
+        if self.window.take().is_some() {
+            self.events.push(json!({"kind": "closed"}));
+            self.dirty = true;
+        }
+    }
+
+    /// The page on the screen, when one is.
+    pub fn window(&self) -> Option<&Window> {
+        self.window.as_ref()
+    }
+
+    /// The window's events go to the page's runtime and into the events a
+    /// test sees; `close` (Esc) closes the window here, the runtime only
+    /// hears of it.
+    fn drain_window(&mut self) {
+        let Some(w) = &mut self.window else {
+            return;
+        };
+        let events = w.take_events();
+        let mut close = false;
+        for e in events {
+            if e.get("event").and_then(Value::as_str) == Some("close") {
+                close = true;
+            }
+            let mut seen = e.clone();
+            seen["kind"] = json!("pixel");
+            self.events.push(seen);
+            self.pixel_out.push(e);
+        }
+        if close {
+            self.close_window();
+        }
+    }
+
+    /// The events the page's runtime is to hear, cleared.
+    pub fn take_pixel_events(&mut self) -> Vec<Value> {
+        std::mem::take(&mut self.pixel_out)
     }
 
     // ---------------------------------------------------------------- time
@@ -637,6 +768,12 @@ impl World {
                 self.toast = None;
                 self.dirty = true;
             }
+        }
+        if let Some(w) = &mut self.window {
+            if w.tick(self.tick) {
+                self.dirty = true;
+            }
+            self.drain_window();
         }
     }
 
@@ -738,6 +875,9 @@ impl World {
         }
         for b in &self.bursts {
             b.draw(canvas);
+        }
+        if let Some(w) = &self.window {
+            w.draw(canvas, font, self.tick);
         }
         if let Some((line, _)) = &self.toast {
             let h = TOAST_HEIGHT;
@@ -847,6 +987,7 @@ impl World {
             "toast": self.toast.as_ref().map(|(t, _)| t.clone()),
             "tweens": self.tweens.len(),
             "effects": self.bursts.len() + self.emitters.iter().filter(|a| self.plays(a)).count(),
+            "window": self.window.as_ref().map(Window::observe),
         })
     }
 

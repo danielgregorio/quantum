@@ -1,0 +1,12 @@
+// a page on the Hive's screen, as quantum pixel sends it (through the play protocol here): the first field has the
+// focus, typing goes into it, Enter sends the form with what was typed and left (the window's event, which the page's
+// runtime would post as a q:action), Tab reaches the table, Enter clicks its row's button, Esc closes the page
+{"op":"start"}
+{"op":"screen"}
+{"op":"screen","play":{"op":"show","page":{"title":"Tarefas","view":[{"id":1,"type":"form","event":{"action":"criar","fields":{"filtro":"todas"}},"children":[{"id":2,"type":"input","props":{"bind":"titulo","placeholder":"O que fazer?"}},{"id":3,"type":"checkbox","props":{"bind":"urgente","label":"Urgente"}},{"id":4,"type":"button","props":{"text":"Criar"}}]},{"id":5,"type":"table","columns":[{"label":"Tarefa"},{"label":""}],"rows":[[[{"id":6,"type":"text","props":{"text":"comprar pão"}}],[{"id":7,"type":"button","props":{"text":"Concluir"},"event":{"action":"alternar","fields":{"id":"2"}}}]]]}]}},"contains":"\"focus\":true,\"id\":2"}
+{"op":"screen","play":{"op":"until","text":"comprar pão","max_ticks":1}}
+{"op":"screen","play":{"op":"act","type":"ligar","ticks":1},"contains":"\"value\":\"ligar\""}
+{"op":"screen","play":{"op":"act","tap":["tab","space","enter"],"ticks":1},"contains":"\"fields\":{\"filtro\":\"todas\",\"titulo\":\"ligar\",\"urgente\":\"on\"}"}
+{"op":"screen","play":{"op":"act","tap":["tab","tab","enter"],"ticks":1},"contains":"\"action\":\"alternar\",\"event\":\"click\",\"fields\":{\"id\":\"2\"}"}
+{"op":"screen","play":{"op":"act","tap":["escape"],"ticks":1},"contains":"\"window\":null"}
+{"op":"end"}

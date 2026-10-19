@@ -235,3 +235,107 @@ fn until_waits_for_a_condition_and_a_plain_notice_is_said() {
     assert_eq!(obs["toast"], "ghost stopped (exit 2)");
     assert_eq!(obs["sprites"]["nginx"]["animation"], Value::Null);
 }
+
+/// A page as `quantum pixel` sends it: Tarefas, with a form, a table
+/// with a button a row, a link and a search field.
+fn tarefas() -> Value {
+    json!({"title": "Tarefas", "flash": "Criada: ligar para a Ana", "view": [
+        {"id": 1, "type": "window", "props": {"title": "Tarefas"}, "children": [
+            {"id": 2, "type": "form", "props": {}, "event": {"action": "criar", "fields": {"filtro": "todas"}}, "children": [
+                {"id": 3, "type": "formitem", "props": {"label": "Nova tarefa"}, "children": [
+                    {"id": 4, "type": "input", "props": {"bind": "titulo", "placeholder": "O que fazer?"}}]},
+                {"id": 5, "type": "hbox", "props": {}, "children": [
+                    {"id": 6, "type": "select", "props": {"bind": "prioridade", "options": "media,alta,baixa", "value": "alta"}},
+                    {"id": 7, "type": "checkbox", "props": {"bind": "urgente", "label": "Urgente", "checked": "true"}},
+                    {"id": 8, "type": "button", "props": {"text": "Criar", "variant": "primary"}}]}]},
+            {"id": 9, "type": "table", "props": {}, "children": [],
+             "columns": [{"label": "Tarefa"}, {"label": "Estado"}, {"label": ""}],
+             "rows": [[[{"id": 10, "type": "text", "props": {"text": "ligar para a Ana"}}],
+                       [{"id": 11, "type": "badge", "props": {"text": "feita", "variant": "success"}}],
+                       [{"id": 12, "type": "button", "props": {"text": "Desfazer"}, "event": {"action": "alternar", "fields": {"id": "1"}}}]],
+                      [[{"id": 13, "type": "text", "props": {"text": "comprar pão"}}],
+                       [{"id": 14, "type": "badge", "props": {"text": "pendente"}}],
+                       [{"id": 15, "type": "button", "props": {"text": "Concluir"}, "event": {"action": "alternar", "fields": {"id": "2"}}}]]]},
+            {"id": 16, "type": "link", "props": {"text": "Ver a planilha", "to": "/planilha"}},
+            {"id": 17, "type": "input", "props": {"bind": "busca", "placeholder": "buscar", "search": "true", "delay": "100"}}]}]})
+}
+
+fn find<'a>(obs: &'a Value, event: &str) -> Option<&'a Value> {
+    obs["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["kind"] == "pixel" && e["event"] == event)
+}
+
+#[test]
+fn a_page_on_the_screen_is_typed_into_and_answers_with_events() {
+    let mut s = Screen::start();
+    s.request(json!({"op": "act", "ticks": 10}));
+    let obs = s.request(json!({"op": "show", "page": tarefas()}));
+    let w = &obs["window"];
+    assert_eq!(w["title"], "Tarefas");
+    assert_eq!(w["flash"], "Criada: ligar para a Ana");
+    assert_eq!(w["items"][0]["bind"], "titulo");
+    assert_eq!(
+        w["items"][0]["focus"], true,
+        "the first field has the focus"
+    );
+    assert_eq!(obs["events"][0]["kind"], "show");
+    assert!(w["texts"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|t| t == "comprar pão"));
+    // typed, with the keyboard alone, then Enter: the form goes with what was typed and left
+    s.request(json!({"op": "act", "type": "ligar de novo", "ticks": 1}));
+    let obs = s.request(json!({"op": "act", "tap": ["home", "delete", "L"], "ticks": 1}));
+    assert_eq!(obs["window"]["items"][0]["value"], "Ligar de novo");
+    s.frame("window");
+    let obs = s.request(json!({"op": "act", "tap": ["enter"], "ticks": 1}));
+    let submit = find(&obs, "submit").expect("a submit event");
+    assert_eq!(submit["action"], "criar");
+    assert_eq!(submit["fields"]["titulo"], "Ligar de novo");
+    assert_eq!(submit["fields"]["prioridade"], "alta");
+    assert_eq!(submit["fields"]["urgente"], "on");
+    assert_eq!(
+        submit["fields"]["filtro"], "todas",
+        "the form's own fields go too"
+    );
+    // the page shown again keeps the focus where it was, by what the element is
+    let mut again = tarefas();
+    again["flash"] = json!("Criada: Ligar de novo");
+    s.request(json!({"op": "act", "tap": ["tab", "tab"], "ticks": 1}));
+    let obs = s.request(json!({"op": "show", "page": again}));
+    assert_eq!(obs["window"]["shown"], 2);
+    assert_eq!(obs["window"]["items"][2]["bind"], "urgente");
+    assert_eq!(obs["window"]["items"][2]["focus"], true);
+    // the table: a row, its button; Enter clicks it
+    let obs = s.request(json!({"op": "act", "tap": ["tab", "tab", "down"], "ticks": 1}));
+    let table = &obs["window"]["items"][4];
+    assert_eq!(table["kind"], "table");
+    assert_eq!(table["row"], 1);
+    assert_eq!(table["actions"][0], "Concluir");
+    assert_eq!(table["rows"][0][0], "Desfazer");
+    let obs = s.request(json!({"op": "act", "tap": ["enter"], "ticks": 1}));
+    let click = find(&obs, "click").expect("a click event");
+    assert_eq!(click["action"], "alternar");
+    assert_eq!(click["fields"]["id"], "2");
+    // the link navigates
+    let obs = s.request(json!({"op": "act", "tap": ["tab", "enter"], "ticks": 1}));
+    assert_eq!(find(&obs, "navigate").unwrap()["to"], "/planilha");
+    // a search field says its change after the pause it names (100 ms: 6 ticks), not at once
+    s.request(json!({"op": "act", "tap": ["tab"], "ticks": 1}));
+    s.request(json!({"op": "act", "type": "pa", "ticks": 1}));
+    let obs = s.request(json!({"op": "until", "pixel": "change", "max_ticks": 2}));
+    assert_eq!(obs["stopped"], "max_ticks");
+    let obs = s.request(json!({"op": "until", "pixel": "change", "max_ticks": 20}));
+    assert_eq!(obs["stopped"], "condition");
+    let change = find(&obs, "change").unwrap();
+    assert_eq!(change["bind"], "busca");
+    assert_eq!(change["value"], "pa");
+    // Esc closes: the scene is whole again
+    let obs = s.request(json!({"op": "act", "tap": ["escape"], "ticks": 1}));
+    assert!(find(&obs, "close").is_some());
+    assert_eq!(obs["window"], Value::Null);
+}

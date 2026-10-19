@@ -58,7 +58,7 @@ The same shape as the Hive lab's: `{"op": ...}` in, `{"ok": true, ...}` or `{"ok
 | `keys_until` (`app`, `keys`, `contains`, `max`: 20) | presses keys until the screen shows the text: moves a selection to a row by what it says |
 | `shot` (`path`, `has`: `#rrggbb`, `min`: 1, `lacks`: `#rrggbb`) | the display as a PNG, its size and its commonest colours; with `has`, whether that colour is on it; with `lacks`, fails when that colour is |
 | `until_shot` (`has` or `lacks`, `min`, `timeout`: 10) | takes the display until that colour is on it (the smoke over a cell, the honey in it), or until it is gone |
-| `press` (`keys`: up, down, enter, escape) | the machine's keyboard, which `hive-screen` reads from `/dev/input` |
+| `press` (`keys`: up, down, left, right, enter, escape, tab, shift-tab, home, end, backspace, delete, space, pgup, pgdn, f1, f5, ctrl-u, or a character; `type`: a text, pressed before `keys`) | the machine's keyboard, which `hive-screen` reads from `/dev/input` |
 | `cpus` (`count`: 1 to 4, `timeout`: 20) | leaves that many of the machine's 4 vCPUs online in the guest (the others go offline, as a vCPU unplugged comes to) and waits for `nproc` to agree: `hive-screen`'s presentation level follows the cores. A restore brings the snapshot's own back |
 | `end` | stops the VM |
 

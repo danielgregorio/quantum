@@ -860,14 +860,14 @@ unchecked one does not go, as in the browser — use `<q:param default="off">`
 in the action.
 
 **UI-7** — The Core set of `ui:*` is drawn with the same meaning by every
-renderer (browser, console, desktop): `window`, `hbox`, `vbox`, `grid`,
+renderer (browser, console, desktop, the Hive's screen): `window`, `hbox`, `vbox`, `grid`,
 `panel`, `section`, `scrollbox`, `spacer`, `rule`, `header`, `footer`, `card`
 (`card-header`, `card-body`, `card-footer`), `tabpanel`/`tab`, `text`, `badge`,
 `alert`, `link`, `image`, `progress`, `table`/`column`, `list`/`item`, `form`,
 `formitem`, `input`, `checkbox`, `switch`, `radio`, `select`/`option`,
 `button`, `pager` (UI-11), `history` (DB-11) and `stream` (IA-7). The same
-script (look, fill in, check, choose, click) passes the same in the browser and
-in the console. `ui:section` is a titled group, always open; the title of a
+script (look, fill in, check, choose, click) passes the same in the browser,
+in the console and on the screen. `ui:section` is a titled group, always open; the title of a
 `ui:card` shows even next to a `ui:card-header`. The other `ui:*` tags work
 only in the browser (Experimental), and the console shows that it does not draw
 them instead of drawing something else in their place.
@@ -953,6 +953,21 @@ input with the param's `accept`. A file is never filled back into the form. In
 the console a file field is a note (a terminal has no file picker) and the form
 posts without it. `submit="…"` adds that button to a form that has none, also
 when the form has fields of its own.
+
+**UI-15** — `quantum pixel` opens the application's pages on the Hive's screen,
+the console of a Quantum OS machine, the way `quantum console` opens them in
+the terminal (UI-3): it starts the application's server in its process, asks
+each page for its view tree, and sends what the user did as the same actions
+the browser sends, with a session. The drawing is `hive-screen`'s: it lays the
+view tree out in cells of its font over the Hive's scene and reads the keyboard
+alone — Tab and Shift+Tab between the elements that react, in the page's order,
+the arrows inside one, Enter acts (in a field, sends its form), Space marks,
+Esc closes the page and ends the command, and the last line says the keys that
+apply to what has the focus. Any local user may; one page shows at a time. The
+page's runtime and the screen speak JSON lines over a Unix socket
+(`/run/hive-screen/pixel.sock`): `show` with the page, and the events `click`,
+`submit` (with the form's fields as a browser would post them), `change` (a
+search field after its pause, UI-12), `navigate`, `reload` and `close` back.
 
 ## 11. Development
 

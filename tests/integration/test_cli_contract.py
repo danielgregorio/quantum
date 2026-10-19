@@ -98,6 +98,14 @@ class TestNoTracebackInTheUsersFace:
     def test_status_without_a_server(self, tmp_path):
         assert TRACEBACK not in output(cli("status", cwd=tmp_path))
 
+    def test_pixel_without_the_screen(self, tmp_path):
+        # UI-15: no hive-screen on this machine (no socket): a sentence that says
+        # what to check, exit 1, no traceback
+        result = cli("pixel", "--socket", str(tmp_path / "none.sock"))
+        assert result.returncode == 1, output(result)[-300:]
+        assert "hive-screen" in output(result)
+        assert TRACEBACK not in output(result)
+
     def test_stop_without_a_server(self, tmp_path):
         assert TRACEBACK not in output(cli("stop", cwd=tmp_path))
 
@@ -135,7 +143,7 @@ class TestSubcommandsAnswer:
     # "status", which is actually a subcommand of `migrate` — the test failed
     # by my mistake, not by a defect of the CLI.
     TOP = ["run", "start", "stop", "pkg", "jobs", "mq",
-           "migrate", "admin", "console", "desktop", "check", "test", "play", "playtest", "relay"]
+           "migrate", "admin", "console", "desktop", "pixel", "check", "test", "play", "playtest", "relay"]
 
     @pytest.mark.parametrize("command", TOP)
     def test_the_subcommand_help_works(self, command):

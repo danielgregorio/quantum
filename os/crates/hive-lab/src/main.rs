@@ -362,9 +362,13 @@ impl Driver {
                 if let Some(play) = req.get("play") {
                     let answer = self.lab()?.screen_request(play).await?;
                     // a frame that differs, an until that ran out: the tape fails
-                    let ok = answer.get("error").is_none()
+                    let mut ok = answer.get("error").is_none()
                         && answer.get("ok") != Some(&Value::Bool(false))
                         && answer.get("stopped").and_then(Value::as_str) != Some("max_ticks");
+                    // what the answer must say (a field of an event, a text of a page)
+                    if let Some(text) = s("contains") {
+                        ok = ok && answer.to_string().contains(text);
+                    }
                     return Ok(json!({"ok": ok, "screen": answer}));
                 }
                 let scene = match s("scene") {

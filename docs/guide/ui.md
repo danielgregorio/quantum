@@ -10,6 +10,7 @@ once, on the server, and each renderer only **draws** the result.
 | `quantum start` | the page in a browser |
 | `quantum console` | the same page in the terminal (Textual) |
 | `quantum desktop` | the same page in a native window (pywebview) |
+| `quantum pixel` | the same page on the Hive's screen, the console of a Quantum OS machine (keyboard only) |
 
 Nothing of the page's logic is translated to another language, so a rule you
 write once — a validation, a login, a query — behaves the same on every screen.
@@ -395,9 +396,10 @@ Layout is declared, with three breakpoints: `sm` (640 px), `md` (768 px) and
 
 ## The core set
 
-These elements are drawn with the same meaning by the browser, the console and
-the desktop window, and one test script — see, fill, check, choose, click — runs
-unchanged in a real browser and in the console:
+These elements are drawn with the same meaning by the browser, the console,
+the desktop window and the Hive's screen, and one test script — see, fill,
+check, choose, click — runs unchanged in a real browser, in the console and on
+the screen:
 
 | Kind | Elements |
 |---|---|
@@ -416,7 +418,34 @@ place.
 Text directly inside a container is content: `<ui:card-header>Summary</ui:card-header>`.
 Plain HTML can sit between `ui:*` elements; the console shows its text.
 
-## Standalone builds
+## On the Hive's screen
+
+On a Quantum OS machine the console is the Hive's screen: a pixel-art scene
+drawn by `hive-screen` ([the screen](/targets/screen)). `quantum pixel`,
+run by any local user, brings a page over that scene, in the screen's own
+font, and closes it with Esc — the scene is whole again, and the command
+ends. The page's logic runs where it always runs: `quantum pixel` starts
+the application's server in its process, as `quantum console` does, asks
+each page for its view tree and sends what the user did back as the same
+posts a browser sends; the screen only draws and reads the keyboard.
+
+There is no mouse, and no key to learn beyond the console's own:
+
+| Key | Does |
+|---|---|
+| Tab, Shift+Tab | the next, the previous element that reacts, in the page's order; the one with the focus shows in honey |
+| arrows | inside the element: the cursor in a field, the option of a `radio` or `select`, the row and the button of a `table`, the tab of a `tabpanel` |
+| Enter | acts: a button, a link, a row's button; in a field, sends its form |
+| Space | marks: a `checkbox`, a `switch` |
+| Esc | closes the page |
+| Page Up, Page Down | scroll |
+| F5 | asks the page again |
+
+The last line of the screen says the keys that apply to what has the
+focus. A search field (`search="true"`) asks the page again after its
+pause, as in the browser; a validation error puts the focus on the field
+it is about (UI-9). What the screen does not draw (`ui:chart`, a modal) it
+says so, as the console does.
 
 `<q:application type="ui">` with `quantum run app.q --target html` (a single
 HTML file) or `--target textual` (a single Python file) draws **layout only**:

@@ -219,7 +219,7 @@ datasources:
 | `stop` | Stop the server started by `start` |
 | `check` | Check that pages parse, SQL compiles and query fields exist |
 | `test` | Run the app's `*.test.q` tests |
-| `console` · `desktop` | The application's pages in the terminal, or in a desktop window |
+| `console` · `desktop` · `pixel` | The application's pages in the terminal, in a desktop window, or on the Hive's screen (a Quantum OS console) |
 | `migrate` | Apply, roll back and plan database migrations |
 | `admin` | Start the Quantum Admin (`pip install "quantum-framework[admin]"`) |
 | `pkg` · `jobs` · `mq` | Component packages (a page cannot import one yet), jobs, message queues — no stability promise |
