@@ -18,6 +18,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
   game's ticks and is only seen; the play protocol reports it as a screen
   view (`kind: camera`, where it looks and how close). Hopper's camera
   looks ahead and lets a jump rise before it follows.
+- Laboratory: animations with an end. `<qg:animation loop="false">` plays
+  once and stays on its last frame; `<qg:on-animation-end name=>` on a
+  character or a prefab runs as it ends (`me` is whose it is), and an
+  `animation-end` event says so; `<qg:play-animation target= name=>` plays
+  one from its first frame, the body's own animations (idle, walk...)
+  waiting until it ends (`name=""` gives them back after a looping one).
+  In Delve a slain skeleton falls to a heap of bones before it goes.
 - Laboratory: Delve (`projects/delve/delve.q`), a dungeon crawl that shows
   the new tags together: three crypts, a wall a lever opens
   (`qg:set-tile`) and the skeletons behind it that find their way through
