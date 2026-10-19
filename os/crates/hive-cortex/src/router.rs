@@ -530,7 +530,9 @@ impl MessageRouter {
             actions: vec![],
             timeout_secs: 10,
         };
-        if let Some(dashboard) = state.get_component_by_type(ComponentType::Dashboard) {
+        // Every administrator's dashboard, not the first one found: with two
+        // open, which one that was depended on a HashMap's order.
+        for dashboard in state.components_of_type(ComponentType::Dashboard) {
             let _ = dashboard.tx.send(notification.clone()).await;
         }
         // Users' shells get these system notices too (never suggestions,
@@ -569,17 +571,22 @@ impl MessageRouter {
             debug!("Suppressing suggestion notification for anonymous session");
             return Ok(());
         }
-        if let Some(dashboard) = state.get_component_by_type(ComponentType::Dashboard) {
-            let notification = HiveMessage::Notification {
-                id: notification_id,
-                title: "Hive Suggestion".to_string(),
-                body: format!("{} suggestion(s) available", suggestions.len()),
-                severity: Severity::Info,
-                actions: suggestions,
-                timeout_secs: 0,
-            };
-            let _ = dashboard.tx.send(notification).await;
-        } else {
+        let notification = HiveMessage::Notification {
+            id: notification_id,
+            title: "Hive Suggestion".to_string(),
+            body: format!("{} suggestion(s) available", suggestions.len()),
+            severity: Severity::Info,
+            actions: suggestions,
+            timeout_secs: 0,
+        };
+        // Offered to every administrator's dashboard; the first to approve
+        // takes it (act_on_suggestion removes it), so it never runs twice.
+        let mut told = 0;
+        for dashboard in state.components_of_type(ComponentType::Dashboard) {
+            let _ = dashboard.tx.send(notification.clone()).await;
+            told += 1;
+        }
+        if told == 0 {
             debug!("Dashboard not connected, suggestions stored but not shown");
         }
         Ok(())
@@ -900,6 +907,66 @@ mod tests {
         }
 
         assert_eq!(state.read().await.pending_suggestions.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn every_dashboard_is_offered_a_suggestion_and_the_first_approval_takes_it() {
+        // Two administrators each with a dashboard open: both are told, and
+        // an action approved in one is not run again when the other approves.
+        let state = new_state().await;
+        let (first_conn, mut first_rx) = register(&state, ComponentType::Dashboard).await;
+        let (second_conn, mut second_rx) = register(&state, ComponentType::Dashboard).await;
+        let (synapse_conn, _synapse_rx) = register(&state, ComponentType::Synapse).await;
+        let (_actuator_conn, mut actuator_rx) = register(&state, ComponentType::Actuator).await;
+        let router = MessageRouter::new(state.clone());
+
+        let restart = Action::RestartService {
+            name: "nginx".to_string(),
+        };
+        router
+            .route(
+                HiveMessage::SuggestionResponse {
+                    request_id: Uuid::new_v4(),
+                    suggestions: vec![sample_suggestion(1, Some(restart))],
+                    processing_time_ms: 10,
+                },
+                synapse_conn,
+            )
+            .await
+            .unwrap();
+
+        let mut ids = Vec::new();
+        for rx in [&mut first_rx, &mut second_rx] {
+            let offer = tokio::time::timeout(tokio::time::Duration::from_secs(1), rx.recv()).await;
+            match offer.ok().flatten().expect("each dashboard is offered it") {
+                HiveMessage::Notification { id, actions, .. } => {
+                    assert_eq!(actions.len(), 1);
+                    ids.push(id);
+                }
+                other => panic!("expected Notification, got {}", other.type_name()),
+            }
+        }
+        assert_eq!(ids[0], ids[1], "the same offer");
+
+        for conn in [first_conn, second_conn] {
+            router
+                .route(
+                    HiveMessage::UserAction {
+                        notification_id: ids[0],
+                        suggestion_id: 1,
+                        confirmed: false,
+                    },
+                    conn,
+                )
+                .await
+                .unwrap();
+        }
+        assert!(matches!(
+            actuator_rx.recv().await,
+            Some(HiveMessage::ActionRequest { .. })
+        ));
+        tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
+        assert!(actuator_rx.try_recv().is_err(), "approved twice, run once");
     }
 
     #[tokio::test]

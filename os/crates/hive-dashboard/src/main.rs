@@ -55,6 +55,15 @@ struct Row {
     outcome: Option<Outcome>,
 }
 
+/// Whether `row` is the suggestion waiting for its second Enter. A row
+/// with no suggestion never is, even when nothing is waiting.
+fn is_armed(armed: Option<(Uuid, u32)>, row: &Row) -> bool {
+    match (armed, &row.suggestion) {
+        (Some(waiting), Some(s)) => waiting == (row.notification_id, s.id),
+        _ => false,
+    }
+}
+
 /// Expands an incoming Notification into the rows it contributes.
 fn notification_to_rows(
     notification_id: Uuid,
@@ -436,7 +445,7 @@ fn render_list(
                     Some(s) => format!("{} \u{2014} {}", r.title, s.title),
                     None => r.title.clone(),
                 };
-                let is_armed = armed == r.suggestion.as_ref().map(|s| (r.notification_id, s.id));
+                let is_armed = is_armed(armed, r);
                 let suffix = if is_armed {
                     " (CONFIRM? press Enter again)".to_string()
                 } else {
@@ -490,6 +499,21 @@ fn render_detail(f: &mut Frame, area: Rect, rows: &[Row], selected: Option<usize
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_notice_without_a_suggestion_is_never_shown_as_awaiting_confirmation() {
+        // nothing armed and no suggestion: None == None must not read as armed
+        let notice = Row {
+            notification_id: Uuid::new_v4(),
+            title: "Service Crashed".into(),
+            body: "nginx.service exited with code 1".into(),
+            severity: Severity::Error,
+            suggestion: None,
+            outcome: None,
+        };
+        assert!(!is_armed(None, &notice));
+        assert!(!is_armed(Some((notice.notification_id, 1)), &notice));
+    }
 
     fn sample_suggestion(id: u32, action: Option<Action>) -> Suggestion {
         Suggestion {
