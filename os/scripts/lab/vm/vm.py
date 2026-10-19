@@ -579,7 +579,10 @@ class Lab:
                 m.sh('cmp -s /mnt/lab/scripts/lab/vm/agent.py /usr/local/lib/quantum-lab/agent.py || '
                      'install -m 0755 /mnt/lab/scripts/lab/vm/agent.py /usr/local/lib/quantum-lab/agent.py')
         finally:
-            m.agent({'op': 'umount', 'tag': 'lab'})
+            unmounted = m.agent({'op': 'umount', 'tag': 'lab'})
+        if not unmounted.get('ok'):
+            # QEMU refuses savevm while the share is mounted: say what held it
+            raise LabError(f'the lab share stayed mounted: {unmounted.get("error")}')
         if not only_binaries:
             m.agent({'op': 'restart'})
             m.wait_agent(30)

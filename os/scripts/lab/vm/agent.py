@@ -112,10 +112,38 @@ def op_mount(req):
 
 
 def op_umount(req):
+    """Unmounts a share. A mounted 9p share keeps QEMU from saving a
+    snapshot, so a mount that will not go (a file still open on it, a
+    process whose directory is there) is an error that names the holder."""
     path = req.get('path', f'/mnt/{req.get("tag", "lab")}')
-    if os.path.ismount(path):
-        subprocess.run(['umount', path], check=True, capture_output=True)
-    return {}
+    if not os.path.ismount(path):
+        return {}
+    for _ in range(20):
+        done = subprocess.run(['umount', path], capture_output=True, text=True)
+        if done.returncode == 0:
+            return {}
+        time.sleep(0.25)
+    raise RuntimeError(f'umount {path}: {done.stderr.strip()}; held by {holders_of(path) or "nobody visible"}')
+
+
+def holders_of(path):
+    """The processes with a file, their directory or their program on `path`."""
+    held = []
+    for pid in os.listdir('/proc'):
+        if not pid.isdigit():
+            continue
+        try:
+            links = ['cwd', 'exe', 'root'] + [f'fd/{fd}' for fd in os.listdir(f'/proc/{pid}/fd')]
+            for link in links:
+                target = os.readlink(f'/proc/{pid}/{link}')
+                if target == path or target.startswith(path + '/'):
+                    with open(f'/proc/{pid}/comm') as f:
+                        name = f.read().strip()
+                    held.append(f'{name}[{pid}] {link} -> {target}')
+                    break
+        except OSError:
+            continue
+    return ', '.join(held)
 
 
 def op_journal(req):
