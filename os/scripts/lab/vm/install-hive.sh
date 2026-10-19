@@ -19,7 +19,7 @@ set -eu
 SRC=${1:-/mnt/lab}
 BIN=$SRC/target/vm-lab/bin
 ALL="hive-cortex hive-synapse hive-actuator hive-nerve-process hive-nerve-journal
-hive-nerve-network hive-nerve-fs hive-apt hive-zfs hive-dashboard grove hive-lab"
+hive-nerve-network hive-nerve-fs hive-apt hive-zfs hive-dashboard hive-screen grove hive-lab"
 
 copy() {
     case $1 in
@@ -58,6 +58,10 @@ mkdir -p /etc/hive
 install -m 0644 "$SRC/config/hive/default.toml" /etc/hive/config.toml
 install -m 0644 "$SRC/config/hive/whitelist.toml" /etc/hive/whitelist.toml
 install -m 0644 "$SRC/config/hive/rules.toml" /etc/hive/rules.toml
+# the Hive's screen: the scene Quantum compiled, its font and its art
+mkdir -p /etc/hive/screen/art
+install -m 0644 "$SRC/config/screen/screen.toml" "$SRC/config/screen/font.png" /etc/hive/screen/
+install -m 0644 "$SRC"/config/screen/art/*.png /etc/hive/screen/art/
 mkdir -p /etc/polkit-1/rules.d /etc/audit/rules.d
 install -m 0644 "$SRC"/config/polkit/*.rules /etc/polkit-1/rules.d/
 install -m 0640 "$SRC"/config/audit/*.rules /etc/audit/rules.d/
@@ -68,6 +72,8 @@ groupadd -r hive 2>/dev/null || true
 useradd -r -g hive -s /usr/sbin/nologin -d /nonexistent _hive-ai 2>/dev/null || true
 useradd -r -g hive -s /usr/sbin/nologin -d /nonexistent _hive-sense 2>/dev/null || true
 useradd -r -g hive -s /usr/sbin/nologin -d /nonexistent _hive-act 2>/dev/null || true
+# the screen draws on the display and reads the keyboard: video and input
+useradd -r -g hive -G video,input -s /usr/sbin/nologin -d /nonexistent _hive-screen 2>/dev/null || true
 
 # the audit rule hive-nerve-process reads commands from, loaded now rather
 # than at the next boot

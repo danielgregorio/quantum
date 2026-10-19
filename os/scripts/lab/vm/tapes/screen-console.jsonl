@@ -1,0 +1,21 @@
+// the Hive's screen on the real console: hive-screen draws the scene on the VM's display through DRM, a real
+// crash smokes nginx's cell, the offer reaches the screen, Enter on the machine's keyboard approves it, and the
+// real actuator's restart fills the cell with honey
+{"op": "start"}
+{"op": "until_sh", "sh": "systemctl is-active hive-screen", "timeout": 20}
+{"op": "sh", "sh": "journalctl -b -u hive-screen --no-pager -o cat", "contains": "the console is in graphics mode"}
+{"op": "sh", "sh": "journalctl -b -u hive-screen --no-pager -o cat", "contains": "display "}
+{"op": "until_shot", "has": "#ffd34d", "timeout": 15}
+{"op": "put", "path": "/usr/local/sbin/nginx", "mode": "755", "text": "#!/bin/sh\n# the VM lab's stand-in for nginx: fails while /run/lab/broken exists\nif [ -e /run/lab/broken ]; then\n    echo 'nginx: [emerg] unknown directive \"lab\" in /etc/nginx/nginx.conf:1' >&2\n    exit 1\nfi\nexec sleep infinity\n"}
+{"op": "put", "path": "/etc/systemd/system/nginx.service", "text": "[Unit]\nDescription=the VM lab's stand-in for nginx\nStartLimitIntervalSec=0\n\n[Service]\nExecStart=/usr/local/sbin/nginx\nRestart=no\n"}
+{"op": "sh", "sh": "mkdir -p /run/lab && touch /run/lab/broken && systemctl daemon-reload && systemctl start nginx"}
+{"op": "until_journal", "unit": "hive-nerve-journal.service", "contains": "Reported service crash: nginx.service"}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "event: service-crash"}
+{"op": "until_shot", "has": "#787880", "timeout": 10}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "offer: Restart nginx", "timeout": 20}
+{"op": "none_journal", "unit": "hive-actuator.service", "contains": "nginx", "within": 0.5}
+{"op": "sh", "sh": "rm /run/lab/broken"}
+{"op": "press", "keys": ["enter"]}
+{"op": "until_sh", "sh": "systemctl is-active nginx", "timeout": 20}
+{"op": "until_shot", "has": "#f0aa28", "timeout": 10}
+{"op": "end"}

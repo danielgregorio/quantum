@@ -22,6 +22,7 @@ override_dh_auto_install:
 	install -D -m 755 target/release/hive-zfs $(CURDIR)/debian/druidos-hive/usr/bin/hive-zfs
 	install -D -m 755 target/release/grove $(CURDIR)/debian/druidos-hive/usr/bin/grove
 	install -D -m 755 target/release/hive-dashboard $(CURDIR)/debian/druidos-hive/usr/bin/hive-dashboard
+	install -D -m 755 target/release/hive-screen $(CURDIR)/debian/druidos-hive/usr/bin/hive-screen
 
 	# Desktop binaries/entries (hive-shell, hive-dock, hive-term) removed:
 	# GUI track archived, see archive/ and CLAUDE.md.
@@ -34,10 +35,15 @@ override_dh_auto_install:
 	install -D -m 644 config/systemd/hive-nerve-journal.service $(CURDIR)/debian/druidos-hive/lib/systemd/system/hive-nerve-journal.service
 	install -D -m 644 config/systemd/hive-nerve-network.service $(CURDIR)/debian/druidos-hive/lib/systemd/system/hive-nerve-network.service
 	install -D -m 644 config/systemd/hive-nerve-fs.service $(CURDIR)/debian/druidos-hive/lib/systemd/system/hive-nerve-fs.service
+	install -D -m 644 config/systemd/hive-screen.service $(CURDIR)/debian/druidos-hive/lib/systemd/system/hive-screen.service
 
 	# Configuration files
 	install -D -m 644 config/hive/default.toml $(CURDIR)/debian/druidos-config/etc/hive/config.toml
 	install -D -m 644 config/hive/whitelist.toml $(CURDIR)/debian/druidos-config/etc/hive/whitelist.toml
+	install -D -m 644 config/screen/screen.toml $(CURDIR)/debian/druidos-config/etc/hive/screen/screen.toml
+	install -D -m 644 config/screen/font.png $(CURDIR)/debian/druidos-config/etc/hive/screen/font.png
+	install -D -m 644 config/screen/art/cells.png $(CURDIR)/debian/druidos-config/etc/hive/screen/art/cells.png
+	install -D -m 644 config/screen/art/bee.png $(CURDIR)/debian/druidos-config/etc/hive/screen/art/bee.png
 	install -D -m 644 config/hive/rules.toml $(CURDIR)/debian/druidos-config/etc/hive/rules.toml
 
 	# Knowledge base

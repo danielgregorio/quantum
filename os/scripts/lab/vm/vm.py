@@ -203,6 +203,9 @@ class Machine:
                '-drive', f'file={self.disk},if=virtio,format=qcow2,cache=unsafe',
                '-netdev', 'user,id=net0', '-device', 'virtio-net-pci,netdev=net0',
                '-device', 'virtio-rng-pci',
+               # a display for the Hive's screen (hive-screen draws on it through DRM; the
+               # host reads it with QMP screendump); a keyboard comes with the machine (i8042)
+               '-device', 'virtio-gpu-pci',
                '-device', 'virtio-serial-pci',
                '-chardev', f'socket,id=agent,path={self.run / "agent.sock"},server=on,wait=off',
                '-device', 'virtserialport,chardev=agent,name=org.quantum.lab',
@@ -262,6 +265,7 @@ class Machine:
         assert self.port
         self.next_id += 1
         req = {**req, 'id': self.next_id}
+        self.port.settimeout(timeout)
         self.port.sendall((json.dumps(req) + '\n').encode())
         deadline = time.monotonic() + timeout
         while True:
@@ -293,7 +297,9 @@ class Machine:
                 raise LabError(f'QEMU stopped; see {self.run / "serial.log"}')
             try:
                 return self.agent({'op': 'ping'}, timeout=3)
-            except LabError:
+            except (LabError, OSError):
+                # OSError: the port's own timeout, while the guest is still
+                # booting and nothing reads the other end
                 if time.monotonic() > deadline:
                     raise LabError(f'the guest agent never answered; see {self.run / "serial.log"}')
 
@@ -339,7 +345,7 @@ QUIET = ['apt-daily.timer', 'apt-daily-upgrade.timer', 'motd-news.timer', 'dpkg-
 REPO_PACKAGES = ['htop']
 
 # Bumped when make_base changes what the base holds.
-BASE_VERSION = 3
+BASE_VERSION = 4
 
 
 def base_fingerprint() -> str:
@@ -460,11 +466,12 @@ def make_base(disk: Path, run: Path) -> None:
 # ------------------------------------------------------------------ the Hive
 
 BINARIES = ['hive-cortex', 'hive-synapse', 'hive-actuator', 'hive-nerve-process', 'hive-nerve-journal',
-            'hive-nerve-network', 'hive-nerve-fs', 'hive-apt', 'hive-zfs', 'hive-dashboard', 'grove',
-            'hive-lab']
+            'hive-nerve-network', 'hive-nerve-fs', 'hive-apt', 'hive-zfs', 'hive-dashboard', 'hive-screen',
+            'grove', 'hive-lab']
 
 # Who registers with hive-cortex when the Hive is up (its log names them so).
-COMPONENTS = ['Synapse', 'Actuator', 'NerveProcess', 'NerveJournal', 'NerveNetwork', 'NerveFs']
+# (hive-screen registers as a dashboard: the screen on the console is up when it has)
+COMPONENTS = ['Synapse', 'Actuator', 'NerveProcess', 'NerveJournal', 'NerveNetwork', 'NerveFs', 'Dashboard']
 
 
 def stage(profile: str = 'debug') -> dict:
@@ -753,6 +760,45 @@ class Lab:
                         'error': f'the screen shows {req["contains"]!r} {seen} times, not {req["count"]}'}
             time.sleep(0.2)
 
+    # -- the Hive's screen on the display
+
+    QCODES = {'enter': 'ret', 'return': 'ret', 'escape': 'esc', 'esc': 'esc', 'up': 'up', 'down': 'down'}
+
+    def op_press(self, req):
+        """Presses `keys` on the machine's keyboard (up, down, enter, escape):
+        what hive-screen reads from /dev/input."""
+        for key in req.get('keys', []):
+            code = self.QCODES.get(key.lower(), key.lower())
+            self.m.qmp.execute('send-key', keys=[{'type': 'qcode', 'data': code}])
+            time.sleep(0.08)
+        return {'pressed': len(req.get('keys', []))}
+
+    def op_shot(self, req):
+        """The display, as QEMU shows it: a PNG at `path` (run/shot.png), its
+        size and its commonest colours; with `has`, whether that `#rrggbb`
+        is on it (at least `min` pixels, 1)."""
+        path = Path(req.get('path') or self.run / 'shot.png')
+        self.m.qmp.execute('screendump', filename=str(path), format='png')
+        width, height, counts = png_colours(path)
+        top = {f'#{c:06x}': n for c, n in sorted(counts.items(), key=lambda kv: -kv[1])[:8]}
+        answer = {'path': str(path), 'width': width, 'height': height, 'colors': top}
+        if 'has' in req:
+            wanted = int(req['has'].lstrip('#'), 16)
+            answer['has'] = counts.get(wanted, 0) >= req.get('min', 1)
+        return answer
+
+    def op_until_shot(self, req):
+        """Takes the display until the colour `has` is on it (`timeout`: 10)."""
+        deadline = time.monotonic() + req.get('timeout', 10)
+        while True:
+            answer = self.op_shot(req)
+            if answer.get('has'):
+                return answer
+            if time.monotonic() > deadline:
+                return {**answer, 'ok': False,
+                        'error': f'the display never showed {req["has"]}; it shows {answer["colors"]}'}
+            time.sleep(0.3)
+
     def op_keys_until(self, req):
         """Presses `keys` until the screen shows `contains` (at most `max`
         times, 20): to move a selection to a row by what the row says."""
@@ -763,6 +809,54 @@ class Lab:
             self.term(req['app'], {'op': 'keys', 'keys': req['keys']})
             time.sleep(0.1)
         return {'ok': False, 'error': f'the screen never showed {req["contains"]!r}', 'screen': screen}
+
+
+def png_colours(path: Path) -> tuple:
+    """(width, height, {0xRRGGBB: pixels}) of an 8-bit RGB or RGBA PNG as
+    QEMU writes them, with the standard library alone."""
+    import struct
+    import zlib
+    data = path.read_bytes()
+    if data[:8] != b'\x89PNG\r\n\x1a\n':
+        raise LabError(f'{path} is not a PNG')
+    pos, idat, width, height, depth, kind = 8, b'', 0, 0, 0, 0
+    while pos < len(data):
+        length, ctype = struct.unpack('>I4s', data[pos:pos + 8])
+        body = data[pos + 8:pos + 8 + length]
+        if ctype == b'IHDR':
+            width, height, depth, kind = struct.unpack('>IIBB', body[:10])
+        elif ctype == b'IDAT':
+            idat += body
+        pos += 12 + length
+    channels = {2: 3, 6: 4}.get(kind)
+    if depth != 8 or not channels:
+        raise LabError(f'{path}: an 8-bit RGB or RGBA PNG was expected (colour type {kind}, depth {depth})')
+    raw = zlib.decompress(idat)
+    stride = width * channels
+    counts: dict = {}
+    prev = bytearray(stride)
+    for y in range(height):
+        start = y * (stride + 1)
+        f, line = raw[start], bytearray(raw[start + 1:start + 1 + stride])
+        for i in range(stride):
+            a = line[i - channels] if i >= channels else 0
+            b = prev[i]
+            c = prev[i - channels] if i >= channels else 0
+            if f == 1:
+                line[i] = (line[i] + a) & 255
+            elif f == 2:
+                line[i] = (line[i] + b) & 255
+            elif f == 3:
+                line[i] = (line[i] + (a + b) // 2) & 255
+            elif f == 4:
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                line[i] = (line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        for x in range(0, stride, channels):
+            colour = (line[x] << 16) | (line[x + 1] << 8) | line[x + 2]
+            counts[colour] = counts.get(colour, 0) + 1
+        prev = line
+    return width, height, counts
 
 
 def expectation(req: dict, code, out: str) -> Optional[str]:

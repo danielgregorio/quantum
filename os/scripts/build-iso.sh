@@ -323,7 +323,7 @@ install_hive_stack() {
     local -a binaries=(
         hive-cortex hive-synapse hive-actuator
         hive-nerve-process hive-nerve-journal hive-nerve-network hive-nerve-fs
-        hive-apt hive-zfs hive-dashboard
+        hive-apt hive-zfs hive-dashboard hive-screen
         grove
     )
     local -a missing=()
@@ -357,6 +357,10 @@ install_hive_stack() {
     install -m 0644 "$PROJECT_ROOT/config/hive/default.toml" "$chroot_dir/etc/hive/config.toml"
     install -m 0644 "$PROJECT_ROOT/config/hive/whitelist.toml" "$chroot_dir/etc/hive/whitelist.toml"
     install -m 0644 "$PROJECT_ROOT/config/hive/rules.toml" "$chroot_dir/etc/hive/rules.toml"
+    # the Hive's screen: the scene Quantum compiled, its font and its art
+    mkdir -p "$chroot_dir/etc/hive/screen/art"
+    install -m 0644 "$PROJECT_ROOT/config/screen/screen.toml" "$PROJECT_ROOT/config/screen/font.png" "$chroot_dir/etc/hive/screen/"
+    install -m 0644 "$PROJECT_ROOT"/config/screen/art/*.png "$chroot_dir/etc/hive/screen/art/"
 
     # hive-actuator runs unprivileged; polkit is what lets it control
     # services (within the rule's own ceiling - see the rules file).
@@ -381,6 +385,7 @@ install_hive_stack() {
         useradd -r -g hive -s /usr/sbin/nologin -d /nonexistent _hive-ai 2>/dev/null || true
         useradd -r -g hive -s /usr/sbin/nologin -d /nonexistent _hive-sense 2>/dev/null || true
         useradd -r -g hive -s /usr/sbin/nologin -d /nonexistent _hive-act 2>/dev/null || true
+        useradd -r -g hive -G video,input -s /usr/sbin/nologin -d /nonexistent _hive-screen 2>/dev/null || true
     "
 
     # Enable every shipped unit that has an [Install] section (enable only

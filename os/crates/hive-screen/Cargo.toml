@@ -24,6 +24,8 @@ chrono = { workspace = true }
 # The sprite sheets and the font are PNGs the compiler leaves next to the
 # scene; frames for the tests are PNGs too.
 png = "0.17"
+drm = "0.15"
+libc.workspace = true
 
 [dev-dependencies]
 tempfile = "3"

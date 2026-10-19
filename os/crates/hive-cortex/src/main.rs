@@ -366,13 +366,19 @@ async fn handle_connection(
         // A shell unless it's hive-dashboard run by an administrator. The
         // name alone decides nothing: authority comes from the uid.
         Origin::User => match get_component_type(creds.pid) {
-            ComponentType::Dashboard if is_administrator(creds.uid) => ComponentType::Dashboard,
+            ComponentType::Dashboard
+                if is_administrator(creds.uid) || is_the_screen(creds.pid, creds.uid) =>
+            {
+                ComponentType::Dashboard
+            }
             ComponentType::Dashboard => {
                 warn!(
                     "Refusing a dashboard (hive-dashboard, hive-screen) for uid {}: acting on the \
-                     Hive's suggestions takes root or membership in {}",
+                     Hive's suggestions takes root, membership in {}, or being the screen's own \
+                     user ({})",
                     creds.uid,
-                    ADMIN_GROUPS.join(", ")
+                    ADMIN_GROUPS.join(", "),
+                    SCREEN_USER
                 );
                 return Ok(());
             }
@@ -461,32 +467,52 @@ async fn handle_connection(
 }
 
 fn get_component_type(pid: i32) -> ComponentType {
-    // /proc/{pid}/comm is tempting (simpler) but the kernel truncates it to
-    // TASK_COMM_LEN-1 = 15 bytes, which silently mismatches every binary
-    // name longer than that ("hive-nerve-process" -> "hive-nerve-proc").
-    // argv[0] from /proc/{pid}/cmdline isn't truncated, so use that instead.
-    let cmdline_path = format!("/proc/{}/cmdline", pid);
-    match std::fs::read(cmdline_path) {
+    match std::fs::read(format!("/proc/{}/cmdline", pid)) {
         Ok(raw) => component_type_from_cmdline_bytes(&raw),
         Err(_) => ComponentType::Unknown,
     }
 }
 
-/// Parses the component type out of raw `/proc/{pid}/cmdline` bytes
+/// The binary name of a process: the basename of argv[0] from
+/// /proc/{pid}/cmdline. /proc/{pid}/comm is tempting (simpler) but the
+/// kernel truncates it to TASK_COMM_LEN-1 = 15 bytes, which silently
+/// mismatches every binary name longer than that ("hive-nerve-process"
+/// -> "hive-nerve-proc"); argv[0] isn't truncated.
+fn component_name(pid: i32) -> Option<String> {
+    let raw = std::fs::read(format!("/proc/{}/cmdline", pid)).ok()?;
+    name_from_cmdline_bytes(&raw)
+}
+
+/// Parses the binary name out of raw `/proc/{pid}/cmdline` bytes
 /// (NUL-separated argv), taking the basename of argv[0] in case the
 /// process was invoked by path rather than a bare name on PATH.
+fn name_from_cmdline_bytes(raw: &[u8]) -> Option<String> {
+    let argv0 = raw.split(|&b| b == 0).next()?;
+    let argv0 = std::str::from_utf8(argv0).ok()?;
+    Some(
+        Path::new(argv0)
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or(argv0)
+            .to_string(),
+    )
+}
+
 fn component_type_from_cmdline_bytes(raw: &[u8]) -> ComponentType {
-    let Some(argv0) = raw.split(|&b| b == 0).next() else {
-        return ComponentType::Unknown;
-    };
-    let Ok(argv0) = std::str::from_utf8(argv0) else {
-        return ComponentType::Unknown;
-    };
-    let name = Path::new(argv0)
-        .file_name()
-        .and_then(|s| s.to_str())
-        .unwrap_or(argv0);
-    ComponentType::from_name(name)
+    name_from_cmdline_bytes(raw)
+        .map(|name| ComponentType::from_name(&name))
+        .unwrap_or(ComponentType::Unknown)
+}
+
+/// The user hive-screen runs as on the system (hive-screen.service): the
+/// screen on the console approves the Hive's offers as an administrator's
+/// dashboard does, so the account that may is this one, by uid, and only
+/// for the binary of that name.
+const SCREEN_USER: &str = "_hive-screen";
+
+fn is_the_screen(pid: i32, uid: u32) -> bool {
+    component_name(pid).as_deref() == Some("hive-screen")
+        && matches!(User::from_name(SCREEN_USER), Ok(Some(user)) if user.uid.as_raw() == uid)
 }
 
 /// The system user each privileged component type must run as, matching

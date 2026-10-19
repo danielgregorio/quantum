@@ -1,5 +1,38 @@
 # DruidOS Development Log
 
+## 2026-10-19 - A tela da Hive no console de verdade (DRM, teclado, unit)
+
+A segunda fatia da tela: o `hive-screen` desenha no console da VM. Sem X,
+sem Wayland, sem driver de GPU do nosso lado: abre `/dev/dri/card0`, toma
+o primeiro conector ligado no modo preferido, cria um dumb buffer e
+escreve a cena nele, ampliada por um número inteiro e centrada (1280×720
+é ×4 de 320×180; 1024×768 é ×3 com bordas pretas). Desenha só quando o
+quadro mudou, no máximo 30 vezes por segundo: uma cena parada não custa
+nada. O teclado vem direto de `/dev/input` (os `event*` que têm Enter), e
+o terminal `tty1`, que o systemd dá ao daemon como entrada padrão, vai para
+modo gráfico (`KDSETMODE`) enquanto ele roda, e volta a texto na saída,
+inclusive por SIGTERM.
+
+`hive-screen.service` roda como `_hive-screen`, usuário próprio nos grupos
+`video` e `input`, com o mesmo hardening dos outros daemons, `DevicePolicy`
+fechada a não ser a placa, os eventos de entrada e o `tty1`, e `Nice=5` e
+`CPUWeight=50` para ceder a vez à synapse. O cortex aceita `hive-screen`
+como dashboard quando vem desse uid (ou de um administrador, como antes).
+Instalado pelo VM lab, pela ISO e pelo pacote, com `/etc/hive/screen/`.
+
+O VM lab ganhou uma placa `virtio-gpu` (a base é refeita: `BASE_VERSION`
+4), o op `shot`, que lê o display pelo `screendump` do QMP e conta as cores
+(um decodificador de PNG de trinta linhas, só biblioteca padrão), o
+`until_shot`, e o `press`, que aperta teclas na máquina pelo `send-key`. A
+fita `screen-console.jsonl` segue um crash real: o título em mel no
+display, a fumaça cinza sobre a célula do nginx, a oferta chegando ao daemon
+(no journal), Enter no teclado da máquina, o actuator reiniciando de verdade
+e o mel de volta na célula. Dados e cores, não OCR.
+
+De quebra, um bug do transporte do agente do VM lab: um timeout curto deixado
+no socket por uma espera anterior cortava o pedido seguinte, o que só
+aparecia sem KVM, quando o primeiro boot demora. Agora cada pedido põe o seu.
+
 ## 2026-10-19 - A tela da Hive: pixel art no console, declarada em Quantum (qs:)
 
 A interface gráfica do OS, decidida depois de pesar o Godot na VM (Mesa
