@@ -102,8 +102,9 @@ function validateTag(
     for (const [attrName, attr] of tag.attributes) {
         const attrSchema = getAttributeSchema(tag.name, attrName);
 
-        // Unknown attribute warning (only for Quantum tags)
-        if (!attrSchema && tag.name.includes(':')) {
+        // Unknown attribute warning (only for Quantum tags; a game tag's gd: attributes
+        // set properties of its Godot node, which the game compiler checks)
+        if (!attrSchema && tag.name.includes(':') && !(tag.name.startsWith('qg:') && attrName.startsWith('gd:'))) {
             // Some common attributes are always valid
             const commonAttrs = ['id', 'class', 'style', 'data-*'];
             if (!commonAttrs.some(c => c === attrName || (c.endsWith('*') && attrName.startsWith(c.slice(0, -1))))) {

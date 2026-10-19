@@ -1,4 +1,4 @@
-"""Generate vscode-quantum's Core/AI tag schema from quantum-lsp's.
+"""Generate vscode-quantum's Core/AI and game tag schemas from quantum-lsp's.
 
     python scripts/generate-editor-schemas.py          # rewrite the generated parts
     python scripts/generate-editor-schemas.py --check  # exit 1 if they are not current
@@ -10,6 +10,10 @@ against the parser. This script writes, from it:
 - the block between the GENERATED markers of the `quantumTags` array in
   vscode-quantum/src/language/quantumSchema.ts;
 - the q: tag alternations of vscode-quantum/syntaxes/quantum.tmLanguage.json.
+
+The game tags (qg:) come the same way from quantum-lsp's game_tags.py, which
+reads them from the game compiler's schema (quantum/runtime/godot/schema.py):
+the `gameTags` array's GENERATED block and the grammar's qg: alternations.
 
 Everything outside the markers (Laboratory and Experimental tags, ui:) stays
 hand-written.
@@ -23,6 +27,7 @@ import re
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))   # the game tags are read from quantum/runtime/godot/schema.py
 
 
 def load_schema():
@@ -39,11 +44,14 @@ def load_schema():
 
 
 CORE_AI_TAGS = importlib.import_module(load_schema().__name__ + '.core_tags').CORE_AI_TAGS
+GAME_TAGS = importlib.import_module(load_schema().__name__ + '.game_tags').GAME_TAGS
+assert GAME_TAGS, 'quantum.runtime.godot.schema did not import: no game tags to write'
 
 SCHEMA = REPO / 'vscode-quantum' / 'src' / 'language' / 'quantumSchema.ts'
 GRAMMAR = REPO / 'vscode-quantum' / 'syntaxes' / 'quantum.tmLanguage.json'
 BEGIN = '    // BEGIN GENERATED: Core and AI tags — python scripts/generate-editor-schemas.py (do not edit)\n'
 END = '    // END GENERATED\n'
+GAME_BEGIN = '    // BEGIN GENERATED: game tags — python scripts/generate-editor-schemas.py (do not edit)\n'
 
 TS_TYPES = {'integer': 'number', 'decimal': 'number', 'boolean': 'boolean', 'expression': 'expression',
             'enum': 'enum'}
@@ -65,9 +73,9 @@ def attribute(info) -> str:
     return '            { ' + ', '.join(parts) + ' },\n'
 
 
-def entry(info) -> str:
-    lines = ['    {\n', f'        name: {ts(info.name)},\n', "        namespace: 'q',\n",
-             f'        description: {ts(info.description)},\n', "        category: 'Core',\n"]
+def entry(info, category: str = 'Core') -> str:
+    lines = ['    {\n', f'        name: {ts(info.name)},\n', f'        namespace: {ts(info.namespace)},\n',
+             f'        description: {ts(info.description)},\n', f'        category: {ts(category)},\n']
     if info.self_closing:
         lines.append('        selfClosing: true,\n')
     if info.children:
@@ -82,9 +90,16 @@ def generated_block() -> str:
     return BEGIN + ''.join(entry(info) for info in CORE_AI_TAGS.values()) + END
 
 
+def game_block() -> str:
+    return GAME_BEGIN + ''.join(entry(info, 'Game') for info in GAME_TAGS.values()) + END
+
+
 def schema_text(current: str) -> str:
     start, end = current.index(BEGIN), current.index(END) + len(END)
-    return current[:start] + generated_block() + current[end:]
+    current = current[:start] + generated_block() + current[end:]
+    start = current.index(GAME_BEGIN)
+    end = current.index(END, start) + len(END)
+    return current[:start] + game_block() + current[end:]
 
 
 def q_tag_names(schema: str) -> list:
@@ -95,7 +110,9 @@ def q_tag_names(schema: str) -> list:
 
 def grammar_text(current: str, names: list) -> str:
     alternation = '|'.join(names)
-    return re.sub(r'(\(q:\)\()[\w|-]+(\))', lambda m: m.group(1) + alternation + m.group(2), current)
+    current = re.sub(r'(\(q:\)\()[\w|-]+(\))', lambda m: m.group(1) + alternation + m.group(2), current)
+    games = '|'.join(sorted(info.name for info in GAME_TAGS.values()))
+    return re.sub(r'(\(qg:\)\()[\w|-]+(\))', lambda m: m.group(1) + games + m.group(2), current)
 
 
 def main() -> int:

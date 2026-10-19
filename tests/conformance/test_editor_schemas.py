@@ -156,3 +156,69 @@ def test_validate_takes_a_regular_expression_too(tag):
     # SET-4: `^...` is accepted besides the named validators, so the value is not an enum
     info = CORE_AI_TAGS[tag].attributes['validate']
     assert '`^`' in info.description and info.type.value != 'enum'
+
+
+# ------------------------------------------------------------------ the game tags (qg:)
+
+GAME_TAGS = generator().GAME_TAGS
+GAMES = sorted(p for p in (REPO / 'projects').glob('*/*.q') if 'type="game"' in p.read_text(encoding='utf-8'))
+NAMESPACES = {'q': 'https://quantum.lang/ns', 'qg': 'https://quantum.lang/game', 'gd': 'https://quantum.lang/godot'}
+
+
+def test_the_editor_describes_every_game_tag_the_compiler_takes():
+    # PARSE-1: the language server and vscode read the compiler's schema, so a new tag is offered at once
+    from quantum.runtime.godot.schema import TAGS
+    assert set(GAME_TAGS) == {f'qg:{name}' for name in TAGS}
+    for name, spec in TAGS.items():
+        assert set(GAME_TAGS[f'qg:{name}'].attributes) == set(spec.attrs), name
+    schema = generator().SCHEMA.read_text(encoding='utf-8')
+    block = schema[schema.index('export const gameTags'):]
+    assert set(re.findall(r"\n        name: '([\w-]+)',\n        namespace: 'qg'", block)) == set(TAGS)
+    grammar = json.loads(generator().GRAMMAR.read_text(encoding='utf-8'))
+    highlighted = re.search(r'\(qg:\)\(([\w|-]+)\)', grammar['repository']['game-tag-open']['begin']).group(1)
+    assert set(highlighted.split('|')) == set(TAGS)
+
+
+def game_elements(path):
+    """Every element of a game as the compiler reads it: (qg:tag or q:tag, attributes, the parent's name)."""
+    root = QuantumParser(use_cache=False).parse_file(str(path)).xml_root
+    prefixes = {'{' + uri + '}': p for p, uri in NAMESPACES.items()}
+
+    def name(tag):
+        for ns, p in prefixes.items():
+            if tag.startswith(ns):
+                return f'{p}:{tag[len(ns):]}'
+        return tag
+
+    def walk(el, parent):
+        yield name(el.tag), {name(k): v for k, v in el.attrib.items()}, parent
+        for child in el:
+            yield from walk(child, name(el.tag))
+    yield from walk(root, None)
+
+
+@pytest.mark.parametrize('path', GAMES, ids=[p.stem for p in GAMES])
+def test_every_game_the_repo_ships_is_clean_in_the_editor(path):
+    # What the editor would underline in a game that compiles: an unknown tag or attribute, a missing
+    # required one, a value it would refuse, a tag in a place the schema does not list
+    attributes = importlib.import_module(generator().load_schema().__name__ + '.attributes')
+    complaints = []
+    for tag, attrs, parent in game_elements(path):
+        if not tag.startswith('qg:'):
+            continue
+        info = GAME_TAGS.get(tag)
+        if info is None:
+            complaints.append(f'unknown <{tag}>')
+            continue
+        handler = parent in GAME_TAGS and tag in GAME_TAGS[parent].children
+        if parent not in info.parent_tags and not ('handler' in info.parent_tags and (handler or parent.startswith('q:'))):
+            complaints.append(f'<{tag}> inside <{parent}>')
+        complaints += [f'<{tag}> without {a}=' for a in attributes.get_required_attributes(tag) if a not in attrs]
+        for attr, value in attrs.items():
+            if attr.startswith('gd:'):
+                continue
+            if attr not in info.attributes:
+                complaints.append(f'<{tag} {attr}=>: unknown')
+            elif attributes.validate_attribute_value(tag, attr, value):
+                complaints.append(attributes.validate_attribute_value(tag, attr, value))
+    assert complaints == []
