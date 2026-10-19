@@ -5,15 +5,14 @@
        the skeletons behind it that find their way through as soon as it does
        (ai="pathfind"); crushers that slide to and fro (qg:tween); a vault
        two levers keep shut, and its treasure. Torches burn and gems sparkle
-       (qg:particles). Each crypt entered is saved (Continue, alone); the
+       (qg:particles). A skeleton archer, made of parts, keeps its distance and
+       shoots. The hearts and the gems are what the delvers carry
+       (qg:item), shown by the HUD's inventory. Each crypt entered is saved (Continue, alone); the
        game speaks English, Portuguese and Spanish. The art is drawn for it by
        scripts/art/delve.py and the music written by scripts/art/delve_music.py
        (CC0); the sounds are Kenney's (CC0). -->
 
   <!-- The delve's state, kept from crypt to crypt; the first crypt starts it anew. -->
-  <q:set name="hearts" value="5" type="number" />
-  <q:set name="gems" value="0" type="number" />
-  <q:set name="taken" value="[]" type="array" />      <!-- the gems and hearts picked up, by name -->
   <q:set name="message" value="" />
 
   <!-- Two players, each on their own machine: the delve starts in crypt-1 once both are there. -->
@@ -32,6 +31,7 @@
   <qg:sound name="heal" src="assets/kenney/audio/powerup.ogg" />
   <qg:sound name="open" src="assets/kenney/audio/block.ogg" />
   <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound name="twang" src="assets/kenney/audio/jump.ogg" />
   <qg:sound name="torchlight" src="assets/torchlight.ogg" loop="true" />
   <qg:sound name="crypt" src="assets/crypt.ogg" loop="true" />
 
@@ -44,8 +44,13 @@
   <qg:particles name="treasure" preset="confetti" />
   <qg:particles name="dust" preset="snow" color="#6a6478" amount="16" speed="8" size="1" />
 
-  <qg:prefab name="Gem" tag="gem" sheet="crypt" frame="5" hitbox="10x12" />
-  <qg:prefab name="Heart" tag="heart" sheet="crypt" frame="6" hitbox="12x12" />
+  <!-- What the delvers carry, kept from crypt to crypt and in a save: hearts (five at most; one
+       less at each wound, and none is the fall) and gems. A heart picked up at five stays where it is. -->
+  <qg:item name="heart" label="HEARTS" sheet="crypt" frame="6" start="5" max="5" sound="heal" particles="glow" />
+  <qg:item name="gem" label="GEMS" sheet="crypt" frame="5" sound="pick" particles="sparkle" />
+
+  <qg:prefab name="Gem" tag="gem" sheet="crypt" frame="5" hitbox="10x12" gives="gem" />
+  <qg:prefab name="Heart" tag="heart" sheet="crypt" frame="6" hitbox="12x12" gives="heart" />
   <qg:prefab name="Lever" tag="lever" sheet="crypt" frame="3" hitbox="14x14" />
   <qg:prefab name="LeverOn" tag="lever-on" sheet="crypt" frame="4" hitbox="14x14" />
   <qg:prefab name="Stairs" tag="stairs" sheet="crypt" frame="8" hitbox="10x10" />
@@ -64,10 +69,28 @@
       <qg:destroy target="me" />
     </qg:on-animation-end>
   </qg:prefab>
+  <!-- a bat flutters about until it sees a delver, then dives at it -->
   <qg:prefab name="Bat" tag="enemy" sheet="delvers" frame="23" hitbox="14x12"
-             ai="chase" speed="42" sight="110">
+             ai="behavior" speed="42" sight="110">
     <qg:animation name="walk" frames="23,24,25,24" fps="10" />
+    <qg:behavior>
+      <qg:seek way="straight" />
+      <qg:wander speed="16" />
+    </qg:behavior>
   </qg:prefab>
+  <!-- an enemy made of parts: it keeps its distance from the nearest delver it sees, shoots
+       at one within range, and wanders while it sees none -->
+  <qg:prefab name="Archer" tag="enemy" sheet="delvers" frame="29" hitbox="12x14"
+             ai="behavior" speed="26" sight="150">
+    <qg:animation name="walk" frames="29,30,29,31" fps="6" />
+    <qg:behavior>
+      <qg:keep-distance min="54" max="90" />
+      <qg:shoot prefab="Arrow" every="90" range="130" sound="twang" />
+      <qg:wander speed="12" />
+    </qg:behavior>
+  </qg:prefab>
+  <qg:prefab name="Arrow" tag="arrow" sheet="delvers" frame="32" hitbox="6x4"
+             ai="fly" speed="100" walls="stop" rotate="true" lifetime="180" />
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
   <qg:language lang="pt" name="Português">
@@ -145,27 +168,19 @@
 
   <qg:scene name="crypt-1" width="256" height="224" background="#100e16" seed="1" save="true">
     <qg:music sound="crypt" />
-    <!-- the delve starts here anew -->
-    <q:set name="hearts" value="5" />
-    <q:set name="gems" value="0" />
-    <q:set name="taken" value="[]" />
+    <!-- the delve starts here anew: five hearts, no gems, every gem back in its place -->
+    <q:function name="anew" params=""><qg:reset-items /></q:function>
+    <q:call function="anew" />
     <q:set name="message" value="A SEALED WALL. A LEVER MUST OPEN IT." />
     <q:set name="leaving" value="false" type="boolean" />
 
     <q:function name="hurt" params="me">
       <qg:play sound="hurt" vary="0.1" />
       <qg:shake at="me" frames="8" strength="2" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
+      <qg:take item="heart" />
+      <q:if condition="{held('heart') <= 0}">
         <qg:goto-scene name="fallen" fade="0.6" />
       </q:if>
-    </q:function>
-    <q:function name="gem" params="it">
-      <qg:play sound="pick" pitch="1.1" vary="0.08" />
-      <qg:emit particles="sparkle" at="it" />
-      <q:set name="gems" value="{gems + 1}" />
-      <q:set name="taken" value="{taken + [it.name]}" />
-      <qg:destroy target="it" />
     </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
@@ -217,7 +232,6 @@
       <qg:animation name="attack-up" frames="8" />
       <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="enemy" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
-      <qg:on-collision with="gem"><q:call function="gem" args="other" /></qg:on-collision>
       <qg:on-collision with="lever"><q:call function="pull" args="other" /></qg:on-collision>
       <qg:on-collision with="stairs"><q:call function="down" /></qg:on-collision>
       <qg:on-hit with="enemy"><q:call function="slay" args="other" /></qg:on-hit>
@@ -233,23 +247,21 @@
       <qg:animation name="attack-up" frames="18" />
       <qg:animation name="attack-down" frames="19" />
       <qg:on-collision with="enemy" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
-      <qg:on-collision with="gem"><q:call function="gem" args="other" /></qg:on-collision>
       <qg:on-collision with="lever"><q:call function="pull" args="other" /></qg:on-collision>
       <qg:on-collision with="stairs"><q:call function="down" /></qg:on-collision>
       <qg:on-hit with="enemy"><q:call function="slay" args="other" /></qg:on-hit>
     </qg:character>
 
     <qg:instance prefab="Lever" name="lever" x="81" y="171" />
-    <qg:instance prefab="Gem" name="gem-1" x="99" y="45" if="{'gem-1' not in taken}" />
-    <qg:instance prefab="Gem" name="gem-2" x="117" y="153" if="{'gem-2' not in taken}" />
-    <qg:instance prefab="Gem" name="gem-3" x="225" y="45" if="{'gem-3' not in taken}" />
+    <qg:instance prefab="Gem" name="gem-1" x="99" y="45" />
+    <qg:instance prefab="Gem" name="gem-2" x="117" y="153" />
+    <qg:instance prefab="Gem" name="gem-3" x="225" y="45" />
     <qg:instance prefab="Skeleton" name="skeleton-1" x="190" y="72" />
     <qg:instance prefab="Skeleton" name="skeleton-2" x="190" y="144" />
     <qg:instance prefab="Stairs" name="stairs" x="225" y="171" />
 
     <qg:hud position="top-left" size="10">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="gems" label="GEMS" />
+      <qg:inventory />
       <qg:text bind="message" />
     </qg:hud>
   </qg:scene>
@@ -264,24 +276,10 @@
     <q:function name="hurt" params="me">
       <qg:play sound="hurt" vary="0.1" />
       <qg:shake at="me" frames="8" strength="2" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
+      <qg:take item="heart" />
+      <q:if condition="{held('heart') <= 0}">
         <qg:goto-scene name="fallen" fade="0.6" />
       </q:if>
-    </q:function>
-    <q:function name="gem" params="it">
-      <qg:play sound="pick" pitch="1.1" vary="0.08" />
-      <qg:emit particles="sparkle" at="it" />
-      <q:set name="gems" value="{gems + 1}" />
-      <q:set name="taken" value="{taken + [it.name]}" />
-      <qg:destroy target="it" />
-    </q:function>
-    <q:function name="heal" params="it">
-      <qg:play sound="heal" />
-      <qg:emit particles="glow" at="it" />
-      <q:set name="hearts" value="{min(hearts + 1, 5)}" />
-      <q:set name="taken" value="{taken + [it.name]}" />
-      <qg:destroy target="it" />
     </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
@@ -326,8 +324,6 @@
       <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="enemy" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
       <qg:on-collision with="slab" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
-      <qg:on-collision with="gem"><q:call function="gem" args="other" /></qg:on-collision>
-      <qg:on-collision with="heart"><q:call function="heal" args="other" /></qg:on-collision>
       <qg:on-collision with="stairs"><q:call function="down" /></qg:on-collision>
       <qg:on-hit with="enemy"><q:call function="slay" args="other" /></qg:on-hit>
     </qg:character>
@@ -343,8 +339,6 @@
       <qg:animation name="attack-down" frames="19" />
       <qg:on-collision with="enemy" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
       <qg:on-collision with="slab" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
-      <qg:on-collision with="gem"><q:call function="gem" args="other" /></qg:on-collision>
-      <qg:on-collision with="heart"><q:call function="heal" args="other" /></qg:on-collision>
       <qg:on-collision with="stairs"><q:call function="down" /></qg:on-collision>
       <qg:on-hit with="enemy"><q:call function="slay" args="other" /></qg:on-hit>
     </qg:character>
@@ -359,16 +353,15 @@
       <qg:tween target="slab-3" property="y" to="189" seconds="2" trans="sine" ease="in-out" repeat="-1" yoyo="true" />
     </qg:timer>
 
-    <qg:instance prefab="Heart" name="heart-1" x="162" y="108" if="{'heart-1' not in taken}" />
-    <qg:instance prefab="Gem" name="gem-4" x="108" y="189" if="{'gem-4' not in taken}" />
-    <qg:instance prefab="Gem" name="gem-5" x="162" y="45" if="{'gem-5' not in taken}" />
+    <qg:instance prefab="Heart" name="heart-1" x="162" y="108" />
+    <qg:instance prefab="Gem" name="gem-4" x="108" y="189" />
+    <qg:instance prefab="Gem" name="gem-5" x="162" y="45" />
     <qg:instance prefab="Bat" name="bat-1" x="216" y="54" />
     <qg:instance prefab="Bat" name="bat-2" x="216" y="171" />
     <qg:instance prefab="Stairs" name="stairs" x="225" y="117" />
 
     <qg:hud position="top-left" size="10">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="gems" label="GEMS" />
+      <qg:inventory />
       <qg:text bind="message" />
     </qg:hud>
   </qg:scene>
@@ -384,17 +377,10 @@
     <q:function name="hurt" params="me">
       <qg:play sound="hurt" vary="0.1" />
       <qg:shake at="me" frames="8" strength="2" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
+      <qg:take item="heart" />
+      <q:if condition="{held('heart') <= 0}">
         <qg:goto-scene name="fallen" fade="0.6" />
       </q:if>
-    </q:function>
-    <q:function name="gem" params="it">
-      <qg:play sound="pick" pitch="1.1" vary="0.08" />
-      <qg:emit particles="sparkle" at="it" />
-      <q:set name="gems" value="{gems + 1}" />
-      <q:set name="taken" value="{taken + [it.name]}" />
-      <qg:destroy target="it" />
     </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
@@ -454,9 +440,9 @@
       <qg:animation name="attack-up" frames="8" />
       <qg:animation name="attack-down" frames="9" />
       <qg:on-collision with="enemy" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
-      <qg:on-collision with="gem"><q:call function="gem" args="other" /></qg:on-collision>
       <qg:on-collision with="lever"><q:call function="pull" args="other" /></qg:on-collision>
       <qg:on-collision with="chest"><q:call function="treasure" args="other" /></qg:on-collision>
+      <qg:on-collision with="arrow"><qg:destroy target="other" /><q:call function="hurt" args="me" /></qg:on-collision>
       <qg:on-hit with="enemy"><q:call function="slay" args="other" /></qg:on-hit>
     </qg:character>
     <qg:character id="p2" controller="topdown" player="2" sheet="delvers" frame="10"
@@ -470,9 +456,9 @@
       <qg:animation name="attack-up" frames="18" />
       <qg:animation name="attack-down" frames="19" />
       <qg:on-collision with="enemy" cooldown="60"><q:call function="hurt" args="me" /></qg:on-collision>
-      <qg:on-collision with="gem"><q:call function="gem" args="other" /></qg:on-collision>
       <qg:on-collision with="lever"><q:call function="pull" args="other" /></qg:on-collision>
       <qg:on-collision with="chest"><q:call function="treasure" args="other" /></qg:on-collision>
+      <qg:on-collision with="arrow"><qg:destroy target="other" /><q:call function="hurt" args="me" /></qg:on-collision>
       <qg:on-hit with="enemy"><q:call function="slay" args="other" /></qg:on-hit>
     </qg:character>
 
@@ -482,15 +468,15 @@
     <qg:timer after="1">
       <qg:tween target="chest" property="y" to="176" seconds="0.8" trans="sine" ease="in-out" repeat="-1" yoyo="true" />
     </qg:timer>
-    <qg:instance prefab="Gem" name="gem-6" x="225" y="27" if="{'gem-6' not in taken}" />
-    <qg:instance prefab="Gem" name="gem-7" x="126" y="99" if="{'gem-7' not in taken}" />
+    <qg:instance prefab="Gem" name="gem-6" x="225" y="27" />
+    <qg:instance prefab="Gem" name="gem-7" x="126" y="99" />
     <qg:instance prefab="Skeleton" name="skeleton-1" x="126" y="63" />
     <qg:instance prefab="Skeleton" name="skeleton-2" x="81" y="117" />
     <qg:instance prefab="Skeleton" name="skeleton-3" x="171" y="117" />
+    <qg:instance prefab="Archer" name="archer" x="207" y="81" />
 
     <qg:hud position="top-left" size="10">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="gems" label="GEMS" />
+      <qg:inventory />
       <qg:text bind="message" />
     </qg:hud>
   </qg:scene>
@@ -503,7 +489,7 @@
     <qg:sprite sheet="crypt" frame="7" x="128" y="120" gd:scale="3,3" />
     <qg:hud position="top-center" size="16">
       <qg:text bind="message" />
-      <qg:counter bind="gems" label="GEMS" />
+      <qg:counter item="gem" label="GEMS" />
     </qg:hud>
     <qg:menu position="bottom-center">
       <qg:button label="To the title"><qg:leave /><qg:goto-scene name="title" /></qg:button>

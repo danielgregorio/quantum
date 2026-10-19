@@ -18,6 +18,21 @@ alter the behaviour of an existing app is listed under **Breaking**.
   refusal says what it says (`tests/dataset/test_dataset_features.py`), and
   a tag added to the schema without its line in the primary intention and a
   game that uses it fails `tests/dataset/test_game_engine_feature.py`.
+- Laboratory: the new tags in the games. In Delve, hearts and gems are
+  items: the inventory is in the HUD, a hit takes a heart, and a new game
+  starts with `qg:reset-items`. A skeleton archer, made of parts, keeps its
+  distance and shoots arrows; the bats are made of parts too and flutter
+  until they see a delver. Hopper has a fourth level, the falls, with water
+  to swim in, snow to slide on, a ladder, spike tiles and a hopping enemy
+  made of parts.
+- Editors: the game tags (`qg:`). The language server and the VS Code
+  extension read them from the game compiler's own schema
+  (`quantum/runtime/godot/schema.py`): completion, hover, required
+  attributes and the values an attribute takes, for every `qg:` tag the
+  compiler accepts, and highlighting for all of them. VS Code no longer
+  warns "Unknown tag" on every tag of a game, nor on its `gd:` attributes.
+  A conformance test checks that every game in `projects/` is clean in the
+  editor.
 - Laboratory: enemies of parts that walk on floors. `<qg:gravity>` in a
   prefab's `qg:behavior` (as in a character's) makes it fall and stand:
   its parts then move it left and right only, a seek goes straight at its

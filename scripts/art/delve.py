@@ -9,7 +9,8 @@ smoothing and outlined, like scripts/art/keep.py.
 - delvers.png, 24x24 frames: for the first delver (rust) and then the second
   (blue), ten each: 0 idle, 1-2 walking (to the right), 3-4 walking up, 5-6
   walking down, 7 the sword swung right, 8 up, 9 down; then 20-22 a skeleton
-  walking, 23-25 a bat, 26-28 a skeleton falling to a heap of bones
+  walking, 23-25 a bat, 26-28 a skeleton falling to a heap of bones, 29-31 a
+  skeleton archer walking (a bow, a quiver), 32 its arrow (pointing right)
 
     python scripts/art/delve.py
 CC0.
@@ -244,9 +245,12 @@ def delver_frames(p):
 BONE, BONE_D = (226, 220, 204), (170, 164, 150)
 
 
-def skeleton(step):
+def skeleton(step, archer=False):
     im = Image.new('RGBA', (24, 24), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
+    if archer:   # a quiver on its back, feathers out of it
+        d.rectangle([4, 8, 7, 15], fill=WOOD)
+        d.point([(4, 7), (6, 6)], fill=(200, 60, 60))
     # legs
     d.line([(10 + step, 17), (10 + step, 21)], fill=BONE, width=2)
     d.line([(14 - step, 17), (14 - step, 21)], fill=BONE, width=2)
@@ -264,6 +268,22 @@ def skeleton(step):
     d.rectangle([10, 5, 11, 6], fill=(220, 60, 60))           # the eyes glow
     d.rectangle([13, 5, 14, 6], fill=(220, 60, 60))
     d.line([(11, 9), (13, 9)], fill=OUTLINE)
+    if archer:   # the bow, held out to the right, and its string
+        d.arc([14, 4, 23, 22], start=-75, end=75, fill=WOOD, width=2)
+        d.line([(20, 5), (20, 21)], fill=(200, 196, 186))
+    return outlined(im)
+
+
+WOOD = (132, 88, 48)
+
+
+def arrow():
+    im = Image.new('RGBA', (24, 24), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.line([(5, 12), (18, 12)], fill=BONE)                       # a shaft of bone
+    d.polygon([(18, 10), (22, 12), (18, 14)], fill=(150, 150, 160))
+    d.line([(4, 10), (7, 12)], fill=(200, 60, 60))              # red fletching
+    d.line([(4, 14), (7, 12)], fill=(200, 60, 60))
     return outlined(im)
 
 
@@ -321,7 +341,7 @@ def main():
     sheet.save(OUT / 'crypt.png', optimize=True)
     frames = (delver_frames(PALETTES['rust']) + delver_frames(PALETTES['blue'])
               + [skeleton(0), skeleton(1), skeleton(-1), bat(0), bat(1), bat(2), collapse(0), collapse(1),
-                 collapse(2)])
+                 collapse(2), skeleton(0, True), skeleton(1, True), skeleton(-1, True), arrow()])
     sheet = Image.new('RGBA', (24 * len(frames), 24))
     for i, f in enumerate(frames):
         sheet.paste(f, (i * 24, 0))

@@ -21,7 +21,14 @@
   <!-- Jump on space, Z, X, up or W; the other actions keep their default keys. -->
   <qg:input action="jump" keys="Space, Z, X, Up, W" />
 
-  <qg:tileset name="kenney" src="assets/kenney/tilemap_packed.png" tile="18" />
+  <!-- level 4's tiles of a kind (qg:tile kind=): a ladder, water, snow slid on as ice, spikes that hurt -->
+  <qg:tileset name="kenney" src="assets/kenney/tilemap_packed.png" tile="18">
+    <qg:tile frame="71" kind="ladder" />
+    <qg:tile frame="33" kind="water" />
+    <qg:tile frame="74" kind="water" />
+    <qg:tile frame="81" kind="ice" />
+    <qg:tile frame="68" kind="hurt" shape="0,10; 18,10; 18,18; 0,18" />
+  </qg:tileset>
   <qg:spritesheet name="chars" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
 
   <qg:sound name="jump" src="assets/kenney/audio/jump.ogg" />
@@ -51,6 +58,16 @@
   <qg:prefab name="Lift" tag="lift" sheet="kenney" frame="43" hitbox="18x8" solid="true"
              ai="shuttle" dy="-80" period="240" />
 
+  <!-- an enemy made of parts: it hops to and fro on the snow, and over what it bumps -->
+  <qg:prefab name="Bouncer" tag="enemy" sheet="chars" frame="11" hitbox="18x18" ai="behavior" speed="36"
+             turns-at="edge">
+    <qg:animation name="walk" frames="11,12" fps="4" />
+    <qg:behavior>
+      <qg:gravity />
+      <qg:leap height="20" every="45" when="{true}" />
+      <qg:patrol heading="left" distance="18" />
+    </qg:behavior>
+  </qg:prefab>
   <qg:prefab name="Walker" tag="enemy" sheet="chars" frame="18" hitbox="18x18"
              ai="patrol" speed="30" direction="left" turns-at="edge">
     <qg:animation name="walk" frames="18,19,20" fps="6" />
@@ -97,8 +114,10 @@
     <qg:map-node name="level-1" x="48" y="112" sheet="kenney" frame="153" scene="level-1" />
     <qg:map-node name="level-2" x="128" y="80" sheet="kenney" frame="153" scene="level-2" />
     <qg:map-node name="level-3" x="208" y="112" sheet="kenney" frame="153" scene="level-3" />
+    <qg:map-node name="level-4" x="128" y="168" sheet="kenney" frame="153" scene="level-4" />
     <qg:map-path from="level-1" to="level-2" requires="level-1" />
     <qg:map-path from="level-2" to="level-3" requires="level-2" />
+    <qg:map-path from="level-3" to="level-4" requires="level-3" />
 
     <qg:character id="player" controller="map" sheet="chars" frame="0" at="{map_at}" speed="60"
                   x="0" y="0" hitbox="18x22">
@@ -416,6 +435,95 @@
     <qg:instance prefab="Spikes" x="261" y="176" />
     <qg:instance prefab="Spikes" x="279" y="176" />
     <qg:instance prefab="Coin" x="252" y="96" />
+    <qg:instance prefab="Flag" x="405" y="171" />
+
+    <qg:camera follow="player" bounds="tilemap" smooth="8" lead="32" dead-zone="16x56" />
+    <qg:hud position="top-left">
+      <qg:counter bind="score" label="SCORE" />
+      <qg:counter bind="coins" label="COINS" />
+      <qg:counter bind="lives" label="LIVES" />
+    </qg:hud>
+  </qg:scene>
+
+  <!-- ===== Level 4: the falls. Water to swim, snow that slides, a ladder up a wall, spikes below it. ===== -->
+
+  <qg:scene name="level-4" width="256" height="224" background="#4f8fb0" seed="17">
+    <q:set name="coins" value="0" type="number" />
+
+    <q:function name="die" params="me">
+      <qg:play sound="hurt" />
+      <q:set name="lives" value="{lives - 1}" />
+      <q:if condition="{lives <= 0}">
+        <qg:goto-scene name="game-over" />
+      <q:else>
+        <qg:goto-scene name="level-4" />
+      </q:else>
+      </q:if>
+    </q:function>
+
+    <!-- 23 grass, 25 dirt; 34 and 75 water (a pool two tiles deep), 82 snow (ice), 72 the ladder up
+         the wall at columns 15-16, 69 the spikes beyond it. -->
+    <qg:tilemap tileset="kenney" collision="true">
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,72,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,72,23,23,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,72,25,25,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,72,25,25,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,72,25,25,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,72,25,25,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,72,25,25,0,0,0,0,0,0,0
+23,23,23,23,23,23,34,34,34,34,82,82,82,82,23,25,25,69,69,69,69,23,23,23
+25,25,25,25,25,25,75,75,75,75,25,25,25,25,25,25,25,25,25,25,25,25,25,25
+25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25,25
+    </qg:tilemap>
+
+    <qg:character id="player" controller="platformer" sheet="chars" frame="0"
+                  x="40" y="160" hitbox="18x22"
+                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6"
+                  jump-sound="jump">
+      <qg:animation name="idle" frames="0" />
+      <qg:animation name="walk" frames="1,2" fps="8" />
+      <qg:animation name="jump" frames="1" />
+
+      <qg:on-collision with="coin">
+        <qg:emit particles="sparkle" at="other" />
+        <qg:destroy target="other" />
+        <qg:play sound="coin" />
+        <q:set name="coins" value="{coins + 1}" />
+        <q:set name="score" value="{score + 10}" />
+      </qg:on-collision>
+      <qg:on-collision with="enemy" side="top">
+        <qg:emit particles="pop" at="other" />
+        <qg:destroy target="other" />
+        <qg:bounce target="me" height="32" />
+        <qg:play sound="stomp" />
+        <q:set name="score" value="{score + 100}" />
+      </qg:on-collision>
+      <qg:on-collision with="enemy" side="any" cooldown="60">
+        <q:call function="die" args="me" />
+      </qg:on-collision>
+      <!-- the spikes are tiles of a kind, not things: touching one is qg:on-tile -->
+      <qg:on-tile kind="hurt" cooldown="60">
+        <q:call function="die" args="me" />
+      </qg:on-tile>
+      <qg:on-collision with="flag" cooldown="100000">
+        <qg:play sound="win" />
+        <q:set name="score" value="{score + 1500}" />
+        <q:set name="cleared" value="{cleared + ['level-4']}" />
+        <q:set name="check_at" value="" />
+        <qg:save scene="map" />
+        <qg:goto-scene name="map" />
+      </qg:on-collision>
+      <qg:on-fall>
+        <q:call function="die" args="me" />
+      </qg:on-fall>
+    </qg:character>
+
+    <qg:instance prefab="Coin" x="144" y="200" />
+    <qg:instance prefab="Bouncer" x="225" y="171" />
+    <qg:instance prefab="Coin" x="279" y="54" />
     <qg:instance prefab="Flag" x="405" y="171" />
 
     <qg:camera follow="player" bounds="tilemap" smooth="8" lead="32" dead-zone="16x56" />
