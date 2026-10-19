@@ -10,6 +10,7 @@ None of them is part of the supported core (see `SUPPORT_TIERS.md`):
 | `type` | Tier | What `quantum run app.q` does |
 |--------|------|-------------------------------|
 | `game` | Laboratory | builds a 2D game (a Godot 4 project): see [Games](/targets/games) |
+| `hive` | Laboratory | writes the rules and the whitelist of Quantum OS's Hive: see [The Hive's rules](/targets/hive) |
 | `terminal` | Experimental | builds a terminal UI |
 | `ui` | Experimental | builds a UI, layout only (`--target html` or `textual`; `mobile` is Laboratory) |
 

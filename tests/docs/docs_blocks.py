@@ -64,6 +64,8 @@ RUN_BY_TEST = {
     'tutorial/tasks-app.md': 'tests/docs/test_tutorial_tasks_app.py',
     # The game language: every block compiles to a Godot project the engine opens (Laboratory job).
     'targets/games.md': 'tests/godot/test_godot_docs.py',
+    # The Hive's rule language: every block compiles to the daemons' files.
+    'targets/hive.md': 'tests/hive/test_hive_docs.py',
     'guide/why-quantum.md': 'tests/docs/test_why_quantum.py',
     'guide/sessions.md': 'tests/docs/test_guide_sessions.py',
     'guide/services.md': 'tests/docs/test_guide_services.py',

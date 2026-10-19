@@ -20,7 +20,7 @@ They also share a way of working. Quantum's games have a play protocol, through 
 - the Hive lab (`crates/hive-lab`) runs the real hive-cortex and hive-synapse and plays the rest, in a fraction of a second;
 - the VM lab (`scripts/lab/vm`) runs the whole system for real in a VM, restored from a snapshot in about a second.
 
-Next is declaring the Hive's rules in Quantum and compiling them to what the daemons load.
+The Hive's rules are declared in Quantum: `config/hive/hive.q` says what the Hive offers on an event and what the actuator may do, and compiles to `rules.toml` and `whitelist.toml`, which the daemons load. A `{field}` is filled in from the event, never from the model; an offer the whitelist would refuse does not compile.
 
 ## Working on it
 
@@ -32,7 +32,7 @@ python3 scripts/lab/vm/vm.py --play   # the real system in a VM restored from a 
 ./scripts/check.sh               # fmt, clippy, tests
 ```
 
-- `CLAUDE.md` is the development guide: the architecture, the security model, the conventions and the labs.
+- `CLAUDE.md` is the development guide: the architecture, the security model, the conventions, the rules and the labs.
 - `crates/hive-lab/README.md` describes the Hive lab, and `scripts/lab/vm/README.md` the VM lab.
 - `DEVLOG.md` and `STATUS.md` are DruidOS's history (in Portuguese); new entries go at the top of the DEVLOG.
 
