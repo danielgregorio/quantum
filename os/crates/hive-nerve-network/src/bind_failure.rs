@@ -27,12 +27,19 @@ pub struct BindFailure {
 }
 
 impl BindFailure {
-    /// Who failed, for logs and dedup: the unit when there is one.
+    /// Who failed, for logs: the unit when there is one, and the process.
     pub fn requester(&self) -> String {
         match &self.unit {
             Some(unit) => format!("{unit} ({}, pid {})", self.comm, self.pid),
             None => format!("{} (pid {})", self.comm, self.pid),
         }
+    }
+
+    /// Who failed, for dedup: what stays the same when the service is
+    /// restarted (its unit, or its program), never its pid, which changes
+    /// with every retry.
+    pub fn retrier(&self) -> &str {
+        self.unit.as_deref().unwrap_or(&self.comm)
     }
 }
 
@@ -183,6 +190,21 @@ mod tests {
         assert_eq!(
             failure.requester(),
             "druidos-probe-binder.service (python3, pid 1099)"
+        );
+    }
+
+    #[test]
+    fn a_service_is_known_by_its_unit_or_its_program_never_its_pid() {
+        let mut entry = json!({
+            "MESSAGE": "nginx: [emerg] bind() to 0.0.0.0:80 failed (98: Address already in use)",
+            "_PID": "100",
+            "_COMM": "nginx",
+        });
+        assert_eq!(from_journal_entry(&entry).unwrap().retrier(), "nginx");
+        entry["_SYSTEMD_UNIT"] = json!("nginx.service");
+        assert_eq!(
+            from_journal_entry(&entry).unwrap().retrier(),
+            "nginx.service"
         );
     }
 
