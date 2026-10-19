@@ -303,7 +303,8 @@ class _Compiler:
                              'fire_sound': el.get('fire-sound'),
                              'states': states, 'initial_state': initial_state,
                              'on_collision': handlers, 'on_damage': on_damage, 'on_death': on_death,
-                             'animations': _animations(el)}
+                             'animations': _animations(el),
+                             'on_animation_end': _animation_ends(el, pscript, f'_{_ident(name)}_on')}
             gdprops.attach(prefabs[name], gdprops.PREFAB_CLASS[gdprops.prefab_kind(prefabs[name])], el.gd,
                            f'<qg:prefab name="{name}">', el.line)
         for pname, line in pscript.prefabs_used + [(p['fire_prefab'], el.line) for p in prefabs.values()
@@ -317,6 +318,7 @@ class _Compiler:
         for pname, line in pscript.particles_used:
             if pname not in self.particles:
                 raise GameCompileError(f'<qg:emit particles="{pname}">: no qg:particles of that name', line)
+        self._animations_known(pscript.animations_played)
         tags = {p['tag'] for p in prefabs.values()} | self._zone_tags
         for p_ in prefabs.values():
             for h in p_['on_collision']:
@@ -402,6 +404,25 @@ class _Compiler:
             elif kind in ('ladder', 'water'):
                 have['shape'] = None
             have['kind'] = kind
+
+    def _animations_known(self, played: list) -> None:
+        """qg:play-animation names an animation some character or prefab of the game has."""
+        if not played:
+            return
+        if getattr(self, '_animation_names', None) is None:
+            names, todo = set(), list(self.game.prefabs.values()) + list(self.game.scenes)
+            while todo:
+                el = todo.pop()
+                for c in el.children:
+                    if isinstance(c, Element):
+                        if c.tag == 'animation':
+                            names.add(c.get('name'))
+                        todo.append(c)
+            self._animation_names = names
+        for name, line in played:
+            if name and name not in self._animation_names:
+                raise GameCompileError(f'<qg:play-animation name="{name}">: no qg:animation of that name in the game '
+                                       f'(it has: {", ".join(sorted(self._animation_names)) or "none"})', line)
 
     def _behavior(self, el: Element) -> list:
         """The parts of a character controller="behavior" (its qg:behavior), checked."""
@@ -843,6 +864,7 @@ class _Compiler:
                                  'handler': compile_handler(script, f'_on_{_ident(cid)}_tile_{i}', h.children,
                                                             h.line)}
                                 for i, h in enumerate(el.find_all('on-tile'))],
+                    'on_animation_end': _animation_ends(el, script, f'_on_{_ident(cid)}'),
                 })
                 self._node_elements.append(el)
             elif el.tag == 'instance':
@@ -1046,6 +1068,7 @@ class _Compiler:
                 raise GameCompileError(
                     f'<qg:emit particles="{pname}">: no qg:particles of that name '
                     f'(declared: {", ".join(sorted(self.particles)) or "none"})', line)
+        self._animations_known(script.animations_played)
         for played in script.sounds_played:
             if played not in self.sounds:
                 raise GameCompileError(
@@ -1296,6 +1319,21 @@ def _animations(el: Element) -> Dict[str, dict]:
         if not frames:
             raise GameCompileError('<qg:animation> needs at least one frame', a.line)
         out[name] = {'frames': frames, 'fps': a.get('fps')}
+        if not a.get('loop'):
+            out[name]['loop'] = False
+    return out
+
+
+def _animation_ends(el: Element, script: SceneScript, prefix: str) -> List[dict]:
+    """The qg:on-animation-end handlers of a character or a prefab, each naming one of its animations."""
+    names = set(_animations(el)) | {a for st in el.find_all('state') for a in _animations(st)}
+    out = []
+    for i, h in enumerate(el.find_all('on-animation-end')):
+        if h.get('name') not in names:
+            raise GameCompileError(f'<qg:on-animation-end name="{h.get("name")}">: no qg:animation of that name here '
+                                   f'(it has: {", ".join(sorted(names)) or "none"})', h.line)
+        out.append({'name': h.get('name'),
+                    'handler': compile_handler(script, f'{prefix}_animation_end_{i}', h.children, h.line)})
     return out
 
 

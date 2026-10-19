@@ -26,6 +26,8 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 		var animator := Animator.new()
 		animator.name = "Animator"
 		animator.setup(sprite, prefab["animations"])
+		animator.ends = prefab.get("on_animation_end", [])
+		animator.caller = P
 		add_child(animator)
 		animator.play("walk")
 	var shape := CollisionShape2D.new()

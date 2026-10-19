@@ -9,7 +9,7 @@ smoothing and outlined, like scripts/art/keep.py.
 - delvers.png, 24x24 frames: for the first delver (rust) and then the second
   (blue), ten each: 0 idle, 1-2 walking (to the right), 3-4 walking up, 5-6
   walking down, 7 the sword swung right, 8 up, 9 down; then 20-22 a skeleton
-  walking, 23-25 a bat
+  walking, 23-25 a bat, 26-28 a skeleton falling to a heap of bones
 
     python scripts/art/delve.py
 CC0.
@@ -267,6 +267,35 @@ def skeleton(step):
     return outlined(im)
 
 
+def collapse(stage):
+    """A slain skeleton: 0 buckling, 1 falling apart, 2 a heap of bones."""
+    im = Image.new('RGBA', (24, 24), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    if stage == 0:
+        d.line([(9, 17), (11, 21)], fill=BONE, width=2)          # the knees give
+        d.line([(15, 17), (13, 21)], fill=BONE, width=2)
+        d.rectangle([9, 12, 15, 17], fill=BONE_D)
+        d.line([(9, 14), (15, 14)], fill=BONE)
+        d.line([(8, 13), (5, 18)], fill=BONE, width=2)
+        d.line([(16, 13), (19, 18)], fill=BONE, width=2)
+        d.ellipse([8, 5, 16, 13], fill=BONE)
+        d.rectangle([10, 8, 11, 9], fill=(150, 40, 40))         # the glow fades
+        d.rectangle([13, 8, 14, 9], fill=(150, 40, 40))
+    elif stage == 1:
+        for (x0, y0, x1, y1) in ((5, 19, 10, 17), (14, 18, 19, 20), (8, 21, 13, 21), (11, 15, 16, 16)):
+            d.line([(x0, y0), (x1, y1)], fill=BONE, width=2)
+        d.rectangle([9, 13, 14, 16], fill=BONE_D)
+        d.ellipse([12, 8, 19, 14], fill=BONE)                    # the skull rolls
+        d.point([(14, 11), (17, 11)], fill=OUTLINE)
+    else:
+        for (x0, y0, x1, y1) in ((4, 21, 11, 19), (12, 20, 20, 21), (7, 18, 15, 19), (9, 21, 17, 18)):
+            d.line([(x0, y0), (x1, y1)], fill=BONE, width=2)
+        d.ellipse([9, 13, 16, 19], fill=BONE)                    # the skull on top of the heap
+        d.point([(11, 16), (14, 16)], fill=OUTLINE)
+        d.line([(12, 18), (13, 18)], fill=OUTLINE)
+    return outlined(im)
+
+
 def bat(wing):
     im = Image.new('RGBA', (24, 24), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
@@ -291,7 +320,8 @@ def main():
         sheet.paste(t, (i * 18, 0))
     sheet.save(OUT / 'crypt.png', optimize=True)
     frames = (delver_frames(PALETTES['rust']) + delver_frames(PALETTES['blue'])
-              + [skeleton(0), skeleton(1), skeleton(-1), bat(0), bat(1), bat(2)])
+              + [skeleton(0), skeleton(1), skeleton(-1), bat(0), bat(1), bat(2), collapse(0), collapse(1),
+                 collapse(2)])
     sheet = Image.new('RGBA', (24 * len(frames), 24))
     for i, f in enumerate(frames):
         sheet.paste(f, (i * 24, 0))

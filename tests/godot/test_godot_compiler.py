@@ -410,6 +410,36 @@ class TestScenesMapAndGameState:
                                   'if="{true}" /></qg:scene>\n'))
         assert 'if= is not for controller="map"' in e.message
 
+    def test_animations_that_play_once(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:prefab name="Pop" tag="pop" sheet="k" frame="1" hitbox="8x8">
+    <qg:animation name="walk" frames="1,2,3" fps="30" loop="false" />
+    <qg:on-animation-end name="walk"><qg:destroy target="me" /></qg:on-animation-end>
+  </qg:prefab>
+  <qg:scene name="main">
+    <qg:character id="hero" controller="topdown" sheet="c" x="10" y="10" hitbox="12x16">
+      <qg:animation name="idle" frames="0" />
+      <qg:animation name="wave" frames="1,2" loop="false" />
+      <qg:on-animation-end name="wave"><qg:play-animation name="" /></qg:on-animation-end>
+    </qg:character>
+    <qg:timer after="1"><qg:play-animation target="hero" name="wave" /></qg:timer>
+  </qg:scene>
+'''))
+        data = json.loads((out / 'game.json').read_text())
+        pop, hero = data['prefabs']['Pop'], data['scenes']['main']['nodes'][0]
+        assert pop['animations']['walk'] == {'frames': [1, 2, 3], 'fps': 30.0, 'loop': False}
+        assert hero['animations']['idle'] == {'frames': [0], 'fps': 8.0}            # looping: as before
+        assert pop['on_animation_end'] == [{'name': 'walk', 'handler': '_Pop_on_animation_end_0'}]
+        assert hero['on_animation_end'] == [{'name': 'wave', 'handler': '_on_hero_animation_end_0'}]
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.play_animation(get_node("hero"), "wave")' in script and 'Q.play_animation(me, "")' in script
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:character id="h" controller="topdown" sheet="c" '
+                                  'x="0" y="0" hitbox="8x8"><qg:animation name="idle" frames="0" />'
+                                  '<qg:on-animation-end name="die" /></qg:character></qg:scene>\n'))
+        assert '<qg:on-animation-end name="die">: no qg:animation of that name here (it has: idle)' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:timer after="1"><qg:play-animation name="dance" />'
+                                  '</qg:timer></qg:scene>\n'))
+        assert '<qg:play-animation name="dance">: no qg:animation of that name in the game' in e.message
+
     def test_a_character_made_of_parts(self, tmp_path):
         out = build(tmp_path, game('''  <qg:scene name="main">
     <qg:character id="hero" controller="behavior" sheet="c" x="10" y="10" hitbox="12x16">

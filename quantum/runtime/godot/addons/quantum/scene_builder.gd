@@ -92,6 +92,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 					if node_spec.get("at_method") != null:
 						start = str(scene.call(node_spec["at_method"]))
 					walker.place(start)
+					_animation_ends(walker, node_spec, scene)
 					Q.apply_gd(walker, node_spec.get("gd"))
 					characters[node_spec["id"]] = walker
 					scene.add_child(walker)
@@ -99,6 +100,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 					if node_spec.get("if") != null and not scene.call(node_spec["if"]):
 						continue
 					var body := _character(node_spec, game, scene)
+					_animation_ends(body, node_spec, scene)
 					Q.apply_gd(body, node_spec.get("gd"))
 					characters[node_spec["id"]] = body
 					scene.add_child(body)
@@ -299,6 +301,14 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 	body.add_child(sensor)
 	body.wire(sensor, node_spec, scene, sprite)
 	return body
+
+
+# A character's qg:on-animation-end handlers, which are the scene's.
+static func _animation_ends(body: Node, node_spec: Dictionary, scene: Node) -> void:
+	var animator = body.get_node_or_null("Animator")
+	if animator != null:
+		animator.ends = node_spec.get("on_animation_end", [])
+		animator.caller = scene
 
 
 static func _sprite(texture: Texture2D, tile: Array, frame: int) -> Sprite2D:

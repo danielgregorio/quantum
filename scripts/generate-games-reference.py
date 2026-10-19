@@ -238,7 +238,8 @@ def build() -> str:
           'map-path', 'camera', 'hud', 'counter', 'text', 'bar', 'menu', 'button', 'field', 'lobby']),
         ('Handlers', 'Where the logic goes: actions and statements, with `me` and `other` '
          '(`cursor` and `other` in qg:on-select).',
-         ['on-collision', 'on-hit', 'on-fall', 'on-tile', 'on-ko', 'on-input', 'on-select', 'on-damage', 'on-death']),
+         ['on-collision', 'on-hit', 'on-fall', 'on-tile', 'on-ko', 'on-input', 'on-select', 'on-damage', 'on-death',
+          'on-animation-end']),
         ('Actions', 'What a handler can do, besides `q:set`, `q:if`, `q:loop`, `q:call` and `q:return`.',
          list(ACTIONS)),
     ]
