@@ -223,7 +223,7 @@ func _jump(p: Dictionary) -> void:
 	if not Q.tapped(_a(str(p["action"]))):
 		return
 	if _about["in"] == "water":
-		velocity.y = -_jump_speed * 0.55   # in water a jump is a stroke, as often as it is pressed
+		velocity.y = -_jump_speed * 0.65   # in water a jump is a stroke, as often as it is pressed
 		return
 	if _coyote > 0:
 		_coyote = 0

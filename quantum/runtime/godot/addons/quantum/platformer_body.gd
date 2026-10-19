@@ -69,6 +69,7 @@ var _ticks: int = 0
 var _moving: Vector2 = Vector2.ZERO
 var _tiles := TileSense.new()   # the kinds of the tiles about it, and its qg:on-tile handlers
 var _climbing := false
+var _stroke := false       # rising from a stroke in water: no jump, so letting go does not cut it
 
 
 func setup(spec: Dictionary) -> void:
@@ -252,7 +253,8 @@ func _physics_process(delta: float) -> void:
 
 	if Q.tapped(_a("jump")):
 		if wet:
-			velocity.y = -_jump_speed * 0.55   # in water a jump is a stroke, as often as it is pressed
+			velocity.y = -_jump_speed * 0.65   # in water a jump is a stroke, as often as it is pressed
+			_stroke = true
 		elif _coyote > 0:
 			_jump()
 			_coyote = 0
@@ -264,10 +266,12 @@ func _physics_process(delta: float) -> void:
 	var g := gravity
 	var fall_max := max_fall
 	var holding := Q.held(_a("jump"))
+	if velocity.y >= 0.0:
+		_stroke = false
 	if wet:   # water holds it up: it sinks slowly
 		g *= 0.25
 		fall_max *= 0.35
-	elif variable_jump and velocity.y < 0.0 and not holding:
+	elif variable_jump and velocity.y < 0.0 and not holding and not _stroke:
 		if jump_cut <= 0.0:
 			g *= 3.0
 		elif _jump_was_held:
@@ -326,6 +330,7 @@ func _climb(dir: int, climb: float) -> void:
 
 func _jump() -> void:
 	velocity.y = -_jump_speed
+	_stroke = false
 	if jump_sound != "":
 		Q.play(jump_sound)
 

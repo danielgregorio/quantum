@@ -112,6 +112,22 @@ def test_a_jump_in_water_is_a_stroke(pool, godot):
     assert stroke < sinking                                    # up it goes, though nothing is under it
 
 
+# a pool two tiles deep in the ground (its top at row 5, y=90; its floor row 7)
+DEEP = ['2,2,2,4,4,4,4,4,2,2,2,2,2,2,2'] * 2 + ['2,2,2,2,2,2,2,2,2,2,2,2,2,2,2']
+
+
+@pytest.fixture(scope='module')
+def deep(tmp_path_factory, godot):
+    return build(tmp_path_factory, godot, 'deep', DEEP, [platformer('hero', 99, y=60)])
+
+
+def test_a_stroke_from_the_bottom_gets_out_of_the_water(deep, godot):
+    # sunk to the floor, it swims right with one tap of jump and climbs out onto the bank (top y=90)
+    assert at(deep, godot, 120, [])['nodes']['hero']['y'] == pytest.approx(118, abs=0.5)
+    out = at(deep, godot, 240, [('right', 120, 240), ('jump', 125, 126)])['nodes']['hero']
+    assert out['x'] > 144 and out['y'] == pytest.approx(82, abs=0.5)
+
+
 # --- ice ---
 
 RINK = ['2,2,2,2,2,5,5,5,5,5,5,5,5,5,5']
