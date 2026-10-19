@@ -50,14 +50,21 @@ impl MessageRouter {
                 requested_by,
                 held_by,
             } => {
+                let problem = format!("port {} for {}", port, requested_by.name);
+                let Some(held) = self.news(problem).await else {
+                    return Ok(());
+                };
                 // Forward to synapse for analysis
                 self.forward_to_synapse(msg.clone(), from_conn).await?;
                 // Notify the dashboard immediately
                 self.notify_dashboard(
                     "Port Conflict Detected",
-                    &format!(
-                        "{} could not bind port {}: already held by {}",
-                        requested_by.name, port, held_by.name
+                    &with_held(
+                        format!(
+                            "{} could not bind port {}: already held by {}",
+                            requested_by.name, port, held_by.name
+                        ),
+                        held,
                     ),
                     Severity::Warning,
                 )
@@ -67,11 +74,14 @@ impl MessageRouter {
             HiveMessage::LogAnomaly {
                 service, severity, ..
             } => {
+                let Some(held) = self.news(format!("anomaly {}", service)).await else {
+                    return Ok(());
+                };
                 self.forward_to_synapse(msg.clone(), from_conn).await?;
                 if severity.requires_notification() {
                     self.notify_dashboard(
                         "Log Anomaly Detected",
-                        &format!("Issues detected in {}", service),
+                        &with_held(format!("Issues detected in {}", service), held),
                         *severity,
                     )
                     .await?;
@@ -81,10 +91,13 @@ impl MessageRouter {
             HiveMessage::ServiceCrash {
                 service, exit_code, ..
             } => {
+                let Some(held) = self.news(format!("crash {}", service)).await else {
+                    return Ok(());
+                };
                 self.forward_to_synapse(msg.clone(), from_conn).await?;
                 self.notify_dashboard(
                     "Service Crashed",
-                    &format!("{} exited with code {}", service, exit_code),
+                    &with_held(format!("{} exited with code {}", service, exit_code), held),
                     Severity::Error,
                 )
                 .await?;
@@ -95,16 +108,25 @@ impl MessageRouter {
                 usage_percent,
                 ..
             } => {
+                let Some(held) = self.news(format!("disk {}", mount.display())).await else {
+                    return Ok(());
+                };
                 self.forward_to_synapse(msg.clone(), from_conn).await?;
                 self.notify_dashboard(
                     "Low Disk Space",
-                    &format!("{} is {:.1}% full", mount.display(), usage_percent),
+                    &with_held(
+                        format!("{} is {:.1}% full", mount.display(), usage_percent),
+                        held,
+                    ),
                     Severity::Warning,
                 )
                 .await?;
             }
 
             HiveMessage::MemoryPressure { .. } => {
+                if self.news("memory".to_string()).await.is_none() {
+                    return Ok(());
+                }
                 self.forward_to_synapse(msg.clone(), from_conn).await?;
                 self.notify_dashboard(
                     "Memory Pressure",
@@ -356,6 +378,36 @@ impl MessageRouter {
             debug!("Synapse not connected, skipping analysis");
         }
         Ok(())
+    }
+
+    /// Whether a problem a nerve reports is news: its first report, or the
+    /// first since PROBLEM_REPORT_INTERVAL. A service in a restart loop
+    /// crashes every few seconds, and each crash would queue up the model
+    /// and stack the same notice and offers on every dashboard again. Some
+    /// (how many reports of it were held since it was last passed on) when
+    /// it is news, None when this report is held too.
+    async fn news(&self, problem: String) -> Option<u32> {
+        let mut state = self.state.write().await;
+        let (now, interval) = (std::time::Instant::now(), state.problem_report_interval);
+        state
+            .reported_problems
+            .retain(|_, (at, held)| *held > 0 || now.duration_since(*at) < interval);
+        match state.reported_problems.get_mut(&problem) {
+            Some((at, held)) if now.duration_since(*at) < interval => {
+                *held += 1;
+                debug!("Holding a repeated report: {}", problem);
+                None
+            }
+            Some((at, held)) => {
+                let since = *held;
+                (*at, *held) = (now, 0);
+                Some(since)
+            }
+            None => {
+                state.reported_problems.insert(problem, (now, 0));
+                Some(0)
+            }
+        }
     }
 
     async fn sent_by(&self, conn: u64, component_type: ComponentType) -> bool {
@@ -676,6 +728,20 @@ impl MessageRouter {
 /// the model or flood the dashboard.
 const PACKAGE_OFFER_INTERVAL: std::time::Duration = std::time::Duration::from_secs(600);
 
+/// How long a problem a nerve reported stands before the same problem is
+/// passed on again (see MessageRouter::news).
+pub(crate) const PROBLEM_REPORT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(300);
+
+/// A notice's body, and how many times the problem was held since it was
+/// last reported.
+fn with_held(body: String, held: u32) -> String {
+    match held {
+        0 => body,
+        1 => format!("{} (once more since the last report)", body),
+        n => format!("{} ({} more times since the last report)", body, n),
+    }
+}
+
 /// Parent, grandparent... of `pid`, from /proc, up to (not including) init.
 fn process_ancestry(pid: u32) -> Vec<u32> {
     let mut ancestors = Vec::new();
@@ -861,6 +927,72 @@ mod tests {
             }
             other => panic!("expected Notification, got {}", other.type_name()),
         }
+    }
+
+    fn crash(service: &str) -> HiveMessage {
+        HiveMessage::ServiceCrash {
+            service: service.to_string(),
+            exit_code: 1,
+            restart_count: 0,
+            logs: vec![],
+        }
+    }
+
+    /// The body of the next Notification, None when nothing more arrived.
+    async fn next_notice(rx: &mut mpsc::Receiver<HiveMessage>) -> Option<String> {
+        tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
+        match rx.try_recv().ok()? {
+            HiveMessage::Notification { body, .. } => Some(body),
+            other => panic!("expected Notification, got {}", other.type_name()),
+        }
+    }
+
+    #[tokio::test]
+    async fn a_crash_loop_is_reported_once_until_the_interval_passes_then_with_what_was_held() {
+        // Found in the VM lab: a unit with Restart=on-failure crashed every
+        // second, and every crash reached the model and stacked "Service
+        // Crashed" and its offers on the dashboard again.
+        let state = new_state().await;
+        let (_synapse_conn, mut synapse_rx) = register(&state, ComponentType::Synapse).await;
+        let (_dashboard_conn, mut dashboard_rx) = register(&state, ComponentType::Dashboard).await;
+        let (nerve_conn, _nerve_rx) = register(&state, ComponentType::NerveJournal).await;
+        let router = MessageRouter::new(state.clone());
+
+        for _ in 0..3 {
+            router
+                .route(crash("nginx.service"), nerve_conn)
+                .await
+                .unwrap();
+        }
+        assert_eq!(
+            next_notice(&mut dashboard_rx).await.as_deref(),
+            Some("nginx.service exited with code 1")
+        );
+        assert_eq!(next_notice(&mut dashboard_rx).await, None, "held");
+        assert!(synapse_rx.try_recv().is_ok());
+        assert!(synapse_rx.try_recv().is_err(), "the model is asked once");
+
+        // another service's crash is news
+        router
+            .route(crash("postgresql.service"), nerve_conn)
+            .await
+            .unwrap();
+        assert_eq!(
+            next_notice(&mut dashboard_rx).await.as_deref(),
+            Some("postgresql.service exited with code 1")
+        );
+
+        // once the interval has passed, the loop is reported again, with
+        // how many crashes were held
+        state.write().await.problem_report_interval = std::time::Duration::ZERO;
+        router
+            .route(crash("nginx.service"), nerve_conn)
+            .await
+            .unwrap();
+        assert_eq!(
+            next_notice(&mut dashboard_rx).await.as_deref(),
+            Some("nginx.service exited with code 1 (2 more times since the last report)")
+        );
     }
 
     fn sample_suggestion(id: u32, action: Option<Action>) -> Suggestion {
