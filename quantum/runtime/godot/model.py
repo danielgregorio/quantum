@@ -214,7 +214,7 @@ def _read_element(element: ET.Element, parent_tag: str) -> Element:
         return node
     _no_raw_text(element, f'<qg:{tag}>')
     child_parent = 'handler' if tag in ('on-collision', 'on-fall', 'on-input', 'on-select', 'on-hit', 'on-ko', 'on-death',
-                                        'on-animation-end',
+                                        'on-tile', 'on-animation-end',
                                         'on-damage', 'timer', 'button', 'on-end') else tag
     node.children = _read_children(element, child_parent, f'<qg:{tag}>')
     return node

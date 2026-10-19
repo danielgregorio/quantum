@@ -8,19 +8,22 @@ a rectangle at its centre, a tile object (one with a gid) at the centre of
 its tile, whose y in Tiled is the bottom edge.
 
 One tileset per map, and no flipped tiles: the map's tile numbers become
-the same CSV rows an inline qg:tilemap holds (0 empty, n = tile n-1).
+the same CSV rows an inline qg:tilemap holds (0 empty, n = tile n-1). A tile
+of the tileset (embedded, or an external .tsx) with a class, or a `kind`
+property, of ladder, water, ice or hurt is a tile of that kind (qg:tile kind=).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 from xml.etree import ElementTree as ET
 
 from quantum.runtime.godot.errors import GameCompileError
 
 _FLIP_BITS = 0xF0000000
+KINDS = ('ladder', 'water', 'ice', 'hurt')
 
 
 @dataclass
@@ -46,6 +49,7 @@ class TiledMap:
     tile_height: int
     layers: List[TiledLayer] = field(default_factory=list)
     objects: List[TiledObject] = field(default_factory=list)
+    kinds: Dict[int, str] = field(default_factory=dict)   # tile frame -> ladder, water, ice or hurt
 
 
 def read_tmx(path: Path, line: Optional[int] = None) -> TiledMap:
@@ -62,6 +66,24 @@ def read_tmx(path: Path, line: Optional[int] = None) -> TiledMap:
     if len(tilesets) != 1:
         raise GameCompileError(f'{where}one tileset per map ({len(tilesets)} found)', line)
     firstgid = int(tilesets[0].get('firstgid', 1))
+    tileset = tilesets[0]
+    if tileset.get('source'):   # an external .tsx, next to the map
+        try:
+            tileset = ET.parse(str(path.parent / tileset.get('source'))).getroot()
+        except (OSError, ET.ParseError) as e:
+            raise GameCompileError(f'{where}cannot read the tileset {tileset.get("source")!r} ({e})', line)
+    for tile in tileset.findall('tile'):
+        kind = tile.get('class') or tile.get('type')
+        kind = kind if kind in KINDS else None          # a class of the game's own is not a kind
+        props = tile.find('properties')
+        for prop in (props.findall('property') if props is not None else []):
+            if prop.get('name') == 'kind':
+                kind = prop.get('value')
+                if kind not in KINDS:
+                    raise GameCompileError(f'{where}tile {tile.get("id")} is of kind {kind!r}: a kind is one of '
+                                           f'{", ".join(KINDS)}', line)
+        if kind:
+            tmap.kinds[int(tile.get('id'))] = kind
 
     for layer in root.findall('layer'):
         data = layer.find('data')
