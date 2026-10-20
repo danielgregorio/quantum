@@ -15,16 +15,15 @@ use crate::canvas::{Band, Font};
 use crate::world::Key;
 use serde_json::{json, Map, Value};
 
-/// Cells across and down at the scene's size (320x180 at 6x10 a cell).
-pub const COLS: usize = 53;
-pub const ROWS: usize = 17;
 /// The title bar is the first row, the help line the last; a flash takes
 /// one more under the title.
 const TITLE_ROWS: usize = 1;
 const HELP_ROWS: usize = 1;
-/// The console's breakpoints in cells, the same as the web's in pixels
-/// (a cell is 6 px): a 53-cell page is a phone's width, below `sm`.
-const SM_COLS: usize = 106;
+/// The console's `sm` breakpoint, in columns (UI-3): below it an `hbox`
+/// that says `stack_below` stacks. At the scene's size the page has 53
+/// columns, a phone's width; at the fine level, drawn on the canvas of two
+/// pixels to the scene's one, it has 106.
+const SM_COLS: usize = 80;
 
 const BG: u32 = 0xFF12_1228;
 const TITLE_BG: u32 = 0xFFFF_D34D;
@@ -79,6 +78,10 @@ struct Node {
 pub struct Window {
     pub title: String,
     pub flash: Option<(String, bool)>,
+    /// Cells across and down: the canvas it is drawn on, in cells of the
+    /// font (53 by 18 at the scene's size; twice that at the fine level).
+    pub cols: usize,
+    pub rows: usize,
     nodes: Vec<Node>,
     focusables: Vec<usize>,
     focus: usize,
@@ -156,10 +159,13 @@ fn cut(text: &str, width: usize) -> String {
 }
 
 impl Window {
-    /// A page as `quantum pixel` sends it: its title, flash and view tree.
-    pub fn new(page: &Value) -> Window {
+    /// A page as `quantum pixel` sends it (its title, flash and view
+    /// tree), laid out in `cols` by `rows` cells.
+    pub fn new(page: &Value, cols: usize, rows: usize) -> Window {
         let mut w = Window {
             title: text_of(page.get("title")),
+            cols: cols.max(12),
+            rows: rows.max(4),
             flash: page
                 .get("flash")
                 .and_then(Value::as_str)
@@ -289,9 +295,18 @@ impl Window {
 
     // ---------------------------------------------------------------- layout
 
+    /// The canvas changed size (the level changed): the page flows again
+    /// into the new cells, the focus stays where it was.
+    pub fn resize(&mut self, cols: usize, rows: usize) {
+        self.cols = cols.max(12);
+        self.rows = rows.max(4);
+        self.layout();
+        self.reveal();
+    }
+
     fn layout(&mut self) {
         self.focusables.clear();
-        let h = self.place(0, 0, 0, COLS);
+        let h = self.place(0, 0, 0, self.cols);
         self.content_height = h;
         let rows = self.content_rows();
         if self.scroll + rows > h.max(rows) {
@@ -307,7 +322,9 @@ impl Window {
 
     /// The rows of content the screen shows at once.
     fn content_rows(&self) -> usize {
-        ROWS - self.content_top() - HELP_ROWS
+        self.rows
+            .saturating_sub(self.content_top() + HELP_ROWS)
+            .max(1)
     }
 
     fn is_focusable(kind: &str, props: &Map<String, Value>) -> bool {
@@ -397,7 +414,7 @@ impl Window {
             }
             "hbox" => {
                 let stack = text_of(props.get("stack_below"));
-                if !stack.is_empty() && COLS < SM_COLS {
+                if !stack.is_empty() && self.cols < SM_COLS {
                     self.stack(&children, x, y, w, Self::gap_rows(&props))
                 } else {
                     self.flow(&children, x, y, w)
@@ -647,11 +664,58 @@ impl Window {
         let r = self.nodes[n].rect;
         let (top, bottom) = (r.y, r.y + r.h.max(1));
         let rows = self.content_rows();
-        if top < self.scroll {
-            self.scroll = top;
-        } else if bottom > self.scroll + rows {
-            self.scroll = bottom - rows;
+        // in view, with a row of what is around it when there is room
+        if top < self.scroll + 1 {
+            self.scroll = top.saturating_sub(1);
+        } else if bottom + 1 > self.scroll + rows {
+            self.scroll = (bottom + 1).saturating_sub(rows);
         }
+        self.scroll = self.scroll.min(self.content_height.saturating_sub(rows));
+    }
+
+    /// Whether that key (Up, Down, Home or End) is the page's to move the
+    /// focus with: what has the focus does nothing with it. A button, a
+    /// link, a box or a tab bar take none of them; a one-line field takes
+    /// Home and End for its cursor and leaves Up and Down; a radio, a
+    /// select, a table and a text area take them all.
+    fn vertical_key_is_free(&self, key: Key) -> bool {
+        match self.focused() {
+            None => true,
+            Some(n) => match self.nodes[n].kind.as_str() {
+                "button" | "link" | "checkbox" | "switch" | "tabpanel" => true,
+                "input" => {
+                    matches!(key, Key::Up | Key::Down)
+                        && text_of(self.nodes[n].props.get("rows")).is_empty()
+                }
+                _ => false,
+            },
+        }
+    }
+
+    /// Up and Down go to the element before and after (no wrap: a list
+    /// ends), Home and End to the first and the last; with nothing to
+    /// focus, they scroll.
+    fn move_vertically(&mut self, key: Key) -> bool {
+        let count = self.focusables.len();
+        if count == 0 {
+            let rows = self.content_rows();
+            let max = self.content_height.saturating_sub(rows);
+            self.scroll = match key {
+                Key::Up => self.scroll.saturating_sub(1),
+                Key::Down => (self.scroll + 1).min(max),
+                Key::Home => 0,
+                _ => max,
+            };
+            return true;
+        }
+        self.focus = match key {
+            Key::Up => self.focus.saturating_sub(1),
+            Key::Down => (self.focus + 1).min(count - 1),
+            Key::Home => 0,
+            _ => count - 1,
+        };
+        self.reveal();
+        true
     }
 
     /// The form an element belongs to, if any.
@@ -814,6 +878,9 @@ impl Window {
             Key::PageUp => {
                 self.scroll = self.scroll.saturating_sub(self.content_rows());
                 return true;
+            }
+            Key::Up | Key::Down | Key::Home | Key::End if self.vertical_key_is_free(key) => {
+                return self.move_vertically(key);
             }
             _ => {}
         }
@@ -1204,6 +1271,8 @@ impl Window {
             "title": self.title,
             "flash": self.flash.as_ref().map(|(f, _)| f.clone()),
             "shown": self.shown,
+            "cols": self.cols,
+            "rows": self.rows,
             "focus": self.focus,
             "items": items,
             "texts": self.texts(),
@@ -1217,14 +1286,17 @@ impl Window {
     // ---------------------------------------------------------------- drawing
 
     /// The page over the scene: the title bar, the content from the
-    /// scroll, the help line.
+    /// scroll, the help line. Drawn in the band's own pixels (at the fine
+    /// level the canvas has twice the scene's, and the page twice the
+    /// cells), so the font is never a block.
     pub fn draw(&self, b: &mut Band, font: &Font, tick: u64) {
         let (cw, ch) = (font.cell.0 as i32, font.cell.1 as i32);
-        b.fill_rect(0, 0, COLS as u32 * cw as u32, ROWS as u32 * ch as u32, BG);
+        let (cols, rows) = (self.cols, self.rows);
+        b.fill_rect(0, 0, cols as u32 * cw as u32, rows as u32 * ch as u32, BG);
         // the title bar
-        b.fill_rect(0, 0, COLS as u32 * cw as u32, ch as u32, TITLE_BG);
-        b.text(font, &cut(&self.title, COLS - 12), cw, 1, INK);
-        b.text(font, "Esc fecha", (COLS as i32 - 10) * cw, 1, INK);
+        b.fill_rect(0, 0, cols as u32 * cw as u32, ch as u32, TITLE_BG);
+        b.text(font, &cut(&self.title, cols - 12), cw, 1, INK);
+        b.text(font, "Esc fecha", (cols as i32 - 10) * cw, 1, INK);
         // the flash: what the action said, under the title
         if let Some((flash, error)) = &self.flash {
             let y = TITLE_ROWS as i32 * ch;
@@ -1233,17 +1305,31 @@ impl Window {
             } else {
                 (OK_BG, OK_TEXT)
             };
-            b.fill_rect(0, y, COLS as u32 * cw as u32, ch as u32, bg);
-            b.text(font, &cut(flash, COLS - 2), cw, y + 1, color);
+            b.fill_rect(0, y, cols as u32 * cw as u32, ch as u32, bg);
+            b.text(font, &cut(flash, cols - 2), cw, y + 1, color);
         }
         // the content, by rows
         let focused = self.focused();
         let blink = (tick / 30) % 2 == 0;
         self.draw_node(0, b, font, focused, blink);
         // the help line
-        let hy = (ROWS as i32 - 1) * ch;
-        b.fill_rect(0, hy, COLS as u32 * cw as u32, ch as u32, BOX_BG);
-        b.text(font, &cut(&self.help(), COLS - 2), cw, hy + 1, TEXT);
+        // a scrollbar at the right edge, when the page is longer than the screen
+        let content_rows = self.content_rows();
+        if self.content_height > content_rows {
+            let x = cols as i32 * cw - 2;
+            let y0 = self.content_top() as i32 * ch;
+            let track = content_rows as i32 * ch;
+            b.fill_rect(x, y0, 2, track as u32, BOX_BG);
+            let thumb = ((track as f32 * content_rows as f32 / self.content_height as f32).round()
+                as i32)
+                .clamp(ch, track);
+            let room = (self.content_height - content_rows) as f32;
+            let at = y0 + ((track - thumb) as f32 * self.scroll as f32 / room).round() as i32;
+            b.fill_rect(x, at, 2, thumb as u32, MUTED);
+        }
+        let hy = (rows as i32 - 1) * ch;
+        b.fill_rect(0, hy, cols as u32 * cw as u32, ch as u32, BOX_BG);
+        b.text(font, &cut(&self.help(), cols - 2), cw, hy + 1, TEXT);
     }
 
     /// A row of the content on the screen, or None when scrolled out.
@@ -1692,7 +1778,7 @@ mod tests {
 
     #[test]
     fn the_focus_starts_on_the_first_field_and_tab_goes_round() {
-        let mut w = Window::new(&page());
+        let mut w = Window::new(&page(), 53, 18);
         let obs = w.observe();
         assert_eq!(obs["items"][0]["bind"], "titulo");
         assert_eq!(obs["items"][0]["focus"], true);
@@ -1715,7 +1801,7 @@ mod tests {
 
     #[test]
     fn typing_edits_the_field_with_a_cursor_and_enter_submits_the_form() {
-        let mut w = Window::new(&page());
+        let mut w = Window::new(&page(), 53, 18);
         for c in "ligar".chars() {
             w.key(Key::Char(c), 0);
         }
@@ -1773,7 +1859,7 @@ mod tests {
 
     #[test]
     fn buttons_click_links_navigate_tables_act_by_row_and_esc_closes() {
-        let mut w = Window::new(&page());
+        let mut w = Window::new(&page(), 53, 18);
         keys(
             &mut w,
             &[Key::Tab, Key::Tab, Key::Tab, Key::Tab, Key::Enter],
@@ -1802,7 +1888,7 @@ mod tests {
     #[test]
     fn a_search_field_says_its_change_after_a_pause() {
         let page = json!({"title": "Busca", "view": [{"id": 1, "type": "input", "props": {"bind": "q", "search": true, "delay": 300}}]});
-        let mut w = Window::new(&page);
+        let mut w = Window::new(&page, 53, 18);
         w.key(Key::Char('b'), 10);
         assert!(w.take_events().is_empty());
         assert!(!w.tick(20));
@@ -1816,7 +1902,7 @@ mod tests {
         let page = json!({"title": "T", "view": [{"type": "tabpanel", "props": {}, "children": [
             {"type": "tab", "props": {"title": "First"}, "children": [{"type": "text", "props": {"text": "one"}}]},
             {"type": "tab", "props": {"title": "Second"}, "children": [{"type": "text", "props": {"text": "two"}}]}]}]});
-        let mut w = Window::new(&page);
+        let mut w = Window::new(&page, 53, 18);
         let texts = w.texts();
         assert!(texts.contains(&"one".to_string()) && !texts.contains(&"two".to_string()));
         w.key(Key::Right, 0);

@@ -115,6 +115,18 @@ impl Band<'_> {
         self.pixels.fill(color);
     }
 
+    /// The same rows, addressed in canvas pixels (scale 1): a page on the
+    /// screen draws its font pixel for pixel at every level.
+    pub fn unscaled(&mut self) -> Band<'_> {
+        Band {
+            pixels: &mut *self.pixels,
+            width: self.width,
+            y0: self.y0,
+            rows: self.rows,
+            scale: 1,
+        }
+    }
+
     /// One canvas pixel, `color` over what is there.
     #[inline]
     fn put(&mut self, px: i32, py: i32, color: u32, factor: u32) {

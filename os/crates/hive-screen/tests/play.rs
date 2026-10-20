@@ -339,3 +339,44 @@ fn a_page_on_the_screen_is_typed_into_and_answers_with_events() {
     assert!(find(&obs, "close").is_some());
     assert_eq!(obs["window"], Value::Null);
 }
+
+#[test]
+fn the_page_flows_again_when_the_level_changes_and_keeps_its_focus() {
+    let mut s = Screen::start();
+    let obs = s.request(json!({"op": "show", "page": tarefas()}));
+    assert_eq!(obs["window"]["cols"], 53);
+    assert_eq!(obs["window"]["rows"], 18);
+    // Down from the one-line field goes to the next element (the select, which
+    // then takes Down for its options: Tab leaves it)
+    let obs = s.request(json!({"op": "act", "tap": ["down"], "ticks": 1}));
+    assert_eq!(obs["window"]["items"][1]["bind"], "prioridade");
+    assert_eq!(obs["window"]["items"][1]["focus"], true);
+    let obs = s.request(json!({"op": "act", "tap": ["down", "tab"], "ticks": 1}));
+    assert_eq!(
+        obs["window"]["items"][1]["value"], "baixa",
+        "Down chose the next option"
+    );
+    assert_eq!(obs["window"]["items"][2]["bind"], "urgente");
+    assert_eq!(obs["window"]["items"][2]["focus"], true);
+    // the fine level: twice the pixels, twice the cells, the same focus
+    let obs = s.request(json!({"op": "level", "level": 2}));
+    assert_eq!(obs["window"]["cols"], 106);
+    assert_eq!(obs["window"]["rows"], 36);
+    assert_eq!(obs["window"]["items"][2]["focus"], true);
+    for bands in [1, 4] {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/screens/window-fine.png");
+        let v = s.request(json!({"op": "frame", "expect": path, "bands": bands}));
+        assert_eq!(v["ok"], true, "the fine page in {} bands: {}", bands, v);
+    }
+    let obs = s.request(json!({"op": "level", "level": 0}));
+    assert_eq!(obs["window"]["cols"], 53);
+    assert_eq!(obs["window"]["items"][2]["focus"], true);
+    // typed text is the same whatever the layout: the play driver types characters
+    s.request(json!({"op": "act", "tap": ["home"], "ticks": 1}));
+    let obs = s.request(json!({"op": "act", "type": "ação", "ticks": 1}));
+    assert_eq!(
+        obs["window"]["items"][0]["focus"], true,
+        "Home went to the first element"
+    );
+    assert_eq!(obs["window"]["items"][0]["value"], "ação");
+}

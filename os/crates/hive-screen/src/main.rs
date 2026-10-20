@@ -164,7 +164,7 @@ fn main() -> Result<()> {
         None
     };
     let mut keyboards = if args.display {
-        input::Keyboards::open()?
+        input::Keyboards::open(input::Layout::detect())?
     } else {
         input::Keyboards::none()
     };
