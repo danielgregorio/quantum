@@ -1,5 +1,70 @@
 # DruidOS Development Log
 
+## 2026-10-20 - Ajustes, mudança: a página pede, a Hive oferece, Enter aprova, o atuador executa
+
+A fatia 5c, pelo caminho A da proposta (o recomendado; o Daniel não disse
+outro): nada que muda o sistema sai da porta da Hive.
+
+**O pedido.** Uma mensagem nova no socket de usuário,
+`HiveMessage::UserRequest { action, reason }`, que qualquer usuário local
+pode mandar e que só aceita os ajustes (`Action::is_a_setting`:
+`SetHostname`, `SetKeyboard`, `SetScreenLevel`; qualquer outra ação é
+recusada com aviso no log). O cortex a transforma numa oferta em nome de
+quem pediu (`offer_request`: notificação de tipo `request`, título "druid
+asks: name the machine forja", campos `user`, `action`, `what`, `count`),
+guardada como qualquer sugestão; quem está diante do console aprova com
+Enter (ou F1 sobre uma página) e o atuador executa pela whitelist.
+
+**O comando `hive`.** O protocolo da Hive é bincode, que o Python não
+fala; em vez de ensinar, o lançador em shell virou um binário Rust
+(`crates/hive-cli`): `hive ajustes` abre a app, `hive apps` lista,
+`hive request set-hostname NOME | set-keyboard LAYOUT [MODELO] |
+set-screen-level auto|plain|effects|fine [--reason TEXTO]` manda o pedido.
+O serviço `ajustes.pedir` da app roda esse comando pela terceira porta,
+`ask`, a única que muda algo, e só pedindo; os botões "Pedir à Hive" das
+abas Máquina, Teclado e Tela chamam ações `q:` que o invocam e mostram a
+resposta no flash.
+
+**As ações, no atuador.** `set-hostname` roda `hostnamectl set-hostname`
+por D-Bus com licença do polkit para `_hive-act`
+(`61-druidos-hive-settings.rules`: só o nome, nada mais do hostnamed).
+O teclado ia pelo `localectl set-x11-keymap`, mas a VM mostrou que o
+localed do Ubuntu recusa ("Setting X11 and console keymaps is not
+supported in Debian"); então `set-keyboard` e `set-screen-level` não
+precisam de root: escrevem ou apagam `keyboard` (`br abnt2`) e
+`screen-level` em `/var/lib/hive/settings`, o `StateDirectory` do
+atuador, legível por todos, e o `/etc/default/keyboard` fica como o
+instalador o deixou. A whitelist ganha os três permits (`qh:allow
+action=` no `hive.q`, dois por minuto) e recusa um valor que o hostnamectl
+não aceitaria ou a tela não leria (rótulo de host; layouts us/br com seus
+modelos; nível 0–2).
+
+**A tela acompanha ao vivo.** Duas vezes por segundo o daemon relê o
+teclado (`Layout::detect`: o ambiente, depois o ajuste da Hive, depois o
+arquivo do sistema; `Keyboards::set_layout`, sem reiniciar) e o arquivo
+de nível (prega ou solta o chooser; `HIVE_SCREEN_LEVEL` no ambiente
+continua mandando), e conta no log e no `status` que manda ao runtime da
+página. Um pedido é evento próprio da cena (`qs:on event="request"`:
+"{user} asks: {what}") e entra no painel de ofertas como qualquer oferta.
+
+**Prova.** Hive lab: `request-hostname.jsonl` (o pedido vira oferta em
+nome do druid, nada corre até aprovar, o atuador recebe `SetHostname`;
+um pedido de `RestartService` nunca vira oferta). Testes unitários:
+validação e descrição das ações, a whitelist fechada e aberta, o socket
+de usuário, as palavras do `hive request`. `tests/apps/test_ajustes.py`:
+`pedir` com a porta `ask` trocada e o clique em "Pedir à Hive" na tela.
+VM: `ajustes-hostname.jsonl` pede nome, teclado e nível como druid,
+aprova cada um com Enter no teclado real, e `hostname` e os dois arquivos
+de ajuste mudam (o `/etc/default/keyboard` não), com a tela relendo o
+teclado ("keyboard layout br (ABNT2)") e o nível ("level 0 pinned by the
+Hive's settings") sem reiniciar. Uma oferta nova toma o foco quando a
+anterior já foi respondida: Enter responde ao que espera.
+
+**O que fica.** A rede (5d, `set-network`, perigosa, Enter duplo, arquivo
+anterior guardado); o teclado do console de texto (tty2), que é do
+`console-setup` do sistema e não da Hive; um limite de pedidos pendentes
+por usuário.
+
 ## 2026-10-20 - Ajustes, leitura: a app, e o runtime Quantum dentro do sistema
 
 A fatia 5b. A app que o Daniel pediu ("uma tela de admin com nome do pc,

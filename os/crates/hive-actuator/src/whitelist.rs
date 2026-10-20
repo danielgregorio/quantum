@@ -7,7 +7,7 @@
 //! can silently drift out of sync with it.
 
 use anyhow::{Context, Result};
-use hive_common::actions::{is_valid_package_name, Action};
+use hive_common::actions::{is_valid_hostname, is_valid_keyboard, is_valid_package_name, Action};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -122,6 +122,14 @@ pub struct MiscRule {
     pub open_url: bool,
     #[serde(default)]
     pub firewall: bool,
+    /// The machine's settings a user may ask for (`<qh:allow action=>`):
+    /// its name, its keyboard, its screen's level.
+    #[serde(default)]
+    pub set_hostname: bool,
+    #[serde(default)]
+    pub set_keyboard: bool,
+    #[serde(default)]
+    pub set_screen_level: bool,
 }
 
 /// Whitelist configuration. Everything defaults to empty/false (deny) —
@@ -257,6 +265,18 @@ impl Whitelist {
 
             Action::AddFirewallRule { .. } => self.config.misc.firewall,
 
+            // The settings: switched on one by one, and never with a value
+            // hostnamectl or localectl would refuse (or take as an option)
+            Action::SetHostname { name } => {
+                self.config.misc.set_hostname && is_valid_hostname(name)
+            }
+            Action::SetKeyboard { layout, model } => {
+                self.config.misc.set_keyboard && is_valid_keyboard(layout, model)
+            }
+            Action::SetScreenLevel { level } => {
+                self.config.misc.set_screen_level && level.map_or(true, |l| l <= 2)
+            }
+
             // System power operations always need explicit permission —
             // there's no config knob for these on purpose.
             Action::Reboot { .. } | Action::Shutdown { .. } | Action::Suspend => false,
@@ -360,6 +380,38 @@ mod tests {
             parents: false,
             mode: None,
         }));
+        assert!(!whitelist.is_allowed(&Action::SetHostname {
+            name: "forja".into()
+        }));
+        assert!(!whitelist.is_allowed(&Action::SetScreenLevel { level: None }));
+    }
+
+    #[test]
+    fn a_setting_needs_its_permit_and_a_value_the_tool_takes() {
+        let mut config = WhitelistConfig::default();
+        config.misc.set_hostname = true;
+        config.misc.set_keyboard = true;
+        config.misc.set_screen_level = true;
+        let whitelist = Whitelist { config };
+        assert!(whitelist.is_allowed(&Action::SetHostname {
+            name: "forja".into()
+        }));
+        assert!(!whitelist.is_allowed(&Action::SetHostname {
+            name: "--help".into()
+        }));
+        assert!(!whitelist.is_allowed(&Action::SetHostname {
+            name: "Forja Nova".into()
+        }));
+        assert!(whitelist.is_allowed(&Action::SetKeyboard {
+            layout: "br".into(),
+            model: "abnt2".into()
+        }));
+        assert!(!whitelist.is_allowed(&Action::SetKeyboard {
+            layout: "br; rm -rf /".into(),
+            model: "".into()
+        }));
+        assert!(whitelist.is_allowed(&Action::SetScreenLevel { level: Some(2) }));
+        assert!(!whitelist.is_allowed(&Action::SetScreenLevel { level: Some(3) }));
     }
 
     #[test]

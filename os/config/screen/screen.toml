@@ -328,6 +328,21 @@ text = "{title}: {body}"
 seconds = 4.0
 
 [[rules]]
+event = "request"
+
+[[rules.actions]]
+kind = "emit"
+particles = "stars"
+at = "bee"
+dx = 8
+dy = 8
+
+[[rules.actions]]
+kind = "say"
+text = "{user} asks: {what}; Enter approves, Escape dismisses"
+seconds = 6.0
+
+[[rules]]
 event = "offer"
 
 [[rules.actions]]

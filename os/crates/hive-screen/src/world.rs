@@ -716,6 +716,15 @@ impl World {
             armed: false,
             outcome: None,
         });
+        // a new offer takes the focus when the one with it is done with:
+        // Enter answers what waits, not what was already answered
+        if self
+            .offers
+            .get(self.focus)
+            .map_or(true, |o| o.outcome.is_some())
+        {
+            self.focus = self.offers.len() - 1;
+        }
         self.events.push(json!({"kind": "offer", "title": title}));
         self.dirty = true;
     }

@@ -19,6 +19,7 @@ members = [
     "crates/hive-dashboard", # TUI panel for notifications/suggestions
     "crates/hive-lab",       # The Hive in a box: drive cortex+synapse without a VM
     "crates/hive-screen",    # The Hive's screen: a pixel-art scene on the console, from a q:application type="screen"
+    "crates/hive-cli",       # hive: an app on the screen, a request for a setting of the machine
 
     # GUI components (bark, spore, hive-shell, hive-dock, hive-term) were
     # paused when the project target was redefined to TUI-only; the code

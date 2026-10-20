@@ -31,6 +31,11 @@ RuntimeDirectory=hive-actuator
 RuntimeDirectoryMode=0700
 Environment=TMPDIR=/run/hive-actuator
 
+# The settings the Hive applied that need no root, for the daemons that
+# read them: hive-screen watches screen-level here (set-screen-level).
+StateDirectory=hive/settings
+StateDirectoryMode=0755
+
 # Security
 NoNewPrivileges=yes
 ProtectSystem=strict

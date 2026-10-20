@@ -1,0 +1,15 @@
+// a user asks the Hive for a setting of the machine (the Ajustes app, `hive request`): the request becomes an
+// offer in the user's name, nothing runs on the asking, an administrator approves it and the actuator is
+// asked; a request for anything but a setting is refused
+{"op":"start"}
+{"op":"request","action":{"SetHostname":{"name":"forja"}},"reason":"the lab machine deserves a name"}
+{"op":"until","to":"dashboard","type":"Notification","contains":"\"kind\":\"request\"","timeout":10}
+{"op":"none","to":"actuator","within":0.5}
+{"op":"approve"}
+{"op":"until","to":"actuator","type":"ActionRequest","contains":"\"SetHostname\":{\"name\":\"forja\"}"}
+{"op":"until","to":"dashboard","type":"ActionResponse","contains":"not executed"}
+{"op":"request","action":{"SetKeyboard":{"layout":"br","model":"abnt2"}},"reason":""}
+{"op":"until","to":"dashboard","type":"Notification","contains":"asks: keyboard br (abnt2)","timeout":10}
+{"op":"request","action":{"RestartService":{"name":"nginx"}},"reason":"not a setting"}
+{"op":"none","to":"dashboard","type":"Notification","contains":"RestartService","within":1}
+{"op":"end"}

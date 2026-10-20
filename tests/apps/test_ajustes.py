@@ -73,6 +73,15 @@ def leitura(monkeypatch):
                        and cmd[2:].index(u) < 3 or (len(cmd) == 3 and u in states))
 
     monkeypatch.setattr(module, 'run_any', run_any)
+    asked = []
+
+    def ask(args):
+        asked.append(list(args))
+        return (0, 'asked the Hive: ' + ' '.join(args)) if args[0] != 'set-keyboard' or args[1] != 'us' \
+            else (1, 'the Hive is not listening')
+
+    monkeypatch.setattr(module, 'ask', ask)
+    module.asked = asked
     return module
 
 
@@ -107,12 +116,20 @@ def test_the_dns_falls_back_to_resolv_conf(leitura, monkeypatch):
     assert n['gateway'] == 'nenhum'
 
 
-def test_the_keyboard_is_the_systems_layout(leitura):
+def test_the_keyboard_is_the_systems_layout_unless_the_hive_set_one(leitura, monkeypatch):
     t = leitura.teclado()
     assert t['layout'] == 'br'
+    assert t['escolha'] == 'br'
     r = rows(t)
-    assert r['modelo'] == 'abnt2'
+    assert r['layout do sistema'] == 'br (abnt2), de /etc/default/keyboard'
+    assert r['ajuste da Hive'] == 'nenhum (a tela lê o do sistema)'
     assert r['a tela lê'] == 'a página não está na tela'
+    read = leitura.read
+    monkeypatch.setattr(leitura, 'read', lambda path: 'us pc105\n' if path == '/var/lib/hive/settings/keyboard'
+                        else read(path))
+    t = leitura.teclado()
+    assert t['escolha'] == 'us', 'the Hive\'s setting is what the screen reads'
+    assert rows(t)['ajuste da Hive'] == 'us pc105'
 
 
 def test_the_screen_tab_says_what_the_screen_said(leitura, monkeypatch):
@@ -145,6 +162,31 @@ def test_the_hive_tab_lists_the_daemons_and_the_whitelist(leitura):
     assert r['comandos'] == 'df, ip'
     assert r['serviços'] == 'nginx, docker'
     assert r['caminhos'] == '/home/*, /tmp/*'
+
+
+def test_a_change_is_asked_of_the_hive_never_made(leitura):
+    ok = leitura.pedir('set-hostname', 'forja')
+    assert ok['ok'] and ok['mensagem'].startswith('Pedido à Hive: mudar o nome da máquina para forja')
+    assert leitura.asked == [['set-hostname', 'forja']]
+    bad = leitura.pedir('set-hostname', 'Forja Nova')
+    assert not bad['ok'] and 'não serve de nome' in bad['mensagem']
+    kb = leitura.pedir('set-keyboard', 'br')
+    assert kb['ok'] and leitura.asked[-1] == ['set-keyboard', 'br', 'abnt2']
+    level = leitura.pedir('set-screen-level', 'fine')
+    assert level['ok'] and leitura.asked[-1] == ['set-screen-level', 'fine']
+    auto = leitura.pedir('set-screen-level', 'auto')
+    assert 'escolhido pela medida' in auto['mensagem']
+    assert not leitura.pedir('set-screen-level', '9')['ok']
+    assert not leitura.pedir('restart-service', 'nginx')['ok']
+    refused = leitura.pedir('set-keyboard', 'us')
+    assert not refused['ok'] and 'não recebeu o pedido' in refused['mensagem']
+    assert 'not listening' in refused['mensagem']
+
+
+def test_without_the_hive_command_asking_says_so(leitura, monkeypatch):
+    monkeypatch.setattr(leitura, 'ask', lambda args: (None, 'o comando hive não está nesta máquina'))
+    answer = leitura.pedir('set-hostname', 'forja')
+    assert not answer['ok'] and 'não está nesta máquina' in answer['mensagem']
 
 
 def test_a_bare_machine_is_read_without_an_error(leitura, monkeypatch):
@@ -231,7 +273,17 @@ def test_the_app_on_the_pixel_screen_says_what_the_screen_is(url, tmp_path):
         pixel = Pixel(screen)
         assert pixel.window()['title'] == 'Ajustes'
         run_script(pixel, script(on_screen=True))
+        # a change is asked of the Hive: the page's service runs `hive request`, replaced here
+        asked = []
+        from quantum.services import _registry
+        # the app's own module, as the server imported it: its `ask` door is replaced
+        _registry['ajustes.pedir'].__globals__['ask'] = \
+            lambda args: (asked.append(list(args)), (0, 'asked the Hive'))[1]
+        run_script(pixel, [('fill', 'nome', 'forja'), ('click', 'Pedir à Hive'),
+                           ('sees', ['Pedido à Hive: mudar o nome da máquina para forja'])])
+        assert asked == [['set-hostname', 'forja']]
         # the arrows go through the tabs: the Tela tab says what the screen told the page's runtime
+        pixel._focus(lambda i: i['kind'] == 'tabpanel')
         screen.request({'op': 'act', 'tap': ['right', 'right', 'right']})
         text = pixel.text()
         assert 'nível: effects (1)' in text, text

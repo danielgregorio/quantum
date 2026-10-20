@@ -171,10 +171,14 @@ fn main() -> Result<()> {
     stop_on_signal();
     hive_common::systemd::report_ready();
     // HIVE_SCREEN_LEVEL pins the level (0 plain, 1 effects, 2 fine), for an
-    // administrator who knows the machine better than the measure
-    let pinned = std::env::var("HIVE_SCREEN_LEVEL")
+    // administrator who knows the machine better than the measure; else the
+    // level the Hive applied for the screen (set-screen-level, approved on
+    // this screen), a file the daemon watches as it runs
+    let by_env = std::env::var("HIVE_SCREEN_LEVEL")
         .ok()
         .and_then(|s| s.trim().parse::<usize>().ok());
+    let mut by_hive = settings_level();
+    let pinned = by_env.or(by_hive);
     let mut chooser = match pinned {
         Some(l) => level::Chooser::pinned(l, cores(), Instant::now()),
         None => level::Chooser::new(cores(), Instant::now()),
@@ -187,6 +191,11 @@ fn main() -> Result<()> {
         "keyboard": keyboard,
         "frame_ms": 0.0,
     });
+    if by_env.is_none() {
+        if let Some(l) = by_hive {
+            tracing::info!("level {} pinned by the Hive's settings", l);
+        }
+    }
     // HIVE_SCREEN_MOTION=off: pages appear and go at once
     if std::env::var("HIVE_SCREEN_MOTION")
         .map(|v| {
@@ -256,6 +265,31 @@ fn main() -> Result<()> {
             runtime.world.set_facts(facts(chooser.cores()));
             runtime.about["frame_ms"] =
                 serde_json::json!((chooser.before_ms() * 10.0).round() / 10.0);
+            // the settings the Hive applied: the keyboard's layout, read
+            // again from the system's file; the screen's level, pinned by
+            // the file or let go to the measure
+            let layout = input::Layout::detect();
+            if keyboards.layout() != layout {
+                keyboards.set_layout(layout);
+                runtime.about["keyboard"] = serde_json::json!(layout.name());
+            }
+            if by_env.is_none() {
+                let now = settings_level();
+                if now != by_hive {
+                    by_hive = now;
+                    chooser = match now {
+                        Some(l) => {
+                            tracing::info!("level {} pinned by the Hive's settings", l);
+                            level::Chooser::pinned(l, chooser.cores(), Instant::now())
+                        }
+                        None => {
+                            tracing::info!("level let go to the measure by the Hive's settings");
+                            level::Chooser::new(chooser.cores(), Instant::now())
+                        }
+                    };
+                    runtime.about["pinned"] = serde_json::json!(chooser.is_pinned());
+                }
+            }
         }
         if chooser.level() != runtime.world.level() {
             let lv = chooser.level();
@@ -310,6 +344,19 @@ fn cores() -> usize {
     std::thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(1)
+}
+
+/// The level the Hive applied for the screen (`set-screen-level`, the
+/// actuator's `screen-level` under its settings), when the file is there
+/// and says 0, 1 or 2.
+fn settings_level() -> Option<usize> {
+    let dir = std::env::var_os("HIVE_SETTINGS_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("/var/lib/hive/settings"));
+    std::fs::read_to_string(dir.join("screen-level"))
+        .ok()
+        .and_then(|s| s.trim().parse::<usize>().ok())
+        .filter(|l| *l < level::LEVELS.len())
 }
 
 /// What the bars of the scene say of the machine: its name as the kernel

@@ -75,6 +75,10 @@
   <qs:on event="notice">
     <qs:say text="{title}: {body}" />
   </qs:on>
+  <qs:on event="request">
+    <qs:emit particles="stars" at="bee" dx="8" dy="8" />
+    <qs:say text="{user} asks: {what}; Enter approves, Escape dismisses" seconds="6" />
+  </qs:on>
   <qs:on event="offer">
     <qs:emit particles="stars" at="bee" dx="8" dy="8" />
     <qs:tween target="bee" property="y" to="42" from="36" seconds="0.4" trans="sine" ease="in-out" repeat="3" yoyo="true" />

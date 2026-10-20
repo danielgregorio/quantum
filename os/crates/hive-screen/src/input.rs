@@ -67,8 +67,9 @@ impl Layout {
         }
     }
 
-    /// The machine's layout: the environment first, then the system's
-    /// keyboard file; US when neither says.
+    /// The machine's layout: the environment first, then the keyboard the
+    /// Hive applied (`set-keyboard`, approved on this screen: a file under
+    /// its settings), then the system's keyboard file; US when none says.
     pub fn detect() -> Layout {
         if let Ok(name) = std::env::var("HIVE_SCREEN_KEYBOARD") {
             if let Some(layout) = Layout::parse(&name) {
@@ -79,9 +80,23 @@ impl Layout {
                 name
             );
         }
+        let settings = std::env::var_os("HIVE_SETTINGS_DIR")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| std::path::PathBuf::from("/var/lib/hive/settings"));
+        if let Ok(text) = std::fs::read_to_string(settings.join("keyboard")) {
+            if let Some(layout) = Layout::from_setting(&text) {
+                return layout;
+            }
+        }
         Layout::from_keyboard_file(
             &std::fs::read_to_string("/etc/default/keyboard").unwrap_or_default(),
         )
+    }
+
+    /// `br abnt2` in the Hive's keyboard setting: the first word is the
+    /// layout; None when the file says nothing the screen reads.
+    pub fn from_setting(text: &str) -> Option<Layout> {
+        Layout::parse(text.split_whitespace().next()?)
     }
 
     /// `XKBLAYOUT="br"` in the file's text (the first layout, when it
@@ -489,6 +504,20 @@ impl Keyboards {
         })
     }
 
+    /// The layout the keys are read by.
+    pub fn layout(&self) -> Layout {
+        self.modifiers.layout
+    }
+
+    /// Reads the keys by another layout from now on (the system's keyboard
+    /// changed under the daemon: `set-keyboard` approved on this screen).
+    pub fn set_layout(&mut self, layout: Layout) {
+        if layout != self.modifiers.layout {
+            tracing::info!("keyboard layout {}", layout.name());
+            self.modifiers = Modifiers::new(layout);
+        }
+    }
+
     /// The keys pressed (or held, repeating) since the last poll, in order.
     pub fn poll(&mut self) -> Vec<Key> {
         let mut keys = Vec::new();
@@ -641,6 +670,14 @@ mod tests {
         assert_eq!(one(&mut m, 43, 1), Some(Key::Char('º')));
         assert_eq!(one(&mut m, 30, 1), None);
         m.key(KEY_RIGHTALT, 0, &mut Vec::new());
+    }
+
+    #[test]
+    fn the_hives_keyboard_setting_names_the_layout() {
+        assert_eq!(Layout::from_setting("br abnt2\n"), Some(Layout::Abnt2));
+        assert_eq!(Layout::from_setting("us"), Some(Layout::Us));
+        assert_eq!(Layout::from_setting(""), None);
+        assert_eq!(Layout::from_setting("fr"), None);
     }
 
     #[test]

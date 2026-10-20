@@ -156,13 +156,17 @@ impl Runtime {
                     tracing::info!("event: {} ({})", kind, title);
                     self.world.event(&kind, &fields);
                 } else {
+                    // the Hive's own suggestions are an `offer`; a user's
+                    // request comes as one too, under its own name
                     let count = actions.len();
                     for s in actions {
                         tracing::info!("offer: {}", s.title);
                         self.world.offer(id, s.id, s.title, s.action);
                     }
                     fields.insert("count".into(), count.to_string());
-                    self.world.event("offer", &fields);
+                    let kind = kind.unwrap_or_else(|| "offer".to_string());
+                    tracing::info!("event: {} ({})", kind, title);
+                    self.world.event(&kind, &fields);
                 }
             }
             HiveMessage::ActionResponse {

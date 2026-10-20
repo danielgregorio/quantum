@@ -349,6 +349,20 @@ pub enum HiveMessage {
         cwd: Option<PathBuf>,
     },
 
+    /// A user asked the Hive for a change of the machine's settings (the
+    /// Ajustes app, `hive request`): its name, its keyboard, its screen's
+    /// level. Cortex turns it into an offer, "<user> asks: ...", that an
+    /// administrator approves as any other; the actuator then runs the
+    /// action through its whitelist. Any local user may ask; nothing runs
+    /// on the asking.
+    UserRequest {
+        /// What they ask for: one of the settings actions (SetHostname,
+        /// SetKeyboard, SetScreenLevel); anything else is refused
+        action: Action,
+        /// Why, in their words (shown with the offer)
+        reason: String,
+    },
+
     /// User entered anonymous mode
     AnonymousModeEnter {
         /// Level of anonymity
@@ -442,6 +456,7 @@ impl HiveMessage {
             HiveMessage::UserDismiss { .. } => "UserDismiss",
             HiveMessage::UserQuery { .. } => "UserQuery",
             HiveMessage::CommandNotFound { .. } => "CommandNotFound",
+            HiveMessage::UserRequest { .. } => "UserRequest",
             HiveMessage::AnonymousModeEnter { .. } => "AnonymousModeEnter",
             HiveMessage::AnonymousModeExit { .. } => "AnonymousModeExit",
             HiveMessage::Ping { .. } => "Ping",

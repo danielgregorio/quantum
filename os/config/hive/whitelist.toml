@@ -73,8 +73,14 @@ destroy_snapshot_pattern = "hive-*"
 kill_port_process = true
 open_url = true
 firewall = false
+set_hostname = true
+set_keyboard = true
+set_screen_level = true
 
 [rate_limits]
+SetHostname = 2
+SetKeyboard = 2
+SetScreenLevel = 2
 KillPortProcess = 10
 InstallPackage = 5
 RemovePackage = 3

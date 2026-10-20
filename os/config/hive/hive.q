@@ -62,6 +62,17 @@
   <qh:allow command="systemctl" args="status *" />
   <qh:allow command="systemctl" args="is-active *" />
   <qh:allow command="journalctl" args="-n 50 -u *" />
+
+  <!-- The machine's settings a user asks for through the Ajustes app
+       (hive request) and an administrator approves on the screen: its name
+       (hostnamectl), its keyboard (localectl, us or br), its screen's level.
+       Two a minute each: a setting is not something to flap. -->
+  <qh:allow action="set-hostname" />
+  <qh:allow action="set-keyboard" />
+  <qh:allow action="set-screen-level" />
+  <qh:limit action="set-hostname" per-minute="2" />
+  <qh:limit action="set-keyboard" per-minute="2" />
+  <qh:limit action="set-screen-level" per-minute="2" />
   <qh:allow command="zpool" args="status" />
   <qh:allow command="zfs" args="list" />
   <qh:allow command="zfs" args="list -t snapshot" />

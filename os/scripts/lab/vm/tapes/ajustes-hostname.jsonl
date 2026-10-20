@@ -1,0 +1,32 @@
+// a setting asked for and approved: `hive request` from a local user becomes an offer in the user's name on the
+// real screen; Enter on the real keyboard approves it; the real actuator applies it through hostnamectl (polkit
+// lets it) and the Hive's settings files; the system's name, the screen's keyboard and its level follow, the
+// screen reading the keyboard and the level anew without a restart
+{"op": "start"}
+{"op": "until_sh", "sh": "systemctl is-active hive-screen hive-actuator", "contains": "active", "timeout": 20}
+{"op": "until_shot", "has": "#ffd34d", "timeout": 15}
+{"op": "sh", "sh": "hive request set-hostname forja --reason 'the lab machine'", "user": "druid", "contains": "asked the Hive: name the machine forja"}
+{"op": "until_journal", "unit": "hive-cortex.service", "contains": "request from druid", "timeout": 10}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "event: request (Request)", "timeout": 10}
+{"op": "sh", "sh": "hostname", "contains": "quantum-lab"}
+{"op": "press", "keys": ["enter"]}
+{"op": "until_journal", "unit": "hive-actuator.service", "contains": "SetHostname", "timeout": 10}
+{"op": "until_sh", "sh": "hostname", "contains": "forja", "timeout": 20}
+{"op": "until_journal", "unit": "hive-actuator.service", "contains": "Action completed", "timeout": 10}
+// the keyboard: a file in the Hive's settings (Ubuntu's localed refuses keymaps), which the screen reads first,
+// as it runs; /etc/default/keyboard stays the installer's
+{"op": "sh", "sh": "hive request set-keyboard br abnt2", "user": "druid", "contains": "asked the Hive: keyboard br (abnt2)"}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "offer: druid asks: keyboard br (abnt2)", "timeout": 10}
+{"op": "press", "keys": ["enter"]}
+{"op": "until_sh", "sh": "cat /var/lib/hive/settings/keyboard", "contains": "br abnt2", "timeout": 20}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "keyboard layout br (ABNT2)", "timeout": 10}
+{"op": "sh", "sh": "cat /etc/default/keyboard", "contains": "XKBLAYOUT=\"us\""}
+// the screen's level: a file in the Hive's settings, which the screen watches
+{"op": "sh", "sh": "hive request set-screen-level plain", "user": "druid", "contains": "asked the Hive: screen level plain"}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "offer: druid asks: screen level plain", "timeout": 10}
+{"op": "press", "keys": ["enter"]}
+{"op": "until_sh", "sh": "cat /var/lib/hive/settings/screen-level", "contains": "0", "timeout": 20}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "level 0 pinned by the Hive's settings", "timeout": 10}
+// a request for anything but a setting never becomes an offer
+{"op": "sh", "sh": "hive request restart-service nginx", "user": "druid", "code": null, "contains": "what to ask for"}
+{"op": "end"}

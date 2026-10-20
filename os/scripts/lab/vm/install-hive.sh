@@ -19,7 +19,7 @@ set -eu
 SRC=${1:-/mnt/lab}
 BIN=$SRC/target/vm-lab/bin
 ALL="hive-cortex hive-synapse hive-actuator hive-nerve-process hive-nerve-journal
-hive-nerve-network hive-nerve-fs hive-apt hive-zfs hive-dashboard hive-screen grove hive-lab"
+hive-nerve-network hive-nerve-fs hive-apt hive-zfs hive-dashboard hive-screen grove hive hive-lab"
 
 copy() {
     case $1 in
@@ -69,11 +69,11 @@ mkdir -p /var/lib/hive/knowledge
 cp -r "$SRC"/knowledge/* /var/lib/hive/knowledge/
 
 # the Quantum runtime (its needs are Ubuntu packages of the base), the
-# `quantum` and `hive` commands, and the apps installed with the Hive
+# `quantum` command (`hive` is a binary above), and the apps installed
+# with the Hive
 rm -rf /usr/lib/python3/dist-packages/quantum
 cp -r "$SRC/target/vm-lab/quantum" /usr/lib/python3/dist-packages/quantum
 install -m 0755 "$SRC/scripts/quantum" /usr/bin/quantum
-install -m 0755 "$SRC/scripts/hive" /usr/bin/hive
 rm -rf /usr/share/quantum-os/apps
 mkdir -p /usr/share/quantum-os/apps
 cp -r "$SRC"/apps/. /usr/share/quantum-os/apps/

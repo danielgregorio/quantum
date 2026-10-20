@@ -139,6 +139,11 @@ impl Chooser {
         self.level
     }
 
+    /// Whether the level was pinned from outside.
+    pub fn is_pinned(&self) -> bool {
+        self.pinned
+    }
+
     pub fn cores(&self) -> usize {
         self.cores
     }
