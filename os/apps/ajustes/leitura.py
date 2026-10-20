@@ -20,7 +20,7 @@ import shutil
 import socket
 import subprocess
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Tuple
 
 from quantum.services import service
 
@@ -29,6 +29,8 @@ DAEMONS = ['hive-cortex', 'hive-synapse', 'hive-actuator', 'hive-nerve-process',
            'hive-nerve-network', 'hive-nerve-fs', 'hive-screen']
 
 NAO_LIDO = 'não lido'
+# the keyboards the screen reads, and the model each asks for
+KEYBOARDS = {'us': 'pc105', 'br': 'abnt2'}
 
 
 def run(cmd: List[str], timeout: float = 5.0) -> Optional[str]:
@@ -60,9 +62,21 @@ def read(path: str) -> Optional[str]:
         return None
 
 
+def ask(args: List[str]) -> Tuple[Optional[int], str]:
+    """`hive request ...`: the third door, the only one that changes anything, and only by asking.
+    The exit code (None when `hive` is not on the machine) and what it said."""
+    if shutil.which('hive') is None:
+        return None, 'o comando hive não está nesta máquina'
+    try:
+        done = subprocess.run(['hive', 'request', *args], capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, str(exc)
+    return done.returncode, (done.stdout + done.stderr).strip()
+
+
 def _doors() -> Dict[str, Callable]:
     """The doors as they are now (a test replaces the module's functions)."""
-    return {'run': run, 'run_any': run_any, 'read': read}
+    return {'run': run, 'run_any': run_any, 'read': read, 'ask': ask}
 
 
 # ---------------------------------------------------------------- the machine
@@ -229,17 +243,19 @@ def teclado() -> dict:
     keys = _keyboard_file(d['read']('/etc/default/keyboard'))
     layout = keys.get('XKBLAYOUT') or NAO_LIDO
     modelo = keys.get('XKBMODEL') or '-'
-    variante = keys.get('XKBVARIANT') or '-'
+    # the keyboard the Hive applied (set-keyboard), which the screen reads first
+    hive = (d['read']('/var/lib/hive/settings/keyboard') or '').split()
+    ajuste = ' '.join(hive) if hive else 'nenhum (a tela lê o do sistema)'
     tela = _screen_status()
     na_tela = tela.get('keyboard') if tela else 'a página não está na tela'
+    escolha = hive[0] if hive and hive[0] in KEYBOARDS else (layout if layout in KEYBOARDS else 'us')
     return {
         'layout': layout,
+        'escolha': escolha,
         'linhas': [
-            {'campo': 'layout do sistema', 'valor': layout},
-            {'campo': 'modelo', 'valor': modelo},
-            {'campo': 'variante', 'valor': variante},
+            {'campo': 'layout do sistema', 'valor': f'{layout} ({modelo}), de /etc/default/keyboard'},
+            {'campo': 'ajuste da Hive', 'valor': ajuste},
             {'campo': 'a tela lê', 'valor': na_tela},
-            {'campo': 'de', 'valor': '/etc/default/keyboard'},
         ],
     }
 
@@ -266,7 +282,7 @@ def tela() -> dict:
     if s is None:
         linhas = [{'campo': 'esta página', 'valor': 'não está na tela (abra com hive ajustes)'},
                   {'campo': 'hive-screen', 'valor': servico}]
-        return {'na_tela': False, 'servico': servico, 'linhas': linhas}
+        return {'na_tela': False, 'servico': servico, 'escolha': 'auto', 'linhas': linhas}
     nivel = f'{s.get("level_name", "?")} ({s.get("level", "?")})'
     escolha = 'pregado por HIVE_SCREEN_LEVEL' if s.get('pinned') else 'escolhido pela medida do quadro'
     quadro = s.get('frame_ms')
@@ -279,7 +295,8 @@ def tela() -> dict:
         {'campo': 'cena', 'valor': 'x'.join(str(n) for n in s.get('scene', [])) or '?'},
         {'campo': 'hive-screen', 'valor': servico},
     ]
-    return {'na_tela': True, 'servico': servico, 'nivel': s.get('level_name'), 'linhas': linhas}
+    escolha = str(s.get('level_name') or 'auto') if s.get('pinned') else 'auto'
+    return {'na_tela': True, 'servico': servico, 'nivel': s.get('level_name'), 'escolha': escolha, 'linhas': linhas}
 
 
 # ---------------------------------------------------------------- the Hive
@@ -315,3 +332,40 @@ def hive() -> dict:
         {'campo': 'de', 'valor': '/etc/hive/whitelist.toml' if wl else 'sem whitelist legível'},
     ]
     return {'daemons': daemons, 'ativos': sum(1 for x in daemons if x['estado'] == 'active'), 'linhas': linhas}
+
+
+# ---------------------------------------------------------------- asking the Hive
+
+HOSTNAME = re.compile(r'^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$')
+LEVELS = ('auto', 'plain', 'effects', 'fine')
+
+
+@service('ajustes.pedir')
+def pedir(acao: str, valor: str = '') -> dict:
+    """Asks the Hive for a setting (`hive request`): the name of the machine
+    (set-hostname), the keyboard (set-keyboard: us or br, with its model), the
+    screen's level (set-screen-level: auto, plain, effects, fine). Nothing
+    changes here: the Hive offers it, and someone approves it on the screen
+    (F1, Enter) or the dashboard. Answers whether it was asked, and what to say."""
+    valor = (valor or '').strip()
+    if acao == 'set-hostname':
+        if not HOSTNAME.match(valor):
+            return {'ok': False, 'mensagem': f'"{valor}" não serve de nome: letras minúsculas, dígitos e hífens, até 63'}
+        args = ['set-hostname', valor]
+        pedido = f'mudar o nome da máquina para {valor}'
+    elif acao == 'set-keyboard':
+        if valor not in KEYBOARDS:
+            return {'ok': False, 'mensagem': f'"{valor}" não é um teclado que a tela lê: us ou br'}
+        args = ['set-keyboard', valor, KEYBOARDS[valor]]
+        pedido = f'teclado {valor} ({KEYBOARDS[valor]})'
+    elif acao == 'set-screen-level':
+        if valor not in LEVELS:
+            return {'ok': False, 'mensagem': f'"{valor}" não é um nível: auto, plain, effects ou fine'}
+        args = ['set-screen-level', valor]
+        pedido = 'nível da tela escolhido pela medida' if valor == 'auto' else f'nível da tela {valor}'
+    else:
+        return {'ok': False, 'mensagem': f'{acao}: não é um ajuste que se pede'}
+    code, said = _doors()['ask'](args)
+    if code == 0:
+        return {'ok': True, 'mensagem': f'Pedido à Hive: {pedido}. Aprove na tela (F1, Enter) ou no dashboard; F5 relê.'}
+    return {'ok': False, 'mensagem': f'A Hive não recebeu o pedido ({pedido}): {said or "sem resposta"}'}

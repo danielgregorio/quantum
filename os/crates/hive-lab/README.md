@@ -40,6 +40,7 @@ The ops:
 | `inject` (`message`) | any `HiveMessage`, as JSON, from the nerve |
 | `send` (`as`, `message`) | any message as any role, to check what a role may *not* do |
 | `ask` (`text`), `not_found` (`command`, `package`), `anonymous` (`on`) | grove |
+| `request` (`action`: an `Action` as JSON, `reason`) | a user asking for a setting of the machine (the Ajustes app, `hive request`): it becomes an offer in the user's name |
 | `approve`, `dismiss` (`notification`, `suggestion`, `as`) | the dashboard; by default, the latest offer |
 | `observe` | everything each role received since the last look |
 | `until` (`to`, `type`, `contains`, `excludes`, `timeout`) | waits for a matching message; `excludes` is text it must not hold |
@@ -82,6 +83,7 @@ sudo target/debug/hive-lab --play crates/hive-lab/tapes/crash-restart.jsonl
 | `disk-low` | a warning; `df -h` is offered |
 | `log-anomaly` | a unit's recent logs are offered, and nothing else |
 | `question` | grove's question is answered as text, never as an action |
+| `request-hostname` | a user asks for a setting (`hive request`): it becomes an offer in the user's name, nothing runs until approved, then the actuator is asked for `SetHostname`; a request for anything but a setting never becomes an offer |
 | `user-socket-boundary` | a user's shell cannot send an action, nor approve a suggestion |
 | `dashboard-screen` | the real dashboard shows the crash and its offers, a plain notice is not shown as awaiting confirmation, Enter approves; a second dashboard's approval runs nothing again |
 | `grove-screen` | the real grove runs a command, answers a question in plain language, and prints the crash notice at the next prompt |

@@ -513,7 +513,7 @@ def make_base(disk: Path, run: Path) -> None:
 
 BINARIES = ['hive-cortex', 'hive-synapse', 'hive-actuator', 'hive-nerve-process', 'hive-nerve-journal',
             'hive-nerve-network', 'hive-nerve-fs', 'hive-apt', 'hive-zfs', 'hive-dashboard', 'hive-screen',
-            'grove', 'hive-lab']
+            'grove', 'hive', 'hive-lab']
 
 # Who registers with hive-cortex when the Hive is up (its log names them so).
 # (hive-screen registers as a dashboard: the screen on the console is up when it has)
@@ -549,8 +549,7 @@ def stage(profile: str = 'debug') -> dict:
     shutil.copytree(OS_DIR.parent / 'quantum', quantum, ignore=QUANTUM_IGNORE)
     for f in sorted([*(OS_DIR / 'config').rglob('*'), *(OS_DIR / 'knowledge').rglob('*'),
                      *(OS_DIR / 'apps').rglob('*'), *quantum.rglob('*'),
-                     HERE / 'install-hive.sh', HERE / 'agent.py', OS_DIR / 'scripts' / 'hive',
-                     OS_DIR / 'scripts' / 'quantum']):
+                     HERE / 'install-hive.sh', HERE / 'agent.py', OS_DIR / 'scripts' / 'quantum']):
         if f.is_file() and '__pycache__' not in f.parts:
             files[str(f.relative_to(OS_DIR))] = hashlib.sha256(f.read_bytes()).hexdigest()
     return files

@@ -1,0 +1,16 @@
+[package]
+name = "hive-cli"
+description = "hive: the Hive's commands for the person at the console: an app on the screen, a request for a setting of the machine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "hive"
+path = "src/main.rs"
+
+[dependencies]
+hive-common = { path = "../hive-common" }
+anyhow = { workspace = true }

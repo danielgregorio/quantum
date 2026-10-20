@@ -483,6 +483,43 @@ async fn package_kit(args: &[&str], timeout: Duration) -> Result<(Option<String>
 /// `systemctl ARGS`: its exit code and, when it fails, what it said
 /// (polkit's "Access denied", "Job for nginx.service failed because..."):
 /// a failed action tells the administrator why.
+/// Where the settings the Hive applied live, for the daemons that read
+/// them (hive-screen reads `screen-level`): the unit's StateDirectory,
+/// /var/lib/hive/settings.
+fn settings_dir() -> PathBuf {
+    std::env::var_os("HIVE_SETTINGS_DIR")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("STATE_DIRECTORY").map(PathBuf::from))
+        .unwrap_or_else(|| PathBuf::from("/var/lib/hive/settings"))
+}
+
+/// A setting the Hive applied, as a file under `settings_dir()`: its text
+/// (with a newline), or removed when `value` is None.
+fn write_setting(name: &str, value: Option<String>) -> Result<()> {
+    let dir = settings_dir();
+    let path = dir.join(name);
+    match value {
+        Some(text) => {
+            std::fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
+            std::fs::write(&path, format!("{}\n", text))
+                .with_context(|| format!("writing {}", path.display()))
+        }
+        None => match std::fs::remove_file(&path) {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(e).with_context(|| format!("removing {}", path.display())),
+        },
+    }
+}
+
+/// A program run for a setting: what it said when it failed, and its code.
+async fn run(program: &str, args: &[&str]) -> Result<(Option<String>, Option<i32>)> {
+    let output = Command::new(program).args(args).output().await?;
+    let said = (!output.status.success())
+        .then(|| String::from_utf8_lossy(&output.stderr).trim().to_string());
+    Ok((said, output.status.code()))
+}
+
 async fn systemctl(args: &[&str]) -> Result<(Option<String>, Option<i32>)> {
     let output = Command::new("systemctl").args(args).output().await?;
     let said = (!output.status.success())
@@ -634,6 +671,30 @@ async fn execute_action(
             }
             args.push(name);
             systemctl(&args).await
+        }
+
+        // The machine's settings. The name goes through systemd's hostnamed
+        // over D-Bus, which polkit lets _hive-act do
+        // (config/polkit/61-druidos-hive-settings.rules).
+        Action::SetHostname { name } => run("hostnamectl", &["set-hostname", name]).await,
+
+        // The keyboard and the screen's level are files in the settings
+        // the Hive applied, which hive-screen watches: no root, no restart.
+        // (localectl would be the way for the keyboard, but Ubuntu's
+        // localed refuses: "Setting X11 and console keymaps is not
+        // supported in Debian"; /etc/default/keyboard stays the
+        // installer's, and the screen reads the Hive's setting first.)
+        Action::SetKeyboard { layout, model } => {
+            write_setting(
+                "keyboard",
+                Some(format!("{} {}", layout, model).trim().to_string()),
+            )?;
+            Ok((None, Some(0)))
+        }
+
+        Action::SetScreenLevel { level } => {
+            write_setting("screen-level", level.map(|l| l.to_string()))?;
+            Ok((None, Some(0)))
         }
 
         Action::KillPortProcess { port, signal } => {
@@ -932,6 +993,23 @@ async fn execute_action(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_setting_is_a_file_the_screen_reads_and_none_removes_it() {
+        let dir = std::env::temp_dir().join(format!("hive-settings-{}", std::process::id()));
+        std::env::set_var("HIVE_SETTINGS_DIR", &dir);
+        write_setting("keyboard", Some("br abnt2".into())).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(dir.join("keyboard")).unwrap(),
+            "br abnt2\n"
+        );
+        write_setting("screen-level", Some("2".into())).unwrap();
+        write_setting("screen-level", None).unwrap();
+        assert!(!dir.join("screen-level").exists());
+        write_setting("screen-level", None).unwrap();
+        std::env::remove_var("HIVE_SETTINGS_DIR");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
     use hive_common::actions::NotificationUrgency;
 
     #[test]

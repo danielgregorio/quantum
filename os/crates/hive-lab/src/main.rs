@@ -246,6 +246,19 @@ impl Driver {
                 )
                 .await
             }
+            "request" => {
+                // a user asks for a setting of the machine (the Ajustes app, `hive request`)
+                let action: hive_common::actions::Action = serde_json::from_value(
+                    req.get("action")
+                        .cloned()
+                        .context("request needs action (an Action, as JSON)")?,
+                )?;
+                let msg = HiveMessage::UserRequest {
+                    action,
+                    reason: s("reason").unwrap_or("").to_string(),
+                };
+                self.send(Role::Shell, msg).await
+            }
             "not_found" => {
                 let msg = HiveMessage::CommandNotFound {
                     command: s("command").context("not_found needs command")?.to_string(),

@@ -2,7 +2,7 @@
 
 use crate::{ComponentType, SharedState};
 use anyhow::Result;
-use hive_common::actions::is_valid_package_name;
+use hive_common::actions::{is_valid_package_name, Action};
 use hive_common::anonymous::AnonymousSession;
 use hive_common::messages::{HiveMessage, MessageId, Severity, Suggestion};
 use tracing::{debug, info, warn};
@@ -271,6 +271,11 @@ impl MessageRouter {
                 }
             }
 
+            HiveMessage::UserRequest { action, reason } => {
+                self.offer_request(action.clone(), reason, from_conn)
+                    .await?;
+            }
+
             HiveMessage::CommandNotFound { command, package } => {
                 self.offer_package(command, package, from_conn).await?;
             }
@@ -423,6 +428,89 @@ impl MessageRouter {
     /// that name exists: have synapse offer it (an administrator decides).
     /// Validated here, deduplicated for a while, and skipped for anonymous
     /// shells.
+    /// A user asked for a setting of the machine (HiveMessage::UserRequest):
+    /// the offer "<user> asks: <what>", with the action, for an
+    /// administrator to approve as any other; the actuator decides by its
+    /// whitelist whether it may run. Only the settings actions are taken,
+    /// and only from a shell: a request is never anything else dressed up.
+    async fn offer_request(&self, action: Action, reason: &str, from_conn: u64) -> Result<()> {
+        let (uid, pid) = {
+            let state = self.state.read().await;
+            match state
+                .components
+                .get(&from_conn)
+                .filter(|c| c.component_type == ComponentType::Shell)
+            {
+                Some(shell) => (shell.uid, shell.pid as u32),
+                None => {
+                    warn!(
+                        "Rejecting UserRequest from connection {} (not a shell)",
+                        from_conn
+                    );
+                    return Ok(());
+                }
+            }
+        };
+        let Some(what) = action.describe_setting().filter(|_| action.is_a_setting()) else {
+            warn!(
+                "Refusing a request from uid {} for {:?}: a request asks for a setting of the \
+                 machine, nothing else",
+                uid, action
+            );
+            return Ok(());
+        };
+        {
+            let state = self.state.read().await;
+            if state.anonymous.should_hide_process(pid) {
+                return Ok(());
+            }
+        }
+        let user = crate::user_name(uid);
+        let reason: String = reason
+            .chars()
+            .filter(|c| !c.is_control())
+            .take(200)
+            .collect();
+        info!("request from {} (uid {}): {}", user, uid, what);
+        let suggestion = Suggestion {
+            id: 1,
+            title: format!("{} asks: {}", user, what),
+            description: reason,
+            action: Some(action.clone()),
+            learn_more: None,
+            confidence: 1.0,
+        };
+        let notification_id = Uuid::new_v4();
+        {
+            let mut state = self.state.write().await;
+            state
+                .pending_suggestions
+                .insert(notification_id, vec![suggestion.clone()]);
+        }
+        let kebab = kebab_case(action.type_name());
+        let notification = HiveMessage::Notification {
+            id: notification_id,
+            title: "Request".to_string(),
+            body: format!("{} asks: {}", user, what),
+            severity: Severity::Info,
+            actions: vec![suggestion],
+            timeout_secs: 0,
+            kind: Some("request".to_string()),
+            fields: [
+                ("user".to_string(), user),
+                ("action".to_string(), kebab),
+                ("what".to_string(), what),
+                ("count".to_string(), "1".to_string()),
+            ]
+            .into(),
+        };
+        let state = self.state.read().await;
+        for dashboard in state.components_of_type(ComponentType::Dashboard) {
+            let _ = dashboard.tx.send(notification.clone()).await;
+        }
+        Ok(())
+    }
+
     async fn offer_package(&self, command: &str, package: &str, from_conn: u64) -> Result<()> {
         let valid_command = !command.is_empty()
             && command.len() <= 64
@@ -797,6 +885,22 @@ fn process_ancestry(pid: u32) -> Vec<u32> {
 fn parent_from_stat(stat: &str) -> Option<u32> {
     let after_comm = &stat[stat.rfind(')')? + 1..];
     after_comm.split_whitespace().nth(1)?.parse().ok()
+}
+
+/// `SetHostname` as the rules and the screen write it: `set-hostname`.
+fn kebab_case(variant: &str) -> String {
+    let mut out = String::new();
+    for (i, c) in variant.chars().enumerate() {
+        if c.is_ascii_uppercase() {
+            if i > 0 {
+                out.push('-');
+            }
+            out.push(c.to_ascii_lowercase());
+        } else {
+            out.push(c);
+        }
+    }
+    out
 }
 
 #[cfg(test)]

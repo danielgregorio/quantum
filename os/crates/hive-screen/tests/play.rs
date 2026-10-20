@@ -189,6 +189,43 @@ fn a_crash_an_offer_an_approval_and_its_result() {
 }
 
 #[test]
+fn a_new_offer_takes_the_focus_once_the_one_with_it_is_answered() {
+    let mut s = Screen::start();
+    s.request(json!({"op": "inject", "message": offers()}));
+    let obs = s.request(json!({"op": "act", "tap": ["enter"], "ticks": 1}));
+    assert_eq!(obs["offers"][0]["outcome"], "sent");
+    let obs = s.request(json!({"op": "inject", "message": done()}));
+    assert_eq!(obs["offers"][0]["outcome"], "succeeded");
+    assert_eq!(
+        obs["offers"][0]["focus"], true,
+        "the focus stays until something else waits"
+    );
+    // a user's request comes as an offer of its own kind: Enter answers it, not the row already done
+    let request = json!({"Notification": {
+        "id": "11111111-2222-3333-4444-888888888888",
+        "title": "Request", "body": "druid asks: name the machine forja", "severity": "Info",
+        "actions": [{"id": 1, "title": "druid asks: name the machine forja", "description": "",
+                     "action": {"SetHostname": {"name": "forja"}}, "learn_more": null, "confidence": 1.0}],
+        "timeout_secs": 0, "kind": "request",
+        "fields": {"user": "druid", "action": "set-hostname", "what": "name the machine forja", "count": "1"}}});
+    let obs = s.request(json!({"op": "inject", "message": request}));
+    assert_eq!(obs["offers"].as_array().unwrap().len(), 3);
+    assert_eq!(obs["offers"][0]["focus"], false);
+    assert_eq!(obs["offers"][2]["focus"], true, "the request has the focus");
+    assert!(event(&obs, "event")
+        .is_some_and(|e| e["event"] == "request" && e["fields"]["user"] == "druid"));
+    assert!(obs["toast"]
+        .as_str()
+        .unwrap()
+        .starts_with("druid asks: name the machine forja"));
+    let obs = s.request(json!({"op": "act", "tap": ["enter"], "ticks": 1}));
+    assert_eq!(obs["offers"][2]["outcome"], "sent");
+    assert!(
+        event(&obs, "approve").is_some_and(|e| e["title"] == "druid asks: name the machine forja")
+    );
+}
+
+#[test]
 fn the_fine_level_draws_two_pixels_to_the_scene_s_one_the_same_in_any_number_of_bands() {
     let mut s = Screen::start();
     let obs = s.request(json!({"op": "act", "ticks": 30}));

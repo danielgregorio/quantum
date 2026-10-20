@@ -310,6 +310,7 @@ fn user_may_send(component_type: ComponentType, msg: &HiveMessage) -> bool {
             msg,
             HiveMessage::UserQuery { .. }
                 | HiveMessage::CommandNotFound { .. }
+                | HiveMessage::UserRequest { .. }
                 | HiveMessage::AnonymousModeEnter { .. }
                 | HiveMessage::AnonymousModeExit { .. }
                 | HiveMessage::Ping { .. }
@@ -328,6 +329,15 @@ fn user_may_send(component_type: ComponentType, msg: &HiveMessage) -> bool {
 /// the ones a distribution makes its administrators (Ubuntu's first user is
 /// in sudo). Not `hive`: that is the service accounts' group.
 const ADMIN_GROUPS: &[&str] = &["sudo", "admin", "wheel"];
+
+/// The name of an account, for an offer that says who asked; the uid
+/// itself when the account has no name.
+pub(crate) fn user_name(uid: u32) -> String {
+    match User::from_uid(Uid::from_raw(uid)) {
+        Ok(Some(user)) => user.name,
+        _ => uid.to_string(),
+    }
+}
 
 /// Whether `uid` may approve actions: root, or an account in one of
 /// `ADMIN_GROUPS` - judged by the account's groups (from the kernel-verified
@@ -699,6 +709,15 @@ mod tests {
                 package: "htop".into()
             }
         ));
+        // a request for a setting is a shell's: it only ever becomes an offer
+        let request = HiveMessage::UserRequest {
+            action: hive_common::actions::Action::SetHostname {
+                name: "forja".into(),
+            },
+            reason: "the lab machine".into(),
+        };
+        assert!(user_may_send(shell, &request));
+        assert!(!user_may_send(dashboard, &request));
         // Only an administrator's dashboard approves - and it doesn't ask.
         assert!(!user_may_send(shell, &approve));
         assert!(user_may_send(dashboard, &approve));

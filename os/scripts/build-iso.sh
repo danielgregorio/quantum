@@ -324,7 +324,7 @@ install_hive_stack() {
         hive-cortex hive-synapse hive-actuator
         hive-nerve-process hive-nerve-journal hive-nerve-network hive-nerve-fs
         hive-apt hive-zfs hive-dashboard hive-screen
-        grove
+        grove hive
     )
     local -a missing=()
     local binary
@@ -388,7 +388,6 @@ install_hive_stack() {
     rsync -a --exclude __pycache__ --exclude '*.pyc' --exclude .pytest_cache --exclude node_modules --exclude logs \
         "$PROJECT_ROOT/../quantum/" "$chroot_dir/usr/lib/python3/dist-packages/quantum/"
     install -m 0755 "$PROJECT_ROOT/scripts/quantum" "$chroot_dir/usr/bin/quantum"
-    install -m 0755 "$PROJECT_ROOT/scripts/hive" "$chroot_dir/usr/bin/hive"
     rm -rf "$chroot_dir/usr/share/quantum-os/apps"
     mkdir -p "$chroot_dir/usr/share/quantum-os/apps"
     rsync -a --exclude __pycache__ "$PROJECT_ROOT/apps/" "$chroot_dir/usr/share/quantum-os/apps/"

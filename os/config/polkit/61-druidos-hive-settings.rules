@@ -1,0 +1,24 @@
+// DruidOS: let hive-actuator apply the machine's name a user asked for and
+// an administrator approved (the Ajustes app, `hive request`).
+//
+// hostnamectl talks to systemd-hostnamed over D-Bus, which asks polkit;
+// hive-actuator runs as _hive-act, with no root. Whether the name may
+// change at all is the actuator's whitelist (/etc/hive/whitelist.toml,
+// <qh:allow action="set-hostname"/>); this is the ceiling: the name,
+// nothing else of hostnamed (no pretty name, no icon, no chassis). The
+// keyboard and the screen's level are files of the Hive's own
+// (/var/lib/hive/settings) and need no leave: Ubuntu's localed refuses
+// keymaps, so the Hive never rewrites /etc/default/keyboard.
+polkit.addRule(function (action, subject) {
+    if (subject.user !== "_hive-act") {
+        return polkit.Result.NOT_HANDLED;
+    }
+    var allowed = [
+        "org.freedesktop.hostname1.set-hostname",
+        "org.freedesktop.hostname1.set-static-hostname"
+    ];
+    if (allowed.indexOf(action.id) >= 0) {
+        return polkit.Result.YES;
+    }
+    return polkit.Result.NOT_HANDLED;
+});

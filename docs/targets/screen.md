@@ -269,7 +269,7 @@ Goes inside `<q:application>`.
 
 | Attribute | Type | Default | What it is |
 |---|---|---|---|
-| `event=` | enum: `service-crash`, `log-anomaly`, `port-conflict`, `disk-low`, `memory-pressure`, `command-observed`, `command-not-found`, `notice`, `offer`, `done`, `failed` | required |  |
+| `event=` | enum: `service-crash`, `log-anomaly`, `port-conflict`, `disk-low`, `memory-pressure`, `command-observed`, `command-not-found`, `notice`, `offer`, `request`, `done`, `failed` | required |  |
 
 ### `qs:animate`
 
@@ -454,6 +454,20 @@ The Hive offered something an administrator may approve; the qs:offers lists it.
 | Field | Type | What it is |
 |---|---|---|
 | `{count}` | int | how many offers came together |
+| `{title}` | text | the notice, as hive-cortex titles it |
+| `{body}` | text | what it says |
+| `{severity}` | text | info, notice, warning, error or critical |
+
+### `request`
+
+A user asked the Hive for a change (the Ajustes app, `hive request`): the offer carries it, for an administrator to approve as any other; the qs:offers lists it.
+
+| Field | Type | What it is |
+|---|---|---|
+| `{user}` | text | who asked |
+| `{action}` | text | what they asked for: the action's name (set-hostname) |
+| `{what}` | text | what it does, in words (name the machine forja) |
+| `{count}` | int | how many offers came with it: one |
 | `{title}` | text | the notice, as hive-cortex titles it |
 | `{body}` | text | what it says |
 | `{severity}` | text | info, notice, warning, error or critical |
@@ -690,6 +704,10 @@ page's runtime.
   </qs:on>
   <qs:on event="notice">
     <qs:say text="{title}: {body}" />
+  </qs:on>
+  <qs:on event="request">
+    <qs:emit particles="stars" at="bee" dx="8" dy="8" />
+    <qs:say text="{user} asks: {what}; Enter approves, Escape dismisses" seconds="6" />
   </qs:on>
   <qs:on event="offer">
     <qs:emit particles="stars" at="bee" dx="8" dy="8" />

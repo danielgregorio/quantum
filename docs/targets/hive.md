@@ -107,7 +107,7 @@ Plus the attributes of its `action=`, listed under [the actions](#the-actions).
 
 ### `qh:allow`
 
-What the actuator may do at all: its whitelist, which fails closed. Exactly one of command= (with args=: `*` is any one argument; the argument count must match), service=, path=, dataset=, action= (a permission with no list: kill-port-process, open-url, firewall) or delete-snapshot= (the snapshot names the Hive may destroy, a pattern).
+What the actuator may do at all: its whitelist, which fails closed. Exactly one of command= (with args=: `*` is any one argument; the argument count must match), service=, path=, dataset=, action= (a permission with no list: kill-port-process, open-url, firewall, set-hostname, set-keyboard, set-screen-level) or delete-snapshot= (the snapshot names the Hive may destroy, a pattern).
 
 Goes inside `<q:application>`.
 
@@ -118,7 +118,7 @@ Goes inside `<q:application>`.
 | `service=` | words |  | services it may start, stop, restart, reload, enable, disable |
 | `path=` | words |  | where files may be created, moved, copied, deleted (patterns) |
 | `dataset=` | words |  | ZFS datasets it may snapshot (patterns) |
-| `action=` | enum: `kill-port-process`, `open-url`, `firewall` |  |  |
+| `action=` | enum: `kill-port-process`, `open-url`, `firewall`, `set-hostname`, `set-keyboard`, `set-screen-level` |  |  |
 | `delete-snapshot=` | text |  | a pattern of snapshot names |
 
 ### `qh:block`
@@ -141,7 +141,7 @@ Goes inside `<q:application>`.
 
 | Attribute | Type | Default | What it is |
 |---|---|---|---|
-| `action=` | enum: `run-command`, `create-snapshot`, `restore-snapshot`, `list-snapshots`, `delete-snapshot`, `show-notification`, `open-file`, `open-url`, `install-package`, `remove-package`, `update-package-lists`, `upgrade-packages`, `start-service`, `stop-service`, `restart-service`, `reload-service`, `enable-service`, `disable-service`, `create-directory`, `move-file`, `copy-file`, `delete-file`, `change-permissions`, `kill-port-process`, `add-firewall-rule`, `reboot`, `shutdown`, `suspend`, `clean-package-cache`, `clean-system` | required |  |
+| `action=` | enum: `run-command`, `create-snapshot`, `restore-snapshot`, `list-snapshots`, `delete-snapshot`, `show-notification`, `open-file`, `open-url`, `install-package`, `remove-package`, `update-package-lists`, `upgrade-packages`, `start-service`, `stop-service`, `restart-service`, `reload-service`, `enable-service`, `disable-service`, `create-directory`, `move-file`, `copy-file`, `delete-file`, `change-permissions`, `kill-port-process`, `add-firewall-rule`, `reboot`, `shutdown`, `suspend`, `clean-package-cache`, `clean-system`, `set-hostname`, `set-keyboard`, `set-screen-level` | required |  |
 | `per-minute=` | int | required |  |
 
 ## The events
@@ -343,11 +343,11 @@ Lists ZFS snapshots. (`Action::ListSnapshots`)
 
 ### What `qh:limit` may name
 
-Every `Action` variant, in kebab-case: `run-command`, `create-snapshot`, `restore-snapshot`, `list-snapshots`, `delete-snapshot`, `show-notification`, `open-file`, `open-url`, `install-package`, `remove-package`, `update-package-lists`, `upgrade-packages`, `start-service`, `stop-service`, `restart-service`, `reload-service`, `enable-service`, `disable-service`, `create-directory`, `move-file`, `copy-file`, `delete-file`, `change-permissions`, `kill-port-process`, `add-firewall-rule`, `reboot`, `shutdown`, `suspend`, `clean-package-cache`, `clean-system`.
+Every `Action` variant, in kebab-case: `run-command`, `create-snapshot`, `restore-snapshot`, `list-snapshots`, `delete-snapshot`, `show-notification`, `open-file`, `open-url`, `install-package`, `remove-package`, `update-package-lists`, `upgrade-packages`, `start-service`, `stop-service`, `restart-service`, `reload-service`, `enable-service`, `disable-service`, `create-directory`, `move-file`, `copy-file`, `delete-file`, `change-permissions`, `kill-port-process`, `add-firewall-rule`, `reboot`, `shutdown`, `suspend`, `clean-package-cache`, `clean-system`, `set-hostname`, `set-keyboard`, `set-screen-level`.
 
 ### What `qh:allow action=` may switch on
 
-`kill-port-process`, `open-url`, `firewall`. Off unless the file switches it on.
+`kill-port-process`, `open-url`, `firewall`, `set-hostname`, `set-keyboard`, `set-screen-level`. Off unless the file switches it on.
 
 ## What is refused
 
@@ -451,6 +451,17 @@ lab (`os/crates/hive-lab`) plays a tape per rule against the real
   <qh:allow command="systemctl" args="status *" />
   <qh:allow command="systemctl" args="is-active *" />
   <qh:allow command="journalctl" args="-n 50 -u *" />
+
+  <!-- The machine's settings a user asks for through the Ajustes app
+       (hive request) and an administrator approves on the screen: its name
+       (hostnamectl), its keyboard (localectl, us or br), its screen's level.
+       Two a minute each: a setting is not something to flap. -->
+  <qh:allow action="set-hostname" />
+  <qh:allow action="set-keyboard" />
+  <qh:allow action="set-screen-level" />
+  <qh:limit action="set-hostname" per-minute="2" />
+  <qh:limit action="set-keyboard" per-minute="2" />
+  <qh:limit action="set-screen-level" per-minute="2" />
   <qh:allow command="zpool" args="status" />
   <qh:allow command="zfs" args="list" />
   <qh:allow command="zfs" args="list -t snapshot" />

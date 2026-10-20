@@ -222,6 +222,32 @@ pub enum Action {
     },
 
     // =========================================================================
+    // The machine's settings: what a user asks for through the Ajustes app
+    // (HiveMessage::UserRequest) and an administrator approves
+    // =========================================================================
+    /// Name the machine (`hostnamectl set-hostname`)
+    SetHostname {
+        /// A host label: letters, digits and hyphens, up to 63
+        name: String,
+    },
+
+    /// The keyboard's layout, for the console and the Hive's screen
+    /// (`localectl set-x11-keymap`, which writes /etc/default/keyboard)
+    SetKeyboard {
+        /// `us` or `br`: the layouts the screen reads
+        layout: String,
+        /// `pc105`, `abnt2`, or empty for the default
+        model: String,
+    },
+
+    /// Pin the screen's presentation level, or let it be chosen by the
+    /// measure again (None): a file the screen watches, no root needed
+    SetScreenLevel {
+        /// 0 plain, 1 effects, 2 fine; None lets the measure choose
+        level: Option<u8>,
+    },
+
+    // =========================================================================
     // Network operations
     // =========================================================================
     /// Kill a process using a specific port
@@ -355,6 +381,9 @@ impl Action {
             Action::CopyFile { .. } => "CopyFile",
             Action::DeleteFile { .. } => "DeleteFile",
             Action::ChangePermissions { .. } => "ChangePermissions",
+            Action::SetHostname { .. } => "SetHostname",
+            Action::SetKeyboard { .. } => "SetKeyboard",
+            Action::SetScreenLevel { .. } => "SetScreenLevel",
             Action::KillPortProcess { .. } => "KillPortProcess",
             Action::AddFirewallRule { .. } => "AddFirewallRule",
             Action::Reboot { .. } => "Reboot",
@@ -387,7 +416,43 @@ impl Action {
                 | Action::Shutdown { .. }
                 | Action::Suspend
                 | Action::CleanPackageCache
+                | Action::SetHostname { .. }
+                | Action::SetKeyboard { .. }
         )
+    }
+
+    /// Whether this is a setting of the machine a user may ask for
+    /// (HiveMessage::UserRequest): the only actions a request may carry.
+    pub fn is_a_setting(&self) -> bool {
+        matches!(
+            self,
+            Action::SetHostname { .. } | Action::SetKeyboard { .. } | Action::SetScreenLevel { .. }
+        )
+    }
+
+    /// What a setting does, in words: the title of the offer a request
+    /// becomes ("name the machine forja").
+    pub fn describe_setting(&self) -> Option<String> {
+        Some(match self {
+            Action::SetHostname { name } => format!("name the machine {}", name),
+            Action::SetKeyboard { layout, model } if model.is_empty() => {
+                format!("keyboard {}", layout)
+            }
+            Action::SetKeyboard { layout, model } => format!("keyboard {} ({})", layout, model),
+            Action::SetScreenLevel { level: Some(l) } => format!(
+                "screen level {}",
+                match l {
+                    0 => "plain",
+                    1 => "effects",
+                    2 => "fine",
+                    _ => "?",
+                }
+            ),
+            Action::SetScreenLevel { level: None } => {
+                "screen level chosen by the measure".to_string()
+            }
+            _ => return None,
+        })
     }
 
     /// Check if this action is considered dangerous
@@ -425,6 +490,29 @@ impl Action {
 /// and `+ - .`, starting with a letter or digit, at least two characters.
 /// Anything else - an option like `--allow-downgrades`, a path, a glob -
 /// never reaches apt or PackageKit as a package.
+/// A host label as `hostnamectl` accepts it and the top bar shows it:
+/// letters, digits and hyphens, 1 to 63 of them, not starting or ending
+/// with a hyphen.
+pub fn is_valid_hostname(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 63
+        && !name.starts_with('-')
+        && !name.ends_with('-')
+        && name
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+}
+
+/// The keyboard layouts the screen reads, and the models each takes.
+pub const KEYBOARD_LAYOUTS: &[(&str, &[&str])] =
+    &[("us", &["", "pc105"]), ("br", &["", "abnt2", "pc105"])];
+
+pub fn is_valid_keyboard(layout: &str, model: &str) -> bool {
+    KEYBOARD_LAYOUTS
+        .iter()
+        .any(|(l, models)| *l == layout && models.contains(&model))
+}
+
 pub fn is_valid_package_name(name: &str) -> bool {
     let mut chars = name.chars();
     name.len() >= 2
@@ -438,6 +526,52 @@ pub fn is_valid_package_name(name: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_setting_is_validated_and_described() {
+        assert!(is_valid_hostname("forja"));
+        assert!(is_valid_hostname("web-01"));
+        assert!(!is_valid_hostname(""));
+        assert!(!is_valid_hostname("-x"));
+        assert!(!is_valid_hostname("Forja"));
+        assert!(!is_valid_hostname("a b"));
+        assert!(!is_valid_hostname(&"a".repeat(64)));
+        assert!(is_valid_keyboard("br", "abnt2"));
+        assert!(is_valid_keyboard("us", ""));
+        assert!(!is_valid_keyboard("fr", ""));
+        assert!(!is_valid_keyboard("us", "abnt2"));
+        let name = Action::SetHostname {
+            name: "forja".into(),
+        };
+        assert!(name.is_a_setting());
+        assert_eq!(name.describe_setting().unwrap(), "name the machine forja");
+        assert_eq!(
+            Action::SetKeyboard {
+                layout: "br".into(),
+                model: "abnt2".into()
+            }
+            .describe_setting()
+            .unwrap(),
+            "keyboard br (abnt2)"
+        );
+        assert_eq!(
+            Action::SetScreenLevel { level: Some(2) }
+                .describe_setting()
+                .unwrap(),
+            "screen level fine"
+        );
+        assert_eq!(
+            Action::SetScreenLevel { level: None }
+                .describe_setting()
+                .unwrap(),
+            "screen level chosen by the measure"
+        );
+        assert!(!Action::RestartService {
+            name: "nginx".into()
+        }
+        .is_a_setting());
+        assert!(!name.is_dangerous());
+    }
 
     #[test]
     fn package_names_follow_debian_policy() {

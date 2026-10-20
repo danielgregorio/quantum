@@ -1500,6 +1500,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "hive-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "hive-common",
+]
+
+[[package]]
 name = "hive-common"
 version = "0.1.0"
 dependencies = [
