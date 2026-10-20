@@ -498,7 +498,7 @@ it runs: a vCPU plugged in counts within half a second):
 |---|---|---|
 | 0 `plain` | 1 core | the scene as declared, no particles, at most 15 pictures a second |
 | 1 `effects` | 2 cores | the particles too (`qs:emit`, and every `qs:emitter` of `level="1"`), at most 30 a second |
-| 2 `fine` | 4 cores | two pixels to the scene's one: a tween or a particle lands on its own pixel, the font's pixels are blocks; and the emitters of `level="2"`. A page on the screen is drawn pixel for pixel instead, so it has 106 by 36 cells there, against 53 by 18 |
+| 2 `fine` | 4 cores | two pixels to the scene's one: a tween or a particle lands on its own pixel, the font's pixels are blocks; and the emitters of `level="2"`. A page on the screen is drawn pixel for pixel instead, so its window has 100 columns and up to 29 rows there, against 49 by up to 13 |
 
 A level changes how the scene shows, never what happens in it: the same
 ticks run at every level, and a rule's actions run the same. The frame is
@@ -515,10 +515,16 @@ runtime is the application's own server, started in that process as
 `quantum console` starts it; it connects to `hive-screen`'s pixel socket
 (`/run/hive-screen/pixel.sock`, anyone's) and sends each page's view tree
 as JSON (`{"op":"show","page":{...}}`), whole, every time it changes. The
-screen lays it out in cells of its font (53 by 18 at 320×180; 106 by 36
+screen lays it out in cells of its font and draws it over the scene as a
+window: a frame with a 1-px bevel and a 3-px shadow, the scene dimmed
+around it, a honey title bar with the Esc key drawn on it, the content,
+and a status bar with the keys that apply; fields are sunken, buttons and
+badges raised, a scrollbar appears when the page is longer than the
+window. The window is as tall as its content, up to the canvas, and sits
+in the middle: 49 columns and up to 13 rows at 320×180; 100 by up to 29
 at the fine level, where the page is drawn pixel for pixel on the canvas
 of two pixels to the scene's one, and flows again when the level changes,
-keeping its focus), draws it over the scene with the keyboard its own,
+keeping its focus. It is drawn with the keyboard its own,
 and sends back what the user did, one JSON line an event: `click` and
 `submit` (with the form's fields, as a browser would post them), `change`
 (a search field, after its pause), `navigate` (a link), `reload` (F5) and

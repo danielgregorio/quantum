@@ -451,11 +451,14 @@ says so, as the console does.
 The keyboard is read by the machine's layout: US, or a Brazilian ABNT2
 (`XKBLAYOUT="br"` in `/etc/default/keyboard`), where `ç` is its own key
 and the accents are dead keys composed with the vowel after them; the
-screen's font has every Latin-1 letter. On a machine with four cores the
-screen draws at its fine level and the page has 106 columns by 36 rows
-instead of 53 by 18, so an `hbox` that stacks on a narrow page sits side
-by side, as in a terminal 80 columns wide; the page flows again when the
-level changes and keeps its focus.
+screen's font has every Latin-1 letter. The page is a window over the Hive's
+scene: a frame with a bevel and a shadow, a title bar with the Esc key
+drawn on it, a status bar with the keys, as tall as the page needs. On a
+machine with four cores the screen draws at its fine level and the window
+has 100 columns by up to 29 rows instead of 49 by up to 13, so an `hbox`
+that stacks on a narrow page sits side by side, as in a terminal 80
+columns wide; the page flows again when the level changes and keeps its
+focus.
 
 `<q:application type="ui">` with `quantum run app.q --target html` (a single
 HTML file) or `--target textual` (a single Python file) draws **layout only**:

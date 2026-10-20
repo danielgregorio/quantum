@@ -1,5 +1,43 @@
 # DruidOS Development Log
 
+## 2026-10-20 - A página vira janela: moldura, relevo, sombra
+
+O primeiro passo da fatia 5 (visual e movimento), depois dos esboços em
+pixel art aprovados: a página na tela deixa de parecer um terminal e vira
+uma janela como as de um gerenciador de janelas mínimo.
+
+**O que mudou no desenho (`window.rs`).** A cena escurece sob a janela e
+aparece em volta dela; a janela tem moldura de 1 px com bisel (claro em
+cima e à esquerda, escuro embaixo e à direita no que é saliente; o
+contrário no que é rebaixado), sombra de 3 px a 50%, barra de título mel
+em dois tons com o título em tinta e a tecla `Esc` desenhada como tecla à
+direita, e barra de estado em relevo com as teclas que valem. Os widgets
+ganharam volume: campo rebaixado (contorno mel com o foco), botão
+saliente (foco em contorno e texto mel; primário com texto mel; perigoso
+em vermelho), caixa de marcar de 8 px com visto, interruptor com trilho e
+botão, radio com quadrado mel, select saliente com seta de três linhas,
+aba ativa como bloco saliente sobre uma régua, tabela com régua sob o
+cabeçalho e zebra, emblemas e alertas em relevo, régua em duas linhas,
+barra de rolagem rebaixada com polegar saliente. Tudo dentro da linha de
+10 px de cada célula, para nada se sobrepor.
+
+**A janela do tamanho do conteúdo.** A largura é a do canvas menos as
+margens (8 px na cena, 16 no nível fino); a altura é a que o conteúdo
+pede mais as barras, até o limite do canvas, e a janela fica centrada:
+uma página curta é uma janela pequena sobre a colmeia, uma longa toma a
+tela e rola. Em células: 49 colunas e até 13 linhas em 320×180; 100 por
+até 29 no nível fino. A observação do play protocol diz `frame` em pixels.
+
+**O que ficou igual.** A árvore de visão, o modelo de teclado, os eventos:
+a página continua a mesma para todo renderizador; só a tela desenha
+diferente. Os quadros de referência foram refeitos; o teste de paridade,
+a fita do laboratório da Hive e os unitários passam sem mudança de
+lógica.
+
+**A seguir na fatia.** A barra inferior com as janelas e o menu F1, a
+colmeia com barras e painéis, e as transições (gelatina, lâmpada, dobra,
+cortina).
+
 ## 2026-10-20 - Páginas na tela, 4b: nível fino a 106×36, ABNT2 com acentos, rolagem
 
 A fatia 4b, por cima da 4a integrada ontem.

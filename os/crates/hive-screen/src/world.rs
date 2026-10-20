@@ -313,23 +313,19 @@ impl World {
         if !self.effects() {
             self.bursts.clear();
         }
-        // a page on the screen flows again into the cells the level gives it
-        let (cols, rows) = self.page_cells();
-        if let Some(w) = &mut self.window {
-            w.resize(cols, rows);
+        // a page on the screen flows again into the canvas the level gives it
+        let (w, h) = self.page_canvas();
+        if let Some(window) = &mut self.window {
+            window.resize(w, h);
         }
         self.dirty = true;
     }
 
-    /// The cells a page has at this level: the canvas (the scene, or twice
-    /// it at the fine level) in cells of the font.
-    pub fn page_cells(&self) -> (usize, usize) {
+    /// The canvas a page is drawn on at this level, in pixels: the scene,
+    /// or twice it at the fine level.
+    pub fn page_canvas(&self) -> (u32, u32) {
         let scale = LEVELS[self.level].scale.max(1);
-        let (cw, ch) = self.scene.font.cell;
-        (
-            (self.scene.width * scale / cw.max(1)) as usize,
-            (self.scene.height * scale / ch.max(1)) as usize,
-        )
+        (self.scene.width * scale, self.scene.height * scale)
     }
 
     /// The picture is to be drawn again whatever moved: the display came
@@ -640,8 +636,8 @@ impl World {
     /// flash, view tree). The same page shown again (after an action)
     /// keeps the focus on the element it was on, when the new page has it.
     pub fn show(&mut self, page: &Value) {
-        let (cols, rows) = self.page_cells();
-        let mut window = Window::new(page, cols, rows);
+        let (w, h) = self.page_canvas();
+        let mut window = Window::new(page, w, h);
         if let Some(old) = &self.window {
             window.shown = old.shown + 1;
             if let Some((kind, identity)) = old.focused_identity() {
