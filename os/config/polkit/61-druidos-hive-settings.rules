@@ -1,5 +1,5 @@
 // DruidOS: let hive-actuator apply the machine's name a user asked for and
-// an administrator approved (the Ajustes app, `hive request`).
+// an administrator approved (the Settings app, `hive request`).
 //
 // hostnamectl talks to systemd-hostnamed over D-Bus, which asks polkit;
 // hive-actuator runs as _hive-act, with no root. Whether the name may

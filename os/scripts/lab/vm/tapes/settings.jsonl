@@ -1,22 +1,22 @@
-// the Ajustes app on the real screen: `hive ajustes`, run by a local user, starts the app's server in its
+// the Settings app on the real screen: `hive settings`, run by a local user, starts the app's server in its
 // process (the Quantum runtime installed with the Hive) and brings its page to the console; the page says
 // what the machine really is (its name, its cores, the screen's own level), the arrows go through the tabs
 // on the real keyboard, Esc closes it
 {"op": "start"}
 {"op": "until_sh", "sh": "systemctl is-active hive-screen", "timeout": 20}
 {"op": "until_shot", "has": "#ffd34d", "timeout": 15}
-{"op": "sh", "sh": "hive apps", "contains": "ajustes"}
+{"op": "sh", "sh": "hive apps", "contains": "settings"}
 {"op": "sh", "sh": "quantum --help", "contains": "pixel"}
-{"op": "sh", "sh": "rm -f /tmp/ajustes.out; nohup hive ajustes >/tmp/ajustes.out 2>&1 &", "user": "druid"}
-{"op": "until_journal", "unit": "hive-screen.service", "contains": "page: Ajustes", "timeout": 30}
+{"op": "sh", "sh": "rm -f /tmp/settings.out; nohup hive settings >/tmp/settings.out 2>&1 &", "user": "druid"}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "page: Settings", "timeout": 30}
 {"op": "until_shot", "has": "#121228", "min": 20000, "timeout": 15}
 // the page's own server answers the same view tree the screen draws: the machine's real name and cores
 {"op": "put", "path": "/tmp/view.py", "mode": "644", "text": "import json, re, subprocess, urllib.request\nout = subprocess.run(['ss', '-tlnpH'], capture_output=True, text=True).stdout\nports = sorted(set(re.findall(r'127\\.0\\.0\\.1:(\\d+)\\s.*python3', out)))\nfor port in ports:\n    req = urllib.request.Request(f'http://127.0.0.1:{port}/', headers={'Accept': 'application/vnd.quantum.view+json'})\n    try:\n        view = json.load(urllib.request.urlopen(req, timeout=5))\n    except Exception as exc:\n        print('port', port, exc)\n        continue\n    texts = []\n    def walk(nodes):\n        for n in nodes:\n            p = n.get('props') or {}\n            for k in ('text', 'title', 'label'):\n                if p.get(k): texts.append(str(p[k]))\n            walk(n.get('children') or [])\n    walk(view.get('view') or [])\n    print(view.get('title'), '|', ' | '.join(texts))\n"}
-{"op": "until_sh", "sh": "python3 /tmp/view.py", "contains": "nome: quantum-lab", "timeout": 20}
-{"op": "sh", "sh": "python3 /tmp/view.py", "contains": "núcleos: 4"}
-{"op": "sh", "sh": "python3 /tmp/view.py", "contains": "nível: "}
+{"op": "until_sh", "sh": "python3 /tmp/view.py", "contains": "name: quantum-lab", "timeout": 20}
+{"op": "sh", "sh": "python3 /tmp/view.py", "contains": "cores: 4"}
+{"op": "sh", "sh": "python3 /tmp/view.py", "contains": "level: "}
 {"op": "sh", "sh": "python3 /tmp/view.py", "contains": "hive-screen: active"}
-// the arrows go through the tabs: Máquina, Rede, Teclado, Tela
+// the arrows go through the tabs: Machine, Network, Keyboard, Screen
 {"op": "press", "keys": ["right", "right", "right"]}
 {"op": "shot", "has": "#121228", "min": 20000}
 {"op": "press", "keys": ["escape"]}

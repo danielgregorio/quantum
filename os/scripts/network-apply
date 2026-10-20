@@ -68,7 +68,7 @@ def yaml_for(spec: dict) -> str:
     file for the same interface is merged under it by netplan (its match and
     name stay, its dhcp4 is overridden)."""
     lines = ['# Written by quantum-network-apply from the setting the Hive approved. Do not edit:',
-             '# ask the Hive again (the Ajustes app, hive request set-network).',
+             '# ask the Hive again (the Settings app, hive request set-network).',
              'network:', '  version: 2', '  ethernets:', f'    {spec["interface"]}:']
     if spec['dhcp']:
         lines += ['      dhcp4: true']

@@ -375,7 +375,7 @@ class Machine:
 # auditd (the process nerve reads program executions from the audit log).
 PACKAGES = ['polkitd', 'packagekit', 'packagekit-tools', 'auditd',
             # the Quantum runtime's needs, as Ubuntu packages: `quantum pixel`
-            # brings an app's pages to the real screen (the Ajustes app)
+            # brings an app's pages to the real screen (the Settings app)
             'python3-flask', 'python3-yaml', 'python3-sqlparse', 'python3-requests', 'python3-bcrypt']
 
 # Timers that would act on their own during a test: a test must see only

@@ -40,14 +40,14 @@ The ops:
 | `inject` (`message`) | any `HiveMessage`, as JSON, from the nerve |
 | `send` (`as`, `message`) | any message as any role, to check what a role may *not* do |
 | `ask` (`text`), `not_found` (`command`, `package`), `anonymous` (`on`) | grove |
-| `request` (`action`: an `Action` as JSON, `reason`) | a user asking for a setting of the machine (the Ajustes app, `hive request`): it becomes an offer in the user's name |
+| `request` (`action`: an `Action` as JSON, `reason`) | a user asking for a setting of the machine (the Settings app, `hive request`): it becomes an offer in the user's name |
 | `approve`, `dismiss` (`notification`, `suggestion`, `as`) | the dashboard; by default, the latest offer |
 | `observe` | everything each role received since the last look |
 | `until` (`to`, `type`, `contains`, `excludes`, `timeout`) | waits for a matching message; `excludes` is text it must not hold |
 | `none` (`to`, `type`, `contains`, `within`) | nothing matching arrives, for example an action nobody approved |
 | `tui` (`app`: dashboard or grove, `rows`, `cols`) | the **real** program in a pseudo-terminal: hive-dashboard as root, grove as the lab's user |
 | `view` (`app`), `keys` (`app`, `keys`: ["Down", "Enter", "text"]), `until_screen` (`app`, `contains`, `excludes`) | its screen as text, through a terminal emulator: what a person sees, with no screenshot and no OCR |
-| `screen` (`scene`), `screen` (`play`: a request) | the **real** hive-screen (the Hive's screen, `config/screen/screen.q`) with no display, as root, on the compiled scene; then its play protocol: `{"op":"until","offer":"Restart nginx"}`, `{"op":"act","tap":["enter"]}`, `{"op":"until","sprite":"nginx","frame":0}`, `{"op":"frame","path":"..."}`, `{"op":"level","level":2}` (the presentation level: 0 plain, 1 effects, 2 fine), `{"op":"show","page":{...}}` (a page on the screen, as `quantum pixel` sends it), `{"op":"act","type":"ligar","tap":["enter"]}` (the text, then the keys), `{"op":"until","pixel":"submit"}` / `{"op":"until","text":"..."}` — what it shows as data, never pixels; `contains` fails the request when the answer does not say that text (a field of an event the page's runtime would hear) |
+| `screen` (`scene`), `screen` (`play`: a request) | the **real** hive-screen (the Hive's screen, `config/screen/screen.q`) with no display, as root, on the compiled scene; then its play protocol: `{"op":"until","offer":"Restart nginx"}`, `{"op":"act","tap":["enter"]}`, `{"op":"until","sprite":"nginx","frame":0}`, `{"op":"frame","path":"..."}`, `{"op":"level","level":2}` (the presentation level: 0 plain, 1 effects, 2 fine), `{"op":"show","page":{...}}` (a page on the screen, as `quantum pixel` sends it), `{"op":"act","type":"lunch","tap":["enter"]}` (the text, then the keys), `{"op":"until","pixel":"submit"}` / `{"op":"until","text":"..."}` — what it shows as data, never pixels; `contains` fails the request when the answer does not say that text (a field of an event the page's runtime would hear) |
 | `log_until` (`daemon`, `contains`), `log` (`daemon`, `lines`) | the daemons' logs |
 | `end` | stops everything and removes the lab's directory |
 

@@ -86,11 +86,11 @@ EVENTS.update({
         'The Hive offered something an administrator may approve; the qs:offers lists it.',
         {'count': Field('int', 'how many offers came together'), **COMMON}, 'screen'),
     'request': ScreenEvent(
-        'A user asked the Hive for a change (the Ajustes app, `hive request`): the offer carries it, for an '
+        'A user asked the Hive for a change (the Settings app, `hive request`): the offer carries it, for an '
         'administrator to approve as any other; the qs:offers lists it.',
         {'user': Field('text', 'who asked'),
          'action': Field('text', 'what they asked for: the action\'s name (set-hostname)'),
-         'what': Field('text', 'what it does, in words (name the machine forja)'),
+         'what': Field('text', 'what it does, in words (name the machine forge)'),
          'count': Field('int', 'how many offers came with it: one'), **COMMON}, 'screen'),
     'done': ScreenEvent(
         'An action an administrator approved on this screen ran and succeeded.',

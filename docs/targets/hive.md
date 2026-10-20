@@ -452,7 +452,7 @@ lab (`os/crates/hive-lab`) plays a tape per rule against the real
   <qh:allow command="systemctl" args="is-active *" />
   <qh:allow command="journalctl" args="-n 50 -u *" />
 
-  <!-- The machine's settings a user asks for through the Ajustes app
+  <!-- The machine's settings a user asks for through the Settings app
        (hive request) and an administrator approves on the screen: its name
        (hostnamectl), its keyboard (us or br), its screen's level, an
        interface's address (netplan; dangerous: Enter twice).

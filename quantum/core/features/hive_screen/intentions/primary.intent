@@ -22,7 +22,7 @@ intention:
     - "Lay out the scene (qs:scene): qs:sprite, qs:text, qs:emitter, the built-in qs:offers and qs:notices (panels when they have a title=), qs:bar at the top and the bottom with the screen's own {field}s"
     - "Per event (qs:on): qs:animate, qs:frame, qs:show, qs:tween, qs:emit, qs:say, with {field}s of the event"
     - "React to every observation the rules know: service-crash, log-anomaly, port-conflict, disk-low, memory-pressure, command-observed, command-not-found"
-    - "React to the screen's own events: notice, offer, request (a user asked for a setting of the machine, through the Ajustes app), done, failed"
+    - "React to the screen's own events: notice, offer, request (a user asked for a setting of the machine, through the Settings app), done, failed"
 
   triggers:
     - '<q:application type="screen">'

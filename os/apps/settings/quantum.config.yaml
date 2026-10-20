@@ -1,0 +1,19 @@
+# Settings: the machine's settings on the Hive's screen (`hive settings`), or in a
+# browser (`quantum start` in this folder). It reads as the user who opened
+# it; a change is asked of the Hive (os/CLAUDE.md, "Apps").
+server:
+  port: 8080
+  host: 127.0.0.1
+  reload: false
+  debug: false
+
+paths:
+  components: ./components
+
+# Installed under /usr/share, which is nobody's to write: the log goes to
+# stderr only (hive settings keeps it in the terminal it was run from).
+logging:
+  file: false
+
+services:
+  - machine

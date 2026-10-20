@@ -712,7 +712,7 @@ mod tests {
         // a request for a setting is a shell's: it only ever becomes an offer
         let request = HiveMessage::UserRequest {
             action: hive_common::actions::Action::SetHostname {
-                name: "forja".into(),
+                name: "forge".into(),
             },
             reason: "the lab machine".into(),
         };

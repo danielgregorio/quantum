@@ -3,11 +3,11 @@
 // runtime would post as a q:action), Tab reaches the table, Enter clicks its row's button, Esc closes the page
 {"op":"start"}
 {"op":"screen"}
-{"op":"screen","play":{"op":"show","page":{"title":"Tarefas","view":[{"id":1,"type":"form","event":{"action":"criar","fields":{"filtro":"todas"}},"children":[{"id":2,"type":"input","props":{"bind":"titulo","placeholder":"O que fazer?"}},{"id":3,"type":"checkbox","props":{"bind":"urgente","label":"Urgente"}},{"id":4,"type":"button","props":{"text":"Criar"}}]},{"id":5,"type":"table","columns":[{"label":"Tarefa"},{"label":""}],"rows":[[[{"id":6,"type":"text","props":{"text":"comprar pão"}}],[{"id":7,"type":"button","props":{"text":"Concluir"},"event":{"action":"alternar","fields":{"id":"2"}}}]]]}]}},"contains":"\"focus\":true,\"id\":2"}
-{"op":"screen","play":{"op":"until","text":"comprar pão","max_ticks":1}}
-{"op":"screen","play":{"op":"act","type":"ligar","ticks":1},"contains":"\"value\":\"ligar\""}
-{"op":"screen","play":{"op":"act","tap":["tab","space","enter"],"ticks":1},"contains":"\"fields\":{\"filtro\":\"todas\",\"titulo\":\"ligar\",\"urgente\":\"on\"}"}
-{"op":"screen","play":{"op":"act","tap":["tab","tab","enter"],"ticks":1},"contains":"\"action\":\"alternar\",\"event\":\"click\",\"fields\":{\"id\":\"2\"}"}
+{"op":"screen","play":{"op":"show","page":{"title":"Tasks","view":[{"id":1,"type":"form","event":{"action":"create","fields":{"filter":"all"}},"children":[{"id":2,"type":"input","props":{"bind":"title","placeholder":"What to do?"}},{"id":3,"type":"checkbox","props":{"bind":"urgent","label":"Urgent"}},{"id":4,"type":"button","props":{"text":"Create"}}]},{"id":5,"type":"table","columns":[{"label":"Task"},{"label":""}],"rows":[[[{"id":6,"type":"text","props":{"text":"buy bread"}}],[{"id":7,"type":"button","props":{"text":"Done"},"event":{"action":"toggle","fields":{"id":"2"}}}]]]}]}},"contains":"\"focus\":true,\"id\":2"}
+{"op":"screen","play":{"op":"until","text":"buy bread","max_ticks":1}}
+{"op":"screen","play":{"op":"act","type":"lunch","ticks":1},"contains":"\"value\":\"lunch\""}
+{"op":"screen","play":{"op":"act","tap":["tab","space","enter"],"ticks":1},"contains":"\"fields\":{\"filter\":\"all\",\"title\":\"lunch\",\"urgent\":\"on\"}"}
+{"op":"screen","play":{"op":"act","tap":["tab","tab","enter"],"ticks":1},"contains":"\"action\":\"toggle\",\"event\":\"click\",\"fields\":{\"id\":\"2\"}"}
 {"op":"screen","play":{"op":"level","level":2},"contains":"\"cols\":100,\"flash\":null,\"focus\":3"}
 {"op":"screen","play":{"op":"level","level":1},"contains":"\"cols\":49,\"flash\":null,\"focus\":3"}
 {"op":"screen","play":{"op":"act","tap":["escape"],"ticks":1},"contains":"\"window\":null"}

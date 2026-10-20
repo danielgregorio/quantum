@@ -395,7 +395,7 @@ mod tests {
             mode: None,
         }));
         assert!(!whitelist.is_allowed(&Action::SetHostname {
-            name: "forja".into()
+            name: "forge".into()
         }));
         assert!(!whitelist.is_allowed(&Action::SetScreenLevel { level: None }));
     }
@@ -408,13 +408,13 @@ mod tests {
         config.misc.set_screen_level = true;
         let whitelist = Whitelist { config };
         assert!(whitelist.is_allowed(&Action::SetHostname {
-            name: "forja".into()
+            name: "forge".into()
         }));
         assert!(!whitelist.is_allowed(&Action::SetHostname {
             name: "--help".into()
         }));
         assert!(!whitelist.is_allowed(&Action::SetHostname {
-            name: "Forja Nova".into()
+            name: "Forge New".into()
         }));
         assert!(whitelist.is_allowed(&Action::SetKeyboard {
             layout: "br".into(),
