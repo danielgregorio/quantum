@@ -1,5 +1,54 @@
 # DruidOS Development Log
 
+## 2026-10-20 - Ajustes, rede: o único ajuste com root, e o único perigoso
+
+A fatia 5d. A rede fecha o básico que o Daniel pediu (nome, rede,
+teclado) pelo mesmo caminho das outras: pedido, oferta, Enter, atuador.
+Duas coisas a distinguem, e as duas estão no desenho.
+
+**É perigosa.** `SetNetwork { interface, dhcp, address, gateway, dns }`
+é `is_dangerous`: um endereço errado tira a máquina da rede. Na tela, o
+primeiro Enter arma a oferta e o segundo aprova (sair dela desarma); no
+dashboard, confirmação. O valor é checado quatro vezes, sempre com a mesma
+régua (`is_valid_network`: nome de interface, IPv4 com prefixo, gateway
+IPv4, até quatro DNS): no `hive request`, na página, na whitelist e de
+novo no passo com root.
+
+**Precisa de root, e o atuador não tem.** O D-Bus do netplan recusa quem
+não é root, e dar root ao atuador quebraria a regra da casa. Então o
+atuador escreve o ajuste (JSON em `/var/lib/hive/settings/network`),
+esvazia `network.result` e inicia `quantum-network-apply.service`, um
+oneshot de root que a regra polkit de manage-units já deixa iniciar; o
+script (`scripts/network-apply`, python3 só com a biblioteca padrão)
+guarda o `/etc/netplan/60-hive.yaml` anterior como `60-hive.yaml.before`,
+escreve o novo só para aquela interface (modo 600; o arquivo do
+cloud-init para a mesma interface fica por baixo, o netplan funde),
+aplica e espera até 20 s a interface ter o endereço (o fixo, ou qualquer
+um por DHCP). Se não vier, o arquivo anterior volta e é aplicado de novo:
+um endereço errado nunca deixa a máquina fora da rede à espera de uma
+mão. O resultado vai para `network.result` ("ok: enp0s1 has 10.0.2.20/24"
+ou "failed: ..."), e é com ele que o atuador responde.
+
+**Na página.** A aba Rede ganha o formulário (interface, origem dhcp/fixo,
+endereço/prefixo, gateway, DNS), que começa do que a primeira interface
+tem; `ajustes.pedir('set-network', ...)` monta as palavras do comando e o
+flash avisa que são dois Enters. No comando: `hive request set-network
+IFACE dhcp` ou `IFACE ADDR/PREFIX [via GATEWAY] [dns A,B]`.
+
+**Prova.** Hive lab: `request-network.jsonl` (fixo e depois DHCP, cada
+um oferta em nome do druid, confirmada, e `SetNetwork` chega ao atuador).
+Unitários: validação, descrição, whitelist, CLI, `pedir` com os campos
+errados ditos antes de pedir, o formulário na tela com o `ask` trocado.
+VM: `ajustes-rede.jsonl` pede 10.0.2.20/24 via 10.0.2.2 dns 10.0.2.3,
+arma com um Enter (o atuador não vê nada), aprova com o segundo, e o
+`ip addr` real tem o endereço fixo e perde a concessão, a rota padrão vai
+por 10.0.2.2, o arquivo do netplan está lá com modo 600; depois volta por
+DHCP, com o `.before` guardado e a concessão de volta.
+
+**O que fica de fora, de propósito.** IPv6, mais de uma interface por
+pedido, Wi-Fi (sem placa no laboratório; é outro ajuste, com segredo) e
+escrever o `/etc/netplan` à mão em vez do `netplan apply`.
+
 ## 2026-10-20 - Ajustes, mudança: a página pede, a Hive oferece, Enter aprova, o atuador executa
 
 A fatia 5c, pelo caminho A da proposta (o recomendado; o Daniel não disse

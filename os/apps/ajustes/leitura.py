@@ -215,10 +215,20 @@ def rede() -> dict:
                 gateway += ' (DHCP)'
             break
     dns = _dns(d)
+    # the form's choices: the interfaces by name, the first one chosen; what it has now, as the fields' start
+    nomes = [i['nome'] for i in interfaces if INTERFACE.match(str(i['nome']))]
+    primeira = interfaces[0] if interfaces else {}
+    endereco = str(primeira.get('endereco', '')).split(',')[0].strip()
     return {
         'interfaces': interfaces,
         'gateway': gateway,
         'dns': ', '.join(dns) if dns else 'nenhum',
+        'opcoes': ','.join(nomes),
+        'escolha': nomes[0] if nomes else '',
+        'origem': 'fixo' if primeira.get('origem') == 'fixo' else 'dhcp',
+        'endereco': endereco if CIDR.match(endereco) else '',
+        'via': gateway.split()[0] if gateway != 'nenhum' else '',
+        'servidores': ','.join(dns),
         'linhas': [{'campo': 'gateway', 'valor': gateway},
                    {'campo': 'DNS', 'valor': ', '.join(dns) if dns else 'nenhum'}],
     }
@@ -338,17 +348,67 @@ def hive() -> dict:
 
 HOSTNAME = re.compile(r'^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$')
 LEVELS = ('auto', 'plain', 'effects', 'fine')
+INTERFACE = re.compile(r'^[a-z][a-z0-9._-]{0,14}$')
+IPV4 = re.compile(r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$')
+CIDR = re.compile(r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})$')
+
+
+def _ipv4(text: str) -> bool:
+    m = IPV4.match(text)
+    return bool(m) and all(0 <= int(g) <= 255 for g in m.groups())
+
+
+def _cidr(text: str) -> bool:
+    m = CIDR.match(text)
+    return bool(m) and _ipv4(text.split('/')[0]) and 1 <= int(m.group(5)) <= 32
+
+
+def _rede_args(interface: str, origem: str, endereco: str, gateway: str, dns: str) -> Tuple[Optional[List[str]], str]:
+    """The words of `hive request set-network`, or what is wrong with the fields."""
+    if not INTERFACE.match(interface):
+        return None, f'"{interface}" não é uma interface'
+    if origem == 'dhcp':
+        return ['set-network', interface, 'dhcp'], f'rede {interface} por DHCP'
+    if origem != 'fixo':
+        return None, f'"{origem}" não é uma origem: dhcp ou fixo'
+    if not _cidr(endereco):
+        return None, f'"{endereco}" não é um endereço com prefixo (10.0.2.20/24)'
+    if gateway and not _ipv4(gateway):
+        return None, f'"{gateway}" não é um gateway IPv4'
+    servidores = [s for s in re.split(r'[,\s]+', dns) if s]
+    if len(servidores) > 4 or not all(_ipv4(s) for s in servidores):
+        return None, f'"{dns}" não são até quatro servidores DNS IPv4'
+    args = ['set-network', interface, endereco]
+    pedido = f'rede {interface} fixa em {endereco}'
+    if gateway:
+        args += ['via', gateway]
+        pedido += f' via {gateway}'
+    if servidores:
+        args += ['dns', ','.join(servidores)]
+        pedido += f', DNS {", ".join(servidores)}'
+    return args, pedido
 
 
 @service('ajustes.pedir')
-def pedir(acao: str, valor: str = '') -> dict:
+def pedir(acao: str, valor: str = '', origem: str = 'dhcp', endereco: str = '', gateway: str = '',
+          dns: str = '') -> dict:
     """Asks the Hive for a setting (`hive request`): the name of the machine
     (set-hostname), the keyboard (set-keyboard: us or br, with its model), the
-    screen's level (set-screen-level: auto, plain, effects, fine). Nothing
-    changes here: the Hive offers it, and someone approves it on the screen
-    (F1, Enter) or the dashboard. Answers whether it was asked, and what to say."""
+    screen's level (set-screen-level: auto, plain, effects, fine), the network
+    (set-network: `valor` is the interface; by DHCP, or fixed at `endereco`
+    with its prefix, `gateway` and `dns`). Nothing changes here: the Hive
+    offers it, and someone approves it on the screen (F1, Enter; twice for the
+    network, which is dangerous) or the dashboard. Answers whether it was
+    asked, and what to say."""
     valor = (valor or '').strip()
-    if acao == 'set-hostname':
+    perigoso = False
+    if acao == 'set-network':
+        args, pedido = _rede_args(valor, (origem or 'dhcp').strip(), (endereco or '').strip(),
+                                  (gateway or '').strip(), (dns or '').strip())
+        if args is None:
+            return {'ok': False, 'mensagem': pedido}
+        perigoso = True
+    elif acao == 'set-hostname':
         if not HOSTNAME.match(valor):
             return {'ok': False, 'mensagem': f'"{valor}" não serve de nome: letras minúsculas, dígitos e hífens, até 63'}
         args = ['set-hostname', valor]
@@ -367,5 +427,6 @@ def pedir(acao: str, valor: str = '') -> dict:
         return {'ok': False, 'mensagem': f'{acao}: não é um ajuste que se pede'}
     code, said = _doors()['ask'](args)
     if code == 0:
-        return {'ok': True, 'mensagem': f'Pedido à Hive: {pedido}. Aprove na tela (F1, Enter) ou no dashboard; F5 relê.'}
+        como = 'É perigoso: aprove na tela com Enter duas vezes (F1)' if perigoso else 'Aprove na tela (F1, Enter)'
+        return {'ok': True, 'mensagem': f'Pedido à Hive: {pedido}. {como} ou no dashboard; F5 relê.'}
     return {'ok': False, 'mensagem': f'A Hive não recebeu o pedido ({pedido}): {said or "sem resposta"}'}

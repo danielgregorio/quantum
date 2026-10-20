@@ -4,7 +4,9 @@
 //!     hive ajustes [PAGE]            an app on the Hive's screen (quantum pixel), as this user
 //!     hive request set-hostname NAME
 //!     hive request set-keyboard LAYOUT [MODEL]
-//!     hive request set-screen-level auto|plain|effects|fine   [--reason TEXT]
+//!     hive request set-screen-level auto|plain|effects|fine
+//!     hive request set-network IFACE dhcp
+//!     hive request set-network IFACE ADDR/PREFIX [via GATEWAY] [dns A,B]   [--reason TEXT]
 //!
 //! An app is a Quantum project folder under /usr/share/quantum-os/apps
 //! (`QUANTUM_OS_APPS`); `hive NAME` opens it on the screen the way
@@ -15,7 +17,7 @@
 //! on the asking. The Ajustes app's "Pedir à Hive" buttons run this.
 
 use anyhow::{bail, Context, Result};
-use hive_common::actions::{is_valid_hostname, is_valid_keyboard, Action};
+use hive_common::actions::{is_valid_hostname, is_valid_keyboard, is_valid_network, Action};
 use hive_common::ipc::blocking::Connection;
 use hive_common::messages::HiveMessage;
 use std::path::PathBuf;
@@ -26,6 +28,10 @@ const USAGE: &str = "hive: the Hive's commands
   hive request set-hostname NAME    ask the Hive to name the machine
   hive request set-keyboard LAYOUT [MODEL]        us, or br (abnt2)
   hive request set-screen-level auto|plain|effects|fine
+  hive request set-network IFACE dhcp             the interface's address by DHCP
+  hive request set-network IFACE ADDR/PREFIX [via GATEWAY] [dns A,B]
+                                    a fixed address (10.0.2.20/24 via 10.0.2.2 dns 10.0.2.3);
+                                    dangerous: the screen asks for Enter twice
       [--reason TEXT]               why, shown with the offer";
 
 fn main() {
@@ -168,10 +174,46 @@ fn parse_setting(words: &[&str]) -> Result<Action> {
             };
             Ok(Action::SetScreenLevel { level })
         }
+        ["set-network", interface, "dhcp"] => network(interface, true, "", &[]),
+        ["set-network", interface, address, rest @ ..] => network(interface, false, address, rest),
         _ => bail!(
-            "what to ask for: set-hostname NAME, set-keyboard LAYOUT [MODEL], set-screen-level LEVEL"
+            "what to ask for: set-hostname NAME, set-keyboard LAYOUT [MODEL], set-screen-level LEVEL, \
+             set-network IFACE dhcp | IFACE ADDR/PREFIX [via GATEWAY] [dns A,B]"
         ),
     }
+}
+
+/// `set-network`: the interface, by DHCP or at a fixed address, with the
+/// words after the address in pairs (`via GATEWAY`, `dns A,B`).
+fn network(interface: &str, dhcp: bool, address: &str, rest: &[&str]) -> Result<Action> {
+    let mut gateway = String::new();
+    let mut dns: Vec<String> = Vec::new();
+    let mut pairs = rest.chunks(2);
+    for pair in &mut pairs {
+        match pair {
+            ["via", gw] => gateway = gw.to_string(),
+            ["dns", list] => dns = list.split(',').map(str::to_string).collect(),
+            _ => bail!(
+                "after the address: via GATEWAY, dns A,B (not {})",
+                pair.join(" ")
+            ),
+        }
+    }
+    if !is_valid_network(interface, dhcp, address, &gateway, &dns) {
+        bail!(
+            "{} {}: an interface name, an IPv4 address with its prefix (10.0.2.20/24), \
+             an IPv4 gateway and up to four IPv4 DNS servers",
+            interface,
+            if dhcp { "dhcp" } else { address }
+        );
+    }
+    Ok(Action::SetNetwork {
+        interface: interface.to_string(),
+        dhcp,
+        address: address.to_string(),
+        gateway,
+        dns,
+    })
 }
 
 #[cfg(test)]
@@ -212,5 +254,61 @@ mod tests {
         );
         assert!(parse_setting(&["set-screen-level", "9"]).is_err());
         assert!(parse_setting(&["restart-service", "nginx"]).is_err());
+    }
+
+    #[test]
+    fn the_network_is_dhcp_or_a_fixed_address_with_its_gateway_and_dns() {
+        assert_eq!(
+            parse_setting(&["set-network", "enp0s1", "dhcp"]).unwrap(),
+            Action::SetNetwork {
+                interface: "enp0s1".into(),
+                dhcp: true,
+                address: "".into(),
+                gateway: "".into(),
+                dns: vec![]
+            }
+        );
+        assert_eq!(
+            parse_setting(&[
+                "set-network",
+                "enp0s1",
+                "10.0.2.20/24",
+                "via",
+                "10.0.2.2",
+                "dns",
+                "10.0.2.3,1.1.1.1"
+            ])
+            .unwrap(),
+            Action::SetNetwork {
+                interface: "enp0s1".into(),
+                dhcp: false,
+                address: "10.0.2.20/24".into(),
+                gateway: "10.0.2.2".into(),
+                dns: vec!["10.0.2.3".into(), "1.1.1.1".into()]
+            }
+        );
+        assert_eq!(
+            parse_setting(&["set-network", "enp0s1", "10.0.2.20/24"]).unwrap(),
+            Action::SetNetwork {
+                interface: "enp0s1".into(),
+                dhcp: false,
+                address: "10.0.2.20/24".into(),
+                gateway: "".into(),
+                dns: vec![]
+            }
+        );
+        assert!(
+            parse_setting(&["set-network", "enp0s1", "10.0.2.20"]).is_err(),
+            "no prefix"
+        );
+        assert!(parse_setting(&["set-network", "enp0s1", "10.0.2.20/24", "via"]).is_err());
+        assert!(
+            parse_setting(&["set-network", "enp0s1", "10.0.2.20/24", "gw", "10.0.2.2"]).is_err()
+        );
+        assert!(
+            parse_setting(&["set-network", "enp0s1", "10.0.2.20/24", "via", "router"]).is_err()
+        );
+        assert!(parse_setting(&["set-network", "eth0;rm", "dhcp"]).is_err());
+        assert!(parse_setting(&["set-network", "enp0s1"]).is_err());
     }
 }

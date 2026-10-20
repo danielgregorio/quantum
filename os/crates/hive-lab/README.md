@@ -84,6 +84,7 @@ sudo target/debug/hive-lab --play crates/hive-lab/tapes/crash-restart.jsonl
 | `log-anomaly` | a unit's recent logs are offered, and nothing else |
 | `question` | grove's question is answered as text, never as an action |
 | `request-hostname` | a user asks for a setting (`hive request`): it becomes an offer in the user's name, nothing runs until approved, then the actuator is asked for `SetHostname`; a request for anything but a setting never becomes an offer |
+| `request-network` | the network is a setting too, and a dangerous one: a fixed address and then DHCP for an interface, each an offer in the user's name, confirmed, and then `SetNetwork` to the actuator |
 | `user-socket-boundary` | a user's shell cannot send an action, nor approve a suggestion |
 | `dashboard-screen` | the real dashboard shows the crash and its offers, a plain notice is not shown as awaiting confirmation, Enter approves; a second dashboard's approval runs nothing again |
 | `grove-screen` | the real grove runs a command, answers a question in plain language, and prints the crash notice at the next prompt |

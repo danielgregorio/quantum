@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+"""Applies the network setting the Hive approved (quantum-network-apply.service, as root).
+
+hive-actuator, which has no root, writes /var/lib/hive/settings/network
+(one JSON object: interface, dhcp, address, gateway, dns) and starts this
+unit. This writes /etc/netplan/60-hive.yaml for that interface only, keeps
+the file that was there as 60-hive.yaml.before, applies netplan, and waits
+for the interface to come up (an address by DHCP, or the fixed one). When
+it does not come up in time, the file before comes back and is applied
+again: a wrong address never leaves the machine off the network for want
+of a hand. The outcome goes to network.result ("ok: ..." or "failed: ...")
+for the actuator to answer with; the exit code says the same.
+
+The setting is checked again here, as strictly as the actuator's
+whitelist checks it: this is the one root step, and it takes nothing but
+an interface name and IPv4 addresses.
+"""
+
+import json
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+SETTINGS = Path('/var/lib/hive/settings')
+SPEC = SETTINGS / 'network'
+RESULT = SETTINGS / 'network.result'
+NETPLAN = Path('/etc/netplan')
+TARGET = NETPLAN / '60-hive.yaml'
+BEFORE = NETPLAN / '60-hive.yaml.before'      # not *.yaml: netplan does not read it
+WAIT = 20.0                                   # seconds for the interface to come up
+
+INTERFACE = re.compile(r'^[a-z][a-z0-9._-]{0,14}$')
+IPV4 = re.compile(r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$')
+
+
+def ipv4(text: str) -> bool:
+    m = IPV4.match(text)
+    return bool(m) and all(0 <= int(g) <= 255 for g in m.groups())
+
+
+def cidr(text: str) -> bool:
+    addr, _, prefix = text.partition('/')
+    return ipv4(addr) and prefix.isdigit() and 1 <= int(prefix) <= 32
+
+
+def read_spec() -> dict:
+    spec = json.loads(SPEC.read_text(encoding='utf-8'))
+    interface = str(spec.get('interface', ''))
+    dhcp = bool(spec.get('dhcp'))
+    address = str(spec.get('address', ''))
+    gateway = str(spec.get('gateway', ''))
+    dns = [str(d) for d in spec.get('dns') or []]
+    if not INTERFACE.match(interface):
+        raise ValueError(f'{interface!r} is not an interface name')
+    if not dhcp and not cidr(address):
+        raise ValueError(f'{address!r} is not an address with its prefix')
+    if gateway and not ipv4(gateway):
+        raise ValueError(f'{gateway!r} is not an IPv4 gateway')
+    if len(dns) > 4 or not all(ipv4(d) for d in dns):
+        raise ValueError(f'{dns!r} are not up to four IPv4 DNS servers')
+    return {'interface': interface, 'dhcp': dhcp, 'address': address, 'gateway': gateway, 'dns': dns}
+
+
+def yaml_for(spec: dict) -> str:
+    """The netplan file: only this interface, only what was asked; cloud-init's
+    file for the same interface is merged under it by netplan (its match and
+    name stay, its dhcp4 is overridden)."""
+    lines = ['# Written by quantum-network-apply from the setting the Hive approved. Do not edit:',
+             '# ask the Hive again (the Ajustes app, hive request set-network).',
+             'network:', '  version: 2', '  ethernets:', f'    {spec["interface"]}:']
+    if spec['dhcp']:
+        lines += ['      dhcp4: true']
+    else:
+        lines += ['      dhcp4: false', f'      addresses: [{spec["address"]}]']
+        if spec['gateway']:
+            lines += ['      routes:', '        - to: default', f'          via: {spec["gateway"]}']
+        if spec['dns']:
+            lines += ['      nameservers:', f'        addresses: [{", ".join(spec["dns"])}]']
+    return '\n'.join(lines) + '\n'
+
+
+def run(*cmd: str) -> subprocess.CompletedProcess:
+    return subprocess.run(list(cmd), capture_output=True, text=True, timeout=60)
+
+
+def addresses(interface: str) -> list:
+    done = run('ip', '-j', 'addr', 'show', interface)
+    if done.returncode != 0:
+        return []
+    try:
+        links = json.loads(done.stdout)
+    except ValueError:
+        return []
+    return [f'{a.get("local")}/{a.get("prefixlen")}' for link in links for a in link.get('addr_info', [])
+            if a.get('family') == 'inet']
+
+
+def up(spec: dict) -> bool:
+    """Whether the interface has what was asked: the fixed address, or any address by DHCP."""
+    have = addresses(spec['interface'])
+    return (spec['address'] in have) if not spec['dhcp'] else bool(have)
+
+
+def apply_netplan() -> str:
+    generated = run('netplan', 'generate')
+    if generated.returncode != 0:
+        return generated.stderr.strip() or 'netplan generate failed'
+    applied = run('netplan', 'apply')
+    if applied.returncode != 0:
+        return applied.stderr.strip() or 'netplan apply failed'
+    return ''
+
+
+def wait_up(spec: dict) -> bool:
+    deadline = time.monotonic() + WAIT
+    while time.monotonic() < deadline:
+        if up(spec):
+            return True
+        time.sleep(0.5)
+    return up(spec)
+
+
+def restore(previous: 'str | None') -> None:
+    if previous is None:
+        TARGET.unlink(missing_ok=True)
+    else:
+        TARGET.write_text(previous, encoding='utf-8')
+    apply_netplan()
+
+
+def say(outcome: str) -> None:
+    SETTINGS.mkdir(parents=True, exist_ok=True)
+    RESULT.write_text(outcome + '\n', encoding='utf-8')
+    print(outcome)
+
+
+def main() -> int:
+    try:
+        spec = read_spec()
+    except (OSError, ValueError) as exc:
+        say(f'failed: the setting is not one netplan takes: {exc}')
+        return 1
+    previous = TARGET.read_text(encoding='utf-8') if TARGET.is_file() else None
+    if previous is not None:
+        BEFORE.write_text(previous, encoding='utf-8')
+    NETPLAN.mkdir(parents=True, exist_ok=True)
+    TARGET.write_text(yaml_for(spec), encoding='utf-8')
+    TARGET.chmod(0o600)
+    error = apply_netplan()
+    if error:
+        restore(previous)
+        say(f'failed: {error}; the network is as it was')
+        return 1
+    if not wait_up(spec):
+        restore(previous)
+        what = 'an address by DHCP' if spec['dhcp'] else spec['address']
+        say(f'failed: {spec["interface"]} did not come up with {what} in {int(WAIT)} s; the network is as it was')
+        return 1
+    have = ', '.join(addresses(spec['interface'])) or 'no address'
+    say(f'ok: {spec["interface"]} has {have}')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

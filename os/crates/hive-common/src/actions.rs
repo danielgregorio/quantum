@@ -247,6 +247,23 @@ pub enum Action {
         level: Option<u8>,
     },
 
+    /// One interface's address: by DHCP, or fixed (netplan, through the
+    /// root unit quantum-network-apply.service, which keeps the file
+    /// before and comes back to it when the interface does not come up).
+    /// Dangerous: a wrong address takes the machine off the network.
+    SetNetwork {
+        /// The interface (enp0s1)
+        interface: String,
+        /// By DHCP; the rest is then ignored
+        dhcp: bool,
+        /// A fixed address with its prefix (10.0.2.20/24)
+        address: String,
+        /// The gateway (10.0.2.2), or empty
+        gateway: String,
+        /// The DNS servers, or none
+        dns: Vec<String>,
+    },
+
     // =========================================================================
     // Network operations
     // =========================================================================
@@ -384,6 +401,7 @@ impl Action {
             Action::SetHostname { .. } => "SetHostname",
             Action::SetKeyboard { .. } => "SetKeyboard",
             Action::SetScreenLevel { .. } => "SetScreenLevel",
+            Action::SetNetwork { .. } => "SetNetwork",
             Action::KillPortProcess { .. } => "KillPortProcess",
             Action::AddFirewallRule { .. } => "AddFirewallRule",
             Action::Reboot { .. } => "Reboot",
@@ -418,6 +436,7 @@ impl Action {
                 | Action::CleanPackageCache
                 | Action::SetHostname { .. }
                 | Action::SetKeyboard { .. }
+                | Action::SetNetwork { .. }
         )
     }
 
@@ -426,7 +445,10 @@ impl Action {
     pub fn is_a_setting(&self) -> bool {
         matches!(
             self,
-            Action::SetHostname { .. } | Action::SetKeyboard { .. } | Action::SetScreenLevel { .. }
+            Action::SetHostname { .. }
+                | Action::SetKeyboard { .. }
+                | Action::SetScreenLevel { .. }
+                | Action::SetNetwork { .. }
         )
     }
 
@@ -451,6 +473,27 @@ impl Action {
             Action::SetScreenLevel { level: None } => {
                 "screen level chosen by the measure".to_string()
             }
+            Action::SetNetwork {
+                interface,
+                dhcp: true,
+                ..
+            } => format!("{} by DHCP", interface),
+            Action::SetNetwork {
+                interface,
+                address,
+                gateway,
+                dns,
+                ..
+            } => {
+                let mut what = format!("{} at {}", interface, address);
+                if !gateway.is_empty() {
+                    what.push_str(&format!(" via {}", gateway));
+                }
+                if !dns.is_empty() {
+                    what.push_str(&format!(", dns {}", dns.join(" ")));
+                }
+                what
+            }
             _ => return None,
         })
     }
@@ -469,6 +512,7 @@ impl Action {
                 | Action::Reboot { .. }
                 | Action::Shutdown { .. }
                 | Action::CleanSystem { .. }
+                | Action::SetNetwork { .. }
         )
     }
 
@@ -506,6 +550,48 @@ pub fn is_valid_hostname(name: &str) -> bool {
 /// The keyboard layouts the screen reads, and the models each takes.
 pub const KEYBOARD_LAYOUTS: &[(&str, &[&str])] =
     &[("us", &["", "pc105"]), ("br", &["", "abnt2", "pc105"])];
+
+/// An interface name as the kernel allows it: up to 15 of letters,
+/// digits, dots, hyphens and underscores, starting with a letter.
+pub fn is_valid_interface(name: &str) -> bool {
+    let mut chars = name.chars();
+    !name.is_empty()
+        && name.len() <= 15
+        && chars.next().is_some_and(|c| c.is_ascii_lowercase())
+        && chars
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, '.' | '-' | '_'))
+}
+
+/// A dotted IPv4 address.
+pub fn is_valid_ipv4(text: &str) -> bool {
+    text.parse::<std::net::Ipv4Addr>().is_ok()
+}
+
+/// An IPv4 address with its prefix, 10.0.2.20/24.
+pub fn is_valid_ipv4_cidr(text: &str) -> bool {
+    match text.split_once('/') {
+        Some((addr, prefix)) => {
+            is_valid_ipv4(addr) && prefix.parse::<u8>().is_ok_and(|p| (1..=32).contains(&p))
+        }
+        None => false,
+    }
+}
+
+/// Whether a network setting is one netplan would take and the machine
+/// would keep: by DHCP, or a fixed address with an optional gateway and
+/// DNS servers, every one an IPv4 (at most four).
+pub fn is_valid_network(
+    interface: &str,
+    dhcp: bool,
+    address: &str,
+    gateway: &str,
+    dns: &[String],
+) -> bool {
+    is_valid_interface(interface)
+        && dns.len() <= 4
+        && dns.iter().all(|d| is_valid_ipv4(d))
+        && (dhcp || (is_valid_ipv4_cidr(address) && (gateway.is_empty() || is_valid_ipv4(gateway))))
+}
 
 pub fn is_valid_keyboard(layout: &str, model: &str) -> bool {
     KEYBOARD_LAYOUTS
@@ -571,6 +657,66 @@ mod tests {
         }
         .is_a_setting());
         assert!(!name.is_dangerous());
+    }
+
+    #[test]
+    fn a_network_setting_is_validated_described_and_dangerous() {
+        assert!(is_valid_interface("enp0s1"));
+        assert!(is_valid_interface("eth0"));
+        assert!(!is_valid_interface("Eth0"));
+        assert!(!is_valid_interface("enp0s1; rm"));
+        assert!(!is_valid_interface("abcdefghijklmnop"));
+        assert!(is_valid_ipv4_cidr("10.0.2.20/24"));
+        assert!(!is_valid_ipv4_cidr("10.0.2.20"));
+        assert!(!is_valid_ipv4_cidr("10.0.2.300/24"));
+        assert!(!is_valid_ipv4_cidr("10.0.2.20/33"));
+        assert!(is_valid_network("enp0s1", true, "", "", &[]));
+        assert!(is_valid_network(
+            "enp0s1",
+            false,
+            "10.0.2.20/24",
+            "10.0.2.2",
+            &["10.0.2.3".into()]
+        ));
+        assert!(!is_valid_network("enp0s1", false, "", "", &[]));
+        assert!(!is_valid_network(
+            "enp0s1",
+            false,
+            "10.0.2.20/24",
+            "gw",
+            &[]
+        ));
+        assert!(!is_valid_network(
+            "enp0s1",
+            true,
+            "",
+            "",
+            &["1".into(), "2".into(), "3".into(), "4".into(), "5".into()]
+        ));
+        let fixed = Action::SetNetwork {
+            interface: "enp0s1".into(),
+            dhcp: false,
+            address: "10.0.2.20/24".into(),
+            gateway: "10.0.2.2".into(),
+            dns: vec!["10.0.2.3".into()],
+        };
+        assert!(fixed.is_a_setting());
+        assert!(
+            fixed.is_dangerous(),
+            "a wrong address takes the machine off the network"
+        );
+        assert_eq!(
+            fixed.describe_setting().unwrap(),
+            "enp0s1 at 10.0.2.20/24 via 10.0.2.2, dns 10.0.2.3"
+        );
+        let dhcp = Action::SetNetwork {
+            interface: "enp0s1".into(),
+            dhcp: true,
+            address: String::new(),
+            gateway: String::new(),
+            dns: vec![],
+        };
+        assert_eq!(dhcp.describe_setting().unwrap(), "enp0s1 by DHCP");
     }
 
     #[test]

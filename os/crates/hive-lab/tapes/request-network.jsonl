@@ -1,0 +1,14 @@
+// the network is a setting too, and a dangerous one (a wrong address takes the machine off the network): the
+// request becomes an offer like the others, approving it takes confirmation (the screen's second Enter; the lab's
+// approve confirms), and the actuator is asked for SetNetwork, fixed or by DHCP, each through the one permit
+{"op":"start"}
+{"op":"request","action":{"SetNetwork":{"interface":"enp0s1","dhcp":false,"address":"10.0.2.20/24","gateway":"10.0.2.2","dns":["10.0.2.3"]}},"reason":"a fixed address for the lab"}
+{"op":"until","to":"dashboard","type":"Notification","contains":"asks: enp0s1 at 10.0.2.20/24 via 10.0.2.2, dns 10.0.2.3","timeout":10}
+{"op":"none","to":"actuator","within":0.5}
+{"op":"approve"}
+{"op":"until","to":"actuator","type":"ActionRequest","contains":"\"SetNetwork\":{\"address\":\"10.0.2.20/24\",\"dhcp\":false,\"dns\":[\"10.0.2.3\"],\"gateway\":\"10.0.2.2\",\"interface\":\"enp0s1\"}"}
+{"op":"request","action":{"SetNetwork":{"interface":"enp0s1","dhcp":true,"address":"","gateway":"","dns":[]}},"reason":"and back"}
+{"op":"until","to":"dashboard","type":"Notification","contains":"asks: enp0s1 by DHCP","timeout":10}
+{"op":"approve"}
+{"op":"until","to":"actuator","type":"ActionRequest","contains":"\"SetNetwork\":{\"address\":\"\",\"dhcp\":true,\"dns\":[],\"gateway\":\"\",\"interface\":\"enp0s1\"}"}
+{"op":"end"}

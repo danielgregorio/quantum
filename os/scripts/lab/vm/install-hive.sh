@@ -74,6 +74,9 @@ cp -r "$SRC"/knowledge/* /var/lib/hive/knowledge/
 rm -rf /usr/lib/python3/dist-packages/quantum
 cp -r "$SRC/target/vm-lab/quantum" /usr/lib/python3/dist-packages/quantum
 install -m 0755 "$SRC/scripts/quantum" /usr/bin/quantum
+# the one root step of a setting: the network, applied by a oneshot unit
+mkdir -p /usr/lib/quantum-os
+install -m 0755 "$SRC/scripts/network-apply" /usr/lib/quantum-os/network-apply
 rm -rf /usr/share/quantum-os/apps
 mkdir -p /usr/share/quantum-os/apps
 cp -r "$SRC"/apps/. /usr/share/quantum-os/apps/

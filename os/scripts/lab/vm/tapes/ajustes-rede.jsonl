@@ -1,0 +1,35 @@
+// the network, asked for and approved: a fixed address from a local user becomes a dangerous offer on the real
+// screen (Enter twice), the real actuator writes the setting and starts quantum-network-apply.service, the one
+// root step, which writes /etc/netplan/60-hive.yaml for that interface, applies it and waits for the address;
+// ip addr follows; then back by DHCP, the file before kept each time
+{"op": "start"}
+{"op": "until_sh", "sh": "systemctl is-active hive-screen hive-actuator", "contains": "active", "timeout": 20}
+{"op": "until_shot", "has": "#ffd34d", "timeout": 15}
+{"op": "sh", "sh": "ip -j addr show enp0s1", "contains": "10.0.2.15"}
+{"op": "sh", "sh": "test ! -e /etc/netplan/60-hive.yaml && echo none", "contains": "none"}
+{"op": "sh", "sh": "hive request set-network enp0s1 10.0.2.20/24 via 10.0.2.2 dns 10.0.2.3 --reason 'a fixed address'", "user": "druid", "contains": "asked the Hive: enp0s1 at 10.0.2.20/24 via 10.0.2.2, dns 10.0.2.3"}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "offer: druid asks: enp0s1 at 10.0.2.20/24 via 10.0.2.2, dns 10.0.2.3", "timeout": 10}
+// dangerous: the first Enter arms the offer, nothing reaches the actuator; the second approves it
+{"op": "press", "keys": ["enter"]}
+{"op": "sh", "sh": "sleep 2; journalctl -u hive-actuator.service --since -30s --no-pager | grep -c SetNetwork || true", "contains": "0"}
+{"op": "press", "keys": ["enter"]}
+{"op": "until_journal", "unit": "hive-actuator.service", "contains": "SetNetwork", "timeout": 10}
+{"op": "until_sh", "sh": "cat /var/lib/hive/settings/network.result", "contains": "ok: enp0s1 has 10.0.2.20/24", "timeout": 90}
+{"op": "sh", "sh": "ip -j addr show enp0s1", "contains": "\"local\":\"10.0.2.20\",\"prefixlen\":24"}
+{"op": "sh", "sh": "ip -j addr show enp0s1 | grep -c 10.0.2.15 || true", "contains": "0"}
+{"op": "sh", "sh": "ip -j route show default", "contains": "\"gateway\":\"10.0.2.2\""}
+{"op": "sh", "sh": "cat /etc/netplan/60-hive.yaml", "contains": "addresses: [10.0.2.20/24]"}
+{"op": "sh", "sh": "stat -c %a /etc/netplan/60-hive.yaml", "contains": "600"}
+{"op": "until_journal", "unit": "hive-actuator.service", "contains": "Action completed", "timeout": 10}
+// back by DHCP: the file before is kept beside the new one, and the lease comes back
+{"op": "sh", "sh": "hive request set-network enp0s1 dhcp", "user": "druid", "contains": "asked the Hive: enp0s1 by DHCP"}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "offer: druid asks: enp0s1 by DHCP", "timeout": 10}
+{"op": "press", "keys": ["enter"]}
+{"op": "press", "keys": ["enter"]}
+{"op": "until_sh", "sh": "cat /var/lib/hive/settings/network.result", "contains": "ok: enp0s1 has 10.0.2.15/24", "timeout": 90}
+{"op": "sh", "sh": "cat /etc/netplan/60-hive.yaml", "contains": "dhcp4: true"}
+{"op": "sh", "sh": "cat /etc/netplan/60-hive.yaml.before", "contains": "addresses: [10.0.2.20/24]"}
+{"op": "until_journal", "unit": "hive-actuator.service", "contains": "Action completed", "timeout": 10}
+// a name that is no interface never reaches the Hive
+{"op": "sh", "sh": "hive request set-network 'eth0;reboot' dhcp", "user": "druid", "code": null, "contains": "an interface name"}
+{"op": "end"}

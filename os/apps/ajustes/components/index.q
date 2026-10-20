@@ -20,6 +20,22 @@
     </q:invoke>
     <q:redirect url="/" flash="{pedido.mensagem}" />
   </q:action>
+  <q:action name="pedir-rede" method="POST">
+    <q:param name="interface" required="true" />
+    <q:param name="origem" required="true" />
+    <q:param name="endereco" />
+    <q:param name="gateway" />
+    <q:param name="dns" />
+    <q:invoke name="pedido" service="ajustes.pedir">
+      <q:param name="acao" value="set-network" />
+      <q:param name="valor" value="{interface}" />
+      <q:param name="origem" value="{origem}" />
+      <q:param name="endereco" value="{endereco}" />
+      <q:param name="gateway" value="{gateway}" />
+      <q:param name="dns" value="{dns}" />
+    </q:invoke>
+    <q:redirect url="/" flash="{pedido.mensagem}" />
+  </q:action>
   <q:action name="pedir-nivel" method="POST">
     <q:param name="nivel" required="true" />
     <q:invoke name="pedido" service="ajustes.pedir">
@@ -57,6 +73,26 @@
         </ui:table>
         <ui:text>gateway: {rede.gateway}</ui:text>
         <ui:text>DNS: {rede.dns}</ui:text>
+        <!-- the address asked of the Hive: by DHCP (the rest is ignored) or fixed; dangerous, so the
+             screen asks for Enter twice; a wrong address comes back by itself (network-apply) -->
+        <ui:form on-submit="pedir-rede">
+          <ui:formitem label="Interface">
+            <ui:select bind="interface" options="{rede.opcoes}" value="{rede.escolha}" />
+          </ui:formitem>
+          <ui:formitem label="Origem">
+            <ui:select bind="origem" options="dhcp,fixo" value="{rede.origem}" />
+          </ui:formitem>
+          <ui:formitem label="Endereço/prefixo (fixo)">
+            <ui:input bind="endereco" value="{rede.endereco}" placeholder="10.0.2.20/24" />
+          </ui:formitem>
+          <ui:formitem label="Gateway">
+            <ui:input bind="gateway" value="{rede.via}" placeholder="10.0.2.2" />
+          </ui:formitem>
+          <ui:formitem label="DNS (vírgulas)">
+            <ui:input bind="dns" value="{rede.servidores}" placeholder="10.0.2.3" />
+          </ui:formitem>
+          <ui:button variant="primary">Pedir à Hive</ui:button>
+        </ui:form>
       </ui:tab>
       <ui:tab title="Teclado">
         <ui:list source="{teclado.linhas}" as="l">
