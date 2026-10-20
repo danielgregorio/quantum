@@ -1,7 +1,7 @@
 """
 Regressions found by writing a real screen in Quantum.
 
-FRAMEWORK_PLAN.md Fase 4: rewrite one quantum_admin screen in .q and record
+FRAMEWORK_PLAN.md Phase 4: rewrite one quantum_admin screen in .q and record
 everything that hurts. These are the failures from that list that were bugs
 rather than friction — each one was hit while building
 components/admin/projects.q, not while reading code.
@@ -137,7 +137,7 @@ class TestHtmxIsOnlyInjectedWhenUsed:
     of pages pulled a third-party CDN at runtime for a library they never
     touched.
     That is a network dependency for the offline/homelab deployment the
-    project targets (FRAMEWORK_PLAN Fase 0.3), and a script a restrictive CSP
+    project targets (FRAMEWORK_PLAN Phase 0.3), and a script a restrictive CSP
     blocks outright. DOGFOOD_NOTES.md item 8.
     """
 

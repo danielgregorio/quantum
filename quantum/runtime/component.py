@@ -171,7 +171,7 @@ class ComponentRuntime:
         # (services.job_executor) ran on two different JobExecutors, while
         # runtime.llm_service ignored llm.base_url (IA-1).
         #
-        # The one expression evaluator (FRAMEWORK_PLAN.md Fase 2.1). Nothing
+        # The one expression evaluator (FRAMEWORK_PLAN.md, phase 2.1). Nothing
         # else in this class compiles or executes an expression any more —
         # ExpressionCache's compile()+eval() is no longer reachable from the
         # runtime, which is the point.
@@ -290,9 +290,9 @@ class ComponentRuntime:
         default, type, min, max, minlength, maxlength, pattern and enum from
         every q:param — and all of it was discarded, so
 
-            <q:param name="idade" type="numeric" min="18" default="30" />
+            <q:param name="age" type="numeric" min="18" default="30" />
 
-        left `idade` undefined ("{idade} did not resolve"), accepted the
+        left `age` undefined ("{age} did not resolve"), accepted the
         string "abc" as numeric, and accepted 7 for a minimum of 18. Every
         attribute but `required` was decoration.
 
@@ -671,7 +671,7 @@ class ComponentRuntime:
     def _resolve_expression_function(self, name: str):
         """Wrap a q:function so an expression can call it positionally.
 
-        `{somaTotal(itens)}` passes arguments by position; q:function binds
+        `{sumTotal(items)}` passes arguments by position; q:function binds
         them by parameter name, so they are zipped against the declared
         params — the same rule q:invoke uses.
         """

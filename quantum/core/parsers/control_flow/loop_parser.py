@@ -47,7 +47,7 @@ class LoopParser(BaseTagParser):
             # the branch below, so <q:loop query="projects" var="p"> silently
             # discarded the name and {p.name} rendered as literal text with no
             # error anywhere — found by writing a real screen against it
-            # (FRAMEWORK_PLAN.md Fase 4). Omitting var= keeps the old
+            # (FRAMEWORK_PLAN.md, phase 4). Omitting var= keeps the old
             # behaviour exactly.
             loop_type = 'query'
             var_name = self.get_attr(element, 'var') or query_attr

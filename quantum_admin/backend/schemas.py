@@ -80,7 +80,7 @@ class DatasourceUpdate(BaseModel):
     port: Optional[int] = Field(None, ge=1, le=65535)
     database_name: Optional[str] = None
     username: Optional[str] = None
-    password: Optional[str] = None      # cifrada antes de gravar
+    password: Optional[str] = None      # encrypted before it is stored
 
 
 class DatasourceResponse(DatasourceBase):

@@ -12,12 +12,12 @@
       "description": "Example demonstrating Data Csv Simple",
       "complexity": "beginner",
       "tags": [
-        "CSV",
         "q:loop",
-        "q:return",
-        "JSON",
         "databinding",
-        "q:data"
+        "q:data",
+        "q:return",
+        "CSV",
+        "JSON"
       ],
       "features": [
         "databinding",
@@ -36,12 +36,12 @@
       "description": "Example demonstrating Data Json Simple",
       "complexity": "beginner",
       "tags": [
-        "CSV",
         "q:loop",
-        "q:return",
-        "JSON",
         "databinding",
-        "q:data"
+        "q:data",
+        "q:return",
+        "CSV",
+        "JSON"
       ],
       "features": [
         "databinding",
@@ -60,12 +60,12 @@
       "description": "Example demonstrating Data Transform Compute",
       "complexity": "beginner",
       "tags": [
-        "CSV",
         "q:loop",
-        "q:return",
-        "JSON",
         "databinding",
-        "q:data"
+        "q:data",
+        "q:return",
+        "CSV",
+        "JSON"
       ],
       "features": [
         "databinding",
@@ -84,12 +84,12 @@
       "description": "Example demonstrating Data Transform Filter",
       "complexity": "beginner",
       "tags": [
-        "CSV",
         "q:loop",
-        "q:return",
-        "JSON",
         "databinding",
-        "q:data"
+        "q:data",
+        "q:return",
+        "CSV",
+        "JSON"
       ],
       "features": [
         "databinding",
@@ -108,12 +108,12 @@
       "description": "Example demonstrating Data Transform Limit",
       "complexity": "beginner",
       "tags": [
-        "CSV",
         "q:loop",
-        "q:return",
-        "JSON",
         "databinding",
-        "q:data"
+        "q:data",
+        "q:return",
+        "CSV",
+        "JSON"
       ],
       "features": [
         "databinding",
@@ -132,12 +132,12 @@
       "description": "Example demonstrating Data Transform Sort",
       "complexity": "beginner",
       "tags": [
-        "CSV",
         "q:loop",
-        "q:return",
-        "JSON",
         "databinding",
-        "q:data"
+        "q:data",
+        "q:return",
+        "CSV",
+        "JSON"
       ],
       "features": [
         "databinding",
@@ -156,12 +156,12 @@
       "description": "Example demonstrating Data Xml Simple",
       "complexity": "beginner",
       "tags": [
-        "CSV",
         "q:loop",
-        "q:return",
-        "JSON",
         "databinding",
-        "q:data"
+        "q:data",
+        "q:return",
+        "CSV",
+        "JSON"
       ],
       "features": [
         "databinding",

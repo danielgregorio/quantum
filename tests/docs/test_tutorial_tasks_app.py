@@ -5,7 +5,7 @@ The tutorial is a sequence of "## N." steps. Each step shows whole files after
 This test rebuilds the app as it stands at the end of each step, adds a small
 suite that checks what that step claims, and runs it with `quantum test`
 (TEST-1). The last step's own suites run as the page shows, with the report it
-prints. The finished app is compared with projects/tarefas, which the page says
+prints. The finished app is compared with projects/tasks, which the page says
 it ends up as: the same tags, file by file.
 """
 
@@ -195,15 +195,12 @@ def tags(text):
     return collections.Counter(re.findall(r'<([a-zA-Z]+:[a-zA-Z-]+)\b', text))
 
 
-@pytest.mark.parametrize('mine,tarefas', [
-    ('components/index.q', 'components/index.q'),
-    ('components/sheet.q', 'components/planilha.q'),
-    ('components/task/[id].q', 'components/tarefa/[id].q'),
-    ('tests/tasks.test.q', 'tests/tarefas.test.q'),
-    ('components/sheet.test.q', 'components/planilha.test.q'),
+@pytest.mark.parametrize('path', [
+    'components/index.q', 'components/sheet.q', 'components/task/[id].q', 'tests/tasks.test.q', 'components/sheet.test.q',
 ])
-def test_the_finished_app_is_projects_tarefas_in_english(mine, tarefas):
-    theirs = (REPO / 'projects' / 'tarefas' / tarefas).read_text(encoding='utf-8')
+def test_the_finished_app_is_projects_tasks(path):
+    mine = path
+    theirs = (REPO / 'projects' / 'tasks' / path).read_text(encoding='utf-8')
     assert tags(files_at(7)[mine]) == tags(theirs)
 
 

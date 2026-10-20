@@ -38,7 +38,7 @@ class TestAuthAcceptsWhatTheEngineStores:
 
     @pytest.mark.parametrize("value", [
         False, "false", "False", "no", "off", "0", "", None,
-        "sim", "banana", "yes please", 1, 0, [], {}, [1],
+        "oui", "banana", "yes please", 1, 0, [], {}, [1],
     ])
     def test_everything_else_is_false(self, value):
         """Closed list — the fix must not widen what counts as authenticated.
@@ -69,8 +69,8 @@ class TestActionFailureIsLogged:
     def test_the_traceback_reaches_the_log(self, caplog):
         src = (
             '<q:component name="F">'
-            '<q:action name="quebra" method="POST">'
-            '<q:query name="q" datasource="inexistente">SELECT 1</q:query>'
+            '<q:action name="breaks" method="POST">'
+            '<q:query name="q" datasource="missing">SELECT 1</q:query>'
             '</q:action></q:component>'
         )
         ast = QuantumParser().parse(src)
@@ -80,7 +80,7 @@ class TestActionFailureIsLogged:
         app.secret_key = "t"
         rt = ComponentRuntime()
 
-        with app.test_request_context("/quebra", method="POST"):
+        with app.test_request_context("/breaks", method="POST"):
             with caplog.at_level(logging.ERROR, logger="quantum.action"):
                 with contextlib.redirect_stdout(io.StringIO()):
                     url, status = ActionHandler(rt).handle_action(action)
@@ -88,4 +88,4 @@ class TestActionFailureIsLogged:
         assert status == 500
         assert url is None, "a 500 must not carry a Location header"
         assert caplog.records, "the action failed and the log said nothing"
-        assert "quebra" in caplog.text, "the log should name the action"
+        assert "breaks" in caplog.text, "the log should name the action"

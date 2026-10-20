@@ -44,10 +44,10 @@ def guard_conditions(node: IfNode) -> List[str]:
 
 def mark_guards(component) -> None:
     """Flag each guard, nested q:if included, so its condition fails closed (AUTH-6)."""
-    def marcar(node):
+    def mark(node):
         node.is_guard = True
         for child in _branches(node):
             if isinstance(child, IfNode):
-                marcar(child)
+                mark(child)
     for guard in page_guards(component):
-        marcar(guard)
+        mark(guard)

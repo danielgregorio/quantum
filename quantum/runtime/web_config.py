@@ -114,12 +114,12 @@ def _validate_config(config: dict, source: str) -> None:
     # Keys nothing reads, in sections that promise protection or speed. A
     # `csrf_protection: true` that does nothing is worse than none: whoever
     # wrote it believes the app is protected.
-    for secao, conhecidas in _KNOWN_KEYS.items():
-        ignored = sorted(k for k in (config.get(secao) or {}) if k not in conhecidas)
+    for section, known in _KNOWN_KEYS.items():
+        ignored = sorted(k for k in (config.get(section) or {}) if k not in known)
         if ignored:
             log.warning(
                 "%s: %s.%s %s not implemented and ignored — nothing enforces %s.",
-                source, secao, ', '.join(ignored), 'is' if len(ignored) == 1 else 'are',
+                source, section, ', '.join(ignored), 'is' if len(ignored) == 1 else 'are',
                 'it' if len(ignored) == 1 else 'them')
 
     unknown = [k for k in config if k not in _KNOWN_SECTIONS]

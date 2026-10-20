@@ -136,7 +136,7 @@ def reference_options(config: dict, datasource: str, reference: Tuple[str, str])
     """(value, label) of the rows a foreign key may point to — label is the first text column."""
     table, column = reference
     columns = columns_of(config, datasource, table)
-    preferred = ('nome', 'name', 'titulo', 'title', 'label', 'descricao', 'description')
+    preferred = ('name', 'title', 'label', 'description')
     texts = [c.name for c in columns if _param_type(c) == 'string']
     label = next((p for p in preferred if p in texts), texts[0] if texts else column)
     conn = _connect(config, datasource)

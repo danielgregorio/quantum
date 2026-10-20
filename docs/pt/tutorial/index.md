@@ -22,7 +22,7 @@ JavaScript.
 
 O código de cada passo é executado pela própria suíte de testes do Quantum
 exatamente como aparece, e a aplicação pronta é a de
-[`projects/tarefas`](https://github.com/danielgregorio/quantum/tree/main/projects/tarefas).
+[`projects/tasks`](https://github.com/danielgregorio/quantum/tree/main/projects/tasks).
 
 Nunca usou Quantum? O [Início rápido](../guide/quick-start.md) leva cinco
 minutos.

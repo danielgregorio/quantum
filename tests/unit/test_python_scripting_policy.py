@@ -5,7 +5,7 @@ q:python / q:pyclass / q:pyimport run arbitrary Python in the server process
 with no sandbox — full access to os, filesystem and network. The 2026-09
 audit flagged this as the blocker for any feature that would let an LLM
 generate or choose template content (see FULL_AUDIT_2026-09.md, Cluster B,
-and AUDIT_FIX_PLAN.md Fase 4).
+and AUDIT_FIX_PLAN.md Phase 4).
 
 An allowlist was rejected: the real examples import json, csv, collections,
 statistics and functools, so any allowlist permissive enough to keep them

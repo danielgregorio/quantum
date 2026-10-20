@@ -13,12 +13,12 @@
       "complexity": "advanced",
       "tags": [
         "q:agent",
-        "q:loop",
-        "q:function",
-        "AI",
         "q:team",
-        "q:if",
-        "databinding"
+        "q:loop",
+        "AI",
+        "q:function",
+        "databinding",
+        "q:if"
       ],
       "features": [
         "databinding",
@@ -43,12 +43,12 @@
       "complexity": "advanced",
       "tags": [
         "q:agent",
-        "q:function",
-        "AI",
         "q:team",
-        "q:if",
+        "AI",
+        "q:function",
         "databinding",
-        "q:param"
+        "q:param",
+        "q:if"
       ],
       "features": [
         "databinding",
@@ -72,10 +72,10 @@
       "complexity": "beginner",
       "tags": [
         "q:agent",
-        "AI",
-        "q:set",
         "q:team",
-        "databinding"
+        "AI",
+        "databinding",
+        "q:set"
       ],
       "features": [
         "databinding",
@@ -93,12 +93,12 @@
       "complexity": "advanced",
       "tags": [
         "q:agent",
+        "q:team",
         "q:loop",
         "AI",
-        "q:team",
-        "q:if",
         "databinding",
-        "q:param"
+        "q:param",
+        "q:if"
       ],
       "features": [
         "databinding",
@@ -122,14 +122,14 @@
       "description": "1. Knowledge base: index features/ with persist (only indexes once)",
       "complexity": "advanced",
       "tags": [
-        "q:query",
         "q:agent",
+        "q:team",
         "q:loop",
         "AI",
-        "q:team",
-        "q:if",
         "databinding",
-        "q:param"
+        "q:param",
+        "q:query",
+        "q:if"
       ],
       "features": [
         "databinding",
@@ -142,7 +142,7 @@
       "relatedDocs": [
         "/guide/agents"
       ],
-      "lineCount": 192
+      "lineCount": 191
     },
     {
       "file": "rag.q",
@@ -150,14 +150,14 @@
       "description": "Knowledge base with inline text sources",
       "complexity": "intermediate",
       "tags": [
-        "q:query",
         "q:agent",
+        "q:team",
         "q:loop",
         "AI",
-        "q:team",
-        "q:if",
         "databinding",
-        "q:param"
+        "q:param",
+        "q:query",
+        "q:if"
       ],
       "features": [
         "databinding",
@@ -170,7 +170,7 @@
       "relatedDocs": [
         "/guide/agents"
       ],
-      "lineCount": 117
+      "lineCount": 114
     }
   ]
 }

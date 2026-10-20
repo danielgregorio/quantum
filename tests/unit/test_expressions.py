@@ -1,7 +1,7 @@
 """
 Tests for the AST-whitelist expression evaluator.
 
-Fase 2.1 of FRAMEWORK_PLAN.md. This module is standalone for now — nothing
+Phase 2.1 of FRAMEWORK_PLAN.md. This module is standalone for now — nothing
 calls it yet. Wiring it in place of the two existing evaluators is a separate,
 riskier step, gated by tests/unit/test_expression_corpus.py.
 
@@ -150,7 +150,7 @@ class TestStdlib:
 
     def test_date_add_is_what_session_expiry_needed(self, ev):
         """The absence of this is why session.sessionExpiry had to be
-        hardcoded to make login work (AUDIT_FIX_PLAN.md Fase 1)."""
+        hardcoded to make login work (AUDIT_FIX_PLAN.md Phase 1)."""
         result = ev.evaluate("dateAdd('h', 24)", {})
         delta = result - datetime.now()
         assert timedelta(hours=23, minutes=59) < delta <= timedelta(hours=24)

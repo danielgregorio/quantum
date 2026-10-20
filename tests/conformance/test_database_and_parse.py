@@ -284,6 +284,17 @@ class TestMigrations:
         # the one that failed halfway does not leave its first table behind
         assert db.execute("select count(*) from sqlite_master where name = 'a'").fetchone()[0] == 0
 
+    def test_a_file_is_read_as_utf8(self, tmp_path):
+        # DB-8 (before: on Windows the system code page read "crème brûlée" as "crÃ¨me brÃ»lÃ©e";
+        # projects/tarefas checked it with its own data until the example app became English)
+        from quantum.cli.migrations import MigrationRunner
+        project = self.project(tmp_path, 'datasources:\n  db:\n    driver: sqlite\n    database: app.db\n')
+        (project / 'migrations' / 'V002_dessert.sql').write_bytes(
+            "INSERT INTO users (name) VALUES ('crème brûlée');\n".encode('utf-8'))
+        MigrationRunner(project_path=project).up()
+        db = sqlite3.connect(project / 'app.db')
+        assert db.execute('select name from users').fetchall() == [('crème brûlée',)]
+
 
 class TestDeclaredDatasource:
     def _run(self, tmp_path, config, body):

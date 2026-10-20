@@ -38,8 +38,8 @@ def test_a_source_type_that_reads_nothing_is_a_parse_error(kind):
 def test_urlencode():
     # EXPR-12
     from quantum.core.expressions import ExpressionEvaluator
-    assert ExpressionEvaluator().evaluate('urlencode(q)', {'q': 'é a ação? & mais'}) == \
-        '%C3%A9+a+a%C3%A7%C3%A3o%3F+%26+mais'
+    assert ExpressionEvaluator().evaluate('urlencode(q)', {'q': 'café au lait? & more'}) == \
+        'caf%C3%A9+au+lait%3F+%26+more'
 
 
 # ------------------------------------------------------------------ IA-2, on a model server that speaks HTTP

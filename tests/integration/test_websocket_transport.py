@@ -149,16 +149,16 @@ class TestBytesActuallyMove:
         svc.register_connection(
             name="chat", url=server.url, metadata={"auto_connect": True})
 
-        assert svc.send_message("chat", "ola") is True
-        assert wait_for(lambda: "ola" in server.received), server.received
+        assert svc.send_message("chat", "hello") is True
+        assert wait_for(lambda: "hello" in server.received), server.received
 
     def test_json_is_serialised_on_the_wire(self, svc, server):
         svc.register_connection(
             name="chat", url=server.url, metadata={"auto_connect": True})
 
-        svc.send_message("chat", {"tipo": "oi", "n": 1}, msg_type="json")
+        svc.send_message("chat", {"kind": "hi", "n": 1}, msg_type="json")
         assert wait_for(lambda: server.received)
-        assert json.loads(server.received[0]) == {"tipo": "oi", "n": 1}
+        assert json.loads(server.received[0]) == {"kind": "hi", "n": 1}
 
     def test_the_reply_arrives_at_the_on_message_handler(self, svc, server):
         got = []
@@ -213,7 +213,7 @@ class TestClosing:
         svc.close_connection("chat")
         assert wait_for(
             lambda: svc.get_connection("chat").state != WebSocketState.OPEN)
-        assert svc.send_message("chat", "tarde demais") is False
+        assert svc.send_message("chat", "too late") is False
 
     def test_the_close_handler_fires_when_the_server_goes_away(
             self, svc, server):

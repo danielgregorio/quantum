@@ -35,7 +35,7 @@ class ValidationError(Exception):
 
 
 def _field_message(name: str, message: str) -> str:
-    """"Parameter 'titulo' must be at least 3 characters" -> "Must be at least 3 characters"."""
+    """"Parameter 'title' must be at least 3 characters" -> "Must be at least 3 characters"."""
     text = re.sub(rf"^Parameter '{re.escape(name)}' ", '', message)
     if text == 'is required':
         return 'Required'
@@ -110,17 +110,17 @@ class ActionHandler:
                     context.set_variable(key, value)
 
             # ACT-6: the submitted fields as `form`, raw, like the page render
-            # gets them. {form.campo} inside an action used to evaluate to
+            # gets them. {form.field} inside an action used to evaluate to
             # empty — only declared q:params reached the action — while the
-            # docs (data-fetching.md) and pages (rag.q) use {form.campo}.
+            # docs (data-fetching.md) and pages (rag.q) use {form.field}.
             context.set_variable('form', {
                 key: value for key, value in form_data.items()
                 if key != 'files' and not param_validation.is_uploaded_file(value)
             })
 
-            # ROUTE-2: the page's route segments ([name], [...caminho]) are
+            # ROUTE-2: the page's route segments ([name], [...path]) are
             # variables of the action too, set last so a form field with the
-            # same name cannot replace them. A POST to /admin/app/loja used to
+            # same name cannot replace them. A POST to /admin/app/shop used to
             # run without `name`, so every form had to repeat it in a hidden
             # field — one the browser can change.
             for key, value in (route_params or {}).items():
@@ -289,14 +289,14 @@ class ActionHandler:
                 self._validate_rules(param, validated_value)
 
                 # UI-10: a foreign key names a row that exists.
-                referencia = getattr(param, 'references', None)
-                if referencia and action is not None and getattr(action, 'table_datasource', None):
+                reference = getattr(param, 'references', None)
+                if reference and action is not None and getattr(action, 'table_datasource', None):
                     from quantum.runtime.table_params import reference_exists
                     if not reference_exists(getattr(self.component_runtime, 'config', None) or {},
-                                            action.table_datasource, referencia, validated_value):
+                                            action.table_datasource, reference, validated_value):
                         raise ValidationError(
-                            f"Parameter '{param.name}' must name an existing row of {referencia[0]} "
-                            f"(no {referencia[1]} = {validated_value})")
+                            f"Parameter '{param.name}' must name an existing row of {reference[0]} "
+                            f"(no {reference[1]} = {validated_value})")
 
                 validated[param.name] = validated_value
             except ValidationError as error:
@@ -314,7 +314,7 @@ class ActionHandler:
         names = set()
         for param in getattr(action, 'params', None) or []:   # table columns are never secrets
             ptype = str(getattr(param, 'type', '') or '').lower()
-            if ptype in ('password', 'file') or 'senha' in param.name.lower() or 'password' in param.name.lower():
+            if ptype in ('password', 'file') or 'password' in param.name.lower():
                 names.add(param.name)
         return names
 
@@ -519,7 +519,7 @@ class ActionHandler:
         """Resolve {expressions} in a redirect URL or flash message (ACT-3).
 
         This looked each {name} up with get_variable, so anything but a plain
-        name failed — `flash="{result.error}"` or `{len(itens)} saved` ended
+        name failed — `flash="{result.error}"` or `{len(items)} saved` ended
         the action with "Variable 'result.error' not found in any scope" and a
         500. It now goes through the same evaluator as every q: attribute.
         """

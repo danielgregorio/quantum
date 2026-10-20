@@ -6,7 +6,7 @@ needed by real .q files or whose absence caused a concrete bug:
 
 - `now()` / `dateAdd()` / `dateFormat()` — their absence is why
   `session.sessionExpiry` had to be hardcoded to make login work at all
-  (AUDIT_FIX_PLAN.md Fase 1). A framework that cannot express "24 hours from
+  (AUDIT_FIX_PLAN.md, phase 1). A framework that cannot express "24 hours from
   now" in its own language forces every app to hardcode a date.
 - `len` / `first` / `last` — `.length` already worked on arrays via attribute
   access; these make the same thing available as a call.
@@ -111,7 +111,7 @@ def _contains(v: Any, needle: Any) -> bool:
 
 
 def _slugify(v: Any) -> str:
-    """'Olá, Mundo!' -> 'ola-mundo': for URLs made from a title (EXPR-9)."""
+    """'Héllo, Wörld!' -> 'hello-world': for URLs made from a title (EXPR-9)."""
     import unicodedata
     text = unicodedata.normalize('NFKD', str(v)).encode('ascii', 'ignore').decode('ascii')
     return re.sub(r'[^a-z0-9]+', '-', text.lower()).strip('-')

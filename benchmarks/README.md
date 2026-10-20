@@ -1,9 +1,9 @@
 # Quantum Framework Benchmarks
 
-Sistema de benchmarks para medir a performance das funcionalidades do Quantum Framework
-e comparar com outras linguagens e plataformas.
+Benchmarks that measure the performance of the Quantum Framework's features
+and compare it with other languages and platforms.
 
-## Categorias de Benchmark
+## Benchmark categories
 
 ### 1. Core Language
 - `q:set` - Variable assignment

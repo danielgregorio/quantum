@@ -70,9 +70,9 @@ def tag_error(exc: BaseException, node) -> None:
 
 def error_location(exc: BaseException):
     """(file, line) of an error or of any error it wraps; (None, None) if unknown."""
-    visto = set()
-    while exc is not None and id(exc) not in visto:
-        visto.add(id(exc))
+    seen = set()
+    while exc is not None and id(exc) not in seen:
+        seen.add(id(exc))
         if getattr(exc, 'quantum_line', None) is not None:
             return getattr(exc, 'quantum_file', None), exc.quantum_line
         if getattr(exc, 'line', None) is not None and type(exc).__name__ == 'QuantumParseError':

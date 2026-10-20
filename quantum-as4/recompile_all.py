@@ -16,7 +16,7 @@ DEMOS = [
     "stopwatch",
     "components-demo",
     "nested-containers",
-    "fase1-mvp-demo",
+    "phase1-mvp-demo",
     "advanced-components",
     "enhanced-components-demo",
     "effects-demo",

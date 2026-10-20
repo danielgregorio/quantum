@@ -108,7 +108,7 @@ Plan: schema.sql vs. the migrations in migrations/
   `NOT NULL` column without a default is flagged: existing rows have no value.
 - The rollback is written next to it. Before writing, the plan is checked:
   applied to the migrations' schema, it must give exactly `schema.sql`'s.
-- SQLite for now. `projects/tarefas` keeps a `schema.sql`.
+- SQLite for now. `projects/tasks` keeps a `schema.sql`.
 
 ## Reusable components
 

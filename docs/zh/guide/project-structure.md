@@ -100,7 +100,7 @@ Plan: schema.sql vs. the migrations in migrations/
 - 新增一个可为空（或有默认值）的列是 `ADD COLUMN`；其他任何变更都会重建数据表并复制各行（SQLite 无法修改列）。
 - 删除数据表或列，或修改列的类型，会丢失数据：计划会说明这一点，没有 `--allow-data-loss` 时 `--write` 会拒绝。没有默认值的新 `NOT NULL` 列会被标出：已有的行没有值。
 - 回滚迁移会写在旁边。写入之前会检查计划：把它应用到迁移的模式上，必须恰好得到 `schema.sql` 的模式。
-- 目前仅支持 SQLite。`projects/tarefas` 维护着一个 `schema.sql`。
+- 目前仅支持 SQLite。`projects/tasks` 维护着一个 `schema.sql`。
 
 ## 可复用组件 {#reusable-components}
 

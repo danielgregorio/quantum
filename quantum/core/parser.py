@@ -71,7 +71,7 @@ def _create_parser_registry(parser: 'QuantumParser') -> ParserRegistry:
         # HTML
         HTMLParser, ComponentCallParser,
     )
-    # New modular parsers (Phase 2 - Operacao Guilhotina)
+    # New modular parsers (Phase 2 - Operation Guillotine)
     from quantum.core.parsers.forms import ActionParser, RedirectParser, FlashParser
     from quantum.core.parsers.composition import ImportParser, SlotParser
     from quantum.core.parsers.functions import FunctionParser
@@ -532,9 +532,9 @@ class QuantumParser:
         conhecidas = {tag for tag in self._parser_registry.registered_tags
                       if type(self._parser_registry.get_parser(tag)).__name__ != 'HTMLParser'}
         conhecidas |= {'return', 'else', 'elseif'}
-        parecidas = difflib.get_close_matches(name, sorted(conhecidas), n=3, cutoff=0.6)
-        dica = (" Did you mean " + " or ".join(f"<q:{p}>" for p in parecidas) + "?") if parecidas else ""
-        return f"<q:{name}> is not a Quantum tag (PARSE-1).{dica}"
+        similar = difflib.get_close_matches(name, sorted(conhecidas), n=3, cutoff=0.6)
+        hint = (" Did you mean " + " or ".join(f"<q:{p}>" for p in similar) + "?") if similar else ""
+        return f"<q:{name}> is not a Quantum tag (PARSE-1).{hint}"
 
     @staticmethod
     def _is_quantum_tag(element: ET.Element) -> bool:
@@ -1045,7 +1045,7 @@ class QuantumParser:
 
     def _parse_application_quantum_children(self, root: ET.Element,
                                             app: ApplicationNode):
-        """Coleta <q:function> e <q:set> escritos direto no q:application."""
+        """Collects the <q:function> and <q:set> written directly in q:application."""
         for child in root:
             local_name = self._get_element_name(child)
             if local_name not in ('function', 'set'):

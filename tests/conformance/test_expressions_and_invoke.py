@@ -328,7 +328,7 @@ class TestFunctionsAndHabits:
     @pytest.mark.parametrize('expr,expected', [
         ('round(2.5)', 3), ('round(-2.5)', -3), ('round(0.125, 2)', 0.13), ('round(2.567, 2)', 2.57),
         ('ceil(2.1)', 3), ('ceil(-2.1)', -2), ('floor(2.9)', 2), ('max(1, ceil(7 / 200))', 1),
-        ("len(split('a b c', ' '))", 3), ("slugify('Olá, Mundo! Ação')", 'ola-mundo-acao'),
+        ("len(split('a b c', ' '))", 3), ("slugify('Héllo, Wörld! Façade')", 'hello-world-facade'),
     ])
     def test_rounding_and_split(self, run_body, expr, expected):
         # EXPR-9 (before: round(2.5) was 2, round(0.125, 2) was 0.12; ceil/floor did not exist)

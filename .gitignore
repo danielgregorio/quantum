@@ -241,23 +241,23 @@ quantum_kb/
 *.db-journal
 
 # Debug/test HTML files
-# Rastreados por engano ate 2026-09; removidos do indice com `git rm --cached`
-# (preservados no disco para o demo rodar localmente). Um clone publico NAO
+# Tracked by mistake until 2026-09; removed from the index with `git rm --cached`
+# (kept on disk so the demo runs locally). A public clone does not have them.
 
-# install.py e o instalador CLI oficial (melhor peca de onboarding). A regra
-# `/*.py` acima o engolia; esta negacao o traz de volta.
+# install.py is the official CLI installer (the best piece of onboarding). The
+# `/*.py` rule above swallowed it; this negation brings it back.
 !/install.py
 
-# --- Estado de runtime / build que estava rastreado por engano (2026-09) ---
+# --- Runtime / build state that was tracked by mistake (2026-09) ---
 coverage.json
 docs/.vitepress/cache/
-# Settings do admin gravam segredos cifrados (com chave publica!) - runtime, nunca versionar
+# The admin's settings store encrypted secrets (with a public key!) - runtime, never commit
 quantum_admin/settings/*.yaml
 !quantum_admin/settings/*.example.yaml
 
-# Scripts de ops pessoais do homelab (tinham senha SSH hardcoded, agora morta).
-# Nao pertencem a um repo de framework. Preservados no disco; mover para fora
-# do repo e atualizar a senha se ainda usar.
+# Personal homelab ops scripts (they had a hardcoded SSH password, now dead).
+# They do not belong in a framework's repository. Kept on disk; move them out
+# of the repository and change the password if still in use.
 scripts/add_rag_route.py
 scripts/fix_quantum_nginx.py
 

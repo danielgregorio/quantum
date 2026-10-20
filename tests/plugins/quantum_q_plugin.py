@@ -164,8 +164,8 @@ class QuantumQItem(pytest.Item):
             from quantum.runtime.ui_builder import UIBuilder
             # UI-8: html is layout only; the mobile example is built for its
             # own (Laboratory) target, the one that runs its logic.
-            alvo = 'mobile' if self.name == 'test-mobile.q' else 'html'
-            output = UIBuilder().build(app, target=alvo)
+            target_name = 'mobile' if self.name == 'test-mobile.q' else 'html'
+            output = UIBuilder().build(app, target=target_name)
             assert output and output.strip(), (
                 f"{self.name}: the UI builder produced nothing")
             return

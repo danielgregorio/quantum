@@ -11,7 +11,7 @@ from dataclasses import asdict
 
 logger = logging.getLogger(__name__)
 
-# quantum is an installed package now (FRAMEWORK_PLAN Fase 1.1). This used to
+# quantum is an installed package now (FRAMEWORK_PLAN, phase 1.1). This used to
 # push <repo>/src onto sys.path and import `runtime.job_executor` — the
 # pre-packaging layout. src/ became quantum/, so the import failed, the
 # except swallowed it into a warning, HAS_JOB_EXECUTOR went False, and the

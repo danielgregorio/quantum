@@ -180,7 +180,7 @@ class QueryParser(BaseTagParser):
                 while i < n:
                     if sql[i] == quote:
                         if i + 1 < n and sql[i + 1] == quote:
-                            i += 2      # '' escapado dentro do literal
+                            i += 2      # '' is an escaped quote inside the literal
                             continue
                         i += 1
                         break

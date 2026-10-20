@@ -13,6 +13,6 @@ JavaScript.
 
 Every step's code is run by Quantum's own test suite as it is shown, and the
 finished app is the one in
-[`projects/tarefas`](https://github.com/danielgregorio/quantum/tree/main/projects/tarefas).
+[`projects/tasks`](https://github.com/danielgregorio/quantum/tree/main/projects/tasks).
 
 New to Quantum? The [Quick Start](../guide/quick-start.md) takes five minutes.

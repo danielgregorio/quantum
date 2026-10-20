@@ -13,7 +13,7 @@ source_hash: d23fd88befc7
 
 - 无法解析的页面；
 - SQL 无法针对你的数据库编译的 `q:query`——不存在的表或列、语法错误——并附上数据库自己的消息；
-- 页面读取了查询并不返回的 `{query.field}`：直接读取（`{post.titulo}`）、通过对它的 `q:loop`（`{linha.titulo}`）、
+- 页面读取了查询并不返回的 `{query.field}`：直接读取（`{post.title}`）、通过对它的 `q:loop`（`{row.title}`）、
   带 `source="{query}"` 的 `ui:table` / `ui:list`，或者 `<ui:column key>`。
 
 ```bash
@@ -22,8 +22,8 @@ quantum check
 ```
 
 ```text
-components/index.q:42: <q:query name="tarefas">: no such column: titlo
-components/index.q:86: {tarefas.titul}: query "tarefas" returns no column "titul" (columns: id, titulo, prioridade, feita)
+components/index.q:42: <q:query name="tasks">: no such column: titel
+components/index.q:86: {tasks.titl}: query "tasks" returns no column "titl" (columns: id, title, priority, done)
 
 2 problem(s) — 1 file(s), 5 query(ies) checked against the database.
 ```

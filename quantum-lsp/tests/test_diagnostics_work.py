@@ -73,7 +73,7 @@ class TestItFindsRealMistakes:
                    for m in found), found
 
     def test_a_mismatched_closing_tag(self):
-        found = messages('<q:component name="C"><p>oi</div></q:component>')
+        found = messages('<q:component name="C"><p>hi</div></q:component>')
         assert any("parse error" in m.lower() for m in found), found
 
 
@@ -83,10 +83,10 @@ class TestItDoesNotCryWolf:
     def test_a_missing_xmlns_is_not_an_error(self):
         # .q files do not have to declare xmlns:q — the framework injects it.
         # A raw ET.fromstring says "unbound prefix" for every single file.
-        assert diagnose('<q:component name="C"><p>oi</p></q:component>') == []
+        assert diagnose('<q:component name="C"><p>hi</p></q:component>') == []
 
     @pytest.mark.parametrize("source", [
-        '<q:component name="C"><br><p>oi</p></q:component>',
+        '<q:component name="C"><br><p>hi</p></q:component>',
         '<q:component name="C"><input disabled></q:component>',
         '<q:component name="C"><p>Tom & Jerry</p></q:component>',
         '<q:component name="C"><meta charset="utf-8"></q:component>',

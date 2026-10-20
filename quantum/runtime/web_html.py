@@ -441,7 +441,7 @@ class HtmlPostProcessing:
         htmx marker, so 98% of pages pulled a third-party CDN dependency they
         never touched — a runtime network requirement for an offline or
         homelab deployment, which is the audience the project declares
-        (FRAMEWORK_PLAN Fase 0.3), and a script a restrictive CSP blocks
+        (FRAMEWORK_PLAN, phase 0.3), and a script a restrictive CSP blocks
         outright.
 
         A handful of other components (htmx_counter.q, htmx_click.q,

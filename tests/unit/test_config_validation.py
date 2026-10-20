@@ -39,7 +39,7 @@ class TestTypeErrorsAreCaughtAtBoot:
         ("server:\n  port: oitenta\n", "server.port"),
         ("server:\n  host: 8080\n", "server.host"),
         ("security:\n  python_scripting: talvez\n", "security.python_scripting"),
-        ("llm:\n  timeout: sempre\n", "llm.timeout"),
+        ("llm:\n  timeout: forever\n", "llm.timeout"),
     ])
     def test_rejected(self, tmp_path, text, needle):
         with pytest.raises(ConfigError, match=needle):

@@ -1,5 +1,5 @@
 """
-The support surface is enforced in code (PRODUCTION_READINESS.md Fase 0).
+The support surface is enforced in code (PRODUCTION_READINESS.md Phase 0).
 
 An experimental tag still runs, but the operator is told once that they are
 leaning on something the project does not promise to keep working — the audit

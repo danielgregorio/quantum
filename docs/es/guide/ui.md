@@ -254,7 +254,7 @@ prioridad es un select con la lista del `CHECK`.
 - Las filas deben incluir la clave primaria (`SELECT id, …`).
 - Lo que hace se muestra en [`/_dev`](/tools/dev-panel) como cualquier acción.
 
-`projects/tarefas` tiene una en `/planilha`.
+`projects/tasks` tiene una en `/sheet`.
 
 ## Formularios que se abren con valores {#forms-that-open-with-values}
 
@@ -381,7 +381,7 @@ tabla — el esquema que ya escribiste en la migración (la tabla `tasks` de arr
   archivo de la base de datos — agrega una columna en una migración y el
   formulario la tiene. `quantum check` informa una tabla o columna que no existe.
 
-`projects/tarefas` edita una tarea de esta forma (`components/tarefa/[id].q`).
+`projects/tasks` edita una tarea de esta forma (`components/task/[id].q`).
 
 ## Diseño que se adapta {#layout-that-adapts}
 

@@ -1,7 +1,7 @@
 ---
 title: Escaparate
 source: showcase/index.md
-source_hash: 531be5155d18
+source_hash: 4dbca0fcf37c
 ---
 
 # Escaparate
@@ -18,19 +18,19 @@ las aplicaciones en ejecución (`scripts/showcase-screenshots.py`); las aplicaci
 responden a través de un servidor de modelos sustituto, así que no hace falta ningún
 modelo para reproducirlas.
 
-## Tareas (Tarefas)
+## Tareas
 
-![Tareas (Tarefas)](/showcase/tarefas.png)
+![Tareas](/showcase/tasks.png)
 
-Una lista de tareas en `ui:*`: un formulario validado por su acción, botones para terminar y eliminar, un filtro desde la dirección, una tabla que ordena y edita sus celdas según el esquema, un formulario de edición generado a partir de la tabla y el historial de cada cambio. Las mismas páginas funcionan en la terminal y en una ventana de escritorio. Su contenido está en portugués; el [tutorial](../tutorial/tasks-app.md) la construye en inglés.
+Una lista de tareas en `ui:*`: un formulario validado por su acción, botones para terminar y eliminar, un filtro desde la dirección, una tabla que ordena y edita sus celdas según el esquema, un formulario de edición generado a partir de la tabla y el historial de cada cambio. Las mismas páginas funcionan en la terminal y en una ventana de escritorio. El [tutorial](../tutorial/tasks-app.md) la construye paso a paso.
 
 | | |
 |---|---|
 | Demuestra | Acciones y formularios, Base de datos, UI, Pruebas |
-| Reglas de la SPEC que cita | DB-8, DB-10, DB-11, UI-2, UI-10, UI-13 |
+| Reglas de la SPEC que cita | DB-10, DB-11, UI-2, UI-10, UI-13 |
 | Tamaño | 3 páginas, 164 líneas de `.q`, 0 líneas de JavaScript |
-| Probada por | 13 pruebas `quantum test`, [`tests/apps/test_tarefas.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tarefas.py), [`tests/apps/test_tarefas_browser.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tarefas_browser.py), [`tests/apps/test_tarefas_console.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tarefas_console.py), [`tests/apps/test_tarefas_desktop.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tarefas_desktop.py) |
-| Código | [`projects/tarefas`](https://github.com/danielgregorio/quantum/tree/main/projects/tarefas) |
+| Probada por | 13 pruebas `quantum test`, [`tests/apps/test_tasks.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tasks.py), [`tests/apps/test_tasks_browser.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tasks_browser.py), [`tests/apps/test_tasks_console.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tasks_console.py), [`tests/apps/test_tasks_desktop.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tasks_desktop.py) |
+| Código | [`projects/tasks`](https://github.com/danielgregorio/quantum/tree/main/projects/tasks) |
 
 <details><summary>Etiquetas que usa (26)</summary>
 

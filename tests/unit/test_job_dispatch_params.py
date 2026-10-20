@@ -11,7 +11,7 @@ from quantum.core.parser import QuantumParser
 
 def _job(src_params):
     src = (f'<q:component name="J">'
-           f'<q:job name="envio" action="dispatch">{src_params}</q:job>'
+           f'<q:job name="send" action="dispatch">{src_params}</q:job>'
            f'</q:component>')
     ast = QuantumParser().parse(src)
     return next(s for s in ast.statements if type(s).__name__ == 'JobNode')

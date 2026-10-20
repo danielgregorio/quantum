@@ -1,7 +1,7 @@
 """
 Compatibility corpus for the expression evaluator.
 
-Step 1 of FRAMEWORK_PLAN.md Fase 2.1. Before replacing the two parallel
+Step 1 of FRAMEWORK_PLAN.md Phase 2.1. Before replacing the two parallel
 evaluators (6 _evaluate_* methods in component.py, 4 more in renderer.py) with
 one, the current behaviour has to be pinned — including the parts that are
 wrong, marked as such. Otherwise there is no way to tell a fix from a
@@ -75,7 +75,7 @@ def test_no_expression_crashes(runtime, corpus):
     assert not failures, "expressions crashed:\n  " + "\n  ".join(failures[:20])
 
 
-# The only expressions whose behaviour the Fase 2.1 migration deliberately
+# The only expressions whose behaviour the Phase 2.1 migration deliberately
 # changed. Two out of 503 — the rest of the corpus is byte-identical.
 #
 #   false   -> used to resolve to the STRING '{false}', which is truthy. So
@@ -136,7 +136,7 @@ def test_regex_quantifiers_are_not_evaluated(runtime):
 
 
 class TestFixedByTheMigration:
-    """The failure modes Fase 2.1 existed to fix.
+    """The failure modes Phase 2.1 existed to fix.
 
     These were written asserting the old, wrong behaviour. They started failing
     the moment the new evaluator was wired in — that failure was the proof the
@@ -150,7 +150,7 @@ class TestFixedByTheMigration:
 
     def test_date_functions_exist(self, runtime):
         """Their absence is why session expiry had to be hardcoded during the
-        q:action fix (AUDIT_FIX_PLAN.md Fase 1)."""
+        q:action fix (AUDIT_FIX_PLAN.md Phase 1)."""
         from datetime import datetime, timedelta
         assert isinstance(runtime._apply_databinding('{now()}', {}), datetime)
         expiry = runtime._apply_databinding("{dateAdd('h', 24)}", {})

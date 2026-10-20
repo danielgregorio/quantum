@@ -122,28 +122,28 @@
     <!-- Suggestion chips -->
     <div class="suggestions">
       <form method="POST" action="/quantum-assistant" style="display:inline">
-        <input type="hidden" name="question" value="Como faco um loop?" />
-        <button type="submit" class="chip">Como faco um loop?</button>
+        <input type="hidden" name="question" value="How do I write a loop?" />
+        <button type="submit" class="chip">How do I write a loop?</button>
       </form>
       <form method="POST" action="/quantum-assistant" style="display:inline">
-        <input type="hidden" name="question" value="Como funciona q:query?" />
-        <button type="submit" class="chip">Como funciona q:query?</button>
+        <input type="hidden" name="question" value="How does q:query work?" />
+        <button type="submit" class="chip">How does q:query work?</button>
       </form>
       <form method="POST" action="/quantum-assistant" style="display:inline">
-        <input type="hidden" name="question" value="Como validar formularios?" />
-        <button type="submit" class="chip">Como validar formularios?</button>
+        <input type="hidden" name="question" value="How do I validate forms?" />
+        <button type="submit" class="chip">How do I validate forms?</button>
       </form>
       <form method="POST" action="/quantum-assistant" style="display:inline">
-        <input type="hidden" name="question" value="Como usar sessoes?" />
-        <button type="submit" class="chip">Como usar sessoes?</button>
+        <input type="hidden" name="question" value="How do I use sessions?" />
+        <button type="submit" class="chip">How do I use sessions?</button>
       </form>
       <form method="POST" action="/quantum-assistant" style="display:inline">
-        <input type="hidden" name="question" value="O que e q:set?" />
-        <button type="submit" class="chip">O que e q:set?</button>
+        <input type="hidden" name="question" value="What is q:set?" />
+        <button type="submit" class="chip">What is q:set?</button>
       </form>
       <form method="POST" action="/quantum-assistant" style="display:inline">
-        <input type="hidden" name="question" value="Como funciona q:if?" />
-        <button type="submit" class="chip">Como funciona q:if?</button>
+        <input type="hidden" name="question" value="How does q:if work?" />
+        <button type="submit" class="chip">How does q:if work?</button>
       </form>
     </div>
 

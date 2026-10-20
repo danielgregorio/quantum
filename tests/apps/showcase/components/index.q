@@ -18,7 +18,7 @@
   </q:action>
 
   <q:set name="people" type="array" value='[{"id": 1, "name": "Ana", "age": 30}, {"id": 2, "name": "Bia", "age": 25}]' />
-  <q:set name="fruits" type="array" value='["açaí", "grape"]' />
+  <q:set name="fruits" type="array" value='["piña", "grape"]' />
   <q:set name="progress" value="40" />
 
   <ui:window title="Showcase">

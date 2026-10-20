@@ -38,10 +38,10 @@ class TestRegisteringIsNotConnecting:
 class TestSendDoesNotClaimDelivery:
     def test_send_returns_false(self, svc):
         svc.register_connection(name="ws", url="ws://x/y")
-        assert svc.send_message("ws", "ola") is False
+        assert svc.send_message("ws", "hello") is False
 
     def test_send_to_an_unknown_name_returns_false(self, svc):
-        assert svc.send_message("naoexiste", "ola") is False
+        assert svc.send_message("missing", "hello") is False
 
     def test_opening_a_connection_that_does_not_exist_returns_false(self, svc):
         assert svc.open("naoexiste") is False

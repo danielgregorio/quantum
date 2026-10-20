@@ -14,10 +14,9 @@ coincide, vale el [original en inglés](/tutorial/tasks-app).
 Este tutorial construye una aplicación completa a partir de una carpeta vacía:
 una lista de tareas con formularios validados, botones para terminar y
 eliminar, un filtro, una tabla ordenable que editas en el lugar, una página de
-edición con el historial de cada cambio, y un conjunto de pruebas. Es el
-gemelo en inglés de
-[`projects/tarefas`](https://github.com/danielgregorio/quantum/tree/main/projects/tarefas),
-una de las aplicaciones que ejecuta el propio CI de Quantum, y termina con el
+edición con el historial de cada cambio, y un conjunto de pruebas. Termina como
+[`projects/tasks`](https://github.com/danielgregorio/quantum/tree/main/projects/tasks),
+una de las aplicaciones que ejecuta el propio CI de Quantum, con el
 mismo código. El código de esta página está en inglés, como en el original.
 
 No escribes JavaScript ni Python. Cada paso es una aplicación completa que

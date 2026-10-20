@@ -1,13 +1,13 @@
 """
 Make an unresolved `{expression}` say something.
 
-FRAMEWORK_PLAN.md Fase 2.2. Both databinding paths catch every exception and
+FRAMEWORK_PLAN.md, phase 2.2. Both databinding paths catch every exception and
 hand back the literal placeholder, which is the right thing to RENDER — a page
 should not 500 because one field is missing — but it threw the diagnosis away.
 The evaluator already knew that `p` was not defined, or that `projects` is a
 list with no `recordCount`; nobody was told.
 
-That silence was the single biggest cost measured in Fase 4: six of the eleven
+That silence was the single biggest cost measured in phase 4: six of the eleven
 frictions found while writing one real screen were the same disease, and three
 of the four bugs produced no message at all. The time went into discovering
 what was wrong, not into fixing it. See DOGFOOD_NOTES.md.

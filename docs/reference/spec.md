@@ -622,7 +622,7 @@ exist (`session.user.is_admin` without `session.user`) is still a failure
 <a id="EXPR-9"></a>**[EXPR-9](#EXPR-9)** — `round(x, places=0)` rounds half away from zero (`round(2.5)` is
 `3`, `round(0.125, 2)` is `0.13`); `ceil(x)` and `floor(x)` round up and down.
 Text is split with `split(text, sep)`, and `slugify(text)` makes an address
-from a title (`'Olá, Mundo!'` → `'ola-mundo'`).
+from a title (`'Héllo, Wörld!'` → `'hello-world'`).
 
 <p class="spec-cited">Referenced by: <a href="./functions#fn-split"><code>split()</code></a> · <a href="./functions#fn-slugify"><code>slugify()</code></a> · <a href="./functions#fn-round"><code>round()</code></a> · <a href="./functions#fn-ceil"><code>ceil()</code></a> · <a href="./functions#fn-floor"><code>floor()</code></a></p>
 

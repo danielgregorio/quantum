@@ -1,7 +1,7 @@
 """
 Tests for unresolved-expression diagnostics.
 
-FRAMEWORK_PLAN.md Fase 2.2, prioritised by Fase 4's measurement: six of the
+FRAMEWORK_PLAN.md Phase 2.2, prioritised by Phase 4's measurement: six of the
 eleven frictions found while writing one real screen were the same disease,
 silent failure, and three of the four bugs produced no message at all.
 
@@ -42,12 +42,12 @@ class TestTheTwoFailuresThatCostTheMostTime:
         exist and every {p.field} rendered as literal text. Naming what IS in
         scope makes the cause obvious in one line."""
         # EXPR-1: the diagnosis travels in the raised error, not a log line.
-        with pytest.raises(ExpressionError) as erro:
+        with pytest.raises(ExpressionError) as caught:
             runtime._apply_databinding(
                 '{p.name}',
                 {'projects': [1, 2, 3], 'projects_result': {}, 'total': 3},
             )
-        message = str(erro.value)
+        message = str(caught.value)
         assert '{p.name}' in message
         assert "'p' is not defined" in message
         assert 'projects' in message and 'total' in message
@@ -55,11 +55,11 @@ class TestTheTwoFailuresThatCostTheMostTime:
     def test_recordcount_on_the_rows_says_where_it_actually_lives(self, runtime, caplog):
         """q:query publishes `projects` (rows) and `projects_result`
         (metadata). {projects.recordCount} is the natural first guess."""
-        with pytest.raises(ExpressionError) as erro:
+        with pytest.raises(ExpressionError) as caught:
             runtime._apply_databinding(
                 '{projects.recordCount}', {'projects': [{'a': 1}, {'a': 2}]}
             )
-        message = str(erro.value)
+        message = str(caught.value)
         assert '.length' in message
         assert '_result' in message
 

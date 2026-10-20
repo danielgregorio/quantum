@@ -13,13 +13,13 @@
       "complexity": "intermediate",
       "tags": [
         "authentication",
-        "q:action",
         "session",
+        "databinding",
+        "q:param",
         "q:set",
         "q:auth",
-        "databinding",
         "security",
-        "q:param"
+        "q:action"
       ],
       "features": [
         "databinding",
@@ -31,7 +31,7 @@
       "relatedDocs": [
         "/guide/authentication"
       ],
-      "lineCount": 20
+      "lineCount": 25
     },
     {
       "file": "test-auth-logout.q",
@@ -40,11 +40,11 @@
       "complexity": "beginner",
       "tags": [
         "authentication",
-        "q:action",
         "session",
-        "q:set",
         "q:auth",
-        "security"
+        "q:action",
+        "security",
+        "q:set"
       ],
       "features": [
         "q:action",
@@ -64,10 +64,10 @@
       "tags": [
         "authentication",
         "session",
-        "q:set",
-        "q:auth",
         "databinding",
-        "security"
+        "q:auth",
+        "security",
+        "q:set"
       ],
       "features": [
         "databinding",
@@ -87,8 +87,8 @@
       "tags": [
         "authentication",
         "session",
-        "q:auth",
         "databinding",
+        "q:auth",
         "security"
       ],
       "features": [

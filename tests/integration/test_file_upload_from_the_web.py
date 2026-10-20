@@ -38,20 +38,20 @@ class TestTheFilesReachTheContext:
         with app.test_request_context(
             "/", method="POST",
             data={"name": "maria",
-                  "avatar": (io.BytesIO(b"conteudo"), "foto.png")},
+                  "avatar": (io.BytesIO(b"content"), "photo.png")},
             content_type="multipart/form-data",
         ):
             data = handler._extract_form_data()
 
             assert data["name"] == "maria"
-            assert data["avatar"].filename == "foto.png"
-            assert data["avatar"].read() == b"conteudo"
+            assert data["avatar"].filename == "photo.png"
+            assert data["avatar"].read() == b"content"
 
     def test_files_are_also_grouped(self, app):
         handler = ActionHandler.__new__(ActionHandler)
         with app.test_request_context(
             "/", method="POST",
-            data={"avatar": (io.BytesIO(b"x"), "foto.png")},
+            data={"avatar": (io.BytesIO(b"x"), "photo.png")},
             content_type="multipart/form-data",
         ):
             data = handler._extract_form_data()
@@ -95,7 +95,7 @@ class TestTheFileActuallyLands:
 
         with app.test_request_context(
             "/", method="POST",
-            data={"avatar": (io.BytesIO(b"bytes reais"), "foto.png")},
+            data={"avatar": (io.BytesIO(b"real bytes"), "photo.png")},
             content_type="multipart/form-data",
         ):
             data = handler._extract_form_data()
@@ -105,4 +105,4 @@ class TestTheFileActuallyLands:
         assert result.get("success"), result
         written = list(pathlib.Path(tmp_path).rglob("*.png"))
         assert written, "nothing was written to disk"
-        assert written[0].read_bytes() == b"bytes reais"
+        assert written[0].read_bytes() == b"real bytes"

@@ -5,9 +5,9 @@ The parser collects default, type, min, max, minlength, maxlength, pattern
 and enum from each q:param. The runtime's _validate_params looked at exactly
 one of them. So
 
-    <q:param name="idade" type="numeric" min="18" max="120" default="30" />
+    <q:param name="age" type="numeric" min="18" max="120" default="30" />
 
-left `idade` undefined — "{idade} did not resolve" — accepted "abc" as a
+left `age` undefined — "{age} did not resolve" — accepted "abc" as a
 number, and accepted 7 for a minimum of 18. A component could not trust a
 single thing it declared about its own inputs.
 """
@@ -33,20 +33,20 @@ def run(component_node, **params):
 
 class TestDefaults:
     def test_a_default_defines_the_variable(self):
-        node = component('<q:param name="idade" default="30" />')
-        assert run(node)["idade"] == "30"
+        node = component('<q:param name="age" default="30" />')
+        assert run(node)["age"] == "30"
 
     def test_a_passed_value_wins_over_the_default(self):
-        node = component('<q:param name="idade" default="30" />')
-        assert run(node, idade="41")["idade"] == "41"
+        node = component('<q:param name="age" default="30" />')
+        assert run(node, age="41")["age"] == "41"
 
     def test_a_typed_default_is_coerced_like_a_passed_value(self):
-        node = component('<q:param name="idade" type="integer" default="30" />')
-        assert run(node)["idade"] == 30
+        node = component('<q:param name="age" type="integer" default="30" />')
+        assert run(node)["age"] == 30
 
     def test_no_default_and_not_required_stays_absent(self):
-        node = component('<q:param name="opcional" />')
-        assert "opcional" not in run(node)
+        node = component('<q:param name="optional" />')
+        assert "optional" not in run(node)
 
 
 class TestRequired:
@@ -66,15 +66,15 @@ class TestTypes:
         assert run(node, n="42")["n"] == 42
 
     def test_number_arrives_as_a_float(self):
-        node = component('<q:param name="preco" type="number" />')
-        assert run(node, preco="19.90")["preco"] == pytest.approx(19.90)
+        node = component('<q:param name="price" type="number" />')
+        assert run(node, price="19.90")["price"] == pytest.approx(19.90)
 
     def test_boolean_accepts_the_written_forms(self):
-        node = component('<q:param name="ativo" type="boolean" />')
+        node = component('<q:param name="active" type="boolean" />')
         for written in ("true", "yes", "1", "on"):
-            assert run(node, ativo=written)["ativo"] is True
+            assert run(node, active=written)["active"] is True
         for written in ("false", "no", "0", "off"):
-            assert run(node, ativo=written)["ativo"] is False
+            assert run(node, active=written)["active"] is False
 
     def test_a_non_numeric_value_for_a_number_is_an_error(self):
         node = component('<q:param name="n" type="integer" />')
@@ -88,54 +88,54 @@ class TestTypes:
 
 class TestRanges:
     def test_below_the_minimum_is_refused(self):
-        node = component('<q:param name="idade" type="integer" min="18" />')
+        node = component('<q:param name="age" type="integer" min="18" />')
         with pytest.raises(ComponentExecutionError, match="at least 18"):
-            run(node, idade="7")
+            run(node, age="7")
 
     def test_above_the_maximum_is_refused(self):
-        node = component('<q:param name="idade" type="integer" max="120" />')
+        node = component('<q:param name="age" type="integer" max="120" />')
         with pytest.raises(ComponentExecutionError, match="at most 120"):
-            run(node, idade="900")
+            run(node, age="900")
 
     def test_inside_the_range_passes(self):
         node = component(
-            '<q:param name="idade" type="integer" min="18" max="120" />')
-        assert run(node, idade="41")["idade"] == 41
+            '<q:param name="age" type="integer" min="18" max="120" />')
+        assert run(node, age="41")["age"] == 41
 
     def test_the_bounds_themselves_pass(self):
         node = component(
-            '<q:param name="idade" type="integer" min="18" max="120" />')
-        assert run(node, idade="18")["idade"] == 18
-        assert run(node, idade="120")["idade"] == 120
+            '<q:param name="age" type="integer" min="18" max="120" />')
+        assert run(node, age="18")["age"] == 18
+        assert run(node, age="120")["age"] == 120
 
 
 class TestLengthPatternAndEnum:
     def test_minlength_is_enforced(self):
-        node = component('<q:param name="senha" minlength="8" />')
+        node = component('<q:param name="passphrase" minlength="8" />')
         with pytest.raises(ComponentExecutionError, match="at least 8"):
-            run(node, senha="curta")
+            run(node, passphrase="short")
 
     def test_maxlength_is_enforced(self):
-        node = component('<q:param name="apelido" maxlength="4" />')
+        node = component('<q:param name="nickname" maxlength="4" />')
         with pytest.raises(ComponentExecutionError, match="at most 4"):
-            run(node, apelido="comprido")
+            run(node, nickname="toolong")
 
     def test_a_pattern_is_enforced(self):
-        node = component(r'<q:param name="cep" pattern="^\d{5}-\d{3}$" />')
+        node = component(r'<q:param name="zip" pattern="^\d{5}-\d{4}$" />')
         with pytest.raises(ComponentExecutionError, match="match"):
-            run(node, cep="abc")
-        assert run(node, cep="01310-100")["cep"] == "01310-100"
+            run(node, zip="abc")
+        assert run(node, zip="94103-1234")["zip"] == "94103-1234"
 
     def test_an_invalid_pattern_does_not_reject_everything(self):
         # A broken regex in the source is the author's bug, not the caller's.
-        node = component('<q:param name="campo" pattern="[unclosed" />')
-        assert run(node, campo="qualquer")["campo"] == "qualquer"
+        node = component('<q:param name="field" pattern="[unclosed" />')
+        assert run(node, field="anything")["field"] == "anything"
 
     def test_enum_limits_the_accepted_values(self):
-        node = component('<q:param name="cor" enum="azul,verde,vermelho" />')
+        node = component('<q:param name="color" enum="blue,green,red" />')
         with pytest.raises(ComponentExecutionError, match="one of"):
-            run(node, cor="roxo")
-        assert run(node, cor="verde")["cor"] == "verde"
+            run(node, color="purple")
+        assert run(node, color="green")["color"] == "green"
 
 
 class TestTheRulesReachTheComponent:

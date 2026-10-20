@@ -9,7 +9,7 @@ import pytest
 PROJECTS = Path(__file__).resolve().parents[2] / "projects"
 
 
-@pytest.mark.parametrize("app", ["tarefas", "blog", "quantum-dashboard", "helpdesk", "shop-agent", "bank-transfer"])
+@pytest.mark.parametrize("app", ["tasks", "blog", "quantum-dashboard", "helpdesk", "shop-agent", "bank-transfer"])
 def test_the_app_passes_quantum_check(app, tmp_path, monkeypatch):
     # DEV-3
     project = tmp_path / app

@@ -18,8 +18,8 @@ y línea, lo que de otro modo solo aparecería cuando alguien abriera la página
 - una `q:query` cuyo SQL no compila contra tu base de datos — una tabla o
   columna que no existe, un error de sintaxis — con el mensaje de la propia base;
 - un `{query.field}` que una página lee y que la consulta no devuelve:
-  directamente (`{post.titulo}`), a través de un `q:loop` sobre ella
-  (`{linha.titulo}`), un `ui:table` / `ui:list` con `source="{query}"`, o un
+  directamente (`{post.title}`), a través de un `q:loop` sobre ella
+  (`{row.title}`), un `ui:table` / `ui:list` con `source="{query}"`, o un
   `<ui:column key>`.
 
 ```bash
@@ -28,8 +28,8 @@ quantum check
 ```
 
 ```text
-components/index.q:42: <q:query name="tarefas">: no such column: titlo
-components/index.q:86: {tarefas.titul}: query "tarefas" returns no column "titul" (columns: id, titulo, prioridade, feita)
+components/index.q:42: <q:query name="tasks">: no such column: titel
+components/index.q:86: {tasks.titl}: query "tasks" returns no column "titl" (columns: id, title, priority, done)
 
 2 problem(s) — 1 file(s), 5 query(ies) checked against the database.
 ```

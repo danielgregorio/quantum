@@ -194,9 +194,8 @@
       "description": "UI components, themes, and animations",
       "icon": "🎨",
       "docsPath": "/ui/overview",
-      "exampleCount": 11,
+      "exampleCount": 10,
       "examples": [
-        "form-rules.q",
         "animations_demo.q",
         "component_library_demo.q",
         "dashboard-ui.q",
@@ -208,15 +207,6 @@
         "test-ui-theme-dark.q",
         "test-ui-themes-all.q"
       ]
-    },
-    {
-      "id": "games",
-      "name": "Games",
-      "description": "Game development with qg:scene, sprites, and physics",
-      "icon": "🎮",
-      "docsPath": "/features/game-engine",
-      "exampleCount": 0,
-      "examples": []
     },
     {
       "id": "data-import",
@@ -241,13 +231,14 @@
       "description": "Complex examples combining multiple features",
       "icon": "🚀",
       "docsPath": "/architecture/",
-      "exampleCount": 24,
+      "exampleCount": 25,
       "examples": [
         "chat-messages.q",
         "chat-tui.q",
         "chat.q",
         "complete-test.q",
         "filebrowser.q",
+        "form-rules.q",
         "hello.q",
         "job_execution_demo.q",
         "message_queue_demo.q",

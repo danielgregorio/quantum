@@ -153,7 +153,7 @@ if _ALLOW_ANONYMOUS and _ADMIN_STRICT:
 # - `/webhooks/*` cannot carry a JWT — the caller is GitHub/GitLab. They
 #   have their own HMAC signature check, which refuses when the secret
 #   is not configured.
-# - `/health` e a sonda do orquestrador.
+# - `/health` is the orchestrator's probe.
 PUBLIC_WRITE_PATHS = frozenset({"/auth/login", "/auth/logout"})
 PUBLIC_WRITE_PREFIXES = ("/webhooks/", "/health")
 

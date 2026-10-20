@@ -5,18 +5,22 @@ Quantum is going public, so the repository is written in **English**.
 ## Language
 
 - **Everything in the repository is English**: code (identifiers, comments,
-  docstrings), error messages, tests (names, comments), `SPEC.md`, docs,
-  CHANGELOG, commit messages.
-- **New code is English (since 2026-09-24).** The Portuguese that existed —
-  `SPEC.md`, the tests, the framework code, the admin, the guide — was
-  translated in a dedicated pass in 0.21, not piecemeal in unrelated changes:
-  a rename mixed into a feature commit hides the feature.
-- Left in Portuguese on purpose: `projects/tarefas`, an app whose content is
-  Portuguese.
-- Domain words that are not prose stay as they are — `cnpj` (a Brazilian tax
-  ID rule), a column called `nome` in an app's schema.
-- Example apps may show content in any language (`projects/tarefas` is a
-  Portuguese to-do app); their code and comments are English.
+  docstrings), error messages, what a page, a screen or a command says to its
+  user, tests (names, comments, their data), example apps and their content,
+  `SPEC.md`, docs, CHANGELOG, commit messages. No exceptions for Portuguese:
+  whoever asks for the work, in whatever language, the repository's text is
+  English.
+- **Translations are the one place for other languages**, and they translate
+  an English source: the site's pages under `docs/pt/`, `docs/es/` and
+  `docs/zh/` (with their glossaries and the strings of the site's theme), and
+  a game's `qg:language` phrases. Nothing else is written in another language
+  first.
+- What is not prose stays as it is: a person's or a place's name, the name of
+  a national format a validator checks (`cep`, `cpf`, `cnpj`), a keyboard
+  layout (`br`, `abnt2`), a character a test types to exercise it (`ç`, `ñ`).
+- The Portuguese that existed was translated in dedicated passes (0.21, and
+  2026-10-20 for `os/`, `projects/tasks` and the rest), not piecemeal in
+  unrelated changes: a rename mixed into a feature commit hides the feature.
 
 ## Code
 

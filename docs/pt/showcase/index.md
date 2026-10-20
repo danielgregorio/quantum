@@ -1,7 +1,7 @@
 ---
 title: Vitrine
 source: showcase/index.md
-source_hash: 531be5155d18
+source_hash: 4dbca0fcf37c
 ---
 
 # Vitrine
@@ -19,17 +19,17 @@ servidor de modelo substituto, então nenhum modelo é necessário para reproduz
 
 ## Tarefas
 
-![Tarefas](/showcase/tarefas.png)
+![Tarefas](/showcase/tasks.png)
 
-Uma lista de tarefas em `ui:*`: um formulário validado pela sua ação, botões de concluir e excluir, um filtro vindo do endereço, uma tabela que ordena e edita suas células conforme o esquema, um formulário de edição gerado a partir da tabela e o histórico de cada alteração. As mesmas páginas rodam no terminal e numa janela de desktop. O conteúdo é em português; o [tutorial](../tutorial/tasks-app.md) o constrói em inglês.
+Uma lista de tarefas em `ui:*`: um formulário validado pela sua ação, botões de concluir e excluir, um filtro vindo do endereço, uma tabela que ordena e edita suas células conforme o esquema, um formulário de edição gerado a partir da tabela e o histórico de cada alteração. As mesmas páginas rodam no terminal e numa janela de desktop. O [tutorial](../tutorial/tasks-app.md) a constrói passo a passo.
 
 | | |
 |---|---|
 | Demonstra | Ações e formulários, Banco de dados, UI, Testes |
-| Regras da SPEC que cita | DB-8, DB-10, DB-11, UI-2, UI-10, UI-13 |
+| Regras da SPEC que cita | DB-10, DB-11, UI-2, UI-10, UI-13 |
 | Tamanho | 3 páginas, 164 linhas de `.q`, 0 linhas de JavaScript |
-| Testado por | 13 testes `quantum test`, [`tests/apps/test_tarefas.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tarefas.py), [`tests/apps/test_tarefas_browser.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tarefas_browser.py), [`tests/apps/test_tarefas_console.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tarefas_console.py), [`tests/apps/test_tarefas_desktop.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tarefas_desktop.py) |
-| Código | [`projects/tarefas`](https://github.com/danielgregorio/quantum/tree/main/projects/tarefas) |
+| Testado por | 13 testes `quantum test`, [`tests/apps/test_tasks.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tasks.py), [`tests/apps/test_tasks_browser.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tasks_browser.py), [`tests/apps/test_tasks_console.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tasks_console.py), [`tests/apps/test_tasks_desktop.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tasks_desktop.py) |
+| Código | [`projects/tasks`](https://github.com/danielgregorio/quantum/tree/main/projects/tasks) |
 
 <details><summary>Tags que usa (26)</summary>
 

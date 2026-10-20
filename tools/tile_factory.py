@@ -1,7 +1,7 @@
 """
-TileFactory - Extrai tiles únicos de uma imagem e cria um tileset otimizado.
+TileFactory - extracts the unique tiles of an image and builds an optimized tileset.
 
-Uso:
+Usage:
     python tools/tile_factory.py input.png output_tileset.png --tile-size 16
 """
 
@@ -25,11 +25,11 @@ class TileFactory:
         self.hash_to_id = {}    # hash -> tile_id
 
     def _detect_bg_color(self, arr):
-        """Detecta cor de fundo (pixel do canto superior esquerdo)"""
+        """Detects the background color (the top-left pixel)"""
         return tuple(arr[0, 0, :3])
 
     def _make_transparent(self, arr, bg_color):
-        """Converte cor de fundo para transparente"""
+        """Turns the background color transparent"""
         mask = (
             (np.abs(arr[:,:,0].astype(int) - bg_color[0]) < self.tolerance) &
             (np.abs(arr[:,:,1].astype(int) - bg_color[1]) < self.tolerance) &
@@ -39,32 +39,32 @@ class TileFactory:
         return arr
 
     def _tile_hash(self, tile_arr):
-        """Gera hash único para um tile"""
+        """A hash unique to a tile"""
         return hashlib.md5(tile_arr.tobytes()).hexdigest()[:12]
 
     def _is_empty_tile(self, tile_arr):
-        """Verifica se tile é vazio (totalmente transparente)"""
+        """Whether a tile is empty (fully transparent)"""
         return np.all(tile_arr[:,:,3] < 10)
 
     def process(self, image_path):
-        """Processa imagem e extrai tiles únicos"""
-        # Carregar imagem
+        """Processes the image and extracts the unique tiles"""
+        # Load the image
         img = Image.open(image_path).convert('RGBA')
         arr = np.array(img)
 
-        print(f"Imagem: {img.size}")
+        print(f"Image: {img.size}")
 
-        # Detectar e remover fundo
+        # Detect and remove the background
         bg_color = self.bg_color or self._detect_bg_color(arr)
-        print(f"Cor de fundo: RGB{bg_color}")
+        print(f"Background color: RGB{bg_color}")
         arr = self._make_transparent(arr, bg_color)
 
-        # Calcular grid
+        # Compute the grid
         cols = img.width // self.tile_width
         rows = img.height // self.tile_height
         print(f"Grid: {cols}x{rows} tiles")
 
-        # Extrair tiles
+        # Extract the tiles
         self.tile_map = []
         empty_hash = "EMPTY"
 
@@ -89,33 +89,33 @@ class TileFactory:
 
             self.tile_map.append(row_hashes)
 
-        # Criar mapeamento hash -> id
+        # Map hash -> id
         self.hash_to_id[empty_hash] = 0
         tile_id = 1
         for h in self.unique_tiles.keys():
             self.hash_to_id[h] = tile_id
             tile_id += 1
 
-        print(f"Tiles únicos: {len(self.unique_tiles)}")
-        print(f"Tiles vazios ignorados: {sum(1 for row in self.tile_map for h in row if h == empty_hash)}")
+        print(f"Unique tiles: {len(self.unique_tiles)}")
+        print(f"Empty tiles skipped: {sum(1 for row in self.tile_map for h in row if h == empty_hash)}")
 
         return self
 
     def create_tileset(self, output_path, max_cols=16):
-        """Cria tileset otimizado com tiles únicos"""
-        num_tiles = len(self.unique_tiles) + 1  # +1 para tile vazio
+        """Builds an optimized tileset from the unique tiles"""
+        num_tiles = len(self.unique_tiles) + 1  # +1 for the empty tile
         cols = min(max_cols, num_tiles)
         rows = (num_tiles + cols - 1) // cols
 
         width = cols * self.tile_width
         height = rows * self.tile_height
 
-        # Criar imagem
+        # Create the image
         tileset = np.zeros((height, width, 4), dtype=np.uint8)
 
-        # Tile 0 = vazio (já é transparente)
+        # Tile 0 = empty (already transparent)
 
-        # Adicionar tiles únicos
+        # Add the unique tiles
         for tile_hash, tile_arr in self.unique_tiles.items():
             tile_id = self.hash_to_id[tile_hash]
             col = tile_id % cols
@@ -126,19 +126,19 @@ class TileFactory:
 
             tileset[y1:y1+self.tile_height, x1:x1+self.tile_width] = tile_arr
 
-        # Salvar
+        # Save
         img = Image.fromarray(tileset)
         img.save(output_path)
-        print(f"Tileset salvo: {output_path} ({width}x{height})")
+        print(f"Tileset saved: {output_path} ({width}x{height})")
 
         return output_path
 
     def get_tile_ids(self):
-        """Retorna mapa de IDs dos tiles"""
+        """The map of tile IDs"""
         return [[self.hash_to_id[h] for h in row] for row in self.tile_map]
 
     def export_map(self, output_path):
-        """Exporta mapa de tiles como JSON"""
+        """Exports the tile map as JSON"""
         tile_ids = self.get_tile_ids()
 
         data = {
@@ -153,11 +153,11 @@ class TileFactory:
         with open(output_path, 'w') as f:
             json.dump(data, f, indent=2)
 
-        print(f"Mapa exportado: {output_path}")
+        print(f"Map exported: {output_path}")
         return data
 
     def export_quantum_layer(self):
-        """Exporta como layer para qg:tilemap"""
+        """Exports as a layer for qg:tilemap"""
         tile_ids = self.get_tile_ids()
         lines = []
         for row in tile_ids:
@@ -169,7 +169,7 @@ if __name__ == '__main__':
     import sys
 
     if len(sys.argv) < 3:
-        print("Uso: python tile_factory.py input.png output_tileset.png")
+        print("Usage: python tile_factory.py input.png output_tileset.png")
         sys.exit(1)
 
     input_path = sys.argv[1]
@@ -179,6 +179,6 @@ if __name__ == '__main__':
     factory.process(input_path)
     factory.create_tileset(output_path)
 
-    # Exportar mapa
+    # Export the map
     map_path = output_path.replace('.png', '_map.json')
     factory.export_map(map_path)

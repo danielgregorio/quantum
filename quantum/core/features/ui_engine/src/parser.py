@@ -272,7 +272,7 @@ class UIParser:
         """Parse all children of an element, adding them to node.
 
         UI-1: inside a page, a container's own text is content too
-        (`<ui:card-header>Resumo</ui:card-header>`); it used to vanish. Nodes
+        (`<ui:card-header>Summary</ui:card-header>`); it used to vanish. Nodes
         that keep their text in `content` read it themselves."""
         text_is_content = self.page_mode and not hasattr(node, 'content')
         if text_is_content and (element.text or '').strip():
