@@ -107,6 +107,11 @@ fn a_crash_an_offer_an_approval_and_its_result() {
         "an empty cell to begin with"
     );
     assert_eq!(obs["sprites"]["bee"]["animation"], "fly");
+    // the bars say what the screen knows of itself; a test's screen has no clock and no name
+    assert_eq!(obs["bars"]["top"]["title"], "Quantum OS");
+    assert_eq!(obs["bars"]["top"]["left"], "");
+    assert_eq!(obs["bars"]["top"]["right"], "1 cores · effects · --:--");
+    assert_eq!(obs["bars"]["bottom"]["right"], "0 offers");
     s.frame("idle");
 
     // the crash: the rule on service-crash plays smoke on the cell named by {service}
@@ -139,9 +144,10 @@ fn a_crash_an_offer_an_approval_and_its_result() {
         .starts_with("the Hive offers 2"));
     let obs = s.request(json!({"op": "act", "ticks": 10}));
     assert!(
-        obs["sprites"]["bee"]["y"].as_f64().unwrap() > 2.0,
+        obs["sprites"]["bee"]["y"].as_f64().unwrap() > 36.0,
         "the bee bobs on an offer"
     );
+    assert_eq!(obs["bars"]["bottom"]["right"], "2 offers");
     s.frame("offer");
     let obs = s.request(json!({"op": "act", "tap": ["down", "enter"], "ticks": 1}));
     assert_eq!(
@@ -192,6 +198,7 @@ fn the_fine_level_draws_two_pixels_to_the_scene_s_one_the_same_in_any_number_of_
     let obs = s.request(json!({"op": "level", "level": 2}));
     assert_eq!(obs["level_name"], "fine");
     assert_eq!(obs["effects"], 1, "the snow emitter plays");
+    assert_eq!(obs["bars"]["top"]["right"], "1 cores · fine · --:--");
     let obs = s.request(json!({"op": "act", "ticks": 90}));
     assert_eq!(obs["tick"], 120);
     // the same frame, drawn whole and in bands: the reference is 640x360

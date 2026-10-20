@@ -21,7 +21,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from quantum.runtime.screen.schema import ACTIONS, EVENTS, TAGS  # noqa: E402
+from quantum.runtime.screen.schema import ACTIONS, BAR_FIELDS, EVENTS, TAGS  # noqa: E402
 
 OUT = REPO / 'docs' / 'targets' / 'screen.md'
 OS_SCREEN = REPO / 'os' / 'config' / 'screen' / 'screen.q'
@@ -71,11 +71,11 @@ expressions, and text where a tag goes is a compile error.
   <qs:particles name="stars" preset="stars" />
 
   <qs:scene width="320" height="180" background="#1a1a2e">
-    <qs:text value="Quantum OS" x="6" y="4" color="#ffd34d" />
+    <qs:bar side="top" title="Quantum OS" left="{host}" right="{level} · {clock}" />
     <qs:sprite name="nginx" sheet="cell" frame="1" x="6" y="22" />
     <qs:text value="nginx" x="34" y="29" />
-    <qs:offers x="186" y="34" width="130" rows="8" />
-    <qs:notices x="6" y="142" width="308" rows="2" />
+    <qs:offers title="Offers" x="188" y="18" width="126" rows="9" />
+    <qs:notices title="Notices" x="6" y="132" width="308" rows="2" />
   </qs:scene>
 
   <qs:on event="service-crash">
@@ -149,8 +149,9 @@ A compile error names the line. The compiler refuses:
 - a literal target no sprite is named; an animation the target's sheet lacks; particles no
   `qs:particles` declares;
 - a `q:` statement, an expression, or text where a tag goes;
-- two `qs:on` on one event, a `qs:on` with nothing to do, two `qs:scene`, two `qs:offers`, two sprites
-  of one name, a tween of no time.
+- two `qs:on` on one event, a `qs:on` with nothing to do, two `qs:scene`, two `qs:offers`, two `qs:bar`
+  on one side, two sprites of one name, a tween of no time; a `{field}` of an event in a `qs:bar` (a bar
+  shows the screen's own fields) or in a panel's title.
 
 `hive-screen` refuses a `screen.toml` that is not what the compiler writes,
 whole; it never guesses at a scene.
@@ -185,6 +186,22 @@ ticks run at every level, and a rule's actions run the same. The frame is
 drawn in bands, one thread a core, and is the same picture whatever their
 number. A scene at rest costs nothing at any level. The lab, the tests and
 `--play` play at level 1 unless asked (`{"op":"level","level":2}`).
+
+## The look of the scene
+
+The scene is drawn in the look of a window manager in pixel art, the same
+the pages below take. A `qs:bar` spans the scene: at the top, 14 pixels
+(a light line, the bar, a rule), at the bottom 12 (a rule and the bar);
+its title sits at the left in the accent, the text after it and the text
+at the right in the bar's colour, 4 pixels in from each edge, and what a
+`qs:say` says takes the left of the bottom bar while it lasts (with no
+bottom bar it is a strip at the bottom of the scene). A `qs:offers` or
+`qs:notices` with a `title` is a panel: a 1-px bevel (light above and
+left, dark below and right), a 3-px shadow, a title bar of 10 pixels with
+a rule under it, and its rows inside, 3 pixels in from the frame, each a
+row of the font; the panel is as tall as its rows. The cells of the OS's
+honeycomb (`scripts/art/hive_screen.py`) carry their own bevel and a 2-px
+shadow in their frames.
 
 ## Pages on the screen
 
@@ -259,6 +276,12 @@ def tags_section():
         out.append(f'### `qs:{name}`\n\n{tag.doc}\n\nGoes inside {parents}.\n\n')
         if tag.attrs:
             out.append(attr_table(tag.attrs) + '\n')
+        if name == 'bar':
+            out.append('The fields a bar\'s texts may hold, which the daemon fills in as it runs (a test\'s screen '
+                       'shows none of it, so its frames are the same on every machine):\n\n'
+                       '| Field | What it is |\n|---|---|\n')
+            out.extend(f'| `{{{f}}}` | {doc} |\n' for f, doc in BAR_FIELDS.items())
+            out.append('\n')
     return ''.join(out)
 
 
@@ -282,8 +305,10 @@ def actions_section():
 
 def os_section():
     source = OS_SCREEN.read_text(encoding='utf-8').rstrip('\n')
-    return ('## The screen Quantum OS ships\n\n`os/config/screen/screen.q`, whole: a honeycomb with a cell per '
-            'service the whitelist names, a bee, the offers and the notices.\n\n```xml\n' + source + '\n```\n')
+    return ('## The screen Quantum OS ships\n\n`os/config/screen/screen.q`, whole: a bar at the top with the '
+            'machine\'s name, its cores, the level and the time, a honeycomb with a cell per service the whitelist '
+            'names, a bee, the offers and the notices as panels, and a bar at the bottom where what the Hive says '
+            'shows.\n\n```xml\n' + source + '\n```\n')
 
 
 def build() -> str:

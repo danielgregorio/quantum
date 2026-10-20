@@ -9,14 +9,14 @@ intention:
 
   variants:
     - name: "The screen the OS ships"
-      description: "A honeycomb with a cell per service the whitelist names, a bee, the offers and the notices; a crash smokes the cell, an approval fills it with honey"
+      description: "A bar at the top, a honeycomb with a cell per service the whitelist names, a bee, the offers and the notices as panels, a bar at the bottom; a crash smokes the cell, an approval fills it with honey"
       example: |
         <qs:sheet name="cell" src="art/cells.png" tile="24">
           <qs:animation name="smoke" frames="2,3,4,5,6,2" fps="4" loop="false" />
         </qs:sheet>
         <qs:scene width="320" height="180" background="#1a1a2e">
           <qs:sprite name="nginx" sheet="cell" frame="1" x="6" y="22" />
-          <qs:offers x="186" y="34" width="130" rows="8" />
+          <qs:offers title="Offers" x="188" y="18" width="126" rows="9" />
         </qs:scene>
         <qs:on event="service-crash">
           <qs:animate target="{service}" name="smoke" />

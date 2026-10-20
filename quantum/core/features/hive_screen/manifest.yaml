@@ -9,7 +9,8 @@ description: |
   A q:application type="screen" is what the Hive of Quantum OS shows on
   the machine's screen: sheets of frames with their animations, particle
   effects, a scene of sprites and text with the built-in offers and
-  notices, and per event of the Hive what happens in it. It compiles to
+  notices (panels, when titled) and bars across it, and per event of the
+  Hive what happens in it. It compiles to
   screen.toml, a font sheet and the sprite sheets, which hive-screen
   draws on the console with no engine, no compositor and no GPU. The
   vocabulary of the scene is the games' (qg:); what moves it are the

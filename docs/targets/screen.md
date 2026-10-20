@@ -43,11 +43,11 @@ expressions, and text where a tag goes is a compile error.
   <qs:particles name="stars" preset="stars" />
 
   <qs:scene width="320" height="180" background="#1a1a2e">
-    <qs:text value="Quantum OS" x="6" y="4" color="#ffd34d" />
+    <qs:bar side="top" title="Quantum OS" left="{host}" right="{level} · {clock}" />
     <qs:sprite name="nginx" sheet="cell" frame="1" x="6" y="22" />
     <qs:text value="nginx" x="34" y="29" />
-    <qs:offers x="186" y="34" width="130" rows="8" />
-    <qs:notices x="6" y="142" width="308" rows="2" />
+    <qs:offers title="Offers" x="188" y="18" width="126" rows="9" />
+    <qs:notices title="Notices" x="6" y="132" width="308" rows="2" />
   </qs:scene>
 
   <qs:on event="service-crash">
@@ -217,6 +217,7 @@ Goes inside `<qs:scene>`.
 | `y=` | int | required |  |
 | `width=` | int | required |  |
 | `rows=` | int | `4` |  |
+| `title=` | text |  | given, the rows sit in a panel with a bevelled frame, a shadow and this title on its bar; x, y and width are then the panel's, and it is as tall as its rows |
 | `color=` | color | `#ffffff` |  |
 | `focus=` | color | `#ffd34d` | the row with the focus |
 
@@ -232,7 +233,33 @@ Goes inside `<qs:scene>`.
 | `y=` | int | required |  |
 | `width=` | int | required |  |
 | `rows=` | int | `3` |  |
+| `title=` | text |  | given, the rows sit in a panel with a bevelled frame, a shadow and this title on its bar; x, y and width are then the panel's, and it is as tall as its rows |
 | `color=` | color | `#c0c0c0` |  |
+
+### `qs:bar`
+
+A bar across the scene, as a window manager's: at the top or at the bottom, a title in the accent at the left, a text after it and one at the right. The texts may hold the screen's own {field}s (below). The bar at the bottom shows what a qs:say says while it lasts. At most one a side.
+
+Goes inside `<qs:scene>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `side=` | enum: `top`, `bottom` | required |  |
+| `title=` | text |  | at the left, in the accent |
+| `left=` | text |  | after the title |
+| `right=` | text |  | against the right edge |
+| `color=` | color | `#8a8aa0` |  |
+| `accent=` | color | `#ffd34d` | the title's colour |
+
+The fields a bar's texts may hold, which the daemon fills in as it runs (a test's screen shows none of it, so its frames are the same on every machine):
+
+| Field | What it is |
+|---|---|
+| `{clock}` | the time, HH:MM (--:-- until the daemon has it) |
+| `{level}` | the presentation level: plain, effects or fine |
+| `{cores}` | how many cores the machine gives the screen |
+| `{host}` | the machine's name |
+| `{offers}` | how many offers wait for an approval |
 
 ### `qs:on`
 
@@ -469,8 +496,9 @@ A compile error names the line. The compiler refuses:
 - a literal target no sprite is named; an animation the target's sheet lacks; particles no
   `qs:particles` declares;
 - a `q:` statement, an expression, or text where a tag goes;
-- two `qs:on` on one event, a `qs:on` with nothing to do, two `qs:scene`, two `qs:offers`, two sprites
-  of one name, a tween of no time.
+- two `qs:on` on one event, a `qs:on` with nothing to do, two `qs:scene`, two `qs:offers`, two `qs:bar`
+  on one side, two sprites of one name, a tween of no time; a `{field}` of an event in a `qs:bar` (a bar
+  shows the screen's own fields) or in a panel's title.
 
 `hive-screen` refuses a `screen.toml` that is not what the compiler writes,
 whole; it never guesses at a scene.
@@ -505,6 +533,22 @@ ticks run at every level, and a rule's actions run the same. The frame is
 drawn in bands, one thread a core, and is the same picture whatever their
 number. A scene at rest costs nothing at any level. The lab, the tests and
 `--play` play at level 1 unless asked (`{"op":"level","level":2}`).
+
+## The look of the scene
+
+The scene is drawn in the look of a window manager in pixel art, the same
+the pages below take. A `qs:bar` spans the scene: at the top, 14 pixels
+(a light line, the bar, a rule), at the bottom 12 (a rule and the bar);
+its title sits at the left in the accent, the text after it and the text
+at the right in the bar's colour, 4 pixels in from each edge, and what a
+`qs:say` says takes the left of the bottom bar while it lasts (with no
+bottom bar it is a strip at the bottom of the scene). A `qs:offers` or
+`qs:notices` with a `title` is a panel: a 1-px bevel (light above and
+left, dark below and right), a 3-px shadow, a title bar of 10 pixels with
+a rule under it, and its rows inside, 3 pixels in from the frame, each a
+row of the font; the panel is as tall as its rows. The cells of the OS's
+honeycomb (`scripts/art/hive_screen.py`) carry their own bevel and a 2-px
+shadow in their frames.
 
 ## Pages on the screen
 
@@ -561,7 +605,7 @@ page's runtime.
 
 ## The screen Quantum OS ships
 
-`os/config/screen/screen.q`, whole: a honeycomb with a cell per service the whitelist names, a bee, the offers and the notices.
+`os/config/screen/screen.q`, whole: a bar at the top with the machine's name, its cores, the level and the time, a honeycomb with a cell per service the whitelist names, a bee, the offers and the notices as panels, and a bar at the bottom where what the Hive says shows.
 
 ```xml
 <!-- The Hive's screen: what hive-screen draws on the machine's console, and what happens in it when
@@ -585,31 +629,33 @@ page's runtime.
   <qs:scene width="320" height="180" background="#1a1a2e">
     <!-- the fine level, which the daemon affords with the machine's cores: snow over the scene -->
     <qs:emitter particles="snow" x="0" y="0" width="320" level="2" />
-    <qs:text value="Quantum OS" x="6" y="4" color="#ffd34d" />
-    <qs:text value="the Hive" x="72" y="4" color="#8a8aa0" />
-    <qs:sprite name="bee" sheet="bee" x="296" y="2" animation="fly" />
+    <!-- the bar at the top: the machine, its cores, the level the screen is at and the time -->
+    <qs:bar side="top" title="Quantum OS" left="{host}" right="{cores} cores · {level} · {clock}" />
 
     <!-- one cell a service the whitelist names; a cell fills with honey when the Hive restarts it -->
-    <qs:sprite name="nginx" sheet="cell" frame="1" x="6" y="22" />
-    <qs:text value="nginx" x="34" y="29" />
-    <qs:sprite name="apache2" sheet="cell" frame="1" x="6" y="52" />
-    <qs:text value="apache2" x="34" y="59" />
-    <qs:sprite name="postgresql" sheet="cell" frame="1" x="6" y="82" />
-    <qs:text value="postgresql" x="34" y="89" />
-    <qs:sprite name="mysql" sheet="cell" frame="1" x="6" y="112" />
-    <qs:text value="mysql" x="34" y="119" />
-    <qs:sprite name="redis-server" sheet="cell" frame="1" x="102" y="22" />
-    <qs:text value="redis" x="130" y="29" />
-    <qs:sprite name="mongodb" sheet="cell" frame="1" x="102" y="52" />
-    <qs:text value="mongodb" x="130" y="59" />
-    <qs:sprite name="docker" sheet="cell" frame="1" x="102" y="82" />
-    <qs:text value="docker" x="130" y="89" />
-    <qs:sprite name="containerd" sheet="cell" frame="1" x="102" y="112" />
-    <qs:text value="containerd" x="130" y="119" />
+    <qs:sprite name="nginx" sheet="cell" frame="1" x="6" y="18" />
+    <qs:text value="nginx" x="34" y="24" />
+    <qs:sprite name="apache2" sheet="cell" frame="1" x="6" y="46" />
+    <qs:text value="apache2" x="34" y="52" />
+    <qs:sprite name="postgresql" sheet="cell" frame="1" x="6" y="74" />
+    <qs:text value="postgresql" x="34" y="80" />
+    <qs:sprite name="mysql" sheet="cell" frame="1" x="6" y="102" />
+    <qs:text value="mysql" x="34" y="108" />
+    <qs:sprite name="redis-server" sheet="cell" frame="1" x="98" y="18" />
+    <qs:text value="redis" x="126" y="24" />
+    <qs:sprite name="mongodb" sheet="cell" frame="1" x="98" y="46" />
+    <qs:text value="mongodb" x="126" y="52" />
+    <qs:sprite name="docker" sheet="cell" frame="1" x="98" y="74" />
+    <qs:text value="docker" x="126" y="80" />
+    <qs:sprite name="containerd" sheet="cell" frame="1" x="98" y="102" />
+    <qs:text value="containerd" x="126" y="108" />
+    <qs:sprite name="bee" sheet="bee" x="168" y="36" animation="fly" />
 
-    <qs:text value="Offers" x="186" y="22" color="#ffd34d" />
-    <qs:offers x="186" y="34" width="130" rows="8" />
-    <qs:notices x="6" y="142" width="308" rows="2" />
+    <!-- the offers and the notices as panels with their own title bars -->
+    <qs:offers title="Offers" x="188" y="18" width="126" rows="9" />
+    <qs:notices title="Notices" x="6" y="132" width="308" rows="2" />
+    <!-- the bar at the bottom: what the Hive said last shows here while it lasts -->
+    <qs:bar side="bottom" right="{offers} offers" />
   </qs:scene>
 
   <qs:on event="service-crash">
@@ -641,7 +687,7 @@ page's runtime.
   </qs:on>
   <qs:on event="offer">
     <qs:emit particles="stars" at="bee" dx="8" dy="8" />
-    <qs:tween target="bee" property="y" to="8" from="2" seconds="0.4" trans="sine" ease="in-out" repeat="3" yoyo="true" />
+    <qs:tween target="bee" property="y" to="42" from="36" seconds="0.4" trans="sine" ease="in-out" repeat="3" yoyo="true" />
     <qs:say text="the Hive offers {count}: up and down choose, Enter approves, Escape dismisses" seconds="6" />
   </qs:on>
   <qs:on event="done">

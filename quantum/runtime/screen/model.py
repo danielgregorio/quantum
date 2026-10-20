@@ -20,7 +20,7 @@ from xml.etree import ElementTree as ET
 
 from quantum.runtime.screen import png
 from quantum.runtime.screen.errors import ScreenCompileError
-from quantum.runtime.screen.schema import ACTIONS, EVENTS, SCREEN_NS, TAGS, Attr
+from quantum.runtime.screen.schema import ACTIONS, BAR_FIELDS, EVENTS, SCREEN_NS, TAGS, Attr
 
 NS = '{' + SCREEN_NS + '}'
 Q_NS = '{https://quantum.lang/ns}'
@@ -31,7 +31,7 @@ _FLOAT = re.compile(r'^-?(\d+\.?\d*|\.\d+)$')
 _IDENT = re.compile(r'^[A-Za-z0-9_][A-Za-z0-9_@.:-]*$')
 _COLOR = re.compile(r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$')
 
-NODE_KINDS = ('sprite', 'text', 'emitter', 'offers', 'notices')
+NODE_KINDS = ('sprite', 'text', 'emitter', 'offers', 'notices', 'bar')
 
 
 @dataclass
@@ -353,6 +353,17 @@ def _check_node(kind: str, attrs: Dict[str, object], screen: Screen, line: Optio
             raise ScreenCompileError(f'one <qs:{kind}> per screen', line)
         if attrs['width'] < 60 or attrs['rows'] < 1:
             raise ScreenCompileError(f'<qs:{kind}> is at least 60 pixels wide and one row', line)
+        if attrs['title'] is not None:
+            _no_placeholders(attrs['title'], f'<qs:{kind}> title=', line)
+    elif kind == 'bar':
+        if any(n.kind == 'bar' and n.attrs['side'] == attrs['side'] for n in screen.nodes):
+            raise ScreenCompileError(f'one <qs:bar side="{attrs["side"]}"> per screen', line)
+        for name in ('title', 'left', 'right'):
+            for found in placeholders(attrs[name] or ''):
+                if found not in BAR_FIELDS:
+                    raise ScreenCompileError(
+                        f'<qs:bar> {name}= holds {{{found}}}: a bar shows the screen\'s own fields '
+                        f'({", ".join("{" + f + "}" for f in BAR_FIELDS)}), not an event\'s', line)
 
 
 # ---------------------------------------------------------------- rules

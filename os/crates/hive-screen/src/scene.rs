@@ -93,6 +93,11 @@ struct NodeInfo {
     rows: Option<u32>,
     focus: Option<String>,
     level: Option<u32>,
+    title: Option<String>,
+    side: Option<String>,
+    left: Option<String>,
+    right: Option<String>,
+    accent: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -215,6 +220,8 @@ pub enum Node {
         rows: u32,
         color: u32,
         focus: u32,
+        /// Given, the rows sit in a panel with this title on its bar.
+        title: Option<String>,
     },
     Notices {
         x: i32,
@@ -222,7 +229,25 @@ pub enum Node {
         width: u32,
         rows: u32,
         color: u32,
+        title: Option<String>,
     },
+    /// A bar across the scene, at the top or the bottom: a title in the
+    /// accent, a text after it, a text at the right; the texts may hold
+    /// the screen's own `{field}`s (world.rs fills them in).
+    Bar {
+        side: Side,
+        title: Option<String>,
+        left: Option<String>,
+        right: Option<String>,
+        color: u32,
+        accent: u32,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Side {
+    Top,
+    Bottom,
 }
 
 #[derive(Debug, Clone)]
@@ -438,6 +463,7 @@ impl Scene {
                     rows: n.rows.unwrap_or(4).max(1),
                     color: color(n.color.as_deref().unwrap_or("#ffffff"), "offers color")?,
                     focus: color(n.focus.as_deref().unwrap_or("#ffd34d"), "offers focus")?,
+                    title: n.title.clone(),
                 },
                 "notices" => Node::Notices {
                     x: need(&n.x, "x", "notices")?,
@@ -445,6 +471,19 @@ impl Scene {
                     width: need(&n.width, "width", "notices")?,
                     rows: n.rows.unwrap_or(3).max(1),
                     color: color(n.color.as_deref().unwrap_or("#c0c0c0"), "notices color")?,
+                    title: n.title.clone(),
+                },
+                "bar" => Node::Bar {
+                    side: match need(&n.side, "side", "bar")?.as_str() {
+                        "top" => Side::Top,
+                        "bottom" => Side::Bottom,
+                        other => bail!("a bar's side is top or bottom, not {}", other),
+                    },
+                    title: n.title.clone(),
+                    left: n.left.clone(),
+                    right: n.right.clone(),
+                    color: color(n.color.as_deref().unwrap_or("#8a8aa0"), "bar color")?,
+                    accent: color(n.accent.as_deref().unwrap_or("#ffd34d"), "bar accent")?,
                 },
                 other => bail!("a node of kind {}: not what the compiler writes", other),
             };

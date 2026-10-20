@@ -43,6 +43,16 @@ EASES = ('in', 'out', 'in-out')
 PROPERTIES = ('x', 'y', 'scale', 'alpha')
 SEVERITIES = ('info', 'notice', 'warning', 'error', 'critical')
 
+# What a qs:bar may show of the screen itself, as {field}s in its texts: the
+# daemon fills them in as it runs (a test's screen shows none of it).
+BAR_FIELDS: Dict[str, str] = {
+    'clock': 'the time, HH:MM (--:-- until the daemon has it)',
+    'level': 'the presentation level: plain, effects or fine',
+    'cores': 'how many cores the machine gives the screen',
+    'host': 'the machine\'s name',
+    'offers': 'how many offers wait for an approval',
+}
+
 # The font every screen gets: 6x10 cells, one per printable ASCII character
 # (32-126, cells 0-94) and one per Latin-1 character (160-255, cells 95-190).
 FONT_CELL = (6, 10)
@@ -94,6 +104,9 @@ EVENTS.update({
 _TARGET = Attr('text', required=True,
                doc='a qs:sprite\'s name, or a {field} that is one (a service name); nothing happens when no '
                    'sprite has that name')
+_PANEL_TITLE = Attr('text', None,
+                    doc='given, the rows sit in a panel with a bevelled frame, a shadow and this title on its bar; '
+                        'x, y and width are then the panel\'s, and it is as tall as its rows')
 
 TAGS: Dict[str, Tag] = {
     'sheet': Tag(
@@ -166,6 +179,7 @@ TAGS: Dict[str, Tag] = {
          'y': Attr('int', required=True),
          'width': Attr('int', required=True),
          'rows': Attr('int', 4),
+         'title': _PANEL_TITLE,
          'color': Attr('color', '#ffffff'),
          'focus': Attr('color', '#ffd34d', doc='the row with the focus')},
         parents=('scene',)),
@@ -175,7 +189,19 @@ TAGS: Dict[str, Tag] = {
          'y': Attr('int', required=True),
          'width': Attr('int', required=True),
          'rows': Attr('int', 3),
+         'title': _PANEL_TITLE,
          'color': Attr('color', '#c0c0c0')},
+        parents=('scene',)),
+    'bar': Tag(
+        'A bar across the scene, as a window manager\'s: at the top or at the bottom, a title in the accent at the '
+        'left, a text after it and one at the right. The texts may hold the screen\'s own {field}s (below). The '
+        'bar at the bottom shows what a qs:say says while it lasts. At most one a side.',
+        {'side': Attr('enum:top|bottom', required=True),
+         'title': Attr('text', None, doc='at the left, in the accent'),
+         'left': Attr('text', None, doc='after the title'),
+         'right': Attr('text', None, doc='against the right edge'),
+         'color': Attr('color', '#8a8aa0'),
+         'accent': Attr('color', '#ffd34d', doc='the title\'s colour')},
         parents=('scene',)),
     'on': Tag(
         'What happens in the scene when an event arrives: the actions inside, in order. One per event.',
