@@ -107,6 +107,9 @@ def test_the_network_names_each_interface_the_gateway_and_the_dns(leitura):
     assert n['interfaces'][1] == {'nome': 'enp0s8', 'estado': 'desligada', 'endereco': 'sem endereço', 'origem': '-'}
     assert n['gateway'] == '10.0.2.2 por enp0s3 (DHCP)'
     assert n['dns'] == '10.0.2.3, 1.1.1.1', 'resolvectl first'
+    # the form starts from what the first interface has
+    assert (n['opcoes'], n['escolha'], n['origem']) == ('enp0s3,enp0s8', 'enp0s3', 'dhcp')
+    assert (n['endereco'], n['via'], n['servidores']) == ('10.0.2.15/24', '10.0.2.2', '10.0.2.3,1.1.1.1')
 
 
 def test_the_dns_falls_back_to_resolv_conf(leitura, monkeypatch):
@@ -181,6 +184,30 @@ def test_a_change_is_asked_of_the_hive_never_made(leitura):
     refused = leitura.pedir('set-keyboard', 'us')
     assert not refused['ok'] and 'não recebeu o pedido' in refused['mensagem']
     assert 'not listening' in refused['mensagem']
+
+
+def test_the_network_is_asked_by_dhcp_or_fixed_and_checked_first(leitura):
+    dhcp = leitura.pedir('set-network', 'enp0s3', origem='dhcp', endereco='ignored', gateway='', dns='')
+    assert dhcp['ok'] and leitura.asked[-1] == ['set-network', 'enp0s3', 'dhcp']
+    assert dhcp['mensagem'].startswith('Pedido à Hive: rede enp0s3 por DHCP. É perigoso: aprove na tela com Enter duas vezes')
+    fixed = leitura.pedir('set-network', 'enp0s3', origem='fixo', endereco='10.0.2.20/24', gateway='10.0.2.2',
+                          dns='10.0.2.3, 1.1.1.1')
+    assert fixed['ok'] and leitura.asked[-1] == ['set-network', 'enp0s3', '10.0.2.20/24', 'via', '10.0.2.2',
+                                                 'dns', '10.0.2.3,1.1.1.1']
+    assert 'rede enp0s3 fixa em 10.0.2.20/24 via 10.0.2.2, DNS 10.0.2.3, 1.1.1.1' in fixed['mensagem']
+    bare = leitura.pedir('set-network', 'enp0s3', origem='fixo', endereco='10.0.2.20/24')
+    assert bare['ok'] and leitura.asked[-1] == ['set-network', 'enp0s3', '10.0.2.20/24']
+    asked = len(leitura.asked)
+    # what is wrong is said before anything is asked
+    assert 'não é uma interface' in leitura.pedir('set-network', 'eth0;rm', origem='dhcp')['mensagem']
+    assert 'não é uma origem' in leitura.pedir('set-network', 'enp0s3', origem='static')['mensagem']
+    assert 'não é um endereço com prefixo' in leitura.pedir('set-network', 'enp0s3', origem='fixo',
+                                                            endereco='10.0.2.20')['mensagem']
+    assert 'não é um gateway' in leitura.pedir('set-network', 'enp0s3', origem='fixo', endereco='10.0.2.20/24',
+                                               gateway='router')['mensagem']
+    assert 'servidores DNS' in leitura.pedir('set-network', 'enp0s3', origem='fixo', endereco='10.0.2.20/24',
+                                             dns='1.1.1.1,2.2.2.2,3.3.3.3,4.4.4.4,5.5.5.5')['mensagem']
+    assert len(leitura.asked) == asked
 
 
 def test_without_the_hive_command_asking_says_so(leitura, monkeypatch):
@@ -282,6 +309,15 @@ def test_the_app_on_the_pixel_screen_says_what_the_screen_is(url, tmp_path):
         run_script(pixel, [('fill', 'nome', 'forja'), ('click', 'Pedir à Hive'),
                            ('sees', ['Pedido à Hive: mudar o nome da máquina para forja'])])
         assert asked == [['set-hostname', 'forja']]
+        # the Rede tab: a fixed address asked for, the fields checked by the page before the Hive hears of it
+        pixel._focus(lambda i: i['kind'] == 'tabpanel')
+        screen.request({'op': 'act', 'tap': ['right']})
+        run_script(pixel, [('sees', ['gateway:', 'Interface', 'Origem']),
+                           ('choose', 'origem', 'fixo'), ('fill', 'endereco', '10.0.2.20/24'),
+                           ('fill', 'gateway', '10.0.2.2'), ('fill', 'dns', '10.0.2.3'), ('click', 'Pedir à Hive'),
+                           ('sees', ['Enter duas vezes'])])
+        assert asked[-1][:3] == ['set-network', asked[-1][1], '10.0.2.20/24'] and asked[-1][3:] == \
+            ['via', '10.0.2.2', 'dns', '10.0.2.3']
         # the arrows go through the tabs: the Tela tab says what the screen told the page's runtime
         pixel._focus(lambda i: i['kind'] == 'tabpanel')
         screen.request({'op': 'act', 'tap': ['right', 'right', 'right']})

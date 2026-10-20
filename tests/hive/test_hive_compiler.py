@@ -66,7 +66,8 @@ def test_a_hive_compiles_to_the_rules_and_the_whitelist(tmp_path):
     assert whitelist['file_ops'] == {'allowed_paths': ['/home/*'], 'blocked_paths': []}
     assert whitelist['zfs'] == {'allowed_datasets': ['rpool/ROOT/*'], 'destroy_snapshot_pattern': 'hive-*'}
     assert whitelist['misc'] == {'kill_port_process': True, 'open_url': False, 'firewall': False,
-                                 'set_hostname': False, 'set_keyboard': False, 'set_screen_level': False}
+                                 'set_hostname': False, 'set_keyboard': False, 'set_screen_level': False,
+                                 'set_network': False}
     assert whitelist['rate_limits'] == {'KillPortProcess': 2}
 
 
@@ -77,7 +78,8 @@ def test_the_whitelist_fails_closed_when_nothing_is_allowed(tmp_path):
     assert whitelist['run_command']['allowed'] == []
     assert whitelist['service']['allowed'] == []
     assert whitelist['misc'] == {'kill_port_process': False, 'open_url': False, 'firewall': False,
-                                 'set_hostname': False, 'set_keyboard': False, 'set_screen_level': False}
+                                 'set_hostname': False, 'set_keyboard': False, 'set_screen_level': False,
+                                 'set_network': False}
 
 
 def test_the_os_hive_compiles(tmp_path):

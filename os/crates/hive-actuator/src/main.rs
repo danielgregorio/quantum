@@ -697,6 +697,41 @@ async fn execute_action(
             Ok((None, Some(0)))
         }
 
+        // The network needs root (netplan): the setting goes as a file,
+        // and quantum-network-apply.service (root, oneshot; polkit lets
+        // _hive-act start it as any unit) writes /etc/netplan/60-hive.yaml,
+        // applies it, waits for the interface to come up and comes back
+        // to the file before when it does not; it leaves its word in
+        // network.result, which is this action's answer.
+        Action::SetNetwork {
+            interface,
+            dhcp,
+            address,
+            gateway,
+            dns,
+        } => {
+            let spec = serde_json::json!({
+                "interface": interface, "dhcp": dhcp, "address": address,
+                "gateway": gateway, "dns": dns,
+            });
+            write_setting("network.result", None)?;
+            write_setting("network", Some(spec.to_string()))?;
+            let started = systemctl(&["start", "quantum-network-apply.service"]).await?;
+            let result =
+                std::fs::read_to_string(settings_dir().join("network.result")).unwrap_or_default();
+            let result = result.trim().to_string();
+            match (started.1, result.strip_prefix("ok: ")) {
+                (Some(0), Some(said)) => Ok((Some(said.to_string()), Some(0))),
+                (_, _) if !result.is_empty() => Ok((Some(result), Some(1))),
+                (code, _) => Ok((
+                    started
+                        .0
+                        .or(Some("the network unit did not say".to_string())),
+                    code.or(Some(1)),
+                )),
+            }
+        }
+
         Action::KillPortProcess { port, signal } => {
             // First find PIDs using the port
             let lsof_output = Command::new("lsof")

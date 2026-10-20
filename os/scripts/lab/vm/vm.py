@@ -549,7 +549,8 @@ def stage(profile: str = 'debug') -> dict:
     shutil.copytree(OS_DIR.parent / 'quantum', quantum, ignore=QUANTUM_IGNORE)
     for f in sorted([*(OS_DIR / 'config').rglob('*'), *(OS_DIR / 'knowledge').rglob('*'),
                      *(OS_DIR / 'apps').rglob('*'), *quantum.rglob('*'),
-                     HERE / 'install-hive.sh', HERE / 'agent.py', OS_DIR / 'scripts' / 'quantum']):
+                     HERE / 'install-hive.sh', HERE / 'agent.py', OS_DIR / 'scripts' / 'quantum',
+                     OS_DIR / 'scripts' / 'network-apply']):
         if f.is_file() and '__pycache__' not in f.parts:
             files[str(f.relative_to(OS_DIR))] = hashlib.sha256(f.read_bytes()).hexdigest()
     return files

@@ -7,7 +7,9 @@
 //! can silently drift out of sync with it.
 
 use anyhow::{Context, Result};
-use hive_common::actions::{is_valid_hostname, is_valid_keyboard, is_valid_package_name, Action};
+use hive_common::actions::{
+    is_valid_hostname, is_valid_keyboard, is_valid_network, is_valid_package_name, Action,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -130,6 +132,8 @@ pub struct MiscRule {
     pub set_keyboard: bool,
     #[serde(default)]
     pub set_screen_level: bool,
+    #[serde(default)]
+    pub set_network: bool,
 }
 
 /// Whitelist configuration. Everything defaults to empty/false (deny) —
@@ -276,6 +280,16 @@ impl Whitelist {
             Action::SetScreenLevel { level } => {
                 self.config.misc.set_screen_level && level.map_or(true, |l| l <= 2)
             }
+            Action::SetNetwork {
+                interface,
+                dhcp,
+                address,
+                gateway,
+                dns,
+            } => {
+                self.config.misc.set_network
+                    && is_valid_network(interface, *dhcp, address, gateway, dns)
+            }
 
             // System power operations always need explicit permission —
             // there's no config knob for these on purpose.
@@ -412,6 +426,28 @@ mod tests {
         }));
         assert!(whitelist.is_allowed(&Action::SetScreenLevel { level: Some(2) }));
         assert!(!whitelist.is_allowed(&Action::SetScreenLevel { level: Some(3) }));
+        let dhcp = Action::SetNetwork {
+            interface: "enp0s1".into(),
+            dhcp: true,
+            address: String::new(),
+            gateway: String::new(),
+            dns: vec![],
+        };
+        assert!(
+            !whitelist.is_allowed(&dhcp),
+            "the network has its own permit"
+        );
+        let mut config = WhitelistConfig::default();
+        config.misc.set_network = true;
+        let whitelist = Whitelist { config };
+        assert!(whitelist.is_allowed(&dhcp));
+        assert!(!whitelist.is_allowed(&Action::SetNetwork {
+            interface: "enp0s1".into(),
+            dhcp: false,
+            address: "not an address".into(),
+            gateway: String::new(),
+            dns: vec![],
+        }));
     }
 
     #[test]

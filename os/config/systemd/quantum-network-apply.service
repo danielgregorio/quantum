@@ -1,0 +1,18 @@
+[Unit]
+Description=Quantum OS - apply the network setting the Hive approved
+Documentation=https://druidos.org/docs/hive-actuator
+# The one thing on the system that changes the network from the Hive:
+# hive-actuator (unprivileged) writes the setting it was approved to apply
+# under /var/lib/hive/settings and starts this unit, which polkit lets it
+# do as it lets it start any service; this runs as root, writes
+# /etc/netplan/60-hive.yaml from that setting and nothing else, applies
+# it, waits for the interface to come up, and comes back to the file
+# before when it does not. Its word goes back in network.result.
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I /usr/lib/quantum-os/network-apply
+TimeoutStartSec=90
+ProtectHome=yes
+PrivateTmp=yes

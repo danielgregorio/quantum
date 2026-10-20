@@ -388,6 +388,8 @@ install_hive_stack() {
     rsync -a --exclude __pycache__ --exclude '*.pyc' --exclude .pytest_cache --exclude node_modules --exclude logs \
         "$PROJECT_ROOT/../quantum/" "$chroot_dir/usr/lib/python3/dist-packages/quantum/"
     install -m 0755 "$PROJECT_ROOT/scripts/quantum" "$chroot_dir/usr/bin/quantum"
+    mkdir -p "$chroot_dir/usr/lib/quantum-os"
+    install -m 0755 "$PROJECT_ROOT/scripts/network-apply" "$chroot_dir/usr/lib/quantum-os/network-apply"
     rm -rf "$chroot_dir/usr/share/quantum-os/apps"
     mkdir -p "$chroot_dir/usr/share/quantum-os/apps"
     rsync -a --exclude __pycache__ "$PROJECT_ROOT/apps/" "$chroot_dir/usr/share/quantum-os/apps/"

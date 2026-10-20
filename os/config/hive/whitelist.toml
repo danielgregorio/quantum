@@ -76,11 +76,13 @@ firewall = false
 set_hostname = true
 set_keyboard = true
 set_screen_level = true
+set_network = true
 
 [rate_limits]
 SetHostname = 2
 SetKeyboard = 2
 SetScreenLevel = 2
+SetNetwork = 2
 KillPortProcess = 10
 InstallPackage = 5
 RemovePackage = 3
