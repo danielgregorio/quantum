@@ -19,7 +19,7 @@ intention:
 
   capabilities:
     - "Declare the sheets (qs:sheet, qs:animation) and the effects (qs:particles) a screen uses"
-    - "Lay out the scene (qs:scene): qs:sprite, qs:text, qs:emitter, the built-in qs:offers and qs:notices"
+    - "Lay out the scene (qs:scene): qs:sprite, qs:text, qs:emitter, the built-in qs:offers and qs:notices (panels when they have a title=), qs:bar at the top and the bottom with the screen's own {field}s"
     - "Per event (qs:on): qs:animate, qs:frame, qs:show, qs:tween, qs:emit, qs:say, with {field}s of the event"
     - "React to every observation the rules know: service-crash, log-anomaly, port-conflict, disk-low, memory-pressure, command-observed, command-not-found"
     - "React to the screen's own events: notice, offer, done, failed"
@@ -40,8 +40,9 @@ intention:
         qs:sprite name= sheet= frame= x= y= animation= hidden=
         qs:text value= x= y= color= align=
         qs:emitter particles= x= y= width= level=
-        qs:offers x= y= width= rows=     the Hive's offers, built in
-        qs:notices x= y= width= rows=    the last notices, built in
+        qs:offers x= y= width= rows= title=     the Hive's offers, built in; a panel with a title
+        qs:notices x= y= width= rows= title=    the last notices, built in; a panel with a title
+        qs:bar side= title= left= right= color= accent=   a bar across the scene; {clock} {level} {cores} {host} {offers}
       qs:on event="..."                  one rule per event
         qs:animate / qs:frame / qs:show / qs:tween / qs:emit / qs:say
     </q:application>

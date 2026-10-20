@@ -180,6 +180,7 @@ fn main() -> Result<()> {
         None => level::Chooser::new(cores(), Instant::now()),
     };
     runtime.world.set_level(chooser.level());
+    runtime.world.set_facts(facts(chooser.cores()));
     // HIVE_SCREEN_MOTION=off: pages appear and go at once
     if std::env::var("HIVE_SCREEN_MOTION")
         .map(|v| {
@@ -236,12 +237,16 @@ fn main() -> Result<()> {
         runtime.step()?;
         n += 1;
         // the cores, twice a second: a vCPU plugged in counts at once
-        if n % 30 == 0 && chooser.set_cores(cores(), Instant::now()) {
-            tracing::info!(
-                "cores: {}, level up to {}",
-                chooser.cores(),
-                level::ceiling(chooser.cores())
-            );
+        if n % 30 == 0 {
+            if chooser.set_cores(cores(), Instant::now()) {
+                tracing::info!(
+                    "cores: {}, level up to {}",
+                    chooser.cores(),
+                    level::ceiling(chooser.cores())
+                );
+            }
+            // what the bars say: the machine's name, its cores, the time
+            runtime.world.set_facts(facts(chooser.cores()));
         }
         if chooser.level() != runtime.world.level() {
             let lv = chooser.level();
@@ -296,6 +301,20 @@ fn cores() -> usize {
     std::thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(1)
+}
+
+/// What the bars of the scene say of the machine: its name as the kernel
+/// has it now (so a name set while the daemon runs shows), the cores the
+/// chooser counts, the local time.
+fn facts(cores: usize) -> world::Facts {
+    let host = std::fs::read_to_string("/proc/sys/kernel/hostname")
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default();
+    world::Facts {
+        host,
+        cores,
+        clock: Some(chrono::Local::now().format("%H:%M").to_string()),
+    }
 }
 
 static STOP: AtomicBool = AtomicBool::new(false);

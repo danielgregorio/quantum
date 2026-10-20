@@ -31,8 +31,10 @@ GOOD = '''<q:application id="x" type="screen">
     <qs:sprite name="nginx" sheet="cell" frame="0" x="10" y="20" />
     <qs:sprite name="redis-server" sheet="cell" x="30" y="20" animation="glow" hidden="true" />
     <qs:emitter particles="puff" x="60" y="60" />
-    <qs:offers x="4" y="40" width="120" rows="3" />
+    <qs:offers x="4" y="40" width="120" rows="3" title="Offers" />
     <qs:notices x="4" y="80" width="120" rows="1" />
+    <qs:bar side="top" title="Quantum OS" left="{host}" right="{cores} cores · {level} · {clock}" />
+    <qs:bar side="bottom" right="{offers} offers" color="#c0c0c0" />
   </qs:scene>
   <qs:on event="service-crash">
     <qs:animate target="{service}" name="smoke" />
@@ -85,11 +87,18 @@ def test_a_screen_compiles_to_the_scene_the_font_and_the_sheets(tmp_path):
                                   {'name': 'glow', 'frames': [0, 1], 'fps': 8.0, 'loop': True}]
     assert scene['particles'] == [{'name': 'puff', 'preset': 'puff', 'color': '#ffffff', 'amount': 6}]
     kinds = [n['kind'] for n in scene['nodes']]
-    assert kinds == ['text', 'sprite', 'sprite', 'emitter', 'offers', 'notices']
+    assert kinds == ['text', 'sprite', 'sprite', 'emitter', 'offers', 'notices', 'bar', 'bar']
     redis = scene['nodes'][2]
     assert redis == {'kind': 'sprite', 'name': 'redis-server', 'sheet': 'cell', 'frame': 0, 'x': 30, 'y': 20,
                      'animation': 'glow', 'hidden': True}
     assert scene['nodes'][4]['focus'] == '#ffd34d'
+    assert scene['nodes'][4]['title'] == 'Offers'
+    assert 'title' not in scene['nodes'][5], 'a panel with no title is written without one'
+    assert scene['nodes'][6] == {'kind': 'bar', 'side': 'top', 'title': 'Quantum OS', 'left': '{host}',
+                                 'right': '{cores} cores · {level} · {clock}', 'color': '#8a8aa0',
+                                 'accent': '#ffd34d'}
+    assert scene['nodes'][7] == {'kind': 'bar', 'side': 'bottom', 'right': '{offers} offers', 'color': '#c0c0c0',
+                                 'accent': '#ffd34d'}
     crash, done = scene['rules']
     assert crash['event'] == 'service-crash'
     assert [a['kind'] for a in crash['actions']] == ['animate', 'emit', 'tween', 'show', 'say']
@@ -157,6 +166,15 @@ REFUSED = [
      lambda tmp: wrapped('', scene='<qs:text value="{title}" x="0" y="0" />')),
     ('two offers', 'one <qs:offers> per screen',
      lambda tmp: wrapped('', scene='<qs:offers x="0" y="0" width="100" /><qs:offers x="0" y="0" width="100" />')),
+    ('a field in a panel\'s title', '<qs:notices> title= holds {title}: a {field} is filled in from an event',
+     lambda tmp: wrapped('', scene='<qs:notices x="0" y="0" width="100" title="{title}" />')),
+    ('two bars on one side', 'one <qs:bar side="top"> per screen',
+     lambda tmp: wrapped('', scene='<qs:bar side="top" /><qs:bar side="top" title="x" />')),
+    ('a bar on no side', '<qs:bar> side="left" is not one of: top, bottom',
+     lambda tmp: wrapped('', scene='<qs:bar side="left" />')),
+    ('an event\'s field in a bar', '<qs:bar> right= holds {service}: a bar shows the screen\'s own fields '
+     '({clock}, {level}, {cores}, {host}, {offers})',
+     lambda tmp: wrapped('', scene='<qs:bar side="bottom" right="{service}" />')),
     ('an emitter of no particles', 'no <qs:particles> of that name',
      lambda tmp: wrapped('', scene='<qs:emitter particles="rain" x="0" y="0" />')),
     ('an emitter of a level there is not', '<qs:emitter> level= is 1 (with the effects) or 2',
@@ -235,7 +253,7 @@ def test_every_event_has_the_common_fields_and_the_hive_s_own():
 def test_every_action_is_a_tag_inside_on_and_every_node_a_tag_inside_scene():
     for action in ACTIONS:
         assert TAGS[action].parents == ('on',)
-    for node in ('sprite', 'text', 'emitter', 'offers', 'notices'):
+    for node in ('sprite', 'text', 'emitter', 'offers', 'notices', 'bar'):
         assert TAGS[node].parents == ('scene',)
 
 

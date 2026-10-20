@@ -19,31 +19,33 @@
   <qs:scene width="320" height="180" background="#1a1a2e">
     <!-- the fine level, which the daemon affords with the machine's cores: snow over the scene -->
     <qs:emitter particles="snow" x="0" y="0" width="320" level="2" />
-    <qs:text value="Quantum OS" x="6" y="4" color="#ffd34d" />
-    <qs:text value="the Hive" x="72" y="4" color="#8a8aa0" />
-    <qs:sprite name="bee" sheet="bee" x="296" y="2" animation="fly" />
+    <!-- the bar at the top: the machine, its cores, the level the screen is at and the time -->
+    <qs:bar side="top" title="Quantum OS" left="{host}" right="{cores} cores · {level} · {clock}" />
 
     <!-- one cell a service the whitelist names; a cell fills with honey when the Hive restarts it -->
-    <qs:sprite name="nginx" sheet="cell" frame="1" x="6" y="22" />
-    <qs:text value="nginx" x="34" y="29" />
-    <qs:sprite name="apache2" sheet="cell" frame="1" x="6" y="52" />
-    <qs:text value="apache2" x="34" y="59" />
-    <qs:sprite name="postgresql" sheet="cell" frame="1" x="6" y="82" />
-    <qs:text value="postgresql" x="34" y="89" />
-    <qs:sprite name="mysql" sheet="cell" frame="1" x="6" y="112" />
-    <qs:text value="mysql" x="34" y="119" />
-    <qs:sprite name="redis-server" sheet="cell" frame="1" x="102" y="22" />
-    <qs:text value="redis" x="130" y="29" />
-    <qs:sprite name="mongodb" sheet="cell" frame="1" x="102" y="52" />
-    <qs:text value="mongodb" x="130" y="59" />
-    <qs:sprite name="docker" sheet="cell" frame="1" x="102" y="82" />
-    <qs:text value="docker" x="130" y="89" />
-    <qs:sprite name="containerd" sheet="cell" frame="1" x="102" y="112" />
-    <qs:text value="containerd" x="130" y="119" />
+    <qs:sprite name="nginx" sheet="cell" frame="1" x="6" y="18" />
+    <qs:text value="nginx" x="34" y="24" />
+    <qs:sprite name="apache2" sheet="cell" frame="1" x="6" y="46" />
+    <qs:text value="apache2" x="34" y="52" />
+    <qs:sprite name="postgresql" sheet="cell" frame="1" x="6" y="74" />
+    <qs:text value="postgresql" x="34" y="80" />
+    <qs:sprite name="mysql" sheet="cell" frame="1" x="6" y="102" />
+    <qs:text value="mysql" x="34" y="108" />
+    <qs:sprite name="redis-server" sheet="cell" frame="1" x="98" y="18" />
+    <qs:text value="redis" x="126" y="24" />
+    <qs:sprite name="mongodb" sheet="cell" frame="1" x="98" y="46" />
+    <qs:text value="mongodb" x="126" y="52" />
+    <qs:sprite name="docker" sheet="cell" frame="1" x="98" y="74" />
+    <qs:text value="docker" x="126" y="80" />
+    <qs:sprite name="containerd" sheet="cell" frame="1" x="98" y="102" />
+    <qs:text value="containerd" x="126" y="108" />
+    <qs:sprite name="bee" sheet="bee" x="168" y="36" animation="fly" />
 
-    <qs:text value="Offers" x="186" y="22" color="#ffd34d" />
-    <qs:offers x="186" y="34" width="130" rows="8" />
-    <qs:notices x="6" y="142" width="308" rows="2" />
+    <!-- the offers and the notices as panels with their own title bars -->
+    <qs:offers title="Offers" x="188" y="18" width="126" rows="9" />
+    <qs:notices title="Notices" x="6" y="132" width="308" rows="2" />
+    <!-- the bar at the bottom: what the Hive said last shows here while it lasts -->
+    <qs:bar side="bottom" right="{offers} offers" />
   </qs:scene>
 
   <qs:on event="service-crash">
@@ -75,7 +77,7 @@
   </qs:on>
   <qs:on event="offer">
     <qs:emit particles="stars" at="bee" dx="8" dy="8" />
-    <qs:tween target="bee" property="y" to="8" from="2" seconds="0.4" trans="sine" ease="in-out" repeat="3" yoyo="true" />
+    <qs:tween target="bee" property="y" to="42" from="36" seconds="0.4" trans="sine" ease="in-out" repeat="3" yoyo="true" />
     <qs:say text="the Hive offers {count}: up and down choose, Enter approves, Escape dismisses" seconds="6" />
   </qs:on>
   <qs:on event="done">

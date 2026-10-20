@@ -43,20 +43,20 @@ const BG: u32 = 0xFF12_1228;
 const TITLE_BG: u32 = 0xFFFF_D34D;
 const TITLE_BG2: u32 = 0xFFD9_AA2E;
 const TITLE_DARK: u32 = 0xFF8A_6A10;
-const LIGHT: u32 = 0xFF4A_4A7A;
-const MID: u32 = 0xFF2A_2A48;
-const DARK: u32 = 0xFF0B_0B16;
-const BLACK: u32 = 0xFF05_050C;
+pub(crate) const LIGHT: u32 = 0xFF4A_4A7A;
+pub(crate) const MID: u32 = 0xFF2A_2A48;
+pub(crate) const DARK: u32 = 0xFF0B_0B16;
+pub(crate) const BLACK: u32 = 0xFF05_050C;
 const ZEBRA: u32 = 0xFF16_1630;
 const OK_LIGHT: u32 = 0xFF2F_6F3F;
 const OK_DARK: u32 = 0xFF10_3018;
 const ERR_LIGHT: u32 = 0xFF8A_3A3A;
 const ERR_DARK: u32 = 0xFF30_1010;
-const SHADOW: u32 = 0x8000_0000;
+pub(crate) const SHADOW: u32 = 0x8000_0000;
 const INK: u32 = 0xFF1A_1A2E;
-const TEXT: u32 = 0xFFFF_FFFF;
+pub(crate) const TEXT: u32 = 0xFFFF_FFFF;
 const MUTED: u32 = 0xFF8A_8AA0;
-const HONEY: u32 = 0xFFFF_D34D;
+pub(crate) const HONEY: u32 = 0xFFFF_D34D;
 const LINK: u32 = 0xFF8A_D4FF;
 const FIELD_BG: u32 = 0xFF0B_0B16;
 const ROW_BG: u32 = 0xFF2A_2A48;
@@ -1886,7 +1886,16 @@ impl Window {
 
 /// A raised box: light above and left, dark below and right.
 #[allow(clippy::too_many_arguments)]
-fn bevel_out(b: &mut Band, x: i32, y: i32, w: u32, h: u32, fill: u32, light: u32, dark: u32) {
+pub(crate) fn bevel_out(
+    b: &mut Band,
+    x: i32,
+    y: i32,
+    w: u32,
+    h: u32,
+    fill: u32,
+    light: u32,
+    dark: u32,
+) {
     if w == 0 || h == 0 {
         return;
     }

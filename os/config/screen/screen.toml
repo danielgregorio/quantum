@@ -66,30 +66,13 @@ width = 320
 level = 2
 
 [[nodes]]
-kind = "text"
-value = "Quantum OS"
-x = 6
-y = 4
-color = "#ffd34d"
-align = "left"
-
-[[nodes]]
-kind = "text"
-value = "the Hive"
-x = 72
-y = 4
+kind = "bar"
+side = "top"
+title = "Quantum OS"
+left = "{host}"
+right = "{cores} cores · {level} · {clock}"
 color = "#8a8aa0"
-align = "left"
-
-[[nodes]]
-kind = "sprite"
-name = "bee"
-sheet = "bee"
-frame = 0
-x = 296
-y = 2
-animation = "fly"
-hidden = false
+accent = "#ffd34d"
 
 [[nodes]]
 kind = "sprite"
@@ -97,14 +80,14 @@ name = "nginx"
 sheet = "cell"
 frame = 1
 x = 6
-y = 22
+y = 18
 hidden = false
 
 [[nodes]]
 kind = "text"
 value = "nginx"
 x = 34
-y = 29
+y = 24
 color = "#ffffff"
 align = "left"
 
@@ -114,14 +97,14 @@ name = "apache2"
 sheet = "cell"
 frame = 1
 x = 6
-y = 52
+y = 46
 hidden = false
 
 [[nodes]]
 kind = "text"
 value = "apache2"
 x = 34
-y = 59
+y = 52
 color = "#ffffff"
 align = "left"
 
@@ -131,14 +114,14 @@ name = "postgresql"
 sheet = "cell"
 frame = 1
 x = 6
-y = 82
+y = 74
 hidden = false
 
 [[nodes]]
 kind = "text"
 value = "postgresql"
 x = 34
-y = 89
+y = 80
 color = "#ffffff"
 align = "left"
 
@@ -148,14 +131,14 @@ name = "mysql"
 sheet = "cell"
 frame = 1
 x = 6
-y = 112
+y = 102
 hidden = false
 
 [[nodes]]
 kind = "text"
 value = "mysql"
 x = 34
-y = 119
+y = 108
 color = "#ffffff"
 align = "left"
 
@@ -164,15 +147,15 @@ kind = "sprite"
 name = "redis-server"
 sheet = "cell"
 frame = 1
-x = 102
-y = 22
+x = 98
+y = 18
 hidden = false
 
 [[nodes]]
 kind = "text"
 value = "redis"
-x = 130
-y = 29
+x = 126
+y = 24
 color = "#ffffff"
 align = "left"
 
@@ -181,15 +164,15 @@ kind = "sprite"
 name = "mongodb"
 sheet = "cell"
 frame = 1
-x = 102
-y = 52
+x = 98
+y = 46
 hidden = false
 
 [[nodes]]
 kind = "text"
 value = "mongodb"
-x = 130
-y = 59
+x = 126
+y = 52
 color = "#ffffff"
 align = "left"
 
@@ -198,15 +181,15 @@ kind = "sprite"
 name = "docker"
 sheet = "cell"
 frame = 1
-x = 102
-y = 82
+x = 98
+y = 74
 hidden = false
 
 [[nodes]]
 kind = "text"
 value = "docker"
-x = 130
-y = 89
+x = 126
+y = 80
 color = "#ffffff"
 align = "left"
 
@@ -215,42 +198,53 @@ kind = "sprite"
 name = "containerd"
 sheet = "cell"
 frame = 1
-x = 102
-y = 112
+x = 98
+y = 102
 hidden = false
 
 [[nodes]]
 kind = "text"
 value = "containerd"
-x = 130
-y = 119
+x = 126
+y = 108
 color = "#ffffff"
 align = "left"
 
 [[nodes]]
-kind = "text"
-value = "Offers"
-x = 186
-y = 22
-color = "#ffd34d"
-align = "left"
+kind = "sprite"
+name = "bee"
+sheet = "bee"
+frame = 0
+x = 168
+y = 36
+animation = "fly"
+hidden = false
 
 [[nodes]]
 kind = "offers"
-x = 186
-y = 34
-width = 130
-rows = 8
+x = 188
+y = 18
+width = 126
+rows = 9
+title = "Offers"
 color = "#ffffff"
 focus = "#ffd34d"
 
 [[nodes]]
 kind = "notices"
 x = 6
-y = 142
+y = 132
 width = 308
 rows = 2
+title = "Notices"
 color = "#c0c0c0"
+
+[[nodes]]
+kind = "bar"
+side = "bottom"
+right = "{offers} offers"
+color = "#8a8aa0"
+accent = "#ffd34d"
 
 [[rules]]
 event = "service-crash"
@@ -347,8 +341,8 @@ dy = 8
 kind = "tween"
 target = "bee"
 property = "y"
-to = 8.0
-from = 2.0
+to = 42.0
+from = 36.0
 seconds = 0.4
 trans = "sine"
 ease = "in-out"

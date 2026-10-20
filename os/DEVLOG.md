@@ -1,5 +1,52 @@
 # DruidOS Development Log
 
+## 2026-10-20 - A colmeia ganha barras, painéis e células com relevo
+
+O terceiro passo da fatia 5: a cena em volta da janela passa a ter o
+mesmo visual que ela. O esboço `cena.png` da proposta virou quadro de
+referência.
+
+**Na linguagem (`qs:`).** Uma tag nova, `qs:bar side="top|bottom"`, com
+`title=` (na cor de destaque), `left=` e `right=`; os textos aceitam os
+campos da própria tela, `{clock}`, `{level}`, `{cores}`, `{host}` e
+`{offers}`, e recusam os campos de evento (esses vão num `qs:say`). O
+`qs:offers` e o `qs:notices` ganham `title=`: com título viram painéis com
+moldura em relevo, sombra de 3 px e barra de título, da altura das suas
+linhas. Uma barra por lado; o esquema, o modelo, o compilador, a
+referência (`docs/targets/screen.md`, com a seção "The look of the scene"
+e a tabela dos campos) e o dataset da feature acompanham.
+
+**No daemon.** `world.rs` desenha as barras (14 px em cima, 12 embaixo) e
+os painéis com a paleta e o `bevel_out` de `window.rs`; o que a Hive diz
+(`qs:say`) passa a aparecer à esquerda da barra de baixo enquanto dura, e
+só sobre uma página continua na faixa própria, para ser lido por cima
+dela. Os fatos das barras (`World::set_facts`: nome da máquina lido de
+`/proc/sys/kernel/hostname`, núcleos do chooser, hora local) são dados
+pelo `main.rs` duas vezes por segundo; a tela de um teste não os tem, por
+isso mostra `--:--` e `1 cores` e os quadros são iguais em qualquer
+máquina. A observação diz `bars` com os campos preenchidos.
+
+**Na arte.** `hive_screen.py` redesenha as células: corpo arredondado de
+cera com relevo (borda clara em cima e à esquerda), sombra de 2 px dentro
+do quadro de 24×24, miolo que mostra o estado (mel, vazio, rachado,
+fumaça, apagado); as cores que as fitas da VM procuram (`#f0aa28` do mel,
+`#1c140c` da rachadura) ficam as mesmas. O `screen.q` reorganiza a
+colmeia: barra em cima, duas colunas de células com passo de 28 px, a
+abelha entre elas e o painel de ofertas, painel de avisos de 308 px
+embaixo, barra embaixo com `{offers} offers`.
+
+**Prova.** Os dez quadros de referência de `tests/play.rs` foram
+redesenhados; o teste do crash e da oferta lê as barras na observação
+(`1 cores · effects · --:--`, `2 offers`, e `fine` depois de subir o
+nível); as fitas `screen-crash` e `screen-page` do Hive lab passam. Os
+textos da cena seguem em inglês como o resto do `screen.q` (a ajuda da
+janela é em português): uma passada de idioma na tela inteira fica para
+quando o app Ajustes tiver a opção.
+
+**A seguir na fatia.** A barra de baixo como barra de tarefas (as janelas
+abertas) e o menu F1 com as ofertas e as apps; depois a gaveta, a abelha
+que traz a oferta, o zoom na célula.
+
 ## 2026-10-20 - Movimento em pixel art: gelatina, lâmpada, cortina
 
 O segundo passo da fatia 5: as três transições que o Daniel viu animadas

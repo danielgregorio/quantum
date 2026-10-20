@@ -3,9 +3,10 @@
 Pixel art at the screen's own size (a 320x180 scene), shapes drawn without
 smoothing, like scripts/art/keep.py.
 
-- cells.png, 24x24 frames: 0 a cell with honey (the service runs), 1 an empty
-  cell (it is off), 2 a cracked cell (it crashed), 3-6 smoke rising from the
-  cracked cell, 7 a dim cell (something is wrong in its logs)
+- cells.png, 24x24 frames, each a rounded cell of wax with a bevel and a
+  2-px shadow: 0 a cell with honey (the service runs), 1 an empty cell (it
+  is off), 2 a cracked cell (it crashed), 3-6 smoke rising from the cracked
+  cell, 7 a dim cell (something is wrong in its logs)
 - bee.png, 16x16 frames: 0 and 1 the bee, wings up and down
 
     python scripts/art/hive_screen.py
@@ -17,52 +18,51 @@ from PIL import Image, ImageDraw
 
 OUT = Path(__file__).resolve().parents[2] / 'os' / 'config' / 'screen' / 'art'
 
-WAX, WAX_DARK, WAX_LIGHT = (196, 150, 52, 255), (132, 96, 30, 255), (228, 190, 92, 255)
+# the wax of a cell: its body, the lit rim at the top left, the dark rim and the hollow inside
+WAX, WAX_LIGHT, WAX_DARK = (62, 50, 34, 255), (132, 96, 30, 255), (28, 20, 12, 255)
+HOLLOW = (44, 34, 22, 255)
 HONEY, HONEY_LIGHT = (240, 170, 40, 255), (252, 212, 110, 255)
-EMPTY = (62, 50, 34, 255)
+DIM = (150, 110, 36, 255)
 CRACK = (28, 20, 12, 255)
 SMOKE, SMOKE_LIGHT = (120, 120, 128, 255), (170, 170, 178, 255)
+SHADOW = (0, 0, 0, 90)
 CLEAR = (0, 0, 0, 0)
 
-# a flat-topped hexagon that fits 24x24, one column of edge pixels per row
-HEX = [(7, 16), (5, 18), (3, 20), (2, 21), (1, 22), (1, 22), (0, 23), (0, 23), (0, 23), (0, 23), (0, 23), (0, 23),
-       (0, 23), (0, 23), (0, 23), (0, 23), (0, 23), (0, 23), (1, 22), (1, 22), (2, 21), (3, 20), (5, 18), (7, 16)]
 
-
-def cell(filling, light=None):
+def cell(core=None):
+    """A cell of the comb in the look of the screen's windows: a rounded body of wax with a bevel (lit at the top
+    left, dark at the bottom right), a 2-px shadow down and right inside the 24x24 frame, and a hollow that holds
+    `core` (honey when the service runs) or nothing."""
     im = Image.new('RGBA', (24, 24), CLEAR)
-    px = im.load()
-    for y, (x0, x1) in enumerate(HEX):
-        for x in range(x0, x1 + 1):
-            edge = x in (x0, x1) or y in (0, 23) or (y < 6 and x in (x0 + 1, x1 - 1)) or (y > 17 and x in (x0 + 1, x1 - 1))
-            if edge:
-                px[x, y] = WAX_DARK if (y > 12 or x > 12) else WAX
-            else:
-                px[x, y] = filling
-    if light is not None:
-        for x, y in ((8, 6), (9, 6), (8, 7), (7, 8)):
-            px[x, y] = light
-    for x, y in ((2, 7), (3, 7), (2, 8)):
-        px[x, y] = WAX_LIGHT
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle([2, 2, 23, 23], radius=6, fill=SHADOW)
+    d.rounded_rectangle([0, 0, 21, 21], radius=6, fill=WAX, outline=WAX_DARK)
+    d.arc([0, 0, 21, 21], 180, 300, fill=WAX_LIGHT)
+    d.rounded_rectangle([3, 3, 18, 18], radius=5, fill=HOLLOW)
+    if core is not None:
+        d.rounded_rectangle([5, 5, 16, 16], radius=4, fill=core)
     return im
 
 
 def honey():
-    return cell(HONEY, HONEY_LIGHT)
+    im = cell(HONEY)
+    for x, y in ((7, 7), (8, 7), (7, 8)):
+        im.putpixel((x, y), HONEY_LIGHT)
+    return im
 
 
 def empty():
-    return cell(EMPTY)
+    return cell()
 
 
 def cracked():
-    im = cell(EMPTY)
+    im = cell()
     d = ImageDraw.Draw(im)
-    d.line([(11, 4), (12, 9), (9, 12), (12, 16), (10, 20)], fill=CRACK)
-    d.line([(12, 9), (16, 11)], fill=CRACK)
-    d.line([(9, 12), (5, 13)], fill=CRACK)
-    for x, y in ((13, 10), (10, 13), (13, 17)):
-        im.putpixel((x, y), WAX_DARK)
+    d.line([(10, 3), (12, 8), (9, 11), (12, 15), (10, 19)], fill=CRACK)
+    d.line([(12, 8), (16, 9)], fill=CRACK)
+    d.line([(9, 11), (5, 12)], fill=CRACK)
+    for x, y in ((13, 9), (10, 12), (13, 16)):
+        im.putpixel((x, y), WAX_LIGHT)
     return im
 
 
@@ -71,10 +71,10 @@ def smoke(step):
     im = cracked()
     d = ImageDraw.Draw(im)
     puffs = [
-        [((9, 9, 13, 12), SMOKE)],
-        [((8, 5, 14, 10), SMOKE), ((10, 3, 13, 6), SMOKE_LIGHT)],
-        [((7, 1, 12, 6), SMOKE), ((12, 0, 16, 4), SMOKE_LIGHT), ((10, 7, 13, 9), SMOKE)],
-        [((9, 0, 12, 2), SMOKE_LIGHT), ((14, 0, 17, 2), SMOKE_LIGHT)],
+        [((8, 8, 12, 11), SMOKE)],
+        [((7, 4, 13, 9), SMOKE), ((9, 2, 12, 5), SMOKE_LIGHT)],
+        [((6, 0, 11, 5), SMOKE), ((11, 0, 15, 3), SMOKE_LIGHT), ((9, 6, 12, 8), SMOKE)],
+        [((8, 0, 11, 1), SMOKE_LIGHT), ((13, 0, 16, 1), SMOKE_LIGHT)],
     ][step]
     for box, colour in puffs:
         d.ellipse(box, fill=colour)
@@ -82,11 +82,9 @@ def smoke(step):
 
 
 def dim():
-    im = cell((150, 110, 36, 255))
-    im.putpixel((11, 7), WAX_DARK)
-    im.putpixel((11, 8), WAX_DARK)
-    im.putpixel((11, 9), WAX_DARK)
-    im.putpixel((11, 11), WAX_DARK)
+    im = cell(DIM)
+    for y in (7, 8, 9, 11):
+        im.putpixel((10, y), WAX_DARK)
     return im
 
 

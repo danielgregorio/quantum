@@ -12,8 +12,8 @@ use crate::ease::{interpolate, Ease, Trans};
 use crate::image::{argb, Image};
 use crate::level::{self, LEVELS};
 use crate::particles::Emitter;
-use crate::scene::{Action, Align, Node, Property, Scene};
-use crate::window::{Rect, Window};
+use crate::scene::{Action, Align, Node, Property, Scene, Side};
+use crate::window::{bevel_out, Rect, Window, BLACK, DARK, HONEY, LIGHT, MID, SHADOW, TEXT};
 use hive_common::actions::Action as HiveAction;
 use hive_common::events::{fill, Fields};
 use serde_json::{json, Value};
@@ -172,8 +172,78 @@ impl Key {
     }
 }
 
-/// Where the toast (`qs:say`) sits: a strip at the bottom of the scene.
+/// Where the toast (`qs:say`) sits when the scene has no bar at the
+/// bottom: a strip at the bottom of the scene.
 const TOAST_HEIGHT: u32 = 12;
+
+/// The bars of the scene (`qs:bar`), in the look of a window manager: the
+/// one at the top is 14 pixels (a light line, the bar, a rule), the one at
+/// the bottom 12 (a rule and the bar); the texts sit 4 pixels in from the
+/// edges.
+const BAR_TOP_H: u32 = 14;
+const BAR_BOTTOM_H: u32 = 12;
+const BAR_IN: i32 = 4;
+const BAR_BG: u32 = 0xFF12_1224;
+const BAR_LINE: u32 = 0xFF34_345A;
+
+/// A panel (`qs:offers` or `qs:notices` with a title): a bevelled frame
+/// with a 3-px shadow, a title bar of 10 pixels with a rule under it,
+/// and the rows 3 pixels in from the frame.
+const PANEL_BG: u32 = 0xFF14_1430;
+const PANEL_TOP: i32 = 13;
+const PANEL_IN: i32 = 3;
+
+/// What the bars say of the machine, which the daemon tells the world as
+/// it runs. A test's world knows none of it, so its frames are the same
+/// on every machine.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Facts {
+    pub host: String,
+    pub cores: usize,
+    /// The time as HH:MM; none shows as `--:--`.
+    pub clock: Option<String>,
+}
+
+impl Default for Facts {
+    fn default() -> Facts {
+        Facts {
+            host: String::new(),
+            cores: 1,
+            clock: None,
+        }
+    }
+}
+
+/// `text` with every `{field}` replaced by what `field` gives for it; a
+/// field it has nothing for stays as written.
+fn fill_fields(text: &str, field: impl Fn(&str) -> Option<String>) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(open) = rest.find('{') {
+        out.push_str(&rest[..open]);
+        let after = &rest[open + 1..];
+        match after.find('}') {
+            Some(close) if !after[..close].contains('{') => {
+                let name = &after[..close];
+                match field(name) {
+                    Some(value) => out.push_str(&value),
+                    None => {
+                        out.push('{');
+                        out.push_str(name);
+                        out.push('}');
+                    }
+                }
+                rest = &after[close + 1..];
+            }
+            _ => {
+                out.push('{');
+                rest = after;
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
 
 /// How dark the scene goes under a page: black at this alpha.
 const DIM_ALPHA: u8 = 0x78;
@@ -254,6 +324,8 @@ pub struct World {
     /// What the page's runtime is to hear: the window's events, until
     /// the socket takes them.
     pixel_out: Vec<Value>,
+    /// What the bars say of the machine.
+    facts: Facts,
 }
 
 impl World {
@@ -339,6 +411,47 @@ impl World {
             motion: None,
             motion_on: true,
             pixel_out: Vec::new(),
+            facts: Facts::default(),
+        }
+    }
+
+    // ---------------------------------------------------------------- the facts
+
+    /// What the bars say of the machine: the daemon tells it as it runs.
+    pub fn set_facts(&mut self, facts: Facts) {
+        if facts != self.facts {
+            self.facts = facts;
+            self.dirty = true;
+        }
+    }
+
+    /// A field of the screen's own, as a bar shows it (schema.py's
+    /// BAR_FIELDS): none for a name that is not one.
+    fn field(&self, name: &str) -> Option<String> {
+        Some(match name {
+            "clock" => self
+                .facts
+                .clock
+                .clone()
+                .unwrap_or_else(|| "--:--".to_string()),
+            "level" => LEVELS[self.level].name.to_string(),
+            "cores" => self.facts.cores.to_string(),
+            "host" => self.facts.host.clone(),
+            "offers" => self
+                .offers
+                .iter()
+                .filter(|o| o.outcome.is_none())
+                .count()
+                .to_string(),
+            _ => return None,
+        })
+    }
+
+    /// A bar's text with its fields filled in.
+    fn bar_text(&self, text: &Option<String>) -> String {
+        match text {
+            Some(t) => fill_fields(t, |name| self.field(name)),
+            None => String::new(),
         }
     }
 
@@ -985,15 +1098,21 @@ impl World {
                     rows,
                     color,
                     focus,
-                } => self.draw_offers(canvas, *x, *y, *width, *rows, *color, *focus),
+                    title,
+                } => {
+                    let (x, y, width) = self.draw_panel(canvas, *x, *y, *width, *rows, title);
+                    self.draw_offers(canvas, x, y, width, *rows, *color, *focus)
+                }
                 Node::Notices {
                     x,
                     y,
                     width,
                     rows,
                     color,
+                    title,
                 } => {
-                    let fit = font.fit(*width);
+                    let (x, y, width) = self.draw_panel(canvas, *x, *y, *width, *rows, title);
+                    let fit = font.fit(width);
                     let shown = self
                         .notices
                         .iter()
@@ -1002,9 +1121,26 @@ impl World {
                         .collect::<Vec<_>>();
                     for (n, line) in shown.iter().rev().enumerate() {
                         let text: String = line.chars().take(fit).collect();
-                        canvas.text(font, &text, *x, y + (n as u32 * font.cell.1) as i32, *color);
+                        canvas.text(font, &text, x, y + (n as u32 * font.cell.1) as i32, *color);
                     }
                 }
+                Node::Bar {
+                    side,
+                    title,
+                    left,
+                    right,
+                    color,
+                    accent,
+                } => self.draw_bar(
+                    canvas,
+                    *side,
+                    title,
+                    left,
+                    right,
+                    *color,
+                    *accent,
+                    page.is_none(),
+                ),
             }
         }
         for b in &self.bursts {
@@ -1012,7 +1148,10 @@ impl World {
         }
         // in the canvas's own pixels: the page's font is never a block
         self.draw_page(&mut canvas.unscaled(), page);
-        if let Some((line, _)) = &self.toast {
+        // what the Hive says: in the bar at the bottom, or on a strip of
+        // its own; over a page, on the strip, so it is read through the page
+        let in_bar = page.is_none() && self.has_bottom_bar();
+        if let Some((line, _)) = self.toast.as_ref().filter(|_| !in_bar) {
             let h = TOAST_HEIGHT;
             let y = self.scene.height as i32 - h as i32;
             canvas.fill_rect(0, y, self.scene.width, h, 0xE0101018);
@@ -1088,6 +1227,110 @@ impl World {
                     }
                 }
             }
+        }
+    }
+
+    fn has_bottom_bar(&self) -> bool {
+        self.scene.nodes.iter().any(|n| {
+            matches!(
+                n,
+                Node::Bar {
+                    side: Side::Bottom,
+                    ..
+                }
+            )
+        })
+    }
+
+    /// A panel for rows, when it has a title: the frame, the shadow, the
+    /// title bar. Gives where the rows go and how wide they may be; with
+    /// no title, the rows go where the node says.
+    fn draw_panel(
+        &self,
+        canvas: &mut Band,
+        x: i32,
+        y: i32,
+        width: u32,
+        rows: u32,
+        title: &Option<String>,
+    ) -> (i32, i32, u32) {
+        let Some(title) = title else {
+            return (x, y, width);
+        };
+        let font = &self.scene.font;
+        let h = rows * font.cell.1 + PANEL_TOP as u32 + 2;
+        canvas.fill_rect(x + 3, y + 3, width, h, SHADOW);
+        bevel_out(canvas, x, y, width, h, PANEL_BG, LIGHT, BLACK);
+        let inner = width.saturating_sub(2);
+        canvas.fill_rect(x + 1, y + 1, inner, font.cell.1, MID);
+        canvas.fill_rect(x + 1, y + 1 + font.cell.1 as i32, inner, 1, DARK);
+        let fit = font.fit(inner.saturating_sub(6));
+        let text: String = title.chars().take(fit).collect();
+        canvas.text(font, &text, x + BAR_IN, y + 1, HONEY);
+        (
+            x + PANEL_IN,
+            y + PANEL_TOP,
+            width.saturating_sub(2 * PANEL_IN as u32),
+        )
+    }
+
+    /// A bar across the scene: the title in the accent, the text after
+    /// it, the text at the right; at the bottom, what the Hive says
+    /// takes the left while it lasts (and no page is over the scene).
+    #[allow(clippy::too_many_arguments)]
+    fn draw_bar(
+        &self,
+        canvas: &mut Band,
+        side: Side,
+        title: &Option<String>,
+        left: &Option<String>,
+        right: &Option<String>,
+        color: u32,
+        accent: u32,
+        bare: bool,
+    ) {
+        let font = &self.scene.font;
+        let w = self.scene.width;
+        let ty = match side {
+            Side::Top => {
+                canvas.fill_rect(0, 0, w, BAR_TOP_H, BAR_BG);
+                canvas.fill_rect(0, 0, w, 1, LIGHT);
+                canvas.fill_rect(0, BAR_TOP_H as i32 - 1, w, 1, BAR_LINE);
+                2
+            }
+            Side::Bottom => {
+                let y0 = self.scene.height as i32 - BAR_BOTTOM_H as i32;
+                canvas.fill_rect(0, y0, w, BAR_BOTTOM_H, BAR_BG);
+                canvas.fill_rect(0, y0, w, 1, BAR_LINE);
+                y0 + 1
+            }
+        };
+        let right = self.bar_text(right);
+        let rw = font.width_of(&right);
+        if rw > 0 {
+            canvas.text(font, &right, w as i32 - BAR_IN - rw as i32, ty, color);
+        }
+        // the left: what the Hive says, or the title and the text after it
+        let room = (w as i32 - 2 * BAR_IN - rw as i32 - if rw > 0 { font.cell.0 as i32 } else { 0 })
+            .max(0) as u32;
+        let said = self.toast.as_ref().filter(|_| side == Side::Bottom && bare);
+        let mut x = BAR_IN;
+        if let Some((line, _)) = said {
+            let text: String = line.chars().take(font.fit(room)).collect();
+            canvas.text(font, &text, x, ty, TEXT);
+            return;
+        }
+        let title = self.bar_text(title);
+        if !title.is_empty() {
+            let text: String = title.chars().take(font.fit(room)).collect();
+            canvas.text(font, &text, x, ty, accent);
+            x += font.width_of(&text) as i32 + font.cell.0 as i32;
+        }
+        let left = self.bar_text(left);
+        let room = (room as i32 - (x - BAR_IN)).max(0) as u32;
+        if !left.is_empty() && room > 0 {
+            let text: String = left.chars().take(font.fit(room)).collect();
+            canvas.text(font, &text, x, ty, color);
         }
     }
 
@@ -1184,7 +1427,37 @@ impl World {
             "effects": self.bursts.len() + self.emitters.iter().filter(|a| self.plays(a)).count(),
             "window": self.window.as_ref().map(Window::observe),
             "motion": self.motion(),
+            "bars": self.observe_bars(),
         })
+    }
+
+    /// The bars with their fields filled in, by side.
+    fn observe_bars(&self) -> Value {
+        let mut bars = serde_json::Map::new();
+        for n in &self.scene.nodes {
+            if let Node::Bar {
+                side,
+                title,
+                left,
+                right,
+                ..
+            } = n
+            {
+                let name = match side {
+                    Side::Top => "top",
+                    Side::Bottom => "bottom",
+                };
+                bars.insert(
+                    name.to_string(),
+                    json!({
+                        "title": self.bar_text(title),
+                        "left": self.bar_text(left),
+                        "right": self.bar_text(right),
+                    }),
+                );
+            }
+        }
+        Value::Object(bars)
     }
 
     /// The events since the last take, cleared.
@@ -1264,6 +1537,23 @@ fn kebab(variant: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_bars_fields_are_filled_in_and_the_rest_is_left_as_written() {
+        let field = |name: &str| match name {
+            "clock" => Some("14:32".to_string()),
+            "cores" => Some("4".to_string()),
+            _ => None,
+        };
+        assert_eq!(
+            fill_fields("{cores} cores · {level} · {clock}", field),
+            "4 cores · {level} · 14:32"
+        );
+        assert_eq!(fill_fields("plain", field), "plain");
+        assert_eq!(fill_fields("{clock", field), "{clock");
+        assert_eq!(fill_fields("a {{clock}", field), "a {14:32");
+        assert_eq!(fill_fields("", field), "");
+    }
 
     #[test]
     fn an_action_tells_its_name_and_its_service_or_package() {
