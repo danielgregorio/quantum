@@ -380,7 +380,7 @@ install_hive_stack() {
 
     # The Quantum runtime (the repository's quantum/ package; its needs are
     # packages of the image), the `quantum` and `hive` commands, and the
-    # apps installed with the Hive (apps/): what `hive ajustes` opens on
+    # apps installed with the Hive (apps/): what `hive settings` opens on
     # the screen. The VM lab installs the same (scripts/lab/vm/install-hive.sh).
     log_info "Installing the Quantum runtime and the apps"
     rm -rf "$chroot_dir/usr/lib/python3/dist-packages/quantum"

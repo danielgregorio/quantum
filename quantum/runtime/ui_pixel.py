@@ -51,8 +51,8 @@ def number_nodes(view: list) -> int:
 
 
 # What hive-screen last said of itself (its `status` event: the level, the
-# cores, the keyboard, what a frame costs), for a page that asks (the Ajustes
-# app's Tela tab); None until the screen said, or when the page is not on it.
+# cores, the keyboard, what a frame costs), for a page that asks (the Settings
+# app's Screen tab); None until the screen said, or when the page is not on it.
 _SCREEN_STATUS: Optional[dict] = None
 
 
@@ -159,7 +159,7 @@ class PixelClient:
 
     def hear_status(self, wait: float = 0.5) -> None:
         """The screen says what it is as soon as a runtime connects; the first page
-        waits that long for it, so a page that asks (the Ajustes app) is right from
+        waits that long for it, so a page that asks (the Settings app) is right from
         the start. A screen that says nothing is an older one: the page goes on."""
         assert self.sock is not None
         self.sock.settimeout(wait)

@@ -4,10 +4,10 @@
 //! JSON lines, and hears the window's events as JSON lines:
 //!
 //! ```text
-//! -> {"op":"show","page":{"title":"Tarefas","flash":null,"view":[...]}}   the page, whole, each time it changes
+//! -> {"op":"show","page":{"title":"Tasks","flash":null,"view":[...]}}     the page, whole, each time it changes
 //! -> {"op":"close"}                                                        the page goes
 //! <- {"event":"click","id":7,"action":"remove","fields":{"id":"2"}}       a button
-//! <- {"event":"submit","id":3,"action":"save","fields":{"name":"Ana"}}   a form, with what the user left
+//! <- {"event":"submit","id":3,"action":"save","fields":{"name":"Ann"}}   a form, with what the user left
 //! <- {"event":"change","id":4,"bind":"q","value":"ab"}                    a search field, after a pause
 //! <- {"event":"navigate","id":9,"to":"/about"}                            a link
 //! <- {"event":"reload"}                                                   F5

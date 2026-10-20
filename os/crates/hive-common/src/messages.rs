@@ -350,7 +350,7 @@ pub enum HiveMessage {
     },
 
     /// A user asked the Hive for a change of the machine's settings (the
-    /// Ajustes app, `hive request`): its name, its keyboard, its screen's
+    /// Settings app, `hive request`): its name, its keyboard, its screen's
     /// level. Cortex turns it into an offer, "<user> asks: ...", that an
     /// administrator approves as any other; the actuator then runs the
     /// action through its whitelist. Any local user may ask; nothing runs

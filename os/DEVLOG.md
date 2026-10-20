@@ -1,1629 +1,1706 @@
 # DruidOS Development Log
 
-## 2026-10-20 - Ajustes, rede: o único ajuste com root, e o único perigoso
-
-A fatia 5d. A rede fecha o básico que o Daniel pediu (nome, rede,
-teclado) pelo mesmo caminho das outras: pedido, oferta, Enter, atuador.
-Duas coisas a distinguem, e as duas estão no desenho.
-
-**É perigosa.** `SetNetwork { interface, dhcp, address, gateway, dns }`
-é `is_dangerous`: um endereço errado tira a máquina da rede. Na tela, o
-primeiro Enter arma a oferta e o segundo aprova (sair dela desarma); no
-dashboard, confirmação. O valor é checado quatro vezes, sempre com a mesma
-régua (`is_valid_network`: nome de interface, IPv4 com prefixo, gateway
-IPv4, até quatro DNS): no `hive request`, na página, na whitelist e de
-novo no passo com root.
-
-**Precisa de root, e o atuador não tem.** O D-Bus do netplan recusa quem
-não é root, e dar root ao atuador quebraria a regra da casa. Então o
-atuador escreve o ajuste (JSON em `/var/lib/hive/settings/network`),
-esvazia `network.result` e inicia `quantum-network-apply.service`, um
-oneshot de root que a regra polkit de manage-units já deixa iniciar; o
-script (`scripts/network-apply`, python3 só com a biblioteca padrão)
-guarda o `/etc/netplan/60-hive.yaml` anterior como `60-hive.yaml.before`,
-escreve o novo só para aquela interface (modo 600; o arquivo do
-cloud-init para a mesma interface fica por baixo, o netplan funde),
-aplica e espera até 20 s a interface ter o endereço (o fixo, ou qualquer
-um por DHCP). Se não vier, o arquivo anterior volta e é aplicado de novo:
-um endereço errado nunca deixa a máquina fora da rede à espera de uma
-mão. O resultado vai para `network.result` ("ok: enp0s1 has 10.0.2.20/24"
-ou "failed: ..."), e é com ele que o atuador responde.
-
-**Na página.** A aba Rede ganha o formulário (interface, origem dhcp/fixo,
-endereço/prefixo, gateway, DNS), que começa do que a primeira interface
-tem; `ajustes.pedir('set-network', ...)` monta as palavras do comando e o
-flash avisa que são dois Enters. No comando: `hive request set-network
-IFACE dhcp` ou `IFACE ADDR/PREFIX [via GATEWAY] [dns A,B]`.
-
-**Prova.** Hive lab: `request-network.jsonl` (fixo e depois DHCP, cada
-um oferta em nome do druid, confirmada, e `SetNetwork` chega ao atuador).
-Unitários: validação, descrição, whitelist, CLI, `pedir` com os campos
-errados ditos antes de pedir, o formulário na tela com o `ask` trocado.
-VM: `ajustes-rede.jsonl` pede 10.0.2.20/24 via 10.0.2.2 dns 10.0.2.3,
-arma com um Enter (o atuador não vê nada), aprova com o segundo, e o
-`ip addr` real tem o endereço fixo e perde a concessão, a rota padrão vai
-por 10.0.2.2, o arquivo do netplan está lá com modo 600; depois volta por
-DHCP, com o `.before` guardado e a concessão de volta.
-
-**O que fica de fora, de propósito.** IPv6, mais de uma interface por
-pedido, Wi-Fi (sem placa no laboratório; é outro ajuste, com segredo) e
-escrever o `/etc/netplan` à mão em vez do `netplan apply`.
-
-## 2026-10-20 - Ajustes, mudança: a página pede, a Hive oferece, Enter aprova, o atuador executa
-
-A fatia 5c, pelo caminho A da proposta (o recomendado; o Daniel não disse
-outro): nada que muda o sistema sai da porta da Hive.
-
-**O pedido.** Uma mensagem nova no socket de usuário,
-`HiveMessage::UserRequest { action, reason }`, que qualquer usuário local
-pode mandar e que só aceita os ajustes (`Action::is_a_setting`:
-`SetHostname`, `SetKeyboard`, `SetScreenLevel`; qualquer outra ação é
-recusada com aviso no log). O cortex a transforma numa oferta em nome de
-quem pediu (`offer_request`: notificação de tipo `request`, título "druid
-asks: name the machine forja", campos `user`, `action`, `what`, `count`),
-guardada como qualquer sugestão; quem está diante do console aprova com
-Enter (ou F1 sobre uma página) e o atuador executa pela whitelist.
-
-**O comando `hive`.** O protocolo da Hive é bincode, que o Python não
-fala; em vez de ensinar, o lançador em shell virou um binário Rust
-(`crates/hive-cli`): `hive ajustes` abre a app, `hive apps` lista,
-`hive request set-hostname NOME | set-keyboard LAYOUT [MODELO] |
-set-screen-level auto|plain|effects|fine [--reason TEXTO]` manda o pedido.
-O serviço `ajustes.pedir` da app roda esse comando pela terceira porta,
-`ask`, a única que muda algo, e só pedindo; os botões "Pedir à Hive" das
-abas Máquina, Teclado e Tela chamam ações `q:` que o invocam e mostram a
-resposta no flash.
-
-**As ações, no atuador.** `set-hostname` roda `hostnamectl set-hostname`
-por D-Bus com licença do polkit para `_hive-act`
-(`61-druidos-hive-settings.rules`: só o nome, nada mais do hostnamed).
-O teclado ia pelo `localectl set-x11-keymap`, mas a VM mostrou que o
-localed do Ubuntu recusa ("Setting X11 and console keymaps is not
-supported in Debian"); então `set-keyboard` e `set-screen-level` não
-precisam de root: escrevem ou apagam `keyboard` (`br abnt2`) e
-`screen-level` em `/var/lib/hive/settings`, o `StateDirectory` do
-atuador, legível por todos, e o `/etc/default/keyboard` fica como o
-instalador o deixou. A whitelist ganha os três permits (`qh:allow
-action=` no `hive.q`, dois por minuto) e recusa um valor que o hostnamectl
-não aceitaria ou a tela não leria (rótulo de host; layouts us/br com seus
-modelos; nível 0–2).
-
-**A tela acompanha ao vivo.** Duas vezes por segundo o daemon relê o
-teclado (`Layout::detect`: o ambiente, depois o ajuste da Hive, depois o
-arquivo do sistema; `Keyboards::set_layout`, sem reiniciar) e o arquivo
-de nível (prega ou solta o chooser; `HIVE_SCREEN_LEVEL` no ambiente
-continua mandando), e conta no log e no `status` que manda ao runtime da
-página. Um pedido é evento próprio da cena (`qs:on event="request"`:
-"{user} asks: {what}") e entra no painel de ofertas como qualquer oferta.
-
-**Prova.** Hive lab: `request-hostname.jsonl` (o pedido vira oferta em
-nome do druid, nada corre até aprovar, o atuador recebe `SetHostname`;
-um pedido de `RestartService` nunca vira oferta). Testes unitários:
-validação e descrição das ações, a whitelist fechada e aberta, o socket
-de usuário, as palavras do `hive request`. `tests/apps/test_ajustes.py`:
-`pedir` com a porta `ask` trocada e o clique em "Pedir à Hive" na tela.
-VM: `ajustes-hostname.jsonl` pede nome, teclado e nível como druid,
-aprova cada um com Enter no teclado real, e `hostname` e os dois arquivos
-de ajuste mudam (o `/etc/default/keyboard` não), com a tela relendo o
-teclado ("keyboard layout br (ABNT2)") e o nível ("level 0 pinned by the
-Hive's settings") sem reiniciar. Uma oferta nova toma o foco quando a
-anterior já foi respondida: Enter responde ao que espera.
-
-**O que fica.** A rede (5d, `set-network`, perigosa, Enter duplo, arquivo
-anterior guardado); o teclado do console de texto (tty2), que é do
-`console-setup` do sistema e não da Hive; um limite de pedidos pendentes
-por usuário.
-
-## 2026-10-20 - Ajustes, leitura: a app, e o runtime Quantum dentro do sistema
-
-A fatia 5b. A app que o Daniel pediu ("uma tela de admin com nome do pc,
-rede, teclado, tudo em tela") lendo a máquina de verdade, e o que faltava
-para ela rodar.
-
-**O que faltava.** Nem a VM do laboratório nem a ISO tinham o runtime
-Python do Quantum: o `quantum pixel` só tinha sido provado por um cliente
-de socket cru. Agora o runtime vai com a Hive: as dependências (flask,
-yaml, sqlparse, requests, bcrypt) como pacotes Ubuntu do base da VM
-(`PACKAGES`, `BASE_VERSION` 7) e da imagem da ISO; o pacote `quantum/` do
-repositório copiado para `/usr/lib/python3/dist-packages` (o `stage()` do
-laboratório o põe ao lado dos binários e um hash por arquivo decide o que
-reinstalar); `/usr/bin/quantum` e `/usr/bin/hive` (`hive ajustes` abre a
-app na tela como o usuário que chamou; `hive apps` lista;
-`/usr/share/quantum-os/apps`). O Textual fica de fora (o do Ubuntu é
-velho demais): na máquina a app roda na tela e no navegador, não no
-console. A ISO segue sem validação aqui.
-
-**A app (`apps/ajustes`).** Cinco abas de um `ui:tabpanel`: Máquina (nome,
-sistema, kernel, tempo ligada, núcleos, memória, disco), Rede (cada
-interface com endereço, estado e origem DHCP/fixo; gateway; DNS), Teclado
-(o layout do sistema e o que a tela lê), Tela (nível, escolha, núcleos,
-custo do quadro, movimento) e Hive (os daemons e seu estado, o que a
-whitelist permite). Cada aba é um serviço de `leitura.py`, stdlib só, que
-lê o que qualquer um lê (`/proc`, `/etc/default/keyboard`,
-`/etc/hive/whitelist.toml`, `ip -j addr`, `ip -j route`, `resolvectl`,
-`systemctl is-active`) por duas portas, `run` e `read`, que o teste troca
-por uma máquina enlatada; nada levanta erro: sem `ip` ou sem tela lê-se
-"não lido". As "últimas ofertas" da aba Hive ficaram de fora: o journal
-não é do usuário comum.
-
-**O status da tela.** A proposta dizia `{"op":"status"}` pedido pela
-página; o socket aceita um cliente só e o serviço corre noutra thread do
-mesmo processo, então o daemon empurra: `{"event":"status",...}` ao
-conectar e a cada mudança (nível, pregado ou não, núcleos, movimento,
-teclado, custo do quadro, cena), `Runtime::status`; o cliente espera meio
-segundo por ele antes da primeira página e o guarda em `screen_status()`.
-
-**O que a VM mostrou.** A primeira rodada falhou: o servidor da app abria
-`logs/quantum.log` dentro de `/usr/share`, que não é do usuário. A app
-instalada não grava log em arquivo (`logging: file: false`) e o runtime
-passa a avisar e seguir só no console quando o diretório de log não é
-gravável. A fita `ajustes.jsonl` então passou (121 s): `hive ajustes` como
-druid, "page: Ajustes" no journal, a view que o servidor da app responde
-com `nome: quantum-lab`, `núcleos: 4`, `nível:` e `hive-screen: active`,
-setas pelas abas no teclado real, Esc.
-
-**Prova fora da VM.** `tests/apps/test_ajustes.py`: os serviços contra a
-máquina enlatada, e a página no navegador, no console e na tela (os
-drivers do teste de paridade), onde a aba Tela diz `nível: effects (1)`.
-
-**A seguir.** A mudança pela Hive (5c): a página pede, o cortex oferece,
-Enter na tela aprova, o atuador executa pela whitelist.
-
-## 2026-10-20 - O menu F1 e o botão da janela na barra
-
-O quarto passo da fatia 5: as ofertas da Hive chegam por cima de qualquer
-coisa que esteja na tela, e a barra de baixo começa a ser barra de
-tarefas.
-
-**O menu.** F1 abre uma gaveta no canto inferior esquerdo, no visual das
-janelas (`window::draw_menu`: moldura com sombra, barra de título mel
-"Ofertas da Hive", uma linha por oferta com a de foco em relevo e mel,
-barra de estado "Enter aprova · Del dispensa · Esc fecha"); vazia, diz
-"nada por agora". Enquanto está fora, as teclas são dela: setas, Enter
-aprova (duas vezes a perigosa), Del dispensa, Esc fecha e a página volta
-a ouvir o teclado. `approve()` e `dismiss()` saíram do `key()` para servir
-ao painel da cena e ao menu. Sem página, F1 abre o mesmo menu sobre a
-colmeia.
-
-**A gaveta.** Desliza da esquerda em 8 ticks (`Quad`/`Out`) e empurra a
-colmeia 4 px para a direita enquanto está fora (as barras ficam); fecha
-pelo mesmo caminho. No `plain` abre e fecha de uma vez. A observação diz
-`menu` (`open`, `t`, `ticks`), `until still` espera a gaveta parar e
-`until menu` espera o menu aberto ou fechado.
-
-**A barra.** A barra de estado da janela mostra "F1 · N ofertas" em mel à
-direita quando há ofertas esperando, e a ajuda é cortada num separador
-(`cut_at_separator`), nunca no meio de uma palavra. A barra de baixo da
-cena mostra a página aberta como um botão em relevo à esquerda, como uma
-barra de tarefas; o `screen.q` diz `{offers} offers · F1` à direita.
-
-**Prova.** `tests/play.rs` ganha o teste do menu sobre a página (ofertas
-chegam com a página aberta, F1 a meio caminho, aprovação da perigosa com
-dois Enter, Del, Esc devolvendo o teclado à página, o menu vazio sobre a
-colmeia, o `plain` de uma vez) e quatro quadros: `window-offers.png`,
-`menu-drawer.png`, `menu.png`, `menu-empty.png`; os outros quadros foram
-refeitos pelo texto novo da barra.
-
-**O que fica.** Várias janelas na barra (Alt+1..9, F2) esperam mais de um
-cliente no socket; as apps instaladas no menu esperam o app Ajustes (5b),
-que é quem registra uma app; a abelha que traz a oferta e o zoom na célula
-são os próximos movimentos.
-
-## 2026-10-20 - A colmeia ganha barras, painéis e células com relevo
-
-O terceiro passo da fatia 5: a cena em volta da janela passa a ter o
-mesmo visual que ela. O esboço `cena.png` da proposta virou quadro de
-referência.
-
-**Na linguagem (`qs:`).** Uma tag nova, `qs:bar side="top|bottom"`, com
-`title=` (na cor de destaque), `left=` e `right=`; os textos aceitam os
-campos da própria tela, `{clock}`, `{level}`, `{cores}`, `{host}` e
-`{offers}`, e recusam os campos de evento (esses vão num `qs:say`). O
-`qs:offers` e o `qs:notices` ganham `title=`: com título viram painéis com
-moldura em relevo, sombra de 3 px e barra de título, da altura das suas
-linhas. Uma barra por lado; o esquema, o modelo, o compilador, a
-referência (`docs/targets/screen.md`, com a seção "The look of the scene"
-e a tabela dos campos) e o dataset da feature acompanham.
-
-**No daemon.** `world.rs` desenha as barras (14 px em cima, 12 embaixo) e
-os painéis com a paleta e o `bevel_out` de `window.rs`; o que a Hive diz
-(`qs:say`) passa a aparecer à esquerda da barra de baixo enquanto dura, e
-só sobre uma página continua na faixa própria, para ser lido por cima
-dela. Os fatos das barras (`World::set_facts`: nome da máquina lido de
-`/proc/sys/kernel/hostname`, núcleos do chooser, hora local) são dados
-pelo `main.rs` duas vezes por segundo; a tela de um teste não os tem, por
-isso mostra `--:--` e `1 cores` e os quadros são iguais em qualquer
-máquina. A observação diz `bars` com os campos preenchidos.
-
-**Na arte.** `hive_screen.py` redesenha as células: corpo arredondado de
-cera com relevo (borda clara em cima e à esquerda), sombra de 2 px dentro
-do quadro de 24×24, miolo que mostra o estado (mel, vazio, rachado,
-fumaça, apagado); as cores que as fitas da VM procuram (`#f0aa28` do mel,
-`#1c140c` da rachadura) ficam as mesmas. O `screen.q` reorganiza a
-colmeia: barra em cima, duas colunas de células com passo de 28 px, a
-abelha entre elas e o painel de ofertas, painel de avisos de 308 px
-embaixo, barra embaixo com `{offers} offers`.
-
-**Prova.** Os dez quadros de referência de `tests/play.rs` foram
-redesenhados; o teste do crash e da oferta lê as barras na observação
-(`1 cores · effects · --:--`, `2 offers`, e `fine` depois de subir o
-nível); as fitas `screen-crash` e `screen-page` do Hive lab passam. Os
-textos da cena seguem em inglês como o resto do `screen.q` (a ajuda da
-janela é em português): uma passada de idioma na tela inteira fica para
-quando o app Ajustes tiver a opção.
-
-**A seguir na fatia.** A barra de baixo como barra de tarefas (as janelas
-abertas) e o menu F1 com as ofertas e as apps; depois a gaveta, a abelha
-que traz a oferta, o zoom na célula.
-
-## 2026-10-20 - Movimento em pixel art: gelatina, lâmpada, cortina
-
-O segundo passo da fatia 5: as três transições que o Daniel viu animadas
-nos esboços, agora no daemon, em ticks, sem alfa suave onde a pixel art
-pede pontilhado.
-
-**Como se compõe.** A janela passa a ser desenhada uma vez por quadro
-num canvas só dela, transparente em volta (`World::page_image`), e
-composta sobre a cena escurecida: inteira quando parada, deformada numa
-transição. Isso custa um buffer do tamanho do canvas por quadro só
-enquanto há página; a apresentação parcial continua levando ao display
-só as linhas que mudaram.
-
-**As três.** Gelatina ao abrir: a imagem da janela e da sombra escalada ao
-redor do centro de 60% a 100% com a curva `Back` (um sobressalto), a cena
-escurecendo junto; 12 ticks. Lâmpada ao fechar: a janela sai da lista na
-hora (o teclado volta à cena), mas a última imagem dela verga e é sugada
-para o canto inferior esquerdo, cada coluna convergindo no alvo, o lado
-longe dobrando primeiro; 14 ticks. Cortina ao mostrar a página de novo
-depois de uma ação: a página nova é desenhada inteira e a antiga fica
-onde uma máscara ordenada 4×4 ainda não chegou; 8 ticks.
-
-**Regras.** Nada se move no nível `plain` (um núcleo não tem quadro
-sobrando); `HIVE_SCREEN_MOTION=off` no ambiente da unit desliga. O play
-protocol ganhou `until still` e a observação diz `motion` (tipo, tick,
-duração); `tests/play.rs` guarda um quadro de cada transição no meio do
-caminho (`window-jelly.png`, `window-lamp.png`, `window-curtain.png`) e
-prova que no `plain` a página aparece de uma vez.
-
-**O que fica para os próximos passos.** A dobra (trocar de janela) espera
-mais de uma janela; a gaveta espera o menu F1; a abelha que traz a oferta
-e o zoom na célula esperam a colmeia nova; faísca, treme e o traço do
-foco vêm com os widgets.
-
-## 2026-10-20 - A página vira janela: moldura, relevo, sombra
-
-O primeiro passo da fatia 5 (visual e movimento), depois dos esboços em
-pixel art aprovados: a página na tela deixa de parecer um terminal e vira
-uma janela como as de um gerenciador de janelas mínimo.
-
-**O que mudou no desenho (`window.rs`).** A cena escurece sob a janela e
-aparece em volta dela; a janela tem moldura de 1 px com bisel (claro em
-cima e à esquerda, escuro embaixo e à direita no que é saliente; o
-contrário no que é rebaixado), sombra de 3 px a 50%, barra de título mel
-em dois tons com o título em tinta e a tecla `Esc` desenhada como tecla à
-direita, e barra de estado em relevo com as teclas que valem. Os widgets
-ganharam volume: campo rebaixado (contorno mel com o foco), botão
-saliente (foco em contorno e texto mel; primário com texto mel; perigoso
-em vermelho), caixa de marcar de 8 px com visto, interruptor com trilho e
-botão, radio com quadrado mel, select saliente com seta de três linhas,
-aba ativa como bloco saliente sobre uma régua, tabela com régua sob o
-cabeçalho e zebra, emblemas e alertas em relevo, régua em duas linhas,
-barra de rolagem rebaixada com polegar saliente. Tudo dentro da linha de
-10 px de cada célula, para nada se sobrepor.
-
-**A janela do tamanho do conteúdo.** A largura é a do canvas menos as
-margens (8 px na cena, 16 no nível fino); a altura é a que o conteúdo
-pede mais as barras, até o limite do canvas, e a janela fica centrada:
-uma página curta é uma janela pequena sobre a colmeia, uma longa toma a
-tela e rola. Em células: 49 colunas e até 13 linhas em 320×180; 100 por
-até 29 no nível fino. A observação do play protocol diz `frame` em pixels.
-
-**O que ficou igual.** A árvore de visão, o modelo de teclado, os eventos:
-a página continua a mesma para todo renderizador; só a tela desenha
-diferente. Os quadros de referência foram refeitos; o teste de paridade,
-a fita do laboratório da Hive e os unitários passam sem mudança de
-lógica.
-
-**A seguir na fatia.** A barra inferior com as janelas e o menu F1, a
-colmeia com barras e painéis, e as transições (gelatina, lâmpada, dobra,
-cortina).
-
-## 2026-10-20 - Páginas na tela, 4b: nível fino a 106×36, ABNT2 com acentos, rolagem
-
-A fatia 4b, por cima da 4a integrada ontem.
-
-**Nível fino.** No nível fino o canvas tem dois pixels para cada um da
-cena (640×360), e até aqui a página era desenhada com a fonte em blocos
-2×2, nas mesmas 53×18 células. Agora a página é desenhada pixel a pixel no
-canvas (`Band::unscaled`): 106×36 células, a fonte nítida, quatro vezes o
-conteúdo. É o `sm` do console (80 colunas): um `hbox` com `stack_below`
-deixa de empilhar. Quando o nível muda com uma página aberta, ela reflui
-nas células novas e o foco fica onde estava (`Window::resize`).
-
-**O que a proposta prometia e o que entrou.** A proposta falava numa fonte
-maior, 8×12, 80×30 células. A fonte da tela é uma face 5×7 desenhada à
-mão, glifo a glifo, em `font.py`; uma face 7×9 seriam 95 glifos novos,
-mais o compilador e o esquema para levá-la ao daemon, e não provaria nada
-do mecanismo. No display de 1280×800 da VM, a letra no nível fino fica com
-12×20 pixels, maior que a fonte de um console de texto; se na prática
-ficar pequena, a face maior é a próxima fatia de legibilidade, não esta.
-
-**ABNT2.** O daemon lê `XKBLAYOUT` em `/etc/default/keyboard` ao subir
-(ou `HIVE_SCREEN_KEYBOARD=br` no ambiente da unit) e, no layout `br`, dá
-`ç` na tecla dela, `/` e `?` na tecla ao lado do Shift direito, `;` e `:`
-onde o US tem `/`, e os acentos como teclas mortas (`´` e `` ` `` à
-direita do P, `~` e `^` à direita do Ç, `¨` em Shift+6) compostas com a
-vogal seguinte, como o Latin-1 as tem (`ã`, `é`, `ô`, `ü`, `Ã`...); morta
-e espaço dá o acento, morta e letra que não leva acento dá os dois, Enter
-esquece a que estava esperando. AltGr dá `/ ? ° ² ³ ª º`. Caps Lock só
-vira as letras. Tudo em `input.rs`, com testes de unidade; a fita
-`screen-abnt2.jsonl` do VM lab põe `br` no sistema, reinicia o daemon e
-digita `ação` no teclado real (a, a tecla do ç, a tecla do ~ e o a, o,
-Enter): o programa do usuário recebe `"titulo":"ação"`.
-
-**Rolagem e teclas verticais.** Cima e Baixo vão ao elemento anterior e
-seguinte quando o que tem o foco não as usa (campo de uma linha, botão,
-caixa, barra de abas; um radio, um select, uma tabela e uma área de texto
-ficam com elas); Home e End vão ao primeiro e ao último (num campo, às
-pontas do texto). Revelar o foco deixa uma linha de contexto, e uma barra
-de dois pixels na borda direita diz onde a tela está numa página longa.
-
-**Fora desta fatia.** Stream e history continuam como texto; a face 7×9.
-
-## 2026-10-19 - Páginas na tela: `quantum pixel`, a fatia 4a
-
-A tela da Hive agora também mostra as aplicações da máquina. `quantum
-pixel`, rodado por qualquer usuário local na pasta de um projeto, é o
-quarto renderizador de uma página Quantum, ao lado do navegador, do
-console e do desktop: o mesmo runtime (o servidor da aplicação, aberto no
-próprio processo como o `quantum console` faz), só o desenho muda.
-
-**Como funciona.** O `quantum pixel` conecta no socket do daemon
-(`/run/hive-screen/pixel.sock`, modo 0666 num `RuntimeDirectory` da unit),
-manda cada página como a árvore de visão em JSON (`show`, inteira, a cada
-mudança) e recebe o que o usuário fez, uma linha por evento: `click`,
-`submit` (com os campos do formulário como um navegador postaria),
-`change` (campo de busca, depois da pausa), `navigate`, `reload` e
-`close`. O daemon (`window.rs`) deita a página em células da fonte (53 por
-17 em 320×180), desenha por cima da cena e fica dono do teclado enquanto
-ela mostra. O teclado agora é lido inteiro de `/dev/input` (layout US,
-Shift, Caps Lock, repetição); ABNT2 e teclas mortas ficam para a 4b.
-
-**Sem mouse.** Quatro regras, e nenhuma tecla além das do console: Tab e
-Shift+Tab entre os elementos que reagem, na ordem da página (o focado em
-mel); setas dentro de um (cursor no campo, opção do radio/select, linha e
-botão da tabela, aba); Enter aciona (num campo, envia o formulário);
-Espaço marca; Esc fecha a página e a cena volta inteira, o `quantum
-pixel` termina. A última linha diz as teclas que valem para o que tem o
-foco. Uma página mostrada de novo depois de uma ação mantém o foco no
-mesmo elemento, reconhecido pelo que ele é (tipo e `bind`/texto), não pelo
-número, que muda quando um flash ou um erro entra na árvore.
-
-**Como se prova.** O teste de paridade UI-7 roda o mesmo roteiro (vê,
-preenche, marca, escolhe, clica) num terceiro driver, o da tela: o
-`hive-screen` em modo play com `--pixel-socket`, as teclas pelo protocolo
-e o `quantum pixel` como runtime da página numa thread; o workflow do OS
-roda esse teste contra o binário recém-construído. `tests/play.rs` guarda
-um quadro de referência de uma página (`window.png`); o laboratório da
-Hive lê uma página como dados (`screen-page.jsonl`, com `contains` na op
-`screen` para afirmar um campo de um evento); o laboratório da VM leva uma
-página de um programa de usuário comum até a tela de verdade, digita nela
-pelo teclado real e vê o formulário voltar com o que foi digitado
-(`screen-pixel.jsonl`; `press` aceita agora todas as teclas e `type`).
-
-**O que ficou de fora.** Fonte maior no nível fino e reflow por nível,
-ABNT2 e teclas mortas, rolagem mais polida (4b); F1 com as ofertas da
-Hive por cima da app, um app de ajustes do OS, várias janelas, ofertas
-que abrem páginas (4c).
-
-## 2026-10-19 - A tela apresenta só o que mudou, e divide o console
-
-Duas consolidações da tela, depois das três fatias.
-
-**Só as linhas que mudaram.** Uma cena em repouso não é parada: a abelha
-bate asas dez vezes por segundo, e cada batida custava um quadro inteiro,
-1280×720 pixels (4 MB) escritos no buffer de scanout e transferidos pela
-`virtio-gpu`. Agora o display guarda o último quadro apresentado e compara
-linha a linha (`changed_rows`): só a faixa entre a primeira e a última
-linha diferente é ampliada, escrita e marcada suja. A abelha custa 16
-linhas de 180. Um quadro igual ao anterior não toca o buffer. O nível fino
-com neve continua custando o quadro inteiro, como deve: lá tudo muda.
-Medido no VM lab sob emulação, onde nada é rápido: o quadro da abelha no
-nível 1 custava 75 a 100 ms e passou a 20 ms (a linha que o daemon diz no
-journal, `ms a frame over the first 20 frames`). Ainda é o limite do
-orçamento a 30 fps sob TCG, então a fita dos níveis segue exigindo KVM;
-numa máquina de verdade a diferença é a mesma proporção sobre custos dez
-vezes menores.
-
-**O console é dividido.** Até aqui o `hive-screen` segurava o `tty1` e não
-tratava Ctrl+Alt+F2: o console serial e o SSH eram o caminho para o grove.
-Agora o terminal fica em modo `VT_PROCESS`: o kernel manda um sinal antes
-de trocar, o daemon solta o DRM (`DROP_MASTER`, para o console de texto
-poder desenhar na mesma placa), responde `VT_RELDISP` e fica esperando sem
-desenhar e sem aceitar teclas; no sinal de volta, retoma o master (quem foi
-master pode voltar a ser sem privilégio), põe o modo de novo e desenha o
-quadro inteiro. A fita `screen-vt.jsonl` faz `chvt 2` no guest, espera o
-mel sumir do `screendump`, `chvt 1`, e espera o mel voltar. `until_shot`
-ganhou `lacks`, esperar uma cor sumir.
-
-## 2026-10-19 - A tela cresce com os núcleos: níveis de apresentação
-
-A terceira fatia da tela, o requisito experimental: a interface escala com
-os núcleos que a VM dá. Não é "fazer uma GPU", é flexibilidade. O quanto o
-`hive-screen` mostra é um **nível de apresentação** (`level.rs`), escolhido
-enquanto roda pelo tempo de quadro que mede, nunca acima do teto que os
-núcleos permitem:
-
-| nível | precisa | mostra |
+## 2026-10-20 - Everything in English
+
+The repository's rule (`CODING.md`) is that everything in it is English;
+`os/` had drifted. The Settings app was written in Portuguese (its folder,
+`ajustes`, its module, its services, its tabs, its fields, its messages),
+and so were the screen's help line, the F1 menu and the window's offers
+count, the test pages of `hive-screen` and the Hive lab, two VM tapes,
+this log, `STATUS.md` and `docs/HIVE-STACK.md`. Nobody asked for that: the
+person asking writes in Portuguese, which is no reason for the repository
+to.
+
+**Renamed.** `apps/ajustes` is `apps/settings` (`hive settings`); its
+module `leitura.py` is `machine.py`, its services `settings.machine`,
+`settings.network`, `settings.keyboard`, `settings.screen`, `settings.hive`
+and `settings.ask`; the tabs are Machine, Network, Keyboard, Screen, Hive;
+the buttons say "Ask the Hive"; the network form's source is `dhcp` or
+`static`. The VM tapes are `settings.jsonl`, `settings-hostname.jsonl` and
+`settings-network.jsonl`; `tests/apps/test_ajustes.py` is
+`tests/apps/test_settings.py`.
+
+**The screen says it in English**: "type · arrows · Enter sends · Esc
+closes" and the rest of the help line, "The Hive's offers" over "Enter
+approves · Del dismisses · Esc closes" in the F1 menu, "nothing for now",
+"F1 · 2 offers". The reference frames in `crates/hive-screen/tests/screens/`
+were drawn again (`UPDATE_SCREENS=1`). The test pages are a Tasks page with
+English fields; the Brazilian keyboard's tape types "façade piñata" (ç from
+its own key, ñ from the dead ~ and n) where it typed a Portuguese word.
+
+**Translated**: this log, whole (the entries below say Settings where they
+said Ajustes), `STATUS.md` and `docs/HIVE-STACK.md`. The rule is now
+written in this folder's `CLAUDE.md` too ("Language", under the coding
+conventions).
+
+## 2026-10-20 - Settings, network: the only setting with root, and the only dangerous one
+
+Slice 5d. The network completes the basics Daniel asked for (name, network,
+keyboard) by the same path as the others: request, offer, Enter, actuator.
+Two things set it apart, and both are in the design.
+
+**It is dangerous.** `SetNetwork { interface, dhcp, address, gateway, dns }`
+is `is_dangerous`: a wrong address takes the machine off the network. On the
+screen, the first Enter arms the offer and the second approves it (leaving it
+disarms it); on the dashboard, a confirmation. The value is checked four times,
+always against the same yardstick (`is_valid_network`: interface name, IPv4
+with prefix, IPv4 gateway, up to four DNS servers): in `hive request`, on the
+page, in the whitelist and again in the root step.
+
+**It needs root, and the actuator does not have it.** netplan's D-Bus refuses
+anyone who is not root, and giving root to the actuator would break the house
+rule. So the actuator writes the setting (JSON in `/var/lib/hive/settings/network`),
+empties `network.result` and starts `quantum-network-apply.service`, a root
+oneshot that the manage-units polkit rule already lets it start; the script
+(`scripts/network-apply`, python3 with only the standard library) keeps the
+previous `/etc/netplan/60-hive.yaml` as `60-hive.yaml.before`, writes the new
+one for that interface only (mode 600; cloud-init's file for the same
+interface stays underneath, netplan merges them), applies it and waits up to
+20 s for the interface to have the address (the static one, or any one by
+DHCP). If it does not come, the previous file comes back and is applied again:
+a wrong address never leaves the machine off the network waiting for a hand.
+The result goes to `network.result` ("ok: enp0s1 has 10.0.2.20/24" or
+"failed: ..."), and that is what the actuator answers with.
+
+**On the page.** The Network tab gets the form (interface, source dhcp/static,
+address/prefix, gateway, DNS), which starts from what the first interface
+has; `settings.ask('set-network', ...)` builds the command's words and the
+flash warns that it takes two Enters. On the command line: `hive request set-network
+IFACE dhcp` or `IFACE ADDR/PREFIX [via GATEWAY] [dns A,B]`.
+
+**Proof.** Hive lab: `request-network.jsonl` (static and then DHCP, each one
+an offer on behalf of druid, confirmed, and `SetNetwork` reaches the actuator).
+Unit tests: validation, description, whitelist, CLI, `ask` with the wrong
+fields named before asking, the form on the screen with `ask` swapped.
+VM: `settings-network.jsonl` asks for 10.0.2.20/24 via 10.0.2.2 dns 10.0.2.3,
+arms it with one Enter (the actuator sees nothing), approves it with the
+second, and the real `ip addr` has the static address and loses the lease, the
+default route goes through 10.0.2.2, the netplan file is there with mode 600;
+then it goes back to DHCP, with the `.before` kept and the lease back.
+
+**What stays out, on purpose.** IPv6, more than one interface per request,
+Wi-Fi (no card in the lab; it is another setting, with a secret) and writing
+`/etc/netplan` by hand instead of `netplan apply`.
+
+## 2026-10-20 - Settings, changing: the page asks, the Hive offers, Enter approves, the actuator executes
+
+Slice 5c, by path A of the proposal (the recommended one; Daniel named no
+other): nothing that changes the system goes outside the Hive's door.
+
+**The request.** A new message on the user socket,
+`HiveMessage::UserRequest { action, reason }`, which any local user can send
+and which only accepts the settings (`Action::is_a_setting`: `SetHostname`,
+`SetKeyboard`, `SetScreenLevel`; any other action is refused with a warning in
+the log). The cortex turns it into an offer on behalf of whoever asked
+(`offer_request`: a notification of type `request`, title "druid asks: name
+the machine forge", fields `user`, `action`, `what`, `count`), stored like any
+suggestion; whoever is at the console approves it with Enter (or F1 over a
+page) and the actuator executes it through the whitelist.
+
+**The `hive` command.** The Hive's protocol is bincode, which Python does not
+speak; instead of teaching it, the shell launcher became a Rust binary
+(`crates/hive-cli`): `hive settings` opens the app, `hive apps` lists them,
+`hive request set-hostname NAME | set-keyboard LAYOUT [MODEL] |
+set-screen-level auto|plain|effects|fine [--reason TEXT]` sends the request.
+The app's `settings.ask` service runs that command through the third door,
+`ask`, the only one that changes anything, and only by asking; the "Ask the
+Hive" buttons on the Machine, Keyboard and Screen tabs call `q:` actions that
+invoke it and show the answer in the flash.
+
+**The actions, in the actuator.** `set-hostname` runs `hostnamectl set-hostname`
+over D-Bus with polkit's permission for `_hive-act`
+(`61-druidos-hive-settings.rules`: only the name, nothing else of hostnamed).
+The keyboard was going through `localectl set-x11-keymap`, but the VM showed
+that Ubuntu's localed refuses ("Setting X11 and console keymaps is not
+supported in Debian"); so `set-keyboard` and `set-screen-level` do not need
+root: they write or delete `keyboard` (`br abnt2`) and `screen-level` in
+`/var/lib/hive/settings`, the actuator's `StateDirectory`, readable by all,
+and `/etc/default/keyboard` stays as the installer left it. The whitelist gets
+the three permits (`qh:allow action=` in `hive.q`, two per minute) and refuses
+a value that hostnamectl would not accept or the screen would not read (host
+label; us/br layouts with their models; level 0–2).
+
+**The screen follows live.** Twice a second the daemon rereads the keyboard
+(`Layout::detect`: the environment, then the Hive's setting, then the system
+file; `Keyboards::set_layout`, without restarting) and the level file (pins
+or releases the chooser; `HIVE_SCREEN_LEVEL` in the environment still takes
+precedence), and reports it in the log and in the `status` it sends to the
+page's runtime. A request is an event of its own in the scene
+(`qs:on event="request"`: "{user} asks: {what}") and enters the offers panel
+like any offer.
+
+**Proof.** Hive lab: `request-hostname.jsonl` (the request becomes an offer on
+behalf of druid, nothing runs until it is approved, the actuator receives
+`SetHostname`; a `RestartService` request never becomes an offer). Unit tests:
+validation and description of the actions, the whitelist closed and open, the
+user socket, the words of `hive request`. `tests/apps/test_settings.py`:
+`ask` with the `ask` door swapped and the click on "Ask the Hive" on the screen.
+VM: `settings-hostname.jsonl` asks for the name, the keyboard and the level as
+druid, approves each one with Enter on the real keyboard, and `hostname` and
+the two setting files change (`/etc/default/keyboard` does not), with the
+screen rereading the keyboard ("keyboard layout br (ABNT2)") and the level
+("level 0 pinned by the Hive's settings") without restarting. A new offer takes
+the focus when the previous one has already been answered: Enter answers what
+is waiting.
+
+**What remains.** The network (5d, `set-network`, dangerous, double Enter,
+previous file kept); the text console's keyboard (tty2), which belongs to the
+system's `console-setup` and not to the Hive; a limit on pending requests per
+user.
+
+## 2026-10-20 - Settings, reading: the app, and the Quantum runtime inside the system
+
+Slice 5b. The app Daniel asked for ("an admin screen with the PC's name,
+network, keyboard, everything on screen") reading the real machine, and what
+was missing for it to run.
+
+**What was missing.** Neither the lab's VM nor the ISO had Quantum's Python
+runtime: `quantum pixel` had only been proven by a raw socket client. Now the
+runtime goes with the Hive: the dependencies (flask, yaml, sqlparse, requests,
+bcrypt) as Ubuntu packages in the VM's base (`PACKAGES`, `BASE_VERSION` 7)
+and in the ISO's image; the repository's `quantum/` package copied to
+`/usr/lib/python3/dist-packages` (the lab's `stage()` puts it next to the
+binaries and a per-file hash decides what to reinstall); `/usr/bin/quantum`
+and `/usr/bin/hive` (`hive settings` opens the app on the screen as the user
+who called it; `hive apps` lists them; `/usr/share/quantum-os/apps`). Textual
+stays out (Ubuntu's is too old): on the machine the app runs on the screen and
+in the browser, not in the console. The ISO is still not validated here.
+
+**The app (`apps/settings`).** Five tabs of a `ui:tabpanel`: Machine (name,
+system, kernel, uptime, cores, memory, disk), Network (each interface with
+address, state and DHCP/static source; gateway; DNS), Keyboard (the system's
+layout and what the screen reads), Screen (level, choice, cores, frame cost,
+motion) and Hive (the daemons and their state, what the whitelist allows).
+Each tab is a service of `machine.py`, stdlib only, which reads what anyone
+can read (`/proc`, `/etc/default/keyboard`, `/etc/hive/whitelist.toml`,
+`ip -j addr`, `ip -j route`, `resolvectl`, `systemctl is-active`) through two
+doors, `run` and `read`, which the test swaps for a canned machine; nothing
+raises an error: without `ip` or without the screen it reads "not read". The
+Hive tab's "latest offers" were left out: the journal is not for the ordinary
+user.
+
+**The screen's status.** The proposal said `{"op":"status"}` requested by the
+page; the socket accepts only one client and the service runs in another
+thread of the same process, so the daemon pushes: `{"event":"status",...}` on
+connecting and at every change (level, pinned or not, cores, motion, keyboard,
+frame cost, scene), `Runtime::status`; the client waits half a second for it
+before the first page and keeps it in `screen_status()`.
+
+**What the VM showed.** The first run failed: the app's server opened
+`logs/quantum.log` inside `/usr/share`, which does not belong to the user. The
+installed app does not write a log to a file (`logging: file: false`) and the
+runtime now warns and carries on with the console only when the log directory
+is not writable. The `settings.jsonl` tape then passed (121 s): `hive settings`
+as druid, "page: Settings" in the journal, the view the app's server answers
+with `name: quantum-lab`, `cores: 4`, `level:` and `hive-screen: active`,
+arrows through the tabs on the real keyboard, Esc.
+
+**Proof outside the VM.** `tests/apps/test_settings.py`: the services against
+the canned machine, and the page in the browser, in the console and on the
+screen (the parity test's drivers), where the Screen tab says
+`level: effects (1)`.
+
+**Next.** The change through the Hive (5c): the page asks, the cortex offers,
+Enter on the screen approves, the actuator executes through the whitelist.
+
+## 2026-10-20 - The F1 menu and the window's button on the bar
+
+The fourth step of slice 5: the Hive's offers arrive on top of whatever is on
+the screen, and the bottom bar starts to be a taskbar.
+
+**The menu.** F1 opens a drawer in the bottom-left corner, in the look of the
+windows (`window::draw_menu`: a frame with a shadow, a honey title bar "The
+Hive's offers", one line per offer with the focused one raised and in honey,
+a status bar "Enter approves · Del dismisses · Esc closes"); empty, it says
+"nothing for now". While it is out, the keys are its own: arrows, Enter
+approves (twice for the dangerous one), Del dismisses, Esc closes and the page
+listens to the keyboard again. `approve()` and `dismiss()` moved out of
+`key()` to serve the scene's panel and the menu. Without a page, F1 opens the
+same menu over the comb.
+
+**The drawer.** It slides in from the left in 8 ticks (`Quad`/`Out`) and
+pushes the comb 4 px to the right while it is out (the bars stay); it closes
+the same way. In `plain` it opens and closes at once. The observation says
+`menu` (`open`, `t`, `ticks`), `until still` waits for the drawer to stop and
+`until menu` waits for the menu to be open or closed.
+
+**The bar.** The window's status bar shows "F1 · N offers" in honey on the
+right when there are offers waiting, and the help is cut at a separator
+(`cut_at_separator`), never in the middle of a word. The scene's bottom bar
+shows the open page as a raised button on the left, like a taskbar;
+`screen.q` says `{offers} offers · F1` on the right.
+
+**Proof.** `tests/play.rs` gets the test of the menu over the page (offers
+arrive with the page open, F1 halfway, approval of the dangerous one with two
+Enters, Del, Esc giving the keyboard back to the page, the empty menu over the
+comb, `plain` at once) and four frames: `window-offers.png`,
+`menu-drawer.png`, `menu.png`, `menu-empty.png`; the other frames were redone
+for the bar's new text.
+
+**What remains.** Several windows on the bar (Alt+1..9, F2) wait for more than
+one client on the socket; the installed apps in the menu wait for the Settings
+app (5b), which is what registers an app; the bee that brings the offer and
+the zoom into the cell are the next motions.
+
+## 2026-10-20 - The comb gets bars, panels and cells in relief
+
+The third step of slice 5: the scene around the window takes on the same look
+as the window. The proposal's sketch `cena.png` became a reference frame.
+
+**In the language (`qs:`).** A new tag, `qs:bar side="top|bottom"`, with
+`title=` (in the highlight color), `left=` and `right=`; the texts accept the
+screen's own fields, `{clock}`, `{level}`, `{cores}`, `{host}` and `{offers}`,
+and refuse the event fields (those go in a `qs:say`). `qs:offers` and
+`qs:notices` get `title=`: with a title they become panels with a raised
+frame, a 3 px shadow and a title bar, as tall as their lines. One bar per
+side; the schema, the model, the compiler, the reference
+(`docs/targets/screen.md`, with the section "The look of the scene" and the
+table of fields) and the feature's dataset follow along.
+
+**In the daemon.** `world.rs` draws the bars (14 px at the top, 12 at the
+bottom) and the panels with the palette and the `bevel_out` of `window.rs`;
+what the Hive says (`qs:say`) now appears on the left of the bottom bar while
+it lasts, and only over a page does it stay in its own strip, so it can be
+read on top of the page. The bars' facts (`World::set_facts`: the machine's
+name read from `/proc/sys/kernel/hostname`, the chooser's cores, local time)
+are given by `main.rs` twice a second; a test's screen does not have them, so
+it shows `--:--` and `1 cores` and the frames are the same on any machine. The
+observation says `bars` with the fields filled in.
+
+**In the art.** `hive_screen.py` redraws the cells: a rounded wax body in
+relief (a light edge at the top and on the left), a 2 px shadow inside the
+24×24 frame, a center that shows the state (honey, empty, cracked, smoke,
+off); the colors the VM tapes look for (`#f0aa28` for the honey, `#1c140c`
+for the crack) stay the same. `screen.q` reorganizes the comb: a bar at the
+top, two columns of cells with a 28 px pitch, the bee between them and the
+offers panel, a 308 px notices panel at the bottom, a bottom bar with
+`{offers} offers`.
+
+**Proof.** The ten reference frames of `tests/play.rs` were redrawn; the crash
+and offer test reads the bars in the observation (`1 cores · effects · --:--`,
+`2 offers`, and `fine` after raising the level); the Hive lab's `screen-crash`
+and `screen-page` tapes pass. The scene's texts stay in English like the rest
+of `screen.q` (the window's help is in Portuguese): a language pass over the
+whole screen is left for when the Settings app has the option.
+
+**Next in the slice.** The bottom bar as a taskbar (the open windows) and the
+F1 menu with the offers and the apps; then the drawer, the bee that brings the
+offer, the zoom into the cell.
+
+## 2026-10-20 - Motion in pixel art: jelly, lamp, curtain
+
+The second step of slice 5: the three transitions Daniel saw animated in the
+sketches, now in the daemon, in ticks, without smooth alpha where pixel art
+calls for dithering.
+
+**How it is composed.** The window is now drawn once per frame on a canvas of
+its own, transparent around it (`World::page_image`), and composited over the
+darkened scene: whole when still, deformed during a transition. This costs a
+canvas-sized buffer per frame only while there is a page; partial presentation
+still takes only the lines that changed to the display.
+
+**The three.** Jelly on opening: the image of the window and its shadow scaled
+around the center from 60% to 100% with the `Back` curve (a jolt), the scene
+darkening along with it; 12 ticks. Lamp on closing: the window leaves the list
+at once (the keyboard goes back to the scene), but its last image bends and is
+sucked into the bottom-left corner, each column converging on the target, the
+far side folding first; 14 ticks. Curtain when showing the page again after an
+action: the new page is drawn whole and the old one stays where a 4×4 ordered
+mask has not yet reached; 8 ticks.
+
+**Rules.** Nothing moves at the `plain` level (a single core has no frame to
+spare); `HIVE_SCREEN_MOTION=off` in the unit's environment turns it off. The
+play protocol got `until still` and the observation says `motion` (kind, tick,
+duration); `tests/play.rs` keeps one frame of each transition halfway through
+(`window-jelly.png`, `window-lamp.png`, `window-curtain.png`) and proves that
+at `plain` the page appears at once.
+
+**What is left for the next steps.** The fold (switching windows) waits for
+more than one window; the drawer waits for the F1 menu; the bee that brings
+the offer and the zoom into the cell wait for the new comb; spark, shake and
+the focus trace come with the widgets.
+
+## 2026-10-20 - The page becomes a window: frame, relief, shadow
+
+The first step of slice 5 (look and motion), after the pixel-art sketches were
+approved: the page on the screen stops looking like a terminal and becomes a
+window like those of a minimal window manager.
+
+**What changed in the drawing (`window.rs`).** The scene darkens under the
+window and shows around it; the window has a 1 px frame with a bevel (light at
+the top and on the left, dark at the bottom and on the right for what is
+raised; the opposite for what is sunken), a 3 px shadow at 50%, a two-tone
+honey title bar with the title in ink and the `Esc` key drawn as a key on the
+right, and a raised status bar with the keys that apply. The widgets gained
+volume: a sunken field (honey outline when focused), a raised button (focus as
+an outline and honey text; primary with honey text; dangerous in red), an 8 px
+checkbox with a check mark, a switch with a track and a knob, a radio with a
+honey square, a raised select with a three-line arrow, the active tab as a
+raised block over a rule, a table with a rule under the header and zebra
+stripes, badges and alerts in relief, a two-line rule, a sunken scroll bar
+with a raised thumb. All within each cell's 10 px line, so nothing overlaps.
+
+**The window sized to its content.** The width is the canvas's minus the
+margins (8 px in the scene, 16 at the fine level); the height is what the
+content asks for plus the bars, up to the canvas's limit, and the window is
+centered: a short page is a small window over the comb, a long one takes over
+the screen and scrolls. In cells: 49 columns and up to 13 lines at 320×180;
+100 by up to 29 at the fine level. The play protocol's observation says
+`frame` in pixels.
+
+**What stayed the same.** The view tree, the keyboard model, the events: the
+page stays the same for every renderer; only the screen draws differently. The
+reference frames were redone; the parity test, the Hive lab's tape and the
+unit tests pass with no change in logic.
+
+**Next in the slice.** The bottom bar with the windows and the F1 menu, the
+comb with bars and panels, and the transitions (jelly, lamp, fold, curtain).
+
+## 2026-10-20 - Pages on the screen, 4b: fine level at 106×36, ABNT2 with accents, scrolling
+
+Slice 4b, on top of 4a, integrated yesterday.
+
+**Fine level.** At the fine level the canvas has two pixels for each one of
+the scene's (640×360), and until now the page was drawn with the font in 2×2
+blocks, in the same 53×18 cells. Now the page is drawn pixel by pixel on the
+canvas (`Band::unscaled`): 106×36 cells, the crisp font, four times the
+content. It is the console's `sm` (80 columns): an `hbox` with `stack_below`
+stops stacking. When the level changes with a page open, the page reflows into
+the new cells and the focus stays where it was (`Window::resize`).
+
+**What the proposal promised and what went in.** The proposal spoke of a
+larger font, 8×12, 80×30 cells. The screen's font is a 5×7 face drawn by hand,
+glyph by glyph, in `font.py`; a 7×9 face would be 95 new glyphs, plus the
+compiler and the schema to carry it to the daemon, and would prove nothing
+about the mechanism. On the VM's 1280×800 display, a letter at the fine level
+is 12×20 pixels, larger than a text console's font; if in practice it turns
+out small, the larger face is the next legibility slice, not this one.
+
+**ABNT2.** The daemon reads `XKBLAYOUT` in `/etc/default/keyboard` on startup
+(or `HIVE_SCREEN_KEYBOARD=br` in the unit's environment) and, in the `br`
+layout, gives `ç` on its own key, `/` and `?` on the key next to the right
+Shift, `;` and `:` where US has `/`, and the accents as dead keys (`´` and
+`` ` `` to the right of P, `~` and `^` to the right of Ç, `¨` on Shift+6)
+composed with the following vowel, as Latin-1 has them (`ã`, `é`, `ô`, `ü`,
+`Ã`...); a dead key and space gives the accent, a dead key and a letter that
+takes no accent gives both, Enter forgets the one that was waiting. AltGr
+gives `/ ? ° ² ³ ª º`. Caps Lock only flips the letters. All in `input.rs`,
+with unit tests; the VM lab's `screen-abnt2.jsonl` tape sets `br` on the
+system, restarts the daemon and types `ação` on the real keyboard (a, the ç
+key, the ~ key and a, o, Enter): the user's program receives
+`"titulo":"ação"`.
+
+**Scrolling and vertical keys.** Up and Down go to the previous and next
+element when the one with the focus does not use them (a one-line field, a
+button, a checkbox, a tab bar; a radio, a select, a table and a text area keep
+them); Home and End go to the first and the last (in a field, to the ends of
+the text). Revealing the focus leaves one line of context, and a two-pixel bar
+on the right edge tells where the screen is in a long page.
+
+**Outside this slice.** Stream and history stay as text; the 7×9 face.
+
+## 2026-10-19 - Pages on the screen: `quantum pixel`, slice 4a
+
+The Hive's screen now also shows the machine's applications. `quantum
+pixel`, run by any local user in a project's folder, is the fourth
+renderer of a Quantum page, alongside the browser, the console and the
+desktop: the same runtime (the application's server, opened in-process
+as `quantum console` does), only the drawing changes.
+
+**How it works.** `quantum pixel` connects to the daemon's socket
+(`/run/hive-screen/pixel.sock`, mode 0666 in the unit's `RuntimeDirectory`),
+sends each page as the view tree in JSON (`show`, whole, on every
+change) and receives what the user did, one line per event: `click`,
+`submit` (with the form's fields as a browser would post them),
+`change` (search field, after the pause), `navigate`, `reload` and
+`close`. The daemon (`window.rs`) lays the page out in font cells (53 by
+17 in 320×180), draws it over the scene and owns the keyboard while it
+is showing. The keyboard is now read entirely from `/dev/input` (US
+layout, Shift, Caps Lock, repeat); ABNT2 and dead keys are left for 4b.
+
+**No mouse.** Four rules, and no keys beyond the console's: Tab and
+Shift+Tab move between the elements that react, in page order (the
+focused one in honey); arrows move within one (cursor in the field,
+radio/select option, table row and button, tab); Enter activates (in a
+field, it submits the form); Space checks; Esc closes the page, the
+scene comes back whole and `quantum pixel` exits. The last line says
+which keys apply to whatever has the focus. A page shown again after an
+action keeps the focus on the same element, recognized by what it is
+(type and `bind`/text), not by its number, which changes when a flash
+or an error enters the tree.
+
+**How it is proven.** The UI-7 parity test runs the same script (sees,
+fills in, checks, picks, clicks) on a third driver, the screen's:
+`hive-screen` in play mode with `--pixel-socket`, the keys through the
+protocol and `quantum pixel` as the page's runtime in a thread; the OS
+workflow runs this test against the freshly built binary.
+`tests/play.rs` keeps a reference frame of a page (`window.png`); the
+Hive lab reads a page as data (`screen-page.jsonl`, with `contains` in
+the `screen` op to assert a field of an event); the VM lab takes a page
+from an ordinary user's program to the real screen, types into it
+through the real keyboard and sees the form come back with what was
+typed (`screen-pixel.jsonl`; `press` now accepts all keys and `type`).
+
+**What was left out.** A larger font at the fine level and reflow per
+level, ABNT2 and dead keys, more polished scrolling (4b); F1 with the
+Hive's offers over the app, an OS Settings app, multiple windows, offers
+that open pages (4c).
+
+## 2026-10-19 - The screen presents only what changed, and shares the console
+
+Two consolidations of the screen, after the three slices.
+
+**Only the rows that changed.** A scene at rest is not still: the bee
+flaps its wings ten times per second, and each flap cost a whole frame,
+1280×720 pixels (4 MB) written to the scanout buffer and transferred
+through `virtio-gpu`. Now the display keeps the last frame presented and
+compares it row by row (`changed_rows`): only the band between the first
+and the last differing row is scaled up, written and marked dirty. The
+bee costs 16 rows out of 180. A frame equal to the previous one does not
+touch the buffer. The fine level with snow still costs the whole frame,
+as it should: there everything changes. Measured in the VM lab under
+emulation, where nothing is fast: the bee's frame at level 1 cost 75 to
+100 ms and went down to 20 ms (the line the daemon writes in the
+journal, `ms a frame over the first 20 frames`). That is still the limit
+of the budget at 30 fps under TCG, so the levels tape still requires
+KVM; on a real machine the difference is the same proportion over costs
+ten times smaller.
+
+**The console is shared.** Until now `hive-screen` held `tty1` and did
+not handle Ctrl+Alt+F2: the serial console and SSH were the way to reach
+grove. Now the terminal is in `VT_PROCESS` mode: the kernel sends a
+signal before switching, the daemon releases DRM (`DROP_MASTER`, so the
+text console can draw on the same card), answers `VT_RELDISP` and waits
+without drawing and without accepting keys; on the signal to come back,
+it takes master again (whoever was master can become it again without
+privilege), sets the mode again and draws the whole frame. The
+`screen-vt.jsonl` tape does `chvt 2` in the guest, waits for the honey
+to disappear from the `screendump`, does `chvt 1`, and waits for the
+honey to come back. `until_shot` gained `lacks`, waiting for a color to
+disappear.
+
+## 2026-10-19 - The screen grows with the cores: presentation levels
+
+The screen's third slice, the experimental requirement: the interface
+scales with the cores the VM gives. It is not "making a GPU", it is
+flexibility. How much `hive-screen` shows is a **presentation level**
+(`level.rs`), chosen while it runs by the frame time it measures, never
+above the ceiling the cores allow:
+
+| level | needs | shows |
 |---|---|---|
-| 0 `plain` | 1 núcleo | a cena como declarada, sem partículas, no máximo 15 quadros por segundo |
-| 1 `effects` | 2 núcleos | as partículas (`qs:emit` e os `qs:emitter` de `level="1"`), no máximo 30 |
-| 2 `fine` | 4 núcleos | dois pixels para cada um da cena: um tween ou uma partícula cai no seu próprio pixel, a fonte vira blocos; e os `qs:emitter` de `level="2"`, a neve que a cena do OS guarda para esse nível |
+| 0 `plain` | 1 core | the scene as declared, without particles, at most 15 frames per second |
+| 1 `effects` | 2 cores | the particles (`qs:emit` and the `qs:emitter`s with `level="1"`), at most 30 |
+| 2 `fine` | 4 cores | two pixels for each one of the scene's: a tween or a particle lands on its own pixel, the font becomes blocks; and the `qs:emitter`s with `level="2"`, the snow the OS scene keeps for this level |
 
-Um nível muda como a cena aparece, nunca o que acontece nela: os mesmos
-ticks rodam em qualquer nível, as regras fazem o mesmo. Quem escolhe é o
-`Chooser`: a média móvel do custo de um quadro (desenhar mais apresentar)
-abaixo de 15% do período do nível, por pelo menos 20 quadros e 2 segundos,
-sobe um nível, se os núcleos deixam; acima de 60% desce, e o nível que se
-provou caro só é tentado de novo meio minuto depois. Os núcleos vêm de
-`available_parallelism` duas vezes por segundo (a afinidade do processo e a
-cota do cgroup): uma vCPU que entra por hotplug conta em meio segundo, uma
-que sai derruba o nível na hora. Uma cena parada continua não custando
-nada em nenhum nível: só se mede quadro desenhado.
+A level changes how the scene looks, never what happens in it: the same
+ticks run at any level, the rules do the same. The one that chooses is
+the `Chooser`: the moving average of a frame's cost (drawing plus
+presenting) below 15% of the level's period, for at least 20 frames and
+2 seconds, moves up one level, if the cores allow it; above 60% it moves
+down, and a level that proved expensive is only tried again half a
+minute later. The cores come from `available_parallelism` twice per
+second (the process's affinity and the cgroup's quota): a vCPU that
+comes in by hotplug counts within half a second, one that leaves drops
+the level at once. A still scene still costs nothing at any level: only
+a drawn frame is measured.
 
-O quadro é desenhado por faixas de linhas, uma thread por núcleo (até oito,
-`std::thread::scope`): cada faixa desenha a mesma lista de nós recortada
-às suas linhas, então a imagem é a mesma com uma faixa ou quarenta, e o
-teste prova isso pixel a pixel em ×1 e em ×2. A ampliação para o dumb
-buffer do DRM também vai por faixas. No nível fino o canvas tem `scale`
-pixels por pixel da cena, e as primitivas recebem coordenadas da cena:
-`fill_rect_f` para as partículas (posição e tamanho fracionários), `blit`
-e `text` multiplicam. Em ×1 a conta é exatamente a de antes: a cena de
-`main` desenhada pelo daemon novo bate com as referências antigas pixel a
-pixel (as referências `crash` e `offer` mudaram só porque a cena ganhou um
-emissor e as sementes das rajadas andaram uma casa).
+The frame is drawn in bands of rows, one thread per core (up to eight,
+`std::thread::scope`): each band draws the same list of nodes clipped to
+its rows, so the image is the same with one band or forty, and the test
+proves it pixel by pixel at ×1 and at ×2. Scaling up into the DRM dumb
+buffer also goes by bands. At the fine level the canvas has `scale`
+pixels per scene pixel, and the primitives receive scene coordinates:
+`fill_rect_f` for the particles (fractional position and size), `blit`
+and `text` multiply. At ×1 the math is exactly what it was before: the
+`main` scene drawn by the new daemon matches the old references pixel by
+pixel (the `crash` and `offer` references changed only because the scene
+gained an emitter and the bursts' seeds moved one place).
 
-Na linguagem, uma coisa: `qs:emitter level="1|2"`, o nível mais baixo em
-que o emissor toca (1 por padrão; 3 é recusado com a linha). A cena do OS
-ganha `<qs:emitter particles="snow" level="2">`. O play protocol ganha
-`{"op":"level","level":N}` e `frame` aceita `bands` (o teste desenha o
-quadro fino inteiro e em 3 e em 8 faixas contra a mesma referência).
+In the language, one thing: `qs:emitter level="1|2"`, the lowest level
+at which the emitter plays (1 by default; 3 is refused, citing the
+line). The OS scene gains `<qs:emitter particles="snow" level="2">`. The
+play protocol gains `{"op":"level","level":N}` and `frame` accepts
+`bands` (the test draws the fine frame whole and in 3 and in 8 bands
+against the same reference).
 
-No VM lab a máquina passa a 4 vCPUs (`BASE_VERSION` 6) e o op `cpus`
-deixa 1 a 4 delas online no guest (`/sys/devices/system/cpu/cpuN/online`),
-esperando o `nproc` concordar: para um programa, uma vCPU offline é o que
-uma desligada seria, e um `restore` traz de volta as do snapshot sem
-cerimônia. O hotplug do QEMU foi a primeira tentativa (`-smp 2,maxcpus=4`,
-`device_add` dos slots de `query-hotpluggable-cpus`): o `device_add` passa,
-mas o kernel deste guest sobe com `smpboot: Allowing 2 CPUs, 0 hotplug
-CPUs` e nunca vê a nova. `shot` ganha `lacks`, a cor que não pode estar na
-tela. A fita `screen-levels.jsonl` segue o nível com os núcleos: 2 online
-e `cores: 2, level up to 1`, a tela sem neve; 4 online e `cores: 4, level
-up to 2`, depois `level 2 (fine)`, a cena a ×2 no display e a cor da neve
-no `screendump`; 2 de novo, nível 1 e a cena a ×4 outra vez. Essa fita
-diz `// needs: kvm` e o lab a pula onde `/dev/kvm` não serve (o CI tem):
-sob emulação só apresentar o buffer de 1280×800 custa 80 ms por quadro, o
-orçamento é do emulador e não da máquina, e a tela fica honestamente em
-`plain` com qualquer número de núcleos (o teto, `cores: 4, level up to 2`,
-aparece do mesmo jeito). Para quem sabe mais que a medida, ou para tirar
-uma captura, `HIVE_SCREEN_LEVEL=N` no ambiente da unit prega o nível.
+In the VM lab the machine goes to 4 vCPUs (`BASE_VERSION` 6) and the
+`cpus` op leaves 1 to 4 of them online in the guest
+(`/sys/devices/system/cpu/cpuN/online`), waiting for `nproc` to agree:
+to a program, an offline vCPU is what a switched-off one would be, and a
+`restore` brings back the snapshot's ones without ceremony. QEMU's
+hotplug was the first attempt (`-smp 2,maxcpus=4`, `device_add` of the
+slots from `query-hotpluggable-cpus`): `device_add` succeeds, but this
+guest's kernel boots with `smpboot: Allowing 2 CPUs, 0 hotplug CPUs` and
+never sees the new one. `shot` gains `lacks`, the color that must not be
+on the screen. The `screen-levels.jsonl` tape follows the level with the
+cores: 2 online and `cores: 2, level up to 1`, the screen without snow;
+4 online and `cores: 4, level up to 2`, then `level 2 (fine)`, the scene
+at ×2 on the display and the snow's color in the `screendump`; 2 again,
+level 1 and the scene at ×4 once more. This tape says `// needs: kvm`
+and the lab skips it where `/dev/kvm` is not usable (CI has it): under
+emulation just presenting the 1280×800 buffer costs 80 ms per frame, the
+budget belongs to the emulator and not to the machine, and the screen
+honestly stays at `plain` with any number of cores (the ceiling,
+`cores: 4, level up to 2`, shows up just the same). For whoever knows
+better than the measurement, or to take a capture, `HIVE_SCREEN_LEVEL=N`
+in the unit's environment pins the level.
 
-De quebra, três coisas. O buffer de scanout era mapeado (`mmap`) a cada
-quadro, e um mapeamento novo custa uma page fault por página: sob emulação
-eram 128 ms por quadro, que derrubavam a tela para `plain` com dois
-núcleos; agora é mapeado uma vez, pela vida do display (`drm-ffi` dá o
-offset, `libc::mmap` o resto). O laço do daemon consumia o `dirty` antes
-de olhar o relógio, então uma mudança única dentro dos 33 ms depois de um
-quadro se perdia até a próxima (as animações mascaravam); agora o relógio
-vem primeiro. E um `done.actual.png` que tinha ido parar no repositório
-saiu, com `*.actual.png` no `.gitignore`. O daemon diz no journal, uma vez
-por visita a um nível, quanto custa um quadro ali. E a fita do console
-espera a rachadura da célula (`#1c140c`, cor de nenhum outro quadro, que
-fica até o mel voltar) em vez da fumaça, que dura 1,5 s e as consultas ao
-journal sob emulação às vezes perdiam.
+On top of that, three things. The scanout buffer was mapped (`mmap`) on
+every frame, and a new mapping costs one page fault per page: under
+emulation that was 128 ms per frame, which dropped the screen to `plain`
+with two cores; now it is mapped once, for the life of the display
+(`drm-ffi` gives the offset, `libc::mmap` the rest). The daemon's loop
+consumed `dirty` before looking at the clock, so a single change within
+the 33 ms after a frame was lost until the next one (the animations
+masked it); now the clock comes first. And a `done.actual.png` that had
+ended up in the repository was removed, with `*.actual.png` in
+`.gitignore`. The daemon writes in the journal, once per visit to a
+level, how much a frame costs there. And the console tape waits for the
+cell's crack (`#1c140c`, a color in no other frame, which stays until
+the honey comes back) instead of the smoke, which lasts 1.5 s and which
+the journal queries under emulation sometimes missed.
 
-Limite desta fatia: não há nível acima do fino; mais núcleos que quatro
-só dão mais faixas. Um nível `smooth` a 60 quadros por segundo caberia na
-mesma tabela quando houver o que mostrar com ele.
+This slice's limit: there is no level above fine; more cores than four
+only give more bands. A `smooth` level at 60 frames per second would fit
+in the same table once there is something to show with it.
 
-## 2026-10-19 - A tela da Hive no console de verdade (DRM, teclado, unit)
+## 2026-10-19 - The Hive's screen on the real console (DRM, keyboard, unit)
 
-A segunda fatia da tela: o `hive-screen` desenha no console da VM. Sem X,
-sem Wayland, sem driver de GPU do nosso lado: abre `/dev/dri/card0`, toma
-o primeiro conector ligado no modo preferido, cria um dumb buffer e
-escreve a cena nele, ampliada por um número inteiro e centrada (1280×720
-é ×4 de 320×180; 1024×768 é ×3 com bordas pretas). Desenha só quando o
-quadro mudou, no máximo 30 vezes por segundo: uma cena parada não custa
-nada. O teclado vem direto de `/dev/input` (os `event*` que têm Enter), e
-o terminal `tty1`, que o systemd dá ao daemon como entrada padrão, vai para
-modo gráfico (`KDSETMODE`) enquanto ele roda, e volta a texto na saída,
-inclusive por SIGTERM.
+The screen's second slice: `hive-screen` draws on the VM's console. No
+X, no Wayland, no GPU driver on our side: it opens `/dev/dri/card0`,
+takes the first connected connector in its preferred mode, creates a
+dumb buffer and writes the scene into it, scaled up by an integer and
+centered (1280×720 is ×4 of 320×180; 1024×768 is ×3 with black
+borders). It draws only when the frame changed, at most 30 times per
+second: a still scene costs nothing. The keyboard comes straight from
+`/dev/input` (the `event*` devices that have Enter), and the `tty1`
+terminal, which systemd gives the daemon as standard input, goes into
+graphics mode (`KDSETMODE`) while it runs, and back to text on exit,
+including on SIGTERM.
 
-`hive-screen.service` roda como `_hive-screen`, usuário próprio nos grupos
-`video` e `input`, com o mesmo hardening dos outros daemons, `DevicePolicy`
-fechada a não ser a placa, os eventos de entrada e o `tty1`, e `Nice=5` e
-`CPUWeight=50` para ceder a vez à synapse. O cortex aceita `hive-screen`
-como dashboard quando vem desse uid (ou de um administrador, como antes).
-Instalado pelo VM lab, pela ISO e pelo pacote, com `/etc/hive/screen/`.
+`hive-screen.service` runs as `_hive-screen`, its own user in the
+`video` and `input` groups, with the same hardening as the other
+daemons, `DevicePolicy` closed except for the card, the input events and
+`tty1`, and `Nice=5` and `CPUWeight=50` to give way to the synapse. The
+cortex accepts `hive-screen` as a dashboard when it comes from that uid
+(or from an administrator, as before). Installed by the VM lab, the ISO
+and the package, with `/etc/hive/screen/`.
 
-O VM lab ganhou uma placa `virtio-gpu` (a base é refeita: `BASE_VERSION`
-4), o op `shot`, que lê o display pelo `screendump` do QMP e conta as cores
-(um decodificador de PNG de trinta linhas, só biblioteca padrão), o
-`until_shot`, e o `press`, que aperta teclas na máquina pelo `send-key`. A
-fita `screen-console.jsonl` segue um crash real: o título em mel no
-display, a fumaça cinza sobre a célula do nginx, a oferta chegando ao daemon
-(no journal), Enter no teclado da máquina, o actuator reiniciando de verdade
-e o mel de volta na célula. Dados e cores, não OCR.
+The VM lab gained a `virtio-gpu` card (the base is rebuilt:
+`BASE_VERSION` 4), the `shot` op, which reads the display through QMP's
+`screendump` and counts the colors (a thirty-line PNG decoder, standard
+library only), `until_shot`, and `press`, which presses keys on the
+machine through `send-key`. The `screen-console.jsonl` tape follows a
+real crash: the title in honey on the display, the grey smoke over
+nginx's cell, the offer reaching the daemon (in the journal), Enter on
+the machine's keyboard, the actuator really restarting and the honey
+back in the cell. Data and colors, not OCR.
 
-De quebra, um bug do transporte do agente do VM lab: um timeout curto deixado
-no socket por uma espera anterior cortava o pedido seguinte, o que só
-aparecia sem KVM, quando o primeiro boot demora. Agora cada pedido põe o seu.
+On top of that, a bug in the VM lab agent's transport: a short timeout
+left on the socket by an earlier wait cut off the next request, which
+only showed up without KVM, when the first boot takes a while. Now each
+request sets its own.
 
-## 2026-10-19 - A tela da Hive: pixel art no console, declarada em Quantum (qs:)
+## 2026-10-19 - The Hive's screen: pixel art on the console, declared in Quantum (qs:)
 
-A interface gráfica do OS, decidida depois de pesar o Godot na VM (Mesa
-llvmpipe, um compositor, ~300 MB e um motor C++ como cliente que aprova
-ações) contra um runtime próprio: ficou o runtime próprio, sem overhead
-nenhum. O que o console mostra é um `q:application type="screen"`,
-`config/screen/screen.q`, com tags `qs:`:
+The OS's graphical interface, decided after weighing Godot in the VM
+(Mesa llvmpipe, a compositor, ~300 MB and a C++ engine as a client that
+approves actions) against a runtime of our own: the runtime of our own
+won, with no overhead at all. What the console shows is a
+`q:application type="screen"`, `config/screen/screen.q`, with `qs:`
+tags:
 
-- `qs:sheet` e `qs:animation` são as folhas de quadros e seus ciclos;
-  `qs:particles` um efeito (os mesmos presets dos jogos); `qs:scene` o
-  que está na tela: `qs:sprite`, `qs:text`, `qs:emitter`, e dois widgets
-  embutidos, `qs:offers` (as ofertas da Hive, que o administrador aprova
-  com o teclado; uma ação perigosa pede Enter duas vezes) e `qs:notices`.
-- `qs:on event="..."` diz o que acontece na cena quando um evento chega:
-  `qs:animate`, `qs:frame`, `qs:show`, `qs:tween` (as mesmas curvas dos
-  jogos), `qs:emit`, `qs:say`. Os eventos são os das regras `qh:`, com os
-  mesmos `{campos}`, mais `notice`, `offer`, `done` e `failed`. O nome de
-  um sprite é como uma regra o alcança: `{service}` em `service-crash`
-  acha o sprite chamado `nginx`, e ele solta fumaça.
-- Nada de statements nem expressões. O compilador (`quantum/runtime/screen`)
-  recusa com a linha o que o arquivo não pode cumprir: folha que não
-  existe, quadro que ela não tem, campo que o evento não tem, alvo que
-  nenhum sprite se chama.
-- A fonte é nossa: 5×7 pixels em células de 6×10, ASCII e Latin-1 com os
-  acentos compostos das letras base, escrita como `font.png` ao lado da
-  cena. A arte (favos de uma colmeia, uma célula por serviço, uma abelha)
-  é de `scripts/art/hive_screen.py`, CC0.
+- `qs:sheet` and `qs:animation` are the frame sheets and their cycles;
+  `qs:particles` an effect (the same presets as the games); `qs:scene`
+  what is on the screen: `qs:sprite`, `qs:text`, `qs:emitter`, and two
+  built-in widgets, `qs:offers` (the Hive's offers, which the
+  administrator approves with the keyboard; a dangerous action asks for
+  Enter twice) and `qs:notices`.
+- `qs:on event="..."` says what happens in the scene when an event
+  arrives: `qs:animate`, `qs:frame`, `qs:show`, `qs:tween` (the same
+  curves as the games), `qs:emit`, `qs:say`. The events are those of the
+  `qh:` rules, with the same `{fields}`, plus `notice`, `offer`, `done`
+  and `failed`. A sprite's name is how a rule reaches it: `{service}` in
+  `service-crash` finds the sprite named `nginx`, and it puffs smoke.
+- No statements or expressions. The compiler (`quantum/runtime/screen`)
+  refuses, citing the line, whatever the file cannot fulfill: a sheet
+  that does not exist, a frame it does not have, a field the event does
+  not have, a target that no sprite is named.
+- The font is ours: 5×7 pixels in 6×10 cells, ASCII and Latin-1 with the
+  accents composed from the base letters, written as `font.png` next to
+  the scene. The art (a comb of honeycomb cells, one cell per service, a
+  bee) is from `scripts/art/hive_screen.py`, CC0.
 
-O daemon é `crates/hive-screen`: carrega `screen.toml` e as folhas (PNG),
-toca a cena a 60 ticks por segundo num canvas, e é cliente do socket de
-usuário do cortex como o dashboard (o cortex o aceita como um). Para a tela
-reagir ao que aconteceu e não às palavras, `Notification` passou a levar
-`kind` e `fields`: a tabela de eventos que vivia na synapse foi para
-`hive-common` (`events.rs`), e o cortex preenche os campos em cada aviso.
-A resposta do actuator vira `done` ou `failed`, com o nome da ação e o
-serviço ou pacote.
+The daemon is `crates/hive-screen`: it loads `screen.toml` and the
+sheets (PNG), plays the scene at 60 ticks per second on a canvas, and is
+a client of the cortex's user socket like the dashboard (the cortex
+accepts it as one). For the screen to react to what happened and not to
+the words, `Notification` now carries `kind` and `fields`: the event
+table that lived in the synapse moved to `hive-common` (`events.rs`),
+and the cortex fills in the fields in each notice. The actuator's reply
+becomes `done` or `failed`, with the action's name and the service or
+package.
 
-Determinismo: seno, cosseno e 2^x são aritmética pura no daemon, e as
-partículas usam uma semente fixa, então um quadro é igual pixel a pixel em
-qualquer máquina. O teste do daemon (`tests/play.rs`) toca a tela do OS
-pelo play protocol (stdin, como o driver dos jogos) e compara quatro
-quadros com referências; o Hive lab roda o `hive-screen` de verdade sem
-tela (`{"op":"screen"}`) e lê o que ele mostra como dados: a fita
-`screen-crash.jsonl` segue o nginx caindo, a fumaça na célula, a oferta,
-o Enter, o actuator e o mel de volta na célula.
+Determinism: sine, cosine and 2^x are pure arithmetic in the daemon, and
+the particles use a fixed seed, so a frame is identical pixel by pixel
+on any machine. The daemon's test (`tests/play.rs`) plays the OS screen
+through the play protocol (stdin, like the games' driver) and compares
+four frames with references; the Hive lab runs the real `hive-screen`
+without a display (`{"op":"screen"}`) and reads what it shows as data:
+the `screen-crash.jsonl` tape follows nginx going down, the smoke in the
+cell, the offer, the Enter, the actuator and the honey back in the cell.
 
-Ficou para as próximas fatias: desenhar no console de verdade (DRM/KMS,
-teclado por evdev, unit do systemd com usuário `_hive-screen`), a VM do lab
-com `virtio-gpu` e `screendump`, e os níveis de apresentação pelo orçamento
-de quadro, para a cena ganhar resolução e efeitos com os núcleos que a VM
-der.
+Left for the next slices: drawing on the real console (DRM/KMS, keyboard
+through evdev, a systemd unit with the `_hive-screen` user), the lab's
+VM with `virtio-gpu` and `screendump`, and the presentation levels by
+frame budget, so the scene gains resolution and effects with the cores
+the VM gives.
 
-## 2026-10-19 - As regras da Hive declaradas em Quantum (qh:)
+## 2026-10-19 - The Hive's rules declared in Quantum (qh:)
 
-O que une os dois projetos de verdade. O que a Hive oferece quando algo
-acontece (reiniciar o serviço que caiu, mostrar os logs, instalar o pacote
-que o usuário pediu) vivia em código Rust na synapse (`actions.rs`), e o
-whitelist do actuator num TOML à parte. Agora as duas coisas são um
-arquivo Quantum, `config/hive/hive.q`, com tags `qh:`:
+What really ties the two projects together. What the Hive offers when
+something happens (restarting the service that went down, showing the
+logs, installing the package the user asked for) lived in Rust code in
+the synapse (`actions.rs`), and the actuator's whitelist in a separate
+TOML. Now both are one Quantum file, `config/hive/hive.q`, with `qh:`
+tags:
 
-- `qh:on event="service-crash"` segura as ofertas de um evento;
-  `qh:offer` é uma oferta com título, descrição, `action=` (o nome em
-  kebab-case da variante de `Action` do actuator) e os atributos dessa
-  ação. Qualquer um pode ter `{campo}`: um campo do evento, que a synapse
-  preenche a partir do próprio evento, nunca do texto do modelo.
-- `qh:allow`, `qh:block` e `qh:limit` são o whitelist: o que o actuator
-  pode fazer, o que nunca pode, e quantas vezes por minuto.
+- `qh:on event="service-crash"` holds an event's offers; `qh:offer` is
+  an offer with a title, a description, `action=` (the kebab-case name
+  of the actuator's `Action` variant) and that action's attributes. Any
+  of them can contain `{field}`: a field of the event, which the synapse
+  fills in from the event itself, never from the model's text.
+- `qh:allow`, `qh:block` and `qh:limit` are the whitelist: what the
+  actuator may do, what it may never do, and how many times per minute.
 
-**O compilador recusa o que o arquivo não pode cumprir:** um evento, uma
-ação ou um atributo que não existem; um `{campo}` que o evento não tem, ou
-texto onde vai número (`port="{holder}"`); uma oferta que o próprio
-whitelist do arquivo recusaria (um comando sem `qh:allow command=`, um
-serviço bloqueado, um `kill-port-process` sem a permissão); statements,
-expressões ou script. Vinte e dois casos em `tests/hive/`.
+**The compiler refuses what the file cannot fulfill:** an event, an
+action or an attribute that does not exist; a `{field}` the event does
+not have, or text where a number goes (`port="{holder}"`); an offer the
+file's own whitelist would refuse (a command without
+`qh:allow command=`, a blocked service, a `kill-port-process` without
+the permission); statements, expressions or script. Twenty-two cases in
+`tests/hive/`.
 
-**O que sai:** `config/hive/rules.toml` (novo; a synapse carrega de
-`/etc/hive/rules.toml`, e o build embute o arquivo commitado como regra
-padrão) e `config/hive/whitelist.toml` (o mesmo formato de antes, agora
-gerado). `python scripts/generate-hive-config.py` escreve os dois; um
-teste falha se forem editados à mão ou se o `hive.q` mudar sem regenerar.
-O whitelist gerado é idêntico ao que existia (comparado como TOML). A
-synapse ganhou `rules.rs`, que faz as mesmas checagens ao carregar e cai
-para as regras embutidas se o arquivo for inválido; uma oferta cujo valor
-não é o que a ação aceita em tempo de execução é deixada de fora, nunca
-adivinhada.
+**What comes out:** `config/hive/rules.toml` (new; the synapse loads it
+from `/etc/hive/rules.toml`, and the build embeds the committed file as
+the default rules) and `config/hive/whitelist.toml` (the same format as
+before, now generated). `python scripts/generate-hive-config.py` writes
+both; a test fails if they are edited by hand or if `hive.q` changes
+without regenerating. The generated whitelist is identical to the one
+that existed (compared as TOML). The synapse gained `rules.rs`, which
+runs the same checks on load and falls back to the embedded rules if the
+file is invalid; an offer whose value is not what the action accepts at
+run time is left out, never guessed.
 
-**Ao redor:** a linguagem é laboratory, como os jogos; `docs/targets/hive.md`
-é gerado do schema; o feature module `hive_rules` tem intenções e dataset
-(5 positivos, 12 negativos), e um teste garante que cada tag, evento e ação
-tem intenção e exemplo. A Hive lab ganhou a fita `log-anomaly`: a quinta
-regra, que não tinha fita. O que ficou de fora: a janela de 5 minutos do
-cortex (`report-interval`) continua constante no código; vira atributo
-quando o cortex carregar o arquivo também.
+**Around it:** the language is laboratory, like the games;
+`docs/targets/hive.md` is generated from the schema; the `hive_rules`
+feature module has intents and a dataset (5 positives, 12 negatives),
+and a test ensures that every tag, event and action has an intent and an
+example. The Hive lab gained the `log-anomaly` tape: the fifth rule,
+which had no tape. What was left out: the cortex's 5-minute window
+(`report-interval`) is still a constant in the code; it becomes an
+attribute when the cortex loads the file too.
 
-## 2026-10-19 - VM Lab: o sistema real, restaurado em um segundo
+## 2026-10-19 - VM Lab: the real system, restored in a second
 
-A segunda camada do play protocol do OS. A Hive lab valida o que a Hive
-decide, mas não o que só o sistema rodando mostra: o que os nerves reais
-veem no journal, no audit e no `/proc`, e o que o actuator real faz via
-polkit e systemd. O lab da ISO cobria isso com ISO, instalação, OCR e o
-Forge, a minutos por volta.
+The second layer of the OS's play protocol. The Hive lab validates what
+the Hive decides, but not what only the running system shows: what the
+real nerves see in the journal, in the audit and in `/proc`, and what
+the real actuator does through polkit and systemd. The ISO lab covered
+that with the ISO, installation, OCR and the Forge, at minutes per
+round.
 
-**O que é (`scripts/lab/vm/`, documentado no README de lá e no
-CLAUDE.md):** a imagem cloud mínima do Ubuntu 24.04 (a release que o OS
-remasteriza) num overlay qcow2, no QEMU (KVM quando há, emulação quando
-não). O cloud-init só instala um agente: `agent.py`, que fala JSON lines
-numa porta virtio-serial, sem rede, sem SSH e sem chaves. A base bota uma
-vez e vira o snapshot `base`, com polkit, PackageKit e auditd. Esses
-pacotes o host baixa com o dpkg status do próprio guest, e o guest instala
-offline por 9p. A Hive do working tree (binários sem debug, `config/`) é
-instalada como a ISO instala (`install-hive.sh`) e vira o snapshot `hive`.
-Cada fita restaura `hive`. O dashboard e o grove reais rodam num terminal
-dentro do guest, e o novo `hive-lab term` lê as telas com o mesmo emulador
-da Hive lab.
+**What it is (`scripts/lab/vm/`, documented in the README there and in
+CLAUDE.md):** Ubuntu 24.04's minimal cloud image (the release the OS
+remasters) on a qcow2 overlay, in QEMU (KVM when there is one, emulation
+when not). cloud-init only installs an agent: `agent.py`, which speaks
+JSON lines over a virtio-serial port, with no network, no SSH and no
+keys. The base boots once and becomes the `base` snapshot, with polkit,
+PackageKit and auditd. The host downloads those packages using the
+guest's own dpkg status, and the guest installs them offline over 9p.
+The working tree's Hive (binaries without debug info, `config/`) is
+installed the way the ISO installs it (`install-hive.sh`) and becomes
+the `hive` snapshot. Each tape restores `hive`. The real dashboard and
+grove run in a terminal inside the guest, and the new `hive-lab term`
+reads the screens with the same emulator as the Hive lab.
 
-**Tempos, medidos aqui sem KVM:** a base sai em ~5 min (quase tudo é o
-primeiro boot). Subir a VM a partir de `hive` leva ~7 s, e um restore
-~2 s. As seis fitas levam ~115 s juntas. Só o que mudou é instalado: se
-mudaram só binários, eles são copiados e só as units deles reiniciam
-(grove 6 s, um nerve 9 s, o cortex 20 s, contra 60 s da instalação
-completa). **No CI, com KVM:** a base sai em 18 a 25 s, e as seis fitas,
-com a primeira instalação, em ~60 s (sem ela, de 2 a 7 s cada).
+**Timings, measured here without KVM:** the base comes out in ~5 min
+(almost all of it is the first boot). Bringing up the VM from `hive`
+takes ~7 s, and a restore ~2 s. The six tapes take ~115 s together. Only
+what changed is installed: if only binaries changed, they are copied and
+only their units restart (grove 6 s, a nerve 9 s, the cortex 20 s,
+versus 60 s for the full installation). **In CI, with KVM:** the base
+comes out in 18 to 25 s, and the six tapes, with the first installation,
+in ~60 s (without it, 2 to 7 s each).
 
-**Fitas:**
-- `crash-restart`: uma unit real em loop de crash aparece uma vez no
-  dashboard real, e só depois de aprovada no teclado o actuator real
-  reinicia a unit via polkit.
-- `port-conflict`: um processo real segura a porta, o nerve de rede real
-  nomeia os dois uma vez, e o actuator roda `ss -tlnp` aprovado.
-- `dangerous-command`: o `rm -rf /srv` de um usuário logado vai do audit
-  do kernel ao dashboard real. Um delete de rotina e os comandos de daemons
-  não são reportados (a regra do audit só registra quem tem loginuid, e o
-  agente dá loginuid aos comandos do usuário, como um login daria).
-- `crash-loop`: uma unit em loop de crash aparece, e a oferta de restart
-  também, uma vez só.
-- `anonymous-shell`: com o grove real em modo anônimo, um comando perigoso
-  chega ao nerve de processo pelo audit, e o cortex, subindo a árvore real
-  de processos até o shell, não repassa nada. Fora do modo anônimo, o
-  mesmo comando volta a ser julgado.
-- `install-on-request`: o usuário chama o htop no grove real, o dashboard
-  oferece a instalação, e a aprovação faz o actuator sem privilégio
-  instalar pelo PackageKit e polkit, a partir de um repositório assinado
-  dentro do guest (a única fonte de pacotes dele, montada pelo host). Na
-  segunda tentativa o grove roda o htop.
+**Tapes:**
+- `crash-restart`: a real unit in a crash loop shows up once in the real
+  dashboard, and only after it is approved on the keyboard does the real
+  actuator restart the unit through polkit.
+- `port-conflict`: a real process holds the port, the real network nerve
+  names both once, and the actuator runs the approved `ss -tlnp`.
+- `dangerous-command`: a logged-in user's `rm -rf /srv` goes from the
+  kernel's audit to the real dashboard. A routine delete and daemons'
+  commands are not reported (the audit rule only records whoever has a
+  loginuid, and the agent gives a loginuid to the user's commands, as a
+  login would).
+- `crash-loop`: a unit in a crash loop shows up, and so does the restart
+  offer, only once.
+- `anonymous-shell`: with the real grove in anonymous mode, a dangerous
+  command reaches the process nerve through the audit, and the cortex,
+  walking up the real process tree to the shell, passes nothing on.
+  Outside anonymous mode, the same command is judged again.
+- `install-on-request`: the user calls htop in the real grove, the
+  dashboard offers the installation, and the approval makes the
+  unprivileged actuator install through PackageKit and polkit, from a
+  signed repository inside the guest (its only package source, mounted
+  by the host). On the second try grove runs htop.
 
-Uma fita que misturava o loop de crash com a aprovação falhou uma vez no
-CI com KVM: o auto-restart do systemd e o restart aprovado disputavam a
-mesma janela. Aprovar logo depois de corrigir a causa, com o serviço
-voltando sozinho, é uma corrida legítima. Por isso o loop e o restart
-viraram fitas separadas, e o restart parte de uma unit que caiu uma vez. As mesmas operações são ferramentas MCP (`vm_start`,
-`vm_request`, `vm_view`, `vm_tape`, `vm_end`).
+A tape that mixed the crash loop with the approval failed once in CI
+with KVM: systemd's auto-restart and the approved restart were competing
+for the same window. Approving right after fixing the cause, with the
+service coming back on its own, is a legitimate race. That is why the
+loop and the restart became separate tapes, and the restart starts from
+a unit that went down once. The same operations are MCP tools
+(`vm_start`, `vm_request`, `vm_view`, `vm_tape`, `vm_end`).
 
-**O que o lab encontrou:**
-- Uma unit em loop de crash inundava a Hive. Cada crash ia para o modelo e
-  empilhava "Service Crashed" e as ofertas em todo dashboard (42
-  reinícios, 42 avisos e mais um conflito de porta com ofertas para cada
-  um). Agora o cortex passa um mesmo problema adiante uma vez a cada 5
-  min, e o reporte seguinte diz quantos segurou, como já fazia com as
-  ofertas de pacote. Há um teste no router e uma fita `crash-loop` na Hive
-  lab.
-- O nerve de rede já tinha uma janela de 5 min, mas a chave levava o pid,
-  que muda a cada reinício, então nunca segurava nada. Agora a chave é a
-  unit (ou o programa), com teste.
-- Depois de um `rm -rf /srv`, o dashboard dizia "A ZFS snapshot has been
-  created for safety", num sistema sem ZFS. O texto do mock da synapse
-  afirmava algo que nada faz. A linha saiu, e um teste segura o mock a não
-  afirmar nada.
-- Uma ação de serviço que falhava chegava ao dashboard como "(failed)" e
-  ao journal como um código de saída, porque o que o systemctl dizia era
-  descartado. Agora isso vira a saída da ação.
-- O pacote druidos-hive não dependia do que a Hive usa. Num sistema sem
-  `packagekit-tools`, a instalação aprovada falhava com "Failed to run
-  pkcon", e a ISO só funcionava porque trazia esse pacote por acaso. O
-  `debian/control` agora depende de polkitd, packagekit,
-  packagekit-tools e auditd.
+**What the lab found:**
+- A unit in a crash loop flooded the Hive. Each crash went to the model
+  and stacked "Service Crashed" and the offers in every dashboard (42
+  restarts, 42 notices and on top of that a port conflict with offers
+  for each one). Now the cortex passes the same problem on once every 5
+  min, and the following report says how many it held back, as it
+  already did with the package offers. There is a test in the router and
+  a `crash-loop` tape in the Hive lab.
+- The network nerve already had a 5-min window, but the key included the
+  pid, which changes on every restart, so it never held anything back.
+  Now the key is the unit (or the program), with a test.
+- After an `rm -rf /srv`, the dashboard said "A ZFS snapshot has been
+  created for safety", on a system without ZFS. The text of the
+  synapse's mock claimed something that nothing does. The line was
+  removed, and a test keeps the mock from claiming anything.
+- A service action that failed reached the dashboard as "(failed)" and
+  the journal as an exit code, because what systemctl said was
+  discarded. Now that becomes the action's output.
+- The druidos-hive package did not depend on what the Hive uses. On a
+  system without `packagekit-tools`, the approved installation failed
+  with "Failed to run pkcon", and the ISO only worked because it
+  happened to ship that package. `debian/control` now depends on
+  polkitd, packagekit, packagekit-tools and auditd.
 
-## 2026-10-19 - Hive Lab: a Hive numa caixa, sem VM (início do Quantum OS)
+## 2026-10-19 - Hive Lab: the Hive in a box, without a VM (the start of Quantum OS)
 
-Pedido do usuário: começar o Quantum OS a partir do DruidOS pelo que mais
-travava o projeto, que era validar ideias. Cada volta pedia ISO, boot,
-instalação, OCR e o Forge; numa sessão na nuvem (sem KVM, sem acesso ao
-Forge) não dava para validar nada.
+The user's request: start Quantum OS from DruidOS with what was holding
+the project back the most, which was validating ideas. Each round needed
+an ISO, a boot, an installation, OCR and the Forge; in a cloud session
+(no KVM, no access to the Forge) nothing could be validated.
 
-**O que é (`crates/hive-lab`, documentado no CLAUDE.md e no README do
-crate):** o `hive-cortex` e o `hive-synapse` de verdade, e o resto
-interpretado por um driver que fala uma requisição JSON por linha. Um
-nerve injeta eventos tipados, o grove pergunta e o dashboard aprova. O
-actuator registra o `ActionRequest` sem executar nada e responde "recorded,
-not executed". Cada papel conecta com o nome de binário e o usuário que o
-cortex confere (`_hive-sense`, `_hive-act`, root no dashboard), então as
-regras de identidade são as do sistema. Os usuários do Hive existem só no
-lab: cada daemon roda num mount namespace privado com `/etc/passwd` e
-`/etc/group` do lab montados por cima, e o `/etc/passwd` da máquina não é
-tocado. Por isso precisa de root (container, VM descartável, CI com sudo).
+**What it is (`crates/hive-lab`, documented in CLAUDE.md and in the
+crate's README):** the real `hive-cortex` and `hive-synapse`, and the
+rest played by a driver that speaks one JSON request per line. A nerve
+injects typed events, grove asks and the dashboard approves. The
+actuator records the `ActionRequest` without executing anything and
+replies "recorded, not executed". Each role connects with the binary
+name and the user that the cortex checks (`_hive-sense`, `_hive-act`,
+root for the dashboard), so the identity rules are the system's. The
+Hive's users exist only in the lab: each daemon runs in a private mount
+namespace with the lab's `/etc/passwd` and `/etc/group` mounted on top,
+and the machine's `/etc/passwd` is not touched. That is why it needs
+root (a container, a disposable VM, CI with sudo).
 
-**Tempos:** a sessão sobe em ~0,2 s. As 6 fitas de `crates/hive-lab/tapes/`
-rodam juntas em ~4 s: crash → reiniciar só com aprovação; programa não
-encontrado → instalar só com aprovação; conflito de porta; disco cheio;
-pergunta respondida como texto e nunca como ação; e as fronteiras do
-socket de usuário (o grove não envia ação nem aprova sugestão). Uma
-sessão feita à mão vira fita com `--record`. `scripts/lab/hive-tapes.sh`
-roda todas, e o CI ganhou esse passo.
+**Timings:** the session comes up in ~0.2 s. The 6 tapes in
+`crates/hive-lab/tapes/` run together in ~4 s: crash → restart only with
+approval; program not found → install only with approval; port
+conflict; full disk; a question answered as text and never as an
+action; and the boundaries of the user socket (grove sends no action and
+approves no suggestion). A session made by hand becomes a tape with
+`--record`. `scripts/lab/hive-tapes.sh` runs them all, and CI gained
+that step.
 
-**O que o lab já encontrou:** sem o modelo, o synapse respondia
-"Check package info with `apt show PACKAGE`" com `PACKAGE` literal, e o
-mesmo com `SERVICE`, `PORT` e `KEYWORD` (o texto do modo mock). Num
-conflito de porta ele nem escolhia o texto de porta, porque a descrição do
-evento diz "already held by" e não "conflict". Corrigido:
-`fill_mock_names` preenche os nomes a partir do evento que o prompt
-descreve, e a linha que ficaria sem nome é omitida. As fitas
-`command-not-found` e `port-conflict` agora exigem `apt show htop` e
-`lsof -i :80` sem nenhum placeholder (`excludes`), e falham com o código
-antigo.
+**What the lab has already found:** without the model, the synapse
+replied "Check package info with `apt show PACKAGE`" with a literal
+`PACKAGE`, and the same with `SERVICE`, `PORT` and `KEYWORD` (the mock
+mode's text). In a port conflict it did not even pick the port text,
+because the event's description says "already held by" and not
+"conflict". Fixed: `fill_mock_names` fills in the names from the event
+the prompt describes, and a line that would be left without a name is
+omitted. The `command-not-found` and `port-conflict` tapes now require
+`apt show htop` and `lsof -i :80` without any placeholder (`excludes`),
+and fail with the old code.
 
-**Telas como texto (mesmo dia):** o lab roda o `hive-dashboard` e o
-`grove` de verdade num pseudo-terminal, e lê a tela por um emulador de
-terminal (crate `vt100`): `tui`, `view`, `keys`, `until_screen`. Nada de
-screenshot nem OCR. Na primeira olhada ao dashboard real, dois defeitos:
+**Screens as text (same day):** the lab runs the real `hive-dashboard`
+and `grove` in a pseudo-terminal, and reads the screen through a
+terminal emulator (the `vt100` crate): `tui`, `view`, `keys`,
+`until_screen`. No screenshots and no OCR. On the first look at the real
+dashboard, two defects:
 
-1. Todo aviso sem sugestão aparecia em vermelho com "(CONFIRM? press
-   Enter again)": `armed == r.suggestion.map(...)` dá verdadeiro quando os
-   dois lados são `None`. Agora `is_armed()` exige os dois `Some`.
-2. O cortex mandava avisos e sugestões só para o **primeiro** dashboard
-   do HashMap. Com dois administradores, qual deles via dependia da ordem
-   do HashMap. Agora vão para todos. A primeira aprovação leva
-   (`pending_suggestions.remove`), então nada roda duas vezes. Há um teste
-   no router, que falhava antes.
+1. Every notice without a suggestion showed up in red with "(CONFIRM?
+   press Enter again)": `armed == r.suggestion.map(...)` is true when
+   both sides are `None`. Now `is_armed()` requires both to be `Some`.
+2. The cortex sent notices and suggestions only to the **first**
+   dashboard in the HashMap. With two administrators, which one saw them
+   depended on the HashMap's order. Now they go to all of them. The
+   first approval takes it (`pending_suggestions.remove`), so nothing
+   runs twice. There is a test in the router, which failed before.
 
-Fitas novas: `dashboard-screen` (falha com o dashboard antigo, conferido)
-e `grove-screen`. As 8 rodam em ~5 s.
+New tapes: `dashboard-screen` (fails with the old dashboard, checked)
+and `grove-screen`. All 8 run in ~5 s.
 
-**Próximas camadas:** a fronteira deste lab é o que o sistema real faz. O
-que os nerves percebem num sistema rodando e o que uma ação faz pedem uma
-VM leve (imagem cloud do Ubuntu, um agente via vsock com observações
-estruturadas, telas do grove e do dashboard como texto via pty e um
-emulador vt100, sem OCR, snapshots via QMP). Depois disso, um servidor MCP
-com as mesmas ferramentas do play protocol do Quantum.
+**Next layers:** this lab's boundary is what the real system does. What
+the nerves notice on a running system and what an action does call for
+a light VM (Ubuntu's cloud image, an agent over vsock with structured
+observations, the grove and dashboard screens as text through a pty and
+a vt100 emulator, no OCR, snapshots through QMP). After that, an MCP
+server with the same tools as Quantum's play protocol.
 
 ---
 
-## 2026-09-10 - ISO Lab: build → boot → install → e2e sem humano, no Forge com KVM
+## 2026-09-10 - ISO Lab: build → boot → install → e2e with no human, on the Forge with KVM
 
-Pedido do usuário: um ambiente onde o Claude consiga gerar as ISOs, bootar
-em QEMU e testar de ponta a ponta sozinho. Antes disso, nem o boot da ISO
-de 24/08 tinha sido confirmado de verdade (só "memória do QEMU crescendo").
+User's request: an environment where Claude can build the ISOs, boot them
+in QEMU and test end to end on its own. Before this, not even the boot of
+the 24/08 ISO had really been confirmed (only "QEMU's memory growing").
 
-**Infra:** o Forge (VM 400) não tinha `/dev/kvm` — CPU `x86-64-v2-AES`.
-O host Proxmox já tinha `nested=1`; mudei a CPU da VM para `host` e
-reiniciei via `qm reboot` (os 40 containers voltaram). Alternativas
-descartadas: VMs direto no Proxmox (só ~2GB de RAM livre e o roteador
-roda lá), TCG (~1h por instalação), QEMU local no Windows (o Colossus é
-ele mesmo uma VM, WHPX não funciona).
+**Infra:** the Forge (VM 400) had no `/dev/kvm` — CPU `x86-64-v2-AES`.
+The Proxmox host already had `nested=1`; I changed the VM's CPU to `host`
+and rebooted it via `qm reboot` (the 40 containers came back). Alternatives
+ruled out: VMs directly on Proxmox (only ~2GB of free RAM, and the router
+runs there), TCG (~1h per install), local QEMU on Windows (the Colossus is
+itself a VM, WHPX doesn't work).
 
-**O lab (`scripts/lab/`, documentado no CLAUDE.md):** `lab.sh` (local,
-sincroniza a working tree) → `remote.sh` (Forge, um container destacado
-por etapa, sobrevive a queda de SSH) → `harness.py` (QEMU via QMP:
-screendump + OCR com tesseract para as fases só-tela, log serial, SSH no
-guest) → `e2e/guest-checks.sh` (roda dentro do DruidOS instalado, saída
-TAP). Tempos reais com KVM: ISO ~1 min (base.iso em cache), boot até o
-instalador ~20s em BIOS e UEFI, instalação automática ~3 min, e2e ~40s,
-loop `dev` (build + hot-swap dos binários + e2e) ~1 min, pipeline `all`
-completo 5min50s.
+**The lab (`scripts/lab/`, documented in CLAUDE.md):** `lab.sh` (local,
+syncs the working tree) → `remote.sh` (Forge, one detached container per
+stage, survives an SSH drop) → `harness.py` (QEMU via QMP: screendump +
+OCR with tesseract for the screen-only phases, serial log, SSH into the
+guest) → `e2e/guest-checks.sh` (runs inside the installed DruidOS, TAP
+output). Real times with KVM: ISO ~1 min (base.iso cached), boot to the
+installer ~20s on BIOS and UEFI, automatic install ~3 min, e2e ~40s,
+`dev` loop (build + hot-swap of the binaries + e2e) ~1 min, full `all`
+pipeline 5min50s.
 
-**O que o lab encontrou (tudo corrigido):**
+**What the lab found (all fixed):**
 
-1. **A ISO instalava Ubuntu puro.** O Subiquity instala o que está em
-   `casper/install-sources.yaml`, que só listava as camadas originais do
-   Ubuntu — o `filesystem.squashfs` com o Hive Stack nunca era usado. Agora
-   `register_install_source()` registra `druidos` como única fonte.
-2. `build-iso.sh`: o glob `hive-*` copiava os `.d` do cargo para
-   `/usr/bin` e deixava o `grove` de fora; só habilitava o `hive-cortex`;
-   copiava o `config/hive/config.toml` não versionado (com `user = "lab"`)
-   e o caminho do `druidos-installer` estava errado. Agora lista explícita
-   de binários (falta = erro), os 7 serviços habilitados, `default.toml`
-   instalado como `/etc/hive/config.toml`.
-3. **Nenhum serviço subia.** Todas as units são `Type=notify`, mas nenhum
-   binário mandava `READY=1`: o `hive-cortex` ficava em "activating" até
-   o timeout e os outros 6 caíam por dependência. Novo
-   `hive_common::systemd` (protocolo sd_notify, sem dependências novas,
-   com testes) chamado pelos 7 daemons quando ficam prontos. O e2e foi
-   rodado primeiro contra o disco com o bug (15 falhas) e depois com a
-   correção (24/24).
-4. `hive-synapse.service` tinha comentário inline no valor
-   (`MemoryDenyWriteExecute=no  # ...`) — systemd não suporta, a linha
-   inteira era ignorada.
-5. Console serial: GRUB da ISO e kernel agora também em `ttyS0` (herdado
-   pelo sistema instalado), coerente com VM-first/terminal-only.
+1. **The ISO installed plain Ubuntu.** Subiquity installs what is in
+   `casper/install-sources.yaml`, which only listed Ubuntu's original
+   layers — the `filesystem.squashfs` with the Hive Stack was never used.
+   Now `register_install_source()` registers `druidos` as the only source.
+2. `build-iso.sh`: the `hive-*` glob copied cargo's `.d` files to
+   `/usr/bin` and left `grove` out; it only enabled `hive-cortex`; it
+   copied the unversioned `config/hive/config.toml` (with `user = "lab"`),
+   and the path of `druidos-installer` was wrong. Now an explicit list of
+   binaries (missing = error), the 7 services enabled, `default.toml`
+   installed as `/etc/hive/config.toml`.
+3. **No service came up.** All the units are `Type=notify`, but no binary
+   sent `READY=1`: `hive-cortex` stayed in "activating" until the timeout
+   and the other 6 failed through the dependency. New
+   `hive_common::systemd` (sd_notify protocol, no new dependencies, with
+   tests) called by the 7 daemons when they are ready. The e2e was run
+   first against the disk with the bug (15 failures) and then with the
+   fix (24/24).
+4. `hive-synapse.service` had an inline comment in a value
+   (`MemoryDenyWriteExecute=no  # ...`) — systemd doesn't support that, so
+   the whole line was ignored.
+5. Serial console: the ISO's GRUB and the kernel now also on `ttyS0`
+   (inherited by the installed system), consistent with
+   VM-first/terminal-only.
 
-**Continuação (mesmo dia) — correções guiadas pelo lab.** Método: primeiro
-a checagem e2e (vermelha contra o build anterior), depois a correção
-(verde), depois `lab.sh all` do zero.
+**Continued (same day) — fixes guided by the lab.** Method: first the e2e
+check (red against the previous build), then the fix (green), then
+`lab.sh all` from scratch.
 
-- `hive-nerve-fs` não observava nada: ignorava o config; o watch
-  recursivo do `notify` aborta a árvore inteira no primeiro diretório
-  ilegível (`/etc/credstore` para `_hive-sense`); e esperava
-  `Modify(Data(Content))`, que o backend inotify nunca emite. Novo
-  `tree::watch_tree` (um watch por diretório, pula só os ilegíveis,
-  diretórios novos ganham watch), escritas detectadas por
-  `IN_CLOSE_WRITE` e por rename (editores, `sed -i`).
-- O cortex descartava todo `Notification` vindo de nerves (sem arm no
-  router). Agora repassa ao dashboard, descartando `actions` e rejeitando
-  remetentes que não são nerves.
-- `hive-nerve-journal` relia as últimas 10 entradas a cada start
-  (`--follow` sem `--lines=0`).
-- Cores ANSI no journal: `hive_common::logging::init()` compartilhado, cor
-  só quando stdout é terminal.
-- Novas checagens e2e, incluindo o fluxo de aprovação no `hive-dashboard`
-  dirigido por tmux (Enter numa sugestão → cortex recebe o `UserAction`).
-  Uma checagem passava em falso (`grep $'\x1b['` sem `-F` sai com erro 2).
+- `hive-nerve-fs` observed nothing: it ignored the config; `notify`'s
+  recursive watch aborts the whole tree at the first unreadable directory
+  (`/etc/credstore` for `_hive-sense`); and it expected
+  `Modify(Data(Content))`, which the inotify backend never emits. New
+  `tree::watch_tree` (one watch per directory, skips only the unreadable
+  ones, new directories get a watch), writes detected by
+  `IN_CLOSE_WRITE` and by rename (editors, `sed -i`).
+- The cortex dropped every `Notification` coming from nerves (no arm in
+  the router). Now it forwards them to the dashboard, discarding `actions`
+  and rejecting senders that are not nerves.
+- `hive-nerve-journal` re-read the last 10 entries on every start
+  (`--follow` without `--lines=0`).
+- ANSI colors in the journal: a shared `hive_common::logging::init()`,
+  color only when stdout is a terminal.
+- New e2e checks, including the approval flow in `hive-dashboard` driven
+  by tmux (Enter on a suggestion → the cortex receives the `UserAction`).
+  One check was passing falsely (`grep $'\x1b['` without `-F` exits with
+  error 2).
 
-**Continuação — aprovar uma sugestão agora age de verdade.** Até aqui o
-`hive-actuator` era inalcançável no produto: o synapse só gerava texto
-(`action: None`), e mesmo com ação o actuator (usuário `_hive-act`, sem
-root) não conseguia `systemctl restart` ("Interactive authentication
-required" — confirmado no guest com o novo `lab.sh exec`).
+**Continued — approving a suggestion now really acts.** Until now
+`hive-actuator` was unreachable in the product: the synapse only produced
+text (`action: None`), and even with an action the actuator (user
+`_hive-act`, no root) couldn't `systemctl restart` ("Interactive
+authentication required" — confirmed in the guest with the new
+`lab.sh exec`).
 
-- `hive-synapse/src/actions.rs`: regras fixas do evento tipado para ações
-  tipadas (serviço crashou → `RestartService` + logs; anomalia → logs;
-  disco → `df -h`; porta → `ss -tlnp`). Parâmetros vêm do evento, nunca do
-  texto do modelo; nomes de unit validados.
-- `config/polkit/60-druidos-hive-actuator.rules` (instalado pela ISO): teto
-  no nível do SO sob a whitelist do actuator — só start/stop/restart/reload
-  de `.service`, nunca hive-*/systemd-*/dbus/polkit/ssh/getty/user@.
-- `hive-nerve-journal` atribuía toda falha de serviço a `init.scope`
-  (mensagens do PID 1 têm a unit real no campo `UNIT`).
-- e2e ponta a ponta numa instalação limpa: serviço whitelisted crasha →
-  sugestão "Restart" → Enter no dashboard (tmux) → actuator reinicia via
-  polkit; e o polkit recusa `_hive-act` fora do teto (recusa tem que ser de
-  autorização, senão a checagem não prova nada). 40 checagens verdes.
+- `hive-synapse/src/actions.rs`: fixed rules from the typed event to typed
+  actions (service crashed → `RestartService` + logs; anomaly → logs;
+  disk → `df -h`; port → `ss -tlnp`). Parameters come from the event, never
+  from the model's text; unit names are validated.
+- `config/polkit/60-druidos-hive-actuator.rules` (installed by the ISO): an
+  OS-level ceiling under the actuator's whitelist — only
+  start/stop/restart/reload of `.service`, never
+  hive-*/systemd-*/dbus/polkit/ssh/getty/user@.
+- `hive-nerve-journal` attributed every service failure to `init.scope`
+  (PID 1's messages have the real unit in the `UNIT` field).
+- End-to-end e2e on a clean install: a whitelisted service crashes →
+  "Restart" suggestion → Enter in the dashboard (tmux) → the actuator
+  restarts it via polkit; and polkit refuses `_hive-act` outside the
+  ceiling (the refusal has to be an authorization one, otherwise the check
+  proves nothing). 40 checks green.
 
-**Continuação — `hive-nerve-network` refeito.** O antigo só gerava falso
-conflito (dois sockets LISTEN numa porta = "conflito", o que é todo serviço
-dual-stack; confirmado no guest) e nunca via um real (quem perde o bind não
-ganha socket; PID fixo em 0). Agora o conflito é detectado pelo lado de quem
-perdeu: `journalctl --grep` por "Address already in use"/EADDRINUSE, porta
-extraída da mensagem (formatos de nginx, apache, redis, node, sshd, python;
-sem porta = ignora, horário nunca vira porta), requisitante pelos campos
-confiáveis do journal (`_PID`, `_COMM`, `_SYSTEMD_UNIT`), dono da porta via
-`/proc/net` — por usuário, porque `_hive-sense` não consegue mapear socket
-de outro usuário para PID (verificado no guest). Retentativas de
-`Restart=always` são reportadas uma vez a cada 5 min. `watch_ports` vazio =
-todas as portas (novo default); a unit ganhou leitura do journal e perdeu
-`CAP_NET_ADMIN`. A notificação diz quem falhou e quem segura a porta. Três
-checagens e2e (vermelhas antes, verdes depois); também corrigido um teste
-instável do `nerve-journal` (processo de log que saía antes de o journald
-resolver o cgroup). 43 checagens verdes numa instalação limpa.
+**Continued — `hive-nerve-network` redone.** The old one only produced
+false conflicts (two LISTEN sockets on a port = "conflict", which is every
+dual-stack service; confirmed in the guest) and never saw a real one
+(whoever loses the bind gets no socket; PID fixed at 0). Now the conflict
+is detected from the side of whoever lost: `journalctl --grep` for
+"Address already in use"/EADDRINUSE, port extracted from the message
+(nginx, apache, redis, node, sshd, python formats; no port = ignore, a
+time of day never becomes a port), requester from the journal's trusted
+fields (`_PID`, `_COMM`, `_SYSTEMD_UNIT`), port owner via `/proc/net` — by
+user, because `_hive-sense` can't map another user's socket to a PID
+(verified in the guest). `Restart=always` retries are reported once every
+5 min. Empty `watch_ports` = all ports (new default); the unit gained
+journal read access and lost `CAP_NET_ADMIN`. The notification says who
+failed and who holds the port. Three e2e checks (red before, green
+after); also fixed a flaky `nerve-journal` test (a logging process that
+exited before journald resolved its cgroup). 43 checks green on a clean
+install.
 
-**Continuação — `hive-nerve-process` não perde mais comandos rápidos.** O
-polling de `/proc` a cada 250ms pegou 0 de 20 `rm -rf` seguidos numa
-instalação real. Proc connector não resolveria (só entrega o PID; ler o
-cmdline depois tem a mesma corrida). Agora o nerve lê o audit do kernel:
-a ISO instala `auditd` com a regra `config/audit/60-druidos-hive-exec.rules`
-(todo `execve` de sessão de login — `auid` definido: SSH, console, sudo;
-não daemons/cron/scripts de pacote) e o nerve assina o grupo multicast de
-audit via netlink com `CAP_AUDIT_READ` (só ler registros de audit, nada
-mais). O argv vem do kernel no momento do exec. Tentativa de ler pelo
-journal descartada: o Ubuntu desliga `systemd-journald-audit.socket` de
-propósito. Novo módulo `audit.rs` (monta SYSCALL+EXECVE+CWD por serial até
-o EOE; argumentos em hex e em chunks; testado com registros capturados do
-guest); sem audit, fallback para polling com aviso. Agora pega 20 de 20. O
-e2e também mostrou efeito de observador: o `grep` da própria checagem tem
-`rm -rf /tmp/...` no argv e é (corretamente) reportado. Obs.: o
-`/var/log/audit/audit.log` (só root) passa a guardar as linhas de comando
-dos usuários. 45 checagens verdes (correção: os totais anteriores eram 40
-e 43, não 42 e 45).
+**Continued — `hive-nerve-process` no longer misses fast commands.**
+Polling `/proc` every 250ms caught 0 of 20 back-to-back `rm -rf` on a
+real install. The proc connector wouldn't solve it (it only delivers the
+PID; reading the cmdline afterwards has the same race). Now the nerve
+reads the kernel's audit: the ISO installs `auditd` with the rule
+`config/audit/60-druidos-hive-exec.rules` (every `execve` from a login
+session — `auid` set: SSH, console, sudo; not daemons/cron/package
+scripts) and the nerve subscribes to the audit multicast group via
+netlink with `CAP_AUDIT_READ` (only reading audit records, nothing
+more). The argv comes from the kernel at the moment of the exec. An
+attempt to read it through the journal was dropped: Ubuntu disables
+`systemd-journald-audit.socket` on purpose. New module `audit.rs`
+(assembles SYSCALL+EXECVE+CWD by serial up to the EOE; arguments in hex
+and in chunks; tested with records captured from the guest); without
+audit, fallback to polling with a warning. Now it catches 20 of 20. The
+e2e also showed an observer effect: the check's own `grep` has
+`rm -rf /tmp/...` in its argv and is (correctly) reported. Note:
+`/var/log/audit/audit.log` (root only) now stores users' command lines.
+45 checks green (correction: the earlier totals were 40 and 43, not 42
+and 45).
 
-**Continuação — os dois achados que sobraram.**
+**Continued — the two remaining findings.**
 
-- **Comando perigoso julgado pelo que roda, não por texto.** A regex sobre
-  a linha inteira flagrava `grep "rm -rf /"` e `rm -rf /tmp/build`, e
-  perdia `cd /etc && rm -rf nginx`. Novo `danger.rs`: programa real (`exe`
-  do audit, não argv[0]), argumentos analisados (clusters, `--recursive`,
-  `--`; para chmod/chown só `-R`), operandos normalizados pelo `cwd`, e uma
-  definição explícita de perigoso (`/`, diretório de topo, ou filho direto
-  de um diretório de sistema — /etc/nginx, /home/alice, /usr/lib). Os
-  canários do e2e agora são `rm -rf` reais e inofensivos:
-  `rm -rf /etc/<nome>/..` normaliza para /etc, mas o diretório não existe e
-  o GNU rm recusa `..` (verificado no guest).
-- **Prioridade real no journal.** `hive_common::logging::init()` manda para
-  o journald nativo (`tracing-journald`) quando o stdout é o journal
-  (`JOURNAL_STREAM` comparado com o próprio stdout): WARN/ERROR ficam com
-  prioridade 4/3. Antes, o `nerve-journal` passa a ignorar logs emitidos
-  por units `hive-*` (mensagens do PID 1 *sobre* elas continuam valendo),
-  senão um aviso do Hive viraria anomalia reportada ao próprio Hive.
+- **Dangerous command judged by what runs, not by text.** The regex over
+  the whole line flagged `grep "rm -rf /"` and `rm -rf /tmp/build`, and
+  missed `cd /etc && rm -rf nginx`. New `danger.rs`: the real program
+  (the audit's `exe`, not argv[0]), parsed arguments (clusters,
+  `--recursive`, `--`; for chmod/chown only `-R`), operands normalized
+  against the `cwd`, and an explicit definition of dangerous (`/`, a
+  top-level directory, or a direct child of a system directory —
+  /etc/nginx, /home/alice, /usr/lib). The e2e canaries are now real,
+  harmless `rm -rf`: `rm -rf /etc/<name>/..` normalizes to /etc, but the
+  directory doesn't exist and GNU rm refuses `..` (verified in the
+  guest).
+- **Real priority in the journal.** `hive_common::logging::init()` sends
+  to the native journald (`tracing-journald`) when stdout is the journal
+  (`JOURNAL_STREAM` compared with stdout itself): WARN/ERROR get priority
+  4/3. Before this, `nerve-journal` was changed to ignore logs emitted by
+  `hive-*` units (PID 1's messages *about* them still count), otherwise a
+  warning from the Hive would become an anomaly reported to the Hive
+  itself.
 
-50 checagens verdes numa instalação limpa.
+50 checks green on a clean install.
 
-**Achados ainda em aberto:** nenhum dos levantados nesta sessão.
+**Findings still open:** none of the ones raised in this session.
 
-**Continuação — as três prioridades: grove, modelo real, ZFS.**
+**Continued — the three priorities: grove, a real model, ZFS.**
 
-- **`grove` executa programas** (`79e8514`, e2e em `aab4dde`). Até aqui só
-  tinha builtins. Novo parser (palavras com aspas e partes, listas com
-  `;`/`&&`/`||`/`&`, pipelines, redirecionamentos `<` `>` `>>` `2>` `2>&1`),
-  expansão (variáveis, `~`, glob), execução com pipes reais, builtins dentro
-  de pipeline (numa thread), jobs em background, e sinais de shell
-  interativo: Ctrl-C para o programa em primeiro plano e não o shell
-  (verificado no guest via tmux). `grove -c` e scripts também. Comandos
-  rodados pelo grove são vistos pelo `nerve-process` como qualquer outro.
-- **`hive-synapse` roda um modelo local de verdade** (`0842ebf`, e2e em
-  `c70cdc3`). Backend `candle` (escolha do usuário, Rust puro) com Qwen2.5
-  0.5B Instruct Q4_K_M (GGUF, 491MB) e o tokenizer, fixados por sha256 e
-  embutidos na ISO pelo `build-iso.sh` (cache em `~/druidos-lab/cache/models`
-  no Forge). Prompt de chat curto (cada token de prompt custa tempo em CPU de
-  VM), fila de pedidos com descarte do mais antigo (no máximo 3 pendentes) e
-  as ações continuam vindo das regras tipadas, nunca do texto do modelo.
-  Medido na VM (2 vCPU): carga ~1s, 11–17s por resposta, pico de ~1,56GB
-  (`MemoryMax=2G`), sem OOM. As checagens que dependem de resposta esperam o
-  synapse esvaziar a fila. 54 checagens verdes.
-- **ZFS como raiz, snapshots de segurança de verdade.** Antes: o lab
-  instalava ext4 (`layout: direct`); o actuator tentava
-  `zfs snapshot rpool/ROOT/druidos@...`, um dataset que nenhum instalador
-  cria, como `_hive-act` sem permissão, e seguia com a ação quando falhava
-  (só um aviso); além disso "destrutivo" era todo `RunCommand` (inclusive
-  `journalctl`) e não incluía instalar ou atualizar pacotes. O `hive-apt`
-  só imprimia uma sugestão com o mesmo nome errado. Numa instalação ZFS real
-  do lab: raiz em `rpool/ROOT/ubuntu_52tka7` com 15 datasets filhos
-  (`var/lib/dpkg`, `var/lib/apt`, `var/log`...), `/boot` em outro pool
-  (`bpool/BOOT/ubuntu_52tka7`), e `_hive-act` recebe "permission denied".
-  - Lab: o autoinstall usa `layout: zfs` (`--storage`, `direct` continua
-    disponível); os discos golden ganharam o sufixo `-zfs`; o hot-swap
-    também instala `/etc/hive/{config,whitelist}.toml`.
-  - `hive_common::zfs`: datasets do sistema (`/` e `/boot`) lidos do
-    `/proc/self/mountinfo` (fixture de teste é o mountinfo real do guest),
-    nome `hive-before-<mudança>-<hora UTC>`, `zfs snapshot -r` por dataset.
-  - `hive-actuator`: snapshot antes de instalar/remover/atualizar pacotes
-    (`Action::should_snapshot_first`, que perdeu `RestoreSnapshot`: o
-    `rollback -r` destruiria o snapshot recém-criado), e **recusa a ação se o
-    snapshot falhar**. `ExecStartPre=-+hive-actuator delegate-snapshots`
-    aplica como root `zfs allow -u _hive-act snapshot,mount` nos datasets a
-    cada start. `snapshot_dataset` passou a ser opcional (vazio = detectar).
-  - `hive-apt install/remove/upgrade/autoremove` tira o snapshot de fato
-    (depois da confirmação, antes do apt), e aborta se falhar
-    (`--skip-hive` pula). `hive-zfs` também detecta o dataset.
-  - O lab achou dois problemas no caminho: o ZFS recusa snapshot de dois
-    pools numa chamada só ("multiple snapshots of same fs not allowed", até
-    sem `-r`), então é uma chamada por dataset; e o automount de
-    `.zfs/snapshot` dá ELOOP em dataset filho, então o e2e lê os snapshots
-    montando-os read-only.
-  - 7 checagens novas (vermelhas antes: 5 falhas): raiz é ZFS; o actuator
-    acha os datasets; `_hive-act` consegue tirar snapshot e o ZFS recusa
-    `destroy` e `rollback` para ele; `hive-apt install` de um `.deb` local
-    cria o snapshot nos dois pools, e o snapshot (raiz + filho do dpkg) não
-    tem nem o arquivo nem o registro do pacote, enquanto o sistema vivo tem;
-    `hive-apt remove`, o inverso.
-  - Pendente: limpeza/retenção dos snapshots `hive-*` (o `hive-zfs` tem a
-    lógica mas não tem unit), ZFS como padrão no instalador interativo (só o
-    autoinstall do lab escolhe), e o caminho do actuator só é coberto por
-    testes de unidade (nenhuma sugestão atual oferece ação de pacote).
+- **`grove` runs programs** (`79e8514`, e2e in `aab4dde`). Until now it
+  only had builtins. New parser (words with quotes and parts, lists with
+  `;`/`&&`/`||`/`&`, pipelines, redirections `<` `>` `>>` `2>` `2>&1`),
+  expansion (variables, `~`, glob), execution with real pipes, builtins
+  inside a pipeline (in a thread), background jobs, and interactive shell
+  signals: Ctrl-C stops the foreground program and not the shell
+  (verified in the guest via tmux). `grove -c` and scripts too. Commands
+  run by grove are seen by `nerve-process` like any other.
+- **`hive-synapse` runs a real local model** (`0842ebf`, e2e in
+  `c70cdc3`). `candle` backend (the user's choice, pure Rust) with
+  Qwen2.5 0.5B Instruct Q4_K_M (GGUF, 491MB) and the tokenizer, pinned by
+  sha256 and embedded in the ISO by `build-iso.sh` (cached in
+  `~/druidos-lab/cache/models` on the Forge). A short chat prompt (every
+  prompt token costs time on a VM's CPU), a request queue that drops the
+  oldest (at most 3 pending), and the actions still come from the typed
+  rules, never from the model's text. Measured in the VM (2 vCPU): load
+  ~1s, 11–17s per answer, a peak of ~1.56GB (`MemoryMax=2G`), no OOM. The
+  checks that depend on an answer wait for the synapse to empty its queue.
+  54 checks green.
+- **ZFS as root, real safety snapshots.** Before: the lab installed ext4
+  (`layout: direct`); the actuator tried
+  `zfs snapshot rpool/ROOT/druidos@...`, a dataset no installer creates,
+  as `_hive-act` without permission, and went ahead with the action when
+  it failed (just a warning); on top of that, "destructive" was every
+  `RunCommand` (including `journalctl`) and didn't include installing or
+  upgrading packages. `hive-apt` only printed a suggestion with the same
+  wrong name. On a real ZFS install from the lab: root on
+  `rpool/ROOT/ubuntu_52tka7` with 15 child datasets (`var/lib/dpkg`,
+  `var/lib/apt`, `var/log`...), `/boot` on another pool
+  (`bpool/BOOT/ubuntu_52tka7`), and `_hive-act` gets "permission denied".
+  - Lab: the autoinstall uses `layout: zfs` (`--storage`, `direct` is
+    still available); the golden disks got the `-zfs` suffix; the
+    hot-swap also installs `/etc/hive/{config,whitelist}.toml`.
+  - `hive_common::zfs`: the system datasets (`/` and `/boot`) read from
+    `/proc/self/mountinfo` (the test fixture is the guest's real
+    mountinfo), name `hive-before-<change>-<UTC time>`, `zfs snapshot -r`
+    per dataset.
+  - `hive-actuator`: snapshot before installing/removing/upgrading
+    packages (`Action::should_snapshot_first`, which lost
+    `RestoreSnapshot`: the `rollback -r` would destroy the freshly created
+    snapshot), and **refuses the action if the snapshot fails**.
+    `ExecStartPre=-+hive-actuator delegate-snapshots` applies
+    `zfs allow -u _hive-act snapshot,mount` as root on the datasets at
+    every start. `snapshot_dataset` became optional (empty = detect).
+  - `hive-apt install/remove/upgrade/autoremove` actually takes the
+    snapshot (after the confirmation, before apt), and aborts if it fails
+    (`--skip-hive` skips it). `hive-zfs` also detects the dataset.
+  - The lab found two problems along the way: ZFS refuses a snapshot of
+    two pools in a single call ("multiple snapshots of same fs not
+    allowed", even without `-r`), so it's one call per dataset; and the
+    automount of `.zfs/snapshot` gives ELOOP on a child dataset, so the
+    e2e reads the snapshots by mounting them read-only.
+  - 7 new checks (red before: 5 failures): root is ZFS; the actuator finds
+    the datasets; `_hive-act` can take a snapshot and ZFS refuses
+    `destroy` and `rollback` for it; `hive-apt install` of a local `.deb`
+    creates the snapshot on both pools, and the snapshot (root + the dpkg
+    child) has neither the file nor the package's record, while the live
+    system has them; `hive-apt remove`, the reverse.
+  - Pending: cleanup/retention of the `hive-*` snapshots (`hive-zfs` has
+    the logic but no unit), ZFS as the default in the interactive
+    installer (only the lab's autoinstall picks it), and the actuator's
+    path is only covered by unit tests (no current suggestion offers a
+    package action).
 
-**Continuação — próximos passos: push, docs, ZFS na ISO de verdade, grove ↔ Hive.**
+**Continued — next steps: push, docs, ZFS in the ISO for real, grove ↔ Hive.**
 
-- Push dos 8 commits (CI e build da ISO verdes em `3f3f929`) e CLAUDE.md
-  corrigido: base/kernel/bootloader reais (Ubuntu 24.04, kernel do Ubuntu,
-  GRUB — o kernel enxuto e o systemd-boot continuam como objetivo), grove já
-  roda programas, confirmação em dois toques no dashboard já existe.
-- **O caminho de produção nunca tinha sido testado.** O `install` do lab
-  pula o instalador (boot direto do kernel + autoinstall). Novo
-  `lab.sh install-interactive`: boota a ISO como CD, escolhe a entrada do
-  GRUB e percorre as telas do Subiquity com teclas via QMP, reconhecendo cada
-  tela pelo texto do corpo (OCR) e com as teclas escolhidas pelas regras de
-  foco lidas do código-fonte do Subiquity (extraído da própria ISO); depois
-  boota o disco e julga o `root=` pelo console serial. O OCR ganhou uma
-  segunda passada por limiar, porque a barra laranja e o botão verde em foco
-  sumiam. Vermelho: a instalação padrão criava LVM/ext4
-  (`root=/dev/mapper/ubuntu--vg-ubuntu--lv`) — sem snapshots de segurança
-  para quem instalasse a ISO de verdade.
-- **ZFS por padrão na ISO.** A tela de disco do Subiquity só oferece LVM ou
-  partição simples e ignora o `layout` do autoinstall como padrão
-  interativo (confirmado no código). A ISO agora leva `/autoinstall.yaml`
-  com tudo interativo menos `storage` (`layout: zfs`, maior disco); a
-  confirmação destrutiva continua. Segunda entrada no GRUB, "choose storage
-  yourself", com `subiquity.autoinstallpath` para um arquivo com
-  `interactive-sections: ["*"]` (fluxo padrão). Verde nas duas:
-  `root=ZFS=rpool/ROOT/ubuntu_4s6y1t` e LVM na manual.
-- **grove conversa com o Hive.** Novo socket de usuário no cortex,
-  `/run/hive/user.sock` (0666, qualquer usuário local), que só aceita
-  `UserQuery`, entrar/sair do modo anônimo **para o próprio pid** e `Ping` —
-  o socket de componentes continua root:hive. No grove: `? pergunta` (a
-  pergunta vai ao synapse numa fila prioritária que rajadas de eventos não
-  descartam; a resposta volta só para quem perguntou, sempre como texto, sem
-  ação), avisos do sistema no próximo prompt (serviço caiu, conflito de
-  porta, disco — nunca sugestões, que podem ser sobre comandos de outro
-  usuário) e `anon [on|off]` (o cortex ignora o que o shell roda, incluindo
-  filhos, pela ancestralidade de processos em `/proc`; a sessão anônima
-  some quando a conexão fecha, para um pid reutilizado não herdá-la). O log
-  do cortex registra quem perguntou e o tamanho, não o texto. Cliente IPC
-  bloqueante no hive-common, já que o grove não tem runtime async.
-  5 checagens e2e (vermelhas antes com os binários antigos: 5 falhas),
-  incluindo a pergunta feita por um usuário sem privilégios. Resposta real
-  no guest: três linhas úteis, uma delas com um comando inventado pelo
-  modelo 0.5B (`systemctl list-unavailable`) — a qualidade das respostas é
-  o limite agora.
+- Pushed the 8 commits (CI and the ISO build green at `3f3f929`) and
+  corrected CLAUDE.md: the real base/kernel/bootloader (Ubuntu 24.04,
+  Ubuntu's kernel, GRUB — the lean kernel and systemd-boot remain the
+  goal), grove already runs programs, two-press confirmation in the
+  dashboard already exists.
+- **The production path had never been tested.** The lab's `install`
+  skips the installer (direct kernel boot + autoinstall). New
+  `lab.sh install-interactive`: boots the ISO as a CD, picks the GRUB
+  entry and walks through Subiquity's screens with keys via QMP,
+  recognizing each screen by its body text (OCR) and with the keys chosen
+  by the focus rules read from Subiquity's source code (extracted from
+  the ISO itself); then it boots the disk and judges the `root=` from the
+  serial console. The OCR got a second, thresholded pass, because the
+  orange bar and the focused green button disappeared. Red: the default
+  install created LVM/ext4 (`root=/dev/mapper/ubuntu--vg-ubuntu--lv`) —
+  no safety snapshots for anyone installing the ISO for real.
+- **ZFS by default in the ISO.** Subiquity's disk screen only offers LVM
+  or a plain partition and ignores the autoinstall's `layout` as an
+  interactive default (confirmed in the code). The ISO now carries
+  `/autoinstall.yaml` with everything interactive except `storage`
+  (`layout: zfs`, largest disk); the destructive confirmation remains. A
+  second GRUB entry, "choose storage yourself", with
+  `subiquity.autoinstallpath` pointing to a file with
+  `interactive-sections: ["*"]` (the standard flow). Green on both:
+  `root=ZFS=rpool/ROOT/ubuntu_4s6y1t`, and LVM on the manual one.
+- **grove talks to the Hive.** New user socket in the cortex,
+  `/run/hive/user.sock` (0666, any local user), which only accepts
+  `UserQuery`, entering/leaving anonymous mode **for its own pid**, and
+  `Ping` — the components socket stays root:hive. In grove: `? question`
+  (the question goes to the synapse in a priority queue that bursts of
+  events don't drop; the answer goes back only to whoever asked, always
+  as text, with no action), system notices at the next prompt (a service
+  went down, a port conflict, disk — never suggestions, which may be about
+  another user's commands) and `anon [on|off]` (the cortex ignores what
+  the shell runs, including its children, by process ancestry in `/proc`;
+  the anonymous session goes away when the connection closes, so that a
+  reused pid doesn't inherit it). The cortex's log records who asked and
+  the size, not the text. A blocking IPC client in hive-common, since
+  grove has no async runtime. 5 e2e checks (red before with the old
+  binaries: 5 failures), including the question asked by an unprivileged
+  user. Real answer in the guest: three useful lines, one of them with a
+  command made up by the 0.5B model (`systemctl list-unavailable`) — the
+  quality of the answers is the limit now.
 
-**Continuação — os três itens em aberto.**
+**Continued — the three open items.**
 
-- **Ação de pacote nunca tinha funcionado.** O actuator roda como `_hive-act`
-  e chamava `apt install`: no guest, "Could not open lock file... are you
-  root?" (e `NoNewPrivileges` impede sudo). Agora pacotes vão pelo
-  PackageKit (`pkcon`), já presente no Ubuntu server, com uma regra polkit
-  que só libera instalar, remover, atualizar e dar refresh a partir de
-  fontes confiáveis. O whitelist passou a exigir nome de pacote válido pela
-  política Debian (antes, `InstallPackage { name: "--allow-downgrades" }`
-  passava). O lab achou mais um: com `PrivateTmp=yes` o pkcon cria o socket
-  do debconf num /tmp que o packagekitd não vê ("frontend-socket does not
-  exist", código 7) — resolvido com `TMPDIR` num `RuntimeDirectory` da unit,
-  mantendo o `PrivateTmp`.
-- **Para exercitar isso de ponta a ponta** (e porque é útil): programa não
-  encontrado no grove + pacote de mesmo nome disponível no `apt-cache` →
-  grove avisa e manda `CommandNotFound` → synapse sugere "Install X"
-  (`InstallPackage` tipado; nome validado em cortex, synapse e whitelist;
-  no máximo uma oferta por pacote a cada 10 min) → administrador aprova no
-  dashboard → snapshot ZFS → pkcon instala. No e2e, offline, com um
-  repositório local.
-- **Dashboard para administradores que não são root.** O dashboard só
-  conectava no socket de componentes (root:hive). Agora usa o socket de
-  usuário, e o cortex só o aceita de root ou de membros de sudo/admin/wheel,
-  verificado pelos grupos da conta do uid do kernel — não pelo nome do
-  processo, e não pelo grupo `hive`, que é o das contas de serviço. Quem não
-  é administrador recebe uma mensagem clara antes de a TUI abrir (handshake
-  por ping). `UserAction`/`UserDismiss` passaram a ser aceitos só de
+- **The package action had never worked.** The actuator runs as
+  `_hive-act` and called `apt install`: in the guest, "Could not open lock
+  file... are you root?" (and `NoNewPrivileges` prevents sudo). Now
+  packages go through PackageKit (`pkcon`), already present on Ubuntu
+  server, with a polkit rule that only allows installing, removing,
+  upgrading and refreshing from trusted sources. The whitelist now
+  requires a package name that is valid under Debian policy (before,
+  `InstallPackage { name: "--allow-downgrades" }` got through). The lab
+  found one more: with `PrivateTmp=yes`, pkcon creates the debconf socket
+  in a /tmp that packagekitd doesn't see ("frontend-socket does not
+  exist", code 7) — solved with `TMPDIR` in a `RuntimeDirectory` of the
+  unit, keeping `PrivateTmp`.
+- **To exercise this end to end** (and because it's useful): program not
+  found in grove + a package of the same name available in `apt-cache` →
+  grove warns and sends `CommandNotFound` → the synapse suggests "Install
+  X" (a typed `InstallPackage`; name validated in the cortex, the synapse
+  and the whitelist; at most one offer per package every 10 min) → an
+  administrator approves in the dashboard → ZFS snapshot → pkcon installs.
+  In the e2e, offline, with a local repository.
+- **Dashboard for administrators who are not root.** The dashboard only
+  connected to the components socket (root:hive). Now it uses the user
+  socket, and the cortex only accepts it from root or from members of
+  sudo/admin/wheel, checked against the groups of the account of the
+  kernel-reported uid — not by the process name, and not by the `hive`
+  group, which is the service accounts' group. Anyone who is not an
+  administrator gets a clear message before the TUI opens (ping
+  handshake). `UserAction`/`UserDismiss` are now accepted only from
   dashboards.
-- **Poda de snapshots antigos.** `hive-zfs prune` + `hive-zfs-prune.timer`
-  (diário, persistente), como root: remove `hive-*` mais antigos que
-  `[zfs] prune_after_days` (14), poupando os `keep_newest` (3) mais novos;
-  a idade vem do timestamp no nome, então snapshots de terceiros nunca são
-  tocados. O man page do hive-zfs descrevia comandos que não existiam e foi
-  reescrito.
-- 7 checagens novas ou alteradas (vermelhas antes: 7 falhas), incluindo o
-  fluxo de reinício aprovado agora por `druid` (sudo, não root). 72 no
-  total.
+- **Pruning old snapshots.** `hive-zfs prune` + `hive-zfs-prune.timer`
+  (daily, persistent), as root: removes `hive-*` snapshots older than
+  `[zfs] prune_after_days` (14), sparing the `keep_newest` (3) newest;
+  the age comes from the timestamp in the name, so third-party snapshots
+  are never touched. The hive-zfs man page described commands that didn't
+  exist and was rewritten.
+- 7 new or changed checks (red before: 7 failures), including the restart
+  flow, now approved by `druid` (sudo, not root). 72 in total.
 
-## 2026-08-24 (continuação 8) - Primeira ISO real do DruidOS, construída e booted
+## 2026-08-24 (continued, 8) - First real DruidOS ISO, built and booted
 
-> **Correção (2026-09-10):** o hash abaixo é da primeira build, que *não*
-> bootava (sem catálogo El Torito — corrigido no commit `b3b6c6f`, a build
-> boa foi `a3f92bf0…`). E o boot nunca tinha sido confirmado visualmente:
-> isso só aconteceu com o ISO Lab (entrada acima), que também mostrou que
-> essa ISO instalaria Ubuntu puro.
+> **Correction (2026-09-10):** the hash below is from the first build,
+> which did *not* boot (no El Torito catalog — fixed in commit `b3b6c6f`;
+> the good build was `a3f92bf0…`). And the boot had never been visually
+> confirmed: that only happened with the ISO Lab (entry above), which also
+> showed that this ISO would install plain Ubuntu.
 
-Pedido do usuário: "como eu faço para conectar no druidos?" — depois de
-uma sessão inteira testando componentes individuais (via Docker no
-Forge), nunca tinha existido uma ISO booted de verdade do projeto. O
-usuário escolheu "ver/usar o DruidOS de verdade" em vez de reusar as
-ISOs antigas de fevereiro/2026 (pré-pivot TUI-only) ou só repetir os
-testes de componente no Forge.
+User's request: "how do I connect to druidos?" — after a whole session
+testing individual components (via Docker on the Forge), there had never
+been a really booted ISO of the project. The user chose "see/use DruidOS
+for real" instead of reusing the old ISOs from February/2026 (pre-pivot,
+TUI-only) or just repeating the component tests on the Forge.
 
-**`scripts/build-iso.sh` nunca tinha sido executado até o fim nesta ou
-em nenhuma sessão recente — achou uma cadeia de bugs reais, cada um
-bloqueando o próximo:**
+**`scripts/build-iso.sh` had never been run to the end in this or any
+recent session — it turned up a chain of real bugs, each one blocking the
+next:**
 
-1. URL da ISO base do Ubuntu fixa em `24.04` — Ubuntu só mantém a point
-   release atual no caminho numerado (`24.04.4`, não `24.04` puro) e
-   remove versões antigas. 404. Corrigido: `BASE_POINT_RELEASE`
-   parametrizado.
-2. Scripts `.sh` chegavam com CRLF no Forge — `.gitattributes` já dizia
-   `eol=lf`, mas o checkout local no Windows (com `core.autocrlf=true`,
-   que não devo mexer) ainda produz CRLF na working tree, mesmo com o
-   blob do git limpo. Corrigido normalizando na chegada em
-   `test-on-forge.sh`, sem tocar em config do git.
-3. **Achado mais profundo**: Ubuntu 24.04 Server usa o instalador
-   Subiquity, que empacota vários squashfs em CAMADAS (pra serem
-   sobrepostas no boot), não um único `filesystem.squashfs` como
-   ISOs mais antigas (casper). O script pegava a camada ERRADA — uma
-   das camadas só-do-instalador (`*.installer*.squashfs`, o próprio
-   ambiente Subiquity/curtin), não o rootfs real. Corrigido: extrai as
-   duas camadas certas (`ubuntu-server-minimal.squashfs` +
-   `ubuntu-server-minimal.ubuntu-server.squashfs`) em ordem.
-4. `unsquashfs` falhava criando um "character device" fake
-   (`/etc/dpkg/dpkg.cfg.d/excludes`, truque de build pra pular
-   instalação de docs/man) — `mknod` dava "Operation not permitted"
-   mesmo dentro de um container Docker `--privileged` com todas as
-   capabilities (confirmado: não é falta de capability, é alguma
-   restrição do ambiente containerd/runtime do Forge que não valeu a
-   pena investigar mais fundo — tentei uma VM real via qemu-lab como
-   alternativa, mas ela travou de forma inexplicável no SSH do guest
-   depois do cloud-init terminar, então abandonei esse caminho).
-   Corrigido com `-ignore-errors` do próprio unsquashfs.
-5. `-ignore-errors` ainda retorna código de saída 2 ("erros não-fatais
-   ocorreram"), que o `set -e` do script tratava como falha total.
-   Corrigido com um wrapper (`run_unsquashfs_tolerant`) que só propaga
-   erro se o código não for 0 nem 2.
-6. `setup_build_dirs()` sempre fazia `rm -rf` no diretório de build
-   inteiro ANTES do cache da ISO base ser checado — ou seja, o cache
-   nunca funcionava, cada retry baixava os ~3.2GB de novo. Corrigido
-   pra só limpar os subdiretórios de extração, preservando `base.iso`.
+1. The Ubuntu base ISO URL was hardcoded to `24.04` — Ubuntu only keeps
+   the current point release under the numbered path (`24.04.4`, not plain
+   `24.04`) and removes old versions. 404. Fixed: `BASE_POINT_RELEASE`
+   parameterized.
+2. `.sh` scripts arrived on the Forge with CRLF — `.gitattributes` already
+   said `eol=lf`, but the local checkout on Windows (with
+   `core.autocrlf=true`, which I must not touch) still produces CRLF in
+   the working tree, even with a clean git blob. Fixed by normalizing on
+   arrival in `test-on-forge.sh`, without touching the git config.
+3. **Deepest finding**: Ubuntu 24.04 Server uses the Subiquity installer,
+   which packs several squashfs images in LAYERS (to be overlaid at boot),
+   not a single `filesystem.squashfs` like older (casper) ISOs. The
+   script took the WRONG layer — one of the installer-only layers
+   (`*.installer*.squashfs`, the Subiquity/curtin environment itself), not
+   the real rootfs. Fixed: it extracts the two right layers
+   (`ubuntu-server-minimal.squashfs` +
+   `ubuntu-server-minimal.ubuntu-server.squashfs`) in order.
+4. `unsquashfs` failed creating a fake "character device"
+   (`/etc/dpkg/dpkg.cfg.d/excludes`, a build trick to skip installing
+   docs/man) — `mknod` gave "Operation not permitted" even inside a
+   `--privileged` Docker container with all capabilities (confirmed: it's
+   not a missing capability, it's some restriction of the Forge's
+   containerd/runtime environment that wasn't worth investigating more
+   deeply — I tried a real VM via qemu-lab as an alternative, but it hung
+   inexplicably at the guest's SSH after cloud-init finished, so I
+   abandoned that path). Fixed with unsquashfs's own `-ignore-errors`.
+5. `-ignore-errors` still returns exit code 2 ("non-fatal errors
+   occurred"), which the script's `set -e` treated as a total failure.
+   Fixed with a wrapper (`run_unsquashfs_tolerant`) that only propagates
+   an error if the code is neither 0 nor 2.
+6. `setup_build_dirs()` always did `rm -rf` on the whole build directory
+   BEFORE the base ISO cache was checked — that is, the cache never
+   worked, and every retry downloaded the ~3.2GB again. Fixed to only
+   clean the extraction subdirectories, preserving `base.iso`.
 
-**Resultado:** `druidos-hive-amd64.iso` (3.4GB,
+**Result:** `druidos-hive-amd64.iso` (3.4GB,
 sha256 `4986a8c5c55474fe5576eb498989881661f862839ebb2a8e9205bfda059d22c7`)
-construída com sucesso, com os binários reais do Hive Stack e os
-serviços systemd instalados. Trazida do Forge pra esta máquina (hash
-conferido, transferência íntegra) e booted via QEMU local.
+built successfully, with the real Hive Stack binaries and the systemd
+services installed. Brought from the Forge to this machine (hash checked,
+transfer intact) and booted via local QEMU.
 
-**Descoberta sobre o boot local:** WHPX (aceleração de hardware do
-Windows) está compilado no QEMU instalado, mas **não funciona de
-verdade nesta máquina** — falha com "WHPX: No accelerator found" /
-"No space left on device" (mensagem enganosa; geralmente significa
-Hyper-V não habilitado ou outro hypervisor com acesso exclusivo à
-VT-x). Caiu pra `-accel tcg` (emulação por software, funcional mas bem
-mais lento).
+**Discovery about the local boot:** WHPX (Windows hardware acceleration)
+is compiled into the installed QEMU, but **doesn't really work on this
+machine** — it fails with "WHPX: No accelerator found" /
+"No space left on device" (a misleading message; it usually means Hyper-V
+isn't enabled or another hypervisor has exclusive access to VT-x). It
+fell back to `-accel tcg` (software emulation, functional but much
+slower).
 
-**Importante:** a ISO gerada é derivada do instalador Ubuntu Server
-(Subiquity) — bootar ela abre o **instalador interativo** de verdade
-(particionamento, usuário, etc.), não cai direto num shell. É esperado
-que o usuário conduza essa parte manualmente na janela do QEMU.
+**Important:** the generated ISO is derived from the Ubuntu Server
+installer (Subiquity) — booting it opens the real **interactive
+installer** (partitioning, user, etc.); it doesn't drop straight into a
+shell. The user is expected to drive that part manually in the QEMU
+window.
 
 ---
 
-## 2026-08-23/24 (continuação 7) - Backend Ollama de teste pro hive-synapse (dev/test only)
+## 2026-08-23/24 (continued, 7) - Test Ollama backend for hive-synapse (dev/test only)
 
-Terceiro e último item da lista de pontos em aberto: `hive-synapse` só
-tinha inferência mock. O usuário tem um Mac mini no homelab
-(`10.10.1.125`, Apple M4, 16GB, Ollama com `qwen2.5:7b`) dedicado a rodar
-LLMs — pediu pra usá-lo, mas só para teste (confirmado explicitamente:
-"para teste ele pode usar sim"). Isso não conflita com a regra de
-segurança do projeto ("hive-synapse nunca tem acesso à rede") porque
-`config/systemd/hive-synapse.service` já tem `PrivateNetwork=yes` —
-isolamento de namespace de rede real, aplicado pelo systemd,
-independente do código. Ou seja: dá pra ter um backend HTTP opcional que
-só existe pra dev (feature Cargo `ollama`, desabilitada por padrão) e
-mesmo assim a produção continua protegida mesmo em caso de
-má-configuração.
+Third and last item on the list of open points: `hive-synapse` only had
+mock inference. The user has a Mac mini in the homelab (`10.10.1.125`,
+Apple M4, 16GB, Ollama with `qwen2.5:7b`) dedicated to running LLMs, and
+asked for it to be used, but only for testing (confirmed explicitly: "for
+testing, yes, it can use it"). This doesn't conflict with the project's
+security rule ("hive-synapse never has network access") because
+`config/systemd/hive-synapse.service` already has `PrivateNetwork=yes` —
+real network namespace isolation, enforced by systemd, independent of the
+code. In other words: it's possible to have an optional HTTP backend that
+only exists for dev (Cargo feature `ollama`, disabled by default) and
+production still stays protected even in case of misconfiguration.
 
-**Implementado:** `SynapseConfig` ganhou `backend` (default `"mock"`),
-`ollama_url`, `ollama_model`. `hive-synapse/src/inference.rs` ganhou um
-`Backend` enum (`Mock` | `Ollama` atrás de `#[cfg(feature = "ollama")]`)
-e `ollama_generate()`, que chama `POST {url}/api/generate` com
-`stream: false`. O parsing da resposta (`parse_ollama_response`) foi
-extraído como função pura, sem depender da feature `ollama` nem do
-cliente de rede, pra ficar testável mesmo em builds sem essa feature.
-Se `backend = "ollama"` for configurado num build sem a feature, cai de
-volta pro mock com um aviso, em vez de falhar.
+**Implemented:** `SynapseConfig` gained `backend` (default `"mock"`),
+`ollama_url`, `ollama_model`. `hive-synapse/src/inference.rs` gained a
+`Backend` enum (`Mock` | `Ollama` behind `#[cfg(feature = "ollama")]`)
+and `ollama_generate()`, which calls `POST {url}/api/generate` with
+`stream: false`. The response parsing (`parse_ollama_response`) was
+extracted as a pure function, depending on neither the `ollama` feature
+nor the network client, so that it stays testable even in builds without
+that feature. If `backend = "ollama"` is configured in a build without
+the feature, it falls back to the mock with a warning instead of failing.
 
-**Descoberta durante a configuração do Mac:** Ollama estava rodando
-(`launchd`/`homebrew.mxcl.ollama`) mas escutando só em
-`localhost:11434` — `OLLAMA_HOST` vazio no plist do launchd (que define
-`EnvironmentVariables` explicitamente, então `launchctl setenv` global
-não tinha efeito nele). Corrigido adicionando `OLLAMA_HOST=0.0.0.0`
-direto no plist via `PlistBuddy` e recarregando com
-`launchctl bootout`/`bootstrap` — confirmado escutando em `*:11434` e
-alcançável do Forge.
+**Discovery while configuring the Mac:** Ollama was running
+(`launchd`/`homebrew.mxcl.ollama`) but listening only on
+`localhost:11434` — `OLLAMA_HOST` was empty in the launchd plist (which
+sets `EnvironmentVariables` explicitly, so a global `launchctl setenv`
+had no effect on it). Fixed by adding `OLLAMA_HOST=0.0.0.0` directly to
+the plist via `PlistBuddy` and reloading with
+`launchctl bootout`/`bootstrap` — confirmed listening on `*:11434` and
+reachable from the Forge.
 
-**Validação real, parcial:** `hive-synapse` com `backend = "ollama"`
-conectou, recebeu uma `SuggestionRequest` de verdade (via
-`hive-nerve-process` detectando um comando perigoso disfarçado) e tentou
-a chamada HTTP real — mas a conectividade Forge↔Mac mini na LAN do
-homelab se mostrou instável durante o teste (GETs que funcionavam
-passaram a travar sem padrão claro; nem `curl` direto do host do Forge
-completou um `/api/generate` em 2 minutos, e `ollama ps` no Mac nunca
-mostrou o modelo carregado, indicando que a requisição nem chegou ao
-servidor). Isso é instabilidade de rede do homelab, não bug do
-DruidOS — o tratamento de erro funcionou corretamente
-("Failed to reach Ollama backend" logado e propagado, sem travar o
-processo). Não fechei um round-trip de geração real completo nesta
-sessão; código e testes unitários (incluindo o parsing da resposta)
-estão prontos e validados, a chamada de rede fim-a-fim fica pendente
-pra quando a conectividade cooperar.
+**Real validation, partial:** `hive-synapse` with `backend = "ollama"`
+connected, received a real `SuggestionRequest` (via `hive-nerve-process`
+detecting a disguised dangerous command) and attempted the real HTTP
+call — but Forge↔Mac mini connectivity on the homelab LAN turned out to
+be unstable during the test (GETs that had worked started hanging with no
+clear pattern; not even a `curl` straight from the Forge's host completed
+an `/api/generate` within 2 minutes, and `ollama ps` on the Mac never
+showed the model loaded, indicating that the request never even reached
+the server). This is homelab network instability, not a DruidOS bug —
+the error handling worked correctly ("Failed to reach Ollama backend"
+logged and propagated, without hanging the process). I didn't close a
+complete real generation round-trip in this session; the code and unit
+tests (including the response parsing) are ready and validated, and the
+end-to-end network call stays pending until the connectivity cooperates.
 
-Testes: `unknown_backend_falls_back_to_mock`,
+Tests: `unknown_backend_falls_back_to_mock`,
 `parse_ollama_response_extracts_the_response_field`,
 `parse_ollama_response_rejects_malformed_json`,
-`parse_ollama_response_rejects_missing_response_field`. Validado
-`cargo clippy -p hive-synapse --features ollama --all-targets` limpo, e
-o build default (sem a feature) continua passando normalmente.
+`parse_ollama_response_rejects_missing_response_field`. Validated
+`cargo clippy -p hive-synapse --features ollama --all-targets` clean, and
+the default build (without the feature) still passes normally.
 
 ---
 
-## 2026-08-23 (continuação 6) - Confirmação de ações perigosas no hive-dashboard
+## 2026-08-23 (continued, 6) - Confirmation of dangerous actions in hive-dashboard
 
-Segundo item da lista de pontos em aberto: até aqui, uma ação perigosa
-aprovada no dashboard (`Action::is_dangerous()` — `RestoreSnapshot`,
+Second item on the list of open points: until now, a dangerous action
+approved in the dashboard (`Action::is_dangerous()` — `RestoreSnapshot`,
 `DeleteSnapshot`, `RemovePackage`, `DeleteFile{permanent:true}`,
-`Reboot`, `Shutdown`, `CleanSystem`) sempre voltava rejeitada do
-`hive-actuator`, porque não existia nenhum mecanismo real de segunda
-confirmação — só um `Enter` já disparava o `UserAction`, e o actuator
-recusava tudo que chegasse marcado `requires_confirmation` (fail-closed,
-correto, mas sem forma de o usuário realmente confirmar).
+`Reboot`, `Shutdown`, `CleanSystem`) always came back rejected from
+`hive-actuator`, because there was no real second-confirmation
+mechanism — a single `Enter` already fired the `UserAction`, and the
+actuator refused everything that arrived marked `requires_confirmation`
+(fail-closed, correct, but with no way for the user to actually confirm).
 
-**Desenho:** `HiveMessage::UserAction` ganhou um campo `confirmed: bool`.
-`hive-dashboard` agora trata a primeira tecla `Enter` sobre uma sugestão
-perigosa como "armar" a confirmação (não envia nada, só marca a linha
-em vermelho/negrito com "(CONFIRM? press Enter again)" e muda a barra de
-status) — só o **segundo** `Enter` sobre a mesma sugestão envia
-`UserAction{confirmed: true}`. Navegar pra outra linha ou `Esc`/`d`
-cancela a confirmação pendente (em vez de dispensar a notificação, se
-havia uma armada). `hive-cortex`'s `act_on_suggestion` agora calcula
-`requires_confirmation = action.is_dangerous() && !confirmed` em vez de
-só `is_dangerous()`. `hive-actuator` não mudou de lógica — continua
-rejeitando quando `requires_confirmation` chega `true`, mas agora isso só
-acontece de fato pra ações não confirmadas.
+**Design:** `HiveMessage::UserAction` gained a `confirmed: bool` field.
+`hive-dashboard` now treats the first `Enter` key on a dangerous
+suggestion as "arming" the confirmation (it sends nothing, it just marks
+the line in red/bold with "(CONFIRM? press Enter again)" and changes the
+status bar) — only the **second** `Enter` on the same suggestion sends
+`UserAction{confirmed: true}`. Moving to another line or `Esc`/`d`
+cancels the pending confirmation (instead of dismissing the notification,
+if one was armed). `hive-cortex`'s `act_on_suggestion` now computes
+`requires_confirmation = action.is_dangerous() && !confirmed` instead of
+just `is_dangerous()`. `hive-actuator`'s logic didn't change — it still
+rejects when `requires_confirmation` arrives as `true`, but now that only
+actually happens for unconfirmed actions.
 
-**Validado de verdade no Forge**, não só em teste unitário: o cliente de
-teste `fake_synapse` (já existente, ver
-[[e2e-test-found-2-real-bugs]]) ganhou `FAKE_SYNAPSE_ACTION=dangerous`
-pra mandar uma sugestão `RemovePackage` em vez da `CleanPackageCache`
-padrão, e passou a rodar via `setpriv` como `_hive-ai` com
-`exec -a hive-synapse` (argv[0] certo) — sem isso, a própria correção de
-autenticação de `SuggestionResponse` desta sessão o rejeita, já que ele
-não é o `hive-synapse` de verdade. Lendo o log bruto do dashboard: 1º
-Enter armou a linha (vermelho/negrito, "(CONFIRM? press Enter again)",
-zero requisições no actuator); 2º Enter mandou a confirmação, cortex
-calculou `requires_confirmation: false`, e o actuator processou a ação
-sem rejeitar por confirmação (só falhou depois por razão de apt dentro
-do container, sem relação com o recurso).
+**Really validated on the Forge**, not just in a unit test: the
+`fake_synapse` test client (already existing, see
+[[e2e-test-found-2-real-bugs]]) gained `FAKE_SYNAPSE_ACTION=dangerous`
+to send a `RemovePackage` suggestion instead of the default
+`CleanPackageCache`, and now runs via `setpriv` as `_hive-ai` with
+`exec -a hive-synapse` (the right argv[0]) — without that, this session's
+own `SuggestionResponse` authentication fix rejects it, since it isn't
+the real `hive-synapse`. Reading the dashboard's raw log: the 1st Enter
+armed the line (red/bold, "(CONFIRM? press Enter again)", zero requests
+at the actuator); the 2nd Enter sent the confirmation, the cortex
+computed `requires_confirmation: false`, and the actuator processed the
+action without rejecting it for confirmation (it only failed afterwards
+for an apt reason inside the container, unrelated to the feature).
 
-**Achado lateral, sem correção nesta sessão:** ao investigar o teste
-anterior (não-perigoso) percebi que o dashboard deixa reaprovar uma
-linha já aprovada — `Enter` não olha pro `outcome` existente antes de
-mandar `UserAction` de novo, gerando um segundo pedido que o cortex
-rejeita com `"UserAction for unknown notification"` (a sugestão já foi
-removida de `pending_suggestions` da primeira vez). Não é regressão
-desta mudança, é comportamento anterior; cosmético (não expõe nada,
-só um aviso a mais no log), não atacado agora.
+**Side finding, not fixed in this session:** while investigating the
+earlier (non-dangerous) test I noticed that the dashboard lets you
+re-approve an already approved line — `Enter` doesn't look at the
+existing `outcome` before sending `UserAction` again, producing a second
+request that the cortex rejects with `"UserAction for unknown notification"`
+(the suggestion was already removed from `pending_suggestions` the first
+time). It's not a regression from this change, it's earlier behavior;
+cosmetic (it exposes nothing, just one extra warning in the log), not
+tackled now.
 
-**Achado que impede reusar `fake_synapse` pra testar o fluxo de
-sugestão sem se disfarçar de `hive-synapse`:** a correção de
-autenticação de `SuggestionResponse` de mais cedo hoje (ver
-[[e2e-test-found-2-real-bugs]]) agora bloqueia o próprio `fake_synapse`
-por padrão — só funciona rodando como `_hive-ai` com `argv[0]` igual a
-`hive-synapse`. Efeito colateral esperado e correto da correção de
-segurança, documentado no próprio arquivo do exemplo.
+**Finding that prevents reusing `fake_synapse` to test the suggestion
+flow without disguising it as `hive-synapse`:** the `SuggestionResponse`
+authentication fix from earlier today (see
+[[e2e-test-found-2-real-bugs]]) now blocks `fake_synapse` itself by
+default — it only works running as `_hive-ai` with `argv[0]` equal to
+`hive-synapse`. An expected and correct side effect of the security fix,
+documented in the example's own file.
 
-**Nota de processo:** a sincronização pro Forge via
-`scripts/test-on-forge.sh` (tar) não garante mtime crescente — o cargo,
-que decide recompilar por mtime (não hash de conteúdo) em build padrão,
-pode achar que nada mudou e pular a recompilação mesmo com conteúdo
-diferente. Descoberto ao editar `fake_synapse.rs` e ver o binário
-antigo continuar rodando após um `cargo build` "bem-sucedido" (`Finished
-in 0.09s`, sem `Compiling`). Solução: `touch` no arquivo antes de
-rebuildar quando iterar fora do pipeline completo de `check.sh`.
-
----
-
-## 2026-08-23 (continuação 5) - Atacando os pontos em aberto: nerve-process
-
-Depois de "conseguimos nossos objetivos?", o usuário pediu pra atacar os
-pontos deixados em aberto na resposta anterior. Priorizados nesta ordem:
-(1) investigar por que `hive-nerve-process` não detectou o `rm -rf` no
-teste E2E, (2) confirmação de ações perigosas no `hive-dashboard`, (3)
-SLM real via Ollama no Mac mini do homelab (só pra teste — produção
-continua sem rede, ver [[security-audit-2026-08]]). Grove async ficou de
-fora (já era "fora de escopo" no plano anterior).
-
-**Achado 1, corrigido:** `get_component_type` (`hive-cortex/src/main.rs`)
-lia `/proc/{pid}/comm`, que o kernel trunca em 15 bytes (`TASK_COMM_LEN-1`).
-`hive-nerve-process` (19 chars) vira `hive-nerve-proc` truncado — nunca
-bate no `from_name()`, sempre cai em `Unknown`. Mesmo problema afeta
-`hive-nerve-journal` e `hive-nerve-network` (também >15 chars).
-Confirmado empiricamente lendo `/proc/PID/comm` de um processo real no
-Forge. Corrigido: agora lê `argv[0]` de `/proc/{pid}/cmdline` (não
-truncado) em vez de `comm`. Revalidado: cortex agora loga
-`Component type: NerveProcess` em vez de `Unknown` pro mesmo binário.
-
-**Achado 2, confirmado mas não corrigido — condição de corrida real no
-polling:** testei disparando 30 `rm -rf` rápidos e independentes contra
-um `hive-nerve-process` real — só **1 dos 30** foi detectado. Um processo
-de controle (cmdline igual, mas vida útil de 2s via `sleep`) foi pego
-sem problema, confirmando que a lógica de regex está certa; o problema é
-puramente o intervalo de poll de 250ms em `/proc`: um comando que roda e
-sai mais rápido que isso (o caso comum pra `rm`/`dd`/etc.) pode nunca
-aparecer numa varredura. O próprio comentário do código já previa isso
-("Uses proc connector (if available) or polling") mas só o polling foi
-implementado — nunca o netlink proc connector (`NETLINK_CONNECTOR`,
-`CN_IDX_PROC`), que entregaria eventos de exec() de forma síncrona
-independente da vida útil do processo. Implementar isso é um recurso
-isolado e substancial (socket netlink cru, `CAP_NET_ADMIN`, comportamento
-diferente dentro de container sem privilégios extras) — sinalizado ao
-usuário, não implementado ainda nesta sessão.
+**Process note:** syncing to the Forge via `scripts/test-on-forge.sh`
+(tar) doesn't guarantee increasing mtimes — cargo, which decides whether
+to recompile by mtime (not by content hash) in a default build, may think
+nothing changed and skip the recompilation even with different content.
+Discovered when editing `fake_synapse.rs` and seeing the old binary keep
+running after a "successful" `cargo build` (`Finished in 0.09s`, with no
+`Compiling`). Solution: `touch` the file before rebuilding when iterating
+outside the full `check.sh` pipeline.
 
 ---
 
-## 2026-08-23 (continuação 4) - Teste E2E real via SSH no Forge: 2 bugs reais encontrados e corrigidos
+## 2026-08-23 (continued, 5) - Tackling the open points: nerve-process
 
-Pedido do usuário: "testa o fluxo principal, conecta via ssh e testa ele" —
-não apenas rodar `cargo test`, mas subir os daemons de verdade (root +
-usuários dedicados `_hive-ai`/`_hive-sense`/`_hive-act`) num container no
-Forge e observar o fluxo ponta a ponta.
+After "did we achieve our goals?", the user asked to tackle the points
+left open in the previous answer. Prioritized in this order:
+(1) investigate why `hive-nerve-process` didn't detect the `rm -rf` in
+the E2E test, (2) confirmation of dangerous actions in `hive-dashboard`,
+(3) a real SLM via Ollama on the homelab's Mac mini (only for testing —
+production stays without network, see [[security-audit-2026-08]]). Async
+grove was left out (it was already "out of scope" in the previous plan).
 
-**Isso encontrou 2 bugs reais que nenhum teste unitário pegaria, porque
-nenhum deles roda com sockets Unix de verdade entre usuários diferentes:**
+**Finding 1, fixed:** `get_component_type` (`hive-cortex/src/main.rs`)
+read `/proc/{pid}/comm`, which the kernel truncates to 15 bytes
+(`TASK_COMM_LEN-1`). `hive-nerve-process` (19 chars) becomes a truncated
+`hive-nerve-proc` — it never matches in `from_name()`, it always falls
+into `Unknown`. The same problem affects `hive-nerve-journal` and
+`hive-nerve-network` (also >15 chars). Confirmed empirically by reading
+`/proc/PID/comm` of a real process on the Forge. Fixed: it now reads
+`argv[0]` from `/proc/{pid}/cmdline` (not truncated) instead of `comm`.
+Revalidated: the cortex now logs `Component type: NerveProcess` instead
+of `Unknown` for the same binary.
 
-1. **Socket do cortex não tinha o grupo `hive`.** `IpcServer::bind`
-   (`crates/hive-common/src/ipc.rs`) fazia `chmod 0660` no socket mas
-   nunca `chown`ava pro grupo `hive` — a permissão 0660 só funciona se o
-   grupo do arquivo for `hive` de verdade. Em produção isso "funciona por
-   acidente" porque o `.service` do systemd define `Group=hive`, e o
-   processo herda esse gid ao criar o socket. Rodando `hive-cortex` como
-   root puro (sem essa diretiva), o socket saía `root:root` e
-   `hive-synapse`/`hive-actuator`/`hive-nerve-process` (grupo `hive`, não
-   `root`) levavam `Permission denied (os error 13)` — confirmado ao
-   rodar o teste E2E pela primeira vez, os 3 processos morreram na
-   inicialização. **Corrigido**: `IpcServer::bind` agora resolve o grupo
-   `hive` via `nix::unistd::Group::from_name` e faz `chown` explícito no
-   socket, com aviso (não erro fatal) se o grupo não existir — mantém dev
-   de usuário único funcionando sem setup extra.
+**Finding 2, confirmed but not fixed — a real race condition in the
+polling:** I tested by firing 30 fast, independent `rm -rf` against a
+real `hive-nerve-process` — only **1 of the 30** was detected. A control
+process (same cmdline, but a 2s lifetime via `sleep`) was caught without
+trouble, confirming that the regex logic is right; the problem is purely
+the 250ms poll interval on `/proc`: a command that runs and exits faster
+than that (the common case for `rm`/`dd`/etc.) may never show up in a
+scan. The code's own comment already anticipated this ("Uses proc
+connector (if available) or polling") but only the polling was
+implemented — never the netlink proc connector (`NETLINK_CONNECTOR`,
+`CN_IDX_PROC`), which would deliver exec() events synchronously
+regardless of the process's lifetime. Implementing that is a separate,
+substantial feature (raw netlink socket, `CAP_NET_ADMIN`, different
+behavior inside a container without extra privileges) — flagged to the
+user, not implemented yet in this session.
 
-2. **`SuggestionResponse` não verificava quem mandou.** Descoberto ao
-   escrever `examples/fake_synapse.rs` (cliente de teste que injeta uma
-   `SuggestionResponse` com uma `Action` real pra exercitar o caminho
-   `UserAction`→`ActionRequest`, já que o `hive-synapse` real ainda é só
-   mock e nunca anexa `Action` ao que "sugere"): rodando como root mas
-   sem se chamar `hive-synapse`, o cortex aceitou e processou a sugestão
-   de qualquer forma — o mesmo tipo de furo que a `ActionRequest` já
-   tinha (auditoria anterior, ver [[security-audit-2026-08]]), só que na
-   entrada de sugestões em vez da execução direta. **Corrigido**:
-   `route()` em `router.rs` agora confere `component_type_of(from_conn)
-   == Some(ComponentType::Synapse)` antes de aceitar (novo helper
-   `CortexState::component_type_of`); caso contrário rejeita com `warn!`,
-   igual ao padrão já usado pra `ActionRequest`. Teste novo:
+---
+
+## 2026-08-23 (continued, 4) - Real E2E test via SSH on the Forge: 2 real bugs found and fixed
+
+User's request: "test the main flow, connect via ssh and test it" — not
+just running `cargo test`, but bringing up the daemons for real (root +
+the dedicated users `_hive-ai`/`_hive-sense`/`_hive-act`) in a container
+on the Forge and watching the flow end to end.
+
+**This found 2 real bugs that no unit test would catch, because none of
+them runs with real Unix sockets between different users:**
+
+1. **The cortex's socket didn't have the `hive` group.** `IpcServer::bind`
+   (`crates/hive-common/src/ipc.rs`) did `chmod 0660` on the socket but
+   never `chown`ed it to the `hive` group — the 0660 permission only
+   works if the file's group really is `hive`. In production this "works
+   by accident" because systemd's `.service` sets `Group=hive`, and the
+   process inherits that gid when it creates the socket. Running
+   `hive-cortex` as plain root (without that directive), the socket came
+   out `root:root` and `hive-synapse`/`hive-actuator`/`hive-nerve-process`
+   (group `hive`, not `root`) got `Permission denied (os error 13)` —
+   confirmed when running the E2E test for the first time: the 3
+   processes died at startup. **Fixed**: `IpcServer::bind` now resolves
+   the `hive` group via `nix::unistd::Group::from_name` and does an
+   explicit `chown` on the socket, with a warning (not a fatal error) if
+   the group doesn't exist — this keeps single-user dev working with no
+   extra setup.
+
+2. **`SuggestionResponse` didn't check who sent it.** Discovered while
+   writing `examples/fake_synapse.rs` (a test client that injects a
+   `SuggestionResponse` with a real `Action` to exercise the
+   `UserAction`→`ActionRequest` path, since the real `hive-synapse` is
+   still just a mock and never attaches an `Action` to what it
+   "suggests"): running as root but without being called `hive-synapse`,
+   the cortex accepted and processed the suggestion anyway — the same
+   kind of hole `ActionRequest` already had (earlier audit, see
+   [[security-audit-2026-08]]), only at the suggestions entry point
+   instead of direct execution. **Fixed**: `route()` in `router.rs` now
+   checks `component_type_of(from_conn) == Some(ComponentType::Synapse)`
+   before accepting (new helper `CortexState::component_type_of`);
+   otherwise it rejects with `warn!`, the same pattern already used for
+   `ActionRequest`. New test:
    `suggestion_response_from_a_non_synapse_connection_is_rejected`.
 
-**Reteste depois da correção — tudo validado de verdade, não só em
-teste unitário:**
+**Retest after the fix — everything validated for real, not just in
+unit tests:**
 - `hive-cortex` (root), `hive-synapse` (`_hive-ai`), `hive-actuator`
-  (`_hive-act`), `hive-nerve-process` (`_hive-sense`) e `hive-dashboard`
-  (root, rodado manualmente) conectaram e se registraram com o tipo
-  correto — sem nenhum "Permission denied".
-- `fake_synapse` (root, mas não chamado `hive-synapse`) tentou injetar
-  a sugestão de novo — cortex rejeitou corretamente:
-  `Rejecting SuggestionResponse from connection 5 (component type
-  Some(Unknown), expected Synapse)`.
-- `hive-dashboard` renderizou corretamente (confirmado lendo o log bruto
-  de escape codes do processo: título "Hive Dashboard", borda, estado
-  vazio "(nothing yet)"/"Select a notification on the left.", barra de
-  status "Connected. Waiting for Hive activity..."). A captura via
-  `tmux capture-pane -p` ficou em branco nas 4 tentativas — investigado,
-  não é bug do dashboard (o log bruto prova que o frame foi desenhado
-  certo), é uma limitação do harness de teste (tmux capture-pane vs.
-  timing/alt-screen), não vale a pena perseguir mais.
-- `hive-nerve-process` não detectou o `rm -rf` disparado diretamente no
-  shell do script — mecanismo de observação dele não é esse tipo de
-  gatilho direto; não é regressão desta sessão, já era assim antes.
+  (`_hive-act`), `hive-nerve-process` (`_hive-sense`) and `hive-dashboard`
+  (root, run manually) connected and registered with the correct
+  type — without a single "Permission denied".
+- `fake_synapse` (root, but not called `hive-synapse`) tried to inject
+  the suggestion again — the cortex correctly rejected it:
+  `Rejecting SuggestionResponse from connection 5 (component type Some(Unknown), expected Synapse)`.
+- `hive-dashboard` rendered correctly (confirmed by reading the process's
+  raw log of escape codes: title "Hive Dashboard", border, empty state
+  "(nothing yet)"/"Select a notification on the left.", status bar
+  "Connected. Waiting for Hive activity..."). The capture via
+  `tmux capture-pane -p` came out blank in all 4 attempts — investigated;
+  it's not a dashboard bug (the raw log proves the frame was drawn
+  correctly), it's a limitation of the test harness (tmux capture-pane
+  vs. timing/alt-screen), not worth pursuing further.
+- `hive-nerve-process` didn't detect the `rm -rf` fired directly in the
+  script's shell — its observation mechanism doesn't catch that kind of
+  direct trigger; it's not a regression from this session, it was already
+  like that before.
 
-**Consequência importante:** as correções de segurança feitas mais cedo
-nesta sessão (autenticação por peer-uid, whitelist, etc.) nunca tinham
-sido exercitadas com usuários Unix separados de verdade até este teste —
-só em testes unitários com canais `mpsc` fake. O bug do grupo do socket
-mostra que "logicamente correto" e "funciona numa implantação real com
-privilégios separados" são coisas diferentes, e só o teste E2E via SSH
-pegou isso.
+**Important consequence:** the security fixes made earlier in this
+session (peer-uid authentication, whitelist, etc.) had never been
+exercised with really separate Unix users until this test — only in unit
+tests with fake `mpsc` channels. The socket group bug shows that
+"logically correct" and "works in a real deployment with separated
+privileges" are different things, and only the E2E test via SSH caught
+it.
 
-**Pendências que ficaram claras neste teste, não resolvidas ainda:**
-- `crates/hive-dashboard/examples/fake_synapse.rs` existe localmente e
-  no Forge mas não foi commitado — é útil como ferramenta de teste manual
-  permanente (é a única forma de exercitar `UserAction`→`ActionRequest`
-  com uma `Action` real hoje, já que `hive-synapse` real não anexa
-  `Action` às sugestões que "gera"), mas também é código de teste que
-  normalmente não iria pro histórico principal sem decisão explícita.
-- Container `druidos-e2e` no Forge continua rodando (`sleep infinity`)
-  pra permitir mais depuração se necessário.
+**Pending items that became clear in this test, not resolved yet:**
+- `crates/hive-dashboard/examples/fake_synapse.rs` exists locally and
+  on the Forge but wasn't committed — it's useful as a permanent manual
+  testing tool (it's the only way to exercise `UserAction`→`ActionRequest`
+  with a real `Action` today, since the real `hive-synapse` doesn't attach
+  an `Action` to the suggestions it "generates"), but it's also test code
+  that normally wouldn't go into the main history without an explicit
+  decision.
+- The `druidos-e2e` container on the Forge is still running
+  (`sleep infinity`) to allow more debugging if needed.
 
 ---
 
-## 2026-08-23 (continuação 3) - hive-dashboard + fluxo UserAction→ActionRequest
+## 2026-08-23 (continued, 3) - hive-dashboard + UserAction→ActionRequest flow
 
-Terceira parte da sessão (mesmo dia). Depois de higiene e docs, atacou-se
-o item mais substancial: como o Hive avisa o usuário sem GUI, e o
-`HiveMessage::UserAction` que continuava um `// TODO` — ou seja, mesmo
-com whitelist e autenticação corrigidas, nada gerava `ActionRequest` de
-verdade.
+Third part of the session (same day). After hygiene and docs, the most
+substantial item was tackled: how the Hive notifies the user without a
+GUI, and the `HiveMessage::UserAction` that was still a `// TODO` — that
+is, even with the whitelist and authentication fixed, nothing actually
+generated an `ActionRequest`.
 
-**Achado que mudou o plano original:** o Grove hoje é síncrono
-(`stdin().read_line()` puro, sem tokio) e nem executa comando externo
-ainda. Integrar notificação ali exigiria primeiro reescrevê-lo pra
-async. Optou-se por um binário novo, `hive-dashboard` (ratatui,
-`tokio::select!` entre eventos de terminal via `crossterm::EventStream`
-e o socket IPC — mesmo padrão dos daemons existentes), em vez de mexer
-no Grove. Roda manualmente pelo usuário (tipo `top`), sem serviço
-systemd.
+**Finding that changed the original plan:** Grove today is synchronous
+(plain `stdin().read_line()`, no tokio) and does not even run external
+commands yet. Integrating notifications there would first require
+rewriting it as async. We opted for a new binary, `hive-dashboard` (ratatui,
+`tokio::select!` between terminal events via `crossterm::EventStream`
+and the IPC socket — the same pattern as the existing daemons), instead
+of touching Grove. The user runs it manually (like `top`), with no
+systemd service.
 
-**Mudanças no `hive-cortex`:**
-- `ComponentType::Shell` renomeado pra `Dashboard` — o nome "Shell"
-  ficou associado ao overlay Wayland arquivado.
-- `SuggestionResponse` agora é guardado (`CortexState.pending_suggestions`)
-  e vira uma `Notification` carregando as sugestões no campo `actions`
-  (que já existia em `HiveMessage::Notification`, nunca populado).
-  Corrigiu de passagem um bug anterior a esta sessão: `forward_to_synapse`
-  nunca registrava a conexão de origem (parâmetro literalmente chamado
-  `_from`), então uma `SuggestionResponse` nunca poderia ter voltado pelo
-  caminho antigo (`forward_to_requester`).
-- `UserAction` agora busca a sugestão, e se ela tem uma `Action`, monta
-  `ActionRequest` e despacha direto pro actuator (`forward_to_actuator`,
-  chamado internamente — não passa pelo caminho da rede, que foi fechado
-  na correção de segurança). `requires_confirmation` vem de
-  `Action::is_dangerous()` — ações perigosas continuam sendo rejeitadas
-  pelo actuator (falha fechado, já corrigido), já que ainda não existe
-  UI de confirmação — limite aceito de v1, não uma lacuna nova.
-- `UserDismiss` agora limpa `pending_suggestions` de verdade.
+**Changes in `hive-cortex`:**
+- `ComponentType::Shell` renamed to `Dashboard` — the name "Shell"
+  had become associated with the archived Wayland overlay.
+- `SuggestionResponse` is now stored (`CortexState.pending_suggestions`)
+  and becomes a `Notification` carrying the suggestions in the `actions`
+  field (which already existed in `HiveMessage::Notification`, never populated).
+  Fixed in passing a bug that predates this session: `forward_to_synapse`
+  never recorded the originating connection (the parameter was literally
+  named `_from`), so a `SuggestionResponse` could never have come back
+  along the old path (`forward_to_requester`).
+- `UserAction` now looks up the suggestion, and if it has an `Action`, builds
+  an `ActionRequest` and dispatches it straight to the actuator (`forward_to_actuator`,
+  called internally — it does not go through the network path, which was closed
+  in the security fix). `requires_confirmation` comes from
+  `Action::is_dangerous()` — dangerous actions are still rejected
+  by the actuator (fail closed, already fixed), since there is no
+  confirmation UI yet — an accepted v1 limit, not a new gap.
+- `UserDismiss` now actually clears `pending_suggestions`.
 
-`hive-common`: `Action` (e os tipos que ela usa) ganhou `PartialEq` —
-o `hive-dashboard` precisa disso pra correlacionar um `ActionResponse`
-recebido (que só carrega a `Action`, não o notification/suggestion id)
-com a linha que está esperando por ele.
+`hive-common`: `Action` (and the types it uses) gained `PartialEq` —
+`hive-dashboard` needs it to correlate a received `ActionResponse`
+(which only carries the `Action`, not the notification/suggestion id)
+with the row that is waiting for it.
 
-16 testes no `hive-cortex` (5 novos: fluxo de sugestão, ação perigosa
-vs não-perigosa, notification_id desconhecido, dismiss) + 8 no
-`hive-dashboard` (lógica pura de estado — expandir notificação em
-linhas, casar ActionResponse, navegação da lista, mapeamento de tecla).
-Tudo validado no Forge e na CI real do GitHub antes do push
+16 tests in `hive-cortex` (5 new: suggestion flow, dangerous vs
+non-dangerous action, unknown notification_id, dismiss) + 8 in
+`hive-dashboard` (pure state logic — expanding a notification into
+rows, matching an ActionResponse, list navigation, key mapping).
+Everything validated on the Forge and on the real GitHub CI before the push
 (commit `2ba745f`).
 
-Docs atualizados: `CLAUDE.md` (as duas perguntas em aberto que isso
-resolve), `docs/architecture.md`, `docs/HIVE-STACK.md`,
-`docs/user-guide.md`, `debian/control`/`rules` (empacota o binário novo).
+Docs updated: `CLAUDE.md` (the two open questions this
+resolves), `docs/architecture.md`, `docs/HIVE-STACK.md`,
+`docs/user-guide.md`, `debian/control`/`rules` (packages the new binary).
 
-### Em aberto
-- Confirmação interativa de ações perigosas dentro do dashboard (v2).
-- Grove continua síncrono e sem execução de comando externo — achado
-  incidental desta sessão, não endereçado (não foi pedido).
-- `pending_suggestions` não tem expiração por tempo (mesmo nível do
-  `pending_requests` já existente).
+### Open items
+- Interactive confirmation of dangerous actions inside the dashboard (v2).
+- Grove is still synchronous and without external command execution — an
+  incidental finding of this session, not addressed (it was not asked for).
+- `pending_suggestions` has no time-based expiry (same level as the
+  already existing `pending_requests`).
 
 ---
 
-## 2026-08-23 (continuação) - Correção dos achados de segurança + higiene
+## 2026-08-23 (continued) - Fixing the security findings + hygiene
 
-Mesmo dia, continuação direta da entrada abaixo. Os 5 achados de
-segurança listados na entrada anterior como "nenhum corrigido" **foram
-todos corrigidos** nesta parte da sessão (commit `6fe1144`), validados
-pelo loop do Forge e depois pela CI real do GitHub:
+Same day, a direct continuation of the entry below. The 5 security
+findings listed in the previous entry as "none fixed" **were
+all fixed** in this part of the session (commit `6fe1144`), validated
+by the Forge loop and then by the real GitHub CI:
 
-1. **Autenticação por uid real**: `hive-cortex` agora cruza o tipo de
-   componente autodeclarado (`/proc/pid/comm`) com o uid de verdade da
-   conexão (`nix::unistd::User::from_uid`), batendo contra o usuário
-   esperado em `config/systemd/hive-*.service`. Mismatch rebaixa pra
+1. **Authentication by real uid**: `hive-cortex` now cross-checks the
+   self-declared component type (`/proc/pid/comm`) against the connection's
+   real uid (`nix::unistd::User::from_uid`), matching it against the
+   expected user in `config/systemd/hive-*.service`. A mismatch downgrades it to
    `Unknown`. `crates/hive-cortex/src/main.rs`.
-2. **`ActionRequest` externo rejeitado**: `router.rs` não encaminha mais
-   `ActionRequest` vindo de qualquer conexão — só cortex deveria gerar
-   essa mensagem (protocolo documentado), e hoje nem gera ainda (`UserAction`
-   continua TODO). `forward_to_actuator` ficou com `#[allow(dead_code)]`
-   pra quando esse fluxo for construído.
-3. **Confirmação falha fechado**: `hive-actuator` rejeita ações que
-   pedem confirmação em vez de executar mesmo assim (não existe UI pra
-   confirmar de verdade ainda).
-4-5. **Whitelist reescrita**: `crates/hive-actuator/src/whitelist.rs`
-   agora corresponde 1:1 ao enum `Action` real (o `whitelist.toml`
-   antigo referenciava tipos de ação que não existem no código). Matching
-   exato de comando+args posicionais (fechou o bypass `iptables` via
-   `"ip"`), glob `*` pra paths/serviços/pacotes, default é negar tudo
-   (antes era uma lista "seguras" hardcoded que podia divergir do arquivo
-   real). Rate limit por tipo de ação, além do global já existente.
+2. **External `ActionRequest` rejected**: `router.rs` no longer forwards
+   an `ActionRequest` coming from any connection — only cortex should generate
+   that message (documented protocol), and today it does not even do so yet (`UserAction`
+   is still a TODO). `forward_to_actuator` was left with `#[allow(dead_code)]`
+   for when that flow is built.
+3. **Confirmation fails closed**: `hive-actuator` rejects actions that
+   require confirmation instead of executing them anyway (there is no UI to
+   really confirm yet).
+4-5. **Whitelist rewritten**: `crates/hive-actuator/src/whitelist.rs`
+   now corresponds 1:1 to the real `Action` enum (the old `whitelist.toml`
+   referenced action types that do not exist in the code). Exact
+   matching of command+positional args (closed the `iptables` bypass via
+   `"ip"`), glob `*` for paths/services/packages, the default is to deny everything
+   (before, it was a hardcoded "safe" list that could diverge from the real
+   file). Rate limit per action type, in addition to the existing global one.
 
-Escopo explicitamente fora: o fluxo `UserAction`→`ActionRequest` em si
-(feature nova, não correção), autorização granular por tipo de mensagem
-além de `ActionRequest`.
+Explicitly out of scope: the `UserAction`→`ActionRequest` flow itself
+(a new feature, not a fix), granular authorization per message type
+beyond `ActionRequest`.
 
-### Higiene rápida
+### Quick hygiene
 
-- Removidos 20 arquivos soltos na raiz (untracked): lixo de debug (`nul`,
-  logs vazios/obsoletos) e scripts que apontavam pra `dist/v0.4-fb`
-  (arquivado) ou pra VMs de build antigas (substituídas pelo Forge).
-  Mantidos `kill-qemu.ps1`/`kill-all-qemu.ps1` (genéricos).
-- Chave SSH em `qemu-workspace/keys/` confirmada já coberta pelo
-  `.gitignore` (não movida — é o workspace esperado pelo MCP `qemu-lab`).
-- `installer/` (instalador TUI em ratatui/crossterm — já alinhado com o
-  pivot) nunca esteve no workspace Cargo, nunca compilou/lintou/testou.
-  Adicionado; corrigidos os 4 avisos reais de clippy da primeira
-  passada.
+- Removed 20 loose files at the root (untracked): debug junk (`nul`,
+  empty/obsolete logs) and scripts that pointed to `dist/v0.4-fb`
+  (archived) or to old build VMs (replaced by the Forge).
+  Kept `kill-qemu.ps1`/`kill-all-qemu.ps1` (generic).
+- SSH key in `qemu-workspace/keys/` confirmed as already covered by
+  `.gitignore` (not moved — it is the workspace the `qemu-lab` MCP expects).
+- `installer/` (TUI installer in ratatui/crossterm — already aligned with the
+  pivot) was never in the Cargo workspace, never compiled/linted/tested.
+  Added; fixed the 4 real clippy warnings from the first
+  pass.
 
-Memória `security-audit-2026-08` atualizada para refletir que os 5
-achados estão corrigidos.
+Memory `security-audit-2026-08` updated to reflect that the 5
+findings are fixed.
 
 ---
 
-## 2026-08-23 - Auditoria, pipeline de testes e cobertura nova
+## 2026-08-23 - Audit, test pipeline and new coverage
 
-### Auditoria do projeto
+### Project audit
 
-Achados de segurança na Hive Stack (nenhum corrigido nesta parte da
-sessão — corrigidos mais tarde no mesmo dia, ver entrada acima):
+Security findings in the Hive Stack (none fixed in this part of the
+session — fixed later the same day, see the entry above):
 
-- `hive-cortex` autentica componentes por `/proc/{pid}/comm`
-  (`get_component_type`), não pelo uid do peer credential que já coleta —
-  qualquer processo local pode se passar por outro componente só nomeando
-  o binário.
-- `router.rs` encaminha `ActionRequest` de **qualquer** conexão direto pro
-  actuator, sem checar se veio do próprio cortex.
-- Confirmação de ação (`requires_confirmation`) é um `// TODO: Handle
-  confirmation requirement` que não faz nada — executa mesmo assim
+- `hive-cortex` authenticates components by `/proc/{pid}/comm`
+  (`get_component_type`), not by the uid of the peer credential it already collects —
+  any local process can impersonate another component just by naming
+  the binary.
+- `router.rs` forwards `ActionRequest` from **any** connection straight to the
+  actuator, without checking whether it came from the cortex itself.
+- Action confirmation (`requires_confirmation`) is a `// TODO: Handle
+  confirmation requirement` that does nothing — it executes anyway
   (`hive-actuator/src/main.rs`).
-- `config/hive/whitelist.toml` (schema rico, `[[actions]]`) é incompatível
-  com o struct Rust que o lê (`WhitelistConfig`) — carrega quase vazio e
-  trata pacotes como "permitir todos" por padrão.
-- Matching de comando por prefixo de string na whitelist libera
-  `iptables` via `"ip"`, e `find`/`git` sem restrição de argumentos
-  permitem exec arbitrário (ex.: `git -c core.fsmonitor=...`).
+- `config/hive/whitelist.toml` (rich schema, `[[actions]]`) is incompatible
+  with the Rust struct that reads it (`WhitelistConfig`) — it loads almost empty and
+  treats packages as "allow all" by default.
+- Command matching by string prefix in the whitelist lets
+  `iptables` through via `"ip"`, and `find`/`git` without argument restrictions
+  allow arbitrary exec (e.g. `git -c core.fsmonitor=...`).
 
-Achados de higiene:
+Hygiene findings:
 
-- `qemu-workspace/keys/id_ed25519` (chave SSH privada) sentado na árvore
-  de trabalho, untracked mas não ignorado.
-- `.gitignore` não cobria `dist/`, `output/`, `qemu-workspace/` —
-  corrigido nesta sessão (ver abaixo, quase mandou 54GB pro Forge).
-- Vários arquivos soltos na raiz (`nul`, `print.png`, `*.log`, `*.ps1`)
-  ainda não tratados.
+- `qemu-workspace/keys/id_ed25519` (private SSH key) sitting in the working
+  tree, untracked but not ignored.
+- `.gitignore` did not cover `dist/`, `output/`, `qemu-workspace/` —
+  fixed in this session (see below, it almost sent 54GB to the Forge).
+- Several loose files at the root (`nul`, `print.png`, `*.log`, `*.ps1`)
+  not yet dealt with.
 
-### Pipeline de testes: CI corrigida + loop no Forge
+### Test pipeline: CI fixed + loop on the Forge
 
-`.github/workflows/ci.yml` ("CI": fmt/clippy/test/build/audit/docs) nunca
-tinha rodado nem uma vez — disparava só em push pra `main`/`develop`, e
-todo o trabalho acontece em branches `claude/**`. Corrigido o trigger.
-Na primeira run real, apareceu um segundo bug pré-existente: a action
-`dtolnay/rust-action@stable` não existe (é `dtolnay/rust-toolchain@stable`)
-— todo job falhava em "Set up job". Corrigido.
+`.github/workflows/ci.yml` ("CI": fmt/clippy/test/build/audit/docs) had never
+run even once — it only triggered on push to `main`/`develop`, and
+all the work happens on `claude/**` branches. Fixed the trigger.
+On the first real run, a second pre-existing bug showed up: the action
+`dtolnay/rust-action@stable` does not exist (it is `dtolnay/rust-toolchain@stable`)
+— every job failed at "Set up job". Fixed.
 
-`rust-build.yml` ("Rust Components Build") foi removido: disparava em
-`claude/**` certo, mas o filtro de paths (`bark/**`, `spore/**`,
-`grove/**`) é de antes da Hive Stack entrar no workspace — nunca testou
-nenhum crate `hive-*`, que é onde vive a maior parte do código.
+`rust-build.yml` ("Rust Components Build") was removed: it did trigger on
+`claude/**`, but the paths filter (`bark/**`, `spore/**`,
+`grove/**`) dates from before the Hive Stack joined the workspace — it never tested
+any `hive-*` crate, which is where most of the code lives.
 
-Criado `scripts/check.sh` (fmt --check + clippy -D warnings + test
---workspace, mesmo comando que a CI roda) e, como o Windows não
-cross-compila os crates que puxam `ring`/`openssl-sys` (falta um
-`x86_64-linux-gnu-gcc`), um loop local via o Forge (servidor Docker do
-homelab, `10.10.1.40`, SSH alias `forge`): `scripts/test-on-forge.sh`
-empacota a árvore de trabalho (`git ls-files`, pega inclusive o que não
-foi commitado ainda) e roda `check.sh` lá dentro de um container
-(`scripts/forge-test.Dockerfile`, imagem `rust:1-bookworm` +
-rustfmt/clippy/libssl-dev). Nada compila localmente no Windows; registry
-do cargo e `target/` persistem no Forge entre execuções.
+Created `scripts/check.sh` (fmt --check + clippy -D warnings + test
+--workspace, the same command the CI runs) and, since Windows does not
+cross-compile the crates that pull in `ring`/`openssl-sys` (it lacks an
+`x86_64-linux-gnu-gcc`), a local loop via the Forge (the homelab's Docker
+server, `10.10.1.40`, SSH alias `forge`): `scripts/test-on-forge.sh`
+packages the working tree (`git ls-files`, which also picks up what has not
+been committed yet) and runs `check.sh` there inside a container
+(`scripts/forge-test.Dockerfile`, image `rust:1-bookworm` +
+rustfmt/clippy/libssl-dev). Nothing compiles locally on Windows; the cargo
+registry and `target/` persist on the Forge between runs.
 
-**Quase-incidente:** o `.gitignore` nunca cobrindo `dist/`/`output/`/
-`qemu-workspace/` significava que `git ls-files --others --exclude-standard`
-ia mandar ~54GB (ISOs, discos qcow2, e a chave SSH privada) pro Forge no
-primeiro sync. Pego antes de completar, processo travado morto, 41GB
-parciais limpos do Forge (via container root, os arquivos ficaram
-root-owned pelo build dentro do container), `.gitignore` corrigido.
+**Near-incident:** `.gitignore` never covering `dist/`/`output/`/
+`qemu-workspace/` meant that `git ls-files --others --exclude-standard`
+was going to send ~54GB (ISOs, qcow2 disks, and the private SSH key) to the Forge on the
+first sync. Caught before it completed, the hung process killed, 41GB
+of partial files cleaned off the Forge (via a root container, since the files had become
+root-owned by the build inside the container), `.gitignore` fixed.
 
-### Débito técnico: backlog de clippy zerado
+### Technical debt: clippy backlog cleared
 
-O workspace nunca tinha passado por `cargo clippy --workspace --all-targets
--- -D warnings` de ponta a ponta. Usando o loop do Forge, apareceram (e
-foram corrigidos) ~20 avisos reais em 8 crates: imports não usados,
-closures redundantes, `derivable_impls` (2x `impl Default` manual que
-vira `#[derive(Default)]`), `useless_vec!`, `manual_strip`,
-`single_match`/`collapsible_match`, `needless_return`, um método
-`to_string()` inerente virou `impl Display`, um `History::next()` renomeado
-pra `next_entry()` (conflitava com o nome do método do trait `Iterator`),
-e `#[allow(dead_code)]` com justificativa numa linha pros campos/métodos
-que são scaffolding genuína ainda não conectada (`FsEvent::PermissionChanged`
-e seus métodos `description`/`severity`, `recent_paths`,
-`create_pre_operation_snapshot`, e os campos `pid`/`uid`/`config` do
-`hive-cortex` — estes últimos são os mesmos da auditoria de segurança;
-o `allow` só cala o lint, não mexe no comportamento).
+The workspace had never passed `cargo clippy --workspace --all-targets
+-- -D warnings` end to end. Using the Forge loop, ~20 real warnings
+in 8 crates showed up (and were fixed): unused imports,
+redundant closures, `derivable_impls` (2x manual `impl Default` that
+becomes `#[derive(Default)]`), `useless_vec!`, `manual_strip`,
+`single_match`/`collapsible_match`, `needless_return`, an inherent
+`to_string()` method became `impl Display`, a `History::next()` renamed
+to `next_entry()` (it clashed with the name of the `Iterator` trait's method),
+and `#[allow(dead_code)]` with a one-line justification for the fields/methods
+that are genuine scaffolding not yet wired up (`FsEvent::PermissionChanged`
+and its `description`/`severity` methods, `recent_paths`,
+`create_pre_operation_snapshot`, and the `pid`/`uid`/`config` fields of
+`hive-cortex` — these last ones are the same as in the security audit;
+the `allow` only silences the lint, it does not change the behavior).
 
-### Cobertura de testes nova
+### New test coverage
 
-`hive-cortex/src/router.rs` (282 linhas, 0 testes antes — é o coração do
-roteamento de mensagens) ganhou 7 testes construindo um `CortexState`/
-`SharedState` real e componentes falsos via canais `mpsc` (mesmo padrão
-já usado no teste de IPC do `hive-common`, só sem socket de verdade):
-Ping/Pong, `CommandObserved` → synapse, supressão em modo anônimo,
-`PortConflict` → synapse+shell, `ActionRequest` → actuator, e
-`ActionResponse` voltando pro requisitante original via `request_id`.
+`hive-cortex/src/router.rs` (282 lines, 0 tests before — it is the heart of
+message routing) gained 7 tests that build a real `CortexState`/
+`SharedState` and fake components via `mpsc` channels (the same pattern
+already used in the IPC test of `hive-common`, just without a real socket):
+Ping/Pong, `CommandObserved` → synapse, suppression in anonymous mode,
+`PortConflict` → synapse+shell, `ActionRequest` → actuator, and
+`ActionResponse` going back to the original requester via `request_id`.
 
-`hive-actuator/src/main.rs` (817 linhas, 0 testes) ganhou 4 testes pro
-`RateLimiter` (janela de taxa) e `is_destructive_action`.
+`hive-actuator/src/main.rs` (817 lines, 0 tests) gained 4 tests for the
+`RateLimiter` (rate window) and `is_destructive_action`.
 
-`hive-cortex/src/main.rs` ganhou 2 testes pro `ComponentType::from_name`.
+`hive-cortex/src/main.rs` gained 2 tests for `ComponentType::from_name`.
 
-Deixado de propósito fora: testes de integração que exercitariam o gap
-de autorização do router — nasceriam vermelhos sem corrigir o bug
-primeiro, então ficam pra a sessão de segurança dedicada.
+Left out on purpose: integration tests that would exercise the router's
+authorization gap — they would be born red without fixing the bug
+first, so they are left for the dedicated security session.
 
-### Commits desta sessão (em cima de `897cd44`)
+### Commits of this session (on top of `897cd44`)
 
 1. `fb49bac` refactor: redefine project target to TUI-only, archive GUI track
 2. `8183cf5` style: apply cargo fmt across the Hive Stack
@@ -1633,272 +1710,272 @@ primeiro, então ficam pra a sessão de segurança dedicada.
 6. `cd9c2c0` feat: add Forge-based test loop (native Linux, no WSL/cross-compile)
 7. `92e5fae` test: add unit coverage for hive-cortex routing and hive-actuator
 
-### Em aberto (status no fim do dia — ver as duas entradas acima)
+### Open items (status at the end of the day — see the two entries above)
 
-- ~~Correções de segurança da auditoria~~ — **corrigidas**, ver entrada
-  "Correção dos achados de segurança + higiene" acima.
+- ~~Security fixes from the audit~~ — **fixed**, see the entry
+  "Fixing the security findings + hygiene" above.
 - `docs/architecture.md`, `docs/security-model.md`, `docs/user-guide.md`,
   `scripts/build-iso.sh`, `scripts/build-image.sh`, `installer/src/main.rs`
-  (as opções `enable_hive`/`install_desktop`, especificamente — o crate em
-  si já compila/linta desde a limpeza de higiene), `.github/workflows/release.yml`
-  ainda descrevem o desktop Hyprland/Wayland como atual — não atualizados
-  no pivot TUI-only (fora de escopo na hora).
-- ~~Higiene de repositório: arquivos soltos na raiz~~ — **limpos** (ver
-  entrada acima). Ainda pendente: `.mcp.json`/`config/hive/config.toml`
-  untracked, indefinido se deveriam ser versionados.
-- Mecanismo de notificação do Hive sem GUI ainda indefinido (ver entrada
-  do pivot, abaixo).
+  (the `enable_hive`/`install_desktop` options, specifically — the crate
+  itself has compiled/linted since the hygiene cleanup), `.github/workflows/release.yml`
+  still describe the Hyprland/Wayland desktop as current — not updated
+  in the TUI-only pivot (out of scope at the time).
+- ~~Repository hygiene: loose files at the root~~ — **cleaned up** (see the
+  entry above). Still pending: `.mcp.json`/`config/hive/config.toml`
+  untracked, undecided whether they should be versioned.
+- The Hive's notification mechanism without a GUI still undefined (see the
+  pivot entry, below).
 
 ---
 
-## 2026-08-23 - Redefinição de alvo: TUI-only (sem GUI)
+## 2026-08-23 - Target redefinition: TUI-only (no GUI)
 
-### Decisão
+### Decision
 
-O projeto tinha duas apostas gráficas CPU-only em paralelo, nenhuma
-integrada de ponta a ponta:
-1. `bark` + `spore` — engine de framebuffer direto (mmap em `/dev/fb0`),
-   sendo depurada na sessão anterior (v0.4-fb, segfault de mmap).
-2. `hive-shell` + `hive-dock` + `hive-term` — desktop Wayland/Hyprland
-   com renderização via Mesa+LLVMpipe, nunca chegou a ter service systemd.
+The project had two CPU-only graphics bets in parallel, neither
+integrated end to end:
+1. `bark` + `spore` — a direct framebuffer engine (mmap on `/dev/fb0`),
+   being debugged in the previous session (v0.4-fb, mmap segfault).
+2. `hive-shell` + `hive-dock` + `hive-term` — a Wayland/Hyprland desktop
+   rendering via Mesa+LLVMpipe, which never got as far as having a systemd service.
 
-Decisão: **abandonar GUI, focar 100% em terminal/TUI**, com `grove` como
-interface principal.
+Decision: **abandon the GUI, focus 100% on terminal/TUI**, with `grove` as the
+main interface.
 
-### Ações
+### Actions
 
-- Movidos para `archive/` (fora do workspace Cargo, histórico git preservado
+- Moved to `archive/` (outside the Cargo workspace, git history preserved
   via `git mv`): `bark/`, `spore/`, `crates/hive-shell/`, `crates/hive-dock/`,
   `crates/hive-term/`, `examples/fb-test.rs`, `assets/`,
   `config/hyprland/`, `config/waybar/`, `config/applications/*.desktop`.
-- `Cargo.toml` raiz: removidos os 5 crates gráficos do `members` e as
-  dependências `memmap2`/`input-linux` (únicos consumidores eram `bark`).
-- `grove/Cargo.toml`: removida dependência `bark` (não era usada no código).
-- `debian/control`: removido pacote `druidos-hive-desktop` e os
+- Root `Cargo.toml`: removed the 5 graphical crates from `members` and the
+  `memmap2`/`input-linux` dependencies (their only consumers were `bark`).
+- `grove/Cargo.toml`: removed the `bark` dependency (it was not used in the code).
+- `debian/control`: removed the `druidos-hive-desktop` package and the
   build-deps `libwayland-dev`/`libxkbcommon-dev`.
-- `CLAUDE.md`, `docs/HIVE-STACK.md`, `STATUS.md`: atualizados para refletir
-  o novo escopo.
+- `CLAUDE.md`, `docs/HIVE-STACK.md`, `STATUS.md`: updated to reflect
+  the new scope.
 
-### Em aberto
+### Open items
 
-Sem `hive-shell`, ainda não está definido como `hive-cortex` deve entregar
-notificações/sugestões ao usuário (inline no Grove? painel TUI separado?).
-Ver "Open Questions" em `CLAUDE.md`. `ComponentType::Shell` no
-`hive-cortex/src/router.rs` continua no código, sem consumidor registrado.
+Without `hive-shell`, it is not yet defined how `hive-cortex` should deliver
+notifications/suggestions to the user (inline in Grove? a separate TUI panel?).
+See "Open Questions" in `CLAUDE.md`. `ComponentType::Shell` in
+`hive-cortex/src/router.rs` remains in the code, with no registered consumer.
 
-Fixes não commitados do framebuffer (`archive/bark/src/framebuffer.rs`)
-foram preservados no código arquivado, só saíram do build ativo.
+Uncommitted framebuffer fixes (`archive/bark/src/framebuffer.rs`)
+were preserved in the archived code; they only left the active build.
 
 ---
 
 ## 2026-02-20 - v0.4 Framebuffer Development
 
-### Objetivo
-Validar bark (HAL) e spore (2D rendering engine) para implementar GUI sem GPU.
+### Goal
+Validate bark (HAL) and spore (2D rendering engine) to implement a GUI without a GPU.
 
-### Conquistas
+### Achievements
 
-#### 1. Framebuffer Funcionando
-- `/dev/fb0` aparece com parâmetro `vga=0x31B`
-- Resolução: 1280x1024 @ 24bpp
-- fb-test abre framebuffer com sucesso
+#### 1. Framebuffer working
+- `/dev/fb0` appears with the parameter `vga=0x31B`
+- Resolution: 1280x1024 @ 24bpp
+- fb-test opens the framebuffer successfully
 
-#### 2. Bugs Identificados em `bark/src/framebuffer.rs`
+#### 2. Bugs identified in `bark/src/framebuffer.rs`
 
-**Bug 1: mmap sem tamanho explícito**
+**Bug 1: mmap without an explicit size**
 ```rust
-// ANTES (não funciona para device files):
+// BEFORE (does not work for device files):
 MmapMut::map_mut(&file)
 
-// DEPOIS (fix aplicado):
+// AFTER (fix applied):
 memmap2::MmapOptions::new()
     .len(size)
     .map_mut(&file)
 ```
 
-**Bug 2: flush() assumia 32bpp**
-O método foi reescrito para suportar 24bpp, 32bpp e 16bpp.
+**Bug 2: flush() assumed 32bpp**
+The method was rewritten to support 24bpp, 32bpp and 16bpp.
 
-#### 3. DruidOS v0.4-fb Criado
+#### 3. DruidOS v0.4-fb created
 - `dist/v0.4-fb/bonsai-kernel` (15MB)
-- `dist/v0.4-fb/bonsai-initramfs.img` (2.6MB) - sem SLM
+- `dist/v0.4-fb/bonsai-initramfs.img` (2.6MB) - without SLM
 
-### Problema Atual
-Fixes estão no código mas **não compilados**. O fb-test atual dá segfault.
+### Current problem
+The fixes are in the code but **not compiled**. The current fb-test segfaults.
 
-### Ambiente de Build Quebrado
-- VM Ubuntu: kernel panic "IO-APIC + timer doesn't work"
+### Broken build environment
+- Ubuntu VM: kernel panic "IO-APIC + timer doesn't work"
 - WHPX: "No space left on device"
-- WSL: disponível mas sem distribuição
+- WSL: available but with no distribution
 
-### Solução Pendente
-Instalar WSL Ubuntu:
+### Pending solution
+Install WSL Ubuntu:
 ```powershell
 wsl --install -d Ubuntu
 ```
-Depois rodar `build-fb-test.sh`
+Then run `build-fb-test.sh`
 
-### Scripts Criados
-- `run-fb.ps1` - Inicia DruidOS com framebuffer
-- `kill-all-qemu.ps1` - Mata todos QEMU
-- `build-fb-test.sh` - Compila fb-test (Linux)
+### Scripts created
+- `run-fb.ps1` - Starts DruidOS with the framebuffer
+- `kill-all-qemu.ps1` - Kills all QEMU processes
+- `build-fb-test.sh` - Compiles fb-test (Linux)
 
-### Parâmetros QEMU para Framebuffer
+### QEMU parameters for the framebuffer
 ```
 -vga std -append "vga=0x31B noapic nolapic console=tty0"
 ```
 
 ---
 
-## 2026-02-19 - Sessão de Desenvolvimento
+## 2026-02-19 - Development session
 
-### Ambiente Configurado
-- **QEMU**: 10.2.0 instalado no Windows
-- **MCP qemu-lab**: Funcionando para controlar VMs
-- **VM Ubuntu 24.04**: Rodando via nested virtualization (Proxmox → Windows → QEMU)
-- **Rust**: 1.93.1 instalado tanto no Windows quanto na VM
+### Environment set up
+- **QEMU**: 10.2.0 installed on Windows
+- **MCP qemu-lab**: Working to control VMs
+- **Ubuntu 24.04 VM**: Running via nested virtualization (Proxmox → Windows → QEMU)
+- **Rust**: 1.93.1 installed both on Windows and in the VM
 
-### Conquistas
+### Achievements
 
-#### 1. MCP QEMU Lab Operacional
-- VM Ubuntu 24.04 cloud image bootando com sucesso
-- SSH funcional (com chave em `qemu-workspace/keys/id_ed25519`)
-- Disco expandido de 2.4GB para 11GB para acomodar compilação
+#### 1. MCP QEMU Lab operational
+- Ubuntu 24.04 cloud image VM booting successfully
+- SSH working (with the key in `qemu-workspace/keys/id_ed25519`)
+- Disk expanded from 2.4GB to 11GB to make room for compiling
 
-#### 2. Workspace Rust Unificado
-- Adicionados 13 crates `hive-*` ao workspace
-- Dependências workspace atualizadas (bincode, toml, uuid, dirs, regex, which, etc.)
-- Cross-check funciona no Windows para target `x86_64-unknown-linux-gnu`
+#### 2. Unified Rust workspace
+- Added 13 `hive-*` crates to the workspace
+- Workspace dependencies updated (bincode, toml, uuid, dirs, regex, which, etc.)
+- Cross-check works on Windows for the target `x86_64-unknown-linux-gnu`
 
-#### 3. Build Completo na VM Ubuntu
-Todos os 13 binários da Hive Stack compilados em release:
+#### 3. Full build on the Ubuntu VM
+All 13 Hive Stack binaries compiled in release:
 
-| Binary | Tamanho | Descrição |
-|--------|---------|-----------|
-| hive-cortex | 2.2M | Orquestrador central |
-| hive-synapse | 2.2M | Motor de IA (Candle + tokenizers) |
-| hive-actuator | 2.3M | Executor de ações |
-| hive-apt | 1.1M | Wrapper inteligente do APT |
-| hive-zfs | 2.2M | Integração ZFS |
-| hive-nerve-process | 2.7M | Monitor de processos |
-| hive-nerve-journal | 2.8M | Monitor de logs (journald) |
-| hive-nerve-network | 2.1M | Monitor de rede |
-| hive-nerve-fs | 2.0M | Monitor de filesystem |
-| hive-shell | 2.2M | Overlay desktop |
+| Binary | Size | Description |
+|--------|------|-------------|
+| hive-cortex | 2.2M | Central orchestrator |
+| hive-synapse | 2.2M | AI engine (Candle + tokenizers) |
+| hive-actuator | 2.3M | Action executor |
+| hive-apt | 1.1M | Smart APT wrapper |
+| hive-zfs | 2.2M | ZFS integration |
+| hive-nerve-process | 2.7M | Process monitor |
+| hive-nerve-journal | 2.8M | Log monitor (journald) |
+| hive-nerve-network | 2.1M | Network monitor |
+| hive-nerve-fs | 2.0M | Filesystem monitor |
+| hive-shell | 2.2M | Desktop overlay |
 | hive-dock | 2.0M | Dock bar |
 | hive-term | 2.2M | Terminal emulator |
 
 **Total: ~25MB** (release, LTO, stripped)
 
-### Problemas Encontrados e Soluções
+### Problems found and solutions
 
-#### SSH Timeout no MCP
-- **Problema**: `guest_exec` do MCP dava timeout
-- **Solução**: Usar SSH direto com a chave em `qemu-workspace/keys/id_ed25519`
+#### SSH timeout in the MCP
+- **Problem**: The MCP's `guest_exec` timed out
+- **Solution**: Use SSH directly with the key in `qemu-workspace/keys/id_ed25519`
 
-#### Disco Pequeno na VM
-- **Problema**: Cloud image tem apenas 2.4GB, Rust precisa de mais
-- **Solução**: `qemu-img resize disk-overlay.qcow2 +8G` + `resize2fs`
+#### Small disk in the VM
+- **Problem**: The cloud image has only 2.4GB, Rust needs more
+- **Solution**: `qemu-img resize disk-overlay.qcow2 +8G` + `resize2fs`
 
-#### Cross-compile no Windows
-- **Problema**: MSVC não instalado, link.exe errado
-- **Solução**: Toolchain GNU (`stable-x86_64-pc-windows-gnu`)
-- **Limitação**: hive-synapse precisa de OpenSSL/cross-compiler completo
+#### Cross-compiling on Windows
+- **Problem**: MSVC not installed, wrong link.exe
+- **Solution**: GNU toolchain (`stable-x86_64-pc-windows-gnu`)
+- **Limitation**: hive-synapse needs OpenSSL/a full cross-compiler
 
-### Workflow de Build
+### Build workflow
 
 ```bash
-# No Windows (cross-check apenas):
+# On Windows (cross-check only):
 cargo check -p hive-common --target x86_64-unknown-linux-gnu
 
-# Na VM Ubuntu (build completo):
+# On the Ubuntu VM (full build):
 ssh -i qemu-workspace/keys/id_ed25519 -p PORT lab@127.0.0.1
 cd ~/druidos
 source ~/.cargo/env
 cargo build --workspace --release
 
-# Copiar binários de volta:
+# Copy the binaries back:
 scp -i qemu-workspace/keys/id_ed25519 -P PORT lab@127.0.0.1:~/druidos/target/release/hive-* target/release/
 ```
 
-### ✅ Hive Stack Testada
-- hive-cortex rodando com sucesso
-- Socket IPC criado em `/run/hive/cortex.sock`
-- Config completo em `/etc/hive/config.toml`
+### ✅ Hive Stack tested
+- hive-cortex running successfully
+- IPC socket created at `/run/hive/cortex.sock`
+- Full config at `/etc/hive/config.toml`
 
-### Próximos Passos
-1. [x] ~~Criar ISO do DruidOS~~ ✅ Feito!
-2. [x] ~~Testar comunicação entre componentes~~ ✅ Funcionando!
-3. [ ] Integrar modelo SLM
+### Next steps
+1. [x] ~~Create the DruidOS ISO~~ ✅ Done!
+2. [x] ~~Test communication between components~~ ✅ Working!
+3. [ ] Integrate the SLM model
 
 ---
 
-## 2026-02-19 - Sessão 2: Hive Stack Completa
+## 2026-02-19 - Session 2: Hive Stack complete
 
-### ✅ ISO DruidOS Criada
+### ✅ DruidOS ISO created
 
-- **Arquivo**: `output/druidos-0.1.0-amd64.iso` (1.5GB)
+- **File**: `output/druidos-0.1.0-amd64.iso` (1.5GB)
 - **Base**: Ubuntu 24.04 minimal via debootstrap
-- **Ferramentas**: grub-mkrescue, squashfs-tools
-- **Status**: GRUB funciona, kernel inicia (lento em TCG/software emulation)
+- **Tools**: grub-mkrescue, squashfs-tools
+- **Status**: GRUB works, the kernel starts (slow under TCG/software emulation)
 
-### ✅ Hive Stack Backend Completa
+### ✅ Hive Stack backend complete
 
-7 componentes rodando simultaneamente com IPC funcional:
+7 components running simultaneously with working IPC:
 
-| Componente | PID | Conexão | Status |
-|------------|-----|---------|--------|
-| hive-cortex | 11751 | - | Orquestrador ativo |
-| hive-nerve-process | 11816 | 1 | Interceptando rm,chmod,dd |
-| hive-nerve-journal | 11924 | 2 | Monitorando logs |
-| hive-nerve-network | 11930 | 3 | Monitorando portas |
+| Component | PID | Connection | Status |
+|-----------|-----|------------|--------|
+| hive-cortex | 11751 | - | Orchestrator active |
+| hive-nerve-process | 11816 | 1 | Intercepting rm,chmod,dd |
+| hive-nerve-journal | 11924 | 2 | Monitoring logs |
+| hive-nerve-network | 11930 | 3 | Monitoring ports |
 | hive-nerve-fs | 12050 | 4 | Watching /etc,/var/log,/home |
-| hive-actuator | 12049 | 5 | Pronto (0 ações whitelist) |
-| hive-synapse | 12163 | 6 | Mock inference (sem modelo) |
+| hive-actuator | 12049 | 5 | Ready (0 whitelisted actions) |
+| hive-synapse | 12163 | 6 | Mock inference (no model) |
 
-### ✅ Interceptação de Comandos Testada
+### ✅ Command interception tested
 
 ```
 [INFO] Detected dangerous command 'rm': rm -rf /home/lab/...
 ```
 
-O nerve-process detecta padrões perigosos e envia ao cortex via IPC.
+nerve-process detects dangerous patterns and sends them to the cortex via IPC.
 
-### Componentes Desktop (Pendente)
+### Desktop components (pending)
 
-- hive-shell, hive-dock, hive-term requerem Wayland
-- Não podem ser testados na VM sem ambiente gráfico
+- hive-shell, hive-dock, hive-term require Wayland
+- They cannot be tested in the VM without a graphical environment
 
-### Próximos Passos
-1. [ ] Download modelo SLM (Qwen 2.5 0.5B GGUF)
-2. [ ] Testar inferência real no synapse
-3. [ ] Configurar Hyprland na ISO
+### Next steps
+1. [ ] Download the SLM model (Qwen 2.5 0.5B GGUF)
+2. [ ] Test real inference in synapse
+3. [ ] Set up Hyprland on the ISO
 
 ---
 
-## Notas Técnicas
+## Technical notes
 
-### VM de Desenvolvimento
+### Development VM
 - **ID**: vm-ubuntu-test-60eefea9
-- **SSH Port**: Dinâmico (verificar com `vm_status`)
-- **Usuário**: lab
-- **Chave SSH**: `qemu-workspace/keys/id_ed25519`
+- **SSH Port**: Dynamic (check with `vm_status`)
+- **User**: lab
+- **SSH key**: `qemu-workspace/keys/id_ed25519`
 
-### Estrutura de Arquivos
+### File structure
 ```
 druidos/
-├── target/release/       # Binários Linux (copiados da VM)
+├── target/release/       # Linux binaries (copied from the VM)
 │   ├── hive-cortex
 │   ├── hive-synapse
 │   └── ...
-├── crates/               # Código fonte
+├── crates/               # Source code
 │   ├── hive-common/
 │   ├── hive-cortex/
 │   └── ...
-├── qemu-workspace/       # VMs e artefatos QEMU
-│   ├── keys/             # Chaves SSH
-│   ├── vms/              # Discos das VMs
-│   └── logs/             # Logs QEMU
-└── scripts/              # Scripts de build
-    └── build-iso.sh      # Gerador de ISO
+├── qemu-workspace/       # VMs and QEMU artifacts
+│   ├── keys/             # SSH keys
+│   ├── vms/              # VM disks
+│   └── logs/             # QEMU logs
+└── scripts/              # Build scripts
+    └── build-iso.sh      # ISO generator
 ```

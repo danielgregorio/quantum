@@ -1,39 +1,39 @@
-# Hive Stack - A Consciência do DruidOS
+# Hive Stack - The Consciousness of DruidOS
 
-## O Que É
+## What It Is
 
-A Hive Stack é o conjunto de daemons Rust que formam a "consciência" do DruidOS. É uma IA local que **observa** o que você faz no sistema e **oferece sugestões** inteligentes.
+The Hive Stack is the set of Rust daemons that form the "consciousness" of DruidOS. It is a local AI that **watches** what you do on the system and **offers smart suggestions**.
 
-**Filosofia:** "The Swarm is watching. The Swarm is learning."
+**Philosophy:** "The Swarm is watching. The Swarm is learning."
 
 ---
 
-## Arquitetura Visual
+## Visual Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                           USUÁRIO                                   │
-│                     (terminal, comandos)                            │
+│                           USER                                      │
+│                     (terminal, commands)                            │
 └───────────────────────────┬─────────────────────────────────────────┘
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                      hive-cortex (root)                             │
-│                    ORQUESTRADOR CENTRAL                             │
+│                    CENTRAL ORCHESTRATOR                             │
 │                                                                     │
-│  - Recebe eventos de todos os nerves                                │
-│  - Decide quando consultar a IA                                     │
-│  - Envia ações para o actuator                                      │
+│  - Receives events from all the nerves                              │
+│  - Decides when to consult the AI                                   │
+│  - Sends actions to the actuator                                    │
 │  - Socket: /run/hive/cortex.sock                                    │
-└────┬──────────┬──────────┬──────────┬──────────┬───────────────────┘
+└────┬──────────┬──────────┬──────────┬──────────┬────────────────────┘
      │          │          │          │          │
      ▼          ▼          ▼          ▼          ▼
 ┌─────────┐┌─────────┐┌─────────┐┌─────────┐┌─────────┐
 │ nerve-  ││ nerve-  ││ nerve-  ││ nerve-  ││hive-    │
 │ process ││ journal ││ network ││ fs      ││synapse  │
 │         ││         ││         ││         ││         │
-│Observa  ││Observa  ││Observa  ││Observa  ││CÉREBRO  │
-│comandos ││logs     ││portas   ││arquivos ││(IA/SLM) │
+│Watches  ││Watches  ││Watches  ││Watches  ││BRAIN    │
+│commands ││logs     ││ports    ││files    ││(AI/SLM) │
 └─────────┘└─────────┘└─────────┘└─────────┘└────┬────┘
                                                   │
                                                   ▼
@@ -46,77 +46,77 @@ A Hive Stack é o conjunto de daemons Rust que formam a "consciência" do DruidO
 
 ---
 
-## Os Componentes
+## The Components
 
-### 1. hive-cortex (Orquestrador)
-**Função:** Cérebro central que coordena tudo
+### 1. hive-cortex (Orchestrator)
+**Role:** Central brain that coordinates everything
 
 ```
-Usuário: root
+User:    root
 Socket:  /run/hive/cortex.sock
 ```
 
-- Recebe mensagens de todos os outros componentes via IPC
-- Decide o que fazer com cada evento
-- Mantém contexto da sessão do usuário
-- Roteia mensagens entre componentes
+- Receives messages from all the other components via IPC
+- Decides what to do with each event
+- Keeps the context of the user's session
+- Routes messages between components
 
-**Exemplo de fluxo:**
+**Example flow:**
 ```
-nerve-process detecta: "rm -rf /home/*"
+nerve-process detects: "rm -rf /home/*"
        │
        ▼
-cortex recebe evento "comando perigoso"
+cortex receives a "dangerous command" event
        │
        ▼
-cortex envia para synapse: "usuário vai deletar home, o que sugerir?"
+cortex sends to synapse: "user is going to delete home, what should we suggest?"
        │
        ▼
-synapse responde: "Sugerir snapshot ZFS antes"
+synapse answers: "Suggest a ZFS snapshot first"
        │
        ▼
-cortex mostra notificação ao usuário
+cortex shows a notification to the user
 ```
 
 ---
 
-### 2. hive-synapse (IA/Cérebro)
-**Função:** Motor de inferência com modelo de linguagem local
+### 2. hive-synapse (AI/Brain)
+**Role:** Inference engine with a local language model
 
 ```
-Usuário: _hive-ai (sem privilégios)
-Modelo:  Qwen 2.5 0.5B Instruct (Q4, 469MB)
+User:    _hive-ai (unprivileged)
+Model:   Qwen 2.5 0.5B Instruct (Q4, 469MB)
 ```
 
-- Roda modelo de linguagem **100% local** (sem internet)
-- Recebe contexto do cortex
-- Gera sugestões em linguagem natural
-- Isolado em sandbox (sem rede, sem disco)
+- Runs a language model **100% locally** (no internet)
+- Receives context from the cortex
+- Generates suggestions in natural language
+- Isolated in a sandbox (no network, no disk)
 
-**Exemplo:**
+**Example:**
 ```
-Input:  "Usuário executou 'chmod 777 /etc/passwd'. Histórico mostra
-         que ele está tentando resolver problema de permissão SSH."
+Input:  "User ran 'chmod 777 /etc/passwd'. History shows
+         that they are trying to fix an SSH permission problem."
 
-Output: "O comando chmod 777 em /etc/passwd é perigoso e pode
-         quebrar a autenticação. Sugiro: chmod 644 /etc/passwd.
-         Para SSH, verifique ~/.ssh/authorized_keys com chmod 600."
+Output: "The chmod 777 command on /etc/passwd is dangerous and can
+         break authentication. I suggest: chmod 644 /etc/passwd.
+         For SSH, check ~/.ssh/authorized_keys with chmod 600."
 ```
 
 ---
 
-### 3. hive-nerve-process (Observador de Comandos)
-**Função:** Monitora comandos executados no terminal
+### 3. hive-nerve-process (Command Observer)
+**Role:** Monitors commands executed in the terminal
 
 ```
-Usuário: _hive-sense (somente leitura)
+User:    _hive-sense (read-only)
 ```
 
-- Intercepta comandos antes de executar (via eBPF ou auditd)
-- Detecta padrões perigosos: `rm -rf`, `chmod 777`, `dd if=/dev/zero`
-- Envia eventos para cortex
+- Intercepts commands before they run (via eBPF or auditd)
+- Detects dangerous patterns: `rm -rf`, `chmod 777`, `dd if=/dev/zero`
+- Sends events to the cortex
 
-**Padrões detectados:**
+**Detected patterns:**
 ```yaml
 - pattern: "rm -rf /"
   severity: critical
@@ -133,114 +133,114 @@ Usuário: _hive-sense (somente leitura)
 
 ---
 
-### 4. hive-nerve-journal (Observador de Logs)
-**Função:** Monitora logs do sistema em tempo real
+### 4. hive-nerve-journal (Log Observer)
+**Role:** Monitors system logs in real time
 
 ```
-Usuário: _hive-sense
-Fonte:   journald (systemd)
+User:    _hive-sense
+Source:  journald (systemd)
 ```
 
-- Detecta erros e anomalias nos logs
-- Correlaciona com ações do usuário
-- Exemplos:
+- Detects errors and anomalies in the logs
+- Correlates them with the user's actions
+- Examples:
   - "nginx: bind() to 0.0.0.0:80 failed - Address already in use"
   - "sshd: Failed password for root from 192.168.1.100"
 
 ---
 
-### 5. hive-nerve-network (Observador de Rede)
-**Função:** Monitora portas e conexões
+### 5. hive-nerve-network (Network Observer)
+**Role:** Monitors ports and connections
 
 ```
-Usuário: _hive-sense
+User:    _hive-sense
 ```
 
-- Detecta conflitos de porta
-- Monitora conexões suspeitas
-- Exemplo: "Porta 3000 já está em uso pelo processo node (PID 1234)"
+- Detects port conflicts
+- Monitors suspicious connections
+- Example: "Port 3000 is already in use by the node process (PID 1234)"
 
 ---
 
-### 6. hive-nerve-fs (Observador de Filesystem)
-**Função:** Monitora mudanças em arquivos críticos
+### 6. hive-nerve-fs (Filesystem Observer)
+**Role:** Monitors changes to critical files
 
 ```
-Usuário: _hive-sense
+User:    _hive-sense
 Paths:   /etc, /var/log, /home
 ```
 
-- Usa inotify para detectar mudanças
-- Alerta sobre modificações em arquivos de configuração
-- Exemplo: "/etc/nginx/nginx.conf foi modificado"
+- Uses inotify to detect changes
+- Alerts about modifications to configuration files
+- Example: "/etc/nginx/nginx.conf was modified"
 
 ---
 
-### 7. hive-actuator (Executor de Ações)
-**Função:** Executa ações aprovadas pelo usuário
+### 7. hive-actuator (Action Executor)
+**Role:** Executes actions approved by the user
 
 ```
-Usuário: _hive-act
+User:    _hive-act
 ```
 
-- Único componente que pode FAZER coisas (não só observar)
-- Lista branca de ações permitidas
-- Rate-limited para segurança
-- Exemplos de ações:
-  - Criar snapshot ZFS
-  - Reiniciar serviço
-  - Corrigir permissão
+- The only component that can DO things (not just watch)
+- Whitelist of allowed actions
+- Rate-limited for safety
+- Examples of actions:
+  - Create a ZFS snapshot
+  - Restart a service
+  - Fix a permission
 
 ---
 
-### 8. hive-dashboard (Painel de Notificações)
-**Função:** Mostra sugestões/notificações e deixa o usuário aprovar ou dispensar
+### 8. hive-dashboard (Notification Panel)
+**Role:** Shows suggestions/notifications and lets the user approve or dismiss them
 
 ```
-Rodado manualmente pelo usuário (tipo `top`) — sem serviço systemd
+Run manually by the user (like `top`) — no systemd service
 ```
 
-- Conecta no cortex como qualquer outro componente
-- Cada sugestão de uma `Notification` vira uma linha navegável
-- Aprovar (Enter) manda `UserAction` — cortex monta o `ActionRequest` e despacha pro actuator
-- Dispensar (`d`/Esc) manda `UserDismiss`
+- Connects to the cortex like any other component
+- Each suggestion of a `Notification` becomes a navigable line
+- Approving (Enter) sends `UserAction` — the cortex builds the `ActionRequest` and dispatches it to the actuator
+- Dismissing (`d`/Esc) sends `UserDismiss`
 
 ---
 
-## Fluxo Completo: Exemplo Real
+## Complete Flow: A Real Example
 
 ```
-1. Usuário digita: rm -rf /var/log/*
+1. User types: rm -rf /var/log/*
 
-2. nerve-process detecta comando perigoso
-   └─> Envia para cortex: CommandObserved {
+2. nerve-process detects a dangerous command
+   └─> Sends to cortex: CommandObserved {
          cmd: "rm -rf /var/log/*",
          severity: high
        }
 
-3. cortex analisa e consulta synapse
+3. cortex analyzes and consults synapse
    └─> SuggestionRequest {
-         context: "usuário quer deletar logs",
-         history: [...últimos comandos...]
+         context: "user wants to delete logs",
+         history: [...latest commands...]
        }
 
-4. synapse processa com IA local
+4. synapse processes it with the local AI
    └─> SuggestionResponse {
-         message: "Deletar /var/log pode quebrar logging.
-                   Considere: journalctl --vacuum-size=500M",
+         message: "Deleting /var/log can break logging.
+                   Consider: journalctl --vacuum-size=500M",
          alternatives: ["logrotate -f", "truncate logs"]
        }
 
-5. cortex guarda as sugestões e notifica o hive-dashboard
-   (rodando num terminal separado, tipo `top`)
+5. cortex stores the suggestions and notifies hive-dashboard
+   (running in a separate terminal, like `top`)
    ┌────────────────────────────────────────┐
    │ Hive Dashboard                         │
    │ Log Anomaly — journalctl --vacuum-size │
-   │ [Enter] aprovar  [d] dispensar         │
+   │ [Enter] approve  [d] dismiss           │
    └────────────────────────────────────────┘
 
-6. Usuário aprova (Enter) → dashboard manda UserAction → cortex monta
-   o ActionRequest de verdade e despacha pro actuator
+6. User approves (Enter) → dashboard sends UserAction → cortex builds
+   the real ActionRequest and dispatches it to the actuator
    └─> ActionRequest {
          action: CreateSnapshot { dataset: "rpool/var" }
        }
@@ -248,32 +248,32 @@ Rodado manualmente pelo usuário (tipo `top`) — sem serviço systemd
 
 ---
 
-## Segurança
+## Security
 
-### Princípio do Menor Privilégio
+### Principle of Least Privilege
 
-| Componente | Usuário | Pode ler | Pode escrever | Rede |
+| Component | User | Can read | Can write | Network |
 |------------|---------|----------|---------------|------|
-| cortex | root | tudo | socket IPC | não |
-| synapse | _hive-ai | nada | nada | **não** |
-| nerve-* | _hive-sense | logs, processos | nada | não |
-| actuator | _hive-act | nada | ações whitelist | não |
-| dashboard | usuário logado | notificações | socket IPC | não |
+| cortex | root | everything | IPC socket | no |
+| synapse | _hive-ai | nothing | nothing | **no** |
+| nerve-* | _hive-sense | logs, processes | nothing | no |
+| actuator | _hive-act | nothing | whitelisted actions | no |
+| dashboard | logged-in user | notifications | IPC socket | no |
 
-### Isolamento do Synapse
+### Synapse Isolation
 ```
-- Sem acesso à rede (não pode "ligar pra casa")
-- Sem acesso ao disco (não pode ler seus arquivos)
-- Só recebe texto do cortex
-- Só retorna texto para cortex
-- Seccomp restrito
+- No network access (cannot "phone home")
+- No disk access (cannot read your files)
+- Only receives text from the cortex
+- Only returns text to the cortex
+- Restricted seccomp
 ```
 
 ---
 
-## Protocolo IPC
+## IPC Protocol
 
-Comunicação via Unix sockets com serialização bincode:
+Communication via Unix sockets with bincode serialization:
 
 ```rust
 pub enum HiveMessage {
@@ -299,34 +299,34 @@ pub enum HiveMessage {
 
 ---
 
-## Modo Anônimo
+## Anonymous Mode
 
-Quando o usuário quer privacidade:
+When the user wants privacy:
 
 ```bash
-hive --quiet      # Hive observa mas não mostra notificações
-hive --detach     # Este terminal é invisível para o Hive
-hive --anonymous  # Namespace isolado, sem logging
+hive --quiet      # The Hive watches but does not show notifications
+hive --detach     # This terminal is invisible to the Hive
+hive --anonymous  # Isolated namespace, no logging
 ```
 
 ---
 
-## Componentes Desktop (Arquivados)
+## Desktop Components (Archived)
 
-O alvo do projeto foi redefinido para TUI-only. hive-shell, hive-dock e
-hive-term (junto com bark e spore, a stack de framebuffer que os
-sustentava) foram movidos para `archive/`, fora do workspace ativo.
-O código continua no histórico do git caso a GUI volte a ser prioridade.
+The project's target was redefined as TUI-only. hive-shell, hive-dock and
+hive-term (along with bark and spore, the framebuffer stack that
+supported them) were moved to `archive/`, outside the active workspace.
+The code remains in the git history in case the GUI becomes a priority again.
 
-O papel de "avisar o usuário" que hive-shell cumpria foi resolvido por
-`hive-dashboard` — um painel TUI separado (ratatui), rodado manualmente
-pelo usuário, não um overlay gráfico. Ver seção 8 acima.
+The role of "warning the user" that hive-shell fulfilled was taken over by
+`hive-dashboard` — a separate TUI panel (ratatui), run manually
+by the user, not a graphical overlay. See section 8 above.
 
 ---
 
-## Status Atual
+## Current Status
 
-| Componente | Código | Compilado | Testado | Integrado |
+| Component | Code | Compiled | Tested | Integrated |
 |------------|--------|-----------|---------|-----------|
 | hive-cortex | ✅ | ✅ | ✅ | ❌ |
 | hive-synapse | ✅ | ✅ | ⚠️ mock | ❌ |
@@ -336,23 +336,23 @@ pelo usuário, não um overlay gráfico. Ver seção 8 acima.
 | hive-nerve-fs | ✅ | ✅ | ✅ | ❌ |
 | hive-actuator | ✅ | ✅ | ✅ | ❌ |
 | hive-dashboard | ✅ | ✅ | ✅ | ❌ |
-| hive-shell | 📦 arquivado | - | - | - |
-| hive-dock | 📦 arquivado | - | - | - |
-| hive-term | 📦 arquivado | - | - | - |
+| hive-shell | 📦 archived | - | - | - |
+| hive-dock | 📦 archived | - | - | - |
+| hive-term | 📦 archived | - | - | - |
 
-**Legenda:**
-- ✅ Completo
-- ⚠️ Parcial (mock ou limitado)
-- ❌ Não feito
-- 📦 Arquivado (código em `archive/`, fora do escopo atual)
+**Legend:**
+- ✅ Complete
+- ⚠️ Partial (mock or limited)
+- ❌ Not done
+- 📦 Archived (code in `archive/`, outside the current scope)
 
 ---
 
-## Para Integrar no DruidOS
+## To Integrate into DruidOS
 
-1. Copiar binários para `/usr/bin/hive-*`
-2. Criar usuários: `_hive-ai`, `_hive-sense`, `_hive-act`
-3. Criar services systemd
-4. Configurar `/etc/hive/config.toml`
-5. Copiar modelo para `/var/lib/hive/models/`
-6. Habilitar services no boot
+1. Copy the binaries to `/usr/bin/hive-*`
+2. Create users: `_hive-ai`, `_hive-sense`, `_hive-act`
+3. Create systemd services
+4. Configure `/etc/hive/config.toml`
+5. Copy the model to `/var/lib/hive/models/`
+6. Enable the services at boot

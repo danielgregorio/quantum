@@ -5,13 +5,13 @@
 {"op": "start"}
 {"op": "until_sh", "sh": "systemctl is-active hive-screen hive-actuator", "contains": "active", "timeout": 20}
 {"op": "until_shot", "has": "#ffd34d", "timeout": 15}
-{"op": "sh", "sh": "hive request set-hostname forja --reason 'the lab machine'", "user": "druid", "contains": "asked the Hive: name the machine forja"}
+{"op": "sh", "sh": "hive request set-hostname forge --reason 'the lab machine'", "user": "druid", "contains": "asked the Hive: name the machine forge"}
 {"op": "until_journal", "unit": "hive-cortex.service", "contains": "request from druid", "timeout": 10}
 {"op": "until_journal", "unit": "hive-screen.service", "contains": "event: request (Request)", "timeout": 10}
 {"op": "sh", "sh": "hostname", "contains": "quantum-lab"}
 {"op": "press", "keys": ["enter"]}
 {"op": "until_journal", "unit": "hive-actuator.service", "contains": "SetHostname", "timeout": 10}
-{"op": "until_sh", "sh": "hostname", "contains": "forja", "timeout": 20}
+{"op": "until_sh", "sh": "hostname", "contains": "forge", "timeout": 20}
 {"op": "until_journal", "unit": "hive-actuator.service", "contains": "Action completed", "timeout": 10}
 // the keyboard: a file in the Hive's settings (Ubuntu's localed refuses keymaps), which the screen reads first,
 // as it runs; /etc/default/keyboard stays the installer's

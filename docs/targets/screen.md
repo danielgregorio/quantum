@@ -460,13 +460,13 @@ The Hive offered something an administrator may approve; the qs:offers lists it.
 
 ### `request`
 
-A user asked the Hive for a change (the Ajustes app, `hive request`): the offer carries it, for an administrator to approve as any other; the qs:offers lists it.
+A user asked the Hive for a change (the Settings app, `hive request`): the offer carries it, for an administrator to approve as any other; the qs:offers lists it.
 
 | Field | Type | What it is |
 |---|---|---|
 | `{user}` | text | who asked |
 | `{action}` | text | what they asked for: the action's name (set-hostname) |
-| `{what}` | text | what it does, in words (name the machine forja) |
+| `{what}` | text | what it does, in words (name the machine forge) |
 | `{count}` | int | how many offers came with it: one |
 | `{title}` | text | the notice, as hive-cortex titles it |
 | `{body}` | text | what it says |

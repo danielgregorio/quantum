@@ -222,7 +222,7 @@ pub enum Action {
     },
 
     // =========================================================================
-    // The machine's settings: what a user asks for through the Ajustes app
+    // The machine's settings: what a user asks for through the Settings app
     // (HiveMessage::UserRequest) and an administrator approves
     // =========================================================================
     /// Name the machine (`hostnamectl set-hostname`)
@@ -453,7 +453,7 @@ impl Action {
     }
 
     /// What a setting does, in words: the title of the offer a request
-    /// becomes ("name the machine forja").
+    /// becomes ("name the machine forge").
     pub fn describe_setting(&self) -> Option<String> {
         Some(match self {
             Action::SetHostname { name } => format!("name the machine {}", name),
@@ -615,11 +615,11 @@ mod tests {
 
     #[test]
     fn a_setting_is_validated_and_described() {
-        assert!(is_valid_hostname("forja"));
+        assert!(is_valid_hostname("forge"));
         assert!(is_valid_hostname("web-01"));
         assert!(!is_valid_hostname(""));
         assert!(!is_valid_hostname("-x"));
-        assert!(!is_valid_hostname("Forja"));
+        assert!(!is_valid_hostname("Forge"));
         assert!(!is_valid_hostname("a b"));
         assert!(!is_valid_hostname(&"a".repeat(64)));
         assert!(is_valid_keyboard("br", "abnt2"));
@@ -627,10 +627,10 @@ mod tests {
         assert!(!is_valid_keyboard("fr", ""));
         assert!(!is_valid_keyboard("us", "abnt2"));
         let name = Action::SetHostname {
-            name: "forja".into(),
+            name: "forge".into(),
         };
         assert!(name.is_a_setting());
-        assert_eq!(name.describe_setting().unwrap(), "name the machine forja");
+        assert_eq!(name.describe_setting().unwrap(), "name the machine forge");
         assert_eq!(
             Action::SetKeyboard {
                 layout: "br".into(),

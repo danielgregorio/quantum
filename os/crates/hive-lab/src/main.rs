@@ -247,7 +247,7 @@ impl Driver {
                 .await
             }
             "request" => {
-                // a user asks for a setting of the machine (the Ajustes app, `hive request`)
+                // a user asks for a setting of the machine (the Settings app, `hive request`)
                 let action: hive_common::actions::Action = serde_json::from_value(
                     req.get("action")
                         .cloned()

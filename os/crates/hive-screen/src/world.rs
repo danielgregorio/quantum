@@ -209,9 +209,9 @@ struct Menu {
 
 const DRAWER_TICKS: u32 = 8;
 const MENU_MIN_COLS: usize = 24;
-const MENU_TITLE: &str = "Ofertas da Hive";
-const MENU_HELP: &str = "Enter aprova · Del dispensa · Esc fecha";
-const MENU_EMPTY: &str = "nada por agora";
+const MENU_TITLE: &str = "The Hive's offers";
+const MENU_HELP: &str = "Enter approves · Del dismisses · Esc closes";
+const MENU_EMPTY: &str = "nothing for now";
 
 /// What the bars say of the machine, which the daemon tells the world as
 /// it runs. A test's world knows none of it, so its frames are the same

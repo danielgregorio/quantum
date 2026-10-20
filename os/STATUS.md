@@ -1,62 +1,62 @@
-# DruidOS - Status do Desenvolvimento
+# DruidOS - Development Status
 
-**Data:** 2026-02-20
-**Versão:** 0.3.0-slm
+**Date:** 2026-02-20
+**Version:** 0.3.0-slm
 
 ---
 
-## Resumo Executivo
+## Executive Summary
 
-DruidOS alcançou o **primeiro SLM (Small Language Model) funcionando**: o usuário pode fazer perguntas em linguagem natural via comando `ask` e receber respostas em português. O modelo Qwen 2.5 0.5B carrega no boot e responde via HTTP API.
+DruidOS has reached its **first working SLM (Small Language Model)**: the user can ask questions in natural language through the `ask` command and get answers in Portuguese. The Qwen 2.5 0.5B model loads at boot and answers through an HTTP API.
 
 ```
-/ # ask ola tudo bem
-Olá! Estou bem, obrigado. Como posso ajudar?
+/ # ask hi, how are you
+Hello! I'm fine, thank you. How can I help?
 ```
 
-Também temos o `hive-cortex` (orquestrador central) rodando com socket IPC em `/run/hive/cortex.sock`.
+We also have `hive-cortex` (the central orchestrator) running with an IPC socket at `/run/hive/cortex.sock`.
 
 ---
 
-## O Que É o DruidOS
+## What DruidOS Is
 
-DruidOS é uma distribuição Linux VM-first que integra uma IA local chamada "The Hive" (A Colmeia). O sistema observa o que o usuário faz e oferece sugestões inteligentes.
+DruidOS is a VM-first Linux distribution that integrates a local AI called "The Hive" (A Colmeia). The system watches what the user does and offers smart suggestions.
 
-- **Kernel**: Linux 6.8+ (atualmente usando Ubuntu 6.8.0-100)
-- **Stack**: 100% Rust (Hive Stack compilada, não integrada ainda)
-- **IA**: SLM local (Qwen 0.5B) - modelo baixado, inferência pendente
-- **Desktop**: Wayland/Hyprland - não integrado ainda
+- **Kernel**: Linux 6.8+ (currently using Ubuntu 6.8.0-100)
+- **Stack**: 100% Rust (Hive Stack compiled, not integrated yet)
+- **AI**: local SLM (Qwen 0.5B) - model downloaded, inference pending
+- **Desktop**: Wayland/Hyprland - not integrated yet
 
 ---
 
-## Arquivos de Distribuição
+## Distribution Files
 
-### v0.3-slm (Atual)
-Localização: `dist/v0.3-slm/`
+### v0.3-slm (Current)
+Location: `dist/v0.3-slm/`
 
-| Arquivo | Tamanho | Descrição |
+| File | Size | Description |
 |---------|---------|-----------|
-| `bonsai-kernel` | 15 MB | Kernel Linux 6.8.0-100-generic |
-| `bonsai-initramfs.img` | ~470 MB | Initramfs com BusyBox + Hive + SLM |
+| `bonsai-kernel` | 15 MB | Linux kernel 6.8.0-100-generic |
+| `bonsai-initramfs.img` | ~470 MB | Initramfs with BusyBox + Hive + SLM |
 
-**Nota:** O initramfs é grande devido ao modelo Qwen 2.5 0.5B (469 MB).
+**Note:** The initramfs is large because of the Qwen 2.5 0.5B model (469 MB).
 
-### v0.2-cortex (Preservado)
-Localização: `dist/v0.2-cortex/`
+### v0.2-cortex (Preserved)
+Location: `dist/v0.2-cortex/`
 
-| Arquivo | Tamanho | Descrição |
+| File | Size | Description |
 |---------|---------|-----------|
-| `bonsai-kernel` | 15 MB | Kernel Linux 6.8.0-100-generic |
-| `bonsai-initramfs.img` | 3.1 MB | Initramfs com BusyBox + hive-cortex |
+| `bonsai-kernel` | 15 MB | Linux kernel 6.8.0-100-generic |
+| `bonsai-initramfs.img` | 3.1 MB | Initramfs with BusyBox + hive-cortex |
 
-### v0.1-minimal (Preservado)
-Localização: `dist/v0.1-minimal/`
+### v0.1-minimal (Preserved)
+Location: `dist/v0.1-minimal/`
 
-| Arquivo | Tamanho | Descrição |
+| File | Size | Description |
 |---------|---------|-----------|
-| `druidos-bonsai.iso` | 27 MB | ISO bootável com GRUB |
-| `bonsai-kernel` | 15 MB | Kernel Linux 6.8.0-100-generic |
-| `bonsai-initramfs.img` | 700 KB | Initramfs mínimo com BusyBox |
+| `druidos-bonsai.iso` | 27 MB | Bootable ISO with GRUB |
+| `bonsai-kernel` | 15 MB | Linux kernel 6.8.0-100-generic |
+| `bonsai-initramfs.img` | 700 KB | Minimal initramfs with BusyBox |
 
 ### Checksums (SHA256)
 ```
@@ -67,9 +67,9 @@ druidos-bonsai.iso:   8491747ba7a7d541ffbb57aa592a16fc3dccc853cae4b45e361756fb75
 
 ---
 
-## Como Bootar
+## How to Boot
 
-### v0.3-slm (Com SLM - Requer mais recursos)
+### v0.3-slm (With SLM - Needs more resources)
 ```bash
 qemu-system-x86_64 \
     -m 4096 \
@@ -81,9 +81,9 @@ qemu-system-x86_64 \
     -append "console=tty0 noapic nolapic" \
     -vnc :0
 ```
-Conecte via VNC em `localhost:5900`.
+Connect via VNC at `localhost:5900`.
 
-### Boot Direto Mínimo (v0.1/v0.2)
+### Minimal Direct Boot (v0.1/v0.2)
 ```bash
 qemu-system-x86_64 -m 512 \
     -kernel dist/v0.1-minimal/bonsai-kernel \
@@ -94,45 +94,45 @@ qemu-system-x86_64 -m 512 \
 
 ---
 
-## Progresso Completo
+## Full Progress
 
-### ✅ Fase 1: Ambiente de Build
-- [x] QEMU 10.2.0 no Windows
-- [x] MCP qemu-lab funcionando
-- [x] VM Ubuntu 24.04 para compilação
-- [x] Rust 1.93.1 na VM
+### ✅ Phase 1: Build Environment
+- [x] QEMU 10.2.0 on Windows
+- [x] qemu-lab MCP working
+- [x] Ubuntu 24.04 VM for compiling
+- [x] Rust 1.93.1 on the VM
 
-### ✅ Fase 2: Hive Stack (Compilação)
-- [x] 12 binários hive-* compilados
+### ✅ Phase 2: Hive Stack (Compilation)
+- [x] 12 hive-* binaries compiled
 - [x] ~25MB total (release, LTO, stripped)
-- [x] Testados na VM Ubuntu
+- [x] Tested on the Ubuntu VM
 
-### ✅ Fase 3: Boot Mínimo
-- [x] Kernel Ubuntu 6.8.0 extraído
-- [x] Initramfs com BusyBox criado
-- [x] Boot funcional em ~1.5s
-- [x] ISO bootável com GRUB
+### ✅ Phase 3: Minimal Boot
+- [x] Ubuntu 6.8.0 kernel extracted
+- [x] Initramfs with BusyBox created
+- [x] Working boot in ~1.5s
+- [x] Bootable ISO with GRUB
 
-### ⏳ Fase 4: Sistema Base (Próximo)
-- [ ] Filesystem root persistente
-- [ ] Login de usuário (`druid`)
-- [ ] Rede automática (DHCP)
-- [ ] Systemd como init
+### ⏳ Phase 4: Base System (Next)
+- [ ] Persistent root filesystem
+- [ ] User login (`druid`)
+- [ ] Automatic networking (DHCP)
+- [ ] Systemd as init
 
-### ✅ Fase 5: Integração Hive (Parcial)
-- [x] Binários hive-* no sistema (hive-cortex)
-- [x] hive-cortex iniciando no boot
-- [x] Socket IPC funcional (/run/hive/cortex.sock)
-- [ ] Nerves conectando ao cortex
+### ✅ Phase 5: Hive Integration (Partial)
+- [x] hive-* binaries in the system (hive-cortex)
+- [x] hive-cortex starting at boot
+- [x] Working IPC socket (/run/hive/cortex.sock)
+- [ ] Nerves connecting to the cortex
 
-### ✅ Fase 6: IA (Parcial)
-- [x] Modelo Qwen 0.5B no sistema
-- [x] llama-server com inferência real (HTTP API)
-- [x] Comando `ask` para interação em linguagem natural
-- [ ] hive-synapse integrando com llama-server
-- [ ] Sugestões end-to-end
+### ✅ Phase 6: AI (Partial)
+- [x] Qwen 0.5B model in the system
+- [x] llama-server with real inference (HTTP API)
+- [x] `ask` command for natural-language interaction
+- [ ] hive-synapse integrating with llama-server
+- [ ] End-to-end suggestions
 
-### ⏳ Fase 7: Desktop
+### ⏳ Phase 7: Desktop
 - [ ] Wayland/Hyprland
 - [ ] hive-shell overlay
 - [ ] hive-term terminal
@@ -140,42 +140,42 @@ qemu-system-x86_64 -m 512 \
 
 ---
 
-## Binários Hive Compilados
+## Compiled Hive Binaries
 
-Todos em `target/release/` (Linux ELF 64-bit):
+All in `target/release/` (Linux ELF 64-bit):
 
-| Binary | Tamanho | Função | Status |
+| Binary | Size | Role | Status |
 |--------|---------|--------|--------|
-| hive-cortex | 2.2M | Orquestrador central | Compilado |
-| hive-synapse | 2.2M | Motor IA | Compilado |
-| hive-actuator | 2.3M | Executor de ações | Compilado |
-| hive-apt | 1.1M | APT inteligente | Compilado |
-| hive-zfs | 2.2M | Snapshots ZFS | Compilado |
-| hive-nerve-process | 2.7M | Monitor processos | Compilado |
-| hive-nerve-journal | 2.8M | Monitor logs | Compilado |
-| hive-nerve-network | 2.1M | Monitor rede | Compilado |
-| hive-nerve-fs | 2.0M | Monitor filesystem | Compilado |
-| hive-shell | 2.2M | Overlay desktop | Compilado |
-| hive-dock | 2.0M | Dock bar | Compilado |
-| hive-term | 2.2M | Terminal | Compilado |
+| hive-cortex | 2.2M | Central orchestrator | Compiled |
+| hive-synapse | 2.2M | AI engine | Compiled |
+| hive-actuator | 2.3M | Action executor | Compiled |
+| hive-apt | 1.1M | Smart APT | Compiled |
+| hive-zfs | 2.2M | ZFS snapshots | Compiled |
+| hive-nerve-process | 2.7M | Process monitor | Compiled |
+| hive-nerve-journal | 2.8M | Log monitor | Compiled |
+| hive-nerve-network | 2.1M | Network monitor | Compiled |
+| hive-nerve-fs | 2.0M | Filesystem monitor | Compiled |
+| hive-shell | 2.2M | Desktop overlay | Compiled |
+| hive-dock | 2.0M | Dock bar | Compiled |
+| hive-term | 2.2M | Terminal | Compiled |
 
 ---
 
-## Ambiente de Desenvolvimento
+## Development Environment
 
-### VM de Build
+### Build VM
 - **OS**: Ubuntu 24.04 LTS
 - **ID**: vm-ubuntu-test-60eefea9
-- **Disco**: 26 GB
-- **SSH**: Porta 2222 (via QEMU user networking)
-- **Chave**: `qemu-workspace/keys/id_ed25519`
+- **Disk**: 26 GB
+- **SSH**: Port 2222 (via QEMU user networking)
+- **Key**: `qemu-workspace/keys/id_ed25519`
 
-### Conectar na VM de Build
+### Connecting to the Build VM
 ```bash
 # Windows (Git Bash)
 ssh -i qemu-workspace/keys/id_ed25519 -p 2222 lab@127.0.0.1
 
-# Iniciar VM primeiro
+# Start the VM first
 start "" "C:\Program Files\qemu\qemu-system-x86_64.exe" \
     -m 2048 -smp 1 \
     -hda qemu-workspace/vms/vm-ubuntu-test-60eefea9/disk-overlay.qcow2 \
@@ -187,27 +187,27 @@ start "" "C:\Program Files\qemu\qemu-system-x86_64.exe" \
 
 ---
 
-## Estrutura do Projeto
+## Project Structure
 
 ```
 druidos/
-├── dist/                          # DISTRIBUIÇÃO
-│   ├── druidos-bonsai.iso         # ISO bootável (27MB)
+├── dist/                          # DISTRIBUTION
+│   ├── druidos-bonsai.iso         # Bootable ISO (27MB)
 │   ├── bonsai-kernel              # Kernel (15MB)
 │   ├── bonsai-initramfs.img       # Initramfs (700KB)
-│   └── README.md                  # Documentação
+│   └── README.md                  # Documentation
 │
-├── build/output/                  # Build temporário
+├── build/output/                  # Temporary build
 │   ├── bonsai-kernel
 │   └── bonsai-initramfs.img
 │
-├── crates/                        # Código fonte Hive Stack
+├── crates/                        # Hive Stack source code
 │   ├── hive-common/
 │   ├── hive-cortex/
 │   ├── hive-synapse/
 │   └── ...
 │
-├── bonsai/                        # Scripts de build do kernel/initramfs
+├── bonsai/                        # Kernel/initramfs build scripts
 │   ├── scripts/
 │   │   ├── build-initramfs.sh
 │   │   ├── build-kernel.sh
@@ -216,135 +216,135 @@ druidos/
 │   └── config/
 │       └── bonsai_defconfig
 │
-├── qemu-workspace/                # VMs e artefatos QEMU
-│   ├── keys/id_ed25519            # Chave SSH
-│   ├── vms/                       # Discos das VMs
+├── qemu-workspace/                # VMs and QEMU artifacts
+│   ├── keys/id_ed25519            # SSH key
+│   ├── vms/                       # VM disks
 │   └── base-images/               # Cloud images
 │
-├── scripts/                       # Scripts de build (legado)
-├── config/                        # Configurações
-├── knowledge/                     # Base de conhecimento
+├── scripts/                       # Build scripts (legacy)
+├── config/                        # Configuration
+├── knowledge/                     # Knowledge base
 │
-├── Cargo.toml                     # Workspace Rust
-├── CLAUDE.md                      # Guia para IA
-├── STATUS.md                      # ESTE ARQUIVO
-└── DEVLOG.md                      # Log de desenvolvimento
+├── Cargo.toml                     # Rust workspace
+├── CLAUDE.md                      # Guide for the AI
+├── STATUS.md                      # THIS FILE
+└── DEVLOG.md                      # Development log
 ```
 
 ---
 
-## O Que Falta Para Sistema Completo
+## What Is Missing for a Complete System
 
-### 1. Sistema Base
-O initramfs atual é só BusyBox. Para um sistema completo:
-- Root filesystem (squashfs ou ext4)
-- Systemd como init
-- Usuário `druid` com login
-- Rede configurada
+### 1. Base System
+The current initramfs is only BusyBox. For a complete system:
+- Root filesystem (squashfs or ext4)
+- Systemd as init
+- User `druid` with login
+- Configured networking
 
 ### 2. Hive Stack
-Os binários estão compilados mas não integrados:
-- Copiar para /usr/bin
-- Criar services systemd
-- Configurar /etc/hive/config.toml
-- Iniciar cortex no boot
+The binaries are compiled but not integrated:
+- Copy to /usr/bin
+- Create systemd services
+- Configure /etc/hive/config.toml
+- Start the cortex at boot
 
-### 3. IA
-Modelo funcionando via llama-server:
-- Qwen 2.5 0.5B carrega no boot
-- Comando `ask` permite interação
-- **Próximo**: Integrar hive-synapse com llama-server API
-- **Próximo**: Conectar nerves ao cortex para sugestões contextuais
+### 3. AI
+Model working via llama-server:
+- Qwen 2.5 0.5B loads at boot
+- The `ask` command allows interaction
+- **Next**: Integrate hive-synapse with the llama-server API
+- **Next**: Connect the nerves to the cortex for contextual suggestions
 
 ### 4. Desktop
-Não integrado ainda:
+Not integrated yet:
 - Wayland/Hyprland
-- Sessão gráfica
-- Overlay hive-shell
+- Graphical session
+- hive-shell overlay
 
 ---
 
-## Decisões Arquiteturais
+## Architectural Decisions
 
-1. **Boot Direto vs ISO**: Suportamos ambos. Boot direto é mais rápido para dev.
-2. **Kernel Ubuntu**: Usando kernel pré-compilado do Ubuntu por praticidade.
-3. **BusyBox Estático**: Baixamos binário pré-compilado (musl) para evitar problemas de compilação.
-4. **Build na VM**: Compilação na VM Ubuntu, não cross-compile do Windows.
-
----
-
-## Problemas Conhecidos
-
-1. **Nested Virtualization**: Boot pode ser lento sem KVM/WHPX (~1 token/s para inferência)
-2. **VNC vs Serial**: Para v0.3-slm usar VNC (requer console gráfico)
-3. **llama.cpp AVX**: Binário pré-compilado falha com "Illegal instruction" - precisa compilar sem AVX
-4. **Loopback Network**: Initramfs precisa configurar `ifconfig lo 127.0.0.1 up` para HTTP local
-3. **Line Endings**: Scripts copiados do Windows precisam de `sed -i 's/\r$//'`
+1. **Direct Boot vs ISO**: We support both. Direct boot is faster for dev.
+2. **Ubuntu Kernel**: Using Ubuntu's precompiled kernel for convenience.
+3. **Static BusyBox**: We download a precompiled binary (musl) to avoid compilation problems.
+4. **Build on the VM**: Compilation on the Ubuntu VM, not cross-compiling from Windows.
 
 ---
 
-## Próxima Sessão
+## Known Problems
 
-> **Nota (tela da Hive, 2026-10):** o console ganhou uma tela, `hive-screen`, declarada em Quantum (`config/screen/screen.q`) e desenhada em CPU, sem motor, sem compositor e sem GPU. Não é a trilha gráfica arquivada voltando: é um daemon pequeno, como os outros. Veja o DEVLOG.
+1. **Nested Virtualization**: Boot can be slow without KVM/WHPX (~1 token/s for inference)
+2. **VNC vs Serial**: For v0.3-slm use VNC (requires a graphical console)
+3. **llama.cpp AVX**: The precompiled binary fails with "Illegal instruction" - it needs to be compiled without AVX
+4. **Loopback Network**: The initramfs needs to configure `ifconfig lo 127.0.0.1 up` for local HTTP
+3. **Line Endings**: Scripts copied from Windows need `sed -i 's/\r$//'`
+
+---
+
+## Next Session
+
+> **Note (the Hive's screen, 2026-10):** the console gained a screen, `hive-screen`, declared in Quantum (`config/screen/screen.q`) and drawn on the CPU, with no engine, no compositor and no GPU. It is not the archived graphics track coming back: it is a small daemon, like the others. See the DEVLOG.
 >
-> **Nota (pivot de alvo):** o projeto foi redefinido para TUI-only — sem GUI.
-> bark/spore/hive-shell/hive-dock/hive-term foram movidos para `archive/`.
-> Ver `DEVLOG.md` (entrada mais recente) e `CLAUDE.md`. A antiga "Opção B:
-> Desktop Mínimo" não se aplica mais.
+> **Note (target pivot):** the project was redefined as TUI-only — no GUI.
+> bark/spore/hive-shell/hive-dock/hive-term were moved to `archive/`.
+> See `DEVLOG.md` (most recent entry) and `CLAUDE.md`. The old "Option B:
+> Minimal Desktop" no longer applies.
 
-### Opção A: v0.4 - Integração Nerves
-1. Conectar hive-nerve-process ao cortex
-2. Nerve observa comandos executados
-3. Cortex envia contexto para SLM
-4. Sugestões automáticas baseadas em comandos
+### Option A: v0.4 - Nerves Integration
+1. Connect hive-nerve-process to the cortex
+2. The nerve watches executed commands
+3. The cortex sends context to the SLM
+4. Automatic suggestions based on commands
 
-### Opção B: Persistência
-1. Root filesystem (squashfs ou ext4)
-2. Login de usuário (druid)
-3. Rede automática (DHCP)
+### Option B: Persistence
+1. Root filesystem (squashfs or ext4)
+2. User login (druid)
+3. Automatic networking (DHCP)
 
-### Opção C: Grove UX
-1. Definir mecanismo de notificação do Hive sem GUI (inline no Grove vs painel TUI separado — ainda em aberto)
-2. Integrar Grove com hive-cortex como componente "Shell"
+### Option C: Grove UX
+1. Define the Hive's notification mechanism without a GUI (inline in Grove vs a separate TUI panel — still open)
+2. Integrate Grove with hive-cortex as the "Shell" component
 
-## Histórico de Versões
+## Version History
 
-| Versão | Data | Descrição |
+| Version | Date | Description |
 |--------|------|-----------|
-| v0.1 | 2026-02-20 | Boot mínimo (BusyBox) |
-| v0.2 | 2026-02-20 | hive-cortex funcionando |
-| v0.3 | 2026-02-20 | SLM funcionando (ask) |
-| v0.4-fb | 2026-02-20 | Framebuffer test (EM DESENVOLVIMENTO) |
+| v0.1 | 2026-02-20 | Minimal boot (BusyBox) |
+| v0.2 | 2026-02-20 | hive-cortex working |
+| v0.3 | 2026-02-20 | SLM working (ask) |
+| v0.4-fb | 2026-02-20 | Framebuffer test (IN DEVELOPMENT) |
 
 ---
 
-## v0.4-fb - Framebuffer (ARQUIVADO)
+## v0.4-fb - Framebuffer (ARCHIVED)
 
-> O alvo do projeto foi redefinido para TUI-only (sem GUI). `bark` e `spore`
-> foram movidos para `archive/bark` e `archive/spore`, fora do workspace
-> ativo. Os fixes descritos abaixo continuam no código arquivado, só não
-> são mais compilados/testados por padrão. Seção mantida como registro
-> histórico.
+> The project's target was redefined as TUI-only (no GUI). `bark` and `spore`
+> were moved to `archive/bark` and `archive/spore`, outside the active
+> workspace. The fixes described below remain in the archived code; they are
+> just no longer compiled/tested by default. Section kept as a historical
+> record.
 
 ### Status
-- `/dev/fb0` aparece com `vga=0x31B` (1280x1024x24bpp)
-- `fb-test` abre framebuffer com sucesso
-- **PROBLEMA**: Segfault no mmap
+- `/dev/fb0` appears with `vga=0x31B` (1280x1024x24bpp)
+- `fb-test` opens the framebuffer successfully
+- **PROBLEM**: Segfault in mmap
 
-### Causa Raiz
-O código em `bark/src/framebuffer.rs` usa `MmapMut::map_mut(&file)` que não funciona para device files. Precisa especificar tamanho explícito.
+### Root Cause
+The code in `bark/src/framebuffer.rs` uses `MmapMut::map_mut(&file)`, which does not work for device files. It needs to specify an explicit size.
 
-### Fixes Aplicados (NÃO COMPILADOS)
+### Applied Fixes (NOT COMPILED)
 
-#### Fix 1: mmap com tamanho explícito (linha ~169)
+#### Fix 1: mmap with explicit size (line ~169)
 ```rust
-// ANTES (quebrado):
+// BEFORE (broken):
 let mmap = unsafe {
     MmapMut::map_mut(&file)
         .map_err(|e| BarkError::MmapFailed(...))?
 };
 
-// DEPOIS (fix):
+// AFTER (fix):
 let mmap = unsafe {
     memmap2::MmapOptions::new()
         .len(size)
@@ -353,58 +353,58 @@ let mmap = unsafe {
 };
 ```
 
-#### Fix 2: flush() com suporte a 24bpp (linha ~312)
-O método `flush()` foi reescrito para converter u32 backbuffer para:
-- 32bpp: cópia direta
-- 24bpp: converte para BGR (3 bytes por pixel)
-- 16bpp: converte para RGB565
+#### Fix 2: flush() with 24bpp support (line ~312)
+The `flush()` method was rewritten to convert the u32 backbuffer to:
+- 32bpp: direct copy
+- 24bpp: converts to BGR (3 bytes per pixel)
+- 16bpp: converts to RGB565
 
-### Como Testar DruidOS v0.4
+### How to Test DruidOS v0.4
 ```powershell
-# Iniciar DruidOS com framebuffer (VNC porta 5901)
+# Start DruidOS with the framebuffer (VNC port 5901)
 & "C:\Program Files\qemu\qemu-system-x86_64.exe" -m 512 `
     -kernel "C:\projetos\druidos\dist\v0.4-fb\bonsai-kernel" `
     -initrd "C:\projetos\druidos\dist\v0.4-fb\bonsai-initramfs.img" `
     -append "console=tty0 noapic nolapic vga=0x31B" `
     -vga std -vnc :1
 
-# Conectar VNC: localhost:5901
-# Executar: fb-test
+# Connect VNC: localhost:5901
+# Run: fb-test
 ```
 
-### Scripts Auxiliares
-- `C:\projetos\druidos\run-fb.ps1` - Inicia DruidOS com framebuffer
-- `C:\projetos\druidos\kill-all-qemu.ps1` - Mata todos QEMU
-- `C:\projetos\druidos\build-fb-test.sh` - Compila fb-test (rodar no Linux)
+### Helper Scripts
+- `C:\projetos\druidos\run-fb.ps1` - Starts DruidOS with the framebuffer
+- `C:\projetos\druidos\kill-all-qemu.ps1` - Kills all QEMU processes
+- `C:\projetos\druidos\build-fb-test.sh` - Compiles fb-test (run on Linux)
 
-### Próximo Passo: Compilar fb-test
+### Next Step: Compile fb-test
 
-**Opção 1: WSL Ubuntu (Recomendado)**
+**Option 1: WSL Ubuntu (Recommended)**
 ```powershell
 wsl --install -d Ubuntu
-# Reiniciar Windows
-# Depois:
+# Restart Windows
+# Then:
 cd /mnt/c/projetos/druidos
 bash build-fb-test.sh
 ```
 
-**Opção 2: VM Externa**
-Copiar projeto para qualquer Linux e rodar `build-fb-test.sh`
+**Option 2: External VM**
+Copy the project to any Linux machine and run `build-fb-test.sh`
 
-### Problema com VM Ubuntu Build
-A VM Ubuntu atual (vm-ubuntu-build-529bc657) tem kernel panic:
+### Problem with the Ubuntu Build VM
+The current Ubuntu VM (vm-ubuntu-build-529bc657) has a kernel panic:
 ```
 Kernel panic - not syncing: IO-APIC + timer doesn't work!
 Boot with the 'noapic' option.
 ```
-- Disco foi expandido (+5GB) mas não ajuda
-- WHPX não funciona: "No space left on device"
-- Precisa modificar GRUB para adicionar `noapic`
+- The disk was expanded (+5GB) but that does not help
+- WHPX does not work: "No space left on device"
+- GRUB needs to be modified to add `noapic`
 
-### Parâmetros VESA
-| vga | Resolução | bpp | /dev/fb0 |
+### VESA Parameters
+| vga | Resolution | bpp | /dev/fb0 |
 |-----|-----------|-----|----------|
-| 0x31B | 1280x1024 | 24 | SIM |
+| 0x31B | 1280x1024 | 24 | YES |
 | 0x318 | 1024x768 | 24 | ? |
-| 0x118 | 1024x768 | 32 | NÃO |
+| 0x118 | 1024x768 | 32 | NO |
 | 0x11B | 1280x1024 | 32 | ? |

@@ -15,7 +15,7 @@
 //! {"op":"inject","message":{...}}                    a HiveMessage, as if the Hive sent it
 //! {"op":"show","page":{"title":"...","view":[...]}}  a page on the screen, as quantum pixel sends it
 //! {"op":"close"}                                     the page goes
-//! {"op":"act","type":"Ana","tap":["enter"]}          text typed, then keys by name (window.rs says which keys do what)
+//! {"op":"act","type":"Ann","tap":["enter"]}          text typed, then keys by name (window.rs says which keys do what)
 //! {"op":"until","pixel":"submit"}                    until the window sent that event (click, submit, change, navigate, close)
 //! {"op":"until","text":"Saved"} / {"op":"until","shown":2}   until the page shows that text / the page was shown so many times
 //! {"op":"until","still":true}                        until no transition runs (the observation's `motion` is null, the F1 menu where it is going)

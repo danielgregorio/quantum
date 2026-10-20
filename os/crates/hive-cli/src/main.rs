@@ -1,7 +1,7 @@
 //! `hive`: the Hive's commands for the person at the console.
 //!
 //!     hive apps                      the applications installed with the Hive
-//!     hive ajustes [PAGE]            an app on the Hive's screen (quantum pixel), as this user
+//!     hive settings [PAGE]           an app on the Hive's screen (quantum pixel), as this user
 //!     hive request set-hostname NAME
 //!     hive request set-keyboard LAYOUT [MODEL]
 //!     hive request set-screen-level auto|plain|effects|fine
@@ -10,11 +10,11 @@
 //!
 //! An app is a Quantum project folder under /usr/share/quantum-os/apps
 //! (`QUANTUM_OS_APPS`); `hive NAME` opens it on the screen the way
-//! `hive ajustes` does. A request goes to hive-cortex's user socket as a
+//! `hive settings` does. A request goes to hive-cortex's user socket as a
 //! `UserRequest`, which any local user may send: the Hive offers it in the
 //! user's name, an administrator approves it on the screen (F1) or the
 //! dashboard, and the actuator runs it through its whitelist. Nothing runs
-//! on the asking. The Ajustes app's "Pedir à Hive" buttons run this.
+//! on the asking. The Settings app's "Ask the Hive" buttons run this.
 
 use anyhow::{bail, Context, Result};
 use hive_common::actions::{is_valid_hostname, is_valid_keyboard, is_valid_network, Action};
@@ -24,7 +24,7 @@ use std::path::PathBuf;
 
 const USAGE: &str = "hive: the Hive's commands
   hive apps                         the applications installed with the Hive
-  hive ajustes [PAGE]               the machine's settings on the screen (any app: hive NAME)
+  hive settings [PAGE]              the machine's settings on the screen (any app: hive NAME)
   hive request set-hostname NAME    ask the Hive to name the machine
   hive request set-keyboard LAYOUT [MODEL]        us, or br (abnt2)
   hive request set-screen-level auto|plain|effects|fine
@@ -223,12 +223,12 @@ mod tests {
     #[test]
     fn the_words_of_a_request_become_the_action() {
         assert_eq!(
-            parse_setting(&["set-hostname", "forja"]).unwrap(),
+            parse_setting(&["set-hostname", "forge"]).unwrap(),
             Action::SetHostname {
-                name: "forja".into()
+                name: "forge".into()
             }
         );
-        assert!(parse_setting(&["set-hostname", "Forja!"]).is_err());
+        assert!(parse_setting(&["set-hostname", "Forge!"]).is_err());
         assert_eq!(
             parse_setting(&["set-keyboard", "br", "abnt2"]).unwrap(),
             Action::SetKeyboard {

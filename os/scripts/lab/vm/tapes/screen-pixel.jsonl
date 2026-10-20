@@ -5,12 +5,12 @@
 {"op": "until_sh", "sh": "systemctl is-active hive-screen", "timeout": 20}
 {"op": "until_sh", "sh": "test -S /run/hive-screen/pixel.sock && stat -c %a /run/hive-screen/pixel.sock", "contains": "666", "timeout": 10}
 {"op": "until_shot", "has": "#ffd34d", "timeout": 15}
-{"op": "put", "path": "/tmp/pixel-client.py", "mode": "644", "text": "import json, socket\ns = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)\ns.connect('/run/hive-screen/pixel.sock')\npage = {'title': 'Tarefas', 'view': [{'id': 1, 'type': 'form', 'event': {'action': 'criar', 'fields': {}}, 'children': [{'id': 2, 'type': 'input', 'props': {'bind': 'titulo'}}, {'id': 3, 'type': 'button', 'props': {'text': 'Criar'}}]}]}\ns.sendall((json.dumps({'op': 'show', 'page': page}) + '\\n').encode())\nwith open('/tmp/pixel-events.log', 'a') as log:\n    for line in s.makefile('r'):\n        log.write(line)\n        log.flush()\n        if json.loads(line).get('event') == 'close':\n            break\n"}
+{"op": "put", "path": "/tmp/pixel-client.py", "mode": "644", "text": "import json, socket\ns = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)\ns.connect('/run/hive-screen/pixel.sock')\npage = {'title': 'Tasks', 'view': [{'id': 1, 'type': 'form', 'event': {'action': 'create', 'fields': {}}, 'children': [{'id': 2, 'type': 'input', 'props': {'bind': 'title'}}, {'id': 3, 'type': 'button', 'props': {'text': 'Create'}}]}]}\ns.sendall((json.dumps({'op': 'show', 'page': page}) + '\\n').encode())\nwith open('/tmp/pixel-events.log', 'a') as log:\n    for line in s.makefile('r'):\n        log.write(line)\n        log.flush()\n        if json.loads(line).get('event') == 'close':\n            break\n"}
 {"op": "sh", "sh": "rm -f /tmp/pixel-events.log; nohup python3 /tmp/pixel-client.py >/tmp/pixel-client.out 2>&1 &", "user": "druid"}
 {"op": "until_shot", "has": "#121228", "min": 20000, "timeout": 15}
-{"op": "until_journal", "unit": "hive-screen.service", "contains": "page: Tarefas", "timeout": 10}
-{"op": "press", "type": "ligar", "keys": ["enter"]}
-{"op": "until_sh", "sh": "cat /tmp/pixel-events.log", "contains": "\"titulo\":\"ligar\"", "timeout": 10}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "page: Tasks", "timeout": 10}
+{"op": "press", "type": "lunch", "keys": ["enter"]}
+{"op": "until_sh", "sh": "cat /tmp/pixel-events.log", "contains": "\"title\":\"lunch\"", "timeout": 10}
 {"op": "press", "keys": ["escape"]}
 {"op": "until_sh", "sh": "cat /tmp/pixel-events.log", "contains": "\"event\":\"close\"", "timeout": 10}
 {"op": "until_shot", "lacks": "#121228", "timeout": 15}

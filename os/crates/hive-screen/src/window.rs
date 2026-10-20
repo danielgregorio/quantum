@@ -1186,17 +1186,17 @@ impl Window {
     /// The keys that apply to what has the focus.
     pub fn help(&self) -> String {
         let Some(n) = self.focused() else {
-            return "Tab move · Esc fecha".into();
+            return "Tab moves · Esc closes".into();
         };
         match self.nodes[n].kind.as_str() {
-            "input" => "digite · setas · Enter envia · Esc fecha".into(),
-            "checkbox" | "switch" => "Espaço marca · Enter envia · Tab move".into(),
-            "radio" | "select" => "setas escolhem · Enter envia · Tab move".into(),
-            "button" => "Enter aciona · Tab move · Esc fecha".into(),
-            "link" => "Enter abre · Tab move · Esc fecha".into(),
-            "table" => "setas: linha, ação · Enter aciona · Tab sai".into(),
-            "tabpanel" => "setas trocam a aba · Tab entra · Esc fecha".into(),
-            _ => "Tab move · Enter escolhe · Esc fecha".into(),
+            "input" => "type · arrows · Enter sends · Esc closes".into(),
+            "checkbox" | "switch" => "Space marks · Enter sends · Tab moves".into(),
+            "radio" | "select" => "arrows choose · Enter sends · Tab moves".into(),
+            "button" => "Enter presses · Tab moves · Esc closes".into(),
+            "link" => "Enter opens · Tab moves · Esc closes".into(),
+            "table" => "arrows: row, action · Enter presses · Tab leaves".into(),
+            "tabpanel" => "arrows change the tab · Tab enters · Esc closes".into(),
+            _ => "Tab moves · Enter chooses · Esc closes".into(),
         }
     }
 
@@ -1876,7 +1876,7 @@ impl Window {
                 if let Some(y) = self.row_y(r.y, ch) {
                     b.text(
                         font,
-                        &cut(&format!("[ui:{} não é desenhado na tela]", kind), r.w),
+                        &cut(&format!("[ui:{} is not drawn on the screen]", kind), r.w),
                         x,
                         y + 1,
                         MUTED,
@@ -1914,9 +1914,9 @@ impl Window {
 /// What the status bar says of the offers that wait, for F1.
 pub(crate) fn offers_tag(offers: usize) -> String {
     if offers == 1 {
-        "F1 · 1 oferta".to_string()
+        "F1 · 1 offer".to_string()
     } else {
-        format!("F1 · {} ofertas", offers)
+        format!("F1 · {} offers", offers)
     }
 }
 
@@ -2028,31 +2028,31 @@ mod tests {
 
     #[test]
     fn a_help_line_is_cut_between_its_hints() {
-        let help = "digite · setas · Enter envia · Esc fecha";
+        let help = "type · arrows · Enter sends · Esc closes";
         assert_eq!(cut_at_separator(help, 60), help);
-        assert_eq!(cut_at_separator(help, 33), "digite · setas · Enter envia");
-        assert_eq!(cut_at_separator(help, 10), "digite");
-        assert_eq!(cut_at_separator(help, 3), "dig");
-        assert_eq!(offers_tag(1), "F1 · 1 oferta");
-        assert_eq!(offers_tag(2), "F1 · 2 ofertas");
+        assert_eq!(cut_at_separator(help, 33), "type · arrows · Enter sends");
+        assert_eq!(cut_at_separator(help, 10), "type");
+        assert_eq!(cut_at_separator(help, 3), "typ");
+        assert_eq!(offers_tag(1), "F1 · 1 offer");
+        assert_eq!(offers_tag(2), "F1 · 2 offers");
     }
 
     fn page() -> Value {
-        json!({"title": "Tarefas", "flash": "Criada: ligar", "view": [
-            {"id": 1, "type": "window", "props": {"title": "Tarefas"}, "children": [
-                {"id": 2, "type": "form", "props": {}, "event": {"action": "criar", "fields": {"filtro": "todas"}}, "children": [
-                    {"id": 3, "type": "input", "props": {"bind": "titulo", "placeholder": "O que?"}},
-                    {"id": 4, "type": "select", "props": {"bind": "prioridade", "options": "media,alta,baixa", "value": "alta"}},
-                    {"id": 5, "type": "checkbox", "props": {"bind": "urgente", "label": "Urgente", "checked": "true"}},
-                    {"id": 6, "type": "button", "props": {"text": "Criar", "variant": "primary"}}]},
-                {"id": 7, "type": "button", "props": {"text": "Concluir"}, "event": {"action": "alternar", "fields": {"id": "3"}}},
-                {"id": 8, "type": "link", "props": {"text": "Planilha", "to": "/planilha"}},
+        json!({"title": "Tasks", "flash": "Created: call", "view": [
+            {"id": 1, "type": "window", "props": {"title": "Tasks"}, "children": [
+                {"id": 2, "type": "form", "props": {}, "event": {"action": "create", "fields": {"filter": "all"}}, "children": [
+                    {"id": 3, "type": "input", "props": {"bind": "title", "placeholder": "What?"}},
+                    {"id": 4, "type": "select", "props": {"bind": "priority", "options": "medium,high,low", "value": "high"}},
+                    {"id": 5, "type": "checkbox", "props": {"bind": "urgent", "label": "Urgent", "checked": "true"}},
+                    {"id": 6, "type": "button", "props": {"text": "Create", "variant": "primary"}}]},
+                {"id": 7, "type": "button", "props": {"text": "Done"}, "event": {"action": "toggle", "fields": {"id": "3"}}},
+                {"id": 8, "type": "link", "props": {"text": "Sheet", "to": "/sheet"}},
                 {"id": 9, "type": "table", "props": {}, "children": [],
-                 "columns": [{"label": "Nome", "to": "/?sort=nome"}, {"label": "Ações"}],
-                 "rows": [[[{"id": 10, "type": "text", "props": {"text": "Ana"}}],
-                           [{"id": 11, "type": "button", "props": {"text": "Remover"}, "event": {"action": "remove", "fields": {"id": "1"}}}]],
-                          [[{"id": 12, "type": "text", "props": {"text": "Bia"}}],
-                           [{"id": 13, "type": "button", "props": {"text": "Remover"}, "event": {"action": "remove", "fields": {"id": "2"}}}]]]}]}]})
+                 "columns": [{"label": "Name", "to": "/?sort=name"}, {"label": "Actions"}],
+                 "rows": [[[{"id": 10, "type": "text", "props": {"text": "Ann"}}],
+                           [{"id": 11, "type": "button", "props": {"text": "Remove"}, "event": {"action": "remove", "fields": {"id": "1"}}}]],
+                          [[{"id": 12, "type": "text", "props": {"text": "Bea"}}],
+                           [{"id": 13, "type": "button", "props": {"text": "Remove"}, "event": {"action": "remove", "fields": {"id": "2"}}}]]]}]}]})
     }
 
     fn keys(w: &mut Window, keys: &[Key]) {
@@ -2065,7 +2065,7 @@ mod tests {
     fn the_focus_starts_on_the_first_field_and_tab_goes_round() {
         let mut w = Window::new(&page(), 320, 180);
         let obs = w.observe();
-        assert_eq!(obs["items"][0]["bind"], "titulo");
+        assert_eq!(obs["items"][0]["bind"], "title");
         assert_eq!(obs["items"][0]["focus"], true);
         assert_eq!(
             obs["items"].as_array().unwrap().len(),
@@ -2081,13 +2081,13 @@ mod tests {
         assert_eq!(w.observe()["items"][0]["focus"], true, "round again");
         keys(&mut w, &[Key::ShiftTab]);
         assert_eq!(w.observe()["items"][6]["focus"], true);
-        assert!(w.help().contains("linha"));
+        assert!(w.help().contains("row"));
     }
 
     #[test]
     fn typing_edits_the_field_with_a_cursor_and_enter_submits_the_form() {
         let mut w = Window::new(&page(), 320, 180);
-        for c in "ligar".chars() {
+        for c in "lunch".chars() {
             w.key(Key::Char(c), 0);
         }
         keys(
@@ -2106,14 +2106,14 @@ mod tests {
         );
         assert_eq!(
             w.observe()["items"][0]["value"],
-            "aigar ",
+            "aunch ",
             "a at the start, l gone, a space at the end"
         );
         keys(&mut w, &[Key::CtrlU]);
-        for c in "banco".chars() {
+        for c in "bread".chars() {
             w.key(Key::Char(c), 0);
         }
-        // the select to baixa, the box off
+        // the select to low, the box off
         keys(
             &mut w,
             &[
@@ -2129,15 +2129,15 @@ mod tests {
         let events = w.take_events();
         assert_eq!(events.len(), 1);
         assert_eq!(events[0]["event"], "submit");
-        assert_eq!(events[0]["action"], "criar");
-        assert_eq!(events[0]["fields"]["titulo"], "banco");
-        assert_eq!(events[0]["fields"]["prioridade"], "baixa");
+        assert_eq!(events[0]["action"], "create");
+        assert_eq!(events[0]["fields"]["title"], "bread");
+        assert_eq!(events[0]["fields"]["priority"], "low");
         assert_eq!(
-            events[0]["fields"]["filtro"], "todas",
+            events[0]["fields"]["filter"], "all",
             "the form's hidden fields"
         );
         assert!(
-            events[0]["fields"].get("urgente").is_none(),
+            events[0]["fields"].get("urgent").is_none(),
             "an unchecked box does not go"
         );
     }
@@ -2152,18 +2152,18 @@ mod tests {
         assert_eq!(
             w.take_events()[0]["fields"]["id"],
             "3",
-            "Concluir sends its row's field"
+            "Done sends its row's field"
         );
         keys(&mut w, &[Key::Tab, Key::Enter]);
-        assert_eq!(w.take_events()[0]["to"], "/planilha");
+        assert_eq!(w.take_events()[0]["to"], "/sheet");
         keys(&mut w, &[Key::Tab, Key::Down, Key::Enter]);
         let e = w.take_events();
         assert_eq!(e[0]["event"], "click");
-        assert_eq!(e[0]["fields"]["id"], "2", "the second row's Remover");
+        assert_eq!(e[0]["fields"]["id"], "2", "the second row's Remove");
         keys(&mut w, &[Key::Up, Key::Up, Key::Enter]);
         assert_eq!(
             w.take_events()[0]["to"],
-            "/?sort=nome",
+            "/?sort=name",
             "the header's sortable column"
         );
         keys(&mut w, &[Key::Escape]);
@@ -2172,7 +2172,7 @@ mod tests {
 
     #[test]
     fn a_search_field_says_its_change_after_a_pause() {
-        let page = json!({"title": "Busca", "view": [{"id": 1, "type": "input", "props": {"bind": "q", "search": true, "delay": 300}}]});
+        let page = json!({"title": "Search", "view": [{"id": 1, "type": "input", "props": {"bind": "q", "search": true, "delay": 300}}]});
         let mut w = Window::new(&page, 320, 180);
         w.key(Key::Char('b'), 10);
         assert!(w.take_events().is_empty());

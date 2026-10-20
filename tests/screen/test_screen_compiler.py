@@ -27,7 +27,7 @@ GOOD = '''<q:application id="x" type="screen">
   </qs:sheet>
   <qs:particles name="puff" preset="puff" color="#fff" amount="6" />
   <qs:scene width="128" height="96" background="#102030">
-    <qs:text value="Olá, Hive" x="4" y="4" align="left" />
+    <qs:text value="Café, Hive" x="4" y="4" align="left" />
     <qs:sprite name="nginx" sheet="cell" frame="0" x="10" y="20" />
     <qs:sprite name="redis-server" sheet="cell" x="30" y="20" animation="glow" hidden="true" />
     <qs:emitter particles="puff" x="60" y="60" />

@@ -179,7 +179,7 @@ LIMITS: Dict[str, str] = {kebab(v): v for v in VARIANTS}
 
 # What <qh:allow action=> may switch on: the actuator's permissions with no
 # list behind them. The last three are the machine's settings a user asks
-# for through the Ajustes app (`hive request`): the name of the machine
+# for through the Settings app (`hive request`): the name of the machine
 # (hostnamectl), the keyboard's layout, the screen's level, an interface's
 # address (netplan, through a root unit).
 PERMITS = ('kill-port-process', 'open-url', 'firewall', 'set-hostname', 'set-keyboard', 'set-screen-level',
