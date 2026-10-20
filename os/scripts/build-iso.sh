@@ -378,6 +378,21 @@ install_hive_stack() {
     mkdir -p "$chroot_dir/var/lib/hive/knowledge"
     cp -r "$PROJECT_ROOT/knowledge/"* "$chroot_dir/var/lib/hive/knowledge/"
 
+    # The Quantum runtime (the repository's quantum/ package; its needs are
+    # packages of the image), the `quantum` and `hive` commands, and the
+    # apps installed with the Hive (apps/): what `hive ajustes` opens on
+    # the screen. The VM lab installs the same (scripts/lab/vm/install-hive.sh).
+    log_info "Installing the Quantum runtime and the apps"
+    rm -rf "$chroot_dir/usr/lib/python3/dist-packages/quantum"
+    mkdir -p "$chroot_dir/usr/lib/python3/dist-packages"
+    rsync -a --exclude __pycache__ --exclude '*.pyc' --exclude .pytest_cache --exclude node_modules --exclude logs \
+        "$PROJECT_ROOT/../quantum/" "$chroot_dir/usr/lib/python3/dist-packages/quantum/"
+    install -m 0755 "$PROJECT_ROOT/scripts/quantum" "$chroot_dir/usr/bin/quantum"
+    install -m 0755 "$PROJECT_ROOT/scripts/hive" "$chroot_dir/usr/bin/hive"
+    rm -rf "$chroot_dir/usr/share/quantum-os/apps"
+    mkdir -p "$chroot_dir/usr/share/quantum-os/apps"
+    rsync -a --exclude __pycache__ "$PROJECT_ROOT/apps/" "$chroot_dir/usr/share/quantum-os/apps/"
+
     # Create hive users
     log_info "Creating system users"
     run_in_chroot "

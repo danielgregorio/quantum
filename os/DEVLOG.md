@@ -1,5 +1,60 @@
 # DruidOS Development Log
 
+## 2026-10-20 - Ajustes, leitura: a app, e o runtime Quantum dentro do sistema
+
+A fatia 5b. A app que o Daniel pediu ("uma tela de admin com nome do pc,
+rede, teclado, tudo em tela") lendo a máquina de verdade, e o que faltava
+para ela rodar.
+
+**O que faltava.** Nem a VM do laboratório nem a ISO tinham o runtime
+Python do Quantum: o `quantum pixel` só tinha sido provado por um cliente
+de socket cru. Agora o runtime vai com a Hive: as dependências (flask,
+yaml, sqlparse, requests, bcrypt) como pacotes Ubuntu do base da VM
+(`PACKAGES`, `BASE_VERSION` 7) e da imagem da ISO; o pacote `quantum/` do
+repositório copiado para `/usr/lib/python3/dist-packages` (o `stage()` do
+laboratório o põe ao lado dos binários e um hash por arquivo decide o que
+reinstalar); `/usr/bin/quantum` e `/usr/bin/hive` (`hive ajustes` abre a
+app na tela como o usuário que chamou; `hive apps` lista;
+`/usr/share/quantum-os/apps`). O Textual fica de fora (o do Ubuntu é
+velho demais): na máquina a app roda na tela e no navegador, não no
+console. A ISO segue sem validação aqui.
+
+**A app (`apps/ajustes`).** Cinco abas de um `ui:tabpanel`: Máquina (nome,
+sistema, kernel, tempo ligada, núcleos, memória, disco), Rede (cada
+interface com endereço, estado e origem DHCP/fixo; gateway; DNS), Teclado
+(o layout do sistema e o que a tela lê), Tela (nível, escolha, núcleos,
+custo do quadro, movimento) e Hive (os daemons e seu estado, o que a
+whitelist permite). Cada aba é um serviço de `leitura.py`, stdlib só, que
+lê o que qualquer um lê (`/proc`, `/etc/default/keyboard`,
+`/etc/hive/whitelist.toml`, `ip -j addr`, `ip -j route`, `resolvectl`,
+`systemctl is-active`) por duas portas, `run` e `read`, que o teste troca
+por uma máquina enlatada; nada levanta erro: sem `ip` ou sem tela lê-se
+"não lido". As "últimas ofertas" da aba Hive ficaram de fora: o journal
+não é do usuário comum.
+
+**O status da tela.** A proposta dizia `{"op":"status"}` pedido pela
+página; o socket aceita um cliente só e o serviço corre noutra thread do
+mesmo processo, então o daemon empurra: `{"event":"status",...}` ao
+conectar e a cada mudança (nível, pregado ou não, núcleos, movimento,
+teclado, custo do quadro, cena), `Runtime::status`; o cliente espera meio
+segundo por ele antes da primeira página e o guarda em `screen_status()`.
+
+**O que a VM mostrou.** A primeira rodada falhou: o servidor da app abria
+`logs/quantum.log` dentro de `/usr/share`, que não é do usuário. A app
+instalada não grava log em arquivo (`logging: file: false`) e o runtime
+passa a avisar e seguir só no console quando o diretório de log não é
+gravável. A fita `ajustes.jsonl` então passou (121 s): `hive ajustes` como
+druid, "page: Ajustes" no journal, a view que o servidor da app responde
+com `nome: quantum-lab`, `núcleos: 4`, `nível:` e `hive-screen: active`,
+setas pelas abas no teclado real, Esc.
+
+**Prova fora da VM.** `tests/apps/test_ajustes.py`: os serviços contra a
+máquina enlatada, e a página no navegador, no console e na tela (os
+drivers do teste de paridade), onde a aba Tela diz `nível: effects (1)`.
+
+**A seguir.** A mudança pela Hive (5c): a página pede, o cortex oferece,
+Enter na tela aprova, o atuador executa pela whitelist.
+
 ## 2026-10-20 - O menu F1 e o botão da janela na barra
 
 O quarto passo da fatia 5: as ofertas da Hive chegam por cima de qualquer

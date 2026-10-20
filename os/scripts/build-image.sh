@@ -290,6 +290,14 @@ install_packages() {
         git
         build-essential
         pkg-config
+        # the Quantum runtime's needs (`quantum pixel`, the apps installed
+        # with the Hive: scripts/lab/vm/vm.py keeps the same list)
+        python3
+        python3-flask
+        python3-yaml
+        python3-sqlparse
+        python3-requests
+        python3-bcrypt
     )
 
     # ZFS packages

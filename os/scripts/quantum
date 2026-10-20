@@ -1,0 +1,3 @@
+#!/bin/sh
+# quantum: the Quantum runtime installed with the Hive (/usr/lib/python3/dist-packages/quantum).
+exec /usr/bin/python3 -m quantum.cli.runner "$@"

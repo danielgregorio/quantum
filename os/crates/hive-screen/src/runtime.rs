@@ -14,11 +14,58 @@ pub struct Runtime {
     pub world: World,
     pub hive: Option<Hive>,
     pub pixel: Option<PixelSocket>,
+    /// What the daemon knows of itself and the world does not: whether
+    /// the level is pinned, the keyboard's layout, what a frame costs
+    /// (main.rs keeps it current).
+    pub about: Value,
+    /// The last `status` the page's runtime was told, so it hears of a
+    /// change once.
+    status_sent: Option<Value>,
 }
 
 impl Runtime {
     pub fn new(world: World, hive: Option<Hive>, pixel: Option<PixelSocket>) -> Runtime {
-        Runtime { world, hive, pixel }
+        Runtime {
+            world,
+            hive,
+            pixel,
+            about: serde_json::json!({"pinned": false, "keyboard": "us", "frame_ms": 0.0}),
+            status_sent: None,
+        }
+    }
+
+    /// What the screen says of itself to the page's runtime: the level,
+    /// the cores, whether pages move, the keyboard, what a frame costs.
+    /// Sent when the runtime connects and whenever any of it changes.
+    pub fn status(&self) -> Value {
+        let mut status = serde_json::json!({
+            "event": "status",
+            "level": self.world.level(),
+            "level_name": crate::level::LEVELS[self.world.level()].name,
+            "cores": self.world.facts().cores,
+            "motion": self.world.motion_on(),
+            "scene": [self.world.scene.width, self.world.scene.height],
+        });
+        if let (Some(into), Some(from)) = (status.as_object_mut(), self.about.as_object()) {
+            for (k, v) in from {
+                into.insert(k.clone(), v.clone());
+            }
+        }
+        status
+    }
+
+    fn tell_status(&mut self) {
+        if !self.pixel.as_ref().is_some_and(|p| p.connected()) {
+            self.status_sent = None;
+            return;
+        }
+        let status = self.status();
+        if self.status_sent.as_ref() != Some(&status) {
+            if let Some(socket) = &mut self.pixel {
+                socket.send(&status);
+            }
+            self.status_sent = Some(status);
+        }
     }
 
     /// One tick: what the Hive and the pixel socket sent meanwhile, the
@@ -48,6 +95,7 @@ impl Runtime {
             }
         }
         self.world.tick();
+        self.tell_status();
         self.flush_pixel();
         Ok(())
     }

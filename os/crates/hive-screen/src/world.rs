@@ -440,6 +440,11 @@ impl World {
 
     // ---------------------------------------------------------------- the facts
 
+    /// What the bars say of the machine.
+    pub fn facts(&self) -> &Facts {
+        &self.facts
+    }
+
     /// What the bars say of the machine: the daemon tells it as it runs.
     pub fn set_facts(&mut self, facts: Facts) {
         if facts != self.facts {
@@ -1036,6 +1041,11 @@ impl World {
     /// frames to spare), never when switched off.
     fn moves(&self) -> bool {
         self.motion_on && self.effects()
+    }
+
+    /// Whether pages may move at all.
+    pub fn motion_on(&self) -> bool {
+        self.motion_on
     }
 
     /// `HIVE_SCREEN_MOTION=off`: pages appear and go at once.

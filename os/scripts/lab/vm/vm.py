@@ -373,7 +373,10 @@ class Machine:
 # What the Hive needs from the system that the minimal image lacks: polkit
 # (the actuator acts through it), PackageKit and its pkcon (installs) and
 # auditd (the process nerve reads program executions from the audit log).
-PACKAGES = ['polkitd', 'packagekit', 'packagekit-tools', 'auditd']
+PACKAGES = ['polkitd', 'packagekit', 'packagekit-tools', 'auditd',
+            # the Quantum runtime's needs, as Ubuntu packages: `quantum pixel`
+            # brings an app's pages to the real screen (the Ajustes app)
+            'python3-flask', 'python3-yaml', 'python3-sqlparse', 'python3-requests', 'python3-bcrypt']
 
 # Timers that would act on their own during a test: a test must see only
 # what it caused.
@@ -388,7 +391,7 @@ QUIET = ['apt-daily.timer', 'apt-daily-upgrade.timer', 'motd-news.timer', 'dpkg-
 REPO_PACKAGES = ['htop']
 
 # Bumped when make_base changes what the base holds.
-BASE_VERSION = 6
+BASE_VERSION = 7
 
 
 def base_fingerprint() -> str:
@@ -517,12 +520,18 @@ BINARIES = ['hive-cortex', 'hive-synapse', 'hive-actuator', 'hive-nerve-process'
 COMPONENTS = ['Synapse', 'Actuator', 'NerveProcess', 'NerveJournal', 'NerveNetwork', 'NerveFs', 'Dashboard']
 
 
+# The Quantum runtime the guest gets (the repository's `quantum/` package,
+# staged beside the binaries): what is not code stays home.
+QUANTUM_IGNORE = shutil.ignore_patterns('__pycache__', '*.pyc', '.pytest_cache', 'node_modules', 'logs')
+
+
 def stage(profile: str = 'debug') -> dict:
     """Copies the workspace's binaries, without their debug sections, to
     target/vm-lab/bin, where the guest installs them from (what the ISO
-    ships is a release build; debug sections would only slow the copy).
-    Answers a digest of every file the guest installs, by path: what changed
-    since the snapshot "hive" was saved is all that needs installing."""
+    ships is a release build; debug sections would only slow the copy), and
+    the Quantum runtime to target/vm-lab/quantum. Answers a digest of every
+    file the guest installs, by path: what changed since the snapshot "hive"
+    was saved is all that needs installing."""
     src = OS_DIR / 'target' / profile
     out = OS_DIR / 'target' / 'vm-lab' / 'bin'
     out.mkdir(parents=True, exist_ok=True)
@@ -535,9 +544,14 @@ def stage(profile: str = 'debug') -> dict:
         if not staged.is_file() or staged.stat().st_mtime < built.stat().st_mtime:
             subprocess.run(['objcopy', '--strip-debug', str(built), str(staged)], check=True)
         files[f'bin/{b}'] = hashlib.sha256(staged.read_bytes()).hexdigest()
+    quantum = OS_DIR / 'target' / 'vm-lab' / 'quantum'
+    shutil.rmtree(quantum, ignore_errors=True)
+    shutil.copytree(OS_DIR.parent / 'quantum', quantum, ignore=QUANTUM_IGNORE)
     for f in sorted([*(OS_DIR / 'config').rglob('*'), *(OS_DIR / 'knowledge').rglob('*'),
-                     HERE / 'install-hive.sh', HERE / 'agent.py']):
-        if f.is_file():
+                     *(OS_DIR / 'apps').rglob('*'), *quantum.rglob('*'),
+                     HERE / 'install-hive.sh', HERE / 'agent.py', OS_DIR / 'scripts' / 'hive',
+                     OS_DIR / 'scripts' / 'quantum']):
+        if f.is_file() and '__pycache__' not in f.parts:
             files[str(f.relative_to(OS_DIR))] = hashlib.sha256(f.read_bytes()).hexdigest()
     return files
 

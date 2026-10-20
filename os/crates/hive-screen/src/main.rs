@@ -181,6 +181,12 @@ fn main() -> Result<()> {
     };
     runtime.world.set_level(chooser.level());
     runtime.world.set_facts(facts(chooser.cores()));
+    let keyboard = input::Layout::detect().name();
+    runtime.about = serde_json::json!({
+        "pinned": pinned.is_some(),
+        "keyboard": keyboard,
+        "frame_ms": 0.0,
+    });
     // HIVE_SCREEN_MOTION=off: pages appear and go at once
     if std::env::var("HIVE_SCREEN_MOTION")
         .map(|v| {
@@ -245,8 +251,11 @@ fn main() -> Result<()> {
                     level::ceiling(chooser.cores())
                 );
             }
-            // what the bars say: the machine's name, its cores, the time
+            // what the bars say: the machine's name, its cores, the time;
+            // what a page's runtime may ask: what a frame costs now
             runtime.world.set_facts(facts(chooser.cores()));
+            runtime.about["frame_ms"] =
+                serde_json::json!((chooser.before_ms() * 10.0).round() / 10.0);
         }
         if chooser.level() != runtime.world.level() {
             let lv = chooser.level();

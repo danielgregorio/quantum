@@ -6,8 +6,8 @@ The Hive lab (`crates/hive-lab`) runs the real hive-cortex and hive-synapse and 
 |---|---|
 | the guest | Ubuntu 24.04's minimal cloud image (the release Quantum OS remasters), on a copy-on-write overlay |
 | the agent | `agent.py`, in the guest: JSON lines over a virtio-serial port (commands, files, the journal, programs in a terminal) |
-| the build | the working tree's binaries (debug sections stripped) and `config/`, over a read-only 9p share, installed by `install-hive.sh` as the ISO installs them |
-| packages | the guest's only package source is a signed repository in the guest, made by the host, with what a test may install (`REPO_PACKAGES`: htop): an approved install goes through PackageKit as on the real system, with no network |
+| the build | the working tree's binaries (debug sections stripped), `config/`, the Quantum runtime (the repository's `quantum/`, staged beside the binaries) and `apps/`, over a read-only 9p share, installed by `install-hive.sh` as the ISO installs them (`/usr/bin/quantum`, `/usr/bin/hive`, `/usr/share/quantum-os/apps`) |
+| packages | the base holds what the Hive and the Quantum runtime need (`PACKAGES`: polkit, PackageKit, auditd, python3-flask and the rest), downloaded by the host's apt for the guest's own dpkg status. The guest's only package source is a signed repository in the guest, made by the host, with what a test may install (`REPO_PACKAGES`: htop): an approved install goes through PackageKit as on the real system, with no network |
 | the speed | the guest boots once. The snapshot `base` keeps it booted with its packages, and `hive` keeps it with the Hive installed from the build. Restoring one takes about a second, with or without KVM |
 | the screens | the real hive-dashboard and grove run in a terminal in the guest. `hive-lab term` renders them with the same terminal emulator as the Hive lab |
 | the display | a `virtio-gpu`, on which the real `hive-screen` draws the Hive's screen through DRM; the host reads it with QMP `screendump` and presses its keys with `send-key` |
@@ -75,6 +75,7 @@ The same shape as the Hive lab's: `{"op": ...}` in, `{"ok": true, ...}` or `{"ok
 | `screen-console` | the Hive's screen on the real display: a real crash smokes nginx's cell, Enter on the machine's keyboard approves the offer, the real actuator's restart fills the cell with honey |
 | `screen-levels` (needs KVM) | the screen's presentation level follows the cores: two online, level 1 and no snow; four, the fine level at 640x360 with the snow; two again, back down |
 | `screen-vt` | the console is shared: `chvt 2` takes it to a text terminal and the scene lets the display go (the honey leaves the screendump); `chvt 1` brings it back whole |
+| `ajustes` | the Ajustes app on the real screen: `hive ajustes`, run by a local user, starts the app's server with the Quantum runtime installed in the guest and brings its page to the console; the page's own server answers the view the screen draws, with the machine's real name, its cores and the screen's level; the arrows go through the tabs on the real keyboard, Esc closes it |
 
 A user's commands (`sh` with `user`, grove) carry a login uid, as a real login gives them: the audit rule the process nerve reads records only programs of someone who logged in. A failing tape prints the guest's journal since it started, for failures seen where nobody can look into the guest afterwards (CI).
 
