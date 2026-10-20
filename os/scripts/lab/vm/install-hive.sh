@@ -68,6 +68,17 @@ install -m 0640 "$SRC"/config/audit/*.rules /etc/audit/rules.d/
 mkdir -p /var/lib/hive/knowledge
 cp -r "$SRC"/knowledge/* /var/lib/hive/knowledge/
 
+# the Quantum runtime (its needs are Ubuntu packages of the base), the
+# `quantum` and `hive` commands, and the apps installed with the Hive
+rm -rf /usr/lib/python3/dist-packages/quantum
+cp -r "$SRC/target/vm-lab/quantum" /usr/lib/python3/dist-packages/quantum
+install -m 0755 "$SRC/scripts/quantum" /usr/bin/quantum
+install -m 0755 "$SRC/scripts/hive" /usr/bin/hive
+rm -rf /usr/share/quantum-os/apps
+mkdir -p /usr/share/quantum-os/apps
+cp -r "$SRC"/apps/. /usr/share/quantum-os/apps/
+find /usr/share/quantum-os/apps -name __pycache__ -type d -prune -exec rm -rf {} +
+
 groupadd -r hive 2>/dev/null || true
 useradd -r -g hive -s /usr/sbin/nologin -d /nonexistent _hive-ai 2>/dev/null || true
 useradd -r -g hive -s /usr/sbin/nologin -d /nonexistent _hive-sense 2>/dev/null || true

@@ -102,16 +102,22 @@ def setup_logging(config: Dict[str, Any]) -> logging.Logger:
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
 
-    # File handler with plain formatter
+    # File handler with plain formatter. A project that is not ours to write
+    # (an app installed under /usr/share, run by a user) keeps its log on the
+    # console: the page is worth more than its log file.
     if enable_file:
         log_path = Path(log_dir)
-        log_path.mkdir(parents=True, exist_ok=True)
-        file_handler = logging.FileHandler(
-            str(log_path / filename), encoding='utf-8'
-        )
-        file_handler.setLevel(level)
-        file_handler.setFormatter(logging.Formatter(plain_fmt, datefmt=datefmt))
-        logger.addHandler(file_handler)
+        try:
+            log_path.mkdir(parents=True, exist_ok=True)
+            file_handler = logging.FileHandler(
+                str(log_path / filename), encoding='utf-8'
+            )
+        except OSError as exc:
+            logger.warning('no log file at %s (%s): logging to the console only', log_path / filename, exc)
+        else:
+            file_handler.setLevel(level)
+            file_handler.setFormatter(logging.Formatter(plain_fmt, datefmt=datefmt))
+            logger.addHandler(file_handler)
 
     # Suppress werkzeug's noisy default request logging
     logging.getLogger('werkzeug').setLevel(logging.WARNING)

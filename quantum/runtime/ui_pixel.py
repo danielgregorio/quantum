@@ -50,6 +50,17 @@ def number_nodes(view: list) -> int:
     return next_id - 1
 
 
+# What hive-screen last said of itself (its `status` event: the level, the
+# cores, the keyboard, what a frame costs), for a page that asks (the Ajustes
+# app's Tela tab); None until the screen said, or when the page is not on it.
+_SCREEN_STATUS: Optional[dict] = None
+
+
+def screen_status() -> Optional[dict]:
+    """What the screen said of itself to this process, or None off the screen."""
+    return dict(_SCREEN_STATUS) if _SCREEN_STATUS is not None else None
+
+
 class PixelClient:
     """One page's runtime on the screen: fetches pages, shows them, answers events."""
 
@@ -124,6 +135,10 @@ class PixelClient:
         kind = event.get('event')
         if kind == 'close':
             return False
+        if kind == 'status':
+            global _SCREEN_STATUS
+            _SCREEN_STATUS = {k: v for k, v in event.items() if k != 'event'}
+            return True
         if kind in ('click', 'submit'):
             fields: Dict[str, str] = dict(event.get('fields') or {})
             self.load(self.path, 'POST', {'action': event.get('action'), **fields})
@@ -142,9 +157,25 @@ class PixelClient:
         self.connect()
         self.serve()
 
+    def hear_status(self, wait: float = 0.5) -> None:
+        """The screen says what it is as soon as a runtime connects; the first page
+        waits that long for it, so a page that asks (the Ajustes app) is right from
+        the start. A screen that says nothing is an older one: the page goes on."""
+        assert self.sock is not None
+        self.sock.settimeout(wait)
+        try:
+            line = self.reader.readline()
+            if line.strip():
+                self.handle(json.loads(line))
+        except (socket.timeout, ValueError, OSError):
+            pass
+        finally:
+            self.sock.settimeout(None)
+
     def serve(self) -> None:
         """Connected: shows the first page and answers events until the page is closed or the screen goes."""
         try:
+            self.hear_status()
             self.load(self.path)
             while True:
                 line = self.reader.readline()
