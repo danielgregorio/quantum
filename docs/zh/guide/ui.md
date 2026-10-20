@@ -229,7 +229,7 @@ INSERT INTO posts (title) SELECT 'Post ' || i FROM n;
 - 行中必须包含主键（`SELECT id, …`）。
 - 它所做的事情会像任何动作一样显示在 [`/_dev`](/tools/dev-panel) 中。
 
-`projects/tarefas` 在 `/planilha` 有一个这样的表格。
+`projects/tasks` 在 `/sheet` 有一个这样的表格。
 
 ## 打开时带有值的表单 {#forms-that-open-with-values}
 
@@ -345,7 +345,7 @@ INSERT INTO posts (title) SELECT 'Post ' || i FROM n;
 - 数据表结构从数据库读取，数据库文件变化时会重新读取——在迁移中添加一列，表单就会有这一列。
   `quantum check` 会报告不存在的数据表或列。
 
-`projects/tarefas` 就是这样编辑任务的（`components/tarefa/[id].q`）。
+`projects/tasks` 就是这样编辑任务的（`components/task/[id].q`）。
 
 ## 自适应的布局 {#layout-that-adapts}
 

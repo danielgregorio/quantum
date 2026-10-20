@@ -510,6 +510,22 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Changed
 
+- The repository is English everywhere, with no exception for Portuguese
+  (`CODING.md`): the example app `projects/tarefas` is `projects/tasks`, the
+  same app the tutorial builds (`components/sheet.q`, `components/task/[id].q`,
+  `tests/tasks.test.q`; its Python tests are `tests/apps/test_tasks*.py`; the
+  showcase's screenshot is `tasks.png`). The rest followed: the sign-up form
+  of `examples/form-rules.q`, the suggestions of
+  `examples/quantum-assistant.q`, the books of the search-as-you-type recipe,
+  comments and identifiers in the runtime, the admin and the tests, the
+  phase demos of the AS4 compiler (`phase1-mvp-demo` and the others), the
+  tile factory's messages and `benchmarks/README.md`. The site's pages in
+  Portuguese, Spanish and Chinese, and the games' `qg:language` phrases, are
+  translations of English sources and stay.
+- An action's parameter named `senha` is no longer treated as a password
+  (kept out of the form refilled after an error) by its name alone: declare
+  it `type="password"`, or name it `password`.
+
 - Laboratory: the game runtime reads input through `Q` (`Q.held`,
   `Q.tapped`, `Q.strength`), sampled once per physics tick before any
   node runs, instead of asking Godot's `Input` from each node. A tick's

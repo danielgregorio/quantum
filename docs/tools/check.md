@@ -7,7 +7,7 @@ file and line, what would otherwise surface only when someone opens the page:
 - a `q:query` whose SQL does not compile against your database — a table or
   column that does not exist, a syntax error — with the database's own message;
 - a `{query.field}` a page reads that the query does not return: directly
-  (`{post.titulo}`), through a `q:loop` over it (`{linha.titulo}`), a
+  (`{post.title}`), through a `q:loop` over it (`{row.title}`), a
   `ui:table` / `ui:list` with `source="{query}"`, or a `<ui:column key>`.
 
 ```bash
@@ -16,8 +16,8 @@ quantum check
 ```
 
 ```text
-components/index.q:42: <q:query name="tarefas">: no such column: titlo
-components/index.q:86: {tarefas.titul}: query "tarefas" returns no column "titul" (columns: id, titulo, prioridade, feita)
+components/index.q:42: <q:query name="tasks">: no such column: titel
+components/index.q:86: {tasks.titl}: query "tasks" returns no column "titl" (columns: id, title, priority, done)
 
 2 problem(s) — 1 file(s), 5 query(ies) checked against the database.
 ```

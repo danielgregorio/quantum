@@ -70,12 +70,12 @@ class TestTheServerUsesIt:
     def test_the_injected_page_points_at_the_local_copy(self, server):
         # The page has to actually use htmx: the script is only injected for
         # pages that do (5d348f3), which is why this one carries hx-get.
-        page = '<html><body><div hx-get="/x">oi</div></body></html>'
+        page = '<html><body><div hx-get="/x">hi</div></body></html>'
         wrapped = server._wrap_with_htmx(page, "x.q")
 
         assert "/static/vendor/htmx.min.js" in wrapped
         assert "unpkg.com" not in wrapped
 
     def test_a_page_without_htmx_still_gets_no_script(self, server):
-        wrapped = server._wrap_with_htmx("<html><body>oi</body></html>", "x.q")
+        wrapped = server._wrap_with_htmx("<html><body>hi</body></html>", "x.q")
         assert "htmx.min.js" not in wrapped

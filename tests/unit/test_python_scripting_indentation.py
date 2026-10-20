@@ -84,25 +84,25 @@ class TestIndentedPythonRuns:
     total = 0
     for i in range(5):
         total += i
-    q.soma = total
+    q.sum = total
   </q:python>
 </q:component>''')
-        assert variables["soma"] == 10
+        assert variables["sum"] == 10
 
     def test_an_indented_class_body_executes(self):
         variables = run('''<q:component name="C">
-  <q:class name="Contador">
+  <q:class name="Counter">
       def __init__(self):
           self.n = 0
 
-      def somar(self, k):
+      def add(self, k):
           self.n += k
           return self.n
   </q:class>
   <q:python>
-    c = Contador()
-    c.somar(3)
-    q.total = c.somar(4)
+    c = Counter()
+    c.add(3)
+    q.total = c.add(4)
   </q:python>
 </q:component>''')
         assert variables["total"] == 7
@@ -112,8 +112,8 @@ class TestTheBridgeLogs:
     def test_info_logs_instead_of_raising(self, caplog):
         bridge = QuantumBridge(None, {})
         with caplog.at_level(logging.INFO):
-            bridge.info("processando", 10, "registros")
-        assert "processando 10 registros" in caplog.text
+            bridge.info("processing", 10, "records")
+        assert "processing 10 records" in caplog.text
 
     def test_the_other_levels_exist(self):
         bridge = QuantumBridge(None, {})
@@ -127,17 +127,17 @@ class TestTheBridgeLogs:
     def test_an_unknown_name_is_still_none_but_says_so(self, caplog):
         bridge = QuantumBridge(None, {})
         with caplog.at_level(logging.WARNING):
-            assert bridge.nao_existe is None
-        assert "nao_existe" in caplog.text
+            assert bridge.missing_name is None
+        assert "missing_name" in caplog.text
 
     def test_it_complains_once_per_name(self, caplog):
         bridge = QuantumBridge(None, {})
         with caplog.at_level(logging.WARNING):
             for _ in range(5):
-                bridge.nao_existe
-        assert caplog.text.count("nao_existe") == 1
+                bridge.missing_name
+        assert caplog.text.count("missing_name") == 1
 
     def test_assignment_still_exports(self):
         bridge = QuantumBridge(None, {})
-        bridge.resultado = 42
-        assert bridge._exports == {"resultado": 42}
+        bridge.result = 42
+        assert bridge._exports == {"result": 42}

@@ -3,9 +3,9 @@
 This tutorial builds a complete app from an empty folder: a task list with
 validated forms, finish and delete buttons, a filter, a sortable table you
 edit in place, an edit page with the history of every change, and a test
-suite. It is the English twin of
-[`projects/tarefas`](https://github.com/danielgregorio/quantum/tree/main/projects/tarefas),
-one of the apps Quantum's own CI runs, and it ends with the same code.
+suite. It ends as
+[`projects/tasks`](https://github.com/danielgregorio/quantum/tree/main/projects/tasks),
+one of the apps Quantum's own CI runs, with the same code.
 
 You write no JavaScript and no Python. Every step is a complete, working app,
 and the code on this page is run by Quantum's test suite exactly as shown

@@ -34,18 +34,18 @@ class TestTheFactoryWorks:
         # clean CI clone had no tables and this answered 500.
         components = tmp_path / "components"
         components.mkdir()
-        (components / "ola.q").write_text(
-            '<q:component name="ola" xmlns:q="https://quantum.lang/ns">'
+        (components / "hello.q").write_text(
+            '<q:component name="hello" xmlns:q="https://quantum.lang/ns">'
             '<q:set name="n" value="41" type="number" />'
-            '<html><body><p>resposta {n + 1}</p></body></html></q:component>',
+            '<html><body><p>answer {n + 1}</p></body></html></q:component>',
             encoding="utf-8")
         config = tmp_path / "quantum.config.yaml"
         config.write_text(
             f"paths:\n  components: {components.as_posix()}\n"
             "logging:\n  console: false\n  file: false\n", encoding="utf-8")
-        resp = create_app(str(config)).test_client().get("/ola")
+        resp = create_app(str(config)).test_client().get("/hello")
         assert resp.status_code == 200
-        assert "resposta 42" in resp.get_data(as_text=True)
+        assert "answer 42" in resp.get_data(as_text=True)
 
 
 class TestTheDocumentedPathIsReal:

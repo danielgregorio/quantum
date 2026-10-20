@@ -1,6 +1,6 @@
 """The apps' own test suites, run by `quantum test` (TEST-1).
 
-projects/tarefas, projects/blog, projects/quantum-chat and projects/bank-transfer are tested in their own language: *.test.q
+projects/tasks, projects/blog, projects/quantum-chat and projects/bank-transfer are tested in their own language: *.test.q
 files next to their pages and in their tests/ folder. This runs them the way a
 person would — `python -m quantum.cli.runner test <app>`, in a subprocess, so
 the exit code is the real one — and fails with the report when a test fails.
@@ -22,7 +22,7 @@ def quantum_test(*paths):
                           cwd=str(REPO), timeout=300)
 
 
-@pytest.mark.parametrize('app,at_least', [('tarefas', 13), ('blog', 16), ('quantum-chat', 4), ('bank-transfer', 6)])
+@pytest.mark.parametrize('app,at_least', [('tasks', 13), ('blog', 16), ('quantum-chat', 4), ('bank-transfer', 6)])
 def test_the_apps_suite_passes(app, at_least):
     # TEST-1: exit code 0, every test passed — and the suites did not shrink by accident
     result = quantum_test(f'projects/{app}')

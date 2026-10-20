@@ -22,27 +22,27 @@ class TestTheSpellingsPeopleUse:
         (" warn ", "warning"),
     ])
     def test_an_alias_becomes_the_real_level(self, written, meant):
-        assert LogNode(level=written, message="oi").level == meant
+        assert LogNode(level=written, message="hi").level == meant
 
     @pytest.mark.parametrize("level", [
         "trace", "debug", "info", "warning", "error", "critical",
     ])
     def test_the_real_levels_are_unchanged(self, level):
-        assert LogNode(level=level, message="oi").level == level
+        assert LogNode(level=level, message="hi").level == level
 
     def test_something_that_is_not_a_level_is_still_refused(self):
         with pytest.raises(ValueError, match="Invalid log level"):
-            LogNode(level="gritar", message="oi")
+            LogNode(level="shout", message="hi")
 
     def test_a_missing_level_is_still_refused(self):
         with pytest.raises(ValueError, match="requires"):
-            LogNode(level="", message="oi")
+            LogNode(level="", message="hi")
 
     def test_validate_agrees_with_the_constructor(self):
         # validate() checks self.level, which __init__ has normalised — if
         # those two ever disagree, a node builds and then reports itself
         # invalid.
-        assert LogNode(level="warn", message="oi").validate() == []
+        assert LogNode(level="warn", message="hi").validate() == []
 
 
 class TestTheExamplesParse:

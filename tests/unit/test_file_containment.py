@@ -4,9 +4,9 @@ q:file could delete and write anywhere on disk.
 FileUploadService.delete_file did `Path(filepath).unlink()` with no
 containment, and q:file's path is databound — it can carry a form value. So
 
-    <q:file action="delete" file="{nomeArquivo}" />
+    <q:file action="delete" file="{fileName}" />
 
-with nomeArquivo = "uploads/../banco-importante.db" deleted a file outside the
+with fileName = "uploads/../important.db" deleted a file outside the
 upload directory and reported
 {'success': True, 'message': 'File deleted successfully'}. Reproduced before
 fixing. upload_file had the same hole on `destination`, which it passed
@@ -26,36 +26,36 @@ from quantum.runtime.file_upload_service import FileUploadService, FileUploadErr
 def svc(tmp_path):
     root = tmp_path / "uploads"
     root.mkdir()
-    (root / "foto.png").write_text("img", encoding="utf-8")
-    (tmp_path / "banco-importante.db").write_text("dados", encoding="utf-8")
+    (root / "photo.png").write_text("img", encoding="utf-8")
+    (tmp_path / "important.db").write_text("data", encoding="utf-8")
     return FileUploadService(root=str(root)), tmp_path, root
 
 
 class TestDeleteIsConfined:
     def test_traversal_is_refused(self, svc):
         s, tmp, _ = svc
-        out = s.delete_file("uploads/../banco-importante.db")
+        out = s.delete_file("uploads/../important.db")
         assert out["success"] is False
         assert "escapes" in out["error"]
-        assert (tmp / "banco-importante.db").exists(), "the victim was deleted"
+        assert (tmp / "important.db").exists(), "the victim was deleted"
 
     def test_an_absolute_path_outside_is_refused(self, svc):
         s, tmp, _ = svc
-        out = s.delete_file(str(tmp / "banco-importante.db"))
+        out = s.delete_file(str(tmp / "important.db"))
         assert out["success"] is False
-        assert (tmp / "banco-importante.db").exists()
+        assert (tmp / "important.db").exists()
 
     def test_backslash_traversal_is_refused(self, svc):
         s, tmp, _ = svc
-        out = s.delete_file("uploads\\..\\banco-importante.db")
+        out = s.delete_file("uploads\\..\\important.db")
         assert out["success"] is False
-        assert (tmp / "banco-importante.db").exists()
+        assert (tmp / "important.db").exists()
 
     def test_a_legitimate_delete_still_works(self, svc):
         s, _, root = svc
-        out = s.delete_file("foto.png")
+        out = s.delete_file("photo.png")
         assert out["success"] is True
-        assert not (root / "foto.png").exists()
+        assert not (root / "photo.png").exists()
 
     def test_a_missing_file_inside_the_root_reports_not_found(self, svc):
         s, _, _ = svc

@@ -511,9 +511,9 @@ def test_q_flash_outside_an_action_is_a_parse_error(body):
 def test_encoding_reads_the_file(run_body, tmp_path, monkeypatch):
     # DATA-1 (before: every file was read as UTF-8 and a Latin-1 file failed)
     monkeypatch.chdir(tmp_path)
-    (tmp_path / 'f.csv').write_bytes('name,city\nJoão,São Paulo\n'.encode('latin-1'))
+    (tmp_path / 'f.csv').write_bytes('name,city\nZoë,Zürich\n'.encode('latin-1'))
     assert run_body('<q:data name="d" source="f.csv" encoding="latin-1"/><q:return value="{d}"/>') == \
-        [{'name': 'João', 'city': 'São Paulo'}]
+        [{'name': 'Zoë', 'city': 'Zürich'}]
 
 
 def test_skip_rows_skips_the_lines_before_the_header(run_body, tmp_path, monkeypatch):

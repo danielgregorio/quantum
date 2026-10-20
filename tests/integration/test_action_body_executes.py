@@ -68,11 +68,11 @@ def _rows(db):
 class TestQueryRunsInsideAnAction:
     SRC = (
         '<q:component name="F">'
-        '<q:action name="salvar" method="POST">'
+        '<q:action name="save" method="POST">'
         '<q:param name="txt" type="string" required="true" />'
         '<q:query name="ins" datasource="a">INSERT INTO msg (txt) VALUES (:t)'
         '<q:param name="t" value="{txt}" /></q:query>'
-        '<q:redirect url="/ok" flash="salvo" />'
+        '<q:redirect url="/ok" flash="saved" />'
         '</q:action></q:component>'
     )
 
@@ -80,14 +80,14 @@ class TestQueryRunsInsideAnAction:
         rt = ComponentRuntime(config={
             "datasources": {"a": {"driver": "sqlite", "database": str(db)}}
         })
-        out = _run(app, rt, _action_from(self.SRC), {"txt": "ola mundo"})
+        out = _run(app, rt, _action_from(self.SRC), {"txt": "hello world"})
         assert out == ("/ok", 302)
-        assert _rows(db) == ["ola mundo"], "q:query inside q:action did nothing"
+        assert _rows(db) == ["hello world"], "q:query inside q:action did nothing"
 
     def test_a_query_inside_an_if_also_runs(self, app, db):
         src = (
             '<q:component name="F">'
-            '<q:action name="salvar" method="POST">'
+            '<q:action name="save" method="POST">'
             '<q:param name="txt" type="string" required="true" />'
             '<q:if condition="1 == 1">'
             '<q:query name="ins" datasource="a">INSERT INTO msg (txt) VALUES (:t)'

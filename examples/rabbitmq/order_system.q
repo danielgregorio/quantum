@@ -370,7 +370,7 @@ To run:
                     </div>
                     <div class="col-md-2">
                         <input type="text" name="zipCode" class="form-control"
-                               placeholder="CEP" required />
+                               placeholder="ZIP code" required />
                     </div>
                     <div class="col-md-2">
                         <input type="number" name="weight" class="form-control"

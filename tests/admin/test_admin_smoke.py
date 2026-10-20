@@ -241,7 +241,7 @@ class TestTheSessionCookie:
         ).status_code == 200
 
 
-class TestNenhumaEscritaSemToken:
+class TestNoWriteWithoutAToken:
     """The gate covered ONLY `/api`, and the admin's real API lives at the root.
 
     37 WRITE routes were left out — /settings/connectors,
@@ -365,10 +365,10 @@ class TestUserManagementDoesTheWork:
         # It was query-only, so the password landed in access logs and
         # browser history. The query form still works; JSON is the new way.
         r = client.post("/auth/users",
-                        json={"username": "joao", "password": "another-good-password"},
+                        json={"username": "jdoe", "password": "another-good-password"},
                         headers=auth)
         assert r.status_code == 200
-        cleanup.append("joao")
+        cleanup.append("jdoe")
 
     def test_creating_without_a_password_is_a_400_not_a_crash(self, client, auth):
         r = client.post("/auth/users", json={"username": "no-password"},

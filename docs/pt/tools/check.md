@@ -18,7 +18,7 @@ linha, o que de outro modo só apareceria quando alguém abrisse a página:
 - uma `q:query` cujo SQL não compila contra o seu banco de dados — uma tabela ou
   coluna que não existe, um erro de sintaxe — com a mensagem do próprio banco;
 - um `{query.field}` que a página lê e que a consulta não retorna: diretamente
-  (`{post.titulo}`), por um `q:loop` sobre ela (`{linha.titulo}`), por um
+  (`{post.title}`), por um `q:loop` sobre ela (`{row.title}`), por um
   `ui:table` / `ui:list` com `source="{query}"`, ou por um `<ui:column key>`.
 
 ```bash
@@ -27,8 +27,8 @@ quantum check
 ```
 
 ```text
-components/index.q:42: <q:query name="tarefas">: no such column: titlo
-components/index.q:86: {tarefas.titul}: query "tarefas" returns no column "titul" (columns: id, titulo, prioridade, feita)
+components/index.q:42: <q:query name="tasks">: no such column: titel
+components/index.q:86: {tasks.titl}: query "tasks" returns no column "titl" (columns: id, title, priority, done)
 
 2 problem(s) — 1 file(s), 5 query(ies) checked against the database.
 ```

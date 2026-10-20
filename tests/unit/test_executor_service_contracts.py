@@ -19,7 +19,7 @@ import pathlib
 import pytest
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
-# The package was renamed src/ -> quantum/ (FRAMEWORK_PLAN Fase 1.1) and this
+# The package was renamed src/ -> quantum/ (FRAMEWORK_PLAN Phase 1.1) and this
 # path was not updated. rglob returned nothing, the parametrize list came out
 # empty, and pytest reported the test as SKIPPED — so the guard against this
 # project's signature bug class (nine executors calling service methods that

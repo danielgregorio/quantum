@@ -2,7 +2,7 @@
 
 **Date**: 2025-01-06
 **Severity**: CRITICAL (Breaks execution)
-**Affected Files**: `fase1-mvp-demo/app.js`, `advanced-components/app.js`
+**Affected Files**: `phase1-mvp-demo/app.js`, `advanced-components/app.js`
 **Root Cause**: Compiler incorrectly prefixing `this.` to JavaScript keywords and native properties
 
 ---
@@ -24,14 +24,14 @@ This causes **SyntaxError** in the browser and prevents the compiled application
 ### Step 1: Compile the MXML
 ```bash
 cd quantum-as4
-./quantum-mxml examples/fase1-mvp-demo.mxml
+./quantum-mxml examples/phase1-mvp-demo.mxml
 ```
 
 ### Step 2: Serve and Open
 ```bash
 cd docs
 python -m http.server 8547
-# Open: http://localhost:8547/fase1-mvp-demo/
+# Open: http://localhost:8547/phase1-mvp-demo/
 ```
 
 ### Step 3: Check Browser Console
@@ -45,13 +45,13 @@ Uncaught SyntaxError: unexpected token: '{' app.js:621:63
 
 ### Source Files (Correct ActionScript):
 ```
-quantum-as4/examples/fase1-mvp-demo.mxml (line ~150-160)
+quantum-as4/examples/phase1-mvp-demo.mxml (line ~150-160)
 quantum-as4/examples/advanced-components-demo.mxml
 ```
 
 ### Compiled Output (Broken JavaScript):
 ```
-quantum-as4/docs/fase1-mvp-demo/app.js (line 621, 622, 627, 629, etc.)
+quantum-as4/docs/phase1-mvp-demo/app.js (line 621, 622, 627, 629, etc.)
 quantum-as4/docs/advanced-components/app.js (line 740, 757)
 ```
 
@@ -143,7 +143,7 @@ this.statusMessage = "Loaded " + this.apiData.length + " users from API";
 
 ---
 
-## 📊 **ALL OCCURRENCES IN fase1-mvp-demo/app.js**
+## 📊 **ALL OCCURRENCES IN phase1-mvp-demo/app.js**
 
 Found by searching for problematic patterns:
 
@@ -349,11 +349,11 @@ else:
 
 ### Step 4: Test with Both Examples
 ```bash
-./quantum-mxml examples/fase1-mvp-demo.mxml
+./quantum-mxml examples/phase1-mvp-demo.mxml
 ./quantum-mxml examples/advanced-components-demo.mxml
 
 # Check output files for correct syntax
-grep "this\.if\|this\.true\|this\.Alert\.this" docs/fase1-mvp-demo/app.js
+grep "this\.if\|this\.true\|this\.Alert\.this" docs/phase1-mvp-demo/app.js
 # Should return: no matches
 ```
 
@@ -376,13 +376,13 @@ quantum-as4/compiler/compilers/web.py
 
 ### Test Files:
 ```
-quantum-as4/examples/fase1-mvp-demo.mxml (line 150-200)
+quantum-as4/examples/phase1-mvp-demo.mxml (line 150-200)
 quantum-as4/examples/advanced-components-demo.mxml
 ```
 
 ### Output Files (To Verify Fix):
 ```
-quantum-as4/docs/fase1-mvp-demo/app.js (line 621+)
+quantum-as4/docs/phase1-mvp-demo/app.js (line 621+)
 quantum-as4/docs/advanced-components/app.js (line 740+)
 ```
 
@@ -402,14 +402,14 @@ After fixing:
 8. ✅ `this.Alert.this.OK` → `Alert.OK`
 
 **Browser console**: No errors
-**Demos work**: Both `fase1-mvp-demo` and `advanced-components` run correctly
+**Demos work**: Both `phase1-mvp-demo` and `advanced-components` run correctly
 
 ---
 
 ## 🔗 **RELATED FILES**
 
-- **Bug demonstration**: `quantum-as4/docs/fase1-mvp-demo/app.js:621`
-- **Source MXML**: `quantum-as4/examples/fase1-mvp-demo.mxml:150`
+- **Bug demonstration**: `quantum-as4/docs/phase1-mvp-demo/app.js:621`
+- **Source MXML**: `quantum-as4/examples/phase1-mvp-demo.mxml:150`
 - **Compiler entry**: `quantum-as4/quantum-mxml` (CLI)
 - **Compilation flow**: MXML → AS4 Parser → AST → Bridge → CodeGen → JavaScript
 
@@ -426,7 +426,7 @@ After fixing:
   - Static class methods (`Alert.show`)
 
 ### Impact:
-- 🔴 **Broken**: `fase1-mvp-demo`, `advanced-components`
+- 🔴 **Broken**: `phase1-mvp-demo`, `advanced-components`
 - ✅ **Working**: `hello`, `databinding`, `stopwatch`, `components-demo`, `nested-containers`
 
   (Working demos don't use complex ActionScript with keywords/static methods)

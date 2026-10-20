@@ -7,7 +7,7 @@ feature:
   # evaluate_condition) that never existed, so any q:action with q:set or q:if
   # in its body raised AttributeError on every request, and the error was
   # returned as a redirect with status=500 (looked like success to clients).
-  # Fixed; see AUDIT_FIX_PLAN.md Fase 1 and tests/integration/test_action_auth.py.
+  # Fixed; see AUDIT_FIX_PLAN.md, phase 1 and tests/integration/test_action_auth.py.
   # "stable" is left as-is because it's now actually true, not because it was
   # already true.
   status: "stable"

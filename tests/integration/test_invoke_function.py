@@ -34,7 +34,7 @@ COMPONENT = '''<q:component name="I">
     <q:param name="n" type="number" />
     <q:return value="{{n * 2}}" />
   </q:function>
-  <q:function name="soma">
+  <q:function name="add">
     <q:param name="a" type="number" />
     <q:param name="b" type="number" />
     <q:return value="{{a + b}}" />
@@ -54,7 +54,7 @@ class TestInvokeFunction:
     def test_arguments_come_from_value_not_default(self):
         """The executor read param.default; the parser writes param.value."""
         rt = _run(COMPONENT.format(
-            invoke='<q:invoke name="r" function="soma">'
+            invoke='<q:invoke name="r" function="add">'
                    '<q:param name="a" value="17" />'
                    '<q:param name="b" value="25" /></q:invoke>'
         ))

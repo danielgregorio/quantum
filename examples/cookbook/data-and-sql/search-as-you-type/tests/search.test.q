@@ -4,10 +4,10 @@
 </q:test>
 
 <q:test name="a title or an author" page="/">
-  <test:visit q="machado" />
+  <test:visit q="austen" />
   <test:expect text="2 books" />
-  <test:expect text="Quincas Borba — Machado de Assis" />
-  <test:expect no-text="Vidas Secas" />
+  <test:expect text="Persuasion — Jane Austen" />
+  <test:expect no-text="Middlemarch" />
 </q:test>
 
 <q:test name="nothing found" page="/">

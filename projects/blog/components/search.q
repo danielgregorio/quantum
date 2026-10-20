@@ -29,13 +29,13 @@
     <Header />
     <main class="main">
       <!-- Search as you type (UI-12): each pause in typing asks for this page
-           with ?q= and swaps only #resultados. Without JavaScript, Enter
+           with ?q= and swaps only #results. Without JavaScript, Enter
            searches the same way. -->
       <div class="search-form">
-        <ui:input bind="q" search="resultados" placeholder="Search posts" grow="true" />
+        <ui:input bind="q" search="results" placeholder="Search posts" grow="true" />
       </div>
 
-      <div id="resultados">
+      <div id="results">
       <q:if condition="term">
         <h2 class="section-title">{results_result.recordCount} result(s) for "{term}"</h2>
         <div class="posts-grid">

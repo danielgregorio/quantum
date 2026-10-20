@@ -149,7 +149,7 @@ class ParserRegistry:
 
         if parser is not None:
             # One-time notice if this tag is outside the supported surface
-            # (PRODUCTION_READINESS.md Fase 0). Experimental tags still parse
+            # (PRODUCTION_READINESS.md, phase 0). Experimental tags still parse
             # and run; the operator just gets told, once, that they are
             # leaning on something unsupported.
             from quantum.core.tiers import warn_if_unsupported

@@ -42,8 +42,8 @@ class IfParser(BaseTagParser):
         # HTML element. Only child elements were read, so
         # <h2><q:if condition="tag">Posts tagged {tag}</q:if></h2> rendered
         # an empty heading.
-        principal = self._body(element, skip=('elseif', 'else'))
-        for statement in principal:
+        main_body = self._body(element, skip=('elseif', 'else'))
+        for statement in main_body:
             if_node.add_if_statement(statement)
 
         for child in element:

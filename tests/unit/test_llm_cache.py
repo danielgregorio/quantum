@@ -2,7 +2,7 @@
 Tests for the q:llm TTL cache.
 
 The `cache` attribute existed on q:llm from the start, wired to nothing —
-the audit removed the false promise, and Fase 3 of FRAMEWORK_PLAN.md made it
+the audit removed the false promise, and Phase 3 of FRAMEWORK_PLAN.md made it
 real. LLM calls are the slowest and most expensive thing a component does, so
 the cache's correctness matters: a key collision would serve the wrong answer.
 """

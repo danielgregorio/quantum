@@ -630,7 +630,7 @@ class HTMLRenderer:
         except Exception:
             pass  # Variable not found, try other evaluation methods
 
-        # The shared evaluator (FRAMEWORK_PLAN.md Fase 2.1) handles arithmetic,
+        # The shared evaluator (FRAMEWORK_PLAN.md, phase 2.1) handles arithmetic,
         # comparison, indexing, attribute access and stdlib calls in one place.
         #
         # Four hand-rolled methods used to sit below this as a fallback —

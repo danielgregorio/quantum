@@ -240,7 +240,7 @@ select with the `CHECK` list.
 - The rows must include the primary key (`SELECT id, …`).
 - What it does shows in [`/_dev`](/tools/dev-panel) like any action.
 
-`projects/tarefas` has one at `/planilha`.
+`projects/tasks` has one at `/sheet`.
 
 ## Forms that open with values
 
@@ -364,7 +364,7 @@ the schema you already wrote in the migration (the `tasks` table above):
   changes — add a column in a migration and the form has it. `quantum check`
   reports a table or column that does not exist.
 
-`projects/tarefas` edits a task this way (`components/tarefa/[id].q`).
+`projects/tasks` edits a task this way (`components/task/[id].q`).
 
 ## Layout that adapts
 

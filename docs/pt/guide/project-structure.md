@@ -122,7 +122,7 @@ Plan: schema.sql vs. the migrations in migrations/
 - O rollback é escrito ao lado. Antes de escrever, o plano é conferido:
   aplicado ao esquema das migrações, ele precisa dar exatamente o do
   `schema.sql`.
-- Por enquanto, só SQLite. O `projects/tarefas` mantém um `schema.sql`.
+- Por enquanto, só SQLite. O `projects/tasks` mantém um `schema.sql`.
 
 ## Componentes reutilizáveis {#reusable-components}
 

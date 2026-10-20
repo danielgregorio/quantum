@@ -253,7 +253,7 @@ prioridade é uma seleção com a lista do `CHECK`.
 - As linhas precisam incluir a chave primária (`SELECT id, …`).
 - O que ela faz aparece no [`/_dev`](/tools/dev-panel) como qualquer ação.
 
-O `projects/tarefas` tem uma em `/planilha`.
+O `projects/tasks` tem uma em `/sheet`.
 
 ## Formulários que abrem com valores {#forms-that-open-with-values}
 
@@ -380,7 +380,7 @@ Quando uma ação grava numa tabela, ela pode pegar as regras da própria tabela
   acrescente uma coluna numa migração e o formulário a terá. O
   `quantum check` informa uma tabela ou coluna que não existe.
 
-O `projects/tarefas` edita uma tarefa assim (`components/tarefa/[id].q`).
+O `projects/tasks` edita uma tarefa assim (`components/task/[id].q`).
 
 ## Um layout que se adapta {#layout-that-adapts}
 

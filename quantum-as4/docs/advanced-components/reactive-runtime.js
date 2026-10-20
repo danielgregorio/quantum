@@ -16,21 +16,21 @@ import { renderTileList } from './components/TileList.js';
 import { renderAccordion, renderAccordionHeader } from './components/Accordion.js';
 import { renderMenu, renderMenuBar } from './components/Menu.js';
 
-// Import FASE 1 MVP components
+// Import PHASE 1 MVP components
 import { renderHTTPService } from './components/HTTPService.js';
 import { renderForm, renderFormItem, renderFormHeading } from './components/Form.js';
 import { renderProgressBar } from './components/ProgressBar.js';
 import { renderImage } from './components/Image.js';
 import { renderAlert, Alert } from './components/Alert.js';
 
-// Import FASE 2 components
+// Import PHASE 2 components
 import { renderNumericStepper } from './components/NumericStepper.js';
 import { renderHSlider, renderVSlider } from './components/Slider.js';
 import { renderTextArea } from './components/TextArea.js';
 import { renderState, initializeStates, parseStates } from './components/States.js';
 import { renderStringValidator, renderNumberValidator, renderEmailValidator } from './components/Validators.js';
 
-// Import FASE 3 components
+// Import PHASE 3 components
 import { renderFade, renderMove, renderResize, renderGlow } from './components/Effects.js';
 import { renderDateFormatter, renderNumberFormatter, renderCurrencyFormatter, renderPhoneFormatter, renderZipCodeFormatter } from './components/Formatters.js';
 
@@ -287,7 +287,7 @@ export class ReactiveRuntime {
             AccordionHeader: (node) => renderAccordionHeader(this, node),
             Menu: (node) => renderMenu(this, node),
             MenuBar: (node) => renderMenuBar(this, node),
-            // FASE 1 MVP Components
+            // PHASE 1 MVP Components
             HTTPService: (node) => renderHTTPService(this, node),
             Form: (node) => renderForm(this, node),
             FormItem: (node) => renderFormItem(this, node),
@@ -295,7 +295,7 @@ export class ReactiveRuntime {
             ProgressBar: (node) => renderProgressBar(this, node),
             Image: (node) => renderImage(this, node),
             Alert: (node) => renderAlert(this, node),
-            // FASE 2 Components
+            // PHASE 2 Components
             NumericStepper: (node) => renderNumericStepper(this, node),
             HSlider: (node) => renderHSlider(this, node),
             VSlider: (node) => renderVSlider(this, node),
@@ -306,7 +306,7 @@ export class ReactiveRuntime {
             StringValidator: (node) => renderStringValidator(this, node),
             NumberValidator: (node) => renderNumberValidator(this, node),
             EmailValidator: (node) => renderEmailValidator(this, node),
-            // FASE 3 Components
+            // PHASE 3 Components
             Fade: (node) => renderFade(this, node),
             Move: (node) => renderMove(this, node),
             Resize: (node) => renderResize(this, node),

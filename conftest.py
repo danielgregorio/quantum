@@ -155,13 +155,13 @@ def _logging_intacto():
     run (pytest -n) changes the order.
     """
     manager = logging.Logger.manager
-    antes_disable = manager.disable
-    estados = {nome: (lg.level, lg.propagate, list(lg.handlers), lg.disabled)
-               for nome, lg in list(manager.loggerDict.items())
-               if isinstance(lg, logging.Logger) and nome.split('.')[0] == 'quantum'}
-    raiz = (logging.root.level, list(logging.root.handlers))
+    disabled_before = manager.disable
+    states = {name: (lg.level, lg.propagate, list(lg.handlers), lg.disabled)
+               for name, lg in list(manager.loggerDict.items())
+               if isinstance(lg, logging.Logger) and name.split('.')[0] == 'quantum'}
+    root_state = (logging.root.level, list(logging.root.handlers))
     yield
-    logging.disable(antes_disable)
+    logging.disable(disabled_before)
 
     def _close_added(current, kept):
         # A handler the test added (a FileHandler from the web server's
@@ -171,11 +171,11 @@ def _logging_intacto():
             if handler not in kept:
                 handler.close()
 
-    for nome, lg in list(manager.loggerDict.items()):
-        if not isinstance(lg, logging.Logger) or nome.split('.')[0] != 'quantum':
+    for name, lg in list(manager.loggerDict.items()):
+        if not isinstance(lg, logging.Logger) or name.split('.')[0] != 'quantum':
             continue
-        if nome in estados:
-            lg.level, lg.propagate, handlers, lg.disabled = estados[nome]
+        if name in states:
+            lg.level, lg.propagate, handlers, lg.disabled = states[name]
             _close_added(lg.handlers, handlers)
             lg.handlers[:] = handlers
         else:
@@ -184,6 +184,6 @@ def _logging_intacto():
             _close_added(lg.handlers, [])
             lg.handlers.clear()
             lg.disabled = False
-    logging.root.setLevel(raiz[0])
-    _close_added(logging.root.handlers, raiz[1])
-    logging.root.handlers[:] = raiz[1]
+    logging.root.setLevel(root_state[0])
+    _close_added(logging.root.handlers, root_state[1])
+    logging.root.handlers[:] = root_state[1]

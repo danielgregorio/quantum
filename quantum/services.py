@@ -77,9 +77,9 @@ def load(modules: Iterable[str], project_dir: str = None) -> None:
         if module in _loaded_modules:
             continue
         try:
-            ja_importado = module in sys.modules
-            modulo = importlib.import_module(module)
-            if ja_importado and not any(f.__module__ == module for f in _registry.values()):
+            already_imported = module in sys.modules
+            imported = importlib.import_module(module)
+            if already_imported and not any(f.__module__ == module for f in _registry.values()):
                 # Imported before the registry was cleared (_reset): its
                 # @service decorators already ran and would not run again on a
                 # plain import. Register again what they registered. Reloading
@@ -92,7 +92,7 @@ def load(modules: Iterable[str], project_dir: str = None) -> None:
                     for name, func in recorded.items():
                         service(name)(func)
                 else:
-                    importlib.reload(modulo)
+                    importlib.reload(imported)
         except ImportError as exc:
             raise ServiceError(
                 f"quantum.config.yaml lists service module '{module}', which could not "
@@ -104,9 +104,9 @@ def get(name: str) -> Callable[..., Any]:
     """The function registered as `name`, or an error listing what exists (SVC-3)."""
     func = _registry.get(name)
     if func is None:
-        disponiveis = ', '.join(sorted(_registry)) or 'none'
+        available = ', '.join(sorted(_registry)) or 'none'
         raise ServiceError(
-            f"no service named '{name}' (registered: {disponiveis}). Declare it with "
+            f"no service named '{name}' (registered: {available}). Declare it with "
             f"@service('{name}') in a module listed under services: in quantum.config.yaml")
     return func
 

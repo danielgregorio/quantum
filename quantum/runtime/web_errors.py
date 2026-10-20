@@ -163,7 +163,7 @@ class ErrorPages:
                 rules = '<p class="rules">Rules: ' + ', '.join(
                     f'<a href="https://github.com/danielgregorio/quantum/blob/main/SPEC.md#:~:text={i}">{i}</a>'
                     for i in ids) + '</p>'
-        rastro = (f'<details class="trace"><summary>Python traceback</summary>'
+        trace_html = (f'<details class="trace"><summary>Python traceback</summary>'
                   f'<div class="details">{e(python_traceback)}</div></details>') if (python_traceback and debug) else ''
         html = f"""
         <!DOCTYPE html>
@@ -230,7 +230,7 @@ class ErrorPages:
 
                 {f'<div class="suggestion"><strong>💡 Suggestion:</strong> {e(suggestion)}</div>' if suggestion else ''}
 
-                {rastro}
+                {trace_html}
 
                 <p style="margin-top: 30px;">
                     <a href="/">← Go back to home</a>

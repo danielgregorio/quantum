@@ -12,14 +12,14 @@
       "description": "Define a job handler",
       "complexity": "advanced",
       "tags": [
-        "q:query",
-        "q:else",
-        "q:action",
-        "database",
-        "q:invoke",
-        "q:if",
+        "SQL",
         "databinding",
-        "SQL"
+        "q:invoke",
+        "database",
+        "q:action",
+        "q:else",
+        "q:query",
+        "q:if"
       ],
       "features": [
         "databinding",
@@ -37,7 +37,7 @@
       "relatedDocs": [
         "/guide/query"
       ],
-      "lineCount": 149
+      "lineCount": 154
     },
     {
       "file": "job-schedule-example.q",
@@ -45,14 +45,14 @@
       "description": "Schedule a task to run every 5 minutes",
       "complexity": "advanced",
       "tags": [
-        "q:query",
-        "q:action",
-        "q:log",
         "q:function",
+        "databinding",
         "q:invoke",
         "database",
-        "databinding",
-        "SQL"
+        "q:log",
+        "q:action",
+        "SQL",
+        "q:query"
       ],
       "features": [
         "databinding",
@@ -77,14 +77,14 @@
       "description": "Example: Async Threads with q:thread",
       "complexity": "advanced",
       "tags": [
-        "q:query",
-        "q:action",
-        "q:log",
         "q:function",
+        "databinding",
         "q:invoke",
         "database",
-        "databinding",
-        "SQL"
+        "q:log",
+        "q:action",
+        "SQL",
+        "q:query"
       ],
       "features": [
         "databinding",
@@ -110,14 +110,14 @@
       "description": "Declare queues",
       "complexity": "advanced",
       "tags": [
-        "q:query",
-        "q:else",
-        "q:action",
-        "database",
+        "SQL",
         "q:function",
-        "q:if",
         "databinding",
-        "SQL"
+        "database",
+        "q:action",
+        "q:else",
+        "q:query",
+        "q:if"
       ],
       "features": [
         "databinding",
@@ -133,7 +133,7 @@
       "relatedDocs": [
         "/guide/query"
       ],
-      "lineCount": 235
+      "lineCount": 241
     },
     {
       "file": "test-query-basic.q",
@@ -141,12 +141,12 @@
       "description": "Display results using query loop shorthand",
       "complexity": "beginner",
       "tags": [
-        "q:query",
         "q:loop",
-        "q:return",
-        "database",
         "databinding",
-        "SQL"
+        "database",
+        "q:return",
+        "SQL",
+        "q:query"
       ],
       "features": [
         "databinding",
@@ -165,13 +165,13 @@
       "description": "Example demonstrating Query Complete",
       "complexity": "intermediate",
       "tags": [
-        "q:query",
         "q:loop",
-        "q:return",
-        "database",
         "databinding",
+        "database",
+        "q:param",
+        "q:return",
         "SQL",
-        "q:param"
+        "q:query"
       ],
       "features": [
         "databinding",
@@ -192,13 +192,13 @@
       "description": "Test: INSERT query with RETURNING clause (PostgreSQL)",
       "complexity": "intermediate",
       "tags": [
-        "q:query",
-        "q:set",
-        "q:return",
-        "database",
         "databinding",
+        "database",
+        "q:param",
+        "q:return",
+        "q:set",
         "SQL",
-        "q:param"
+        "q:query"
       ],
       "features": [
         "databinding",
@@ -218,14 +218,14 @@
       "description": "Fetch users",
       "complexity": "intermediate",
       "tags": [
-        "q:query",
-        "q:else",
-        "database",
         "q:loop",
-        "q:if",
-        "databinding",
         "SQL",
-        "q:param"
+        "databinding",
+        "database",
+        "q:param",
+        "q:else",
+        "q:query",
+        "q:if"
       ],
       "features": [
         "databinding",
@@ -248,13 +248,13 @@
       "description": "Test: Enhanced query metadata (affectedRows, lastInsertId)",
       "complexity": "intermediate",
       "tags": [
-        "q:query",
-        "q:set",
-        "q:return",
-        "database",
         "databinding",
+        "database",
+        "q:param",
+        "q:return",
+        "q:set",
         "SQL",
-        "q:param"
+        "q:query"
       ],
       "features": [
         "databinding",
@@ -274,11 +274,11 @@
       "description": "Query 1: Get users",
       "complexity": "beginner",
       "tags": [
-        "q:query",
-        "q:return",
-        "database",
         "databinding",
-        "SQL"
+        "database",
+        "q:return",
+        "SQL",
+        "q:query"
       ],
       "features": [
         "databinding",
@@ -296,11 +296,11 @@
       "description": "Step 1: Get all users from database",
       "complexity": "beginner",
       "tags": [
-        "q:query",
-        "q:return",
-        "database",
         "databinding",
-        "SQL"
+        "database",
+        "q:return",
+        "SQL",
+        "q:query"
       ],
       "features": [
         "databinding",
@@ -318,11 +318,11 @@
       "description": "Paginated query - page 1, 5 records per page",
       "complexity": "beginner",
       "tags": [
-        "q:query",
-        "q:return",
-        "database",
         "databinding",
-        "SQL"
+        "database",
+        "q:return",
+        "SQL",
+        "q:query"
       ],
       "features": [
         "databinding",
@@ -340,13 +340,13 @@
       "description": "Test: SELECT query with parameter binding",
       "complexity": "intermediate",
       "tags": [
-        "q:query",
         "q:loop",
-        "q:return",
-        "database",
         "databinding",
+        "database",
+        "q:param",
+        "q:return",
         "SQL",
-        "q:param"
+        "q:query"
       ],
       "features": [
         "databinding",
@@ -367,10 +367,10 @@
       "description": "Example demonstrating Transaction Basic",
       "complexity": "advanced",
       "tags": [
-        "q:query",
+        "q:transaction",
         "SQL",
-        "database",
-        "q:transaction"
+        "q:query",
+        "database"
       ],
       "features": [
         "q:query",
@@ -387,12 +387,12 @@
       "description": "Example demonstrating Transaction Isolation",
       "complexity": "advanced",
       "tags": [
-        "q:query",
         "q:transaction",
-        "q:set",
-        "database",
         "databinding",
-        "SQL"
+        "database",
+        "q:set",
+        "SQL",
+        "q:query"
       ],
       "features": [
         "databinding",
@@ -411,11 +411,11 @@
       "description": "Example demonstrating Transaction Rollback",
       "complexity": "advanced",
       "tags": [
-        "q:query",
         "q:transaction",
-        "database",
         "databinding",
-        "SQL"
+        "database",
+        "SQL",
+        "q:query"
       ],
       "features": [
         "databinding",

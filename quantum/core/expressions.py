@@ -4,7 +4,7 @@ Quantum expression evaluator.
 One evaluator, built on `ast.parse` with a node whitelist, to replace the two
 parallel hand-rolled ones (6 `_evaluate_*` methods in runtime/component.py, 4
 more in runtime/renderer.py) and the six `eval()` calls they rely on. See
-FRAMEWORK_PLAN.md Fase 2.1.
+FRAMEWORK_PLAN.md, phase 2.1.
 
 Two things this fixes by construction:
 
@@ -196,7 +196,7 @@ def _guard_pow(left: Any, right: Any) -> None:
                 return
             bits = float(right) * math.log2(base)
     except (OverflowError, ValueError):
-        # O proprio calculo do tamanho estourou: e grande demais.
+        # Computing the size itself overflowed: it is far too big.
         bits = float('inf')
 
     if bits > _MAX_POW_BITS:
@@ -320,7 +320,7 @@ class ExpressionEvaluator:
             max_length: refuse expressions longer than this.
             function_resolver: consulted for a name that is not in
                 `functions`. This is how a component's own q:function
-                becomes callable from `{somaTotal(itens)}` — the registry
+                becomes callable from `{sumTotal(items)}` — the registry
                 is filled while the component executes, so it cannot be
                 handed over as a dict when the evaluator is built.
         """
@@ -344,11 +344,11 @@ class ExpressionEvaluator:
         false, so `not session.authenticated` was false for a visitor with no
         session and a guard written that way never fired.
         """
-        marca = _ABSENT_SCOPE_KEY_IS_NONE.set(absent_scope_key_is_none)
+        token = _ABSENT_SCOPE_KEY_IS_NONE.set(absent_scope_key_is_none)
         try:
             return self._evaluate(expression, context)
         finally:
-            _ABSENT_SCOPE_KEY_IS_NONE.reset(marca)
+            _ABSENT_SCOPE_KEY_IS_NONE.reset(token)
 
     def _evaluate(self, expression: str, context: Dict[str, Any]) -> Any:
         if expression is None:

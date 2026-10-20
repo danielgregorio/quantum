@@ -141,7 +141,7 @@ def bank(page, base):
 
 
 APPS = {
-    'tarefas': {'scene': open_path('/')},
+    'tasks': {'scene': open_path('/')},
     'blog': {'scene': open_path('/')},
     'helpdesk': {'scene': helpdesk},
     'bank-transfer': {'scene': bank},

@@ -167,7 +167,7 @@ def test_a_ticket_from_the_console(tmp_path, monkeypatch):
     from werkzeug.serving import make_server
     from quantum.runtime.ui_console import ConsoleUI
     from quantum.runtime.web_server import QuantumWebServer
-    from tests.apps.test_tarefas_console import screen_text
+    from tests.apps.test_tasks_console import screen_text
     from tests.console_pilot import page_loaded, press
 
     project = tmp_path / "helpdesk"

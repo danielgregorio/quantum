@@ -1,7 +1,7 @@
 """
 Support tiers for Quantum tags.
 
-PRODUCTION_READINESS.md Fase 0. "Production-ready" is meaningful only relative
+PRODUCTION_READINESS.md, phase 0. "Production-ready" is meaningful only relative
 to a defined surface, so the surface is defined here, in code, and a tag
 outside the supported set announces itself the first time it is used instead
 of pretending to be first-class.

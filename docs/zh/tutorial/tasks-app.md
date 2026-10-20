@@ -9,9 +9,9 @@ source_hash: 0b96f8323cd6
 本页由英文原文机器翻译而来，尚未经过母语审校，欢迎在 GitHub 上提出修改。内容如有出入，以[英文原文](/tutorial/tasks-app)为准。
 :::
 
-本教程从一个空文件夹开始构建一个完整的应用：一个任务列表，带有经过校验的表单、完成和删除按钮、一个筛选器、一个可以就地编辑的可排序表格、一个记录每次修改历史的编辑页面，以及一个测试套件。它是
-[`projects/tarefas`](https://github.com/danielgregorio/quantum/tree/main/projects/tarefas)
-的英文版孪生应用——Quantum 自己的 CI 运行的应用之一——最终得到的代码与它相同。本页的代码与英文原文一样保持英文。
+本教程从一个空文件夹开始构建一个完整的应用：一个任务列表，带有经过校验的表单、完成和删除按钮、一个筛选器、一个可以就地编辑的可排序表格、一个记录每次修改历史的编辑页面，以及一个测试套件。它最终就是
+[`projects/tasks`](https://github.com/danielgregorio/quantum/tree/main/projects/tasks)
+——Quantum 自己的 CI 运行的应用之一——代码与它相同。本页的代码与英文原文一样保持英文。
 
 你不需要写 JavaScript，也不需要写 Python。每一步都是一个完整、可运行的应用，本页的代码由 Quantum 的测试套件按原样运行（`tests/docs/test_tutorial_tasks_app.py`）：你读到的就是运行的。
 

@@ -34,7 +34,7 @@ def _status(svc, job_id):
 
 class TestAnUnhandleableJobStaysQueued:
     def test_it_is_not_failed(self, queue):
-        job_id = queue.dispatch(name="semHandler", queue="default", params={"a": 1})
+        job_id = queue.dispatch(name="noHandler", queue="default", params={"a": 1})
         job = queue._fetch_next_job("default")
         assert job is not None
         queue._process_job(job)
@@ -44,7 +44,7 @@ class TestAnUnhandleableJobStaysQueued:
 
     def test_it_returns_to_pending(self, queue):
         """It was marked 'running' by the fetch; it must not be stranded there."""
-        job_id = queue.dispatch(name="semHandler", queue="default", params={})
+        job_id = queue.dispatch(name="noHandler", queue="default", params={})
         job = queue._fetch_next_job("default")
         queue._process_job(job)
         assert _status(queue, job_id) == "pending"
@@ -52,7 +52,7 @@ class TestAnUnhandleableJobStaysQueued:
     def test_process_job_reports_that_it_did_not_run(self, queue):
         """The worker loop uses this to back off instead of spinning on the
         same row at full speed."""
-        queue.dispatch(name="semHandler", queue="default", params={})
+        queue.dispatch(name="noHandler", queue="default", params={})
         job = queue._fetch_next_job("default")
         assert queue._process_job(job) is False
 
@@ -71,8 +71,8 @@ class TestARealJobStillRuns:
         """Releasing must not swallow genuine failures."""
         def boom(params):
             raise RuntimeError("nope")
-        queue.register_handler("quebra", boom)
-        job_id = queue.dispatch(name="quebra", queue="default", params={})
+        queue.register_handler("breaks", boom)
+        job_id = queue.dispatch(name="breaks", queue="default", params={})
         job = queue._fetch_next_job("default")
         queue._process_job(job)
         assert _status(queue, job_id) in ("failed", "pending")  # retry or fail

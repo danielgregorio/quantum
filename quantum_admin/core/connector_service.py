@@ -950,10 +950,10 @@ class ConnectorService:
             data = [asdict(c) for c in connectors]
 
             # Atomic: a crash mid-write must not leave half a file.
-            temporario = CONNECTORS_FILE.with_suffix(".yaml.tmp")
-            with open(temporario, 'w', encoding='utf-8') as f:
+            tmp_file = CONNECTORS_FILE.with_suffix(".yaml.tmp")
+            with open(tmp_file, 'w', encoding='utf-8') as f:
                 yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
-            os.replace(temporario, CONNECTORS_FILE)
+            os.replace(tmp_file, CONNECTORS_FILE)
 
             # Invalidate cache
             self._connectors_cache = None

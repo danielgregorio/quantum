@@ -122,7 +122,7 @@ Plan: schema.sql vs. the migrations in migrations/
   no tienen valor.
 - La reversión se escribe junto a ella. Antes de escribir, el plan se verifica:
   aplicado al esquema de las migraciones, debe dar exactamente el de `schema.sql`.
-- Por ahora, solo SQLite. `projects/tarefas` mantiene un `schema.sql`.
+- Por ahora, solo SQLite. `projects/tasks` mantiene un `schema.sql`.
 
 ## Componentes reutilizables {#reusable-components}
 

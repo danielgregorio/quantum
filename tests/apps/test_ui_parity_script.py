@@ -30,7 +30,7 @@ VISIBLE_ON_OPEN = [
     "Section", "Section text", "Cell A", "Cell B",
     "Card", "Card top", "Card body", "Card footer",
     "First tab", "Second tab", "Content of the first",
-    "Fruit: açaí", "Fruit: grape",
+    "Fruit: piña", "Fruit: grape",
     "Name", "Age", "Actions", "Ana", "30", "Bia", "25", "Remove Ana", "Remove Bia",
     "Active", "Get notifications", "free", "pro", "Save", "Showcase footer",
 ]

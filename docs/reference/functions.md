@@ -99,7 +99,7 @@ True when the text contains `needle`.
 
 ### `slugify(v)`
 
-'Olá, Mundo!' -> 'ola-mundo': for URLs made from a title ([EXPR-9](./spec#EXPR-9)).
+'Héllo, Wörld!' -> 'hello-world': for URLs made from a title ([EXPR-9](./spec#EXPR-9)).
 
 Specified by: [EXPR-9](./spec#EXPR-9)
 

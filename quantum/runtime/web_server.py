@@ -860,8 +860,8 @@ class QuantumWebServer(ConfigLoading, HtmlPostProcessing, ErrorPages, ServerLife
                 return node
 
         # ACT-5: no silent fallback. This used to run the FIRST action when the
-        # name was missing or matched nothing — a POST meant for "excluir" with
-        # a typo ran "criar".
+        # name was missing or matched nothing — a POST meant for "delete" with
+        # a typo ran "create".
         available = ', '.join(getattr(n, 'name', '?') for n in action_nodes)
         if requested_action:
             raise UnknownActionError(

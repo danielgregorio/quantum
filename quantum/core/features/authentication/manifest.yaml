@@ -6,7 +6,7 @@ feature:
   # (JWT, RBAC)" for the same feature — neither was accurate. As of this date:
   # require_auth/require_role/require_permission gates and session-based login
   # via plain q:set work and are covered by tests/integration/test_action_auth.py
-  # (this depended on a q:action fix, see AUDIT_FIX_PLAN.md Fase 1). There is
+  # (this depended on a q:action fix, see AUDIT_FIX_PLAN.md, phase 1). There is
   # still no q:auth/q:login tag and no JWT support — login is hand-rolled with
   # q:set, and the example below needs type="boolean" on session.authenticated
   # and an explicit session.sessionExpiry to actually work (no declarative

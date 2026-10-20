@@ -1,7 +1,7 @@
 ---
 title: 案例
 source: showcase/index.md
-source_hash: 531be5155d18
+source_hash: 4dbca0fcf37c
 ---
 
 # 案例
@@ -16,19 +16,19 @@ source_hash: 531be5155d18
 截图取自正在运行的应用（`scripts/showcase-screenshots.py`）；AI 应用通过替身模型服务器回答，
 因此复现它们不需要任何模型。
 
-## 任务（Tarefas）
+## 任务
 
-![任务（Tarefas）](/showcase/tarefas.png)
+![任务](/showcase/tasks.png)
 
-一个用 `ui:*` 编写的任务列表：由其动作校验的表单、完成和删除按钮、来自地址的筛选器、按表结构排序并编辑单元格的表格、根据表生成的编辑表单，以及每次修改的历史记录。同样的页面也能在终端和桌面窗口中运行。它的内容是葡萄牙语；[教程](../tutorial/tasks-app.md)用英文构建它。
+一个用 `ui:*` 编写的任务列表：由其动作校验的表单、完成和删除按钮、来自地址的筛选器、按表结构排序并编辑单元格的表格、根据表生成的编辑表单，以及每次修改的历史记录。同样的页面也能在终端和桌面窗口中运行。[教程](../tutorial/tasks-app.md)一步步构建它。
 
 | | |
 |---|---|
 | 展示 | 动作与表单, 数据库, UI, 测试 |
-| 引用的 SPEC 规则 | DB-8, DB-10, DB-11, UI-2, UI-10, UI-13 |
+| 引用的 SPEC 规则 | DB-10, DB-11, UI-2, UI-10, UI-13 |
 | 规模 | 3 个页面，164 行 `.q`，0 行 JavaScript |
-| 测试 | 13 个 `quantum test` 测试, [`tests/apps/test_tarefas.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tarefas.py), [`tests/apps/test_tarefas_browser.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tarefas_browser.py), [`tests/apps/test_tarefas_console.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tarefas_console.py), [`tests/apps/test_tarefas_desktop.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tarefas_desktop.py) |
-| 源码 | [`projects/tarefas`](https://github.com/danielgregorio/quantum/tree/main/projects/tarefas) |
+| 测试 | 13 个 `quantum test` 测试, [`tests/apps/test_tasks.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tasks.py), [`tests/apps/test_tasks_browser.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tasks_browser.py), [`tests/apps/test_tasks_console.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tasks_console.py), [`tests/apps/test_tasks_desktop.py`](https://github.com/danielgregorio/quantum/blob/main/tests/apps/test_tasks_desktop.py) |
+| 源码 | [`projects/tasks`](https://github.com/danielgregorio/quantum/tree/main/projects/tasks) |
 
 <details><summary>使用的标签 (26)</summary>
 
