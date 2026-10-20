@@ -275,6 +275,10 @@ fn a_page_on_the_screen_is_typed_into_and_answers_with_events() {
     let obs = s.request(json!({"op": "show", "page": tarefas()}));
     let w = &obs["window"];
     assert_eq!(w["title"], "Tarefas");
+    assert_eq!(
+        obs["motion"]["kind"], "jelly",
+        "a page opens with the jelly"
+    );
     assert_eq!(w["flash"], "Criada: ligar para a Ana");
     assert_eq!(w["items"][0]["bind"], "titulo");
     assert_eq!(
@@ -287,6 +291,10 @@ fn a_page_on_the_screen_is_typed_into_and_answers_with_events() {
         .unwrap()
         .iter()
         .any(|t| t == "comprar pão"));
+    // the frames are of the page at rest: the jelly settles first
+    let obs = s.request(json!({"op": "until", "still": true, "max_ticks": 30}));
+    assert_eq!(obs["stopped"], "condition");
+    assert_eq!(obs["motion"], Value::Null);
     // typed, with the keyboard alone, then Enter: the form goes with what was typed and left
     s.request(json!({"op": "act", "type": "ligar de novo", "ticks": 1}));
     let obs = s.request(json!({"op": "act", "tap": ["home", "delete", "L"], "ticks": 1}));
@@ -343,7 +351,8 @@ fn a_page_on_the_screen_is_typed_into_and_answers_with_events() {
 #[test]
 fn the_page_flows_again_when_the_level_changes_and_keeps_its_focus() {
     let mut s = Screen::start();
-    let obs = s.request(json!({"op": "show", "page": tarefas()}));
+    s.request(json!({"op": "show", "page": tarefas()}));
+    let obs = s.request(json!({"op": "until", "still": true, "max_ticks": 30}));
     assert_eq!(obs["window"]["cols"], 49);
     assert!(obs["window"]["rows"].as_u64().unwrap() >= 4);
     // Down from the one-line field goes to the next element (the select, which
@@ -378,4 +387,40 @@ fn the_page_flows_again_when_the_level_changes_and_keeps_its_focus() {
         "Home went to the first element"
     );
     assert_eq!(obs["window"]["items"][0]["value"], "ação");
+}
+
+#[test]
+fn pages_move_in_pixel_art_the_jelly_the_lamp_and_the_curtain() {
+    let mut s = Screen::start();
+    s.request(json!({"op": "act", "ticks": 10}));
+    // opening: the jelly, 12 ticks; the frame half way has the window growing
+    let obs = s.request(json!({"op": "show", "page": tarefas()}));
+    assert_eq!(obs["motion"], json!({"kind": "jelly", "t": 0, "ticks": 12}));
+    let obs = s.request(json!({"op": "act", "ticks": 6}));
+    assert_eq!(obs["motion"]["t"], 6);
+    s.frame("window-jelly");
+    let obs = s.request(json!({"op": "until", "still": true, "max_ticks": 30}));
+    assert_eq!(obs["stopped"], "condition");
+    assert_eq!(obs["tick"], 22, "the jelly took the rest of its 12 ticks");
+    // the page again after an action: the curtain, the old page through the dither
+    let mut again = tarefas();
+    again["flash"] = json!("Criada: Ligar de novo");
+    let obs = s.request(json!({"op": "show", "page": again}));
+    assert_eq!(obs["motion"]["kind"], "curtain");
+    s.request(json!({"op": "act", "ticks": 4}));
+    s.frame("window-curtain");
+    s.request(json!({"op": "until", "still": true, "max_ticks": 30}));
+    // Esc: the lamp sucks the window into the corner; the window is gone at once, the picture lingers
+    let obs = s.request(json!({"op": "act", "tap": ["escape"], "ticks": 0}));
+    assert_eq!(obs["window"], Value::Null);
+    assert_eq!(obs["motion"]["kind"], "lamp");
+    s.request(json!({"op": "act", "ticks": 7}));
+    s.frame("window-lamp");
+    let obs = s.request(json!({"op": "until", "still": true, "max_ticks": 30}));
+    assert_eq!(obs["motion"], Value::Null);
+    // at the plain level nothing moves: the page is there at once
+    s.request(json!({"op": "level", "level": 0}));
+    let obs = s.request(json!({"op": "show", "page": tarefas()}));
+    assert_eq!(obs["motion"], Value::Null);
+    assert_eq!(obs["window"]["title"], "Tarefas");
 }

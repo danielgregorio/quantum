@@ -458,7 +458,11 @@ machine with four cores the screen draws at its fine level and the window
 has 100 columns by up to 29 rows instead of 49 by up to 13, so an `hbox`
 that stacks on a narrow page sits side by side, as in a terminal 80
 columns wide; the page flows again when the level changes and keeps its
-focus.
+focus. The page moves in pixel art, the way the window managers of 2008
+did: it opens growing with an overshoot (the jelly), closes bending into
+the corner (the lamp), and a page that comes back after an action
+replaces the one before through a dither (the curtain); nothing moves on
+one core, and `HIVE_SCREEN_MOTION=off` stops it all.
 
 `<q:application type="ui">` with `quantum run app.q --target html` (a single
 HTML file) or `--target textual` (a single Python file) draws **layout only**:

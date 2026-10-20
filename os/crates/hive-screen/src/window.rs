@@ -53,7 +53,6 @@ const OK_DARK: u32 = 0xFF10_3018;
 const ERR_LIGHT: u32 = 0xFF8A_3A3A;
 const ERR_DARK: u32 = 0xFF30_1010;
 const SHADOW: u32 = 0x8000_0000;
-const DIM: u32 = 0x7800_0000;
 const INK: u32 = 0xFF1A_1A2E;
 const TEXT: u32 = 0xFFFF_FFFF;
 const MUTED: u32 = 0xFF8A_8AA0;
@@ -1348,7 +1347,7 @@ impl Window {
 
     // ---------------------------------------------------------------- drawing
 
-    /// The page over the scene, as a window: the scene dimmed, a shadow,
+    /// The page as a window (the world dims the scene under it): a shadow,
     /// a frame with a bevel, the title bar with the Esc key, the flash,
     /// the content from the scroll, a scrollbar when it is longer than
     /// the window, the status bar with the keys that apply. Drawn in the
@@ -1359,7 +1358,6 @@ impl Window {
         let (cw, ch) = (font.cell.0 as i32, font.cell.1 as i32);
         let f = self.frame;
         let (x, y, w, h) = (f.x as i32, f.y as i32, f.w as u32, f.h as u32);
-        b.fill_rect(0, 0, self.canvas.0, self.canvas.1, DIM);
         b.fill_rect(x + 3, y + 3, w, h, SHADOW);
         bevel_out(b, x, y, w, h, BG, LIGHT, BLACK);
         // the title bar: honey in two tones, the title in ink, the Esc key

@@ -9,10 +9,11 @@
 
 use crate::canvas::{Band, Canvas};
 use crate::ease::{interpolate, Ease, Trans};
+use crate::image::{argb, Image};
 use crate::level::{self, LEVELS};
 use crate::particles::Emitter;
 use crate::scene::{Action, Align, Node, Property, Scene};
-use crate::window::Window;
+use crate::window::{Rect, Window};
 use hive_common::actions::Action as HiveAction;
 use hive_common::events::{fill, Fields};
 use serde_json::{json, Value};
@@ -174,6 +175,52 @@ impl Key {
 /// Where the toast (`qs:say`) sits: a strip at the bottom of the scene.
 const TOAST_HEIGHT: u32 = 12;
 
+/// How dark the scene goes under a page: black at this alpha.
+const DIM_ALPHA: u8 = 0x78;
+
+/// An ordered dither, 4 by 4: the pixel-art way to show one picture
+/// through another, with no alpha.
+const BAYER: [[u8; 4]; 4] = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+
+/// A transition of the page on the screen: what the window manager of
+/// 2008 did in 3D, in pixel art, in ticks. Jelly: the window opens
+/// growing from 60% with an overshoot. Lamp: closed, it bends and is
+/// sucked into the bottom left corner, where its button on the bar will
+/// be. Curtain: a page shown again after an action replaces the one
+/// before through the dither, line by line.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MotionKind {
+    Jelly,
+    Lamp,
+    Curtain,
+}
+
+impl MotionKind {
+    fn ticks(self) -> u32 {
+        match self {
+            MotionKind::Jelly => 12,
+            MotionKind::Lamp => 14,
+            MotionKind::Curtain => 8,
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            MotionKind::Jelly => "jelly",
+            MotionKind::Lamp => "lamp",
+            MotionKind::Curtain => "curtain",
+        }
+    }
+}
+
+struct Motion {
+    kind: MotionKind,
+    t: u32,
+    /// The picture of the page as it was (the lamp's, the curtain's old
+    /// one), and its frame.
+    old: Option<(Image, Rect)>,
+}
+
 /// An emitter the scene keeps going, from the presentation level it names.
 struct Ambient {
     level: u32,
@@ -200,6 +247,10 @@ pub struct World {
     level: usize,
     /// A page on the screen (`quantum pixel`), over the scene.
     window: Option<Window>,
+    /// The transition the page is in, if any.
+    motion: Option<Motion>,
+    /// Whether pages move at all (`HIVE_SCREEN_MOTION=off` says no).
+    motion_on: bool,
     /// What the page's runtime is to hear: the window's events, until
     /// the socket takes them.
     pixel_out: Vec<Value>,
@@ -285,6 +336,8 @@ impl World {
             dirty: true,
             level: level::DEFAULT,
             window: None,
+            motion: None,
+            motion_on: true,
             pixel_out: Vec::new(),
         }
     }
@@ -638,6 +691,7 @@ impl World {
     pub fn show(&mut self, page: &Value) {
         let (w, h) = self.page_canvas();
         let mut window = Window::new(page, w, h);
+        let old = self.page_image();
         if let Some(old) = &self.window {
             window.shown = old.shown + 1;
             if let Some((kind, identity)) = old.focused_identity() {
@@ -647,15 +701,71 @@ impl World {
         self.events
             .push(json!({"kind": "show", "title": window.title, "shown": window.shown}));
         self.window = Some(window);
+        if self.moves() {
+            self.motion = Some(match old {
+                Some(old) => Motion {
+                    kind: MotionKind::Curtain,
+                    t: 0,
+                    old: Some(old),
+                },
+                None => Motion {
+                    kind: MotionKind::Jelly,
+                    t: 0,
+                    old: None,
+                },
+            });
+        }
         self.dirty = true;
     }
 
-    /// The page goes: the scene is whole again.
+    /// The page goes: the scene is whole again (after the lamp, when the
+    /// page moves).
     pub fn close_window(&mut self) {
+        let old = self.page_image();
         if self.window.take().is_some() {
             self.events.push(json!({"kind": "closed"}));
+            self.motion = if self.moves() {
+                Some(Motion {
+                    kind: MotionKind::Lamp,
+                    t: 0,
+                    old,
+                })
+            } else {
+                None
+            };
             self.dirty = true;
         }
+    }
+
+    /// Whether pages move: never at the plain level (one core has no
+    /// frames to spare), never when switched off.
+    fn moves(&self) -> bool {
+        self.motion_on && self.effects()
+    }
+
+    /// `HIVE_SCREEN_MOTION=off`: pages appear and go at once.
+    pub fn set_motion(&mut self, on: bool) {
+        self.motion_on = on;
+        if !on {
+            self.motion = None;
+        }
+    }
+
+    /// The transition the page is in, as data: its kind and how far.
+    pub fn motion(&self) -> Option<Value> {
+        self.motion
+            .as_ref()
+            .map(|m| json!({"kind": m.kind.name(), "t": m.t, "ticks": m.kind.ticks()}))
+    }
+
+    /// The page drawn on a canvas of its own, transparent around it, with
+    /// its frame: what the transitions bend, scale and mask.
+    fn page_image(&self) -> Option<(Image, Rect)> {
+        let w = self.window.as_ref()?;
+        let (cw, ch) = self.page_canvas();
+        let mut canvas = Canvas::new(cw, ch, 1);
+        w.draw(&mut canvas.band(), &self.scene.font, self.tick);
+        Some((canvas.image, w.frame))
     }
 
     /// The page on the screen, when one is.
@@ -788,6 +898,13 @@ impl World {
             }
             self.drain_window();
         }
+        if let Some(m) = &mut self.motion {
+            m.t += 1;
+            self.dirty = true;
+            if m.t >= m.kind.ticks() {
+                self.motion = None;
+            }
+        }
     }
 
     // ---------------------------------------------------------------- the picture
@@ -795,20 +912,24 @@ impl World {
     /// The picture, drawn in `threads` bands at once (in this thread when
     /// there is one): the same picture whatever the count.
     pub fn render(&self, canvas: &mut Canvas, threads: usize) {
+        // the page, drawn once for every band
+        let page = self.page_image();
+        let page = page.as_ref();
         if threads <= 1 {
-            self.draw(&mut canvas.band());
+            self.draw(&mut canvas.band(), page);
             return;
         }
         let mut bands = canvas.bands(threads);
         std::thread::scope(|s| {
             for band in &mut bands {
-                s.spawn(move || self.draw(band));
+                s.spawn(move || self.draw(band, page));
             }
         });
     }
 
-    /// One band of the picture: every node in order, clipped to its rows.
-    pub fn draw(&self, canvas: &mut Band) {
+    /// One band of the picture: every node in order, clipped to its rows;
+    /// the page over it, in its transition if one runs.
+    pub fn draw(&self, canvas: &mut Band, page: Option<&(Image, Rect)>) {
         canvas.clear(self.scene.background);
         let font = &self.scene.font;
         let mut sprite_index = 0;
@@ -889,10 +1010,8 @@ impl World {
         for b in &self.bursts {
             b.draw(canvas);
         }
-        if let Some(w) = &self.window {
-            // in the canvas's own pixels: the page's font is never a block
-            w.draw(&mut canvas.unscaled(), font, self.tick);
-        }
+        // in the canvas's own pixels: the page's font is never a block
+        self.draw_page(&mut canvas.unscaled(), page);
         if let Some((line, _)) = &self.toast {
             let h = TOAST_HEIGHT;
             let y = self.scene.height as i32 - h as i32;
@@ -907,6 +1026,68 @@ impl World {
                 y + 1,
                 0xFFFFFFFF,
             );
+        }
+    }
+
+    /// The scene dimmed and the page over it: whole, or in its transition.
+    fn draw_page(&self, b: &mut Band, page: Option<&(Image, Rect)>) {
+        let (cw, ch) = self.page_canvas();
+        let dim = |b: &mut Band, alpha: f32| {
+            let a = (DIM_ALPHA as f32 * alpha.clamp(0.0, 1.0)).round() as u8;
+            if a > 0 {
+                b.fill_rect(0, 0, cw, ch, argb(a, 0, 0, 0));
+            }
+        };
+        let Some(m) = &self.motion else {
+            if let Some((img, _)) = page {
+                dim(b, 1.0);
+                b.blit(img, 0, 0, cw, ch, 0.0, 0.0, 1.0, 1.0);
+            }
+            return;
+        };
+        let (t, d) = (m.t as f32, m.kind.ticks() as f32);
+        match m.kind {
+            MotionKind::Jelly => {
+                let Some((img, f)) = page else {
+                    return;
+                };
+                let p = interpolate(0.0, 1.0, t, d, Trans::Quad, Ease::Out);
+                dim(b, p);
+                // the window and its shadow, scaled about the frame's centre
+                let k = 0.6 + 0.4 * interpolate(0.0, 1.0, t, d, Trans::Back, Ease::Out);
+                let (x, y, w, h) = (f.x as u32, f.y as u32, f.w as u32 + 3, f.h as u32 + 3);
+                b.blit(img, x, y, w, h, x as f32, y as f32, 1.0, k.max(0.05));
+            }
+            MotionKind::Lamp => {
+                let Some((img, f)) = &m.old else {
+                    return;
+                };
+                let p = interpolate(0.0, 1.0, t, d, Trans::Quad, Ease::In);
+                dim(b, 1.0 - p);
+                lamp(b, img, *f, (f.x as f32 + 8.0, ch as f32 - 6.0), p);
+            }
+            MotionKind::Curtain => {
+                dim(b, 1.0);
+                if let Some((img, _)) = page {
+                    b.blit(img, 0, 0, cw, ch, 0.0, 0.0, 1.0, 1.0);
+                }
+                // the old page stays where the dither has not reached
+                if let Some((old, f)) = &m.old {
+                    let level = (16.0 * t / d) as u8;
+                    let (x0, y0) = (f.x as i32, f.y as i32);
+                    let (x1, y1) = (x0 + f.w as i32 + 3, y0 + f.h as i32 + 3);
+                    for y in y0.max(0)..y1.min(ch as i32) {
+                        for x in x0.max(0)..x1.min(cw as i32) {
+                            if BAYER[(y % 4) as usize][(x % 4) as usize] >= level {
+                                let px = old.get(x as u32, y as u32);
+                                if px >> 24 != 0 {
+                                    b.fill_rect(x, y, 1, 1, px);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -1002,12 +1183,37 @@ impl World {
             "tweens": self.tweens.len(),
             "effects": self.bursts.len() + self.emitters.iter().filter(|a| self.plays(a)).count(),
             "window": self.window.as_ref().map(Window::observe),
+            "motion": self.motion(),
         })
     }
 
     /// The events since the last take, cleared.
     pub fn take_events(&mut self) -> Vec<Value> {
         std::mem::take(&mut self.events)
+    }
+}
+
+/// The magic lamp: every column of the window's picture converges on
+/// `target`, the far side bending first, so the window bends as it is
+/// sucked in; `p` from 0 (whole) to 1 (gone).
+fn lamp(b: &mut Band, img: &Image, f: Rect, target: (f32, f32), p: f32) {
+    let (fx, fy) = (f.x as f32, f.y as f32);
+    let (fw, fh) = (f.w as f32 + 3.0, f.h as f32 + 3.0);
+    let (tx, ty) = target;
+    for col in 0..fw as u32 {
+        let s = 0.45 + 0.55 * (col as f32 / fw);
+        let q = (p * (0.6 + s)).min(1.0);
+        let nx = (tx + (fx + col as f32 - tx) * (1.0 - q)).round() as i32;
+        let top = fy + (ty - fy) * q * q;
+        let bottom = fy + fh + (ty - fy - fh) * q;
+        let h = (bottom - top).round().max(1.0) as u32;
+        for dy in 0..h {
+            let sy = ((dy as f32 * fh / h as f32) as u32).min(f.h as u32 + 2);
+            let px = img.get(f.x as u32 + col, f.y as u32 + sy);
+            if px >> 24 != 0 {
+                b.fill_rect(nx, top.round() as i32 + dy as i32, 1, 1, px);
+            }
+        }
     }
 }
 

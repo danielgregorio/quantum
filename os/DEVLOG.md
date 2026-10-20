@@ -1,5 +1,39 @@
 # DruidOS Development Log
 
+## 2026-10-20 - Movimento em pixel art: gelatina, lâmpada, cortina
+
+O segundo passo da fatia 5: as três transições que o Daniel viu animadas
+nos esboços, agora no daemon, em ticks, sem alfa suave onde a pixel art
+pede pontilhado.
+
+**Como se compõe.** A janela passa a ser desenhada uma vez por quadro
+num canvas só dela, transparente em volta (`World::page_image`), e
+composta sobre a cena escurecida: inteira quando parada, deformada numa
+transição. Isso custa um buffer do tamanho do canvas por quadro só
+enquanto há página; a apresentação parcial continua levando ao display
+só as linhas que mudaram.
+
+**As três.** Gelatina ao abrir: a imagem da janela e da sombra escalada ao
+redor do centro de 60% a 100% com a curva `Back` (um sobressalto), a cena
+escurecendo junto; 12 ticks. Lâmpada ao fechar: a janela sai da lista na
+hora (o teclado volta à cena), mas a última imagem dela verga e é sugada
+para o canto inferior esquerdo, cada coluna convergindo no alvo, o lado
+longe dobrando primeiro; 14 ticks. Cortina ao mostrar a página de novo
+depois de uma ação: a página nova é desenhada inteira e a antiga fica
+onde uma máscara ordenada 4×4 ainda não chegou; 8 ticks.
+
+**Regras.** Nada se move no nível `plain` (um núcleo não tem quadro
+sobrando); `HIVE_SCREEN_MOTION=off` no ambiente da unit desliga. O play
+protocol ganhou `until still` e a observação diz `motion` (tipo, tick,
+duração); `tests/play.rs` guarda um quadro de cada transição no meio do
+caminho (`window-jelly.png`, `window-lamp.png`, `window-curtain.png`) e
+prova que no `plain` a página aparece de uma vez.
+
+**O que fica para os próximos passos.** A dobra (trocar de janela) espera
+mais de uma janela; a gaveta espera o menu F1; a abelha que traz a oferta
+e o zoom na célula esperam a colmeia nova; faísca, treme e o traço do
+foco vêm com os widgets.
+
 ## 2026-10-20 - A página vira janela: moldura, relevo, sombra
 
 O primeiro passo da fatia 5 (visual e movimento), depois dos esboços em

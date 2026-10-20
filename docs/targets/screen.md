@@ -524,7 +524,13 @@ window. The window is as tall as its content, up to the canvas, and sits
 in the middle: 49 columns and up to 13 rows at 320×180; 100 by up to 29
 at the fine level, where the page is drawn pixel for pixel on the canvas
 of two pixels to the scene's one, and flows again when the level changes,
-keeping its focus. It is drawn with the keyboard its own,
+keeping its focus. The page moves as the window managers of 2008 did,
+in pixel art and in ticks: it opens with the jelly (grows from 60% with an
+overshoot, 12 ticks), closes with the lamp (bends and is sucked into the
+bottom left corner, 14 ticks), and a page shown again after an action
+replaces the one before through an ordered dither, the curtain (8 ticks);
+nothing moves at the `plain` level, and `HIVE_SCREEN_MOTION=off` in the
+unit's environment stops it all. It is drawn with the keyboard its own,
 and sends back what the user did, one JSON line an event: `click` and
 `submit` (with the form's fields, as a browser would post them), `change`
 (a search field, after its pause), `navigate` (a link), `reload` (F5) and
@@ -545,8 +551,9 @@ page with no runtime, `act` takes `type` (a text) and every key by name
 (`tab`, `shift-tab`, `left`, `right`, `home`, `end`, `backspace`,
 `delete`, `space`, `pgup`, `pgdn`, `f1`, `f5`, `ctrl-u`, or one
 character), `until` takes `pixel` (an event), `text` (shown on the page)
-and `shown` (how many times a page was shown), and the observation's
-`window` says the page as data: its title, flash, the elements that react
+and `shown` (how many times a page was shown), `still` (no transition
+runs), and the observation's `window` says the page as data and `motion`
+the transition it is in: its title, flash, the elements that react
 in order with their state and which has the focus, the texts, the help
 line. `--pixel-socket PATH` gives a test the socket too: the UI parity
 test runs its one script on the screen with `quantum pixel` as the
