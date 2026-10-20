@@ -237,7 +237,13 @@ Shift+Tab between the elements that react, the arrows inside one (Up and
 Down between elements when what has the focus does not take them, Home and
 End to the first and the last), Enter acts, Space marks, Esc closes; the
 last line says the keys that apply, and a scrollbar at the right edge
-says where in a long page the screen is. The keyboard is read by the
+says where in a long page the screen is. F1 opens the Hive's offers in a
+menu over the page (or over the scene), a drawer that slides in from the
+bottom left and pushes the comb aside: Up and Down choose, Enter approves
+(twice for a dangerous action), Del dismisses, Esc shuts it and the page
+has its keys back; the window's status bar says how many offers wait
+(`F1 · 2 ofertas`), and the bar at the bottom shows the open page as a
+button, as a taskbar does. The keyboard is read by the
 machine's layout: US, or ABNT2 (`XKBLAYOUT="br"` in `/etc/default/keyboard`,
 or `HIVE_SCREEN_KEYBOARD=br` in the unit's environment) with `ç` on its
 key and the dead accents (`´` `` ` `` `^` `~` `¨`) composed with the vowel

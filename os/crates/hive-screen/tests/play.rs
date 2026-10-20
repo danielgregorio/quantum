@@ -111,7 +111,7 @@ fn a_crash_an_offer_an_approval_and_its_result() {
     assert_eq!(obs["bars"]["top"]["title"], "Quantum OS");
     assert_eq!(obs["bars"]["top"]["left"], "");
     assert_eq!(obs["bars"]["top"]["right"], "1 cores · effects · --:--");
-    assert_eq!(obs["bars"]["bottom"]["right"], "0 offers");
+    assert_eq!(obs["bars"]["bottom"]["right"], "0 offers · F1");
     s.frame("idle");
 
     // the crash: the rule on service-crash plays smoke on the cell named by {service}
@@ -147,7 +147,7 @@ fn a_crash_an_offer_an_approval_and_its_result() {
         obs["sprites"]["bee"]["y"].as_f64().unwrap() > 36.0,
         "the bee bobs on an offer"
     );
-    assert_eq!(obs["bars"]["bottom"]["right"], "2 offers");
+    assert_eq!(obs["bars"]["bottom"]["right"], "2 offers · F1");
     s.frame("offer");
     let obs = s.request(json!({"op": "act", "tap": ["down", "enter"], "ticks": 1}));
     assert_eq!(
@@ -273,6 +273,15 @@ fn find<'a>(obs: &'a Value, event: &str) -> Option<&'a Value> {
         .unwrap()
         .iter()
         .find(|e| e["kind"] == "pixel" && e["event"] == event)
+}
+
+/// The first event of the screen's own of that kind (approve, dismiss, menu...).
+fn event<'a>(obs: &'a Value, kind: &str) -> Option<&'a Value> {
+    obs["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["kind"] == kind)
 }
 
 #[test]
@@ -430,4 +439,58 @@ fn pages_move_in_pixel_art_the_jelly_the_lamp_and_the_curtain() {
     let obs = s.request(json!({"op": "show", "page": tarefas()}));
     assert_eq!(obs["motion"], Value::Null);
     assert_eq!(obs["window"]["title"], "Tarefas");
+}
+
+#[test]
+fn the_f1_menu_lists_the_offers_over_the_page_and_the_bar_has_the_windows_button() {
+    let mut s = Screen::start();
+    s.request(json!({"op": "show", "page": tarefas()}));
+    s.request(json!({"op": "until", "still": true, "max_ticks": 30}));
+    // offers arrive while the page is up: the window's status bar says so, the bar counts them
+    let obs = s.request(json!({"op": "inject", "message": offers()}));
+    assert_eq!(obs["bars"]["bottom"]["right"], "2 offers · F1");
+    assert_eq!(obs["menu"], Value::Null);
+    s.request(json!({"op": "until", "still": true, "max_ticks": 30}));
+    s.frame("window-offers");
+    // F1: the drawer slides in from the left over the page, the comb pushed aside
+    let obs = s.request(json!({"op": "act", "tap": ["f1"], "ticks": 4}));
+    assert_eq!(obs["menu"], json!({"open": true, "t": 4, "ticks": 8}));
+    assert!(event(&obs, "menu").is_some_and(|e| e["open"] == true));
+    s.frame("menu-drawer");
+    let obs = s.request(json!({"op": "until", "menu": true, "max_ticks": 20}));
+    assert_eq!(obs["stopped"], "condition");
+    s.frame("menu");
+    // the keys are the menu's: Down and Enter arm the dangerous offer, Enter again approves it
+    let obs = s.request(json!({"op": "act", "tap": ["down", "enter"], "ticks": 1}));
+    assert_eq!(obs["offers"][1]["focus"], true);
+    assert_eq!(obs["offers"][1]["armed"], true);
+    assert_eq!(obs["window"]["focus"], 0, "the page did not hear the keys");
+    let obs = s.request(json!({"op": "act", "tap": ["enter"], "ticks": 1}));
+    assert_eq!(obs["offers"][1]["outcome"], "sent");
+    assert!(event(&obs, "approve").is_some_and(|e| e["title"] == "Remove nginx"));
+    // Delete dismisses the one with the focus (and the notification's other rows with it)
+    let obs = s.request(json!({"op": "act", "tap": ["up", "delete"], "ticks": 1}));
+    assert_eq!(obs["offers"].as_array().unwrap().len(), 0);
+    assert!(event(&obs, "dismiss").is_some_and(|e| e["title"] == "Restart nginx"));
+    // Esc shuts the drawer; the page is still there and has its keys back
+    let obs = s.request(json!({"op": "act", "tap": ["escape"], "ticks": 0}));
+    assert_eq!(obs["menu"]["open"], false);
+    assert_eq!(obs["window"]["title"], "Tarefas");
+    let obs = s.request(json!({"op": "until", "menu": false, "max_ticks": 20}));
+    assert_eq!(obs["menu"], Value::Null);
+    assert_eq!(obs["bars"]["bottom"]["right"], "0 offers · F1");
+    let obs = s.request(json!({"op": "act", "tap": ["tab"], "ticks": 1}));
+    assert_eq!(obs["window"]["focus"], 1, "the page hears the keys again");
+    // with no page, the menu opens over the comb and says there is nothing
+    s.request(json!({"op": "act", "tap": ["escape"], "ticks": 0}));
+    s.request(json!({"op": "until", "still": true, "max_ticks": 30}));
+    let obs = s.request(json!({"op": "act", "tap": ["f1"], "ticks": 8}));
+    assert_eq!(obs["menu"]["open"], true);
+    s.frame("menu-empty");
+    // at the plain level the drawer is out at once, and shut at once
+    s.request(json!({"op": "level", "level": 0}));
+    let obs = s.request(json!({"op": "act", "tap": ["f1"], "ticks": 0}));
+    assert_eq!(obs["menu"], Value::Null);
+    let obs = s.request(json!({"op": "act", "tap": ["f1"], "ticks": 0}));
+    assert_eq!(obs["menu"], json!({"open": true, "t": 8, "ticks": 8}));
 }

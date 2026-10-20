@@ -1,5 +1,45 @@
 # DruidOS Development Log
 
+## 2026-10-20 - O menu F1 e o botão da janela na barra
+
+O quarto passo da fatia 5: as ofertas da Hive chegam por cima de qualquer
+coisa que esteja na tela, e a barra de baixo começa a ser barra de
+tarefas.
+
+**O menu.** F1 abre uma gaveta no canto inferior esquerdo, no visual das
+janelas (`window::draw_menu`: moldura com sombra, barra de título mel
+"Ofertas da Hive", uma linha por oferta com a de foco em relevo e mel,
+barra de estado "Enter aprova · Del dispensa · Esc fecha"); vazia, diz
+"nada por agora". Enquanto está fora, as teclas são dela: setas, Enter
+aprova (duas vezes a perigosa), Del dispensa, Esc fecha e a página volta
+a ouvir o teclado. `approve()` e `dismiss()` saíram do `key()` para servir
+ao painel da cena e ao menu. Sem página, F1 abre o mesmo menu sobre a
+colmeia.
+
+**A gaveta.** Desliza da esquerda em 8 ticks (`Quad`/`Out`) e empurra a
+colmeia 4 px para a direita enquanto está fora (as barras ficam); fecha
+pelo mesmo caminho. No `plain` abre e fecha de uma vez. A observação diz
+`menu` (`open`, `t`, `ticks`), `until still` espera a gaveta parar e
+`until menu` espera o menu aberto ou fechado.
+
+**A barra.** A barra de estado da janela mostra "F1 · N ofertas" em mel à
+direita quando há ofertas esperando, e a ajuda é cortada num separador
+(`cut_at_separator`), nunca no meio de uma palavra. A barra de baixo da
+cena mostra a página aberta como um botão em relevo à esquerda, como uma
+barra de tarefas; o `screen.q` diz `{offers} offers · F1` à direita.
+
+**Prova.** `tests/play.rs` ganha o teste do menu sobre a página (ofertas
+chegam com a página aberta, F1 a meio caminho, aprovação da perigosa com
+dois Enter, Del, Esc devolvendo o teclado à página, o menu vazio sobre a
+colmeia, o `plain` de uma vez) e quatro quadros: `window-offers.png`,
+`menu-drawer.png`, `menu.png`, `menu-empty.png`; os outros quadros foram
+refeitos pelo texto novo da barra.
+
+**O que fica.** Várias janelas na barra (Alt+1..9, F2) esperam mais de um
+cliente no socket; as apps instaladas no menu esperam o app Ajustes (5b),
+que é quem registra uma app; a abelha que traz a oferta e o zoom na célula
+são os próximos movimentos.
+
 ## 2026-10-20 - A colmeia ganha barras, painéis e células com relevo
 
 O terceiro passo da fatia 5: a cena em volta da janela passa a ter o

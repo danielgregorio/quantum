@@ -242,7 +242,7 @@ color = "#c0c0c0"
 [[nodes]]
 kind = "bar"
 side = "bottom"
-right = "{offers} offers"
+right = "{offers} offers · F1"
 color = "#8a8aa0"
 accent = "#ffd34d"
 
