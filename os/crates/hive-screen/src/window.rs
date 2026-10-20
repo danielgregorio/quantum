@@ -192,6 +192,19 @@ fn cut(text: &str, width: usize) -> String {
     text.chars().take(width).collect()
 }
 
+/// The text cut to `width` cells at a ` · ` between its parts, so a help
+/// line loses whole hints, never half a word.
+fn cut_at_separator(text: &str, width: usize) -> String {
+    if text.chars().count() <= width {
+        return text.to_string();
+    }
+    let head = cut(text, width);
+    match head.rfind(" · ") {
+        Some(at) => head[..at].to_string(),
+        None => head,
+    }
+}
+
 impl Window {
     /// A page as `quantum pixel` sends it (its title, flash and view
     /// tree), laid out for a canvas of `width` by `height` pixels.
@@ -1354,7 +1367,7 @@ impl Window {
     /// band's own pixels (at the fine level the canvas has twice the
     /// scene's, and the page twice the cells), so the font is never a
     /// block.
-    pub fn draw(&self, b: &mut Band, font: &Font, tick: u64) {
+    pub fn draw(&self, b: &mut Band, font: &Font, tick: u64, offers: usize) {
         let (cw, ch) = (font.cell.0 as i32, font.cell.1 as i32);
         let f = self.frame;
         let (x, y, w, h) = (f.x as i32, f.y as i32, f.w as u32, f.h as u32);
@@ -1410,11 +1423,25 @@ impl Window {
             let at = y0 + ((track - thumb) as f32 * self.scroll as f32 / room).round() as i32;
             bevel_out(b, sx, at, 4, thumb as u32, MID, LIGHT, BLACK);
         }
-        // the status bar: the keys that apply, raised
+        // the status bar: the keys that apply, raised; at its right, the
+        // offers that wait for F1
         let sy = y + h as i32 - 1 - STATUS_H;
         b.fill_rect(x + 1, sy - 1, w - 2, 1, LIGHT);
         b.fill_rect(x + 1, sy, w - 2, STATUS_H as u32, MID);
-        b.text(font, &cut(&self.help(), self.cols), x + 5, sy + 1, TEXT);
+        let mut help_cols = self.cols;
+        if offers > 0 {
+            let tag = offers_tag(offers);
+            let tw = font.width_of(&tag) as i32;
+            b.text(font, &tag, x + w as i32 - 5 - tw, sy + 1, HONEY);
+            help_cols = self.cols.saturating_sub(tag.chars().count() + 2);
+        }
+        b.text(
+            font,
+            &cut_at_separator(&self.help(), help_cols),
+            x + 5,
+            sy + 1,
+            TEXT,
+        );
     }
 
     /// A row of the content on the screen, or None when scrolled out.
@@ -1884,6 +1911,82 @@ impl Window {
     }
 }
 
+/// What the status bar says of the offers that wait, for F1.
+pub(crate) fn offers_tag(offers: usize) -> String {
+    if offers == 1 {
+        "F1 · 1 oferta".to_string()
+    } else {
+        format!("F1 · {} ofertas", offers)
+    }
+}
+
+/// A row of a menu: its text, whether it has the focus, whether it is
+/// done with (shown muted).
+pub(crate) struct MenuRow {
+    pub text: String,
+    pub focused: bool,
+    pub muted: bool,
+}
+
+/// The size of a menu of `cols` cells by `rows` rows, in pixels: the
+/// frame around the content, as a window's.
+pub(crate) fn menu_size(font: &Font, cols: usize, rows: usize) -> (u32, u32) {
+    (
+        cols as u32 * font.cell.0 + 10,
+        rows as u32 * font.cell.1 + CHROME_H as u32,
+    )
+}
+
+/// A menu in the look of the windows at (x, y): the frame with its shadow,
+/// a honey title bar, one row a line (the one with the focus raised, in
+/// honey; a muted one in grey), a status bar with the keys.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn draw_menu(
+    b: &mut Band,
+    font: &Font,
+    x: i32,
+    y: i32,
+    cols: usize,
+    title: &str,
+    rows: &[MenuRow],
+    help: &str,
+) {
+    let (cw, ch) = (font.cell.0 as i32, font.cell.1 as i32);
+    let (w, h) = menu_size(font, cols, rows.len());
+    b.fill_rect(x + 3, y + 3, w, h, SHADOW);
+    bevel_out(b, x, y, w, h, BG, LIGHT, BLACK);
+    b.fill_rect(x + 1, y + 1, w - 2, 6, TITLE_BG);
+    b.fill_rect(x + 1, y + 7, w - 2, (TITLE_H - 6) as u32, TITLE_BG2);
+    b.fill_rect(x + 1, y + 1 + TITLE_H, w - 2, 1, DARK);
+    b.text(font, &cut(title, cols), x + 5, y + 2, INK);
+    let (ox, oy) = (x + SIDE + 1, y + 1 + TITLE_H + 2);
+    for (i, row) in rows.iter().enumerate() {
+        let ry = oy + i as i32 * ch;
+        let color = if row.focused {
+            bevel_out(
+                b,
+                ox - 1,
+                ry,
+                cols as u32 * cw as u32 + 2,
+                ch as u32,
+                MID,
+                LIGHT,
+                BLACK,
+            );
+            HONEY
+        } else if row.muted {
+            MUTED
+        } else {
+            TEXT
+        };
+        b.text(font, &cut(&row.text, cols), ox + 1, ry, color);
+    }
+    let sy = y + h as i32 - 1 - STATUS_H;
+    b.fill_rect(x + 1, sy - 1, w - 2, 1, LIGHT);
+    b.fill_rect(x + 1, sy, w - 2, STATUS_H as u32, MID);
+    b.text(font, &cut(help, cols), x + 5, sy + 1, TEXT);
+}
+
 /// A raised box: light above and left, dark below and right.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn bevel_out(
@@ -1922,6 +2025,17 @@ fn check_mark(b: &mut Band, x: i32, y: i32, color: u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_help_line_is_cut_between_its_hints() {
+        let help = "digite · setas · Enter envia · Esc fecha";
+        assert_eq!(cut_at_separator(help, 60), help);
+        assert_eq!(cut_at_separator(help, 33), "digite · setas · Enter envia");
+        assert_eq!(cut_at_separator(help, 10), "digite");
+        assert_eq!(cut_at_separator(help, 3), "dig");
+        assert_eq!(offers_tag(1), "F1 · 1 oferta");
+        assert_eq!(offers_tag(2), "F1 · 2 ofertas");
+    }
 
     fn page() -> Value {
         json!({"title": "Tarefas", "flash": "Criada: ligar", "view": [

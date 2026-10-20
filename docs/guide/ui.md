@@ -441,6 +441,7 @@ There is no mouse, and no key to learn beyond the console's own:
 | Home, End | the first and the last element (in a field, the ends of its text) |
 | Page Up, Page Down | scroll; a bar at the right edge says where in a long page the screen is |
 | F5 | asks the page again |
+| F1 | the Hive's offers in a menu over the page (Enter approves, Del dismisses, Esc shuts it); the status bar says how many wait |
 
 The last line of the screen says the keys that apply to what has the
 focus. A search field (`search="true"`) asks the page again after its

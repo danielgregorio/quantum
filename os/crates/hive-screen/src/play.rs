@@ -18,7 +18,8 @@
 //! {"op":"act","type":"Ana","tap":["enter"]}          text typed, then keys by name (window.rs says which keys do what)
 //! {"op":"until","pixel":"submit"}                    until the window sent that event (click, submit, change, navigate, close)
 //! {"op":"until","text":"Saved"} / {"op":"until","shown":2}   until the page shows that text / the page was shown so many times
-//! {"op":"until","still":true}                        until no transition runs (the observation's `motion` is null)
+//! {"op":"until","still":true}                        until no transition runs (the observation's `motion` is null, the F1 menu where it is going)
+//! {"op":"until","menu":true}                         until the F1 menu is out (false: shut), and still
 //! {"op":"end"}
 //! ```
 //!
@@ -120,7 +121,10 @@ fn holds(runtime: &Runtime, req: &Value, events: &[Value]) -> bool {
         return world.window().is_some_and(|w| w.shown >= n);
     }
     if req.get("still").and_then(Value::as_bool) == Some(true) {
-        return world.motion().is_none();
+        return world.still();
+    }
+    if let Some(open) = req.get("menu").and_then(Value::as_bool) {
+        return world.still() && world.observe()["menu"]["open"].as_bool().unwrap_or(false) == open;
     }
     false
 }

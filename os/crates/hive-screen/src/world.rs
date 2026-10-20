@@ -13,7 +13,10 @@ use crate::image::{argb, Image};
 use crate::level::{self, LEVELS};
 use crate::particles::Emitter;
 use crate::scene::{Action, Align, Node, Property, Scene, Side};
-use crate::window::{bevel_out, Rect, Window, BLACK, DARK, HONEY, LIGHT, MID, SHADOW, TEXT};
+use crate::window::{
+    bevel_out, draw_menu, menu_size, MenuRow, Rect, Window, BLACK, DARK, HONEY, LIGHT, MID, SHADOW,
+    TEXT,
+};
 use hive_common::actions::Action as HiveAction;
 use hive_common::events::{fill, Fields};
 use serde_json::{json, Value};
@@ -193,6 +196,23 @@ const PANEL_BG: u32 = 0xFF14_1430;
 const PANEL_TOP: i32 = 13;
 const PANEL_IN: i32 = 3;
 
+/// The F1 menu: the Hive's offers in a drawer at the bottom left, over
+/// whatever is on the screen (the machine's applications join it later).
+/// The drawer slides in from the left and the comb is pushed 4 pixels
+/// to the right while it is out; `t` says how far it is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Menu {
+    /// How far the drawer is, in ticks: 0 shut, DRAWER_TICKS out.
+    t: u32,
+    closing: bool,
+}
+
+const DRAWER_TICKS: u32 = 8;
+const MENU_MIN_COLS: usize = 24;
+const MENU_TITLE: &str = "Ofertas da Hive";
+const MENU_HELP: &str = "Enter aprova · Del dispensa · Esc fecha";
+const MENU_EMPTY: &str = "nada por agora";
+
 /// What the bars say of the machine, which the daemon tells the world as
 /// it runs. A test's world knows none of it, so its frames are the same
 /// on every machine.
@@ -326,6 +346,8 @@ pub struct World {
     pixel_out: Vec<Value>,
     /// What the bars say of the machine.
     facts: Facts,
+    /// The F1 menu, while it is out (or on its way).
+    menu: Option<Menu>,
 }
 
 impl World {
@@ -412,6 +434,7 @@ impl World {
             motion_on: true,
             pixel_out: Vec::new(),
             facts: Facts::default(),
+            menu: None,
         }
     }
 
@@ -721,6 +744,30 @@ impl World {
     pub fn key(&mut self, key: Key) -> Option<Outgoing> {
         self.dirty = true;
         self.events.push(json!({"kind": "key", "key": key.name()}));
+        // F1 opens and closes the menu over whatever is there
+        if key == Key::F1 {
+            self.toggle_menu();
+            return None;
+        }
+        if self.menu_out() {
+            return match key {
+                Key::Up => {
+                    self.focus_up();
+                    None
+                }
+                Key::Down => {
+                    self.focus_down();
+                    None
+                }
+                Key::Enter => self.approve(),
+                Key::Delete => self.dismiss(),
+                Key::Escape => {
+                    self.toggle_menu();
+                    None
+                }
+                _ => None,
+            };
+        }
         if let Some(w) = &mut self.window {
             w.key(key, self.tick);
             self.drain_window();
@@ -728,63 +775,198 @@ impl World {
         }
         match key {
             Key::Up => {
-                self.focus = self.focus.saturating_sub(1);
-                self.disarm_others();
+                self.focus_up();
                 None
             }
             Key::Down => {
-                if self.focus + 1 < self.offers.len() {
-                    self.focus += 1;
-                }
-                self.disarm_others();
+                self.focus_down();
                 None
             }
-            Key::Enter => {
-                let i = self.focus;
-                let offer = self.offers.get_mut(i)?;
-                if offer.outcome.is_some() {
-                    return None;
-                }
-                if offer.dangerous && !offer.armed {
-                    offer.armed = true;
-                    return None;
-                }
-                offer.armed = false;
-                offer.outcome = Some(if offer.action.is_some() {
-                    Outcome::Sent
-                } else {
-                    Outcome::NoAction
-                });
-                self.events
-                    .push(json!({"kind": "approve", "title": offer.title}));
-                Some(Outgoing::Approve {
-                    notification: offer.notification,
-                    suggestion: offer.suggestion,
-                    confirmed: true,
-                })
-            }
-            Key::Escape => {
-                if self.offers.is_empty() {
-                    return None;
-                }
-                let offer = self.offers.remove(self.focus.min(self.offers.len() - 1));
-                if self.focus >= self.offers.len() {
-                    self.focus = self.offers.len().saturating_sub(1);
-                }
-                self.events
-                    .push(json!({"kind": "dismiss", "title": offer.title}));
-                // the rows of one notification go together: dismissing one
-                // dismisses the notification, as on the dashboard
-                self.offers.retain(|o| o.notification != offer.notification);
-                if self.focus >= self.offers.len() {
-                    self.focus = self.offers.len().saturating_sub(1);
-                }
-                Some(Outgoing::Dismiss {
-                    notification: offer.notification,
-                })
-            }
+            Key::Enter => self.approve(),
+            Key::Escape => self.dismiss(),
             _ => None,
         }
+    }
+
+    fn focus_up(&mut self) {
+        self.focus = self.focus.saturating_sub(1);
+        self.disarm_others();
+    }
+
+    fn focus_down(&mut self) {
+        if self.focus + 1 < self.offers.len() {
+            self.focus += 1;
+        }
+        self.disarm_others();
+    }
+
+    /// Approves the offer with the focus (a dangerous one on the second
+    /// Enter): what goes to the Hive, if anything.
+    fn approve(&mut self) -> Option<Outgoing> {
+        let i = self.focus;
+        let offer = self.offers.get_mut(i)?;
+        if offer.outcome.is_some() {
+            return None;
+        }
+        if offer.dangerous && !offer.armed {
+            offer.armed = true;
+            return None;
+        }
+        offer.armed = false;
+        offer.outcome = Some(if offer.action.is_some() {
+            Outcome::Sent
+        } else {
+            Outcome::NoAction
+        });
+        self.events
+            .push(json!({"kind": "approve", "title": offer.title}));
+        Some(Outgoing::Approve {
+            notification: offer.notification,
+            suggestion: offer.suggestion,
+            confirmed: true,
+        })
+    }
+
+    /// Dismisses the offer with the focus, and with it the rows of the
+    /// same notification, as on the dashboard.
+    fn dismiss(&mut self) -> Option<Outgoing> {
+        if self.offers.is_empty() {
+            return None;
+        }
+        let offer = self.offers.remove(self.focus.min(self.offers.len() - 1));
+        if self.focus >= self.offers.len() {
+            self.focus = self.offers.len().saturating_sub(1);
+        }
+        self.events
+            .push(json!({"kind": "dismiss", "title": offer.title}));
+        self.offers.retain(|o| o.notification != offer.notification);
+        if self.focus >= self.offers.len() {
+            self.focus = self.offers.len().saturating_sub(1);
+        }
+        Some(Outgoing::Dismiss {
+            notification: offer.notification,
+        })
+    }
+
+    // ---------------------------------------------------------------- the F1 menu
+
+    /// The offers that wait for an answer.
+    pub fn pending_offers(&self) -> usize {
+        self.offers.iter().filter(|o| o.outcome.is_none()).count()
+    }
+
+    /// Whether the menu takes the keys: out, or on its way out.
+    fn menu_out(&self) -> bool {
+        self.menu.is_some_and(|m| !m.closing)
+    }
+
+    /// F1, or Esc on the menu: the drawer comes out or goes back (at once
+    /// when nothing moves).
+    fn toggle_menu(&mut self) {
+        let at_once = !self.moves();
+        self.menu = match self.menu {
+            Some(m) if !m.closing => {
+                if at_once {
+                    None
+                } else {
+                    Some(Menu { closing: true, ..m })
+                }
+            }
+            Some(m) => Some(Menu {
+                closing: false,
+                ..m
+            }),
+            None => Some(Menu {
+                t: if at_once { DRAWER_TICKS } else { 0 },
+                closing: false,
+            }),
+        };
+        self.events
+            .push(json!({"kind": "menu", "open": self.menu_out()}));
+        self.dirty = true;
+    }
+
+    /// Every offer as a row of the menu, or one row saying there is none.
+    fn menu_rows(&self) -> Vec<MenuRow> {
+        if self.offers.is_empty() {
+            return vec![MenuRow {
+                text: MENU_EMPTY.to_string(),
+                focused: false,
+                muted: true,
+            }];
+        }
+        self.offers
+            .iter()
+            .enumerate()
+            .map(|(i, o)| MenuRow {
+                text: format!("{}{}", o.title, offer_suffix(o)),
+                focused: i == self.focus,
+                muted: o.outcome.is_some(),
+            })
+            .collect()
+    }
+
+    /// How far the comb is pushed by the drawer, in scene pixels.
+    fn drawer_push(&self) -> i32 {
+        match self.menu {
+            Some(m) => {
+                let p = interpolate(
+                    0.0,
+                    1.0,
+                    m.t as f32,
+                    DRAWER_TICKS as f32,
+                    Trans::Quad,
+                    Ease::Out,
+                );
+                (4.0 * p).round() as i32
+            }
+            None => 0,
+        }
+    }
+
+    /// The menu, in the canvas's own pixels, where the drawer is.
+    fn draw_menu(&self, b: &mut Band) {
+        let Some(m) = self.menu else {
+            return;
+        };
+        let font = &self.scene.font;
+        let (canvas_w, canvas_h) = self.page_canvas();
+        let rows = self.menu_rows();
+        let longest = rows
+            .iter()
+            .map(|r| r.text.chars().count())
+            .chain([MENU_HELP.chars().count(), MENU_TITLE.chars().count() + 2])
+            .max()
+            .unwrap_or(0);
+        let max_cols = (canvas_w / font.cell.0).saturating_sub(3) as usize;
+        let cols = (longest + 1).clamp(MENU_MIN_COLS.min(max_cols), max_cols.max(1));
+        let (w, h) = menu_size(font, cols, rows.len());
+        let scale = LEVELS[self.level].scale.max(1);
+        let bar = if self.has_bottom_bar() {
+            BAR_BOTTOM_H * scale
+        } else {
+            0
+        };
+        let y = (canvas_h as i32 - bar as i32 - 4 - h as i32).max(0);
+        let p = interpolate(
+            0.0,
+            1.0,
+            m.t as f32,
+            DRAWER_TICKS as f32,
+            Trans::Quad,
+            Ease::Out,
+        );
+        let x = -(w as i32 + 4) + ((w as i32 + 8) as f32 * p).round() as i32;
+        draw_menu(b, font, x, y, cols, MENU_TITLE, &rows, MENU_HELP);
+    }
+
+    /// Whether nothing is in a transition: no motion of the page, the
+    /// drawer where it is going.
+    pub fn still(&self) -> bool {
+        self.motion.is_none()
+            && self
+                .menu
+                .map_or(true, |m| m.t == DRAWER_TICKS && !m.closing)
     }
 
     fn disarm_others(&mut self) {
@@ -877,7 +1059,12 @@ impl World {
         let w = self.window.as_ref()?;
         let (cw, ch) = self.page_canvas();
         let mut canvas = Canvas::new(cw, ch, 1);
-        w.draw(&mut canvas.band(), &self.scene.font, self.tick);
+        w.draw(
+            &mut canvas.band(),
+            &self.scene.font,
+            self.tick,
+            self.pending_offers(),
+        );
         Some((canvas.image, w.frame))
     }
 
@@ -919,6 +1106,19 @@ impl World {
     /// One tick: animations, tweens, effects and the toast advance.
     pub fn tick(&mut self) {
         self.tick += 1;
+        if let Some(m) = &mut self.menu {
+            if m.closing {
+                if m.t == 0 {
+                    self.menu = None;
+                } else {
+                    m.t -= 1;
+                }
+                self.dirty = true;
+            } else if m.t < DRAWER_TICKS {
+                m.t += 1;
+                self.dirty = true;
+            }
+        }
         if !self.tweens.is_empty()
             || !self.bursts.is_empty()
             || self.emitters.iter().any(|a| self.plays(a))
@@ -1047,6 +1247,8 @@ impl World {
         let font = &self.scene.font;
         let mut sprite_index = 0;
         let mut emitter_index = 0;
+        // the comb is pushed aside by the drawer; the bars stay
+        let push = self.drawer_push();
         for node in &self.scene.nodes {
             match node {
                 Node::Sprite { .. } => {
@@ -1063,7 +1265,7 @@ impl World {
                         sy,
                         sheet.tile.0,
                         sheet.tile.1,
-                        s.x,
+                        s.x + push as f32,
                         s.y,
                         s.alpha,
                         s.scale,
@@ -1082,7 +1284,7 @@ impl World {
                         Align::Center => x - w / 2,
                         Align::Right => x - w,
                     };
-                    canvas.text(font, value, x, *y, *color);
+                    canvas.text(font, value, x + push, *y, *color);
                 }
                 Node::Emitter { .. } => {
                     let a = &self.emitters[emitter_index];
@@ -1100,7 +1302,8 @@ impl World {
                     focus,
                     title,
                 } => {
-                    let (x, y, width) = self.draw_panel(canvas, *x, *y, *width, *rows, title);
+                    let (x, y, width) =
+                        self.draw_panel(canvas, *x + push, *y, *width, *rows, title);
                     self.draw_offers(canvas, x, y, width, *rows, *color, *focus)
                 }
                 Node::Notices {
@@ -1111,7 +1314,8 @@ impl World {
                     color,
                     title,
                 } => {
-                    let (x, y, width) = self.draw_panel(canvas, *x, *y, *width, *rows, title);
+                    let (x, y, width) =
+                        self.draw_panel(canvas, *x + push, *y, *width, *rows, title);
                     let fit = font.fit(width);
                     let shown = self
                         .notices
@@ -1166,6 +1370,8 @@ impl World {
                 0xFFFFFFFF,
             );
         }
+        // the F1 menu, over everything, in the canvas's own pixels
+        self.draw_menu(&mut canvas.unscaled());
     }
 
     /// The scene dimmed and the page over it: whole, or in its transition.
@@ -1315,6 +1521,15 @@ impl World {
             .max(0) as u32;
         let said = self.toast.as_ref().filter(|_| side == Side::Bottom && bare);
         let mut x = BAR_IN;
+        // the page on the screen has its button at the left, as on a taskbar
+        if let Some(win) = self.window.as_ref().filter(|_| side == Side::Bottom) {
+            let label: String = win.title.chars().take(16).collect();
+            let bw = font.width_of(&label) + 6;
+            bevel_out(canvas, x - 2, ty - 1, bw, BAR_BOTTOM_H, MID, LIGHT, BLACK);
+            canvas.text(font, &label, x + 1, ty, TEXT);
+            x += bw as i32 + 2;
+        }
+        let room = (room as i32 - (x - BAR_IN)).max(0) as u32;
         if let Some((line, _)) = said {
             let text: String = line.chars().take(font.fit(room)).collect();
             canvas.text(font, &text, x, ty, TEXT);
@@ -1356,15 +1571,7 @@ impl World {
         for (n, offer) in self.offers.iter().enumerate().skip(first).take(rows) {
             let focused = n == self.focus;
             let mark = if focused { ">" } else { " " };
-            let suffix = match (&offer.outcome, offer.armed) {
-                (Some(Outcome::Succeeded), _) => " ok",
-                (Some(Outcome::Failed), _) => " failed",
-                (Some(Outcome::Sent), _) => " ...",
-                (Some(Outcome::NoAction), _) => " noted",
-                (None, true) => " again?",
-                (None, false) => "",
-            };
-            let line = format!("{}{}{}", mark, offer.title, suffix);
+            let line = format!("{}{}{}", mark, offer.title, offer_suffix(offer));
             let text: String = line.chars().take(fit).collect();
             canvas.text(
                 font,
@@ -1428,6 +1635,7 @@ impl World {
             "window": self.window.as_ref().map(Window::observe),
             "motion": self.motion(),
             "bars": self.observe_bars(),
+            "menu": self.menu.map(|m| json!({"open": !m.closing, "t": m.t, "ticks": DRAWER_TICKS})),
         })
     }
 
@@ -1463,6 +1671,18 @@ impl World {
     /// The events since the last take, cleared.
     pub fn take_events(&mut self) -> Vec<Value> {
         std::mem::take(&mut self.events)
+    }
+}
+
+/// What follows an offer's title: its state, in a word.
+fn offer_suffix(offer: &Offer) -> &'static str {
+    match (&offer.outcome, offer.armed) {
+        (Some(Outcome::Succeeded), _) => " ok",
+        (Some(Outcome::Failed), _) => " failed",
+        (Some(Outcome::Sent), _) => " ...",
+        (Some(Outcome::NoAction), _) => " noted",
+        (None, true) => " again?",
+        (None, false) => "",
     }
 }
 
