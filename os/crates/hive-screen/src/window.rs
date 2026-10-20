@@ -1,8 +1,11 @@
 //! A page on the screen: the view tree a page's runtime sends (`quantum
 //! pixel`, over the pixel socket, or a test over the play protocol), laid
-//! out in cells of the font, drawn over the scene, driven by the keyboard
-//! alone, and answered with events: `click`, `submit` (with the form's
-//! fields), `change` (a search field, after a pause), `navigate`, `close`.
+//! out in cells of the font, drawn over the scene as a window (a frame
+//! with a bevel, a shadow, a title bar with the Esc key, a status bar
+//! with the keys that apply, as tall as its content), driven by the
+//! keyboard alone, and answered with events: `click`, `submit` (with the
+//! form's fields), `change` (a search field, after a pause), `navigate`,
+//! `close`.
 //!
 //! Four rules: everything that reacts has the focus in turn, in document
 //! order, and the focus shows (a honey mark); few keys, the console's own
@@ -15,25 +18,47 @@ use crate::canvas::{Band, Font};
 use crate::world::Key;
 use serde_json::{json, Map, Value};
 
-/// The title bar is the first row, the help line the last; a flash takes
-/// one more under the title.
-const TITLE_ROWS: usize = 1;
-const HELP_ROWS: usize = 1;
+/// The frame around the content, in pixels: the outer line, the bevel and
+/// the padding on each side; the title bar and the status bar with their
+/// lines above and below.
+const SIDE: i32 = 4;
+const TITLE_H: i32 = 12;
+const STATUS_H: i32 = 12;
+/// What the bars and lines take of the window's height: the outer lines
+/// (2), the title bar and its line (13), the status bar and its line
+/// (13), the padding above and below the content (2) and one more row
+/// of breathing room (1).
+const CHROME_H: i32 = 31;
+const MIN_ROWS: usize = 4;
 /// The console's `sm` breakpoint, in columns (UI-3): below it an `hbox`
 /// that says `stack_below` stacks. At the scene's size the page has 53
 /// columns, a phone's width; at the fine level, drawn on the canvas of two
 /// pixels to the scene's one, it has 106.
 const SM_COLS: usize = 80;
 
+// The look of a window manager in pixel art: a 1-px bevel (light above and
+// left, dark below and right) on what is raised, the reverse on what is
+// sunken, a 3-px shadow, the scene dimmed under the window.
 const BG: u32 = 0xFF12_1228;
 const TITLE_BG: u32 = 0xFFFF_D34D;
+const TITLE_BG2: u32 = 0xFFD9_AA2E;
+const TITLE_DARK: u32 = 0xFF8A_6A10;
+const LIGHT: u32 = 0xFF4A_4A7A;
+const MID: u32 = 0xFF2A_2A48;
+const DARK: u32 = 0xFF0B_0B16;
+const BLACK: u32 = 0xFF05_050C;
+const ZEBRA: u32 = 0xFF16_1630;
+const OK_LIGHT: u32 = 0xFF2F_6F3F;
+const OK_DARK: u32 = 0xFF10_3018;
+const ERR_LIGHT: u32 = 0xFF8A_3A3A;
+const ERR_DARK: u32 = 0xFF30_1010;
+const SHADOW: u32 = 0x8000_0000;
 const INK: u32 = 0xFF1A_1A2E;
 const TEXT: u32 = 0xFFFF_FFFF;
 const MUTED: u32 = 0xFF8A_8AA0;
 const HONEY: u32 = 0xFFFF_D34D;
 const LINK: u32 = 0xFF8A_D4FF;
 const FIELD_BG: u32 = 0xFF0B_0B16;
-const BOX_BG: u32 = 0xFF34_345A;
 const ROW_BG: u32 = 0xFF2A_2A48;
 const DANGER_BG: u32 = 0xFFB0_3030;
 const OK_BG: u32 = 0xFF1F_4D2A;
@@ -78,10 +103,19 @@ struct Node {
 pub struct Window {
     pub title: String,
     pub flash: Option<(String, bool)>,
-    /// Cells across and down: the canvas it is drawn on, in cells of the
-    /// font (53 by 18 at the scene's size; twice that at the fine level).
+    /// Cells across and down of the content: what fits in the window on
+    /// this canvas (49 by up to 13 at the scene's size; 100 by up to 29 at
+    /// the fine level). The window is as tall as its content, up to the
+    /// canvas.
     pub cols: usize,
     pub rows: usize,
+    /// The canvas it is drawn on, in pixels.
+    canvas: (u32, u32),
+    /// The window's frame on the canvas, in pixels.
+    pub frame: Rect,
+    /// Where the content's cell (0, 0) is drawn, in pixels.
+    ox: i32,
+    oy: i32,
     nodes: Vec<Node>,
     focusables: Vec<usize>,
     focus: usize,
@@ -160,12 +194,16 @@ fn cut(text: &str, width: usize) -> String {
 
 impl Window {
     /// A page as `quantum pixel` sends it (its title, flash and view
-    /// tree), laid out in `cols` by `rows` cells.
-    pub fn new(page: &Value, cols: usize, rows: usize) -> Window {
+    /// tree), laid out for a canvas of `width` by `height` pixels.
+    pub fn new(page: &Value, width: u32, height: u32) -> Window {
         let mut w = Window {
             title: text_of(page.get("title")),
-            cols: cols.max(12),
-            rows: rows.max(4),
+            cols: 12,
+            rows: MIN_ROWS,
+            canvas: (width.max(120), height.max(80)),
+            frame: Rect::default(),
+            ox: 0,
+            oy: 0,
             flash: page
                 .get("flash")
                 .and_then(Value::as_str)
@@ -297,34 +335,57 @@ impl Window {
 
     /// The canvas changed size (the level changed): the page flows again
     /// into the new cells, the focus stays where it was.
-    pub fn resize(&mut self, cols: usize, rows: usize) {
-        self.cols = cols.max(12);
-        self.rows = rows.max(4);
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.canvas = (width.max(120), height.max(80));
         self.layout();
         self.reveal();
     }
 
+    /// The margin around the window: 8 px at the scene's size, scaled
+    /// with the canvas.
+    fn margin(&self) -> i32 {
+        (self.canvas.0 as i32 / 40).max(4)
+    }
+
+    /// The content flows into the columns the canvas gives; then the
+    /// window takes the height the content needs, up to the canvas, and
+    /// sits in the middle.
     fn layout(&mut self) {
+        let (cw, ch) = (6usize, 10usize);
+        let margin = self.margin() as usize;
+        let width = (self.canvas.0 as usize).saturating_sub(2 * margin);
+        self.cols = (width.saturating_sub(2 * SIDE as usize) / cw).max(12);
         self.focusables.clear();
         let h = self.place(0, 0, 0, self.cols);
         self.content_height = h;
+        let max_rows = ((self.canvas.1 as usize).saturating_sub(2 * margin + CHROME_H as usize)
+            / ch)
+            .max(MIN_ROWS);
+        self.rows = (h + self.content_top()).clamp(MIN_ROWS, max_rows);
+        let height = self.rows * ch + CHROME_H as usize;
+        let y = (self.canvas.1 as usize).saturating_sub(height) / 2;
+        self.frame = Rect {
+            x: margin,
+            y,
+            w: width,
+            h: height,
+        };
+        self.ox = (margin + SIDE as usize) as i32;
+        self.oy = y as i32 + 1 + TITLE_H + 1 + 1;
         let rows = self.content_rows();
         if self.scroll + rows > h.max(rows) {
             self.scroll = h.max(rows) - rows;
         }
     }
 
-    /// The first row of the content on the screen: under the title, and
-    /// under the flash when there is one.
+    /// The first row of the content: under the flash when there is one.
     fn content_top(&self) -> usize {
-        TITLE_ROWS + usize::from(self.flash.is_some())
+        usize::from(self.flash.is_some())
     }
 
-    /// The rows of content the screen shows at once.
+    /// The rows of content the window shows at once.
     fn content_rows(&self) -> usize {
-        self.rows
-            .saturating_sub(self.content_top() + HELP_ROWS)
-            .max(1)
+        self.rows.saturating_sub(self.content_top()).max(1)
     }
 
     fn is_focusable(kind: &str, props: &Map<String, Value>) -> bool {
@@ -1273,6 +1334,7 @@ impl Window {
             "shown": self.shown,
             "cols": self.cols,
             "rows": self.rows,
+            "frame": {"x": self.frame.x, "y": self.frame.y, "w": self.frame.w, "h": self.frame.h},
             "focus": self.focus,
             "items": items,
             "texts": self.texts(),
@@ -1285,51 +1347,74 @@ impl Window {
 
     // ---------------------------------------------------------------- drawing
 
-    /// The page over the scene: the title bar, the content from the
-    /// scroll, the help line. Drawn in the band's own pixels (at the fine
-    /// level the canvas has twice the scene's, and the page twice the
-    /// cells), so the font is never a block.
+    /// The page as a window (the world dims the scene under it): a shadow,
+    /// a frame with a bevel, the title bar with the Esc key, the flash,
+    /// the content from the scroll, a scrollbar when it is longer than
+    /// the window, the status bar with the keys that apply. Drawn in the
+    /// band's own pixels (at the fine level the canvas has twice the
+    /// scene's, and the page twice the cells), so the font is never a
+    /// block.
     pub fn draw(&self, b: &mut Band, font: &Font, tick: u64) {
         let (cw, ch) = (font.cell.0 as i32, font.cell.1 as i32);
-        let (cols, rows) = (self.cols, self.rows);
-        b.fill_rect(0, 0, cols as u32 * cw as u32, rows as u32 * ch as u32, BG);
-        // the title bar
-        b.fill_rect(0, 0, cols as u32 * cw as u32, ch as u32, TITLE_BG);
-        b.text(font, &cut(&self.title, cols - 12), cw, 1, INK);
-        b.text(font, "Esc fecha", (cols as i32 - 10) * cw, 1, INK);
-        // the flash: what the action said, under the title
+        let f = self.frame;
+        let (x, y, w, h) = (f.x as i32, f.y as i32, f.w as u32, f.h as u32);
+        b.fill_rect(x + 3, y + 3, w, h, SHADOW);
+        bevel_out(b, x, y, w, h, BG, LIGHT, BLACK);
+        // the title bar: honey in two tones, the title in ink, the Esc key
+        b.fill_rect(x + 1, y + 1, w - 2, 6, TITLE_BG);
+        b.fill_rect(x + 1, y + 7, w - 2, (TITLE_H - 6) as u32, TITLE_BG2);
+        b.fill_rect(x + 1, y + 1 + TITLE_H, w - 2, 1, DARK);
+        b.text(
+            font,
+            &cut(&self.title, self.cols.saturating_sub(6)),
+            x + 5,
+            y + 2,
+            INK,
+        );
+        let kx = x + w as i32 - 26;
+        bevel_out(b, kx, y + 2, 23, 9, TITLE_BG2, TITLE_BG, TITLE_DARK);
+        b.text(font, "Esc", kx + 2, y + 1, INK);
+        // the flash: what the action said, in the first row of the content
         if let Some((flash, error)) = &self.flash {
-            let y = TITLE_ROWS as i32 * ch;
-            let (bg, color) = if *error {
-                (ERR_BG, ERR_TEXT)
+            let fy = self.oy;
+            let (bg, light, dark, color) = if *error {
+                (ERR_BG, ERR_LIGHT, ERR_DARK, ERR_TEXT)
             } else {
-                (OK_BG, OK_TEXT)
+                (OK_BG, OK_LIGHT, OK_DARK, OK_TEXT)
             };
-            b.fill_rect(0, y, cols as u32 * cw as u32, ch as u32, bg);
-            b.text(font, &cut(flash, cols - 2), cw, y + 1, color);
+            let fw = self.cols as u32 * cw as u32 + 2;
+            bevel_out(b, self.ox - 1, fy, fw, ch as u32, bg, light, dark);
+            b.text(
+                font,
+                &cut(flash, self.cols.saturating_sub(1)),
+                self.ox + 2,
+                fy,
+                color,
+            );
         }
         // the content, by rows
         let focused = self.focused();
         let blink = (tick / 30) % 2 == 0;
         self.draw_node(0, b, font, focused, blink);
-        // the help line
-        // a scrollbar at the right edge, when the page is longer than the screen
+        // the scrollbar, sunken, with a raised thumb, inside the frame
         let content_rows = self.content_rows();
         if self.content_height > content_rows {
-            let x = cols as i32 * cw - 2;
-            let y0 = self.content_top() as i32 * ch;
+            let sx = x + w as i32 - 6;
+            let y0 = self.oy + self.content_top() as i32 * ch;
             let track = content_rows as i32 * ch;
-            b.fill_rect(x, y0, 2, track as u32, BOX_BG);
+            bevel_in(b, sx, y0, 4, track as u32, DARK, LIGHT, BLACK);
             let thumb = ((track as f32 * content_rows as f32 / self.content_height as f32).round()
                 as i32)
                 .clamp(ch, track);
             let room = (self.content_height - content_rows) as f32;
             let at = y0 + ((track - thumb) as f32 * self.scroll as f32 / room).round() as i32;
-            b.fill_rect(x, at, 2, thumb as u32, MUTED);
+            bevel_out(b, sx, at, 4, thumb as u32, MID, LIGHT, BLACK);
         }
-        let hy = (rows as i32 - 1) * ch;
-        b.fill_rect(0, hy, cols as u32 * cw as u32, ch as u32, BOX_BG);
-        b.text(font, &cut(&self.help(), cols - 2), cw, hy + 1, TEXT);
+        // the status bar: the keys that apply, raised
+        let sy = y + h as i32 - 1 - STATUS_H;
+        b.fill_rect(x + 1, sy - 1, w - 2, 1, LIGHT);
+        b.fill_rect(x + 1, sy, w - 2, STATUS_H as u32, MID);
+        b.text(font, &cut(&self.help(), self.cols), x + 5, sy + 1, TEXT);
     }
 
     /// A row of the content on the screen, or None when scrolled out.
@@ -1337,7 +1422,7 @@ impl Window {
         if row < self.scroll || row - self.scroll >= self.content_rows() {
             return None;
         }
-        Some((self.content_top() + row - self.scroll) as i32 * ch)
+        Some(self.oy + (self.content_top() + row - self.scroll) as i32 * ch)
     }
 
     #[allow(clippy::too_many_lines)]
@@ -1347,7 +1432,7 @@ impl Window {
         let r = node.rect;
         let p = &node.props;
         let is_focus = focused == Some(n);
-        let x = r.x as i32 * cw;
+        let x = self.ox + r.x as i32 * cw;
         let kind = node.kind.as_str();
         match kind {
             "page" | "window" | "vbox" | "scrollbox" | "form" | "cardbody" | "cardfooter"
@@ -1366,10 +1451,10 @@ impl Window {
                 }
             }
             "panel" | "card" => {
-                // a frame: a line a cell in, the title on it
-                let (x0, x1) = (x, (r.x + r.w) as i32 * cw);
+                // a frame with a bevel, a line a cell in, the title on it
+                let (x0, x1) = (x, self.ox + (r.x + r.w) as i32 * cw);
                 if let Some(y) = self.row_y(r.y, ch) {
-                    b.fill_rect(x0, y + ch / 2, (x1 - x0) as u32, 1, LINE);
+                    b.fill_rect(x0, y + ch / 2, (x1 - x0) as u32, 1, LIGHT);
                     if let Some(title) = node.lines.first() {
                         if !title.is_empty() {
                             let tw = font.width_of(title) as i32 + 2 * cw;
@@ -1379,12 +1464,12 @@ impl Window {
                     }
                 }
                 if let Some(y) = self.row_y(r.y + r.h - 1, ch) {
-                    b.fill_rect(x0, y + ch / 2, (x1 - x0) as u32, 1, LINE);
+                    b.fill_rect(x0, y + ch / 2, (x1 - x0) as u32, 1, BLACK);
                 }
                 for row in r.y..r.y + r.h {
                     if let Some(y) = self.row_y(row, ch) {
-                        b.fill_rect(x0, y, 1, ch as u32, LINE);
-                        b.fill_rect(x1 - 1, y, 1, ch as u32, LINE);
+                        b.fill_rect(x0, y, 1, ch as u32, LIGHT);
+                        b.fill_rect(x1 - 1, y, 1, ch as u32, BLACK);
                     }
                 }
             }
@@ -1392,9 +1477,9 @@ impl Window {
                 let (bg, color) = match kind {
                     "alert" => {
                         if matches!(text_of(p.get("variant")).as_str(), "danger" | "error") {
-                            (Some(ERR_BG), ERR_TEXT)
+                            (Some((ERR_BG, ERR_LIGHT, ERR_DARK)), ERR_TEXT)
                         } else {
-                            (Some(OK_BG), OK_TEXT)
+                            (Some((OK_BG, OK_LIGHT, OK_DARK)), OK_TEXT)
                         }
                     }
                     "footer" => (None, MUTED),
@@ -1409,24 +1494,34 @@ impl Window {
                 };
                 for (i, line) in node.lines.iter().enumerate() {
                     if let Some(y) = self.row_y(r.y + i, ch) {
-                        if let Some(bg) = bg {
-                            b.fill_rect(x, y, r.w as u32 * cw as u32, ch as u32, bg);
+                        if let Some((fill, light, dark)) = bg {
+                            let wpx = r.w as u32 * cw as u32;
+                            b.fill_rect(x, y, wpx, ch as u32, fill);
+                            if i == 0 {
+                                b.fill_rect(x, y, wpx, 1, light);
+                            }
+                            if i + 1 == node.lines.len() {
+                                b.fill_rect(x, y + ch - 1, wpx, 1, dark);
+                            }
+                            b.fill_rect(x, y, 1, ch as u32, light);
+                            b.fill_rect(x + wpx as i32 - 1, y, 1, ch as u32, dark);
                         }
-                        b.text(font, line, x, y + 1, color);
+                        b.text(font, line, x + i32::from(bg.is_some()) * 2, y + 1, color);
                     }
                 }
             }
             "badge" => {
                 if let Some(y) = self.row_y(r.y, ch) {
                     let t = cut(&text_of(p.get("text")), r.w.saturating_sub(2));
-                    let (bg, color) = match text_of(p.get("variant")).as_str() {
-                        "success" => (OK_BG, OK_TEXT),
-                        "danger" | "error" => (ERR_BG, ERR_TEXT),
-                        "warning" | "primary" => (HONEY, INK),
-                        _ => (BOX_BG, TEXT),
+                    let (bg, light, dark, color) = match text_of(p.get("variant")).as_str() {
+                        "success" => (OK_BG, OK_LIGHT, OK_DARK, OK_TEXT),
+                        "danger" | "error" => (ERR_BG, ERR_LIGHT, ERR_DARK, ERR_TEXT),
+                        "warning" | "primary" => (TITLE_BG2, TITLE_BG, TITLE_DARK, INK),
+                        _ => (MID, LIGHT, BLACK, TEXT),
                     };
-                    b.fill_rect(x, y, font.width_of(&t) + 2 * font.cell.0, ch as u32, bg);
-                    b.text(font, &t, x + cw, y + 1, color);
+                    let wpx = font.width_of(&t) + 2 * font.cell.0;
+                    bevel_out(b, x, y, wpx, ch as u32, bg, light, dark);
+                    b.text(font, &t, x + cw, y, color);
                 }
             }
             "link" => {
@@ -1449,7 +1544,9 @@ impl Window {
             }
             "rule" => {
                 if let Some(y) = self.row_y(r.y, ch) {
-                    b.fill_rect(x, y + ch / 2, r.w as u32 * cw as u32, 1, LINE);
+                    let wpx = r.w as u32 * cw as u32;
+                    b.fill_rect(x, y + ch / 2 - 1, wpx, 1, BLACK);
+                    b.fill_rect(x, y + ch / 2, wpx, 1, LIGHT);
                 }
             }
             "spacer" => {}
@@ -1464,32 +1561,29 @@ impl Window {
                         .unwrap_or(0.0)
                         .clamp(0.0, max);
                     let w = (r.w.min(20) as i32 * cw) as u32;
-                    b.fill_rect(x, y + 2, w, (ch - 4) as u32, FIELD_BG);
-                    b.fill_rect(
-                        x,
-                        y + 2,
-                        (w as f32 * value / max) as u32,
-                        (ch - 4) as u32,
-                        HONEY,
-                    );
+                    bevel_in(b, x, y + 1, w, (ch - 2) as u32, FIELD_BG, LIGHT, BLACK);
+                    let filled = ((w - 2) as f32 * value / max) as u32;
+                    if filled > 0 {
+                        b.fill_rect(x + 1, y + 2, filled, (ch - 4) as u32, HONEY);
+                    }
                 }
             }
             "button" => {
                 if let Some(y) = self.row_y(r.y, ch) {
                     let t = cut(&text_of(p.get("text")), r.w.saturating_sub(4));
                     let variant = text_of(p.get("variant"));
-                    let (bg, color) = if is_focus {
-                        (HONEY, INK)
+                    let (bg, light, dark, color) = if is_focus {
+                        (MID, HONEY, HONEY, HONEY)
                     } else if variant == "primary" {
-                        (BOX_BG, HONEY)
+                        (MID, LIGHT, BLACK, HONEY)
                     } else if variant == "danger" {
-                        (DANGER_BG, TEXT)
+                        (DANGER_BG, ERR_LIGHT, ERR_DARK, TEXT)
                     } else {
-                        (BOX_BG, TEXT)
+                        (MID, LIGHT, BLACK, TEXT)
                     };
                     let w = font.width_of(&t) + 4 * font.cell.0;
-                    b.fill_rect(x, y, w, ch as u32, bg);
-                    b.text(font, &format!("[ {} ]", t), x, y + 1, color);
+                    bevel_out(b, x, y, w, ch as u32, bg, light, dark);
+                    b.text(font, &t, x + 2 * cw, y, color);
                 }
             }
             "input" => {
@@ -1518,15 +1612,22 @@ impl Window {
                     before -= len + 1;
                 }
                 let inner = r.w.saturating_sub(2).max(1);
+                let wpx = r.w as u32 * cw as u32;
+                // the field, sunken: one box for every row of an area
+                let (light, dark) = if is_focus {
+                    (HONEY, HONEY)
+                } else {
+                    (LIGHT, BLACK)
+                };
+                let (first, last) = (self.row_y(r.y, ch), self.row_y(r.y + rows - 1, ch));
+                if let (Some(top), Some(bottom)) = (first, last) {
+                    let hpx = (bottom + ch - top) as u32;
+                    bevel_in(b, x, top, wpx, hpx, FIELD_BG, light, dark);
+                }
                 for i in 0..rows {
                     let Some(y) = self.row_y(r.y + i, ch) else {
                         continue;
                     };
-                    b.fill_rect(x, y, r.w as u32 * cw as u32, ch as u32, FIELD_BG);
-                    if is_focus {
-                        b.fill_rect(x, y, 1, ch as u32, HONEY);
-                        b.fill_rect(x + r.w as i32 * cw - 1, y, 1, ch as u32, HONEY);
-                    }
                     let line = lines.get(i).cloned().unwrap_or_default();
                     // scroll the line so the cursor is in view
                     let start = if i == cl && cc > inner.saturating_sub(1) {
@@ -1540,17 +1641,17 @@ impl Window {
                             font,
                             &cut(&text_of(p.get("placeholder")), inner),
                             x + cw,
-                            y + 1,
+                            y,
                             MUTED,
                         );
                     } else {
-                        b.text(font, &visible, x + cw, y + 1, TEXT);
+                        b.text(font, &visible, x + cw, y, TEXT);
                     }
                     if is_focus && i == cl && blink {
                         let cx = x + cw + (cc - start) as i32 * cw;
                         b.fill_rect(cx, y + 1, cw as u32, (ch - 2) as u32, HONEY);
                         if let Some(under) = line.chars().nth(cc) {
-                            b.text(font, &under.to_string(), cx, y + 1, INK);
+                            b.text(font, &under.to_string(), cx, y, INK);
                         }
                     }
                 }
@@ -1562,23 +1663,30 @@ impl Window {
             }
             "checkbox" | "switch" => {
                 if let Some(y) = self.row_y(r.y, ch) {
-                    let mark = if kind == "switch" {
-                        if node.checked {
-                            "(*)"
-                        } else {
-                            "( )"
-                        }
-                    } else if node.checked {
-                        "[x]"
+                    let (light, dark) = if is_focus {
+                        (HONEY, HONEY)
                     } else {
-                        "[ ]"
+                        (LIGHT, BLACK)
                     };
-                    let color = if is_focus { HONEY } else { TEXT };
-                    b.text(font, mark, x, y + 1, color);
+                    if kind == "switch" {
+                        // a track with a knob at the left (off) or the right (on)
+                        bevel_in(b, x, y + 1, 14, 8, FIELD_BG, light, dark);
+                        let kx = if node.checked { x + 7 } else { x + 1 };
+                        if node.checked {
+                            bevel_out(b, kx, y + 2, 6, 6, HONEY, TITLE_BG, TITLE_DARK);
+                        } else {
+                            bevel_out(b, kx, y + 2, 6, 6, MID, LIGHT, BLACK);
+                        }
+                    } else {
+                        bevel_in(b, x, y + 1, 8, 8, FIELD_BG, light, dark);
+                        if node.checked {
+                            check_mark(b, x, y + 1, HONEY);
+                        }
+                    }
                     b.text(
                         font,
                         &cut(&text_of(p.get("label")), r.w.saturating_sub(4)),
-                        x + 4 * cw,
+                        x + 3 * cw,
                         y + 1,
                         TEXT,
                     );
@@ -1589,14 +1697,17 @@ impl Window {
                 if let Some(y) = self.row_y(r.y, ch) {
                     let mut cx = x;
                     for (i, (label, _)) in self.options(n).iter().enumerate() {
-                        let mark = if i == node.choice { "(*)" } else { "( )" };
-                        let color = if is_focus && i == node.choice {
-                            HONEY
+                        let chosen = i == node.choice;
+                        let (light, dark) = if is_focus && chosen {
+                            (HONEY, HONEY)
                         } else {
-                            TEXT
+                            (LIGHT, BLACK)
                         };
-                        b.text(font, mark, cx, y + 1, color);
-                        b.text(font, label, cx + 4 * cw, y + 1, TEXT);
+                        bevel_in(b, cx, y + 1, 8, 8, FIELD_BG, light, dark);
+                        if chosen {
+                            b.fill_rect(cx + 2, y + 3, 4, 4, HONEY);
+                        }
+                        b.text(font, label, cx + 2 * cw, y + 1, TEXT);
                         cx += (label.chars().count() as i32 + 5) * cw;
                     }
                 }
@@ -1609,22 +1720,20 @@ impl Window {
                         .get(node.choice)
                         .map(|(l, _)| l.clone())
                         .unwrap_or_default();
-                    let color = if is_focus { HONEY } else { TEXT };
-                    b.text(font, "<", x, y + 1, color);
-                    b.text(
-                        font,
-                        &cut(&label, r.w.saturating_sub(4)),
-                        x + 2 * cw,
-                        y + 1,
-                        TEXT,
-                    );
-                    b.text(
-                        font,
-                        ">",
-                        x + (2 + label.chars().count().min(r.w.saturating_sub(4)) as i32 + 1) * cw,
-                        y + 1,
-                        color,
-                    );
+                    let (light, dark, color) = if is_focus {
+                        (HONEY, HONEY, HONEY)
+                    } else {
+                        (LIGHT, BLACK, TEXT)
+                    };
+                    let shown = cut(&label, r.w.saturating_sub(4));
+                    let wpx = font.width_of(&shown) + 4 * font.cell.0;
+                    bevel_out(b, x, y, wpx, ch as u32, MID, light, dark);
+                    b.text(font, &shown, x + cw / 2 + 1, y, color);
+                    // the arrow: three rows, five, three and one pixel wide
+                    let ax = x + wpx as i32 - 9;
+                    for (i, w) in [5u32, 3, 1].iter().enumerate() {
+                        b.fill_rect(ax + i as i32, y + 3 + i as i32, *w, 1, HONEY);
+                    }
                 }
                 self.draw_error(node, b, font, 1);
             }
@@ -1646,8 +1755,12 @@ impl Window {
                         let active = i == node.tab;
                         let width = font.width_of(&title) + 2 * cw as u32;
                         if active {
-                            let bg = if is_focus { HONEY } else { BOX_BG };
-                            b.fill_rect(cx, y, width, ch as u32, bg);
+                            let (bg, light, dark) = if is_focus {
+                                (TITLE_BG2, TITLE_BG, TITLE_DARK)
+                            } else {
+                                (MID, LIGHT, BLACK)
+                            };
+                            bevel_out(b, cx, y, width, ch as u32, bg, light, dark);
                         }
                         let color = if active && is_focus {
                             INK
@@ -1656,9 +1769,11 @@ impl Window {
                         } else {
                             MUTED
                         };
-                        b.text(font, &title, cx + cw, y + 1, color);
+                        b.text(font, &title, cx + cw, y, color);
                         cx += (title.chars().count() as i32 + 3) * cw;
                     }
+                    // the bar's floor
+                    b.fill_rect(x, y + ch - 1, r.w as u32 * cw as u32, 1, LIGHT);
                 }
             }
             "table" => {
@@ -1671,32 +1786,47 @@ impl Window {
                         let w = widths.get(i).copied().unwrap_or(1);
                         let label = cut(&text_of(c.get("label")), w);
                         let on = is_focus && node.row < 0 && sortable.get(node.col) == Some(&i);
-                        b.text(font, &label, cx, y + 1, if on { HONEY } else { MUTED });
+                        b.text(font, &label, cx, y, if on { HONEY } else { MUTED });
                         if on {
                             b.fill_rect(cx, y + ch - 2, font.width_of(&label), 1, HONEY);
                         }
                         cx += (w as i32 + 1) * cw;
                     }
+                    // the rule under the header
+                    b.fill_rect(x, y + ch - 1, r.w as u32 * cw as u32, 1, LINE);
                 }
-                if is_focus && node.row >= 0 {
-                    // the active row's background, under its cells
-                    if let Some(row) = node.rows.get(node.row as usize) {
-                        let top = row
-                            .iter()
-                            .flatten()
-                            .map(|&m| self.nodes[m].rect.y)
-                            .min()
-                            .unwrap_or(r.y + 1);
-                        let height = row
-                            .iter()
-                            .flatten()
-                            .map(|&m| self.nodes[m].rect.y + self.nodes[m].rect.h)
-                            .max()
-                            .unwrap_or(top + 1)
-                            - top;
+                // the rows: every other one shaded, the active one lit
+                let active_row = if is_focus && node.row >= 0 {
+                    node.row as usize
+                } else {
+                    usize::MAX
+                };
+                for (ri, row) in node.rows.iter().enumerate() {
+                    let top = row
+                        .iter()
+                        .flatten()
+                        .map(|&m| self.nodes[m].rect.y)
+                        .min()
+                        .unwrap_or(r.y + 1);
+                    let height = row
+                        .iter()
+                        .flatten()
+                        .map(|&m| self.nodes[m].rect.y + self.nodes[m].rect.h)
+                        .max()
+                        .unwrap_or(top + 1)
+                        - top;
+                    let bg = if ri == active_row {
+                        Some(ROW_BG)
+                    } else if ri % 2 == 1 {
+                        Some(ZEBRA)
+                    } else {
+                        None
+                    };
+                    if let Some(bg) = bg {
                         for i in 0..height.max(1) {
                             if let Some(y) = self.row_y(top + i, ch) {
-                                b.fill_rect(x, y, r.w as u32 * cw as u32, ch as u32, ROW_BG);
+                                let wpx = r.w as u32 * cw as u32 + 2;
+                                b.fill_rect(x - 1, y, wpx, ch as u32, bg);
                             }
                         }
                     }
@@ -1742,9 +1872,41 @@ impl Window {
         let (cw, ch) = (font.cell.0 as i32, font.cell.1 as i32);
         for (i, line) in node.lines.iter().enumerate() {
             if let Some(y) = self.row_y(node.rect.y + from + i, ch) {
-                b.text(font, line, node.rect.x as i32 * cw, y + 1, ERR_TEXT);
+                b.text(
+                    font,
+                    line,
+                    self.ox + node.rect.x as i32 * cw,
+                    y + 1,
+                    ERR_TEXT,
+                );
             }
         }
+    }
+}
+
+/// A raised box: light above and left, dark below and right.
+#[allow(clippy::too_many_arguments)]
+fn bevel_out(b: &mut Band, x: i32, y: i32, w: u32, h: u32, fill: u32, light: u32, dark: u32) {
+    if w == 0 || h == 0 {
+        return;
+    }
+    b.fill_rect(x, y, w, h, fill);
+    b.fill_rect(x, y, w, 1, light);
+    b.fill_rect(x, y, 1, h, light);
+    b.fill_rect(x, y + h as i32 - 1, w, 1, dark);
+    b.fill_rect(x + w as i32 - 1, y, 1, h, dark);
+}
+
+/// A sunken box (a field): dark above and left, light below and right.
+#[allow(clippy::too_many_arguments)]
+fn bevel_in(b: &mut Band, x: i32, y: i32, w: u32, h: u32, fill: u32, light: u32, dark: u32) {
+    bevel_out(b, x, y, w, h, fill, dark, light);
+}
+
+/// A check mark in an 8-px box at (x, y).
+fn check_mark(b: &mut Band, x: i32, y: i32, color: u32) {
+    for (dx, dy) in [(2, 4), (3, 5), (4, 6), (5, 5), (6, 4), (7, 3)] {
+        b.fill_rect(x + dx, y + dy, 1, 1, color);
     }
 }
 
@@ -1778,7 +1940,7 @@ mod tests {
 
     #[test]
     fn the_focus_starts_on_the_first_field_and_tab_goes_round() {
-        let mut w = Window::new(&page(), 53, 18);
+        let mut w = Window::new(&page(), 320, 180);
         let obs = w.observe();
         assert_eq!(obs["items"][0]["bind"], "titulo");
         assert_eq!(obs["items"][0]["focus"], true);
@@ -1801,7 +1963,7 @@ mod tests {
 
     #[test]
     fn typing_edits_the_field_with_a_cursor_and_enter_submits_the_form() {
-        let mut w = Window::new(&page(), 53, 18);
+        let mut w = Window::new(&page(), 320, 180);
         for c in "ligar".chars() {
             w.key(Key::Char(c), 0);
         }
@@ -1859,7 +2021,7 @@ mod tests {
 
     #[test]
     fn buttons_click_links_navigate_tables_act_by_row_and_esc_closes() {
-        let mut w = Window::new(&page(), 53, 18);
+        let mut w = Window::new(&page(), 320, 180);
         keys(
             &mut w,
             &[Key::Tab, Key::Tab, Key::Tab, Key::Tab, Key::Enter],
@@ -1888,7 +2050,7 @@ mod tests {
     #[test]
     fn a_search_field_says_its_change_after_a_pause() {
         let page = json!({"title": "Busca", "view": [{"id": 1, "type": "input", "props": {"bind": "q", "search": true, "delay": 300}}]});
-        let mut w = Window::new(&page, 53, 18);
+        let mut w = Window::new(&page, 320, 180);
         w.key(Key::Char('b'), 10);
         assert!(w.take_events().is_empty());
         assert!(!w.tick(20));
@@ -1902,7 +2064,7 @@ mod tests {
         let page = json!({"title": "T", "view": [{"type": "tabpanel", "props": {}, "children": [
             {"type": "tab", "props": {"title": "First"}, "children": [{"type": "text", "props": {"text": "one"}}]},
             {"type": "tab", "props": {"title": "Second"}, "children": [{"type": "text", "props": {"text": "two"}}]}]}]});
-        let mut w = Window::new(&page, 53, 18);
+        let mut w = Window::new(&page, 320, 180);
         let texts = w.texts();
         assert!(texts.contains(&"one".to_string()) && !texts.contains(&"two".to_string()));
         w.key(Key::Right, 0);

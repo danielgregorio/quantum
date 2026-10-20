@@ -498,7 +498,7 @@ it runs: a vCPU plugged in counts within half a second):
 |---|---|---|
 | 0 `plain` | 1 core | the scene as declared, no particles, at most 15 pictures a second |
 | 1 `effects` | 2 cores | the particles too (`qs:emit`, and every `qs:emitter` of `level="1"`), at most 30 a second |
-| 2 `fine` | 4 cores | two pixels to the scene's one: a tween or a particle lands on its own pixel, the font's pixels are blocks; and the emitters of `level="2"`. A page on the screen is drawn pixel for pixel instead, so it has 106 by 36 cells there, against 53 by 18 |
+| 2 `fine` | 4 cores | two pixels to the scene's one: a tween or a particle lands on its own pixel, the font's pixels are blocks; and the emitters of `level="2"`. A page on the screen is drawn pixel for pixel instead, so its window has 100 columns and up to 29 rows there, against 49 by up to 13 |
 
 A level changes how the scene shows, never what happens in it: the same
 ticks run at every level, and a rule's actions run the same. The frame is
@@ -515,10 +515,22 @@ runtime is the application's own server, started in that process as
 `quantum console` starts it; it connects to `hive-screen`'s pixel socket
 (`/run/hive-screen/pixel.sock`, anyone's) and sends each page's view tree
 as JSON (`{"op":"show","page":{...}}`), whole, every time it changes. The
-screen lays it out in cells of its font (53 by 18 at 320×180; 106 by 36
+screen lays it out in cells of its font and draws it over the scene as a
+window: a frame with a 1-px bevel and a 3-px shadow, the scene dimmed
+around it, a honey title bar with the Esc key drawn on it, the content,
+and a status bar with the keys that apply; fields are sunken, buttons and
+badges raised, a scrollbar appears when the page is longer than the
+window. The window is as tall as its content, up to the canvas, and sits
+in the middle: 49 columns and up to 13 rows at 320×180; 100 by up to 29
 at the fine level, where the page is drawn pixel for pixel on the canvas
 of two pixels to the scene's one, and flows again when the level changes,
-keeping its focus), draws it over the scene with the keyboard its own,
+keeping its focus. The page moves as the window managers of 2008 did,
+in pixel art and in ticks: it opens with the jelly (grows from 60% with an
+overshoot, 12 ticks), closes with the lamp (bends and is sucked into the
+bottom left corner, 14 ticks), and a page shown again after an action
+replaces the one before through an ordered dither, the curtain (8 ticks);
+nothing moves at the `plain` level, and `HIVE_SCREEN_MOTION=off` in the
+unit's environment stops it all. It is drawn with the keyboard its own,
 and sends back what the user did, one JSON line an event: `click` and
 `submit` (with the form's fields, as a browser would post them), `change`
 (a search field, after its pause), `navigate` (a link), `reload` (F5) and
@@ -539,8 +551,9 @@ page with no runtime, `act` takes `type` (a text) and every key by name
 (`tab`, `shift-tab`, `left`, `right`, `home`, `end`, `backspace`,
 `delete`, `space`, `pgup`, `pgdn`, `f1`, `f5`, `ctrl-u`, or one
 character), `until` takes `pixel` (an event), `text` (shown on the page)
-and `shown` (how many times a page was shown), and the observation's
-`window` says the page as data: its title, flash, the elements that react
+and `shown` (how many times a page was shown), `still` (no transition
+runs), and the observation's `window` says the page as data and `motion`
+the transition it is in: its title, flash, the elements that react
 in order with their state and which has the focus, the texts, the help
 line. `--pixel-socket PATH` gives a test the socket too: the UI parity
 test runs its one script on the screen with `quantum pixel` as the

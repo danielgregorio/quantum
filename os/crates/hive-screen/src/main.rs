@@ -180,6 +180,19 @@ fn main() -> Result<()> {
         None => level::Chooser::new(cores(), Instant::now()),
     };
     runtime.world.set_level(chooser.level());
+    // HIVE_SCREEN_MOTION=off: pages appear and go at once
+    if std::env::var("HIVE_SCREEN_MOTION")
+        .map(|v| {
+            matches!(
+                v.trim().to_ascii_lowercase().as_str(),
+                "off" | "0" | "no" | "false"
+            )
+        })
+        .unwrap_or(false)
+    {
+        runtime.world.set_motion(false);
+        tracing::info!("motion off (HIVE_SCREEN_MOTION)");
+    }
     if pinned.is_some() {
         tracing::info!("level {} pinned by HIVE_SCREEN_LEVEL", chooser.level());
     }
