@@ -434,11 +434,12 @@ There is no mouse, and no key to learn beyond the console's own:
 | Key | Does |
 |---|---|
 | Tab, Shift+Tab | the next, the previous element that reacts, in the page's order; the one with the focus shows in honey |
-| arrows | inside the element: the cursor in a field, the option of a `radio` or `select`, the row and the button of a `table`, the tab of a `tabpanel` |
+| arrows | inside the element: the cursor in a field, the option of a `radio` or `select`, the row and the button of a `table`, the tab of a `tabpanel`; Up and Down go to the element before and after when what has the focus does not use them (a one-line field, a button, a box) |
 | Enter | acts: a button, a link, a row's button; in a field, sends its form |
 | Space | marks: a `checkbox`, a `switch` |
 | Esc | closes the page |
-| Page Up, Page Down | scroll |
+| Home, End | the first and the last element (in a field, the ends of its text) |
+| Page Up, Page Down | scroll; a bar at the right edge says where in a long page the screen is |
 | F5 | asks the page again |
 
 The last line of the screen says the keys that apply to what has the
@@ -446,6 +447,15 @@ focus. A search field (`search="true"`) asks the page again after its
 pause, as in the browser; a validation error puts the focus on the field
 it is about (UI-9). What the screen does not draw (`ui:chart`, a modal) it
 says so, as the console does.
+
+The keyboard is read by the machine's layout: US, or a Brazilian ABNT2
+(`XKBLAYOUT="br"` in `/etc/default/keyboard`), where `ç` is its own key
+and the accents are dead keys composed with the vowel after them; the
+screen's font has every Latin-1 letter. On a machine with four cores the
+screen draws at its fine level and the page has 106 columns by 36 rows
+instead of 53 by 18, so an `hbox` that stacks on a narrow page sits side
+by side, as in a terminal 80 columns wide; the page flows again when the
+level changes and keeps its focus.
 
 `<q:application type="ui">` with `quantum run app.q --target html` (a single
 HTML file) or `--target textual` (a single Python file) draws **layout only**:

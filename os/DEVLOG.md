@@ -1,5 +1,47 @@
 # DruidOS Development Log
 
+## 2026-10-20 - Páginas na tela, 4b: nível fino a 106×36, ABNT2 com acentos, rolagem
+
+A fatia 4b, por cima da 4a integrada ontem.
+
+**Nível fino.** No nível fino o canvas tem dois pixels para cada um da
+cena (640×360), e até aqui a página era desenhada com a fonte em blocos
+2×2, nas mesmas 53×18 células. Agora a página é desenhada pixel a pixel no
+canvas (`Band::unscaled`): 106×36 células, a fonte nítida, quatro vezes o
+conteúdo. É o `sm` do console (80 colunas): um `hbox` com `stack_below`
+deixa de empilhar. Quando o nível muda com uma página aberta, ela reflui
+nas células novas e o foco fica onde estava (`Window::resize`).
+
+**O que a proposta prometia e o que entrou.** A proposta falava numa fonte
+maior, 8×12, 80×30 células. A fonte da tela é uma face 5×7 desenhada à
+mão, glifo a glifo, em `font.py`; uma face 7×9 seriam 95 glifos novos,
+mais o compilador e o esquema para levá-la ao daemon, e não provaria nada
+do mecanismo. No display de 1280×800 da VM, a letra no nível fino fica com
+12×20 pixels, maior que a fonte de um console de texto; se na prática
+ficar pequena, a face maior é a próxima fatia de legibilidade, não esta.
+
+**ABNT2.** O daemon lê `XKBLAYOUT` em `/etc/default/keyboard` ao subir
+(ou `HIVE_SCREEN_KEYBOARD=br` no ambiente da unit) e, no layout `br`, dá
+`ç` na tecla dela, `/` e `?` na tecla ao lado do Shift direito, `;` e `:`
+onde o US tem `/`, e os acentos como teclas mortas (`´` e `` ` `` à
+direita do P, `~` e `^` à direita do Ç, `¨` em Shift+6) compostas com a
+vogal seguinte, como o Latin-1 as tem (`ã`, `é`, `ô`, `ü`, `Ã`...); morta
+e espaço dá o acento, morta e letra que não leva acento dá os dois, Enter
+esquece a que estava esperando. AltGr dá `/ ? ° ² ³ ª º`. Caps Lock só
+vira as letras. Tudo em `input.rs`, com testes de unidade; a fita
+`screen-abnt2.jsonl` do VM lab põe `br` no sistema, reinicia o daemon e
+digita `ação` no teclado real (a, a tecla do ç, a tecla do ~ e o a, o,
+Enter): o programa do usuário recebe `"titulo":"ação"`.
+
+**Rolagem e teclas verticais.** Cima e Baixo vão ao elemento anterior e
+seguinte quando o que tem o foco não as usa (campo de uma linha, botão,
+caixa, barra de abas; um radio, um select, uma tabela e uma área de texto
+ficam com elas); Home e End vão ao primeiro e ao último (num campo, às
+pontas do texto). Revelar o foco deixa uma linha de contexto, e uma barra
+de dois pixels na borda direita diz onde a tela está numa página longa.
+
+**Fora desta fatia.** Stream e history continuam como texto; a face 7×9.
+
 ## 2026-10-19 - Páginas na tela: `quantum pixel`, a fatia 4a
 
 A tela da Hive agora também mostra as aplicações da máquina. `quantum

@@ -8,5 +8,7 @@
 {"op":"screen","play":{"op":"act","type":"ligar","ticks":1},"contains":"\"value\":\"ligar\""}
 {"op":"screen","play":{"op":"act","tap":["tab","space","enter"],"ticks":1},"contains":"\"fields\":{\"filtro\":\"todas\",\"titulo\":\"ligar\",\"urgente\":\"on\"}"}
 {"op":"screen","play":{"op":"act","tap":["tab","tab","enter"],"ticks":1},"contains":"\"action\":\"alternar\",\"event\":\"click\",\"fields\":{\"id\":\"2\"}"}
+{"op":"screen","play":{"op":"level","level":2},"contains":"\"cols\":106,\"flash\":null,\"focus\":3"}
+{"op":"screen","play":{"op":"level","level":1},"contains":"\"cols\":53,\"flash\":null,\"focus\":3"}
 {"op":"screen","play":{"op":"act","tap":["escape"],"ticks":1},"contains":"\"window\":null"}
 {"op":"end"}

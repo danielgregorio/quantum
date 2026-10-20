@@ -178,7 +178,7 @@ it runs: a vCPU plugged in counts within half a second):
 |---|---|---|
 | 0 `plain` | 1 core | the scene as declared, no particles, at most 15 pictures a second |
 | 1 `effects` | 2 cores | the particles too (`qs:emit`, and every `qs:emitter` of `level="1"`), at most 30 a second |
-| 2 `fine` | 4 cores | two pixels to the scene's one: a tween or a particle lands on its own pixel, the font's pixels are blocks; and the emitters of `level="2"` |
+| 2 `fine` | 4 cores | two pixels to the scene's one: a tween or a particle lands on its own pixel, the font's pixels are blocks; and the emitters of `level="2"`. A page on the screen is drawn pixel for pixel instead, so it has 106 by 36 cells there, against 53 by 18 |
 
 A level changes how the scene shows, never what happens in it: the same
 ticks run at every level, and a rule's actions run the same. The frame is
@@ -195,15 +195,24 @@ runtime is the application's own server, started in that process as
 `quantum console` starts it; it connects to `hive-screen`'s pixel socket
 (`/run/hive-screen/pixel.sock`, anyone's) and sends each page's view tree
 as JSON (`{"op":"show","page":{...}}`), whole, every time it changes. The
-screen lays it out in cells of its font (53 by 17 at 320×180), draws it
-over the scene with the keyboard its own, and sends back what the user
-did, one JSON line an event: `click` and `submit` (with the form's fields,
-as a browser would post them), `change` (a search field, after its
-pause), `navigate` (a link), `reload` (F5) and `close` (Esc, after which
-the page's runtime ends). Only one page shows at a time; a second
-`quantum pixel` is told so. Keyboard only: Tab and Shift+Tab between the
-elements that react, the arrows inside one, Enter acts, Space marks, Esc
-closes; the last line says the keys that apply.
+screen lays it out in cells of its font (53 by 18 at 320×180; 106 by 36
+at the fine level, where the page is drawn pixel for pixel on the canvas
+of two pixels to the scene's one, and flows again when the level changes,
+keeping its focus), draws it over the scene with the keyboard its own,
+and sends back what the user did, one JSON line an event: `click` and
+`submit` (with the form's fields, as a browser would post them), `change`
+(a search field, after its pause), `navigate` (a link), `reload` (F5) and
+`close` (Esc, after which the page's runtime ends). Only one page shows at
+a time; a second `quantum pixel` is told so. Keyboard only: Tab and
+Shift+Tab between the elements that react, the arrows inside one (Up and
+Down between elements when what has the focus does not take them, Home and
+End to the first and the last), Enter acts, Space marks, Esc closes; the
+last line says the keys that apply, and a scrollbar at the right edge
+says where in a long page the screen is. The keyboard is read by the
+machine's layout: US, or ABNT2 (`XKBLAYOUT="br"` in `/etc/default/keyboard`,
+or `HIVE_SCREEN_KEYBOARD=br` in the unit's environment) with `ç` on its
+key and the dead accents (`´` `` ` `` `^` `~` `¨`) composed with the vowel
+after them; the font has every Latin-1 letter.
 
 In the play protocol (`--play`), `{"op":"show","page":{...}}` shows a
 page with no runtime, `act` takes `type` (a text) and every key by name

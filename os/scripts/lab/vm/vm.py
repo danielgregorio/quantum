@@ -290,8 +290,26 @@ class Machine:
                 raise LabError('the agent port closed (QEMU stopped?)')
             self.buf += chunk
 
-    def wait_agent(self, timeout: float) -> dict:
+    def reconnect(self) -> None:
+        """The host side of the agent's port, connected again: a fresh
+        connection is told to the guest's port, which a guest restored
+        from a snapshot sometimes never heard."""
+        if self.port:
+            self.port.close()
+        self.port = socket.socket(socket.AF_UNIX)
+        self.port.connect(str(self.run / 'agent.sock'))
+        self.buf = b''
+
+    def wait_agent(self, timeout: float, loadvm: Optional[str] = None) -> dict:
+        """Pings until the agent answers. A guest restored from a snapshot
+        now and then never answers (seen about once in ten starts, on CI
+        and under emulation, with nothing in its serial log): after 12 s
+        the host connects to the port again, and after half the time,
+        when the machine was started from a snapshot, QEMU is started
+        again from it, once."""
         deadline = time.monotonic() + timeout
+        reconnect_at = time.monotonic() + 12
+        restart_at = time.monotonic() + timeout / 2 if loadvm else None
         while True:
             if not self.alive():
                 raise LabError(f'QEMU stopped; see {self.run / "serial.log"}')
@@ -300,8 +318,19 @@ class Machine:
             except (LabError, OSError):
                 # OSError: the port's own timeout, while the guest is still
                 # booting and nothing reads the other end
-                if time.monotonic() > deadline:
+                now = time.monotonic()
+                if now > deadline:
                     raise LabError(f'the guest agent never answered; see {self.run / "serial.log"}')
+                if reconnect_at and now > reconnect_at:
+                    reconnect_at = None
+                    log('the guest agent is quiet: connecting to its port again')
+                    self.reconnect()
+                elif restart_at and now > restart_at:
+                    restart_at = None
+                    log(f'the guest agent is still quiet: starting QEMU again from the snapshot {loadvm}')
+                    self.stop()
+                    self.start(loadvm=loadvm)
+                    reconnect_at = time.monotonic() + 12
 
     def sh(self, command: str, timeout: float = 120, check: bool = True, **kw) -> dict:
         answer = self.agent({'op': 'exec', 'sh': command, 'timeout': timeout, **kw}, timeout + 10)
@@ -317,7 +346,21 @@ class Machine:
         assert self.qmp
         self.qmp.hmp(f'loadvm {name}')
         self.buf = b''
-        self.agent({'op': 'clock', 'epoch': time.time()}, timeout=10)
+        try:
+            self.agent({'op': 'clock', 'epoch': time.time()}, timeout=10)
+        except (LabError, OSError):
+            # the same quiet guest as after a start from a snapshot: the
+            # port connected again, then QEMU started again from it
+            log(f'the guest agent is quiet after loadvm {name}: connecting to its port again')
+            self.reconnect()
+            try:
+                self.agent({'op': 'clock', 'epoch': time.time()}, timeout=10)
+            except (LabError, OSError):
+                log(f'the guest agent is still quiet: starting QEMU again from the snapshot {name}')
+                self.stop()
+                self.start(loadvm=name)
+                self.wait_agent(60)
+                self.agent({'op': 'clock', 'epoch': time.time()}, timeout=10)
 
     def snapshots(self) -> list:
         assert self.qmp
@@ -550,7 +593,7 @@ class Lab:
         else:
             self.machine = lab_machine(self.run, self.disk)
             self.machine.start(loadvm=snapshot)
-            self.machine.wait_agent(60)
+            self.machine.wait_agent(60, loadvm=snapshot)
             self.machine.agent({'op': 'clock', 'epoch': time.time()})
         how = 'restored'
         if changed or others:
@@ -938,7 +981,7 @@ def answer_line(lab: Lab, line: str) -> dict:
 def evidence(lab: Lab) -> str:
     """What the guest's journal says since the tape started, for a failure
     seen where nobody can look into the guest afterwards (CI)."""
-    if not lab.machine or not lab.machine.alive():
+    if not lab.machine or not lab.machine.alive() or not lab.machine.port:
         return '      (no VM to ask)'
     try:
         answer = lab.machine.agent({'op': 'exec', 'sh': (
@@ -946,7 +989,8 @@ def evidence(lab: Lab) -> str:
             "| grep -v -e quantum-lab-agent -e 'kernel:' | tail -n 80")}, 30)
         return '      the guest\'s journal:\n' + '\n'.join(
             '        ' + line for line in answer.get('stdout', '').splitlines())
-    except LabError as e:
+    except (LabError, OSError) as e:
+        # OSError: the port is gone with the agent (a broken pipe)
         return f'      (the guest did not answer: {e})'
 
 
