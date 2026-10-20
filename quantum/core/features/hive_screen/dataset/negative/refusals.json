@@ -239,7 +239,7 @@
         "message": "<qs:bar> left= holds {service}: a bar shows the screen's own fields"
       },
       "why_invalid": "A bar is part of the scene, not of a rule: it shows what the screen knows of itself ({clock}, {level}, {cores}, {host}, {offers}), never an event's field. What an event says goes in a qs:say, which the bar at the bottom shows while it lasts.",
-      "correction": "<qs:bar side=\"bottom\" right=\"{offers} offers\" /> and, in the rule, <qs:say text=\"{service} stopped\" />.",
+      "correction": "<qs:bar side=\"bottom\" right=\"offers: {offers}\" /> and, in the rule, <qs:say text=\"{service} stopped\" />.",
       "tags": [
         "scene",
         "bars",

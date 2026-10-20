@@ -319,9 +319,11 @@ def test_the_app_on_the_pixel_screen_says_what_the_screen_is(url, tmp_path):
                            ('sees', ['Enter twice'])])
         assert asked[-1][:3] == ['set-network', asked[-1][1], '10.0.2.20/24'] and asked[-1][3:] == \
             ['via', '10.0.2.2', 'dns', '10.0.2.3']
+        # UI-17: the page came back on the tab the request was made from
+        tabs = pixel._focus(lambda i: i['kind'] == 'tabpanel')
+        assert tabs['tabs'][tabs['tab']] == 'Network'
         # the arrows go through the tabs: the Screen tab says what the screen told the page's runtime
-        pixel._focus(lambda i: i['kind'] == 'tabpanel')
-        screen.request({'op': 'act', 'tap': ['right', 'right', 'right']})
+        screen.request({'op': 'act', 'tap': ['right', 'right']})
         text = pixel.text()
         assert 'level: effects (1)' in text, text
         assert 'how: chosen by measuring the frame' in text

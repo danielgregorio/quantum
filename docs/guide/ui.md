@@ -418,6 +418,17 @@ place.
 Text directly inside a container is content: `<ui:card-header>Summary</ui:card-header>`.
 Plain HTML can sit between `ui:*` elements; the console shows its text.
 
+A `ui:tabpanel` opens on its first tab, or on the one its `open` names
+(`open="{tab}"`, with `tab` read from the address): a page that comes back
+after an action that redirects to `/?tab=Network` opens where the user was
+([the Tabs recipe](/cookbook/screens/tabs)). A value that names no tab opens
+the first; a literal that names none is a parse error that lists the tabs.
+
+The flash shows where the page draws it, once: the console and the Hive's
+screen give it a line of their own only on a page that does not show it.
+`variant="{flashType == 'error' and 'danger' or 'success'}"` on its `ui:alert`
+draws a refused action's message in red.
+
 ## On the Hive's screen
 
 On a Quantum OS machine the console is the Hive's screen: a pixel-art scene

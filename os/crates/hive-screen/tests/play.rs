@@ -111,7 +111,7 @@ fn a_crash_an_offer_an_approval_and_its_result() {
     assert_eq!(obs["bars"]["top"]["title"], "Quantum OS");
     assert_eq!(obs["bars"]["top"]["left"], "");
     assert_eq!(obs["bars"]["top"]["right"], "1 cores · effects · --:--");
-    assert_eq!(obs["bars"]["bottom"]["right"], "0 offers · F1");
+    assert_eq!(obs["bars"]["bottom"]["right"], "offers: 0 · F1");
     s.frame("idle");
 
     // the crash: the rule on service-crash plays smoke on the cell named by {service}
@@ -147,7 +147,7 @@ fn a_crash_an_offer_an_approval_and_its_result() {
         obs["sprites"]["bee"]["y"].as_f64().unwrap() > 36.0,
         "the bee bobs on an offer"
     );
-    assert_eq!(obs["bars"]["bottom"]["right"], "2 offers · F1");
+    assert_eq!(obs["bars"]["bottom"]["right"], "offers: 2 · F1");
     s.frame("offer");
     let obs = s.request(json!({"op": "act", "tap": ["down", "enter"], "ticks": 1}));
     assert_eq!(
@@ -485,7 +485,7 @@ fn the_f1_menu_lists_the_offers_over_the_page_and_the_bar_has_the_windows_button
     s.request(json!({"op": "until", "still": true, "max_ticks": 30}));
     // offers arrive while the page is up: the window's status bar says so, the bar counts them
     let obs = s.request(json!({"op": "inject", "message": offers()}));
-    assert_eq!(obs["bars"]["bottom"]["right"], "2 offers · F1");
+    assert_eq!(obs["bars"]["bottom"]["right"], "offers: 2 · F1");
     assert_eq!(obs["menu"], Value::Null);
     s.request(json!({"op": "until", "still": true, "max_ticks": 30}));
     s.frame("window-offers");
@@ -515,7 +515,7 @@ fn the_f1_menu_lists_the_offers_over_the_page_and_the_bar_has_the_windows_button
     assert_eq!(obs["window"]["title"], "Tasks");
     let obs = s.request(json!({"op": "until", "menu": false, "max_ticks": 20}));
     assert_eq!(obs["menu"], Value::Null);
-    assert_eq!(obs["bars"]["bottom"]["right"], "0 offers · F1");
+    assert_eq!(obs["bars"]["bottom"]["right"], "offers: 0 · F1");
     let obs = s.request(json!({"op": "act", "tap": ["tab"], "ticks": 1}));
     assert_eq!(obs["window"]["focus"], 1, "the page hears the keys again");
     // with no page, the menu opens over the comb and says there is nothing

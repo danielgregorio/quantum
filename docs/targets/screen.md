@@ -675,7 +675,7 @@ page's runtime.
     <qs:offers title="Offers" x="188" y="18" width="126" rows="9" />
     <qs:notices title="Notices" x="6" y="132" width="308" rows="2" />
     <!-- the bar at the bottom: what the Hive said last shows here while it lasts -->
-    <qs:bar side="bottom" right="{offers} offers · F1" />
+    <qs:bar side="bottom" right="offers: {offers} · F1" />
   </qs:scene>
 
   <qs:on event="service-crash">

@@ -9,6 +9,7 @@ with the page's runtime (UI-1); the desktop is that page in a window (UI-4).
 """
 
 import calendar as _calendar
+import html as html_lib
 from datetime import date as _date
 from typing import Dict, List, Optional, Set
 
@@ -923,10 +924,14 @@ class UIHtmlAdapter:
         b.open_tag('div', {'class': 'q-tab-headers'})
         b.indent()
         tabs = [c for c in node.children if isinstance(c, UITabNode)]
+        # UI-17: the tab `open` names (resolved and escaped in a served page) opens; else the first
+        wanted = html_lib.unescape(str(getattr(node, 'open', None) or '')).strip()
+        opened = next((i for i, tab in enumerate(tabs) if wanted and str(tab.title).strip() == wanted), 0)
         for i, tab in enumerate(tabs):
             tab_id = f"{group_id}-tab-{i}"
-            cls = 'q-tab-header active' if i == 0 else 'q-tab-header'
-            b.open_tag('button', {'class': cls, 'data-tab': tab_id, 'data-tab-group': group_id})
+            cls = 'q-tab-header active' if i == opened else 'q-tab-header'
+            # type="button": a tab inside a form changes the tab, it does not send the form
+            b.open_tag('button', {'type': 'button', 'class': cls, 'data-tab': tab_id, 'data-tab-group': group_id})
             b.indent()
             b.text(tab.title)
             b.dedent()
@@ -937,7 +942,7 @@ class UIHtmlAdapter:
         # Tab contents
         for i, tab in enumerate(tabs):
             tab_id = f"{group_id}-tab-{i}"
-            cls = 'q-tab-content active' if i == 0 else 'q-tab-content'
+            cls = 'q-tab-content active' if i == opened else 'q-tab-content'
             b.open_tag('div', {'id': tab_id, 'class': cls, 'data-tab-group': group_id})
             b.indent()
             self._render_children(tab.children, b)
@@ -1177,8 +1182,10 @@ class UIHtmlAdapter:
             input_attrs['id'] = input_id
             attrs = self._merge_attrs(input_attrs, self._layout_attrs(node))
 
-            # Create wrapper for input + error message
-            b.open_tag('div', {'class': 'q-input-wrapper'})
+            # Create wrapper for input + error message. The wrapper is what its
+            # row lays out, so grow="true" (UI-2) goes on it, not only on the input.
+            wrapper = 'q-input-wrapper q-grow' if 'q-grow' in attrs.get('class', '').split() else 'q-input-wrapper'
+            b.open_tag('div', {'class': wrapper})
             b.indent()
             self._input_tag(node, attrs, b)
             b.open_tag('div', {'class': 'q-error-message', 'id': f'{input_id}-error', 'style': 'display:none'})

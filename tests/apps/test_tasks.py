@@ -64,6 +64,17 @@ def test_the_form_from_the_table_draws_the_fields_and_the_errors(app):
     assert errors == ["Required", "Must be one of: low, medium, high"]
 
 
+def test_a_refused_task_comes_back_in_red(app):
+    # ACT-2: the action refuses a title of two letters; the flash says why, as an error
+    # (before: the page drew every flash in green)
+    client, _ = app
+    client.post("/", data={"action": "create", "title": "ab"}, headers={"Referer": "http://localhost/"})
+    html = client.get("/").get_data(as_text=True)
+    assert re.search(r'q-alert q-alert-danger.*?at least 3 characters', html, re.S)
+    client.post("/", data={"action": "create", "title": "Water the plants"})
+    assert 'q-alert q-alert-success' in client.get("/").get_data(as_text=True)
+
+
 def test_the_sheet_sorts(app):
     # UI-13: the headers sort in the SQL
     client, _ = app

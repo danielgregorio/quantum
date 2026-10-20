@@ -28,6 +28,7 @@ from quantum.runtime.execution_context import ExecutionContext
 from quantum.runtime.conditions import evaluate_condition
 from quantum.core.ast_nodes import ActionNode
 from quantum.runtime.ui_page_renderer import UIPageRenderer, is_ui_node
+from quantum.runtime.ui_html_templates import TAB_JS
 from quantum.core.xml_lines import tag_error
 
 logger = logging.getLogger('quantum.renderer')
@@ -412,7 +413,14 @@ class HTMLRenderer:
         if not getattr(self, '_ui_css_done', False):
             self._ui_css_done = True
             css = '<style data-quantum-ui>\n' + UIPageRenderer.css() + '\n</style>\n'
-        return css + UIPageRenderer(self, getattr(self, '_ui_actions', [])).render(node)
+        ui = UIPageRenderer(self, getattr(self, '_ui_actions', []))
+        drawn = ui.render(node)
+        # UI-7: a tabpanel switches its tabs in the browser too — the script
+        # goes once, after the first one (it listens on the document)
+        if ui._has_tabs and not getattr(self, '_ui_tabs_done', False):
+            self._ui_tabs_done = True
+            drawn += TAB_JS
+        return css + drawn
 
     def _evaluate_condition(self, condition: str) -> bool:
         """A condition by the language's rules — see quantum/runtime/conditions.py."""

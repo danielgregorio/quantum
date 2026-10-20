@@ -131,7 +131,7 @@ class ConsoleUI(App):
         await body.remove_children()
         self._actions.clear()
         widgets: List = []
-        if page.get('flash'):
+        if page.get('flash') and not page.get('flashShown'):      # UI-16: once
             classes = 'flash flash-error' if page.get('flashType') == 'error' else 'flash'
             widgets.append(Static(Text(str(page['flash'])), classes=classes, id='flash'))
         widgets.extend(self._build_widgets(page.get('view', [])))
@@ -201,10 +201,16 @@ class ConsoleUI(App):
             panel.border_title = props.get('title', '')
             return panel
         if kind == 'tabpanel':
-            tabs = TabbedContent(id=ident)
-            for n, f in enumerate(f for f in children if f.get('type') == 'tab'):
-                tabs.compose_add_child(TabPane(str(f.get('props', {}).get('title') or n + 1),
-                                               *self._build_widgets(f.get('children', []), form)))
+            panes = [f for f in children if f.get('type') == 'tab']
+            titles = [str(f.get('props', {}).get('title') or n + 1) for n, f in enumerate(panes)]
+            # UI-17: the tab `open` names opens; else the first
+            wanted = str(props.get('open') or '').strip()
+            opened = titles.index(wanted) if wanted in titles else 0
+            pane_id = f'tabpane-{id(node)}-'
+            tabs = TabbedContent(id=ident, initial=f'{pane_id}{opened}' if panes else '')
+            for n, (f, title) in enumerate(zip(panes, titles)):
+                tabs.compose_add_child(TabPane(title, *self._build_widgets(f.get('children', []), form),
+                                               id=f'{pane_id}{n}'))
             return tabs
         if kind == 'form':
             # The form's marker exists before its children, so each widget

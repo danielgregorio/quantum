@@ -10,7 +10,7 @@
       <q:param name="action" value="set-hostname" />
       <q:param name="value" value="{hostname}" />
     </q:invoke>
-    <q:redirect url="/" flash="{asked.message}" />
+    <q:redirect url="/?tab=Machine" flash="{asked.message}" />
   </q:action>
   <q:action name="ask-keyboard" method="POST">
     <q:param name="layout" required="true" />
@@ -18,7 +18,7 @@
       <q:param name="action" value="set-keyboard" />
       <q:param name="value" value="{layout}" />
     </q:invoke>
-    <q:redirect url="/" flash="{asked.message}" />
+    <q:redirect url="/?tab=Keyboard" flash="{asked.message}" />
   </q:action>
   <q:action name="ask-network" method="POST">
     <q:param name="interface" required="true" />
@@ -34,7 +34,7 @@
       <q:param name="gateway" value="{gateway}" />
       <q:param name="dns" value="{dns}" />
     </q:invoke>
-    <q:redirect url="/" flash="{asked.message}" />
+    <q:redirect url="/?tab=Network" flash="{asked.message}" />
   </q:action>
   <q:action name="ask-level" method="POST">
     <q:param name="level" required="true" />
@@ -42,7 +42,7 @@
       <q:param name="action" value="set-screen-level" />
       <q:param name="value" value="{level}" />
     </q:invoke>
-    <q:redirect url="/" flash="{asked.message}" />
+    <q:redirect url="/?tab=Screen" flash="{asked.message}" />
   </q:action>
 
   <q:invoke name="machine" service="settings.machine" />
@@ -50,9 +50,11 @@
   <q:invoke name="keyboard" service="settings.keyboard" />
   <q:invoke name="screen" service="settings.screen" />
   <q:invoke name="hive" service="settings.hive" />
+  <!-- after a request the page comes back on the tab it was asked from (UI-17) -->
+  <q:set name="tab" value="{query.tab}" default="Machine" />
 
   <ui:window title="Settings">
-    <ui:tabpanel>
+    <ui:tabpanel open="{tab}">
       <ui:tab title="Machine">
         <ui:list source="{machine.rows}" as="r">
           <ui:item><ui:text>{r.field}: {r.value}</ui:text></ui:item>

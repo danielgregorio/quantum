@@ -1,6 +1,7 @@
 """Conformance: forms that already know the action's rules (M1, SPEC UI-9)."""
 
 import re
+from pathlib import Path
 
 import pytest
 
@@ -145,6 +146,43 @@ def test_the_browser_checks_before_sending(tmp_path, monkeypatch):
             page.get_by_role('button', name='Save').click()
             assert page.evaluate('document.querySelector("input[name=name]").validity.tooShort') is True
             assert page.url.endswith('/p') and 'ok Al' not in page.content()
+            browser.close()
+    finally:
+        server.shutdown()
+        logging.disable(logging.NOTSET)
+
+
+def test_the_example_s_message_is_as_tall_as_what_it_says(tmp_path, monkeypatch):
+    # UI-7: a ui:alert straight in a ui:window is one line of text, as in the
+    # console and on the screen (before: the window's CSS made every <div> in it
+    # grow, and examples/form-rules.q drew its message half a window tall)
+    playwright = pytest.importorskip('playwright.sync_api', reason='Playwright is not installed')
+    import logging
+    import shutil
+    import threading
+    from werkzeug.serving import make_server
+    from quantum.runtime.web_server import QuantumWebServer
+    (tmp_path / 'components').mkdir()
+    shutil.copy(Path(__file__).resolve().parents[2] / 'examples' / 'form-rules.q', tmp_path / 'components')
+    (tmp_path / 'quantum.config.yaml').write_text('paths: {components: ./components}\n', encoding='utf-8')
+    monkeypatch.chdir(tmp_path)
+    logging.disable(logging.WARNING)
+    server = make_server('127.0.0.1', 0, QuantumWebServer('quantum.config.yaml').app, threaded=True)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        with playwright.sync_playwright() as pw:
+            try:
+                browser = pw.chromium.launch()
+            except Exception as exc:
+                pytest.skip(f"Playwright's Chromium is not available: {exc}")
+            page = browser.new_page(viewport={'width': 1024, 'height': 600})
+            page.goto(f'http://127.0.0.1:{server.server_port}/form-rules')
+            page.fill('input[name=name]', 'Alice')
+            page.click('button:has-text("Sign up")')
+            page.wait_for_load_state()
+            alert = page.locator('.q-alert').bounding_box()
+            assert 'Signed up: Alice' in page.inner_text('.q-alert')
+            assert alert['height'] < 80, alert
             browser.close()
     finally:
         server.shutdown()

@@ -1089,7 +1089,8 @@ renderer (browser, console, desktop, the Hive's screen): `window`, `hbox`, `vbox
 `button`, `pager` ([UI-11](#UI-11)), `history` ([DB-11](#DB-11)) and `stream` ([IA-7](#IA-7)). The same
 script (look, fill in, check, choose, click) passes the same in the browser,
 in the console and on the screen. `ui:section` is a titled group, always open; the title of a
-`ui:card` shows even next to a `ui:card-header`. The other `ui:*` tags work
+`ui:card` shows even next to a `ui:card-header`; a `ui:alert` is as tall as what it says; a tab
+opens on a click in the browser as on the arrows in the console and on the screen. The other `ui:*` tags work
 only in the browser (Experimental), and the console shows that it does not draw
 them instead of drawing something else in their place.
 
@@ -1207,6 +1208,24 @@ page's runtime and the screen speak JSON lines over a Unix socket
 search field after its pause, [UI-12](#UI-12)), `navigate`, `reload` and `close` back.
 
 <p class="spec-cited">Referenced by: <a href="./cli#cli-console"><code>quantum console</code></a> · <a href="./cli#cli-pixel"><code>quantum pixel</code></a> · <a href="./config#cfg-server"><code>server.reload</code></a></p>
+
+<a id="UI-16"></a>**[UI-16](#UI-16)** — A page shows its flash where it draws it
+(`<q:if condition="flash"><ui:alert>{flash}</ui:alert></q:if>`), and it shows
+once in every renderer. The view tree says whether one of the page's elements
+says exactly the flash (`flashShown`); the console and the Hive's screen draw
+the flash on a line of their own only for a page where none does.
+
+<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./ui#ui-alert"><code>&lt;ui:alert&gt;</code></a></p>
+
+<a id="UI-17"></a>**[UI-17](#UI-17)** — `<ui:tabpanel open="Network">` opens on the tab with that title, in
+every renderer; without `open`, on the first. An expression is the page's to
+resolve: with `<q:set name="tab" value="{query.tab}" default="Machine"/>` and
+`open="{tab}"`, a page that comes back after an action
+(`<q:redirect url="/?tab=Network">`) opens on the tab the user was on. A value
+that names no tab opens the first; a literal that names no tab is a parse error
+that lists the tabs.
+
+<p class="spec-cited">Referenced by: <a href="./tags#q-set"><code>&lt;q:set&gt;</code></a> · <a href="./tags#q-redirect"><code>&lt;q:redirect&gt;</code></a> · <a href="./ui#ui-tabpanel"><code>&lt;ui:tabpanel&gt;</code></a></p>
 
 ## 11. Development
 
