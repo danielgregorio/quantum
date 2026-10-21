@@ -86,9 +86,13 @@ Specified by: [UI-7](./spec#UI-7)
 
 ## `ui:tabpanel`
 
-Takes the [layout attributes](#layout-attributes), child elements.
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `open` | string |  |  |  |
 
-Specified by: [UI-7](./spec#UI-7)
+Also takes the [layout attributes](#layout-attributes), child elements.
+
+Specified by: [UI-7](./spec#UI-7) · [UI-17](./spec#UI-17)
 
 <a id="ui-tab"></a>
 
@@ -532,7 +536,7 @@ Specified by: [UI-7](./spec#UI-7)
 
 Also takes the [layout attributes](#layout-attributes), its text, child elements.
 
-Specified by: [UI-7](./spec#UI-7)
+Specified by: [UI-7](./spec#UI-7) · [UI-16](./spec#UI-16)
 
 <h1 class="reference-group">Experimental</h1>
 

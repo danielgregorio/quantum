@@ -16,8 +16,11 @@
 {"op": "sh", "sh": "python3 /tmp/view.py", "contains": "cores: 4"}
 {"op": "sh", "sh": "python3 /tmp/view.py", "contains": "level: "}
 {"op": "sh", "sh": "python3 /tmp/view.py", "contains": "hive-screen: active"}
-// the arrows go through the tabs: Machine, Network, Keyboard, Screen
-{"op": "press", "keys": ["right", "right", "right"]}
+// the real keyboard goes through the page: the focus opens in the name field, Tab twice reaches the tabs, the
+// arrows go to Screen, Tab enters its Level select, an arrow chooses plain and Enter sends it: the Hive hears
+// the request (an offer on the screen), and the page comes back on the Screen tab (UI-17)
+{"op": "press", "keys": ["tab", "tab", "right", "right", "right", "tab", "right", "enter"]}
+{"op": "until_journal", "unit": "hive-screen.service", "contains": "offer: druid asks: screen level plain", "timeout": 20}
 {"op": "shot", "has": "#121228", "min": 20000}
 {"op": "press", "keys": ["escape"]}
 {"op": "until_shot", "lacks": "#121228", "timeout": 15}

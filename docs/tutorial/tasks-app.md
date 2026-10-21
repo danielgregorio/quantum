@@ -132,7 +132,8 @@ comes back with the message on the field and what was typed
 ([Actions and forms](/guide/actions)).
 
 After the insert, `q:redirect` sends the browser back to the list with a flash
-message, shown once by the `q:if condition="flash"` block. The form draws its
+message, shown once by the `q:if condition="flash"` block: green, or red when
+the action refused what was sent (`flashType` is then `error`). The form draws its
 fields from the action it submits to: `ui:input bind="title"` becomes a
 required text field with `minlength="3"`, taken from the rule.
 
@@ -176,7 +177,7 @@ Save as `components/index.q`:
 
       <ui:vbox gap="md" grow="true" id="content">
         <q:if condition="flash">
-          <ui:alert variant="success">{flash}</ui:alert>
+          <ui:alert variant="{flashType == 'error' and 'danger' or 'success'}">{flash}</ui:alert>
         </q:if>
 
         <ui:form on-submit="create">
@@ -267,7 +268,7 @@ Save as `components/index.q`:
 
       <ui:vbox gap="md" grow="true" id="content">
         <q:if condition="flash">
-          <ui:alert variant="success">{flash}</ui:alert>
+          <ui:alert variant="{flashType == 'error' and 'danger' or 'success'}">{flash}</ui:alert>
         </q:if>
 
         <ui:form on-submit="create">
@@ -370,7 +371,7 @@ Save as `components/index.q`:
 
       <ui:vbox gap="md" grow="true" id="content">
         <q:if condition="flash">
-          <ui:alert variant="success">{flash}</ui:alert>
+          <ui:alert variant="{flashType == 'error' and 'danger' or 'success'}">{flash}</ui:alert>
         </q:if>
 
         <ui:form on-submit="create">
@@ -511,7 +512,7 @@ Save as `components/index.q`:
 
       <ui:vbox gap="md" grow="true" id="content">
         <q:if condition="flash">
-          <ui:alert variant="success">{flash}</ui:alert>
+          <ui:alert variant="{flashType == 'error' and 'danger' or 'success'}">{flash}</ui:alert>
         </q:if>
 
         <ui:form on-submit="create">
@@ -681,7 +682,7 @@ Save as `components/index.q`:
 
       <ui:vbox gap="md" grow="true" id="content">
         <q:if condition="flash">
-          <ui:alert variant="success">{flash}</ui:alert>
+          <ui:alert variant="{flashType == 'error' and 'danger' or 'success'}">{flash}</ui:alert>
         </q:if>
 
         <ui:form on-submit="create">

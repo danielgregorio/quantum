@@ -1,5 +1,31 @@
 # DruidOS Development Log
 
+## 2026-10-20 - What the screenshots showed
+
+Screenshots of the real screen in the VM lab, taken after the English pass,
+showed four things wrong.
+
+**The Settings app lost its tab.** After "Ask the Hive", the page came back on
+Machine, whatever tab the request was made from. `ui:tabpanel` now takes
+`open` (SPEC UI-17), read by the browser, the console and `hive-screen`
+alike; the app redirects to `/?tab=Network` and opens `{tab}`. The screen's
+observation of a tabpanel names its tabs (`tabs`), for drivers.
+
+**Every message showed twice.** `hive-screen` draws the flash on a line of
+its own, and the page draws it again in its `ui:alert`. The view tree now
+says when the page shows it (`flashShown`, UI-16), and the screen and the
+console draw their line only when it does not.
+
+**"1 offers · F1".** The bottom bar of `screen.q` says `offers: 1 · F1`; the
+reference frames were drawn again.
+
+**The `settings` tape never went through the tabs.** The focus opens in the
+name field, so the arrows it pressed moved the text cursor, and the tape only
+checked a colour. It now presses Tab twice to reach the tabs, goes to Screen,
+chooses a level and sends it: the offer in the journal proves each key did
+what it should. Played on the VM with this build, with `settings-hostname`
+and `screen-pixel`.
+
 ## 2026-10-20 - Everything in English
 
 The repository's rule (`CODING.md`) is that everything in it is English;

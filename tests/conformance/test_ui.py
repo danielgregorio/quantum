@@ -325,3 +325,93 @@ class TestBoundAttributesAreNotValidatedAsLiterals:
         ast = QuantumParser().parse('<q:component name="C" xmlns:q="https://quantum.lang/ns" '
                                     'xmlns:ui="https://quantum.lang/ui"><ui:alert variant="red">x</ui:alert></q:component>')
         assert any('Invalid alert variant' in e for e in ast.validate())
+
+
+VIEW = {'Accept': 'application/vnd.quantum.view+json'}
+
+TABS = (f'<q:component name="t" {NS}><q:set name="tab" value="{{query.tab}}" default="One"/>'
+        '<ui:window title="T"><ui:tabpanel open="{tab}">'
+        '<ui:tab title="One"><ui:text>first</ui:text></ui:tab>'
+        '<ui:tab title="Two"><ui:text>second</ui:text></ui:tab>'
+        '</ui:tabpanel></ui:window></q:component>')
+
+
+def opened_tab(html):
+    """The title of the tab a served page opens."""
+    return re.search(r'class="q-tab-header active"[^>]*>\s*([^<]*?)\s*<', html).group(1)
+
+
+def console_with(page, look):
+    """`look(app)` on the console drawing `page` (a view tree, as the server answers it)."""
+    import asyncio
+    from quantum.runtime.ui_console import ConsoleUI
+
+    class Fixed(ConsoleUI):
+        def _fetch(self, method, path, data=None):
+            return page
+
+    async def main():
+        app = Fixed('http://127.0.0.1:1/')
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            return look(app)
+    return asyncio.run(main())
+
+
+class TestTheOpenTab:
+    """UI-17 (before: a tabpanel always opened on its first tab, and a page
+    that came back after an action lost the tab the user was on)."""
+
+    def test_open_names_the_tab_that_opens(self, serve_pages):
+        c = serve_pages(t=TABS)
+        assert opened_tab(c.get('/t?tab=Two').get_data(as_text=True)) == 'Two'
+        assert opened_tab(c.get('/t').get_data(as_text=True)) == 'One'
+
+    def test_a_value_that_names_no_tab_opens_the_first(self, serve_pages):
+        assert opened_tab(serve_pages(t=TABS).get('/t?tab=Nine').get_data(as_text=True)) == 'One'
+
+    def test_a_literal_that_names_no_tab_is_an_error(self):
+        with pytest.raises(Exception, match='names no tab; its tabs are: One, Two'):
+            QuantumParser().parse(TABS.replace('open="{tab}"', 'open="Nine"'))
+
+    def test_the_console_opens_it_from_the_view_tree(self, serve_pages):
+        import json
+        from textual.widgets import TabbedContent
+        page = json.loads(serve_pages(t=TABS).get('/t?tab=Two', headers=VIEW).get_data(as_text=True))
+        panel = page['view'][0]['children'][0]
+        assert panel['type'] == 'tabpanel' and panel['props']['open'] == 'Two'
+
+        def opened(app):
+            tabs = app.query_one(TabbedContent)
+            return str(tabs.get_pane(tabs.active)._title)
+        assert console_with(page, opened) == 'Two'
+
+
+FLASHED = (f'<q:component name="f" {NS}>'
+           '<q:action name="go" method="POST"><q:redirect url="/f" flash="Done: saved"/></q:action>'
+           '<ui:window title="T"><q:if condition="flash"><ui:alert variant="success">{flash}</ui:alert></q:if>'
+           '<ui:button on-click="go">Go</ui:button></ui:window></q:component>')
+UNFLASHED = (FLASHED.replace('<q:if condition="flash"><ui:alert variant="success">{flash}</ui:alert></q:if>', '')
+             .replace('name="f"', 'name="g"').replace('url="/f"', 'url="/g"'))
+
+
+class TestTheFlashShowsOnce:
+    """UI-16 (before: the console and the Hive's screen drew the flash on a
+    line of their own, and the page's `<ui:alert>{flash}</ui:alert>` drew it
+    again — every message twice on the screen)."""
+
+    def test_the_view_tree_says_whether_the_page_shows_its_flash(self, serve_pages):
+        import json
+        c = serve_pages(f=FLASHED, g=UNFLASHED)
+        for path, shown in (('/f', True), ('/g', False)):
+            c.post(path, data={'action': 'go'})
+            page = json.loads(c.get(path, headers=VIEW).get_data(as_text=True))
+            assert (page['flash'], page['flashShown']) == ('Done: saved', shown)
+
+    def test_the_console_draws_its_own_line_only_for_a_page_that_does_not(self):
+        alert = {'type': 'alert', 'props': {'variant': 'success', 'text': 'Done: saved'}, 'children': []}
+        own_line = lambda app: len(app.query('#flash'))        # noqa: E731
+        assert console_with({'title': 'T', 'flash': 'Done: saved', 'flashShown': True, 'view': [alert]},
+                            own_line) == 0
+        assert console_with({'title': 'T', 'flash': 'Done: saved', 'flashShown': False, 'view': []},
+                            own_line) == 1

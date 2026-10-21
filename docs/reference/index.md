@@ -17,7 +17,7 @@ Generated from the code and the SPEC on every change: what is here is what the p
 | [Expression functions](./functions) | The 32 functions an expression can call |
 | [Command line](./cli) | `quantum` and its commands, options and defaults |
 | [Configuration](./config) | The sections and keys of `quantum.config.yaml` |
-| [Specification](./spec) | The 138 rules of the SPEC, each with an anchor |
+| [Specification](./spec) | The 140 rules of the SPEC, each with an anchor |
 | [UI tags](./ui) | The 67 `ui:*` tags, Core and Experimental, with the attributes each reads |
 | [Experimental tags](./experimental) | Tags outside the Core and the AI |
 

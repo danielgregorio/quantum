@@ -58,6 +58,10 @@ SCRIPT = [
     ("click", "Save"),
     ("sees", ["does not match '^[A-Z]'", "Does not match '^[A-Z]'"]),
     ("values", {"name": "carla"}),
+    # A tab opens its content and closes the other's.
+    ("tab", "Second tab"),
+    ("sees", ["Content of the second"]),
+    ("does_not_see", ["Content of the first"]),
 ]
 
 
@@ -135,6 +139,9 @@ class Browser:
     def click(self, label):
         with self.p.expect_navigation():
             self.p.get_by_role("button", name=label, exact=True).click()
+
+    def tab(self, title):
+        self.p.locator(".q-tab-header", has_text=title).click()
 
 
 def test_the_script_in_the_browser(url):
@@ -221,6 +228,11 @@ class Console:
     def click(self, label):
         from textual.widgets import Button
         [b for b in self.app.query(Button) if str(b.label) == label][0].press()
+
+    def tab(self, title):
+        from textual.widgets import TabbedContent, TabPane
+        tabs = self.app.query_one(TabbedContent)
+        tabs.active = [p for p in tabs.query(TabPane) if str(p._title) == title][0].id
 
 
 def test_the_script_in_the_console(url):
@@ -352,6 +364,12 @@ class Pixel:
         # the action posted, the page came back: the screen shows it again
         obs = self.s.request({"op": "until", "shown": before + 1, "max_ticks": 600})
         assert obs["stopped"] == "condition", f"the page did not come back after {label}"
+
+    def tab(self, title):
+        panel = self._focus(lambda i: i["kind"] == "tabpanel")
+        steps = panel["tabs"].index(title) - panel["tab"]
+        if steps:
+            self.s.request({"op": "act", "tap": ["right"] * steps if steps > 0 else ["left"] * -steps})
 
 
 def test_the_script_on_the_pixel_screen(url, tmp_path):

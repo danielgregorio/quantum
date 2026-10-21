@@ -227,7 +227,7 @@ section.q-section-group > .q-section-title { font-weight: 600; }
 /* Responsive Layout */
 .q-window > header, .q-window > .q-header { flex-shrink: 0; }
 .q-window > footer, .q-window > .q-footer { flex-shrink: 0; margin-top: auto; }
-.q-window > div:not(.q-header):not(.q-footer) { flex: 1; overflow: auto; }
+.q-window > div:not(.q-header):not(.q-footer):not(.q-alert) { flex: 1; overflow: auto; }
 .q-panel { flex-shrink: 0; }
 
 /* Media Queries for smaller screens */
@@ -798,17 +798,19 @@ HTML_TEMPLATE = """\
 # Tab JS
 # ==========================================================================
 
+# One listener on the document: it serves every tabpanel of the page, those
+# drawn after the script and those a swap brings in (UI-12), so a page emits
+# it once wherever its first tabpanel is.
 TAB_JS = """\
 <script>
-document.querySelectorAll('.q-tab-header').forEach(function(btn) {
-  btn.addEventListener('click', function() {
-    var group = this.dataset.tabGroup;
-    var target = this.dataset.tab;
-    document.querySelectorAll('.q-tab-header[data-tab-group="' + group + '"]').forEach(function(b) { b.classList.remove('active'); });
-    document.querySelectorAll('.q-tab-content[data-tab-group="' + group + '"]').forEach(function(c) { c.classList.remove('active'); });
-    this.classList.add('active');
-    document.getElementById(target).classList.add('active');
-  });
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest && e.target.closest('.q-tab-header');
+  if (!btn) return;
+  var group = btn.dataset.tabGroup;
+  document.querySelectorAll('.q-tab-header[data-tab-group="' + group + '"]').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.q-tab-content[data-tab-group="' + group + '"]').forEach(function(c) { c.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById(btn.dataset.tab).classList.add('active');
 });
 </script>
 """
@@ -2055,6 +2057,8 @@ window.__quantumCalendar = (function() {
 RESPONSIVE_CSS = """\n/* UI-2: responsive layout (sm < 640px, md < 768px, lg < 1024px) */
 .q-grow { flex: 1 1 0; min-width: 0; }
 .q-grow > input, .q-grow > .q-input { width: 100%; }
+/* a select in a row is as wide as its options; grow="true" makes it take the rest */
+div[style*="flex-direction: row"] > .q-select:not(.q-grow) { width: auto; }
 .q-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
 .q-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .q-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }

@@ -569,13 +569,16 @@ class QuantumWebServer(ConfigLoading, HtmlPostProcessing, ErrorPages, ServerLife
             # page as a tree of view nodes instead of HTML. Same page, same
             # runtime, same actions — only the drawing differs.
             if 'application/vnd.quantum.view+json' in (request.headers.get('Accept') or ''):
-                from quantum.runtime.ui_view import UIViewBuilder, page_title
+                from quantum.runtime.ui_view import UIViewBuilder, page_title, shows_text
                 import json as _json
+                view = UIViewBuilder(renderer).build([s for s in ast.statements if not isinstance(s, ActionNode)])
+                flash = params.get('flash', '')
                 payload = {
                     'title': page_title(ast, renderer),
-                    'flash': params.get('flash', ''), 'flashType': params.get('flashType', ''),
-                    'view': UIViewBuilder(renderer).build(
-                        [s for s in ast.statements if not isinstance(s, ActionNode)]),
+                    'flash': flash, 'flashType': params.get('flashType', ''),
+                    # UI-16: the page draws its flash itself; the renderer does not again
+                    'flashShown': bool(flash) and shows_text(view, flash),
+                    'view': view,
                 }
                 return Response(_json.dumps(payload, ensure_ascii=False, default=str),
                                 mimetype='application/vnd.quantum.view+json')

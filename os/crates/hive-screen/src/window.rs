@@ -217,10 +217,11 @@ impl Window {
             frame: Rect::default(),
             ox: 0,
             oy: 0,
+            // a page that shows its flash itself (UI-16) gets no second line of it
             flash: page
                 .get("flash")
                 .and_then(Value::as_str)
-                .filter(|s| !s.is_empty())
+                .filter(|s| !s.is_empty() && !truthy(page.get("flashShown")))
                 .map(|s| {
                     (
                         s.to_string(),
@@ -314,7 +315,27 @@ impl Window {
         if kind == "table" && self.nodes[n].rows.is_empty() {
             self.nodes[n].row = -1;
         }
+        if kind == "tabpanel" {
+            // UI-17: the tab `open` names opens; else the first
+            let wanted = text_of(self.nodes[n].props.get("open"));
+            let wanted = wanted.trim();
+            self.nodes[n].tab = self
+                .tab_titles(n)
+                .iter()
+                .position(|t| !wanted.is_empty() && t.trim() == wanted)
+                .unwrap_or(0);
+        }
         n
+    }
+
+    /// A tabpanel's tab titles, in order.
+    fn tab_titles(&self, n: usize) -> Vec<String> {
+        self.nodes[n]
+            .children
+            .iter()
+            .filter(|&&c| self.nodes[c].kind == "tab")
+            .map(|&c| text_of(self.nodes[c].props.get("title")))
+            .collect()
     }
 
     /// A radio's or a select's options: (label, value).
@@ -1322,7 +1343,10 @@ impl Window {
                                 .collect::<Vec<_>>())
                             .collect::<Vec<_>>());
                     }
-                    "tabpanel" => v["tab"] = json!(node.tab),
+                    "tabpanel" => {
+                        v["tab"] = json!(node.tab);
+                        v["tabs"] = json!(self.tab_titles(n));
+                    }
                     "link" => v["to"] = json!(text_of(p.get("to"))),
                     _ => {}
                 }
@@ -2195,5 +2219,40 @@ mod tests {
         assert!(texts.contains(&"two".to_string()) && !texts.contains(&"one".to_string()));
         assert_eq!(wrap("a bb ccc dddd", 5), vec!["a bb", "ccc", "dddd"]);
         assert_eq!(wrap("abcdefgh", 3), vec!["abc", "def", "gh"]);
+    }
+
+    #[test]
+    fn open_names_the_tab_that_opens() {
+        // UI-17: the tab `open` names; a value that names none opens the first
+        let tabs = |open: &str| {
+            json!({"title": "T", "view": [{"type": "tabpanel", "props": {"open": open}, "children": [
+                {"type": "tab", "props": {"title": "First"}, "children": [{"type": "text", "props": {"text": "one"}}]},
+                {"type": "tab", "props": {"title": "Second"}, "children": [{"type": "text", "props": {"text": "two"}}]}]}]})
+        };
+        let w = Window::new(&tabs("Second"), 320, 180);
+        assert!(w.texts().contains(&"two".to_string()));
+        let panel = w.observe()["items"][0].clone();
+        assert_eq!(
+            (panel["tab"].clone(), panel["tabs"].clone()),
+            (json!(1), json!(["First", "Second"]))
+        );
+        assert!(Window::new(&tabs("Ninth"), 320, 180)
+            .texts()
+            .contains(&"one".to_string()));
+    }
+
+    #[test]
+    fn a_flash_the_page_shows_gets_no_line_of_its_own() {
+        // UI-16: the page's own alert says it; the window does not say it again
+        let mut shown = page();
+        shown["flashShown"] = json!(true);
+        assert_eq!(
+            Window::new(&shown, 320, 180).observe()["flash"],
+            Value::Null
+        );
+        assert_eq!(
+            Window::new(&page(), 320, 180).observe()["flash"],
+            "Created: call"
+        );
     }
 }

@@ -868,7 +868,8 @@ renderer (browser, console, desktop, the Hive's screen): `window`, `hbox`, `vbox
 `button`, `pager` (UI-11), `history` (DB-11) and `stream` (IA-7). The same
 script (look, fill in, check, choose, click) passes the same in the browser,
 in the console and on the screen. `ui:section` is a titled group, always open; the title of a
-`ui:card` shows even next to a `ui:card-header`. The other `ui:*` tags work
+`ui:card` shows even next to a `ui:card-header`; a `ui:alert` is as tall as what it says; a tab
+opens on a click in the browser as on the arrows in the console and on the screen. The other `ui:*` tags work
 only in the browser (Experimental), and the console shows that it does not draw
 them instead of drawing something else in their place.
 
@@ -968,6 +969,20 @@ page's runtime and the screen speak JSON lines over a Unix socket
 (`/run/hive-screen/pixel.sock`): `show` with the page, and the events `click`,
 `submit` (with the form's fields as a browser would post them), `change` (a
 search field after its pause, UI-12), `navigate`, `reload` and `close` back.
+
+**UI-16** — A page shows its flash where it draws it
+(`<q:if condition="flash"><ui:alert>{flash}</ui:alert></q:if>`), and it shows
+once in every renderer. The view tree says whether one of the page's elements
+says exactly the flash (`flashShown`); the console and the Hive's screen draw
+the flash on a line of their own only for a page where none does.
+
+**UI-17** — `<ui:tabpanel open="Network">` opens on the tab with that title, in
+every renderer; without `open`, on the first. An expression is the page's to
+resolve: with `<q:set name="tab" value="{query.tab}" default="Machine"/>` and
+`open="{tab}"`, a page that comes back after an action
+(`<q:redirect url="/?tab=Network">`) opens on the tab the user was on. A value
+that names no tab opens the first; a literal that names no tab is a parse error
+that lists the tabs.
 
 ## 11. Development
 

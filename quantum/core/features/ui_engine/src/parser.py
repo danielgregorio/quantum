@@ -317,8 +317,15 @@ class UIParser:
 
     def _parse_ui_tabpanel(self, element: ET.Element) -> UITabPanelNode:
         node = UITabPanelNode()
+        node.open = element.get('open')
         self._apply_layout_attrs(node, element)
         self._parse_children(element, node)
+        # UI-17: a literal `open` names one of the tabs; `open="{tab}"` is the
+        # page's to resolve, and a value that names none opens the first.
+        titles = [c.title for c in node.children if isinstance(c, UITabNode)]
+        if node.open and '{' not in node.open and node.open not in titles:
+            raise UIParseError(f'<ui:tabpanel open="{node.open}"> names no tab; its tabs are: '
+                               + ', '.join(titles))
         return node
 
     def _parse_ui_tab(self, element: ET.Element) -> UITabNode:

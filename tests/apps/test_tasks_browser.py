@@ -99,3 +99,12 @@ def test_create_and_complete_by_clicking(browser, url):
     page.wait_for_load_state()
     assert page.inner_text("body").count("Reopen") == 2
     assert errors == []
+
+
+def test_the_title_takes_the_row_and_the_priority_is_as_wide_as_its_options(browser, url):
+    # UI-2 (before: grow="true" went on the <input>, not on the box that holds it
+    # with its error, so the title stayed narrow and the select took the row)
+    page = open_page(browser, url, 1280)
+    title, priority = box(page, "input[name=title]"), box(page, "select[name=priority]")
+    assert title["width"] > 3 * priority["width"], (title, priority)
+    assert priority["width"] < 200

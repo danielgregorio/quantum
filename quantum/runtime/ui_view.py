@@ -51,6 +51,20 @@ def page_title(ast, renderer) -> str:
     return getattr(ast, 'name', '') or ''
 
 
+def shows_text(view, text: str) -> bool:
+    """UI-16: whether an element of the view says exactly `text` — a page that
+    shows its flash (`<ui:alert>{flash}</ui:alert>`) shows it once, so the
+    console and the screen do not draw it again on a line of their own."""
+    wanted = str(text).strip()
+    for node in view:
+        if isinstance(node, dict):
+            if str((node.get('props') or {}).get('text', '')).strip() == wanted:
+                return True
+            if shows_text(node.get('children') or [], wanted):
+                return True
+    return False
+
+
 class UIViewBuilder:
     """Walks a page's nodes with the page renderer's evaluation (loops, ifs, bindings)."""
 

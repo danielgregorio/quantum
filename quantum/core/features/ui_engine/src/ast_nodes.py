@@ -169,13 +169,14 @@ class UITabPanelNode(QuantumNode, UILayoutMixin):
 
     def __init__(self):
         self.children: List[QuantumNode] = []  # Should contain UITabNode
+        self.open: Optional[str] = None        # UI-17: the title of the tab that opens
         self._init_layout_attrs()
 
     def add_child(self, child: QuantumNode):
         self.children.append(child)
 
     def to_dict(self) -> Dict[str, Any]:
-        d = {"type": "ui_tabpanel", "children_count": len(self.children)}
+        d = {"type": "ui_tabpanel", "children_count": len(self.children), "open": self.open}
         d.update(self._layout_to_dict())
         return d
 

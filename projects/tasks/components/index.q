@@ -70,7 +70,7 @@
 
       <ui:vbox gap="md" grow="true" id="content">
         <q:if condition="flash">
-          <ui:alert variant="success">{flash}</ui:alert>
+          <ui:alert variant="{flashType == 'error' and 'danger' or 'success'}">{flash}</ui:alert>
         </q:if>
 
         <ui:form on-submit="create">

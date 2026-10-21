@@ -10,6 +10,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- `<ui:tabpanel open="Title">` opens on the tab with that title, in the
+  browser, the console and on the Hive's screen (UI-17); `open="{tab}"` with
+  `<q:set name="tab" value="{query.tab}" default="...">` lets a page that
+  comes back after an action open where the user was. A literal that names no
+  tab is a parse error that lists the tabs. The Settings app of Quantum OS
+  comes back on the tab a request was made from.
 - Laboratory: the game language is a feature of its own,
   `quantum/core/features/game_engine/`, like the others: a manifest, three
   intentions (`primary`, with a line for every `qg:` tag, statement and
@@ -438,6 +444,29 @@ alter the behaviour of an existing app is listed under **Breaking**.
   by keys and by the pointer.
 
 ### Fixed
+
+- A `ui:tabpanel` in a served page switches its tabs on a click (UI-7): the
+  page got the tabs' markup and CSS but not their script, so the first tab
+  was the only one a browser could show. The script is one listener for every
+  tabpanel of the page, and a tab's header is a `type="button"`, so a
+  tabpanel inside a form no longer sends it.
+- The flash shows once on the console and the Hive's screen (UI-16): both drew
+  it on a line of their own, and the page's `<ui:alert>{flash}</ui:alert>`
+  drew it again. The view tree says whether the page shows it (`flashShown`).
+- A `ui:alert` straight in a `ui:window` is as tall as what it says (UI-7):
+  the window's CSS made every `<div>` in it grow, and `examples/form-rules.q`
+  drew its message half a window tall.
+- `grow="true"` on a `ui:input` with rules takes what is left of its row
+  (UI-2): the class went on the `<input>`, not on the box that holds it with
+  its error. A `ui:select` in a row is as wide as its options unless it
+  grows; it took the row before. `projects/tasks` shows it: a wide title, a
+  narrow priority.
+- `projects/tasks` (and the tutorial that builds it) draws a refused task's
+  flash in red, not in green.
+- Quantum OS: the screen's bottom bar says `offers: 1 · F1`, not `1 offers · F1`.
+- Quantum OS: the VM lab's `settings` tape goes through the tabs with the real
+  keyboard and sends a level from the Screen tab; it pressed the arrows while
+  the name field had the focus, and only checked a colour.
 
 - Laboratory: a game that adds to a name nobody declared, in a handler or a
   `q:function` (`<q:set name="score" value="{score + 1}" />` without a
