@@ -53,6 +53,10 @@ GAMES = [
     ('Robot', 'projects/robot/robot.q', 'Godot\'s "Platformer 2D" demo transcribed: its level tile for tile, with '
      'slopes and ledges, a robot that runs, jumps twice and shoots, crawling enemies, coins, lifts and a pause menu '
      '(projects/robot/README.md)'),
+    ('Bricks', 'projects/bricks/bricks.q', 'a brick breaker for one, or two to four over the network: levels written '
+     'as lines of letters and built by a q:loop, steel bricks of two hits, a bomb that breaks the bricks around it '
+     '(qg:for-each), the serve as jump is let go (on="release"), a ball lost off the bottom (qg:on-screen-exit), the '
+     'last brick in slow motion (qg:time-scale) and a sequence of tweens (qg:on-end)'),
     ('RPG', 'projects/rpg/rpg.q', 'Godot\'s "JRPG" demo transcribed: its map in three tile layers, a slime that '
      'walks it cell by cell, a key and another slime that talk in a dialogue box, and a turn-based fight '
      '(projects/rpg/README.md)'),

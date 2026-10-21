@@ -243,20 +243,17 @@ const TRANS := {"linear": Tween.TRANS_LINEAR, "sine": Tween.TRANS_SINE, "quad": 
 const EASE := {"in": Tween.EASE_IN, "out": Tween.EASE_OUT, "in-out": Tween.EASE_IN_OUT}
 
 
-static func tween(node, property: String, to: float, seconds: float, trans: String, ease: String,
-		repeat: int = 0, yoyo: bool = false, from = null) -> void:
+static func tween(node, property: String, to, seconds: float, trans: String, ease: String,
+		repeat: int = 0, yoyo: bool = false, from = null, caller: Object = null, on_end: String = "") -> void:
 	node = _thing(node)
 	if node == null or not (node is Node2D):
 		return
-	var old: Node = node.get_node_or_null("Tween_" + property)
-	if old != null:
-		node.remove_child(old)
-		old.queue_free()
-	var t = load("res://addons/quantum/tween.gd").new()
-	t.start(node, property, to, seconds, TRANS[trans], EASE[ease], repeat, yoyo, from)
-	node.add_child(t)
-	node.set_meta("q_tweened", true)
-	event("tween", {"property": property, "to": to})
+	var scene := _current_scene(node)
+	var runner = scene.get_node_or_null("Tweens") if scene != null else null
+	if runner == null:
+		return
+	runner.add(node, property, to, seconds, TRANS[trans], EASE[ease], repeat, yoyo, from, caller, on_end)
+	event("tween", {"property": property, "to": to.to_html(false) if to is Color else to})
 
 
 # Places a prefab where `at` is, offset (qg:spawn).
@@ -361,9 +358,124 @@ static func touched(body: Node, other) -> void:
 static func count(scene: Node, tag: String) -> int:
 	var n := 0
 	for t in scene.get_tree().get_nodes_in_group("q_thing"):
-		if t.get_parent() == scene and t.quantum_tag() == tag and not t.is_queued_for_deletion():
+		if t.get_parent() == scene and t.quantum_tag() == tag and alive(t):
 			n += 1
 	return n
+
+
+# qg:on-separate: when `area` stops overlapping something of a tag a handler
+# names, that handler runs (the caller is the scene for a character, P for a
+# prefab) with `me` the owner and `other` what it touched. Not when either is
+# being destroyed (it left nothing), nor while the scene is paused (a paused
+# body leaves the physics; nothing was stepped off).
+static func watch_separate(area: Area2D, owner: Node, handlers: Array, caller: Object) -> void:
+	area.area_exited.connect(func(other_area: Area2D) -> void:
+		if not other_area.has_method("quantum_tag") or not alive(owner) or paused(owner):
+			return
+		var other = _thing(other_area)
+		if other == owner or not alive(other):
+			return
+		for h in handlers:
+			if h["with"] == other_area.quantum_tag() and caller.has_method(h["handler"]):
+				event("separate", {"who": who(owner), "with": who(other)})
+				caller.call(h["handler"], owner, other))
+
+
+# me.on_floor, me.on_wall, me.on_ceiling in an expression: what the body touched as it last
+# moved. A body that keeps its own (a fighter, an enemy of parts) answers for itself.
+static func touching(v, what: String) -> bool:
+	v = _thing(v)
+	if v == null:
+		return false
+	if ("on_" + what) in v:
+		return v.get("on_" + what) == true
+	if v is CharacterBody2D:
+		match what:
+			"floor":
+				return (v as CharacterBody2D).is_on_floor()
+			"wall":
+				return (v as CharacterBody2D).is_on_wall()
+			"ceiling":
+				return (v as CharacterBody2D).is_on_ceiling()
+	return false
+
+
+# A thing that is still in the game: not destroyed, and not dying (a thing whose
+# health reached 0 is gone for count() and qg:for-each while its qg:on-death runs).
+static func alive(n) -> bool:
+	return n != null and is_instance_valid(n) and not n.is_queued_for_deletion() and n.get("_dead") != true
+
+
+# qg:for-each tag=: the things of a tag in the scene, in its order, as the loop starts.
+static func things(node, tag: String) -> Array:
+	var scene := _current_scene(node)
+	var out := []
+	if scene == null:
+		return out
+	for t in scene.get_children():
+		if t.is_in_group("q_thing") and t.quantum_tag() == tag and alive(t):
+			out.append(t)
+	return out
+
+
+# `a.x` and `a.y` in an expression: where a thing or a character is, or a cursor's point.
+static func pos_x(v):
+	if v is Dictionary:
+		return v.get("x")
+	v = _thing(v)
+	return (v as Node2D).position.x if v is Node2D else null
+
+
+static func pos_y(v):
+	if v is Dictionary:
+		return v.get("y")
+	v = _thing(v)
+	return (v as Node2D).position.y if v is Node2D else null
+
+
+# --- the game's clock: qg:time-scale, and the lockstep's catching up ---
+# Slow motion is the ticks coming further apart, not a tick that does less:
+# the engine runs `slow` times as many ticks a second and slows its clock as
+# much, so each tick still steps 1/60 of a second and is the same tick as
+# ever — on every peer, in every replay. A rejoining peer's catching up
+# (lockstep.gd) multiplies in.
+var slow: float = 1.0      # the game's own speed (qg:time-scale)
+var slow_ticks: int = 0    # engine ticks left before it is back to 1 (0: until changed)
+var catch_up: int = 1      # the lockstep's: this many times faster while a peer catches up
+
+
+static func time_scale(scale: float, seconds: float = 0.0) -> void:
+	var q := _q_node()
+	if q == null:
+		return
+	q.slow = scale
+	# seconds as the player sees them: at a quarter of the speed, a quarter of the ticks
+	q.slow_ticks = maxi(1, int(round(seconds * TICK_RATE * scale))) if seconds > 0.0 else 0
+	q.apply_clock()
+	event("time-scale", {"scale": scale})
+
+
+func apply_clock() -> void:
+	var ticks := maxi(1, int(round(TICK_RATE * slow)))
+	Engine.physics_ticks_per_second = ticks * catch_up
+	Engine.time_scale = float(ticks * catch_up) / TICK_RATE
+	Engine.max_physics_steps_per_frame = 8 * catch_up * maxi(1, ceili(slow))
+
+
+# --- quitting: qg:quit ---
+var no_quit: bool = false   # the replay harness and the play protocol: a quit is an event, not the end
+
+
+static func can_quit() -> bool:
+	return not OS.has_feature("web")
+
+
+static func quit() -> void:
+	event("quit")
+	var q := _q_node()
+	if not can_quit() or (q != null and q.no_quit):
+		return
+	(Engine.get_main_loop() as SceneTree).quit()
 
 
 # nearest(from, who) in an expression, and the parts of an enemy: the
@@ -614,6 +726,12 @@ func _ready() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	if slow_ticks > 0:
+		slow_ticks -= 1
+		if slow_ticks == 0:
+			slow = 1.0
+			apply_clock()
+			event("time-scale", {"scale": 1.0})
 	if external_input:
 		return
 	set_input(sample_local())
@@ -686,6 +804,11 @@ func tapped(action: String) -> bool:
 	return float(_now.get(action, 0.0)) > 0.0 and float(_prev.get(action, 0.0)) <= 0.0
 
 
+# Let go this tick (qg:on-input on="release").
+func released(action: String) -> bool:
+	return float(_now.get(action, 0.0)) <= 0.0 and float(_prev.get(action, 0.0)) > 0.0
+
+
 func strength(action: String) -> float:
 	return float(_now.get(action, 0.0))
 
@@ -712,6 +835,20 @@ static func net_leave() -> void:
 	var g := _game()
 	if g != null:
 		g.net_leave()
+
+
+# qg:watch: join with no seat, to watch the game the players play.
+static func net_watch(address) -> void:
+	var g := _game()
+	if g != null:
+		g.net_watch(str(address))
+
+
+# qg:start-now: the host starts with the players who are there (qg:multiplayer min-players=).
+static func net_start_now() -> void:
+	var g := _game()
+	if g != null:
+		g.net_start_now()
 
 
 # url_param("join", default): in a web build, the page address's ?join=...;

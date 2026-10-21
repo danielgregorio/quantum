@@ -56,7 +56,6 @@ class SceneScript:
     function_names: List[str] = field(default_factory=list)
     sounds_played: List[str] = field(default_factory=list)
     prefabs_used: List[tuple] = field(default_factory=list)   # (name, line) from spawn/swap
-    unrollable: List[tuple] = field(default_factory=list)     # (tag, line): qg:tween, qg:set-tile (not under rollback)
     particles_used: List[tuple] = field(default_factory=list)  # (name, line) from qg:emit
     animations_played: List[tuple] = field(default_factory=list)  # (name, line) from qg:play-animation
     items_used: List[tuple] = field(default_factory=list)  # (item, line) from qg:give and qg:take
@@ -65,6 +64,7 @@ class SceneScript:
     paths_used: List[tuple] = field(default_factory=list)     # (name, line) from spawn at="path"
     dialogues_used: List[tuple] = field(default_factory=list)  # (name, line) from qg:say
     net_used: List[Optional[int]] = field(default_factory=list)   # lines of qg:host, qg:join, qg:leave
+    tween_ends: int = 0   # the qg:on-end handlers of tweens so far: each its own method, nested ones too
 
     node_ids: List[str] = field(default_factory=list)   # the scene's characters, by id
 
@@ -160,6 +160,8 @@ def local_names(body: List[Node], scope: Scope) -> List[str]:
                 walk(n.body)
                 for b in n.branches:
                     walk(b.body)
+            elif n.tag == 'for-each':
+                walk(n.children)
     walk(body)
     for name in out:
         if name in RESERVED_NAMES:
@@ -191,6 +193,8 @@ def _sets(body: List[Node]) -> List[Statement]:
             out.extend(_sets(n.body))
             for b in n.branches:
                 out.extend(_sets(b.body))
+        elif n.tag == 'for-each':
+            out.extend(_sets(n.children))
     return out
 
 
@@ -291,6 +295,16 @@ def compile_block(nodes: List[Node], scope: Scope, script: SceneScript, depth: i
 
 def _compile_node(node: Node, scope: Scope, script: SceneScript, depth: int) -> List[str]:
     ind = _INDENT * depth
+    if isinstance(node, Element) and node.tag == 'for-each':
+        var = node.get('var')
+        if scope.has(var):
+            raise GameCompileError(f'<qg:for-each var="{var}">: the name is taken here; choose another', node.line)
+        inner = scope.child([var])
+        # the things there as it starts; one destroyed meanwhile (by the loop itself) is skipped
+        return [f'{ind}for {var} in Q.things(self, {json.dumps(node.get("tag"))}):',
+                f'{ind}{_INDENT}if not Q.alive({var}):',
+                f'{ind}{_INDENT}{_INDENT}continue',
+                compile_block(node.children, inner, script, depth + 1).rstrip('\n')]
     if isinstance(node, Element):
         return [ind + _compile_action(node, scope, script)]
     st = node
@@ -378,7 +392,8 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         script.sounds_played.append(el.get('sound'))
         return f'Q.stop({json.dumps(el.get("sound"))})'
     if el.tag == 'become':
-        script.states_used.append((el.get('state'), el.line))
+        if el.get('target') == 'me':   # its own state: checked against its qg:states (another's is its own business)
+            script.states_used.append((el.get('state'), el.line))
         return f'Q.become({target}, {json.dumps(el.get("state"))})'
     if el.tag == 'spawn':
         at = el.get('at')
@@ -399,11 +414,12 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         if el.get('path'):
             raise GameCompileError('path= goes with at="path"', el.line)
         if not scope.has(at):
-            raise GameCompileError(f'<qg:spawn at="{at}"> outside a handler that has {at!r}', el.line)
+            raise GameCompileError(f'<qg:spawn at="{at}">: not me/other of this handler, a character of the scene, '
+                                   f'nor a parameter, loop variable or q:set', el.line)
         if at == 'cursor':
             return (f'Q.spawn_at(self, {json.dumps(el.get("prefab"))}, '
                     f'Vector2(cursor.x + {float(el.get("dx"))!r}, cursor.y + {float(el.get("dy"))!r}))')
-        return (f'Q.spawn(self, {json.dumps(el.get("prefab"))}, {at}, '
+        return (f'Q.spawn(self, {json.dumps(el.get("prefab"))}, {scope.reference(at)}, '
                 f'{float(el.get("dx"))!r}, {float(el.get("dy"))!r})')
     if el.tag == 'swap':
         script.prefabs_used.append((el.get('prefab'), el.line))
@@ -414,12 +430,12 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         at = el.get('at')
         if not scope.has(at):
             raise GameCompileError(f'<qg:burst at="{at}"> outside a handler that has {at!r}', el.line)
-        return f'Q.burst({at}, {json.dumps(el.get("color"))}, {int(el.get("count"))})'
+        return f'Q.burst({scope.reference(at)}, {json.dumps(el.get("color"))}, {int(el.get("count"))})'
     if el.tag == 'shake':
         at = el.get('at')
         if not scope.has(at):
             raise GameCompileError(f'<qg:shake at="{at}"> outside a handler that has {at!r}', el.line)
-        return f'Q.shake({at}, {int(el.get("frames"))}, {float(el.get("strength"))!r})'
+        return f'Q.shake({scope.reference(at)}, {int(el.get("frames"))}, {float(el.get("strength"))!r})'
     if el.tag == 'deflect':
         axis, dx, dy = el.get('axis'), el.get('dx'), el.get('dy')
         if axis is not None and (dx is not None or dy is not None):
@@ -439,6 +455,18 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     if el.tag == 'leave':
         script.net_used.append(el.line)
         return 'Q.net_leave()'
+    if el.tag == 'watch':
+        script.net_used.append(el.line)
+        return f'Q.net_watch({compile_expression(el.get("address"), scope, el.line)})'
+    if el.tag == 'time-scale':
+        if not 0 < el.get('scale') <= 4 or el.get('seconds') < 0:
+            raise GameCompileError('<qg:time-scale>: scale= more than 0 and up to 4, seconds= 0 or more', el.line)
+        return f'Q.time_scale({float(el.get("scale"))!r}, {float(el.get("seconds"))!r})'
+    if el.tag == 'quit':
+        return 'Q.quit()'
+    if el.tag == 'start-now':
+        script.net_used.append(el.line)
+        return 'Q.net_start_now()'
     if el.tag == 'pause':
         return 'Q.pause(self, true)'
     if el.tag == 'resume':
@@ -456,7 +484,6 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
                 for a in ('x', 'y'))
         return f'Q.velocity({target}, {x}, {y})'
     if el.tag == 'set-tile':
-        script.unrollable.append(('set-tile', el.line))
         args = [compile_expression(el.get('col'), scope, el.line), compile_expression(el.get('row'), scope, el.line),
                 compile_expression(el.get('tile'), scope, el.line)]
         if el.get('layer'):
@@ -484,13 +511,20 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     if el.tag == 'tween':
         if el.get('seconds') <= 0:
             raise GameCompileError(f'<qg:tween seconds="{el.get("seconds")}">: more than 0', el.line)
-        script.unrollable.append(('tween', el.line))
-        frm = el.get('from')
-        args = [target, json.dumps(el.get('property')), compile_expression(el.get('to'), scope, el.line),
+        frm, ends = el.get('from'), [c for c in el.children if isinstance(c, Element) and c.tag == 'on-end']
+        if len(ends) != len(el.children) or len(ends) > 1:
+            raise GameCompileError('<qg:tween> holds one <qg:on-end> at most, and nothing else', el.line)
+        value = _tween_value if el.get('property') == 'tint' else compile_expression
+        args = [target, json.dumps(el.get('property')), value(el.get('to'), scope, el.line),
                 repr(float(el.get('seconds'))), json.dumps(el.get('trans')), json.dumps(el.get('ease')),
-                str(int(el.get('repeat'))), 'true' if el.get('yoyo') else 'false']
-        if frm is not None:
-            args.append(compile_expression(frm, scope, el.line))
+                str(int(el.get('repeat'))), 'true' if el.get('yoyo') else 'false',
+                value(frm, scope, el.line) if frm is not None else 'null']
+        if ends:   # what runs when it is done: a handler of this script, `me` the thing it moved
+            script.tween_ends += 1
+            name = compile_handler(script, f'_on_tween_end_{script.tween_ends}', ends[0].children, ends[0].line)
+            args += ['self', json.dumps(name)]
+        while args[-1] == 'null':
+            args.pop()
         return f'Q.tween({", ".join(args)})'
     if el.tag == 'goto-scene':
         script.scenes_used.append((el.get('name'), el.line))
@@ -515,6 +549,13 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
             raise GameCompileError(f'<qg:checkpoint at="{at}"> outside a handler that has {at!r}', el.line)
         return f'Q.checkpoint({target}, {at})'
     raise GameCompileError(f'<qg:{el.tag}> is not an action; it cannot go inside a handler', el.line)
+
+
+def _tween_value(value: str, scope: Scope, line: Optional[int]) -> str:
+    """A tint's colour: #rrggbb as written, or an expression that gives one."""
+    if re.fullmatch(r'#[0-9a-fA-F]{6}', str(value).strip()):
+        return f'Color({json.dumps(str(value).strip())})'
+    return f'Color({compile_expression(value, scope, line)})'
 
 
 def expression_or_literal(value: str, scope: Scope, line: Optional[int]) -> str:

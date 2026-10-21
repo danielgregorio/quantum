@@ -25,6 +25,8 @@ var _shake_rng := RandomNumberGenerator.new()
 func _ready() -> void:
 	add_to_group("q_scene")
 	rng.seed = q_seed
+	if Q.slow != 1.0:
+		Q.time_scale(1.0)   # a new scene starts at the usual speed
 	if q_camera != null:
 		q_camera.make_current()
 	if has_method("_q_enter"):
@@ -94,6 +96,9 @@ static func _look(n: Node, entry: Dictionary) -> void:
 	var tween = load("res://addons/quantum/tween.gd")
 	for prop in ["scale", "rotation", "alpha"]:
 		entry[prop] = snappedf(tween.read(n, prop), 0.001)
+	var tint: Color = tween.read(n, "tint")
+	if tint != Color.WHITE:
+		entry["tint"] = tint.to_html(false)
 
 
 # What the replay harness records: the state variables, and the position
@@ -149,8 +154,9 @@ func quantum_state() -> Dictionary:
 	return state
 
 
-# The qg:on-input handlers of the scene: {action: method name}.
+# The qg:on-input handlers of the scene: {action: method name}; on="release" ones apart.
 var q_on_input: Dictionary = {}
+var q_on_release: Dictionary = {}
 # The qg:on-select handlers: {"0": any player, "2": player 2...}; and the qg:paths: {name: points}.
 var q_on_select: Dictionary = {}
 var q_cursors: Array = []
@@ -158,9 +164,13 @@ var q_paths: Dictionary = {}
 
 
 func _physics_process(_delta: float) -> void:
+	_screen()
 	for action in q_on_input.keys():
 		if Q.tapped(action):
 			call(q_on_input[action], null, null)
+	for action in q_on_release.keys():
+		if Q.released(action):
+			call(q_on_release[action], null, null)
 	for cursor in q_cursors:
 		var p: int = cursor.player
 		var select: String = "select" if p == 1 else "p%d_select" % p
@@ -172,6 +182,86 @@ func _physics_process(_delta: float) -> void:
 		var at: Dictionary = cursor.where()
 		var other = Q.thing_at(self, "", at["x"], at["y"])
 		call(handler, at, other)
+
+
+# --- qg:on-screen-exit and qg:on-screen-enter ---
+# Each tick, before anything moves, the scene looks at what has screen
+# handlers (its own, or the scene's of= its tag) and compares where it is with
+# where it was: on the screen, or beyond one of its edges. Only a change runs a
+# handler, so a thing placed off the screen has not left it. The screen is the
+# camera's view, worked out from the camera's own position in the game's ticks
+# (not from what was drawn), or the scene when it has no camera.
+var q_on_screen: Array = []   # the scene's own handlers, each of= a tag
+
+
+func _screen() -> void:
+	if q_paused:
+		return
+	var view := q_view()
+	for n in get_children():
+		if not (n is Node2D) or not Q.alive(n):
+			continue
+		var own: Array = n.get_meta("q_on_screen", [])
+		var theirs := []
+		if n.is_in_group("q_thing"):
+			for h in q_on_screen:
+				if h["of"] == n.quantum_tag():
+					theirs.append(h)
+		if own.is_empty() and theirs.is_empty():
+			continue
+		var side := _beyond(n, view)
+		if not n.has_meta("q_screen"):
+			n.set_meta("q_screen", side)   # where it was placed: nothing happened yet
+			continue
+		var was: String = n.get_meta("q_screen")
+		n.set_meta("q_screen", side)
+		var on := ""
+		var edge := ""
+		if was == "" and side != "":
+			on = "exit"
+			edge = side
+		elif was != "" and side == "":
+			on = "enter"
+			edge = was
+		else:
+			continue   # still on the screen, or still off it
+		Q.event("screen", {"what": Q.who(n), "on": on, "side": edge})
+		var caller: Object = P if n.is_in_group("q_thing") else self
+		for h in own:
+			if h["on"] == on and (h["side"] == "any" or h["side"] == edge) and caller.has_method(h["handler"]):
+				caller.call(h["handler"], n, null)
+		for h in theirs:
+			if h["on"] == on and (h["side"] == "any" or h["side"] == edge) and has_method(h["handler"]):
+				call(h["handler"], null, n)
+
+
+# The edge a node is beyond ("bottom", "top", "right", "left"), or "" on the screen.
+static func _beyond(n: Node2D, view: Rect2) -> String:
+	var size = n.get("hitbox_size")
+	if not (size is Vector2):
+		size = Vector2(8, 8)
+	var r := Rect2(n.position - size / 2.0, size)
+	if r.intersects(view):
+		return ""
+	if r.position.y >= view.end.y:
+		return "bottom"
+	if r.end.y <= view.position.y:
+		return "top"
+	if r.position.x >= view.end.x:
+		return "right"
+	return "left"
+
+
+# What the screen shows of the scene, in scene pixels.
+func q_view() -> Rect2:
+	var size := Vector2(float(q_spec.get("width", 256)), float(q_spec.get("height", 224)))
+	if q_camera == null or not is_instance_valid(q_camera):
+		return Rect2(Vector2.ZERO, size)
+	var half := size / q_camera.zoom / 2.0
+	var c := q_camera.position
+	c.x = clampf(c.x, q_camera.limit_left + half.x, maxf(q_camera.limit_left + half.x, q_camera.limit_right - half.x))
+	c.y = clampf(c.y, q_camera.limit_top + half.y, maxf(q_camera.limit_top + half.y, q_camera.limit_bottom - half.y))
+	return Rect2(c - half, half * 2.0)
 
 
 # The qg:dialogue open now (qg:say), or "".

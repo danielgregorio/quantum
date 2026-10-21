@@ -101,6 +101,9 @@ func _finish(lockstep: Node) -> bool:
 
 
 func _physics_process(_delta: float) -> bool:
+	var qn := root.get_node_or_null("Q")
+	if qn != null:
+		qn.no_quit = true   # a qg:quit is in the state's events, not the end of the replay
 	var lockstep: Node = scene.get("lockstep") if "lockstep" in scene else null
 	if _linger >= 0:
 		return _finish(lockstep)

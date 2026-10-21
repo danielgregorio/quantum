@@ -89,6 +89,7 @@ func _physics_process(_delta: float) -> bool:
 		q = root.get_node_or_null("Q")
 		if q != null:
 			q.tracing = true
+			q.no_quit = true   # the session goes on: a qg:quit is an event the agent reads
 	_note_sets()
 	if not taps.is_empty() and request.has("_first_done"):
 		for a in taps:

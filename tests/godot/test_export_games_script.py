@@ -19,8 +19,8 @@ def load():
 
 def test_every_project_is_a_game_to_export():
     eg = load()
-    assert sorted(eg.games()) == ['arena', 'chess', 'creeps', 'delve', 'drift', 'hopper', 'keep', 'pong', 'robot', 'rpg',
-                                  'towers']
+    assert sorted(eg.games()) == ['arena', 'bricks', 'chess', 'creeps', 'delve', 'drift', 'hopper', 'keep', 'pong', 'robot',
+                                  'rpg', 'towers']
     assert eg.games()['pong'] == REPO / 'projects' / 'pong' / 'pong.q'
 
 
@@ -146,4 +146,4 @@ def test_with_a_relay_each_networked_game_can_be_played_online(tmp_path, monkeyp
     monkeypatch.setenv('QUANTUM_RELAY_URL', 'wss://relay.example/')
     page = eg.write_index(tmp_path).read_text(encoding='utf-8')
     online = {name for name in eg.games() if f'data-game="{name}" data-relay="wss://relay.example"' in page}
-    assert online == {'arena', 'chess', 'delve', 'pong', 'towers'}         # the games with qg:multiplayer
+    assert online == {'arena', 'bricks', 'chess', 'delve', 'pong', 'towers'}   # the games with qg:multiplayer

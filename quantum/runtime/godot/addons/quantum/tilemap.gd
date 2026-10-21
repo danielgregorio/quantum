@@ -61,6 +61,7 @@ func _physics_process(_delta: float) -> void:
 		layer.update_internals()
 	_unshaped.clear()
 var changed: Dictionary = {}   # "col,row" (and ",layer" past the first) -> the tile a qg:set-tile put there
+var _first: Dictionary = {}    # the same keys -> the tile the level had there, for the rollback (q_load)
 
 
 # Puts tile n (1 is the tileset's first; -n the same flipped left to right; 0
@@ -105,14 +106,36 @@ func set_tile(col: int, row: int, n: int, layer_name: String = "") -> void:
 	var layer := _layer(layer_name)
 	if layer == null or col < 0 or row < 0 or col >= columns or row >= rows_count:
 		return
-	_place(layer, Vector2i(col, row), n)
-	if not _unshaped.has(layer):
-		_unshaped.append(layer)
 	var key := "%d,%d" % [col, row]
 	if layer != _layer(""):
 		key += "," + String(layer.name)
+	if not _first.has(key):
+		_first[key] = tile_at(col, row, String(layer.name))
+	_place(layer, Vector2i(col, row), n)
+	if not _unshaped.has(layer):
+		_unshaped.append(layer)
 	changed[key] = n
 	_blocked = null   # the free cells are found again (ai="pathfind")
+
+
+# For the rollback: the cells changed so far, and back to them — every cell
+# changed now or then gets the tile it had then (the level's, if none).
+func q_save() -> Dictionary:
+	return {"changed": changed.duplicate()}
+
+
+func q_load(d: Dictionary) -> void:
+	var then: Dictionary = d["changed"]
+	for key in changed.keys() + then.keys():
+		var parts: PackedStringArray = String(key).split(",")
+		var layer := _layer(parts[2] if parts.size() > 2 else "")
+		if layer == null:
+			continue
+		_place(layer, Vector2i(int(parts[0]), int(parts[1])), int(then.get(key, _first.get(key, 0))))
+		if not _unshaped.has(layer):
+			_unshaped.append(layer)
+	changed = then.duplicate()
+	_blocked = null
 
 
 # tile_at(): the tile in a cell (0: none), of the layer named, or the topmost that has one.

@@ -128,7 +128,8 @@ The game is played by several people, each on their own machine, in lockstep: ev
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `players` | integer | required | how many, 2 or more |
+| `players` | integer | required | how many, 2 or more: the game starts by itself as the last of them joins |
+| `min-players` | integer |  | fewer may play: once this many are there, the host may start the game (qg:start-now, or the lobby's Start now) with those who are; `net_players()` then says how many play |
 | `delay` | integer | `3` | ticks between a press and its effect, everywhere: hides the round trip |
 | `check-every` | integer | `60` | ticks between comparisons of the whole state across peers; a difference is a desync, reported and fatal (0: never) |
 | `rollback` | integer | `0` | rollback instead of waiting: up to this many ticks run ahead on a guess of the others' input and are run again when it was wrong (0: plain lockstep). The scenes the networked game reaches may only hold fighters, timers, menus, the HUD, pictures and a camera — nothing that goes through physics |
@@ -854,11 +855,12 @@ Goes inside: `qg:character`.
 
 ### `qg:on-input`
 
-What happens when the player presses an action in this scene. Holds actions and statements.
+What happens when the player presses an action in this scene, or lets it go (on="release"). Holds actions and statements.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `action` | a name | required | a default action, or one a qg:input declares |
+| `on` | `press` / `release` | `press` | press: as it goes down; release: as it is let go |
 
 Goes inside: `qg:scene`.
 
@@ -958,7 +960,7 @@ Changes a character or a thing to one of its qg:states.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `target` | `me` / `other` | `me` |  |
+| `target` | a name | `me` | other, me, or a parameter, loop variable or q:set holding a thing |
 | `state` | a name | required |  |
 
 Goes inside: a handler.
@@ -970,7 +972,7 @@ Places a new prefab instance in the scene.
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `prefab` | a name | required |  |
-| `at` | `other` / `me` / `cursor` / `path` | `other` | whose position; cursor: where the qg:on-select cursor is; path: the start of path= |
+| `at` | a name | `other` | whose position: other, me, a character id, or a parameter, loop variable or q:set holding a thing; cursor: where the qg:on-select cursor is; path: the start of path= |
 | `path` | a name |  | at="path": a qg:path of the scene, which an ai="path" prefab follows |
 | `x` | an expression |  | a point of the scene instead of at= (with y=): an expression, in pixels |
 | `y` | an expression |  |  |
@@ -1018,7 +1020,7 @@ Takes health from a thing; at 0 its qg:on-death runs and it goes.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `target` | `other` / `me` | `other` |  |
+| `target` | a name | `other` | other, me, or a parameter, loop variable or q:set holding a thing |
 | `amount` | integer | `1` |  |
 
 Goes inside: a handler.
@@ -1029,7 +1031,7 @@ A puff of particles where a thing is. Cosmetic.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `at` | `other` / `me` | `me` |  |
+| `at` | a name | `me` | other, me, or a parameter, loop variable or q:set holding a thing |
 | `color` | `#rrggbb` | `#ffffff` |  |
 | `count` | integer | `12` |  |
 
@@ -1041,7 +1043,7 @@ Shakes the scene a thing is in. Cosmetic.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `at` | `other` / `me` | `me` |  |
+| `at` | a name | `me` | other, me, or a parameter, loop variable or q:set holding a thing |
 | `frames` | integer | `10` |  |
 | `strength` | number | `3.0` | pixels |
 
@@ -1053,7 +1055,7 @@ Changes where a flying thing (ai="fly") goes: flips one axis of its heading, or 
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `target` | `other` / `me` | `other` |  |
+| `target` | a name | `other` | other, me, or a parameter, loop variable or q:set holding a thing |
 | `axis` | `x` / `y` |  | the axis to flip |
 | `dx` | an expression |  |  |
 | `dy` | an expression |  |  |
@@ -1159,8 +1161,8 @@ Eases a property of a thing from what it is to a value, over some seconds: a coi
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `target` | a name | `me` | me, other, a character id, or a q:set holding a thing |
-| `property` | `x` / `y` / `rotation` / `scale` / `alpha` | required | x, y: where it is (collisions see it); rotation (degrees), scale, alpha: its picture |
-| `to` | an expression | required |  |
+| `property` | `x` / `y` / `rotation` / `scale` / `alpha` / `tint` | required | x, y: where it is (collisions see it); rotation (degrees), scale, alpha, tint (a colour its picture is multiplied by: #ffffff is as drawn): its picture |
+| `to` | an expression | required | a number, or for tint a colour (#rrggbb) |
 | `from` | an expression |  | where it starts (what it is now when not given) |
 | `seconds` | number | `0.5` |  |
 | `trans` | `linear` / `sine` / `quad` / `cubic` / `back` / `bounce` / `elastic` | `sine` | the curve |
@@ -1247,6 +1249,50 @@ A new game: every qg:item back to its start=, and the named things picked up or 
 
 Goes inside: a handler.
 
+### `qg:for-each`
+
+Runs what it holds once for every thing of a tag in the scene, in the scene's order, with var= naming the thing: freeze every enemy, break the bricks near a bomb. The things are those there as it starts; one destroyed meanwhile is skipped.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `tag` | a name | required | the things' tag |
+| `var` | a name | `it` | the name of each thing in turn (a target=, an expression) |
+
+Goes inside: a handler.
+
+### `qg:time-scale`
+
+Slow motion, or fast: the whole game runs at this speed — its ticks come further apart (or closer), each the same tick as ever, so a replay and every peer see the same game. The music is not slowed. A new scene starts at 1.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `scale` | number | required | 0.25: four times slower; 1: as usual; up to 4 |
+| `seconds` | number | `0.0` | seconds as the player sees them, then back to 1 (0: until another qg:time-scale) |
+
+Goes inside: a handler.
+
+### `qg:quit`
+
+Ends the game: the window closes. In a browser there is nothing to quit to and it does nothing; `can_quit()` says whether it would.
+
+Goes inside: a handler.
+
+### `qg:start-now`
+
+The host starts the networked game with the players who are there, once qg:multiplayer's min-players= are (before that, and on the other machines, it does nothing). The lobby has a Start now button that does this.
+
+Goes inside: a handler.
+
+### `qg:watch`
+
+Joins a networked game at an address with no seat, to watch it: the players' inputs reach this machine too, and it runs the same game, its keys doing nothing. One who comes after the game has begun catches up on it first. `net_status()` is then "watching" and `net_player()` 0. Not under rollback=.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `address` | an expression | required | host:port, or a relay's wss:// room |
+
+Goes inside: a handler.
+
 ## Other tags
 
 ### `qg:dialogue`
@@ -1297,9 +1343,41 @@ Goes inside: `qg:scene`.
 
 ### `qg:on-end`
 
-What happens when a qg:dialogue has shown its last line. Holds actions and statements.
+What happens when a qg:dialogue has shown its last line, or when a qg:tween is done (the last of its repeats; `me` is the thing it moved, and another tween in it plays after: a sequence). Holds actions and statements.
 
-Goes inside: `qg:dialogue`.
+Goes inside: `qg:dialogue`, `qg:tween`.
+
+### `qg:on-screen-enter`
+
+What happens when this character or prefab comes onto the screen from outside it (one placed on the screen has not come onto it). In a scene, with of=, when any thing of that tag does.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `of` | a name |  | scene: the tag |
+| `side` | `any` / `top` / `bottom` / `left` / `right` | `any` | the edge it came in by |
+
+Goes inside: `qg:character`, `qg:prefab`, `qg:scene`.
+
+### `qg:on-screen-exit`
+
+What happens when this character or prefab leaves the screen: the camera's view, or the scene when it has no camera. In a scene, with of=, when any thing of that tag does (`other` is the thing). Holds actions and statements; it runs in the game's tick, the same on every peer.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `of` | a name |  | scene: the tag |
+| `side` | `any` / `top` / `bottom` / `left` / `right` | `any` | the edge it left by |
+
+Goes inside: `qg:character`, `qg:prefab`, `qg:scene`.
+
+### `qg:on-separate`
+
+What happens when this character or prefab stops touching something it touched: a plate stepped off, a door that closes behind. Holds actions and statements; `me` is the one that touched, `other` what it touched. Not when the other is destroyed: it left nothing.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `with` | a name | required | the tag of what it stops touching |
+
+Goes inside: `qg:character`, `qg:prefab`.
 
 ### `qg:parallax`
 
@@ -1354,7 +1432,7 @@ Goes inside: `qg:scene`.
 
 ## Statements
 
-Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `language()`, `has_save()`, `distance()`, `nearest()`, `sees()`, `held()`.
+Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `language()`, `has_save()`, `distance()`, `nearest()`, `sees()`, `held()`, `can_quit()`.
 
 ## `gd:` attributes
 
@@ -4370,6 +4448,340 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:button label="Restart">
         <qg:goto-scene name="level" />
       </qg:button>
+    </qg:menu>
+  </qg:scene>
+
+</q:application>
+```
+
+### Bricks
+
+`projects/bricks/bricks.q` — a brick breaker for one, or two to four over the network: levels written as lines of letters and built by a q:loop, steel bricks of two hits, a bomb that breaks the bricks around it (qg:for-each), the serve as jump is let go (on="release"), a ball lost off the bottom (qg:on-screen-exit), the last brick in slow motion (qg:time-scale) and a sequence of tweens (qg:on-end).
+
+```xml
+<q:application id="bricks" type="game">
+
+  <!-- Bricks: a brick breaker, alone or for two to four over the network.
+       A paddle (one each, over the network) keeps a ball in play, and the
+       ball breaks the bricks it hits. Steel bricks take two hits, a bomb
+       brick breaks the bricks around it, and the last brick of a level
+       breaks in slow motion. Each level is a few lines of text, one letter
+       a brick. The art is drawn by scripts/art/bricks.py (CC0); the sounds
+       are Kenney's Pixel Platformer (CC0). -->
+
+  <q:set name="score" value="0" type="number" />
+  <q:set name="lives" value="3" type="number" />
+  <q:set name="level" value="1" type="number" />
+  <!-- the levels, nine bricks to a row: R O Y G B the colours (one hit), S steel
+       (two), X a bomb, . none -->
+  <q:set name="levels" type="array" value='[
+    ["RRRRRRRRR", "OOOOOOOOO", "YYYYXYYYY", "GGGGGGGGG", "BBBBBBBBB"],
+    ["S.S.S.S.S", "RRRRRRRRR", "OOXOOOXOO", "YYYYYYYYY", ".GGGGGGG.", "..BBBBB.."],
+    ["SSSSSSSSS", "R.XRRRX.R", "OOOOOOOOO", "YSYYXYYSY", "GGGGGGGGG", "BBBXBXBBB", "S.......S"]
+  ]' />
+
+  <qg:spritesheet name="bricks" src="assets/bricks.png" tile="32x12" />
+  <qg:spritesheet name="paddles" src="assets/paddles.png" tile="48x8" />
+  <qg:spritesheet name="ball" src="assets/ball.png" tile="8" />
+
+  <qg:sound name="bounce" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound name="break" src="assets/kenney/audio/block.ogg" />
+  <qg:sound name="clank" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound name="boom" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound name="lost" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound name="clear" src="assets/kenney/audio/win.ogg" />
+
+  <!-- The serve: Space, Up, W or the joypad's A, as it is let go. -->
+  <qg:input action="jump" keys="Space, Up, W, JoyA" />
+
+  <!-- Two to four players, each on their own machine. The game starts as the
+       fourth joins, or when the host chooses to start with two or three. -->
+  <qg:multiplayer players="4" min-players="2" start="level" />
+
+  <!-- The ball flies at 150 px/s, a little faster every second. It bounces
+       off the sides and the top, and off a brick by the side it hit, which
+       takes a hit; the ball flashes as it does. -->
+  <qg:prefab name="Ball" tag="ball" sheet="ball" hitbox="8x8" ai="fly" heading="0.4,-1" speed="150" accel="1">
+    <qg:on-collision with="side">
+      <qg:deflect target="me" axis="x" />
+      <qg:play sound="bounce" volume="-8" vary="0.1" />
+    </qg:on-collision>
+    <qg:on-collision with="top">
+      <qg:deflect target="me" axis="y" />
+      <qg:play sound="bounce" volume="-8" vary="0.1" />
+    </qg:on-collision>
+    <qg:on-collision with="brick">
+      <q:if condition="{abs(me.x - other.x) > 16}">
+        <qg:deflect target="me" axis="x" />
+        <q:else><qg:deflect target="me" axis="y" /></q:else>
+      </q:if>
+      <qg:tween target="me" property="tint" from="#ffd060" to="#ffffff" seconds="0.3" />
+      <qg:damage target="other" amount="1" />
+    </qg:on-collision>
+    <qg:on-collision with="bomb">
+      <qg:deflect target="me" axis="y" />
+      <qg:tween target="me" property="tint" from="#ff5040" to="#ffffff" seconds="0.5" />
+      <qg:damage target="other" amount="1" />
+    </qg:on-collision>
+  </qg:prefab>
+
+  <!-- The bricks: five colours of one hit, steel of two (cracked after the
+       first), and the bomb, which breaks the bricks around it (the level's
+       qg:on-death of="bomb"). -->
+  <qg:prefab name="Red" tag="brick" sheet="bricks" frame="0" hitbox="32x12">
+    <qg:on-death>
+      <qg:play sound="break" vary="0.2" />
+      <qg:burst at="me" color="#d64040" count="10" />
+      <q:set name="score" value="{score + 50}" />
+    </qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="Orange" tag="brick" sheet="bricks" frame="1" hitbox="32x12">
+    <qg:on-death>
+      <qg:play sound="break" vary="0.2" />
+      <qg:burst at="me" color="#e88030" count="10" />
+      <q:set name="score" value="{score + 40}" />
+    </qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="Yellow" tag="brick" sheet="bricks" frame="2" hitbox="32x12">
+    <qg:on-death>
+      <qg:play sound="break" vary="0.2" />
+      <qg:burst at="me" color="#ecc838" count="10" />
+      <q:set name="score" value="{score + 30}" />
+    </qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="Green" tag="brick" sheet="bricks" frame="3" hitbox="32x12">
+    <qg:on-death>
+      <qg:play sound="break" vary="0.2" />
+      <qg:burst at="me" color="#58b858" count="10" />
+      <q:set name="score" value="{score + 20}" />
+    </qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="Blue" tag="brick" sheet="bricks" frame="4" hitbox="32x12">
+    <qg:on-death>
+      <qg:play sound="break" vary="0.2" />
+      <qg:burst at="me" color="#4884dc" count="10" />
+      <q:set name="score" value="{score + 10}" />
+    </qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="Steel" tag="brick" sheet="bricks" frame="5" hitbox="32x12" health="2">
+    <qg:state name="whole" frame="5" initial="true" />
+    <qg:state name="cracked" frame="6" />
+    <qg:on-damage>
+      <qg:play sound="clank" />
+      <qg:become target="me" state="cracked" />
+    </qg:on-damage>
+    <qg:on-death>
+      <qg:play sound="break" pitch="0.8" />
+      <qg:burst at="me" color="#969cac" count="16" />
+      <q:set name="score" value="{score + 80}" />
+    </qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="Bomb" tag="bomb" sheet="bricks" frame="7" hitbox="32x12">
+    <qg:on-death>
+      <qg:play sound="boom" />
+      <qg:burst at="me" color="#ff7040" count="24" />
+      <q:set name="score" value="{score + 100}" />
+    </qg:on-death>
+  </qg:prefab>
+
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="BRICKS" as="TIJOLOS" />
+    <qg:phrase text="Play alone" as="Jogar sozinho" />
+    <qg:phrase text="Play together" as="Jogar junto" />
+    <qg:phrase text="Quit" as="Sair" />
+    <qg:phrase text="Language" as="Idioma" />
+    <qg:phrase text="To the title" as="Para o título" />
+    <qg:phrase text="SCORE" as="PONTOS" />
+    <qg:phrase text="LIVES" as="VIDAS" />
+    <qg:phrase text="LEVEL" as="FASE" />
+    <qg:phrase text="SPACE: SERVE" as="ESPAÇO: SACAR" />
+    <qg:phrase text="TWO TO FOUR PLAYERS, EACH ON THEIR OWN MACHINE" as="DE DOIS A QUATRO JOGADORES, CADA UM NA SUA MÁQUINA" />
+    <qg:phrase text="EVERY BRICK IS BROKEN" as="TODOS OS TIJOLOS QUEBRADOS" />
+    <qg:phrase text="THE BALLS ARE GONE" as="AS BOLAS ACABARAM" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="BRICKS" as="LADRILLOS" />
+    <qg:phrase text="Play alone" as="Jugar solo" />
+    <qg:phrase text="Play together" as="Jugar juntos" />
+    <qg:phrase text="Quit" as="Salir" />
+    <qg:phrase text="Language" as="Idioma" />
+    <qg:phrase text="To the title" as="Al título" />
+    <qg:phrase text="SCORE" as="PUNTOS" />
+    <qg:phrase text="LIVES" as="VIDAS" />
+    <qg:phrase text="LEVEL" as="NIVEL" />
+    <qg:phrase text="SPACE: SERVE" as="ESPACIO: SACAR" />
+    <qg:phrase text="TWO TO FOUR PLAYERS, EACH ON THEIR OWN MACHINE" as="DE DOS A CUATRO JUGADORES, CADA UNO EN SU MÁQUINA" />
+    <qg:phrase text="EVERY BRICK IS BROKEN" as="TODOS LOS LADRILLOS ROTOS" />
+    <qg:phrase text="THE BALLS ARE GONE" as="SE ACABARON LAS PELOTAS" />
+  </qg:language>
+
+  <qg:scene name="title" width="320" height="240" background="#1c1a2c">
+    <qg:sprite sheet="bricks" frame="0" x="64" y="56" />
+    <qg:sprite sheet="bricks" frame="1" x="112" y="56" />
+    <qg:sprite sheet="bricks" frame="2" x="160" y="56" />
+    <qg:sprite sheet="bricks" frame="3" x="208" y="56" />
+    <qg:sprite sheet="bricks" frame="4" x="256" y="56" />
+    <qg:hud position="top-center" size="32"><qg:text value="{tr('BRICKS')}" /></qg:hud>
+    <qg:menu position="center" size="14">
+      <qg:button label="Play alone"><q:call function="anew" /><qg:goto-scene name="level" fade="0.3" /></qg:button>
+      <qg:button label="Play together"><q:call function="anew" /><qg:goto-scene name="together" /></qg:button>
+      <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
+      <!-- a desktop build quits; a page in a browser has nothing to quit to -->
+      <qg:button label="Quit" if="{can_quit()}"><qg:quit /></qg:button>
+    </qg:menu>
+    <q:function name="anew">
+      <q:set name="score" value="0" />
+      <q:set name="lives" value="3" />
+      <q:set name="level" value="1" />
+    </q:function>
+  </qg:scene>
+
+  <!-- Two to four machines: one hosts, the others join its address. The game
+       starts as the fourth joins, or when the host chooses to start sooner. -->
+  <qg:scene name="together" width="320" height="240" background="#1c1a2c">
+    <qg:hud position="top-center" size="10"><qg:text value="{tr('TWO TO FOUR PLAYERS, EACH ON THEIR OWN MACHINE')}" /></qg:hud>
+    <qg:lobby local="level" local-label="Play alone" size="12" />
+    <qg:on-input action="cancel">
+      <qg:leave />
+      <qg:goto-scene name="title" />
+    </qg:on-input>
+  </qg:scene>
+
+  <!-- A level: the bricks of levels[level - 1], a paddle for each player, the
+       ball served from the first paddle. -->
+  <qg:scene name="level" width="320" height="240" background="#1c1a2c" seed="1">
+    <q:set name="serving" value="true" type="boolean" />
+    <q:set name="done" value="false" type="boolean" />
+    <q:call function="build" args="{levels[int(level) - 1]}" />
+
+    <qg:hud position="top-left" size="10"><qg:text value="{tr('SCORE') + ' ' + str(score)}" /></qg:hud>
+    <qg:hud position="top-center" size="10"><qg:text value="{tr('LEVEL') + ' ' + str(int(level))}" /></qg:hud>
+    <qg:hud position="top-right" size="10"><qg:text value="{tr('LIVES') + ' ' + str(int(lives))}" /></qg:hud>
+    <qg:hud position="bottom-center" size="10"><qg:text value="{tr('SPACE: SERVE') if serving else ''}" /></qg:hud>
+
+    <!-- the walls: the sides and the top; the bottom is open -->
+    <qg:zone name="left-wall" tag="side" x="-20" y="0" width="20" height="240" />
+    <qg:zone name="right-wall" tag="side" x="320" y="0" width="20" height="240" />
+    <qg:zone name="ceiling" tag="top" x="0" y="0" width="320" height="16" />
+
+    <!-- A paddle runs along the bottom, kept on the screen. The ball leaves
+         it at a slant: straight up from its middle, more aslant towards its
+         ends. It squashes a little as it does. -->
+    <qg:character id="p1" controller="ship" player="1" axis="horizontal" speed="240"
+                  sheet="paddles" frame="0" x="160" y="226" hitbox="48x8">
+      <qg:on-collision with="ball"><q:call function="hit" args="me, other" /></qg:on-collision>
+    </qg:character>
+    <qg:character id="p2" controller="ship" player="2" axis="horizontal" speed="240" if="{net_players() >= 2}"
+                  sheet="paddles" frame="1" x="80" y="226" hitbox="48x8">
+      <qg:on-collision with="ball"><q:call function="hit" args="me, other" /></qg:on-collision>
+    </qg:character>
+    <qg:character id="p3" controller="ship" player="3" axis="horizontal" speed="240" if="{net_players() >= 3}"
+                  sheet="paddles" frame="2" x="240" y="226" hitbox="48x8">
+      <qg:on-collision with="ball"><q:call function="hit" args="me, other" /></qg:on-collision>
+    </qg:character>
+    <qg:character id="p4" controller="ship" player="4" axis="horizontal" speed="240" if="{net_players() >= 4}"
+                  sheet="paddles" frame="3" x="120" y="226" hitbox="48x8">
+      <qg:on-collision with="ball"><q:call function="hit" args="me, other" /></qg:on-collision>
+    </qg:character>
+    <q:function name="hit" params="paddle, ball">
+      <qg:deflect target="ball" dx="{(ball.x - paddle.x) / 24}" dy="-1" />
+      <qg:tween target="paddle" property="scale" from="1.2" to="1" seconds="0.2" trans="back" />
+      <qg:play sound="bounce" vary="0.1" />
+    </q:function>
+
+    <!-- The serve: as the action is let go, a ball leaves the first paddle. -->
+    <qg:on-input action="jump" on="release">
+      <q:if condition="{serving and not done}">
+        <q:set name="serving" value="false" />
+        <qg:spawn prefab="Ball" at="p1" dy="-10" />
+      </q:if>
+    </qg:on-input>
+
+    <!-- A ball out at the bottom is lost; with none left, a life. -->
+    <qg:on-screen-exit of="ball" side="bottom">
+      <qg:destroy target="other" />
+      <q:if condition="{count('ball') == 0 and not done}">
+        <qg:play sound="lost" />
+        <q:set name="lives" value="{lives - 1}" />
+        <q:if condition="{lives <= 0}">
+          <qg:goto-scene name="over" fade="0.5" />
+          <q:else><q:set name="serving" value="true" /></q:else>
+        </q:if>
+      </q:if>
+    </qg:on-screen-exit>
+
+    <!-- A bomb breaks every brick within a brick and a half of it. -->
+    <qg:on-death of="bomb">
+      <qg:shake at="other" frames="12" strength="3" />
+      <qg:for-each tag="brick" var="near">
+        <q:if condition="{distance(near, other) < 48}">
+          <qg:damage target="near" amount="2" />
+        </q:if>
+      </qg:for-each>
+      <q:call function="check" />
+    </qg:on-death>
+    <qg:on-death of="brick"><q:call function="check" /></qg:on-death>
+
+    <!-- The last brick: slow motion, the balls fade out, the paddle hops, the next level. -->
+    <q:function name="check">
+      <q:if condition="{count('brick') + count('bomb') == 0 and not done}">
+        <q:set name="done" value="true" />
+        <qg:play sound="clear" />
+        <qg:time-scale scale="0.25" seconds="1.5" />
+        <qg:for-each tag="ball" var="b">
+          <qg:tween target="b" property="alpha" to="0" seconds="0.3">
+            <qg:on-end><qg:destroy target="me" /></qg:on-end>
+          </qg:tween>
+        </qg:for-each>
+        <qg:tween target="p1" property="y" to="214" seconds="0.4" trans="quad" yoyo="true" repeat="1">
+          <qg:on-end><q:call function="next" /></qg:on-end>
+        </qg:tween>
+      </q:if>
+    </q:function>
+    <q:function name="next">
+      <q:if condition="{level >= len(levels)}">
+        <qg:goto-scene name="won" fade="0.5" />
+        <q:else>
+          <q:set name="level" value="{level + 1}" />
+          <qg:goto-scene name="level" fade="0.3" />
+        </q:else>
+      </q:if>
+    </q:function>
+
+    <!-- the level: a letter a brick, nine to a row -->
+    <q:function name="build" params="lines">
+      <q:loop var="r" from="0" to="{len(lines) - 1}">
+        <q:loop var="c" from="0" to="{len(lines[r]) - 1}">
+          <q:call function="place" args="{lines[r][c]}, {32 + c * 32}, {40 + r * 12}" />
+        </q:loop>
+      </q:loop>
+    </q:function>
+    <q:function name="place" params="kind, x, y">
+      <q:if condition="{kind == 'R'}"><qg:spawn prefab="Red" x="{x}" y="{y}" />
+        <q:elseif condition="{kind == 'O'}"><qg:spawn prefab="Orange" x="{x}" y="{y}" /></q:elseif>
+        <q:elseif condition="{kind == 'Y'}"><qg:spawn prefab="Yellow" x="{x}" y="{y}" /></q:elseif>
+        <q:elseif condition="{kind == 'G'}"><qg:spawn prefab="Green" x="{x}" y="{y}" /></q:elseif>
+        <q:elseif condition="{kind == 'B'}"><qg:spawn prefab="Blue" x="{x}" y="{y}" /></q:elseif>
+        <q:elseif condition="{kind == 'S'}"><qg:spawn prefab="Steel" x="{x}" y="{y}" /></q:elseif>
+        <q:elseif condition="{kind == 'X'}"><qg:spawn prefab="Bomb" x="{x}" y="{y}" /></q:elseif>
+      </q:if>
+    </q:function>
+  </qg:scene>
+
+  <qg:scene name="won" width="320" height="240" background="#1c1a2c">
+    <qg:hud position="top-center" size="14"><qg:text value="{tr('EVERY BRICK IS BROKEN')}" /></qg:hud>
+    <qg:hud position="center" size="12"><qg:text value="{tr('SCORE') + ' ' + str(score)}" /></qg:hud>
+    <qg:menu position="bottom-center" size="12">
+      <qg:button label="To the title"><qg:leave /><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <qg:scene name="over" width="320" height="240" background="#1c1a2c">
+    <qg:hud position="top-center" size="14"><qg:text value="{tr('THE BALLS ARE GONE')}" /></qg:hud>
+    <qg:hud position="center" size="12"><qg:text value="{tr('SCORE') + ' ' + str(score)}" /></qg:hud>
+    <qg:menu position="bottom-center" size="12">
+      <qg:button label="To the title"><qg:leave /><qg:goto-scene name="title" /></qg:button>
     </qg:menu>
   </qg:scene>
 

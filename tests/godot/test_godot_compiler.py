@@ -1079,7 +1079,9 @@ class TestExpressions:
         ('1 < coins <= 3', '((1 < coins) and (coins <= 3))'),
         ('"a" in name', '("a" in name)'),
         ('coins if name else 0', '(coins if name else 0)'),
-        ('items[0].x', 'items[0].x'),
+        ('items[0].x', 'Q.pos_x(items[0])'),            # a thing's place, or a dictionary's x
+        ('items[0].name', 'items[0].name'),
+        ('items[0].on_wall', 'Q.touching(items[0], "wall")'),
         ('items[1:3]', 'Q.slice(items, 1, 3)'),
         ('name[:2]', 'Q.slice(name, null, 2)'),
         ('items[-2:]', 'Q.slice(items, (-2), null)'),
@@ -1429,7 +1431,7 @@ class TestWhatTowersAsked:
         assert data['scenes']['main']['on_select'] == {'0': '_on_select_0'}
         script = (out / 'scripts' / 'scene_main.gd').read_text()
         assert 'func _on_select_0(cursor, other) -> void:' in script
-        assert 'Q.thing_at(self, "road", cursor.x, cursor.y)' in script and 'Q.count(self, "tower")' in script
+        assert 'Q.thing_at(self, "road", Q.pos_x(cursor), Q.pos_y(cursor))' in script and 'Q.count(self, "tower")' in script
         assert 'Q.spawn_at(self, "Tower", Vector2(cursor.x + 0.0, cursor.y + 0.0))' in script
         err = refuse(tmp_path, game('  <qg:scene name="main"><q:set name="x" value="0" type="number" />'
                                     '<qg:on-select><q:set name="x" value="1" /></qg:on-select></qg:scene>\n'))
@@ -1555,7 +1557,7 @@ class TestWhatChessAsked:
   </qg:scene>
 '''))
         script = (out / 'scripts' / 'scene_main.gd').read_text()
-        assert '\t\tQ.destroy(hit)\n' in script and '\tQ.put(get_node("mark"), cursor.x, (cursor.y + 1))\n' in script
+        assert '\t\tQ.destroy(hit)\n' in script and '\tQ.put(get_node("mark"), Q.pos_x(cursor), (Q.pos_y(cursor) + 1))\n' in script
 
 
 class TestMenus:
@@ -1620,12 +1622,14 @@ class TestLobby:
 ''' + TAIL)
         title = json.loads((out / 'game.json').read_text())['scenes']['title']
         menu, hud = title['nodes']
-        assert [i.get('label') for i in menu['items']] == ['Play here', 'Host a game', 'Address', 'Join', 'Cancel']
+        assert [i.get('label') for i in menu['items']] == ['Play here', 'Host a game', 'Address', 'Join', 'Watch',
+                                                           'Cancel']
         assert menu['items'][2] == {'kind': 'field', 'bind': 'lobby_address', 'label': 'Address', 'max_length': 64, 'game': False}
         assert hud['position'] == 'bottom-center' and 'value_method' in hud['items'][0]
         script = (out / 'scripts' / 'scene_title.gd').read_text()
         assert 'var lobby_address: Variant = Q.url_param("join", "10.0.0.2:9000")' in script
         assert '\tQ.net_host(9000)\n' in script and '\tQ.net_join(lobby_address)\n' in script
+        assert '\tQ.net_watch(lobby_address)\n' in script                 # no seat: to watch
         assert 'Q.goto_scene(self, "play")' in script
 
     def test_a_lobby_speaks_the_languages_its_game_declares(self, tmp_path):
@@ -1647,7 +1651,7 @@ class TestLobby:
 
     @pytest.mark.parametrize('source,message', [
         ('<qg:scene name="t"><qg:menu><qg:button label="H"><qg:host /></qg:button></qg:menu></qg:scene>',
-         'qg:host, qg:join and qg:leave need a <qg:multiplayer>'),
+         'qg:host, qg:join, qg:watch, qg:leave and qg:start-now need a <qg:multiplayer>'),
         ('<qg:scene name="t"><qg:lobby /></qg:scene>', '<qg:lobby> needs a <qg:multiplayer>'),
         ('<qg:multiplayer players="2" start="nowhere" /><qg:scene name="t" />', 'start="nowhere">: no scene of that name'),
         ('<qg:scene name="t"><qg:hud><qg:text /></qg:hud></qg:scene>', '<qg:text> takes bind= or value=, one of them'),
@@ -1657,25 +1661,21 @@ class TestLobby:
 
 
 class TestRollback:
-    def test_a_set_tile_is_not_taken_under_rollback(self, tmp_path):
-        e = refuse(tmp_path, HEAD + '''  <qg:multiplayer players="2" rollback="6" start="fight" />
+    def test_a_set_tile_and_a_tween_are_taken_under_rollback(self, tmp_path):
+        # both are kept so the rollback can take them back: the tilemap's changed cells, the
+        # scene's tweens as records (tween.gd); a tilemap is a scene's to hold under rollback
+        out = build(tmp_path, HEAD + '''  <qg:multiplayer players="2" rollback="6" start="fight" />
   <qg:scene name="fight">
+    <qg:tilemap tileset="k">
+1,1,1
+    </qg:tilemap>
     <qg:character id="a" controller="fighter" sheet="c" x="10" y="10" hitbox="8x8" />
     <qg:character id="b" controller="fighter" player="2" sheet="c" x="40" y="10" hitbox="8x8" />
-    <qg:timer after="1"><qg:set-tile col="0" row="0" tile="0" /></qg:timer>
+    <qg:timer after="1"><qg:set-tile col="0" row="0" tile="0" /><qg:tween target="a" property="scale" to="2" /></qg:timer>
   </qg:scene>
 ''' + TAIL)
-        assert 'has a qg:set-tile, which rollback cannot take back yet' in e.message
-
-    def test_a_tween_is_not_taken_under_rollback(self, tmp_path):
-        e = refuse(tmp_path, HEAD + '''  <qg:multiplayer players="2" rollback="6" start="fight" />
-  <qg:scene name="fight">
-    <qg:character id="a" controller="fighter" sheet="c" x="10" y="10" hitbox="8x8" />
-    <qg:character id="b" controller="fighter" player="2" sheet="c" x="40" y="10" hitbox="8x8" />
-    <qg:timer after="1"><qg:tween target="a" property="scale" to="2" /></qg:timer>
-  </qg:scene>
-''' + TAIL)
-        assert 'has a qg:tween, which rollback cannot take back yet' in e.message
+        script = (out / 'scripts' / 'scene_fight.gd').read_text(encoding='utf-8')
+        assert 'Q.set_tile(self, 0, 0, 0)' in script and 'Q.tween(get_node("a"), "scale", 2' in script
 
     def test_rollback_on_a_scene_of_fighters(self, tmp_path):
         out = build(tmp_path, HEAD + '''  <qg:input action="punch" keys="J" />

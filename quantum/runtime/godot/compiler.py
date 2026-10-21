@@ -169,6 +169,13 @@ class _Compiler:
                 raise GameCompileError('<qg:multiplayer delay=>: 1 or more', mp.line)
             self.multiplayer = {'players': mp.get('players'), 'delay': mp.get('delay'),
                                 'check_every': mp.get('check-every'), 'transport': mp.get('transport')}
+            if mp.get('min-players') is not None:
+                if not 2 <= mp.get('min-players') < mp.get('players'):
+                    raise GameCompileError('<qg:multiplayer min-players=>: 2 or more, and fewer than players=', mp.line)
+                if mp.get('rollback'):
+                    raise GameCompileError('<qg:multiplayer min-players=> goes with the plain lockstep, not rollback=',
+                                           mp.line)
+                self.multiplayer['min_players'] = mp.get('min-players')
             if mp.get('rollback'):
                 if mp.get('rollback') < 1:
                     raise GameCompileError('<qg:multiplayer rollback=>: 1 or more ticks (0 is off)', mp.line)
@@ -276,7 +283,8 @@ class _Compiler:
             for attr in ('fire-sound',):
                 if el.get(attr) and el.get(attr) not in sounds:
                     raise GameCompileError(f'{attr}="{el.get(attr)}": no qg:sound of that name', el.line)
-            states, initial_state = _states(el, pscript, name, for_prefab=True)
+            mark = len(pscript.states_used)   # the become target="me" of this prefab's own handlers, below
+            states, initial_state = _states(el, pscript, name, for_prefab=True, already=mark)
             handlers = []
             for i, h in enumerate(el.find_all('on-collision')):
                 hname = compile_handler(pscript, f'_{_ident(name)}_on_collision_{i}', h.children, h.line)
@@ -290,6 +298,11 @@ class _Compiler:
                 on_death = compile_handler(pscript, f'_{_ident(name)}_on_death', h.children, h.line)
             parts = self._prefab_parts(el, name, pscript)
             carry = self._prefab_items(el, name, pscript)
+            prefab_contacts = _contact_handlers(el, pscript, f'_{_ident(name)}')
+            for sname, line in pscript.states_used[mark:]:
+                if sname not in states:
+                    raise GameCompileError(f'<qg:become state="{sname}">: {name!r} has no qg:state of that name '
+                                           f'(it has: {", ".join(states) or "none"})', line)
             prefabs[name] = {'tag': el.get('tag') or name.lower(), 'sheet': el.get('sheet'),
                              'frame': el.get('frame'), 'hitbox': list(el.get('hitbox')),
                              'ai': el.get('ai'), 'speed': _speed(el.get('speed'), el.line), 'sight': el.get('sight'),
@@ -309,6 +322,7 @@ class _Compiler:
                              'on_collision': handlers, 'on_damage': on_damage, 'on_death': on_death,
                              'animations': _animations(el),
                              'on_animation_end': _animation_ends(el, pscript, f'_{_ident(name)}_on')}
+            prefabs[name].update(prefab_contacts)
             if parts:
                 prefabs[name]['parts'] = parts
             prefabs[name].update(carry)
@@ -329,7 +343,7 @@ class _Compiler:
         self._items_known(pscript.items_used)
         tags = {p['tag'] for p in prefabs.values()} | self._zone_tags
         for p_ in prefabs.values():
-            for h in p_['on_collision']:
+            for h in p_['on_collision'] + p_.get('on_separate', []):
                 if h['with'] not in tags:
                     raise GameCompileError(
                         f'<qg:on-collision with="{h["with"]}">: no prefab or zone has that tag '
@@ -343,12 +357,11 @@ class _Compiler:
         self._scenes_used.extend(self._prefab_scenes_used)
         self._scene_goes: Dict[str, List[str]] = {}
         self._scene_spawns: Dict[str, Optional[int]] = {}
-        self._scene_tweens: Dict[str, Optional[tuple]] = {}   # the first qg:tween or qg:set-tile
         for scene in g.scenes:
             scenes[scene.get('name')] = self._scene(scene, sheets, prefabs)
         if self.multiplayer is not None and self.multiplayer.get('rollback'):
             _check_rollback(self.multiplayer.get('start') or g.scenes[0].get('name'), scenes,
-                            self._scene_goes, self._scene_spawns, g.multiplayer.line, self._scene_tweens)
+                            self._scene_goes, self._scene_spawns, g.multiplayer.line)
         characters = {n['id'] for sc in scenes.values() for n in sc['nodes'] if n['kind'] == 'character'}
         tags = {p['tag'] for p in prefabs.values()}
         for who, tag, attr, line in self._part_targets:
@@ -664,6 +677,8 @@ class _Compiler:
         map_nodes: Dict[str, dict] = {}
         map_paths: List[dict] = []
         on_input: Dict[str, str] = {}
+        on_release: Dict[str, str] = {}
+        on_screen: List[dict] = []
         exits: Dict[str, dict] = {}
         zones: set = set()
         on_select: Dict[str, str] = {}
@@ -785,9 +800,19 @@ class _Compiler:
                     raise GameCompileError(
                         f'<qg:on-input action="{action}">: no such action (the defaults are '
                         f'{", ".join(DEFAULT_INPUTS)}; a qg:input declares another)', el.line)
-                if action in on_input:
-                    raise GameCompileError(f'two <qg:on-input action="{action}">', el.line)
-                on_input[action] = compile_handler(script, f'_on_input_{_ident(action)}', el.children, el.line)
+                pressing = el.get('on') == 'press'
+                table = on_input if pressing else on_release
+                if action in table:
+                    raise GameCompileError(f'two <qg:on-input action="{action}"'
+                                           f'{"" if pressing else " on=" + chr(34) + "release" + chr(34)}>', el.line)
+                table[action] = compile_handler(script, f'_on_{"input" if pressing else "release"}_{_ident(action)}',
+                                                el.children, el.line)
+            elif el.tag in ('on-screen-exit', 'on-screen-enter'):
+                if not el.get('of'):
+                    raise GameCompileError(f'<qg:{el.tag}> in a scene needs of= (a tag)', el.line)
+                on_screen.append({'of': el.get('of'), 'on': el.tag[len('on-screen-'):], 'side': el.get('side'),
+                                  'handler': compile_handler(script, f'_on_screen_{len(on_screen)}', el.children,
+                                                             el.line)})
             elif el.tag == 'on-select':
                 key = str(el.get('player') or 0)
                 if key in on_select:
@@ -1012,6 +1037,7 @@ class _Compiler:
                                                             h.line)}
                                 for i, h in enumerate(el.find_all('on-tile'))],
                     'on_animation_end': _animation_ends(el, script, f'_on_{_ident(cid)}'),
+                    **_contact_handlers(el, script, f'_on_{_ident(cid)}'),
                 })
                 self._node_elements.append(el)
             elif el.tag == 'instance':
@@ -1205,9 +1231,13 @@ class _Compiler:
         for tag in on_death:
             if tag not in tags:
                 raise GameCompileError(f'<qg:on-death of="{tag}">: no prefab has that tag', scene.line)
+        for h in on_screen:
+            if h['of'] not in tags:
+                raise GameCompileError(f'<qg:on-screen-{h["on"]} of="{h["of"]}">: no prefab has that tag '
+                                       f'(tags: {", ".join(sorted(tags)) or "none"})', scene.line)
         tags |= self._zone_tags
         for n in nodes:
-            for kind in ('on_collision', 'on_hit'):
+            for kind in ('on_collision', 'on_hit', 'on_separate'):
                 for h in n.get(kind, []):
                     if h['with'] not in tags:
                         raise GameCompileError(
@@ -1228,12 +1258,11 @@ class _Compiler:
                 raise GameCompileError(f'<qg:spawn path="{pname}">: no qg:path of that name in the scene '
                                        f'(paths: {", ".join(sorted(paths)) or "none"})', line)
         if script.net_used and self.multiplayer is None:
-            raise GameCompileError('qg:host, qg:join and qg:leave need a <qg:multiplayer> in q:application', script.net_used[0])
+            raise GameCompileError('qg:host, qg:join, qg:watch, qg:leave and qg:start-now need a <qg:multiplayer> in q:application', script.net_used[0])
         self._scene_exits[name] = set(exits)
         self._scenes_used.extend(script.scenes_used)
         self._scene_goes[name] = [s for s, _ in script.scenes_used]
         self._scene_spawns[name] = script.prefabs_used[0][1] if script.prefabs_used else None
-        self._scene_tweens[name] = script.unrollable[0] if script.unrollable else None
         for pname, line in script.prefabs_used:
             if pname not in prefabs:
                 raise GameCompileError(
@@ -1265,7 +1294,8 @@ class _Compiler:
             'name': name, 'script': f'res://scripts/{script_file}',
             'width': scene.get('width'), 'height': scene.get('height'),
             'background': scene.get('background'), 'seed': scene.get('seed'),
-            'nodes': nodes, 'map_paths': map_paths, 'on_input': on_input, 'on_death': on_death,
+            'nodes': nodes, 'map_paths': map_paths, 'on_input': on_input, 'on_release': on_release,
+            'on_screen': on_screen, 'on_death': on_death,
             'on_select': on_select, 'music': music,
         }
         if scene.get('save'):
@@ -1319,12 +1349,14 @@ _ENEMY_PARTS = ('seek', 'flee', 'keep-distance', 'patrol', 'wander', 'stand', 's
 
 
 # What a scene the rollback reaches may hold: nodes that save and load their whole state
-# and never go through Godot's physics, which cannot be run again inside one frame.
-_ROLLBACK_KINDS = {'character', 'timer', 'hud', 'sprite', 'menu', 'camera'}
+# and never go through Godot's physics, which cannot be run again inside one frame. A tilemap
+# saves the cells qg:set-tile changed (a fighter stands on its own floor, not on its tiles), and
+# the scene's tweens are records the rollback saves and runs again (tween.gd).
+_ROLLBACK_KINDS = {'character', 'timer', 'hud', 'sprite', 'menu', 'camera', 'tilemap'}
 
 
 def _check_rollback(start: str, scenes: dict, goes: Dict[str, List[str]], spawns: Dict[str, Optional[int]],
-                    line: Optional[int], tweens: Optional[Dict[str, Optional[tuple]]] = None) -> None:
+                    line: Optional[int]) -> None:
     reach, todo = set(), [start]
     while todo:
         s = todo.pop()
@@ -1339,14 +1371,10 @@ def _check_rollback(start: str, scenes: dict, goes: Dict[str, List[str]], spawns
                 raise GameCompileError(
                     f'<qg:multiplayer rollback=>: the scene {s!r} holds {what}, which goes through physics or '
                     f'keeps no state to roll back — rollback takes fighters, timers, menus, the HUD, pictures '
-                    f'and a camera (rollback="0" is the plain lockstep)', line)
+                    f'a tilemap and a camera (rollback="0" is the plain lockstep)', line)
         if spawns.get(s) is not None:
             raise GameCompileError(f'<qg:multiplayer rollback=>: the scene {s!r} places prefabs (qg:spawn, qg:swap), '
                                    f'which rollback cannot take back', spawns[s])
-        if (tweens or {}).get(s) is not None:
-            tag, at = tweens[s]
-            raise GameCompileError(f'<qg:multiplayer rollback=>: the scene {s!r} has a qg:{tag}, which rollback '
-                                   f'cannot take back yet', at)
 
 
 def _el(tag: str, line: Optional[int], children=(), **attrs) -> Element:
@@ -1366,14 +1394,16 @@ LOBBY_PHRASES = {
            'Could not connect': 'Não foi possível conectar',
            'Waiting for the other player to come back': 'Esperando o outro jogador voltar',
            'Catching up': 'Alcançando a partida', 'The other player left': 'O outro jogador saiu',
-           'The games differ: the match stopped': 'Os jogos divergiram: a partida parou'},
+           'The games differ: the match stopped': 'Os jogos divergiram: a partida parou',
+           'Start now': 'Começar agora', 'here': 'aqui', 'Watch': 'Assistir', 'Watching': 'Assistindo'},
     'es': {'Language': 'Idioma', 'Host a game': 'Crear una partida', 'Address': 'Dirección', 'Join': 'Unirse', 'Cancel': 'Cancelar',
            'Waiting for the other players on port': 'Esperando a los demás jugadores en el puerto',
            'Joining': 'Uniéndose a', 'Connected, starting...': 'Conectado, empezando...',
            'Could not connect': 'No se pudo conectar',
            'Waiting for the other player to come back': 'Esperando a que el otro jugador vuelva',
            'Catching up': 'Poniéndose al día', 'The other player left': 'El otro jugador se fue',
-           'The games differ: the match stopped': 'Las partidas difieren: el juego se detuvo'},
+           'The games differ: the match stopped': 'Las partidas difieren: el juego se detuvo',
+           'Start now': 'Empezar ya', 'here': 'aquí', 'Watch': 'Mirar', 'Watching': 'Mirando'},
 }
 
 # The label of a button for qg:next-language: "Language: English".
@@ -1403,12 +1433,21 @@ def _expand_lobbies(children: list, multiplayer: Optional[dict], languages: bool
             _el('button', line, [_el('host', line, port=port)], label='Host a game', **{'if': '{' + _IDLE + '}'}),
             _el('field', line, bind='lobby_address', label='Address'),
             _el('button', line, [_el('join', line, address='{lobby_address}')], label='Join', **{'if': '{' + _IDLE + '}'}),
+            *([] if multiplayer.get('rollback') else [   # one who only watches: not under the rollback
+                _el('button', line, [_el('watch', line, address='{lobby_address}')], label='Watch',
+                    **{'if': '{' + _IDLE + '}'})]),
             _el('button', line, [_el('leave', line)], label='Cancel', **{'if': '{' + _BUSY + '}'}),
         ]
+        least = multiplayer.get('min_players')
+        if least:   # fewer may play: the host starts with those who are there
+            buttons.insert(-1, _el('button', line, [_el('start-now', line)], label='Start now',
+                                   **{'if': '{' + f"(net_status() == 'hosting' or (net_status() == 'connected' and net_player() == 1)) "
+                                         f"and net_players() >= {least}" + '}'}))
         if languages:   # a game in several languages: a button to show the next one
             buttons.append(_el('button', line, [_el('next-language', line)], label=LANGUAGE_LABEL))
         # each part through tr(), in the player's language (LOBBY_PHRASES); the same text in English
-        status = ("{" + f"tr('Waiting for the other players on port') + ' {port}' if net_status() == 'hosting' else "
+        here = " + ' (' + str(net_players()) + ' ' + tr('here') + ')'" if least else ''   # how many are there
+        status = ("{" + f"tr('Waiting for the other players on port') + ' {port}'{here} if net_status() == 'hosting' else "
                   "(tr('Joining') + ' ' + lobby_address + '...' if net_status() == 'joining' else "
                   "(tr('Connected, starting...') if net_status() == 'connected' else "
                   "(tr('Could not connect') if net_status() == 'failed' else '')))" + "}")
@@ -1500,6 +1539,27 @@ def _animations(el: Element) -> Dict[str, dict]:
         out[name] = {'frames': frames, 'fps': a.get('fps')}
         if not a.get('loop'):
             out[name]['loop'] = False
+    return out
+
+
+def _contact_handlers(el: Element, script: SceneScript, prefix: str) -> dict:
+    """A character's or a prefab's qg:on-separate and qg:on-screen-exit/-enter handlers (`me` is itself)."""
+    out: dict = {}
+    separate = [{'with': h.get('with'),
+                 'handler': compile_handler(script, f'{prefix}_separate_{i}', h.children, h.line)}
+                for i, h in enumerate(el.find_all('on-separate'))]
+    screen = []
+    for tag in ('on-screen-exit', 'on-screen-enter'):
+        for i, h in enumerate(el.find_all(tag)):
+            if h.get('of'):
+                raise GameCompileError(f'of= is for a <qg:{tag}> in a scene; here it is about this one', h.line)
+            on = tag[len('on-screen-'):]
+            screen.append({'on': on, 'side': h.get('side'),
+                           'handler': compile_handler(script, f'{prefix}_screen_{on}_{i}', h.children, h.line)})
+    if separate:
+        out['on_separate'] = separate
+    if screen:
+        out['on_screen'] = screen
     return out
 
 

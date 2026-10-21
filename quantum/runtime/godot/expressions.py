@@ -53,6 +53,7 @@ _FUNCTIONS = {
     'nearest': 'Q.nearest({0}, {1})',        # the character of that id, or thing of that tag, nearest the first
     'sees': 'Q.sees({0}, {1})',              # no solid tile of the tilemap between the two
     'held': 'Q.items_held({0})',             # how many of a qg:item the players hold
+    'can_quit': 'Q.can_quit()',              # qg:quit would close the game (not in a browser)
 }
 
 _BIN = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*'}
@@ -207,6 +208,10 @@ class _Emitter:
         return f'({self.emit(node.body)} if {self.emit(node.test)} else {self.emit(node.orelse)})'
 
     def _Attribute(self, node: ast.Attribute) -> str:
+        if node.attr in ('x', 'y'):   # where a thing or a character is (or a cursor's point)
+            return f'Q.pos_{node.attr}({self.emit(node.value)})'
+        if node.attr in ('on_floor', 'on_wall', 'on_ceiling'):   # what a body touched as it last moved
+            return f'Q.touching({self.emit(node.value)}, "{node.attr[3:]}")'
         return f'{self.emit(node.value)}.{node.attr}'
 
     def _Subscript(self, node: ast.Subscript) -> str:

@@ -7,7 +7,7 @@ outline: [2, 3]
 
 **[All the games on one page →](https://quantumframework.net/games/)**
 
-Ten games written in the game language, each a single `.q` file in
+Twelve games written in the game language, each a single `.q` file in
 [`projects/`](https://github.com/danielgregorio/quantum/tree/main/projects), built by
 `quantum run`, replayed in CI from input tapes, and exported here by Godot
 4.4.1 for the browser, Linux and Windows. The browser builds run as
@@ -22,8 +22,10 @@ when it is pointed at.
 Pong, Arena, Chess and Towers are played by two, on one keyboard or over the
 network: on the title, one machine chooses **Host a game**, the other types
 the host's address and chooses **Join**, and both run the same game in
-lockstep (`PLAN_MULTIPLAYER.md` in the repository says how). The command
-line skips the title:
+lockstep (`PLAN_MULTIPLAYER.md` in the repository says how). Bricks is played
+by two to four, each on their own machine: it starts as the fourth joins, or
+when the host chooses **Start now** with two or three. The command line skips
+the title:
 
 ```
 ./pong.x86_64 -- --q-host=7777            # player 1 hosts on port 7777
@@ -95,6 +97,7 @@ It makes a room of its own and a link to send to a friend.
 | **Delve** | A dungeon crawl: a wall a lever opens and the skeletons that come through it, crushers, a skeleton archer, a vault two levers keep shut; alone, or two delvers over the network | [browser](https://quantumframework.net/games/delve/) | [Linux](https://quantumframework.net/games/delve/delve-linux.zip) · [Windows](https://quantumframework.net/games/delve/delve-windows.zip) | [delve.q](https://quantumframework.net/games/delve/source/) |
 | **Drift** | A vertical shooter: three waves from the scene's seed, drones and tanks that shoot, a boss with two phases, a high score kept between runs | [browser](https://quantumframework.net/games/drift/) | [Linux](https://quantumframework.net/games/drift/drift-linux.zip) · [Windows](https://quantumframework.net/games/drift/drift-windows.zip) | [drift.q](https://quantumframework.net/games/drift/source/) |
 | **Pong** | Godot's own Pong demo transcribed: two paddles, a ball that bounces; two players on one keyboard or over the network | [browser](https://quantumframework.net/games/pong/) | [Linux](https://quantumframework.net/games/pong/pong-linux.zip) · [Windows](https://quantumframework.net/games/pong/pong-windows.zip) | [pong.q](https://quantumframework.net/games/pong/source/) |
+| **Bricks** | A brick breaker: three levels, steel bricks, bombs that break their neighbours, the last brick in slow motion; alone, or two to four paddles over the network | [browser](https://quantumframework.net/games/bricks/) | [Linux](https://quantumframework.net/games/bricks/bricks-linux.zip) · [Windows](https://quantumframework.net/games/bricks/bricks-windows.zip) | [bricks.q](https://quantumframework.net/games/bricks/source/) |
 | **Creeps** | Godot's "Dodge the Creeps" tutorial game transcribed: creeps from the border at random speeds, a point a second | [browser](https://quantumframework.net/games/creeps/) | [Linux](https://quantumframework.net/games/creeps/creeps-linux.zip) · [Windows](https://quantumframework.net/games/creeps/creeps-windows.zip) | [creeps.q](https://quantumframework.net/games/creeps/source/) |
 | **Towers** | A tower defense: turrets that shoot the nearest dino, dinos down a road in waves, gold and a base; two builders over the network | [browser](https://quantumframework.net/games/towers/) | [Linux](https://quantumframework.net/games/towers/towers-linux.zip) · [Windows](https://quantumframework.net/games/towers/towers-windows.zip) | [towers.q](https://quantumframework.net/games/towers/source/) |
 | **Arena** | A one-on-one fighting game: moves with frame data, blocking, hit stun, rounds on a clock; two players on one keyboard or over the network | [browser](https://quantumframework.net/games/arena/) | [Linux](https://quantumframework.net/games/arena/arena-linux.zip) · [Windows](https://quantumframework.net/games/arena/arena-windows.zip) | [arena.q](https://quantumframework.net/games/arena/source/) |

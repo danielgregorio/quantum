@@ -39,13 +39,14 @@ class Tag:
 
 # The tags that hold a handler: actions (and q: statements), run when it fires.
 HANDLERS = ('on-collision', 'on-fall', 'on-input', 'on-select', 'on-hit', 'on-ko', 'on-death', 'on-tile',
-            'on-animation-end', 'on-locked', 'on-damage', 'timer', 'button', 'on-end')
+            'on-animation-end', 'on-locked', 'on-damage', 'timer', 'button', 'on-end', 'on-separate',
+            'on-screen-exit', 'on-screen-enter', 'for-each')
 
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
            'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
-           'play-animation', 'give', 'take', 'reset-items')
+           'play-animation', 'give', 'take', 'reset-items', 'for-each', 'time-scale', 'quit', 'start-now', 'watch')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -94,7 +95,11 @@ TAGS: Dict[str, Tag] = {
         'The players\' characters are told apart by player=; nobody declares keys for players 2... '
         'A player who leaves can come back: the others wait, and the next to join takes the seat, catching '
         'up the game so far (not under rollback=, where the game ends).',
-        {'players': Attr('int', required=True, doc='how many, 2 or more'),
+        {'players': Attr('int', required=True, doc='how many, 2 or more: the game starts by itself as the last '
+                                                     'of them joins'),
+         'min-players': Attr('int', None, doc='fewer may play: once this many are there, the host may start '
+                                              'the game (qg:start-now, or the lobby\'s Start now) with those who '
+                                              'are; `net_players()` then says how many play'),
          'delay': Attr('int', 3, doc='ticks between a press and its effect, everywhere: hides the round trip'),
          'check-every': Attr('int', 60, doc='ticks between comparisons of the whole state across peers; '
                                            'a difference is a desync, reported and fatal (0: never)'),
@@ -361,9 +366,30 @@ TAGS: Dict[str, Tag] = {
          'text': Attr('str', required=True, doc='the line, or an expression ({...}) read as it is shown')},
         parents=('dialogue',)),
     'on-end': Tag(
-        'What happens when a qg:dialogue has shown its last line. Holds actions and statements.',
+        'What happens when a qg:dialogue has shown its last line, or when a qg:tween is done (the last of its '
+        'repeats; `me` is the thing it moved, and another tween in it plays after: a sequence). Holds actions and '
+        'statements.',
         {},
-        parents=('dialogue',)),
+        parents=('dialogue', 'tween')),
+    'on-separate': Tag(
+        'What happens when this character or prefab stops touching something it touched: a plate stepped off, '
+        'a door that closes behind. Holds actions and statements; `me` is the one that touched, `other` what it '
+        'touched. Not when the other is destroyed: it left nothing.',
+        {'with': Attr('ident', required=True, doc='the tag of what it stops touching')},
+        parents=('character', 'prefab')),
+    'on-screen-exit': Tag(
+        'What happens when this character or prefab leaves the screen: the camera\'s view, or the scene when it '
+        'has no camera. In a scene, with of=, when any thing of that tag does (`other` is the thing). Holds '
+        'actions and statements; it runs in the game\'s tick, the same on every peer.',
+        {'of': Attr('ident', None, doc='scene: the tag'),
+         'side': Attr('enum:any|top|bottom|left|right', 'any', doc='the edge it left by')},
+        parents=('character', 'prefab', 'scene')),
+    'on-screen-enter': Tag(
+        'What happens when this character or prefab comes onto the screen from outside it (one placed on the '
+        'screen has not come onto it). In a scene, with of=, when any thing of that tag does.',
+        {'of': Attr('ident', None, doc='scene: the tag'),
+         'side': Attr('enum:any|top|bottom|left|right', 'any', doc='the edge it came in by')},
+        parents=('character', 'prefab', 'scene')),
     'zone': Tag(
         'An invisible rectangle with a tag: what touches it runs its qg:on-collision with= that tag.',
         {'name': Attr('ident', required=True),
@@ -483,8 +509,10 @@ TAGS: Dict[str, Tag] = {
          'requires': Attr('ident', None, doc='a scene name that must be in the game state `cleared`')},
         parents=('scene',)),
     'on-input': Tag(
-        'What happens when the player presses an action in this scene. Holds actions and statements.',
-        {'action': Attr('ident', required=True, doc='a default action, or one a qg:input declares')},
+        'What happens when the player presses an action in this scene, or lets it go (on="release"). Holds '
+        'actions and statements.',
+        {'action': Attr('ident', required=True, doc='a default action, or one a qg:input declares'),
+         'on': Attr('enum:press|release', 'press', doc='press: as it goes down; release: as it is let go')},
         parents=('scene',)),
     'on-hit': Tag(
         'What happens when this character\'s swing (attack-action) reaches something. Holds actions and statements.',
@@ -671,6 +699,38 @@ TAGS: Dict[str, Tag] = {
         {'item': Attr('ident', required=True, doc='a qg:item'),
          'amount': Attr('int', 1)},
         parents=('handler',)),
+    'for-each': Tag(
+        'Runs what it holds once for every thing of a tag in the scene, in the scene\'s order, with var= naming '
+        'the thing: freeze every enemy, break the bricks near a bomb. The things are those there as it starts; '
+        'one destroyed meanwhile is skipped.',
+        {'tag': Attr('ident', required=True, doc='the things\' tag'),
+         'var': Attr('ident', 'it', doc='the name of each thing in turn (a target=, an expression)')},
+        parents=('handler',)),
+    'time-scale': Tag(
+        'Slow motion, or fast: the whole game runs at this speed — its ticks come further apart (or closer), '
+        'each the same tick as ever, so a replay and every peer see the same game. The music is not slowed. A '
+        'new scene starts at 1.',
+        {'scale': Attr('float', required=True, doc='0.25: four times slower; 1: as usual; up to 4'),
+         'seconds': Attr('float', 0.0, doc='seconds as the player sees them, then back to 1 (0: until another '
+                                           'qg:time-scale)')},
+        parents=('handler',)),
+    'quit': Tag(
+        'Ends the game: the window closes. In a browser there is nothing to quit to and it does nothing; '
+        '`can_quit()` says whether it would.',
+        {},
+        parents=('handler',)),
+    'watch': Tag(
+        'Joins a networked game at an address with no seat, to watch it: the players\' inputs reach this '
+        'machine too, and it runs the same game, its keys doing nothing. One who comes after the game has begun '
+        'catches up on it first. `net_status()` is then "watching" and `net_player()` 0. Not under rollback=.',
+        {'address': Attr('expr', required=True, doc='host:port, or a relay\'s wss:// room')},
+        parents=('handler',)),
+    'start-now': Tag(
+        'The host starts the networked game with the players who are there, once qg:multiplayer\'s '
+        'min-players= are (before that, and on the other machines, it does nothing). The lobby has a Start now '
+        'button that does this.',
+        {},
+        parents=('handler',)),
     'reset-items': Tag(
         'A new game: every qg:item back to its start=, and the named things picked up or opened come back.',
         {},
@@ -721,20 +781,21 @@ TAGS: Dict[str, Tag] = {
     'deflect': Tag(
         'Changes where a flying thing (ai="fly") goes: flips one axis of its heading, or sets the heading '
         'to dx,dy (expressions; the length does not matter).',
-        {'target': Attr('enum:other|me', 'other'),
+        {'target': Attr('ident', 'other', doc='other, me, or a parameter, loop variable or q:set holding a thing'),
          'axis': Attr('enum:x|y', None, doc='the axis to flip'),
          'dx': Attr('expr', None), 'dy': Attr('expr', None)},
         parents=('handler',)),
     'become': Tag(
         'Changes a character or a thing to one of its qg:states.',
-        {'target': Attr('enum:me|other', 'me'),
+        {'target': Attr('ident', 'me', doc='other, me, or a parameter, loop variable or q:set holding a thing'),
          'state': Attr('ident', required=True)},
         parents=('handler',)),
     'spawn': Tag(
         'Places a new prefab instance in the scene.',
         {'prefab': Attr('ident', required=True),
-         'at': Attr('enum:other|me|cursor|path', 'other',
-                    doc='whose position; cursor: where the qg:on-select cursor is; path: the start of path='),
+         'at': Attr('ident', 'other',
+                    doc='whose position: other, me, a character id, or a parameter, loop variable or q:set holding '
+                        'a thing; cursor: where the qg:on-select cursor is; path: the start of path='),
          'path': Attr('ident', None, doc='at="path": a qg:path of the scene, which an ai="path" prefab follows'),
          'x': Attr('expr', None, doc='a point of the scene instead of at= (with y=): an expression, in pixels'),
          'y': Attr('expr', None),
@@ -752,18 +813,18 @@ TAGS: Dict[str, Tag] = {
         parents=('handler',)),
     'damage': Tag(
         'Takes health from a thing; at 0 its qg:on-death runs and it goes.',
-        {'target': Attr('enum:other|me', 'other'),
+        {'target': Attr('ident', 'other', doc='other, me, or a parameter, loop variable or q:set holding a thing'),
          'amount': Attr('int', 1)},
         parents=('handler',)),
     'burst': Tag(
         'A puff of particles where a thing is. Cosmetic.',
-        {'at': Attr('enum:other|me', 'me'),
+        {'at': Attr('ident', 'me', doc='other, me, or a parameter, loop variable or q:set holding a thing'),
          'color': Attr('color', '#ffffff'),
          'count': Attr('int', 12)},
         parents=('handler',)),
     'shake': Tag(
         'Shakes the scene a thing is in. Cosmetic.',
-        {'at': Attr('enum:other|me', 'me'),
+        {'at': Attr('ident', 'me', doc='other, me, or a parameter, loop variable or q:set holding a thing'),
          'frames': Attr('int', 10),
          'strength': Attr('float', 3.0, doc='pixels')},
         parents=('handler',)),
@@ -772,9 +833,10 @@ TAGS: Dict[str, Tag] = {
         'that slides, a pulse. It runs in the game\'s ticks, so a replay and every peer see the same; it stops '
         'while the scene is paused, and a new tween of the same property replaces it.',
         {'target': Attr('ident', 'me', doc='me, other, a character id, or a q:set holding a thing'),
-         'property': Attr('enum:x|y|rotation|scale|alpha', required=True,
-                          doc='x, y: where it is (collisions see it); rotation (degrees), scale, alpha: its picture'),
-         'to': Attr('expr', required=True),
+         'property': Attr('enum:x|y|rotation|scale|alpha|tint', required=True,
+                          doc='x, y: where it is (collisions see it); rotation (degrees), scale, alpha, tint (a '
+                              'colour its picture is multiplied by: #ffffff is as drawn): its picture'),
+         'to': Attr('expr', required=True, doc='a number, or for tint a colour (#rrggbb)'),
          'from': Attr('expr', None, doc='where it starts (what it is now when not given)'),
          'seconds': Attr('float', 0.5),
          'trans': Attr('enum:linear|sine|quad|cubic|back|bounce|elastic', 'sine', doc='the curve'),

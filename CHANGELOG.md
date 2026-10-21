@@ -10,6 +10,69 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: Bricks (`projects/bricks/bricks.q`), a brick breaker for one,
+  or two to four over the network, written for the tags below: three levels
+  written as lines of letters and built by a `q:loop`, steel bricks of two
+  hits, bombs that break the bricks around them, the serve as jump is let go,
+  a ball lost off the bottom, the last brick in slow motion and a sequence of
+  tweens after it. Its art is drawn by `scripts/art/bricks.py` (CC0). On the
+  games page, and replayed in CI (`tests/godot/test_godot_bricks.py`).
+- Laboratory: what a contact ending does. `<qg:on-separate with=>` on a
+  character or a prefab runs when it stops touching something of that tag (a
+  plate stepped off, a door that closes behind); not when the other is
+  destroyed, nor because the scene was paused.
+- Laboratory: the screen's edges. `<qg:on-screen-exit side=>` and
+  `<qg:on-screen-enter side=>` on a character or a prefab, or in a scene with
+  `of=` a tag, run when it leaves the screen or comes onto it, by any edge or
+  one (`top`, `bottom`, `left`, `right`). The screen is the camera's view,
+  worked out in the game's ticks, or the scene without a camera; a thing
+  placed off the screen has not left it. A `screen` event reaches the play
+  protocol.
+- Laboratory: `<qg:on-input action= on="release">` runs as the action is let
+  go (`on="press"`, the default, as it goes down).
+- Laboratory: `<qg:for-each tag= var=>` runs what it holds for every thing of
+  a tag in the scene, `var=` naming each in turn; one destroyed meanwhile is
+  skipped.
+- Laboratory: slow motion. `<qg:time-scale scale= seconds=>` runs the whole
+  game slower (or faster, up to 4) for `seconds=` as the player sees them, or
+  until the next one; a new scene starts at 1. The ticks come further apart
+  and each is the same tick as ever (the engine runs fewer ticks a second and
+  slows its clock as much, as the lockstep's catching up already did, which
+  now multiplies in), so a replay and every peer see the same game.
+- Laboratory: `<qg:quit>` closes the game; in a browser it does nothing, and
+  `can_quit()` says whether it would (a Quit button with `if="{can_quit()}"`).
+  In a replay or a play session it is a `quit` event and the game goes on.
+- Laboratory: a tween's end. `<qg:on-end>` inside a `qg:tween` runs when it is
+  done (the last of its repeats), with `me` the thing it moved; a tween in it
+  plays next, so tweens make sequences. `property="tint"` eases the colour a
+  picture is multiplied by (`from="#ff4040" to="#ffffff"`), reported as
+  `tint` in the state while it is not white.
+- Laboratory: up to four players, or fewer. `<qg:multiplayer min-players=>`
+  lets the host start before every seat is taken: `<qg:start-now>`, the
+  lobby's **Start now** (and how many are there), or `--q-players=N` on the
+  command line. Every peer learns how many play as the game starts, and
+  `net_players()` says it.
+- Laboratory: watching a networked game. `<qg:watch address=>`, the lobby's
+  **Watch** button and `--q-watch=HOST:PORT` join with no seat: the players'
+  inputs reach this machine too and it runs the same game, its keys doing
+  nothing; one who comes after the start catches up on the game so far, as a
+  rejoining player does. `net_status()` is then `watching`. Up to eight watch
+  a game; not under `rollback=`.
+- Laboratory: tweens and `qg:set-tile` under rollback. A scene's tweens are
+  now records in one node per scene (`Tweens`), which the rollback saves and
+  runs again with the rest, the looks they touched included; a tilemap saves
+  the cells `qg:set-tile` changed. A rollback scene may hold a tilemap.
+- Laboratory: in expressions, `a.x` and `a.y` read where a thing or a
+  character is (`other.x - me.x`); before, `hero.x` compiled and stopped the
+  game in Godot. `me.on_wall` and `me.on_ceiling` read what a body touched as
+  it last moved, as `me.on_floor` does, for every controller.
+- Laboratory: a prefab that does not move (an item, a solid block) has
+  health, `qg:on-damage`, `qg:on-death` and `qg:state`s as one that moves
+  does; before, `qg:damage` and `qg:become` did nothing to it.
+- Laboratory: a thing's name where a target goes. `target=` of `qg:damage`,
+  `qg:become` and `qg:deflect`, `at=` of `qg:burst`, `qg:shake` and
+  `qg:spawn` take a parameter, a loop variable or a q:set holding a thing, and
+  `qg:spawn at=` a character's id, as `qg:destroy` and `qg:tween` already did.
 - The games page (`/games/`) shows each game's source: **View the source**
   opens `/games/<name>/source/`, the whole `.q` (and a level drawn in Tiled,
   in a tab of its own) highlighted, every line numbered and a link
@@ -453,6 +516,17 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- Laboratory: `qg:become target="me"` in a prefab's handler was checked
+  against the states of every prefab declared after it, so a second prefab
+  without that state failed to compile.
+- Laboratory: a player rejoining a networked game could wait for good at the
+  tick it caught up to: a frame another player sent as it joined reached it
+  before the host's inputs so far, which replaced it, or never reached it at
+  all. The inputs so far are merged with what has come, and the host hands
+  on every frame to whoever came late.
+- Laboratory: `count()` and `qg:for-each` leave out a thing whose health has
+  reached 0 while its `qg:on-death` runs, so the last brick's handler sees
+  none left.
 - A `ui:tabpanel` in a served page switches its tabs on a click (UI-7): the
   page got the tabs' markup and CSS but not their script, so the first tab
   was the only one a browser could show. The script is one listener for every

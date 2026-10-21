@@ -423,6 +423,92 @@
         "multiplayer",
         "rollback"
       ]
+    },
+    {
+      "id": "game-bad-025",
+      "intent": "A loop name that is taken",
+      "input": {
+        "natural_language": "Damage every coin, naming each one other",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:timer after=\"1\">\n      <qg:for-each tag=\"coin\" var=\"paused\"><qg:damage target=\"paused\" amount=\"1\" /></qg:for-each>\n    </qg:timer>\n    <q:set name=\"paused\" value=\"false\" type=\"boolean\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "the name is taken here"
+      },
+      "why_invalid": "The name of each thing must not hide a state, a parameter or another loop variable.",
+      "correction": "Choose another name: var=\"coin\".",
+      "tags": [
+        "for-each"
+      ]
+    },
+    {
+      "id": "game-bad-026",
+      "intent": "Time stopped",
+      "input": {
+        "natural_language": "Freeze time with a time scale of zero",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:timer after=\"1\"><qg:time-scale scale=\"0\" /></qg:timer>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "scale= more than 0 and up to 4"
+      },
+      "why_invalid": "A game whose ticks never come stops for good; qg:pause is the way to stop a scene.",
+      "correction": "Use <qg:pause /> and <qg:resume />, or a small scale such as 0.1.",
+      "tags": [
+        "time-scale"
+      ]
+    },
+    {
+      "id": "game-bad-027",
+      "intent": "A screen handler of a scene without a tag",
+      "input": {
+        "natural_language": "Do something when anything leaves the screen",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:sound name=\"out\" src=\"assets/kenney/audio/hurt.ogg\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:on-screen-exit><qg:play sound=\"out\" /></qg:on-screen-exit>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "needs of= (a tag)"
+      },
+      "why_invalid": "In a scene the handler is about the things of one tag; in a character or prefab it is about that one.",
+      "correction": "Write of=\"coin\" (a prefab's tag), or put the handler in the prefab.",
+      "tags": [
+        "on-screen-exit"
+      ]
+    },
+    {
+      "id": "game-bad-028",
+      "intent": "Fewer players than players",
+      "input": {
+        "natural_language": "A game for two that may start with two",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:multiplayer players=\"2\" min-players=\"2\" />\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "2 or more, and fewer than players="
+      },
+      "why_invalid": "min-players= says how many fewer may start; the same number is players= itself.",
+      "correction": "Leave min-players= out, or raise players=.",
+      "tags": [
+        "multiplayer"
+      ]
+    },
+    {
+      "id": "game-bad-029",
+      "intent": "Statements straight inside a tween",
+      "input": {
+        "natural_language": "When the tween ends, add a point",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"points\" value=\"0\" type=\"number\" />\n    <qg:instance prefab=\"Coin\" name=\"c\" x=\"40\" y=\"40\" />\n    <qg:timer after=\"1\">\n      <qg:tween target=\"c\" property=\"y\" to=\"20\" seconds=\"0.5\"><q:set name=\"points\" value=\"{points + 1}\" /></qg:tween>\n    </qg:timer>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "holds one <qg:on-end> at most, and nothing else"
+      },
+      "why_invalid": "A tween runs over many ticks; what follows it runs when it is done, in its qg:on-end.",
+      "correction": "Wrap it: <qg:tween ...><qg:on-end><q:set .../></qg:on-end></qg:tween>.",
+      "tags": [
+        "tween",
+        "on-end"
+      ]
     }
   ]
 }

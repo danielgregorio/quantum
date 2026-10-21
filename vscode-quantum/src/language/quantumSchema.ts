@@ -1379,7 +1379,8 @@ export const gameTags: TagSchema[] = [
         description: 'The game is played by several people, each on their own machine, in lockstep: every peer runs the whole game and a tick runs when every player\'s input for it has arrived. One hosts (`--q-host=PORT`, player 1), the others join (`--q-join=HOST:PORT`, players 2.. in order). The players\' characters are told apart by player=; nobody declares keys for players 2... A player who leaves can come back: the others wait, and the next to join takes the seat, catching up the game so far (not under rollback=, where the game ends).',
         category: 'Game',
         attributes: [
-            { name: 'players', description: 'how many, 2 or more', required: true, type: 'number' },
+            { name: 'players', description: 'how many, 2 or more: the game starts by itself as the last of them joins', required: true, type: 'number' },
+            { name: 'min-players', description: 'fewer may play: once this many are there, the host may start the game (qg:start-now, or the lobby\'s Start now) with those who are; `net_players()` then says how many play', type: 'number' },
             { name: 'delay', description: 'ticks between a press and its effect, everywhere: hides the round trip', type: 'number', default: '3' },
             { name: 'check-every', description: 'ticks between comparisons of the whole state across peers; a difference is a desync, reported and fatal (0: never)', type: 'number', default: '60' },
             { name: 'rollback', description: 'rollback instead of waiting: up to this many ticks run ahead on a guess of the others\' input and are run again when it was wrong (0: plain lockstep). The scenes the networked game reaches may only hold fighters, timers, menus, the HUD, pictures and a camera — nothing that goes through physics', type: 'number', default: '0' },
@@ -1455,7 +1456,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'A kind of thing the scene places with qg:instance. With ai= it moves.',
         category: 'Game',
-        allowedChildren: ['qg:state', 'qg:animation', 'qg:on-collision', 'qg:on-damage', 'qg:on-death', 'qg:behavior', 'qg:on-animation-end', 'qg:on-locked'],
+        allowedChildren: ['qg:state', 'qg:animation', 'qg:on-separate', 'qg:on-screen-exit', 'qg:on-screen-enter', 'qg:on-collision', 'qg:on-damage', 'qg:on-death', 'qg:behavior', 'qg:on-animation-end', 'qg:on-locked'],
         attributes: [
             { name: 'name', description: '', required: true, type: 'string' },
             { name: 'tag', description: 'what collisions see it as (`with="coin"`)', type: 'string' },
@@ -1528,7 +1529,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'A screen of the game. The first one is where the game starts.',
         category: 'Game',
-        allowedChildren: ['qg:tilemap', 'qg:character', 'qg:instance', 'qg:cursor', 'qg:path', 'qg:on-select', 'qg:menu', 'qg:dialogue', 'qg:zone', 'qg:parallax', 'qg:sprite', 'qg:emitter', 'qg:exit', 'qg:camera', 'qg:hud', 'qg:on-death', 'qg:timer', 'qg:spawner', 'qg:map-node', 'qg:map-path', 'qg:on-input', 'qg:play', 'qg:music', 'qg:stop', 'qg:lobby'],
+        allowedChildren: ['qg:tilemap', 'qg:character', 'qg:instance', 'qg:cursor', 'qg:path', 'qg:on-select', 'qg:menu', 'qg:dialogue', 'qg:on-screen-exit', 'qg:on-screen-enter', 'qg:zone', 'qg:parallax', 'qg:sprite', 'qg:emitter', 'qg:exit', 'qg:camera', 'qg:hud', 'qg:on-death', 'qg:timer', 'qg:spawner', 'qg:map-node', 'qg:map-path', 'qg:on-input', 'qg:play', 'qg:music', 'qg:stop', 'qg:lobby'],
         attributes: [
             { name: 'name', description: '', required: true, type: 'string' },
             { name: 'width', description: '', type: 'number', default: '256' },
@@ -1554,7 +1555,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'A body the player moves: a platformer, or a walker on a world map.',
         category: 'Game',
-        allowedChildren: ['qg:state', 'qg:animation', 'qg:on-collision', 'qg:on-hit', 'qg:on-fall', 'qg:move', 'qg:behavior', 'qg:on-tile', 'qg:on-animation-end', 'qg:on-ko'],
+        allowedChildren: ['qg:state', 'qg:animation', 'qg:on-separate', 'qg:on-screen-exit', 'qg:on-screen-enter', 'qg:on-collision', 'qg:on-hit', 'qg:on-fall', 'qg:move', 'qg:behavior', 'qg:on-tile', 'qg:on-animation-end', 'qg:on-ko'],
         attributes: [
             { name: 'id', description: '', required: true, type: 'string' },
             { name: 'controller', description: 'grid: steps from cell to cell of the tilemap; the tiles of a layer with collision, and the things, stop it, and stepping into a thing runs its qg:on-collision with the thing\'s tag; `me.col` and `me.row` are its cell. behavior: made of the parts its qg:behavior lists', required: true, type: 'enum', values: ['platformer', 'map', 'topdown', 'ship', 'fighter', 'grid', 'behavior'] },
@@ -1637,7 +1638,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when a player presses select with their qg:cursor somewhere. Holds actions and statements; `cursor` is where (x, y, col, row, player), `other` the thing under it, or null.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
         attributes: [
             { name: 'player', description: 'only this player\'s cursor (any, when not given)', type: 'number' },
         ]
@@ -1661,7 +1662,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'A button of a qg:menu. What it holds runs when it is chosen: actions and statements, like a handler.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
         attributes: [
             { name: 'label', description: 'its text, or an expression ({...}) read every frame', required: true, type: 'string' },
             { name: 'if', description: 'shown, and choosable, only while this is true', type: 'expression' },
@@ -1703,10 +1704,42 @@ export const gameTags: TagSchema[] = [
     {
         name: 'on-end',
         namespace: 'qg',
-        description: 'What happens when a qg:dialogue has shown its last line. Holds actions and statements.',
+        description: 'What happens when a qg:dialogue has shown its last line, or when a qg:tween is done (the last of its repeats; `me` is the thing it moved, and another tween in it plays after: a sequence). Holds actions and statements.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
         attributes: [
+        ]
+    },
+    {
+        name: 'on-separate',
+        namespace: 'qg',
+        description: 'What happens when this character or prefab stops touching something it touched: a plate stepped off, a door that closes behind. Holds actions and statements; `me` is the one that touched, `other` what it touched. Not when the other is destroyed: it left nothing.',
+        category: 'Game',
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        attributes: [
+            { name: 'with', description: 'the tag of what it stops touching', required: true, type: 'string' },
+        ]
+    },
+    {
+        name: 'on-screen-exit',
+        namespace: 'qg',
+        description: 'What happens when this character or prefab leaves the screen: the camera\'s view, or the scene when it has no camera. In a scene, with of=, when any thing of that tag does (`other` is the thing). Holds actions and statements; it runs in the game\'s tick, the same on every peer.',
+        category: 'Game',
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        attributes: [
+            { name: 'of', description: 'scene: the tag', type: 'string' },
+            { name: 'side', description: 'the edge it left by', type: 'enum', values: ['any', 'top', 'bottom', 'left', 'right'], default: 'any' },
+        ]
+    },
+    {
+        name: 'on-screen-enter',
+        namespace: 'qg',
+        description: 'What happens when this character or prefab comes onto the screen from outside it (one placed on the screen has not come onto it). In a scene, with of=, when any thing of that tag does.',
+        category: 'Game',
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        attributes: [
+            { name: 'of', description: 'scene: the tag', type: 'string' },
+            { name: 'side', description: 'the edge it came in by', type: 'enum', values: ['any', 'top', 'bottom', 'left', 'right'], default: 'any' },
         ]
     },
     {
@@ -1831,7 +1864,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when this character or prefab touches something. Holds actions and statements; `me` is the toucher, `other` what it touched. In a prefab, only the game state is in reach.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
         attributes: [
             { name: 'with', description: 'the tag of what it touches', required: true, type: 'string' },
             { name: 'side', description: 'top: landing on it; bottom: hitting it from below. A side handler runs before the "any" one, which then does not', type: 'enum', values: ['any', 'top', 'bottom'], default: 'any' },
@@ -1843,7 +1876,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when this prefab takes qg:damage and lives (`me.health` is what is left).',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
         attributes: [
         ]
     },
@@ -1852,7 +1885,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when this prefab\'s health reaches 0, before it goes. In a scene, with of=, when any thing of that tag dies there.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
         attributes: [
             { name: 'of', description: 'scene: the tag', type: 'string' },
         ]
@@ -1862,7 +1895,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'Runs its handler after so many ticks, or every so many ticks, in this scene.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
         attributes: [
             { name: 'after', description: 'ticks from entering the scene, once', type: 'number' },
             { name: 'every', description: 'ticks between runs, from entering the scene (or from=)', type: 'number' },
@@ -1915,11 +1948,12 @@ export const gameTags: TagSchema[] = [
     {
         name: 'on-input',
         namespace: 'qg',
-        description: 'What happens when the player presses an action in this scene. Holds actions and statements.',
+        description: 'What happens when the player presses an action in this scene, or lets it go (on="release"). Holds actions and statements.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
         attributes: [
             { name: 'action', description: 'a default action, or one a qg:input declares', required: true, type: 'string' },
+            { name: 'on', description: 'press: as it goes down; release: as it is let go', type: 'enum', values: ['press', 'release'], default: 'press' },
         ]
     },
     {
@@ -1927,7 +1961,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when this character\'s swing (attack-action) reaches something. Holds actions and statements.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
         attributes: [
             { name: 'with', description: 'the tag of what it hits', required: true, type: 'string' },
         ]
@@ -1937,7 +1971,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when this character falls below the tilemap. Holds actions and statements.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
         attributes: [
         ]
     },
@@ -2136,7 +2170,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens while this character touches a tile of a kind (qg:tile kind=): stands on it, is in it, or bumps it. Holds actions and statements; `me` is the character. Without a cooldown, once as it comes to touch one; with one, again each time the cooldown runs out while it still does.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
         attributes: [
             { name: 'kind', description: '', required: true, type: 'enum', values: ['ladder', 'water', 'ice', 'hurt'] },
             { name: 'cooldown', description: 'ticks before it may run again while still touching', type: 'number', default: '0' },
@@ -2147,7 +2181,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when an animation of this character or prefab with loop="false" has played to its last frame. Holds actions and statements; `me` is whose animation it is.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
         attributes: [
             { name: 'name', description: 'the animation', required: true, type: 'string' },
         ]
@@ -2157,7 +2191,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when this fighter\'s health reaches 0. Holds actions and statements; `me` is the loser, `other` the winner.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
         attributes: [
         ]
     },
@@ -2188,7 +2222,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when a character bumps this prefab (opens-with=) without the item. Holds actions and statements; `me` is the locked thing, `other` the character.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
         attributes: [
         ]
     },
@@ -2210,6 +2244,52 @@ export const gameTags: TagSchema[] = [
         attributes: [
             { name: 'item', description: 'a qg:item', required: true, type: 'string' },
             { name: 'amount', description: '', type: 'number', default: '1' },
+        ]
+    },
+    {
+        name: 'for-each',
+        namespace: 'qg',
+        description: 'Runs what it holds once for every thing of a tag in the scene, in the scene\'s order, with var= naming the thing: freeze every enemy, break the bricks near a bomb. The things are those there as it starts; one destroyed meanwhile is skipped.',
+        category: 'Game',
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:shake', 'qg:tween', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue'],
+        attributes: [
+            { name: 'tag', description: 'the things\' tag', required: true, type: 'string' },
+            { name: 'var', description: 'the name of each thing in turn (a target=, an expression)', type: 'string', default: 'it' },
+        ]
+    },
+    {
+        name: 'time-scale',
+        namespace: 'qg',
+        description: 'Slow motion, or fast: the whole game runs at this speed — its ticks come further apart (or closer), each the same tick as ever, so a replay and every peer see the same game. The music is not slowed. A new scene starts at 1.',
+        category: 'Game',
+        attributes: [
+            { name: 'scale', description: '0.25: four times slower; 1: as usual; up to 4', required: true, type: 'number' },
+            { name: 'seconds', description: 'seconds as the player sees them, then back to 1 (0: until another qg:time-scale)', type: 'number', default: '0' },
+        ]
+    },
+    {
+        name: 'quit',
+        namespace: 'qg',
+        description: 'Ends the game: the window closes. In a browser there is nothing to quit to and it does nothing; `can_quit()` says whether it would.',
+        category: 'Game',
+        attributes: [
+        ]
+    },
+    {
+        name: 'watch',
+        namespace: 'qg',
+        description: 'Joins a networked game at an address with no seat, to watch it: the players\' inputs reach this machine too, and it runs the same game, its keys doing nothing. One who comes after the game has begun catches up on it first. `net_status()` is then "watching" and `net_player()` 0. Not under rollback=.',
+        category: 'Game',
+        attributes: [
+            { name: 'address', description: 'host:port, or a relay\'s wss:// room', required: true, type: 'expression' },
+        ]
+    },
+    {
+        name: 'start-now',
+        namespace: 'qg',
+        description: 'The host starts the networked game with the players who are there, once qg:multiplayer\'s min-players= are (before that, and on the other machines, it does nothing). The lobby has a Start now button that does this.',
+        category: 'Game',
+        attributes: [
         ]
     },
     {
@@ -2296,7 +2376,7 @@ export const gameTags: TagSchema[] = [
         description: 'Changes where a flying thing (ai="fly") goes: flips one axis of its heading, or sets the heading to dx,dy (expressions; the length does not matter).',
         category: 'Game',
         attributes: [
-            { name: 'target', description: '', type: 'enum', values: ['other', 'me'], default: 'other' },
+            { name: 'target', description: 'other, me, or a parameter, loop variable or q:set holding a thing', type: 'string', default: 'other' },
             { name: 'axis', description: 'the axis to flip', type: 'enum', values: ['x', 'y'] },
             { name: 'dx', description: '', type: 'expression' },
             { name: 'dy', description: '', type: 'expression' },
@@ -2308,7 +2388,7 @@ export const gameTags: TagSchema[] = [
         description: 'Changes a character or a thing to one of its qg:states.',
         category: 'Game',
         attributes: [
-            { name: 'target', description: '', type: 'enum', values: ['me', 'other'], default: 'me' },
+            { name: 'target', description: 'other, me, or a parameter, loop variable or q:set holding a thing', type: 'string', default: 'me' },
             { name: 'state', description: '', required: true, type: 'string' },
         ]
     },
@@ -2319,7 +2399,7 @@ export const gameTags: TagSchema[] = [
         category: 'Game',
         attributes: [
             { name: 'prefab', description: '', required: true, type: 'string' },
-            { name: 'at', description: 'whose position; cursor: where the qg:on-select cursor is; path: the start of path=', type: 'enum', values: ['other', 'me', 'cursor', 'path'], default: 'other' },
+            { name: 'at', description: 'whose position: other, me, a character id, or a parameter, loop variable or q:set holding a thing; cursor: where the qg:on-select cursor is; path: the start of path=', type: 'string', default: 'other' },
             { name: 'path', description: 'at="path": a qg:path of the scene, which an ai="path" prefab follows', type: 'string' },
             { name: 'x', description: 'a point of the scene instead of at= (with y=): an expression, in pixels', type: 'expression' },
             { name: 'y', description: '', type: 'expression' },
@@ -2353,7 +2433,7 @@ export const gameTags: TagSchema[] = [
         description: 'Takes health from a thing; at 0 its qg:on-death runs and it goes.',
         category: 'Game',
         attributes: [
-            { name: 'target', description: '', type: 'enum', values: ['other', 'me'], default: 'other' },
+            { name: 'target', description: 'other, me, or a parameter, loop variable or q:set holding a thing', type: 'string', default: 'other' },
             { name: 'amount', description: '', type: 'number', default: '1' },
         ]
     },
@@ -2363,7 +2443,7 @@ export const gameTags: TagSchema[] = [
         description: 'A puff of particles where a thing is. Cosmetic.',
         category: 'Game',
         attributes: [
-            { name: 'at', description: '', type: 'enum', values: ['other', 'me'], default: 'me' },
+            { name: 'at', description: 'other, me, or a parameter, loop variable or q:set holding a thing', type: 'string', default: 'me' },
             { name: 'color', description: '', type: 'string', default: '#ffffff' },
             { name: 'count', description: '', type: 'number', default: '12' },
         ]
@@ -2374,7 +2454,7 @@ export const gameTags: TagSchema[] = [
         description: 'Shakes the scene a thing is in. Cosmetic.',
         category: 'Game',
         attributes: [
-            { name: 'at', description: '', type: 'enum', values: ['other', 'me'], default: 'me' },
+            { name: 'at', description: 'other, me, or a parameter, loop variable or q:set holding a thing', type: 'string', default: 'me' },
             { name: 'frames', description: '', type: 'number', default: '10' },
             { name: 'strength', description: 'pixels', type: 'number', default: '3' },
         ]
@@ -2384,10 +2464,11 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'Eases a property of a thing from what it is to a value, over some seconds: a coin that rises, a door that slides, a pulse. It runs in the game\'s ticks, so a replay and every peer see the same; it stops while the scene is paused, and a new tween of the same property replaces it.',
         category: 'Game',
+        allowedChildren: ['qg:on-end'],
         attributes: [
             { name: 'target', description: 'me, other, a character id, or a q:set holding a thing', type: 'string', default: 'me' },
-            { name: 'property', description: 'x, y: where it is (collisions see it); rotation (degrees), scale, alpha: its picture', required: true, type: 'enum', values: ['x', 'y', 'rotation', 'scale', 'alpha'] },
-            { name: 'to', description: '', required: true, type: 'expression' },
+            { name: 'property', description: 'x, y: where it is (collisions see it); rotation (degrees), scale, alpha, tint (a colour its picture is multiplied by: #ffffff is as drawn): its picture', required: true, type: 'enum', values: ['x', 'y', 'rotation', 'scale', 'alpha', 'tint'] },
+            { name: 'to', description: 'a number, or for tint a colour (#rrggbb)', required: true, type: 'expression' },
             { name: 'from', description: 'where it starts (what it is now when not given)', type: 'expression' },
             { name: 'seconds', description: '', type: 'number', default: '0.5' },
             { name: 'trans', description: 'the curve', type: 'enum', values: ['linear', 'sine', 'quad', 'cubic', 'back', 'bounce', 'elastic'], default: 'sine' },

@@ -47,11 +47,16 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	bg.position = Vector2(-8192, -8192)
 	bg.z_index = -100
 	scene.add_child(bg)
+	var tweens: Node = load("res://addons/quantum/tween.gd").new()
+	tweens.name = "Tweens"   # the scene's qg:tweens, stepped before its things (tween.gd)
+	scene.add_child(tweens)
 
 	scene.q_on_input = scene_spec.get("on_input", {})
 	scene.q_on_select = scene_spec.get("on_select", {})
 	Q.apply_gd(scene, scene_spec.get("gd"))
 	scene.q_on_death = scene_spec.get("on_death", {})
+	scene.q_on_release = scene_spec.get("on_release", {})
+	scene.q_on_screen = scene_spec.get("on_screen", [])
 	var tilemap: Node = null
 	var characters: Dictionary = {}
 	var exits: Dictionary = {}
@@ -103,6 +108,8 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 						continue
 					var body := _character(node_spec, game, scene)
 					_animation_ends(body, node_spec, scene)
+					if node_spec.get("on_screen") != null:
+						body.set_meta("q_on_screen", node_spec["on_screen"])
 					Q.apply_gd(body, node_spec.get("gd"))
 					characters[node_spec["id"]] = body
 					scene.add_child(body)
@@ -248,6 +255,11 @@ static func instance(game: Dictionary, scene: Node, prefab_name: String, at: Vec
 		thing = Item.new()
 	thing.setup(prefab_name, prefab, _texture(sheet), sheet["tile"])
 	thing.position = at
+	if prefab.get("on_screen") != null:
+		thing.set_meta("q_on_screen", prefab["on_screen"])
+	var hitbox: Node = thing if thing is Area2D else thing.get_node_or_null("Hitbox")   # an item is its own area
+	if prefab.get("on_separate") != null and hitbox is Area2D:
+		Q.watch_separate(hitbox, thing, prefab["on_separate"], P)
 	if deferred:   # made by the game as it runs (qg:spawn), not placed with the scene
 		Q.event("spawn", {"what": str(prefab.get("tag", prefab_name)), "x": snappedf(at.x, 0.1), "y": snappedf(at.y, 0.1)})
 	Q.apply_gd(thing, prefab.get("gd"))
@@ -301,6 +313,8 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 	sensor.add_child(sensor_shape)
 	body.add_child(sensor)
 	body.wire(sensor, node_spec, scene, sprite)
+	if node_spec.get("on_separate") != null:
+		Q.watch_separate(sensor, body, node_spec["on_separate"], scene)
 	return body
 
 

@@ -31,8 +31,9 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--q-host="):
 			port = int(a.substr(9))
-		elif a.begins_with("--q-join="):
-			var address := a.substr(9)
+		elif a.begins_with("--q-join=") or a.begins_with("--q-watch="):
+			watch_override = a.begins_with("--q-watch=")
+			var address := a.substr(a.find("=") + 1)
 			if address.contains("://"):   # a relay's URL: wss://host/game/room
 				host = address
 				port = 0
@@ -49,6 +50,8 @@ func _ready() -> void:
 			transport_override = a.substr(14)
 		elif a.begins_with("--q-latency="):
 			latency_override = int(a.substr(12))
+		elif a.begins_with("--q-players="):
+			players_override = int(a.substr(12))
 	if spec.has("multiplayer") and (port > 0 or (port == 0 and host != "")):
 		_start_network(host, port).from_command_line = true
 		return
@@ -95,6 +98,8 @@ var port_override: int = -1
 var transport_override: String = ""
 var latency_override: int = 0
 var relay_override: bool = false   # --q-relay=PORT: quantum relay's seatless host
+var players_override: int = 0      # --q-players=N: the host plays with N, from min-players= up to players=
+var watch_override: bool = false   # --q-watch=HOST:PORT (or qg:watch): join with no seat, to watch
 
 
 func _start_network(host: String, port: int) -> Node:
@@ -103,11 +108,14 @@ func _start_network(host: String, port: int) -> Node:
 		remove_child(lockstep)
 		lockstep.queue_free()
 	var mp: Dictionary = spec["multiplayer"].duplicate()
+	if players_override > 0 and mp.get("min_players") != null:
+		mp["players"] = clampi(players_override, int(mp["min_players"]), int(mp["players"]))
 	if transport_override != "":
 		mp["transport"] = transport_override
 	lockstep = Rollback.new() if int(mp.get("rollback", 0)) > 0 else Lockstep.new()
 	lockstep.latency_ms = latency_override
 	lockstep.relay = relay_override
+	lockstep.watching = watch_override and host != ""
 	if relay_override:
 		mp["transport"] = "websocket"   # browsers reach a relay
 	add_child(lockstep)
@@ -115,19 +123,31 @@ func _start_network(host: String, port: int) -> Node:
 	return lockstep
 
 
+# qg:start-now, from a scene: the host starts with the players who are there.
+func net_start_now() -> void:
+	if lockstep != null:
+		lockstep.start_now()
+
+
 # qg:host / qg:join / qg:leave, from a scene (Q.net_host...).
 func net_host(port: int) -> void:
 	_start_network("", port)
 
 
-func net_join(address: String) -> void:
+func net_join(address: String, watch: bool = false) -> void:
 	address = address.strip_edges()
+	watch_override = watch
 	if address.contains("://"):   # a relay's URL: wss://host/game/room
 		_start_network(address, 0)
 		return
 	var parts := address.split(":")
 	var port := int(parts[1]) if parts.size() > 1 else 7777
 	_start_network(parts[0], port)
+
+
+# qg:watch: join with no seat, to watch the game the players play.
+func net_watch(address: String) -> void:
+	net_join(address, true)
 
 
 func net_leave() -> void:
