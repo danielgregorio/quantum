@@ -20,7 +20,9 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
 from quantum.runtime.godot import gd  # noqa: E402
+from quantum.runtime.godot.expressions import _ACTION_FUNCTIONS as ACTION_FUNCTIONS  # noqa: E402
 from quantum.runtime.godot.expressions import _FUNCTIONS as FUNCTIONS  # noqa: E402
+from quantum.runtime.godot.expressions import THING_FIELDS  # noqa: E402
 from quantum.runtime.godot.schema import ACTIONS, STATEMENTS, TAGS  # noqa: E402
 from quantum.runtime.godot_bin import GODOT_VERSION  # noqa: E402
 
@@ -266,7 +268,16 @@ def build() -> str:
                  ', '.join(f'`q:{s}`' for s in STATEMENTS if s not in ('else', 'elseif')) +
                  ' (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the '
                  'scene\'s state; in `q:application`, the game\'s, kept across scenes — with `saved="true"`, '
-                 'between runs. An expression may call ' + ', '.join(f'`{f}()`' for f in FUNCTIONS) + '.\n')
+                 'between runs. A `q:function` directly in a scene is the scene\'s; in `q:application`, every '
+                 'scene\'s (and the prefabs\' handlers\'), reading the game\'s state, its parameters and its own '
+                 'variables. An expression may call ' + ', '.join(f'`{f}()`' for f in FUNCTIONS) +
+                 '; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take '
+                 'degrees and `atan2(y, x)` gives them (0 to the right, 90 down), and `sort()` is the Core\'s. '
+                 + ', '.join(f'`{f}()`' for f in ACTION_FUNCTIONS) + ' read an action of player 1, or of another '
+                 '(`pressing(\'run\', 2)`): held now, the ticks it has been held (on the tick it is let go, how long '
+                 'it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). '
+                 'A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: '
+                 + ', '.join(f'`{f}`' for f in sorted(THING_FIELDS)) + ', as its controller has them.\n')
     parts.append(gd_section())
     parts.append('## The games\n\nEach one is written in these tags and nothing else, and replayed '
                  'in CI from input tapes (`tests/godot/test_godot_<name>.py`).\n')

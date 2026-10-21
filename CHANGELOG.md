@@ -73,6 +73,28 @@ alter the behaviour of an existing app is listed under **Breaking**.
   `qg:become` and `qg:deflect`, `at=` of `qg:burst`, `qg:shake` and
   `qg:spawn` take a parameter, a loop variable or a q:set holding a thing, and
   `qg:spawn at=` a character's id, as `qg:destroy` and `qg:tween` already did.
+- Laboratory: game logic, Phase 1 of `PLAN_GAMES_3.md` (the plan approved
+  on 2026-10-21 for the language's next 34 features, and ten more as a game
+  asks for them). `<qg:after ticks= | seconds= name=>` in a handler runs what
+  it holds later, with the names of its handler as they were (`me`, a loop's
+  thing, a parameter; a thing gone by then is null); one of the same name
+  still waiting starts its count again. `<qg:when condition=>` in a scene runs
+  its handler as the condition turns true, read at the start of every tick,
+  and again only after it has been false. Both live in the scene's clock (one
+  `Clock` node a scene), which counts `ticks()`, stops while the scene is
+  paused, and rolls back. A `q:function` directly in `q:application` is every
+  scene's and the prefabs': it reads the game's state, its parameters and its
+  own variables; Delve's and Keep's `hurt`, once in every room, is one now,
+  and Bricks' last brick is a `qg:when`. In expressions, `pressing('run')`,
+  `pressed_for('fire')` (ticks; on the tick it is let go, how long it was)
+  and `strength('right')`, for player 1 or another (`pressing('run', 2)`);
+  `sin()`, `cos()` and `atan2(y, x)` in degrees, as a picture's rotation; and
+  the Core's `sort(list)`, `sort(list, true)`. A field a thing does not have
+  (`hero.health` on a platformer) is a compile error that lists the fields it
+  has, by its controller; a `q:set` may still hold a dictionary (`bag.a`).
+  Tested in Godot (`tests/godot/test_godot_logic.py`, and under rollback in
+  `tests/godot/test_godot_rollback_tweens.py`); the feature's dataset has six
+  games and five refusals more. `GAMES_PARITY.md` counts 154 rows covered.
 - The games page (`/games/`) shows each game's source: **View the source**
   opens `/games/<name>/source/`, the whole `.q` (and a level drawn in Tiled,
   in a tab of its own) highlighted, every line numbered and a link
@@ -527,6 +549,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
 - Laboratory: `count()` and `qg:for-each` leave out a thing whose health has
   reached 0 while its `qg:on-death` runs, so the last brick's handler sees
   none left.
+- Laboratory: `q:call args=` split its arguments at every comma, so a text
+  with a comma (`{'a, b'}`), a list or a call with two arguments became two
+  arguments; it splits only between them. In a prefab's handler, `count()`,
+  `thing_at()` and `tile_at()` read the scene the prefab is in (they read
+  nothing there before).
 - A `ui:tabpanel` in a served page switches its tabs on a click (UI-7): the
   page got the tabs' markup and CSS but not their script, so the first tab
   was the only one a browser could show. The script is one listener for every

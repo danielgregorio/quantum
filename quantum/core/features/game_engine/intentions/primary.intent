@@ -144,6 +144,8 @@ intention:
     - "qg:for-each runs what it holds once for every thing of tag= in the scene, var= naming each (damage every enemy near a bomb)"
     - "qg:time-scale runs the whole game slower or faster (scale=), for seconds= or until changed; each tick stays the same tick, so replays and peers agree"
     - "qg:quit closes the game (not in a browser: can_quit() says whether it would)"
+    - "qg:after runs what it holds ticks= or seconds= later (a power-up that runs out, a fuse), with the names of its handler as they were; name= restarts one still waiting"
+    - "qg:when in a scene runs its handler when condition= turns true (a wave beaten: count('enemy') == 0), read at the start of every tick, once until it has been false again"
     - "qg:start-now: the host starts the networked game with the players there, once min-players= are"
     - "qg:watch joins a networked game at an address with no seat, to watch it (catching up on it when it has begun); the lobby has a Watch button"
     - "qg:play-animation plays an animation of a thing or character from its first frame; name='' gives it its own animations back"
@@ -171,9 +173,9 @@ intention:
     - "q:set in q:application is game state (saved=true keeps it between runs); in qg:scene, scene state; in a handler, an assignment with value="
     - "q:if, q:elseif and q:else choose between actions and statements in a handler"
     - "q:loop repeats a body over items= or from=/to=, with var="
-    - "q:function (directly in a qg:scene) names a body of actions and statements; q:call runs it; q:return leaves it"
-    - "expressions are written in braces and read state, me, other, cursor, the scene's characters by id (p1.health, hero.x), where a thing is (other.x, me.y), what a body touched as it last moved (me.on_floor, me.on_wall, me.on_ceiling), and built-in functions"
-    - "functions: len, str, int, float, abs, min, max, round, floor, ceil, sqrt, random (from the scene seed), count, thing_at, tile_at, distance, nearest, sees, held, paused, talking, tr, language, has_save, net_status, net_players, net_player, url_param, can_quit"
+    - "q:function (directly in a qg:scene, or in q:application for every scene and the prefabs) names a body of actions and statements; q:call runs it; q:return leaves it"
+    - "expressions are written in braces and read state, me, other, cursor, the scene's characters by id (p1.health, hero.x), where a thing is (other.x, me.y), what a body touched as it last moved (me.on_floor, me.on_wall, me.on_ceiling), and built-in functions; a field a thing does not have (hero.foo) is a compile error that lists the ones it has"
+    - "functions: len, str, int, float, abs, min, max, round, floor, ceil, sqrt, random (from the scene seed), count, thing_at, tile_at, distance, nearest, sees, held, paused, talking, tr, language, has_save, net_status, net_players, net_player, url_param, can_quit, ticks (the scene's), sin, cos, atan2 (degrees), sort; pressing, pressed_for (ticks) and strength of an action, for player 1 or another"
 
   compilation:
     input: "<q:application type=\"game\"> with qg: tags and q: statements"

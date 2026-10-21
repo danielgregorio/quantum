@@ -72,6 +72,7 @@ class Game:
     languages: List[Element] = field(default_factory=list)
     particles: Dict[str, Element] = field(default_factory=dict)
     items: Dict[str, Element] = field(default_factory=dict)
+    functions: List[Statement] = field(default_factory=list)   # q:function at the application level: every scene's
 
 
 def _local(element: ET.Element) -> tuple:
@@ -267,8 +268,9 @@ def _read_statement(element: ET.Element, parent_tag: str) -> Statement:
     if kind == 'function':
         if 'name' not in attrs:
             raise GameCompileError('<q:function> needs name=', line)
-        if parent_tag != 'scene':
-            raise GameCompileError('<q:function> goes directly inside <qg:scene>', line)
+        if parent_tag not in ('scene', 'application'):
+            raise GameCompileError('<q:function> goes directly inside <qg:scene>, or <q:application> for every '
+                                   'scene', line)
     st.body = _read_children(element, 'handler', f'<q:{kind}>')
     return st
 
@@ -295,6 +297,7 @@ def read_game(app) -> Game:
     languages: List[Element] = []
     particles: Dict[str, Element] = {}
     items: Dict[str, Element] = {}
+    functions: List[Statement] = []
     try:
         for child in root:
             ns, name = _local(child)
@@ -329,10 +332,17 @@ def read_game(app) -> Game:
                 else:
                     raise GameCompileError(f'<qg:{el.tag}> goes inside a scene', el.line)
             elif ns == 'q':
-                if name != 'set':
+                if name not in ('set', 'function'):
                     raise GameCompileError(
-                        f'<q:{name}> goes inside a <qg:scene>; only q:set goes here, as game state', _line(child))
-                game_state.append(_read_statement(child, 'application'))
+                        f'<q:{name}> goes inside a <qg:scene>; only q:set (game state) and q:function (one every '
+                        f'scene has) go here', _line(child))
+                st = _read_statement(child, 'application')
+                if name == 'function':
+                    if any(f.attrs['name'] == st.attrs['name'] for f in functions):
+                        raise GameCompileError(f'two q:functions named {st.attrs["name"]!r} in the game', st.line)
+                    functions.append(st)
+                else:
+                    game_state.append(st)
             elif isinstance(child.tag, str):
                 raise GameCompileError(f'<{name}> is not a game tag', _line(child))
     except GameCompileError as e:
@@ -342,7 +352,7 @@ def read_game(app) -> Game:
     if not scenes:
         raise GameCompileError('a game needs at least one <qg:scene>', file=source_path)
     return Game(getattr(app, 'app_id', 'game'), tilesets, sheets, prefabs, scenes, source_path, sounds,
-                game_state, inputs, multiplayer, languages, particles, items)
+                game_state, inputs, multiplayer, languages, particles, items, functions)
 
 
 def _unique(table: Dict[str, Element], el: Element, what: str) -> None:

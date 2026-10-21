@@ -47,6 +47,9 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	bg.position = Vector2(-8192, -8192)
 	bg.z_index = -100
 	scene.add_child(bg)
+	var clock: Node = load("res://addons/quantum/clock.gd").new()
+	clock.name = "Clock"   # the scene's ticks, its qg:afters and qg:whens, stepped first (clock.gd)
+	scene.add_child(clock)
 	var tweens: Node = load("res://addons/quantum/tween.gd").new()
 	tweens.name = "Tweens"   # the scene's qg:tweens, stepped before its things (tween.gd)
 	scene.add_child(tweens)

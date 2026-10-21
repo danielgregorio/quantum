@@ -641,10 +641,11 @@ class TestScenesMapAndGameState:
                    '  <qg:scene name="main"><q:set name="lives" value="1" type="number" /></qg:scene>\n</q:application>\n')
         assert "'lives' is already the game's state" in e.message
 
-    def test_only_q_set_goes_in_the_application(self, tmp_path):
-        e = refuse(tmp_path, '<q:application id="t" type="game">\n  <q:function name="f" />\n'
+    def test_only_q_set_and_q_function_go_in_the_application(self, tmp_path):
+        e = refuse(tmp_path, '<q:application id="t" type="game">\n  <q:loop var="i" from="1" to="2" />\n'
                    '  <qg:scene name="main" />\n</q:application>\n')
-        assert '<q:function> goes inside a <qg:scene>; only q:set goes here, as game state' in e.message
+        assert ('<q:loop> goes inside a <qg:scene>; only q:set (game state) and q:function (one every scene has) '
+                'go here') in e.message
 
     def test_a_call_to_no_function(self, tmp_path):
         e = refuse(tmp_path, game('''  <qg:scene name="main">
@@ -2175,3 +2176,122 @@ class TestTiledTileKinds:
         (tmp_path / 'level.tmx').write_text(self.tmx(' <tileset firstgid="1" source="none.tsx"/>\n'), encoding='utf-8')
         err = refuse(tmp_path, game('  <qg:scene name="main"><qg:tilemap tileset="k" src="level.tmx" /></qg:scene>\n'))
         assert "cannot read the tileset 'none.tsx'" in str(err)
+
+
+class TestGameLogic:
+    """PLAN_GAMES_3.md, Phase 1: delays, conditions, the game's functions, held actions, fields."""
+
+    def test_a_delay_passes_on_the_names_of_its_handler(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="hits" value="0" type="number" />
+    <qg:instance prefab="Coin" x="10" y="10" />
+    <qg:on-input action="jump">
+      <qg:for-each tag="coin" var="c">
+        <qg:after seconds="0.5" name="fade"><qg:destroy target="c" /></qg:after>
+      </qg:for-each>
+      <qg:after ticks="{hits * 2}"><q:set name="hits" value="{hits + 1}" /></qg:after>
+    </qg:on-input>
+  </qg:scene>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\t\tQ.after(self, 0.5 * Q.TICK_RATE, "_after_1", [me, other, c], "fade")\n' in script
+        assert 'func _after_1(me, other, c) -> void:\n\tQ.destroy(c)\n' in script
+        assert '\tQ.after(self, (hits * 2), "_after_2", [me, other])\n' in script
+
+    def test_a_delay_needs_one_count_more_than_0(self, tmp_path):
+        for attrs, message in (('', 'takes ticks= or seconds=, one of them'),
+                               ('ticks="1" seconds="1"', 'takes ticks= or seconds=, one of them'),
+                               ('ticks="0"', 'ticks="0">: more than 0')):
+            err = refuse(tmp_path, game(f'''  <qg:scene name="main">
+    <qg:on-input action="jump"><qg:after {attrs}><qg:quit /></qg:after></qg:on-input>
+  </qg:scene>
+'''))
+            assert message in str(err)
+
+    def test_a_condition_is_a_method_the_clock_reads(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="won" value="false" type="boolean" />
+    <qg:when condition="{count('coin') == 0}"><q:set name="won" value="true" /></qg:when>
+  </qg:scene>
+'''))
+        data = json.loads((out / 'game.json').read_text())
+        assert data['scenes']['main']['when'] == [['_when_1', '_on_when_1']]
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'func _when_1() -> bool:\n\treturn bool((Q.count(self, "coin") == 0))' in script
+        assert 'func _on_when_1() -> void:\n\twon = true' in script
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:when condition="{true}"><qg:destroy target="me" /></qg:when>
+  </qg:scene>
+'''))
+        assert 'target="me"' in str(err)    # a condition of the scene has no me
+
+    def test_the_game_s_functions_are_every_scene_s_and_the_prefabs(self, tmp_path):
+        out = build(tmp_path, HEAD.replace('hitbox="12x12" />', 'hitbox="12x12">\n'
+                                           '    <qg:on-collision with="coin"><q:call function="hurt" /></qg:on-collision>\n'
+                                           '  </qg:prefab>') + '''  <q:set name="lives" value="3" type="number" />
+  <q:function name="hurt">
+    <q:set name="lives" value="{lives - 1}" />
+    <q:if condition="{lives <= 0}"><qg:goto-scene name="over" /></q:if>
+  </q:function>
+  <qg:scene name="main"><qg:on-input action="jump"><q:call function="hurt" /></qg:on-input></qg:scene>
+  <qg:scene name="over"><qg:timer after="1"><q:call function="hurt" /></qg:timer></qg:scene>
+''' + TAIL)
+        for script in ('scene_main.gd', 'scene_over.gd', 'prefabs.gd'):
+            text = (out / 'scripts' / script).read_text()
+            assert 'func hurt():\n\tG.lives = (G.lives - 1)\n' in text, script
+
+    def test_a_game_function_sees_the_game_not_a_scene(self, tmp_path):
+        err = refuse(tmp_path, game('''  <q:function name="win" params="n"><q:set name="n" value="{done}" /></q:function>
+  <qg:scene name="main"><q:set name="done" value="false" type="boolean" /></qg:scene>
+'''))
+        assert "'done' is not declared" in str(err)
+        err = refuse(tmp_path, game('''  <q:function name="win"><qg:quit /></q:function>
+  <qg:scene name="main"><q:function name="win"><qg:quit /></q:function></qg:scene>
+'''))
+        assert "'win' is a q:function of the game already" in str(err)
+
+    def test_held_actions(self):
+        scope = Scope(actions=['run', 'jump'])
+        assert compile_expression("pressing('run')", scope) == 'Q.held("run")'
+        assert compile_expression("pressed_for('run', 2)", scope) == 'Q.held_ticks("p2_run")'
+        assert compile_expression("strength('jump', 1)", scope) == 'Q.strength("jump")'
+        with pytest.raises(GameCompileError, match=re.escape("pressing('fly'): no such action (the game has jump, run)")):
+            compile_expression("pressing('fly')", scope)
+
+    def test_angles_sort_and_ticks(self):
+        scope = Scope(['xs'])
+        assert compile_expression('sin(90) + cos(0)', scope) == '(sin(deg_to_rad(90)) + cos(deg_to_rad(0)))'
+        assert compile_expression('atan2(1, 2)', scope) == 'Q.atan2_deg(1, 2)'
+        assert compile_expression('sort(xs)', scope) == 'Q.sort(xs)'
+        assert compile_expression('sort(xs, true)', scope) == 'Q.sort(xs, true)'
+        assert compile_expression('ticks()', scope) == 'Q.ticks(self)'
+        with pytest.raises(GameCompileError, match=r'sort\(\) takes 1 or 2 argument'):
+            compile_expression('sort()', scope)
+
+    def test_a_field_a_thing_does_not_have_is_an_error(self, tmp_path):
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="n" value="0" type="number" />
+    <qg:character id="hero" controller="platformer" sheet="c" x="10" y="10" hitbox="18x22" />
+    <qg:timer every="10"><q:set name="n" value="{hero.health}" /></qg:timer>
+  </qg:scene>
+'''))
+        assert ('hero.health: no such field; hero has facing, name, on_ceiling, on_floor, on_wall, player, '
+                'state, x, y') in str(err)
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="n" value="0" type="number" />
+    <qg:on-input action="jump"><qg:for-each tag="coin"><q:set name="n" value="{it.colour}" /></qg:for-each></qg:on-input>
+  </qg:scene>
+'''))
+        assert 'it.colour: no such field; it has col, doing, facing, health, name' in str(err)
+        # a q:set may hold a dictionary: its keys are not checked
+        assert compile_expression('bag.a', Scope(['bag'])) == 'bag.a'
+
+    def test_a_call_s_arguments_split_only_between_them(self, tmp_path):
+        out = build(tmp_path, game('''  <q:set name="log" value="[]" type="array" />
+  <q:function name="note" params="what, n, xs"><q:set name="log" value="{log + [what, n, xs]}" /></q:function>
+  <qg:scene name="main">
+    <qg:on-input action="jump"><q:call function="note" args="{'a, b'}, {max(1, 2)}, {[1, 2]}" /></qg:on-input>
+  </qg:scene>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\tnote("a, b", max(1, 2), [1, 2])\n' in script

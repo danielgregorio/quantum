@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import ast
 import json
-from typing import Dict, Iterable, Optional, Set
+from typing import Dict, Iterable, List, Optional, Set
 
 from quantum.core.expressions import _normalise_js_operators
 from quantum.runtime.godot.errors import GameCompileError
@@ -54,7 +54,35 @@ _FUNCTIONS = {
     'sees': 'Q.sees({0}, {1})',              # no solid tile of the tilemap between the two
     'held': 'Q.items_held({0})',             # how many of a qg:item the players hold
     'can_quit': 'Q.can_quit()',              # qg:quit would close the game (not in a browser)
+    'ticks': 'Q.ticks(self)',                # the ticks the scene has played (not while paused)
+    'sin': 'sin(deg_to_rad({0}))',           # of an angle in degrees
+    'cos': 'cos(deg_to_rad({0}))',
+    'atan2': 'Q.atan2_deg({0}, {1})',        # the angle of (x, y) in degrees: 0 right, 90 down
+    'sort': {1: 'Q.sort({0})', 2: 'Q.sort({0}, {1})'},   # a sorted copy (descending with true), the Core's sort
 }
+
+# The built-ins that read a player's action: the action's name, and the player (1 when not given).
+# What an action is held with travels in the lockstep as pressed or not, so strength() is 0 or 1 there.
+_ACTION_FUNCTIONS = {
+    'pressing': 'Q.held({0})',               # held now
+    'pressed_for': 'Q.held_ticks({0})',      # the ticks it has been held; on the tick it is let go, how long it was
+    'strength': 'Q.strength({0})',           # how far it is pressed, 0 to 1 (a stick, a trigger)
+}
+
+# What an expression may read of a thing (`hero.x`, `other.state`); anything else is a compile error, not a
+# game stopped in Godot. A character's controller says which of these it has.
+_BODY = ('x', 'y', 'name', 'state', 'player', 'on_floor', 'on_wall', 'on_ceiling')
+CONTROLLER_FIELDS: Dict[str, frozenset] = {
+    'platformer': frozenset(_BODY + ('facing',)),
+    'topdown': frozenset(_BODY + ('facing',)),
+    'ship': frozenset(_BODY),
+    'fighter': frozenset(_BODY + ('facing', 'health')),
+    'grid': frozenset(_BODY + ('facing', 'col', 'row')),
+    'behavior': frozenset(_BODY + ('facing', 'vx', 'vy')),
+    'map': frozenset(('x', 'y', 'name')),
+}
+# ...and a thing that may be any of them, or a prefab's instance (`me` and `other` of a handler, a loop's thing)
+THING_FIELDS = frozenset().union(*CONTROLLER_FIELDS.values(), ('tag', 'health', 'doing'))
 
 _BIN = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*'}
 _CMP = {ast.Eq: '==', ast.NotEq: '!=', ast.Lt: '<', ast.LtE: '<=', ast.Gt: '>', ast.GtE: '>='}
@@ -68,11 +96,16 @@ class Scope:
     """
 
     def __init__(self, names: Iterable[str] = (), parent: Optional['Scope'] = None,
-                 functions: Iterable[str] = (), game_names: Iterable[str] = (), node_ids: Iterable[str] = ()):
+                 functions: Iterable[str] = (), game_names: Iterable[str] = (), node_ids: Iterable[str] = (),
+                 things: Iterable[str] = (), node_fields: Optional[Dict[str, frozenset]] = None,
+                 actions: Optional[Iterable[str]] = None):
         self.names: Set[str] = set(names)
         self.functions: Set[str] = set(functions)
         self.game_names: Set[str] = set(game_names)
         self.node_ids: Set[str] = set(node_ids)   # the scene's characters, by id: `p1.health`
+        self.things: Set[str] = set(things)       # names that always hold a thing: me, other, a qg:for-each's
+        self.node_fields = node_fields or {}      # a character id -> what its controller has
+        self.actions = set(actions) if actions is not None else None   # the game's actions (None: unchecked)
         self.parent = parent
 
     def has(self, name: str) -> bool:
@@ -99,8 +132,29 @@ class Scope:
     def has_function(self, name: str) -> bool:
         return name in self.functions or (self.parent is not None and self.parent.has_function(name))
 
-    def child(self, names: Iterable[str] = ()) -> 'Scope':
-        return Scope(names, parent=self)
+    def child(self, names: Iterable[str] = (), things: Iterable[str] = ()) -> 'Scope':
+        return Scope(names, parent=self, things=things)
+
+    def fields_of(self, name: str) -> Optional[frozenset]:
+        """What `name.field` may read, or None when the name may hold anything (a q:set, a parameter)."""
+        if name in self.names:
+            return THING_FIELDS if name in self.things else None
+        if name in self.node_ids:
+            return self.node_fields.get(name, THING_FIELDS)
+        return self.parent.fields_of(name) if self.parent is not None else None
+
+    def game_actions(self) -> Optional[Set[str]]:
+        if self.actions is not None:
+            return self.actions
+        return self.parent.game_actions() if self.parent is not None else None
+
+    def locals(self) -> List[str]:
+        """The names of the scopes inside the script's own: parameters, loop variables, a function's or a
+        handler's variables (outermost first)."""
+        if self.parent is None:
+            return []
+        out = self.parent.locals()
+        return out + sorted(n for n in self.names if n not in out)
 
 
 def strip_braces(text: str) -> str:
@@ -208,6 +262,11 @@ class _Emitter:
         return f'({self.emit(node.body)} if {self.emit(node.test)} else {self.emit(node.orelse)})'
 
     def _Attribute(self, node: ast.Attribute) -> str:
+        if isinstance(node.value, ast.Name):
+            fields = self.scope.fields_of(node.value.id)
+            if fields is not None and node.attr not in fields:
+                raise self.fail(f'{node.value.id}.{node.attr}: no such field; {node.value.id} has '
+                                + ', '.join(sorted(fields)))
         if node.attr in ('x', 'y'):   # where a thing or a character is (or a cursor's point)
             return f'Q.pos_{node.attr}({self.emit(node.value)})'
         if node.attr in ('on_floor', 'on_wall', 'on_ceiling'):   # what a body touched as it last moved
@@ -245,17 +304,42 @@ class _Emitter:
         if isinstance(node.func, ast.Name):
             name = node.func.id
             if name in _FUNCTIONS:
-                template = _FUNCTIONS[name]
-                wanted = template.count('{')
-                if len(args) != wanted:
+                templates = _FUNCTIONS[name]
+                if isinstance(templates, str):
+                    templates = {templates.count('{'): templates}
+                if len(args) not in templates:
+                    wanted = ' or '.join(str(n) for n in sorted(templates))
                     raise self.fail(f'{name}() takes {wanted} argument(s), {len(args)} given')
-                return template.format(*args)
+                return templates[len(args)].format(*args)
+            if name in _ACTION_FUNCTIONS:
+                return _ACTION_FUNCTIONS[name].format(self._action(name, node.args, args))
             if self.scope.has_function(name):
                 return f'{name}({", ".join(args)})'
             raise self.fail(f'{name}() is not a built-in nor a q:function of this scene')
         if isinstance(node.func, ast.Attribute):
             raise self.fail('method calls are not part of the game language yet')
         raise self.fail('call is not part of the language')
+
+
+    def _action(self, name: str, nodes: list, args: list) -> str:
+        """pressing('run'), pressing('run', 2): the Godot action of that player's action (p2_run)."""
+        if len(args) not in (1, 2):
+            raise self.fail(f'{name}() takes an action and, for another player, its number')
+        actions = self.scope.game_actions()
+        if isinstance(nodes[0], ast.Constant) and isinstance(nodes[0].value, str):
+            action = nodes[0].value
+            if actions is not None and action not in actions:
+                raise self.fail(f'{name}({action!r}): no such action (the game has {", ".join(sorted(actions))})')
+            if len(args) == 1:
+                return json.dumps(action)
+            if isinstance(nodes[1], ast.Constant):
+                player = int(nodes[1].value)
+                if player < 1:
+                    raise self.fail(f'{name}(): the player is 1 or more')
+                return json.dumps(action if player == 1 else f'p{player}_{action}')
+        if len(args) == 1:
+            return args[0]
+        return f'Q.action_of({args[0]}, {args[1]})'
 
 
 def gdscript_literal(value: object, type_name: str = 'string') -> str:

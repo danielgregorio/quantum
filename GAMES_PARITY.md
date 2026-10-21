@@ -7,7 +7,9 @@
 > were checked by compiling and running small games in Godot 4.4.1 (§2 and
 > §6). The thirteen rows the owner approved on 2026-10-21 have landed, with
 > Bricks (`projects/bricks/`), the game written for them, and are counted as
-> covered.
+> covered. What comes next is PLAN_GAMES_3.md, approved the same day; the
+> rows its phases cover are updated as each lands (Phase 1: nine rows, and
+> gaps 1, 2, 4, 7, 27 and 28 below, and the maths of 3).
 
 Each row is one feature a 2D game is made of, as Godot 4.4 and Unity 6 (URP
 2D with its packages: 2D Tilemap, Physics 2D, Input System, Cinemachine 3,
@@ -52,14 +54,14 @@ declarative shape for it.
 |---|---|---|---|---|
 | Variables of a level and of the whole game | script members, autoloads | fields, statics, `DontDestroyOnLoad`, `ScriptableObject` | `q:set` in `qg:scene` (reset on entry) and in `q:application` (the autoload `G`, kept across scenes): numbers, strings, arrays, dictionaries | covered |
 | Expressions, conditions, loops | GDScript | C# | `{...}` compiled to GDScript with the Core evaluator's meaning; `q:if`, `q:elseif`, `q:else`, `q:loop` | covered |
-| Functions | `func` | methods | `q:function`, `q:call`, `q:return`; local variables and recursion (Chess) | partial: only directly in a `qg:scene`, none shared by every scene |
-| Arithmetic and maths | `@GlobalScope` (`sin`, `atan2`, `lerp`...) | `Mathf` | `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `**` | partial: no `sin`, `cos`, `atan2`, no sorting |
+| Functions | `func` | methods | `q:function`, `q:call`, `q:return`; local variables and recursion (Chess); directly in `q:application`, every scene's and the prefabs' (Delve's and Keep's `hurt`) | covered |
+| Arithmetic and maths | `@GlobalScope` (`sin`, `atan2`, `lerp`...) | `Mathf` | `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `**`, `sin()`, `cos()`, `atan2()` (degrees), `sort()` | covered |
 | Random numbers | `RandomNumberGenerator` (seedable), `randf()` | `Random` (one global state, `Random.InitState`) | `random(a, b)` from the scene's seed; `speed="150..250"`; `qg:spawner` draws | covered |
 | Asking the scene: how many, which is nearest, what is here | `get_nodes_in_group()`, script | `FindGameObjectsWithTag`, script | `count(tag)`, `nearest(a, who)`, `distance(a, b)`, `thing_at(tag, x, y)`, `tile_at(col, row)`, `held(item)` | covered |
 | Reading a thing's fields | any property | any field | `me.state`, `me.health`, `me.doing`, `me.vx`, `me.vy`, `me.on_floor`, `me.col`, `me.row`, `other.name`, `other.tag`, `p1.health` | covered |
-| Reading a thing's position | `position` | `transform.position` | `me.x`, `other.y`, `hero.x` (a thing, a character, or a cursor's point) | covered (a field after a dot is not checked: `hero.foo` compiles; gap 4) |
+| Reading a thing's position | `position` | `transform.position` | `me.x`, `other.y`, `hero.x` (a thing, a character, or a cursor's point); a field the thing does not have is a compile error | covered |
 | Messages between objects | signals | C# events, `UnityEvent`, `SendMessage` | handlers on what happens (`qg:on-*`); rules read state (`if=`, `when=`, `q:if`) | by design: wiring is imperative; a rule reads the state instead |
-| A handler when a condition becomes true | a setter or a check in `_process` | a check in `Update` | — (a `qg:timer every="1"` that tests it) | gap |
+| A handler when a condition becomes true | a setter or a check in `_process` | a check in `Update` | `qg:when condition=` in a scene: read at the start of every tick, run as it turns true (Bricks' last brick) | covered |
 | A script of one's own | GDScript, C#, GDExtension | C# | none: text where statements go is a compile error | by design: what the language cannot say grows a tag |
 
 ## 3. Transform and drawing
@@ -217,7 +219,7 @@ declarative shape for it.
 |---|---|---|---|---|
 | Named actions | `InputMap` | Input System actions (`InputActionAsset`, `PlayerInput`) | `qg:input action= keys= player=`; defaults `left`, `right`, `up`, `down`, `jump`, `select`, `cancel`, `click` | covered |
 | Keyboard and gamepad | `InputEventKey`, `InputEventJoypadButton`, `InputEventJoypadMotion` | `Keyboard`, `Gamepad` | Godot key names; `JoyA`...`JoySelect`, the pad, `JoyLeftStickUp` and the others; player n reads joypad n-1 | covered |
-| Analog strength | `get_action_strength()`, `get_vector()` | `ReadValue<Vector2>()` | the ship and top-down controllers read the stick's strength | partial: no expression reads it |
+| Analog strength | `get_action_strength()`, `get_vector()` | `ReadValue<Vector2>()` | the ship and top-down controllers read the stick's strength; `strength('right')` in an expression (0 or 1 under the lockstep, where pressed or not travels) | covered |
 | Vibration | `Input.start_joy_vibration()` | `Gamepad.SetMotorSpeeds()` | — | gap |
 | Mouse buttons and pointer | `InputEventMouseButton`, `get_global_mouse_position()` | `Mouse.current` | `MouseLeft`, `MouseRight`, `MouseMiddle`; `qg:cursor` (`step=`, `grid=`, `sheet=`), `cursor.x`, `cursor.y`, `cursor.col`, `cursor.row` | covered |
 | Clicking a thing | `input_event` on a `CollisionObject2D` | `OnMouseDown`, `IPointerClickHandler` | `qg:on-select` (`other` is the thing under the cursor) | covered |
@@ -226,7 +228,7 @@ declarative shape for it.
 | On-screen buttons and sticks | `TouchScreenButton` | `OnScreenButton`, `OnScreenStick` | — | gap |
 | On press | `is_action_just_pressed()` | `performed` | `qg:on-input action=`; a press between two ticks is kept for the next one | covered |
 | On release | `is_action_just_released()` | `canceled`, Press interaction (Release Only) | `qg:on-input on="release"` | covered |
-| Held, and for how long (a run button, a charge shot) | `is_action_pressed()` | Hold interaction, `IsPressed()` | — (only the controllers read held keys) | gap |
+| Held, and for how long (a run button, a charge shot) | `is_action_pressed()` | Hold interaction, `IsPressed()` | `pressing('run')`, `pressed_for('fire')` (ticks; on the tick it is let go, how long it was), for player 1 or another | covered |
 | Sequences (double tap, a fighter's motion inputs) | script | MultiTap interaction, script | — | gap |
 | Rebinding in the game | `InputMap.action_erase_events()`, `action_add_event()` | `PerformInteractiveRebinding()` | — (keys are fixed at compile time) | gap |
 
@@ -294,7 +296,7 @@ declarative shape for it.
 |---|---|---|---|---|
 | A fixed tick | `_physics_process`, `physics_ticks_per_second` | `FixedUpdate`, `Time.fixedDeltaTime` | every rule runs in the 60 Hz tick | covered |
 | Timers | `Timer` | coroutines, `InvokeRepeating()`, `Awaitable.WaitForSecondsAsync()` | `qg:timer after=`, `every=`, `from=`, `count=` | covered |
-| A delay started by a handler (a power-up that runs out, a fuse) | `get_tree().create_timer()`, `await` | `Invoke()`, `WaitForSeconds` | — (a `qg:timer` counts from entering the scene) | gap |
+| A delay started by a handler (a power-up that runs out, a fuse) | `get_tree().create_timer()`, `await` | `Invoke()`, `WaitForSeconds` | `qg:after ticks=` or `seconds=`, `name=` to start one again; it keeps the names of its handler, waits while paused and rolls back | covered |
 | The clock in an expression | `Engine.get_physics_frames()` | `Time.time`, `Time.frameCount` | — (count ticks with a `qg:timer every="1"`) | gap |
 | Cooldowns | script | script | `cooldown=`, `fire-every=`, `every=` on `qg:shoot` and `qg:leap` | covered |
 | Pause | `SceneTree.paused`, `process_mode` | `Time.timeScale = 0` | `qg:pause`, `qg:resume`, `paused()`; menus, HUD, camera and `qg:on-input` go on; `qg:say` pauses until the last line | covered |
@@ -324,7 +326,7 @@ declarative shape for it.
 | Save and continue | script + `FileAccess`, `JSON` | script + `JsonUtility`, `persistentDataPath` | `qg:save scene=`, `qg:continue`, `has_save()`, `qg:scene save="true"`; items and the things picked up or opened go in the save | covered |
 | Save slots | script | script | one save per game | gap |
 | Saving in the middle of a scene | script that serialises nodes | script | the saved scene starts over; the game state and the items are kept | partial: no positions or enemies saved |
-| A high-score table | script | script | a saved `q:set` (Drift's best) | partial: a top-ten table needs sorting |
+| A high-score table | script | script | a saved `q:set` (Drift's best), `sort()` and a slice (`sort(best + [t])[:10]`) | covered |
 | In a browser | `user://` on IndexedDB | `PlayerPrefs` on IndexedDB | the same, kept by the browser (`scripts/check-save-in-browser.py`) | covered |
 | Cloud saves | — | Cloud Save (Unity Gaming Services) | — | by design: a hosted service, not the language |
 
@@ -375,7 +377,7 @@ declarative shape for it.
 | Branching a session; a session as a test | — | — | `play_snapshot`, `play_restore`, `play_tape`; kept tapes in `tests/godot/playtests/` | covered |
 | Screenshots and frames | Movie Maker mode (`--write-movie`) | Recorder package | `play_frame`; a screenshot of each game in CI | covered |
 | Determinism across machines | — | — | Linux is what CI replays on | partial: not promised across architectures |
-| Errors before the game runs | GDScript analyzer warnings | the C# compiler | unknown tags, attributes, parents, names, prefabs, sounds and scenes, and `gd:` properties against Godot's class reference, are errors with the line | partial: a field after a dot (`hero.foo`) is not checked |
+| Errors before the game runs | GDScript analyzer warnings | the C# compiler | unknown tags, attributes, parents, names, prefabs, sounds and scenes, fields after a dot (`hero.foo`, against the character's controller), actions read by name, and `gd:` properties against Godot's class reference, are errors with the line | covered |
 
 ## 23. Export and platforms
 
@@ -406,7 +408,7 @@ declarative shape for it.
 | Area | covered | partial | gap | by design | rows |
 |---|---|---|---|---|---|
 | Scene structure and prefabs | 7 | 1 | 1 | 2 | 11 |
-| Logic and state | 6 | 2 | 1 | 2 | 11 |
+| Logic and state | 9 | 0 | 0 | 2 | 11 |
 | Transform and drawing | 7 | 6 | 1 | 2 | 16 |
 | Sprite animation and animation state machines | 6 | 2 | 0 | 0 | 8 |
 | Tweening, timelines and cutscenes | 4 | 1 | 0 | 0 | 5 |
@@ -416,25 +418,26 @@ declarative shape for it.
 | Game rules: health, shots, pickups | 8 | 1 | 1 | 0 | 10 |
 | AI and navigation | 8 | 0 | 2 | 1 | 11 |
 | Camera | 7 | 1 | 2 | 0 | 10 |
-| Input | 6 | 2 | 6 | 0 | 14 |
+| Input | 8 | 1 | 5 | 0 | 14 |
 | Audio | 4 | 2 | 3 | 1 | 10 |
 | Particles and visual effects | 3 | 0 | 2 | 1 | 6 |
 | Lighting, shaders and post-processing | 0 | 1 | 2 | 3 | 6 |
 | UI | 7 | 6 | 3 | 0 | 16 |
-| Time | 5 | 0 | 2 | 1 | 8 |
+| Time | 6 | 0 | 1 | 1 | 8 |
 | Scene flow | 7 | 1 | 1 | 1 | 10 |
-| Persistence | 3 | 2 | 1 | 1 | 7 |
+| Persistence | 4 | 1 | 1 | 1 | 7 |
 | Localization | 4 | 1 | 2 | 0 | 7 |
 | Multiplayer and networking | 12 | 2 | 1 | 2 | 17 |
-| Testing and determinism | 8 | 2 | 0 | 0 | 10 |
+| Testing and determinism | 9 | 1 | 0 | 0 | 10 |
 | Export and platforms | 3 | 0 | 2 | 1 | 6 |
 | Tooling | 4 | 1 | 1 | 2 | 8 |
-| **Total** | **146** | **42** | **40** | **23** | **251** |
+| **Total** | **154** | **37** | **37** | **23** | **251** |
 
-Of 251 rows, 146 are covered and 42 partial; 40 are gaps, and 23 are left
-out by design: more than half covered. The gaps gather in input (six: held
-keys, rebinding, touch controls, sequences, the second mouse button,
-vibration), then the controllers, audio and the UI (three each). The rows
+Of 251 rows, 154 are covered and 37 partial; 37 are gaps, and 23 are left
+out by design: more than half covered (146, 42 and 40 when the map was made;
+Phase 1 of PLAN_GAMES_3.md covered nine rows). The gaps gather in input (five:
+rebinding, touch controls, sequences, the second mouse button, vibration),
+then the controllers, audio and the UI (three each). The rows
 left out by design are mostly the rigid-body solver, shaders and post-
 processing, what belongs to an editor, and the networking machinery that
 lockstep makes unnecessary.
@@ -446,13 +449,13 @@ game need them, the most useful for the next genre first; each with the
 smallest tag that would say it, and who asks for it. Every **gap** row
 above is in this list, and so are many **partial** ones.
 
-1. **A delay started by a handler.** `<qg:after ticks="600">...</qg:after>` inside a handler, and `ticks()` (ticks since the scene began) in expressions. Every genre: a power-up that runs out, a bomb's fuse, a respawn after a pause, a lap time.
-2. **A handler when a condition becomes true.** `<qg:when condition="{count('enemy') == 0}">` in a scene (in a prefab, with `me`). Wave and puzzle games: a wave cleared, a room solved, a score reached, without testing it in every handler that changes it.
-3. **Aiming.** `heading="{dx},{dy}"` on `qg:spawn` for an `ai="fly"` prefab (as `qg:deflect dx= dy=` sets it later), and `sin()`, `cos()`, `atan2()` in expressions. Twin-stick and bullet-pattern shooters, a bow aimed with the mouse.
-4. **Fields checked at compile time.** A field after a dot that the thing does not have (`hero.foo`) is a compile error naming the fields it has. Every game: it is the language's own promise.
+1. **A delay started by a handler.** *Done: PLAN_GAMES_3.md, Phase 1.* `<qg:after ticks="600">...</qg:after>` inside a handler, and `ticks()` (ticks since the scene began) in expressions. Every genre: a power-up that runs out, a bomb's fuse, a respawn after a pause, a lap time.
+2. **A handler when a condition becomes true.** *Done: PLAN_GAMES_3.md, Phase 1.* `<qg:when condition="{count('enemy') == 0}">` in a scene (in a prefab, with `me`). Wave and puzzle games: a wave cleared, a room solved, a score reached, without testing it in every handler that changes it.
+3. **Aiming.** *The maths done: PLAN_GAMES_3.md, Phase 1; `heading=` is Phase 2.* `heading="{dx},{dy}"` on `qg:spawn` for an `ai="fly"` prefab (as `qg:deflect dx= dy=` sets it later), and `sin()`, `cos()`, `atan2()` in expressions. Twin-stick and bullet-pattern shooters, a bow aimed with the mouse.
+4. **Fields checked at compile time.** *Done: PLAN_GAMES_3.md, Phase 1.* A field after a dot that the thing does not have (`hero.foo`) is a compile error naming the fields it has. Every game: it is the language's own promise.
 5. **Text and bars in the world.** `<qg:label x= y= value=>` in a scene (on a prefab, following it), and `text=` on `qg:emit` for a number that floats up. RPGs and brawlers (damage numbers), adventures (signs), networked games (names over the players).
 6. **Pushable things.** `pushable="true"` on a solid prefab: a character walking into it moves it, a cell on a grid, unless something stops it. Box puzzles, puzzle rooms in an adventure.
-7. **Held actions, and how far.** `pressing('run')`, `pressed_for('fire')` (ticks) and `strength('right')` in expressions (`held()` is taken by items). Charge shots, a run button, hold-to-confirm, analog speed in a rule.
+7. **Held actions, and how far.** *Done: PLAN_GAMES_3.md, Phase 1.* `pressing('run')`, `pressed_for('fire')` (ticks) and `strength('right')` in expressions (`held()` is taken by items). Charge shots, a run button, hold-to-confirm, analog speed in a rule.
 8. **Rotate and thrust.** `<qg:steer turn= thrust= drag=>`, a part of `qg:behavior`: left and right turn the body, up pushes it the way it points. Asteroids-likes, top-down racing.
 9. **An options screen.** `bus=` on `qg:sound` with `<qg:volume bus= value=>` (kept between runs), `<qg:slider bind= min= max=>` in a `qg:menu`, and `<qg:fullscreen>`. Every game that ships.
 10. **Touch controls and phones.** `<qg:touch-button action= x= y=>` and a touch stick that press the game's own actions (so replays and peers see them); Android and iOS presets in `scripts/export-games.py`. Mobile browsers and phones.
@@ -472,8 +475,8 @@ above is in this list, and so are many **partial** ones.
 24. **Keeping apart.** `spacing=` on a prefab: things of one tag keep that far from each other as they move. Swarms, crowds of enemies, strategy units.
 25. **Squash and stretch, visibility, depth.** `scale-x` and `scale-y` for `qg:tween`, `visible="{...}"` and `flip-v=` on prefabs and characters, `layer=` for draw order, and `y-sort="true"` on `qg:scene` (the `gd:` attribute promoted). Every game's juice; depth in top-down games.
 26. **More of Tiled.** Zones, exits and paths drawn as Tiled objects (a rectangle of class `zone`, a polyline as a `qg:path`), object and tile properties of the game's own, several tilesets per map, flipped tiles. Large levels drawn wholly in Tiled.
-27. **Functions for every scene.** `q:function` directly in `q:application`. Games with several levels that share rules.
-28. **Sorting.** `sorted(list)` in expressions. High-score tables, turn order in tactics.
+27. **Functions for every scene.** *Done: PLAN_GAMES_3.md, Phase 1.* `q:function` directly in `q:application`. Games with several levels that share rules.
+28. **Sorting.** *Done: PLAN_GAMES_3.md, Phase 1, as the Core's `sort(list)`.* `sorted(list)` in expressions. High-score tables, turn order in tactics.
 29. **Rebinding keys.** `<qg:rebind action=>` in a menu: the next key pressed becomes the action's, kept between runs. Desktop releases, accessibility.
 30. **Collision sides left and right.** `side="left"` and `side="right"` on `qg:on-collision`, as `qg:on-screen-exit` has. Switches hit from the side, bumpers, shields.
 31. **Flying things that bounce off tiles.** `walls="bounce"` on `ai="fly"`, with the cell it hit in reach of `tile_at()`. Ricochet shots, a ball in a level of tiles.

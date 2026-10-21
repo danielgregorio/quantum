@@ -1,7 +1,8 @@
 # Games 3 — what the game language takes from Godot and Unity next
 
 > Status: approved 2026-10-21, whole, the ten "later" items included (each
-> comes in with the game that asks for it: Phase 6). Phase 1 in progress.
+> comes in with the game that asks for it: Phase 6). Phase 1 done
+> (2026-10-21); Phase 2 next.
 > Laboratory tier: no tag here carries a stability promise until it ships.
 > The proposal it comes from is the Claude Docs page "Proposta: próximos
 > recursos da linguagem de jogos"; the map it was chosen from is
@@ -62,14 +63,49 @@ the map found: `hero.foo` compiles and only breaks in Godot.
 | Fields checked at compile time | `hero.foo` is an error that lists the fields there are | every game | M |
 | Functions for every scene | `q:function` straight in `q:application` | rules repeated across scenes (Delve's three crypts) | S |
 | Held actions, and for how long | `pressing('run')`, `pressed_for('fire')`, `strength('right')` | a charged shot, a run button, analog speed | S |
-| Aiming and sorting maths | `sin()`, `cos()`, `atan2()`, `sorted()` | aiming with the mouse, a high-score table, turn order | S |
+| Aiming and sorting maths | `sin()`, `cos()`, `atan2()`, `sort()` | aiming with the mouse, a high-score table, turn order | S |
 
-- [ ] `qg:after` and `ticks()`
-- [ ] `qg:when`
-- [ ] fields checked at compile time
-- [ ] `q:function` in `q:application`
-- [ ] `pressing()`, `pressed_for()`, `strength()`
-- [ ] `sin()`, `cos()`, `atan2()`, `sorted()`
+- [x] `qg:after` and `ticks()`
+- [x] `qg:when`
+- [x] fields checked at compile time
+- [x] `q:function` in `q:application`
+- [x] `pressing()`, `pressed_for()`, `strength()`
+- [x] `sin()`, `cos()`, `atan2()`, `sort()` (the Core's name)
+
+What was built (2026-10-21):
+
+- `addons/quantum/clock.gd`: one `Clock` node a scene, stepped first in the
+  tick (before the tweens and the things). It counts `ticks()`, holds the
+  qg:afters as records (the ticks left, the method that runs, the values of
+  the handler's names) and reads the qg:whens' conditions (methods of the
+  scene); it saves and loads them for the rollback, things by their path.
+- `qg:after` compiles its body to a method of the script (`_after_N`) whose
+  parameters are the names of the handler's own scopes (`Scope.locals()`:
+  `me`, `other`, a loop's thing, a parameter, a variable), passed as they
+  are; a thing gone by then is passed as null. `qg:when` compiles to a
+  condition method and a handler with no `me`.
+- A game's `q:function` is compiled into every scene's script and into P,
+  with a scope of the game's state and functions only, so it means the same
+  everywhere; a scene's of the same name is an error. The Core parser leaves
+  them to the game compiler.
+- `pressing()`, `pressed_for()`, `strength()` read the input of the tick
+  (`Q._now`, and the ticks each action has been held, kept with it and
+  saved by the rollback); an action named by a literal is checked.
+- Fields: a character's id is checked against its controller's fields, `me`
+  and `other` of a handler and a qg:for-each's thing against every thing's;
+  a q:set, a parameter or a variable is not checked (it may hold a
+  dictionary).
+- In the games: Delve's and Keep's `hurt` (three and five copies) are one
+  function of the game; Bricks' last brick is a qg:when (it runs a tick
+  after the brick goes, which nothing in its tests sees).
+
+What was learned: the condition of a qg:when is best read in the clock's
+step, after the delays due then, so a delay that destroys the last enemy
+and the qg:when that sees it agree on the tick; a lambda capturing a loop's
+thing would have kept it, but could not be saved by the rollback, so the
+values travel as arguments; `is` on a freed object is an error in GDScript,
+so what a delay passes on is asked its type first. `q:call args=` split on
+every comma (a text with one became two arguments): fixed with the phase.
 
 ## Phase 2 — Action and aiming
 

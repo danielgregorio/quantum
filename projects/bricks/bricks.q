@@ -258,26 +258,22 @@
           <qg:damage target="near" amount="2" />
         </q:if>
       </qg:for-each>
-      <q:call function="check" />
     </qg:on-death>
-    <qg:on-death of="brick"><q:call function="check" /></qg:on-death>
 
     <!-- The last brick: slow motion, the balls fade out, the paddle hops, the next level. -->
-    <q:function name="check">
-      <q:if condition="{count('brick') + count('bomb') == 0 and not done}">
-        <q:set name="done" value="true" />
-        <qg:play sound="clear" />
-        <qg:time-scale scale="0.25" seconds="1.5" />
-        <qg:for-each tag="ball" var="b">
-          <qg:tween target="b" property="alpha" to="0" seconds="0.3">
-            <qg:on-end><qg:destroy target="me" /></qg:on-end>
-          </qg:tween>
-        </qg:for-each>
-        <qg:tween target="p1" property="y" to="214" seconds="0.4" trans="quad" yoyo="true" repeat="1">
-          <qg:on-end><q:call function="next" /></qg:on-end>
+    <qg:when condition="{count('brick') + count('bomb') == 0}">
+      <q:set name="done" value="true" />
+      <qg:play sound="clear" />
+      <qg:time-scale scale="0.25" seconds="1.5" />
+      <qg:for-each tag="ball" var="b">
+        <qg:tween target="b" property="alpha" to="0" seconds="0.3">
+          <qg:on-end><qg:destroy target="me" /></qg:on-end>
         </qg:tween>
-      </q:if>
-    </q:function>
+      </qg:for-each>
+      <qg:tween target="p1" property="y" to="214" seconds="0.4" trans="quad" yoyo="true" repeat="1">
+        <qg:on-end><q:call function="next" /></qg:on-end>
+      </qg:tween>
+    </qg:when>
     <q:function name="next">
       <q:if condition="{level >= len(levels)}">
         <qg:goto-scene name="won" fade="0.5" />

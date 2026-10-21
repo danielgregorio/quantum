@@ -15,6 +15,14 @@
   <q:set name="taken" value="[]" type="array" />      <!-- things picked up, by name -->
   <q:set name="opened" value="[]" type="array" />     <!-- doors and gates opened, by name -->
   <q:set name="message" value="" />
+  <!-- a hurt, the same in every room: a function of the game -->
+  <q:function name="hurt" params="me">
+    <qg:play sound="hurt" />
+    <q:set name="hearts" value="{hearts - 1}" />
+    <q:if condition="{hearts <= 0}">
+      <qg:goto-scene name="game-over" />
+    </q:if>
+  </q:function>
 
   <!-- 1 is the floor (walked on: no collision), 2 the wall. -->
   <qg:tileset name="dungeon" src="assets/dungeon.png" tile="18">
@@ -93,14 +101,6 @@
   <!-- ===== Room 1: the entrance. East to room 2. ===== -->
 
   <qg:scene name="room-1" width="256" height="224" background="#2b2b3a" seed="1" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,2,2,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -153,14 +153,6 @@
   <!-- ===== Room 2: the crossing. West to 1, north to 3, south to 4, east (locked) to 5. ===== -->
 
   <qg:scene name="room-2" width="256" height="224" background="#2b2b3a" seed="2" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,1,1,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -224,14 +216,6 @@
   <!-- ===== Room 3: the key, guarded. South to 2. ===== -->
 
   <qg:scene name="room-3" width="256" height="224" background="#2b2b3a" seed="3" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,2,2,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -301,14 +285,6 @@
   <!-- ===== Room 4: the switch. North to 2. ===== -->
 
   <qg:scene name="room-4" width="256" height="224" background="#2b2b3a" seed="4" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,1,1,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -365,14 +341,6 @@
   <!-- ===== Room 5: behind the locked door; the gate the switch opens. West to 2, east to 6. ===== -->
 
   <qg:scene name="room-5" width="256" height="224" background="#2b2b3a" seed="5" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,2,2,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2

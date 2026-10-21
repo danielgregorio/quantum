@@ -14,6 +14,15 @@
 
   <!-- The delve's state, kept from crypt to crypt; the first crypt starts it anew. -->
   <q:set name="message" value="" />
+  <!-- a hurt, the same in every crypt: a function of the game -->
+  <q:function name="hurt" params="me">
+    <qg:play sound="hurt" vary="0.1" />
+    <qg:shake at="me" frames="8" strength="2" />
+    <qg:take item="heart" />
+    <q:if condition="{held('heart') <= 0}">
+      <qg:goto-scene name="fallen" fade="0.6" />
+    </q:if>
+  </q:function>
 
   <!-- Two players, each on their own machine: the delve starts in crypt-1 once both are there. -->
   <qg:multiplayer players="2" start="crypt-1" />
@@ -174,14 +183,6 @@
     <q:set name="message" value="A SEALED WALL. A LEVER MUST OPEN IT." />
     <q:set name="leaving" value="false" type="boolean" />
 
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" vary="0.1" />
-      <qg:shake at="me" frames="8" strength="2" />
-      <qg:take item="heart" />
-      <q:if condition="{held('heart') <= 0}">
-        <qg:goto-scene name="fallen" fade="0.6" />
-      </q:if>
-    </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
       <qg:swap target="foe" prefab="Fallen" />
@@ -273,14 +274,6 @@
     <q:set name="message" value="THE CRUSHERS. MIND THEIR TIME." />
     <q:set name="leaving" value="false" type="boolean" />
 
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" vary="0.1" />
-      <qg:shake at="me" frames="8" strength="2" />
-      <qg:take item="heart" />
-      <q:if condition="{held('heart') <= 0}">
-        <qg:goto-scene name="fallen" fade="0.6" />
-      </q:if>
-    </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
       <qg:emit particles="slain" at="foe" />
@@ -374,14 +367,6 @@
     <q:set name="pulled" value="0" type="number" />
     <q:set name="won" value="false" type="boolean" />
 
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" vary="0.1" />
-      <qg:shake at="me" frames="8" strength="2" />
-      <qg:take item="heart" />
-      <q:if condition="{held('heart') <= 0}">
-        <qg:goto-scene name="fallen" fade="0.6" />
-      </q:if>
-    </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
       <qg:swap target="foe" prefab="Fallen" />

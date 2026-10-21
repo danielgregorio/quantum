@@ -1,0 +1,124 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "logic",
+  "description": "What a delay, a condition that turns true, a function of the game, held actions, angles and sorting say (PLAN_GAMES_3.md, Phase 1)",
+  "examples": [
+    {
+      "id": "game-logic-001",
+      "intent": "A power-up that runs out, and a second one that starts the count again",
+      "input": {
+        "natural_language": "A star makes the hero fast for five seconds; picking up another before it runs out gives five seconds from then, not two runs that end the first early",
+        "context": {
+          "target": "godot",
+          "file": "game-logic-001.q"
+        }
+      },
+      "tags": [
+        "after",
+        "name"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"star\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Star\" tag=\"star\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"field\" width=\"320\" height=\"180\">\n    <q:set name=\"fast\" value=\"false\" type=\"boolean\" />\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"90\" hitbox=\"16x16\" speed=\"80\">\n      <qg:on-collision with=\"star\">\n        <qg:destroy target=\"other\" />\n        <q:set name=\"fast\" value=\"true\" />\n        <!-- a second star before this runs out: the count starts again -->\n        <qg:after seconds=\"5\" name=\"star\"><q:set name=\"fast\" value=\"false\" /></qg:after>\n      </qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Star\" x=\"120\" y=\"90\" />\n    <qg:instance prefab=\"Star\" x=\"200\" y=\"90\" />\n    <qg:hud position=\"top-left\"><qg:text value=\"{'FAST' if fast else ''}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-logic-002",
+      "intent": "A bomb's fuse: what it hits is what was near it when it went off",
+      "input": {
+        "natural_language": "Dropping a bomb lights its fuse; two seconds later it bursts and breaks every crate within forty pixels of it",
+        "context": {
+          "target": "godot",
+          "file": "game-logic-002.q"
+        }
+      },
+      "tags": [
+        "after",
+        "for-each",
+        "spawn"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"fuse\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Bomb\" tag=\"bomb\" sheet=\"tiles\" frame=\"152\" hitbox=\"12x12\" />\n  <qg:prefab name=\"Crate\" tag=\"crate\" sheet=\"tiles\" frame=\"153\" hitbox=\"16x16\" solid=\"true\" />\n  <qg:scene name=\"yard\" width=\"320\" height=\"180\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"90\" hitbox=\"16x16\" speed=\"80\" />\n    <qg:instance prefab=\"Crate\" x=\"100\" y=\"90\" />\n    <qg:instance prefab=\"Crate\" x=\"200\" y=\"90\" />\n    <qg:on-input action=\"jump\">\n      <qg:spawn prefab=\"Bomb\" at=\"hero\" dx=\"16\" />\n      <!-- the bomb is `fresh` in the delay: the one just dropped, not the newest by then -->\n      <qg:for-each tag=\"bomb\" var=\"fresh\">\n        <qg:after seconds=\"2\">\n          <qg:burst at=\"fresh\" />\n          <qg:for-each tag=\"crate\" var=\"crate\">\n            <q:if condition=\"{distance(crate, fresh) < 40}\"><qg:destroy target=\"crate\" /></q:if>\n          </qg:for-each>\n          <qg:destroy target=\"fresh\" />\n        </qg:after>\n      </qg:for-each>\n    </qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-logic-003",
+      "intent": "A wave beaten: the next one when the last enemy goes",
+      "input": {
+        "natural_language": "Enemies come in waves; when none is left the wave number goes up and the next wave comes after a breath",
+        "context": {
+          "target": "godot",
+          "file": "game-logic-003.q"
+        }
+      },
+      "tags": [
+        "when",
+        "after",
+        "count"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"waves\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Drone\" tag=\"enemy\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" ai=\"patrol\" speed=\"40\" health=\"1\" />\n  <qg:scene name=\"arena\" width=\"320\" height=\"180\">\n    <q:set name=\"wave\" value=\"1\" type=\"number\" />\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"160\" y=\"150\" hitbox=\"16x16\" speed=\"80\"\n                  attack-action=\"jump\" attack-reach=\"20\">\n      <qg:on-collision with=\"enemy\"><qg:damage target=\"other\" /></qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Drone\" x=\"80\" y=\"40\" />\n    <qg:instance prefab=\"Drone\" x=\"240\" y=\"40\" />\n    <!-- read before every tick: it runs once as the last one goes, and again only after a new wave came -->\n    <qg:when condition=\"{count('enemy') == 0}\">\n      <q:set name=\"wave\" value=\"{wave + 1}\" />\n      <qg:after seconds=\"1.5\">\n        <q:loop var=\"i\" from=\"1\" to=\"{wave + 1}\">\n          <qg:spawn prefab=\"Drone\" x=\"{40 * i}\" y=\"40\" />\n        </q:loop>\n      </qg:after>\n    </qg:when>\n    <qg:hud position=\"top-left\"><qg:counter bind=\"wave\" label=\"WAVE\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-logic-004",
+      "intent": "One rule for every room: a function of the game",
+      "input": {
+        "natural_language": "Every room of a dungeon hurts the hero the same way: a heart less, a sound, and the end when none is left. Written once, not once a room",
+        "context": {
+          "target": "godot",
+          "file": "game-logic-004.q"
+        }
+      },
+      "tags": [
+        "q:function",
+        "application"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"rooms\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"hearts\" value=\"3\" type=\"number\" />\n  <!-- in <q:application>: every scene has it (and the prefabs' handlers) -->\n  <q:function name=\"hurt\">\n    <q:set name=\"hearts\" value=\"{hearts - 1}\" />\n    <q:if condition=\"{hearts <= 0}\"><qg:goto-scene name=\"fallen\" /></q:if>\n  </q:function>\n  <qg:scene name=\"room-1\" width=\"320\" height=\"180\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"90\" hitbox=\"16x16\" speed=\"80\">\n      <qg:on-collision with=\"spikes\" cooldown=\"60\"><q:call function=\"hurt\" /></qg:on-collision>\n    </qg:character>\n    <qg:zone name=\"spikes\" tag=\"spikes\" x=\"160\" y=\"80\" width=\"16\" height=\"16\" />\n    <qg:exit name=\"east\" x=\"300\" y=\"80\" width=\"20\" height=\"20\" to=\"room-2\" at=\"west\" />\n  </qg:scene>\n  <qg:scene name=\"room-2\" width=\"320\" height=\"180\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"90\" hitbox=\"16x16\" speed=\"80\">\n      <qg:on-collision with=\"bat\" cooldown=\"60\"><q:call function=\"hurt\" /></qg:on-collision>\n    </qg:character>\n    <qg:zone name=\"bat\" tag=\"bat\" x=\"240\" y=\"60\" width=\"16\" height=\"16\" />\n    <qg:exit name=\"west\" x=\"-4\" y=\"80\" width=\"8\" height=\"20\" to=\"room-1\" at=\"east\" />\n  </qg:scene>\n  <qg:scene name=\"fallen\" width=\"320\" height=\"180\">\n    <qg:hud position=\"center\"><qg:text value=\"{'FALLEN'}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-logic-005",
+      "intent": "A charged shot: held longer, it flies faster",
+      "input": {
+        "natural_language": "Holding fire charges a shot; letting go fires it, and how long it was held says how fast it goes. Holding run makes the hero faster",
+        "context": {
+          "target": "godot",
+          "file": "game-logic-005.q"
+        }
+      },
+      "tags": [
+        "pressing",
+        "pressed_for",
+        "on-input",
+        "release"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"charge\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:input action=\"fire\" keys=\"J\" />\n  <qg:input action=\"run\" keys=\"K\" />\n  <qg:prefab name=\"Shot\" tag=\"shot\" sheet=\"tiles\" frame=\"151\" hitbox=\"6x6\" ai=\"fly\" heading=\"right\" speed=\"200\" />\n  <qg:scene name=\"range\" width=\"320\" height=\"180\">\n    <q:set name=\"charge\" value=\"0\" type=\"number\" />\n    <qg:character id=\"hero\" controller=\"behavior\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"90\" hitbox=\"16x16\">\n      <qg:behavior><qg:walk axis=\"both\" speed=\"80\" /></qg:behavior>\n    </qg:character>\n    <qg:on-input action=\"fire\" on=\"release\">\n      <!-- the ticks it was held, read on the tick it is let go -->\n      <q:set name=\"charge\" value=\"{min(pressed_for('fire'), 60)}\" />\n      <qg:spawn prefab=\"Shot\" at=\"hero\" dx=\"12\" />\n    </qg:on-input>\n    <qg:timer every=\"1\">\n      <q:if condition=\"{pressing('run')}\"><qg:velocity target=\"hero\" x=\"{hero.vx * 1.5}\" /></q:if>\n    </qg:timer>\n    <qg:hud position=\"top-left\"><qg:text value=\"{'CHARGE ' + str(charge)}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-logic-006",
+      "intent": "A turret that turns to the hero, and a table of the best times",
+      "input": {
+        "natural_language": "A turret's picture turns to face the hero, in degrees; the three best times so far, sorted, and the time of this run in ticks",
+        "context": {
+          "target": "godot",
+          "file": "game-logic-006.q"
+        }
+      },
+      "tags": [
+        "atan2",
+        "sin",
+        "cos",
+        "sort",
+        "ticks",
+        "tween"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"turret\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"best\" value=\"[]\" type=\"array\" />\n  <qg:prefab name=\"Turret\" tag=\"turret\" sheet=\"tiles\" frame=\"151\" hitbox=\"16x16\" />\n  <qg:scene name=\"yard\" width=\"320\" height=\"180\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"90\" hitbox=\"16x16\" speed=\"80\">\n      <qg:on-collision with=\"goal\">\n        <!-- the run's time, then the three best, fastest first -->\n        <q:set name=\"best\" value=\"{sort(best + [ticks()])[:3]}\" />\n        <qg:goto-scene name=\"yard\" />\n      </qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Turret\" name=\"gun\" x=\"200\" y=\"90\" />\n    <qg:zone name=\"goal\" tag=\"goal\" x=\"300\" y=\"80\" width=\"20\" height=\"20\" />\n    <qg:timer every=\"6\">\n      <qg:tween target=\"gun\" property=\"rotation\" to=\"{atan2(hero.y - gun.y, hero.x - gun.x)}\" seconds=\"0.1\" />\n    </qg:timer>\n    <!-- a mark that circles the turret: cos and sin of degrees -->\n    <qg:timer every=\"2\">\n      <qg:put target=\"mark\" x=\"{gun.x + 30 * cos(ticks() * 3)}\" y=\"{gun.y + 30 * sin(ticks() * 3)}\" />\n    </qg:timer>\n    <qg:instance prefab=\"Turret\" name=\"mark\" x=\"230\" y=\"90\" />\n  </qg:scene>\n</q:application>\n"
+      }
+    }
+  ]
+}

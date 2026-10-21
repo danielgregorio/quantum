@@ -1293,6 +1293,18 @@ Joins a networked game at an address with no seat, to watch it: the players' inp
 
 Goes inside: a handler.
 
+### `qg:after`
+
+Runs what it holds later, so many ticks (or seconds) after the handler reached it: a power-up that runs out, a bomb's fuse, a pause before the next serve. It counts the game's ticks, so a replay and every peer see the same; it waits while the scene is paused, and goes with the scene. The names it reads (me, other, a loop variable, a parameter) are what they were as it started; a thing gone by then is null, and an action on it does nothing.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `ticks` | an expression |  | how many ticks from now (60 a second) |
+| `seconds` | an expression |  | or how many seconds, rounded to ticks |
+| `name` | a name |  | one of this name still waiting is replaced: the count starts again (a second power-up before the first runs out) |
+
+Goes inside: a handler.
+
 ## Other tags
 
 ### `qg:dialogue`
@@ -1430,9 +1442,19 @@ Runs its handler after so many ticks, or every so many ticks, in this scene.
 
 Goes inside: `qg:scene`.
 
+### `qg:when`
+
+Runs its handler when a condition turns true: a wave beaten (`count('enemy') == 0`), a room solved, a score reached. The condition is read at the start of every tick, from the scene's first, after the qg:afters due then (not while the scene is paused); the handler runs on the tick it is first true, and again only after it has been false. Holds actions and statements.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `condition` | an expression | required | an expression of the scene's state |
+
+Goes inside: `qg:scene`.
+
 ## Statements
 
-Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `language()`, `has_save()`, `distance()`, `nearest()`, `sees()`, `held()`, `can_quit()`.
+Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. A `q:function` directly in a scene is the scene's; in `q:application`, every scene's (and the prefabs' handlers'), reading the game's state, its parameters and its own variables. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `language()`, `has_save()`, `distance()`, `nearest()`, `sees()`, `held()`, `can_quit()`, `ticks()`, `sin()`, `cos()`, `atan2()`, `sort()`; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take degrees and `atan2(y, x)` gives them (0 to the right, 90 down), and `sort()` is the Core's. `pressing()`, `pressed_for()`, `strength()` read an action of player 1, or of another (`pressing('run', 2)`): held now, the ticks it has been held (on the tick it is let go, how long it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: `col`, `doing`, `facing`, `health`, `name`, `on_ceiling`, `on_floor`, `on_wall`, `player`, `row`, `state`, `tag`, `vx`, `vy`, `x`, `y`, as its controller has them.
 
 ## `gd:` attributes
 
@@ -2074,6 +2096,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <q:set name="taken" value="[]" type="array" />      <!-- things picked up, by name -->
   <q:set name="opened" value="[]" type="array" />     <!-- doors and gates opened, by name -->
   <q:set name="message" value="" />
+  <!-- a hurt, the same in every room: a function of the game -->
+  <q:function name="hurt" params="me">
+    <qg:play sound="hurt" />
+    <q:set name="hearts" value="{hearts - 1}" />
+    <q:if condition="{hearts <= 0}">
+      <qg:goto-scene name="game-over" />
+    </q:if>
+  </q:function>
 
   <!-- 1 is the floor (walked on: no collision), 2 the wall. -->
   <qg:tileset name="dungeon" src="assets/dungeon.png" tile="18">
@@ -2152,14 +2182,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== Room 1: the entrance. East to room 2. ===== -->
 
   <qg:scene name="room-1" width="256" height="224" background="#2b2b3a" seed="1" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,2,2,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -2212,14 +2234,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== Room 2: the crossing. West to 1, north to 3, south to 4, east (locked) to 5. ===== -->
 
   <qg:scene name="room-2" width="256" height="224" background="#2b2b3a" seed="2" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,1,1,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -2283,14 +2297,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== Room 3: the key, guarded. South to 2. ===== -->
 
   <qg:scene name="room-3" width="256" height="224" background="#2b2b3a" seed="3" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,2,2,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -2360,14 +2366,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== Room 4: the switch. North to 2. ===== -->
 
   <qg:scene name="room-4" width="256" height="224" background="#2b2b3a" seed="4" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,1,1,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -2424,14 +2422,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== Room 5: behind the locked door; the gate the switch opens. West to 2, east to 6. ===== -->
 
   <qg:scene name="room-5" width="256" height="224" background="#2b2b3a" seed="5" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,2,2,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -2581,6 +2571,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- The delve's state, kept from crypt to crypt; the first crypt starts it anew. -->
   <q:set name="message" value="" />
+  <!-- a hurt, the same in every crypt: a function of the game -->
+  <q:function name="hurt" params="me">
+    <qg:play sound="hurt" vary="0.1" />
+    <qg:shake at="me" frames="8" strength="2" />
+    <qg:take item="heart" />
+    <q:if condition="{held('heart') <= 0}">
+      <qg:goto-scene name="fallen" fade="0.6" />
+    </q:if>
+  </q:function>
 
   <!-- Two players, each on their own machine: the delve starts in crypt-1 once both are there. -->
   <qg:multiplayer players="2" start="crypt-1" />
@@ -2741,14 +2740,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="message" value="A SEALED WALL. A LEVER MUST OPEN IT." />
     <q:set name="leaving" value="false" type="boolean" />
 
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" vary="0.1" />
-      <qg:shake at="me" frames="8" strength="2" />
-      <qg:take item="heart" />
-      <q:if condition="{held('heart') <= 0}">
-        <qg:goto-scene name="fallen" fade="0.6" />
-      </q:if>
-    </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
       <qg:swap target="foe" prefab="Fallen" />
@@ -2840,14 +2831,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="message" value="THE CRUSHERS. MIND THEIR TIME." />
     <q:set name="leaving" value="false" type="boolean" />
 
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" vary="0.1" />
-      <qg:shake at="me" frames="8" strength="2" />
-      <qg:take item="heart" />
-      <q:if condition="{held('heart') <= 0}">
-        <qg:goto-scene name="fallen" fade="0.6" />
-      </q:if>
-    </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
       <qg:emit particles="slain" at="foe" />
@@ -2941,14 +2924,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="pulled" value="0" type="number" />
     <q:set name="won" value="false" type="boolean" />
 
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" vary="0.1" />
-      <qg:shake at="me" frames="8" strength="2" />
-      <qg:take item="heart" />
-      <q:if condition="{held('heart') <= 0}">
-        <qg:goto-scene name="fallen" fade="0.6" />
-      </q:if>
-    </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
       <qg:swap target="foe" prefab="Fallen" />
@@ -4719,26 +4694,22 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
           <qg:damage target="near" amount="2" />
         </q:if>
       </qg:for-each>
-      <q:call function="check" />
     </qg:on-death>
-    <qg:on-death of="brick"><q:call function="check" /></qg:on-death>
 
     <!-- The last brick: slow motion, the balls fade out, the paddle hops, the next level. -->
-    <q:function name="check">
-      <q:if condition="{count('brick') + count('bomb') == 0 and not done}">
-        <q:set name="done" value="true" />
-        <qg:play sound="clear" />
-        <qg:time-scale scale="0.25" seconds="1.5" />
-        <qg:for-each tag="ball" var="b">
-          <qg:tween target="b" property="alpha" to="0" seconds="0.3">
-            <qg:on-end><qg:destroy target="me" /></qg:on-end>
-          </qg:tween>
-        </qg:for-each>
-        <qg:tween target="p1" property="y" to="214" seconds="0.4" trans="quad" yoyo="true" repeat="1">
-          <qg:on-end><q:call function="next" /></qg:on-end>
+    <qg:when condition="{count('brick') + count('bomb') == 0}">
+      <q:set name="done" value="true" />
+      <qg:play sound="clear" />
+      <qg:time-scale scale="0.25" seconds="1.5" />
+      <qg:for-each tag="ball" var="b">
+        <qg:tween target="b" property="alpha" to="0" seconds="0.3">
+          <qg:on-end><qg:destroy target="me" /></qg:on-end>
         </qg:tween>
-      </q:if>
-    </q:function>
+      </qg:for-each>
+      <qg:tween target="p1" property="y" to="214" seconds="0.4" trans="quad" yoyo="true" repeat="1">
+        <qg:on-end><q:call function="next" /></qg:on-end>
+      </qg:tween>
+    </qg:when>
     <q:function name="next">
       <q:if condition="{level >= len(levels)}">
         <qg:goto-scene name="won" fade="0.5" />

@@ -65,12 +65,20 @@ class SceneScript:
     dialogues_used: List[tuple] = field(default_factory=list)  # (name, line) from qg:say
     net_used: List[Optional[int]] = field(default_factory=list)   # lines of qg:host, qg:join, qg:leave
     tween_ends: int = 0   # the qg:on-end handlers of tweens so far: each its own method, nested ones too
+    afters: int = 0       # the qg:afters so far: what each puts off is its own method
 
     node_ids: List[str] = field(default_factory=list)   # the scene's characters, by id
+    game_functions: List[str] = field(default_factory=list)   # the q:functions of <q:application>, every scene's
+    game_wide: bool = False   # compiling one of those: it sees the game's state and functions, not the scene's
+    node_fields: Dict[str, frozenset] = field(default_factory=dict)   # a character id -> its controller's fields
+    actions: Optional[List[str]] = None   # the game's actions, for pressing('run') and the like
 
     def scope(self) -> Scope:
+        if self.game_wide:
+            return Scope((), functions=self.game_functions, game_names=self.game_state.keys(),
+                         actions=self.actions)
         return Scope(self.state.keys(), functions=self.function_names, game_names=self.game_state.keys(),
-                     node_ids=self.node_ids)
+                     node_ids=self.node_ids, node_fields=self.node_fields, actions=self.actions)
 
     enter: List[Node] = field(default_factory=list)   # statements directly in the scene: run on enter
 
@@ -144,7 +152,7 @@ def _literal_type(value: str) -> str:
         return 'string'
 
 
-def local_names(body: List[Node], scope: Scope) -> List[str]:
+def local_names(body: List[Node], scope: Scope, home: str = 'the scene') -> List[str]:
     """The names a q:set in the body gives that no q:set of the scene or the game declared: the
     function's (or the handler's) own variables, local to the call — they never clash with another
     function's, nor with the same function called from within a loop of itself."""
@@ -173,8 +181,9 @@ def local_names(body: List[Node], scope: Scope) -> List[str]:
         if not any(mentioned.search(text) for text in read):
             line = next((n.line for n in _sets(body) if n.attrs['name'] == name), None)
             raise GameCompileError(
-                f'{name!r} is set and never read: a state of the scene is declared with <q:set name="{name}" .../> '
-                f'in the scene; a variable of the function or handler is read somewhere in it', line)
+                f'{name!r} is set and never read: a state of {"the game" if home != "the scene" else "the scene"} '
+                f'is declared with <q:set name="{name}" .../> in {home}; a variable of the function or handler is '
+                f'read somewhere in it', line)
         # ...and one whose first q:set reads it (score + 1) is a state never declared: it would start as null
         first = next(n for n in _sets(body) if n.attrs['name'] == name)
         if mentioned.search(str(first.attrs.get('value', ''))):
@@ -220,11 +229,26 @@ def compile_function(script: SceneScript, st: Statement) -> None:
     name = st.attrs['name']
     params = [p.strip() for p in st.attrs.get('params', '').split(',') if p.strip()]
     scope = script.scope().child(params)
-    locals_ = local_names(st.body, scope)
+    locals_ = local_names(st.body, scope, '<q:application>' if script.game_wide else 'the scene')
     scope = scope.child(locals_)
     head = ''.join(f'{_INDENT}var {v} = null\n' for v in locals_)
     body = compile_block(st.body, scope, script, 1)
     script.functions.append(f'func {name}({", ".join(params)}):\n' + head + body)
+
+
+def compile_game_functions(script: SceneScript, functions: List[Statement]) -> None:
+    """The q:functions of <q:application>, compiled into a scene's script (or P): each scene has them, and
+    they read only the game's state, their parameters and their own variables."""
+    script.game_functions = [f.attrs['name'] for f in functions]
+    for name in script.game_functions:
+        if name not in script.function_names:
+            script.function_names.append(name)
+    script.game_wide = True
+    try:
+        for st in functions:
+            compile_function(script, st)
+    finally:
+        script.game_wide = False
 
 
 def game_state_source(state: Dict[str, StateVar], items: Optional[dict] = None) -> str:
@@ -266,7 +290,7 @@ def game_state_source(state: Dict[str, StateVar], items: Optional[dict] = None) 
 def prefabs_source(script: 'SceneScript') -> str:
     """The autoload P: the handlers of the prefabs (qg:on-collision, qg:on-damage, qg:on-death)."""
     lines = ['extends Node', '# Compiled by Quantum from the handlers of the qg:prefabs; do not edit.', '']
-    for block in script.handlers:
+    for block in script.functions + script.handlers:
         lines.append(block)
         lines.append('')
     return '\n'.join(lines).rstrip('\n') + '\n'
@@ -275,7 +299,7 @@ def prefabs_source(script: 'SceneScript') -> str:
 def compile_handler(script: SceneScript, name: str, body: List[Node], line: Optional[int],
                     params: tuple = ('me', 'other')) -> str:
     """A handler method `(me, other)` (or `(cursor, other)` for qg:on-select); returns its name."""
-    scope = script.scope().child(params)
+    scope = script.scope().child(params, things=[p for p in params if p in ('me', 'other')])
     locals_ = local_names(body, scope)
     scope = scope.child(locals_)
     head = ''.join(f'{_INDENT}var {v} = null\n' for v in locals_)
@@ -299,7 +323,7 @@ def _compile_node(node: Node, scope: Scope, script: SceneScript, depth: int) -> 
         var = node.get('var')
         if scope.has(var):
             raise GameCompileError(f'<qg:for-each var="{var}">: the name is taken here; choose another', node.line)
-        inner = scope.child([var])
+        inner = scope.child([var], things=[var])
         # the things there as it starts; one destroyed meanwhile (by the loop itself) is skipped
         return [f'{ind}for {var} in Q.things(self, {json.dumps(node.get("tag"))}):',
                 f'{ind}{_INDENT}if not Q.alive({var}):',
@@ -358,13 +382,34 @@ def _compile_node(node: Node, scope: Scope, script: SceneScript, depth: int) -> 
     if st.kind == 'call':
         fname = st.attrs['function']
         if not scope.has_function(fname):
-            raise GameCompileError(f'<q:call function="{fname}">: no q:function of that name in the scene', st.line)
-        args = [compile_expression(a.strip(), scope, st.line)
-                for a in st.attrs.get('args', '').split(',') if a.strip()]
+            raise GameCompileError(f'<q:call function="{fname}">: no q:function of that name in the scene or the '
+                                   f'game', st.line)
+        args = [compile_expression(a, scope, st.line) for a in split_args(st.attrs.get('args', ''))]
         return [f'{ind}{fname}({", ".join(args)})']
     if st.kind == 'function':
         raise GameCompileError('<q:function> goes directly inside <qg:scene>', st.line)
     raise GameCompileError(f'<q:{st.kind}> cannot go here', st.line)
+
+
+def split_args(text: str) -> List[str]:
+    """q:call's args=: the arguments, split at the commas between them — not one inside a text, a list,
+    a dictionary or a call (`{'a, b'}, {[1, 2]}, {max(x, 3)}` is three)."""
+    out, depth, quote, start = [], 0, '', 0
+    for i, ch in enumerate(text):
+        if quote:
+            if ch == quote and text[i - 1] != '\\':
+                quote = ''
+        elif ch in '\'"':
+            quote = ch
+        elif ch in '([{':
+            depth += 1
+        elif ch in ')]}':
+            depth -= 1
+        elif ch == ',' and depth == 0:
+            out.append(text[start:i])
+            start = i + 1
+    out.append(text[start:])
+    return [a.strip() for a in out if a.strip()]
 
 
 def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
@@ -526,6 +571,28 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         while args[-1] == 'null':
             args.pop()
         return f'Q.tween({", ".join(args)})'
+    if el.tag == 'after':
+        ticks, seconds = el.get('ticks'), el.get('seconds')
+        if (ticks is None) == (seconds is None):
+            raise GameCompileError('<qg:after> takes ticks= or seconds=, one of them', el.line)
+        given = ticks if ticks is not None else seconds
+        try:
+            if float(strip_braces(str(given))) <= 0:
+                raise GameCompileError(f'<qg:after {"ticks" if ticks is not None else "seconds"}="{given}">: '
+                                       f'more than 0', el.line)
+        except ValueError:
+            pass   # an expression: rounded at run time, and at least one tick
+        count = compile_expression(str(given), scope, el.line)
+        if seconds is not None:
+            count = f'{count} * Q.TICK_RATE'
+        # the names of this handler are passed on as they are now: the method runs later, with them
+        names = scope.locals()
+        script.afters += 1
+        method = compile_handler(script, f'_after_{script.afters}', el.children, el.line, params=tuple(names))
+        args = ['self', count, json.dumps(method), '[' + ', '.join(names) + ']']
+        if el.get('name'):
+            args.append(json.dumps(el.get('name')))
+        return f'Q.after({", ".join(args)})'
     if el.tag == 'goto-scene':
         script.scenes_used.append((el.get('name'), el.line))
         fade = el.get('fade') or 0.0

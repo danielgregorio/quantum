@@ -180,17 +180,17 @@
     },
     {
       "id": "game-bad-011",
-      "intent": "A q:function outside a scene",
+      "intent": "A function of the game setting a state no one declared",
       "input": {
-        "natural_language": "A function the whole game can call",
+        "natural_language": "A function the whole game can call, that resets the score",
         "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <q:function name=\"reset\"><q:set name=\"score\" value=\"0\" /></q:function>\n  <qg:scene name=\"main\" />\n</q:application>\n"
       },
       "expected_error": {
         "type": "GameCompileError",
-        "message": "goes inside a <qg:scene>"
+        "message": "'score' is set and never read: a state of the game is declared with <q:set name=\"score\" .../> in <q:application>"
       },
-      "why_invalid": "Only q:set (game state) goes directly in q:application; functions belong to a scene.",
-      "correction": "Put the q:function directly inside the qg:scene that calls it.",
+      "why_invalid": "No q:set declares score: in a function, a name no q:set of the game declares is a variable of the function, and one set and never read is a misspelt state.",
+      "correction": "Declare it in <q:application>: <q:set name=\"score\" value=\"0\" type=\"number\" />.",
       "tags": [
         "q:function"
       ]
@@ -508,6 +508,91 @@
       "tags": [
         "tween",
         "on-end"
+      ]
+    },
+    {
+      "id": "game-bad-030",
+      "intent": "A field the character does not have",
+      "input": {
+        "natural_language": "Show the hero's health",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"shown\" value=\"0\" type=\"number\" />\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"18x22\" />\n    <qg:timer every=\"10\"><q:set name=\"shown\" value=\"{hero.health}\" /></qg:timer>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "hero.health: no such field; hero has facing, name, on_ceiling, on_floor, on_wall, player, state, x, y"
+      },
+      "why_invalid": "A platformer's character keeps no health (a fighter does): read before, hero.health stopped the game in Godot.",
+      "correction": "Keep the hearts in a q:set of the game, or use controller=\"fighter\".",
+      "tags": [
+        "fields"
+      ]
+    },
+    {
+      "id": "game-bad-031",
+      "intent": "A delay with no count",
+      "input": {
+        "natural_language": "Later, end the level",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:on-input action=\"jump\"><qg:after><qg:goto-scene name=\"main\" /></qg:after></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:after> takes ticks= or seconds=, one of them"
+      },
+      "why_invalid": "A delay needs to know how long it waits.",
+      "correction": "Write <qg:after seconds=\"2\"> or <qg:after ticks=\"120\">.",
+      "tags": [
+        "after"
+      ]
+    },
+    {
+      "id": "game-bad-032",
+      "intent": "A function of the game reading a scene's state",
+      "input": {
+        "natural_language": "A function every room uses that reads the score of one room",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:function name=\"win\" params=\"n\"><q:set name=\"n\" value=\"{points}\" /></q:function>\n  <qg:scene name=\"main\"><q:set name=\"points\" value=\"0\" type=\"number\" /></qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "'points' is not declared"
+      },
+      "why_invalid": "A q:function of the game runs in every scene: it reads the game's state (q:set in q:application), its parameters and its own variables, not one scene's.",
+      "correction": "Declare points in <q:application>, or pass it: <q:call function=\"win\" args=\"{points}\" />.",
+      "tags": [
+        "q:function"
+      ]
+    },
+    {
+      "id": "game-bad-033",
+      "intent": "A scene function named like one of the game",
+      "input": {
+        "natural_language": "Each room has its own hurt",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:function name=\"hurt\"><qg:quit /></q:function>\n  <qg:scene name=\"main\"><q:function name=\"hurt\"><qg:quit /></q:function></qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "'hurt' is a q:function of the game already"
+      },
+      "why_invalid": "Two functions of the same name in one scene: which runs would depend on nothing written.",
+      "correction": "Give the scene's another name.",
+      "tags": [
+        "q:function"
+      ]
+    },
+    {
+      "id": "game-bad-034",
+      "intent": "Reading an action the game does not have",
+      "input": {
+        "natural_language": "Charge while dash is held",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"charge\" value=\"0\" type=\"number\" />\n    <qg:timer every=\"1\"><q:if condition=\"{pressing('dash')}\"><q:set name=\"charge\" value=\"{charge + 1}\" /></q:if></qg:timer>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "pressing('dash'): no such action"
+      },
+      "why_invalid": "An action is a name the game declares (qg:input) or a default one: a misspelt one would read as never pressed.",
+      "correction": "Declare it: <qg:input action=\"dash\" keys=\"Shift\" />.",
+      "tags": [
+        "pressing"
       ]
     }
   ]

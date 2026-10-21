@@ -40,13 +40,14 @@ class Tag:
 # The tags that hold a handler: actions (and q: statements), run when it fires.
 HANDLERS = ('on-collision', 'on-fall', 'on-input', 'on-select', 'on-hit', 'on-ko', 'on-death', 'on-tile',
             'on-animation-end', 'on-locked', 'on-damage', 'timer', 'button', 'on-end', 'on-separate',
-            'on-screen-exit', 'on-screen-enter', 'for-each')
+            'on-screen-exit', 'on-screen-enter', 'for-each', 'after', 'when')
 
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
            'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
-           'play-animation', 'give', 'take', 'reset-items', 'for-each', 'time-scale', 'quit', 'start-now', 'watch')
+           'play-animation', 'give', 'take', 'reset-items', 'for-each', 'time-scale', 'quit', 'start-now', 'watch',
+           'after')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -477,6 +478,13 @@ TAGS: Dict[str, Tag] = {
         'when any thing of that tag dies there.',
         {'of': Attr('ident', None, doc='scene: the tag')},
         parents=('prefab', 'scene')),
+    'when': Tag(
+        'Runs its handler when a condition turns true: a wave beaten (`count(\'enemy\') == 0`), a room solved, a '
+        'score reached. The condition is read at the start of every tick, from the scene\'s first, after the '
+        'qg:afters due then (not while the scene is paused); the handler runs on the tick it is first true, and '
+        'again only after it has been false. Holds actions and statements.',
+        {'condition': Attr('expr', required=True, doc='an expression of the scene\'s state')},
+        parents=('scene',)),
     'timer': Tag(
         'Runs its handler after so many ticks, or every so many ticks, in this scene.',
         {'after': Attr('int', None, doc='ticks from entering the scene, once'),
@@ -705,6 +713,17 @@ TAGS: Dict[str, Tag] = {
         'one destroyed meanwhile is skipped.',
         {'tag': Attr('ident', required=True, doc='the things\' tag'),
          'var': Attr('ident', 'it', doc='the name of each thing in turn (a target=, an expression)')},
+        parents=('handler',)),
+    'after': Tag(
+        'Runs what it holds later, so many ticks (or seconds) after the handler reached it: a power-up that runs '
+        'out, a bomb\'s fuse, a pause before the next serve. It counts the game\'s ticks, so a replay and every '
+        'peer see the same; it waits while the scene is paused, and goes with the scene. The names it reads (me, '
+        'other, a loop variable, a parameter) are what they were as it started; a thing gone by then is null, and '
+        'an action on it does nothing.',
+        {'ticks': Attr('expr', None, doc='how many ticks from now (60 a second)'),
+         'seconds': Attr('expr', None, doc='or how many seconds, rounded to ticks'),
+         'name': Attr('ident', None, doc='one of this name still waiting is replaced: the count starts again (a '
+                                         'second power-up before the first runs out)')},
         parents=('handler',)),
     'time-scale': Tag(
         'Slow motion, or fast: the whole game runs at this speed — its ticks come further apart (or closer), '

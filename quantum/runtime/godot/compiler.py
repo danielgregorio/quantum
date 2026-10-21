@@ -10,13 +10,13 @@ from typing import Dict, List, Optional
 
 from quantum.runtime.godot.errors import GameCompileError
 from quantum.runtime.godot.model import Element, Game, Statement, read_game
-from quantum.runtime.godot.expressions import compile_expression, strip_braces
+from quantum.runtime.godot.expressions import CONTROLLER_FIELDS, THING_FIELDS, compile_expression, strip_braces
 from quantum.runtime.godot.schema import TAGS
 from quantum.runtime.godot.tiled import read_tmx
 from quantum.runtime.godot import gd as gdprops
 from quantum.runtime.godot.statements import (
-    SceneScript, StateVar, compile_function, compile_handler, declare_state, game_state_source,
-    is_expression, prefabs_source,
+    SceneScript, StateVar, compile_function, compile_game_functions, compile_handler, declare_state,
+    game_state_source, is_expression, prefabs_source,
 )
 
 ADDON_SRC = Path(__file__).with_name('addons') / 'quantum'
@@ -260,7 +260,8 @@ class _Compiler:
         self.languages = languages
         prefabs = {}
         self._part_targets: List[tuple] = []
-        pscript = SceneScript('prefabs', game_state=self.game_state)
+        pscript = SceneScript('prefabs', game_state=self.game_state, actions=self.actions)
+        compile_game_functions(pscript, g.functions)   # a prefab's handlers call the game's q:functions too
         for name, el in g.prefabs.items():
             self._sheet_exists(el.get('sheet'), sheets, el.line)
             if el.get('solid') and el.get('ai') and el.get('ai') != 'shuttle':
@@ -648,6 +649,9 @@ class _Compiler:
         # the characters, by id: names in the scene's expressions, targets of its actions
         script.node_ids = ([c.get('id') for c in scene.find_all('character')]
                            + [i.get('name') for i in scene.find_all('instance') if i.get('name')])
+        script.node_fields = {c.get('id'): CONTROLLER_FIELDS.get(c.get('controller'), THING_FIELDS)
+                              for c in scene.find_all('character')}
+        script.actions = self.actions
         # 1. state and functions first: handlers refer to them
         for node in scene.children:
             if isinstance(node, Statement) and node.kind == 'set':
@@ -657,7 +661,11 @@ class _Compiler:
                     declare_state(script, node)
         for node in scene.children:
             if isinstance(node, Statement) and node.kind == 'function':
+                if any(f.attrs['name'] == node.attrs['name'] for f in self.game.functions):
+                    raise GameCompileError(f'{node.attrs["name"]!r} is a q:function of the game already (in '
+                                           f'<q:application>); a scene\'s needs another name', node.line)
                 script.function_names.append(node.attrs['name'])
+        compile_game_functions(script, self.game.functions)
         for node in scene.children:
             if isinstance(node, Statement) and node.kind == 'function':
                 compile_function(script, node)
@@ -688,6 +696,7 @@ class _Compiler:
         paths: Dict[str, list] = {}
         conditions = 0
         on_death: Dict[str, str] = {}
+        whens: List[list] = []
         dialogues: Dict[str, dict] = {}
         self._node_elements: List[Optional[Element]] = []
         for node in scene.children:
@@ -786,6 +795,12 @@ class _Compiler:
                 if tag in on_death:
                     raise GameCompileError(f'two <qg:on-death of="{tag}">', el.line)
                 on_death[tag] = compile_handler(script, f'_on_death_of_{_ident(tag)}', el.children, el.line)
+            elif el.tag == 'when':
+                # the condition, a method the scene's clock reads before every tick; the handler, run as it turns true
+                n = len(whens) + 1
+                cond = compile_expression(el.get('condition'), script.scope(), el.line)
+                script.functions.append(f'func _when_{n}() -> bool:\n\treturn bool({cond})')
+                whens.append([f'_when_{n}', compile_handler(script, f'_on_when_{n}', el.children, el.line, params=())])
             elif el.tag == 'timer':
                 if (el.get('after') is None) == (el.get('every') is None):
                     raise GameCompileError('<qg:timer> takes after= or every=, one of them', el.line)
@@ -1298,6 +1313,8 @@ class _Compiler:
             'on_screen': on_screen, 'on_death': on_death,
             'on_select': on_select, 'music': music,
         }
+        if whens:
+            spec['when'] = whens
         if scene.get('save'):
             spec['save'] = True
         gdprops.attach(spec, 'Node2D', scene.gd, f'<qg:scene name="{name}">', scene.line)

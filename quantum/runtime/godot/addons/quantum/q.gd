@@ -23,6 +23,8 @@ var sounds_played: Array = []  # names, in order — the replay harness reads it
 # rollback can replay old ticks with their input in one frame.
 var _now: Dictionary = {}    # action -> strength (0..1), only the pressed ones
 var _prev: Dictionary = {}
+var _for: Dictionary = {}    # action -> the ticks it has been held, up to this one
+var _for_prev: Dictionary = {}
 var external_input: bool = false
 
 
@@ -55,6 +57,29 @@ static func len(v) -> int:
 	if v is Array or v is Dictionary:
 		return v.size()
 	return 0
+
+
+# `sort(list)`, `sort(list, true)`: a sorted copy, as the Core's sort (numbers
+# before texts when they are mixed, as Python cannot compare them at all).
+static func sort(v, reverse: bool = false) -> Array:
+	var out: Array = (v as Array).duplicate() if v is Array else []
+	out.sort_custom(func(a, b): return _before(b, a) if reverse else _before(a, b))
+	return out
+
+
+static func _before(a, b) -> bool:
+	var na := a is int or a is float
+	var nb := b is int or b is float
+	if na != nb:
+		return na
+	return a < b
+
+
+# sin(), cos() of an angle in degrees, and atan2(y, x) the angle of a direction
+# in degrees: 0 to the right, 90 down (the screen's y grows downwards), as a
+# picture's rotation.
+static func atan2_deg(y: float, x: float) -> float:
+	return rad_to_deg(atan2(y, x))
 
 
 # `a[start:end]` of a string or an array, like Python (null: from the start / to the end).
@@ -256,6 +281,26 @@ static func tween(node, property: String, to, seconds: float, trans: String, eas
 	event("tween", {"property": property, "to": to.to_html(false) if to is Color else to})
 
 
+# qg:after: a method of the caller (the scene script, or P) run so many ticks
+# from now, with the values its names have now (clock.gd).
+static func after(caller: Object, ticks, method: String, args: Array, name_: String = "") -> void:
+	var clock = _clock(caller)
+	if clock != null:
+		clock.after(caller, int(round(float(ticks))), method, args, name_)
+		event("after", {"ticks": int(round(float(ticks))), "name": name_})
+
+
+# ticks(): how many ticks the scene has played (not while paused).
+static func ticks(ctx) -> int:
+	var clock = _clock(ctx)
+	return clock.tick if clock != null else 0
+
+
+static func _clock(ctx) -> Node:
+	var scene := _current_scene(ctx)
+	return scene.get_node_or_null("Clock") if scene != null else null
+
+
 # Places a prefab where `at` is, offset (qg:spawn).
 static func spawn(scene: Node, prefab: String, at, dx: float, dy: float) -> Node:
 	at = _thing(at)
@@ -355,8 +400,11 @@ static func touched(body: Node, other) -> void:
 
 
 # count(tag): how many things of the tag are in the scene (zones are not things).
-static func count(scene: Node, tag: String) -> int:
+static func count(ctx: Node, tag: String) -> int:
+	var scene := _current_scene(ctx)   # a prefab's handler (in P), or a function of the game there, asks too
 	var n := 0
+	if scene == null:
+		return 0
 	for t in scene.get_tree().get_nodes_in_group("q_thing"):
 		if t.get_parent() == scene and t.quantum_tag() == tag and alive(t):
 			n += 1
@@ -543,12 +591,16 @@ static func set_tile(scene: Node, col, row, n, layer: String = "") -> void:
 		event("tile", {"col": int(col), "row": int(row), "tile": int(n)})
 
 
-static func tile_at(scene: Node, col, row) -> int:
+static func tile_at(ctx: Node, col, row) -> int:
+	var scene := _current_scene(ctx)
 	var map = scene.get_node_or_null("Tilemap") if scene != null else null
 	return map.tile_at(int(col), int(row)) if map != null and map.has_method("tile_at") else 0
 
 
-static func thing_at(scene: Node, tag: String, x: float, y: float):
+static func thing_at(ctx: Node, tag: String, x: float, y: float):
+	var scene := _current_scene(ctx)
+	if scene == null:
+		return null
 	var point := Vector2(x, y)
 	for t in scene.get_tree().get_nodes_in_group("q_thing"):
 		if t.get_parent() != scene or t.is_queued_for_deletion():
@@ -774,6 +826,10 @@ func sample_local() -> Dictionary:
 func set_input(next: Dictionary) -> void:
 	_prev = _now
 	_now = next
+	_for_prev = _for
+	_for = {}
+	for a in next.keys():
+		_for[a] = int(_for_prev.get(a, 0)) + 1
 	if OS.has_feature("web"):
 		for a in next.keys():
 			if not _web_pressed.has(a):
@@ -811,6 +867,19 @@ func released(action: String) -> bool:
 
 func strength(action: String) -> float:
 	return float(_now.get(action, 0.0))
+
+
+# pressing(action, player) and the like, with the player an expression: p2_run.
+static func action_of(action: String, player) -> String:
+	return action if int(player) == 1 else "p%d_%s" % [int(player), action]
+
+
+# pressed_for(action): the ticks it has been held, this one counted; on the
+# tick it is let go, the ticks it was held; else 0.
+func held_ticks(action: String) -> int:
+	if _now.has(action):
+		return int(_for.get(action, 0))
+	return int(_for_prev.get(action, 0)) if _prev.has(action) else 0
 
 
 # --- the network, from a scene: qg:host, qg:join, qg:leave, net_*() ---
@@ -938,12 +1007,14 @@ static func net_player() -> int:
 
 # For the rollback: the input state, and back to it.
 func input_state() -> Array:
-	return [_now.duplicate(), _prev.duplicate()]
+	return [_now.duplicate(), _prev.duplicate(), _for.duplicate(), _for_prev.duplicate()]
 
 
 func restore_input(state: Array) -> void:
 	_now = state[0].duplicate()
 	_prev = state[1].duplicate()
+	_for = state[2].duplicate()
+	_for_prev = state[3].duplicate()
 
 
 func _persist_path() -> String:
