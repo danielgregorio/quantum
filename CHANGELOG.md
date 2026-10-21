@@ -73,6 +73,34 @@ alter the behaviour of an existing app is listed under **Breaking**.
   `qg:become` and `qg:deflect`, `at=` of `qg:burst`, `qg:shake` and
   `qg:spawn` take a parameter, a loop variable or a q:set holding a thing, and
   `qg:spawn at=` a character's id, as `qg:destroy` and `qg:tween` already did.
+- Laboratory: Siege (`projects/siege/siege.q`), a keep under siege seen from
+  above, for one, or two over the network, written for Phase 2 of
+  `PLAN_GAMES_3.md`: raiders in waves from the edges make for the tower, the
+  archer aims at the pointer (or with the right stick) and charges a bolt
+  that glances off the walls, a tower zaps the nearest, and the second player
+  is a knight who steers a horse. Its art is drawn by `scripts/art/siege.py`
+  (CC0). On the games page, and replayed in CI
+  (`tests/godot/test_godot_siege.py`).
+- Laboratory: action and aiming, Phase 2 of `PLAN_GAMES_3.md`. `heading=`
+  on `qg:spawn` sends a flying prefab where two expressions say (at the
+  pointer: a `qg:cursor id="aim"` is read as `aim.x`, `aim.y`). `<qg:steer
+  turn= thrust= drag= max=>`, a part of `qg:behavior`: left and right turn
+  the body, up pushes it the way it points. `<qg:label value=>` is text in
+  the world, over a character or a prefab or at a place of a scene, read
+  every tick (and in the play protocol's screen); `qg:emit text=` floats a
+  number (or a word, in the player's language) up. `<qg:beam from= to= seconds=>` draws a line between two things;
+  `trail=` on a prefab leaves a streak; `particles=` on a prefab or a
+  character keeps an effect going on it. `qg:tween` eases `scale-x` and
+  `scale-y` (a scale is now from the thing's own size), and a prefab or a
+  character takes `visible="{...}"` (read every tick), `flip-v=` and
+  `layer=`; a scene takes `y-sort="true"`. A flying prefab's `walls="bounce"`
+  turns off the tiles; `side="left"` and `side="right"` join top and bottom
+  on `qg:on-collision`, for prefabs too; `buffer-frames=` (the platformer)
+  and `buffer=` (`qg:jump`) jump on landing for a press just before it
+  (Hopper has it); `spacing=` keeps things of a tag apart as they move.
+  `qg:damage amount=` takes an expression. Tested in Godot
+  (`tests/godot/test_godot_action.py`); the feature's dataset has six games
+  and five refusals more. `GAMES_PARITY.md` counts 166 rows covered.
 - Laboratory: game logic, Phase 1 of `PLAN_GAMES_3.md` (the plan approved
   on 2026-10-21 for the language's next 34 features, and ten more as a game
   asks for them). `<qg:after ticks= | seconds= name=>` in a handler runs what
@@ -549,6 +577,15 @@ alter the behaviour of an existing app is listed under **Breaking**.
 - Laboratory: `count()` and `qg:for-each` leave out a thing whose health has
   reached 0 while its `qg:on-death` runs, so the last brick's handler sees
   none left.
+- Laboratory: in a prefab's handler (and a function of the game called from
+  one), `qg:goto-scene`, `qg:spawn`, `qg:swap`, `qg:set-tile`, `qg:save` and
+  `qg:continue` did nothing, or stopped the game: they looked for the scene
+  where the prefabs' handlers live. They find the scene the game is in.
+- Laboratory: a prefab that does not move (an item, a solid) accepted
+  `qg:on-collision`, which never ran; it is refused, naming what to write
+  instead. A thing that walks into a solid prefab (a raider into the tower)
+  touches it, as a character does. A flying prefab with `walls=` spawned on a
+  character no longer sticks in its body.
 - Laboratory: `q:call args=` split its arguments at every comma, so a text
   with a comma (`{'a, b'}`), a list or a call with two arguments became two
   arguments; it splits only between them. In a prefab's handler, `count()`,

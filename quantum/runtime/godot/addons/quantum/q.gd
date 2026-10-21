@@ -260,6 +260,70 @@ static func emit(node, name_: String, dx: float = 0.0, dy: float = 0.0) -> void:
 	event("emit", {"particles": name_})
 
 
+# qg:emit text=: a text that floats up from a thing and fades (a damage number,
+# +10). Only seen: the rollback's ticks run again show none.
+static func emit_text(node, text: String, color: String, size: int, dx: float = 0.0, dy: float = 0.0) -> void:
+	node = _thing(node)
+	var q := _q_node()
+	if node == null or not (node is Node2D) or (q != null and q.resimulating):
+		return
+	var scene := (node as Node).get_parent()
+	if scene == null:
+		return
+	var label := Label.new()
+	label.text = translate(text)   # a word in the player's language, as a HUD's is
+	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_color_override("font_color", Color(color))
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	label.add_theme_constant_override("outline_size", 2)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.size = Vector2(80, size + 6)
+	label.position = (node as Node2D).position + Vector2(dx, dy) - label.size / 2.0
+	label.z_index = 30
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scene.call_deferred("add_child", label)
+	var rise := scene.create_tween()
+	rise.tween_property(label, "position:y", label.position.y - 14.0, 0.8)
+	rise.parallel().tween_property(label, "modulate:a", 0.0, 0.8).set_delay(0.3)
+	rise.tween_callback(label.queue_free)
+	event("emit", {"text": text})
+
+
+# qg:beam: a line between two things for a while, following them. Only seen.
+static func beam(ctx, a, b, seconds: float, color: String, width: float) -> void:
+	a = _thing(a)
+	b = _thing(b)
+	var q := _q_node()
+	var scene := _current_scene(ctx)
+	if scene == null or not (a is Node2D) or not (b is Node2D) or (q != null and q.resimulating):
+		return
+	var line: Line2D = load("res://addons/quantum/beam.gd").new()
+	line.setup(a, b, int(round(seconds * TICK_RATE)), Color(color), width)
+	scene.call_deferred("add_child", line)
+	event("beam", {"from": who(a), "to": who(b)})
+
+
+# qg:spawn heading=: the way a flying thing just placed goes (and faces).
+static func headed(node, x: float, y: float):
+	if node != null and is_instance_valid(node) and node.has_method("deflect_to"):
+		node.deflect_to(x, y)
+	return node
+
+
+# The side of `other` a toucher hit, judged from where the two are: left when it
+# is to the right of the toucher (hit from its left), right, top when the toucher
+# is above it (landing on it), bottom. Their hitboxes weigh the two axes.
+static func side_of(me: Node2D, other: Node2D) -> String:
+	var a: Vector2 = me.get("hitbox_size") if me.get("hitbox_size") != null else Vector2(16, 16)
+	var b: Vector2 = other.get("hitbox_size") if other.get("hitbox_size") != null else Vector2(16, 16)
+	var d := other.global_position - me.global_position
+	var nx := d.x / maxf(1.0, (a.x + b.x) / 2.0)
+	var ny := d.y / maxf(1.0, (a.y + b.y) / 2.0)
+	if absf(nx) >= absf(ny):
+		return "left" if nx > 0.0 else "right"
+	return "top" if ny > 0.0 else "bottom"
+
+
 # qg:tween: a property of a thing, eased to a value over so many seconds of
 # ticks (tween.gd). A new tween of the same property replaces the old one.
 const TRANS := {"linear": Tween.TRANS_LINEAR, "sine": Tween.TRANS_SINE, "quad": Tween.TRANS_QUAD,
@@ -302,7 +366,10 @@ static func _clock(ctx) -> Node:
 
 
 # Places a prefab where `at` is, offset (qg:spawn).
-static func spawn(scene: Node, prefab: String, at, dx: float, dy: float) -> Node:
+static func spawn(ctx: Node, prefab: String, at, dx: float, dy: float) -> Node:
+	var scene := _current_scene(ctx)
+	if scene == null:
+		return null
 	at = _thing(at)
 	if at == null or not (at is Node2D):
 		return null
@@ -311,7 +378,10 @@ static func spawn(scene: Node, prefab: String, at, dx: float, dy: float) -> Node
 
 
 # qg:spawn at="path": at the start of the scene's path, which an ai="path" thing then follows.
-static func spawn_on_path(scene: Node, prefab: String, path_name: String) -> Node:
+static func spawn_on_path(ctx: Node, prefab: String, path_name: String) -> Node:
+	var scene := _current_scene(ctx)
+	if scene == null:
+		return null
 	var paths: Dictionary = scene.q_paths if "q_paths" in scene else {}
 	if not paths.has(path_name):
 		return null
@@ -584,7 +654,8 @@ static func sees(a, b) -> bool:
 
 # thing_at(tag, x, y): the thing (or zone) of the tag whose box covers the point ("" for any thing), or null.
 # qg:set-tile and tile_at(): a cell of the scene's tilemap (tilemap.gd).
-static func set_tile(scene: Node, col, row, n, layer: String = "") -> void:
+static func set_tile(ctx: Node, col, row, n, layer: String = "") -> void:
+	var scene := _current_scene(ctx)
 	var map = scene.get_node_or_null("Tilemap") if scene != null else null
 	if map != null and map.has_method("set_tile"):
 		map.set_tile(int(col), int(row), int(n), layer)
@@ -619,7 +690,10 @@ static func thing_at(ctx: Node, tag: String, x: float, y: float):
 
 
 # Replaces a thing with another prefab, in its place (qg:swap).
-static func swap(scene: Node, node, prefab: String) -> Node:
+static func swap(ctx: Node, node, prefab: String) -> Node:
+	var scene := _current_scene(ctx)
+	if scene == null:
+		return null
 	node = _thing(node)
 	if node == null or not (node is Node2D):
 		return null
@@ -648,7 +722,10 @@ static func damage(node, amount: int) -> void:
 
 
 # Places a prefab at a point of the scene, at the end of the tick.
-static func spawn_at(scene: Node, prefab: String, at: Vector2) -> Node:
+static func spawn_at(ctx: Node, prefab: String, at: Vector2) -> Node:
+	var scene := _current_scene(ctx)
+	if scene == null:
+		return null
 	var builder = load("res://addons/quantum/scene_builder.gd")
 	return builder.instance(scene.q_game, scene, prefab, at, true)
 
@@ -722,7 +799,10 @@ static func talking(node) -> bool:
 
 
 # Leaves the scene for another at the end of the tick (qg:goto-scene).
-static func goto_scene(scene: Node, name_: String, fade: float = 0.0) -> void:
+static func goto_scene(ctx: Node, name_: String, fade: float = 0.0) -> void:
+	var scene := _current_scene(ctx)
+	if scene == null:
+		return
 	var game := scene.get_parent()
 	if game == null or not game.has_method("go_to_scene"):
 		return
@@ -1080,7 +1160,10 @@ static func _networked(scene: Node) -> bool:
 	return net != null and net.started
 
 
-static func save_game(scene: Node, at: String = "") -> void:
+static func save_game(ctx: Node, at: String = "") -> void:
+	var scene := _current_scene(ctx)
+	if scene == null:
+		return
 	if _networked(scene):
 		return
 	var where := at if at != "" else String(scene.name)
@@ -1097,7 +1180,10 @@ static func has_save() -> bool:
 	return FileAccess.file_exists(_save_path())
 
 
-static func continue_game(scene: Node) -> void:
+static func continue_game(ctx: Node) -> void:
+	var scene := _current_scene(ctx)   # P too: a prefab's handler, a function of the game there
+	if scene == null:
+		return
 	if _networked(scene) or not has_save():
 		return
 	var f := FileAccess.open(_save_path(), FileAccess.READ)

@@ -9,7 +9,8 @@ extends Node
 #
 #   x, y        the thing's position (it moves in the game: collisions see it)
 #   rotation    its picture's turn, in degrees
-#   scale       its picture's size (1 is as drawn)
+#   scale       its picture's size (1: its own, as its scale= makes it)
+#   scale-x     across only, and scale-y up and down only: a squash, a stretch
 #   alpha       how opaque it is (0 to 1)
 #   tint        the colour its picture is multiplied by (white: as drawn)
 #
@@ -30,6 +31,7 @@ func _ready() -> void:
 
 func add(target: Node2D, property: String, to, seconds: float, trans: int, ease: int, repeat: int, yoyo: bool,
 		from = null, caller: Object = null, on_end: String = "") -> void:
+	_base(target)   # its own size, before any tween changes it
 	for rec in tweens.duplicate():
 		if rec["target"] == target and rec["property"] == property:
 			tweens.erase(rec)
@@ -79,6 +81,14 @@ static func _picture(node: Node2D) -> Node2D:
 	return sprite if sprite is Node2D else node
 
 
+# Its picture's own size (its scale=), kept as the first tween finds it: a scale is relative to it.
+static func _base(node: Node2D) -> Vector2:
+	if not node.has_meta("q_base_scale"):
+		node.set_meta("q_base_scale", _picture(node).scale)
+	var base: Vector2 = node.get_meta("q_base_scale")
+	return Vector2(maxf(base.x, 0.0001), maxf(base.y, 0.0001))
+
+
 static func read(node: Node2D, prop: String):
 	match prop:
 		"tint":
@@ -90,8 +100,10 @@ static func read(node: Node2D, prop: String):
 			return node.position.y
 		"rotation":
 			return _picture(node).rotation_degrees
-		"scale":
-			return _picture(node).scale.x
+		"scale", "scale-x":
+			return _picture(node).scale.x / _base(node).x
+		"scale-y":
+			return _picture(node).scale.y / _base(node).y
 		"alpha":
 			return node.modulate.a
 	return 0.0
@@ -109,7 +121,11 @@ static func write(node: Node2D, prop: String, v) -> void:
 		"rotation":
 			_picture(node).rotation_degrees = v
 		"scale":
-			_picture(node).scale = Vector2(v, v)
+			_picture(node).scale = _base(node) * v
+		"scale-x":
+			_picture(node).scale.x = _base(node).x * v
+		"scale-y":
+			_picture(node).scale.y = _base(node).y * v
 		"alpha":
 			node.modulate.a = v
 
@@ -117,7 +133,7 @@ static func write(node: Node2D, prop: String, v) -> void:
 # For the rollback: the tweens as far as they have got, and the looks of what
 # they touched (a tween done, or not yet started, leaves its mark on them).
 # Things by their path from the scene; the caller as "scene" or "P".
-const LOOKS := ["rotation", "scale", "alpha", "tint"]
+const LOOKS := ["rotation", "scale", "scale-x", "scale-y", "alpha", "tint"]
 
 
 func q_save() -> Dictionary:

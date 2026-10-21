@@ -83,6 +83,8 @@ CONTROLLER_FIELDS: Dict[str, frozenset] = {
 }
 # ...and a thing that may be any of them, or a prefab's instance (`me` and `other` of a handler, a loop's thing)
 THING_FIELDS = frozenset().union(*CONTROLLER_FIELDS.values(), ('tag', 'health', 'doing'))
+# a qg:cursor with an id (`aim.x`)
+CURSOR_FIELDS = frozenset(('x', 'y', 'player', 'col', 'row'))
 
 _BIN = {ast.Add: '+', ast.Sub: '-', ast.Mult: '*'}
 _CMP = {ast.Eq: '==', ast.NotEq: '!=', ast.Lt: '<', ast.LtE: '<=', ast.Gt: '>', ast.GtE: '>='}

@@ -21,6 +21,7 @@ const Hud := preload("res://addons/quantum/hud.gd")
 const Tilemap := preload("res://addons/quantum/tilemap.gd")
 const Zone := preload("res://addons/quantum/zone.gd")
 const Cursor := preload("res://addons/quantum/cursor.gd")
+const Looks := preload("res://addons/quantum/looks.gd")
 const FighterBody := preload("res://addons/quantum/fighter_body.gd")
 const Menu := preload("res://addons/quantum/menu.gd")
 const GridBody := preload("res://addons/quantum/grid_body.gd")
@@ -47,6 +48,8 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	bg.position = Vector2(-8192, -8192)
 	bg.z_index = -100
 	scene.add_child(bg)
+	# y-sort="true": what stands lower is drawn in front (the tilemap stays under all of it)
+	scene.y_sort_enabled = bool(scene_spec.get("y_sort", false))
 	var clock: Node = load("res://addons/quantum/clock.gd").new()
 	clock.name = "Clock"   # the scene's ticks, its qg:afters and qg:whens, stepped first (clock.gd)
 	scene.add_child(clock)
@@ -87,6 +90,8 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				scene.add_child(marker)
 			"tilemap":
 				tilemap = Tilemap.build(node_spec, game["sheets"][node_spec["tileset"]], _texture)
+				if scene.y_sort_enabled:
+					tilemap.z_index = -10
 				for layer in tilemap.get_children():
 					Q.apply_gd(layer, node_spec.get("gd"))
 				scene.add_child(tilemap)
@@ -111,6 +116,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 						continue
 					var body := _character(node_spec, game, scene)
 					_animation_ends(body, node_spec, scene)
+					looks(body, node_spec, game, scene)
 					if node_spec.get("on_screen") != null:
 						body.set_meta("q_on_screen", node_spec["on_screen"])
 					Q.apply_gd(body, node_spec.get("gd"))
@@ -139,6 +145,8 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 			"cursor":
 				var cursor := Cursor.new()
 				cursor.setup(node_spec, scene)
+				if node_spec.get("id") != null:
+					cursor.name = node_spec["id"]   # read by its id: aim.x
 				if node_spec.get("sheet") != null:
 					var sheet: Dictionary = game["sheets"][node_spec["sheet"]]
 					cursor.add_child(_sprite(_texture(sheet), sheet["tile"], int(node_spec["frame"])))
@@ -193,6 +201,15 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				exits[node_spec["name"]] = exit
 			"camera":
 				cameras.append(node_spec)   # made last: where its characters stand, after an arrival
+			"label":
+				if node_spec.get("if") != null and not scene.call(node_spec["if"]):
+					continue
+				var label: Node2D = Looks.new()
+				label.position = Vector2(node_spec["x"], node_spec["y"])
+				label.setup({"labels": [{"method": node_spec["method"], "size": node_spec.get("size", 8),
+					"color": node_spec.get("color", "#ffffff")}]}, scene, game)
+				Q.apply_gd(label, node_spec.get("gd"))
+				scene.add_child(label)
 			"menu":
 				var menu := Menu.new()
 				menu.setup(node_spec, scene)
@@ -258,6 +275,7 @@ static func instance(game: Dictionary, scene: Node, prefab_name: String, at: Vec
 		thing = Item.new()
 	thing.setup(prefab_name, prefab, _texture(sheet), sheet["tile"])
 	thing.position = at
+	looks(thing, prefab, game, P)
 	if prefab.get("on_screen") != null:
 		thing.set_meta("q_on_screen", prefab["on_screen"])
 	var hitbox: Node = thing if thing is Area2D else thing.get_node_or_null("Hitbox")   # an item is its own area
@@ -319,6 +337,22 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 	if node_spec.get("on_separate") != null:
 		Q.watch_separate(sensor, body, node_spec["on_separate"], scene)
 	return body
+
+
+# How a character or a thing looks besides its frame: upside down (flip-v=), its draw layer
+# (layer=), and what a Looks node keeps up every tick (labels, visible=, particles=, trail=).
+static func looks(node: Node2D, spec: Dictionary, game: Dictionary, caller: Object) -> void:
+	var sprite = node.get_node_or_null("Sprite")
+	if spec.get("flip_v", false) and sprite is Sprite2D:
+		sprite.flip_v = true
+	if spec.get("layer") != null:
+		node.z_index = int(spec["layer"])
+	for key in ["labels", "visible", "particles", "trail"]:
+		if spec.get(key) != null:
+			var keeper: Node2D = Looks.new()
+			keeper.setup(spec, caller, game, node)
+			node.add_child(keeper)
+			return
 
 
 # A character's qg:on-animation-end handlers, which are the scene's.

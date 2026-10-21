@@ -47,7 +47,7 @@ ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'c
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
            'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
            'play-animation', 'give', 'take', 'reset-items', 'for-each', 'time-scale', 'quit', 'start-now', 'watch',
-           'after')
+           'after', 'beam')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -188,11 +188,24 @@ TAGS: Dict[str, Tag] = {
          'shape': Attr('str', None, doc='solid: the solid part as x,y points from its centre, separated by '
                                         'semicolons (-96,-21; 96,-21; 96,6; -96,6), instead of the hitbox'),
          'scale': Attr('float', 1.0, doc='the picture\'s size, times its frame (the hitbox stays as given)'),
-         'walls': Attr('enum:pass|stop', 'pass', doc='fly: pass goes through the tiles; stop is gone on touching one'),
+         'walls': Attr('enum:pass|stop|bounce', 'pass', doc='fly: pass goes through the tiles; stop is gone on '
+                                                           'touching one; bounce turns off it, as a ball off a '
+                                                           'wall (the way across it reverses)'),
+         'trail': Attr('color', None, doc='a line it leaves behind it as it moves, fading (a shot\'s streak, a '
+                                          'ship\'s wake): only seen'),
+         'spacing': Attr('float', 0.0, doc='things of its tag keep at least this many pixels apart as they move: a '
+                                           'crowd, not a pile (0: they may overlap)'),
          'sight': Attr('float', 80.0, doc='chase, pathfind, and the parts of a behavior: pixels'),
          'heading': Attr('str', 'down', doc='fly: up, down, left, right, or a direction as x,y (-1,0.5)'),
          'accel': Attr('float', 0.0, doc='fly: pixels per second added to its speed every second'),
          'lifetime': Attr('int', 0, doc='fly: gone after this many ticks (0: never); any fly is gone off-screen'),
+         'particles': Attr('ident', None, doc='a qg:particles kept going where it is, as it moves (a fire, an '
+                                              'engine\'s flame, a torch carried): only seen'),
+         'visible': Attr('expr', None, doc='shown only while this is true, read every tick (`me` is it): blinking '
+                                           'while hurt, hidden in the dark; it still collides'),
+         'flip-v': Attr('bool', False, doc='its picture upside down'),
+         'layer': Attr('int', 0, doc='drawn over things of a lower layer and under those of a higher one, '
+                                     'whatever y-sort says'),
          'health': Attr('int', 1, doc='hits it takes (qg:damage); at 0 its qg:on-death runs and it is gone'),
          'fire-prefab': Attr('ident', None, doc='what it shoots, placed below it (or above, when heading is up)'),
          'fire-every': Attr('int', 0, doc='ticks between shots (0: never)'),
@@ -243,7 +256,9 @@ TAGS: Dict[str, Tag] = {
          'background': Attr('color', '#000000'),
          'seed': Attr('int', 0, doc='the random seed; the same seed gives the same game'),
          'save': Attr('bool', False, doc='entering the scene saves the game to continue here (qg:save), '
-                      'as a room of an adventure does')},
+                      'as a room of an adventure does'),
+         'y-sort': Attr('bool', False, doc='characters and things are drawn by how low they stand, the lower in '
+                                           'front: depth seen from above (a layer= still comes first)')},
         parents=('application',)),
     'tilemap': Tag(
         'The level: CSV rows of tile numbers (0 is empty, n is tile n-1 of the tileset), '
@@ -289,6 +304,8 @@ TAGS: Dict[str, Tag] = {
          'jump-height': Attr('float', 64.0, doc='pixels, with the button held'),
          'variable-jump': Attr('bool', True, doc='releasing the button cuts the jump'),
          'coyote-frames': Attr('int', 6, doc='ticks after leaving a ledge in which a jump still works'),
+         'buffer-frames': Attr('int', 0, doc='platformer: a jump pressed up to this many ticks before landing jumps '
+                                             'as it lands (0: only a press on the floor)'),
          'gravity': Attr('float', 900.0, doc='pixels per second squared'),
          'max-fall': Attr('float', 300.0, doc='terminal velocity, pixels per second'),
          'jump-sound': Attr('ident', None, doc='a qg:sound, played on take-off'),
@@ -302,7 +319,14 @@ TAGS: Dict[str, Tag] = {
                                             'this, once (0: the extra gravity of variable-jump instead)'),
          'scale': Attr('float', 1.0, doc='the picture\'s size, times its frame (the hitbox stays as given)'),
          'if': Attr('expr', None, doc='placed only when this is true as the scene is built: a second player\'s '
-                                      'character only in a networked game, `net_status() != \'offline\'`')},
+                                      'character only in a networked game, `net_status() != \'offline\'`'),
+         'particles': Attr('ident', None, doc='a qg:particles kept going where it is, as it moves (a fire, an '
+                                              'engine\'s flame, a torch carried): only seen'),
+         'visible': Attr('expr', None, doc='shown only while this is true, read every tick (`me` is it): blinking '
+                                           'while hurt, hidden in the dark; it still collides'),
+         'flip-v': Attr('bool', False, doc='its picture upside down'),
+         'layer': Attr('int', 0, doc='drawn over things of a lower layer and under those of a higher one, '
+                                     'whatever y-sort says')},
         parents=('scene',)),
     'instance': Tag(
         'A prefab placed in the scene.',
@@ -315,7 +339,9 @@ TAGS: Dict[str, Tag] = {
         'A player\'s pointer in the scene: the mouse, moved also by that player\'s left/right/up/down by step= '
         'pixels. `cursor.x`, `cursor.y` (and, with grid=, `cursor.col`, `cursor.row`, snapped) in qg:on-select; '
         'with sheet= it is drawn. Under qg:multiplayer every player\'s cursor travels with their input.',
-        {'player': Attr('int', 1),
+        {'id': Attr('ident', None, doc='its name in expressions, as a character\'s: `aim.x`, `aim.y` (with grid=, '
+                                       '`aim.col`, `aim.row`), and a target of qg:beam'),
+         'player': Attr('int', 1),
          'step': Attr('float', 16.0, doc='pixels per tick while a direction is held'),
          'grid': Attr('int', None, doc='cell size: the cursor snaps to cell centres'),
          'sheet': Attr('ident', None), 'frame': Attr('int', 0)},
@@ -464,9 +490,10 @@ TAGS: Dict[str, Tag] = {
         'What happens when this character or prefab touches something. Holds actions and statements; '
         '`me` is the toucher, `other` what it touched. In a prefab, only the game state is in reach.',
         {'with': Attr('ident', required=True, doc='the tag of what it touches'),
-         'side': Attr('enum:any|top|bottom', 'any',
-                      doc='top: landing on it; bottom: hitting it from below. A side handler runs '
-                          'before the "any" one, which then does not'),
+         'side': Attr('enum:any|top|bottom|left|right', 'any',
+                      doc='top: landing on it; bottom: hitting it from below; left: hitting it from its left (it is '
+                          'to the right); right: from its right. A side handler runs before the "any" one, which '
+                          'then does not'),
          'cooldown': Attr('int', 0, doc='ticks before this handler can fire again')},
         parents=('character', 'prefab')),
     'on-damage': Tag(
@@ -478,6 +505,18 @@ TAGS: Dict[str, Tag] = {
         'when any thing of that tag dies there.',
         {'of': Attr('ident', None, doc='scene: the tag')},
         parents=('prefab', 'scene')),
+    'label': Tag(
+        'Text in the world, read every tick: over a character or a prefab, following it (a name over a player, '
+        'what an enemy has left), or at a place of the scene (a sign). Only seen.',
+        {'value': Attr('expr', required=True, doc='an expression; on a character or a prefab, `me` is it'),
+         'x': Attr('float', None, doc='in a scene: where its middle is'),
+         'y': Attr('float', None),
+         'dx': Attr('float', 0.0, doc='on a character or a prefab: how far from its middle'),
+         'dy': Attr('float', -12.0),
+         'size': Attr('int', 8),
+         'color': Attr('color', '#ffffff'),
+         'if': Attr('expr', None, doc='placed only when this is true as the scene is built')},
+        parents=('scene', 'character', 'prefab')),
     'when': Tag(
         'Runs its handler when a condition turns true: a wave beaten (`count(\'enemy\') == 0`), a room solved, a '
         'score reached. The condition is read at the start of every tick, from the scene\'s first, after the '
@@ -578,11 +617,24 @@ TAGS: Dict[str, Tag] = {
          'height': Attr('float', 64.0, doc='pixels, with the button held'),
          'speed': Attr('float', None, doc='the take-off speed, pixels per second, instead of height='),
          'coyote': Attr('int', 6, doc='ticks after leaving a ledge in which a jump still works'),
+         'buffer': Attr('int', 0, doc='a press up to this many ticks before landing jumps as it lands (0: only a '
+                                      'press on the floor)'),
          'air': Attr('int', 0, doc='jumps it may take in the air before landing again'),
          'variable': Attr('bool', True, doc='letting go while rising cuts the leap'),
          'cut': Attr('float', 0.0, doc='letting go multiplies the rise by this, once (0: three times the '
                                        'gravity while it rises instead)'),
          'sound': Attr('ident', None, doc='a qg:sound, played on take-off')},
+        parents=('behavior',)),
+    'steer': Tag(
+        'A part: left and right turn the body, up pushes it the way it points and down holds it back; it '
+        'drifts, and slows by drag= on its own. Its picture turns with it. An Asteroids ship, a car seen from '
+        'above, a horse. It needs no qg:walk.',
+        {'turn': Attr('float', 180.0, doc='degrees a second'),
+         'thrust': Attr('float', 200.0, doc='pixels per second, added every second up is held'),
+         'drag': Attr('float', 1.0, doc='the part of its speed it loses every second on its own (0: none, it '
+                                        'drifts for ever)'),
+         'max': Attr('float', 160.0, doc='its top speed, pixels per second'),
+         'heading': Attr('float', 0.0, doc='where it points at first, degrees: 0 right, 90 down')},
         parents=('behavior',)),
     'keep-inside': Tag(
         'A part: the scene\'s edges stop it.',
@@ -714,6 +766,16 @@ TAGS: Dict[str, Tag] = {
         {'tag': Attr('ident', required=True, doc='the things\' tag'),
          'var': Attr('ident', 'it', doc='the name of each thing in turn (a target=, an expression)')},
         parents=('handler',)),
+    'beam': Tag(
+        'A line between two things for a while, following them as they move: a laser, a zap, a rope, an aiming '
+        'line. Only seen.',
+        {'from': Attr('ident', 'me', doc='me, other, a character or cursor id, or a parameter, loop variable or '
+                                         'q:set holding a thing'),
+         'to': Attr('ident', required=True, doc='the same'),
+         'seconds': Attr('float', 0.1, doc='how long it shows'),
+         'color': Attr('color', '#ffffff'),
+         'width': Attr('float', 2.0, doc='pixels')},
+        parents=('handler',)),
     'after': Tag(
         'Runs what it holds later, so many ticks (or seconds) after the handler reached it: a power-up that runs '
         'out, a bomb\'s fuse, a pause before the next serve. It counts the game\'s ticks, so a replay and every '
@@ -818,7 +880,9 @@ TAGS: Dict[str, Tag] = {
          'path': Attr('ident', None, doc='at="path": a qg:path of the scene, which an ai="path" prefab follows'),
          'x': Attr('expr', None, doc='a point of the scene instead of at= (with y=): an expression, in pixels'),
          'y': Attr('expr', None),
-         'dx': Attr('float', 0.0), 'dy': Attr('float', 0.0, doc='offset in pixels')},
+         'dx': Attr('float', 0.0), 'dy': Attr('float', 0.0, doc='offset in pixels'),
+         'heading': Attr('str', None, doc='an ai="fly" prefab: the way it goes, as x,y, each an expression '
+                                          '(`{aim.x - me.x},{aim.y - me.y}`: at the pointer), instead of its own')},
         parents=('handler',)),
     'swap': Tag(
         'Replaces a thing with an instance of another prefab, in its place.',
@@ -833,7 +897,7 @@ TAGS: Dict[str, Tag] = {
     'damage': Tag(
         'Takes health from a thing; at 0 its qg:on-death runs and it goes.',
         {'target': Attr('ident', 'other', doc='other, me, or a parameter, loop variable or q:set holding a thing'),
-         'amount': Attr('int', 1)},
+         'amount': Attr('expr', '1')},
         parents=('handler',)),
     'burst': Tag(
         'A puff of particles where a thing is. Cosmetic.',
@@ -852,9 +916,10 @@ TAGS: Dict[str, Tag] = {
         'that slides, a pulse. It runs in the game\'s ticks, so a replay and every peer see the same; it stops '
         'while the scene is paused, and a new tween of the same property replaces it.',
         {'target': Attr('ident', 'me', doc='me, other, a character id, or a q:set holding a thing'),
-         'property': Attr('enum:x|y|rotation|scale|alpha|tint', required=True,
-                          doc='x, y: where it is (collisions see it); rotation (degrees), scale, alpha, tint (a '
-                              'colour its picture is multiplied by: #ffffff is as drawn): its picture'),
+         'property': Attr('enum:x|y|rotation|scale|scale-x|scale-y|alpha|tint', required=True,
+                          doc='x, y: where it is (collisions see it); rotation (degrees), scale, scale-x and scale-y '
+                              '(across and up: a squash, a stretch), alpha, tint (a colour its picture is multiplied '
+                              'by: #ffffff is as drawn): its picture'),
          'to': Attr('expr', required=True, doc='a number, or for tint a colour (#rrggbb)'),
          'from': Attr('expr', None, doc='where it starts (what it is now when not given)'),
          'seconds': Attr('float', 0.5),
@@ -882,8 +947,12 @@ TAGS: Dict[str, Tag] = {
                        'first, when not given')},
         parents=('handler',)),
     'emit': Tag(
-        'Plays a qg:particles effect once where a thing is. Only seen: the game\'s state never depends on it.',
-        {'particles': Attr('ident', required=True),
+        'Plays a qg:particles effect once where a thing is, or a text that floats up from it and fades (a '
+        'damage number, +10). Only seen: the game\'s state never depends on it.',
+        {'particles': Attr('ident', None, doc='the effect (or text=)'),
+         'text': Attr('expr', None, doc='a text instead: "+10", or an expression (`{str(amount)}`)'),
+         'color': Attr('color', '#ffffff', doc='the text\'s colour'),
+         'size': Attr('int', 8, doc='the text\'s size'),
          'at': Attr('ident', 'me', doc='me, other, a character id, or a q:set holding a thing'),
          'dx': Attr('float', 0.0), 'dy': Attr('float', 0.0, doc='offset in pixels')},
         parents=('handler',)),

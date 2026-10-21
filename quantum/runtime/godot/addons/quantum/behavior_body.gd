@@ -67,6 +67,8 @@ var _moving: Vector2 = Vector2.ZERO   # the velocity of the last move: the side 
 var _tiles := TileSense.new()   # the kinds of the tiles about it (qg:tile kind=), its qg:on-tile handlers
 var _about := {"in": "", "under": "", "touching": []}
 var _climbing := false
+var _buffered: int = 0            # qg:jump buffer=: ticks a press made in the air still jumps on landing
+var _angle: float = 0.0           # qg:steer: where it points, degrees
 
 
 func setup(spec: Dictionary) -> void:
@@ -74,6 +76,8 @@ func setup(spec: Dictionary) -> void:
 	for p in spec.get("behavior", []):
 		parts[p["part"]] = p
 	hitbox_size = Vector2(spec["hitbox"][0], spec["hitbox"][1])
+	if parts.has("steer"):
+		_angle = float(parts["steer"].get("heading", 0.0))
 	if parts.has("jump"):
 		var j: Dictionary = parts["jump"]
 		_jump_speed = float(j["speed"]) if j.get("speed") != null else _speed_for_height(float(j["height"]))
@@ -173,6 +177,8 @@ func _physics_process(delta: float) -> void:
 		return
 	if parts.has("walk"):
 		_walk(parts["walk"], delta)
+	if parts.has("steer"):
+		_steer(parts["steer"], delta)
 	if parts.has("jump"):
 		_jump(parts["jump"])
 	if parts.has("gravity"):
@@ -214,14 +220,35 @@ func _walk(p: Dictionary, delta: float) -> void:
 			velocity.y = target.y
 
 
+# qg:steer: left and right turn it, up pushes it the way it points, down holds
+# it back; it slows by drag on its own and goes no faster than max. Its picture
+# points where it does.
+func _steer(p: Dictionary, delta: float) -> void:
+	var turn := Q.strength(_a("right")) - Q.strength(_a("left"))
+	_angle = fposmod(_angle + turn * float(p["turn"]) * delta, 360.0)
+	var pointing := Vector2.RIGHT.rotated(deg_to_rad(_angle))
+	velocity += pointing * float(p["thrust"]) * Q.strength(_a("up")) * delta
+	velocity *= maxf(0.0, 1.0 - float(p["drag"]) * delta) * (1.0 - minf(1.0, 3.0 * delta * Q.strength(_a("down"))))
+	velocity = velocity.limit_length(float(p["max"]))
+	var sprite := get_node_or_null("Sprite")
+	if sprite != null:
+		sprite.rotation = deg_to_rad(_angle)
+
+
 func _jump(p: Dictionary) -> void:
 	if is_on_floor():
 		_coyote = maxi(int(p["coyote"]), 1)   # standing, a jump works whatever coyote= says
 		_airs = int(p["air"])
 	elif _coyote > 0:
 		_coyote -= 1
-	if not Q.tapped(_a(str(p["action"]))):
+	var pressed := Q.tapped(_a(str(p["action"])))
+	if not pressed and _buffered > 0:
+		_buffered -= 1
+		if is_on_floor():
+			pressed = true   # pressed just before landing (buffer=): it jumps as it lands
+	if not pressed:
 		return
+	_buffered = 0
 	if _about["in"] == "water":
 		velocity.y = -_jump_speed * 0.65   # in water a jump is a stroke, as often as it is pressed
 		return
@@ -230,6 +257,7 @@ func _jump(p: Dictionary) -> void:
 	elif _airs > 0:
 		_airs -= 1
 	else:
+		_buffered = int(p.get("buffer", 0))
 		return
 	velocity.y = -_jump_speed
 	_leaping = true
@@ -348,10 +376,13 @@ func _on_area_entered(area: Area2D) -> void:
 	Q.touched(self, other)
 	var on_top := _is_on_top_of(other)
 	var from_below := _is_below(other)
+	# left and right from where the two are; top and bottom from the way it moved
+	var across: String = Q.side_of(self, other) if other is Node2D else ""
 	var matched := false
 	for h in _handlers:
 		var side: String = h.get("side", "any")
-		if h["with"] == tag and ((side == "top" and on_top) or (side == "bottom" and from_below)):
+		if h["with"] == tag and ((side == "top" and on_top) or (side == "bottom" and from_below)
+				or ((side == "left" or side == "right") and side == across)):
 			if _fire(h, other):
 				matched = true
 	if matched:

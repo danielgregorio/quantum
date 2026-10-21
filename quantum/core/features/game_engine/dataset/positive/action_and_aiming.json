@@ -1,0 +1,133 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "action",
+  "description": "What aiming, steering, text in the world, beams, trails, emitters on things, looks, collision sides, a buffered jump and keeping apart say (PLAN_GAMES_3.md, Phase 2)",
+  "examples": [
+    {
+      "id": "game-action-001",
+      "intent": "Shots aimed at the pointer, that bounce off the walls",
+      "input": {
+        "natural_language": "A top-down shooter: the hero shoots where the mouse points; a shot glances off the walls of the room, leaving a streak",
+        "context": {
+          "target": "godot",
+          "file": "game-action-001.q"
+        }
+      },
+      "tags": [
+        "spawn",
+        "heading",
+        "cursor",
+        "walls",
+        "trail"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"aim\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Shot\" tag=\"shot\" sheet=\"tiles\" frame=\"151\" hitbox=\"6x6\" ai=\"fly\" speed=\"220\"\n             rotate=\"true\" walls=\"bounce\" lifetime=\"180\" trail=\"#ffd070\" />\n  <qg:scene name=\"room\" width=\"324\" height=\"252\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"160\" y=\"126\" hitbox=\"14x14\" speed=\"80\" />\n    <!-- the mouse, by its id: aim.x, aim.y -->\n    <qg:cursor id=\"aim\" step=\"0\" />\n    <qg:on-input action=\"jump\">\n      <qg:spawn prefab=\"Shot\" at=\"hero\" heading=\"{aim.x - hero.x},{aim.y - hero.y}\" />\n    </qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-action-002",
+      "intent": "A ship that turns and thrusts, and shots the way it drifts",
+      "input": {
+        "natural_language": "An Asteroids ship: left and right turn it, up pushes it the way it points, it drifts and comes round the screen; jump shoots the way it is moving",
+        "context": {
+          "target": "godot",
+          "file": "game-action-002.q"
+        }
+      },
+      "tags": [
+        "steer",
+        "wrap",
+        "behavior",
+        "heading"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"rocks\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Shot\" tag=\"shot\" sheet=\"tiles\" frame=\"151\" hitbox=\"4x4\" ai=\"fly\" speed=\"260\" lifetime=\"50\" />\n  <qg:prefab name=\"Rock\" tag=\"rock\" sheet=\"tiles\" frame=\"152\" hitbox=\"16x16\" ai=\"wander\" speed=\"25\" health=\"3\">\n    <qg:on-collision with=\"shot\"><qg:damage target=\"me\" /><qg:destroy target=\"other\" /></qg:on-collision>\n  </qg:prefab>\n  <qg:scene name=\"space\" width=\"320\" height=\"240\" background=\"#05050f\">\n    <qg:character id=\"ship\" controller=\"behavior\" sheet=\"tiles\" frame=\"150\" x=\"160\" y=\"120\" hitbox=\"12x12\">\n      <qg:behavior>\n        <qg:steer turn=\"220\" thrust=\"180\" drag=\"0.4\" max=\"160\" heading=\"-90\" />\n        <qg:wrap />\n      </qg:behavior>\n    </qg:character>\n    <qg:instance prefab=\"Rock\" x=\"60\" y=\"60\" />\n    <qg:instance prefab=\"Rock\" x=\"260\" y=\"180\" />\n    <qg:on-input action=\"jump\">\n      <q:if condition=\"{abs(ship.vx) + abs(ship.vy) > 1}\">\n        <qg:spawn prefab=\"Shot\" at=\"ship\" heading=\"{ship.vx},{ship.vy}\" />\n      </q:if>\n    </qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-action-003",
+      "intent": "Damage numbers, health over an enemy, a squash, a blink",
+      "input": {
+        "natural_language": "An ogre with its health over its head: each hit floats a number up, squashes it for a moment and flashes it red; the hero blinks for a second after being hurt",
+        "context": {
+          "target": "godot",
+          "file": "game-action-003.q"
+        }
+      },
+      "tags": [
+        "label",
+        "emit",
+        "text",
+        "tween",
+        "scale-x",
+        "scale-y",
+        "visible",
+        "after"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"ogre\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"hurt_until\" value=\"0\" type=\"number\" />\n  <qg:prefab name=\"Ogre\" tag=\"ogre\" sheet=\"people\" frame=\"20\" hitbox=\"20x20\" ai=\"chase\" speed=\"20\" sight=\"200\"\n             health=\"6\" scale=\"1.4\">\n    <qg:label value=\"{'HP ' + str(me.health)}\" dy=\"-20\" size=\"8\" color=\"#ff9090\" />\n    <qg:on-damage>\n      <qg:emit text=\"{'-1'}\" at=\"me\" dy=\"-12\" color=\"#ffffff\" />\n      <qg:tween target=\"me\" property=\"scale-x\" from=\"1.3\" to=\"1\" seconds=\"0.2\" trans=\"back\" />\n      <qg:tween target=\"me\" property=\"scale-y\" from=\"0.7\" to=\"1\" seconds=\"0.2\" trans=\"back\" />\n      <qg:tween target=\"me\" property=\"tint\" from=\"#ff6060\" to=\"#ffffff\" seconds=\"0.25\" />\n    </qg:on-damage>\n    <qg:on-death><qg:emit text=\"WIN\" at=\"me\" color=\"#ffe070\" size=\"12\" /></qg:on-death>\n  </qg:prefab>\n  <qg:scene name=\"field\" width=\"320\" height=\"240\">\n    <q:set name=\"blink\" value=\"false\" type=\"boolean\" />\n    <!-- hidden every other few ticks while it blinks -->\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"60\" y=\"120\" hitbox=\"14x14\" speed=\"80\"\n                  attack-action=\"jump\" visible=\"{not blink or ticks() % 8 < 4}\">\n      <qg:on-hit with=\"ogre\"><qg:damage target=\"other\" /></qg:on-hit>\n      <qg:on-collision with=\"ogre\" cooldown=\"60\">\n        <q:set name=\"blink\" value=\"true\" />\n        <qg:after seconds=\"1\" name=\"blink\"><q:set name=\"blink\" value=\"false\" /></qg:after>\n      </qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Ogre\" x=\"240\" y=\"120\" />\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-action-004",
+      "intent": "A laser tower, a torch that burns, depth seen from above",
+      "input": {
+        "natural_language": "A tower zaps the nearest bat every second with a blue beam; a torch burns on a post; things lower on the screen are drawn in front, and the bats always over everything",
+        "context": {
+          "target": "godot",
+          "file": "game-action-004.q"
+        }
+      },
+      "tags": [
+        "beam",
+        "particles",
+        "y-sort",
+        "layer",
+        "nearest"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"tower\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:particles name=\"flame\" preset=\"fire\" color=\"#ff9030\" amount=\"10\" />\n  <qg:prefab name=\"Bat\" tag=\"bat\" sheet=\"people\" frame=\"24\" hitbox=\"12x12\" ai=\"wander\" speed=\"40\" health=\"2\" layer=\"5\" />\n  <qg:prefab name=\"Torch\" tag=\"torch\" sheet=\"tiles\" frame=\"62\" hitbox=\"8x16\" solid=\"true\" particles=\"flame\" />\n  <qg:prefab name=\"Tower\" tag=\"tower\" sheet=\"tiles\" frame=\"63\" hitbox=\"16x16\" solid=\"true\" />\n  <qg:scene name=\"yard\" width=\"320\" height=\"240\" y-sort=\"true\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"60\" y=\"200\" hitbox=\"14x14\" speed=\"80\" />\n    <qg:instance prefab=\"Tower\" name=\"tower\" x=\"160\" y=\"120\" />\n    <qg:instance prefab=\"Torch\" x=\"100\" y=\"100\" />\n    <qg:instance prefab=\"Bat\" x=\"200\" y=\"60\" />\n    <qg:instance prefab=\"Bat\" x=\"80\" y=\"40\" />\n    <qg:timer every=\"60\">\n      <q:set name=\"near\" value=\"{nearest(tower, 'bat')}\" />\n      <q:if condition=\"{near != null and distance(tower, near) < 120}\">\n        <qg:beam from=\"tower\" to=\"near\" seconds=\"0.2\" color=\"#80d0ff\" width=\"2\" />\n        <qg:damage target=\"near\" />\n      </q:if>\n    </qg:timer>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-action-005",
+      "intent": "A switch hit from the side, a jump pressed just before landing",
+      "input": {
+        "natural_language": "A platformer: a jump pressed a few ticks before landing still jumps as it lands; a switch turns green when bumped from its left and red from its right",
+        "context": {
+          "target": "godot",
+          "file": "game-action-005.q"
+        }
+      },
+      "tags": [
+        "buffer-frames",
+        "on-collision",
+        "side",
+        "flip-v"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"switch\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Switch\" tag=\"switch\" sheet=\"tiles\" frame=\"64\" hitbox=\"16x16\" solid=\"true\" flip-v=\"true\" />\n  <qg:scene name=\"hall\" width=\"320\" height=\"240\">\n    <q:set name=\"light\" value=\"off\" />\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"180\" hitbox=\"18x22\"\n                  buffer-frames=\"6\">\n      <!-- the side of the switch it touched: its left, walking right into it -->\n      <qg:on-collision with=\"switch\" side=\"left\"><q:set name=\"light\" value=\"green\" /></qg:on-collision>\n      <qg:on-collision with=\"switch\" side=\"right\"><q:set name=\"light\" value=\"red\" /></qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Switch\" x=\"160\" y=\"198\" />\n    <qg:hud position=\"top-left\"><qg:text bind=\"light\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-action-006",
+      "intent": "A swarm that keeps apart",
+      "input": {
+        "natural_language": "Bees from one hive go for the hero together, but each keeps twenty pixels from the others, so they come as a swarm, not a single blob",
+        "context": {
+          "target": "godot",
+          "file": "game-action-006.q"
+        }
+      },
+      "tags": [
+        "spacing",
+        "behavior",
+        "seek"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"swarm\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Bee\" tag=\"bee\" sheet=\"people\" frame=\"24\" hitbox=\"10x10\" ai=\"behavior\" speed=\"45\" sight=\"300\"\n             spacing=\"20\">\n    <qg:behavior><qg:seek target=\"hero\" way=\"straight\" /><qg:wander speed=\"10\" /></qg:behavior>\n  </qg:prefab>\n  <qg:scene name=\"meadow\" width=\"320\" height=\"240\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"60\" y=\"200\" hitbox=\"14x14\" speed=\"90\" />\n    <qg:timer every=\"20\" count=\"8\"><qg:spawn prefab=\"Bee\" x=\"280\" y=\"30\" /></qg:timer>\n  </qg:scene>\n</q:application>\n"
+      }
+    }
+  ]
+}

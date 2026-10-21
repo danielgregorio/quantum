@@ -66,6 +66,7 @@ class SceneScript:
     net_used: List[Optional[int]] = field(default_factory=list)   # lines of qg:host, qg:join, qg:leave
     tween_ends: int = 0   # the qg:on-end handlers of tweens so far: each its own method, nested ones too
     afters: int = 0       # the qg:afters so far: what each puts off is its own method
+    headed: List[tuple] = field(default_factory=list)   # (prefab, line) of a qg:spawn heading=: an ai="fly" one
 
     node_ids: List[str] = field(default_factory=list)   # the scene's characters, by id
     game_functions: List[str] = field(default_factory=list)   # the q:functions of <q:application>, every scene's
@@ -440,6 +441,16 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         if el.get('target') == 'me':   # its own state: checked against its qg:states (another's is its own business)
             script.states_used.append((el.get('state'), el.line))
         return f'Q.become({target}, {json.dumps(el.get("state"))})'
+    if el.tag == 'spawn' and el.get('heading') is not None:
+        # the way an ai="fly" prefab goes, from expressions: set on the thing as it is placed
+        parts = split_args(el.get('heading'))
+        if len(parts) != 2:
+            raise GameCompileError(f'<qg:spawn heading="{el.get("heading")}">: x,y (each a number or an '
+                                   f'expression)', el.line)
+        script.headed.append((el.get('prefab'), el.line))
+        hx, hy = (compile_expression(v, scope, el.line) for v in parts)
+        bare = Element(el.tag, {k: v for k, v in el.attrs.items() if k != 'heading'}, el.line, el.children)
+        return f'Q.headed({_compile_action(bare, scope, script)}, float({hx}), float({hy}))'
     if el.tag == 'spawn':
         at = el.get('at')
         script.prefabs_used.append((el.get('prefab'), el.line))
@@ -470,7 +481,10 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         script.prefabs_used.append((el.get('prefab'), el.line))
         return f'Q.swap(self, {target}, {json.dumps(el.get("prefab"))})'
     if el.tag == 'damage':
-        return f'Q.damage({target}, {int(el.get("amount"))})'
+        amount = str(el.get('amount'))
+        if re.fullmatch(r'\d+', strip_braces(amount)):
+            return f'Q.damage({target}, {int(strip_braces(amount))})'
+        return f'Q.damage({target}, int({compile_expression(amount, scope, el.line)}))'
     if el.tag == 'burst':
         at = el.get('at')
         if not scope.has(at):
@@ -539,6 +553,14 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         if not scope.has(at):
             raise GameCompileError(f'<qg:emit at="{at}">: not me/other of this handler nor a character of the scene',
                                    el.line)
+        if (el.get('particles') is None) == (el.get('text') is None):
+            raise GameCompileError('<qg:emit> plays particles= or shows text=, one of them', el.line)
+        if el.get('text') is not None:
+            text = el.get('text')
+            value = (compile_expression(text, scope, el.line) if is_expression(text)
+                     else json.dumps(str(text), ensure_ascii=False))
+            return (f'Q.emit_text({scope.reference(at)}, Q.to_str({value}), {json.dumps(el.get("color"))}, '
+                    f'{int(el.get("size"))}, {float(el.get("dx"))!r}, {float(el.get("dy"))!r})')
         script.particles_used.append((el.get('particles'), el.line))
         return (f'Q.emit({scope.reference(at)}, {json.dumps(el.get("particles"))}, '
                 f'{float(el.get("dx"))!r}, {float(el.get("dy"))!r})')
@@ -593,6 +615,18 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         if el.get('name'):
             args.append(json.dumps(el.get('name')))
         return f'Q.after({", ".join(args)})'
+    if el.tag == 'beam':
+        ends = []
+        for attr in ('from', 'to'):
+            name = el.get(attr)
+            if not scope.has(name):
+                raise GameCompileError(f'<qg:beam {attr}="{name}">: not me/other of this handler, a character or '
+                                       f'cursor of the scene, nor a parameter, loop variable or q:set', el.line)
+            ends.append(scope.reference(name))
+        if el.get('seconds') <= 0 or el.get('width') <= 0:
+            raise GameCompileError('<qg:beam>: seconds= and width= more than 0', el.line)
+        return (f'Q.beam(self, {ends[0]}, {ends[1]}, {float(el.get("seconds"))!r}, {json.dumps(el.get("color"))}, '
+                f'{float(el.get("width"))!r})')
     if el.tag == 'goto-scene':
         script.scenes_used.append((el.get('name'), el.line))
         fade = el.get('fade') or 0.0

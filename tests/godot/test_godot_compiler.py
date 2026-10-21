@@ -866,7 +866,7 @@ class TestArcadePrefabsAndSpawners:
         data = json.loads((out / 'game.json').read_text())
         shot, drone = data['prefabs']['Shot'], data['prefabs']['Drone']
         assert (shot['ai'], shot['heading'], shot['lifetime'], shot['health']) == ('fly', [0.0, -1.0], 80, 1)
-        assert shot['on_collision'] == [{'with': 'enemy', 'cooldown': 0, 'handler': '_Shot_on_collision_0'}]
+        assert shot['on_collision'] == [{'with': 'enemy', 'side': 'any', 'cooldown': 0, 'handler': '_Shot_on_collision_0'}]
         assert (drone['health'], drone['fire_prefab'], drone['fire_every']) == (3, 'Shot', 90)
         assert drone['on_damage'] == '_Drone_on_damage' and drone['on_death'] == '_Drone_on_death'
         assert drone['initial_state'] == 'calm'
@@ -2226,7 +2226,7 @@ class TestGameLogic:
         assert 'target="me"' in str(err)    # a condition of the scene has no me
 
     def test_the_game_s_functions_are_every_scene_s_and_the_prefabs(self, tmp_path):
-        out = build(tmp_path, HEAD.replace('hitbox="12x12" />', 'hitbox="12x12">\n'
+        out = build(tmp_path, HEAD.replace('hitbox="12x12" />', 'hitbox="12x12" ai="wander">\n'
                                            '    <qg:on-collision with="coin"><q:call function="hurt" /></qg:on-collision>\n'
                                            '  </qg:prefab>') + '''  <q:set name="lives" value="3" type="number" />
   <q:function name="hurt">
@@ -2295,3 +2295,129 @@ class TestGameLogic:
 '''))
         script = (out / 'scripts' / 'scene_main.gd').read_text()
         assert '\tnote("a, b", max(1, 2), [1, 2])\n' in script
+
+
+class TestActionAndAiming:
+    """PLAN_GAMES_3.md, Phase 2 (what Siege asked for)."""
+
+    def test_a_spawn_heading_is_set_on_the_flying_thing(self, tmp_path):
+        out = build(tmp_path, HEAD.replace('hitbox="12x12" />', 'hitbox="12x12" />\n'
+                    '  <qg:prefab name="Shot" tag="shot" sheet="k" frame="1" hitbox="4x4" ai="fly" speed="200" />')
+                    + '''  <qg:scene name="main">
+    <qg:character id="p1" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12" />
+    <qg:cursor id="aim" step="0" />
+    <qg:on-input action="jump"><qg:spawn prefab="Shot" at="p1" heading="{aim.x - p1.x},{aim.y - p1.y}" /></qg:on-input>
+  </qg:scene>
+''' + TAIL)
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert ('Q.headed(Q.spawn(self, "Shot", get_node("p1"), 0.0, 0.0), '
+                'float((Q.pos_x(get_node("aim")) - Q.pos_x(get_node("p1")))), '
+                'float((Q.pos_y(get_node("aim")) - Q.pos_y(get_node("p1")))))') in script
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p1" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12" />
+    <qg:on-input action="jump"><qg:spawn prefab="Coin" at="p1" heading="1,0" /></qg:on-input>
+  </qg:scene>
+'''))
+        assert 'heading= is for a prefab with ai="fly"' in str(err)
+
+    def test_looks_on_things_and_characters(self, tmp_path):
+        out = build(tmp_path, HEAD.replace('<qg:prefab name="Coin" tag="coin" sheet="k" frame="151" hitbox="12x12" />', '''<qg:particles name="fire" preset="fire" />
+  <qg:prefab name="Coin" tag="coin" sheet="k" frame="151" hitbox="12x12" ai="wander" spacing="12" particles="fire"
+             flip-v="true" layer="3" visible="{me.health > 0}">
+    <qg:label value="{me.health}" dy="-10" color="#ff0000" />
+  </qg:prefab>''') + '''  <qg:scene name="main" y-sort="true">
+    <qg:character id="p1" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12" layer="1">
+      <qg:label value="{'P1'}" />
+    </qg:character>
+    <qg:label value="{'SIGN'}" x="100" y="20" size="10" />
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        coin = data['prefabs']['Coin']
+        assert coin['spacing'] == 12 and coin['particles'] == 'fire' and coin['flip_v'] and coin['layer'] == 3
+        assert coin['visible'] == '_Coin_visible'
+        assert coin['labels'] == [{'method': '_Coin_label_0', 'dx': 0.0, 'dy': -10.0, 'size': 8, 'color': '#ff0000'}]
+        prefabs = (out / 'scripts' / 'prefabs.gd').read_text()
+        assert 'func _Coin_visible(me) -> bool:\n\treturn bool((me.health > 0))' in prefabs
+        assert 'func _Coin_label_0(me) -> String:\n\treturn Q.to_str(me.health)' in prefabs
+        scene = data['scenes']['main']
+        assert scene['y_sort'] is True
+        p1 = next(n for n in scene['nodes'] if n['kind'] == 'character')
+        assert p1['layer'] == 1 and p1['labels'][0]['method'] == '_q_p1_label_0'
+        sign = next(n for n in scene['nodes'] if n['kind'] == 'label')
+        assert sign == {'kind': 'label', 'method': '_q_label_1', 'x': 100.0, 'y': 20.0, 'size': 10, 'color': '#ffffff',
+                        'if': None}
+
+    def test_what_the_looks_refuse(self, tmp_path):
+        for body, message in (
+                ('<qg:label value="{1}" /></qg:scene>', '<qg:label> in a scene needs x= and y='),
+                ('<qg:character id="p" controller="topdown" sheet="c" x="1" y="1" hitbox="8x8">'
+                 '<qg:label value="{1}" x="3" y="4" /></qg:character></qg:scene>', 'takes dx= and dy='),
+                ('<qg:character id="p" controller="topdown" sheet="c" x="1" y="1" hitbox="8x8" particles="smoke" />'
+                 '</qg:scene>', 'particles="smoke": no qg:particles of that name')):
+            err = refuse(tmp_path, game(f'  <qg:scene name="main">{body}\n'))
+            assert message in str(err), str(err)
+        err = refuse(tmp_path, HEAD.replace('hitbox="12x12" />', 'hitbox="12x12" spacing="10" />') +
+                     '  <qg:scene name="main" />\n' + TAIL)
+        assert 'spacing= is for a prefab that walks' in str(err)
+
+    def test_a_still_prefab_does_not_touch(self, tmp_path):
+        err = refuse(tmp_path, HEAD.replace('hitbox="12x12" />', 'hitbox="12x12" solid="true">'
+                                            '<qg:on-collision with="coin"><qg:quit /></qg:on-collision></qg:prefab>')
+                     + '  <qg:scene name="main" />\n' + TAIL)
+        assert "a prefab that does not move: it would never run" in str(err)
+
+    def test_emit_text_and_a_beam(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p1" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12" />
+    <qg:instance prefab="Coin" name="gold" x="50" y="50" />
+    <qg:on-input action="jump">
+      <qg:emit text="+10" at="p1" color="#ffe070" dy="-8" />
+      <qg:emit text="{str(1 + 1)}" at="p1" />
+      <qg:beam from="p1" to="gold" seconds="0.5" color="#80d0ff" width="3" />
+    </qg:on-input>
+  </qg:scene>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\tQ.emit_text(get_node("p1"), Q.to_str("+10"), "#ffe070", 8, 0.0, -8.0)\n' in script
+        assert '\tQ.emit_text(get_node("p1"), Q.to_str(Q.to_str((1 + 1))), "#ffffff", 8, 0.0, 0.0)\n' in script
+        assert '\tQ.beam(self, get_node("p1"), get_node("gold"), 0.5, "#80d0ff", 3.0)\n' in script
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p1" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12" />
+    <qg:on-input action="jump"><qg:emit at="p1" /></qg:on-input>
+  </qg:scene>
+'''))
+        assert 'plays particles= or shows text=, one of them' in str(err)
+
+    def test_steer_alone_and_a_buffered_jump(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="ship" controller="behavior" sheet="c" x="10" y="10" hitbox="12x12">
+      <qg:behavior><qg:steer turn="120" thrust="300" drag="0.5" max="150" heading="-90" /></qg:behavior>
+    </qg:character>
+    <qg:character id="hop" controller="platformer" sheet="c" x="40" y="10" hitbox="12x12" buffer-frames="5" />
+  </qg:scene>
+'''))
+        nodes = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes']
+        ship, hop = (n for n in nodes if n['kind'] == 'character')
+        assert ship['behavior'] == [{'part': 'steer', 'turn': 120.0, 'thrust': 300.0, 'drag': 0.5, 'max': 150.0,
+                                     'heading': -90.0}]
+        assert hop['buffer_frames'] == 5
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="ship" controller="behavior" sheet="c" x="10" y="10" hitbox="12x12">
+      <qg:behavior><qg:steer /><qg:walk /></qg:behavior>
+    </qg:character>
+  </qg:scene>
+'''))
+        assert '<qg:steer> and <qg:walk> in one qg:behavior' in str(err)
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12" buffer-frames="4" />
+  </qg:scene>
+'''))
+        assert 'buffer-frames= is for controller="platformer"' in str(err)
+
+    def test_a_cursor_by_its_id(self):
+        from quantum.runtime.godot.expressions import CURSOR_FIELDS
+        scope = Scope(node_ids=['aim'], node_fields={'aim': CURSOR_FIELDS})
+        assert compile_expression('aim.x', scope) == 'Q.pos_x(get_node("aim"))'
+        with pytest.raises(GameCompileError, match='aim.health: no such field; aim has col, player, row, x, y'):
+            compile_expression('aim.health', scope)

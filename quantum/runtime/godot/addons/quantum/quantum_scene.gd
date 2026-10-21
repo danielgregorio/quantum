@@ -89,13 +89,19 @@ func _q_state() -> Dictionary:
 
 
 # A thing a qg:tween has touched also says how it looks: its picture's scale
-# and rotation, and its alpha.
+# (and its height apart, when a scale-y made it differ) and rotation, and its
+# alpha. One that visible= hides says so.
 static func _look(n: Node, entry: Dictionary) -> void:
+	if n is CanvasItem and not (n as CanvasItem).visible:
+		entry["hidden"] = true
 	if not n.has_meta("q_tweened"):
 		return
 	var tween = load("res://addons/quantum/tween.gd")
 	for prop in ["scale", "rotation", "alpha"]:
 		entry[prop] = snappedf(tween.read(n, prop), 0.001)
+	var tall: float = snappedf(tween.read(n, "scale-y"), 0.001)
+	if tall != entry["scale"]:
+		entry["scale_y"] = tall
 	var tint: Color = tween.read(n, "tint")
 	if tint != Color.WHITE:
 		entry["tint"] = tint.to_html(false)

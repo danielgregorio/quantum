@@ -7,7 +7,7 @@ outline: [2, 3]
 
 **[All the games on one page →](https://quantumframework.net/games/)**
 
-Twelve games written in the game language, each a single `.q` file in
+Thirteen games written in the game language, each a single `.q` file in
 [`projects/`](https://github.com/danielgregorio/quantum/tree/main/projects), built by
 `quantum run`, replayed in CI from input tapes, and exported here by Godot
 4.4.1 for the browser, Linux and Windows. The browser builds run as
@@ -24,8 +24,9 @@ network: on the title, one machine chooses **Host a game**, the other types
 the host's address and chooses **Join**, and both run the same game in
 lockstep (`PLAN_MULTIPLAYER.md` in the repository says how). Bricks is played
 by two to four, each on their own machine: it starts as the fourth joins, or
-when the host chooses **Start now** with two or three. The command line skips
-the title:
+when the host chooses **Start now** with two or three. Siege is played by
+one, or by two each on their own machine: the second is the knight. The
+command line skips the title:
 
 ```
 ./pong.x86_64 -- --q-host=7777            # player 1 hosts on port 7777
@@ -98,6 +99,7 @@ It makes a room of its own and a link to send to a friend.
 | **Drift** | A vertical shooter: three waves from the scene's seed, drones and tanks that shoot, a boss with two phases, a high score kept between runs | [browser](https://quantumframework.net/games/drift/) | [Linux](https://quantumframework.net/games/drift/drift-linux.zip) · [Windows](https://quantumframework.net/games/drift/drift-windows.zip) | [drift.q](https://quantumframework.net/games/drift/source/) |
 | **Pong** | Godot's own Pong demo transcribed: two paddles, a ball that bounces; two players on one keyboard or over the network | [browser](https://quantumframework.net/games/pong/) | [Linux](https://quantumframework.net/games/pong/pong-linux.zip) · [Windows](https://quantumframework.net/games/pong/pong-windows.zip) | [pong.q](https://quantumframework.net/games/pong/source/) |
 | **Bricks** | A brick breaker: three levels, steel bricks, bombs that break their neighbours, the last brick in slow motion; alone, or two to four paddles over the network | [browser](https://quantumframework.net/games/bricks/) | [Linux](https://quantumframework.net/games/bricks/bricks-linux.zip) · [Windows](https://quantumframework.net/games/bricks/bricks-windows.zip) | [bricks.q](https://quantumframework.net/games/bricks/source/) |
+| **Siege** | A keep under siege, seen from above: raiders in waves, an archer who aims with the mouse and charges a bolt that glances off the walls, a tower that zaps them; alone, or with a knight on a horse over the network | [browser](https://quantumframework.net/games/siege/) | [Linux](https://quantumframework.net/games/siege/siege-linux.zip) · [Windows](https://quantumframework.net/games/siege/siege-windows.zip) | [siege.q](https://quantumframework.net/games/siege/source/) |
 | **Creeps** | Godot's "Dodge the Creeps" tutorial game transcribed: creeps from the border at random speeds, a point a second | [browser](https://quantumframework.net/games/creeps/) | [Linux](https://quantumframework.net/games/creeps/creeps-linux.zip) · [Windows](https://quantumframework.net/games/creeps/creeps-windows.zip) | [creeps.q](https://quantumframework.net/games/creeps/source/) |
 | **Towers** | A tower defense: turrets that shoot the nearest dino, dinos down a road in waves, gold and a base; two builders over the network | [browser](https://quantumframework.net/games/towers/) | [Linux](https://quantumframework.net/games/towers/towers-linux.zip) · [Windows](https://quantumframework.net/games/towers/towers-windows.zip) | [towers.q](https://quantumframework.net/games/towers/source/) |
 | **Arena** | A one-on-one fighting game: moves with frame data, blocking, hit stun, rounds on a clock; two players on one keyboard or over the network | [browser](https://quantumframework.net/games/arena/) | [Linux](https://quantumframework.net/games/arena/arena-linux.zip) · [Windows](https://quantumframework.net/games/arena/arena-windows.zip) | [arena.q](https://quantumframework.net/games/arena/source/) |
@@ -112,6 +114,8 @@ It makes a room of its own and a link to send to a friend.
 - **Delve**: arrows or WASD; Space swings the sword; walk into a lever to pull it. Escape leaves the lobby.
 - **Drift**: arrows or WASD; Space fires.
 - **Pong**: W/S for the left paddle, the arrows for the right one.
+- **Bricks**: arrows or A/D move the paddle; Space, Up or W serves as it is let go.
+- **Siege**: WASD or the arrows walk; the mouse (or the right stick) aims; the left button or J shoots as it is let go, held most of a second a bolt. The knight: left and right turn the horse, up spurs it on.
 - **Creeps**: arrows or WASD; Space or Enter starts.
 - **Towers**: the mouse (or the arrows) points, click or Enter builds; `1` and `2` choose the turret; a click on a turret upgrades it.
 - **Arena**: player 1 A/D, W jump, S crouch, J punch, K kick; player 2 the arrows, `.` punch, `/` kick. Hold away from the opponent to block.

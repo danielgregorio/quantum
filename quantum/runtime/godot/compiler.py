@@ -10,7 +10,9 @@ from typing import Dict, List, Optional
 
 from quantum.runtime.godot.errors import GameCompileError
 from quantum.runtime.godot.model import Element, Game, Statement, read_game
-from quantum.runtime.godot.expressions import CONTROLLER_FIELDS, THING_FIELDS, compile_expression, strip_braces
+from quantum.runtime.godot.expressions import (
+    CONTROLLER_FIELDS, CURSOR_FIELDS, THING_FIELDS, compile_expression, strip_braces,
+)
 from quantum.runtime.godot.schema import TAGS
 from quantum.runtime.godot.tiled import read_tmx
 from quantum.runtime.godot import gd as gdprops
@@ -279,6 +281,11 @@ class _Compiler:
                     raise GameCompileError('<qg:prefab shape=>: at least three points', el.line)
             if el.get('walls') != 'pass' and el.get('ai') != 'fly':
                 raise GameCompileError('walls= is for ai="fly"', el.line)
+            if el.get('spacing') < 0:
+                raise GameCompileError('<qg:prefab spacing=>: 0 or more (pixels)', el.line)
+            if el.get('spacing') and (el.get('solid') or el.get('ai') in (None, 'fly', 'shuttle', 'turret', 'path')):
+                raise GameCompileError('spacing= is for a prefab that walks: ai="patrol", "wander", "chase", '
+                                       '"pathfind", "sway" or "behavior"', el.line)
             if el.get('scale') <= 0:
                 raise GameCompileError('<qg:prefab scale=>: more than 0', el.line)
             for attr in ('fire-sound',):
@@ -287,9 +294,15 @@ class _Compiler:
             mark = len(pscript.states_used)   # the become target="me" of this prefab's own handlers, below
             states, initial_state = _states(el, pscript, name, for_prefab=True, already=mark)
             handlers = []
-            for i, h in enumerate(el.find_all('on-collision')):
+            touches = el.find_all('on-collision')
+            if touches and el.get('ai') in (None, 'shuttle'):
+                raise GameCompileError(f'<qg:on-collision> on {name!r}, a prefab that does not move: it would never '
+                                       f'run — put it on what moves into it, `with="{el.get("tag") or name.lower()}"`',
+                                       touches[0].line)
+            for i, h in enumerate(touches):
                 hname = compile_handler(pscript, f'_{_ident(name)}_on_collision_{i}', h.children, h.line)
-                handlers.append({'with': h.get('with'), 'cooldown': h.get('cooldown'), 'handler': hname})
+                handlers.append({'with': h.get('with'), 'side': h.get('side'), 'cooldown': h.get('cooldown'),
+                                 'handler': hname})
             on_damage = on_death = None
             for h in el.find_all('on-damage'):
                 on_damage = compile_handler(pscript, f'_{_ident(name)}_on_damage', h.children, h.line)
@@ -324,6 +337,11 @@ class _Compiler:
                              'animations': _animations(el),
                              'on_animation_end': _animation_ends(el, pscript, f'_{_ident(name)}_on')}
             prefabs[name].update(prefab_contacts)
+            prefabs[name].update(_looks(el, pscript, f'_{_ident(name)}', self.particles))
+            if el.get('trail') is not None:
+                prefabs[name]['trail'] = el.get('trail')
+            if el.get('spacing'):
+                prefabs[name]['spacing'] = el.get('spacing')
             if parts:
                 prefabs[name]['parts'] = parts
             prefabs[name].update(carry)
@@ -334,6 +352,7 @@ class _Compiler:
             if pname not in prefabs:
                 raise GameCompileError(
                     f'no qg:prefab named {pname!r} (declared: {", ".join(sorted(prefabs)) or "none"})', line)
+        _heading_is_flown(pscript.headed, prefabs)
         for played in pscript.sounds_played:
             if played not in sounds:
                 raise GameCompileError(f'<qg:play sound="{played}">: no qg:sound of that name', None)
@@ -629,10 +648,18 @@ class _Compiler:
                 raise GameCompileError(f'<qg:jump sound="{j["sound"]}">: no qg:sound of that name', line)
             if j['height'] <= 0 or (j['speed'] is not None and j['speed'] <= 0):
                 raise GameCompileError('<qg:jump>: height= and speed= more than 0', line)
-            if j['coyote'] < 0 or j['air'] < 0:
-                raise GameCompileError('<qg:jump>: coyote= and air= 0 or more', line)
+            if j['coyote'] < 0 or j['air'] < 0 or j['buffer'] < 0:
+                raise GameCompileError('<qg:jump>: coyote=, air= and buffer= 0 or more', line)
             if not 0 <= j['cut'] <= 1:
                 raise GameCompileError('<qg:jump cut=>: between 0 and 1', line)
+        if 'steer' in by:
+            st, line = by['steer'], seen['steer']
+            for other in ('walk', 'gravity', 'jump'):
+                if other in by:
+                    raise GameCompileError(f'<qg:steer> and <qg:{other}> in one qg:behavior: steer turns and pushes '
+                                           f'the body itself, seen from above', line)
+            if st['turn'] < 0 or st['thrust'] < 0 or st['drag'] < 0 or st['max'] <= 0:
+                raise GameCompileError('<qg:steer>: turn=, thrust= and drag= 0 or more, max= more than 0', line)
         return parts
 
     @staticmethod
@@ -648,9 +675,11 @@ class _Compiler:
         self._states_checked: list = []
         # the characters, by id: names in the scene's expressions, targets of its actions
         script.node_ids = ([c.get('id') for c in scene.find_all('character')]
-                           + [i.get('name') for i in scene.find_all('instance') if i.get('name')])
+                           + [i.get('name') for i in scene.find_all('instance') if i.get('name')]
+                           + [c.get('id') for c in scene.find_all('cursor') if c.get('id')])
         script.node_fields = {c.get('id'): CONTROLLER_FIELDS.get(c.get('controller'), THING_FIELDS)
                               for c in scene.find_all('character')}
+        script.node_fields.update({c.get('id'): CURSOR_FIELDS for c in scene.find_all('cursor') if c.get('id')})
         script.actions = self.actions
         # 1. state and functions first: handlers refer to them
         for node in scene.children:
@@ -795,6 +824,23 @@ class _Compiler:
                 if tag in on_death:
                     raise GameCompileError(f'two <qg:on-death of="{tag}">', el.line)
                 on_death[tag] = compile_handler(script, f'_on_death_of_{_ident(tag)}', el.children, el.line)
+            elif el.tag == 'label':
+                # text at a place of the scene, read every tick
+                if el.get('x') is None or el.get('y') is None:
+                    raise GameCompileError('<qg:label> in a scene needs x= and y= (where its middle is)', el.line)
+                n = sum(1 for nd in nodes if nd['kind'] == 'label') + 1
+                method = f'_q_label_{n}'
+                script.functions.append(f'func {method}() -> String:\n\treturn Q.to_str('
+                                        f'{compile_expression(el.get("value"), script.scope(), el.line)})\n')
+                condition = None
+                if el.get('if') is not None:
+                    conditions += 1
+                    condition = f'_q_if_{conditions}'
+                    expr = compile_expression(el.get('if'), script.scope(), el.line)
+                    script.functions.append(f'func {condition}() -> bool:\n\treturn {expr}\n')
+                nodes.append({'kind': 'label', 'method': method, 'x': el.get('x'), 'y': el.get('y'),
+                              'size': el.get('size'), 'color': el.get('color'), 'if': condition})
+                self._node_elements.append(el)
             elif el.tag == 'when':
                 # the condition, a method the scene's clock reads before every tick; the handler, run as it turns true
                 n = len(whens) + 1
@@ -840,8 +886,13 @@ class _Compiler:
                 if el.get('player') in cursors:
                     raise GameCompileError(f'two <qg:cursor player="{el.get("player")}">', el.line)
                 cursors.add(el.get('player'))
+                if el.get('id') is not None:
+                    if el.get('id') in ids:
+                        raise GameCompileError(f'two nodes with id {el.get("id")!r}', el.line)
+                    ids[el.get('id')] = el.line
                 nodes.append({'kind': 'cursor', 'player': el.get('player'), 'step': el.get('step'),
-                              'grid': el.get('grid'), 'sheet': el.get('sheet'), 'frame': el.get('frame')})
+                              'grid': el.get('grid'), 'sheet': el.get('sheet'), 'frame': el.get('frame'),
+                              **({'id': el.get('id')} if el.get('id') else {})})
                 self._node_elements.append(el)
             elif el.tag == 'path':
                 pname = el.get('name')
@@ -966,13 +1017,13 @@ class _Compiler:
                         raise GameCompileError(
                             f'fire-prefab="{el.get("fire-prefab")}": a platformer shoots a prefab with ai="fly"', el.line)
                 for attr, default in (('jump-speed', None), ('accel', 0.0), ('air-jumps', 0),
-                                      ('air-jump-boost', 1.0), ('jump-cut', 0.0)):
+                                      ('air-jump-boost', 1.0), ('jump-cut', 0.0), ('buffer-frames', 0)):
                     if el.get(attr) != default and controller != 'platformer':
                         raise GameCompileError(f'{attr}= is for controller="platformer"', el.line)
                 if el.get('jump-speed') is not None and el.get('jump-speed') <= 0:
                     raise GameCompileError('jump-speed=: more than 0 (pixels per second, upwards)', el.line)
-                if el.get('air-jumps') < 0 or el.get('accel') < 0:
-                    raise GameCompileError('air-jumps= and accel=: 0 or more', el.line)
+                if el.get('air-jumps') < 0 or el.get('accel') < 0 or el.get('buffer-frames') < 0:
+                    raise GameCompileError('air-jumps=, accel= and buffer-frames=: 0 or more', el.line)
                 if not 0 <= el.get('jump-cut') <= 1:
                     raise GameCompileError('jump-cut=: between 0 and 1', el.line)
                 if el.get('scale') <= 0:
@@ -1053,6 +1104,8 @@ class _Compiler:
                                 for i, h in enumerate(el.find_all('on-tile'))],
                     'on_animation_end': _animation_ends(el, script, f'_on_{_ident(cid)}'),
                     **_contact_handlers(el, script, f'_on_{_ident(cid)}'),
+                    **_looks(el, script, f'_q_{_ident(cid)}', self.particles),
+                    **({'buffer_frames': el.get('buffer-frames')} if el.get('buffer-frames') else {}),
                 })
                 self._node_elements.append(el)
             elif el.tag == 'instance':
@@ -1282,6 +1335,7 @@ class _Compiler:
             if pname not in prefabs:
                 raise GameCompileError(
                     f'no qg:prefab named {pname!r} (declared: {", ".join(sorted(prefabs)) or "none"})', line)
+        _heading_is_flown(script.headed, prefabs)
         for pname, line in script.particles_used:
             if pname not in self.particles:
                 raise GameCompileError(
@@ -1315,6 +1369,8 @@ class _Compiler:
         }
         if whens:
             spec['when'] = whens
+        if scene.get('y-sort'):
+            spec['y_sort'] = True
         if scene.get('save'):
             spec['save'] = True
         gdprops.attach(spec, 'Node2D', scene.gd, f'<qg:scene name="{name}">', scene.line)
@@ -1369,7 +1425,7 @@ _ENEMY_PARTS = ('seek', 'flee', 'keep-distance', 'patrol', 'wander', 'stand', 's
 # and never go through Godot's physics, which cannot be run again inside one frame. A tilemap
 # saves the cells qg:set-tile changed (a fighter stands on its own floor, not on its tiles), and
 # the scene's tweens are records the rollback saves and runs again (tween.gd).
-_ROLLBACK_KINDS = {'character', 'timer', 'hud', 'sprite', 'menu', 'camera', 'tilemap'}
+_ROLLBACK_KINDS = {'character', 'timer', 'hud', 'sprite', 'menu', 'camera', 'tilemap', 'label'}
 
 
 def _check_rollback(start: str, scenes: dict, goes: Dict[str, List[str]], spawns: Dict[str, Optional[int]],
@@ -1556,6 +1612,51 @@ def _animations(el: Element) -> Dict[str, dict]:
         out[name] = {'frames': frames, 'fps': a.get('fps')}
         if not a.get('loop'):
             out[name]['loop'] = False
+    return out
+
+
+def _heading_is_flown(headed: List[tuple], prefabs: dict) -> None:
+    for pname, line in headed:
+        if pname in prefabs and prefabs[pname]['ai'] != 'fly':
+            raise GameCompileError(f'<qg:spawn prefab="{pname}" heading=>: heading= is for a prefab with ai="fly"',
+                                   line)
+
+
+def _looks(el: Element, script: SceneScript, prefix: str, particles: dict) -> dict:
+    """How a character or a prefab looks besides its frame: an effect kept going on it (particles=), when it
+    is shown (visible=, a method with `me`), upside down, its draw layer, and the qg:labels over it (each a
+    method with `me` giving the text). Only seen."""
+    out: dict = {}
+    scope = script.scope().child(('me',), things=('me',))
+    if el.get('particles') is not None:
+        if el.get('particles') not in particles:
+            raise GameCompileError(f'particles="{el.get("particles")}": no qg:particles of that name', el.line)
+        out['particles'] = el.get('particles')
+    if el.get('visible') is not None:
+        out['visible'] = f'{prefix}_visible'
+        script.functions.append(f'func {prefix}_visible(me) -> bool:\n\treturn bool('
+                                f'{compile_expression(el.get("visible"), scope, el.line)})\n')
+    if el.get('flip-v'):
+        out['flip_v'] = True
+    if el.get('layer'):
+        out['layer'] = el.get('layer')
+    labels = []
+    for i, lb in enumerate(el.find_all('label')):
+        if lb.get('x') is not None or lb.get('y') is not None:
+            raise GameCompileError('<qg:label> on a character or a prefab takes dx= and dy= (from its middle), '
+                                   'not x= and y=', lb.line)
+        method = f'{prefix}_label_{i}'
+        script.functions.append(f'func {method}(me) -> String:\n\treturn Q.to_str('
+                                f'{compile_expression(lb.get("value"), scope, lb.line)})\n')
+        label = {'method': method, 'dx': lb.get('dx'), 'dy': lb.get('dy'), 'size': lb.get('size'),
+                 'color': lb.get('color')}
+        if lb.get('if') is not None:
+            label['if'] = f'{method}_if'
+            script.functions.append(f'func {method}_if(me) -> bool:\n\treturn bool('
+                                    f'{compile_expression(lb.get("if"), scope, lb.line)})\n')
+        labels.append(label)
+    if labels:
+        out['labels'] = labels
     return out
 
 

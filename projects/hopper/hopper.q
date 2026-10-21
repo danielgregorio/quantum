@@ -182,7 +182,7 @@
 
     <qg:character id="player" controller="platformer" sheet="chars" frame="0"
                   x="40" y="160" hitbox="18x22"
-                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6"
+                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6" buffer-frames="6"
                   jump-sound="jump">
       <qg:state name="small" hitbox="18x22" frame="0" initial="true">
         <qg:animation name="idle" frames="0" />
@@ -308,7 +308,7 @@
 
     <qg:character id="player" controller="platformer" sheet="chars" frame="0"
                   x="40" y="160" hitbox="18x22"
-                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6"
+                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6" buffer-frames="6"
                   jump-sound="jump">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
@@ -390,7 +390,7 @@
 
     <qg:character id="player" controller="platformer" sheet="chars" frame="0"
                   x="40" y="160" hitbox="18x22"
-                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6"
+                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6" buffer-frames="6"
                   jump-sound="jump">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
@@ -481,7 +481,7 @@
 
     <qg:character id="player" controller="platformer" sheet="chars" frame="0"
                   x="40" y="160" hitbox="18x22"
-                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6"
+                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6" buffer-frames="6"
                   jump-sound="jump">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />

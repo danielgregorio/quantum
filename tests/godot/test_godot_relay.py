@@ -135,5 +135,5 @@ def test_a_plain_request_is_a_health_check(relay):
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     with opener.open(url.replace('ws://', 'http://') + '/health', timeout=10) as answer:
         health = json.loads(answer.read())
-    assert health['relay'] == 'quantum' and health['games'] == ['arena', 'bricks', 'chess', 'delve', 'pong', 'towers']
+    assert health['relay'] == 'quantum' and health['games'] == ['arena', 'bricks', 'chess', 'delve', 'pong', 'siege', 'towers']
     assert health['rooms'] == len(game_relay.rooms)

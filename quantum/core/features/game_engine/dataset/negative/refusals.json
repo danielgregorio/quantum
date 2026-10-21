@@ -594,6 +594,93 @@
       "tags": [
         "pressing"
       ]
+    },
+    {
+      "id": "game-bad-035",
+      "intent": "A heading for a thing that does not fly",
+      "input": {
+        "natural_language": "Throw the coin at the pointer",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"14x14\" />\n    <qg:cursor id=\"aim\" />\n    <qg:on-input action=\"jump\"><qg:spawn prefab=\"Coin\" at=\"hero\" heading=\"{aim.x - hero.x},{aim.y - hero.y}\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "heading= is for a prefab with ai=\"fly\""
+      },
+      "why_invalid": "Only a flying prefab goes along a heading; a coin stays where it is placed.",
+      "correction": "Give the prefab ai=\"fly\" and a speed=, or spawn it without heading=.",
+      "tags": [
+        "spawn",
+        "heading"
+      ]
+    },
+    {
+      "id": "game-bad-036",
+      "intent": "A wall that would notice what touches it",
+      "input": {
+        "natural_language": "The wall says ouch when something touches it",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"said\" value=\"''\" />\n  <qg:prefab name=\"Wall\" tag=\"wall\" sheet=\"tiles\" frame=\"0\" hitbox=\"18x18\" solid=\"true\">\n    <qg:on-collision with=\"ball\"><q:set name=\"said\" value=\"ouch\" /></qg:on-collision>\n  </qg:prefab>\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "a prefab that does not move: it would never run"
+      },
+      "why_invalid": "A prefab that does not move never touches anything itself; what moves into it does the touching.",
+      "correction": "Put it on what moves: <qg:on-collision with=\"wall\"> in the ball's prefab.",
+      "tags": [
+        "on-collision"
+      ]
+    },
+    {
+      "id": "game-bad-037",
+      "intent": "A label in the scene with no place",
+      "input": {
+        "natural_language": "A sign that says WELCOME",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\"><qg:label value=\"{'WELCOME'}\" /></qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:label> in a scene needs x= and y="
+      },
+      "why_invalid": "A label in a scene stands at a place; over a character or a prefab it follows it.",
+      "correction": "Give it x= and y=, or put it inside the character it is over.",
+      "tags": [
+        "label"
+      ]
+    },
+    {
+      "id": "game-bad-038",
+      "intent": "An emit with nothing to show",
+      "input": {
+        "natural_language": "Show something where the hero is",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"14x14\" />\n    <qg:on-input action=\"jump\"><qg:emit at=\"hero\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "plays particles= or shows text=, one of them"
+      },
+      "why_invalid": "qg:emit plays an effect or floats a text: one of them must be said.",
+      "correction": "Write particles=\"sparkle\" (a qg:particles) or text=\"+10\".",
+      "tags": [
+        "emit"
+      ]
+    },
+    {
+      "id": "game-bad-039",
+      "intent": "Steering and walking at once",
+      "input": {
+        "natural_language": "A car that steers and also walks with the arrows",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"car\" controller=\"behavior\" sheet=\"tiles\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"14x14\">\n      <qg:behavior><qg:steer /><qg:walk axis=\"both\" /></qg:behavior>\n    </qg:character>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:steer> and <qg:walk> in one qg:behavior"
+      },
+      "why_invalid": "Steering turns and pushes the body itself; walking would set its speed from the same keys.",
+      "correction": "Keep one of them: qg:steer for a car or a ship, qg:walk for a walker.",
+      "tags": [
+        "steer",
+        "walk"
+      ]
     }
   ]
 }

@@ -1,8 +1,8 @@
 # Games 3 — what the game language takes from Godot and Unity next
 
 > Status: approved 2026-10-21, whole, the ten "later" items included (each
-> comes in with the game that asks for it: Phase 6). Phase 1 done
-> (2026-10-21); Phase 2 next.
+> comes in with the game that asks for it: Phase 6). Phases 1 and 2 done
+> (2026-10-21, Siege the game of the second); Phase 3 next.
 > Laboratory tier: no tag here carries a stability promise until it ships.
 > The proposal it comes from is the Claude Docs page "Proposta: próximos
 > recursos da linguagem de jogos"; the map it was chosen from is
@@ -127,17 +127,53 @@ language lacks.
 | A buffered jump | `buffer-frames=` on the platformer controller and on `qg:jump` | every platformer (Hopper, Robot) | S |
 | Keeping apart | `spacing=` on a prefab | swarms, crowds of enemies that do not overlap | M |
 
-- [ ] Siege, written first: what the compiler refuses is the list
-- [ ] `heading=` on `qg:spawn`
-- [ ] `qg:steer`
-- [ ] `qg:label`, `text=` on `qg:emit`
-- [ ] `particles=` on things
-- [ ] `qg:beam`, `trail=`
-- [ ] `scale-x`/`scale-y`, `visible=`, `flip-v=`, `layer=`, `y-sort=`
-- [ ] `walls="bounce"`
-- [ ] `side="left"` / `side="right"`
-- [ ] `buffer-frames=`
-- [ ] `spacing=`
+- [x] Siege, written first: what the compiler refuses is the list
+- [x] `heading=` on `qg:spawn`
+- [x] `qg:steer`
+- [x] `qg:label`, `text=` on `qg:emit`
+- [x] `particles=` on things
+- [x] `qg:beam`, `trail=`
+- [x] `scale-x`/`scale-y`, `visible=`, `flip-v=`, `layer=`, `y-sort=`
+- [x] `walls="bounce"`
+- [x] `side="left"` / `side="right"`
+- [x] `buffer-frames=`
+- [x] `spacing=`
+
+What was built (2026-10-21):
+
+- Siege (`projects/siege/siege.q`, art by `scripts/art/siege.py`), written
+  first. The compiler's refusals were the list, and three more the game
+  needed: a cursor read by its id (`aim.x`), `qg:damage amount=` as an
+  expression, and the things Siege ran into below.
+- `addons/quantum/looks.gd`: one `Looks` node on a character or a thing (or
+  at a place of a scene, for a scene's label) keeps up every tick what is
+  only seen: its labels (methods of the scene's script, or P's, with `me`),
+  `visible=`, an effect kept going on it (`particles=`) and its trail. The
+  play protocol's screen reads the labels. `beam.gd`: a line between two
+  things for so many ticks. `Q.emit_text`: a label that rises and fades.
+- `thing.gd`: `walls="bounce"` reflects the heading off the tile's normal;
+  `spacing=` adds a push of half the overlap a tick away from each thing of
+  its tag (in the scene's order, the same on every peer); a touch's side is
+  judged from where the two are (`Q.side_of`), for things and for the
+  left and right of characters; a thing that walks into a solid prefab
+  touches it (`_bumps`).
+- `behavior_body.gd`: `qg:steer` (an angle, thrust along it, drag, a top
+  speed; the picture turns); `buffer=` on `qg:jump`, `buffer-frames=` on the
+  platformer.
+- `tween.gd`: `scale-x`, `scale-y`, and every scale from the thing's own
+  size; the state reports a `scale_y` that differs, and `hidden` things.
+
+What was learned: a thing's hitbox is no larger than its body, so a thing
+pushing on a solid never overlapped it and its `qg:on-collision` never ran
+(characters have a sensor two pixels larger for this); the slide collisions
+of its move are the touch. A prefab's handlers run in P, and several scene
+actions took `self` for the scene: from P they did nothing (`qg:goto-scene`)
+or stopped the game (`qg:spawn`); a game function called from a prefab
+made it plain. A shot that meets the tiles (`walls=`) is a moving body: it
+started inside the archer that shot it and stuck there. A prefab that does
+not move never touches; its `qg:on-collision` is now refused. Spacing as a
+soft push lost to the seek that draws a crowd together; half the overlap a
+tick holds them apart.
 
 ## Phase 3 — Puzzle and adventure
 

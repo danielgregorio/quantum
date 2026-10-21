@@ -59,6 +59,12 @@ GAMES = [
      'as lines of letters and built by a q:loop, steel bricks of two hits, a bomb that breaks the bricks around it '
      '(qg:for-each), the serve as jump is let go (on="release"), a ball lost off the bottom (qg:on-screen-exit), the '
      'last brick in slow motion (qg:time-scale) and a sequence of tweens (qg:on-end)'),
+    ('Siege', 'projects/siege/siege.q', 'a keep under siege seen from above, for one or two over the network: '
+     'raiders in waves (qg:when, qg:after) that keep apart (spacing=) and make for the tower, an archer who aims at '
+     'the pointer (qg:spawn heading=, a qg:cursor\'s id) and charges a bolt (pressed_for()) that glances off the '
+     'walls (walls="bounce") with a trail, numbers that float up (qg:emit text=), a tower that zaps (qg:beam), a '
+     'brute with its health over it (qg:label), a ram shielded in front (side="left"), and a knight who steers a '
+     'horse (qg:steer)'),
     ('RPG', 'projects/rpg/rpg.q', 'Godot\'s "JRPG" demo transcribed: its map in three tile layers, a slime that '
      'walks it cell by cell, a key and another slime that talk in a dialogue box, and a turn-based fight '
      '(projects/rpg/README.md)'),
