@@ -10,6 +10,14 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- The games page (`/games/`) shows each game's source: **View the source**
+  opens `/games/<name>/source/`, the whole `.q` (and a level drawn in Tiled,
+  in a tab of its own) highlighted, every line numbered and a link
+  (`source/#L42`). Each `qg:` tag links to its entry in the language's
+  reference, a tag or an attribute shows what it does when pointed at (the
+  schema's own words), and each file can be copied, downloaded or opened on
+  GitHub. `scripts/export-games.py` writes the pages with the games; the
+  Source column of the Play page links them.
 - `<ui:tabpanel open="Title">` opens on the tab with that title, in the
   browser, the console and on the Hive's screen (UI-17); `open="{tab}"` with
   `<q:set name="tab" value="{query.tab}" default="...">` lets a page that
