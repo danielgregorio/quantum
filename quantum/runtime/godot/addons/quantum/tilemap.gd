@@ -52,6 +52,9 @@ static func build(spec: Dictionary, sheet: Dictionary, texture_of: Callable, she
 				var n := int(row[x])
 				if n != 0:
 					map._place(layer, Vector2i(x, y), n)
+	if spec.get("shadows", false):   # a dark scene (ambient=): the solid tiles stop the lights
+		map._shadows = true
+		map._occlude()
 	return map
 
 
@@ -67,6 +70,8 @@ var _unshaped: Array = []   # layers with cells set whose collision is not made 
 func _physics_process(_delta: float) -> void:
 	for layer in _unshaped:
 		layer.update_internals()
+	if _shadows and not _unshaped.is_empty():
+		_occlude()   # a wall opened (qg:set-tile) lets the light through
 	_unshaped.clear()
 var changed: Dictionary = {}   # "col,row" (and ",layer" past the first) -> the tile a qg:set-tile put there
 var _first: Dictionary = {}    # the same keys -> the tile the level had there, for the rollback (q_load)
@@ -199,6 +204,47 @@ func _layer(layer_name: String) -> TileMapLayer:
 
 func pixel_size() -> Vector2:
 	return Vector2(columns * tile, rows_count * tile)
+
+
+# --- the shadows of the walls, in a dark scene ---
+
+var _shadows := false
+var _occluders: Node2D = null
+
+
+# The edges between the solid cells and the rest, joined into lines, each a
+# LightOccluder2D that stops only the light coming from inside the wall (cull
+# mode): a light lights a wall's face, and the wall's far side casts its
+# shadow. Not a polygon per tile, whose edges between two walls would cast
+# shadows across the walls themselves. Only seen.
+func _occlude() -> void:
+	if _occluders != null:
+		_occluders.free()
+	_occluders = Node2D.new()
+	_occluders.name = "Occluders"
+	add_child(_occluders)
+	var solid := blocked()
+	# each solid cell's open edges, wound as its tile is (top left to right, right side down, ...)
+	var sides := [[Vector2i(0, -1), Vector2(0, 0), Vector2(1, 0)], [Vector2i(1, 0), Vector2(1, 0), Vector2(1, 1)],
+		[Vector2i(0, 1), Vector2(1, 1), Vector2(0, 1)], [Vector2i(-1, 0), Vector2(0, 1), Vector2(0, 0)]]
+	for side in sides:
+		var edges := {}   # its start -> its end, to join edges in a line
+		for cell in solid.keys():
+			if not solid.has(cell + side[0]):
+				edges[(Vector2(cell) + side[1]) * tile] = (Vector2(cell) + side[2]) * tile
+		for start in edges.keys():
+			if edges.values().has(start):
+				continue   # another edge ends here: the line starts before
+			var end: Vector2 = edges[start]
+			while edges.has(end):
+				end = edges[end]
+			var line := OccluderPolygon2D.new()
+			line.closed = false
+			line.cull_mode = OccluderPolygon2D.CULL_COUNTER_CLOCKWISE
+			line.polygon = PackedVector2Array([start, end])
+			var occluder := LightOccluder2D.new()
+			occluder.occluder = line
+			_occluders.add_child(occluder)
 
 
 # --- the free cells, for ai="pathfind" ---

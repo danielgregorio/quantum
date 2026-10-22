@@ -66,6 +66,11 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	scene.q_on_release = scene_spec.get("on_release", {})
 	scene.q_sequences = scene_spec.get("sequences", [])
 	scene.q_on_screen = scene_spec.get("on_screen", [])
+	if scene_spec.get("ambient") != null:   # a dark scene: what no qg:light reaches is this colour
+		var dark := CanvasModulate.new()
+		dark.name = "Ambient"
+		dark.color = Color(str(scene_spec["ambient"]))
+		scene.add_child(dark)
 	var tilemap: Node = null
 	var characters: Dictionary = {}
 	var exits: Dictionary = {}
@@ -191,6 +196,12 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 					picture.follow(scene, node_spec["frame_method"])
 				Q.apply_gd(picture, node_spec.get("gd"))
 				scene.add_child(picture)
+			"light":
+				var light := PointLight2D.new()
+				light.set_script(load("res://addons/quantum/light.gd"))
+				light.setup(node_spec)
+				light.position = Vector2(node_spec["x"], node_spec["y"])
+				scene.add_child(light)
 			"emitter":
 				var fx: CPUParticles2D = load("res://addons/quantum/particles.gd").make(
 					game["particles"][node_spec["particles"]], float(node_spec.get("width", 0.0)))
@@ -371,14 +382,14 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 
 
 # How a character or a thing looks besides its frame: upside down (flip-v=), its draw layer
-# (layer=), and what a Looks node keeps up every tick (labels, visible=, particles=, trail=).
+# (layer=), and what a Looks node keeps up every tick (labels, visible=, particles=, trail=, lights).
 static func looks(node: Node2D, spec: Dictionary, game: Dictionary, caller: Object) -> void:
 	var sprite = node.get_node_or_null("Sprite")
 	if spec.get("flip_v", false) and sprite is Sprite2D:
 		sprite.flip_v = true
 	if spec.get("layer") != null:
 		node.z_index = int(spec["layer"])
-	for key in ["labels", "visible", "particles", "trail"]:
+	for key in ["labels", "visible", "particles", "trail", "lights"]:
 		if spec.get(key) != null:
 			var keeper: Node2D = Looks.new()
 			keeper.setup(spec, caller, game, node)

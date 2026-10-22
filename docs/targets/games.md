@@ -408,6 +408,7 @@ A screen of the game. The first one is where the game starts.
 | `seed` | integer | `0` | the random seed; the same seed gives the same game |
 | `save` | true / false | `false` | entering the scene saves the game to continue here (qg:save), as a room of an adventure does |
 | `y-sort` | true / false | `false` | characters and things are drawn by how low they stand, the lower in front: depth seen from above (a layer= still comes first) |
+| `ambient` | `#rrggbb` |  | a dark scene: the light where no qg:light reaches (#000000 is black, #ffffff as drawn); its solid tiles cast the shadows of the lights with shadows="true" |
 
 Goes inside: `q:application`.
 
@@ -1527,6 +1528,24 @@ The game's texts in another language: each qg:phrase gives one text as written i
 | `font` | text |  | a .ttf with the letters of its alphabet that the game's fonts lack (Cyrillic, Greek, Japanese): every text draws them from it |
 
 Goes inside: `q:application`.
+
+### `qg:light`
+
+A light: a torch on a wall, a lantern a character carries, the glow of a gem. In a scene with ambient= it is what can be seen; elsewhere it brightens what it reaches. Only seen: the game's state never reads it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `x` | number |  | in a scene: where it is |
+| `y` | number |  |  |
+| `dx` | number | `0.0` | on a character or a prefab: how far from its middle |
+| `dy` | number | `0.0` |  |
+| `radius` | number | `64.0` | how far it reaches, pixels |
+| `color` | `#rrggbb` | `#ffffff` |  |
+| `energy` | number | `1.0` | how bright: 1 as drawn, 2 twice |
+| `flicker` | number | `0.0` | 0 to 1: how much it flickers, as a flame does (the same in every replay) |
+| `shadows` | true / false | `false` | the solid tiles of a scene with ambient= stop it, and cast shadows |
+
+Goes inside: `qg:scene`, `qg:character`, `qg:prefab`.
 
 ### `qg:line`
 
@@ -2946,8 +2965,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
        Three crypts, down and down: a wall a lever opens (qg:set-tile), and
        the skeletons behind it that find their way through as soon as it does
        (ai="pathfind"); crushers that slide to and fro (qg:tween); a vault
-       two levers keep shut, and its treasure. Torches burn and gems sparkle
-       (qg:particles). A skeleton archer, made of parts, keeps its distance and
+       two levers keep shut, and its treasure, in the dark (ambient=): its
+       torches and the delvers' lanterns light it and its pillars cast shadows
+       (qg:light). Torches burn and gems sparkle (qg:particles). A skeleton archer, made of parts, keeps its distance and
        shoots. The hearts and the gems are what the delvers carry
        (qg:item), shown by the HUD's inventory. Each crypt entered is saved (Continue, alone); the
        game speaks English, Portuguese and Spanish. The art is drawn for it by
@@ -3337,7 +3357,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- ===== Crypt 3: the vault, which two levers keep shut. ===== -->
 
-  <qg:scene name="crypt-3" width="256" height="224" background="#100e16" seed="3" save="true">
+  <!-- The vault is dark (ambient=): what the torches and the delvers' lanterns light, and the walls cast
+       their shadows. Only seen: the game is the same in the dark. -->
+  <qg:scene name="crypt-3" width="256" height="224" background="#100e16" seed="3" save="true" ambient="#1c1828">
     <qg:music sound="crypt" />
     <q:set name="message" value="THE VAULT. TWO LEVERS HOLD IT SHUT." />
     <q:set name="pulled" value="0" type="number" />
@@ -3397,10 +3419,17 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:emitter particles="torch" x="243" y="57" />
     <qg:emitter particles="torch" x="99" y="147" />
     <qg:emitter particles="torch" x="153" y="147" />
+    <!-- each torch's light, just off its wall, flickering as a flame; and the treasure's glow in the vault -->
+    <qg:light x="24" y="63" radius="72" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="232" y="63" radius="72" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="99" y="138" radius="64" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="153" y="138" radius="64" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="126" y="176" radius="40" color="#ffd860" energy="1.4" shadows="true" />
 
     <qg:character id="p1" controller="topdown" player="1" sheet="delvers" frame="0"
                   x="45" y="45" hitbox="12x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
+      <qg:light radius="52" color="#fff0d8" shadows="true" />   <!-- a lantern -->
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
       <qg:animation name="walk-up" frames="3,4" fps="8" />
@@ -3417,6 +3446,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:character id="p2" controller="topdown" player="2" sheet="delvers" frame="10"
                   x="207" y="45" hitbox="12x14" speed="70" if="{net_status() != 'offline'}"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
+      <qg:light radius="52" color="#fff0d8" shadows="true" />   <!-- a lantern -->
       <qg:animation name="idle" frames="10" />
       <qg:animation name="walk" frames="11,12" fps="8" />
       <qg:animation name="walk-up" frames="13,14" fps="8" />

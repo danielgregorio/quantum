@@ -98,6 +98,15 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the pause menu of Robot, Drift and the RPG) and touch controls. Tested in
   Godot (`tests/godot/test_godot_shipping.py`); the feature's dataset has
   seven games and six refusals more.
+- Laboratory: lights and shadows, from Phase 6 of `PLAN_GAMES_3.md`, for
+  Delve. `ambient=` on `qg:scene` makes it dark; `<qg:light radius= color=
+  energy= flicker=>` lights it, at a place of the scene or carried by a
+  character or a prefab; with `shadows="true"` the scene's solid tiles stop
+  it, lit on their side and casting their shadow past it, and a wall opened
+  lets it through. The flicker follows the ticks: a replay's frames are the
+  same every time. Delve's vault is dark, lit by its torches, the delvers'
+  lanterns and its treasure. Only seen. Tested in Godot
+  (`tests/godot/test_godot_lights.py`, with rendered frames).
 - Laboratory: the RPG in Russian, from Phase 6 of `PLAN_GAMES_3.md`. A
   count's word takes the forms its language has: `tr_n(one, other, n)`, and
   `one=`, `few=`, `many=` on a `qg:phrase` (1 зелье, 2 зелья, 5 зелий, 21

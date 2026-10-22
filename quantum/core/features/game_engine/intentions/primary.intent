@@ -83,7 +83,7 @@ intention:
     - "an enemy made of parts moves by the first of seek, flee, keep-distance, patrol, wander and stand whose when= holds and that has something to do; me.doing names it"
 
     # --- what a scene holds ---
-    - "qg:scene is a screen of the game: width, height, background, seed=, save=true to save on entering it as a room, and y-sort=true to draw what stands lower in front"
+    - "qg:scene is a screen of the game: width, height, background, seed=, save=true to save on entering it as a room, y-sort=true to draw what stands lower in front, and ambient= a dark scene: the colour where no qg:light reaches"
     - "qg:tilemap is the level: CSV rows of tile numbers (0 empty, n is tile n-1, -n flipped) or a Tiled map (src=): its layers from one or more tilesets (each a qg:tileset with the same image), flipped and turned tiles, its objects placing prefabs (a state property), zones, exits and paths, and its own properties read by tiled('name'); collision=true makes its tiles solid; several are layers"
     - "qg:character is a body a player moves: controller= platformer, topdown, map, ship, fighter, grid, pointer (a grid walker its player's click walks by the shortest way) or behavior, with sheet, frame, x, y, hitbox and the controller's own settings"
     - "qg:instance places a prefab at x,y, with an optional name= and if="
@@ -95,6 +95,7 @@ intention:
     - "qg:sprite is a picture with no behaviour; its frame= may be an expression it follows tick by tick"
     - "qg:parallax is a backdrop that scrolls slower than the level (scroll=), repeated across"
     - "qg:emitter keeps a qg:particles effect going at a spot or across a width"
+    - "qg:light is a glow of radius=, color=, energy= and flicker= at x,y of a scene, or on a character or a prefab (dx=, dy=: a lantern); shadows=true lets the solid tiles of a dark scene stop it: a wall lit, its shadow past it, and a wall opened lets it through; only seen"
     - "qg:map-node is a place on a world map; with scene= pressing jump there enters that scene"
     - "qg:map-path joins two map nodes both ways; requires= opens it only once that scene is in the game state cleared"
     - "qg:camera follows a character or the middle of several, with zoom, dead-zone, lead, smooth, and fit/zoom-min to keep several on screen; player= gives each player a view: on one machine the screen splits (side by side for two, quarters for three or four), over the network each machine shows its own player's"

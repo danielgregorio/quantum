@@ -14,7 +14,7 @@
 > with Crates: nine rows more, and gaps 6, 13, 15, 18, 21, 22 and 26; Phase 4,
 > into every game: ten rows more, and gaps 9, 10, 11, 19, 29, 33 and 42;
 > Phase 5, with Rally: four rows more, and gaps 32, 35 and 39; Phase 6, a game
-> at a time: seven rows more so far, and gaps 17, 34, 36, 38 and 40).
+> at a time: nine rows more so far, and gaps 12, 17, 34, 36, 38 and 40).
 
 Each row is one feature a 2D game is made of, as Godot 4.4 and Unity 6 (URP
 2D with its packages: 2D Tilemap, Physics 2D, Input System, Cinemachine 3,
@@ -267,9 +267,9 @@ declarative shape for it.
 
 | Feature | Godot 4.4 | Unity 6 | Quantum (qg:) | Verdict |
 |---|---|---|---|---|
-| 2D lights | `PointLight2D`, `DirectionalLight2D` | `Light2D` (Spot, Freeform, Sprite, Global) | — | gap |
-| Shadows | `LightOccluder2D`, TileSet occlusion layers | `ShadowCaster2D` | — | gap |
-| Darkening or tinting the whole scene | `CanvasModulate` | a Global `Light2D` | `gd:modulate` on `qg:scene`, once | partial: fixed for the scene |
+| 2D lights | `PointLight2D`, `DirectionalLight2D` | `Light2D` (Spot, Freeform, Sprite, Global) | `qg:light radius= color= energy= flicker=` at a place of a scene, or carried by a character or a prefab (Delve's torches and lanterns) | covered |
+| Shadows | `LightOccluder2D`, TileSet occlusion layers | `ShadowCaster2D` | `shadows="true"` on `qg:light`: a dark scene's solid tiles stop it, and a wall opened lets it through (Delve's pillars) | covered |
+| Darkening or tinting the whole scene | `CanvasModulate` | a Global `Light2D` | `ambient=` on `qg:scene` (Delve's vault); `gd:modulate` on `qg:scene` | partial: fixed for the scene |
 | Normal maps | `CanvasTexture` | sprite secondary textures | — | by design: a lighting detail of the art pipeline |
 | Shaders, materials, sprite effects (outline, dissolve) | canvas_item shaders, `VisualShader`, `CanvasItemMaterial` | Shader Graph (Sprite Lit, Unlit), HLSL | — | by design: shaders are code |
 | Post-processing and full-screen effects (bloom, vignette, CRT) | `WorldEnvironment` glow (HDR 2D), `BackBufferCopy` | URP Volume (Bloom, Vignette, Color Adjustments), Full Screen Pass Renderer Feature | — | by design: rendering settings and shaders, not rules |
@@ -426,7 +426,7 @@ declarative shape for it.
 | Input | 13 | 1 | 0 | 0 | 14 |
 | Audio | 8 | 0 | 1 | 1 | 10 |
 | Particles and visual effects | 5 | 0 | 0 | 1 | 6 |
-| Lighting, shaders and post-processing | 0 | 1 | 2 | 3 | 6 |
+| Lighting, shaders and post-processing | 2 | 1 | 0 | 3 | 6 |
 | UI | 12 | 4 | 0 | 0 | 16 |
 | Time | 7 | 0 | 0 | 1 | 8 |
 | Scene flow | 8 | 1 | 0 | 1 | 10 |
@@ -436,14 +436,15 @@ declarative shape for it.
 | Testing and determinism | 9 | 1 | 0 | 0 | 10 |
 | Export and platforms | 5 | 0 | 0 | 1 | 6 |
 | Tooling | 4 | 1 | 1 | 2 | 8 |
-| **Total** | **197** | **25** | **6** | **23** | **251** |
+| **Total** | **199** | **25** | **4** | **23** | **251** |
 
-Of 251 rows, 197 are covered and 25 partial; 6 are gaps, and 23 are left
+Of 251 rows, 199 are covered and 25 partial; 4 are gaps, and 23 are left
 out by design: four in five covered (146, 42 and 40 when the map was made;
 Phase 1 of PLAN_GAMES_3.md covered nine rows, and the clock in an expression,
 its `ticks()`, counted late; Phase 2 twelve more, Phase 3 nine more, Phase 4
-ten more, Phase 5 four more, Phase 6 seven so far, and a frame for boxes). The gaps left are lighting's two, hexagonal maps, terrain
-costs and hot reload (the rest of Phase 6's list), and adaptive music. The rows
+ten more, Phase 5 four more, Phase 6 nine so far, and a frame for boxes). The gaps left are
+hexagonal maps, terrain costs and hot reload (the rest of Phase 6's list), and
+adaptive music. The rows
 left out by design are mostly the rigid-body solver, shaders and post-
 processing, what belongs to an editor, and the networking machinery that
 lockstep makes unnecessary.
@@ -466,7 +467,7 @@ above is in this list, and so are many **partial** ones.
 9. **An options screen.** *Done: PLAN_GAMES_3.md, Phase 4.* `bus=` on `qg:sound` with `<qg:volume bus= value=>` (kept between runs), `<qg:slider bind= min= max=>` in a `qg:menu`, and `<qg:fullscreen>`. Every game that ships.
 10. **Touch controls and phones.** *Done: PLAN_GAMES_3.md, Phase 4.* `<qg:touch-button action= x= y=>` and a touch stick that press the game's own actions (so replays and peers see them); Android and iOS presets in `scripts/export-games.py`. Mobile browsers and phones.
 11. **Save slots.** *Done: PLAN_GAMES_3.md, Phase 4.* `slot=` on `qg:save`, `qg:continue` and `has_save()`; later, a save in the middle of a scene kept as the scene's input tape and replayed. RPGs and long adventures.
-12. **2D lights and shadows.** `<qg:light radius= color=>` on a character or a prefab, `darkness=` on `qg:scene`, shadows from solid tiles; only seen, like the camera. Caves, horror, stealth.
+12. **2D lights and shadows.** *Done: PLAN_GAMES_3.md, Phase 6, for Delve's vault (`ambient=` for darkness=).* `<qg:light radius= color=>` on a character or a prefab, `darkness=` on `qg:scene`, shadows from solid tiles; only seen, like the camera. Caves, horror, stealth.
 13. **Camera direction.** *Done: PLAN_GAMES_3.md, Phase 3.* `<qg:camera-to target= x= y= zoom= seconds=>`, then back to `follow=`. Cutscenes, a boss's entrance, showing the door a lever opened.
 14. **Lines, beams and trails.** *Done: PLAN_GAMES_3.md, Phase 2.* `<qg:beam from= to= color= width=>` between two things, `trail=` on a prefab. Laser turrets (Towers' ray turret), grappling hooks, a fast ship's wake.
 15. **Click to move.** *Done: PLAN_GAMES_3.md, Phase 3.* `controller="pointer"`: the character walks, by the shortest way over the free cells, to where its `qg:cursor` selects. Point-and-click adventures, tactics.

@@ -4,8 +4,9 @@
        Three crypts, down and down: a wall a lever opens (qg:set-tile), and
        the skeletons behind it that find their way through as soon as it does
        (ai="pathfind"); crushers that slide to and fro (qg:tween); a vault
-       two levers keep shut, and its treasure. Torches burn and gems sparkle
-       (qg:particles). A skeleton archer, made of parts, keeps its distance and
+       two levers keep shut, and its treasure, in the dark (ambient=): its
+       torches and the delvers' lanterns light it and its pillars cast shadows
+       (qg:light). Torches burn and gems sparkle (qg:particles). A skeleton archer, made of parts, keeps its distance and
        shoots. The hearts and the gems are what the delvers carry
        (qg:item), shown by the HUD's inventory. Each crypt entered is saved (Continue, alone); the
        game speaks English, Portuguese and Spanish. The art is drawn for it by
@@ -395,7 +396,9 @@
 
   <!-- ===== Crypt 3: the vault, which two levers keep shut. ===== -->
 
-  <qg:scene name="crypt-3" width="256" height="224" background="#100e16" seed="3" save="true">
+  <!-- The vault is dark (ambient=): what the torches and the delvers' lanterns light, and the walls cast
+       their shadows. Only seen: the game is the same in the dark. -->
+  <qg:scene name="crypt-3" width="256" height="224" background="#100e16" seed="3" save="true" ambient="#1c1828">
     <qg:music sound="crypt" />
     <q:set name="message" value="THE VAULT. TWO LEVERS HOLD IT SHUT." />
     <q:set name="pulled" value="0" type="number" />
@@ -455,10 +458,17 @@
     <qg:emitter particles="torch" x="243" y="57" />
     <qg:emitter particles="torch" x="99" y="147" />
     <qg:emitter particles="torch" x="153" y="147" />
+    <!-- each torch's light, just off its wall, flickering as a flame; and the treasure's glow in the vault -->
+    <qg:light x="24" y="63" radius="72" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="232" y="63" radius="72" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="99" y="138" radius="64" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="153" y="138" radius="64" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="126" y="176" radius="40" color="#ffd860" energy="1.4" shadows="true" />
 
     <qg:character id="p1" controller="topdown" player="1" sheet="delvers" frame="0"
                   x="45" y="45" hitbox="12x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
+      <qg:light radius="52" color="#fff0d8" shadows="true" />   <!-- a lantern -->
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
       <qg:animation name="walk-up" frames="3,4" fps="8" />
@@ -475,6 +485,7 @@
     <qg:character id="p2" controller="topdown" player="2" sheet="delvers" frame="10"
                   x="207" y="45" hitbox="12x14" speed="70" if="{net_status() != 'offline'}"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
+      <qg:light radius="52" color="#fff0d8" shadows="true" />   <!-- a lantern -->
       <qg:animation name="idle" frames="10" />
       <qg:animation name="walk" frames="11,12" fps="8" />
       <qg:animation name="walk-up" frames="13,14" fps="8" />

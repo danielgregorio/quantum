@@ -917,6 +917,14 @@ class _Compiler:
                 if tag in on_death:
                     raise GameCompileError(f'two <qg:on-death of="{tag}">', el.line)
                 on_death[tag] = compile_handler(script, f'_on_death_of_{_ident(tag)}', el.children, el.line)
+            elif el.tag == 'light':
+                if el.get('x') is None or el.get('y') is None:
+                    raise GameCompileError('<qg:light> in a scene needs x= and y= (where it is)', el.line)
+                if el.get('dx') or el.get('dy'):
+                    raise GameCompileError('<qg:light> in a scene takes x= and y=; dx= and dy= are for one on a '
+                                           'character or a prefab', el.line)
+                nodes.append({'kind': 'light', 'x': el.get('x'), 'y': el.get('y'), **_light(el)})
+                self._node_elements.append(el)
             elif el.tag == 'label':
                 # text at a place of the scene, read every tick
                 if el.get('x') is None or el.get('y') is None:
@@ -1671,6 +1679,12 @@ class _Compiler:
             'on_select': on_select, 'music': music,
             **({'sequences': sequences} if sequences else {}),
         }
+        if scene.get('ambient') is not None:
+            # a dark scene: its solid tiles stop the lights that cast shadows
+            spec['ambient'] = scene.get('ambient')
+            for n in nodes:
+                if n['kind'] == 'tilemap':
+                    n['shadows'] = True
         if script.cameras_moved and not cameras_here:
             raise GameCompileError('<qg:camera-to> moves the scene\'s qg:camera, which it has not', script.cameras_moved[0])
         for player, line in pointers:
@@ -2001,7 +2015,24 @@ def _looks(el: Element, script: SceneScript, prefix: str, particles: dict) -> di
         labels.append(label)
     if labels:
         out['labels'] = labels
+    lights = []
+    for lt in el.find_all('light'):
+        if lt.get('x') is not None or lt.get('y') is not None:
+            raise GameCompileError('<qg:light> on a character or a prefab takes dx= and dy= (from its middle), '
+                                   'not x= and y=', lt.line)
+        lights.append({'dx': lt.get('dx'), 'dy': lt.get('dy'), **_light(lt)})
+    if lights:
+        out['lights'] = lights
     return out
+
+
+def _light(el: Element) -> dict:
+    """A qg:light's own look, wherever it is."""
+    if el.get('radius') <= 0 or el.get('energy') < 0 or not 0 <= el.get('flicker') <= 1:
+        raise GameCompileError('<qg:light>: radius= more than 0, energy= 0 or more, flicker= from 0 to 1', el.line)
+    return {'radius': el.get('radius'), 'color': el.get('color'), 'energy': el.get('energy'),
+            **({'flicker': el.get('flicker')} if el.get('flicker') else {}),
+            **({'shadows': True} if el.get('shadows') else {})}
 
 
 def _contact_handlers(el: Element, script: SceneScript, prefix: str) -> dict:

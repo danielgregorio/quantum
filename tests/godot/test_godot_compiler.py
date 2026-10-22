@@ -2919,3 +2919,46 @@ class TestWhatTheTranslatedRpgAsked:
                                   '<qg:asset name="c" src="projects/rpg/assets/banner-pt.png" /></qg:language>\n'
                                   '  <qg:scene name="main" />\n'))
         assert '<qg:asset name="c">: twice in lang="pt"' in e.message
+
+
+class TestLights:
+    """PLAN_GAMES_3.md, Phase 6: a dark scene (ambient=) and its qg:lights, in it or carried (Delve's vault)."""
+
+    def test_a_dark_scene_its_lights_and_a_lantern(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:prefab name="Glow" tag="glow" sheet="k" frame="151" hitbox="12x12">
+    <qg:light radius="20" color="#80ffff" />
+  </qg:prefab>
+  <qg:scene name="main" ambient="#101018">
+    <qg:tilemap tileset="k" collision="true">
+0,23
+    </qg:tilemap>
+    <qg:light x="40" y="30" radius="90" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:character id="hero" controller="topdown" sheet="c" x="10" y="10" hitbox="10x10">
+      <qg:light dy="-4" radius="48" shadows="true" />
+    </qg:character>
+  </qg:scene>
+''' + TAIL)
+        spec = json.loads((out / 'game.json').read_text())
+        scene = spec['scenes']['main']
+        assert scene['ambient'] == '#101018'
+        nodes = {n['kind']: n for n in scene['nodes']}
+        assert nodes['tilemap']['shadows'] is True                         # its solid tiles cast shadows
+        assert nodes['light'] == {'kind': 'light', 'x': 40.0, 'y': 30.0, 'radius': 90.0, 'color': '#ffa850',
+                                  'energy': 1.4, 'flicker': 0.25, 'shadows': True}
+        assert nodes['character']['lights'] == [{'dx': 0.0, 'dy': -4.0, 'radius': 48.0, 'color': '#ffffff',
+                                                 'energy': 1.0, 'shadows': True}]
+        assert spec['prefabs']['Glow']['lights'][0]['color'] == '#80ffff'
+
+    def test_a_scene_with_daylight_casts_no_shadows(self, tmp_path):
+        out = build(tmp_path, game(SCENE))
+        scene = json.loads((out / 'game.json').read_text())['scenes']['main']
+        assert 'ambient' not in scene and 'shadows' not in [n for n in scene['nodes'] if n['kind'] == 'tilemap'][0]
+
+    def test_lights_out_of_place(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:light radius="40" /></qg:scene>\n'))
+        assert '<qg:light> in a scene needs x= and y=' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:character id="h" controller="topdown" sheet="c" '
+                                  'x="0" y="0" hitbox="10x10"><qg:light x="4" y="4" /></qg:character></qg:scene>\n'))
+        assert '<qg:light> on a character or a prefab takes dx= and dy=' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:light x="1" y="1" flicker="2" /></qg:scene>\n'))
+        assert 'flicker= from 0 to 1' in e.message

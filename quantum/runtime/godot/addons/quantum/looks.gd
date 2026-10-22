@@ -3,7 +3,8 @@ extends Node2D
 # tick by one child node ("Looks"): the qg:labels over it (their text a
 # method of the script that owns it: the scene's for a character, P's for a
 # prefab, called with `me`), when it is shown (visible=), an effect kept
-# going on it (particles=) and the line it leaves behind it (trail=). A
+# going on it (particles=), the lights it carries (qg:light) and the line it
+# leaves behind it (trail=). A
 # qg:label in a scene is one of these too, at its place, its method called
 # with nothing. All of it is only seen: the game's state never reads it.
 
@@ -35,6 +36,12 @@ func setup(spec: Dictionary, caller_: Object, game: Dictionary, thing: Node = nu
 		fx.emitting = true
 		fx.z_index = -1
 		add_child(fx)
+	for spec_light in spec.get("lights", []):   # a lantern it carries, a glow
+		var light := PointLight2D.new()
+		light.set_script(load("res://addons/quantum/light.gd"))
+		light.setup(spec_light)
+		light.position = Vector2(float(spec_light.get("dx", 0.0)), float(spec_light.get("dy", 0.0)))
+		add_child(light)
 	if spec.get("trail") != null:
 		trail = Line2D.new()
 		trail.top_level = true   # its points are the scene's: it stays where the thing was

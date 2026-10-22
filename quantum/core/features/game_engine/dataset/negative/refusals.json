@@ -1105,6 +1105,23 @@
         "box",
         "slice"
       ]
+    },
+    {
+      "id": "game-bad-064",
+      "intent": "A torch with no place",
+      "input": {
+        "natural_language": "A torch light in a scene, without saying where",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\" ambient=\"#101018\">\n    <qg:light radius=\"80\" color=\"#ffa850\" flicker=\"0.25\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:light> in a scene needs x= and y="
+      },
+      "why_invalid": "A light in a scene is at a place; only one on a character or a prefab goes with it, from its middle (dx=, dy=).",
+      "correction": "Say where it is: <qg:light x=\"26\" y=\"36\" ... />, or put it in the character that carries it.",
+      "tags": [
+        "light"
+      ]
     }
   ]
 }

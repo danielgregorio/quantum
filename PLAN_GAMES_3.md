@@ -395,7 +395,7 @@ that needs it is written, under the same rules.
 - [x] music and sounds within a scene (Delve's warden)
 - [x] positional sound (Hopper's bouncer)
 - [x] nine-slice; plurals, assets and fonts per language (the RPG)
-- [ ] 2D lights and shadows (Delve)
+- [x] 2D lights and shadows (Delve)
 - [ ] isometric and hexagonal maps, terrain costs (a tactics game)
 - [ ] hot reload
 
@@ -454,6 +454,21 @@ frame stretch to a box (a `StyleBoxTexture`), `box=` on `qg:dialogue` and
 on `qg:menu`; a sprite sliced or tiled in the world is still not said. The
 RPG's dialogues and fight menu are framed, its HUD counts potions and keys,
 and a banner says "FIGHT!" in each language as the fight fades in.
+
+What was built (2026-10-22), for Delve: lights and shadows. `ambient=` on
+`qg:scene` makes it dark (a `CanvasModulate`): what no light reaches is that
+colour. `qg:light` is a glow of `radius=`, `color=`, `energy=` and
+`flicker=` at a place of a scene, or on a character or a prefab, which
+carries it. With `shadows="true"` the solid tiles of a dark scene stop it.
+Godot's occluder per tile was tried first and left: each tile's edges cast
+shadows across the walls next to it, and a wall was dark on the side the
+light saw. The edges between the solid cells and the rest are joined into
+lines instead, each stopping only light from inside the wall, so a wall is
+lit and its shadow falls past it; a `qg:set-tile` that opens a wall makes
+them again. The flicker follows the ticks, so a replay's frames are the
+same every time. Delve's vault is dark: its four torches burn just off the
+walls, each delver carries a lantern, the treasure glows in the vault, and
+the pillars cast their shadows. Only seen: the stored run plays as before.
 
 Out by design (also in the map): rigid-body physics, which breaks the
 lockstep's determinism; shaders and post-processing, which are code; a

@@ -293,7 +293,10 @@ TAGS: Dict[str, Tag] = {
          'save': Attr('bool', False, doc='entering the scene saves the game to continue here (qg:save), '
                       'as a room of an adventure does'),
          'y-sort': Attr('bool', False, doc='characters and things are drawn by how low they stand, the lower in '
-                                           'front: depth seen from above (a layer= still comes first)')},
+                                           'front: depth seen from above (a layer= still comes first)'),
+         'ambient': Attr('color', None, doc='a dark scene: the light where no qg:light reaches (#000000 is black, '
+                                            '#ffffff as drawn); its solid tiles cast the shadows of the lights with '
+                                            'shadows="true"')},
         parents=('application',)),
     'tilemap': Tag(
         'The level: CSV rows of tile numbers (0 is empty, n is tile n-1 of the tileset), '
@@ -617,6 +620,19 @@ TAGS: Dict[str, Tag] = {
          'size': Attr('int', 8),
          'color': Attr('color', '#ffffff'),
          'if': Attr('expr', None, doc='placed only when this is true as the scene is built')},
+        parents=('scene', 'character', 'prefab')),
+    'light': Tag(
+        'A light: a torch on a wall, a lantern a character carries, the glow of a gem. In a scene with ambient= it '
+        'is what can be seen; elsewhere it brightens what it reaches. Only seen: the game\'s state never reads it.',
+        {'x': Attr('float', None, doc='in a scene: where it is'),
+         'y': Attr('float', None),
+         'dx': Attr('float', 0.0, doc='on a character or a prefab: how far from its middle'),
+         'dy': Attr('float', 0.0),
+         'radius': Attr('float', 64.0, doc='how far it reaches, pixels'),
+         'color': Attr('color', '#ffffff'),
+         'energy': Attr('float', 1.0, doc='how bright: 1 as drawn, 2 twice'),
+         'flicker': Attr('float', 0.0, doc='0 to 1: how much it flickers, as a flame does (the same in every replay)'),
+         'shadows': Attr('bool', False, doc='the solid tiles of a scene with ambient= stop it, and cast shadows')},
         parents=('scene', 'character', 'prefab')),
     'when': Tag(
         'Runs its handler when a condition turns true: a wave beaten (`count(\'enemy\') == 0`), a room solved, a '

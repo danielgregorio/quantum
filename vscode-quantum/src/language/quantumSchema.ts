@@ -1474,7 +1474,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'A kind of thing the scene places with qg:instance. With ai= it moves.',
         category: 'Game',
-        allowedChildren: ['qg:state', 'qg:animation', 'qg:on-separate', 'qg:on-screen-exit', 'qg:on-screen-enter', 'qg:on-collision', 'qg:on-damage', 'qg:on-death', 'qg:label', 'qg:behavior', 'qg:on-animation-end', 'qg:on-locked'],
+        allowedChildren: ['qg:state', 'qg:animation', 'qg:on-separate', 'qg:on-screen-exit', 'qg:on-screen-enter', 'qg:on-collision', 'qg:on-damage', 'qg:on-death', 'qg:label', 'qg:light', 'qg:behavior', 'qg:on-animation-end', 'qg:on-locked'],
         attributes: [
             { name: 'name', description: '', required: true, type: 'string' },
             { name: 'tag', description: 'what collisions see it as (`with="coin"`)', type: 'string' },
@@ -1555,7 +1555,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'A screen of the game. The first one is where the game starts.',
         category: 'Game',
-        allowedChildren: ['qg:tilemap', 'qg:character', 'qg:instance', 'qg:cursor', 'qg:path', 'qg:on-select', 'qg:menu', 'qg:dialogue', 'qg:on-screen-exit', 'qg:on-screen-enter', 'qg:zone', 'qg:parallax', 'qg:sprite', 'qg:emitter', 'qg:exit', 'qg:camera', 'qg:hud', 'qg:on-death', 'qg:label', 'qg:when', 'qg:timer', 'qg:spawner', 'qg:map-node', 'qg:map-path', 'qg:on-input', 'qg:play', 'qg:music', 'qg:stop', 'qg:lobby', 'qg:touch-button', 'qg:touch-stick'],
+        allowedChildren: ['qg:tilemap', 'qg:character', 'qg:instance', 'qg:cursor', 'qg:path', 'qg:on-select', 'qg:menu', 'qg:dialogue', 'qg:on-screen-exit', 'qg:on-screen-enter', 'qg:zone', 'qg:parallax', 'qg:sprite', 'qg:emitter', 'qg:exit', 'qg:camera', 'qg:hud', 'qg:on-death', 'qg:label', 'qg:light', 'qg:when', 'qg:timer', 'qg:spawner', 'qg:map-node', 'qg:map-path', 'qg:on-input', 'qg:play', 'qg:music', 'qg:stop', 'qg:lobby', 'qg:touch-button', 'qg:touch-stick'],
         attributes: [
             { name: 'name', description: '', required: true, type: 'string' },
             { name: 'width', description: '', type: 'number', default: '256' },
@@ -1564,6 +1564,7 @@ export const gameTags: TagSchema[] = [
             { name: 'seed', description: 'the random seed; the same seed gives the same game', type: 'number', default: '0' },
             { name: 'save', description: 'entering the scene saves the game to continue here (qg:save), as a room of an adventure does', type: 'boolean', default: 'false' },
             { name: 'y-sort', description: 'characters and things are drawn by how low they stand, the lower in front: depth seen from above (a layer= still comes first)', type: 'boolean', default: 'false' },
+            { name: 'ambient', description: 'a dark scene: the light where no qg:light reaches (#000000 is black, #ffffff as drawn); its solid tiles cast the shadows of the lights with shadows="true"', type: 'string' },
         ]
     },
     {
@@ -1582,7 +1583,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'A body the player moves: a platformer, or a walker on a world map.',
         category: 'Game',
-        allowedChildren: ['qg:state', 'qg:animation', 'qg:on-separate', 'qg:on-screen-exit', 'qg:on-screen-enter', 'qg:on-collision', 'qg:label', 'qg:on-hit', 'qg:on-fall', 'qg:move', 'qg:behavior', 'qg:on-tile', 'qg:on-animation-end', 'qg:on-ko'],
+        allowedChildren: ['qg:state', 'qg:animation', 'qg:on-separate', 'qg:on-screen-exit', 'qg:on-screen-enter', 'qg:on-collision', 'qg:label', 'qg:light', 'qg:on-hit', 'qg:on-fall', 'qg:move', 'qg:behavior', 'qg:on-tile', 'qg:on-animation-end', 'qg:on-ko'],
         attributes: [
             { name: 'id', description: '', required: true, type: 'string' },
             { name: 'controller', description: 'grid: steps from cell to cell of the tilemap; the tiles of a layer with collision, and the things, stop it, and stepping into a thing runs its qg:on-collision with the thing\'s tag; `me.col` and `me.row` are its cell. pointer: as grid, and a click (its player\'s qg:cursor) walks it to that cell by the shortest way around the walls and things. behavior: made of the parts its qg:behavior lists', required: true, type: 'enum', values: ['platformer', 'map', 'topdown', 'ship', 'fighter', 'grid', 'pointer', 'behavior'] },
@@ -2002,6 +2003,23 @@ export const gameTags: TagSchema[] = [
             { name: 'size', description: '', type: 'number', default: '8' },
             { name: 'color', description: '', type: 'string', default: '#ffffff' },
             { name: 'if', description: 'placed only when this is true as the scene is built', type: 'expression' },
+        ]
+    },
+    {
+        name: 'light',
+        namespace: 'qg',
+        description: 'A light: a torch on a wall, a lantern a character carries, the glow of a gem. In a scene with ambient= it is what can be seen; elsewhere it brightens what it reaches. Only seen: the game\'s state never reads it.',
+        category: 'Game',
+        attributes: [
+            { name: 'x', description: 'in a scene: where it is', type: 'number' },
+            { name: 'y', description: '', type: 'number' },
+            { name: 'dx', description: 'on a character or a prefab: how far from its middle', type: 'number', default: '0' },
+            { name: 'dy', description: '', type: 'number', default: '0' },
+            { name: 'radius', description: 'how far it reaches, pixels', type: 'number', default: '64' },
+            { name: 'color', description: '', type: 'string', default: '#ffffff' },
+            { name: 'energy', description: 'how bright: 1 as drawn, 2 twice', type: 'number', default: '1' },
+            { name: 'flicker', description: '0 to 1: how much it flickers, as a flame does (the same in every replay)', type: 'number', default: '0' },
+            { name: 'shadows', description: 'the solid tiles of a scene with ambient= stop it, and cast shadows', type: 'boolean', default: 'false' },
         ]
     },
     {
