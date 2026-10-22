@@ -632,7 +632,10 @@ def test_agents_sit_in_the_seats_they_ask_for_in_bricks(bricks, godot):
                 seats = [s.until("net.status == 'playing'", max_ticks=900)['net']['player']
                          for s in (host, second, third, fourth)]
                 assert seats == [1, 2, 3, 4]
-                third.act(tap=['select'], ticks=20)                          # who is who: its name box
+                # who is who: its name box. The press goes by the lockstep, which on a busy machine takes
+                # more than a few ticks: the name is typed once the box has the keyboard.
+                opened = third.until('event:choose', tap=['select'], max_ticks=600)
+                assert opened['stopped'] == 'condition'
                 third.act(text='Tri\n', ticks=20)
                 named = host.until("event:message", max_ticks=600)          # sent to every machine
                 said = [e for e in named['events'] if e['kind'] == 'message'][0]

@@ -494,16 +494,20 @@ func _physics_process(_delta: float) -> void:
 	var scene: Node = game.current_scene
 	if scene == null:
 		return
-	# 1. what this player presses now runs `delay` ticks from now, everywhere
-	var mask := 0
-	var local: Dictionary = Q.sample_local()   # held, and tapped since the last tick
-	for i in ACTIONS.size():
-		if local.has(ACTIONS[i]):
-			mask |= 1 << i
+	# 1. what this player presses now runs `delay` ticks from now, everywhere. The keys are taken once a
+	# tick, as its input is recorded: a key tapped while the game waits for another player goes with the
+	# next tick's, and is not lost.
 	var ahead := tick + delay
 	if not _frames.has(ahead):
 		_frames[ahead] = {}
-	if player > 0 and not _frames[ahead].has(player):
+	if player <= 0:
+		Q.sample_local()   # one who watches plays nothing
+	elif not _frames[ahead].has(player):
+		var mask := 0
+		var local: Dictionary = Q.sample_local()   # held, and tapped since the keys were last taken
+		for i in ACTIONS.size():
+			if local.has(ACTIONS[i]):
+				mask |= 1 << i
 		var raw: Vector2 = Q.raw_cursor
 		var said: Dictionary = Q.take_said()   # a shared field's text goes with the keys (qg:field shared=)
 		_frames[ahead][player] = entry(mask, raw.x, raw.y, said)

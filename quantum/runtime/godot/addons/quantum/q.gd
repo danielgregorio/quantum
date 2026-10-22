@@ -1123,6 +1123,7 @@ func _physics_process(_delta: float) -> void:
 # click, a tap on a screen. Sampling only what is held at each tick would lose
 # them; they count as pressed for the next tick.
 var _taps: Dictionary = {}
+var samples: int = 0   # how many times the keys were taken (sample_local): a tap the play protocol presses lasts until they are
 
 
 func _input(event: InputEvent) -> void:
@@ -1138,6 +1139,7 @@ func _input(event: InputEvent) -> void:
 # was tapped since the last tick. The lockstep sends it; alone, it is the input.
 # While a text box is being typed in (qg:field), the keys type: they play nothing.
 func sample_local() -> Dictionary:
+	samples += 1
 	var next := {}
 	if typing():
 		_taps.clear()

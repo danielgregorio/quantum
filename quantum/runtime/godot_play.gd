@@ -55,6 +55,7 @@ var run_left := 0             # ticks still to run for the request being served
 var request: Dictionary = {}  # the request being served
 var holds: Array = []         # released when the request is done
 var taps: Array = []          # released after the request's first tick
+var taps_taken := 0           # Q.samples as they were pressed: let go once the game has taken the keys
 var held: Dictionary = {}     # pressed by "press", until a "release"
 var until_start: Dictionary = {}
 var ended := false
@@ -95,7 +96,9 @@ func _physics_process(_delta: float) -> bool:
 			q.tracing = true
 			q.no_quit = true   # the session goes on: a qg:quit is an event the agent reads
 	_note_sets()
-	if not taps.is_empty() and request.has("_first_done"):
+	# a tap is let go after the request's first tick, once the game has taken the keys: a networked game
+	# waiting for another player takes them only when it goes on
+	if not taps.is_empty() and request.has("_first_done") and (q == null or q.samples > taps_taken):
 		for a in taps:
 			if not held.has(a) and not reflex_held.has(a):
 				_release(a)
@@ -270,9 +273,10 @@ func _start(req: Dictionary) -> String:
 	for a in req.get("hold", []):
 		holds.append(str(a))
 		_press(str(a))
-	taps = []
+	taps_taken = q.samples if q != null else 0   # a tap the game has not taken yet stays with these
 	for a in req.get("tap", []):
-		taps.append(str(a))
+		if not str(a) in taps:
+			taps.append(str(a))
 		_press(str(a))
 	if req.has("cursor"):
 		var c: Array = req["cursor"]

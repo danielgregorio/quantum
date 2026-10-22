@@ -858,6 +858,18 @@ alter the behaviour of an existing app is listed under **Breaking**.
   prefab under a name Godot made up (`@Area2D@10`); it lists only the
   things a `qg:instance name=` names.
 
+- Laboratory: a key tapped while a networked game waited for another player
+  was lost: the lockstep and the rollback took the keys every frame, and
+  what they took while the next tick's input was already recorded was
+  dropped. They take the keys once a tick, as they record its input, so the
+  tap goes with the next tick. The play protocol lets a `tap` go once the
+  game has taken it, not after a frame.
+
+- Laboratory: a game with two fonts or more (the RPG since it speaks
+  Russian) sometimes crashed Godot's import, or hung it: the editor imports
+  the files of one importer together on several threads. A compiled project
+  imports one file at a time (`editor/import/use_multiple_threads=false`).
+
 ### Changed
 
 - The repository is English everywhere, with no exception for Portuguese

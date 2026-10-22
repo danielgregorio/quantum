@@ -79,17 +79,20 @@ func _physics_process(_delta: float) -> bool:
 				k.physical_keycode = OS.find_keycode_from_string(s["key"])
 				k.pressed = s.get("pressed", true)
 				Input.parse_input_event(k)
+				Input.flush_buffered_events()   # now: several ticks may run before the next frame
 			"touch":
 				var t := InputEventScreenTouch.new()
 				t.index = int(s.get("finger", 0))
 				t.position = root.get_final_transform() * Vector2(s["x"], s["y"])   # on the window, as a finger
 				t.pressed = s.get("pressed", true)
 				Input.parse_input_event(t)
+				Input.flush_buffered_events()
 			"drag":
 				var d := InputEventScreenDrag.new()
 				d.index = int(s.get("finger", 0))
 				d.position = root.get_final_transform() * Vector2(s["x"], s["y"])
 				Input.parse_input_event(d)
+				Input.flush_buffered_events()
 			"choose":
 				var menu = game.current_scene.get_node("Menu")
 				menu._choose(int(s["item"]))

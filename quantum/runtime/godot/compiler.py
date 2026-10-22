@@ -68,6 +68,11 @@ window/stretch/mode="viewport"
 [physics]
 common/physics_ticks_per_second=60
 
+[editor]
+; One file at a time: Godot 4.4 imports the files of an importer on several threads, and two fonts
+; imported together sometimes crash the import, or hang it. One at a time is as quick here.
+import/use_multiple_threads=false
+
 [rendering]
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
