@@ -59,6 +59,7 @@ _FUNCTIONS = {
     'distance': 'Q.distance({0}, {1})',      # pixels between two things or characters (INF when one is gone)
     'nearest': 'Q.nearest({0}, {1})',        # the character of that id, or thing of that tag, nearest the first
     'sees': 'Q.sees({0}, {1})',              # no solid tile of the tilemap between the two
+    'cost': 'Q.cost(self, {0}, {1})',        # what the cheapest way from a thing to a thing or cursor costs (INF: none)
     'held': 'Q.items_held({0})',             # how many of a qg:item the players hold
     'can_quit': 'Q.can_quit()',              # qg:quit would close the game (not in a browser)
     'ticks': 'Q.ticks(self)',                # the ticks the scene has played (not while paused)

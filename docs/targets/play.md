@@ -7,7 +7,7 @@ outline: [2, 3]
 
 **[All the games on one page →](https://quantumframework.net/games/)**
 
-Fifteen games written in the game language, each a single `.q` file in
+Sixteen games written in the game language, each a single `.q` file in
 [`projects/`](https://github.com/danielgregorio/quantum/tree/main/projects), built by
 `quantum run`, replayed in CI from input tapes, and exported here by Godot
 4.4.1 for the browser, Linux and Windows. The browser builds run as
@@ -112,6 +112,7 @@ It makes a room of its own and a link to send to a friend.
 | **Siege** | A keep under siege, seen from above: raiders in waves, an archer who aims with the mouse and charges a bolt that glances off the walls, a tower that zaps them; alone, or with a knight on a horse over the network | [browser](https://quantumframework.net/games/siege/) | [Linux](https://quantumframework.net/games/siege/siege-linux.zip) · [Windows](https://quantumframework.net/games/siege/siege-windows.zip) | [siege.q](https://quantumframework.net/games/siege/source/) |
 | **Crates** | A box-pushing puzzle: three rooms drawn in Tiled, crates and barrels onto the pads, a foreman who talks and offers a choice, a gate the camera shows open, a key carried to a locked gate | [browser](https://quantumframework.net/games/crates/) | [Linux](https://quantumframework.net/games/crates/crates-linux.zip) · [Windows](https://quantumframework.net/games/crates/crates-windows.zip) | [crates.q](https://quantumframework.net/games/crates/source/) |
 | **Rally** | Two cars round a circuit wider than the screen: on one keyboard the screen splits in two, a view for each car; over the network each machine follows its own; three laps win | [browser](https://quantumframework.net/games/rally/) | [Linux](https://quantumframework.net/games/rally/rally-linux.zip) · [Windows](https://quantumframework.net/games/rally/rally-windows.zip) | [rally.q](https://quantumframework.net/games/rally/source/) |
+| **Marches** | A skirmish on a map of hexes, turn by turn: three riders hold the keep by the river against four raiders; forests, hills and marshes cost more to cross | [browser](https://quantumframework.net/games/marches/) | [Linux](https://quantumframework.net/games/marches/marches-linux.zip) · [Windows](https://quantumframework.net/games/marches/marches-windows.zip) | [marches.q](https://quantumframework.net/games/marches/source/) |
 | **Creeps** | Godot's "Dodge the Creeps" tutorial game transcribed: creeps from the border at random speeds, a point a second | [browser](https://quantumframework.net/games/creeps/) | [Linux](https://quantumframework.net/games/creeps/creeps-linux.zip) · [Windows](https://quantumframework.net/games/creeps/creeps-windows.zip) | [creeps.q](https://quantumframework.net/games/creeps/source/) |
 | **Towers** | A tower defense: turrets that shoot the nearest dino, dinos down a road in waves, gold and a base; two builders over the network | [browser](https://quantumframework.net/games/towers/) | [Linux](https://quantumframework.net/games/towers/towers-linux.zip) · [Windows](https://quantumframework.net/games/towers/towers-windows.zip) | [towers.q](https://quantumframework.net/games/towers/source/) |
 | **Arena** | A one-on-one fighting game: moves with frame data, blocking, hit stun, rounds on a clock; two players on one keyboard or over the network | [browser](https://quantumframework.net/games/arena/) | [Linux](https://quantumframework.net/games/arena/arena-linux.zip) · [Windows](https://quantumframework.net/games/arena/arena-windows.zip) | [arena.q](https://quantumframework.net/games/arena/source/) |
@@ -130,6 +131,7 @@ It makes a room of its own and a link to send to a friend.
 - **Siege**: WASD or the arrows walk; the mouse (or the right stick) aims; the left button or J shoots as it is let go, held most of a second a bolt. The knight: left and right turn the horse, up spurs it on.
 - **Crates**: arrows or WASD step; a click walks to a cell, or into a crate beside the worker, which pushes it; walk into the foreman to talk (up, down and Enter choose an answer); R starts the room over.
 - **Rally**: red W A S D, blue the arrows (over the network, each W A S D); the barrier lifts at the green light.
+- **Marches**: click a rider, then a hex (four moves a turn); click a raider next to a rider to strike; E or End turn ends the turn.
 - **Creeps**: arrows or WASD; Space or Enter starts.
 - **Towers**: the mouse (or the arrows) points, click or Enter builds; `1` and `2` (or the wheel, or Tab) choose the turret; a click on a turret upgrades it, a right click (or X) sells it.
 - **Arena**: player 1 A/D, W jump, S crouch, J punch, K kick; player 2 the arrows, `.` punch, `/` kick. Hold away from the opponent to block. Down, forward, punch within half a second: the blast, felt on the other's joypad.

@@ -98,6 +98,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the pause menu of Robot, Drift and the RPG) and touch controls. Tested in
   Godot (`tests/godot/test_godot_shipping.py`); the feature's dataset has
   seven games and six refusals more.
+- Laboratory: Marches (`projects/marches/marches.q`), a skirmish on a map of
+  hexes, turn by turn: three riders hold a keep by a river against four
+  raiders. Written for Phase 6 of `PLAN_GAMES_3.md`: `shape="hex"` (or
+  `"iso"`) on `qg:tileset` with `tile="WxH"`, the rows of the .q the rows
+  seen; a grid walker, a pointer and a cursor (`cells="true"`) on hexes;
+  `cost=` on `qg:tile`, so the way found by `ai="pathfind"`, a pointer's
+  click and the new `<qg:travel target= to= budget= step=>` is the cheapest;
+  `cost(a, b)` in expressions. Its art is drawn by `scripts/art/marches.py`
+  (CC0). On the games page, and played in CI
+  (`tests/godot/test_godot_marches.py`, `tests/godot/test_godot_hexes.py`).
 - Laboratory: lights and shadows, from Phase 6 of `PLAN_GAMES_3.md`, for
   Delve. `ambient=` on `qg:scene` makes it dark; `<qg:light radius= color=
   energy= flicker=>` lights it, at a place of the scene or carried by a

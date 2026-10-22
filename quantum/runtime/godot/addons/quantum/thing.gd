@@ -511,7 +511,9 @@ func _aim_around(target: Node2D, map: Node):
 		# Lined up with the middle of its cell across the step first: a body a little
 		# off it would catch the corner of the wall beside a gap.
 		var mid: Vector2 = map.centre_of(here)
-		if next.x != here.x and absf(position.y - mid.y) > 1.0:
+		if map.shape != "square":
+			pass   # hexes: straight from middle to middle, no corner to catch
+		elif next.x != here.x and absf(position.y - mid.y) > 1.0:
 			aim = Vector2(position.x, mid.y)
 		elif next.y != here.y and absf(position.x - mid.x) > 1.0:
 			aim = Vector2(mid.x, position.y)

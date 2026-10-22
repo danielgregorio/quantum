@@ -482,6 +482,77 @@ static func tween(node, property: String, to, seconds: float, trans: String, eas
 	event("tween", {"property": property, "to": to.to_html(false) if to is Color else to})
 
 
+# qg:travel: a thing goes to `to` (a cursor's cell, or beside a thing) by the
+# cheapest way over the scene's tilemap (qg:tile cost=), round the things and
+# characters on it and the ends of the other travels, as far as `budget` pays
+# for (-1: all the way), a cell every `step` ticks; then its qg:on-end runs,
+# `me` the traveller. With no way, it stays and its qg:on-end runs at once.
+static func travel(node, to, budget, step: int, caller: Object = null, on_end: String = "") -> void:
+	node = _thing(node)
+	if not (node is Node2D):
+		return
+	var scene := _current_scene(node)
+	var map = scene.get_node_or_null("Tilemap") if scene != null else null
+	var runner = scene.get_node_or_null("Tweens") if scene != null else null
+	if map == null or runner == null:
+		return
+	var from: Vector2i = map.cell_of(node.position)
+	var goal = _place_of(to)
+	var cells := [node.position]
+	if goal != null:
+		var dest: Vector2i = map.cell_of(goal)
+		var avoid := _occupied(scene, map, node)
+		for c in runner.travel_ends():
+			avoid[map.cell_of(c)] = true
+		var beside: bool = avoid.has(dest)   # a thing there: up to it
+		var way: Array = map.path(from, dest, 4096, avoid)
+		if beside and not way.is_empty():
+			way.pop_back()
+		var spent := 0
+		for i in range(1, way.size()):
+			spent += map.cost_at(way[i])
+			if budget != null and float(budget) >= 0 and spent > float(budget):
+				break
+			cells.append(map.centre_of(way[i]))
+	event("travel", {"who": who(node), "cells": cells.size() - 1})
+	runner.travel(node, cells, step, caller, on_end)
+
+
+# cost(a, b): what the cheapest way from where a stands to where b is costs
+# (qg:tile cost=, round the things on the way); INF when there is none.
+static func cost(ctx, a, b) -> float:
+	var scene := _current_scene(ctx)
+	var map = scene.get_node_or_null("Tilemap") if scene != null else null
+	var from = _place_of(a)
+	var to = _place_of(b)
+	if map == null or from == null or to == null:
+		return INF
+	var mover = _thing(a)
+	var avoid := _occupied(scene, map, mover if mover is Node2D else null)
+	avoid.erase(map.cell_of(to))
+	var c: int = map.path_cost(map.cell_of(from), map.cell_of(to), avoid)
+	return INF if c < 0 else float(c)
+
+
+# Where a thing, a character or a cursor is: a point of the scene, or null.
+static func _place_of(v):
+	if v is Dictionary:
+		return Vector2(float(v.get("x", 0.0)), float(v.get("y", 0.0))) if v.has("x") else null
+	v = _thing(v)
+	return (v as Node2D).position if v is Node2D and not v.is_queued_for_deletion() else null
+
+
+# The cells the things and characters of a scene stand in, but one's.
+static func _occupied(scene: Node, map, but) -> Dictionary:
+	var out := {}
+	for n in scene.get_children():
+		if n == but or not (n is Node2D) or n.is_queued_for_deletion() or n.has_meta("q_carrier"):
+			continue
+		if n.is_in_group("q_thing") or n is CharacterBody2D:
+			out[map.cell_of(n.position)] = true
+	return out
+
+
 # qg:after: a method of the caller (the scene script, or P) run so many ticks
 # from now, with the values its names have now (clock.gd).
 static func after(caller: Object, ticks, method: String, args: Array, name_: String = "") -> void:
@@ -710,6 +781,8 @@ static func _cell_of(n):
 	if n.has_method("cell"):
 		return n.cell()
 	var map = n.get_parent().get_node_or_null("Tilemap") if n.get_parent() != null else null
+	if map != null and map.has_method("cell_of") and map.shape != "square":
+		return map.cell_of(n.position)
 	var tile := float(map.tile) if map != null and "tile" in map else 1.0
 	return Vector2i(floori(n.position.x / tile), floori(n.position.y / tile))
 

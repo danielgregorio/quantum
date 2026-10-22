@@ -8,10 +8,19 @@ extends Node2D
 # the world — unless the tileset's qg:tile gives that tile a shape of its own
 # (a lower top, a slope, a ledge to jump through), or none. A qg:tile with
 # frames= is animated: it and the frames after it in the sheet's row, in turn.
+#
+# A tileset with shape="hex" draws hexes with their points up, every other
+# row half a hex to the right; shape="iso", diamonds, every other row half a
+# diamond to the right. The rows of the .q are the rows seen, and a cell's
+# neighbours, its middle and the cell at a point are Godot's for that shape.
+# A step onto a tile costs its qg:tile cost= (1 when not given): the way a
+# walker finds is the cheapest.
 
 var columns: int = 0
 var rows_count: int = 0
 var tile: int = 16
+var tile_height: int = 16
+var shape: String = "square"
 
 
 static func build(spec: Dictionary, sheet: Dictionary, texture_of: Callable, sheets: Dictionary = {}) -> Node2D:
@@ -20,6 +29,8 @@ static func build(spec: Dictionary, sheet: Dictionary, texture_of: Callable, she
 	map.process_physics_priority = -100   # first in a tick: the cells set in the last one take their shapes
 	var size := int(sheet["tile"][0])
 	map.tile = size
+	map.tile_height = int(sheet["tile"][1])
+	map.shape = str(sheet.get("shape", "square"))
 	var texture: Texture2D = texture_of.call(sheet)
 	map._per_row = maxi(1, int(texture.get_width()) / size)
 	map._shapes = sheet.get("tiles", {})
@@ -32,13 +43,19 @@ static func build(spec: Dictionary, sheet: Dictionary, texture_of: Callable, she
 		layer.set_meta("q_per_row", maxi(1, int(picture.get_width()) / size))
 		layer.set_meta("q_shapes", own.get("tiles", {}))
 		var set := TileSet.new()
-		set.tile_size = Vector2i(size, size)
+		set.tile_size = Vector2i(size, map.tile_height)
+		if map.shape == "hex":
+			set.tile_shape = TileSet.TILE_SHAPE_HEXAGON
+			set.tile_offset_axis = TileSet.TILE_OFFSET_AXIS_HORIZONTAL   # points up; every other row half a hex on
+		elif map.shape == "iso":
+			set.tile_shape = TileSet.TILE_SHAPE_ISOMETRIC
+		set.tile_layout = TileSet.TILE_LAYOUT_STACKED   # the rows of the .q are the rows seen
 		var collision: bool = layer_spec.get("collision", false)
 		if collision:
 			set.add_physics_layer()
 		var source := TileSetAtlasSource.new()
 		source.texture = picture
-		source.texture_region_size = Vector2i(size, size)
+		source.texture_region_size = Vector2i(size, map.tile_height)
 		set.add_source(source)
 		layer.tile_set = set
 		layer.set_meta("q_collision", collision)
@@ -52,7 +69,7 @@ static func build(spec: Dictionary, sheet: Dictionary, texture_of: Callable, she
 				var n := int(row[x])
 				if n != 0:
 					map._place(layer, Vector2i(x, y), n)
-	if spec.get("shadows", false):   # a dark scene (ambient=): the solid tiles stop the lights
+	if spec.get("shadows", false) and map.shape == "square":   # a dark scene (ambient=): the solid tiles stop the lights
 		map._shadows = true
 		map._occlude()
 	return map
@@ -110,6 +127,7 @@ func _place(layer: TileMapLayer, cell: Vector2i, n: int) -> void:
 		source.create_tile(coords)
 		var frame := str(n - 1)
 		var half := tile / 2.0
+		var half_h := tile_height / 2.0
 		if shapes.has(frame) and int(shapes[frame].get("frames", 1)) > 1:
 			# an animated tile: it and the frames after it in the row, in turn (only seen)
 			source.set_tile_animation_columns(coords, 0)
@@ -118,13 +136,18 @@ func _place(layer: TileMapLayer, cell: Vector2i, n: int) -> void:
 		if layer.get_meta("q_collision", false) and not (shapes.has(frame) and shapes[frame]["shape"] == null):
 			var data := source.get_tile_data(coords, 0)
 			var points := PackedVector2Array([
-				Vector2(-half, -half), Vector2(half, -half),
-				Vector2(half, half), Vector2(-half, half)])
-			if shapes.has(frame):
+				Vector2(-half, -half_h), Vector2(half, -half_h),
+				Vector2(half, half_h), Vector2(-half, half_h)])
+			if shape == "hex":
+				points = PackedVector2Array([Vector2(0, -half_h), Vector2(half, -half_h / 2.0), Vector2(half, half_h / 2.0),
+					Vector2(0, half_h), Vector2(-half, half_h / 2.0), Vector2(-half, -half_h / 2.0)])
+			elif shape == "iso":
+				points = PackedVector2Array([Vector2(0, -half_h), Vector2(half, 0), Vector2(0, half_h), Vector2(-half, 0)])
+			if shapes.has(frame) and shapes[frame]["shape"] is Array:
 				# from the tile's top-left corner, as the .q gives them, to its centre
 				points = PackedVector2Array()
 				for p in shapes[frame]["shape"]:
-					points.append(Vector2(float(p[0]) - half, float(p[1]) - half))
+					points.append(Vector2(float(p[0]) - half, float(p[1]) - half_h))
 			data.add_collision_polygon(0)
 			data.set_collision_polygon_points(0, 0, points)
 			if shapes.has(frame) and shapes[frame].get("one_way", false):
@@ -203,6 +226,10 @@ func _layer(layer_name: String) -> TileMapLayer:
 
 
 func pixel_size() -> Vector2:
+	if shape == "hex":   # rows three quarters of a hex apart, every other one half a hex on
+		return Vector2(columns * tile + tile / 2.0, (rows_count - 1) * tile_height * 0.75 + tile_height)
+	if shape == "iso":   # rows half a diamond apart
+		return Vector2(columns * tile + tile / 2.0, (rows_count - 1) * tile_height * 0.5 + tile_height)
 	return Vector2(columns * tile, rows_count * tile)
 
 
@@ -299,40 +326,149 @@ func kinds_about(p: Vector2, size: Vector2) -> Dictionary:
 
 
 func cell_of(p: Vector2) -> Vector2i:
+	if shape != "square":
+		return _first_layer().local_to_map(p - position)
 	return Vector2i(floori((p.x - position.x) / tile), floori((p.y - position.y) / tile))
 
 
 func centre_of(cell: Vector2i) -> Vector2:
+	if shape != "square":
+		return position + _first_layer().map_to_local(cell)
 	return position + Vector2((cell.x + 0.5) * tile, (cell.y + 0.5) * tile)
+
+
+func _first_layer() -> TileMapLayer:
+	for c in get_children():
+		if c is TileMapLayer:
+			return c
+	return null
+
+
+func inside(c: Vector2i) -> bool:
+	return c.x >= 0 and c.y >= 0 and c.x < columns and c.y < rows_count
 
 
 const _STEPS := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
 
 
-# The cells from `from` to `to`, shortest first found over the free cells
-# (breadth first, the neighbours always in the same order: the same way on
-# every peer and in every replay); [] when there is none.
-func path(from: Vector2i, to: Vector2i, limit: int = 4096) -> Array:
+# The cells next to one, always in the same order: right, left, down, up on
+# square tiles; Godot's six of a hex, or four of a diamond, round it.
+func neighbours(c: Vector2i) -> Array:
+	if shape == "square":
+		return _STEPS.map(func(s): return c + s)
+	return Array(_first_layer().get_surrounding_cells(c))
+
+
+# The neighbour of a cell most in a direction on the screen: a key held on
+# a hex map (up with the right side facing: up and to the right).
+func toward(c: Vector2i, dir: Vector2) -> Vector2i:
+	if shape == "square":
+		return c + Vector2i(signi(int(dir.x)), signi(int(dir.y)))
+	var best := c
+	var most := 0.0
+	var here := centre_of(c)
+	for n in neighbours(c):
+		var d := (centre_of(n) - here).normalized().dot(dir.normalized())
+		if d > most + 0.001:
+			best = n
+			most = d
+	return best
+
+
+# The neighbour a key held goes to (a grid walker's): on hexes, left and
+# right along the row, up and down to the side it faces; on diamonds, the
+# keys turned an eighth (right is down and to the right, up is up and to the
+# right), as an isometric game has them.
+func toward_key(c: Vector2i, dir: Vector2i, facing_x: int) -> Vector2i:
+	var way := Vector2(dir.x, dir.y)
+	if shape == "hex" and dir.x == 0:
+		way.x = 0.5 if facing_x >= 0 else -0.5
+	elif shape == "iso":
+		way = Vector2(dir.x - dir.y, dir.x + dir.y)
+	return toward(c, way)
+
+
+# The cell past `b`, coming from `a` (a crate pushed on).
+func beyond(a: Vector2i, b: Vector2i) -> Vector2i:
+	if shape == "square":
+		return b + (b - a)
+	return toward(b, centre_of(b) - centre_of(a))
+
+
+func has_costs() -> bool:
+	for layer in get_children():
+		if layer is TileMapLayer:
+			for t in layer.get_meta("q_shapes", _shapes).values():
+				if t.has("cost"):
+					return true
+	return false
+
+
+# What a step onto a cell costs (qg:tile cost=): the topmost layer's tile there that says, else 1.
+func cost_at(c: Vector2i) -> int:
+	var layers := get_children()
+	layers.reverse()
+	for layer in layers:
+		if not (layer is TileMapLayer) or layer.get_cell_source_id(c) == -1:
+			continue
+		var coords: Vector2i = layer.get_cell_atlas_coords(c)
+		var frame := str(coords.y * int(layer.get_meta("q_per_row", _per_row)) + coords.x)
+		var shapes: Dictionary = layer.get_meta("q_shapes", _shapes)
+		if shapes.has(frame) and shapes[frame].has("cost"):
+			return int(shapes[frame]["cost"])
+	return 1
+
+
+# The cells from `from` to `to` by the cheapest way over the free cells (and
+# not through the cells of `avoid`, but to one of them), each step costing
+# the cell stepped onto; among ways as cheap, the first found, the
+# neighbours always in the same order: the same way on every peer and in
+# every replay. With every cost 1, it is the shortest, breadth first. []
+# when there is none.
+func path(from: Vector2i, to: Vector2i, limit: int = 4096, avoid: Dictionary = {}) -> Array:
 	var walls := blocked()
 	if from == to:
 		return [to]
 	var came := {from: from}
-	var todo: Array = [from]
-	var head := 0
-	while head < todo.size() and head < limit:
-		var at: Vector2i = todo[head]
-		head += 1
-		for step in _STEPS:
-			var next: Vector2i = at + step
-			if came.has(next) or walls.has(next):
+	var best := {from: 0}
+	var buckets := {0: [from]}   # cost so far -> the cells reached for it, in the order found
+	var cost := 0
+	var left := 1
+	var seen := 0
+	while left > 0 and seen < limit:
+		while not buckets.has(cost) or buckets[cost].is_empty():
+			buckets.erase(cost)
+			cost += 1
+		var at: Vector2i = buckets[cost].pop_front()
+		left -= 1
+		if best[at] < cost:
+			continue   # reached more cheaply since
+		seen += 1
+		if at == to:
+			var out := [at]
+			while out[0] != from:
+				out.push_front(came[out[0]])
+			return out
+		for next in neighbours(at):
+			if walls.has(next) or not inside(next) or (avoid.has(next) and next != to):
 				continue
-			if next.x < 0 or next.y < 0 or next.x >= columns or next.y >= rows_count:
-				continue
-			came[next] = at
-			if next == to:
-				var out := [next]
-				while out[0] != from:
-					out.push_front(came[out[0]])
-				return out
-			todo.append(next)
+			var c: int = cost + cost_at(next)
+			if c < int(best.get(next, 1 << 30)):
+				best[next] = c
+				came[next] = at
+				if not buckets.has(c):
+					buckets[c] = []
+				buckets[c].append(next)
+				left += 1
 	return []
+
+
+# What the cheapest way from one cell to another costs; -1 when there is none.
+func path_cost(from: Vector2i, to: Vector2i, avoid: Dictionary = {}) -> int:
+	var way := path(from, to, 4096, avoid)
+	if way.is_empty():
+		return -1
+	var total := 0
+	for i in range(1, way.size()):
+		total += cost_at(way[i])
+	return total

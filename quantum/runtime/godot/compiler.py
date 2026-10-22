@@ -200,8 +200,14 @@ class _Compiler:
             tile = el.get('tile')
             if isinstance(tile, int):
                 tile = (tile, tile)
+            shaped = el.tag == 'tileset' and el.get('shape') != 'square'
+            if el.tag == 'tileset' and not shaped and tile[0] != tile[1]:
+                raise GameCompileError(f'<qg:tileset name="{name}" tile="{tile[0]}x{tile[1]}">: square tiles are '
+                                       f'square (tile="{tile[0]}"); WxH is for shape="hex" or "iso"', el.line)
             sheets[name] = {'src': self._asset(el.get('src'), el.line), 'tile': list(tile),
                             'kind': el.tag}
+            if shaped:
+                sheets[name]['shape'] = el.get('shape')
             if el.get('slice') is not None:
                 sheets[name]['slice'] = _slice(el.get('slice'), tile, name, el.line)
             tiles = {}
@@ -220,6 +226,8 @@ class _Compiler:
                     if t.get('one-way'):
                         raise GameCompileError('<qg:tile shape="none"> is not solid: one-way= means nothing', t.line)
                     points = None
+                elif shape is None and shaped:
+                    points = 'cell'   # the whole hex (or diamond)
                 elif shape is None:
                     size = float(tile[0])
                     points = [[0.0, 0.0], [size, 0.0], [size, size], [0.0, size]]
@@ -230,6 +238,10 @@ class _Compiler:
                 tiles[str(t.get('frame'))] = {'shape': points, 'one_way': t.get('one-way')}
                 if t.get('kind'):
                     tiles[str(t.get('frame'))]['kind'] = t.get('kind')
+                if t.get('cost') != 1:
+                    if t.get('cost') < 1:
+                        raise GameCompileError('<qg:tile cost=>: what a step onto it costs, 1 or more', t.line)
+                    tiles[str(t.get('frame'))]['cost'] = t.get('cost')
                 if t.get('frames') != 1:
                     if t.get('frames') < 1 or t.get('fps') <= 0:
                         raise GameCompileError('<qg:tile frames=>: 1 or more, and fps= more than 0', t.line)
@@ -1017,8 +1029,12 @@ class _Compiler:
                     if el.get('id') in ids:
                         raise GameCompileError(f'two nodes with id {el.get("id")!r}', el.line)
                     ids[el.get('id')] = el.line
+                if el.get('cells') and el.get('grid') is not None:
+                    raise GameCompileError('<qg:cursor> snaps to grid= or to the cells of the tilemap (cells="true"), '
+                                           'one of them', el.line)
                 nodes.append({'kind': 'cursor', 'player': el.get('player'), 'step': el.get('step'),
                               'grid': el.get('grid'), 'sheet': el.get('sheet'), 'frame': el.get('frame'),
+                              **({'cells': True} if el.get('cells') else {}),
                               **({'id': el.get('id')} if el.get('id') else {})})
                 self._node_elements.append(el)
             elif el.tag == 'path':
@@ -1034,6 +1050,9 @@ class _Compiler:
                         f'<qg:tilemap tileset="{el.get("tileset")}">: the layers of a scene share one tileset, '
                         f'{tilemap["tileset"]!r}', el.line)
                 self._sheet_exists(el.get('tileset'), sheets, el.line)
+                if el.get('src') and sheets[el.get('tileset')].get('shape'):
+                    raise GameCompileError(f'<qg:tilemap src="{el.get("src")}">: a Tiled map of hexes or diamonds is '
+                                           f'not read yet; give its rows in the .q', el.line)
                 if el.get('src'):
                     tmx = self._tmx(el.get('src'), el.line)
                     tile = sheets[el.get('tileset')]['tile'][0]
@@ -1679,6 +1698,13 @@ class _Compiler:
             'on_select': on_select, 'music': music,
             **({'sequences': sequences} if sequences else {}),
         }
+        has_map = any(n['kind'] == 'tilemap' for n in nodes)
+        if script.travels_used and not has_map:
+            raise GameCompileError('<qg:travel> goes over the scene\'s qg:tilemap, which it has not',
+                                   script.travels_used[0])
+        if any(n['kind'] == 'cursor' and n.get('cells') for n in nodes) and not has_map:
+            raise GameCompileError('<qg:cursor cells="true">: the cells of the scene\'s qg:tilemap, which it has not',
+                                   scene.line)
         if scene.get('ambient') is not None:
             # a dark scene: its solid tiles stop the lights that cast shadows
             spec['ambient'] = scene.get('ambient')

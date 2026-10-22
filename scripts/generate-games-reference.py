@@ -74,6 +74,10 @@ GAMES = [
      'camera for each (qg:camera player=), so on one keyboard the screen splits in two and over the network each '
      'machine follows its own car; a barrier that lifts at the green light (a solid prefab destroyed by a qg:timer), '
      'and laps counted at the line only after halfway round (the map\'s zones)'),
+    ('Marches', 'projects/marches/marches.q', 'a skirmish on a map of hexes (qg:tileset shape="hex"), turn by turn: '
+     'riders that ride where they are clicked by the cheapest way (qg:travel budget=), forests, hills and marshes that '
+     'cost more to cross (qg:tile cost=), a pointer that snaps to the hexes (qg:cursor cells=), what a ride there '
+     'would cost (cost()), and raiders that ride at the nearest rider in their turn (qg:for-each, qg:travel)'),
     ('RPG', 'projects/rpg/rpg.q', 'Godot\'s "JRPG" demo transcribed: its map in three tile layers, a slime that '
      'walks it cell by cell, a key and another slime that talk in a dialogue box, and a turn-based fight '
      '(projects/rpg/README.md)'),

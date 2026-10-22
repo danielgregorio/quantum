@@ -19,8 +19,8 @@ def load():
 
 def test_every_project_is_a_game_to_export():
     eg = load()
-    assert sorted(eg.games()) == ['arena', 'bricks', 'chess', 'crates', 'creeps', 'delve', 'drift', 'hopper', 'keep', 'pong',
-                                  'rally', 'robot', 'rpg', 'siege', 'towers']
+    assert sorted(eg.games()) == ['arena', 'bricks', 'chess', 'crates', 'creeps', 'delve', 'drift', 'hopper', 'keep',
+                                  'marches', 'pong', 'rally', 'robot', 'rpg', 'siege', 'towers']
     assert eg.games()['pong'] == REPO / 'projects' / 'pong' / 'pong.q'
 
 

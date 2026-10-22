@@ -23,6 +23,10 @@ extends Node
 # the looks (scale, rotation, alpha, tint) of what they had touched.
 
 var tweens: Array = []   # {target, property, from, to, ticks, t, trans, ease, repeat, yoyo, caller, on_end}
+# qg:travel: a thing goes cell by cell along a way found as it starts, a
+# cell every `step` ticks, and its qg:on-end runs as it arrives. Stepped here
+# with the tweens, and rolled back with them.
+var travels: Array = []   # {target, cells (the middles, the start first), i, t, step, caller, on_end}
 
 
 func _ready() -> void:
@@ -46,7 +50,43 @@ func add(target: Node2D, property: String, to, seconds: float, trans: int, ease:
 	target.set_meta("q_tweened", true)
 
 
+func travel(target: Node2D, cells: Array, step: int, caller: Object = null, on_end: String = "") -> void:
+	for rec in travels.duplicate():
+		if rec["target"] == target:
+			travels.erase(rec)   # a new travel replaces the one it was on
+	travels.append({"target": target, "cells": cells, "i": 1, "t": 0, "step": maxi(1, step), "caller": caller,
+		"on_end": on_end})
+
+
+# Where the travels under way end: no other travel ends there too.
+func travel_ends() -> Array:
+	return travels.map(func(rec): return rec["cells"][-1])
+
+
+func _step_travels() -> void:
+	for rec in travels.duplicate():
+		if not travels.has(rec):
+			continue
+		var target = rec["target"]
+		if not is_instance_valid(target) or target.is_queued_for_deletion():
+			travels.erase(rec)
+			continue
+		if rec["i"] < rec["cells"].size():
+			rec["t"] += 1
+			target.position = (rec["cells"][rec["i"] - 1] as Vector2).lerp(rec["cells"][rec["i"]], float(rec["t"]) / rec["step"])
+			if rec["t"] >= rec["step"]:
+				rec["i"] += 1
+				rec["t"] = 0
+			if rec["i"] < rec["cells"].size():
+				continue
+		travels.erase(rec)
+		var caller = rec["caller"]
+		if rec["on_end"] != "" and is_instance_valid(caller) and caller.has_method(rec["on_end"]):
+			caller.call(rec["on_end"], target, null)
+
+
 func _physics_process(_delta: float) -> void:
+	_step_travels()
 	# a copy: a tween's qg:on-end may start another (it plays from the next tick)
 	for rec in tweens.duplicate():
 		if not tweens.has(rec):
@@ -152,7 +192,14 @@ func q_save() -> Dictionary:
 		for prop in LOOKS:
 			l[prop] = read(n, prop)
 		looks[scene.get_path_to(n)] = l
-	return {"tweens": recs, "looks": looks}
+	var ways := []
+	for rec in travels:
+		if is_instance_valid(rec["target"]):
+			var r: Dictionary = rec.duplicate()
+			r["target"] = scene.get_path_to(rec["target"])
+			r["caller"] = "P" if rec["caller"] == P else "scene"
+			ways.append(r)
+	return {"tweens": recs, "looks": looks, "travels": ways}
 
 
 func q_load(d: Dictionary) -> void:
@@ -171,6 +218,15 @@ func q_load(d: Dictionary) -> void:
 		if n is Node2D:
 			for prop in LOOKS:
 				write(n, prop, d["looks"][path][prop])
+	travels.clear()
+	for r in d.get("travels", []):
+		var target := scene.get_node_or_null(r["target"])
+		if target == null:
+			continue
+		var rec: Dictionary = r.duplicate()
+		rec["target"] = target
+		rec["caller"] = P if r["caller"] == "P" else scene
+		travels.append(rec)
 
 
 static func _touched(scene: Node) -> Array:

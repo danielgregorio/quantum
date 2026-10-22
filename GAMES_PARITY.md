@@ -14,7 +14,7 @@
 > with Crates: nine rows more, and gaps 6, 13, 15, 18, 21, 22 and 26; Phase 4,
 > into every game: ten rows more, and gaps 9, 10, 11, 19, 29, 33 and 42;
 > Phase 5, with Rally: four rows more, and gaps 32, 35 and 39; Phase 6, a game
-> at a time: nine rows more so far, and gaps 12, 17, 34, 36, 38 and 40).
+> at a time: eleven rows more so far, and gaps 12, 17, 34, 36, 37, 38, 40 and 41).
 
 Each row is one feature a 2D game is made of, as Godot 4.4 and Unity 6 (URP
 2D with its packages: 2D Tilemap, Physics 2D, Input System, Cinemachine 3,
@@ -129,7 +129,7 @@ declarative shape for it.
 | Procedural levels, random tiles | script | Random Tile, script | `q:loop`, `random()` and `qg:set-tile`, `qg:spawn` directly in a scene, as it is entered (run in Godot for this map; no game does it yet) | covered |
 | Tiled maps | importers (third party) | SuperTiled2Unity (third party) | `qg:tilemap src="level.tmx"`: CSV layers, an external `.tsx`, kinds from a tile's class, object layers placing prefabs by class | covered |
 | More of Tiled | importers | importers | several tilesets per map (each a `qg:tileset` with the same image), flipped and turned tiles, objects of class `zone`, `exit` and `path`, an object's `state`, the map's own properties (`tiled('name')`); CSV layers only (Crates' three rooms) | covered |
-| Isometric, hexagonal and non-square grids | `TileSet.tile_shape` | `Grid` cell layout (Hexagon, Isometric) | square tiles only | gap |
+| Isometric, hexagonal and non-square grids | `TileSet.tile_shape` | `Grid` cell layout (Hexagon, Isometric) | `shape="hex"` or `"iso"` on `qg:tileset` (`tile="28x32"`): neighbours, ways, a grid walker's keys and a cursor's `cells=` follow (Marches) | covered |
 
 ## 7. Physics and collision
 
@@ -195,7 +195,7 @@ declarative shape for it.
 | Chase, flee, keep a distance | script | script | `ai="chase"`; `qg:seek way="straight"`, `qg:flee`, `qg:keep-distance min= max=` | covered |
 | Pathfinding on a grid | `AStarGrid2D` | A* Pathfinding Project (third party) | `ai="pathfind"`, `qg:seek` (breadth first over the free cells, the same on every peer) | covered |
 | Navigation meshes | `NavigationRegion2D`, `NavigationAgent2D` | AI Navigation (`NavMeshSurface`, `NavMeshAgent`; 2D through NavMeshPlus, third party) | the tilemap's cells are the graph | by design: levels are tilemaps; a cell graph is exact and deterministic |
-| Costs per terrain | `AStarGrid2D.set_point_weight_scale()` | penalties (A* Pathfinding Project) | — (every free cell costs the same) | gap |
+| Costs per terrain | `AStarGrid2D.set_point_weight_scale()` | penalties (A* Pathfinding Project) | `cost=` on `qg:tile`: `ai="pathfind"`, a pointer's click, `qg:travel budget=` and `cost()` take the cheapest way (Marches' forests and marshes) | covered |
 | Following a route | `Path2D` + `PathFollow2D` | splines (Splines package) + script | `qg:path points=`, `ai="path"`, `qg:spawn at="path"` | covered |
 | Flying and jumping enemies | script | script | `ai="fly"`, `ai="sway"`; `qg:leap height= every= at-wall= when=` | covered |
 | Shooting at the player | script | script | `qg:shoot prefab= at= every= range=`; `ai="turret" targets= range= attack= damage=` | covered |
@@ -417,11 +417,11 @@ declarative shape for it.
 | Transform and drawing | 11 | 3 | 0 | 2 | 16 |
 | Sprite animation and animation state machines | 6 | 2 | 0 | 0 | 8 |
 | Tweening, timelines and cutscenes | 4 | 1 | 0 | 0 | 5 |
-| Tilemaps | 10 | 1 | 1 | 1 | 13 |
+| Tilemaps | 11 | 1 | 0 | 1 | 13 |
 | Physics and collision | 10 | 5 | 0 | 2 | 17 |
 | Character controllers | 14 | 0 | 0 | 0 | 14 |
 | Game rules: health, shots, pickups | 10 | 0 | 0 | 0 | 10 |
-| AI and navigation | 9 | 0 | 1 | 1 | 11 |
+| AI and navigation | 10 | 0 | 0 | 1 | 11 |
 | Camera | 9 | 1 | 0 | 0 | 10 |
 | Input | 13 | 1 | 0 | 0 | 14 |
 | Audio | 8 | 0 | 1 | 1 | 10 |
@@ -436,15 +436,14 @@ declarative shape for it.
 | Testing and determinism | 9 | 1 | 0 | 0 | 10 |
 | Export and platforms | 5 | 0 | 0 | 1 | 6 |
 | Tooling | 4 | 1 | 1 | 2 | 8 |
-| **Total** | **199** | **25** | **4** | **23** | **251** |
+| **Total** | **201** | **25** | **2** | **23** | **251** |
 
-Of 251 rows, 199 are covered and 25 partial; 4 are gaps, and 23 are left
+Of 251 rows, 201 are covered and 25 partial; 2 are gaps, and 23 are left
 out by design: four in five covered (146, 42 and 40 when the map was made;
 Phase 1 of PLAN_GAMES_3.md covered nine rows, and the clock in an expression,
 its `ticks()`, counted late; Phase 2 twelve more, Phase 3 nine more, Phase 4
-ten more, Phase 5 four more, Phase 6 nine so far, and a frame for boxes). The gaps left are
-hexagonal maps, terrain costs and hot reload (the rest of Phase 6's list), and
-adaptive music. The rows
+ten more, Phase 5 four more, Phase 6 eleven so far, and a frame for boxes). The gaps left
+are hot reload, the last of Phase 6's list, and adaptive music. The rows
 left out by design are mostly the rigid-body solver, shaders and post-
 processing, what belongs to an editor, and the networking machinery that
 lockstep makes unnecessary.
@@ -492,11 +491,11 @@ above is in this list, and so are many **partial** ones.
 34. **Music and sounds inside a scene.** *Done: PLAN_GAMES_3.md, Phase 6, for Delve's warden (the crossfade and `sounds=`; layers that come in, not yet).* `qg:music` as an action (a crossfade inside a scene, layers that come in), and `sounds="a, b, c"` on `qg:play` (one drawn each time). A boss fight's music, footsteps.
 35. **Input sequences and vibration.** *Done: PLAN_GAMES_3.md, Phase 5 (Arena's blast).* `qg:on-input sequence="down, right, punch" within=` and `<qg:rumble player= strength= seconds=>`. Fighting games (motion inputs), any game on a gamepad.
 36. **Sound in place.** *Done: PLAN_GAMES_3.md, Phase 6, for Hopper's bouncer.* `at=` on `qg:play`: softer, and to one side, the farther the thing is from the middle of the screen. Large levels.
-37. **Costs per terrain.** `cost=` on `qg:tile` for `ai="pathfind"` and `qg:seek`. Strategy and tactics maps (mud, roads).
+37. **Costs per terrain.** *Done: PLAN_GAMES_3.md, Phase 6, for Marches.* `cost=` on `qg:tile` for `ai="pathfind"` and `qg:seek`. Strategy and tactics maps (mud, roads).
 38. **Plurals, localized assets, fonts per language.** *Done: PLAN_GAMES_3.md, Phase 6, for the RPG in Russian.* Plural forms on `qg:phrase`, `src=` per language on a sheet or a sound, `font=` on `qg:language`. Translated games with counts, voices or a script Latin fonts lack.
 39. **Names and messages between players.** *Done: PLAN_GAMES_3.md, Phase 5 (Bricks' who is who).* `shared="true"` on a `qg:field`: its text travels with the inputs when it is entered, not as it is typed. Networked games that show who is who, or let the players talk.
 40. **Nine-slice pictures.** *Done: PLAN_GAMES_3.md, Phase 6, for the RPG's dialogues and fight menu.* `slice=` on `qg:spritesheet`, for boxes that stretch. Dialogue boxes, framed menus.
-41. **Isometric and hexagonal maps.** `shape="hex"` or `"iso"` on `qg:tileset`, with neighbours and pathfinding to match. Strategy and tactics games.
+41. **Isometric and hexagonal maps.** *Done: PLAN_GAMES_3.md, Phase 6, for Marches (hexes; diamonds tested, no game yet).* `shape="hex"` or `"iso"` on `qg:tileset`, with neighbours and pathfinding to match. Strategy and tactics games.
 42. **macOS builds.** *Done: PLAN_GAMES_3.md, Phase 4.* A `macOS` preset in `scripts/export-games.py`. Desktop releases.
 43. **Hot reload.** `quantum run game.q --watch`: rebuild on save and come back to the same tick from the session's tape. Whoever writes a game.
 

@@ -1122,6 +1122,41 @@
       "tags": [
         "light"
       ]
+    },
+    {
+      "id": "game-bad-065",
+      "intent": "A travel with no map",
+      "input": {
+        "natural_language": "A unit travels to the pointer in a scene without a tilemap",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Unit\" tag=\"unit\" sheet=\"people\" frame=\"0\" hitbox=\"14x14\" />\n  <qg:scene name=\"main\">\n    <qg:cursor id=\"aim\" />\n    <qg:instance prefab=\"Unit\" name=\"unit\" x=\"40\" y=\"40\" />\n    <qg:on-select><qg:travel target=\"unit\" to=\"aim\" budget=\"4\" /></qg:on-select>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:travel> goes over the scene's qg:tilemap, which it has not"
+      },
+      "why_invalid": "A travel finds its way over the cells of the scene's map, by what each costs; without a map there are no cells.",
+      "correction": "Give the scene a qg:tilemap, or move the unit with qg:tween.",
+      "tags": [
+        "travel"
+      ]
+    },
+    {
+      "id": "game-bad-066",
+      "intent": "Square tiles that are not square",
+      "input": {
+        "natural_language": "A hex tileset whose shape was left out",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:tileset name=\"land\" src=\"projects/marches/assets/land.png\" tile=\"28x32\" />\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "square tiles are square"
+      },
+      "why_invalid": "A tileset is of square tiles unless shape= says otherwise; WxH sizes are for hexes and diamonds.",
+      "correction": "Say the shape: <qg:tileset ... tile=\"28x32\" shape=\"hex\" />.",
+      "tags": [
+        "tileset",
+        "shape"
+      ]
     }
   ]
 }

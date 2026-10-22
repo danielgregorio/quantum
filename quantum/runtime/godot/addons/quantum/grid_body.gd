@@ -9,7 +9,10 @@ extends CharacterBody2D
 # stepping into anything else closed is a bump, which takes as long as a step.
 # Arriving in a cell, it touches the zones there (qg:zone, a Tiled zone), and
 # an exit there takes it on. As Godot's JRPG demo: two directions held at
-# once step diagonally only with diagonal. Deterministic: everything in
+# once step diagonally only with diagonal. On a map of hexes it steps to the
+# neighbour most the way held: left and right along the row, up and down to
+# the side it faces; on diamonds, the keys turned an eighth (right is down
+# and to the right). Deterministic: everything in
 # _physics_process at the fixed tick.
 
 const Animator := preload("res://addons/quantum/animator.gd")
@@ -44,6 +47,7 @@ var _bumping: int = 0     # ticks left of a bump
 var _pushed: Node2D = null   # the thing it pushes on this step, and from where to where
 var _pushed_from: Vector2 = Vector2.ZERO
 var _pushed_to: Vector2 = Vector2.ZERO
+var _routed: bool = false   # this tick's step is a route's next cell (a pointer's), not a key's way
 
 
 func setup(spec: Dictionary) -> void:
@@ -86,11 +90,27 @@ func respawn() -> void:
 # The cell it stands in (the one it is stepping to, mid-step).
 func cell() -> Vector2i:
 	var at := _to if _moving > 0 else position
+	return _cell_at(at)
+
+
+func _cell_at(at: Vector2) -> Vector2i:
+	var map := _map()
+	if map != null and map.shape != "square":
+		return map.cell_of(at)
 	return Vector2i(floori(at.x / _tile), floori(at.y / _tile))
 
 
 func _centre(c: Vector2i) -> Vector2:
+	var map := _map()
+	if map != null and map.shape != "square":
+		return map.centre_of(c)
 	return Vector2((c.x + 0.5) * _tile, (c.y + 0.5) * _tile)
+
+
+# The cell past `b`, from `a`: where a pushed crate goes.
+func _beyond(a: Vector2i, b: Vector2i) -> Vector2i:
+	var map := _map()
+	return map.beyond(a, b) if map != null else b + (b - a)
 
 
 func _map() -> Node:
@@ -117,7 +137,7 @@ func _wall(c: Vector2i) -> bool:
 func _thing_in(c: Vector2i) -> Node:
 	for n in get_tree().get_nodes_in_group("q_thing"):
 		if n.get_parent() == _scene and not n.is_queued_for_deletion() and n != self and not n.has_meta("q_carrier"):
-			if Vector2i(floori(n.position.x / _tile), floori(n.position.y / _tile)) == c:
+			if _cell_at(n.position) == c:
 				return n
 	return null
 
@@ -149,17 +169,25 @@ func _physics_process(_delta: float) -> void:
 	var dir := _wanted()
 	if dir == Vector2i.ZERO:
 		return
-	facing = dir
-	if _sprite != null and dir.x != 0:
-		_sprite.flip_h = dir.x < 0
 	var target := cell() + dir
+	if _map() != null and _map().shape != "square" and not _routed:
+		# a key held on a map of hexes or diamonds: the neighbour that way (tilemap.gd's toward_key)
+		target = _map().toward_key(cell(), dir, facing.x)
+		if target == cell():
+			return
+	_routed = false
+	var across := signi(int(_centre(target).x - _centre(cell()).x))
+	facing = dir if across == 0 else Vector2i(across, dir.y)
+	if _sprite != null and facing.x != 0:
+		_sprite.flip_h = facing.x < 0
 	var thing := _thing_in(target)
+	var past := _beyond(cell(), target)
 	# a pushable thing with a free cell beyond: both go on, and the step is a touch
-	if thing != null and thing.get("pushable") == true and not _wall(target + dir) and _thing_in(target + dir) == null:
+	if thing != null and thing.get("pushable") == true and not _wall(past) and _thing_in(past) == null:
 		_pushed = thing
 		_pushed_from = thing.position
-		_pushed_to = _centre(target + dir)
-		Q.event("push", {"who": String(name), "what": Q.who(thing), "to": [target.x + dir.x, target.y + dir.y]})
+		_pushed_to = _centre(past)
+		Q.event("push", {"who": String(name), "what": Q.who(thing), "to": [past.x, past.y]})
 		_touch_handlers(thing)
 		_step(target)
 		return

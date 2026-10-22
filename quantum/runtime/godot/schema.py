@@ -47,14 +47,19 @@ ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'c
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
            'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
            'play-animation', 'give', 'take', 'reset-items', 'for-each', 'time-scale', 'quit', 'start-now', 'watch',
-           'after', 'beam', 'camera-to', 'attach', 'detach', 'volume', 'fullscreen', 'rumble', 'music')
+           'after', 'beam', 'camera-to', 'attach', 'detach', 'volume', 'fullscreen', 'rumble', 'music', 'travel')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
-        'A sheet of equal tiles; tilemaps and sprites name it.',
+        'A sheet of equal tiles; tilemaps and sprites name it. With shape="hex" its tiles are hexes with their '
+        'points up, every other row of a map half a hex to the right (a strategy map); with shape="iso", '
+        'diamonds, every other row half a diamond on. The rows of a qg:tilemap are the rows seen; a walker\'s '
+        'neighbours, its way and the cell at a point follow the shape.',
         {'name': Attr('ident', required=True),
          'src': Attr('str', required=True, doc='the image, relative to the .q or a folder above it'),
-         'tile': Attr('int', required=True, doc='tile size in pixels (square)')},
+         'tile': Attr('tile', required=True, doc='tile size in pixels: 18 (square), or WxH for hexes and diamonds '
+                                                 '(28x32)'),
+         'shape': Attr('enum:square|hex|iso', 'square', doc='square tiles, hexes or diamonds')},
         parents=('application',)),
     'tile': Tag(
         'One tile of a qg:tileset that is not a full solid square, for the tilemap layers with collision: '
@@ -73,7 +78,10 @@ TAGS: Dict[str, Tag] = {
          'frames': Attr('int', 1, doc='an animated tile (water, lava, a torch): how many frames it shows in turn, '
                                       'itself and the ones after it in the sheet\'s row, which are then not tiles of '
                                       'their own. Only seen'),
-         'fps': Attr('float', 4.0, doc='frames a second, with frames=')},
+         'fps': Attr('float', 4.0, doc='frames a second, with frames='),
+         'cost': Attr('int', 1, doc='what a step onto it costs a walker finding its way (ai="pathfind", qg:seek, '
+                                    'a pointer\'s click, qg:travel, cost()): a forest 2, a marsh 3. The way found is '
+                                    'the cheapest')},
         parents=('tileset',)),
     'spritesheet': Tag(
         'A sheet of equal frames for characters and items. With slice=, it is a frame that stretches to a box '
@@ -387,6 +395,9 @@ TAGS: Dict[str, Tag] = {
          'player': Attr('int', 1),
          'step': Attr('float', 16.0, doc='pixels per tick while a direction is held'),
          'grid': Attr('int', None, doc='cell size: the cursor snaps to cell centres'),
+         'cells': Attr('bool', False, doc='it snaps to the middles of the cells of the scene\'s qg:tilemap, '
+                                          'whatever their shape (a hex map\'s); `cursor.col`, `cursor.row` are '
+                                          'the cell'),
          'sheet': Attr('ident', None), 'frame': Attr('int', 0)},
         parents=('scene',)),
     'path': Tag(
@@ -487,7 +498,7 @@ TAGS: Dict[str, Tag] = {
         'repeats; `me` is the thing it moved, and another tween in it plays after: a sequence). Holds actions and '
         'statements.',
         {},
-        parents=('dialogue', 'tween')),
+        parents=('dialogue', 'tween', 'travel')),
     'on-separate': Tag(
         'What happens when this character or prefab stops touching something it touched: a plate stepped off, '
         'a door that closes behind. Holds actions and statements; `me` is the one that touched, `other` what it '
@@ -1093,6 +1104,17 @@ TAGS: Dict[str, Tag] = {
          'ease': Attr('enum:in|out|in-out', 'out', doc='which end of the curve is slow'),
          'repeat': Attr('int', 0, doc='times it plays again (-1: for ever)'),
          'yoyo': Attr('bool', False, doc='each repeat goes back the other way')},
+        parents=('handler',)),
+    'travel': Tag(
+        'A thing travels to a place by the cheapest way over the scene\'s qg:tilemap (qg:tile cost=), round the '
+        'things and characters on it and where other travels end, a cell at a time: a unit of a tactics game. '
+        'Its qg:on-end runs as it arrives (`me` the traveller); with no way, at once, where it is. In the game\'s '
+        'ticks, so a replay and every peer see the same; a new travel of the same thing replaces it.',
+        {'target': Attr('ident', 'me', doc='me, other, a parameter, a loop variable or a q:set holding a thing'),
+         'to': Attr('expr', required=True, doc='a cursor (its cell), or a thing or character (up to it, beside it)'),
+         'budget': Attr('expr', None, doc='how much of the way\'s cost it may spend: it stops where the next step '
+                                          'would cost more (all the way when not given)'),
+         'step': Attr('int', 10, doc='ticks a cell')},
         parents=('handler',)),
     'velocity': Tag(
         'Sets the speed of a character controller="behavior", in pixels per second: a dash, a knock-back, a '

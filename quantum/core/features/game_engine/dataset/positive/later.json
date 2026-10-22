@@ -108,6 +108,28 @@
       "expected_output": {
         "quantum_code": "<q:application id=\"crypt\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Lever\" tag=\"lever\" sheet=\"tiles\" frame=\"64\" hitbox=\"14x14\" />\n  <!-- ambient=: what no light reaches is this dark; only seen, the game is the same in the dark -->\n  <qg:scene name=\"crypt\" width=\"324\" height=\"180\" background=\"#100e16\" ambient=\"#181420\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5\n5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5\n5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5\n5,0,0,0,5,0,0,0,0,0,0,0,0,5,0,0,0,5\n5,0,0,0,5,0,0,0,0,0,0,0,0,5,0,0,0,5\n5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5\n5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5\n5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5\n    </qg:tilemap>\n    <!-- torches just off the walls: the solid tiles stop their light (shadows) -->\n    <qg:light x=\"26\" y=\"36\" radius=\"80\" color=\"#ffa850\" energy=\"1.4\" flicker=\"0.25\" shadows=\"true\" />\n    <qg:light x=\"298\" y=\"36\" radius=\"80\" color=\"#ffa850\" energy=\"1.4\" flicker=\"0.25\" shadows=\"true\" />\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"100\" hitbox=\"14x14\">\n      <!-- a lantern goes with the hero -->\n      <qg:light radius=\"48\" color=\"#fff0d8\" shadows=\"true\" />\n      <qg:on-collision with=\"lever\">\n        <qg:set-tile col=\"13\" row=\"3\" tile=\"0\" />\n        <qg:set-tile col=\"13\" row=\"4\" tile=\"0\" />\n        <qg:destroy target=\"other\" />\n      </qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Lever\" x=\"160\" y=\"100\" />\n  </qg:scene>\n</q:application>\n"
       }
+    },
+    {
+      "id": "game-later-006",
+      "intent": "A unit on a hex map that rides by the cheapest way",
+      "input": {
+        "natural_language": "On a map of hexes, a knight rides where the player clicks by the cheapest way, at most four moves, a forest costing two and the river impassable; the screen says what riding to the hex under the pointer would cost",
+        "context": {
+          "target": "godot",
+          "file": "game-later-006.q"
+        }
+      },
+      "tags": [
+        "tileset",
+        "shape",
+        "cost",
+        "travel",
+        "cursor",
+        "cells"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"hexes\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <!-- hexes with their points up; what a step onto each costs -->\n  <qg:tileset name=\"land\" src=\"projects/marches/assets/land.png\" tile=\"28x32\" shape=\"hex\">\n    <qg:tile frame=\"0\" shape=\"none\" />\n    <qg:tile frame=\"1\" shape=\"none\" cost=\"2\" />\n    <!-- frame 4, the river: solid -->\n  </qg:tileset>\n  <qg:spritesheet name=\"units\" src=\"projects/marches/assets/units.png\" tile=\"24\" />\n  <qg:prefab name=\"Knight\" tag=\"knight\" sheet=\"units\" frame=\"0\" hitbox=\"14x14\" />\n  <qg:scene name=\"field\" width=\"240\" height=\"160\">\n    <q:set name=\"message\" value=\"Click a hex.\" />\n    <qg:tilemap tileset=\"land\" collision=\"true\">\n1,1,2,2,5,1,1,1\n1,2,2,1,5,1,1,1\n1,1,1,1,1,1,2,1\n1,1,2,1,5,1,1,1\n    </qg:tilemap>\n    <qg:instance prefab=\"Knight\" name=\"knight\" x=\"14\" y=\"16\" />\n    <!-- the pointer snaps to the hexes -->\n    <qg:cursor id=\"aim\" player=\"1\" cells=\"true\" />\n    <qg:on-select>\n      <q:if condition=\"{cost(knight, aim) &lt;= 4}\">\n        <qg:travel target=\"knight\" to=\"aim\" budget=\"4\" step=\"8\">\n          <qg:on-end><q:set name=\"message\" value=\"Arrived.\" /></qg:on-end>\n        </qg:travel>\n      <q:else>\n        <q:set name=\"message\" value=\"Too far.\" />\n      </q:else>\n      </q:if>\n    </qg:on-select>\n    <qg:hud>\n      <qg:text bind=\"message\" />\n      <qg:text value=\"{'Moves: ' + str(cost(knight, aim))}\" />\n    </qg:hud>\n  </qg:scene>\n</q:application>\n"
+      }
     }
   ]
 }

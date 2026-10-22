@@ -48,8 +48,8 @@ intention:
 
   semantics:
     # --- the game's resources, directly in q:application ---
-    - "qg:tileset names a sheet of square tiles that tilemaps, sprites and prefabs draw from"
-    - "qg:tile (in a qg:tileset) gives one tile a shape (x,y points or none), makes it one-way, or gives it a kind: ladder, water, ice or hurt; frames= and fps= animate it (water, lava, a torch: it and the frames after it in the row, in turn)"
+    - "qg:tileset names a sheet of square tiles that tilemaps, sprites and prefabs draw from; shape=hex makes them hexes with their points up (tile=WxH, every other row half a hex on), shape=iso diamonds: neighbours, ways and the cell at a point follow"
+    - "qg:tile (in a qg:tileset) gives one tile a shape (x,y points or none), makes it one-way, or gives it a kind: ladder, water, ice or hurt; frames= and fps= animate it (water, lava, a torch: it and the frames after it in the row, in turn); cost= is what a step onto it costs a walker finding its way (a forest 2): the way found is the cheapest"
     - "qg:spritesheet names a sheet of equal frames (24, or WxH) for characters and things; slice= (16, or left, top, right, bottom) makes its first frame a frame that stretches to a box, its edges as drawn (box= of a qg:dialogue or a qg:menu)"
     - "qg:input replaces the keys of an action (or declares a new one) for a player: keyboard, joypad and mouse names"
     - "qg:multiplayer makes the game networked for players= people in lockstep (delay=, check-every=), or with rollback=; start= is the scene play begins in; transport= is enet or websocket; min-players= lets the host start sooner with fewer (qg:start-now)"
@@ -87,7 +87,7 @@ intention:
     - "qg:tilemap is the level: CSV rows of tile numbers (0 empty, n is tile n-1, -n flipped) or a Tiled map (src=): its layers from one or more tilesets (each a qg:tileset with the same image), flipped and turned tiles, its objects placing prefabs (a state property), zones, exits and paths, and its own properties read by tiled('name'); collision=true makes its tiles solid; several are layers"
     - "qg:character is a body a player moves: controller= platformer, topdown, map, ship, fighter, grid, pointer (a grid walker its player's click walks by the shortest way) or behavior, with sheet, frame, x, y, hitbox and the controller's own settings"
     - "qg:instance places a prefab at x,y, with an optional name= and if="
-    - "qg:cursor is a player's pointer (the mouse, or the direction keys by step=), snapped with grid=; qg:on-select reads it, and with id= it is read anywhere by its id (aim.x)"
+    - "qg:cursor is a player's pointer (the mouse, or the direction keys by step=), snapped with grid=, or cells=true to the cells of the scene's tilemap (a hex map's); qg:on-select reads it, and with id= it is read anywhere by its id (aim.x)"
     - "qg:path is a route of x,y points that ai=path prefabs spawned on it follow"
     - "qg:zone is an invisible tagged rectangle that runs on-collision handlers with that tag"
     - "qg:exit is a rectangle that leads to another scene (to=), arriving at that scene's exit named at="
@@ -147,6 +147,7 @@ intention:
     - "qg:velocity sets the speed of a behavior character (a dash, a knock-back, a spring); parts go on from there"
     - "qg:deflect flips one axis of a flying thing's heading, or sets it to dx,dy"
     - "qg:tween eases x, y, rotation, scale, scale-x, scale-y (a squash), alpha or tint (a colour) to a value over seconds, with a curve, repeats and yoyo, in the game's ticks; its qg:on-end runs when it is done"
+    - "qg:travel moves a thing to a cursor's cell, or beside a thing, by the cheapest way over the scene's tilemap (round the things on it), a cell every step= ticks, as far as budget= pays for: a unit of a tactics game; its qg:on-end runs as it arrives"
     - "qg:for-each runs what it holds once for every thing of tag= in the scene, var= naming each (damage every enemy near a bomb)"
     - "qg:time-scale runs the whole game slower or faster (scale=), for seconds= or until changed; each tick stays the same tick, so replays and peers agree"
     - "qg:quit closes the game (not in a browser: can_quit() says whether it would)"
@@ -191,7 +192,7 @@ intention:
     - "q:loop repeats a body over items= or from=/to=, with var="
     - "q:function (directly in a qg:scene, or in q:application for every scene and the prefabs) names a body of actions and statements; q:call runs it; q:return leaves it"
     - "expressions are written in braces and read state, me, other, cursor, the scene's characters by id (p1.health, hero.x), where a thing is (other.x, me.y) and the cell of the tilemap it stands in (other.col, me.row), what a body touched as it last moved (me.on_floor, me.on_wall, me.on_ceiling), and built-in functions; a field a thing does not have (hero.foo) is a compile error that lists the ones it has"
-    - "functions: len, str, int, float, abs, min, max, round, floor, ceil, sqrt, random (from the scene seed), count, thing_at, tile_at (of a layer by name too), tiled (a property of the scene's Tiled map), carrying (what of a tag a thing carries), distance, nearest, sees, held, paused, talking, tr, tr_n (a count's word, one or other, in its language's form for n), language, has_save (of a slot too), volume (of a bus), fullscreen, net_status, net_players, net_player, url_param, can_quit, ticks (the scene's), sin, cos, atan2 (degrees), sort; pressing, pressed_for (ticks) and strength of an action, for player 1 or another"
+    - "functions: len, str, int, float, abs, min, max, round, floor, ceil, sqrt, random (from the scene seed), count, thing_at, tile_at (of a layer by name too), tiled (a property of the scene's Tiled map), carrying (what of a tag a thing carries), distance, nearest, sees, cost (what the cheapest way from a thing to a thing or a cursor costs), held, paused, talking, tr, tr_n (a count's word, one or other, in its language's form for n), language, has_save (of a slot too), volume (of a bus), fullscreen, net_status, net_players, net_player, url_param, can_quit, ticks (the scene's), sin, cos, atan2 (degrees), sort; pressing, pressed_for (ticks) and strength of an action, for player 1 or another"
 
   compilation:
     input: "<q:application type=\"game\"> with qg: tags and q: statements"

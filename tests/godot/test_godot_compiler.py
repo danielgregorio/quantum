@@ -2962,3 +2962,53 @@ class TestLights:
         assert '<qg:light> on a character or a prefab takes dx= and dy=' in e.message
         e = refuse(tmp_path, game('  <qg:scene name="main"><qg:light x="1" y="1" flicker="2" /></qg:scene>\n'))
         assert 'flicker= from 0 to 1' in e.message
+
+
+class TestHexesAndCosts:
+    """PLAN_GAMES_3.md, Phase 6: maps of hexes and diamonds, terrain costs, qg:travel and cost() (Marches)."""
+
+    LAND = ('  <qg:tileset name="land" src="projects/marches/assets/land.png" tile="28x32" shape="hex">\n'
+            '    <qg:tile frame="1" shape="none" cost="2" />\n    <qg:tile frame="4" />\n  </qg:tileset>\n')
+
+    def test_a_hex_map_its_costs_a_walk_and_a_cursor_on_its_cells(self, tmp_path):
+        out = build(tmp_path, HEAD + self.LAND + '''  <qg:scene name="main">
+    <q:set name="spent" value="0" type="number" />
+    <qg:tilemap tileset="land" collision="true">
+1,2,5
+    </qg:tilemap>
+    <qg:cursor id="aim" cells="true" />
+    <qg:instance prefab="Coin" name="coin" x="14" y="16" />
+    <qg:on-select>
+      <q:set name="spent" value="{cost(coin, aim)}" />
+      <qg:travel target="coin" to="aim" budget="{spent}" step="6"><qg:on-end><qg:destroy target="me" /></qg:on-end></qg:travel>
+    </qg:on-select>
+  </qg:scene>
+''' + TAIL)
+        spec = json.loads((out / 'game.json').read_text())
+        land = spec['sheets']['land']
+        assert (land['shape'], land['tile']) == ('hex', [28, 32])
+        assert land['tiles']['1'] == {'shape': None, 'one_way': False, 'cost': 2}
+        assert land['tiles']['4']['shape'] == 'cell'                       # solid: the whole hex
+        cursor = [n for n in spec['scenes']['main']['nodes'] if n['kind'] == 'cursor'][0]
+        assert cursor['cells'] is True
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'spent = Q.cost(self, get_node_or_null("coin"), get_node_or_null("aim"))' in script
+        assert 'Q.travel(get_node_or_null("coin"), get_node_or_null("aim"), spent, 6, self, "_on_travel_end_1")' in script
+
+    def test_what_a_hex_map_refuses(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:tileset name="t" src="assets/kenney/tilemap_packed.png" tile="18x20" />\n'
+                                  '  <qg:scene name="main" />\n'))
+        assert 'square tiles are square (tile="18"); WxH is for shape="hex" or "iso"' in e.message
+        e = refuse(tmp_path, game('  <qg:tileset name="t" src="assets/kenney/tilemap_packed.png" tile="18">'
+                                  '<qg:tile frame="1" cost="0" /></qg:tileset>\n  <qg:scene name="main" />\n'))
+        assert '<qg:tile cost=>: what a step onto it costs, 1 or more' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:instance prefab="Coin" name="c" x="1" y="1" />'
+                                  '<qg:on-input action="jump"><qg:travel target="c" to="c" /></qg:on-input></qg:scene>\n'))
+        assert "<qg:travel> goes over the scene's qg:tilemap, which it has not" in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:cursor cells="true" /></qg:scene>\n'))
+        assert 'the cells of the scene\'s qg:tilemap, which it has not' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:cursor cells="true" grid="18" /></qg:scene>\n'))
+        assert 'snaps to grid= or to the cells of the tilemap' in e.message
+        e = refuse(tmp_path, HEAD + self.LAND + '  <qg:scene name="main"><qg:tilemap tileset="land" src="projects/crates/rooms/dock.tmx" />'
+                   '</qg:scene>\n' + TAIL)
+        assert 'a Tiled map of hexes or diamonds is not read yet' in e.message

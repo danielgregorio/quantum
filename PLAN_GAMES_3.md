@@ -396,7 +396,7 @@ that needs it is written, under the same rules.
 - [x] positional sound (Hopper's bouncer)
 - [x] nine-slice; plurals, assets and fonts per language (the RPG)
 - [x] 2D lights and shadows (Delve)
-- [ ] isometric and hexagonal maps, terrain costs (a tactics game)
+- [x] isometric and hexagonal maps, terrain costs (Marches, a tactics game)
 - [ ] hot reload
 
 What was found (2026-10-22): characters already block each other. A
@@ -469,6 +469,25 @@ them again. The flicker follows the ticks, so a replay's frames are the
 same every time. Delve's vault is dark: its four torches burn just off the
 walls, each delver carries a lantern, the treasure glows in the vault, and
 the pillars cast their shadows. Only seen: the stored run plays as before.
+
+What was built (2026-10-22), for Marches, a tactics game written for it:
+maps of hexes and of diamonds, and terrain costs. `shape="hex"` on
+`qg:tileset` (`tile="28x32"`) draws hexes with their points up, every other
+row half a hex on; `shape="iso"`, diamonds. The rows of the .q stay the
+rows seen. A cell's neighbours, its middle and the cell at a point are
+Godot's for the shape, so a grid walker steps from hex to hex (up and down
+to the side it faces; on diamonds the keys turned an eighth), a pointer
+walks to a click and a cursor with `cells="true"` snaps to the cells. A
+step costs its tile's `cost=`: the breadth-first search became a cheapest
+first one, which finds the same ways where every cost is 1 (so the stored
+runs play as before), and a pointer on square tiles keeps its own order
+unless the map has costs. Two things Marches needed beyond the plan:
+`qg:travel`, which moves a thing (a unit, not a character) by the cheapest
+way as far as `budget=` pays, round the others and where the others'
+travels end, with a `qg:on-end`; and `cost(a, b)`, what that way costs, for
+the HUD and the rules. `qg:walk` was the first name, but it is already a
+part of `ai="behavior"`. A Tiled map of hexes is not read yet, and the
+walls of a hex map cast no shadows.
 
 Out by design (also in the map): rigid-body physics, which breaks the
 lockstep's determinism; shaders and post-processing, which are code; a

@@ -21,7 +21,7 @@ func _wanted() -> Vector2i:
 		return keys
 	if Q.tapped(_a("click")) and Q.cursors.has(player):
 		var at: Vector2 = Q.cursors[player]
-		var to := Vector2i(floori(at.x / _tile), floori(at.y / _tile))
+		var to := _cell_at(at)
 		_route = _way(cell(), to)
 		var thing := _thing_in(to)
 		if thing != null and thing.get("pushable") == true and _route.size() > 1:
@@ -38,13 +38,22 @@ func _wanted() -> Vector2i:
 	if _thing_in(next) != null:
 		var last := _route.size() == 1
 		_route.clear()   # the thing clicked: stepped into once; any other in the way stops it
+		_routed = last
 		return next - cell() if last else Vector2i.ZERO
+	_routed = true
 	return next - cell()
 
 
 func _way(from: Vector2i, to: Vector2i) -> Array:
 	if from == to or _wall(to):
 		return []
+	var map := _map()
+	if map != null and (map.shape != "square" or map.has_costs()):
+		# a map of hexes, or of costs: the cheapest way (qg:tile cost=), round the things on it
+		var way: Array = map.path(from, to, 4096, _things_cells())
+		if not way.is_empty():
+			way.pop_front()
+		return way
 	var came := {from: from}
 	var todo := [from]
 	var steps := [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]
@@ -66,3 +75,12 @@ func _way(from: Vector2i, to: Vector2i) -> Array:
 		way.push_front(c)
 		c = came[c]
 	return way
+
+
+# The cells things stand in (a walk goes round them, but to the one clicked).
+func _things_cells() -> Dictionary:
+	var out := {}
+	for n in get_tree().get_nodes_in_group("q_thing"):
+		if n.get_parent() == _scene and not n.is_queued_for_deletion() and n != self and not n.has_meta("q_carrier"):
+			out[_cell_at(n.position)] = true
+	return out

@@ -67,6 +67,7 @@ class SceneScript:
     dialogues_used: List[tuple] = field(default_factory=list)  # (name, line) from qg:say
     net_used: List[Optional[int]] = field(default_factory=list)   # lines of qg:host, qg:join, qg:leave
     tween_ends: int = 0   # the qg:on-end handlers of tweens so far: each its own method, nested ones too
+    travels_used: list = field(default_factory=list)   # the lines of its qg:travels: the scene needs a tilemap
     afters: int = 0       # the qg:afters so far: what each puts off is its own method
     headed: List[tuple] = field(default_factory=list)   # (prefab, line) of a qg:spawn heading=: an ai="fly" one
     cameras_moved: List[Optional[int]] = field(default_factory=list)   # lines of qg:camera-to: the scene needs a camera
@@ -620,6 +621,22 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         while args[-1] == 'null':
             args.pop()
         return f'Q.tween({", ".join(args)})'
+    if el.tag == 'travel':
+        ends = [c for c in el.children if isinstance(c, Element) and c.tag == 'on-end']
+        if len(ends) != len(el.children) or len(ends) > 1:
+            raise GameCompileError('<qg:travel> holds one <qg:on-end> at most, and nothing else', el.line)
+        if el.get('step') < 1:
+            raise GameCompileError('<qg:travel step=>: 1 tick a cell or more', el.line)
+        script.travels_used.append(el.line)
+        to = str(el.get('to')).strip()
+        to = scope.reference(to) if scope.has(to) else compile_expression(to, scope, el.line)
+        budget = compile_expression(el.get('budget'), scope, el.line) if el.get('budget') is not None else '-1'
+        args = [target or scope.reference('me'), to, budget, str(int(el.get('step')))]
+        if ends:   # what runs as it arrives: a handler of this script, `me` the traveller
+            script.tween_ends += 1
+            name = compile_handler(script, f'_on_travel_end_{script.tween_ends}', ends[0].children, ends[0].line)
+            args += ['self', json.dumps(name)]
+        return f'Q.travel({", ".join(args)})'
     if el.tag == 'after':
         ticks, seconds = el.get('ticks'), el.get('seconds')
         if (ticks is None) == (seconds is None):
