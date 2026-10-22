@@ -53,6 +53,8 @@ func _ready() -> void:
 			latency_override = int(a.substr(12))
 		elif a.begins_with("--q-players="):
 			players_override = int(a.substr(12))
+		elif a.begins_with("--q-seat="):
+			seat_override = int(a.substr(9))
 	if spec.has("multiplayer") and (port > 0 or (port == 0 and host != "")):
 		_start_network(host, port).from_command_line = true
 		return
@@ -101,6 +103,7 @@ var latency_override: int = 0
 var relay_override: bool = false   # --q-relay=PORT: quantum relay's seatless host
 var players_override: int = 0      # --q-players=N: the host plays with N, from min-players= up to players=
 var watch_override: bool = false   # --q-watch=HOST:PORT (or qg:watch): join with no seat, to watch
+var seat_override: int = 0         # --q-seat=N: the seat a joiner asks for (else the lowest free one)
 
 
 func _start_network(host: String, port: int) -> Node:
@@ -117,6 +120,7 @@ func _start_network(host: String, port: int) -> Node:
 	lockstep.latency_ms = latency_override
 	lockstep.relay = relay_override
 	lockstep.watching = watch_override and host != ""
+	lockstep.seat = seat_override if host != "" else 0
 	if relay_override:
 		mp["transport"] = "websocket"   # browsers reach a relay
 	add_child(lockstep)

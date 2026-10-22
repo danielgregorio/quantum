@@ -16,7 +16,7 @@
 
   <!-- Player 1: A/D, W to jump, S to crouch, J punch, K kick. Player 2 on the
        same keyboard: the arrows, . punch, / kick. Over the network each peer
-       is one player on player 1's keys. -->
+       is one player on player 1's keys. Down, forward, punch: the blast. -->
   <qg:input action="jump" keys="W, Space, JoyA" />
   <qg:input action="punch" keys="J, JoyX" />
   <qg:input action="kick" keys="K, JoyB" />
@@ -124,6 +124,7 @@
         <q:set name="wins_2" value="{wins_2 + 1}" />
         <q:set name="message" value="PLAYER 2 WINS THE ROUND" />
         <q:set name="reset_in" value="120" />
+        <qg:rumble player="1" strength="1" seconds="0.6" />
       </qg:on-ko>
     </qg:character>
     <qg:character id="p2" controller="fighter" player="2" sheet="blue" frame="0" x="440" y="252" hitbox="40x90"
@@ -141,8 +142,28 @@
         <q:set name="wins_1" value="{wins_1 + 1}" />
         <q:set name="message" value="PLAYER 1 WINS THE ROUND" />
         <q:set name="reset_in" value="120" />
+        <qg:rumble player="2" strength="1" seconds="0.6" />
       </qg:on-ko>
     </qg:character>
+
+    <!-- The special move: down, then forward (the way the fighter faces), then
+         punch, all within half a second, sends a blast at the other fighter
+         when they are near enough. It hits at once (the rollback takes no
+         flying prefab), is blocked by holding away like a move, and is felt
+         on the joypad of the one it hits. -->
+    <qg:on-input sequence="down, forward, punch" within="30" player="1">
+      <q:call function="blast" args="p1, p2, 2" />
+    </qg:on-input>
+    <qg:on-input sequence="down, forward, punch" within="30" player="2">
+      <q:call function="blast" args="p2, p1, 1" />
+    </qg:on-input>
+    <q:function name="blast" params="attacker, target, hurt">
+      <q:if condition="{abs(attacker.x - target.x) &lt; 180 and attacker.health > 0 and target.health > 0 and reset_in == 0}">
+        <qg:beam from="attacker" to="target" seconds="0.15" color="#ffe080" width="4" />
+        <qg:damage target="target" amount="12" />
+        <qg:rumble player="{hurt}" strength="0.7" seconds="0.3" />
+      </q:if>
+    </q:function>
 
     <!-- The clock: a second a second; at zero the healthier fighter takes the round. -->
     <qg:timer every="60">

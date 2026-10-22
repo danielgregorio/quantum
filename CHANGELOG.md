@@ -98,6 +98,44 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the pause menu of Robot, Drift and the RPG) and touch controls. Tested in
   Godot (`tests/godot/test_godot_shipping.py`); the feature's dataset has
   seven games and six refusals more.
+- Laboratory: multiplayer and the play protocol, Phase 5 of
+  `PLAN_GAMES_3.md`. Choosing the seat: `--q-seat=N` on joining (taken, the
+  joiner is turned away, and the game goes on), `seat=` on the play
+  protocol's `play_start` with `join=` and `quantum play --seat`; the replay
+  harness's peers ask for their seats, so they join all at once. `player=N` on
+  `play_act` and `play_until` presses player N's keys by player 1's names in a
+  game for several on one machine; `text=` types into the text box chosen
+  (`"\n"` is Enter), and a tape keeps what was typed (`["type", text]`, for the
+  replay too). Shared fields: `<qg:field shared="true">` is a draft until Enter
+  sends it with the player's input, like a key, and on that tick every machine
+  sets the bound state and runs what the field holds, with `sender` and `text`
+  (`sent` and `message` events); the menu waits for it on every machine.
+  `<qg:menu local="true">` is the menu of whoever plays at this machine, of
+  shared fields only. While a field is typed in, the keys type and play
+  nothing. Split screen: `player=` on `qg:camera` gives each player a view; on
+  one machine the screen splits (side by side, or in quarters for three or
+  four), over the network each machine shows its own player's, and the screen
+  of `qg:on-screen-exit` is every player's view. Special moves:
+  `<qg:on-input sequence="down, forward, punch" within= player=>` holds when
+  the presses come in order within so many ticks, `forward` and `back` the way
+  the player's character faces; the presses are kept with the input, so the
+  rollback replays them. `<qg:rumble player= strength= seconds=>` shakes a
+  joypad (a phone, in the hand), felt only on that player's machine. A fighter
+  takes `qg:damage` as a hit, blocked by holding away. Bricks over the network
+  starts with who is who (each player's name, sent from their own machine);
+  Arena has the blast (down, forward, punch), felt on the joypad of the one it
+  hits. Tested in Godot (`tests/godot/test_godot_shared.py`,
+  `test_godot_split.py`, the Arena's and the play protocol's tests, an agent in
+  each seat of a four-machine Bricks); the feature's dataset has seven games
+  and six refusals more.
+- Laboratory: Rally (`projects/rally/rally.q`), two cars round a circuit seen
+  from above, wider and taller than the screen, written for the split screen:
+  on one keyboard the screen splits in two, a view for each car; over the
+  network each machine follows its own. The circuit is a Tiled map, the laps
+  are counted at the line after halfway round (its zones), and a barrier lifts
+  at the green light. Its art and circuit are drawn by `scripts/art/rally.py`
+  (CC0). On the games page, and raced in CI, alone and over the network
+  (`tests/godot/test_godot_rally.py`).
 - Laboratory: Crates (`projects/crates/crates.q`), a box-pushing puzzle on a
   dockside, written for Phase 3 of `PLAN_GAMES_3.md`: three rooms drawn in
   Tiled (`projects/crates/rooms/`: two tilesets, flipped walls, animated

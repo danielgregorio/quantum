@@ -10,6 +10,7 @@ var q_spec: Dictionary = {}
 var q_game: Dictionary = {}
 var q_seed: int = 0
 var q_camera: Camera2D = null
+var q_views: Array = []   # qg:camera player=: [camera, its view's size] each (split.gd); [] for one camera
 var q_fall_y: float = 100000.0
 var rng := RandomNumberGenerator.new()
 
@@ -163,6 +164,7 @@ func quantum_state() -> Dictionary:
 # The qg:on-input handlers of the scene: {action: method name}; on="release" ones apart.
 var q_on_input: Dictionary = {}
 var q_on_release: Dictionary = {}
+var q_sequences: Array = []   # qg:on-input sequence=: [{steps, within, player, handler}]
 # The qg:on-select handlers: {"0": any player, "2": player 2...}; and the qg:paths: {name: points}.
 var q_on_select: Dictionary = {}
 var q_cursors: Array = []
@@ -171,6 +173,9 @@ var q_paths: Dictionary = {}
 
 func _physics_process(_delta: float) -> void:
 	_screen()
+	for s in q_sequences:
+		if Q.sequence(_steps(s), int(s["within"])) and has_method(s["handler"]):
+			call(s["handler"], null, null)
 	for action in q_on_input.keys():
 		if Q.tapped(action):
 			call(q_on_input[action], null, null)
@@ -203,7 +208,7 @@ var q_on_screen: Array = []   # the scene's own handlers, each of= a tag
 func _screen() -> void:
 	if q_paused:
 		return
-	var view := q_view()
+	var views := q_view_rects()
 	for n in get_children():
 		if not (n is Node2D) or not Q.alive(n):
 			continue
@@ -215,7 +220,7 @@ func _screen() -> void:
 					theirs.append(h)
 		if own.is_empty() and theirs.is_empty():
 			continue
-		var side := _beyond(n, view)
+		var side := _beyond(n, views)
 		if not n.has_meta("q_screen"):
 			n.set_meta("q_screen", side)   # where it was placed: nothing happened yet
 			continue
@@ -241,14 +246,43 @@ func _screen() -> void:
 				call(h["handler"], null, n)
 
 
-# The edge a node is beyond ("bottom", "top", "right", "left"), or "" on the screen.
-static func _beyond(n: Node2D, view: Rect2) -> String:
+# A sequence's steps as the player's actions: "forward" and "back" are right
+# and left as that player's character faces now (left and right when it faces left).
+func _steps(s: Dictionary) -> Array:
+	var p := int(s["player"])
+	var faces := 1
+	for n in get_children():
+		if n.get("player") == p and "facing" in n:
+			var f = n.get("facing")
+			faces = (-1 if f < 0 else 1) if f is int or f is float else (-1 if (f as Vector2).x < 0 else 1)
+			break
+	var out := []
+	for step in s["steps"]:
+		var a := str(step)
+		if a == "forward":
+			a = "right" if faces > 0 else "left"
+		elif a == "back":
+			a = "left" if faces > 0 else "right"
+		out.append(a if p == 1 else "p%d_%s" % [p, a])
+	return out
+
+
+# The edge a node is beyond ("bottom", "top", "right", "left"), or "" on the
+# screen: in a view. Off every view, the edge is the nearest view's.
+static func _beyond(n: Node2D, views: Array) -> String:
 	var size = n.get("hitbox_size")
 	if not (size is Vector2):
 		size = Vector2(8, 8)
 	var r := Rect2(n.position - size / 2.0, size)
-	if r.intersects(view):
-		return ""
+	var view: Rect2 = views[0]
+	var best := INF
+	for v in views:
+		if r.intersects(v):
+			return ""
+		var d: float = ((v as Rect2).get_center() - n.position).length_squared()
+		if d < best:
+			best = d
+			view = v
 	if r.position.y >= view.end.y:
 		return "bottom"
 	if r.end.y <= view.position.y:
@@ -263,10 +297,28 @@ func q_view() -> Rect2:
 	var size := Vector2(float(q_spec.get("width", 256)), float(q_spec.get("height", 224)))
 	if q_camera == null or not is_instance_valid(q_camera):
 		return Rect2(Vector2.ZERO, size)
-	var half := size / q_camera.zoom / 2.0
-	var c := q_camera.position
-	c.x = clampf(c.x, q_camera.limit_left + half.x, maxf(q_camera.limit_left + half.x, q_camera.limit_right - half.x))
-	c.y = clampf(c.y, q_camera.limit_top + half.y, maxf(q_camera.limit_top + half.y, q_camera.limit_bottom - half.y))
+	return _seen(q_camera, size)
+
+
+# What each view shows (qg:camera player=: one a player), or the screen.
+func q_view_rects() -> Array:
+	if q_views.is_empty():
+		return [q_view()]
+	return q_views.map(func(v): return _seen(v[0], v[1]))
+
+
+# The cameras of the scene: one, or one a player.
+func q_cameras() -> Array:
+	if not q_views.is_empty():
+		return q_views.map(func(v): return v[0])
+	return [q_camera] if q_camera != null and is_instance_valid(q_camera) else []
+
+
+static func _seen(cam: Camera2D, size: Vector2) -> Rect2:
+	var half := size / cam.zoom / 2.0
+	var c := cam.position
+	c.x = clampf(c.x, cam.limit_left + half.x, maxf(cam.limit_left + half.x, cam.limit_right - half.x))
+	c.y = clampf(c.y, cam.limit_top + half.y, maxf(cam.limit_top + half.y, cam.limit_bottom - half.y))
 	return Rect2(c - half, half * 2.0)
 
 

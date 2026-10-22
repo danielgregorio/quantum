@@ -303,12 +303,34 @@ static func beam(ctx, a, b, seconds: float, color: String, width: float) -> void
 	event("beam", {"from": who(a), "to": who(b)})
 
 
+# qg:rumble: the player's joypad shakes, and a phone in the hand. Felt only:
+# nothing in the game depends on it. Over the network only the machine of that
+# player's seat feels it, on its own pad; on one machine, player N's is the
+# Nth pad connected.
+static func rumble(player: int, strength: float, seconds: float) -> void:
+	var q = (Engine.get_main_loop() as SceneTree).root.get_node_or_null("Q")
+	event("rumble", {"player": player, "strength": strength, "seconds": seconds})
+	if q == null or q.resimulating:
+		return
+	var pad := player - 1
+	if q.external_input:
+		if net_player() != player:
+			return
+		pad = 0
+	var pads := Input.get_connected_joypads()
+	var k := clampf(strength, 0.0, 1.0)
+	if pad >= 0 and pad < pads.size():
+		Input.start_joy_vibration(pads[pad], k, k, seconds)
+	if OS.has_feature("mobile") and pad == 0:
+		Input.vibrate_handheld(int(seconds * 1000.0), k)
+
+
 # qg:camera-to: the scene's camera goes to a thing or a point, stays, and comes
 # back to what it follows (camera.gd); the scene waits meanwhile, when asked.
 static func camera_to(ctx, to, zoom: float, seconds: float, hold: float, pause_: bool) -> void:
 	var scene := _current_scene(ctx)
-	var cam = scene.get_node_or_null("Camera") if scene != null else null
-	if cam == null or not cam.has_method("show_point"):
+	var cams: Array = scene.q_cameras() if scene != null and scene.has_method("q_cameras") else []
+	if cams.is_empty() or not cams[0].has_method("show_point"):
 		return
 	var at: Vector2
 	if to is Vector2:
@@ -318,7 +340,8 @@ static func camera_to(ctx, to, zoom: float, seconds: float, hold: float, pause_:
 		if to == null or not (to is Node2D):
 			return
 		at = (to as Node2D).position
-	cam.show_point(scene, at, zoom, int(round(seconds * TICK_RATE)), int(round(hold * TICK_RATE)), pause_)
+	for cam in cams:   # every player's view shows it (the first pauses the scene, and resumes it)
+		cam.show_point(scene, at, zoom, int(round(seconds * TICK_RATE)), int(round(hold * TICK_RATE)), pause_)
 	event("camera", {"x": snappedf(at.x, 0.1), "y": snappedf(at.y, 0.1)})
 
 
@@ -1002,6 +1025,10 @@ func _physics_process(_delta: float) -> void:
 	if external_input:
 		return
 	set_input(sample_local())
+	var said := _said_here
+	_said_here = []
+	for s in said:
+		deliver_said(int(s[0]), {s[1]: s[2]}, true)
 
 
 # The game's actions pressed and released again between two ticks: a quick
@@ -1011,7 +1038,7 @@ var _taps: Dictionary = {}
 
 
 func _input(event: InputEvent) -> void:
-	if not event.is_pressed() or event.is_echo():
+	if not event.is_pressed() or event.is_echo() or typing():
 		return
 	for a in InputMap.get_actions():
 		var name_ := String(a)
@@ -1021,8 +1048,12 @@ func _input(event: InputEvent) -> void:
 
 # This machine's keys, for the tick: what is held, with its strength, and what
 # was tapped since the last tick. The lockstep sends it; alone, it is the input.
+# While a text box is being typed in (qg:field), the keys type: they play nothing.
 func sample_local() -> Dictionary:
 	var next := {}
+	if typing():
+		_taps.clear()
+		return next
 	for a in InputMap.get_actions():
 		var name_ := String(a)
 		if name_.begins_with("ui_"):
@@ -1037,8 +1068,111 @@ func sample_local() -> Dictionary:
 	return next
 
 
+# A text box (qg:field) has the keyboard.
+func typing() -> bool:
+	var focused := get_viewport().gui_get_focus_owner() if is_inside_tree() else null
+	return focused is LineEdit
+
+
+# Typing, as the keyboard would, into the text box being typed in: "\n" is
+# Enter. The play protocol and the replay type with it ("type" in a tape).
+func type_text(text: String) -> void:
+	for ch in text:
+		var k := InputEventKey.new()
+		if ch == "\n":
+			k.keycode = KEY_ENTER
+			k.physical_keycode = KEY_ENTER
+		else:
+			k.unicode = ch.unicode_at(0)
+			k.keycode = OS.find_keycode_from_string(ch.to_upper())   # a letter's key, as a keyboard sends
+			k.physical_keycode = k.keycode
+		k.pressed = true
+		Input.parse_input_event(k)
+		var up: InputEventKey = k.duplicate()
+		up.pressed = false
+		Input.parse_input_event(up)
+
+
+# --- qg:field shared="true": what a player sends reaches every machine ---
+# The text goes with this machine's input for a tick, as its keys do: in a
+# networked game, in the lockstep's frame (rollback's too), so every machine
+# hands it to the field on the same tick; alone, on the next tick.
+var said_out: Dictionary = {}   # field key -> text: sent here, for the next frame this machine sends
+var _said_here: Array = []      # alone: [player, key, text], for the next tick
+
+
+func share(key: String, text: String, player: int) -> void:
+	if external_input:
+		said_out[key] = text
+	else:
+		_said_here.append([player, key, text])
+
+
+func take_said() -> Dictionary:
+	var out := said_out
+	said_out = {}
+	return out
+
+
+# The texts a player sent for this tick, to the fields they were sent from
+# (if the scene still has them): the bound state, then what the field holds.
+# `mine`: sent from this machine.
+func deliver_said(p: int, said: Dictionary, mine: bool) -> void:
+	var keys := said.keys()
+	keys.sort()
+	for key in keys:
+		for m in get_tree().get_nodes_in_group("q_menu"):
+			if m.receive(str(key), p, str(said[key]), mine):
+				break
+
+
+# --- qg:on-input sequence=: presses in order, in time (a special move) ---
+# Every action pressed (as it goes down) is kept a while, with how many ticks
+# ago it went down. A sequence holds on the tick its last step is pressed, when
+# its other steps were pressed before it, in order, within so many ticks
+# (other presses between them do not matter); the presses it used are used
+# up, so the same ones do not make it again. A networked game starts with none
+# (clear_presses): what each machine pressed while it waited is its own.
+const PRESSES_KEPT := 120
+var _presses: Array = []    # [ticks ago, action], oldest first
+
+
+func clear_presses() -> void:
+	_presses = []
+
+
+func sequence(steps: Array, within: int) -> bool:
+	if steps.is_empty() or not tapped(steps[-1]):
+		return false
+	var i := _presses.size() - 1
+	while i >= 0 and not (int(_presses[i][0]) == 0 and _presses[i][1] == steps[-1]):
+		i -= 1
+	if i < 0:
+		return false
+	var used := [i]
+	var k := steps.size() - 2
+	var j := i - 1
+	while k >= 0 and j >= 0 and int(_presses[j][0]) <= within:
+		if _presses[j][1] == steps[k]:
+			used.append(j)
+			k -= 1
+		j -= 1
+	if k >= 0:
+		return false
+	for u in used:   # from the last: the earlier places stay where they are
+		_presses.remove_at(u)
+	return true
+
+
 # The input of the next tick: {action: strength}, only what is pressed.
 func set_input(next: Dictionary) -> void:
+	for e in _presses:
+		e[0] = int(e[0]) + 1
+	while not _presses.is_empty() and int(_presses[0][0]) > PRESSES_KEPT:
+		_presses.pop_front()
+	for a in next.keys():
+		if not _now.has(a):
+			_presses.append([0, a])
 	_prev = _now
 	_now = next
 	_for_prev = _for
@@ -1222,7 +1356,7 @@ static func net_player() -> int:
 
 # For the rollback: the input state, and back to it.
 func input_state() -> Array:
-	return [_now.duplicate(), _prev.duplicate(), _for.duplicate(), _for_prev.duplicate()]
+	return [_now.duplicate(), _prev.duplicate(), _for.duplicate(), _for_prev.duplicate(), _presses.duplicate(true)]
 
 
 func restore_input(state: Array) -> void:
@@ -1230,6 +1364,7 @@ func restore_input(state: Array) -> void:
 	_prev = state[1].duplicate()
 	_for = state[2].duplicate()
 	_for_prev = state[3].duplicate()
+	_presses = state[4].duplicate(true)
 
 
 func _persist_path() -> String:

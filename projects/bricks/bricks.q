@@ -11,6 +11,8 @@
   <q:set name="score" value="0" type="number" />
   <q:set name="lives" value="3" type="number" />
   <q:set name="level" value="1" type="number" />
+  <!-- what each player is called, over the network: the names they send -->
+  <q:set name="names" type="array" value='["", "", "", ""]' />
   <!-- the levels, nine bricks to a row: R O Y G B the colours (one hit), S steel
        (two), X a bomb, . none -->
   <q:set name="levels" type="array" value='[
@@ -34,8 +36,15 @@
   <qg:input action="jump" keys="Space, Up, W, JoyA" />
 
   <!-- Two to four players, each on their own machine. The game starts as the
-       fourth joins, or when the host chooses to start with two or three. -->
-  <qg:multiplayer players="4" min-players="2" start="level" />
+       fourth joins, or when the host chooses to start with two or three:
+       first who is who, then the first level. -->
+  <qg:multiplayer players="4" min-players="2" start="names" />
+
+  <!-- A player's name, or "Player 2" until they give one. -->
+  <q:function name="who" params="n">
+    <q:if condition="{names[n - 1] == ''}"><q:return value="{tr('Player') + ' ' + str(n)}" /></q:if>
+    <q:return value="{names[n - 1]}" />
+  </q:function>
 
   <!-- The ball flies at 150 px/s, a little faster every second. It bounces
        off the sides and the top, and off a brick by the side it hit, which
@@ -153,6 +162,10 @@
     <qg:phrase text="Serve" as="Sacar" />
     <qg:phrase text="Left" as="Esquerda" />
     <qg:phrase text="Right" as="Direita" />
+    <qg:phrase text="WHO IS WHO" as="QUEM É QUEM" />
+    <qg:phrase text="Player" as="Jogador" />
+    <qg:phrase text="Your name" as="Seu nome" />
+    <qg:phrase text="PLAYER 1: SPACE TO START" as="JOGADOR 1: ESPAÇO PARA COMEÇAR" />
 </qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="BRICKS" as="LADRILLOS" />
@@ -178,6 +191,10 @@
     <qg:phrase text="Serve" as="Sacar" />
     <qg:phrase text="Left" as="Izquierda" />
     <qg:phrase text="Right" as="Derecha" />
+    <qg:phrase text="WHO IS WHO" as="QUIÉN ES QUIÉN" />
+    <qg:phrase text="Player" as="Jugador" />
+    <qg:phrase text="Your name" as="Tu nombre" />
+    <qg:phrase text="PLAYER 1: SPACE TO START" as="JUGADOR 1: ESPACIO PARA EMPEZAR" />
 </qg:language>
 
   <qg:scene name="title" width="320" height="240" background="#1c1a2c">
@@ -210,6 +227,34 @@
     <qg:on-input action="cancel">
       <qg:leave />
       <qg:goto-scene name="title" />
+    </qg:on-input>
+  </qg:scene>
+
+  <!-- Who is who: each player types a name at their own machine (Enter opens
+       the box, Enter sends it). The field is shared: what is sent reaches every
+       machine on the same tick, as the keys do, and each shows it beside that
+       player's paddle. Player 1 starts the first level with the serve. -->
+  <qg:scene name="names" width="320" height="240" background="#1c1a2c">
+    <q:set name="typed" value="" />
+    <qg:hud position="top-center" size="14"><qg:text value="{tr('WHO IS WHO')}" /></qg:hud>
+    <qg:hud position="center" size="12">
+      <qg:icon sheet="paddles" frame="0" />
+      <qg:text value="{who(1)}" color="#40dce6" />
+      <qg:icon sheet="paddles" frame="1" />
+      <qg:text value="{who(2)}" color="#e650c8" />
+      <qg:icon sheet="paddles" frame="2" />
+      <qg:text value="{who(3) if net_players() >= 3 else '-'}" color="#96e646" />
+      <qg:icon sheet="paddles" frame="3" />
+      <qg:text value="{who(4) if net_players() >= 4 else '-'}" color="#f0b030" />
+      <qg:text value="{tr('PLAYER 1: SPACE TO START')}" />
+    </qg:hud>
+    <qg:menu local="true" position="bottom-center" size="12">
+      <qg:field bind="typed" label="Your name" shared="true" max-length="10">
+        <q:set name="names" index="{sender - 1}" value="{text}" />
+      </qg:field>
+    </qg:menu>
+    <qg:on-input action="jump" on="release">
+      <qg:goto-scene name="level" fade="0.3" />
     </qg:on-input>
   </qg:scene>
 

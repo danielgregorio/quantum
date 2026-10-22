@@ -12,7 +12,8 @@
 > gaps 1, 2, 4, 7, 27 and 28 below, and the maths of 3; Phase 2, with Siege:
 > twelve rows more, and gaps 3, 5, 8, 14, 16, 23, 24, 25, 30 and 31; Phase 3,
 > with Crates: nine rows more, and gaps 6, 13, 15, 18, 21, 22 and 26; Phase 4,
-> into every game: ten rows more, and gaps 9, 10, 11, 19, 29, 33 and 42).
+> into every game: ten rows more, and gaps 9, 10, 11, 19, 29, 33 and 42;
+> Phase 5, with Rally: four rows more, and gaps 32, 35 and 39).
 
 Each row is one feature a 2D game is made of, as Godot 4.4 and Unity 6 (URP
 2D with its packages: 2D Tilemap, Physics 2D, Input System, Cinemachine 3,
@@ -213,7 +214,7 @@ declarative shape for it.
 | Shake | script on `offset` | `CinemachineImpulseSource` + `CinemachineImpulseListener` | `qg:shake frames= strength=` | covered |
 | Changing what it follows, moving it in a cutscene | script, `AnimationPlayer` | priorities and blends (`CinemachineBrain`), a Timeline Cinemachine track | `qg:camera-to target= x= y= zoom= seconds= hold= pause=`: there, a while, and back to what it follows (Crates' gates, Delve's wall) | covered |
 | A camera per room | script | a confiner per room, script | each room a `qg:scene` with `qg:exit`s (Keep); no camera in a room the size of the screen | partial: no snapping between rooms of one scene |
-| Split screen | a `SubViewport` per player | cameras with viewport rects | — | gap |
+| Split screen | a `SubViewport` per player | cameras with viewport rects | `player=` on `qg:camera`: a view a player, side by side or in quarters on one machine, each machine its own over the network (Rally) | covered |
 | A thing entering or leaving the screen | `VisibleOnScreenNotifier2D` | `OnBecameVisible`, `OnBecameInvisible` | `qg:on-screen-exit` and `qg:on-screen-enter` (`side=`; in a scene with `of=` a tag), worked out in the game's ticks from the camera's view | covered |
 
 ## 12. Input
@@ -223,7 +224,7 @@ declarative shape for it.
 | Named actions | `InputMap` | Input System actions (`InputActionAsset`, `PlayerInput`) | `qg:input action= keys= player=`; defaults `left`, `right`, `up`, `down`, `jump`, `select`, `cancel`, `click` | covered |
 | Keyboard and gamepad | `InputEventKey`, `InputEventJoypadButton`, `InputEventJoypadMotion` | `Keyboard`, `Gamepad` | Godot key names; `JoyA`...`JoySelect`, the pad, `JoyLeftStickUp` and the others; player n reads joypad n-1 | covered |
 | Analog strength | `get_action_strength()`, `get_vector()` | `ReadValue<Vector2>()` | the ship and top-down controllers read the stick's strength; `strength('right')` in an expression (0 or 1 under the lockstep, where pressed or not travels) | covered |
-| Vibration | `Input.start_joy_vibration()` | `Gamepad.SetMotorSpeeds()` | — | gap |
+| Vibration | `Input.start_joy_vibration()` | `Gamepad.SetMotorSpeeds()` | `qg:rumble player= strength= seconds=`, a phone in the hand too (Arena's blast and knock-outs) | covered |
 | Mouse buttons and pointer | `InputEventMouseButton`, `get_global_mouse_position()` | `Mouse.current` | `MouseLeft`, `MouseRight`, `MouseMiddle`; `qg:cursor` (`step=`, `grid=`, `sheet=`), `cursor.x`, `cursor.y`, `cursor.col`, `cursor.row` | covered |
 | Clicking a thing | `input_event` on a `CollisionObject2D` | `OnMouseDown`, `IPointerClickHandler` | `qg:on-select` (`other` is the thing under the cursor) | covered |
 | Right-click on a thing, wheel, hover | `MOUSE_BUTTON_WHEEL_UP`, `mouse_entered` | `Mouse.scroll`, `IPointerEnterHandler` | — (`qg:on-select` answers select only) | gap |
@@ -232,7 +233,7 @@ declarative shape for it.
 | On press | `is_action_just_pressed()` | `performed` | `qg:on-input action=`; a press between two ticks is kept for the next one | covered |
 | On release | `is_action_just_released()` | `canceled`, Press interaction (Release Only) | `qg:on-input on="release"` | covered |
 | Held, and for how long (a run button, a charge shot) | `is_action_pressed()` | Hold interaction, `IsPressed()` | `pressing('run')`, `pressed_for('fire')` (ticks; on the tick it is let go, how long it was), for player 1 or another | covered |
-| Sequences (double tap, a fighter's motion inputs) | script | MultiTap interaction, script | — | gap |
+| Sequences (double tap, a fighter's motion inputs) | script | MultiTap interaction, script | `qg:on-input sequence="down, forward, punch" within= player=` (forward the way the character faces; Arena's blast) | covered |
 | Rebinding in the game | `InputMap.action_erase_events()`, `action_add_event()` | `PerformInteractiveRebinding()` | `qg:rebind action=` in a menu: the next key, mouse or joypad button pressed, kept between runs (every game's options) | covered |
 
 ## 13. Audio
@@ -364,7 +365,7 @@ declarative shape for it.
 | Authority and ownership | `set_multiplayer_authority()` | ownership, Distributed Authority | — | by design: every peer runs the whole game; nobody owns anything |
 | RPCs, synced state, interpolation | `@rpc`, `MultiplayerSynchronizer` | `[Rpc]`, `NetworkVariable`, `NetworkTransform` | — | by design: the state is computed on every peer, never sent |
 | Matchmaking and room lists | — | Lobby, Matchmaker (Unity Gaming Services) | — (a room is a link to send) | partial: no list of rooms |
-| Names and chat between players | RPCs | RPCs, Vivox | — (a `qg:field` is local; only actions travel) | gap |
+| Names and chat between players | RPCs | RPCs, Vivox | `shared="true"` on `qg:field`: sent with the inputs on Enter, set on every machine on one tick; `qg:menu local="true"` (Bricks' who is who) | covered |
 | Testing several peers, latency | — | Multiplayer Play Mode, Network Simulator | `replay_peers()` (N headless Godots under tapes, `latency_ms=`, `net_report=`) | covered |
 
 ## 22. Testing and determinism
@@ -420,8 +421,8 @@ declarative shape for it.
 | Character controllers | 14 | 0 | 0 | 0 | 14 |
 | Game rules: health, shots, pickups | 10 | 0 | 0 | 0 | 10 |
 | AI and navigation | 9 | 0 | 1 | 1 | 11 |
-| Camera | 8 | 1 | 1 | 0 | 10 |
-| Input | 10 | 1 | 3 | 0 | 14 |
+| Camera | 9 | 1 | 0 | 0 | 10 |
+| Input | 12 | 1 | 1 | 0 | 14 |
 | Audio | 5 | 2 | 2 | 1 | 10 |
 | Particles and visual effects | 5 | 0 | 0 | 1 | 6 |
 | Lighting, shaders and post-processing | 0 | 1 | 2 | 3 | 6 |
@@ -430,18 +431,17 @@ declarative shape for it.
 | Scene flow | 8 | 1 | 0 | 1 | 10 |
 | Persistence | 5 | 1 | 0 | 1 | 7 |
 | Localization | 4 | 1 | 2 | 0 | 7 |
-| Multiplayer and networking | 12 | 2 | 1 | 2 | 17 |
+| Multiplayer and networking | 13 | 2 | 0 | 2 | 17 |
 | Testing and determinism | 9 | 1 | 0 | 0 | 10 |
 | Export and platforms | 5 | 0 | 0 | 1 | 6 |
 | Tooling | 4 | 1 | 1 | 2 | 8 |
-| **Total** | **185** | **27** | **16** | **23** | **251** |
+| **Total** | **189** | **27** | **12** | **23** | **251** |
 
-Of 251 rows, 185 are covered and 27 partial; 16 are gaps, and 23 are left
+Of 251 rows, 189 are covered and 27 partial; 12 are gaps, and 23 are left
 out by design: three in four covered (146, 42 and 40 when the map was made;
 Phase 1 of PLAN_GAMES_3.md covered nine rows, Phase 2 twelve more, Phase 3
-nine more, Phase 4 ten more). The gaps gather in input (three: sequences,
-the second mouse button, vibration), then audio, lighting and localization (two
-each). The rows
+nine more, Phase 4 ten more, Phase 5 four more). The gaps left gather in
+audio, lighting and localization (two each), the rest of Phase 6's list. The rows
 left out by design are mostly the rigid-body solver, shaders and post-
 processing, what belongs to an editor, and the networking machinery that
 lockstep makes unnecessary.
@@ -484,14 +484,14 @@ above is in this list, and so are many **partial** ones.
 29. **Rebinding keys.** *Done: PLAN_GAMES_3.md, Phase 4.* `<qg:rebind action=>` in a menu: the next key pressed becomes the action's, kept between runs. Desktop releases, accessibility.
 30. **Collision sides left and right.** *Done: PLAN_GAMES_3.md, Phase 2.* `side="left"` and `side="right"` on `qg:on-collision`, as `qg:on-screen-exit` has. Switches hit from the side, bumpers, shields.
 31. **Flying things that bounce off tiles.** *Done: PLAN_GAMES_3.md, Phase 2.* `walls="bounce"` on `ai="fly"`, with the cell it hit in reach of `tile_at()`. Ricochet shots, a ball in a level of tiles.
-32. **Split screen.** `player=` on `qg:camera`, one view per player. Local versus racing, co-op that splits up.
+32. **Split screen.** *Done: PLAN_GAMES_3.md, Phase 5, with Rally.* `player=` on `qg:camera`, one view per player. Local versus racing, co-op that splits up.
 33. **Grids and lists in menus.** *Done: PLAN_GAMES_3.md, Phase 4.* `columns=` on `qg:menu`, scrolling past the screen. Level select, a shop, an inventory screen.
 34. **Music and sounds inside a scene.** `qg:music` as an action (a crossfade inside a scene, layers that come in), and `sounds="a, b, c"` on `qg:play` (one drawn each time). A boss fight's music, footsteps.
-35. **Input sequences and vibration.** `qg:on-input sequence="down, right, punch" within=` and `<qg:rumble player= strength= seconds=>`. Fighting games (motion inputs), any game on a gamepad.
+35. **Input sequences and vibration.** *Done: PLAN_GAMES_3.md, Phase 5 (Arena's blast).* `qg:on-input sequence="down, right, punch" within=` and `<qg:rumble player= strength= seconds=>`. Fighting games (motion inputs), any game on a gamepad.
 36. **Sound in place.** `at=` on `qg:play`: softer, and to one side, the farther the thing is from the middle of the screen. Large levels.
 37. **Costs per terrain.** `cost=` on `qg:tile` for `ai="pathfind"` and `qg:seek`. Strategy and tactics maps (mud, roads).
 38. **Plurals, localized assets, fonts per language.** Plural forms on `qg:phrase`, `src=` per language on a sheet or a sound, `font=` on `qg:language`. Translated games with counts, voices or a script Latin fonts lack.
-39. **Names and messages between players.** `shared="true"` on a `qg:field`: its text travels with the inputs when it is entered, not as it is typed. Networked games that show who is who, or let the players talk.
+39. **Names and messages between players.** *Done: PLAN_GAMES_3.md, Phase 5 (Bricks' who is who).* `shared="true"` on a `qg:field`: its text travels with the inputs when it is entered, not as it is typed. Networked games that show who is who, or let the players talk.
 40. **Nine-slice pictures.** `slice=` on `qg:spritesheet`, for boxes that stretch. Dialogue boxes, framed menus.
 41. **Isometric and hexagonal maps.** `shape="hex"` or `"iso"` on `qg:tileset`, with neighbours and pathfinding to match. Strategy and tactics games.
 42. **macOS builds.** *Done: PLAN_GAMES_3.md, Phase 4.* A `macOS` preset in `scripts/export-games.py`. Desktop releases.

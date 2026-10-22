@@ -124,12 +124,14 @@ class PlaySession:
     def __init__(self, project_dir: Union[str, Path], binary: Optional[Path] = None,
                  persist_dir: Optional[Path] = None, timeout: float = 120, frames: bool = False,
                  live: bool = False, host: Optional[int] = None, join: Optional[str] = None,
-                 transport: Optional[str] = None, lang: Optional[str] = None):
+                 transport: Optional[str] = None, lang: Optional[str] = None, seat: Optional[int] = None):
         """``lang``: the language of the game's texts (a ``qg:language``: ``"pt"``); the game's
         own texts by default, whatever this machine's language. ``live``: the game runs at its own speed, 60 ticks a second, and does not wait
         for requests (against a person, or a peer that does not wait). ``host`` (a port) or
         ``join`` (``"host:port"``) take a seat in a ``qg:multiplayer`` game, as the
-        game's ``--q-host``/``--q-join`` do; a networked session is always live."""
+        game's ``--q-host``/``--q-join`` do; a networked session is always live. ``seat``: the
+        seat a joining session asks for (``--q-seat``), turned away if someone sits there;
+        else the lowest free one. The host sits in seat 1."""
         self.project_dir = Path(project_dir)
         self.timeout = timeout
         self.live = live or host is not None or join is not None
@@ -138,6 +140,10 @@ class PlaySession:
             self._net.append(f'--q-host={int(host)}')
         if join is not None:
             self._net.append(f'--q-join={join}')
+            if seat is not None:
+                self._net.append(f'--q-seat={int(seat)}')
+        elif seat is not None and not (host is not None and int(seat) == 1):
+            raise PlayError('seat= is the seat a joining session asks for (join=); the host sits in seat 1')
         if transport:
             self._net.append(f'--q-transport={transport}')
         self._net.append(f'--q-lang={lang or "en"}')   # an observation reads the same on every machine
@@ -227,23 +233,33 @@ class PlaySession:
 
     def act(self, hold: Iterable[str] = (), tap: Iterable[str] = (), press: Iterable[str] = (),
             release: Iterable[str] = (), cursor: Optional[tuple] = None, ticks: int = 1,
-            reflex: Optional[Iterable[dict]] = None) -> dict:
+            reflex: Optional[Iterable[dict]] = None, player: Optional[int] = None,
+            text: Optional[str] = None) -> dict:
         """Apply the actions on the first tick and run ``ticks`` ticks: ``hold`` is
         released after them, ``tap`` after the first, ``press`` stays until a ``release``.
-        ``reflex`` replaces the reflexes (``[]`` clears them); ``ticks=0`` only sets them."""
-        return self.request(self._actions('act', hold, tap, press, release, cursor, reflex, ticks=ticks))
+        ``reflex`` replaces the reflexes (``[]`` clears them); ``ticks=0`` only sets them.
+        ``player``: the actions are named as player 1's (``left``) and pressed as player
+        N's (``p3_left``) in a game on one machine; in a networked game, N is this session's seat.
+        ``text`` is typed into the text box being typed in (a ``qg:field`` chosen); ``\\n`` is Enter."""
+        return self.request(self._actions('act', hold, tap, press, release, cursor, reflex, player, text,
+                                          ticks=ticks))
 
     def until(self, cond: Union[str, dict, list], hold: Iterable[str] = (), tap: Iterable[str] = (),
               press: Iterable[str] = (), release: Iterable[str] = (), cursor: Optional[tuple] = None,
-              max_ticks: int = 600, reflex: Optional[Iterable[dict]] = None) -> dict:
+              max_ticks: int = 600, reflex: Optional[Iterable[dict]] = None, player: Optional[int] = None,
+              text: Optional[str] = None) -> dict:
         """As ``act``, but runs until ``cond`` holds (checked after each tick) or
         ``max_ticks`` have run; the answer's ``stopped`` says which."""
-        return self.request(self._actions('until', hold, tap, press, release, cursor, reflex,
+        return self.request(self._actions('until', hold, tap, press, release, cursor, reflex, player, text,
                                           max_ticks=max_ticks, condition=condition(cond)))
 
     @staticmethod
-    def _actions(op, hold, tap, press, release, cursor, rules, **more) -> dict:
+    def _actions(op, hold, tap, press, release, cursor, rules, player=None, text=None, **more) -> dict:
         req = {'op': op, 'hold': list(hold), 'tap': list(tap), 'press': list(press), 'release': list(release)}
+        if player is not None:
+            req['player'] = int(player)
+        if text:
+            req['text'] = str(text)
         if cursor is not None:
             req['cursor'] = [float(cursor[0]), float(cursor[1])]
         if rules is not None:

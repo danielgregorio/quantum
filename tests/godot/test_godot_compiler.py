@@ -2701,3 +2701,69 @@ class TestShipping:
                     '  <qg:scene name="options" />\n' + TAIL)
         menu = next(n for n in json.loads((out / 'game.json').read_text())['scenes']['title']['nodes'] if n['kind'] == 'menu')
         assert 'Options' in [i.get('label') for i in menu['items']]
+
+
+class TestSharedFields:
+    """PLAN_GAMES_3.md, Phase 5: a field whose text reaches every machine, and the menu of this machine's seat."""
+
+    def scene(self, body):
+        return HEAD + f'  <qg:scene name="main">\n    <q:set name="said" value="" />\n{body}  </qg:scene>\n' + TAIL
+
+    def test_a_shared_field_and_what_it_runs(self, tmp_path):
+        out = build(tmp_path, self.scene('''    <q:set name="who" value="0" type="number" />
+    <qg:menu local="true">
+      <qg:field bind="said" label="Say" shared="true"><q:set name="who" value="{sender}" /></qg:field>
+    </qg:menu>
+'''))
+        menu = next(n for n in json.loads((out / 'game.json').read_text())['scenes']['main']['nodes']
+                    if n['kind'] == 'menu')
+        assert menu['local'] is True
+        assert menu['items'] == [{'kind': 'field', 'bind': 'said', 'label': 'Say', 'max_length': 64, 'game': False,
+                                  'shared': True, 'key': 'main:1:0', 'handler': '_on_menu_1_field_0'}]
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'func _on_menu_1_field_0(sender, text) -> void:' in script and 'who = sender' in script
+
+    def test_what_shared_fields_refuse(self, tmp_path):
+        e = refuse(tmp_path, self.scene('    <qg:menu><qg:field bind="said"><q:set name="said" value="x" /></qg:field>'
+                                        '</qg:menu>\n'))
+        assert 'only a shared field (shared="true") runs what it holds' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:menu local="true"><qg:field bind="said" />'
+                                        '<qg:button label="Go"><qg:quit /></qg:button></qg:menu>\n'))
+        assert '<qg:menu local="true"> holds only shared fields' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:menu local="true" player="2"><qg:field bind="said" shared="true" />'
+                                        '</qg:menu>\n'))
+        assert 'the seat of the machine it is on; no player=' in e.message
+
+
+class TestSequencesAndRumble:
+    """PLAN_GAMES_3.md, Phase 5: presses in order, in time (a special move), and a joypad that shakes."""
+
+    def scene(self, body):
+        return HEAD + f'  <qg:scene name="main">\n    <q:set name="n" value="0" type="number" />\n{body}  </qg:scene>\n' + TAIL
+
+    def test_a_sequence_and_a_rumble(self, tmp_path):
+        out = build(tmp_path, self.scene('''    <qg:on-input sequence="down, forward, jump" within="20" player="2">
+      <q:set name="n" value="{n + 1}" />
+      <qg:rumble player="{n}" strength="0.4" seconds="0.5" />
+      <qg:rumble />
+    </qg:on-input>
+'''))
+        spec = json.loads((out / 'game.json').read_text())['scenes']['main']
+        assert spec['sequences'] == [{'steps': ['down', 'forward', 'jump'], 'within': 20, 'player': 2,
+                                      'handler': '_on_sequence_0'}]
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.rumble(int(n), 0.4, 0.5)' in script and 'Q.rumble(1, 0.5, 0.2)' in script
+
+    def test_what_sequences_and_rumbles_refuse(self, tmp_path):
+        e = refuse(tmp_path, self.scene('    <qg:on-input sequence="down, dash" />\n'))
+        assert "no such action 'dash'" in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input sequence="down" />\n'))
+        assert 'two actions or more' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input action="jump" sequence="down, jump" />\n'))
+        assert 'no action= or on=' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input sequence="down, right, jump" within="1" />\n'))
+        assert 'within= at least a tick a step' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input />\n'))
+        assert '<qg:on-input> takes action= (or sequence=)' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input action="jump"><qg:rumble strength="2" /></qg:on-input>\n'))
+        assert 'strength= 0 to 1' in e.message

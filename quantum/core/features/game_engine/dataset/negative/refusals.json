@@ -909,6 +909,113 @@
       "tags": [
         "icon"
       ]
+    },
+    {
+      "id": "game-bad-053",
+      "intent": "A field that runs something without being shared",
+      "input": {
+        "natural_language": "A name box that also greets, on one machine only",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"who\" value=\"\" />\n    <q:set name=\"hello\" value=\"\" />\n    <qg:menu>\n      <qg:field bind=\"who\" label=\"Name\"><q:set name=\"hello\" value=\"{'Hi ' + who}\" /></qg:field>\n    </qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "only a shared field (shared=\"true\") runs what it holds"
+      },
+      "why_invalid": "What a field holds runs as its text arrives, on every machine; a field that is not shared sends nothing, so nothing arrives.",
+      "correction": "Share it: shared=\"true\", and its text is sent on Enter.",
+      "tags": [
+        "field",
+        "shared"
+      ]
+    },
+    {
+      "id": "game-bad-054",
+      "intent": "A button in a local menu",
+      "input": {
+        "natural_language": "A menu of this machine with a name box and a Start button",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:multiplayer players=\"2\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"who\" value=\"\" />\n    <qg:menu local=\"true\">\n      <qg:field bind=\"who\" shared=\"true\" />\n      <qg:button label=\"Start\"><qg:goto-scene name=\"main\" /></qg:button>\n    </qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:menu local=\"true\"> holds only shared fields"
+      },
+      "why_invalid": "A local menu is chosen on one machine only; a button in it would change one machine's game and not the other's.",
+      "correction": "Put the button in a menu of a player (player=\"1\"), which every machine runs the same.",
+      "tags": [
+        "menu",
+        "local"
+      ]
+    },
+    {
+      "id": "game-bad-055",
+      "intent": "One camera for everyone and one for a player",
+      "input": {
+        "natural_language": "A camera on the hero and another for player 2",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:input action=\"left\" keys=\"Left\" player=\"2\" />\n  <qg:input action=\"right\" keys=\"Right\" player=\"2\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"p1\" controller=\"topdown\" player=\"1\" sheet=\"people\" x=\"40\" y=\"40\" hitbox=\"14x14\" />\n    <qg:character id=\"p2\" controller=\"topdown\" player=\"2\" sheet=\"people\" x=\"80\" y=\"40\" hitbox=\"14x14\" />\n    <qg:camera follow=\"p1\" />\n    <qg:camera player=\"2\" follow=\"p2\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "one camera for everyone, or one a player"
+      },
+      "why_invalid": "With player= the screen splits, a view a player; a camera for no one in particular has no place among them.",
+      "correction": "Give the first one player=\"1\".",
+      "tags": [
+        "camera",
+        "player"
+      ]
+    },
+    {
+      "id": "game-bad-056",
+      "intent": "A sequence with an action the game has not",
+      "input": {
+        "natural_language": "A special move of down, forward and fireball",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:on-input sequence=\"down, forward, fireball\"><q:set name=\"x\" value=\"1\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "no such action 'fireball'"
+      },
+      "why_invalid": "A sequence is presses of the game's actions; fireball is not one (forward and back are the way the character faces).",
+      "correction": "Declare it with qg:input, or end the sequence with an action the game has (punch).",
+      "tags": [
+        "on-input",
+        "sequence"
+      ]
+    },
+    {
+      "id": "game-bad-057",
+      "intent": "A sequence of one",
+      "input": {
+        "natural_language": "A special move that is just punch",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:on-input sequence=\"punch\"><q:set name=\"x\" value=\"1\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "two actions or more"
+      },
+      "why_invalid": "One press is not a sequence: action= says it.",
+      "correction": "<qg:on-input action=\"punch\">, or name the presses before it: sequence=\"down, forward, punch\".",
+      "tags": [
+        "on-input",
+        "sequence"
+      ]
+    },
+    {
+      "id": "game-bad-058",
+      "intent": "A rumble stronger than a joypad",
+      "input": {
+        "natural_language": "The joypad shakes at strength 5 on a hit",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:on-input action=\"jump\"><qg:rumble strength=\"5\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "strength= 0 to 1"
+      },
+      "why_invalid": "A joypad shakes from nothing (0) to as hard as it can (1).",
+      "correction": "strength=\"1\".",
+      "tags": [
+        "rumble"
+      ]
     }
   ]
 }

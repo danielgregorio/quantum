@@ -762,6 +762,7 @@ class _Compiler:
         map_nodes: Dict[str, dict] = {}
         map_paths: List[dict] = []
         on_input: Dict[str, str] = {}
+        sequences: List[dict] = []
         on_release: Dict[str, str] = {}
         on_screen: List[dict] = []
         exits: Dict[str, dict] = {}
@@ -907,8 +908,29 @@ class _Compiler:
                 nodes.append({'kind': 'timer', 'after': el.get('after'), 'every': el.get('every'),
                               'from': el.get('from'), 'count': el.get('count'), 'handler': handler})
                 self._node_elements.append(el)
+            elif el.tag == 'on-input' and el.get('sequence') is not None:
+                # a special move: presses in order, in time (quantum_scene.gd, Q.sequence)
+                steps = [s.strip() for s in str(el.get('sequence')).split(',') if s.strip()]
+                if el.get('action') is not None or el.get('on') != 'press':
+                    raise GameCompileError('<qg:on-input sequence=>: the sequence names its actions; no action= '
+                                           'or on=', el.line)
+                if len(steps) < 2:
+                    raise GameCompileError('<qg:on-input sequence=>: two actions or more, separated by commas',
+                                           el.line)
+                for step in steps:
+                    if step not in self.actions and step not in ('forward', 'back'):
+                        raise GameCompileError(f'<qg:on-input sequence=>: no such action {step!r} (forward and '
+                                               f'back are the way the character faces)', el.line)
+                if el.get('within') < len(steps) - 1 or not 1 <= el.get('player') <= 4:
+                    raise GameCompileError('<qg:on-input sequence=>: within= at least a tick a step; player= 1 to 4',
+                                           el.line)
+                sequences.append({'steps': steps, 'within': el.get('within'), 'player': el.get('player'),
+                                  'handler': compile_handler(script, f'_on_sequence_{len(sequences)}', el.children,
+                                                             el.line)})
             elif el.tag == 'on-input':
                 action = el.get('action')
+                if action is None:
+                    raise GameCompileError('<qg:on-input> takes action= (or sequence=)', el.line)
                 if action not in self.actions:
                     raise GameCompileError(
                         f'<qg:on-input action="{action}">: no such action (the defaults are '
@@ -1229,10 +1251,17 @@ class _Compiler:
                                            el.line)
                 if el.get('fit') and len(follow) < 2:
                     raise GameCompileError('<qg:camera fit="true">: for a camera that follows several', el.line)
+                players = [c.get('player') for c in scene.find_all('camera')]
+                if any(p is not None for p in players) and (None in players or len(set(players)) < len(players)):
+                    raise GameCompileError('<qg:camera>: one camera for everyone, or one a player (player=, each '
+                                           'player once)', el.line)
+                if el.get('player') is not None and not 1 <= el.get('player') <= 4:
+                    raise GameCompileError('<qg:camera player=>: 1 to 4', el.line)
                 nodes.append({'kind': 'camera', 'follow': follow, 'bounds': el.get('bounds'), 'zoom': el.get('zoom'),
                               'dead_zone': list(el.get('dead-zone')) if el.get('dead-zone') else None,
                               'lead': el.get('lead'), 'smooth': el.get('smooth'), 'fit': el.get('fit'),
-                              'zoom_min': el.get('zoom-min')})
+                              'zoom_min': el.get('zoom-min'),
+                              **({'player': el.get('player')} if el.get('player') is not None else {})})
                 self._node_elements.append(el)
             elif el.tag == 'menu':
                 menus += 1
@@ -1262,8 +1291,19 @@ class _Compiler:
                             raise GameCompileError(f'<qg:field bind="{bind}">: no q:set of that name in the scene or the game', c.line)
                         if var.typed and var.type != 'string':
                             raise GameCompileError(f'<qg:field bind="{bind}">: a field holds text; {bind!r} is a {var.type}', c.line)
-                        items.append({'kind': 'field', 'bind': bind, 'label': c.get('label'), 'max_length': c.get('max-length'),
-                                      'game': bind not in script.state})
+                        item = {'kind': 'field', 'bind': bind, 'label': c.get('label'), 'max_length': c.get('max-length'),
+                                'game': bind not in script.state}
+                        body = [b for b in c.children if isinstance(b, (Element, Statement))]
+                        if c.get('shared'):
+                            # the field a text was sent from, on every machine: the scene, the menu, its place
+                            item.update({'shared': True, 'key': f'{scene.get("name")}:{menus}:{len(items)}'})
+                            if body:
+                                item['handler'] = compile_handler(script, f'_on_menu_{menus}_field_{len(items)}',
+                                                                  c.children, c.line, params=('sender', 'text'))
+                        elif body:
+                            raise GameCompileError(f'<qg:field bind="{bind}">: only a shared field (shared="true") '
+                                                   'runs what it holds, when a text is sent', c.line)
+                        items.append(item)
                     elif isinstance(c, Element) and c.tag == 'slider':
                         if (c.get('bus') is None) == (c.get('bind') is None):
                             raise GameCompileError('<qg:slider> takes bus= or bind=, one of them', c.line)
@@ -1309,8 +1349,18 @@ class _Compiler:
                 font = self._asset(el.get('font'), el.line) if el.get('font') else None
                 if el.get('columns') < 1 or el.get('rows') < 0:
                     raise GameCompileError('<qg:menu>: columns= 1 or more, rows= 0 or more', el.line)
+                if el.get('local'):
+                    # what it does happens on one machine: only a text sent reaches the others
+                    if el.get('player') != 1:
+                        raise GameCompileError('<qg:menu local="true">: the seat of the machine it is on; no player=',
+                                               el.line)
+                    if any(not i.get('shared') for i in items):
+                        raise GameCompileError('<qg:menu local="true"> holds only shared fields (qg:field '
+                                               'shared="true"): anything else it did would happen on one machine '
+                                               'and not the others', el.line)
                 nodes.append({'kind': 'menu', 'player': el.get('player'), 'position': el.get('position'),
                               'size': el.get('size'), 'font': font, 'items': items,
+                              **({'local': True} if el.get('local') else {}),
                               **({'columns': el.get('columns')} if el.get('columns') > 1 else {}),
                               **({'rows': el.get('rows')} if el.get('rows') else {})})
                 if el.get('if') is not None:
@@ -1564,6 +1614,7 @@ class _Compiler:
             'nodes': nodes, 'map_paths': map_paths, 'on_input': on_input, 'on_release': on_release,
             'on_screen': on_screen, 'on_death': on_death,
             'on_select': on_select, 'music': music,
+            **({'sequences': sequences} if sequences else {}),
         }
         if script.cameras_moved and not cameras_here:
             raise GameCompileError('<qg:camera-to> moves the scene\'s qg:camera, which it has not', script.cameras_moved[0])

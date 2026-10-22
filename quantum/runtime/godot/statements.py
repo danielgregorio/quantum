@@ -696,6 +696,12 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
             raise GameCompileError(f'<qg:volume bus="{el.get("bus")}">: no qg:sound is heard on that bus (buses: '
                                    f'{", ".join(sorted(script.buses)) or "none: give a qg:sound bus="})', el.line)
         return f'Q.set_volume({json.dumps(el.get("bus"))}, float({compile_expression(el.get("value"), scope, el.line)}))'
+    if el.tag == 'rumble':
+        if not 0.0 <= el.get('strength') <= 1.0 or el.get('seconds') <= 0:
+            raise GameCompileError('<qg:rumble>: strength= 0 to 1, seconds= more than 0', el.line)
+        player = str(el.get('player'))
+        who = player if player.isdigit() else f'int({compile_expression(player, scope, el.line)})'
+        return f'Q.rumble({who}, {float(el.get("strength"))!r}, {float(el.get("seconds"))!r})'
     if el.tag == 'fullscreen':
         if el.get('on') is None:
             return 'Q.set_fullscreen(not Q.fullscreen())'

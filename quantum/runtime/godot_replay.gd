@@ -73,6 +73,8 @@ func _apply(events: Array) -> void:
 	for ev in events:
 		if ev[0] == "cursor":
 			root.get_node("Q").tape_cursor = Vector2(ev[1][0], ev[1][1])
+		elif ev[0] == "type":
+			root.get_node("Q").type_text(str(ev[1]))   # into the text box being typed in (qg:field)
 		elif ev[1]:
 			Input.action_press(ev[0])
 		else:

@@ -588,3 +588,69 @@ def test_an_agent_joins_a_persons_pong_and_never_misses(pong, godot, tmp_path):
         assert touches.count('right') >= 2 and 'the agent' not in missed, touches
     finally:
         person.wait(timeout=60)
+
+
+# --- PLAN_GAMES_3.md, Phase 5: who sits where ---
+
+@pytest.fixture(scope='module')
+def bricks(godot, tmp_path_factory) -> Path:
+    return _build(godot, tmp_path_factory, 'bricks')
+
+
+def test_player_n_presses_that_players_keys_by_player_ones_names(pong, godot):
+    with PlaySession(pong, binary=godot) as game:
+        game.act(tap=['select'], ticks=2)                                    # two players, one keyboard
+        before = game.act(ticks=1)['state']['nodes']
+        after = game.act(hold=['up'], player=2, ticks=30)['state']['nodes']
+        assert after['right']['y'] < before['right']['y'] - 20               # p2_up: the right paddle
+        assert after['left']['y'] == before['left']['y']
+        down = game.act(ticks=30, reflex=[{'hold': ['down']}], player=2)['state']['nodes']
+        assert down['right']['y'] > after['right']['y'] + 20                 # a reflex's actions too
+        assert game.tape()['reflex']['rules'][0]['hold'] == ['p2_down']
+        with pytest.raises(PlayError, match='no such action: p3_up'):
+            game.act(hold=['up'], player=3)
+        with pytest.raises(PlayError, match='player= is 1 or more'):
+            game.act(hold=['up'], player=0)
+
+
+def test_agents_sit_in_the_seats_they_ask_for_in_bricks(bricks, godot):
+    """Four machines, three of them agents that ask for seats 3, 4 and 2 in that order; one more
+    asks for seat 3 and is turned away. The third gives its name, which every machine shows;
+    each plays its own paddle by player 1's names."""
+    from quantum.runtime.godot_replay import free_port
+    port = free_port()
+    address = f'127.0.0.1:{port}'
+    with PlaySession(bricks, binary=godot, host=port) as host:
+        assert host.until("net.status == 'hosting'", max_ticks=600)['net']['player'] == 1
+        third = PlaySession(bricks, binary=godot, join=address, seat=3)
+        try:
+            assert third.until('net.player == 3', max_ticks=600)['net']['player'] == 3
+            with PlaySession(bricks, binary=godot, join=address, seat=3) as late:
+                assert late.until("net.status == 'failed'", max_ticks=600)['net']['player'] == 0
+            with PlaySession(bricks, binary=godot, join=address, seat=4) as fourth, \
+                    PlaySession(bricks, binary=godot, join=address, seat=2) as second:
+                seats = [s.until("net.status == 'playing'", max_ticks=900)['net']['player']
+                         for s in (host, second, third, fourth)]
+                assert seats == [1, 2, 3, 4]
+                third.act(tap=['select'], ticks=20)                          # who is who: its name box
+                third.act(text='Tri\n', ticks=20)
+                named = host.until("event:message", max_ticks=600)          # sent to every machine
+                said = [e for e in named['events'] if e['kind'] == 'message'][0]
+                assert (said['sender'], said['text']) == (3, 'Tri')
+                assert 'Tri' in [i for v in named['screen'] if v['kind'] == 'hud' for i in v['items']]
+                host.act(tap=['jump'], ticks=2)                              # player 1 starts the level
+                assert third.until("scene == 'level'", max_ticks=600)['scene'] == 'level'
+                x = third.act(ticks=1)['state']['nodes']['p3']['x']
+                moved = third.act(hold=['right'], player=3, ticks=40)['state']['nodes']
+                assert moved['p3']['x'] > x + 40
+                with pytest.raises(PlayError, match='sits in seat 4, not 2'):
+                    fourth.act(hold=['right'], player=2)
+                seen = host.until(f'p3.x > {x + 40}', max_ticks=600)                # every machine plays it
+                assert seen['stopped'] == 'condition' and not seen['net']['desync']
+        finally:
+            third.close()
+
+
+def test_a_seat_is_for_one_who_joins():
+    with pytest.raises(PlayError, match='seat= is the seat a joining session asks for'):
+        PlaySession('.', seat=2)

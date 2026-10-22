@@ -1,9 +1,10 @@
 # Games 3 — what the game language takes from Godot and Unity next
 
 > Status: approved 2026-10-21, whole, the ten "later" items included (each
-> comes in with the game that asks for it: Phase 6). Phases 1 to 4 done
-> (2026-10-21 and 22: Siege the game of the second, Crates of the third, and
-> the fourth in every game); Phase 5 next.
+> comes in with the game that asks for it: Phase 6). Phases 1 to 5 done
+> (2026-10-21 and 22: Siege the game of the second, Crates of the third, the
+> fourth in every game, Rally of the fifth); Phase 6 next, each item with
+> the game that asks for it.
 > Laboratory tier: no tag here carries a stability promise until it ships.
 > The proposal it comes from is the Claude Docs page "Proposta: próximos
 > recursos da linguagem de jogos"; the map it was chosen from is
@@ -315,10 +316,60 @@ takes the waits out of the test harness and lets an agent take seat 3 or 4.
 | Split screen | `player=` on `qg:camera`, one view per player | local racing and co-op that split up | L |
 | Input sequences and rumble | `sequence="down, right, punch" within=` on `qg:on-input`; `<qg:rumble player= strength= seconds=>` | special moves in Arena, every game with a controller | M |
 
-- [ ] seat selection
-- [ ] shared fields
-- [ ] split screen
-- [ ] input sequences, `qg:rumble`
+- [x] seat selection
+- [x] shared fields
+- [x] split screen
+- [x] input sequences, `qg:rumble`
+
+What was built (2026-10-22):
+
+- Seats: `--q-seat=N` asks the host (or the relay) for a seat as the joiner
+  says hello; taken, the joiner is turned away and the game goes on (a peer
+  turned away was never seated, so its leaving changes nothing). The play
+  protocol: `seat=` on `play_start` with `join=`, `quantum play --seat`;
+  `player=N` on `play_act` and `play_until` names the actions as player 1's
+  and presses player N's on one machine, and in a networked game says the
+  session's own seat (another is refused). `replay_peers` gives each tape the
+  seat of its place, so its joiners come all at once, the host first. A
+  test runs four machines of Bricks, three of them agents asking for seats 3,
+  4 and 2, a fifth turned away from 3.
+- Shared fields: Enter puts the field's text in this machine's next frame of
+  the lockstep (a fourth element, `{field key: text}`, logged for one who
+  rejoins); on the tick of that frame every machine sets the bound state and
+  runs what the field holds, with `sender` and `text`. The rollback never
+  guesses a text (a guess repeats the keys only), so a late one rolls back
+  to its tick. The menu goes on, on every machine, when its own seat's text
+  comes back; only the machine whose seat it is takes the keyboard.
+  `local="true"` on `qg:menu` is this machine's seat's menu, of shared fields
+  only. While a field has the keyboard, the keys type and play nothing (the
+  Enter that ends it does not choose again). Typing is now something a
+  player does in the play protocol (`text=`) and in a tape (`["type", text]`),
+  so tests and agents type. Bricks over the network starts with who is who.
+- Split screen: `split.gd` puts each player's camera in a `SubViewport` that
+  draws the scene's world, side by side for two and in quarters for three or
+  four, under the scene's HUD; over the network each machine shows its own
+  player's camera, and the others run unseen. The screen of
+  `qg:on-screen-exit` is every view, each as large as it is shown, so it is
+  the same on every machine of a game. Rally, written for it: two cars on a
+  circuit drawn in Tiled, laps counted at the line after halfway round.
+- Sequences: every press is kept with how many ticks ago it was, in the
+  input's state (the rollback saves and replays it); a sequence holds on its
+  last step's press and uses its presses up. `forward` and `back` are read
+  from the facing of the player's character. `qg:rumble` drives
+  `Input.start_joy_vibration` on that player's pad (on one machine the Nth;
+  over the network this machine's own, only for its seat) and a phone's
+  vibrator. A fighter takes `qg:damage` as a hit, blocked by holding away.
+  Arena's blast: down, forward, punch, felt on the joypad of the one it hits.
+
+What was learned: a tick counter in the input's state differs between two
+machines from the start (each counted its own ticks while it waited for the
+other), so the lockstep's hash differed at its first check: the presses keep
+an age instead, and the networked game starts with none. Under the rollback
+a flying prefab cannot be taken back (no `qg:spawn` in its scenes), so
+Arena's special move hits at once and shows a beam, which the rollback does
+not draw twice. A local menu's field has one key on every machine: the menu
+must go on only when its own seat's text comes back, not another player's.
+A field reopened put the caret at its start; it goes to the end.
 
 ## Phase 6 — Later, with the game that asks
 

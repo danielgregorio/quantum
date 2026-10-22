@@ -40,14 +40,14 @@ class Tag:
 # The tags that hold a handler: actions (and q: statements), run when it fires.
 HANDLERS = ('on-collision', 'on-fall', 'on-input', 'on-select', 'on-hit', 'on-ko', 'on-death', 'on-tile',
             'on-animation-end', 'on-locked', 'on-damage', 'timer', 'button', 'on-end', 'on-separate',
-            'on-screen-exit', 'on-screen-enter', 'for-each', 'after', 'when', 'choice')
+            'on-screen-exit', 'on-screen-enter', 'for-each', 'after', 'when', 'choice', 'field')
 
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
            'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
            'play-animation', 'give', 'take', 'reset-items', 'for-each', 'time-scale', 'quit', 'start-now', 'watch',
-           'after', 'beam', 'camera-to', 'attach', 'detach', 'volume', 'fullscreen')
+           'after', 'beam', 'camera-to', 'attach', 'detach', 'volume', 'fullscreen', 'rumble')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -96,7 +96,8 @@ TAGS: Dict[str, Tag] = {
     'multiplayer': Tag(
         'The game is played by several people, each on their own machine, in lockstep: every peer runs '
         'the whole game and a tick runs when every player\'s input for it has arrived. One hosts '
-        '(`--q-host=PORT`, player 1), the others join (`--q-join=HOST:PORT`, players 2.. in order). '
+        '(`--q-host=PORT`, player 1), the others join (`--q-join=HOST:PORT`, players 2.. in order, or the '
+        'seat `--q-seat=N` asks for). '
         'The players\' characters are told apart by player=; nobody declares keys for players 2... '
         'A player who leaves can come back: the others wait, and the next to join takes the seat, catching '
         'up the game so far (not under rollback=, where the game ends).',
@@ -381,6 +382,8 @@ TAGS: Dict[str, Tag] = {
         'player\'s qg:cursor and the click its "click" action, so a click is replayed and travels in the '
         'lockstep like a key.',
         {'player': Attr('int', 1, doc='whose keys and pointer choose'),
+         'local': Attr('bool', False, doc='the menu of whoever plays at this machine (its seat, in a networked '
+                                          'game); it holds only shared fields, whose texts reach the others'),
          'if': Attr('expr', None, doc='shown, and choosable, only while this is true: paused(), a q:set...'),
          'position': Attr('enum:top-left|top-center|top-right|center|bottom-center', 'center'),
          'font': Attr('str', None, doc='a .ttf, relative to the .q or a folder above it'),
@@ -396,10 +399,15 @@ TAGS: Dict[str, Tag] = {
         parents=('menu',)),
     'field': Tag(
         'A text box of a qg:menu, bound to a string state: what is typed is the state. Typing is local to '
-        'the machine (an address, a name) — a replay cannot type, and the lockstep does not carry it.',
+        'the machine (an address) — the lockstep does not carry it. A shared field (shared="true") is a '
+        'draft until Enter sends it: the text goes with the player\'s input for a tick, and on that tick, on '
+        'every machine of a networked game, it becomes the bound state and what the field holds runs, with '
+        '`sender` (the seat that sent it) and `text` — names, a short chat. While a field is typed in, the '
+        'keys type and play nothing.',
         {'bind': Attr('ident', required=True, doc='a q:set of the scene or the game'),
          'label': Attr('str', '', doc='text before the box'),
-         'max-length': Attr('int', 64)},
+         'max-length': Attr('int', 64),
+         'shared': Attr('bool', False, doc='sent to every machine with the inputs, on Enter')},
         parents=('menu',)),
     'slider': Tag(
         'A value of a qg:menu that left and right change while it has the focus: how loud a bus is (bus=, '
@@ -515,7 +523,11 @@ TAGS: Dict[str, Tag] = {
          'smooth': Attr('float', 0.0, doc='how fast it catches up, per second (0: at once)'),
          'fit': Attr('bool', False, doc='several followed: it zooms out to keep them all on the screen, down to '
                                         'zoom-min, and back in as they come together'),
-         'zoom-min': Attr('float', 0.5, doc='fit: as far out as it goes')},
+         'zoom-min': Attr('float', 0.5, doc='fit: as far out as it goes'),
+         'player': Attr('int', None, doc='one view per player: this is that player\'s. On one machine the screen '
+                                         'splits (side by side for two, quarters for three or four); over the '
+                                         'network each machine shows its own player\'s. A camera that follows no '
+                                         'one present has no view')},
         parents=('scene',)),
     'hud': Tag(
         'Text and pictures over the game.',
@@ -616,10 +628,17 @@ TAGS: Dict[str, Tag] = {
          'requires': Attr('ident', None, doc='a scene name that must be in the game state `cleared`')},
         parents=('scene',)),
     'on-input': Tag(
-        'What happens when the player presses an action in this scene, or lets it go (on="release"). Holds '
-        'actions and statements.',
-        {'action': Attr('ident', required=True, doc='a default action, or one a qg:input declares'),
-         'on': Attr('enum:press|release', 'press', doc='press: as it goes down; release: as it is let go')},
+        'What happens when the player presses an action in this scene, or lets it go (on="release"); or, with '
+        'sequence=, when a player presses several in order in a short time — a special move: "down, forward, '
+        'punch" holds on the tick punch is pressed, if down and then forward were pressed before it within '
+        'within= ticks (other presses between them do not matter, and the presses it uses are used up). '
+        '"forward" and "back" are right and left as that player\'s character faces. Holds actions and statements.',
+        {'action': Attr('ident', None, doc='a default action, or one a qg:input declares; or sequence='),
+         'on': Attr('enum:press|release', 'press', doc='press: as it goes down; release: as it is let go'),
+         'sequence': Attr('str', None, doc='actions in the order pressed, separated by commas; forward and back '
+                                           'follow the way the player\'s character faces'),
+         'within': Attr('int', 30, doc='sequence: how many ticks from its first press to its last (60 a second)'),
+         'player': Attr('int', 1, doc='sequence: whose presses')},
         parents=('scene',)),
     'on-hit': Tag(
         'What happens when this character\'s swing (attack-action) reaches something. Holds actions and statements.',
@@ -991,6 +1010,14 @@ TAGS: Dict[str, Tag] = {
         {'at': Attr('ident', 'me', doc='other, me, or a parameter, loop variable or q:set holding a thing'),
          'color': Attr('color', '#ffffff'),
          'count': Attr('int', 12)},
+        parents=('handler',)),
+    'rumble': Tag(
+        'A player\'s joypad shakes (and a phone, in the hand): a hit felt. Felt only, like a shake: nothing in the '
+        'game depends on it. Over the network only the machine of that player\'s seat feels it; on one machine, '
+        'player N\'s is the Nth joypad connected.',
+        {'player': Attr('expr', '1', doc='whose joypad'),
+         'strength': Attr('float', 0.5, doc='0 to 1'),
+         'seconds': Attr('float', 0.2)},
         parents=('handler',)),
     'shake': Tag(
         'Shakes the scene a thing is in. Cosmetic.',

@@ -407,6 +407,7 @@ Examples:
     play_parser.add_argument('--live', action='store_true', help='the game runs at its own speed, not request by request')
     play_parser.add_argument('--host', type=int, metavar='PORT', help='host a networked game on this port (live)')
     play_parser.add_argument('--join', metavar='HOST:PORT', help="join a networked game, a person's or another agent's (live)")
+    play_parser.add_argument('--seat', type=int, metavar='N', help='with --join: the seat to sit in (else the lowest free)')
     play_parser.add_argument('--lang', help="the language of the game's texts, when it has it (pt, es...)")
     play_parser.add_argument('--transport', choices=['enet', 'websocket'],
                              help="the network's transport (websocket: the one a browser joins)")

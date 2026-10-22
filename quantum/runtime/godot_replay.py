@@ -21,7 +21,7 @@ from quantum.runtime.godot_bin import run_godot, script_errors
 
 REPLAY_SCRIPT = Path(__file__).with_name('godot_replay.gd')
 
-Tape = Dict[int, List[tuple]]   # tick -> [(action, pressed)] and [('cursor', [x, y])]
+Tape = Dict[int, List[tuple]]   # tick -> [(action, pressed)], [('cursor', [x, y])] and [('type', text)]
 
 
 class ReplayError(RuntimeError):
@@ -35,6 +35,16 @@ def tape_from_holds(holds: Iterable[Tuple[str, int, int]]) -> Tape:
     for action, start, end in holds:
         tape.setdefault(start, []).append((action, True))
         tape.setdefault(end, []).append((action, False))
+    return tape
+
+
+LEAVING = 'Unable to send packet on channel'
+
+
+def typed_at(tape: Tape, tick: int, text: str) -> Tape:
+    """Adds to the tape: on ``tick`` the player types ``text`` into the text box being typed in
+    (a qg:field chosen before); ``\\n`` is Enter."""
+    tape.setdefault(tick, []).append(('type', text))
     return tape
 
 
@@ -105,7 +115,8 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
                  players: Optional[int] = None, watchers: Sequence[float] = ()) -> List[dict]:
     """Run the project under qg:multiplayer: one Godot per player, on localhost.
 
-    The first tape is player 1's, who hosts; the others join in order. Each
+    The first tape is player 1's, who hosts; the others join, each in the
+    seat of its tape's place (``--q-seat``), all at once. Each
     tape names the actions as a single-player tape does (``up``, ``jump``):
     the lockstep turns them into that player's actions, ``delay`` ticks
     later, on every peer. Returns the state each peer dumped at ``ticks``
@@ -164,6 +175,8 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
                 peer_args = [f'--tape={tape_path}',
                              f'--q-host={port}' if i == 0 and not relay
                              else f'--q-join={relay_url or f"127.0.0.1:{port}"}']
+                if i > 0 or relay:
+                    peer_args.append(f'--q-seat={i + 1}')   # the tape's seat, whoever arrives first
                 if relay:
                     peer_args.append('--q-transport=websocket')
             if transport:
@@ -182,10 +195,9 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
                  f'--ticks={ticks}', f'--out={out_path}', f'--persist-dir={persist}', *peer_args],
                 stdout=log, stderr=subprocess.STDOUT), log))
             outs.append(out_path)
-            if i < len(tapes) - 1 and lobby_tapes is None and (i == 0 or relay or len(tapes) > 2):
-                # the host listens before anyone joins (a lobby tape times it itself); the seats go
-                # in the order the players arrive (through a relay, or three and more joining a
-                # host), so they arrive in order
+            if i == 0 and len(tapes) > 1 and lobby_tapes is None and not relay:
+                # the host listens before anyone joins (a lobby tape times it itself, and the relay
+                # listens already); the others ask for their seats, so they may come in any order
                 time.sleep(1.0)
         for w, after in enumerate(watchers):
             # one who watches: no tape, no seat; it plays the game the players' inputs make
@@ -218,7 +230,8 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
             tape_path, out_path = Path(tmp) / f'tape{i}.json', Path(tmp) / f'state{i}.json'
             (Path(tmp) / f'persist{i}').mkdir()
             write(tape_path, rejoin[1])
-            join = [f'--q-join={relay_url or f"127.0.0.1:{port}"}'] + (['--q-transport=websocket'] if relay else [])
+            join = [f'--q-join={relay_url or f"127.0.0.1:{port}"}', f'--q-seat={len(tapes)}'] + \
+                (['--q-transport=websocket'] if relay else [])
             if transport:
                 join.append(f'--q-transport={transport}')
             log = open(Path(tmp) / f'log{i}.txt', 'w', encoding='utf-8')
@@ -249,7 +262,10 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
         states = []
         for i, out_path in enumerate(outs):
             output = (Path(tmp) / f'log{logs[i]}.txt').read_text(encoding='utf-8')
-            errors = script_errors(output)
+            # ENet's complaint when Godot's server relay hands a frame on to a peer in the very poll
+            # that peer leaves in (its channels gone, its leaving not yet dispatched): the
+            # transport's, as a peer that finished quits, not the game's
+            errors = [e for e in script_errors(output) if LEAVING not in e]
             if not out_path.is_file():
                 raise ReplayError(f'peer {i + 1} wrote no state' + (': ' + '; '.join(errors) if errors else f'\n{output}'))
             if errors:

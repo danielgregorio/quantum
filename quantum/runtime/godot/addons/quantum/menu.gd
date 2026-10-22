@@ -13,7 +13,14 @@ extends CanvasLayer
 #
 # A field, once chosen, takes the keyboard until Enter or until it loses the
 # focus; what is typed is the bound state. Typing is local: it is not input
-# the replay or the lockstep carries.
+# the lockstep carries. A shared field (shared="true") is a draft until Enter
+# sends it: the text goes with this machine's input for a tick, and on that
+# tick, on every machine, it becomes the bound state and what the field holds
+# runs, with `sender` (the seat that sent it) and `text`. In a networked game
+# only the machine whose seat the menu is takes the keyboard; the menu waits,
+# on every machine, until the text comes back, so it goes on the same there.
+# A local menu (local="true", shared fields only) is the menu of whoever
+# plays at this machine: of this machine's seat.
 #
 # A slider (qg:slider) is changed by left and right while it has the focus, a
 # step a press, or set where it is clicked: a bus's volume (kept between
@@ -26,6 +33,7 @@ extends CanvasLayer
 # rest scroll into view with the focus.
 
 var player: int = 1
+var local_menu: bool = false      # qg:menu local="true": this machine's seat's
 var focus: int = 0
 var _scene: Node = null
 var _items: Array = []            # [{spec, control, line}]
@@ -40,6 +48,7 @@ var _scroll: ScrollContainer = null
 func setup(spec: Dictionary, scene: Node) -> void:
 	_scene = scene
 	player = int(spec.get("player", 1))
+	local_menu = bool(spec.get("local", false))
 	_if_method = spec.get("if_method")
 	name = "Menu"
 	layer = 10
@@ -149,8 +158,8 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			line.text = str(_read(item["bind"], item.get("game", false)))
 			_style(line, font, size)
 			line.text_changed.connect(_on_typed.bind(item))
-			line.text_submitted.connect(func(_t): _stop_editing())
-			line.focus_exited.connect(_stop_editing)
+			line.text_submitted.connect(_on_submitted.bind(entry))
+			line.focus_exited.connect(_on_focus_lost.bind(entry))
 			row.add_child(line)
 			list.add_child(row)
 			entry["control"] = row
@@ -174,10 +183,59 @@ func _read(bind: String, game: bool):
 
 
 func _on_typed(text: String, item: Dictionary) -> void:
+	if item.get("shared", false):
+		return   # a draft, until it is sent
 	if item.get("game", false):
 		G.set(item["bind"], text)
 	else:
 		_scene.set(item["bind"], text)
+
+
+func _on_submitted(text: String, entry: Dictionary) -> void:
+	var spec: Dictionary = entry["spec"]
+	if not spec.get("shared", false):
+		_stop_editing()
+		return
+	if entry.has("pending"):
+		return
+	entry["pending"] = text   # shown until it comes back
+	var line: LineEdit = entry["line"]
+	if line.has_focus():
+		line.release_focus()   # the keys play again; the menu waits for the text to come back
+	Q.share(str(spec["key"]), text, player)
+	Q.event("sent", {"field": Q.translate(spec.get("label", "")), "text": text})
+
+
+func _on_focus_lost(entry: Dictionary) -> void:
+	if not entry["spec"].get("shared", false):
+		_stop_editing()
+	elif _editing >= 0 and is_same(_items[_editing], entry) and not entry.has("pending"):
+		_on_submitted(entry["line"].text, entry)   # sent as it is
+
+
+# A text sent from a shared field, on the tick it is for (Q.deliver_said):
+# true if it is one of this menu's fields.
+func receive(key: String, sender: int, text: String, mine: bool) -> bool:
+	for entry in _items:
+		var spec: Dictionary = entry["spec"]
+		if not spec.get("shared", false) or str(spec["key"]) != key:
+			continue
+		if spec.get("game", false):
+			G.set(spec["bind"], text)
+		else:
+			_scene.set(spec["bind"], text)
+		if mine:
+			entry.erase("pending")
+		if sender == player and _editing >= 0 and is_same(_items[_editing], entry):
+			_editing = -1   # its own seat's text: on every machine on this tick, the menu goes on
+			var line: LineEdit = entry["line"]
+			if line.has_focus():
+				line.release_focus()
+		Q.event("message", {"field": Q.translate(spec.get("label", "")), "sender": sender, "text": text})
+		if spec.get("handler") != null and _scene.has_method(spec["handler"]):
+			_scene.call(spec["handler"], sender, text)
+		return true
+	return false
 
 
 func _stop_editing() -> void:
@@ -231,6 +289,10 @@ func quantum_view() -> Dictionary:
 		else:
 			item["field"] = Q.translate(spec.get("label", ""))
 			item["value"] = str(_read(spec["bind"], spec.get("game", false)))
+			if _editing == i and _items[i]["line"].has_focus():
+				item["typing"] = true   # this machine's keys type into it
+			if _items[i].has("pending"):
+				item["sending"] = _items[i]["pending"]
 		items.append(item)
 	var view := {"kind": "menu", "player": player, "shown": active(), "focus": focus, "items": items}
 	if _scroll != null:
@@ -240,12 +302,13 @@ func quantum_view() -> Dictionary:
 
 # For the rollback.
 func q_save() -> Dictionary:
-	return {"f": focus, "ps": _pointer_seen}
+	return {"f": focus, "ps": _pointer_seen, "e": _editing}
 
 
 func q_load(d: Dictionary) -> void:
 	focus = d["f"]
 	_pointer_seen = d["ps"]
+	_editing = d["e"]
 
 
 func active() -> bool:
@@ -253,6 +316,10 @@ func active() -> bool:
 
 
 func _physics_process(_delta: float) -> void:
+	if local_menu:
+		player = Q.net_player() if Q.external_input else 1   # 0: one who watches, with no seat
+		if player == 0:
+			return
 	if _editing >= 0 or _waiting >= 0:
 		return
 	if not active():
@@ -370,9 +437,13 @@ func _choose(i: int) -> void:
 		pass   # left and right change it
 	else:
 		_editing = i
+		if Q.resimulating:
+			return   # the rollback runs this tick again: the box, and what is typed in it, stay as they are
 		var line: LineEdit = _items[i]["line"]
 		line.text = str(_read(spec["bind"], spec.get("game", false)))
-		line.grab_focus()
+		line.caret_column = line.text.length()   # typing goes on from the end
+		if not Q.external_input or Q.net_player() == player:   # the keyboard of the machine whose seat it is
+			line.grab_focus()
 
 
 func _process(_delta: float) -> void:
@@ -389,7 +460,7 @@ func _refresh() -> void:
 		if spec["kind"] == "button" and spec.get("label_method") != null:
 			(c as Button).text = str(_scene.call(spec["label_method"]))
 		if spec["kind"] == "field" and _editing != i:
-			var value := str(_read(spec["bind"], spec.get("game", false)))
+			var value := str(entry.get("pending", _read(spec["bind"], spec.get("game", false))))
 			if entry["line"].text != value:
 				entry["line"].text = value
 		if spec["kind"] == "slider":

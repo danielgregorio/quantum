@@ -34,6 +34,10 @@ extends Node
 # 1/60 of a second. The rollback (rollback.gd) cannot rejoin: a game of it
 # ends when a player leaves.
 #
+# A joiner may ask for a seat (--q-seat=N, a play session's seat=): it gets
+# that one if it is free, and is turned away if it is not; with none asked
+# for, the lowest free seat.
+#
 # Someone may watch (qg:watch, --q-watch=HOST:PORT): a peer with no seat and
 # no input, which runs the game from the inputs the players send everyone.
 # One who comes before the game starts starts with it; one who comes later
@@ -68,11 +72,12 @@ var _retries: int = 0
 var _stalled: bool = false
 var relay: bool = false          # --q-relay=PORT: host with no seat, passing the players' inputs on (quantum relay)
 var latency_ms: int = 0          # --q-latency=MS: this peer's frames leave that much later (tests)
-var _outbox: Array = []          # [due msec, player, tick, mask, cx, cy]
+var _outbox: Array = []          # [due msec, player, tick, mask, cx, cy, said]
 var _log: Dictionary = {}        # tick -> {player: entry}: every input of the game, for a player who rejoins
 var _agreed: Dictionary = {}     # tick -> the hash of the state every player reported
 var catch_up_to: int = -1        # a rejoining player runs fast up to this tick, the game it missed
 var watching: bool = false       # this peer only watches: no seat, no input (qg:watch, --q-watch)
+var seat: int = 0                # the seat this joiner asks for (--q-seat=N); 0: the lowest free one
 var _watchers: Dictionary = {}   # peer id -> true: the host's (or the relay's) list of those who watch
 var _late: Dictionary = {}       # peer id -> true: those who came after the start, or watch (frames handed on)
 
@@ -160,7 +165,7 @@ func _connect() -> void:
 func _on_connected() -> void:
 	status = "connected"
 	print("quantum: connected to " + host)
-	_hello.rpc_id(1, watching)   # a player, or one who watches: the seat waits for this
+	_hello.rpc_id(1, watching, seat)   # a player (in a seat of its choice), or one who watches: the seat waits for this
 
 
 # The networked game is over for this peer: back to no network.
@@ -179,12 +184,12 @@ func _on_peer_connected(_id: int) -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func _hello(watch: bool) -> void:
+func _hello(watch: bool, wanted: int) -> void:
 	var id := multiplayer.get_remote_sender_id()
 	if watch:
 		_take_watcher(id)
 	else:
-		_take_seat(id)
+		_take_seat(id, wanted)
 
 
 # One who watches: no seat; the inputs so far when the game is under way, which
@@ -202,10 +207,16 @@ func _take_watcher(id: int) -> void:
 		_send_log(id)   # else it starts with the players: _start_with goes to every peer
 
 
-func _take_seat(id: int) -> void:
+func _take_seat(id: int, wanted: int = 0) -> void:
 	var n := 1
 	while n in _peers.values():   # the lowest free seat
 		n += 1
+	if wanted > 0:   # the one asked for, or none
+		n = wanted
+		if n in _peers.values():
+			print("quantum: seat %d is taken" % n)
+			multiplayer.multiplayer_peer.disconnect_peer(id)
+			return
 	if n > players or (started and not can_rejoin()):
 		multiplayer.multiplayer_peer.disconnect_peer(id)
 		return
@@ -249,6 +260,8 @@ func _on_peer_gone(_id: int) -> void:
 	if _watchers.has(_id):
 		_watchers.erase(_id)   # one who watched: nothing changes for the players
 		return
+	if _id != 1 and not _peers.has(_id):
+		return   # one turned away (its seat taken, the game full or under way): it never sat
 	if relay:
 		_peers.erase(_id)
 		connected_players = _peers.size()
@@ -437,6 +450,7 @@ func _log_done(agreed: Dictionary, count: int) -> void:
 		for p in _log[t]:
 			_frames[t][p] = _log[t][p]
 	var last := count - 1
+	Q.clear_presses()
 	catch_up_to = last
 	started = true
 	status = "catching up"
@@ -454,6 +468,7 @@ func _speed(k: int) -> void:
 
 
 func _begin() -> void:
+	Q.clear_presses()   # the game's presses from its first tick, the same on every machine
 	_fill_pipeline()
 	started = true
 	status = "watching" if watching else "playing"
@@ -490,10 +505,11 @@ func _physics_process(_delta: float) -> void:
 		_frames[ahead] = {}
 	if player > 0 and not _frames[ahead].has(player):
 		var raw: Vector2 = Q.raw_cursor
-		_frames[ahead][player] = [mask, raw.x, raw.y]
+		var said: Dictionary = Q.take_said()   # a shared field's text goes with the keys (qg:field shared=)
+		_frames[ahead][player] = entry(mask, raw.x, raw.y, said)
 		_keep(player, ahead, _frames[ahead][player])
 		if not ended:
-			_send_frame(player, ahead, mask, raw.x, raw.y)
+			_send_frame(player, ahead, mask, raw.x, raw.y, said)
 	# 2. this tick runs only when every player's input for it is here
 	var frame: Dictionary = _frames.get(tick, {})
 	if frame.size() < players:
@@ -513,6 +529,9 @@ func _physics_process(_delta: float) -> void:
 			if m & (1 << i):
 				input[ACTIONS[i] if p == 1 else "p%d_%s" % [p, ACTIONS[i]]] = 1.0
 	Q.set_input(input)
+	for p in range(1, players + 1):
+		if frame[p].size() > 3:
+			Q.deliver_said(p, frame[p][3], p == player)
 	# 3. the state everyone must agree on
 	if check_every > 0 and tick > 0 and tick % check_every == 0 and scene.has_method("quantum_state"):
 		var h := hash(JSON.stringify(scene.quantum_state(), "", true))
@@ -534,11 +553,17 @@ func _physics_process(_delta: float) -> void:
 		print("quantum: caught up at tick %d" % tick)
 
 
-func _send_frame(p: int, t: int, mask: int, cx: float, cy: float) -> void:
+func _send_frame(p: int, t: int, mask: int, cx: float, cy: float, said: Dictionary) -> void:
 	if latency_ms <= 0:
-		_frame.rpc(p, t, mask, cx, cy)
+		_frame.rpc(p, t, mask, cx, cy, said)
 	else:
-		_outbox.append([Time.get_ticks_msec() + latency_ms, p, t, mask, cx, cy])
+		_outbox.append([Time.get_ticks_msec() + latency_ms, p, t, mask, cx, cy, said])
+
+
+# A player's input for a tick: the actions pressed, the pointer, and the texts
+# sent from shared fields, if any ({field key: text}).
+static func entry(mask: int, cx: float, cy: float, said: Dictionary) -> Array:
+	return [mask, cx, cy] if said.is_empty() else [mask, cx, cy, said]
 
 
 var _reported: String = ""
@@ -554,7 +579,7 @@ func _process(_delta: float) -> void:
 	var now := Time.get_ticks_msec()
 	while not _outbox.is_empty() and int(_outbox[0][0]) <= now and not ended:
 		var f: Array = _outbox.pop_front()
-		_frame.rpc(f[1], f[2], f[3], f[4], f[5])
+		_frame.rpc(f[1], f[2], f[3], f[4], f[5], f[6])
 
 
 # --- what the players are told while the game cannot go on as usual ---
@@ -613,18 +638,18 @@ func quantum_view() -> Dictionary:
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func _frame(p: int, t: int, mask: int, cx: float, cy: float) -> void:
-	_keep(p, t, [mask, cx, cy])
+func _frame(p: int, t: int, mask: int, cx: float, cy: float, said: Dictionary) -> void:
+	_keep(p, t, entry(mask, cx, cy, said))
 	# the host (or the relay) hands every player's frame to those who came late or watch: Godot's own
 	# relay of a frame that reaches the host as one joins may miss them, and they would wait for good
 	for w in _late:
 		if w != multiplayer.get_remote_sender_id():
-			_frame.rpc_id(w, p, t, mask, cx, cy)
+			_frame.rpc_id(w, p, t, mask, cx, cy, said)
 	if relay:
 		return   # passed on by the multiplayer API itself; kept only for a player who rejoins
 	if not _frames.has(t):
 		_frames[t] = {}
-	_frames[t][p] = [mask, cx, cy]
+	_frames[t][p] = entry(mask, cx, cy, said)
 
 
 # Every input, for a player who rejoins (only the host, or the relay, sends it).

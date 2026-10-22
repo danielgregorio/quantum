@@ -10,6 +10,7 @@ extends Camera2D
 #   smooth=     how fast it catches up, per second (0: at once)
 #   fit=        several followed: it zooms out to keep them all on the
 #               screen, down to zoom-min, and back in as they come together
+#   player=     one view per player (split.gd): this one is that player's
 
 var targets: Array = []
 var zoom_base := 1.0
@@ -18,6 +19,8 @@ var dead := Vector2.ZERO          # half the dead zone
 var lead := 0.0
 var smooth := 0.0
 var fit := false
+var player := 0                   # qg:camera player=: whose view it is (split.gd); 0: everyone's
+var scene_node: Node = null       # the scene it shows: its parent, or above its view (split.gd)
 var _focus := Vector2.ZERO        # where it aims, before smoothing
 var _ahead := Vector2.ZERO        # the look-ahead, eased
 
@@ -82,7 +85,7 @@ func _step_shot() -> void:
 				_focus = position
 				var resume: bool = _shot["pause"]
 				_shot = {}
-				var scene := get_parent()
+				var scene := scene_node if scene_node != null else get_parent()
 				if resume and scene != null and scene.q_paused:
 					Q.pause(scene, false)
 
@@ -126,8 +129,8 @@ func _physics_process(delta: float) -> void:
 		_fit()
 
 
-# The followed ones still there. They are the scene's children, as the camera is:
-# their positions are in its space, from the moment the scene is built.
+# The followed ones still there. They are the scene's children, as the camera is (or it
+# is in a view of its own, at the origin): their positions are in its space.
 func _alive() -> Array:
 	return targets.filter(func(t): return is_instance_valid(t) and not t.is_queued_for_deletion())
 
@@ -163,5 +166,8 @@ func _fit() -> void:
 
 # For the play protocol: where the screen looks, and how close.
 func quantum_view() -> Dictionary:
-	return {"kind": "camera", "x": snappedf(get_screen_center_position().x, 0.1),
+	var view := {"kind": "camera", "x": snappedf(get_screen_center_position().x, 0.1),
 		"y": snappedf(get_screen_center_position().y, 0.1), "zoom": snappedf(zoom.x, 0.01)}
+	if player > 0:
+		view["player"] = player
+	return view

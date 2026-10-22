@@ -1,0 +1,144 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "seats_and_screens",
+  "description": "What names and a chat over the network (shared fields, a local menu), a screen split a view a player, special moves (input sequences) and a joypad that shakes say (PLAN_GAMES_3.md, Phase 5)",
+  "examples": [
+    {
+      "id": "game-seat-001",
+      "intent": "Names over the network",
+      "input": {
+        "natural_language": "Once both players are in, each types a name at their own machine, and both machines show who is who",
+        "context": {
+          "target": "godot",
+          "file": "game-seat-001.q"
+        }
+      },
+      "tags": [
+        "field",
+        "shared",
+        "menu",
+        "local",
+        "multiplayer"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"names\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"names\" type=\"array\" value='[\"\", \"\"]' />\n  <qg:multiplayer players=\"2\" start=\"names\" />\n  <qg:scene name=\"title\" width=\"320\" height=\"240\">\n    <qg:lobby local=\"level\" />\n  </qg:scene>\n  <!-- Enter opens the box, Enter sends it: the name reaches both machines on the same tick -->\n  <qg:scene name=\"names\" width=\"320\" height=\"240\">\n    <q:set name=\"typed\" value=\"\" />\n    <qg:hud position=\"center\" size=\"12\">\n      <qg:text value=\"{'Player 1: ' + names[0]}\" />\n      <qg:text value=\"{'Player 2: ' + names[1]}\" />\n    </qg:hud>\n    <qg:menu local=\"true\" position=\"bottom-center\">\n      <qg:field bind=\"typed\" label=\"Your name\" shared=\"true\" max-length=\"10\">\n        <q:set name=\"names\" index=\"{sender - 1}\" value=\"{text}\" />\n      </qg:field>\n    </qg:menu>\n    <!-- player 1 starts once both have a name -->\n    <qg:on-input action=\"jump\">\n      <q:if condition=\"{names[0] != '' and names[1] != ''}\"><qg:goto-scene name=\"level\" /></q:if>\n    </qg:on-input>\n  </qg:scene>\n  <qg:scene name=\"level\" width=\"320\" height=\"240\" />\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-seat-002",
+      "intent": "A short chat",
+      "input": {
+        "natural_language": "Players over the network can send each other a line; the last three lines show at the top",
+        "context": {
+          "target": "godot",
+          "file": "game-seat-002.q"
+        }
+      },
+      "tags": [
+        "field",
+        "shared",
+        "menu",
+        "local",
+        "hud"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"chat\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:multiplayer players=\"2\" start=\"room\" />\n  <qg:scene name=\"room\" width=\"320\" height=\"240\">\n    <q:set name=\"line\" value=\"\" />\n    <q:set name=\"said\" type=\"array\" value=\"[]\" />\n    <qg:menu local=\"true\" position=\"bottom-center\" size=\"10\">\n      <qg:field bind=\"line\" label=\"Say\" shared=\"true\" max-length=\"40\">\n        <q:set name=\"said\" value=\"{(said + ['P' + str(sender) + ': ' + text])[-3:]}\" />\n        <q:set name=\"line\" value=\"\" />\n      </qg:field>\n    </qg:menu>\n    <qg:hud position=\"top-left\" size=\"10\">\n      <qg:text value=\"{said[0] if len(said) > 0 else ''}\" />\n      <qg:text value=\"{said[1] if len(said) > 1 else ''}\" />\n      <qg:text value=\"{said[2] if len(said) > 2 else ''}\" />\n    </qg:hud>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-seat-003",
+      "intent": "Split screen for two",
+      "input": {
+        "natural_language": "Two players on one keyboard explore a map wider than the screen; each half of the screen follows one of them",
+        "context": {
+          "target": "godot",
+          "file": "game-seat-003.q"
+        }
+      },
+      "tags": [
+        "camera",
+        "player",
+        "split"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"split\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:input action=\"up\" keys=\"W\" player=\"1\" />\n  <qg:input action=\"down\" keys=\"S\" player=\"1\" />\n  <qg:input action=\"left\" keys=\"A\" player=\"1\" />\n  <qg:input action=\"right\" keys=\"D\" player=\"1\" />\n  <qg:input action=\"up\" keys=\"Up\" player=\"2\" />\n  <qg:input action=\"down\" keys=\"Down\" player=\"2\" />\n  <qg:input action=\"left\" keys=\"Left\" player=\"2\" />\n  <qg:input action=\"right\" keys=\"Right\" player=\"2\" />\n  <qg:scene name=\"field\" width=\"320\" height=\"180\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1\n1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1\n    </qg:tilemap>\n    <qg:character id=\"p1\" controller=\"topdown\" player=\"1\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"80\" hitbox=\"14x14\" />\n    <qg:character id=\"p2\" controller=\"topdown\" player=\"2\" sheet=\"people\" frame=\"2\" x=\"660\" y=\"80\" hitbox=\"14x14\" />\n    <!-- a camera a player: the screen splits, red on the left, blue on the right -->\n    <qg:camera player=\"1\" follow=\"p1\" />\n    <qg:camera player=\"2\" follow=\"p2\" />\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-seat-004",
+      "intent": "Four views for four players",
+      "input": {
+        "natural_language": "A party game for four on one machine, each with a quarter of the screen following them",
+        "context": {
+          "target": "godot",
+          "file": "game-seat-004.q"
+        }
+      },
+      "tags": [
+        "camera",
+        "player",
+        "split"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"quarters\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:input action=\"up\" keys=\"Up\" player=\"2\" />\n  <qg:input action=\"down\" keys=\"Down\" player=\"2\" />\n  <qg:input action=\"left\" keys=\"Left\" player=\"2\" />\n  <qg:input action=\"right\" keys=\"Right\" player=\"2\" />\n  <qg:input action=\"up\" keys=\"I\" player=\"3\" />\n  <qg:input action=\"down\" keys=\"K\" player=\"3\" />\n  <qg:input action=\"left\" keys=\"J\" player=\"3\" />\n  <qg:input action=\"right\" keys=\"L\" player=\"3\" />\n  <qg:input action=\"up\" keys=\"Kp8\" player=\"4\" />\n  <qg:input action=\"down\" keys=\"Kp5\" player=\"4\" />\n  <qg:input action=\"left\" keys=\"Kp4\" player=\"4\" />\n  <qg:input action=\"right\" keys=\"Kp6\" player=\"4\" />\n  <qg:scene name=\"party\" width=\"384\" height=\"216\">\n    <qg:character id=\"p1\" controller=\"topdown\" player=\"1\" sheet=\"people\" frame=\"0\" x=\"100\" y=\"100\" hitbox=\"14x14\" />\n    <qg:character id=\"p2\" controller=\"topdown\" player=\"2\" sheet=\"people\" frame=\"2\" x=\"900\" y=\"100\" hitbox=\"14x14\" />\n    <qg:character id=\"p3\" controller=\"topdown\" player=\"3\" sheet=\"people\" frame=\"4\" x=\"100\" y=\"700\" hitbox=\"14x14\" />\n    <qg:character id=\"p4\" controller=\"topdown\" player=\"4\" sheet=\"people\" frame=\"6\" x=\"900\" y=\"700\" hitbox=\"14x14\" />\n    <!-- four cameras: four quarters; a player who is not there has none -->\n    <qg:camera player=\"1\" follow=\"p1\" bounds=\"none\" />\n    <qg:camera player=\"2\" follow=\"p2\" bounds=\"none\" />\n    <qg:camera player=\"3\" follow=\"p3\" bounds=\"none\" />\n    <qg:camera player=\"4\" follow=\"p4\" bounds=\"none\" />\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-seat-005",
+      "intent": "A special move",
+      "input": {
+        "natural_language": "In a fighting game, down, forward and punch in quick succession throws a hit at the other fighter from afar",
+        "context": {
+          "target": "godot",
+          "file": "game-seat-005.q"
+        }
+      },
+      "tags": [
+        "on-input",
+        "sequence",
+        "fighter",
+        "damage"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"special\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:input action=\"punch\" keys=\"J\" />\n  <qg:input action=\"punch\" keys=\"Period\" player=\"2\" />\n  <qg:scene name=\"fight\" width=\"640\" height=\"360\">\n    <qg:character id=\"p1\" controller=\"fighter\" player=\"1\" sheet=\"people\" frame=\"0\" x=\"200\" y=\"252\" hitbox=\"40x90\">\n      <qg:move name=\"jab\" action=\"punch\" frames=\"1, 2\" reach=\"30x20\" damage=\"6\" />\n    </qg:character>\n    <qg:character id=\"p2\" controller=\"fighter\" player=\"2\" sheet=\"people\" frame=\"2\" x=\"440\" y=\"252\" hitbox=\"40x90\" facing=\"left\">\n      <qg:move name=\"jab\" action=\"punch\" frames=\"1, 2\" reach=\"30x20\" damage=\"6\" />\n    </qg:character>\n    <!-- forward is the way the fighter faces: right for player 1 here -->\n    <qg:on-input sequence=\"down, forward, punch\" within=\"30\" player=\"1\">\n      <q:if condition=\"{abs(p1.x - p2.x) &lt; 200}\"><qg:damage target=\"p2\" amount=\"12\" /></q:if>\n    </qg:on-input>\n    <qg:on-input sequence=\"down, forward, punch\" within=\"30\" player=\"2\">\n      <q:if condition=\"{abs(p1.x - p2.x) &lt; 200}\"><qg:damage target=\"p1\" amount=\"12\" /></q:if>\n    </qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-seat-006",
+      "intent": "A secret code",
+      "input": {
+        "natural_language": "On the title, up, up, down, down, left, right, left, right gives ninety-nine lives",
+        "context": {
+          "target": "godot",
+          "file": "game-seat-006.q"
+        }
+      },
+      "tags": [
+        "on-input",
+        "sequence"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"code\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"lives\" value=\"3\" type=\"number\" />\n  <qg:scene name=\"title\" width=\"320\" height=\"240\">\n    <qg:hud position=\"top-center\"><qg:text value=\"{'Lives: ' + str(lives)}\" /></qg:hud>\n    <!-- two seconds for the eight presses -->\n    <qg:on-input sequence=\"up, up, down, down, left, right, left, right\" within=\"120\">\n      <q:set name=\"lives\" value=\"99\" />\n    </qg:on-input>\n    <qg:on-input action=\"jump\"><qg:goto-scene name=\"level\" /></qg:on-input>\n  </qg:scene>\n  <qg:scene name=\"level\" width=\"320\" height=\"240\" />\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-seat-007",
+      "intent": "A hit felt in the hands",
+      "input": {
+        "natural_language": "When the hero runs into a spike, the joypad shakes for a moment; at the end of the lives, a long shake",
+        "context": {
+          "target": "godot",
+          "file": "game-seat-007.q"
+        }
+      },
+      "tags": [
+        "rumble",
+        "on-collision"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"rumble\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"lives\" value=\"3\" type=\"number\" />\n  <qg:prefab name=\"Spike\" tag=\"spike\" sheet=\"tiles\" frame=\"68\" hitbox=\"18x10\" />\n  <qg:scene name=\"level\" width=\"320\" height=\"240\">\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"14x20\">\n      <qg:on-collision with=\"spike\" cooldown=\"60\">\n        <q:set name=\"lives\" value=\"{lives - 1}\" />\n        <qg:rumble player=\"1\" strength=\"0.6\" seconds=\"0.25\" />\n        <q:if condition=\"{lives &lt;= 0}\">\n          <qg:rumble player=\"1\" strength=\"1\" seconds=\"0.8\" />\n          <qg:goto-scene name=\"level\" />\n        </q:if>\n      </qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Spike\" name=\"spike\" x=\"160\" y=\"200\" />\n  </qg:scene>\n</q:application>\n"
+      }
+    }
+  ]
+}

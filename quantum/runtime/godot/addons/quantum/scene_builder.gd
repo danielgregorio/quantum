@@ -64,6 +64,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	Q.apply_gd(scene, scene_spec.get("gd"))
 	scene.q_on_death = scene_spec.get("on_death", {})
 	scene.q_on_release = scene_spec.get("on_release", {})
+	scene.q_sequences = scene_spec.get("sequences", [])
 	scene.q_on_screen = scene_spec.get("on_screen", [])
 	var tilemap: Node = null
 	var characters: Dictionary = {}
@@ -256,9 +257,11 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 		for c in characters.values():
 			if c is CharacterBody2D and e.holds(c.position):
 				e.disarm()
+	var by_player := []   # qg:camera player=: a view each (split.gd)
 	for node_spec in cameras:
 		var cam := Camera.new()
 		cam.setup(node_spec, characters)
+		cam.scene_node = scene
 		if node_spec.get("bounds", "tilemap") == "tilemap" and tilemap != null:
 			var size: Vector2 = tilemap.pixel_size()
 			cam.limit_left = 0
@@ -266,8 +269,20 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 			cam.limit_right = int(size.x)
 			cam.limit_bottom = int(size.y)
 		Q.apply_gd(cam, node_spec.get("gd"))
+		if node_spec.get("player") != null:
+			cam.player = int(node_spec["player"])
+			if cam.targets.is_empty():
+				cam.free()   # it follows no one here: a player who is not playing has no view
+			else:
+				by_player.append(cam)
+			continue
 		scene.add_child(cam)
 		scene.q_camera = cam
+	if not by_player.is_empty():
+		var split: CanvasLayer = load("res://addons/quantum/split.gd").new()
+		var screen := Vector2(float(scene_spec.get("width", 256)), float(scene_spec.get("height", 224)))
+		scene.q_camera = split.build(scene, by_player, screen, Q.net_player() if Q.external_input else 0)
+		scene.q_views = split.views
 	return scene
 
 

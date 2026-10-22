@@ -70,6 +70,10 @@ GAMES = [
      'steps or walks where it is clicked (controller="pointer") and pushes crates (pushable=), barrels made from '
      'crates (extends=), a foreman whose words are typed in beside his face with a choice (qg:choice), a gate the '
      'camera goes to show open (qg:camera-to), and a key carried over the worker\'s head (qg:attach)'),
+    ('Rally', 'projects/rally/rally.q', 'two cars round a circuit drawn in Tiled, wider and taller than the screen: a '
+     'camera for each (qg:camera player=), so on one keyboard the screen splits in two and over the network each '
+     'machine follows its own car; a barrier that lifts at the green light (a solid prefab destroyed by a qg:timer), '
+     'and laps counted at the line only after halfway round (the map\'s zones)'),
     ('RPG', 'projects/rpg/rpg.q', 'Godot\'s "JRPG" demo transcribed: its map in three tile layers, a slime that '
      'walks it cell by cell, a key and another slime that talk in a dialogue box, and a turn-based fight '
      '(projects/rpg/README.md)'),
