@@ -15,6 +15,9 @@
 > into every game: ten rows more, and gaps 9, 10, 11, 19, 29, 33 and 42;
 > Phase 5, with Rally: four rows more, and gaps 32, 35 and 39; Phase 6, a game
 > at a time: twelve rows more, and gaps 12, 17, 34, 36, 37, 38, 40, 41 and 43).
+> PLAN_PANDAFOOT.md's Phase 1, with PandaFoot, a football manager drawn as a
+> text screen, covers placement by x and y, and two rows more: tables of the
+> state's rows and text formatted for columns (gap 44).
 
 Each row is one feature a 2D game is made of, as Godot 4.4 and Unity 6 (URP
 2D with its packages: 2D Tilemap, Physics 2D, Input System, Cinemachine 3,
@@ -57,11 +60,11 @@ declarative shape for it.
 
 | Feature | Godot 4.4 | Unity 6 | Quantum (qg:) | Verdict |
 |---|---|---|---|---|
-| Variables of a level and of the whole game | script members, autoloads | fields, statics, `DontDestroyOnLoad`, `ScriptableObject` | `q:set` in `qg:scene` (reset on entry) and in `q:application` (the autoload `G`, kept across scenes): numbers, strings, arrays, dictionaries | covered |
+| Variables of a level and of the whole game | script members, autoloads | fields, statics, `DontDestroyOnLoad`, `ScriptableObject` | `q:set` in `qg:scene` (reset on entry) and in `q:application` (the autoload `G`, kept across scenes): numbers, strings, arrays, dictionaries; a record's field set in place (`q:set name="team.points"`), a dictionary's key with `index=` (PandaFoot's league) | covered |
 | Expressions, conditions, loops | GDScript | C# | `{...}` compiled to GDScript with the Core evaluator's meaning; `q:if`, `q:elseif`, `q:else`, `q:loop` | covered |
 | Functions | `func` | methods | `q:function`, `q:call`, `q:return`; local variables and recursion (Chess); directly in `q:application`, every scene's and the prefabs' (Delve's and Keep's `hurt`) | covered |
 | Arithmetic and maths | `@GlobalScope` (`sin`, `atan2`, `lerp`...) | `Mathf` | `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `**`, `sin()`, `cos()`, `atan2()` (degrees), `sort()` | covered |
-| Random numbers | `RandomNumberGenerator` (seedable), `randf()` | `Random` (one global state, `Random.InitState`) | `random(a, b)` from the scene's seed; `speed="150..250"`; `qg:spawner` draws | covered |
+| Random numbers | `RandomNumberGenerator` (seedable), `randf()` | `Random` (one global state, `Random.InitState`) | `random(a, b)`, `pick(list)`, `chance(p)` from the scene's seed, which may be read from the state (`seed="{world}"`: PandaFoot's world from its number); `speed="150..250"`; `qg:spawner` draws | covered |
 | Asking the scene: how many, which is nearest, what is here | `get_nodes_in_group()`, script | `FindGameObjectsWithTag`, script | `count(tag)`, `nearest(a, who)`, `distance(a, b)`, `thing_at(tag, x, y)`, `tile_at(col, row)`, `held(item)` | covered |
 | Reading a thing's fields | any property | any field | `me.state`, `me.health`, `me.doing`, `me.vx`, `me.vy`, `me.on_floor`, `me.col`, `me.row`, `other.name`, `other.tag`, `p1.health` | covered |
 | Reading a thing's position | `position` | `transform.position` | `me.x`, `other.y`, `hero.x` (a thing, a character, or a cursor's point); a field the thing does not have is a compile error | covered |
@@ -283,14 +286,16 @@ declarative shape for it.
 | Bars | `ProgressBar`, `TextureProgressBar` | `Slider` or a filled `Image`; UI Toolkit `ProgressBar` | `qg:bar bind= max= width= height= color=` (a `q:set`, or `p1.health`) | covered |
 | Pictures in the HUD (icons, portraits, a logo) | `TextureRect` | `Image` | `qg:icon sheet= frame= scale=` (Keep's heart and key); `qg:inventory`; a dialogue's `portrait=` | covered |
 | Text and bars in the world (signs, a floating "+100", a bar over a head) | a `Label` or `Control` in the scene | `TextMeshPro`, a world-space Canvas | `qg:label` over a character or a prefab, or at a place of a scene; `qg:emit text=` floats a number up (Siege) | partial: text, not a bar drawn in the world |
-| Placement | anchors, offsets, containers | `RectTransform` anchors, layout groups | `position=`: the four corners, `top-center`, `center`, `bottom-center` | partial: no x and y |
+| Placement | anchors, offsets, containers | `RectTransform` anchors, layout groups | `position=`: the four corners, `top-center`, `center`, `bottom-center`; or `x=` and `y=` on `qg:hud` and `qg:menu` (PandaFoot's panels), `box=` to frame either | covered |
 | A HUD shown only sometimes | `visible` | `SetActive` | `if=` on `qg:hud`, `qg:menu` and its items | covered |
 | Fonts and sizes | `FontFile`, `SystemFont` | TextMeshPro font assets | `font=` (a `.ttf`) and `size=` on `qg:hud`, `qg:menu`, `qg:dialogue`, `qg:lobby`; `size=` per item | covered |
 | Text colour, outlines, rich text, panel styles | `Theme`, `LabelSettings`, `RichTextLabel` BBCode | USS, TextMeshPro rich text | `color=` on `qg:bar`; `gd:modulate` on a `qg:counter` or `qg:text` | partial: no text colour of the language's own, no rich text |
 | Menus and screens (title, pause, game over) | `Button`, containers, focus | `Button`, `EventSystem` navigation | `qg:menu` + `qg:button` (`label="{...}"`, `if=`): up, down and select, the mouse, the joypad's A; `qg:menu if="{paused()}"` | covered |
 | Text fields | `LineEdit` | `TMP_InputField`, `TextField` | `qg:field bind= label= max-length=` (typing is local to the machine) | covered |
 | Sliders, toggles, dropdowns (an options screen) | `HSlider`, `CheckBox`, `OptionButton` | `Slider`, `Toggle`, `TMP_Dropdown` | a toggle is a `qg:button` whose label reads the state | partial: no slider or dropdown |
-| Grids and scrolling lists | `GridContainer`, `ScrollContainer`, `ItemList` | `GridLayoutGroup`, `ScrollRect`, `ListView` | `columns=` and `rows=` on `qg:menu`: a grid, the rows beyond scrolled into view with the focus (Arena's keys) | covered |
+| Grids and scrolling lists | `GridContainer`, `ScrollContainer`, `ItemList` | `GridLayoutGroup`, `ScrollRect`, `ListView` | `columns=` and `rows=` on `qg:menu`: a grid, the rows beyond scrolled into view with the focus (Arena's keys); `source=` and `as=`: a button for each row of a list of the state (PandaFoot's line-up); menus shown together share the keys as one column | covered |
+| Tables of rows (a squad, a league table, a shop) | `Tree` with columns, `GridContainer` + script | UI Toolkit `MultiColumnListView` | `qg:table source= as= rows=` in a `qg:hud`, `qg:column label= value= width= align= color=` (PandaFoot's squad and table) | covered |
+| Text formatted for columns and money | `String.lpad()`, `rpad()`, `%` formatting | `string.Format`, `PadLeft`, `ToString("N0")` | `fit(v, width)`, `fit(v, width, 'right')`, `thousands(n, '.')`, `repeat(text, n)`, `join(list, sep)` | covered |
 | Dialogue boxes | Dialogic, Dialogue Manager (third party) | Yarn Spinner, Ink (third party) | `qg:dialogue`, `qg:line who= text=`, `qg:say`, `qg:on-end`, `talking()` | covered |
 | Dialogue choices | add-ons | Yarn Spinner options | `qg:choice label= if=` in a `qg:line`, with what it does (Crates' foreman, Keep's end) | covered |
 | Portraits and typewriter text | `visible_ratio`, add-ons | `maxVisibleCharacters`, add-ons | `speed=` and `sheet=` on `qg:dialogue`, `portrait=` on `qg:line` | covered |
@@ -427,7 +432,7 @@ declarative shape for it.
 | Audio | 8 | 0 | 1 | 1 | 10 |
 | Particles and visual effects | 5 | 0 | 0 | 1 | 6 |
 | Lighting, shaders and post-processing | 2 | 1 | 0 | 3 | 6 |
-| UI | 12 | 4 | 0 | 0 | 16 |
+| UI | 15 | 3 | 0 | 0 | 18 |
 | Time | 7 | 0 | 0 | 1 | 8 |
 | Scene flow | 8 | 1 | 0 | 1 | 10 |
 | Persistence | 5 | 1 | 0 | 1 | 7 |
@@ -436,13 +441,14 @@ declarative shape for it.
 | Testing and determinism | 9 | 1 | 0 | 0 | 10 |
 | Export and platforms | 5 | 0 | 0 | 1 | 6 |
 | Tooling | 5 | 1 | 0 | 2 | 8 |
-| **Total** | **202** | **25** | **1** | **23** | **251** |
+| **Total** | **205** | **24** | **1** | **23** | **253** |
 
-Of 251 rows, 202 are covered and 25 partial; 1 is a gap, and 23 are left
+Of 253 rows, 205 are covered and 24 partial; 1 is a gap, and 23 are left
 out by design: four in five covered (146, 42 and 40 when the map was made;
 Phase 1 of PLAN_GAMES_3.md covered nine rows, and the clock in an expression,
 its `ticks()`, counted late; Phase 2 twelve more, Phase 3 nine more, Phase 4
-ten more, Phase 5 four more, Phase 6 twelve, and a frame for boxes). The gap left is
+ten more, Phase 5 four more, Phase 6 twelve, and a frame for boxes; PLAN_PANDAFOOT.md's Phase 1 one, and
+two rows more covered). The gap left is
 adaptive music, which no game has asked for. The rows
 left out by design are mostly the rigid-body solver, shaders and post-
 processing, what belongs to an editor, and the networking machinery that
@@ -498,6 +504,7 @@ above is in this list, and so are many **partial** ones.
 41. **Isometric and hexagonal maps.** *Done: PLAN_GAMES_3.md, Phase 6, for Marches (hexes; diamonds tested, no game yet).* `shape="hex"` or `"iso"` on `qg:tileset`, with neighbours and pathfinding to match. Strategy and tactics games.
 42. **macOS builds.** *Done: PLAN_GAMES_3.md, Phase 4.* A `macOS` preset in `scripts/export-games.py`. Desktop releases.
 43. **Hot reload.** *Done: PLAN_GAMES_3.md, Phase 6.* `quantum run game.q --watch`: rebuild on save and come back to the same tick from the session's tape. Whoever writes a game.
+44. **Screens of a management game.** *Done: PLAN_PANDAFOOT.md, Phase 1, for PandaFoot.* `qg:table` and `qg:column` in a HUD, `source=` and `as=` on `qg:menu`, `x=` and `y=` on both, `fit()` and `thousands()`, a record's field set in place, a seed read from the state. Management and sports games, a shop, a league table.
 
 ## What Quantum has that neither engine has
 

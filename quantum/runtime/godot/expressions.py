@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import ast
 import json
+import keyword
+import re
 from typing import Dict, Iterable, List, Optional, Set
 
 from quantum.core.expressions import _normalise_js_operators
@@ -68,6 +70,12 @@ _FUNCTIONS = {
     'atan2': 'Q.atan2_deg({0}, {1})',        # the angle of (x, y) in degrees: 0 right, 90 down
     'sort': {1: 'Q.sort({0})', 2: 'Q.sort({0}, {1})'},   # a sorted copy (descending with true), the Core's sort
     'carrying': 'Q.carrying({0}, {1})',      # what of a tag a thing carries (qg:attach), or null
+    'pick': 'Q.pick(self, {0})',             # one item of a list at random, from the scene's seeded source
+    'chance': 'Q.chance(self, {0})',         # true with probability p (0 to 1), from the same source
+    'join': {1: 'Q.join({0})', 2: 'Q.join({0}, {1})'},   # the items as text, joined by ', ' (or the second)
+    'fit': {2: 'Q.fit({0}, {1})', 3: 'Q.fit({0}, {1}, {2})'},   # cut or padded to so many characters ('right')
+    'thousands': {1: 'Q.thousands({0})', 2: 'Q.thousands({0}, {1})'},   # 1500000 as 1,500,000 (or with '.')
+    'repeat': 'Q.repeat({0}, {1})',          # a text so many times (a bar of blocks)
 }
 
 # The built-ins that read a player's action: the action's name, and the player (1 when not given).
@@ -142,6 +150,15 @@ class Scope:
             return f'get_node_or_null("{name}")'   # a character placed only sometimes (if=), or gone: null
         return f'G.{name}' if self.is_game(name) else name
 
+    def has_local(self, name: str) -> bool:
+        """A parameter, a variable or a loop's name of the function or handler being compiled (not the state)."""
+        scope = self
+        while scope is not None and scope.parent is not None:
+            if name in scope.names:
+                return True
+            scope = scope.parent
+        return False
+
     def has_function(self, name: str) -> bool:
         return name in self.functions or (self.parent is not None and self.parent.has_function(name))
 
@@ -190,7 +207,9 @@ def compile_expression(source: str, scope: Scope, line: Optional[int] = None) ->
     try:
         tree = ast.parse(_normalise_js_operators(text), mode='eval')
     except SyntaxError as e:
-        raise GameCompileError(f'cannot read the expression {text!r}: {e.msg}', line)
+        word = re.search(r'\.\s*(' + '|'.join(keyword.kwlist) + r')\b', text)
+        hint = (f'; {word.group(1)!r} is a word of the language: name the field otherwise' if word else '')
+        raise GameCompileError(f'cannot read the expression {text!r}: {e.msg}{hint}', line)
     return _Emitter(scope, line, text).emit(tree.body)
 
 

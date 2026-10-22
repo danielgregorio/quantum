@@ -728,6 +728,58 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the demo's Start button. `tests/godot/test_godot_menu.py` drives a menu
   by keys and by the pointer.
 
+- Laboratory: PandaFoot (`projects/pandafoot/pandafoot.q`), a football
+  manager after Elifoot 2, Phase 1 of `PLAN_PANDAFOOT.md`: one league of ten
+  clubs home and away, for one manager or two to four taking turns at one
+  machine, drawn as an 80×25 text screen of the DOS days, in English,
+  Portuguese and Spanish. A world is made from its number (squads of 22 by
+  `GAME_DESIGN.md` v0.2 of danielgregorio/pandafoot: strength, positions,
+  traits by band of strength, a genius hidden in a small club); the
+  dashboard, the squad (F3), the line-up (F1),
+  tactics (F2), the table (F7) and finances (F5) are a key away; the live
+  round plays the five matches in the same minute at 1x to 16x, the table
+  moving with each goal, with time-outs, and reactions that change tactics at
+  their minute with three seconds to undo them; gates, wages, TV and
+  sponsorship after it; saves in three slots. Its box and sounds are drawn
+  and synthesized by `scripts/art/pandafoot.py` (CC0), its font is DejaVu
+  Sans Mono (its licence beside it). On the games page, and played in CI
+  (`tests/godot/test_godot_pandafoot.py`).
+- Laboratory: tables, from what PandaFoot asked. `<qg:table source= as=
+  rows=>` in a `qg:hud` shows rows of the state, a line each, in
+  `<qg:column label= value= width= align= color=>`s: each cell is the
+  column's expression of the row, cut or padded to its width, a space
+  between the columns; `color=` is a colour or an expression of the row.
+  The play protocol reads a table as its headings and the rows' cells as
+  shown.
+- Laboratory: a menu of rows. `<qg:menu source= as=>` holds one
+  `qg:button`, shown for each row of a list read every tick (a squad, the
+  clubs, a shop's goods); its `label=`, `if=` and what it runs read the row
+  by the name `as=` gives. Its rows are lines of text, the focused one lit.
+- Laboratory: menus shown together. Menus of the same player shown at once
+  are one column for the keys, in the scene's order: down from one's last
+  item goes to the next one's first, up from its first to the previous
+  one's last, and the pointer moving onto an item (or a click) brings the
+  keys to its menu. The play protocol says `keys: false` of a menu without
+  them.
+- Laboratory: screens laid out by hand. `x=` and `y=` on `qg:hud` and
+  `qg:menu` put their top-left corner on the screen (in place of
+  `position=`); `box=` on `qg:hud` frames it as `qg:menu`'s does. `color=`
+  on `qg:text` may be an expression, read every frame (red when a balance
+  is below zero).
+- Laboratory: text formatting and chance in expressions: `fit(v, width)`
+  and `fit(v, width, 'right')` cut or pad a text to a column, `thousands(n)`
+  and `thousands(n, '.')` write 1,500,000 or 1.500.000, `repeat(text, n)`
+  (a bar of blocks), `join(list)` and `join(list, sep)`, `pick(list)` and
+  `chance(p)` (as the Core's, from the scene's seeded source).
+- Laboratory: records changed in place. `<q:set name="team.points">` sets a
+  field of a record (a dictionary in a list sets it there); `index=` sets a
+  key of a dictionary as well as an item of a list.
+- Laboratory: a world's number. `seed=` on `qg:scene` may be an expression of
+  the game's state, read as the scene is entered: the same number, the same
+  world. A scene entered again and again with the same seed draws the same
+  each time; PandaFoot's round is seeded by the world, the season and the
+  round, so each round has its own luck and a replay the same.
+
 ### Fixed
 
 - Laboratory: a `qg:state` without `frame=` showed frame 0 of the sheet; it
@@ -870,8 +922,29 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the files of one importer together on several threads. A compiled project
   imports one file at a time (`editor/import/use_multiple_threads=false`).
 
+- Laboratory: a `q:loop` whose variable had the name of a variable of the
+  function stopped Godot from loading the script; the compiler refuses it
+  with the line. A variable read as a field of another (`m.luck`) is not
+  the variable `luck`, which a first `q:set` may now read. An expression
+  that reads a field named like a word of the language (`side.def`) says so,
+  and a variable named like a property of every node gives its line.
+- Laboratory: a HUD hidden by its `if=` still read what it shows every
+  frame (an `if="{len(live) > 0}"` did not keep `live[0]` from being read).
+- Laboratory: the play protocol wrote every variable of the scene and the game
+  out as JSON twice a tick, to see what changed: a league of 220 players
+  played a round at 16x in tens of seconds. Each variable is hashed a tick
+  and written only when it changed, and a list or a record changed in place
+  (a player's goals) is a `set` event too, which it was not.
+
 ### Changed
 
+- Laboratory: a scene's `q:set` whose value is computed (it calls a
+  function, reads the game's state or draws at random) is set as the scene
+  is entered, after its random source is seeded and before what the scene
+  runs, in the order written; it read an unseeded source before, and could
+  not call a q:function. A constant (`{3}`, `{[]}`) is the value from the
+  start, as before. The game's q:functions may be written after the scenes
+  that use them.
 - The repository is English everywhere, with no exception for Portuguese
   (`CODING.md`): the example app `projects/tarefas` is `projects/tasks`, the
   same app the tutorial builds (`components/sheet.q`, `components/task/[id].q`,

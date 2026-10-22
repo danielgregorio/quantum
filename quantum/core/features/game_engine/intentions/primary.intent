@@ -83,7 +83,7 @@ intention:
     - "an enemy made of parts moves by the first of seek, flee, keep-distance, patrol, wander and stand whose when= holds and that has something to do; me.doing names it"
 
     # --- what a scene holds ---
-    - "qg:scene is a screen of the game: width, height, background, seed=, save=true to save on entering it as a room, y-sort=true to draw what stands lower in front, and ambient= a dark scene: the colour where no qg:light reaches"
+    - "qg:scene is a screen of the game: width, height, background, seed= (a number, or an expression of the game's state: a world's number), save=true to save on entering it as a room, y-sort=true to draw what stands lower in front, and ambient= a dark scene: the colour where no qg:light reaches"
     - "qg:tilemap is the level: CSV rows of tile numbers (0 empty, n is tile n-1, -n flipped) or a Tiled map (src=): its layers from one or more tilesets (each a qg:tileset with the same image), flipped and turned tiles, its objects placing prefabs (a state property), zones, exits and paths, and its own properties read by tiled('name'); collision=true makes its tiles solid; several are layers"
     - "qg:character is a body a player moves: controller= platformer, topdown, map, ship, fighter, grid, pointer (a grid walker its player's click walks by the shortest way) or behavior, with sheet, frame, x, y, hitbox and the controller's own settings"
     - "qg:instance places a prefab at x,y, with an optional name= and if="
@@ -103,11 +103,14 @@ intention:
     - "qg:hud is text over the game at a position, with a font and size"
     - "qg:counter (in qg:hud) shows a number: a q:set (bind=) or how many of an item are held (item=)"
     - "qg:icon in a qg:hud is a picture: a frame of a sheet (frame= may be an expression), the item after it on its line; color= on qg:text and qg:counter; if= and bottom-left, bottom-right on qg:hud"
-    - "qg:text (in qg:hud) shows a string: a q:set (bind=) or an expression (value=)"
+    - "qg:text (in qg:hud) shows a string: a q:set (bind=) or an expression (value=); its color= may be an expression, read every frame"
+    - "qg:table (in qg:hud) shows rows of the state (source=, each named as=), a line each, in columns: qg:column gives a heading (label=), an expression of the row (value=), how many characters wide (width=, cut or padded), align=right for numbers and a colour (color=, or an expression of the row); rows= shows so many at most"
+    - "x= and y= put a qg:hud's or a qg:menu's top-left corner on the screen, in place of position=; box= frames a qg:hud as a qg:menu (a panel of a text screen)"
     - "qg:bar (in qg:hud) shows a number against its max: a q:set, or a fighter's id.health"
     - "qg:inventory (in qg:hud) shows the items held, each its picture and how many"
     - "qg:menu is a list of buttons, fields, sliders and keys a player moves through with up/down and chooses with select or a click; if= shows it only while true; columns= lays it out in a grid (left and right along a row), rows= shows so many rows and scrolls the rest into view; box= frames it with a qg:spritesheet with slice="
     - "qg:button (in qg:menu) runs what it holds when chosen; its label= may be an expression"
+    - "qg:menu source= as= holds one qg:button, shown for each row of a list of the state read every tick (a squad, the clubs, a shop); its label=, if= and what it runs read the row; menus of a player shown together are one column for the keys, down from one's last item to the next one's first"
     - "qg:field (in qg:menu) is a text box bound to a string q:set; typing is local to the machine, and the keys type rather than play while it has them; shared=true makes it a draft that Enter sends with the player's input, so on that tick every machine sets the state and runs what the field holds, with sender and text (names, a chat); qg:menu local=true is the menu of whoever plays at this machine, of shared fields only"
     - "qg:slider in a qg:menu is a value left and right change while it has the focus: how loud a bus is (bus=, 0 to 100, kept between runs) or a number of the state (bind=, min=, max=, step=)"
     - "qg:rebind in a qg:menu shows an action's key; chosen, the next key, mouse button or joypad button pressed becomes the action's (Escape keeps it), kept between runs; local, like typing"
@@ -187,12 +190,12 @@ intention:
     - "qg:leave leaves the networked game, or stops hosting or joining"
 
     # --- statements and expressions ---
-    - "q:set in q:application is game state (saved=true keeps it between runs); in qg:scene, scene state; in a handler, an assignment with value="
+    - "q:set in q:application is game state (saved=true keeps it between runs); in qg:scene, scene state (computed as the scene is entered, after its seed); in a handler, an assignment with value=; name=\"team.points\" sets a field of a record in place, index= an item of a list or a key of a dictionary"
     - "q:if, q:elseif and q:else choose between actions and statements in a handler"
     - "q:loop repeats a body over items= or from=/to=, with var="
     - "q:function (directly in a qg:scene, or in q:application for every scene and the prefabs) names a body of actions and statements; q:call runs it; q:return leaves it"
     - "expressions are written in braces and read state, me, other, cursor, the scene's characters by id (p1.health, hero.x), where a thing is (other.x, me.y) and the cell of the tilemap it stands in (other.col, me.row), what a body touched as it last moved (me.on_floor, me.on_wall, me.on_ceiling), and built-in functions; a field a thing does not have (hero.foo) is a compile error that lists the ones it has"
-    - "functions: len, str, int, float, abs, min, max, round, floor, ceil, sqrt, random (from the scene seed), count, thing_at, tile_at (of a layer by name too), tiled (a property of the scene's Tiled map), carrying (what of a tag a thing carries), distance, nearest, sees, cost (what the cheapest way from a thing to a thing or a cursor costs), held, paused, talking, tr, tr_n (a count's word, one or other, in its language's form for n), language, has_save (of a slot too), volume (of a bus), fullscreen, net_status, net_players, net_player, url_param, can_quit, ticks (the scene's), sin, cos, atan2 (degrees), sort; pressing, pressed_for (ticks) and strength of an action, for player 1 or another"
+    - "functions: len, str, int, float, abs, min, max, round, floor, ceil, sqrt, random (from the scene seed), count, thing_at, tile_at (of a layer by name too), tiled (a property of the scene's Tiled map), carrying (what of a tag a thing carries), distance, nearest, sees, cost (what the cheapest way from a thing to a thing or a cursor costs), held, paused, talking, tr, tr_n (a count's word, one or other, in its language's form for n), language, has_save (of a slot too), volume (of a bus), fullscreen, net_status, net_players, net_player, url_param, can_quit, ticks (the scene's), sin, cos, atan2 (degrees), sort, pick and chance (from the scene seed, as the Core's), join, fit (cut or padded to a column, 'right' for numbers), thousands (1,500,000, or with '.'), repeat (a text so many times); pressing, pressed_for (ticks) and strength of an action, for player 1 or another"
 
   compilation:
     input: "<q:application type=\"game\"> with qg: tags and q: statements"

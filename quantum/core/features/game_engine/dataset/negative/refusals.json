@@ -1157,6 +1157,169 @@
         "tileset",
         "shape"
       ]
+    },
+    {
+      "id": "game-bad-067",
+      "intent": "A HUD placed by x alone",
+      "input": {
+        "natural_language": "A panel given x= but not y=",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:hud x=\"8\"><qg:text value=\"{'Balance'}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:hud>: x= and y= go together"
+      },
+      "why_invalid": "x= and y= are a top-left corner; one alone places nothing.",
+      "correction": "Give both: <qg:hud x=\"8\" y=\"16\">, or a position=.",
+      "tags": [
+        "hud",
+        "x",
+        "y"
+      ]
+    },
+    {
+      "id": "game-bad-068",
+      "intent": "A table with no columns",
+      "input": {
+        "natural_language": "A table of the squad that says nothing of what to show",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"team\" value=\"[]\" type=\"array\" />\n    <qg:hud><qg:table source=\"{team}\" as=\"p\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:table> needs at least one qg:column"
+      },
+      "why_invalid": "A table shows its rows in columns; without one it has nothing to show.",
+      "correction": "Add a column: <qg:column label=\"Name\" value=\"{p.name}\" width=\"12\" />.",
+      "tags": [
+        "table",
+        "column"
+      ]
+    },
+    {
+      "id": "game-bad-069",
+      "intent": "A colour by name",
+      "input": {
+        "natural_language": "A column coloured \"red\"",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"team\" value=\"[]\" type=\"array\" />\n    <qg:hud><qg:table source=\"{team}\" as=\"p\"><qg:column value=\"{p.name}\" color=\"red\" /></qg:table></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "a colour #rrggbb, or an expression ({...}) giving one"
+      },
+      "why_invalid": "Colours are written #rrggbb; a word is not read as one.",
+      "correction": "color=\"#ff5555\", or an expression: color=\"{'#ff5555' if p.injured else '#ffffff'}\".",
+      "tags": [
+        "column",
+        "color"
+      ]
+    },
+    {
+      "id": "game-bad-070",
+      "intent": "Rows without a name",
+      "input": {
+        "natural_language": "A menu of the squad with source= but no as=",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"team\" value=\"[]\" type=\"array\" />\n    <qg:menu source=\"{team}\"><qg:button label=\"Pick\" /></qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "source= and as= go together"
+      },
+      "why_invalid": "The button is shown for each row and reads it by a name; as= gives that name.",
+      "correction": "<qg:menu source=\"{team}\" as=\"p\"> and label=\"{p.name}\".",
+      "tags": [
+        "menu",
+        "source",
+        "as"
+      ]
+    },
+    {
+      "id": "game-bad-071",
+      "intent": "Two buttons for each row",
+      "input": {
+        "natural_language": "A menu of rows with a pick button and a sell button",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"team\" value=\"[]\" type=\"array\" />\n    <qg:menu source=\"{team}\" as=\"p\"><qg:button label=\"Pick\" /><qg:button label=\"Sell\" /></qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:menu source=> holds one qg:button, shown once for each row"
+      },
+      "why_invalid": "A menu of rows is a list: each row is one button, and choosing it runs what it holds with the row.",
+      "correction": "One button per row; what to do with the row can be a second menu, or a key (qg:on-input).",
+      "tags": [
+        "menu",
+        "source",
+        "button"
+      ]
+    },
+    {
+      "id": "game-bad-072",
+      "intent": "A field of something undeclared",
+      "input": {
+        "natural_language": "Points added to a club that is no variable",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:on-input action=\"select\"><q:set name=\"club.points\" value=\"{3}\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "'club' is not declared"
+      },
+      "why_invalid": "A field is set in a record the scene, the game or the function has.",
+      "correction": "Declare it, or set a field of one that is there: <q:set name=\"team.points\" .../>.",
+      "tags": [
+        "set"
+      ]
+    },
+    {
+      "id": "game-bad-073",
+      "intent": "A loop over a name taken",
+      "input": {
+        "natural_language": "A loop whose variable is a variable of the function already",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"clubs\" value=\"[]\" type=\"array\" />\n  <q:function name=\"reset\">\n    <q:set name=\"c\" value=\"{clubs[0]}\" />\n    <q:loop items=\"{clubs}\" var=\"c\"><q:set name=\"c.points\" value=\"{0}\" /></q:loop>\n  </q:function>\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "is a parameter or a variable here already"
+      },
+      "why_invalid": "The loop's name would hide the variable, and Godot refuses that.",
+      "correction": "Name the loop's otherwise: <q:loop items=\"{clubs}\" var=\"club\">.",
+      "tags": [
+        "loop"
+      ]
+    },
+    {
+      "id": "game-bad-074",
+      "intent": "A field named like a word of the language",
+      "input": {
+        "natural_language": "A side's defence kept in a field called def",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"side\" value=\"{ {'att': 1, 'def': 2} }\" />\n    <qg:hud><qg:text value=\"{side.def}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "'def' is a word of the language: name the field otherwise"
+      },
+      "why_invalid": "Expressions are read as Python reads them: def, class, if... are words of the language, not names.",
+      "correction": "Call the field defense: {side.defense}.",
+      "tags": [
+        "text",
+        "expression"
+      ]
+    },
+    {
+      "id": "game-bad-075",
+      "intent": "A seed in words",
+      "input": {
+        "natural_language": "A scene seeded with \"seven\"",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\" seed=\"seven\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "a whole number, or an expression ({...}) giving one"
+      },
+      "why_invalid": "The seed is a number, or read from the state.",
+      "correction": "seed=\"7\", or seed=\"{world}\".",
+      "tags": [
+        "scene",
+        "seed"
+      ]
     }
   ]
 }

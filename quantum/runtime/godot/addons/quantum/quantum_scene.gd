@@ -25,6 +25,8 @@ var _shake_rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	add_to_group("q_scene")
+	if q_spec.has("seed_method"):
+		q_seed = int(call(q_spec["seed_method"]))   # seed="{...}": a world's number
 	rng.seed = q_seed
 	if Q.slow != 1.0:
 		Q.time_scale(1.0)   # a new scene starts at the usual speed

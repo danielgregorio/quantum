@@ -5,6 +5,12 @@ extends CanvasLayer
 # the items held (qg:item), each its picture and how many. A qg:icon is a
 # picture, and the item after it shares its line (a heart, then the hearts).
 # With if=, it shows only while that is true.
+#
+# A qg:table is rows of the state in columns, a label for each cell (a grid,
+# so the columns line up a space apart whatever the font); its cells are made
+# again when the number of rows changes. x= and y= put the HUD's top-left
+# corner on the screen; box= draws it in a frame of the game's (a sheet with
+# slice=), as a panel of a text screen.
 
 var _scene: Node = null
 var _labels: Array = []   # [{label, bind, prefix}], or {inventory: row, size, shown}, or {icon, method, sheet}
@@ -18,7 +24,7 @@ func setup(spec: Dictionary, scene: Node) -> void:
 	var box: BoxContainer = VBoxContainer.new()
 	var viewport_w: int = ProjectSettings.get_setting("display/window/size/viewport_width", 256)
 	var viewport_h: int = ProjectSettings.get_setting("display/window/size/viewport_height", 224)
-	var position_ := str(spec.get("position", "top-left"))
+	var position_ := "xy" if spec.get("xy") != null else str(spec.get("position", "top-left"))
 	var centered := position_ == "top-center" or position_ == "center" or position_ == "bottom-center"
 	var right := position_ == "top-right" or position_ == "bottom-right"
 	match position_:
@@ -45,6 +51,8 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			box.position = Vector2(0, 0)
 			box.size = Vector2(viewport_w - 4, viewport_h - 4)
 			box.alignment = BoxContainer.ALIGNMENT_END
+		"xy":
+			box.position = Vector2(float(spec["xy"][0]), float(spec["xy"][1]))
 		_:
 			box.position = Vector2(4, 4)
 	add_child(box)
@@ -54,6 +62,15 @@ func setup(spec: Dictionary, scene: Node) -> void:
 		if font == null:
 			push_warning("quantum: cannot load the font " + str(spec["font"]))
 	var size := int(spec.get("size", 8))
+	if spec.get("box") != null:   # in a frame of the game's, stretched to what it shows
+		var panel := PanelContainer.new()
+		panel.add_theme_stylebox_override("panel", Q.frame_box(scene.q_game["sheets"][spec["box"]], size * 0.5))
+		panel.size_flags_horizontal = Control.SIZE_SHRINK_END if right else (Control.SIZE_SHRINK_CENTER if centered
+			else Control.SIZE_SHRINK_BEGIN)
+		box.add_child(panel)
+		var inside := VBoxContainer.new()
+		panel.add_child(inside)
+		box = inside
 	_font = font
 	_if_method = spec.get("if_method")
 	var outer: BoxContainer = box
@@ -91,6 +108,20 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			_labels.append({"inventory": row, "size": int(item["size"]) if item.get("size") != null else size,
 				"shown": null})
 			continue
+		if item["kind"] == "table":
+			var grid := GridContainer.new()
+			grid.columns = item["columns"].size()
+			var f: Font = font if font != null else ThemeDB.fallback_font
+			# a space between the columns; the rows as close as a text screen's lines
+			grid.add_theme_constant_override("h_separation", int(ceilf(f.get_string_size(" ", HORIZONTAL_ALIGNMENT_LEFT,
+				-1, size).x)))
+			grid.add_theme_constant_override("v_separation", 0)
+			if centered or right:
+				grid.size_flags_horizontal = Control.SIZE_SHRINK_END if right else Control.SIZE_SHRINK_CENTER
+			Q.apply_gd(grid, item.get("gd"))
+			box.add_child(grid)
+			_labels.append({"table": grid, "spec": item, "size": size, "count": -1, "shown": []})
+			continue
 		if item["kind"] == "bar":
 			var bar := ProgressBar.new()
 			bar.show_percentage = false
@@ -120,7 +151,8 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			Q.apply_gd(label, item.get("gd"))
 			box.add_child(label)
 			_labels.append({"label": label, "bind": item.get("bind"), "prefix": item.get("label", ""),
-				"method": item.get("value_method"), "item": item.get("item")})
+				"method": item.get("value_method"), "item": item.get("item"), "color_method": item.get("color_method"),
+				"color": null})
 	_refresh()
 
 
@@ -142,6 +174,12 @@ func quantum_view() -> Dictionary:
 			shown.append({"bar": entry["bind"], "value": entry["bar"].value, "max": entry["bar"].max_value})
 		elif entry.has("inventory"):
 			shown.append({"inventory": entry["shown"]})
+		elif entry.has("table"):
+			# the headings, then each row's cells as shown (without the padding)
+			var labels := []
+			for c in entry["spec"]["columns"]:
+				labels.append(Q.translate(str(c.get("label", ""))))
+			shown.append({"table": labels, "rows": entry["shown"]})
 		else:
 			shown.append(Q.translate(entry["label"].text))   # as shown: in the player's language
 	return {"kind": "hud", "items": shown}
@@ -159,6 +197,8 @@ func _bound(bind: String):
 func _refresh() -> void:
 	if _if_method != null:
 		visible = bool(_scene.call(_if_method))
+	if not visible:
+		return   # what it shows is read while it is shown (if="{len(live) > 0}" guards a live[0])
 	for entry in _labels:
 		if entry.has("icon"):
 			var f: int = int(_scene.call(entry["method"])) if entry["method"] != null else int(entry["frame"])
@@ -173,6 +213,17 @@ func _refresh() -> void:
 		if entry.has("inventory"):
 			_refresh_inventory(entry)
 			continue
+		if entry.has("table"):
+			_refresh_table(entry)
+			continue
+		if entry["color_method"] != null:   # color="{...}": read every frame
+			var color := str(_scene.call(entry["color_method"]))
+			if color != entry["color"]:
+				entry["color"] = color
+				if color == "":
+					entry["label"].remove_theme_color_override("font_color")
+				else:
+					entry["label"].add_theme_color_override("font_color", Color.from_string(color, Color.WHITE))
 		var value
 		if entry.get("item") != null:
 			value = Q.items_held(entry["item"])
@@ -227,3 +278,53 @@ func _refresh_inventory(entry: Dictionary) -> void:
 			count.add_theme_font_override("font", _font)
 		count.text = str(held[item]) if spec.get("sheet") != null else Q.translate(str(spec["label"])) + " " + str(held[item])
 		row.add_child(count)
+
+
+# The rows of a qg:table: a label for each cell, made again when how many rows
+# there are changes; each cell its column's value of the row, cut or padded to
+# the column's width, in its colour.
+func _refresh_table(entry: Dictionary) -> void:
+	var spec: Dictionary = entry["spec"]
+	var columns: Array = spec["columns"]
+	var rows: Array = _scene.call(spec["source"])
+	if spec.get("rows") != null and rows.size() > int(spec["rows"]):
+		rows = rows.slice(0, int(spec["rows"]))
+	var heading := false
+	for c in columns:
+		heading = heading or str(c.get("label", "")) != ""
+	var grid: GridContainer = entry["table"]
+	if rows.size() != entry["count"]:
+		entry["count"] = rows.size()
+		for c in grid.get_children():
+			grid.remove_child(c)
+			c.queue_free()
+		for i in (rows.size() + (1 if heading else 0)) * columns.size():
+			var label := Label.new()
+			label.add_theme_font_size_override("font_size", int(entry["size"]))
+			if _font != null:
+				label.add_theme_font_override("font", _font)
+			var c: Dictionary = columns[i % columns.size()]
+			if heading and i < columns.size():
+				label.text = Q.fit(Q.translate(str(c.get("label", ""))), int(c["width"]), c["align"])
+			grid.add_child(label)
+	var cells := grid.get_children()
+	var start := columns.size() if heading else 0
+	var shown := []
+	for r in rows.size():
+		var row = rows[r]
+		var line := []
+		for k in columns.size():
+			var c: Dictionary = columns[k]
+			var text := Q.fit(str(_scene.call(c["value"], row)), int(c["width"]), c["align"])
+			line.append(text.strip_edges())   # as shown, cut to the column, without its padding
+			var label: Label = cells[start + r * columns.size() + k]
+			label.text = text
+			var color = c.get("color")
+			if c.get("color_method") != null:
+				color = str(_scene.call(c["color_method"], row))
+			if color == null or color == "":
+				label.remove_theme_color_override("font_color")
+			else:
+				label.add_theme_color_override("font_color", Color.from_string(str(color), Color.WHITE))
+		shown.append(line)
+	entry["shown"] = shown

@@ -78,6 +78,12 @@ GAMES = [
      'riders that ride where they are clicked by the cheapest way (qg:travel budget=), forests, hills and marshes that '
      'cost more to cross (qg:tile cost=), a pointer that snaps to the hexes (qg:cursor cells=), what a ride there '
      'would cost (cost()), and raiders that ride at the nearest rider in their turn (qg:for-each, qg:travel)'),
+    ('PandaFoot', 'projects/pandafoot/pandafoot.q', 'a football manager after Elifoot 2, drawn as an 80 by 25 text '
+     'screen: a world made from its number (qg:scene seed="{world}"), squads in tables (qg:table, qg:column, fit(), '
+     'thousands()) and panels placed by hand (x=, y=, box=), the line-up as a menu of rows (qg:menu source=), records '
+     'changed in place (q:set name="p.goals"), and the live round: five matches in the same minute at 1x to 16x, '
+     'reactions that change tactics at their minute with three seconds to undo them; in English, Portuguese and '
+     'Spanish'),
     ('RPG', 'projects/rpg/rpg.q', 'Godot\'s "JRPG" demo transcribed: its map in three tile layers, a slime that '
      'walks it cell by cell, a key and another slime that talk in a dialogue box, and a turn-based fight '
      '(projects/rpg/README.md)'),
@@ -290,9 +296,15 @@ def build() -> str:
                  'scene\'s state; in `q:application`, the game\'s, kept across scenes — with `saved="true"`, '
                  'between runs. A `q:function` directly in a scene is the scene\'s; in `q:application`, every '
                  'scene\'s (and the prefabs\' handlers\'), reading the game\'s state, its parameters and its own '
-                 'variables. An expression may call ' + ', '.join(f'`{f}()`' for f in FUNCTIONS) +
+                 'variables. A `q:set` directly in a scene whose value is computed (a function, the game\'s state, '
+                 '`random()`) is set as the scene is entered, after its seed, in the order written. '
+                 '`<q:set name="team.points">` sets a field of a record in place (in the list that holds it too), '
+                 'and `index=` an item of a list or a key of a dictionary. An expression may call '
+                 + ', '.join(f'`{f}()`' for f in FUNCTIONS) +
                  '; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take '
-                 'degrees and `atan2(y, x)` gives them (0 to the right, 90 down), and `sort()` is the Core\'s. '
+                 'degrees and `atan2(y, x)` gives them (0 to the right, 90 down), `sort()`, `pick()`, `chance()` '
+                 'and `join()` are the Core\'s, `fit(v, width)` cuts or pads a text to a column (`fit(v, width, '
+                 '\'right\')` for numbers), `thousands(n, \'.\')` writes 1.500.000 and `repeat(text, n)` a bar. '
                  + ', '.join(f'`{f}()`' for f in ACTION_FUNCTIONS) + ' read an action of player 1, or of another '
                  '(`pressing(\'run\', 2)`): held now, the ticks it has been held (on the tick it is let go, how long '
                  'it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). '

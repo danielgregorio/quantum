@@ -763,6 +763,47 @@ class _Compiler:
                                    f'which do not stretch)', line)
 
     @staticmethod
+    def _place(el: Element, what: str) -> dict:
+        """x= and y=: a HUD's or a menu's top-left corner, in pixels, in place of position=."""
+        x, y = el.get('x'), el.get('y')
+        if (x is None) != (y is None):
+            raise GameCompileError(f'<qg:{what}>: x= and y= go together (its top-left corner)', el.line)
+        return {} if x is None else {'xy': [x, y]}
+
+    def _table(self, el: Element, script: SceneScript, n: int) -> dict:
+        """A qg:table of a HUD: a method for its rows, and one for each column's value (and colour) of a row."""
+        name = f'_q_table_{n}'
+        row = el.get('as')
+        scope = script.scope().child([row])
+        script.functions.append(f'func {name}():\n\treturn Q.rows('
+                                f'{compile_expression(el.get("source"), script.scope(), el.line)})\n')
+        columns = []
+        for k, c in enumerate(el.children):
+            if not (isinstance(c, Element) and c.tag == 'column'):
+                raise GameCompileError('<qg:table> holds qg:column', getattr(c, 'line', el.line))
+            if c.get('width') < 1:
+                raise GameCompileError('<qg:column width=>: 1 character or more', c.line)
+            column = {'label': c.get('label'), 'width': c.get('width'), 'align': c.get('align'),
+                      'value': f'{name}_{k}'}
+            script.functions.append(f'func {name}_{k}({row}):\n\treturn Q.to_str('
+                                    f'{compile_expression(c.get("value"), scope, c.line)})\n')
+            color = c.get('color')
+            if color:
+                if is_expression(str(color)):
+                    column['color_method'] = f'{name}_{k}_color'
+                    script.functions.append(f'func {name}_{k}_color({row}):\n\treturn Q.to_str('
+                                            f'{compile_expression(color, scope, c.line)})\n')
+                else:
+                    column['color'] = _color(color, '<qg:column color=', c.line)
+            columns.append(column)
+        if not columns:
+            raise GameCompileError('<qg:table> needs at least one qg:column', el.line)
+        if el.get('rows') < 0:
+            raise GameCompileError('<qg:table rows=>: 0 (all of them) or more', el.line)
+        return {'kind': 'table', 'source': name, 'columns': columns,
+                **({'rows': el.get('rows')} if el.get('rows') else {})}
+
+    @staticmethod
     def _sheet_exists(name: str, sheets: dict, line: Optional[int]) -> None:
         if name not in sheets:
             known = ', '.join(sorted(sheets)) or 'none'
@@ -786,19 +827,20 @@ class _Compiler:
         for tm in scene.find_all('tilemap'):
             if tm.get('src'):
                 script.tiled_props.update(self._tmx(tm.get('src'), tm.line).properties)
-        # 1. state and functions first: handlers refer to them
-        for node in scene.children:
-            if isinstance(node, Statement) and node.kind == 'set':
-                if node.attrs['name'] in self.game_state and 'type' not in node.attrs and 'saved' not in node.attrs:
-                    script.enter.append(node)   # the game's state, set as the scene is entered
-                else:
-                    declare_state(script, node)
+        # 1. state and functions first: handlers refer to them (and a state's first value may call a function)
         for node in scene.children:
             if isinstance(node, Statement) and node.kind == 'function':
                 if any(f.attrs['name'] == node.attrs['name'] for f in self.game.functions):
                     raise GameCompileError(f'{node.attrs["name"]!r} is a q:function of the game already (in '
                                            f'<q:application>); a scene\'s needs another name', node.line)
                 script.function_names.append(node.attrs['name'])
+        script.function_names.extend(f.attrs['name'] for f in self.game.functions)
+        for node in scene.children:
+            if isinstance(node, Statement) and node.kind == 'set':
+                if node.attrs['name'] in self.game_state and 'type' not in node.attrs and 'saved' not in node.attrs:
+                    script.enter.append(node)   # the game's state, set as the scene is entered
+                else:
+                    declare_state(script, node)
         compile_game_functions(script, self.game.functions)
         for node in scene.children:
             if isinstance(node, Statement) and node.kind == 'function':
@@ -1343,7 +1385,34 @@ class _Compiler:
             elif el.tag == 'menu':
                 menus += 1
                 items = []
-                for c in el.children:
+                rows = None   # source=: the method that reads the rows, and the button shown for each
+                if (el.get('source') is None) != (el.get('as') is None):
+                    raise GameCompileError('<qg:menu>: source= and as= go together (the rows, and the name of one)',
+                                           el.line)
+                if el.get('source') is not None:
+                    buttons = [c for c in el.children if isinstance(c, Element)]
+                    if len(buttons) != 1 or buttons[0].tag != 'button':
+                        raise GameCompileError('<qg:menu source=> holds one qg:button, shown once for each row',
+                                               el.line)
+                    rows = f'_q_menu_{menus}_rows'
+                    script.functions.append(f'func {rows}():\n\treturn Q.rows('
+                                            f'{compile_expression(el.get("source"), script.scope(), el.line)})\n')
+                    c, row = buttons[0], el.get('as')
+                    item = {'kind': 'button', 'handler': compile_handler(script, f'_on_menu_{menus}_button_0', c.children,
+                                                                         c.line, params=(row,))}
+                    label = str(c.get('label'))
+                    lscope = script.scope().child([row])
+                    item['label_method'] = f'_q_menu_{menus}_label_0'
+                    script.functions.append(
+                        f'func {item["label_method"]}({row}):\n\treturn Q.to_str('
+                        f'{compile_expression(label, lscope, c.line) if is_expression(label) else json.dumps(label)})\n')
+                    if c.get('if') is not None:
+                        item['if_method'] = f'_q_menu_{menus}_if_0'
+                        script.functions.append(
+                            f'func {item["if_method"]}({row}):\n\treturn {compile_expression(c.get("if"), lscope, c.line)}\n')
+                    gdprops.attach(item, 'Button', c.gd, '<qg:button>', c.line)
+                    items.append(item)
+                for c in el.children if rows is None else []:
                     if isinstance(c, Element) and c.tag == 'button':
                         n = len(items)
                         item = {'kind': 'button',
@@ -1438,7 +1507,8 @@ class _Compiler:
                 if el.get('box') is not None:
                     self._box(el.get('box'), sheets, '<qg:menu', el.line)
                 nodes.append({'kind': 'menu', 'player': el.get('player'), 'position': el.get('position'),
-                              'size': el.get('size'), 'font': font, 'items': items,
+                              'size': el.get('size'), 'font': font, 'items': items, **self._place(el, 'menu'),
+                              **({'rows_method': rows} if rows else {}),
                               **({'local': True} if el.get('local') else {}),
                               **({'box': el.get('box')} if el.get('box') else {}),
                               **({'columns': el.get('columns')} if el.get('columns') > 1 else {}),
@@ -1487,13 +1557,25 @@ class _Compiler:
                                 f'<qg:{c.tag} bind="{c.get("bind")}">: no q:set of that name in the scene '
                                 f'or the game', c.line)
                         items.append({'kind': c.tag, 'bind': c.get('bind'), 'label': c.get('label', ''),
-                                      'size': c.get('size'), **({'color': c.get('color')} if c.get('color') else {})})
+                                      'size': c.get('size')})
+                        if c.get('color'):
+                            if c.tag == 'text' and is_expression(str(c.get('color'))):
+                                texts += 1
+                                items[-1]['color_method'] = f'_q_text_{texts}'
+                                script.functions.append(
+                                    f'func _q_text_{texts}():\n\treturn Q.to_str('
+                                    f'{compile_expression(c.get("color"), script.scope(), c.line)})\n')
+                            else:
+                                items[-1]['color'] = _color(c.get('color'), f'<qg:{c.tag} color=', c.line)
                         if c.tag == 'text' and c.get('value') is not None:
                             texts += 1
                             items[-1]['value_method'] = f'_q_text_{texts}'
                             script.functions.append(
                                 f'func _q_text_{texts}():\n\treturn Q.to_str({compile_expression(c.get("value"), script.scope(), c.line)})\n')
                         gdprops.attach(items[-1], 'Label', c.gd, f'<qg:{c.tag}>', c.line)
+                    elif isinstance(c, Element) and c.tag == 'table':
+                        texts += 1
+                        items.append(self._table(c, script, texts))
                     elif isinstance(c, Element) and c.tag == 'icon':
                         self._sheet_exists(c.get('sheet'), sheets, c.line)
                         if c.get('scale') <= 0:
@@ -1514,11 +1596,14 @@ class _Compiler:
                         gdprops.attach(icon, 'TextureRect', c.gd, '<qg:icon>', c.line)
                         items.append(icon)
                     else:
-                        raise GameCompileError('<qg:hud> holds qg:counter, qg:text, qg:icon, qg:bar and qg:inventory',
-                                               getattr(c, 'line', el.line))
+                        raise GameCompileError('<qg:hud> holds qg:counter, qg:text, qg:icon, qg:bar, qg:inventory '
+                                               'and qg:table', getattr(c, 'line', el.line))
                 font = self._asset(el.get('font'), el.line) if el.get('font') else None
+                if el.get('box') is not None:
+                    self._box(el.get('box'), sheets, '<qg:hud', el.line)
                 nodes.append({'kind': 'hud', 'position': el.get('position'), 'items': items,
-                              'font': font, 'size': el.get('size')})
+                              'font': font, 'size': el.get('size'), **self._place(el, 'hud'),
+                              **({'box': el.get('box')} if el.get('box') else {})})
                 if el.get('if') is not None:
                     texts += 1
                     nodes[-1]['if_method'] = f'_q_text_{texts}'
@@ -1692,12 +1777,23 @@ class _Compiler:
             else:
                 cls = gdprops.NODE_CLASS.get(n['kind'], 'Node')
             gdprops.attach(n, cls, el.gd, f'<qg:{el.tag}>', el.line)
+        seed = str(scene.get('seed')).strip()
+        if is_expression(seed):
+            # a world's number: read as the scene is entered
+            script.functions.append(f'func _q_seed():\n\treturn int({compile_expression(seed, script.scope(), scene.line)})\n')
+            seed_spec = {'seed': 0, 'seed_method': '_q_seed'}
+        else:
+            try:
+                seed_spec = {'seed': int(seed)}
+            except ValueError:
+                raise GameCompileError(f'<qg:scene seed="{seed}">: a whole number, or an expression ({{...}}) giving one',
+                                       scene.line) from None
         script_file = _script_name(name)
         self.scripts[script_file] = script.source()
         spec = {
             'name': name, 'script': f'res://scripts/{script_file}',
             'width': scene.get('width'), 'height': scene.get('height'),
-            'background': scene.get('background'), 'seed': scene.get('seed'),
+            'background': scene.get('background'), **seed_spec,
             'nodes': nodes, 'map_paths': map_paths, 'on_input': on_input, 'on_release': on_release,
             'on_screen': on_screen, 'on_death': on_death,
             'on_select': on_select, 'music': music,
@@ -1768,6 +1864,17 @@ def _speed(raw, line: Optional[int]):
         return float(raw)
     except ValueError:
         raise GameCompileError(f'speed="{raw}": a number, or a range like 150..250', line)
+
+
+_COLOR_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
+
+
+def _color(raw, where: str, line: Optional[int]) -> str:
+    """A colour given as it is (#rrggbb), where an expression giving one could have been."""
+    raw = str(raw).strip()
+    if not _COLOR_RE.match(raw):
+        raise GameCompileError(f'{where}"{raw}">: a colour #rrggbb, or an expression ({{...}}) giving one', line)
+    return raw.lower()
 
 
 def action_name(player: int, action: str) -> str:
