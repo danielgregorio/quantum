@@ -963,11 +963,12 @@ Goes inside: a handler.
 
 ### `qg:play`
 
-Plays a qg:sound. Directly in a scene: as the scene is entered. With volume=, pitch= or vary=, it plays in a voice of its own, so the same sound can overlap itself. Only heard: the game's state records the sound's name, never how it was played.
+Plays a qg:sound. Directly in a scene: as the scene is entered. With volume=, pitch= or vary=, it plays in a voice of its own, so the same sound can overlap itself. With sounds=, one of several, drawn each time (footsteps, hits that do not all sound alike). Only heard: the game's state records the sound's name (sounds= as written), never how it was played nor which one.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `sound` | a name | required |  |
+| `sound` | a name |  | a qg:sound; or sounds= |
+| `sounds` | text |  | several qg:sounds, separated by commas: one of them each time |
 | `volume` | number | `0.0` | decibels added (-6: about half as loud) |
 | `pitch` | number | `1.0` | 2: an octave up, 0.5: an octave down |
 | `vary` | number | `0.0` | a random pitch between pitch - vary and pitch + vary, each time: twenty hits that do not sound the same |
@@ -1432,6 +1433,18 @@ A player's joypad shakes (and a phone, in the hand): a hit felt. Felt only, like
 
 Goes inside: a handler.
 
+### `qg:music`
+
+The music of a scene: a looping qg:sound that plays while the scene is on. Going to a scene with other music crossfades from one to the other; a scene with the same music lets it play on; a scene with none fades it out. In a handler, it changes the music there and then, crossfading over fade= (a boss's theme as the fight starts, the scene's own back as it ends). Only heard, like a sound.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `sound` | a name | required | a qg:sound with loop="true" |
+| `fade` | number | `1.0` | seconds the crossfade takes |
+| `volume` | number | `0.0` | decibels (0: as recorded; -6: half as loud) |
+
+Goes inside: `qg:scene`, a handler.
+
 ## Other tags
 
 ### `qg:choice`
@@ -1510,18 +1523,6 @@ One line of a qg:dialogue: who says it, and what. With qg:choice inside, the pla
 | `portrait` | integer |  | a frame of the dialogue's sheet=, beside the text |
 
 Goes inside: `qg:dialogue`.
-
-### `qg:music`
-
-The music of a scene: a looping qg:sound that plays while the scene is on. Going to a scene with other music crossfades from one to the other; a scene with the same music lets it play on; a scene with none fades it out.
-
-| Attribute | Type | Default | Meaning |
-|---|---|---|---|
-| `sound` | a name | required | a qg:sound with loop="true" |
-| `fade` | number | `1.0` | seconds the crossfade takes |
-| `volume` | number | `0.0` | decibels (0: as recorded; -6: half as loud) |
-
-Goes inside: `qg:scene`.
 
 ### `qg:on-end`
 
@@ -2962,6 +2963,11 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:sound bus="effects" name="twang" src="assets/kenney/audio/jump.ogg" />
   <qg:sound bus="music" name="torchlight" src="assets/torchlight.ogg" loop="true" />
   <qg:sound bus="music" name="crypt" src="assets/crypt.ogg" loop="true" />
+  <qg:sound bus="music" name="warden" src="assets/warden.ogg" loop="true" />
+  <!-- a skeleton falling apart: one of three, so no two fall alike -->
+  <qg:sound bus="effects" name="bones1" src="assets/bones1.ogg" />
+  <qg:sound bus="effects" name="bones2" src="assets/bones2.ogg" />
+  <qg:sound bus="effects" name="bones3" src="assets/bones3.ogg" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="torch" preset="fire" amount="20" size="3" lifetime="0.7" speed="30" />
@@ -3127,6 +3133,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
+      <qg:play sounds="bones1, bones2, bones3" vary="0.1" />
       <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">
@@ -3222,6 +3229,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
+      <qg:play sounds="bones1, bones2, bones3" vary="0.1" />
       <qg:emit particles="slain" at="foe" />
       <qg:destroy target="foe" />
     </q:function>
@@ -3313,8 +3321,16 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="pulled" value="0" type="number" />
     <q:set name="won" value="false" type="boolean" />
 
+    <!-- The warden, the skeleton archer: its fight has a theme of its own, from
+         when it first sees a delver until it falls (the music changes in the
+         scene; what is heard only, so the game is the same). -->
+    <qg:when condition="{distance(archer, p1) &lt; 110 or distance(archer, p2) &lt; 110}">
+      <qg:music sound="warden" fade="0.5" />
+    </qg:when>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
+      <qg:play sounds="bones1, bones2, bones3" vary="0.1" />
+      <q:if condition="{foe.name == 'archer'}"><qg:music sound="crypt" fade="2" /></q:if>
       <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">

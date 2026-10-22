@@ -241,11 +241,11 @@ declarative shape for it.
 | Feature | Godot 4.4 | Unity 6 | Quantum (qg:) | Verdict |
 |---|---|---|---|---|
 | Sound effects, volume, pitch | `AudioStreamPlayer` (`volume_db`, `pitch_scale`) | `AudioSource.PlayOneShot()` | `qg:sound`, `qg:play sound= volume= pitch=`, `qg:stop` | covered |
-| Variation | `AudioStreamRandomizer` | Audio Random Container | `qg:play vary=` (a random pitch, from a source of its own) | partial: no random clip from a set |
+| Variation | `AudioStreamRandomizer` | Audio Random Container | `qg:play vary=` (a random pitch, from a source of its own), and `sounds="a, b, c"`: one of several each time (Delve's bones) | covered |
 | Overlapping voices | `max_polyphony` | several `AudioSource`s | a `qg:play` with `volume=`, `pitch=` or `vary=` plays in a voice of its own | covered |
 | Sounds bound to events | script | script | `jump-sound=`, `fire-sound=`, `attack-sound=`; `sound=` on `qg:item`, `qg:jump`, `qg:leap`, `qg:shoot` | covered |
 | Music, crossfading between scenes | a looping player in an autoload, a tween on `volume_db` | `AudioSource.loop`, `AudioMixer` snapshots `TransitionTo()` | `qg:sound loop="true"`; `qg:music sound= fade= volume=`: other music crossfades, the same plays on | covered |
-| Changing music inside a scene (a boss) | a tween | snapshots | `qg:play` and `qg:stop` of a looping `qg:sound` | partial: no crossfade inside a scene |
+| Changing music inside a scene (a boss) | a tween | snapshots | `qg:music` in a handler: it crossfades there and then (Delve's warden, as the archer first sees a delver) | covered |
 | Buses and volume settings (music, effects) | `AudioServer` buses | `AudioMixer` groups, exposed parameters | `bus=` on `qg:sound`; `qg:volume bus= value=`, `volume()`, a menu's `qg:slider bus=`, kept between runs | covered |
 | Effects (reverb, low-pass under water) | `AudioEffect*` on buses | mixer effects | — | by design: a DSP chain is low-level; a named preset could come later |
 | Positional sound | `AudioStreamPlayer2D` | `AudioSource.spatialBlend` | — | gap |
@@ -423,7 +423,7 @@ declarative shape for it.
 | AI and navigation | 9 | 0 | 1 | 1 | 11 |
 | Camera | 9 | 1 | 0 | 0 | 10 |
 | Input | 13 | 1 | 0 | 0 | 14 |
-| Audio | 5 | 2 | 2 | 1 | 10 |
+| Audio | 7 | 0 | 2 | 1 | 10 |
 | Particles and visual effects | 5 | 0 | 0 | 1 | 6 |
 | Lighting, shaders and post-processing | 0 | 1 | 2 | 3 | 6 |
 | UI | 12 | 4 | 0 | 0 | 16 |
@@ -435,12 +435,12 @@ declarative shape for it.
 | Testing and determinism | 9 | 1 | 0 | 0 | 10 |
 | Export and platforms | 5 | 0 | 0 | 1 | 6 |
 | Tooling | 4 | 1 | 1 | 2 | 8 |
-| **Total** | **190** | **27** | **11** | **23** | **251** |
+| **Total** | **192** | **25** | **11** | **23** | **251** |
 
-Of 251 rows, 190 are covered and 27 partial; 11 are gaps, and 23 are left
+Of 251 rows, 192 are covered and 25 partial; 11 are gaps, and 23 are left
 out by design: three in four covered (146, 42 and 40 when the map was made;
 Phase 1 of PLAN_GAMES_3.md covered nine rows, Phase 2 twelve more, Phase 3
-nine more, Phase 4 ten more, Phase 5 four more, Phase 6 one so far). The gaps left gather in
+nine more, Phase 4 ten more, Phase 5 four more, Phase 6 three so far). The gaps left gather in
 audio, lighting and localization (two each), the rest of Phase 6's list. The rows
 left out by design are mostly the rigid-body solver, shaders and post-
 processing, what belongs to an editor, and the networking machinery that
@@ -486,7 +486,7 @@ above is in this list, and so are many **partial** ones.
 31. **Flying things that bounce off tiles.** *Done: PLAN_GAMES_3.md, Phase 2.* `walls="bounce"` on `ai="fly"`, with the cell it hit in reach of `tile_at()`. Ricochet shots, a ball in a level of tiles.
 32. **Split screen.** *Done: PLAN_GAMES_3.md, Phase 5, with Rally.* `player=` on `qg:camera`, one view per player. Local versus racing, co-op that splits up.
 33. **Grids and lists in menus.** *Done: PLAN_GAMES_3.md, Phase 4.* `columns=` on `qg:menu`, scrolling past the screen. Level select, a shop, an inventory screen.
-34. **Music and sounds inside a scene.** `qg:music` as an action (a crossfade inside a scene, layers that come in), and `sounds="a, b, c"` on `qg:play` (one drawn each time). A boss fight's music, footsteps.
+34. **Music and sounds inside a scene.** *Done: PLAN_GAMES_3.md, Phase 6, for Delve's warden (the crossfade and `sounds=`; layers that come in, not yet).* `qg:music` as an action (a crossfade inside a scene, layers that come in), and `sounds="a, b, c"` on `qg:play` (one drawn each time). A boss fight's music, footsteps.
 35. **Input sequences and vibration.** *Done: PLAN_GAMES_3.md, Phase 5 (Arena's blast).* `qg:on-input sequence="down, right, punch" within=` and `<qg:rumble player= strength= seconds=>`. Fighting games (motion inputs), any game on a gamepad.
 36. **Sound in place.** `at=` on `qg:play`: softer, and to one side, the farther the thing is from the middle of the screen. Large levels.
 37. **Costs per terrain.** `cost=` on `qg:tile` for `ai="pathfind"` and `qg:seek`. Strategy and tactics maps (mud, roads).

@@ -1765,8 +1765,12 @@ var resimulating: bool = false   # the rollback replays old ticks: record sounds
 func play(name_: String, louder: float = 0.0, pitch: float = 1.0, vary: float = 0.0) -> void:
 	sounds_played.append(name_)
 	event("sound", {"name": name_})
-	if resimulating:
-		return
+	if not resimulating:
+		_voice(name_, louder, pitch, vary)
+
+
+# What is heard of a sound played: as recorded, or in a voice of its own.
+func _voice(name_: String, louder: float, pitch: float, vary: float) -> void:
 	var player: AudioStreamPlayer = _sounds.get(name_)
 	if player == null:
 		return
@@ -1785,6 +1789,16 @@ func play(name_: String, louder: float = 0.0, pitch: float = 1.0, vary: float = 
 
 
 var _voices := RandomNumberGenerator.new()   # the pitch of a voice: heard only, so not the game's generator
+
+
+# qg:play sounds=: one of several, drawn by the voices' generator (heard only);
+# the state records them as written, whichever was heard.
+func play_one(names: Array, louder: float = 0.0, pitch: float = 1.0, vary: float = 0.0) -> void:
+	var written := ", ".join(PackedStringArray(names))
+	sounds_played.append(written)
+	event("sound", {"name": written})
+	if not resimulating and not names.is_empty():
+		_voice(names[_voices.randi_range(0, names.size() - 1)], louder, pitch, vary)
 
 
 # qg:music: the scene's music. Another one crossfades in over `fade` seconds,

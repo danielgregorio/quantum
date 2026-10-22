@@ -43,6 +43,11 @@
   <qg:sound bus="effects" name="twang" src="assets/kenney/audio/jump.ogg" />
   <qg:sound bus="music" name="torchlight" src="assets/torchlight.ogg" loop="true" />
   <qg:sound bus="music" name="crypt" src="assets/crypt.ogg" loop="true" />
+  <qg:sound bus="music" name="warden" src="assets/warden.ogg" loop="true" />
+  <!-- a skeleton falling apart: one of three, so no two fall alike -->
+  <qg:sound bus="effects" name="bones1" src="assets/bones1.ogg" />
+  <qg:sound bus="effects" name="bones2" src="assets/bones2.ogg" />
+  <qg:sound bus="effects" name="bones3" src="assets/bones3.ogg" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="torch" preset="fire" amount="20" size="3" lifetime="0.7" speed="30" />
@@ -208,6 +213,7 @@
 
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
+      <qg:play sounds="bones1, bones2, bones3" vary="0.1" />
       <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">
@@ -303,6 +309,7 @@
 
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
+      <qg:play sounds="bones1, bones2, bones3" vary="0.1" />
       <qg:emit particles="slain" at="foe" />
       <qg:destroy target="foe" />
     </q:function>
@@ -394,8 +401,16 @@
     <q:set name="pulled" value="0" type="number" />
     <q:set name="won" value="false" type="boolean" />
 
+    <!-- The warden, the skeleton archer: its fight has a theme of its own, from
+         when it first sees a delver until it falls (the music changes in the
+         scene; what is heard only, so the game is the same). -->
+    <qg:when condition="{distance(archer, p1) &lt; 110 or distance(archer, p2) &lt; 110}">
+      <qg:music sound="warden" fade="0.5" />
+    </qg:when>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
+      <qg:play sounds="bones1, bones2, bones3" vary="0.1" />
+      <q:if condition="{foe.name == 'archer'}"><qg:music sound="crypt" fade="2" /></q:if>
       <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">

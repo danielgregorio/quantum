@@ -387,8 +387,8 @@ class TestScenesMapAndGameState:
   </qg:scene>
 '''))
         script = (out / 'scripts' / 'scene_main.gd').read_text()
-        assert 'Q.tween(get_node("hero"), "y", (40 + 2), 0.5, "back", "in-out", -1, true)' in script
-        assert 'Q.tween(get_node("hero"), "alpha", 0, 0.5, "sine", "out", 0, false, 1)' in script
+        assert 'Q.tween(get_node_or_null("hero"), "y", (40 + 2), 0.5, "back", "in-out", -1, true)' in script
+        assert 'Q.tween(get_node_or_null("hero"), "alpha", 0, 0.5, "sine", "out", 0, false, 1)' in script
         e = refuse(tmp_path, game('  <qg:scene name="t"><qg:timer after="1"><qg:tween target="nobody" property="x" to="1" />'
                                   '</qg:timer></qg:scene>\n'))
         assert 'target="nobody"' in e.message
@@ -461,7 +461,7 @@ class TestScenesMapAndGameState:
         assert pop['on_animation_end'] == [{'name': 'walk', 'handler': '_Pop_on_animation_end_0'}]
         assert hero['on_animation_end'] == [{'name': 'wave', 'handler': '_on_hero_animation_end_0'}]
         script = (out / 'scripts' / 'scene_main.gd').read_text()
-        assert 'Q.play_animation(get_node("hero"), "wave")' in script and 'Q.play_animation(me, "")' in script
+        assert 'Q.play_animation(get_node_or_null("hero"), "wave")' in script and 'Q.play_animation(me, "")' in script
         e = refuse(tmp_path, game('  <qg:scene name="main"><qg:character id="h" controller="topdown" sheet="c" '
                                   'x="0" y="0" hitbox="8x8"><qg:animation name="idle" frames="0" />'
                                   '<qg:on-animation-end name="die" /></qg:character></qg:scene>\n'))
@@ -488,7 +488,7 @@ class TestScenesMapAndGameState:
         assert hero['behavior'][0] == {'part': 'gravity', 'strength': 700.0, 'max_fall': 300.0}
         assert hero['behavior'][2]['action'] == 'jump' and hero['behavior'][2]['cut'] == 0.5
         script = (out / 'scripts' / 'scene_main.gd').read_text()
-        assert 'Q.velocity(get_node("hero"), (get_node("hero").vx * 2), null)' in script
+        assert 'Q.velocity(get_node_or_null("hero"), (get_node_or_null("hero").vx * 2), null)' in script
 
     def test_what_a_behavior_refuses(self, tmp_path):
         def parts(inner, controller='behavior', after=''):
@@ -1552,8 +1552,8 @@ class TestWhatArenaAsked:
         hud = [n for n in data['scenes']['main']['nodes'] if n['kind'] == 'hud'][0]
         assert hud['items'] == [{'kind': 'bar', 'bind': 'p1.health', 'max': 80.0, 'width': 60, 'height': 10, 'color': '#e04040'}]
         script = (out / 'scripts' / 'scene_main.gd').read_text()
-        assert '\tQ.respawn(get_node("p2"))\n' in script
-        assert 'wins = (get_node("p1").health + get_node("p2").health)' in script
+        assert '\tQ.respawn(get_node_or_null("p2"))\n' in script
+        assert 'wins = (get_node_or_null("p1").health + get_node_or_null("p2").health)' in script
 
     @pytest.mark.parametrize('bad,message', [
         ('<qg:move name="m" action="fire" frames="1" reach="4x4" />', 'action="fire">: no such action'),
@@ -1626,7 +1626,7 @@ class TestWhatChessAsked:
   </qg:scene>
 '''))
         script = (out / 'scripts' / 'scene_main.gd').read_text()
-        assert '\t\tQ.destroy(hit)\n' in script and '\tQ.put(get_node("mark"), Q.pos_x(cursor), (Q.pos_y(cursor) + 1))\n' in script
+        assert '\t\tQ.destroy(hit)\n' in script and '\tQ.put(get_node_or_null("mark"), Q.pos_x(cursor), (Q.pos_y(cursor) + 1))\n' in script
 
 
 class TestMenus:
@@ -1744,7 +1744,7 @@ class TestRollback:
   </qg:scene>
 ''' + TAIL)
         script = (out / 'scripts' / 'scene_fight.gd').read_text(encoding='utf-8')
-        assert 'Q.set_tile(self, 0, 0, 0)' in script and 'Q.tween(get_node("a"), "scale", 2' in script
+        assert 'Q.set_tile(self, 0, 0, 0)' in script and 'Q.tween(get_node_or_null("a"), "scale", 2' in script
 
     def test_rollback_on_a_scene_of_fighters(self, tmp_path):
         out = build(tmp_path, HEAD + '''  <qg:input action="punch" keys="J" />
@@ -2378,9 +2378,9 @@ class TestActionAndAiming:
   </qg:scene>
 ''' + TAIL)
         script = (out / 'scripts' / 'scene_main.gd').read_text()
-        assert ('Q.headed(Q.spawn(self, "Shot", get_node("p1"), 0.0, 0.0), '
-                'float((Q.pos_x(get_node("aim")) - Q.pos_x(get_node("p1")))), '
-                'float((Q.pos_y(get_node("aim")) - Q.pos_y(get_node("p1")))))') in script
+        assert ('Q.headed(Q.spawn(self, "Shot", get_node_or_null("p1"), 0.0, 0.0), '
+                'float((Q.pos_x(get_node_or_null("aim")) - Q.pos_x(get_node_or_null("p1")))), '
+                'float((Q.pos_y(get_node_or_null("aim")) - Q.pos_y(get_node_or_null("p1")))))') in script
         err = refuse(tmp_path, game('''  <qg:scene name="main">
     <qg:character id="p1" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12" />
     <qg:on-input action="jump"><qg:spawn prefab="Coin" at="p1" heading="1,0" /></qg:on-input>
@@ -2447,9 +2447,9 @@ class TestActionAndAiming:
   </qg:scene>
 '''))
         script = (out / 'scripts' / 'scene_main.gd').read_text()
-        assert '\tQ.emit_text(get_node("p1"), Q.to_str("+10"), "#ffe070", 8, 0.0, -8.0)\n' in script
-        assert '\tQ.emit_text(get_node("p1"), Q.to_str(Q.to_str((1 + 1))), "#ffffff", 8, 0.0, 0.0)\n' in script
-        assert '\tQ.beam(self, get_node("p1"), get_node("gold"), 0.5, "#80d0ff", 3.0)\n' in script
+        assert '\tQ.emit_text(get_node_or_null("p1"), Q.to_str("+10"), "#ffe070", 8, 0.0, -8.0)\n' in script
+        assert '\tQ.emit_text(get_node_or_null("p1"), Q.to_str(Q.to_str((1 + 1))), "#ffffff", 8, 0.0, 0.0)\n' in script
+        assert '\tQ.beam(self, get_node_or_null("p1"), get_node_or_null("gold"), 0.5, "#80d0ff", 3.0)\n' in script
         err = refuse(tmp_path, game('''  <qg:scene name="main">
     <qg:character id="p1" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12" />
     <qg:on-input action="jump"><qg:emit at="p1" /></qg:on-input>
@@ -2486,7 +2486,7 @@ class TestActionAndAiming:
     def test_a_cursor_by_its_id(self):
         from quantum.runtime.godot.expressions import CURSOR_FIELDS
         scope = Scope(node_ids=['aim'], node_fields={'aim': CURSOR_FIELDS})
-        assert compile_expression('aim.x', scope) == 'Q.pos_x(get_node("aim"))'
+        assert compile_expression('aim.x', scope) == 'Q.pos_x(get_node_or_null("aim"))'
         with pytest.raises(GameCompileError, match='aim.health: no such field; aim has col, player, row, x, y'):
             compile_expression('aim.health', scope)
 
@@ -2535,7 +2535,7 @@ class TestPuzzleAndAdventure:
         out = build(tmp_path, self.scene(body + '    <qg:on-input action="jump"><qg:camera-to target="w" zoom="2" '
                                                 'seconds="0.5" hold="1" pause="false" /></qg:on-input>\n'))
         script = (out / 'scripts' / 'scene_main.gd').read_text()
-        assert 'Q.camera_to(self, get_node("w"), 2.0, 0.5, 1.0, false)' in script
+        assert 'Q.camera_to(self, get_node_or_null("w"), 2.0, 0.5, 1.0, false)' in script
         e = refuse(tmp_path, self.scene(self.GRID + '    <qg:on-input action="jump"><qg:camera-to x="1" y="2" />'
                                                     '</qg:on-input>\n'))
         assert "<qg:camera-to> moves the scene's qg:camera, which it has not" in e.message
@@ -2576,8 +2576,8 @@ class TestPuzzleAndAdventure:
 '''
         out = build(tmp_path, self.scene(body))
         script = (out / 'scripts' / 'scene_main.gd').read_text()
-        assert 'Q.attach(c, get_node("w"), 0.0, -8.0)' in script
-        assert 'Q.carrying(get_node("w"), "coin")' in script and 'Q.detach_all(get_node("w"), "coin")' in script
+        assert 'Q.attach(c, get_node_or_null("w"), 0.0, -8.0)' in script
+        assert 'Q.carrying(get_node_or_null("w"), "coin")' in script and 'Q.detach_all(get_node_or_null("w"), "coin")' in script
         e = refuse(tmp_path, self.scene(body.replace('target="c" to="w"', 'target="nobody" to="w"')))
         assert '<qg:attach target="nobody">' in e.message
         e = refuse(tmp_path, self.scene(body.replace('<qg:detach from="w" tag="coin" />', '<qg:detach from="w" />')))
@@ -2794,3 +2794,32 @@ class TestMouseButtons:
         e = refuse(tmp_path, HEAD + '  <qg:input action="sell" keys="MouseRight" />\n  <qg:scene name="main">'
                    '<qg:on-select action="sell" /><qg:on-select action="sell" /></qg:scene>\n' + TAIL)
         assert 'two <qg:on-select> for the same player and action' in e.message
+
+
+class TestMusicWithinAScene:
+    """PLAN_GAMES_3.md, Phase 6: qg:music in a handler, and qg:play sounds= (Delve's warden)."""
+
+    SOUNDS = ('  <qg:sound name="calm" src="assets/kenney/audio/win.ogg" loop="true" />\n'
+              '  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />\n'
+              '  <qg:sound name="clank" src="assets/kenney/audio/block.ogg" />\n')
+
+    def scene(self, body):
+        return HEAD + self.SOUNDS + f'  <qg:scene name="main">\n{body}  </qg:scene>\n' + TAIL
+
+    def test_music_in_a_handler_and_one_of_several_sounds(self, tmp_path):
+        out = build(tmp_path, self.scene('    <qg:on-input action="jump"><qg:music sound="calm" fade="0.5" />'
+                                         '<qg:play sounds="hit, clank" vary="0.1" /></qg:on-input>\n'))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.music({"sound": "calm", "fade": 0.5, "volume": 0.0})' in script
+        assert 'Q.play_one(["hit", "clank"], 0.0, 1.0, 0.1)' in script
+
+    def test_what_they_refuse(self, tmp_path):
+        e = refuse(tmp_path, self.scene('    <qg:on-input action="jump"><qg:music sound="hit" /></qg:on-input>\n'))
+        assert '<qg:music sound="hit">: music loops' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input action="jump"><qg:play sounds="hit" /></qg:on-input>\n'))
+        assert 'two sounds or more' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input action="jump"><qg:play sound="hit" sounds="hit, clank" />'
+                                        '</qg:on-input>\n'))
+        assert '<qg:play> takes sound= or sounds=, one of them' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input action="jump"><qg:play sounds="hit, boom" /></qg:on-input>\n'))
+        assert '<qg:play sound="boom">: no qg:sound of that name' in e.message

@@ -1034,6 +1034,23 @@
         "on-select",
         "action"
       ]
+    },
+    {
+      "id": "game-bad-060",
+      "intent": "Music that does not loop",
+      "input": {
+        "natural_language": "A boss theme from a sound that plays once",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"sting\" src=\"assets/kenney/audio/powerup.ogg\" />\n  <qg:scene name=\"main\">\n    <qg:on-input action=\"jump\"><qg:music sound=\"sting\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:music sound=\"sting\">: music loops"
+      },
+      "why_invalid": "Music plays on until another comes; a sound that plays once would leave silence after it.",
+      "correction": "Give the qg:sound loop=\"true\", or play it once with qg:play.",
+      "tags": [
+        "music"
+      ]
     }
   ]
 }

@@ -7,6 +7,7 @@ hooded delvers walking and swinging in four directions, a skeleton, a bat:
 attribution needed. The sounds are Kenney's Pixel Platformer (CC0), in
 `assets/kenney/` at the top of the repository.
 
-`torchlight.ogg` (the title and the end) and `crypt.ogg` (the crypts) are
-written and synthesized for this game by `scripts/art/delve_music.py`: CC0
-as well.
+`torchlight.ogg` (the title and the end), `crypt.ogg` (the crypts),
+`warden.ogg` (the fight with the vault's warden) and `bones1.ogg` to
+`bones3.ogg` (a skeleton falling apart) are written and synthesized for this
+game by `scripts/art/delve_music.py`: CC0 as well.

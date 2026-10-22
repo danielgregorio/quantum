@@ -98,6 +98,14 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the pause menu of Robot, Drift and the RPG) and touch controls. Tested in
   Godot (`tests/godot/test_godot_shipping.py`); the feature's dataset has
   seven games and six refusals more.
+- Laboratory: music and sounds within a scene, from Phase 6 of
+  `PLAN_GAMES_3.md`, for Delve. `qg:music` in a handler changes the music
+  there and then, crossfading over `fade=`; Delve's vault has a warden, the
+  skeleton archer, whose fight has a theme of its own from when it first sees
+  a delver until it falls. `sounds="a, b, c"` on `qg:play` plays one of
+  several each time (Delve's skeletons fall apart in one of three ways); the
+  state records the list as written. The music and the bones are synthesized
+  by `scripts/art/delve_music.py` (CC0).
 - Laboratory: the mouse's other buttons and hover, from Phase 6 of
   `PLAN_GAMES_3.md`, for Towers. `<qg:on-select action=>` chooses with
   another of the player's actions (a `qg:input` of `MouseRight` is a right

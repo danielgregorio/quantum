@@ -392,7 +392,7 @@ that needs it is written, under the same rules.
 
 - [x] characters that block each other: already so, found by testing it (below)
 - [x] mouse right button, wheel, hover (Towers' sell)
-- [ ] music and sounds within a scene (a boss fight)
+- [x] music and sounds within a scene (Delve's warden)
 - [ ] positional sound
 - [ ] nine-slice; plurals, assets and fonts per language (the RPG)
 - [ ] 2D lights and shadows (Delve)
@@ -416,6 +416,17 @@ cursor's point travels with the input, so it is the same on every machine.
 Towers sells a tower with a right click (or X: 25 gold, 50 upgraded),
 changes the tower to build with the wheel (or Tab), and says in its HUD what
 the tower under the mouse sells for.
+
+What was built (2026-10-22), for Delve: music and sounds within a scene.
+`qg:music` in a handler changes the music there and then, crossfading; the
+skeleton archer of the vault is its warden, and its fight has a theme of its
+own (`warden.ogg`) from when it first sees a delver (a `qg:when`) until it
+falls. `sounds="bones1, bones2, bones3"` on `qg:play` plays one of them each
+time, so no two skeletons fall alike; the state records the list as
+written, so the draw (from the voices' generator, heard only) changes
+nothing a replay compares. The new music and the bones are synthesized by
+`scripts/art/delve_music.py`, which writes the old two again byte for byte.
+Layers of music that come in on the beat stay in the map.
 
 Out by design (also in the map): rigid-body physics, which breaks the
 lockstep's determinism; shaders and post-processing, which are code; a

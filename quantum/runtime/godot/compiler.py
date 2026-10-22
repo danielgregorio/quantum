@@ -1601,6 +1601,10 @@ class _Compiler:
                 raise GameCompileError(
                     f'<qg:play sound="{played}">: no qg:sound of that name '
                     f'(declared: {", ".join(sorted(self.sounds)) or "none"})', scene.line)
+        for sound, line in script.music_set:
+            if not self.sounds[sound].get('loop'):
+                raise GameCompileError(f'<qg:music sound="{sound}">: music loops; give the qg:sound loop="true"',
+                                       line)
         # gd: attributes, checked against the Godot class each node becomes
         for n, el in zip(nodes, self._node_elements):
             if el is None:

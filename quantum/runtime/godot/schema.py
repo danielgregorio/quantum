@@ -47,7 +47,7 @@ ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'c
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
            'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
            'play-animation', 'give', 'take', 'reset-items', 'for-each', 'time-scale', 'quit', 'start-now', 'watch',
-           'after', 'beam', 'camera-to', 'attach', 'detach', 'volume', 'fullscreen', 'rumble')
+           'after', 'beam', 'camera-to', 'attach', 'detach', 'volume', 'fullscreen', 'rumble', 'music')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -944,9 +944,11 @@ TAGS: Dict[str, Tag] = {
         parents=('handler',)),
     'play': Tag(
         'Plays a qg:sound. Directly in a scene: as the scene is entered. With volume=, pitch= or vary=, it plays '
-        'in a voice of its own, so the same sound can overlap itself. Only heard: the game\'s state records the '
-        'sound\'s name, never how it was played.',
-        {'sound': Attr('ident', required=True),
+        'in a voice of its own, so the same sound can overlap itself. With sounds=, one of several, drawn each '
+        'time (footsteps, hits that do not all sound alike). Only heard: the game\'s state records the sound\'s '
+        'name (sounds= as written), never how it was played nor which one.',
+        {'sound': Attr('ident', None, doc='a qg:sound; or sounds='),
+         'sounds': Attr('str', None, doc='several qg:sounds, separated by commas: one of them each time'),
          'volume': Attr('float', 0.0, doc='decibels added (-6: about half as loud)'),
          'pitch': Attr('float', 1.0, doc='2: an octave up, 0.5: an octave down'),
          'vary': Attr('float', 0.0, doc='a random pitch between pitch - vary and pitch + vary, each time: '
@@ -955,11 +957,12 @@ TAGS: Dict[str, Tag] = {
     'music': Tag(
         'The music of a scene: a looping qg:sound that plays while the scene is on. Going to a scene '
         'with other music crossfades from one to the other; a scene with the same music lets it play on; '
-        'a scene with none fades it out.',
+        'a scene with none fades it out. In a handler, it changes the music there and then, crossfading over '
+        'fade= (a boss\'s theme as the fight starts, the scene\'s own back as it ends). Only heard, like a sound.',
         {'sound': Attr('ident', required=True, doc='a qg:sound with loop="true"'),
          'fade': Attr('float', 1.0, doc='seconds the crossfade takes'),
          'volume': Attr('float', 0.0, doc='decibels (0: as recorded; -6: half as loud)')},
-        parents=('scene',)),
+        parents=('scene', 'handler')),
     'stop': Tag(
         'Stops a qg:sound (a looping one, mostly). Directly in a scene: as the scene is entered.',
         {'sound': Attr('ident', required=True)},

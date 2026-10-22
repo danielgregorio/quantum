@@ -132,3 +132,15 @@ def test_the_archer_keeps_its_distance_and_shoots(delve, godot):
     assert crypt['named']['archer']['doing'] == 'keep-distance'
     assert crypt['sounds'].count('twang') == 1
     assert crypt['game']['q_items']['heart'] == 3
+
+
+def test_the_warden_has_a_theme_of_its_own(delve, godot):
+    # PLAN_GAMES_3.md, Phase 6: the music changes within crypt 3 as the archer first sees a delver (qg:when,
+    # qg:music in a handler); the stored run comes near it a little after tick 3140
+    tape = stored_tape(3377)
+    with PlaySession(delve, binary=godot) as game:
+        snap = game.snapshot()
+        before = game.restore(dict(snap, ticks=3100, tape={k: v for k, v in tape.items() if k < 3100}))
+        after = game.restore(dict(snap, ticks=3240, tape={k: v for k, v in tape.items() if k < 3240}))
+    assert (before['scene'], before['music']) == ('crypt-3', 'crypt')
+    assert (after['scene'], after['music']) == ('crypt-3', 'warden')

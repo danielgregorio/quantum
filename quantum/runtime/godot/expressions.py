@@ -137,7 +137,7 @@ class Scope:
 
     def reference(self, name: str) -> str:
         if self.is_node(name):
-            return f'get_node("{name}")'
+            return f'get_node_or_null("{name}")'   # a character placed only sometimes (if=), or gone: null
         return f'G.{name}' if self.is_game(name) else name
 
     def has_function(self, name: str) -> bool:

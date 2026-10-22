@@ -55,6 +55,7 @@ class SceneScript:
     handlers: List[str] = field(default_factory=list)
     function_names: List[str] = field(default_factory=list)
     sounds_played: List[str] = field(default_factory=list)
+    music_set: List[tuple] = field(default_factory=list)   # (sound, line) of a qg:music in a handler: it must loop
     prefabs_used: List[tuple] = field(default_factory=list)   # (name, line) from spawn/swap
     particles_used: List[tuple] = field(default_factory=list)  # (name, line) from qg:emit
     animations_played: List[tuple] = field(default_factory=list)  # (name, line) from qg:play-animation
@@ -431,13 +432,28 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     if el.tag == 'respawn':
         return f'Q.respawn({target})'
     if el.tag == 'play':
-        script.sounds_played.append(el.get('sound'))
         volume, pitch, vary = float(el.get('volume')), float(el.get('pitch')), float(el.get('vary'))
         if pitch <= 0 or vary < 0 or vary >= pitch:
             raise GameCompileError('<qg:play>: pitch= more than 0, vary= 0 or more and less than pitch=', el.line)
+        if (el.get('sound') is None) == (el.get('sounds') is None):
+            raise GameCompileError('<qg:play> takes sound= or sounds=, one of them', el.line)
+        if el.get('sounds') is not None:   # one of several, drawn each time
+            names = [n.strip() for n in str(el.get('sounds')).split(',') if n.strip()]
+            if len(names) < 2:
+                raise GameCompileError('<qg:play sounds=>: two sounds or more, separated by commas', el.line)
+            script.sounds_played.extend(names)
+            return f'Q.play_one({json.dumps(names)}, {volume!r}, {pitch!r}, {vary!r})'
+        script.sounds_played.append(el.get('sound'))
         if (volume, pitch, vary) == (0.0, 1.0, 0.0):
             return f'Q.play({json.dumps(el.get("sound"))})'
         return f'Q.play({json.dumps(el.get("sound"))}, {volume!r}, {pitch!r}, {vary!r})'
+    if el.tag == 'music':   # in a handler: the music changes there and then
+        if el.get('fade') < 0:
+            raise GameCompileError('<qg:music fade=>: the seconds of a fade cannot be negative', el.line)
+        script.sounds_played.append(el.get('sound'))
+        script.music_set.append((el.get('sound'), el.line))
+        spec = {'sound': el.get('sound'), 'fade': el.get('fade'), 'volume': el.get('volume')}
+        return f'Q.music({json.dumps(spec)})'
     if el.tag == 'stop':
         script.sounds_played.append(el.get('sound'))
         return f'Q.stop({json.dumps(el.get("sound"))})'
