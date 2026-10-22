@@ -12,8 +12,11 @@ extends SceneTree
 #
 # Requests:
 #   {"op": "observe"}
-#   {"op": "act", "ticks": N, "hold": [...], "tap": [...], "press": [...], "release": [...], "cursor": [x, y]}
+#   {"op": "act", "ticks": N, "hold": [...], "tap": [...], "press": [...], "release": [...], "cursor": [x, y],
+#    "text": "Ana\n"}   text: typed into the text box being typed in (a qg:field chosen), "\n" Enter
 #   {"op": "until", "max_ticks": N, "condition": {...}, ...the same actions as act}
+#   either may carry "player": N, the actions named as player 1's ("left") and pressed as player N's
+#                     ("p3_left" on one machine; in a networked game, N is the session's own seat)
 #   either may carry "reflex": [{"when": {...a condition...}, "hold": [...]}, ...], which replaces the
 #                     reflexes: rules checked before every tick the agent asks for, until replaced
 #                     ([] clears them). The actions of the rules whose condition holds are held for that
@@ -21,7 +24,8 @@ extends SceneTree
 #   {"op": "map"}     the scene's tilemap as a grid of what is solid ("#"), one-way ("-") or open (".")
 #   {"op": "view"}    the screen as text at the map's cell size: walls, characters, things, with a legend
 #   {"op": "frame", "path": "/tmp/x.png"}   the real picture (a session with a display only)
-#   {"op": "tape"}    the session's inputs so far, as a replay tape ({tick: [[action, pressed], ["cursor", [x, y]]]}),
+#   {"op": "tape"}    the session's inputs so far, as a replay tape ({tick: [[action, pressed], ["cursor", [x, y]],
+#                     ["type", text]]}),
 #                     with the reflexes at that point and what they hold
 #   {"op": "replay", "tape": {...}, "ticks": N, "held": [...], "reflex": {...}}   runs to tick N applying a
 #                     tape: how a snapshot is restored, in a fresh game, by the determinism every replay
@@ -33,7 +37,7 @@ extends SceneTree
 # change of a scene's or the game's variable ("set": name, from, to). An
 # answer after a scene change carries the new scene's map.
 # What the agent may do is what a player may do: press and release the
-# game's actions and point its cursor. Nothing else in the game is reachable.
+# game's actions, point its cursor and type. Nothing else in the game is reachable.
 #
 # A condition, checked after every tick of an until:
 #   {"path": "player.col", "op": "==", "value": 11}   (==, !=, <, <=, >, >=; "truthy", "falsy")
@@ -51,6 +55,7 @@ var run_left := 0             # ticks still to run for the request being served
 var request: Dictionary = {}  # the request being served
 var holds: Array = []         # released when the request is done
 var taps: Array = []          # released after the request's first tick
+var taps_taken := 0           # Q.samples as they were pressed: let go once the game has taken the keys
 var held: Dictionary = {}     # pressed by "press", until a "release"
 var until_start: Dictionary = {}
 var ended := false
@@ -89,8 +94,11 @@ func _physics_process(_delta: float) -> bool:
 		q = root.get_node_or_null("Q")
 		if q != null:
 			q.tracing = true
+			q.no_quit = true   # the session goes on: a qg:quit is an event the agent reads
 	_note_sets()
-	if not taps.is_empty() and request.has("_first_done"):
+	# a tap is let go after the request's first tick, once the game has taken the keys: a networked game
+	# waiting for another player takes them only when it goes on
+	if not taps.is_empty() and request.has("_first_done") and (q == null or q.samples > taps_taken):
 		for a in taps:
 			if not held.has(a) and not reflex_held.has(a):
 				_release(a)
@@ -231,6 +239,10 @@ func _serve(line: String) -> String:
 
 # The request's actions, applied on its first tick; an error, or "".
 func _start(req: Dictionary) -> String:
+	if req.has("player"):
+		var why := _as_player(req)
+		if why != "":
+			return why
 	var known := {}
 	for a in InputMap.get_actions():
 		known[String(a)] = true
@@ -261,13 +273,16 @@ func _start(req: Dictionary) -> String:
 	for a in req.get("hold", []):
 		holds.append(str(a))
 		_press(str(a))
-	taps = []
+	taps_taken = q.samples if q != null else 0   # a tap the game has not taken yet stays with these
 	for a in req.get("tap", []):
-		taps.append(str(a))
+		if not str(a) in taps:
+			taps.append(str(a))
 		_press(str(a))
 	if req.has("cursor"):
 		var c: Array = req["cursor"]
 		_cursor(float(c[0]), float(c[1]))
+	if str(req.get("text", "")) != "":
+		_type(str(req["text"]))
 	if str(req["op"]) == "until":
 		run_left = maxi(0, int(req.get("max_ticks", 600)))
 		until_start = observation()
@@ -276,6 +291,32 @@ func _start(req: Dictionary) -> String:
 	if req.has("reflex"):
 		reflexes = rules.duplicate(true)
 		_reflex()
+	return ""
+
+
+# player=N: the actions are named as player 1's ("left") and pressed as
+# player N's, "p3_left", in a game played on one machine. In a networked game
+# the session plays its own seat, whatever its number: N says which it is.
+func _as_player(req: Dictionary) -> String:
+	var n := int(req["player"])
+	if n < 1:
+		return "player= is 1 or more"
+	var lock = scene.get("lockstep") if scene != null else null
+	if lock != null and is_instance_valid(lock):
+		var mine: int = lock.player if lock.player > 0 else lock.seat
+		if mine == 0:
+			return "this session has no seat yet (play_start's seat= asks for one)"
+		if n != mine:
+			return "this session sits in seat %d, not %d" % [mine, n]
+		return ""
+	if n == 1:
+		return ""
+	var named := func(a): return "p%d_%s" % [n, a]
+	for key in ["hold", "tap", "press", "release"]:
+		req[key] = req.get(key, []).map(named)
+	for r in req.get("reflex", []):
+		if r is Dictionary and r.get("hold") is Array:
+			r["hold"] = r["hold"].map(named)
 	return ""
 
 
@@ -319,6 +360,11 @@ func _cursor(x: float, y: float) -> void:
 	_log(["cursor", [x, y]])
 
 
+func _type(text: String) -> void:
+	root.get_node("Q").type_text(text)
+	_log(["type", text])
+
+
 func _log(e: Array) -> void:
 	var at: Array = log.get(ticks, [])
 	at.append(e)
@@ -332,6 +378,8 @@ func _tick() -> void:
 		for e in replay_tape[ticks]:
 			if e[0] == "cursor":
 				_cursor(float(e[1][0]), float(e[1][1]))
+			elif e[0] == "type":
+				_type(str(e[1]))
 			elif e[1]:
 				_press(str(e[0]))
 			else:
@@ -397,6 +445,8 @@ func _finish(why: String) -> void:
 		for e in replay_tape.get(ticks, []):
 			if e[0] == "cursor":
 				_cursor(float(e[1][0]), float(e[1][1]))
+			elif e[0] == "type":
+				_type(str(e[1]))
 			elif e[1]:
 				_press(str(e[0]))
 			else:

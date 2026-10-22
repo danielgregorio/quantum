@@ -73,6 +73,8 @@ func _apply(events: Array) -> void:
 	for ev in events:
 		if ev[0] == "cursor":
 			root.get_node("Q").tape_cursor = Vector2(ev[1][0], ev[1][1])
+		elif ev[0] == "type":
+			root.get_node("Q").type_text(str(ev[1]))   # into the text box being typed in (qg:field)
 		elif ev[1]:
 			Input.action_press(ev[0])
 		else:
@@ -101,6 +103,9 @@ func _finish(lockstep: Node) -> bool:
 
 
 func _physics_process(_delta: float) -> bool:
+	var qn := root.get_node_or_null("Q")
+	if qn != null:
+		qn.no_quit = true   # a qg:quit is in the state's events, not the end of the replay
 	var lockstep: Node = scene.get("lockstep") if "lockstep" in scene else null
 	if _linger >= 0:
 		return _finish(lockstep)

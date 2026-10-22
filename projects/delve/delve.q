@@ -4,8 +4,9 @@
        Three crypts, down and down: a wall a lever opens (qg:set-tile), and
        the skeletons behind it that find their way through as soon as it does
        (ai="pathfind"); crushers that slide to and fro (qg:tween); a vault
-       two levers keep shut, and its treasure. Torches burn and gems sparkle
-       (qg:particles). A skeleton archer, made of parts, keeps its distance and
+       two levers keep shut, and its treasure, in the dark (ambient=): its
+       torches and the delvers' lanterns light it and its pillars cast shadows
+       (qg:light). Torches burn and gems sparkle (qg:particles). A skeleton archer, made of parts, keeps its distance and
        shoots. The hearts and the gems are what the delvers carry
        (qg:item), shown by the HUD's inventory. Each crypt entered is saved (Continue, alone); the
        game speaks English, Portuguese and Spanish. The art is drawn for it by
@@ -14,6 +15,15 @@
 
   <!-- The delve's state, kept from crypt to crypt; the first crypt starts it anew. -->
   <q:set name="message" value="" />
+  <!-- a hurt, the same in every crypt: a function of the game -->
+  <q:function name="hurt" params="me">
+    <qg:play sound="hurt" vary="0.1" />
+    <qg:shake at="me" frames="8" strength="2" />
+    <qg:take item="heart" />
+    <q:if condition="{held('heart') <= 0}">
+      <qg:goto-scene name="fallen" fade="0.6" />
+    </q:if>
+  </q:function>
 
   <!-- Two players, each on their own machine: the delve starts in crypt-1 once both are there. -->
   <qg:multiplayer players="2" start="crypt-1" />
@@ -25,15 +35,20 @@
   </qg:tileset>
   <qg:spritesheet name="delvers" src="assets/delvers.png" tile="24" />
 
-  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="pick" src="assets/kenney/audio/coin.ogg" />
-  <qg:sound name="heal" src="assets/kenney/audio/powerup.ogg" />
-  <qg:sound name="open" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
-  <qg:sound name="twang" src="assets/kenney/audio/jump.ogg" />
-  <qg:sound name="torchlight" src="assets/torchlight.ogg" loop="true" />
-  <qg:sound name="crypt" src="assets/crypt.ogg" loop="true" />
+  <qg:sound bus="effects" name="hit" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="hurt" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="pick" src="assets/kenney/audio/coin.ogg" />
+  <qg:sound bus="effects" name="heal" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="open" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="twang" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="music" name="torchlight" src="assets/torchlight.ogg" loop="true" />
+  <qg:sound bus="music" name="crypt" src="assets/crypt.ogg" loop="true" />
+  <qg:sound bus="music" name="warden" src="assets/warden.ogg" loop="true" />
+  <!-- a skeleton falling apart: one of three, so no two fall alike -->
+  <qg:sound bus="effects" name="bones1" src="assets/bones1.ogg" />
+  <qg:sound bus="effects" name="bones2" src="assets/bones2.ogg" />
+  <qg:sound bus="effects" name="bones3" src="assets/bones3.ogg" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="torch" preset="fire" amount="20" size="3" lifetime="0.7" speed="30" />
@@ -93,6 +108,10 @@
              ai="fly" speed="100" walls="stop" rotate="true" lifetime="180" />
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="40" y="184" />
+  <qg:touch-button action="jump" label="A" x="220" y="184" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="HEARTS" as="CORAÇÕES" />
     <qg:phrase text="GEMS" as="GEMAS" />
@@ -112,7 +131,16 @@
     <qg:phrase text="THE VAULT IS OPEN." as="O COFRE ESTÁ ABERTO." />
     <qg:phrase text="THE VAULT IS YOURS." as="O COFRE É SEU." />
     <qg:phrase text="THE CRYPT KEEPS YOU." as="A CRIPTA FICA COM VOCÊ." />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Sword" as="Espada" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="HEARTS" as="CORAZONES" />
     <qg:phrase text="GEMS" as="GEMAS" />
@@ -132,7 +160,16 @@
     <qg:phrase text="THE VAULT IS OPEN." as="LA BÓVEDA ESTÁ ABIERTA." />
     <qg:phrase text="THE VAULT IS YOURS." as="LA BÓVEDA ES TUYA." />
     <qg:phrase text="THE CRYPT KEEPS YOU." as="LA CRIPTA SE QUEDA CONTIGO." />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Sword" as="Espada" />
+</qg:language>
 
   <!-- ===== The title: alone, together, or the saved delve ===== -->
 
@@ -149,6 +186,7 @@
       <qg:button label="Play alone"><qg:goto-scene name="crypt-1" fade="0.4" /></qg:button>
       <qg:button label="Play together"><qg:goto-scene name="together" /></qg:button>
       <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
     </qg:menu>
   </qg:scene>
@@ -174,16 +212,9 @@
     <q:set name="message" value="A SEALED WALL. A LEVER MUST OPEN IT." />
     <q:set name="leaving" value="false" type="boolean" />
 
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" vary="0.1" />
-      <qg:shake at="me" frames="8" strength="2" />
-      <qg:take item="heart" />
-      <q:if condition="{held('heart') <= 0}">
-        <qg:goto-scene name="fallen" fade="0.6" />
-      </q:if>
-    </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
+      <qg:play sounds="bones1, bones2, bones3" vary="0.1" />
       <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">
@@ -192,6 +223,8 @@
       <qg:set-tile col="8" row="5" tile="12" />
       <qg:set-tile col="8" row="6" tile="12" />
       <qg:emit particles="rumble" at="lever" dx="72" dy="-63" />
+      <!-- the camera goes to show the gap, and back; the dead do not wait for it -->
+      <qg:camera-to x="153" y="108" zoom="2" seconds="0.4" hold="0.6" pause="false" />
       <q:set name="message" value="THE WALL OPENS. THE DEAD WAKE." />
     </q:function>
     <q:function name="down" params="">
@@ -252,6 +285,8 @@
       <qg:on-hit with="enemy"><q:call function="slay" args="other" /></qg:on-hit>
     </qg:character>
 
+    <qg:camera follow="p1" bounds="tilemap" />
+
     <qg:instance prefab="Lever" name="lever" x="81" y="171" />
     <qg:instance prefab="Gem" name="gem-1" x="99" y="45" />
     <qg:instance prefab="Gem" name="gem-2" x="117" y="153" />
@@ -273,16 +308,9 @@
     <q:set name="message" value="THE CRUSHERS. MIND THEIR TIME." />
     <q:set name="leaving" value="false" type="boolean" />
 
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" vary="0.1" />
-      <qg:shake at="me" frames="8" strength="2" />
-      <qg:take item="heart" />
-      <q:if condition="{held('heart') <= 0}">
-        <qg:goto-scene name="fallen" fade="0.6" />
-      </q:if>
-    </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
+      <qg:play sounds="bones1, bones2, bones3" vary="0.1" />
       <qg:emit particles="slain" at="foe" />
       <qg:destroy target="foe" />
     </q:function>
@@ -368,22 +396,24 @@
 
   <!-- ===== Crypt 3: the vault, which two levers keep shut. ===== -->
 
-  <qg:scene name="crypt-3" width="256" height="224" background="#100e16" seed="3" save="true">
+  <!-- The vault is dark (ambient=): what the torches and the delvers' lanterns light, and the walls cast
+       their shadows. Only seen: the game is the same in the dark. -->
+  <qg:scene name="crypt-3" width="256" height="224" background="#100e16" seed="3" save="true" ambient="#1c1828">
     <qg:music sound="crypt" />
     <q:set name="message" value="THE VAULT. TWO LEVERS HOLD IT SHUT." />
     <q:set name="pulled" value="0" type="number" />
     <q:set name="won" value="false" type="boolean" />
 
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" vary="0.1" />
-      <qg:shake at="me" frames="8" strength="2" />
-      <qg:take item="heart" />
-      <q:if condition="{held('heart') <= 0}">
-        <qg:goto-scene name="fallen" fade="0.6" />
-      </q:if>
-    </q:function>
+    <!-- The warden, the skeleton archer: its fight has a theme of its own, from
+         when it first sees a delver until it falls (the music changes in the
+         scene; what is heard only, so the game is the same). -->
+    <qg:when condition="{distance(archer, p1) &lt; 110 or distance(archer, p2) &lt; 110}">
+      <qg:music sound="warden" fade="0.5" />
+    </qg:when>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
+      <qg:play sounds="bones1, bones2, bones3" vary="0.1" />
+      <q:if condition="{foe.name == 'archer'}"><qg:music sound="crypt" fade="2" /></q:if>
       <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">
@@ -428,10 +458,17 @@
     <qg:emitter particles="torch" x="243" y="57" />
     <qg:emitter particles="torch" x="99" y="147" />
     <qg:emitter particles="torch" x="153" y="147" />
+    <!-- each torch's light, just off its wall, flickering as a flame; and the treasure's glow in the vault -->
+    <qg:light x="24" y="63" radius="72" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="232" y="63" radius="72" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="99" y="138" radius="64" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="153" y="138" radius="64" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="126" y="176" radius="40" color="#ffd860" energy="1.4" shadows="true" />
 
     <qg:character id="p1" controller="topdown" player="1" sheet="delvers" frame="0"
                   x="45" y="45" hitbox="12x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
+      <qg:light radius="52" color="#fff0d8" shadows="true" />   <!-- a lantern -->
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
       <qg:animation name="walk-up" frames="3,4" fps="8" />
@@ -448,6 +485,7 @@
     <qg:character id="p2" controller="topdown" player="2" sheet="delvers" frame="10"
                   x="207" y="45" hitbox="12x14" speed="70" if="{net_status() != 'offline'}"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
+      <qg:light radius="52" color="#fff0d8" shadows="true" />   <!-- a lantern -->
       <qg:animation name="idle" frames="10" />
       <qg:animation name="walk" frames="11,12" fps="8" />
       <qg:animation name="walk-up" frames="13,14" fps="8" />
@@ -511,6 +549,19 @@
         </q:if>
       </qg:button>
       <qg:button label="To the title"><qg:leave /><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="256" height="224" background="#16141e">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="12">
+      <qg:slider label="Music" bus="music" />
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Sword" action="jump" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
     </qg:menu>
   </qg:scene>
 

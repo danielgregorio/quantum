@@ -20,7 +20,9 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
 from quantum.runtime.godot import gd  # noqa: E402
+from quantum.runtime.godot.expressions import _ACTION_FUNCTIONS as ACTION_FUNCTIONS  # noqa: E402
 from quantum.runtime.godot.expressions import _FUNCTIONS as FUNCTIONS  # noqa: E402
+from quantum.runtime.godot.expressions import THING_FIELDS  # noqa: E402
 from quantum.runtime.godot.schema import ACTIONS, STATEMENTS, TAGS  # noqa: E402
 from quantum.runtime.godot_bin import GODOT_VERSION  # noqa: E402
 
@@ -53,6 +55,29 @@ GAMES = [
     ('Robot', 'projects/robot/robot.q', 'Godot\'s "Platformer 2D" demo transcribed: its level tile for tile, with '
      'slopes and ledges, a robot that runs, jumps twice and shoots, crawling enemies, coins, lifts and a pause menu '
      '(projects/robot/README.md)'),
+    ('Bricks', 'projects/bricks/bricks.q', 'a brick breaker for one, or two to four over the network: levels written '
+     'as lines of letters and built by a q:loop, steel bricks of two hits, a bomb that breaks the bricks around it '
+     '(qg:for-each), the serve as jump is let go (on="release"), a ball lost off the bottom (qg:on-screen-exit), the '
+     'last brick in slow motion (qg:time-scale) and a sequence of tweens (qg:on-end)'),
+    ('Siege', 'projects/siege/siege.q', 'a keep under siege seen from above, for one or two over the network: '
+     'raiders in waves (qg:when, qg:after) that keep apart (spacing=) and make for the tower, an archer who aims at '
+     'the pointer (qg:spawn heading=, a qg:cursor\'s id) and charges a bolt (pressed_for()) that glances off the '
+     'walls (walls="bounce") with a trail, numbers that float up (qg:emit text=), a tower that zaps (qg:beam), a '
+     'brute made from a raider (extends=) with its health over it (qg:label), a ram shielded in front '
+     '(side="left"), and a knight who steers a horse (qg:steer)'),
+    ('Crates', 'projects/crates/crates.q', 'a box-pushing puzzle in three rooms drawn in Tiled (two tilesets, flipped '
+     'tiles, animated water, the doors, a sign, a gull\'s path and each room\'s title from the maps): a worker that '
+     'steps or walks where it is clicked (controller="pointer") and pushes crates (pushable=), barrels made from '
+     'crates (extends=), a foreman whose words are typed in beside his face with a choice (qg:choice), a gate the '
+     'camera goes to show open (qg:camera-to), and a key carried over the worker\'s head (qg:attach)'),
+    ('Rally', 'projects/rally/rally.q', 'two cars round a circuit drawn in Tiled, wider and taller than the screen: a '
+     'camera for each (qg:camera player=), so on one keyboard the screen splits in two and over the network each '
+     'machine follows its own car; a barrier that lifts at the green light (a solid prefab destroyed by a qg:timer), '
+     'and laps counted at the line only after halfway round (the map\'s zones)'),
+    ('Marches', 'projects/marches/marches.q', 'a skirmish on a map of hexes (qg:tileset shape="hex"), turn by turn: '
+     'riders that ride where they are clicked by the cheapest way (qg:travel budget=), forests, hills and marshes that '
+     'cost more to cross (qg:tile cost=), a pointer that snaps to the hexes (qg:cursor cells=), what a ride there '
+     'would cost (cost()), and raiders that ride at the nearest rider in their turn (qg:for-each, qg:travel)'),
     ('RPG', 'projects/rpg/rpg.q', 'Godot\'s "JRPG" demo transcribed: its map in three tile layers, a slime that '
      'walks it cell by cell, a key and another slime that talk in a dialogue box, and a turn-based fight '
      '(projects/rpg/README.md)'),
@@ -81,6 +106,7 @@ of your own anywhere: text where statements go is a compile error.
 ```bash
 quantum run game.q            # writes projects/<id>/godot/, which Godot opens, runs and exports
 quantum run game.q --check    # ...and opens it headless: any script error fails the build
+quantum run game.q --watch    # plays it; each save builds again and the game goes on where it was
 python scripts/godot.py install   # the pinned Godot, into ~/.cache/quantum/godot
 ```
 
@@ -262,7 +288,16 @@ def build() -> str:
                  ', '.join(f'`q:{s}`' for s in STATEMENTS if s not in ('else', 'elseif')) +
                  ' (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the '
                  'scene\'s state; in `q:application`, the game\'s, kept across scenes — with `saved="true"`, '
-                 'between runs. An expression may call ' + ', '.join(f'`{f}()`' for f in FUNCTIONS) + '.\n')
+                 'between runs. A `q:function` directly in a scene is the scene\'s; in `q:application`, every '
+                 'scene\'s (and the prefabs\' handlers\'), reading the game\'s state, its parameters and its own '
+                 'variables. An expression may call ' + ', '.join(f'`{f}()`' for f in FUNCTIONS) +
+                 '; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take '
+                 'degrees and `atan2(y, x)` gives them (0 to the right, 90 down), and `sort()` is the Core\'s. '
+                 + ', '.join(f'`{f}()`' for f in ACTION_FUNCTIONS) + ' read an action of player 1, or of another '
+                 '(`pressing(\'run\', 2)`): held now, the ticks it has been held (on the tick it is let go, how long '
+                 'it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). '
+                 'A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: '
+                 + ', '.join(f'`{f}`' for f in sorted(THING_FIELDS)) + ', as its controller has them.\n')
     parts.append(gd_section())
     parts.append('## The games\n\nEach one is written in these tags and nothing else, and replayed '
                  'in CI from input tapes (`tests/godot/test_godot_<name>.py`).\n')

@@ -88,3 +88,33 @@ def test_two_players_build_the_same_defence_in_lockstep(godot, project):
     s = peers[0]['map']
     assert s['game']['gold'] == 40          # 100 - 50 - 70, plus six dinos shot by two towers
     assert sorted(towers_in(s)) == [['tower', 216.0, 312.0, 'level1'], ['tower', 600.0, 600.0, 'level1']]
+
+
+# --- PLAN_GAMES_3.md, Phase 6: the mouse's other buttons and hover (qg:on-select action=, hovered()) ---
+
+def test_a_right_click_on_a_tower_sells_it(godot, project):
+    _, s = run(project, 60, [('select', 20, 22), ('sell', 40, 42)], [(10, 600, 600)])
+    assert s['game']['gold'] == 75 and towers_in(s) == []                    # 50 spent, 25 back
+    _, s = run(project, 80, [('select', 20, 22), ('select', 40, 42), ('sell', 60, 62)], [(10, 600, 600)])
+    assert s['game']['gold'] == 50 and towers_in(s) == []                    # upgraded: 50 back
+    _, s = run(project, 60, [('sell', 40, 42)], [(10, 600, 600)])
+    assert s['game']['gold'] == 100                                          # nothing there: nothing sold
+
+
+def test_the_wheel_changes_the_tower_to_build(godot, project):
+    _, s = run(project, 60, [('other-tower', 20, 22), ('select', 40, 42)], [(10, 600, 600)])
+    assert s['choice'] == 'Explosive' and s['game']['gold'] == 30
+
+
+def test_the_mouse_over_a_tower_says_what_it_sells_for(godot, project):
+    from quantum.runtime.godot_play import PlaySession
+    with PlaySession(project, binary=godot) as game:
+        game.act(tap=['select'], ticks=2)
+        game.act(cursor=(600, 600), ticks=2)
+        game.act(tap=['select'], ticks=4)                                    # a gatling there
+        over = game.act(cursor=(605, 598), ticks=2)
+        texts = [i for v in over['screen'] if v['kind'] == 'hud' for i in v['items']]
+        assert 'Right click sells this tower for 25' in texts
+        away = game.act(cursor=(100, 600), ticks=2)
+        texts = [i for v in away['screen'] if v['kind'] == 'hud' for i in v['items']]
+        assert 'Right click: sell a tower   Wheel or Tab: the other tower' in texts

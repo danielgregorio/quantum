@@ -4,11 +4,21 @@ extends Area2D
 # animation when it has one (a coin that spins).
 
 const Animator := preload("res://addons/quantum/animator.gd")
+const Life := preload("res://addons/quantum/life.gd")
 
 var prefab_name: String = ""
 var tag: String = ""
 var gives: String = ""      # a qg:item a character picks up by touching it (Q.touched)
 var amount: int = 1
+
+# health and states (life.gd): qg:damage, qg:on-damage, qg:on-death, qg:become
+var health: int = 1
+var state: String = ""
+var states: Dictionary = {}
+var base_frame: int = 0
+var on_damage: String = ""
+var on_death: String = ""
+var _dead: bool = false
 
 
 func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -> void:
@@ -39,6 +49,7 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 	rect.size = Vector2(prefab["hitbox"][0], prefab["hitbox"][1])
 	shape.shape = rect
 	add_child(shape)
+	Life.setup(self, prefab)
 
 
 func quantum_tag() -> String:
@@ -47,6 +58,14 @@ func quantum_tag() -> String:
 
 func quantum_destroy() -> void:
 	# Out of the physics world at once, so the same tick cannot touch it twice.
+	_dead = true
 	set_deferred("monitorable", false)
 	remove_from_group("q_thing")
 	queue_free()
+
+func take_damage(amount: int) -> void:
+	Life.take_damage(self, amount)
+
+
+func become(name_: String) -> void:
+	Life.become(self, name_)

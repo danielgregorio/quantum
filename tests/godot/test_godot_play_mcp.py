@@ -88,7 +88,9 @@ def test_a_countdown_is_one_set_from_its_first_value_to_its_last():
 
 def test_the_games_list_says_their_languages():
     games = {g['game']: g for g in PlayTools().games()}
-    assert {name: g.get('languages') for name, g in games.items()} == {name: ['pt', 'es'] for name in games}
+    said = {name: ['pt', 'es'] for name in games}
+    said['rpg'] = ['pt', 'es', 'ru']                                     # and Russian, in another alphabet
+    assert {name: g.get('languages') for name, g in games.items()} == said
 
 
 def test_the_repository_declares_the_server():
@@ -112,7 +114,10 @@ def test_an_agent_wins_the_rpg_through_the_mcp_tools(godot):
                 assert not result.is_error, result.content[0].text
                 return json.loads(result.content[0].text)
 
-            listed = {t.name for t in (await client.list_tools()).tools}
+            described = {t.name: t.input_schema['properties'] for t in (await client.list_tools()).tools}
+            listed = set(described)
+            assert 'seat' in described['play_start']                         # a seat of a networked game
+            assert 'player' in described['play_act'] and 'player' in described['play_until']
             assert listed == {'play_games', 'play_start', 'play_observe', 'play_act', 'play_until', 'play_view',
                               'play_map', 'play_frame', 'play_snapshot', 'play_restore', 'play_tape', 'play_end'}
             assert 'rpg' in {g['game'] for g in await call('play_games')}

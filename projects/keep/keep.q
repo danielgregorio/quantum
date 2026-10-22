@@ -15,6 +15,36 @@
   <q:set name="taken" value="[]" type="array" />      <!-- things picked up, by name -->
   <q:set name="opened" value="[]" type="array" />     <!-- doors and gates opened, by name -->
   <q:set name="message" value="" />
+  <!-- a new game: the state as the keep was found -->
+  <q:function name="anew">
+    <q:set name="hearts" value="3" />
+    <q:set name="keys" value="0" />
+    <q:set name="taken" value="[]" />
+    <q:set name="opened" value="[]" />
+    <q:set name="message" value="" />
+  </q:function>
+  <!-- three games, each kept apart (qg:save slot=): one goes on where it was, an empty one starts -->
+  <q:function name="game_label" params="n">
+    <q:return value="{tr('Game') + ' ' + str(n) + ': ' + (tr('go on') if has_save(n) else tr('new'))}" />
+  </q:function>
+  <q:function name="play" params="n">
+    <q:if condition="{has_save(n)}">
+      <qg:continue slot="{n}" />
+      <q:else>
+        <q:call function="anew" />
+        <qg:save slot="{n}" scene="room-1" />
+        <qg:goto-scene name="room-1" />
+      </q:else>
+    </q:if>
+  </q:function>
+  <!-- a hurt, the same in every room: a function of the game -->
+  <q:function name="hurt" params="me">
+    <qg:play sound="hurt" />
+    <q:set name="hearts" value="{hearts - 1}" />
+    <q:if condition="{hearts <= 0}">
+      <qg:goto-scene name="game-over" />
+    </q:if>
+  </q:function>
 
   <!-- 1 is the floor (walked on: no collision), 2 the wall. -->
   <qg:tileset name="dungeon" src="assets/dungeon.png" tile="18">
@@ -22,11 +52,15 @@
   </qg:tileset>
   <qg:spritesheet name="hero" src="assets/hero.png" tile="24" />
 
-  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="pick" src="assets/kenney/audio/coin.ogg" />
-  <qg:sound name="open" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound name="hit" bus="effects" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound name="hurt" bus="effects" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound name="pick" bus="effects" src="assets/kenney/audio/coin.ogg" />
+  <qg:sound name="open" bus="effects" src="assets/kenney/audio/block.ogg" />
+  <qg:sound name="win" bus="effects" src="assets/kenney/audio/win.ogg" />
+
+  <!-- on a phone: a stick to walk and a button for the sword, in every scene -->
+  <qg:touch-stick x="40" y="184" />
+  <qg:touch-button action="jump" label="A" x="220" y="184" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="sparkle" preset="stars" color="#fff0a0" />
@@ -64,7 +98,21 @@
     <qg:phrase text="New game" as="Novo jogo" />
     <qg:phrase text="Continue" as="Continuar" />
     <qg:phrase text="Language" as="Idioma" />
-  </qg:language>
+    <qg:phrase text="The keep is quiet again." as="A fortaleza está quieta outra vez." />
+    <qg:phrase text="Once more" as="Mais uma vez" />
+    <qg:phrase text="To the title" as="Para o início" />
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Sword" as="Espada" />
+    <qg:phrase text="Game" as="Jogo" />
+    <qg:phrase text="go on" as="continuar" />
+    <qg:phrase text="new" as="novo" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="HEARTS" as="CORAZONES" />
     <qg:phrase text="KEYS" as="LLAVES" />
@@ -77,30 +125,50 @@
     <qg:phrase text="New game" as="Nueva partida" />
     <qg:phrase text="Continue" as="Continuar" />
     <qg:phrase text="Language" as="Idioma" />
-  </qg:language>
+    <qg:phrase text="The keep is quiet again." as="La fortaleza vuelve a estar en calma." />
+    <qg:phrase text="Once more" as="Otra vez" />
+    <qg:phrase text="To the title" as="Al inicio" />
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Sword" as="Espada" />
+    <qg:phrase text="Game" as="Partida" />
+    <qg:phrase text="go on" as="seguir" />
+    <qg:phrase text="new" as="nueva" />
+</qg:language>
 
   <!-- ===== The title: a new game, or the saved one (each room entered saves it) ===== -->
 
   <qg:scene name="title" width="256" height="224" background="#2b2b3a">
     <qg:hud position="top-center" size="32"><qg:text value="{'KEEP'}" /></qg:hud>
-    <qg:menu position="center">
-      <qg:button label="New game"><qg:goto-scene name="room-1" /></qg:button>
-      <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+    <qg:menu position="center" size="14">
+      <qg:button label="{game_label(1)}"><q:call function="play" args="1" /></qg:button>
+      <qg:button label="{game_label(2)}"><q:call function="play" args="2" /></qg:button>
+      <qg:button label="{game_label(3)}"><q:call function="play" args="3" /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the sword's key; kept between runs ===== -->
+
+  <qg:scene name="options" width="256" height="224" background="#2b2b3a">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="12">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Sword" action="jump" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
     </qg:menu>
   </qg:scene>
 
   <!-- ===== Room 1: the entrance. East to room 2. ===== -->
 
   <qg:scene name="room-1" width="256" height="224" background="#2b2b3a" seed="1" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,2,2,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -144,23 +212,17 @@
     <qg:exit name="east" x="252" y="99" width="8" height="36" to="room-2" at="west" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== Room 2: the crossing. West to 1, north to 3, south to 4, east (locked) to 5. ===== -->
 
   <qg:scene name="room-2" width="256" height="224" background="#2b2b3a" seed="2" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,1,1,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -215,23 +277,17 @@
     <qg:exit name="east" x="252" y="99" width="8" height="36" to="room-5" at="west" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== Room 3: the key, guarded. South to 2. ===== -->
 
   <qg:scene name="room-3" width="256" height="224" background="#2b2b3a" seed="3" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,2,2,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -292,23 +348,17 @@
     <qg:exit name="south" x="117" y="220" width="36" height="8" to="room-2" at="north" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== Room 4: the switch. North to 2. ===== -->
 
   <qg:scene name="room-4" width="256" height="224" background="#2b2b3a" seed="4" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,1,1,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -356,23 +406,17 @@
     <qg:exit name="north" x="117" y="-4" width="36" height="8" to="room-2" at="south" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== Room 5: behind the locked door; the gate the switch opens. West to 2, east to 6. ===== -->
 
   <qg:scene name="room-5" width="256" height="224" background="#2b2b3a" seed="5" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,2,2,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -419,10 +463,12 @@
     <qg:exit name="east" x="252" y="99" width="8" height="36" to="room-6" at="west" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== Room 6: the chest. ===== -->
@@ -469,10 +515,12 @@
     <qg:exit name="west" x="-4" y="99" width="8" height="36" to="room-5" at="east" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== The end, and the game over ===== -->
@@ -481,16 +529,20 @@
     <qg:hud position="top-center">
       <qg:text bind="message" />
     </qg:hud>
+    <!-- a moment later, what now: the keep again, or the title -->
+    <qg:dialogue name="end" size="12" speed="30">
+      <qg:line who="KEEP" text="The keep is quiet again.">
+        <qg:choice label="Once more"><q:call function="anew" /><qg:goto-scene name="room-1" /></qg:choice>
+        <qg:choice label="To the title"><qg:goto-scene name="title" /></qg:choice>
+      </qg:line>
+    </qg:dialogue>
+    <qg:timer after="90"><qg:say dialogue="end" /></qg:timer>
   </qg:scene>
 
   <qg:scene name="game-over" width="256" height="224" background="#000000">
     <q:set name="title" value="YOU FELL. PRESS JUMP." />
     <qg:on-input action="jump">
-      <q:set name="hearts" value="3" />
-      <q:set name="keys" value="0" />
-      <q:set name="taken" value="[]" />
-      <q:set name="opened" value="[]" />
-      <q:set name="message" value="" />
+      <q:call function="anew" />
       <qg:goto-scene name="room-1" />
     </qg:on-input>
     <qg:hud position="top-center">

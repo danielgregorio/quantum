@@ -2,7 +2,8 @@
 
 > Status: lockstep works, started from the game's own lobby (`qg:lobby`, or
 > `qg:host`/`qg:join`) or the command line, over ENet or WebSocket
-> (`tests/godot/test_godot_multiplayer.py`).
+> (`tests/godot/test_godot_multiplayer.py`), for two to as many players as
+> the game says, with watchers; rollback for fighting games.
 > This page says what it is, why it is this and not something else, what it
 > costs, and what is left.
 
@@ -105,8 +106,15 @@ No controller, prefab or handler knows multiplayer exists.
    takes the seat, gets the inputs so far and runs the game from its start
    16 times faster (the engine runs 16x the ticks with time_scale 16, so a
    tick still steps 1/60 s), checking the hashes the players agreed on.
-   Not under rollback. **Spectate** is still open: the same history, to a
-   peer that takes no seat.
+   Not under rollback. ~~**Spectate**~~ — done: `qg:watch address=`, the
+   lobby's **Watch**, `--q-watch=HOST:PORT`. A joiner now says, as it
+   connects, whether it plays or watches, and only then gets a seat or none;
+   one who watches before the start starts with the players, one who comes
+   later gets the inputs so far and catches up. The host (or the relay)
+   hands every frame it receives on to those who came late, since Godot's
+   own relay can miss one that arrives as they join — which a rejoining
+   player could also hit (fixed for both). `tests/godot/test_godot_watch.py`
+   has two watchers, one from the start and one three seconds in.
 3. ~~**Rollback**~~ — done, for the scenes it can take:
    `<qg:multiplayer rollback="8" />`. Each tick runs at once with the
    others' input guessed (what they last pressed); a snapshot of the state
@@ -117,7 +125,10 @@ No controller, prefab or handler knows multiplayer exists.
    its own input. Godot's physics cannot be run again inside a frame, so
    the compiler allows rollback only when every scene the networked game
    reaches holds fighters, timers, menus, the HUD, pictures and a camera —
-   nodes that save and load their whole state. A scene change waits until
+   nodes that save and load their whole state — and, since 2026-10-21, a
+   tilemap (the cells `qg:set-tile` changed) and the scene's tweens (records
+   in one `Tweens` node, `tests/godot/test_godot_rollback_tweens.py`). A
+   scene change waits until
    the tick that asked for it is certain. Arena uses it, with an input
    delay of 2 ticks; its tests inject 30–120 ms of latency and check both
    peers end where one replay of both tapes ends.
@@ -132,5 +143,14 @@ No controller, prefab or handler knows multiplayer exists.
    WebRTC mesh would skip the relay but needs a signalling server anyway.
    `scripts/check-relay-in-browser.py` runs two Chromium pages through a
    relay in CI.
-5. **Three or more players in a game that uses it**: the runtime takes
-   any `players`; only Pong (2) exercises it.
+5. ~~**Three or more players in a game that uses it**~~ — done: Bricks
+   is for two to four. `<qg:multiplayer players="4" min-players="2" />`:
+   the game starts by itself as the fourth joins, or the host starts it
+   sooner with those who are there (`qg:start-now`, the lobby's **Start
+   now**, or `--q-players=N` on the command line); from then on `players`
+   is how many play, what every tick waits for and every hash is compared
+   across, and every peer learns it as the game starts. `net_players()`
+   says it, so `if="{net_players() >= 3}"` places a third character only
+   when there is a third player. Under a relay player 1 asks the relay to
+   start. `tests/godot/test_godot_party.py` plays three on three Godots,
+   from the game's own menu and from the command line. Not under rollback.

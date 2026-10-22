@@ -41,7 +41,9 @@ var fire_prefab: String = ""
 var fire_every: int = 0
 var fire_sound: String = ""
 var state: String = ""
-var stops_at_walls: bool = false
+var stops_at_walls: bool = false   # walls="stop" or "bounce": it meets the tiles
+var bounces: bool = false          # walls="bounce": it turns off them
+var spacing: float = 0.0           # spacing=: things of its tag keep this far apart as they move
 var parts: Array = []
 var doing: String = ""            # the part that moved it this tick (ai="behavior"), "" for none
 var on_floor: bool = false        # an enemy of parts with qg:gravity: it stands on something
@@ -92,9 +94,11 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 		motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
 	if ai == "fly" or ai == "sway" or ai == "path" or ai == "turret":
 		collision_mask = 0   # through everything: a shot or a drone is stopped by nothing
-	stops_at_walls = ai == "fly" and prefab.get("walls", "pass") == "stop"
+	stops_at_walls = ai == "fly" and prefab.get("walls", "pass") in ["stop", "bounce"]
+	bounces = ai == "fly" and prefab.get("walls", "pass") == "bounce"
 	if stops_at_walls:
 		collision_mask = 1
+	spacing = float(prefab.get("spacing", 0.0))
 	direction = -1 if prefab.get("direction", "left") == "left" else 1
 	turns_at_edge = prefab.get("turns_at", "wall") == "edge"
 	gravity = float(prefab.get("gravity", 900.0))
@@ -240,7 +244,7 @@ func become(name_: String) -> void:
 	var st: Dictionary = _states[name_]
 	var sprite: Sprite2D = get_node_or_null("Sprite")
 	if sprite != null:
-		sprite.frame = int(st.get("frame", _base["frame"]))
+		sprite.frame = int(st["frame"]) if st.get("frame") != null else int(_base["frame"])   # a state without frame= keeps its own
 	speed = float(st["speed"]) if st.get("speed") != null else float(_base["speed"])
 	fire_every = int(st["fire_every"]) if st.get("fire_every") != null else int(_base["fire_every"])
 	fire_prefab = str(st["fire_prefab"]) if st.get("fire_prefab") != null else str(_base["fire_prefab"])
@@ -254,21 +258,53 @@ func become(name_: String) -> void:
 func _on_hitbox_entered(area: Area2D) -> void:
 	if _dead or not area.has_method("quantum_tag"):
 		return
-	var other_tag: String = area.quantum_tag()
 	var other: Node = area.quantum_owner() if area.has_method("quantum_owner") else area
 	if other == self:
 		return
+	_touched(area.quantum_tag(), other)
+
+
+# A solid thing it walks into (a wall of the keep, a door) it touches too, once
+# as it comes against it: its hitbox, no larger than its body, never overlaps one.
+var _against: Dictionary = {}
+
+
+func _bumps() -> void:
+	var now := {}
+	for i in get_slide_collision_count():
+		var c = get_slide_collision(i).get_collider()
+		if c != null and not (c is TileMapLayer) and c.has_method("quantum_tag"):
+			now[c.get_instance_id()] = c
+	for id in now:
+		if not _against.has(id) and not _dead and is_instance_valid(now[id]):
+			_touched(now[id].quantum_tag(), now[id])
+	_against = now
+
+
+func _touched(other_tag: String, other: Node) -> void:
+	# a handler of the side it was hit on runs instead of the "any" ones
+	var side: String = Q.side_of(self, other) if other is Node2D else "any"
+	var sided := false
 	for h in _handlers:
-		if h["with"] != other_tag:
-			continue
-		var cooldown := int(h.get("cooldown", 0))
-		if cooldown > 0 and _cooldowns.get(h["handler"], -1) > _ticks:
-			continue
-		if cooldown > 0:
-			_cooldowns[h["handler"]] = _ticks + cooldown
-		if P.has_method(h["handler"]):
-			Q.event("touch", {"who": Q.who(self), "with": Q.who(other)})
-			P.call(h["handler"], self, other)
+		if h["with"] == other_tag and h.get("side", "any") == side and _fire_handler(h, other):
+			sided = true
+	if sided:
+		return
+	for h in _handlers:
+		if h["with"] == other_tag and h.get("side", "any") == "any":
+			_fire_handler(h, other)
+
+
+func _fire_handler(h: Dictionary, other: Node) -> bool:
+	var cooldown := int(h.get("cooldown", 0))
+	if cooldown > 0 and _cooldowns.get(h["handler"], -1) > _ticks:
+		return false
+	if cooldown > 0:
+		_cooldowns[h["handler"]] = _ticks + cooldown
+	if P.has_method(h["handler"]):
+		Q.event("touch", {"who": Q.who(self), "with": Q.who(other)})
+		P.call(h["handler"], self, other)
+	return true
 
 
 func _physics_process(delta: float) -> void:
@@ -310,7 +346,7 @@ func _fire() -> void:
 	var below := position + Vector2(0, hitbox_size.y / 2.0 + 4.0) * (-1.0 if heading == Vector2.UP else 1.0)
 	Q.spawn_at(_scene_of(), fire_prefab, below)
 	if fire_sound != "":
-		Q.play(fire_sound)
+		Q.play(fire_sound, 0.0, 1.0, 0.0, self)   # heard where it is
 
 
 # ai="path": from point to point at `speed`; at the last point it stands.
@@ -373,7 +409,7 @@ func _turret() -> void:
 			if "rotate" in shot and shot.rotate:
 				shot.call_deferred("_face_heading")
 	if fire_sound != "":
-		Q.play(fire_sound)
+		Q.play(fire_sound, 0.0, 1.0, 0.0, self)   # heard where it is
 
 
 func _scene_of() -> Node:
@@ -384,8 +420,9 @@ func _scene_of() -> Node:
 
 func _patrol(delta: float) -> void:
 	velocity.y = minf(velocity.y + gravity * delta, 300.0)
-	velocity.x = direction * speed
+	velocity.x = _spaced(Vector2(direction * speed, 0.0)).x
 	move_and_slide()
+	_bumps()
 	if is_on_wall():
 		direction = -direction
 	elif turns_at_edge and is_on_floor() and not _ground_ahead():
@@ -403,8 +440,9 @@ func _wander() -> void:
 		_heading = Vector2(cos(angle), sin(angle))
 		_rethink = rng.randi_range(30, 90)
 	_rethink -= 1
-	velocity = _heading * speed
+	velocity = _spaced(_heading * speed)
 	move_and_slide()
+	_bumps()
 	if get_slide_collision_count() > 0:
 		_rethink = 0
 	_face(velocity.x)
@@ -423,8 +461,9 @@ func _chase() -> void:
 	if target == null:
 		velocity = Vector2.ZERO
 		return
-	velocity = (target.global_position - global_position).normalized() * speed
+	velocity = _spaced((target.global_position - global_position).normalized() * speed)
 	move_and_slide()
+	_bumps()
 	_face(velocity.x)
 
 
@@ -450,8 +489,9 @@ func _pathfind() -> void:
 	if aim == null:
 		velocity = Vector2.ZERO   # walled off: it waits
 		return
-	velocity = _towards(aim, speed)
+	velocity = _spaced(_towards(aim, speed))
 	move_and_slide()
+	_bumps()
 	_face(velocity.x)
 
 
@@ -471,7 +511,9 @@ func _aim_around(target: Node2D, map: Node):
 		# Lined up with the middle of its cell across the step first: a body a little
 		# off it would catch the corner of the wall beside a gap.
 		var mid: Vector2 = map.centre_of(here)
-		if next.x != here.x and absf(position.y - mid.y) > 1.0:
+		if map.shape != "square":
+			pass   # hexes: straight from middle to middle, no corner to catch
+		elif next.x != here.x and absf(position.y - mid.y) > 1.0:
 			aim = Vector2(position.x, mid.y)
 		elif next.y != here.y and absf(position.x - mid.x) > 1.0:
 			aim = Vector2(mid.x, position.y)
@@ -523,9 +565,10 @@ func _behave(delta: float) -> void:
 
 # Top-down: the part's velocity, as it is.
 func _float(chosen: int, v: Vector2) -> void:
-	velocity = v
-	if v != Vector2.ZERO:
+	velocity = _spaced(v)
+	if velocity != Vector2.ZERO:
 		move_and_slide()
+		_bumps()
 		if get_slide_collision_count() > 0:
 			if doing == "patrol":
 				_part_state[chosen]["dir"] = -_part_state[chosen]["dir"]
@@ -555,8 +598,10 @@ func _walk_and_fall(chosen: int, vx: float, delta: float) -> void:
 			_leap_next = _ticks + int(_leap["every"])
 			Q.event("leap", {"who": Q.who(self)})
 			if _leap.get("sound") != null:
-				Q.play(str(_leap["sound"]))
+				Q.play(str(_leap["sound"]), 0.0, 1.0, 0.0, self)
+	velocity.x = _spaced(Vector2(velocity.x, 0.0)).x
 	move_and_slide()
+	_bumps()
 	on_floor = is_on_floor()
 	_bumped = is_on_wall()
 	if _bumped and doing == "patrol" and not _leap_climbs():
@@ -666,7 +711,7 @@ func _part_shoot(i: int, p: Dictionary) -> void:
 		if "rotate" in shot and shot.rotate:
 			shot.call_deferred("_face_heading")
 	if p.get("sound") != null:
-		Q.play(str(p["sound"]))
+		Q.play(str(p["sound"]), 0.0, 1.0, 0.0, self)
 
 
 # The nearest named character within sight, or null.
@@ -682,17 +727,50 @@ func _quarry() -> Node2D:
 	return target
 
 
+# spacing=: a push away from the things of its tag nearer than spacing, half
+# the overlap a tick, added to where it was going (what pulls them together
+# moves them less than that). The scene's order decides (the same on every
+# peer); two on one spot part by their places in it.
+func _spaced(v: Vector2) -> Vector2:
+	if spacing <= 0.0 or get_parent() == null:
+		return v
+	var push := Vector2.ZERO
+	for t in get_parent().get_children():
+		if t == self or not (t is Node2D) or not ("tag" in t) or t.tag != tag or not Q.alive(t):
+			continue
+		var d: Vector2 = global_position - (t as Node2D).global_position
+		var dist := d.length()
+		if dist >= spacing:
+			continue
+		if dist < 0.001:
+			d = Vector2.RIGHT.rotated(float(get_index()))
+			dist = 0.001
+		push += d / dist * (spacing - dist)
+	if push == Vector2.ZERO:
+		return v
+	return v + (push * Q.TICK_RATE / 2.0).limit_length(240.0)
+
+
 # Straight along the heading; gone when old or out of the scene.
 func _fly(delta: float) -> void:
 	speed += accel * delta
 	if stops_at_walls:
-		# walls="stop": gone on touching a tile; the bodies it meets it goes through
+		# walls="stop": gone on touching a tile; "bounce": off it, the way across it reversed;
+		# the bodies it meets it goes through
 		var hit := move_and_collide(heading * speed * delta)
 		if hit != null:
 			if hit.get_collider() is TileMapLayer:
-				quantum_destroy()
-				return
-			position += hit.get_remainder()
+				if not bounces:
+					quantum_destroy()
+					return
+				heading = heading.bounce(hit.get_normal()).normalized()
+				_face_heading()
+				position += heading * hit.get_remainder().length()
+				Q.event("bounce", {"who": Q.who(self)})
+			else:
+				# a body (the one that shot it, one in its way): through it, from now on
+				add_collision_exception_with(hit.get_collider())
+				position += hit.get_remainder()
 	else:
 		position += heading * speed * delta
 	if lifetime > 0 and _age >= lifetime:

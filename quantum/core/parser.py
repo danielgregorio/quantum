@@ -1050,6 +1050,10 @@ class QuantumParser:
             local_name = self._get_element_name(child)
             if local_name not in ('function', 'set'):
                 continue
+            # A game's q:functions hold its qg: actions and q:call, which the game compiler reads from
+            # app.xml_root (every scene has them); they are not functions of a page.
+            if local_name == 'function' and app.app_type == 'game':
+                continue
             tag = child.tag
             # Only the q: namespace. A <ui:set> or <qg:set> belongs to its own
             # parser, and an element without a prefix is not a framework tag.

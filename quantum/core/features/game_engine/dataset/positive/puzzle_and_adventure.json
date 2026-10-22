@@ -1,0 +1,143 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "puzzle",
+  "description": "What pushing, prefabs made from prefabs, click to walk, carrying, the camera sent somewhere, dialogue with choices and animated tiles say (PLAN_GAMES_3.md, Phase 3)",
+  "examples": [
+    {
+      "id": "game-puzzle-001",
+      "intent": "Crates pushed onto pads",
+      "input": {
+        "natural_language": "A box-pushing room: the worker walks a cell at a time and pushes the crates; the room is solved when every crate stands on a pad",
+        "context": {
+          "target": "godot",
+          "file": "game-puzzle-001.q"
+        }
+      },
+      "tags": [
+        "pushable",
+        "grid",
+        "tile_at",
+        "when"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"pads\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Crate\" tag=\"crate\" sheet=\"tiles\" frame=\"6\" hitbox=\"16x16\" solid=\"true\" pushable=\"true\" />\n  <!-- the crates standing on a pad: a pad is a tile of the pads layer -->\n  <q:function name=\"placed\">\n    <q:set name=\"n\" value=\"0\" type=\"number\" />\n    <qg:for-each tag=\"crate\" var=\"c\">\n      <q:if condition=\"{tile_at(c.col, c.row, 'pads') != 0}\"><q:set name=\"n\" value=\"{n + 1}\" /></q:if>\n    </qg:for-each>\n    <q:return value=\"{n}\" />\n  </q:function>\n  <qg:scene name=\"room\" width=\"180\" height=\"108\">\n    <q:set name=\"message\" value=\"PUSH THE CRATES ONTO THE PADS\" />\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n1,1,1,1,1,1,1,1,1,1\n1,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,1\n1,1,1,1,1,1,1,1,1,1\n    </qg:tilemap>\n    <qg:tilemap tileset=\"tiles\">\n0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,68,0,0\n0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,68,0,0\n0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0\n    </qg:tilemap>\n    <qg:instance prefab=\"Crate\" x=\"63\" y=\"27\" />\n    <qg:instance prefab=\"Crate\" x=\"63\" y=\"63\" />\n    <qg:character id=\"worker\" controller=\"grid\" sheet=\"people\" frame=\"0\" x=\"27\" y=\"27\" hitbox=\"14x14\" step-frames=\"10\" />\n    <qg:when condition=\"{placed() == count('crate')}\">\n      <q:set name=\"message\" value=\"SOLVED\" />\n    </qg:when>\n    <qg:hud position=\"top-left\"><qg:text bind=\"message\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-puzzle-002",
+      "intent": "A family of enemies from one prefab",
+      "input": {
+        "natural_language": "Slimes that chase; a big slime is a slime that is slower and takes three hits; a spitting slime is a big one that also shoots",
+        "context": {
+          "target": "godot",
+          "file": "game-puzzle-002.q"
+        }
+      },
+      "tags": [
+        "extends",
+        "prefab"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"slimes\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Spit\" tag=\"spit\" sheet=\"tiles\" frame=\"151\" hitbox=\"4x4\" ai=\"fly\" speed=\"90\" lifetime=\"60\" />\n  <qg:prefab name=\"Slime\" tag=\"enemy\" sheet=\"people\" frame=\"18\" hitbox=\"14x14\" health=\"1\" ai=\"chase\" speed=\"40\" sight=\"120\">\n    <qg:animation name=\"walk\" frames=\"18,19\" fps=\"6\" />\n    <qg:on-death><qg:emit text=\"+1\" at=\"me\" /></qg:on-death>\n  </qg:prefab>\n  <!-- everything a slime has, but what it says itself -->\n  <qg:prefab name=\"BigSlime\" extends=\"Slime\" health=\"3\" speed=\"25\" scale=\"1.5\" />\n  <qg:prefab name=\"Spitter\" extends=\"BigSlime\" fire-prefab=\"Spit\" fire-every=\"90\">\n    <qg:on-death><qg:emit text=\"+5\" at=\"me\" /></qg:on-death>\n  </qg:prefab>\n  <qg:scene name=\"field\" width=\"320\" height=\"240\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"160\" y=\"120\" hitbox=\"14x14\" speed=\"80\"\n                  attack-action=\"jump\" attack-reach=\"16\" attack-frames=\"12\">\n      <qg:on-hit with=\"enemy\"><qg:damage target=\"other\" amount=\"1\" /></qg:on-hit>\n    </qg:character>\n    <qg:instance prefab=\"Slime\" x=\"40\" y=\"40\" />\n    <qg:instance prefab=\"BigSlime\" x=\"280\" y=\"40\" />\n    <qg:instance prefab=\"Spitter\" x=\"160\" y=\"220\" />\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-puzzle-003",
+      "intent": "Click to walk",
+      "input": {
+        "natural_language": "A point-and-click room: a click walks the hero to that cell by the shortest way around the walls; clicking the old man walks up to him and talks",
+        "context": {
+          "target": "godot",
+          "file": "game-puzzle-003.q"
+        }
+      },
+      "tags": [
+        "pointer",
+        "cursor",
+        "say"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"walk\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Elder\" tag=\"elder\" sheet=\"people\" frame=\"6\" hitbox=\"14x14\" solid=\"true\" />\n  <qg:scene name=\"room\" width=\"180\" height=\"108\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n1,1,1,1,1,1,1,1,1,1\n1,0,0,1,0,0,0,0,0,1\n1,0,0,1,0,1,1,0,0,1\n1,0,0,0,0,1,0,0,0,1\n1,0,0,0,0,0,0,0,0,1\n1,1,1,1,1,1,1,1,1,1\n    </qg:tilemap>\n    <qg:cursor player=\"1\" grid=\"18\" />\n    <qg:instance prefab=\"Elder\" x=\"117\" y=\"63\" />\n    <qg:character id=\"hero\" controller=\"pointer\" sheet=\"people\" frame=\"0\" x=\"27\" y=\"27\" hitbox=\"14x14\" step-frames=\"8\">\n      <qg:on-collision with=\"elder\"><qg:say dialogue=\"elder\" /></qg:on-collision>\n    </qg:character>\n    <qg:dialogue name=\"elder\" size=\"10\">\n      <qg:line who=\"Elder\" text=\"You found the way round.\" />\n    </qg:dialogue>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-puzzle-004",
+      "intent": "A torch carried and put down",
+      "input": {
+        "natural_language": "The hero picks up a torch, which goes over its head wherever it walks; the drop key puts it down where it is",
+        "context": {
+          "target": "godot",
+          "file": "game-puzzle-004.q"
+        }
+      },
+      "tags": [
+        "attach",
+        "detach",
+        "carrying"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"torch\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:input action=\"drop\" keys=\"X\" />\n  <qg:prefab name=\"Torch\" tag=\"torch\" sheet=\"tiles\" frame=\"49\" hitbox=\"10x10\" />\n  <qg:scene name=\"cave\" width=\"320\" height=\"240\" background=\"#101018\">\n    <q:set name=\"lit\" value=\"false\" type=\"boolean\" />\n    <qg:instance prefab=\"Torch\" x=\"200\" y=\"120\" />\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"60\" y=\"120\" hitbox=\"14x14\" speed=\"70\">\n      <qg:on-collision with=\"torch\">\n        <q:if condition=\"{carrying(me, 'torch') == null}\">\n          <qg:attach target=\"other\" dy=\"-14\" />\n          <q:set name=\"lit\" value=\"true\" />\n        </q:if>\n      </qg:on-collision>\n    </qg:character>\n    <qg:on-input action=\"drop\">\n      <qg:detach from=\"hero\" tag=\"torch\" />\n      <q:set name=\"lit\" value=\"false\" />\n    </qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-puzzle-005",
+      "intent": "A lever and a cutscene",
+      "input": {
+        "natural_language": "Pulling a lever opens a gate across the room; the camera goes to show the gate open, and comes back to the hero while the game waits",
+        "context": {
+          "target": "godot",
+          "file": "game-puzzle-005.q"
+        }
+      },
+      "tags": [
+        "camera-to",
+        "camera",
+        "set-tile"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"lever\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Lever\" tag=\"lever\" sheet=\"tiles\" frame=\"64\" hitbox=\"14x14\" />\n  <qg:scene name=\"hall\" width=\"180\" height=\"108\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n1,1,1,1,1,1,1,1,1,1\n1,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,0,0,1\n1,0,0,0,0,0,0,1,0,1\n1,1,1,1,1,1,1,1,1,1\n    </qg:tilemap>\n    <qg:instance prefab=\"Lever\" name=\"lever\" x=\"27\" y=\"81\" />\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"45\" y=\"45\" hitbox=\"14x14\" speed=\"60\">\n      <qg:on-collision with=\"lever\">\n        <qg:set-tile col=\"7\" row=\"4\" tile=\"0\" />\n        <qg:camera-to x=\"135\" y=\"81\" zoom=\"2\" seconds=\"0.5\" hold=\"1\" />\n        <qg:destroy target=\"other\" />\n      </qg:on-collision>\n    </qg:character>\n    <qg:camera follow=\"hero\" />\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-puzzle-006",
+      "intent": "A conversation with choices",
+      "input": {
+        "natural_language": "Talking to the innkeeper: her face beside the text, the words typed in, and a choice of answers; one is offered only to who has coins, and the answer is remembered",
+        "context": {
+          "target": "godot",
+          "file": "game-puzzle-006.q"
+        }
+      },
+      "tags": [
+        "choice",
+        "dialogue",
+        "line",
+        "portrait",
+        "speed"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"inn\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"coins\" value=\"3\" type=\"number\" />\n  <qg:spritesheet name=\"faces\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Keeper\" tag=\"keeper\" sheet=\"people\" frame=\"4\" hitbox=\"14x14\" solid=\"true\" />\n  <qg:scene name=\"inn\" width=\"320\" height=\"240\">\n    <q:set name=\"room\" value=\"false\" type=\"boolean\" />\n    <qg:instance prefab=\"Keeper\" x=\"200\" y=\"120\" />\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"60\" y=\"120\" hitbox=\"14x14\" speed=\"70\">\n      <qg:on-collision with=\"keeper\"><qg:say dialogue=\"keeper\" /></qg:on-collision>\n    </qg:character>\n    <qg:dialogue name=\"keeper\" size=\"12\" speed=\"30\" sheet=\"faces\">\n      <qg:line who=\"Innkeeper\" portrait=\"4\" text=\"Welcome, traveller. A bed for the night?\">\n        <qg:choice label=\"Yes, three coins\" if=\"{coins >= 3}\">\n          <q:set name=\"coins\" value=\"{coins - 3}\" />\n          <q:set name=\"room\" value=\"true\" />\n        </qg:choice>\n        <qg:choice label=\"Not tonight\" />\n      </qg:line>\n      <qg:line who=\"Innkeeper\" portrait=\"4\" text=\"{'Sleep well.' if room else 'Safe roads, then.'}\" />\n    </qg:dialogue>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-puzzle-007",
+      "intent": "Water and torches that move",
+      "input": {
+        "natural_language": "A tile map whose water ripples and whose torches flicker: animated tiles, frames in turn from the tileset",
+        "context": {
+          "target": "godot",
+          "file": "game-puzzle-007.q"
+        }
+      },
+      "tags": [
+        "tile",
+        "frames",
+        "fps"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"ripples\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\">\n    <!-- tile 34 and the two after it in the sheet's row, in turn: the water -->\n    <qg:tile frame=\"33\" frames=\"3\" fps=\"4\" />\n    <qg:tile frame=\"54\" frames=\"2\" fps=\"8\" shape=\"none\" />\n  </qg:tileset>\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"pond\" width=\"180\" height=\"108\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n1,1,1,1,1,1,1,1,1,1\n1,0,0,55,0,0,55,0,0,1\n1,0,0,0,0,0,0,0,0,1\n1,0,34,34,34,34,0,0,0,1\n1,0,34,34,34,34,0,0,0,1\n1,1,1,1,1,1,1,1,1,1\n    </qg:tilemap>\n    <qg:character id=\"duck\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"140\" y=\"50\" hitbox=\"14x14\" speed=\"60\" />\n  </qg:scene>\n</q:application>\n"
+      }
+    }
+  ]
+}

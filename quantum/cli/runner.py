@@ -315,6 +315,7 @@ Examples:
   quantum check                    # Pages parse, SQL compiles, query fields exist
   quantum test                     # Run the app's *.test.q tests
   quantum run game.q               # Build a Godot 4 project
+  quantum run game.q --watch       # Play it; each save of the .q comes into the running game
   quantum run backup-job.q         # Execute job
   quantum pkg init ./my-component  # Initialize new package
   quantum pkg install ./package    # Install package
@@ -355,6 +356,9 @@ Examples:
     run_parser.add_argument('--check', action='store_true',
                             help='For a game: after the build, open the Godot project headless and '
                                  'fail on any script error (needs Godot; `python scripts/godot.py install`)')
+    run_parser.add_argument('--watch', action='store_true',
+                            help='For a game: play it in Godot, and each time the .q (or a file beside it) is '
+                                 'saved, build again and go on where the game was, under the new build')
 
     # Start command
     start_parser = subparsers.add_parser('start', help='Start web server')
@@ -407,6 +411,7 @@ Examples:
     play_parser.add_argument('--live', action='store_true', help='the game runs at its own speed, not request by request')
     play_parser.add_argument('--host', type=int, metavar='PORT', help='host a networked game on this port (live)')
     play_parser.add_argument('--join', metavar='HOST:PORT', help="join a networked game, a person's or another agent's (live)")
+    play_parser.add_argument('--seat', type=int, metavar='N', help='with --join: the seat to sit in (else the lowest free)')
     play_parser.add_argument('--lang', help="the language of the game's texts, when it has it (pt, es...)")
     play_parser.add_argument('--transport', choices=['enet', 'websocket'],
                              help="the network's transport (websocket: the one a browser joins)")
@@ -544,6 +549,9 @@ def main():
             print("Usage: quantum run <file.q>")
             sys.exit(1)
 
+        if getattr(args, 'watch', False):   # a game, played while its .q is edited
+            from quantum.runtime.game_watch import watch_game
+            sys.exit(watch_game(args.file))
         runner = QuantumRunner(config=load_config(getattr(args, 'config', 'quantum.config.yaml')))
         runner._ui_target = getattr(args, 'target', 'html')
         runner._check_build = getattr(args, 'check', False)

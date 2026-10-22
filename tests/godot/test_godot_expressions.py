@@ -24,6 +24,7 @@ EXPRESSIONS = [
     "word + '!'", "'p' in word", "2 in items", "9 not in items", "'a' in bag", 'items[0]', 'items[-1]',
     'items[1:3]', 'items[:2]', 'items[2:]', 'items[-2:]', 'items[5:9]', 'word[0:3]', 'word[3:]', 'word[-2:]',
     'bag.a + bag.b', '[coins, lives]', 'empty', 'coins == 7.0', 'ratio * 2 == 5',
+    'sort([3, 1, 2])', 'sort(items, true)', "sort(['b', 'c', 'a'])",
 ]
 
 

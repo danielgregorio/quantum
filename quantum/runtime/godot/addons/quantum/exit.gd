@@ -1,8 +1,8 @@
 extends Area2D
 # A way out of the scene (qg:exit): a rectangle. A character that enters it
 # leaves for the scene `to`, arriving at that scene's exit named `at`. An
-# exit the character arrives inside is disarmed until it has left it, so
-# arriving does not send it straight back.
+# exit the character arrives inside, or starts the scene inside, is disarmed
+# until it has left it, so arriving does not send it straight back.
 
 var to: String = ""
 var at: String = ""
@@ -29,6 +29,11 @@ func setup(spec: Dictionary, scene: Node) -> void:
 
 func disarm() -> void:
 	_armed = false
+
+
+func holds(point: Vector2) -> bool:
+	var size: Vector2 = (get_child(0).shape as RectangleShape2D).size
+	return Rect2(position - size / 2.0, size).has_point(point)
 
 
 func _on_body_entered(body: Node) -> void:

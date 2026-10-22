@@ -10,6 +10,291 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: Bricks (`projects/bricks/bricks.q`), a brick breaker for one,
+  or two to four over the network, written for the tags below: three levels
+  written as lines of letters and built by a `q:loop`, steel bricks of two
+  hits, bombs that break the bricks around them, the serve as jump is let go,
+  a ball lost off the bottom, the last brick in slow motion and a sequence of
+  tweens after it. Its art is drawn by `scripts/art/bricks.py` (CC0). On the
+  games page, and replayed in CI (`tests/godot/test_godot_bricks.py`).
+- Laboratory: what a contact ending does. `<qg:on-separate with=>` on a
+  character or a prefab runs when it stops touching something of that tag (a
+  plate stepped off, a door that closes behind); not when the other is
+  destroyed, nor because the scene was paused.
+- Laboratory: the screen's edges. `<qg:on-screen-exit side=>` and
+  `<qg:on-screen-enter side=>` on a character or a prefab, or in a scene with
+  `of=` a tag, run when it leaves the screen or comes onto it, by any edge or
+  one (`top`, `bottom`, `left`, `right`). The screen is the camera's view,
+  worked out in the game's ticks, or the scene without a camera; a thing
+  placed off the screen has not left it. A `screen` event reaches the play
+  protocol.
+- Laboratory: `<qg:on-input action= on="release">` runs as the action is let
+  go (`on="press"`, the default, as it goes down).
+- Laboratory: `<qg:for-each tag= var=>` runs what it holds for every thing of
+  a tag in the scene, `var=` naming each in turn; one destroyed meanwhile is
+  skipped.
+- Laboratory: slow motion. `<qg:time-scale scale= seconds=>` runs the whole
+  game slower (or faster, up to 4) for `seconds=` as the player sees them, or
+  until the next one; a new scene starts at 1. The ticks come further apart
+  and each is the same tick as ever (the engine runs fewer ticks a second and
+  slows its clock as much, as the lockstep's catching up already did, which
+  now multiplies in), so a replay and every peer see the same game.
+- Laboratory: `<qg:quit>` closes the game; in a browser it does nothing, and
+  `can_quit()` says whether it would (a Quit button with `if="{can_quit()}"`).
+  In a replay or a play session it is a `quit` event and the game goes on.
+- Laboratory: a tween's end. `<qg:on-end>` inside a `qg:tween` runs when it is
+  done (the last of its repeats), with `me` the thing it moved; a tween in it
+  plays next, so tweens make sequences. `property="tint"` eases the colour a
+  picture is multiplied by (`from="#ff4040" to="#ffffff"`), reported as
+  `tint` in the state while it is not white.
+- Laboratory: up to four players, or fewer. `<qg:multiplayer min-players=>`
+  lets the host start before every seat is taken: `<qg:start-now>`, the
+  lobby's **Start now** (and how many are there), or `--q-players=N` on the
+  command line. Every peer learns how many play as the game starts, and
+  `net_players()` says it.
+- Laboratory: watching a networked game. `<qg:watch address=>`, the lobby's
+  **Watch** button and `--q-watch=HOST:PORT` join with no seat: the players'
+  inputs reach this machine too and it runs the same game, its keys doing
+  nothing; one who comes after the start catches up on the game so far, as a
+  rejoining player does. `net_status()` is then `watching`. Up to eight watch
+  a game; not under `rollback=`.
+- Laboratory: tweens and `qg:set-tile` under rollback. A scene's tweens are
+  now records in one node per scene (`Tweens`), which the rollback saves and
+  runs again with the rest, the looks they touched included; a tilemap saves
+  the cells `qg:set-tile` changed. A rollback scene may hold a tilemap.
+- Laboratory: in expressions, `a.x` and `a.y` read where a thing or a
+  character is (`other.x - me.x`); before, `hero.x` compiled and stopped the
+  game in Godot. `me.on_wall` and `me.on_ceiling` read what a body touched as
+  it last moved, as `me.on_floor` does, for every controller.
+- Laboratory: a prefab that does not move (an item, a solid block) has
+  health, `qg:on-damage`, `qg:on-death` and `qg:state`s as one that moves
+  does; before, `qg:damage` and `qg:become` did nothing to it.
+- Laboratory: a thing's name where a target goes. `target=` of `qg:damage`,
+  `qg:become` and `qg:deflect`, `at=` of `qg:burst`, `qg:shake` and
+  `qg:spawn` take a parameter, a loop variable or a q:set holding a thing, and
+  `qg:spawn at=` a character's id, as `qg:destroy` and `qg:tween` already did.
+- Laboratory: to ship a game, Phase 4 of `PLAN_GAMES_3.md`, in every game of
+  `projects/`. An options screen: `bus=` on `qg:sound` puts it on a bus
+  (music, effects); `<qg:slider>` in a menu changes, with left and right, how
+  loud a bus is (`bus=`) or a number of the state (`bind= min= max= step=`);
+  `<qg:volume bus= value=>` and `volume('music')` set and read a bus;
+  `<qg:fullscreen on=>` and `fullscreen()`; `<qg:rebind action=>` in a menu
+  takes the next key, mouse button or joypad button pressed for the action
+  (Escape keeps the old one). What the player chose there is kept between
+  runs (`quantum-settings.json`, next to the saves), and the replay and the
+  lockstep, which carry actions, are as before. Save slots: `slot=` on
+  `qg:save` and `qg:continue`, `has_save(2)`; the scenes with `save="true"`
+  save into the slot last used (Keep keeps three games). A HUD takes
+  `<qg:icon sheet= frame= scale=>` (the item after it shares its line),
+  `color=` on its texts and counters, `if=`, and the bottom corners. A menu
+  takes `columns=` (left and right move along a row) and `rows=` (the rest
+  scroll into view with the focus). `<qg:touch-button action=>` and
+  `<qg:touch-stick>`, in the application or a scene, press the game's actions
+  on a touch screen as keys would (`show="always"` everywhere); a lobby's
+  `options=` adds an Options button. `scripts/export-games.py` builds a Mac
+  app (`--preset macOS`, checked here), an `.apk` with the Android SDK
+  (`--preset Android`) and an Xcode project (`--preset iOS`); the site still
+  builds Web, Linux and Windows. Every game has options (on its title, or in
+  the pause menu of Robot, Drift and the RPG) and touch controls. Tested in
+  Godot (`tests/godot/test_godot_shipping.py`); the feature's dataset has
+  seven games and six refusals more.
+- Laboratory: hot reload, from Phase 6 of `PLAN_GAMES_3.md`. `quantum run
+  game.q --watch` plays the game in Godot and records what is pressed; each
+  save of the .q (or of a file beside it) builds it again, and the game
+  comes back on the new build at the same tick, by playing the session's
+  inputs again quickly. A build the compiler refuses is printed and the game
+  plays on. Tested in Godot (`tests/godot/test_godot_hot_reload.py`).
+- Laboratory: Marches (`projects/marches/marches.q`), a skirmish on a map of
+  hexes, turn by turn: three riders hold a keep by a river against four
+  raiders. Written for Phase 6 of `PLAN_GAMES_3.md`: `shape="hex"` (or
+  `"iso"`) on `qg:tileset` with `tile="WxH"`, the rows of the .q the rows
+  seen; a grid walker, a pointer and a cursor (`cells="true"`) on hexes;
+  `cost=` on `qg:tile`, so the way found by `ai="pathfind"`, a pointer's
+  click and the new `<qg:travel target= to= budget= step=>` is the cheapest;
+  `cost(a, b)` in expressions. Its art is drawn by `scripts/art/marches.py`
+  (CC0). On the games page, and played in CI
+  (`tests/godot/test_godot_marches.py`, `tests/godot/test_godot_hexes.py`).
+- Laboratory: lights and shadows, from Phase 6 of `PLAN_GAMES_3.md`, for
+  Delve. `ambient=` on `qg:scene` makes it dark; `<qg:light radius= color=
+  energy= flicker=>` lights it, at a place of the scene or carried by a
+  character or a prefab; with `shadows="true"` the scene's solid tiles stop
+  it, lit on their side and casting their shadow past it, and a wall opened
+  lets it through. The flicker follows the ticks: a replay's frames are the
+  same every time. Delve's vault is dark, lit by its torches, the delvers'
+  lanterns and its treasure. Only seen. Tested in Godot
+  (`tests/godot/test_godot_lights.py`, with rendered frames).
+- Laboratory: the RPG in Russian, from Phase 6 of `PLAN_GAMES_3.md`. A
+  count's word takes the forms its language has: `tr_n(one, other, n)`, and
+  `one=`, `few=`, `many=` on a `qg:phrase` (1 зелье, 2 зелья, 5 зелий, 21
+  зелье; Polish, Czech and Slovak counted as they count, 0 singular in
+  French). `<qg:asset name= src=>` in a `qg:language` gives a sheet or a
+  sound its file in that language: the RPG's "FIGHT!" banner is drawn in each
+  of its four. `font=` on `qg:language` is a font with the letters of its
+  alphabet the game's fonts lack: every font draws them from it (the RPG's
+  Cyrillic, from Xolonium; its Latin letters stay Montserrat's). `slice=` on
+  a `qg:spritesheet` makes its first frame a frame that stretches to a box,
+  its edges as drawn: `box=` on `qg:dialogue` and `qg:menu` (the RPG's
+  dialogues and fight menu, `scripts/art/rpg_extra.py`, CC0). The RPG's HUD
+  counts "2 potions" instead of "Potions 2". Tested in Godot
+  (`tests/godot/test_godot_localized.py`, with rendered frames).
+- Laboratory: positional sound, from Phase 6 of `PLAN_GAMES_3.md`, for
+  Hopper. `at=` on `qg:play` plays a sound from where a thing is: softer and
+  to one side the farther it is from the middle of the screen, silent two
+  screens away. A thing's own sounds (its `fire-sound=`, a leap's or a
+  shot's `sound=`) now come from where it is. Hopper's bouncer hops with a
+  sound, heard from its side before it is seen. The `sound` event says where
+  a sound came from.
+- Laboratory: music and sounds within a scene, from Phase 6 of
+  `PLAN_GAMES_3.md`, for Delve. `qg:music` in a handler changes the music
+  there and then, crossfading over `fade=`; Delve's vault has a warden, the
+  skeleton archer, whose fight has a theme of its own from when it first sees
+  a delver until it falls. `sounds="a, b, c"` on `qg:play` plays one of
+  several each time (Delve's skeletons fall apart in one of three ways); the
+  state records the list as written. The music and the bones are synthesized
+  by `scripts/art/delve_music.py` (CC0).
+- Laboratory: the mouse's other buttons and hover, from Phase 6 of
+  `PLAN_GAMES_3.md`, for Towers. `<qg:on-select action=>` chooses with
+  another of the player's actions (a `qg:input` of `MouseRight` is a right
+  click on a thing); `WheelUp` and `WheelDown` in `keys=` turn the wheel into
+  an action; `hovered()` is the thing under a player's cursor. Towers sells a
+  tower with a right click, changes the tower to build with the wheel, and
+  says what the tower under the mouse sells for. Characters blocking each
+  other, the first item of the phase, needed nothing: they already stop at
+  each other and stand on each other's heads, now in a test
+  (`tests/godot/test_godot_bodies.py`), and Rally's cars bump.
+- Laboratory: multiplayer and the play protocol, Phase 5 of
+  `PLAN_GAMES_3.md`. Choosing the seat: `--q-seat=N` on joining (taken, the
+  joiner is turned away, and the game goes on), `seat=` on the play
+  protocol's `play_start` with `join=` and `quantum play --seat`; the replay
+  harness's peers ask for their seats, so they join all at once. `player=N` on
+  `play_act` and `play_until` presses player N's keys by player 1's names in a
+  game for several on one machine; `text=` types into the text box chosen
+  (`"\n"` is Enter), and a tape keeps what was typed (`["type", text]`, for the
+  replay too). Shared fields: `<qg:field shared="true">` is a draft until Enter
+  sends it with the player's input, like a key, and on that tick every machine
+  sets the bound state and runs what the field holds, with `sender` and `text`
+  (`sent` and `message` events); the menu waits for it on every machine.
+  `<qg:menu local="true">` is the menu of whoever plays at this machine, of
+  shared fields only. While a field is typed in, the keys type and play
+  nothing. Split screen: `player=` on `qg:camera` gives each player a view; on
+  one machine the screen splits (side by side, or in quarters for three or
+  four), over the network each machine shows its own player's, and the screen
+  of `qg:on-screen-exit` is every player's view. Special moves:
+  `<qg:on-input sequence="down, forward, punch" within= player=>` holds when
+  the presses come in order within so many ticks, `forward` and `back` the way
+  the player's character faces; the presses are kept with the input, so the
+  rollback replays them. `<qg:rumble player= strength= seconds=>` shakes a
+  joypad (a phone, in the hand), felt only on that player's machine. A fighter
+  takes `qg:damage` as a hit, blocked by holding away. Bricks over the network
+  starts with who is who (each player's name, sent from their own machine);
+  Arena has the blast (down, forward, punch), felt on the joypad of the one it
+  hits. Tested in Godot (`tests/godot/test_godot_shared.py`,
+  `test_godot_split.py`, the Arena's and the play protocol's tests, an agent in
+  each seat of a four-machine Bricks); the feature's dataset has seven games
+  and six refusals more.
+- Laboratory: Rally (`projects/rally/rally.q`), two cars round a circuit seen
+  from above, wider and taller than the screen, written for the split screen:
+  on one keyboard the screen splits in two, a view for each car; over the
+  network each machine follows its own. The circuit is a Tiled map, the laps
+  are counted at the line after halfway round (its zones), and a barrier lifts
+  at the green light. Its art and circuit are drawn by `scripts/art/rally.py`
+  (CC0). On the games page, and raced in CI, alone and over the network
+  (`tests/godot/test_godot_rally.py`).
+- Laboratory: Crates (`projects/crates/crates.q`), a box-pushing puzzle on a
+  dockside, written for Phase 3 of `PLAN_GAMES_3.md`: three rooms drawn in
+  Tiled (`projects/crates/rooms/`: two tilesets, flipped walls, animated
+  water, the doors, a sign by each, a gull's way over the harbour and each
+  room's title and hint), a worker who steps or walks where it is clicked and
+  pushes crates and barrels onto the pads, a foreman who talks and offers a
+  choice, a gate the camera goes to show open, and a key carried over the
+  worker's head to a locked gate. Its art is drawn by `scripts/art/crates.py`
+  (CC0). On the games page, and played through in CI with a solver's moves
+  (`tests/godot/test_godot_crates.py`).
+- Laboratory: puzzle and adventure, Phase 3 of `PLAN_GAMES_3.md`.
+  `pushable="true"` on a solid prefab: a grid walker's step pushes it a cell
+  on when the cell beyond is free (a `push` event), and runs the walker's
+  `qg:on-collision` with it. `controller="pointer"`: a grid walker that its
+  player's click also walks, by the shortest way round the walls and things
+  (a `route` event); a click on a thing walks up to it and steps into it, a
+  crate only when it is beside the walker (further off, the walk ends beside
+  it); the click and the cursor travel in the lockstep. `extends=` on
+  `qg:prefab` makes one prefab from another: all of it (attributes,
+  animations, states, handlers, behavior) but what it says itself. `<qg:attach
+  target= to= dx= dy=>` makes a thing carried by another, following it and
+  touching nothing; `<qg:detach target=>` (or `from= tag=`) puts it down;
+  `carrying(me, 'key')` finds it. `<qg:camera-to target= | x= y= zoom=
+  seconds= hold= pause=>` sends the camera to a thing or a point and back to
+  what it follows, the scene waiting meanwhile unless `pause="false"`.
+  `<qg:choice label= if=>` in a `qg:line` offers answers (up, down, select);
+  `speed=` on `qg:dialogue` types each line in, `sheet=` and a line's
+  `portrait=` put a face beside it. `frames=` and `fps=` on `qg:tile` animate
+  a tile. A Tiled map may use several tilesets (each the game's `qg:tileset`
+  with the same image), flipped and turned tiles, objects of class `zone`,
+  `exit` and `path`, an object's `state` property, and properties of its own
+  that `tiled('name')` reads. `tile_at(col, row, 'layer')` reads a layer by
+  name, and `a.col`, `a.row` the cell of any thing or character. Keep's end
+  asks what now (a dialogue with choices), Delve's lever sends the camera to
+  the wall it opened, and Siege's brute is made from its raider. Tested in
+  Godot (`tests/godot/test_godot_puzzle.py`, over the network too); the
+  feature's dataset has seven games and seven refusals more.
+- Laboratory: Siege (`projects/siege/siege.q`), a keep under siege seen from
+  above, for one, or two over the network, written for Phase 2 of
+  `PLAN_GAMES_3.md`: raiders in waves from the edges make for the tower, the
+  archer aims at the pointer (or with the right stick) and charges a bolt
+  that glances off the walls, a tower zaps the nearest, and the second player
+  is a knight who steers a horse. Its art is drawn by `scripts/art/siege.py`
+  (CC0). On the games page, and replayed in CI
+  (`tests/godot/test_godot_siege.py`).
+- Laboratory: action and aiming, Phase 2 of `PLAN_GAMES_3.md`. `heading=`
+  on `qg:spawn` sends a flying prefab where two expressions say (at the
+  pointer: a `qg:cursor id="aim"` is read as `aim.x`, `aim.y`). `<qg:steer
+  turn= thrust= drag= max=>`, a part of `qg:behavior`: left and right turn
+  the body, up pushes it the way it points. `<qg:label value=>` is text in
+  the world, over a character or a prefab or at a place of a scene, read
+  every tick (and in the play protocol's screen); `qg:emit text=` floats a
+  number (or a word, in the player's language) up. `<qg:beam from= to= seconds=>` draws a line between two things;
+  `trail=` on a prefab leaves a streak; `particles=` on a prefab or a
+  character keeps an effect going on it. `qg:tween` eases `scale-x` and
+  `scale-y` (a scale is now from the thing's own size), and a prefab or a
+  character takes `visible="{...}"` (read every tick), `flip-v=` and
+  `layer=`; a scene takes `y-sort="true"`. A flying prefab's `walls="bounce"`
+  turns off the tiles; `side="left"` and `side="right"` join top and bottom
+  on `qg:on-collision`, for prefabs too; `buffer-frames=` (the platformer)
+  and `buffer=` (`qg:jump`) jump on landing for a press just before it
+  (Hopper has it); `spacing=` keeps things of a tag apart as they move.
+  `qg:damage amount=` takes an expression. Tested in Godot
+  (`tests/godot/test_godot_action.py`); the feature's dataset has six games
+  and five refusals more. `GAMES_PARITY.md` counts 166 rows covered.
+- Laboratory: game logic, Phase 1 of `PLAN_GAMES_3.md` (the plan approved
+  on 2026-10-21 for the language's next 34 features, and ten more as a game
+  asks for them). `<qg:after ticks= | seconds= name=>` in a handler runs what
+  it holds later, with the names of its handler as they were (`me`, a loop's
+  thing, a parameter; a thing gone by then is null); one of the same name
+  still waiting starts its count again. `<qg:when condition=>` in a scene runs
+  its handler as the condition turns true, read at the start of every tick,
+  and again only after it has been false. Both live in the scene's clock (one
+  `Clock` node a scene), which counts `ticks()`, stops while the scene is
+  paused, and rolls back. A `q:function` directly in `q:application` is every
+  scene's and the prefabs': it reads the game's state, its parameters and its
+  own variables; Delve's and Keep's `hurt`, once in every room, is one now,
+  and Bricks' last brick is a `qg:when`. In expressions, `pressing('run')`,
+  `pressed_for('fire')` (ticks; on the tick it is let go, how long it was)
+  and `strength('right')`, for player 1 or another (`pressing('run', 2)`);
+  `sin()`, `cos()` and `atan2(y, x)` in degrees, as a picture's rotation; and
+  the Core's `sort(list)`, `sort(list, true)`. A field a thing does not have
+  (`hero.health` on a platformer) is a compile error that lists the fields it
+  has, by its controller; a `q:set` may still hold a dictionary (`bag.a`).
+  Tested in Godot (`tests/godot/test_godot_logic.py`, and under rollback in
+  `tests/godot/test_godot_rollback_tweens.py`); the feature's dataset has six
+  games and five refusals more. `GAMES_PARITY.md` counts 154 rows covered.
+- The games page (`/games/`) shows each game's source: **View the source**
+  opens `/games/<name>/source/`, the whole `.q` (and a level drawn in Tiled,
+  in a tab of its own) highlighted, every line numbered and a link
+  (`source/#L42`). Each `qg:` tag links to its entry in the language's
+  reference, a tag or an attribute shows what it does when pointed at (the
+  schema's own words), and each file can be copied, downloaded or opened on
+  GitHub. `scripts/export-games.py` writes the pages with the games; the
+  Source column of the Play page links them.
 - `<ui:tabpanel open="Title">` opens on the tab with that title, in the
   browser, the console and on the Hive's screen (UI-17); `open="{tab}"` with
   `<q:set name="tab" value="{query.tab}" default="...">` lets a page that
@@ -445,6 +730,42 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- Laboratory: a `qg:state` without `frame=` showed frame 0 of the sheet; it
+  keeps the prefab's (or the character's) own frame.
+- Laboratory: a character placed in a `qg:exit` as its scene starts (a door
+  the room starts at) left by it at once; it is disarmed until the character
+  has stepped out, as one arrived at is.
+- Laboratory: `count()` and `thing_at()` read as a scene was being built (a
+  HUD's first value) stopped the game.
+- Laboratory: the tile kinds of a Tiled map's layer were read from the
+  scene's tileset, not from the layer's own.
+- Laboratory: a scene's `q:set` whose first value read `tiled('name')` was
+  null; a property the map has is known as the game compiles.
+- Laboratory: `qg:become target="me"` in a prefab's handler was checked
+  against the states of every prefab declared after it, so a second prefab
+  without that state failed to compile.
+- Laboratory: a player rejoining a networked game could wait for good at the
+  tick it caught up to: a frame another player sent as it joined reached it
+  before the host's inputs so far, which replaced it, or never reached it at
+  all. The inputs so far are merged with what has come, and the host hands
+  on every frame to whoever came late.
+- Laboratory: `count()` and `qg:for-each` leave out a thing whose health has
+  reached 0 while its `qg:on-death` runs, so the last brick's handler sees
+  none left.
+- Laboratory: in a prefab's handler (and a function of the game called from
+  one), `qg:goto-scene`, `qg:spawn`, `qg:swap`, `qg:set-tile`, `qg:save` and
+  `qg:continue` did nothing, or stopped the game: they looked for the scene
+  where the prefabs' handlers live. They find the scene the game is in.
+- Laboratory: a prefab that does not move (an item, a solid) accepted
+  `qg:on-collision`, which never ran; it is refused, naming what to write
+  instead. A thing that walks into a solid prefab (a raider into the tower)
+  touches it, as a character does. A flying prefab with `walls=` spawned on a
+  character no longer sticks in its body.
+- Laboratory: `q:call args=` split its arguments at every comma, so a text
+  with a comma (`{'a, b'}`), a list or a call with two arguments became two
+  arguments; it splits only between them. In a prefab's handler, `count()`,
+  `thing_at()` and `tile_at()` read the scene the prefab is in (they read
+  nothing there before).
 - A `ui:tabpanel` in a served page switches its tabs on a click (UI-7): the
   page got the tabs' markup and CSS but not their script, so the first tab
   was the only one a browser could show. The script is one listener for every
@@ -536,6 +857,18 @@ alter the behaviour of an existing app is listed under **Breaking**.
 - Laboratory: the replay dump's `named` listed every second instance of a
   prefab under a name Godot made up (`@Area2D@10`); it lists only the
   things a `qg:instance name=` names.
+
+- Laboratory: a key tapped while a networked game waited for another player
+  was lost: the lockstep and the rollback took the keys every frame, and
+  what they took while the next tick's input was already recorded was
+  dropped. They take the keys once a tick, as they record its input, so the
+  tap goes with the next tick. The play protocol lets a `tap` go once the
+  game has taken it, not after a frame.
+
+- Laboratory: a game with two fonts or more (the RPG since it speaks
+  Russian) sometimes crashed Godot's import, or hung it: the editor imports
+  the files of one importer together on several threads. A compiled project
+  imports one file at a time (`editor/import/use_multiple_threads=false`).
 
 ### Changed
 

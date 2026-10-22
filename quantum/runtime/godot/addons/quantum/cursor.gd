@@ -1,6 +1,7 @@
 extends Node2D
 # A player's pointer (qg:cursor): the mouse, or that player's directions by
-# `step` pixels a tick, snapped to a grid of `grid` when asked, drawn with a
+# `step` pixels a tick, snapped to a grid of `grid` when asked (or to the
+# cells of the scene's tilemap, cells="true", a hex map's), drawn with a
 # sprite when given one. Alone, it lands in Q.cursors[player] at once; under
 # the lockstep it is the raw pointer the lockstep sends with the input, and
 # Q.cursors[player] is what came back — the same on every peer.
@@ -8,6 +9,7 @@ extends Node2D
 var player: int = 1
 var step: float = 16.0
 var grid: int = 0
+var cells: bool = false   # snapped to the cells of the scene's tilemap, whatever their shape (a hex map's)
 var _scene: Node = null
 var _pos: Vector2 = Vector2.ZERO
 var _mouse_seen: Vector2 = Vector2(-1, -1)
@@ -17,6 +19,7 @@ func setup(spec: Dictionary, scene: Node) -> void:
 	player = int(spec.get("player", 1))
 	step = float(spec.get("step", 16.0))
 	grid = int(spec["grid"]) if spec.get("grid") != null else 0
+	cells = bool(spec.get("cells", false))
 	_scene = scene
 	add_to_group("q_cursor")
 	name = "cursor-%d" % player
@@ -37,7 +40,9 @@ func _physics_process(_delta: float) -> void:
 		if Q.tape_cursor != null:
 			_pos = Q.tape_cursor
 		else:
-			var mouse := get_global_mouse_position()
+			# the mouse; or where it was, as `quantum run --watch` plays a session again (godot_watch.gd)
+			var mouse: Vector2 = Q.tape_mouse if Q.tape_mouse != null else get_global_mouse_position()
+			Q.mouse_seen = mouse
 			if mouse != _mouse_seen:
 				_mouse_seen = mouse
 				_pos = mouse
@@ -61,7 +66,13 @@ func _physics_process(_delta: float) -> void:
 	_publish()
 
 
+func _map() -> Node:
+	return _scene.get_node_or_null("Tilemap") if _scene != null else null
+
+
 func snapped_of(p: Vector2) -> Vector2:
+	if cells and _map() != null:
+		return _map().centre_of(_map().cell_of(p))
 	if grid <= 0:
 		return p
 	return Vector2(floorf(p.x / grid) * grid + grid / 2.0, floorf(p.y / grid) * grid + grid / 2.0)
@@ -77,7 +88,11 @@ func where() -> Dictionary:
 	var p: Vector2 = Q.cursors.get(player, _pos)
 	var s := snapped_of(p)
 	var d := {"x": s.x, "y": s.y, "player": player}
-	if grid > 0:
+	if cells and _map() != null:
+		var c: Vector2i = _map().cell_of(p)
+		d["col"] = c.x
+		d["row"] = c.y
+	elif grid > 0:
 		d["col"] = int(floorf(p.x / grid))
 		d["row"] = int(floorf(p.y / grid))
 	return d

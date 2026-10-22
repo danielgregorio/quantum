@@ -32,8 +32,10 @@ screen as text. In an action game, give play_act or play_until `reflex` rules, w
 before every tick until you replace them ([] clears them): [{"when": "ball.y < left.y - 4", "hold":
 ["up"]}, {"when": "ball.y > left.y + 4", "hold": ["down"]}] keeps a paddle on the ball while you
 decide where it should go; a rule without "when" always holds. play_start with join="host:port" takes
-the second seat of a person's networked game (live: it runs at the person's speed, so let reflexes play
-between calls; `net` in each answer says the seat and whether the game is playing). play_snapshot and
+a seat of a person's networked game, the lowest free one or seat=N (live: it runs at the person's speed,
+so let reflexes play between calls; `net` in each answer says the seat and whether the game is
+playing). In a game for several on one machine, player=N on play_act and play_until presses player N's
+keys with player 1's names ("left"). text= types into the text box chosen (a menu's field); "\n" is Enter. play_snapshot and
 play_restore try a choice and come back (not in a live game). play_tape saves the session
 as a replay test. Close what you open with play_end."""
 
@@ -75,14 +77,17 @@ def build_server(tools: Optional[PlayTools] = None):
     @server.tool()
     @_plays
     def play_start(game: str, live: bool = False, host: Optional[int] = None, join: Optional[str] = None,
-                   transport: Optional[str] = None, lang: Optional[str] = None) -> str:
+                   transport: Optional[str] = None, lang: Optional[str] = None,
+                   seat: Optional[int] = None) -> str:
         """Opens a game by name (from play_games). Answers the session id, the game's actions,
         the first observation and the scene's map. live: the game runs at its own speed (60
         ticks a second) instead of waiting for each call. host (a port) or join ("host:port"):
-        take a seat in a networked game, with a person or another agent (always live);
+        take a seat in a networked game, with a person or another agent (always live); with
+        join, seat: the one asked for (2, 3, 4), refused if taken; else the lowest free.
         transport "websocket" is the one a browser joins. lang: the language of the game's texts,
         when it has it (play_games lists them; "pt", "es"); by default the game's own."""
-        return _dump(tools.start(game, live=live, host=host, join=join, transport=transport, lang=lang))
+        return _dump(tools.start(game, live=live, host=host, join=join, transport=transport, lang=lang,
+                                 seat=seat))
 
     @server.tool()
     @_plays
@@ -95,28 +100,35 @@ def build_server(tools: Optional[PlayTools] = None):
     def play_act(session: str, ticks: int = 16, hold: Optional[List[str]] = None,
                  tap: Optional[List[str]] = None, press: Optional[List[str]] = None,
                  release: Optional[List[str]] = None, cursor: Optional[List[float]] = None,
-                 reflex: Optional[List[dict]] = None) -> str:
+                 reflex: Optional[List[dict]] = None, player: Optional[int] = None,
+                 text: Optional[str] = None) -> str:
         """Applies actions and runs `ticks` ticks (60 a second). hold: pressed for these ticks;
         tap: pressed one tick; press/release: held across calls until released; cursor: [x, y]
         where the player's pointer is (menus, boards); reflex: rules {"when": a condition,
         "hold": [actions]} checked before every tick from now on ([] clears them; ticks=0
-        only sets them)."""
+        only sets them). player: the actions named as player 1's ("left") are pressed as
+        player N's, in a game for several on one machine (in a networked one, your seat).
+        text: typed into the text box chosen (a field of a menu; "\\n" is Enter, which sends
+        a shared one to every player)."""
         return _dump(tools.act(session, hold=hold or [], tap=tap or [], press=press or [],
-                               release=release or [], cursor=cursor, ticks=ticks, reflex=reflex))
+                               release=release or [], cursor=cursor, ticks=ticks, reflex=reflex,
+                               player=player, text=text))
 
     @server.tool()
     @_plays
     def play_until(session: str, condition: List[str], max_ticks: int = 600,
                    hold: Optional[List[str]] = None, tap: Optional[List[str]] = None,
                    press: Optional[List[str]] = None, release: Optional[List[str]] = None,
-                   cursor: Optional[List[float]] = None, reflex: Optional[List[dict]] = None) -> str:
+                   cursor: Optional[List[float]] = None, reflex: Optional[List[dict]] = None,
+                   player: Optional[int] = None, text: Optional[str] = None) -> str:
         """As play_act, but runs until any of the conditions holds or max_ticks have run.
         Conditions: "talking", "player.col == 11", "scene == 'combat'", "changed scene",
         "not paused", "event:say", "event:touch with=key", "ball.y < left.y - 8". The
         answer's `stopped` says which."""
         cond = condition[0] if len(condition) == 1 else condition
         return _dump(tools.until(session, cond, hold=hold or [], tap=tap or [], press=press or [],
-                                 release=release or [], cursor=cursor, max_ticks=max_ticks, reflex=reflex))
+                                 release=release or [], cursor=cursor, max_ticks=max_ticks, reflex=reflex,
+                                 player=player, text=text))
 
     @server.tool()
     @_plays

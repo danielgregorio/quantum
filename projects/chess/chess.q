@@ -48,7 +48,12 @@
     <qg:phrase text="Checkmate - White wins" as="Xeque-mate - as brancas vencem" />
     <qg:phrase text="Checkmate - Black wins" as="Xeque-mate - as pretas vencem" />
     <qg:phrase text="Stalemate" as="Afogamento - empate" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="CHESS" as="AJEDREZ" />
     <qg:phrase text="Two players, one board" as="Dos jugadores, un tablero" />
@@ -64,12 +69,17 @@
     <qg:phrase text="Checkmate - White wins" as="Jaque mate - ganan las blancas" />
     <qg:phrase text="Checkmate - Black wins" as="Jaque mate - ganan las negras" />
     <qg:phrase text="Stalemate" as="Rey ahogado - tablas" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+</qg:language>
 
   <!-- The title: both colours on one board, or white and black on two machines. -->
   <qg:scene name="title" width="496" height="540" background="#2a2520">
     <qg:hud position="top-center" size="40"><qg:text value="{'CHESS'}" /></qg:hud>
-    <qg:lobby local="game" local-label="Two players, one board" size="18" />
+    <qg:lobby local="game" local-label="Two players, one board" size="18" options="options" />
   </qg:scene>
 
   <qg:scene name="game" width="496" height="540" background="#2a2520">
@@ -346,6 +356,16 @@
         </q:if>
       </q:if>
     </qg:on-select>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="496" height="540" background="#2a2520">
+    <qg:hud position="top-center" size="36"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="18">
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
   </qg:scene>
 
 </q:application>

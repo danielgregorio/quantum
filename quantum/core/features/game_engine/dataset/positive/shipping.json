@@ -1,0 +1,143 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "shipping",
+  "description": "What an options screen, chosen keys, save slots, a HUD with pictures, menus in a grid that scroll and touch controls say (PLAN_GAMES_3.md, Phase 4)",
+  "examples": [
+    {
+      "id": "game-ship-001",
+      "intent": "An options screen",
+      "input": {
+        "natural_language": "A title with an Options button: how loud the music and the sounds are, the full screen, kept for the next time",
+        "context": {
+          "target": "godot",
+          "file": "game-ship-001.q"
+        }
+      },
+      "tags": [
+        "slider",
+        "fullscreen",
+        "sound",
+        "bus"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"options\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"song\" src=\"assets/kenney/audio/win.ogg\" loop=\"true\" bus=\"music\" />\n  <qg:sound name=\"jump\" src=\"assets/kenney/audio/jump.ogg\" bus=\"effects\" />\n  <qg:scene name=\"title\" width=\"320\" height=\"240\">\n    <qg:menu position=\"center\" size=\"14\">\n      <qg:button label=\"Play\"><qg:goto-scene name=\"level\" /></qg:button>\n      <qg:button label=\"Options\"><qg:goto-scene name=\"options\" /></qg:button>\n    </qg:menu>\n  </qg:scene>\n  <!-- left and right change a slider; the volumes and the full screen are kept between runs -->\n  <qg:scene name=\"options\" width=\"320\" height=\"240\">\n    <qg:menu position=\"center\" size=\"14\">\n      <qg:slider label=\"Music\" bus=\"music\" />\n      <qg:slider label=\"Sounds\" bus=\"effects\" step=\"20\" />\n      <qg:button label=\"{'Full screen: ' + ('on' if fullscreen() else 'off')}\"><qg:fullscreen /></qg:button>\n      <qg:button label=\"Back\"><qg:goto-scene name=\"title\" /></qg:button>\n    </qg:menu>\n  </qg:scene>\n  <qg:scene name=\"level\" width=\"320\" height=\"240\">\n    <qg:music sound=\"song\" />\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"14x20\" jump-sound=\"jump\" />\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-ship-002",
+      "intent": "Keys the player chooses",
+      "input": {
+        "natural_language": "A screen where each player picks the keys for jumping and firing; the next key pressed becomes the action's, and the choice is kept",
+        "context": {
+          "target": "godot",
+          "file": "game-ship-002.q"
+        }
+      },
+      "tags": [
+        "rebind",
+        "menu",
+        "columns"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"keys\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:input action=\"fire\" keys=\"J\" />\n  <qg:input action=\"jump\" keys=\"Up\" player=\"2\" />\n  <qg:input action=\"fire\" keys=\"Period\" player=\"2\" />\n  <qg:scene name=\"keys\" width=\"320\" height=\"240\">\n    <!-- two columns: player 1's keys on the left, player 2's on the right -->\n    <qg:menu position=\"center\" size=\"12\" columns=\"2\">\n      <qg:rebind label=\"P1 jump\" action=\"jump\" />\n      <qg:rebind label=\"P2 jump\" action=\"jump\" player=\"2\" />\n      <qg:rebind label=\"P1 fire\" action=\"fire\" />\n      <qg:rebind label=\"P2 fire\" action=\"fire\" player=\"2\" />\n    </qg:menu>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-ship-003",
+      "intent": "Three save slots",
+      "input": {
+        "natural_language": "A title with three saved games: each goes on where it was left, or starts anew in its slot; each level entered saves it",
+        "context": {
+          "target": "godot",
+          "file": "game-ship-003.q"
+        }
+      },
+      "tags": [
+        "save",
+        "continue",
+        "slot",
+        "has_save"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"slots\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"coins\" value=\"0\" type=\"number\" />\n  <q:function name=\"slot_label\" params=\"n\">\n    <q:return value=\"{'Game ' + str(n) + (': go on' if has_save(n) else ': new')}\" />\n  </q:function>\n  <q:function name=\"play\" params=\"n\">\n    <q:if condition=\"{has_save(n)}\">\n      <qg:continue slot=\"{n}\" />\n      <q:else>\n        <q:set name=\"coins\" value=\"0\" />\n        <qg:save slot=\"{n}\" scene=\"level-1\" />\n        <qg:goto-scene name=\"level-1\" />\n      </q:else>\n    </q:if>\n  </q:function>\n  <qg:scene name=\"title\" width=\"320\" height=\"240\">\n    <qg:menu position=\"center\">\n      <qg:button label=\"{slot_label(1)}\"><q:call function=\"play\" args=\"1\" /></qg:button>\n      <qg:button label=\"{slot_label(2)}\"><q:call function=\"play\" args=\"2\" /></qg:button>\n      <qg:button label=\"{slot_label(3)}\"><q:call function=\"play\" args=\"3\" /></qg:button>\n    </qg:menu>\n  </qg:scene>\n  <qg:scene name=\"level-1\" width=\"320\" height=\"240\" save=\"true\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"14x14\" />\n    <qg:exit name=\"east\" x=\"316\" y=\"0\" width=\"8\" height=\"240\" to=\"level-2\" at=\"west\" />\n  </qg:scene>\n  <qg:scene name=\"level-2\" width=\"320\" height=\"240\" save=\"true\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"14x14\" />\n    <qg:exit name=\"west\" x=\"-4\" y=\"0\" width=\"8\" height=\"240\" to=\"level-1\" at=\"east\" />\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-ship-004",
+      "intent": "A HUD with pictures",
+      "input": {
+        "natural_language": "Hearts drawn as a heart and a number in the top left, the coins in the bottom right in gold, and a warning that shows only on the last heart",
+        "context": {
+          "target": "godot",
+          "file": "game-ship-004.q"
+        }
+      },
+      "tags": [
+        "hud",
+        "icon",
+        "color",
+        "bottom-right"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"hud\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"hearts\" value=\"3\" type=\"number\" />\n  <q:set name=\"coins\" value=\"0\" type=\"number\" />\n  <qg:scene name=\"room\" width=\"320\" height=\"240\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"160\" y=\"120\" hitbox=\"14x14\" />\n    <qg:hud position=\"top-left\">\n      <qg:icon sheet=\"tiles\" frame=\"44\" />\n      <qg:counter bind=\"hearts\" label=\"x\" color=\"#ff6060\" />\n    </qg:hud>\n    <qg:hud position=\"bottom-right\">\n      <qg:icon sheet=\"tiles\" frame=\"{151 if coins > 0 else 152}\" />\n      <qg:counter bind=\"coins\" label=\"COINS\" color=\"#ffd040\" />\n    </qg:hud>\n    <qg:hud position=\"top-center\" if=\"{hearts == 1}\"><qg:text value=\"{'LAST HEART'}\" color=\"#ff2020\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-ship-005",
+      "intent": "Controls on a phone",
+      "input": {
+        "natural_language": "A platformer that shows a stick and a jump button on a touch screen; they press the same actions as the keys",
+        "context": {
+          "target": "godot",
+          "file": "game-ship-005.q"
+        }
+      },
+      "tags": [
+        "touch-stick",
+        "touch-button"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"phone\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <!-- in the application: every scene has them, on a device with a touch screen -->\n  <qg:touch-stick x=\"48\" y=\"200\" />\n  <qg:touch-button action=\"jump\" label=\"A\" x=\"280\" y=\"200\" size=\"40\" />\n  <qg:scene name=\"level\" width=\"320\" height=\"240\">\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"people\" frame=\"0\" x=\"60\" y=\"180\" hitbox=\"14x20\" />\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-ship-006",
+      "intent": "A pause menu that mutes",
+      "input": {
+        "natural_language": "Escape pauses the game; the pause menu has the effects' volume, a button that mutes the music, and resume",
+        "context": {
+          "target": "godot",
+          "file": "game-ship-006.q"
+        }
+      },
+      "tags": [
+        "volume",
+        "pause",
+        "slider"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"mute\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"song\" src=\"assets/kenney/audio/win.ogg\" loop=\"true\" bus=\"music\" />\n  <qg:sound name=\"hit\" src=\"assets/kenney/audio/stomp.ogg\" bus=\"effects\" />\n  <qg:scene name=\"level\" width=\"320\" height=\"240\">\n    <qg:music sound=\"song\" />\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"160\" y=\"120\" hitbox=\"14x14\" />\n    <qg:on-input action=\"cancel\">\n      <q:if condition=\"{paused()}\"><qg:resume /><q:else><qg:pause /></q:else></q:if>\n    </qg:on-input>\n    <qg:menu if=\"{paused()}\" size=\"14\">\n      <qg:button label=\"Resume\"><qg:resume /></qg:button>\n      <qg:slider label=\"Sounds\" bus=\"effects\" />\n      <qg:button label=\"{'Music: ' + ('off' if volume('music') == 0 else 'on')}\">\n        <qg:volume bus=\"music\" value=\"{100 if volume('music') == 0 else 0}\" />\n      </qg:button>\n    </qg:menu>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-ship-007",
+      "intent": "A level select that scrolls",
+      "input": {
+        "natural_language": "Twelve levels in a grid of four columns, three rows shown at a time; the others scroll into view as the focus moves down",
+        "context": {
+          "target": "godot",
+          "file": "game-ship-007.q"
+        }
+      },
+      "tags": [
+        "menu",
+        "columns",
+        "rows"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"levels\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"chosen\" value=\"0\" type=\"number\" />\n  <qg:scene name=\"select\" width=\"320\" height=\"240\">\n    <qg:menu position=\"center\" size=\"14\" columns=\"4\" rows=\"3\">\n      <qg:button label=\"1\"><q:set name=\"chosen\" value=\"1\" /><qg:goto-scene name=\"level\" /></qg:button>\n      <qg:button label=\"2\"><q:set name=\"chosen\" value=\"2\" /><qg:goto-scene name=\"level\" /></qg:button>\n      <qg:button label=\"3\"><q:set name=\"chosen\" value=\"3\" /><qg:goto-scene name=\"level\" /></qg:button>\n      <qg:button label=\"4\"><q:set name=\"chosen\" value=\"4\" /><qg:goto-scene name=\"level\" /></qg:button>\n      <qg:button label=\"5\"><q:set name=\"chosen\" value=\"5\" /><qg:goto-scene name=\"level\" /></qg:button>\n      <qg:button label=\"6\"><q:set name=\"chosen\" value=\"6\" /><qg:goto-scene name=\"level\" /></qg:button>\n      <qg:button label=\"7\"><q:set name=\"chosen\" value=\"7\" /><qg:goto-scene name=\"level\" /></qg:button>\n      <qg:button label=\"8\"><q:set name=\"chosen\" value=\"8\" /><qg:goto-scene name=\"level\" /></qg:button>\n      <qg:button label=\"9\"><q:set name=\"chosen\" value=\"9\" /><qg:goto-scene name=\"level\" /></qg:button>\n      <qg:button label=\"10\"><q:set name=\"chosen\" value=\"10\" /><qg:goto-scene name=\"level\" /></qg:button>\n      <qg:button label=\"11\"><q:set name=\"chosen\" value=\"11\" /><qg:goto-scene name=\"level\" /></qg:button>\n      <qg:button label=\"12\"><q:set name=\"chosen\" value=\"12\" /><qg:goto-scene name=\"level\" /></qg:button>\n    </qg:menu>\n  </qg:scene>\n  <qg:scene name=\"level\" width=\"320\" height=\"240\">\n    <qg:hud><qg:counter bind=\"chosen\" label=\"LEVEL\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      }
+    }
+  ]
+}

@@ -195,3 +195,14 @@ Not in the tables above because Godot's `MultiplayerAPI` surface (RPCs,
 declarative language should not mirror. The language's answer is in
 `PLAN_MULTIPLAYER.md`: determinism makes lockstep free, so multiplayer is
 one declaration, `qg:multiplayer`, and the exchange of inputs.
+
+## Postscript 4: a map against Godot and Unity
+
+`GAMES_PARITY.md` (2026-10-21) takes this page further: 251 features of a 2D
+game, each as Godot 4.4 and Unity 6 provide it and as the language says it,
+with a verdict, a count, and the gaps ranked for the next genre. The gaps
+the owner approved that day landed with it — the screen's edges, a contact
+ending, letting a key go, every thing of a tag, slow motion, quitting, a
+tween's end and tint, walls and ceilings in expressions, two to four
+players, watchers, and tweens and tiles under rollback — with Bricks, the
+game written for them.

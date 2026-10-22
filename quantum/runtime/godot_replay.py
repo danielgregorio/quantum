@@ -15,13 +15,13 @@ from __future__ import annotations
 import json
 import tempfile
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 from quantum.runtime.godot_bin import run_godot, script_errors
 
 REPLAY_SCRIPT = Path(__file__).with_name('godot_replay.gd')
 
-Tape = Dict[int, List[tuple]]   # tick -> [(action, pressed)] and [('cursor', [x, y])]
+Tape = Dict[int, List[tuple]]   # tick -> [(action, pressed)], [('cursor', [x, y])] and [('type', text)]
 
 
 class ReplayError(RuntimeError):
@@ -35,6 +35,16 @@ def tape_from_holds(holds: Iterable[Tuple[str, int, int]]) -> Tape:
     for action, start, end in holds:
         tape.setdefault(start, []).append((action, True))
         tape.setdefault(end, []).append((action, False))
+    return tape
+
+
+LEAVING = 'Unable to send packet on channel'
+
+
+def typed_at(tape: Tape, tick: int, text: str) -> Tape:
+    """Adds to the tape: on ``tick`` the player types ``text`` into the text box being typed in
+    (a qg:field chosen before); ``\\n`` is Enter."""
+    tape.setdefault(tick, []).append(('type', text))
     return tape
 
 
@@ -101,10 +111,12 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
                  binary: Optional[Path] = None, timeout: float = 300,
                  lobby_tapes: Optional[List[Optional[Tape]]] = None, transport: Optional[str] = None,
                  latency_ms: Optional[List[int]] = None, net_report: bool = False,
-                 relay=False, rejoin: Optional[Tuple[int, Optional[Tape]]] = None) -> List[dict]:
+                 relay=False, rejoin: Optional[Tuple[int, Optional[Tape]]] = None,
+                 players: Optional[int] = None, watchers: Sequence[float] = ()) -> List[dict]:
     """Run the project under qg:multiplayer: one Godot per player, on localhost.
 
-    The first tape is player 1's, who hosts; the others join in order. Each
+    The first tape is player 1's, who hosts; the others join, each in the
+    seat of its tape's place (``--q-seat``), all at once. Each
     tape names the actions as a single-player tape does (``up``, ``jump``):
     the lockstep turns them into that player's actions, ``delay`` ticks
     later, on every peer. Returns the state each peer dumped at ``ticks``
@@ -124,7 +136,10 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
     With ``rejoin=(tick, tape)``, the last peer leaves at that tick of the
     networked game, and once it is gone another joins and takes its seat,
     playing ``tape``: its state is the last of the states returned, in the
-    place of the one that left.
+    place of the one that left. With ``players``, a game whose qg:multiplayer has min-players=
+    is played by that many: the host (or the relay) is told so (``--q-players``). Each of
+    ``watchers`` is how many seconds after the players start someone joins to watch
+    (``--q-watch``); their states follow the players', in that order.
     """
     import subprocess
     import time
@@ -139,7 +154,7 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
         relay_url = relay if isinstance(relay, str) else None   # a quantum relay's room: everyone joins it
         if relay and not relay_url:
             relay_proc = subprocess.Popen([str(binary), '--headless', '--path', str(project_dir), '--',
-                                           f'--q-relay={port}'],
+                                           f'--q-relay={port}', *([f'--q-players={players}'] if players else [])],
                                           stdout=open(Path(tmp) / 'relay.txt', 'w'), stderr=subprocess.STDOUT)
             time.sleep(1.0)
         def write(path: Path, tape: Optional[Tape]) -> None:
@@ -160,10 +175,14 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
                 peer_args = [f'--tape={tape_path}',
                              f'--q-host={port}' if i == 0 and not relay
                              else f'--q-join={relay_url or f"127.0.0.1:{port}"}']
+                if i > 0 or relay:
+                    peer_args.append(f'--q-seat={i + 1}')   # the tape's seat, whoever arrives first
                 if relay:
                     peer_args.append('--q-transport=websocket')
             if transport:
                 peer_args.append(f'--q-transport={transport}')
+            if players and i == 0 and not relay:
+                peer_args.append(f'--q-players={players}')
             if latency_ms and latency_ms[i]:
                 peer_args.append(f'--q-latency={latency_ms[i]}')
             if net_report:
@@ -176,10 +195,25 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
                  f'--ticks={ticks}', f'--out={out_path}', f'--persist-dir={persist}', *peer_args],
                 stdout=log, stderr=subprocess.STDOUT), log))
             outs.append(out_path)
-            if i < len(tapes) - 1 and lobby_tapes is None and (i == 0 or relay):
-                # the host listens before anyone joins (a lobby tape times it itself); through a
-                # relay the seats go in the order the players arrive, so they arrive in order
+            if i == 0 and len(tapes) > 1 and lobby_tapes is None and not relay:
+                # the host listens before anyone joins (a lobby tape times it itself, and the relay
+                # listens already); the others ask for their seats, so they may come in any order
                 time.sleep(1.0)
+        for w, after in enumerate(watchers):
+            # one who watches: no tape, no seat; it plays the game the players' inputs make
+            time.sleep(after)
+            i = len(tapes) + 1000 + w
+            out_path = Path(tmp) / f'watch{w}.json'
+            (Path(tmp) / f'persist{i}').mkdir()
+            watch = [f'--q-watch={relay_url or f"127.0.0.1:{port}"}'] + (['--q-transport=websocket'] if relay else [])
+            if transport:
+                watch.append(f'--q-transport={transport}')
+            log = open(Path(tmp) / f'log{i}.txt', 'w', encoding='utf-8')
+            procs.append((subprocess.Popen(
+                [str(binary), '--headless', '--path', str(project_dir), '-s', str(REPLAY_SCRIPT), '--',
+                 f'--ticks={ticks}', f'--out={out_path}', f'--persist-dir={Path(tmp) / f"persist{i}"}', *watch],
+                stdout=log, stderr=subprocess.STDOUT), log))
+            outs.append(out_path)
         deadline = time.time() + timeout
         if rejoin is not None:
             # the one who leaves goes; then someone joins in its place, with its own tape
@@ -196,7 +230,8 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
             tape_path, out_path = Path(tmp) / f'tape{i}.json', Path(tmp) / f'state{i}.json'
             (Path(tmp) / f'persist{i}').mkdir()
             write(tape_path, rejoin[1])
-            join = [f'--q-join={relay_url or f"127.0.0.1:{port}"}'] + (['--q-transport=websocket'] if relay else [])
+            join = [f'--q-join={relay_url or f"127.0.0.1:{port}"}', f'--q-seat={len(tapes)}'] + \
+                (['--q-transport=websocket'] if relay else [])
             if transport:
                 join.append(f'--q-transport={transport}')
             log = open(Path(tmp) / f'log{i}.txt', 'w', encoding='utf-8')
@@ -209,6 +244,7 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
             logs = list(range(len(tapes) - 1)) + [i]
         else:
             logs = list(range(len(tapes)))
+        logs += [len(tapes) + 1000 + w for w in range(len(watchers))]
         try:
             for proc, log in procs:
                 remaining = max(1.0, deadline - time.time())
@@ -226,7 +262,10 @@ def _replay_peers(project_dir: Path, ticks: int, tapes: List[Optional[Tape]], po
         states = []
         for i, out_path in enumerate(outs):
             output = (Path(tmp) / f'log{logs[i]}.txt').read_text(encoding='utf-8')
-            errors = script_errors(output)
+            # ENet's complaint when Godot's server relay hands a frame on to a peer in the very poll
+            # that peer leaves in (its channels gone, its leaving not yet dispatched): the
+            # transport's, as a peer that finished quits, not the game's
+            errors = [e for e in script_errors(output) if LEAVING not in e]
             if not out_path.is_file():
                 raise ReplayError(f'peer {i + 1} wrote no state' + (': ' + '; '.join(errors) if errors else f'\n{output}'))
             if errors:

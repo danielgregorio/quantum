@@ -94,8 +94,15 @@ func _touch(area: Area2D) -> void:
 		return
 	var tag: String = area.quantum_tag()
 	var other: Node = area.quantum_owner() if area.has_method("quantum_owner") else area
+	var side: String = Q.side_of(self, other) if other is Node2D else "any"
+	var sided := false
 	for h in _handlers:
-		if h["with"] == tag:
+		if h["with"] == tag and h.get("side", "any") == side and _fire(h, other):
+			sided = true
+	if sided:
+		return
+	for h in _handlers:
+		if h["with"] == tag and h.get("side", "any") == "any":
 			_fire(h, other)
 
 

@@ -31,6 +31,8 @@ var run_speed: float = 90.0
 var jump_height: float = 64.0
 var variable_jump: bool = true
 var coyote_frames: int = 6
+var buffer_frames: int = 0   # a press this many ticks before landing jumps as it lands
+var _buffered: int = 0
 var gravity: float = 900.0
 var max_fall: float = 300.0
 var jump_sound: String = ""
@@ -78,6 +80,7 @@ func setup(spec: Dictionary) -> void:
 	jump_height = float(spec.get("jump_height", jump_height))
 	variable_jump = bool(spec.get("variable_jump", variable_jump))
 	coyote_frames = int(spec.get("coyote_frames", coyote_frames))
+	buffer_frames = int(spec.get("buffer_frames", 0))
 	gravity = float(spec.get("gravity", gravity))
 	max_fall = float(spec.get("max_fall", max_fall))
 	jump_sound = str(spec.get("jump_sound", "")) if spec.get("jump_sound") != null else ""
@@ -160,7 +163,7 @@ func become(name_: String) -> void:
 	position.y -= (hitbox_size.y - old_h) / 2.0
 	var sprite: Sprite2D = get_node_or_null("Sprite")
 	if sprite != null:
-		sprite.frame = int(st.get("frame", _base_frame))
+		sprite.frame = int(st["frame"]) if st.get("frame") != null else _base_frame   # a state without frame= keeps its own
 	if animator != null:
 		var anims: Dictionary = _base_animations.duplicate()
 		for k in st.get("animations", {}).keys():
@@ -177,10 +180,13 @@ func _on_area_entered(area: Area2D) -> void:
 	Q.touched(self, other)
 	var on_top := _is_on_top_of(other)
 	var from_below := _is_below(other)
+	# left and right from where the two are; top and bottom from the way it moved
+	var across: String = Q.side_of(self, other) if other is Node2D else ""
 	var matched := false
 	for h in _handlers:
 		var side: String = h.get("side", "any")
-		if h["with"] == tag and ((side == "top" and on_top) or (side == "bottom" and from_below)):
+		if h["with"] == tag and ((side == "top" and on_top) or (side == "bottom" and from_below)
+				or ((side == "left" or side == "right") and side == across)):
 			if _fire(h, other):
 				matched = true
 	if matched:
@@ -252,7 +258,13 @@ func _physics_process(delta: float) -> void:
 	elif _coyote > 0:
 		_coyote -= 1
 
-	if Q.tapped(_a("jump")):
+	var pressed := Q.tapped(_a("jump"))
+	if not pressed and _buffered > 0:
+		_buffered -= 1
+		if is_on_floor():
+			pressed = true   # pressed just before landing (buffer-frames=): it jumps as it lands
+	if pressed:
+		_buffered = 0
 		if wet:
 			velocity.y = -_jump_speed * 0.65   # in water a jump is a stroke, as often as it is pressed
 			_stroke = true
@@ -263,6 +275,8 @@ func _physics_process(delta: float) -> void:
 			_air_jumps_left -= 1
 			velocity.x *= air_jump_boost
 			_jump()
+		else:
+			_buffered = buffer_frames
 
 	var g := gravity
 	var fall_max := max_fall

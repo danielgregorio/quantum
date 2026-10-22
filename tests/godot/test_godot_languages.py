@@ -4,8 +4,9 @@ A qg:phrase is found by its text exactly, and a text without one stays as
 written: a phrase that does not match, or a text added later, would leave
 the screen half translated with nothing to say so. This reads each game's
 .q and lists what it shows as written: a label, a dialogue's lines and who
-says them, a qg:text's literal value, and the literal values of the q:sets
-a qg:text shows. Texts put together by an expression (Chess's status, Arena's
+says them, a qg:text's literal value, the literal values of the q:sets
+a qg:text shows (a text with no letters, a number, is the same in all), and
+both words of a tr_n. Texts put together by an expression (Chess's status, Arena's
 round) are checked by playing them (test_godot_play.py).
 """
 
@@ -17,7 +18,7 @@ import pytest
 PROJECTS = Path(__file__).resolve().parents[2] / 'projects'
 
 # the same in every language: a name
-SAME = {'HOPPER', 'KEEP', 'DELVE'}
+SAME = {'HOPPER', 'KEEP', 'DELVE', 'CRATES'}
 
 
 def _unescape(text: str) -> str:
@@ -27,12 +28,15 @@ def _unescape(text: str) -> str:
 def shown(source: str) -> set:
     texts = set()
     for attr in ('label', 'local-label', 'text', 'who'):
-        for m in re.finditer(rf'<qg:(?!phrase)[\w-]+[^>]*?\s{attr}="([^"{{][^"]*)"', source):
+        for m in re.finditer(rf'<qg:(?!phrase|touch-button)[\w-]+[^>]*?\s{attr}="([^"{{][^"]*)"', source):
             texts.add(m.group(1))
     texts |= set(re.findall(r"<qg:text value=\"\{'([^']*)'\}\"", source))
+    for one, other in re.findall(r"tr_n\('([^']*)', '([^']*)'", source):    # a count's word, both forms
+        texts |= {one, other}
     for name in set(re.findall(r'<qg:text bind="(\w+)"', source)):
         texts |= set(re.findall(rf'<q:set name="{name}" value="([^"{{][^"]*)"', source))
-    return {_unescape(t) for t in texts} - SAME
+    # a text with no letters (+10, a qg:emit's number) reads the same in every language
+    return {_unescape(t) for t in texts if re.search(r'[^\W\d_]', t)} - SAME
 
 
 def phrases(source: str) -> dict:

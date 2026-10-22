@@ -1,0 +1,160 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "handlers",
+  "description": "What a contact ending, the screen's edges, letting a key go, every thing of a tag, slow motion, a tween's end, quitting and a game of two to four say",
+  "examples": [
+    {
+      "id": "game-more-001",
+      "intent": "Serving on letting go, and a ball lost off the bottom",
+      "input": {
+        "natural_language": "A brick breaker paddle that serves the ball when the player lets go of jump; the ball leaves the paddle at a slant from where it hit, and a ball that falls off the bottom costs a life",
+        "context": {
+          "target": "godot",
+          "file": "game-more-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"serve\" type=\"game\">\n  <q:set name=\"lives\" value=\"3\" type=\"number\" />\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:prefab name=\"Ball\" tag=\"ball\" sheet=\"tiles\" frame=\"151\" hitbox=\"8x8\" ai=\"fly\" heading=\"0.3,-1\" speed=\"150\">\n    <qg:on-collision with=\"side\"><qg:deflect target=\"me\" axis=\"x\" /></qg:on-collision>\n    <qg:on-collision with=\"top\"><qg:deflect target=\"me\" axis=\"y\" /></qg:on-collision>\n  </qg:prefab>\n  <qg:scene name=\"court\" width=\"320\" height=\"240\">\n    <q:set name=\"serving\" value=\"true\" type=\"boolean\" />\n    <qg:zone name=\"left\" tag=\"side\" x=\"-20\" y=\"0\" width=\"20\" height=\"240\" />\n    <qg:zone name=\"right\" tag=\"side\" x=\"320\" y=\"0\" width=\"20\" height=\"240\" />\n    <qg:zone name=\"ceiling\" tag=\"top\" x=\"0\" y=\"-20\" width=\"320\" height=\"20\" />\n    <qg:character id=\"paddle\" controller=\"ship\" axis=\"horizontal\" speed=\"240\" sheet=\"tiles\" frame=\"0\" x=\"160\" y=\"226\" hitbox=\"48x8\">\n      <qg:on-collision with=\"ball\">\n        <!-- the further from its middle, the more aslant the ball leaves -->\n        <qg:deflect target=\"other\" dx=\"{(other.x - me.x) / 24}\" dy=\"-1\" />\n      </qg:on-collision>\n    </qg:character>\n    <!-- the serve: as jump is let go -->\n    <qg:on-input action=\"jump\" on=\"release\">\n      <q:if condition=\"{serving}\">\n        <q:set name=\"serving\" value=\"false\" />\n        <qg:spawn prefab=\"Ball\" at=\"paddle\" dy=\"-10\" />\n      </q:if>\n    </qg:on-input>\n    <!-- a ball out at the bottom costs a life -->\n    <qg:on-screen-exit of=\"ball\" side=\"bottom\">\n      <qg:destroy target=\"other\" />\n      <q:set name=\"lives\" value=\"{lives - 1}\" />\n      <q:set name=\"serving\" value=\"true\" />\n    </qg:on-screen-exit>\n  </qg:scene>\n</q:application>\n"
+      },
+      "tags": [
+        "on-input",
+        "release",
+        "on-screen-exit",
+        "spawn",
+        "positions"
+      ]
+    },
+    {
+      "id": "game-more-002",
+      "intent": "A pressure plate that holds a gate open",
+      "input": {
+        "natural_language": "A gate made of tiles opens while the hero stands on a plate and shuts when they step off; walking into a wall says so",
+        "context": {
+          "target": "godot",
+          "file": "game-more-002.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"plate\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"hall\" width=\"270\" height=\"144\">\n    <q:set name=\"message\" value=\"\" />\n    <qg:tilemap tileset=\"tiles\" collision=\"true\">\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,0,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,23,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,23,0,0,0,0\n0,0,0,0,0,0,0,0,0,0,23,0,0,0,0\n23,23,23,23,23,23,23,23,23,23,23,23,23,23,23\n    </qg:tilemap>\n    <qg:zone name=\"plate\" tag=\"plate\" x=\"72\" y=\"108\" width=\"18\" height=\"18\" />\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"chars\" frame=\"0\" x=\"20\" y=\"110\" hitbox=\"14x18\">\n      <!-- the gate stays open while someone stands on the plate, and shuts behind them -->\n      <qg:on-collision with=\"plate\">\n        <qg:set-tile col=\"10\" row=\"6\" tile=\"0\" />\n        <qg:set-tile col=\"10\" row=\"5\" tile=\"0\" />\n      </qg:on-collision>\n      <qg:on-separate with=\"plate\">\n        <qg:set-tile col=\"10\" row=\"6\" tile=\"23\" />\n        <qg:set-tile col=\"10\" row=\"5\" tile=\"23\" />\n      </qg:on-separate>\n    </qg:character>\n    <qg:timer every=\"10\">\n      <q:if condition=\"{hero.on_wall}\"><q:set name=\"message\" value=\"A WALL. FIND A WAY ROUND.\" /></q:if>\n    </qg:timer>\n  </qg:scene>\n</q:application>\n"
+      },
+      "tags": [
+        "on-separate",
+        "set-tile",
+        "on_wall"
+      ]
+    },
+    {
+      "id": "game-more-003",
+      "intent": "A bomb, and slow motion on the last brick",
+      "input": {
+        "natural_language": "Bricks take two hits (cracked after one); a bomb breaks the bricks near it; the last brick goes in slow motion, the hero flashes and hops, then the next scene",
+        "context": {
+          "target": "godot",
+          "file": "game-more-003.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"bomb\" type=\"game\">\n  <q:set name=\"score\" value=\"0\" type=\"number\" />\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:prefab name=\"Brick\" tag=\"brick\" sheet=\"tiles\" frame=\"1\" hitbox=\"18x18\" health=\"2\">\n    <qg:state name=\"whole\" frame=\"1\" initial=\"true\" />\n    <qg:state name=\"cracked\" frame=\"2\" />\n    <qg:on-damage><qg:become target=\"me\" state=\"cracked\" /></qg:on-damage>\n    <qg:on-death><q:set name=\"score\" value=\"{score + 10}\" /></qg:on-death>\n  </qg:prefab>\n  <qg:prefab name=\"Bomb\" tag=\"bomb\" sheet=\"tiles\" frame=\"3\" hitbox=\"18x18\" />\n  <qg:scene name=\"wall\" width=\"270\" height=\"144\">\n    <q:set name=\"done\" value=\"false\" type=\"boolean\" />\n    <qg:instance prefab=\"Brick\" x=\"81\" y=\"45\" />\n    <qg:instance prefab=\"Bomb\" name=\"bomb\" x=\"99\" y=\"45\" />\n    <qg:instance prefab=\"Brick\" x=\"117\" y=\"45\" />\n    <qg:instance prefab=\"Brick\" x=\"200\" y=\"45\" />\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"tiles\" frame=\"0\" x=\"99\" y=\"120\" hitbox=\"14x14\">\n      <qg:on-collision with=\"bomb\"><qg:damage target=\"other\" amount=\"1\" /></qg:on-collision>\n    </qg:character>\n    <!-- a bomb breaks the bricks within two tiles of it -->\n    <qg:on-death of=\"bomb\">\n      <qg:for-each tag=\"brick\" var=\"near\">\n        <q:if condition=\"{distance(near, other) < 36}\"><qg:damage target=\"near\" amount=\"2\" /></q:if>\n      </qg:for-each>\n    </qg:on-death>\n    <!-- the last brick: slow motion, a red flash fading to white, then the next scene -->\n    <qg:on-death of=\"brick\">\n      <q:if condition=\"{count('brick') == 0 and not done}\">\n        <q:set name=\"done\" value=\"true\" />\n        <qg:time-scale scale=\"0.25\" seconds=\"1\" />\n        <qg:tween target=\"hero\" property=\"tint\" from=\"#ff4040\" to=\"#ffffff\" seconds=\"0.5\">\n          <qg:on-end>\n            <qg:tween target=\"me\" property=\"y\" to=\"100\" seconds=\"0.25\">\n              <qg:on-end><qg:goto-scene name=\"won\" /></qg:on-end>\n            </qg:tween>\n          </qg:on-end>\n        </qg:tween>\n      </q:if>\n    </qg:on-death>\n  </qg:scene>\n  <qg:scene name=\"won\" width=\"270\" height=\"144\">\n    <qg:hud position=\"center\"><qg:counter bind=\"score\" label=\"SCORE \" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      },
+      "tags": [
+        "for-each",
+        "time-scale",
+        "tween",
+        "tint",
+        "on-end",
+        "health"
+      ]
+    },
+    {
+      "id": "game-more-004",
+      "intent": "A Quit button",
+      "input": {
+        "natural_language": "A title with Play and Quit; Quit only where a game can close (not in a browser), and Escape quits from the game",
+        "context": {
+          "target": "godot",
+          "file": "game-more-004.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"quitter\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:scene name=\"title\" width=\"256\" height=\"224\">\n    <qg:menu position=\"center\">\n      <qg:button label=\"Play\"><qg:goto-scene name=\"play\" /></qg:button>\n      <!-- a desktop build closes; a page in a browser has nothing to quit to -->\n      <qg:button label=\"Quit\" if=\"{can_quit()}\"><qg:quit /></qg:button>\n    </qg:menu>\n  </qg:scene>\n  <qg:scene name=\"play\" width=\"256\" height=\"224\">\n    <qg:on-input action=\"cancel\"><qg:quit /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "tags": [
+        "quit",
+        "can_quit"
+      ]
+    },
+    {
+      "id": "game-more-005",
+      "intent": "Two to four players",
+      "input": {
+        "natural_language": "A networked game for up to four players where the host may start once two are there; the third and fourth characters only when they play",
+        "context": {
+          "target": "godot",
+          "file": "game-more-005.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"party\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <!-- up to four, each on their own machine; the host may start once two are there -->\n  <qg:multiplayer players=\"4\" min-players=\"2\" start=\"arena\" />\n  <qg:scene name=\"lobby\" width=\"320\" height=\"240\">\n    <qg:lobby />\n  </qg:scene>\n  <qg:scene name=\"arena\" width=\"320\" height=\"240\">\n    <qg:character id=\"p1\" controller=\"topdown\" player=\"1\" sheet=\"tiles\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"14x14\" />\n    <qg:character id=\"p2\" controller=\"topdown\" player=\"2\" sheet=\"tiles\" frame=\"0\" x=\"280\" y=\"40\" hitbox=\"14x14\" if=\"{net_players() >= 2}\" />\n    <qg:character id=\"p3\" controller=\"topdown\" player=\"3\" sheet=\"tiles\" frame=\"0\" x=\"40\" y=\"200\" hitbox=\"14x14\" if=\"{net_players() >= 3}\" />\n    <qg:character id=\"p4\" controller=\"topdown\" player=\"4\" sheet=\"tiles\" frame=\"0\" x=\"280\" y=\"200\" hitbox=\"14x14\" if=\"{net_players() >= 4}\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "tags": [
+        "multiplayer",
+        "min-players",
+        "lobby"
+      ]
+    },
+    {
+      "id": "game-more-006",
+      "intent": "Start with those who are here",
+      "input": {
+        "natural_language": "A host button, and a button that starts the networked game with the players who joined so far",
+        "context": {
+          "target": "godot",
+          "file": "game-more-006.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"party-menu\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:multiplayer players=\"3\" min-players=\"2\" start=\"field\" />\n  <qg:scene name=\"title\" width=\"320\" height=\"240\">\n    <qg:menu position=\"center\">\n      <qg:button label=\"Host\" if=\"{net_status() == 'offline'}\"><qg:host port=\"7777\" /></qg:button>\n      <qg:button label=\"Start with those here\" if=\"{net_status() == 'hosting' and net_players() >= 2}\"><qg:start-now /></qg:button>\n    </qg:menu>\n  </qg:scene>\n  <qg:scene name=\"field\" width=\"320\" height=\"240\">\n    <qg:character id=\"p1\" controller=\"topdown\" player=\"1\" sheet=\"tiles\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"14x14\" />\n    <qg:character id=\"p2\" controller=\"topdown\" player=\"2\" sheet=\"tiles\" frame=\"0\" x=\"80\" y=\"40\" hitbox=\"14x14\" />\n    <qg:character id=\"p3\" controller=\"topdown\" player=\"3\" sheet=\"tiles\" frame=\"0\" x=\"120\" y=\"40\" hitbox=\"14x14\" if=\"{net_players() >= 3}\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "tags": [
+        "start-now",
+        "multiplayer"
+      ]
+    },
+    {
+      "id": "game-more-007",
+      "intent": "A raider seen coming onto the screen",
+      "input": {
+        "natural_language": "Raiders drop in from above the screen; each fades in as it comes onto the screen, and the scene counts them",
+        "context": {
+          "target": "godot",
+          "file": "game-more-007.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"warning\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:prefab name=\"Raider\" tag=\"raider\" sheet=\"tiles\" frame=\"150\" hitbox=\"16x16\" ai=\"fly\" heading=\"down\" speed=\"40\">\n    <!-- seen coming: it flashes once as it comes onto the screen -->\n    <qg:on-screen-enter side=\"top\"><qg:tween target=\"me\" property=\"alpha\" from=\"0.2\" to=\"1\" seconds=\"0.4\" /></qg:on-screen-enter>\n  </qg:prefab>\n  <qg:scene name=\"sky\" width=\"256\" height=\"224\">\n    <q:set name=\"warned\" value=\"0\" type=\"number\" />\n    <qg:spawner prefab=\"Raider\" every=\"90\" x=\"random\" y=\"-20\" />\n    <qg:on-screen-enter of=\"raider\"><q:set name=\"warned\" value=\"{warned + 1}\" /></qg:on-screen-enter>\n  </qg:scene>\n</q:application>\n"
+      },
+      "tags": [
+        "on-screen-enter"
+      ]
+    },
+    {
+      "id": "game-more-008",
+      "intent": "Watching a networked game",
+      "input": {
+        "natural_language": "A two-player networked game that others can watch from the title: Host, Play or Watch at an address; a watcher sees the same game and says WATCHING",
+        "context": {
+          "target": "godot",
+          "file": "game-more-008.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"watched\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:multiplayer players=\"2\" start=\"court\" />\n  <qg:scene name=\"title\" width=\"320\" height=\"240\">\n    <q:set name=\"address\" value=\"127.0.0.1:7777\" />\n    <qg:menu position=\"center\">\n      <qg:button label=\"Host\" if=\"{net_status() == 'offline'}\"><qg:host port=\"7777\" /></qg:button>\n      <qg:field bind=\"address\" label=\"Address\" />\n      <qg:button label=\"Play\" if=\"{net_status() == 'offline'}\"><qg:join address=\"{address}\" /></qg:button>\n      <!-- no seat: the players' game, from its start or caught up on, the keys doing nothing -->\n      <qg:button label=\"Watch\" if=\"{net_status() == 'offline'}\"><qg:watch address=\"{address}\" /></qg:button>\n    </qg:menu>\n  </qg:scene>\n  <qg:scene name=\"court\" width=\"320\" height=\"240\">\n    <qg:character id=\"left\" controller=\"ship\" player=\"1\" axis=\"vertical\" sheet=\"tiles\" frame=\"0\" x=\"20\" y=\"120\" hitbox=\"8x32\" />\n    <qg:character id=\"right\" controller=\"ship\" player=\"2\" axis=\"vertical\" sheet=\"tiles\" frame=\"0\" x=\"300\" y=\"120\" hitbox=\"8x32\" />\n    <qg:hud position=\"top-center\"><qg:text value=\"{'WATCHING' if net_status() == 'watching' else ''}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      },
+      "tags": [
+        "watch",
+        "multiplayer"
+      ]
+    }
+  ]
+}

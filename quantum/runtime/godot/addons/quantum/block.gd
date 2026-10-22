@@ -2,12 +2,24 @@ extends StaticBody2D
 # A solid prefab instance (qg:prefab solid="true"): characters stand on it
 # and bump it from below. Its Hitbox area carries the tag collisions see.
 
+const Life := preload("res://addons/quantum/life.gd")
+
 
 var prefab_name: String = ""
 var tag: String = ""
 var opens_with: String = ""   # a qg:item that opens it, a door (Q.touched)
+var pushable: bool = false    # a grid character's step pushes it a cell on (grid_body.gd)
 var keeps: bool = false
 var on_locked: String = ""
+
+# health and states (life.gd): qg:damage, qg:on-damage, qg:on-death, qg:become
+var health: int = 1
+var state: String = ""
+var states: Dictionary = {}
+var base_frame: int = 0
+var on_damage: String = ""
+var on_death: String = ""
+var _dead: bool = false
 
 
 func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -> void:
@@ -16,6 +28,7 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 	name = name_
 	add_to_group("q_thing")
 	opens_with = str(prefab.get("opens_with", "")) if prefab.get("opens_with") != null else ""
+	pushable = bool(prefab.get("pushable", false))
 	keeps = bool(prefab.get("keeps", false))
 	on_locked = str(prefab.get("on_locked", "")) if prefab.get("on_locked") != null else ""
 	collision_layer = 1
@@ -36,6 +49,7 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 	hit_shape.set("one_way_collision", false)
 	hitbox.add_child(hit_shape)
 	add_child(hitbox)
+	Life.setup(self, prefab)
 
 
 func quantum_tag() -> String:
@@ -43,9 +57,18 @@ func quantum_tag() -> String:
 
 
 func quantum_destroy() -> void:
+	_dead = true
 	remove_from_group("q_thing")
 	var hitbox := get_node_or_null("Hitbox")
 	if hitbox != null:
 		hitbox.set_deferred("monitorable", false)
 	set_deferred("collision_layer", 0)
 	queue_free()
+
+
+func take_damage(amount: int) -> void:
+	Life.take_damage(self, amount)
+
+
+func become(name_: String) -> void:
+	Life.become(self, name_)

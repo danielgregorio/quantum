@@ -123,3 +123,62 @@ def test_a_match_to_the_result_under_rollback(godot, project):
     assert a['result']['game'] == {'wins_1': 2.0, 'wins_2': 0.0}
     assert a['result']['message'] == 'PLAYER 1 WINS - press jump'
     assert b['_net']['rollbacks'] > 0
+
+
+# --- PLAN_GAMES_3.md, Phase 5: the special move (qg:on-input sequence=) and qg:rumble ---
+
+CLOSE = [('right', 0, 30)]   # player 1 walks in to 170 px of player 2: in the blast's reach, out of a punch's
+
+
+def blast(at):
+    """Down, forward (right, facing right), punch: three presses four ticks apart, from tick `at`."""
+    return [('down', at, at + 2), ('right', at + 4, at + 6), ('punch', at + 8, at + 10)]
+
+
+def test_down_forward_punch_is_the_blast(godot, project):
+    _, s = fight(project, 56, CLOSE + blast(40))
+    assert s['nodes']['p2']['health'] == 88 and s['nodes']['p2']['phase'] == 'hit'   # stunned a moment
+    _, s = fight(project, 80, CLOSE + [('punch', 48, 50)])
+    assert s['nodes']['p2']['health'] == 100                                   # a punch alone does not reach
+
+
+def test_a_sequence_too_slow_or_out_of_order_is_not_one(godot, project):
+    slow = [('down', 30, 32), ('right', 50, 52), ('punch', 70, 72)]           # 40 ticks: more than 30
+    _, s = fight(project, 100, CLOSE + slow)
+    assert s['nodes']['p2']['health'] == 100
+    _, s = fight(project, 80, CLOSE + [('right', 40, 42), ('down', 44, 46), ('punch', 48, 50)])
+    assert s['nodes']['p2']['health'] == 100
+
+
+def test_forward_is_the_way_the_fighter_faces(godot, project):
+    # player 2 faces left: down, left, punch is its blast; down, right, punch is not
+    p2 = [('p2_left', 0, 30), ('p2_down', 40, 42), ('p2_left', 44, 46), ('p2_punch', 48, 50)]
+    _, s = fight(project, 80, p2)
+    assert s['nodes']['p1']['health'] == 88
+    _, s = fight(project, 80, [('p2_left', 0, 30), ('p2_down', 40, 42), ('p2_right', 44, 46), ('p2_punch', 48, 50)])
+    assert s['nodes']['p1']['health'] == 100
+
+
+def test_holding_away_blocks_the_blast(godot, project):
+    _, s = fight(project, 80, CLOSE + blast(40) + [('p2_right', 46, 60)])
+    assert s['nodes']['p2']['health'] == 100 and s['nodes']['p2']['x'] > 440
+
+
+def test_the_blast_is_felt_on_the_joypad_of_the_one_it_hits(godot, project):
+    from quantum.runtime.godot_play import PlaySession
+    with PlaySession(project, binary=godot) as game:
+        game.act(tap=['select'], ticks=2)
+        game.act(hold=['right'], ticks=30)
+        game.act(tap=['down'], ticks=4)
+        game.act(tap=['right'], ticks=4)
+        hit = game.act(tap=['punch'], ticks=4)
+        felt = [e for e in hit['events'] if e['kind'] == 'rumble']
+        assert felt and (felt[0]['player'], felt[0]['strength'], felt[0]['seconds']) == (2, 0.7, 0.3)
+
+
+def test_the_blast_under_rollback_with_latency(godot, project):
+    one = tape_from_holds(CLOSE + blast(40))
+    two = tape_from_holds([('down', 70, 72), ('left', 74, 76), ('punch', 78, 80)])   # blasts back
+    a, b = replay_peers(project, 140, [one, two], binary=godot, latency_ms=[80, 40], net_report=True)
+    assert a['fight'] == b['fight']
+    assert a['fight']['nodes']['p2']['health'] == 88 and a['fight']['nodes']['p1']['health'] == 88

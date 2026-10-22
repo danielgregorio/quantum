@@ -7,22 +7,28 @@
     "Claude"
   ],
   "statistics": {
-    "total_examples": 63,
-    "positive_examples": 39,
-    "negative_examples": 24,
+    "total_examples": 152,
+    "positive_examples": 86,
+    "negative_examples": 66,
     "categories": {
       "whole_games": 3,
       "controllers": 5,
       "composed_controllers": 3,
       "enemies": 5,
       "tiles": 2,
-      "handlers": 5,
-      "presentation": 5,
+      "handlers": 9,
+      "presentation": 6,
       "interface": 4,
       "items": 2,
       "persistence": 2,
-      "multiplayer": 3,
-      "compile_errors": 24
+      "multiplayer": 6,
+      "compile_errors": 66,
+      "logic": 6,
+      "action": 6,
+      "puzzle": 7,
+      "shipping": 7,
+      "seats_and_screens": 7,
+      "later": 6
     }
   },
   "checked_by": "tests/dataset/test_dataset_features.py (compiles each example) and tests/dataset/test_game_engine_feature.py (every tag has an intention and an example)"

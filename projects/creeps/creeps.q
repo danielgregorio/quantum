@@ -11,8 +11,8 @@
   <qg:spritesheet name="player" src="assets/player.png" tile="112x136" />
   <qg:spritesheet name="creeps" src="assets/creeps.png" tile="100x140" />
 
-  <qg:sound name="music" src="assets/music.ogg" loop="true" />
-  <qg:sound name="death" src="assets/gameover.wav" />
+  <qg:sound bus="music" name="music" src="assets/music.ogg" loop="true" />
+  <qg:sound bus="effects" name="death" src="assets/gameover.wav" />
 
   <qg:input action="jump" keys="Space, Enter, JoyA, JoyStart" />
 
@@ -29,18 +29,37 @@
   </qg:prefab>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="90" y="630" size="140" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="Start" as="Começar" />
     <qg:phrase text="Dodge the&#10;Creeps" as="Desvie das&#10;Criaturas" />
     <qg:phrase text="Get Ready" as="Prepare-se" />
     <qg:phrase text="Game Over" as="Fim de jogo" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="Start" as="Empezar" />
     <qg:phrase text="Dodge the&#10;Creeps" as="Esquiva a las&#10;Criaturas" />
     <qg:phrase text="Get Ready" as="Prepárate" />
     <qg:phrase text="Game Over" as="Fin del juego" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+</qg:language>
   <qg:scene name="title" width="480" height="720" background="#385f61">
     <q:set name="message" value="Dodge the&#10;Creeps" />
     <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
@@ -49,6 +68,7 @@
     <!-- The demo's StartButton: clicked, or Enter, or the joypad's A. -->
     <qg:menu position="bottom-center" font="fonts/Xolonium-Regular.ttf" size="60">
       <qg:button label="Start"><qg:goto-scene name="play" /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
     </qg:menu>
     <qg:on-input action="jump">
       <qg:goto-scene name="play" />
@@ -113,6 +133,18 @@
         <qg:goto-scene name="play" />
       </q:if>
     </qg:on-input>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="480" height="720" background="#385f61">
+    <qg:hud position="top-center" size="48"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" font="fonts/Xolonium-Regular.ttf" size="28">
+      <qg:slider label="Music" bus="music" />
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
   </qg:scene>
 
 </q:application>

@@ -146,6 +146,16 @@ func is_blocking() -> bool:
 	return _blocking
 
 
+# Hit by something else than the opponent's move (qg:damage: a fireball). Blocked
+# as a move is, by holding away on the ground; it pushes back the way it faces.
+func take_damage(amount: int) -> void:
+	var dir := int(Q.held(_a("right"))) - int(Q.held(_a("left")))
+	var was := _blocking
+	_blocking = position.y >= _floor_y and dir != 0 and dir == -facing and phase == "free"
+	take_hit(amount, 16, 30.0, -facing)
+	_blocking = was
+
+
 # Hit by the opponent's move (or blocked it).
 func take_hit(damage: int, stun: int, push: float, from_facing: int) -> void:
 	if phase == "ko":

@@ -30,6 +30,7 @@ Execute a .q file.
 | `--target` | UI target (for type="ui" apps): html, textual, or mobile | `html` | `html`, `textual`, `mobile` |
 | `--out` | For a hive or a screen: write what it compiles to here (projects/&lt;id>/hive or projects/&lt;id>/screen by default) |  |  |
 | `--check` | For a game: after the build, open the Godot project headless and fail on any script error (needs Godot; `python scripts/godot.py install`) |  |  |
+| `--watch` | For a game: play it in Godot, and each time the .q (or a file beside it) is saved, build again and go on where the game was, under the new build |  |  |
 
 Specified by: [IA-7](./spec#IA-7) · [CFG-1](./spec#CFG-1) · [UI-0](./spec#UI-0) · [UI-2](./spec#UI-2) · [UI-8](./spec#UI-8)
 
@@ -137,6 +138,7 @@ Play a game step by step (or serve it to an agent, --mcp).
 | `--live` | the game runs at its own speed, not request by request |  |  |
 | `--host` | host a networked game on this port (live) |  |  |
 | `--join` | join a networked game, a person's or another agent's (live) |  |  |
+| `--seat` | with --join: the seat to sit in (else the lowest free) |  |  |
 | `--lang` | the language of the game's texts, when it has it (pt, es...) |  |  |
 | `--transport` | the network's transport (websocket: the one a browser joins) |  | `enet`, `websocket` |
 

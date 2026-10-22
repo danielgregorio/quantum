@@ -21,9 +21,11 @@ const Hud := preload("res://addons/quantum/hud.gd")
 const Tilemap := preload("res://addons/quantum/tilemap.gd")
 const Zone := preload("res://addons/quantum/zone.gd")
 const Cursor := preload("res://addons/quantum/cursor.gd")
+const Looks := preload("res://addons/quantum/looks.gd")
 const FighterBody := preload("res://addons/quantum/fighter_body.gd")
 const Menu := preload("res://addons/quantum/menu.gd")
 const GridBody := preload("res://addons/quantum/grid_body.gd")
+const PointerBody := preload("res://addons/quantum/pointer_body.gd")
 const Dialogue := preload("res://addons/quantum/dialogue.gd")
 const BehaviorBody := preload("res://addons/quantum/behavior_body.gd")
 const Camera := preload("res://addons/quantum/camera.gd")
@@ -37,6 +39,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	scene.q_spec = scene_spec
 	scene.q_game = game
 	scene.q_seed = int(scene_spec.get("seed", 0))
+	Q.make_buses(game.get("buses", []))
 	Q.load_sounds(game.get("sounds", {}))
 	Q.particles_spec = game.get("particles", {})
 
@@ -47,11 +50,27 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	bg.position = Vector2(-8192, -8192)
 	bg.z_index = -100
 	scene.add_child(bg)
+	# y-sort="true": what stands lower is drawn in front (the tilemap stays under all of it)
+	scene.y_sort_enabled = bool(scene_spec.get("y_sort", false))
+	var clock: Node = load("res://addons/quantum/clock.gd").new()
+	clock.name = "Clock"   # the scene's ticks, its qg:afters and qg:whens, stepped first (clock.gd)
+	scene.add_child(clock)
+	var tweens: Node = load("res://addons/quantum/tween.gd").new()
+	tweens.name = "Tweens"   # the scene's qg:tweens, stepped before its things (tween.gd)
+	scene.add_child(tweens)
 
 	scene.q_on_input = scene_spec.get("on_input", {})
 	scene.q_on_select = scene_spec.get("on_select", {})
 	Q.apply_gd(scene, scene_spec.get("gd"))
 	scene.q_on_death = scene_spec.get("on_death", {})
+	scene.q_on_release = scene_spec.get("on_release", {})
+	scene.q_sequences = scene_spec.get("sequences", [])
+	scene.q_on_screen = scene_spec.get("on_screen", [])
+	if scene_spec.get("ambient") != null:   # a dark scene: what no qg:light reaches is this colour
+		var dark := CanvasModulate.new()
+		dark.name = "Ambient"
+		dark.color = Color(str(scene_spec["ambient"]))
+		scene.add_child(dark)
 	var tilemap: Node = null
 	var characters: Dictionary = {}
 	var exits: Dictionary = {}
@@ -78,7 +97,9 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				Q.apply_gd(marker, node_spec.get("gd"))
 				scene.add_child(marker)
 			"tilemap":
-				tilemap = Tilemap.build(node_spec, game["sheets"][node_spec["tileset"]], _texture)
+				tilemap = Tilemap.build(node_spec, game["sheets"][node_spec["tileset"]], _texture, game["sheets"])
+				if scene.y_sort_enabled:
+					tilemap.z_index = -10
 				for layer in tilemap.get_children():
 					Q.apply_gd(layer, node_spec.get("gd"))
 				scene.add_child(tilemap)
@@ -103,6 +124,9 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 						continue
 					var body := _character(node_spec, game, scene)
 					_animation_ends(body, node_spec, scene)
+					looks(body, node_spec, game, scene)
+					if node_spec.get("on_screen") != null:
+						body.set_meta("q_on_screen", node_spec["on_screen"])
 					Q.apply_gd(body, node_spec.get("gd"))
 					characters[node_spec["id"]] = body
 					scene.add_child(body)
@@ -115,6 +139,8 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				if node_spec.get("name") != null:
 					made.name = node_spec["name"]
 					made.set_meta("q_named", true)
+				if node_spec.get("state") != null and made.has_method("become"):
+					made.become(str(node_spec["state"]))   # a Tiled object's state property
 				Q.apply_gd(made, node_spec.get("gd"))
 			"timer":
 				var timer := Timer_.new()
@@ -129,6 +155,8 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 			"cursor":
 				var cursor := Cursor.new()
 				cursor.setup(node_spec, scene)
+				if node_spec.get("id") != null:
+					cursor.name = node_spec["id"]   # read by its id: aim.x
 				if node_spec.get("sheet") != null:
 					var sheet: Dictionary = game["sheets"][node_spec["sheet"]]
 					cursor.add_child(_sprite(_texture(sheet), sheet["tile"], int(node_spec["frame"])))
@@ -168,6 +196,12 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 					picture.follow(scene, node_spec["frame_method"])
 				Q.apply_gd(picture, node_spec.get("gd"))
 				scene.add_child(picture)
+			"light":
+				var light := PointLight2D.new()
+				light.set_script(load("res://addons/quantum/light.gd"))
+				light.setup(node_spec)
+				light.position = Vector2(node_spec["x"], node_spec["y"])
+				scene.add_child(light)
 			"emitter":
 				var fx: CPUParticles2D = load("res://addons/quantum/particles.gd").make(
 					game["particles"][node_spec["particles"]], float(node_spec.get("width", 0.0)))
@@ -183,6 +217,15 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				exits[node_spec["name"]] = exit
 			"camera":
 				cameras.append(node_spec)   # made last: where its characters stand, after an arrival
+			"label":
+				if node_spec.get("if") != null and not scene.call(node_spec["if"]):
+					continue
+				var label: Node2D = Looks.new()
+				label.position = Vector2(node_spec["x"], node_spec["y"])
+				label.setup({"labels": [{"method": node_spec["method"], "size": node_spec.get("size", 8),
+					"color": node_spec.get("color", "#ffffff")}]}, scene, game)
+				Q.apply_gd(label, node_spec.get("gd"))
+				scene.add_child(label)
 			"menu":
 				var menu := Menu.new()
 				menu.setup(node_spec, scene)
@@ -206,6 +249,12 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				hud.setup(node_spec, scene)
 				Q.apply_gd(hud, node_spec.get("gd"))
 				scene.add_child(hud)
+	# on a touch screen: the game's buttons and sticks, and this scene's
+	var touch: Array = game.get("touch", []) + scene_spec.get("touch", [])
+	if not touch.is_empty():
+		var pads = load("res://addons/quantum/touch.gd").new()
+		pads.setup(touch)
+		scene.add_child(pads)
 	# Arriving through an exit: the character stands in the exit it was
 	# sent to, which stays disarmed until it walks out of it.
 	var arrive_at = G.get("_q_arrive_at")
@@ -215,9 +264,15 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				c.position = exits[arrive_at].position
 		exits[arrive_at].disarm()
 	G.set("_q_arrive_at", "")
+	for e in exits.values():   # nor does starting in one (a door the room starts at)
+		for c in characters.values():
+			if c is CharacterBody2D and e.holds(c.position):
+				e.disarm()
+	var by_player := []   # qg:camera player=: a view each (split.gd)
 	for node_spec in cameras:
 		var cam := Camera.new()
 		cam.setup(node_spec, characters)
+		cam.scene_node = scene
 		if node_spec.get("bounds", "tilemap") == "tilemap" and tilemap != null:
 			var size: Vector2 = tilemap.pixel_size()
 			cam.limit_left = 0
@@ -225,8 +280,20 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 			cam.limit_right = int(size.x)
 			cam.limit_bottom = int(size.y)
 		Q.apply_gd(cam, node_spec.get("gd"))
+		if node_spec.get("player") != null:
+			cam.player = int(node_spec["player"])
+			if cam.targets.is_empty():
+				cam.free()   # it follows no one here: a player who is not playing has no view
+			else:
+				by_player.append(cam)
+			continue
 		scene.add_child(cam)
 		scene.q_camera = cam
+	if not by_player.is_empty():
+		var split: CanvasLayer = load("res://addons/quantum/split.gd").new()
+		var screen := Vector2(float(scene_spec.get("width", 256)), float(scene_spec.get("height", 224)))
+		scene.q_camera = split.build(scene, by_player, screen, Q.net_player() if Q.external_input else 0)
+		scene.q_views = split.views
 	return scene
 
 
@@ -248,6 +315,12 @@ static func instance(game: Dictionary, scene: Node, prefab_name: String, at: Vec
 		thing = Item.new()
 	thing.setup(prefab_name, prefab, _texture(sheet), sheet["tile"])
 	thing.position = at
+	looks(thing, prefab, game, P)
+	if prefab.get("on_screen") != null:
+		thing.set_meta("q_on_screen", prefab["on_screen"])
+	var hitbox: Node = thing if thing is Area2D else thing.get_node_or_null("Hitbox")   # an item is its own area
+	if prefab.get("on_separate") != null and hitbox is Area2D:
+		Q.watch_separate(hitbox, thing, prefab["on_separate"], P)
 	if deferred:   # made by the game as it runs (qg:spawn), not placed with the scene
 		Q.event("spawn", {"what": str(prefab.get("tag", prefab_name)), "x": snappedf(at.x, 0.1), "y": snappedf(at.y, 0.1)})
 	Q.apply_gd(thing, prefab.get("gd"))
@@ -268,6 +341,8 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 		body = FighterBody.new()
 	elif node_spec["controller"] == "grid":
 		body = GridBody.new()
+	elif node_spec["controller"] == "pointer":
+		body = PointerBody.new()
 	elif node_spec["controller"] == "behavior":
 		body = BehaviorBody.new()
 	else:
@@ -301,7 +376,25 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 	sensor.add_child(sensor_shape)
 	body.add_child(sensor)
 	body.wire(sensor, node_spec, scene, sprite)
+	if node_spec.get("on_separate") != null:
+		Q.watch_separate(sensor, body, node_spec["on_separate"], scene)
 	return body
+
+
+# How a character or a thing looks besides its frame: upside down (flip-v=), its draw layer
+# (layer=), and what a Looks node keeps up every tick (labels, visible=, particles=, trail=, lights).
+static func looks(node: Node2D, spec: Dictionary, game: Dictionary, caller: Object) -> void:
+	var sprite = node.get_node_or_null("Sprite")
+	if spec.get("flip_v", false) and sprite is Sprite2D:
+		sprite.flip_v = true
+	if spec.get("layer") != null:
+		node.z_index = int(spec["layer"])
+	for key in ["labels", "visible", "particles", "trail", "lights"]:
+		if spec.get(key) != null:
+			var keeper: Node2D = Looks.new()
+			keeper.setup(spec, caller, game, node)
+			node.add_child(keeper)
+			return
 
 
 # A character's qg:on-animation-end handlers, which are the scene's.
@@ -327,7 +420,7 @@ static func forget_textures() -> void:
 
 
 static func _texture(sheet: Dictionary) -> Texture2D:
-	var src: String = sheet["src"]
+	var src := Q.src_of(sheet)   # the language's own picture, when it has one (qg:asset)
 	if _textures.has(src):
 		return _textures[src]
 	var texture := Q.texture(src)

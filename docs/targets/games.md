@@ -21,6 +21,7 @@ of your own anywhere: text where statements go is a compile error.
 ```bash
 quantum run game.q            # writes projects/<id>/godot/, which Godot opens, runs and exports
 quantum run game.q --check    # ...and opens it headless: any script error fails the build
+quantum run game.q --watch    # plays it; each save builds again and the game goes on where it was
 python scripts/godot.py install   # the pinned Godot, into ~/.cache/quantum/godot
 ```
 
@@ -88,25 +89,27 @@ Declared once, in `q:application`.
 
 ### `qg:tileset`
 
-A sheet of equal tiles; tilemaps and sprites name it.
+A sheet of equal tiles; tilemaps and sprites name it. With shape="hex" its tiles are hexes with their points up, every other row of a map half a hex to the right (a strategy map); with shape="iso", diamonds, every other row half a diamond on. The rows of a qg:tilemap are the rows seen; a walker's neighbours, its way and the cell at a point follow the shape.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `name` | a name | required |  |
 | `src` | text | required | the image, relative to the .q or a folder above it |
-| `tile` | integer | required | tile size in pixels (square) |
+| `tile` | tile | required | tile size in pixels: 18 (square), or WxH for hexes and diamonds (28x32) |
+| `shape` | `square` / `hex` / `iso` | `square` | square tiles, hexes or diamonds |
 
 Goes inside: `q:application`.
 
 ### `qg:spritesheet`
 
-A sheet of equal frames for characters and items.
+A sheet of equal frames for characters and items. With slice=, it is a frame that stretches to a box (a dialogue's box=): its corners stay as drawn, its edges and middle stretch.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `name` | a name | required |  |
 | `src` | text | required |  |
 | `tile` | tile | required | frame size in pixels: 24, or 8x32 for frames that are not square |
+| `slice` | text |  | how wide its edges are, in pixels, that do not stretch: 16, or left, top, right, bottom (16, 8, 16, 8); its first frame is the frame |
 
 Goes inside: `q:application`.
 
@@ -124,11 +127,12 @@ Goes inside: `q:application`.
 
 ### `qg:multiplayer`
 
-The game is played by several people, each on their own machine, in lockstep: every peer runs the whole game and a tick runs when every player's input for it has arrived. One hosts (`--q-host=PORT`, player 1), the others join (`--q-join=HOST:PORT`, players 2.. in order). The players' characters are told apart by player=; nobody declares keys for players 2... A player who leaves can come back: the others wait, and the next to join takes the seat, catching up the game so far (not under rollback=, where the game ends).
+The game is played by several people, each on their own machine, in lockstep: every peer runs the whole game and a tick runs when every player's input for it has arrived. One hosts (`--q-host=PORT`, player 1), the others join (`--q-join=HOST:PORT`, players 2.. in order, or the seat `--q-seat=N` asks for). The players' characters are told apart by player=; nobody declares keys for players 2... A player who leaves can come back: the others wait, and the next to join takes the seat, catching up the game so far (not under rollback=, where the game ends).
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `players` | integer | required | how many, 2 or more |
+| `players` | integer | required | how many, 2 or more: the game starts by itself as the last of them joins |
+| `min-players` | integer |  | fewer may play: once this many are there, the host may start the game (qg:start-now, or the lobby's Start now) with those who are; `net_players()` then says how many play |
 | `delay` | integer | `3` | ticks between a press and its effect, everywhere: hides the round trip |
 | `check-every` | integer | `60` | ticks between comparisons of the whole state across peers; a difference is a desync, reported and fatal (0: never) |
 | `rollback` | integer | `0` | rollback instead of waiting: up to this many ticks run ahead on a guess of the others' input and are run again when it was wrong (0: plain lockstep). The scenes the networked game reaches may only hold fighters, timers, menus, the HUD, pictures and a camera — nothing that goes through physics |
@@ -146,6 +150,7 @@ A sound the game can play (qg:play).
 | `name` | a name | required |  |
 | `src` | text | required | an .ogg or .wav |
 | `loop` | true / false | `false` | plays until qg:stop (music) |
+| `bus` | a name |  | the bus it is heard on (music, effects...): how loud a bus is, qg:volume and a menu's qg:slider set, kept between runs |
 
 Goes inside: `q:application`.
 
@@ -204,11 +209,19 @@ A kind of thing the scene places with qg:instance. With ai= it moves.
 | `one-way` | true / false | `false` | solid: can be jumped through from below and stood on |
 | `shape` | text |  | solid: the solid part as x,y points from its centre, separated by semicolons (-96,-21; 96,-21; 96,6; -96,6), instead of the hitbox |
 | `scale` | number | `1.0` | the picture's size, times its frame (the hitbox stays as given) |
-| `walls` | `pass` / `stop` | `pass` | fly: pass goes through the tiles; stop is gone on touching one |
+| `walls` | `pass` / `stop` / `bounce` | `pass` | fly: pass goes through the tiles; stop is gone on touching one; bounce turns off it, as a ball off a wall (the way across it reverses) |
+| `trail` | `#rrggbb` |  | a line it leaves behind it as it moves, fading (a shot's streak, a ship's wake): only seen |
+| `pushable` | true / false | `false` | solid: a character controller="grid" or "pointer" that steps into it pushes it a cell on, if that cell is free (no wall, no thing): a crate |
+| `extends` | a name |  | another prefab it is made from: it has all of it (attributes, animations, states, handlers) but what it says itself; a qg:animation or qg:state of the same name, a handler with the same with= and side=, a qg:behavior, replace the other's |
+| `spacing` | number | `0.0` | things of its tag keep at least this many pixels apart as they move: a crowd, not a pile (0: they may overlap) |
 | `sight` | number | `80.0` | chase, pathfind, and the parts of a behavior: pixels |
 | `heading` | text | `down` | fly: up, down, left, right, or a direction as x,y (-1,0.5) |
 | `accel` | number | `0.0` | fly: pixels per second added to its speed every second |
 | `lifetime` | integer | `0` | fly: gone after this many ticks (0: never); any fly is gone off-screen |
+| `particles` | a name |  | a qg:particles kept going where it is, as it moves (a fire, an engine's flame, a torch carried): only seen |
+| `visible` | an expression |  | shown only while this is true, read every tick (`me` is it): blinking while hurt, hidden in the dark; it still collides |
+| `flip-v` | true / false | `false` | its picture upside down |
+| `layer` | integer | `0` | drawn over things of a lower layer and under those of a higher one, whatever y-sort says |
 | `health` | integer | `1` | hits it takes (qg:damage); at 0 its qg:on-death runs and it is gone |
 | `fire-prefab` | a name |  | what it shoots, placed below it (or above, when heading is up) |
 | `fire-every` | integer | `0` | ticks between shots (0: never) |
@@ -356,7 +369,7 @@ A form of a character or a prefab (small, big; calm, angry): hitbox, frame, anim
 |---|---|---|---|
 | `name` | a name | required |  |
 | `hitbox` | `WxH` pixels |  | a character needs one; a prefab keeps its own |
-| `frame` | integer | `0` |  |
+| `frame` | integer |  | its picture in this state (its own frame when not given) |
 | `speed` | number |  | prefab: overrides its speed |
 | `fire-every` | integer |  | prefab: overrides its fire-every |
 | `fire-prefab` | a name |  | prefab: overrides its fire-prefab |
@@ -396,6 +409,8 @@ A screen of the game. The first one is where the game starts.
 | `background` | `#rrggbb` | `#000000` |  |
 | `seed` | integer | `0` | the random seed; the same seed gives the same game |
 | `save` | true / false | `false` | entering the scene saves the game to continue here (qg:save), as a room of an adventure does |
+| `y-sort` | true / false | `false` | characters and things are drawn by how low they stand, the lower in front: depth seen from above (a layer= still comes first) |
+| `ambient` | `#rrggbb` |  | a dark scene: the light where no qg:light reaches (#000000 is black, #ffffff as drawn); its solid tiles cast the shadows of the lights with shadows="true" |
 
 Goes inside: `q:application`.
 
@@ -405,7 +420,7 @@ The level, the character, the things placed in it, and what the screen shows.
 
 ### `qg:tilemap`
 
-The level: CSV rows of tile numbers (0 is empty, n is tile n-1 of the tileset), or a Tiled map (src=) whose tile layers draw it and whose object layers place prefabs by class. Several in a scene are layers of one map, drawn in order (a floor, a path, the walls), on one tileset.
+The level: CSV rows of tile numbers (0 is empty, n is tile n-1 of the tileset), or a Tiled map (src=) whose tile layers draw it and whose object layers place prefabs by class. Several in a scene are layers of one map, drawn in order (a floor, a path, the walls), on one tileset. A Tiled map may use several tilesets (each layer draws from one, which is the qg:tileset of the game with the same image) and flipped or turned tiles; an object's state property is the qg:state it starts in; objects of class zone (a tag property), exit (to and at properties) and path (a polyline) are the scene's qg:zone, qg:exit and qg:path; the map's own properties are read with tiled('name').
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
@@ -424,7 +439,7 @@ A body the player moves: a platformer, or a walker on a world map.
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `id` | a name | required |  |
-| `controller` | `platformer` / `map` / `topdown` / `ship` / `fighter` / `grid` / `behavior` | required | grid: steps from cell to cell of the tilemap; the tiles of a layer with collision, and the things, stop it, and stepping into a thing runs its qg:on-collision with the thing's tag; `me.col` and `me.row` are its cell. behavior: made of the parts its qg:behavior lists |
+| `controller` | `platformer` / `map` / `topdown` / `ship` / `fighter` / `grid` / `pointer` / `behavior` | required | grid: steps from cell to cell of the tilemap; the tiles of a layer with collision, and the things, stop it, and stepping into a thing runs its qg:on-collision with the thing's tag; `me.col` and `me.row` are its cell. pointer: as grid, and a click (its player's qg:cursor) walks it to that cell by the shortest way around the walls and things. behavior: made of the parts its qg:behavior lists |
 | `step-frames` | integer | `15` | grid: ticks to walk one cell (a bump takes as long) |
 | `diagonal` | true / false | `false` | grid: two directions held at once step diagonally |
 | `player` | integer | `1` | whose keys move it (qg:input player=); 1 has the defaults |
@@ -451,6 +466,7 @@ A body the player moves: a platformer, or a walker on a world map.
 | `jump-height` | number | `64.0` | pixels, with the button held |
 | `variable-jump` | true / false | `true` | releasing the button cuts the jump |
 | `coyote-frames` | integer | `6` | ticks after leaving a ledge in which a jump still works |
+| `buffer-frames` | integer | `0` | platformer: a jump pressed up to this many ticks before landing jumps as it lands (0: only a press on the floor) |
 | `gravity` | number | `900.0` | pixels per second squared |
 | `max-fall` | number | `300.0` | terminal velocity, pixels per second |
 | `jump-sound` | a name |  | a qg:sound, played on take-off |
@@ -461,6 +477,10 @@ A body the player moves: a platformer, or a walker on a world map.
 | `jump-cut` | number | `0.0` | platformer: releasing the button while rising multiplies the rise by this, once (0: the extra gravity of variable-jump instead) |
 | `scale` | number | `1.0` | the picture's size, times its frame (the hitbox stays as given) |
 | `if` | an expression |  | placed only when this is true as the scene is built: a second player's character only in a networked game, `net_status() != 'offline'` |
+| `particles` | a name |  | a qg:particles kept going where it is, as it moves (a fire, an engine's flame, a torch carried): only seen |
+| `visible` | an expression |  | shown only while this is true, read every tick (`me` is it): blinking while hurt, hidden in the dark; it still collides |
+| `flip-v` | true / false | `false` | its picture upside down |
+| `layer` | integer | `0` | drawn over things of a lower layer and under those of a higher one, whatever y-sort says |
 
 Goes inside: `qg:scene`.
 
@@ -503,6 +523,7 @@ A part: a press on the floor leaps; with air=, also in the air. It needs qg:grav
 | `height` | number | `64.0` | pixels, with the button held |
 | `speed` | number |  | the take-off speed, pixels per second, instead of height= |
 | `coyote` | integer | `6` | ticks after leaving a ledge in which a jump still works |
+| `buffer` | integer | `0` | a press up to this many ticks before landing jumps as it lands (0: only a press on the floor) |
 | `air` | integer | `0` | jumps it may take in the air before landing again |
 | `variable` | true / false | `true` | letting go while rising cuts the leap |
 | `cut` | number | `0.0` | letting go multiplies the rise by this, once (0: three times the gravity while it rises instead) |
@@ -622,9 +643,11 @@ A player's pointer in the scene: the mouse, moved also by that player's left/rig
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
+| `id` | a name |  | its name in expressions, as a character's: `aim.x`, `aim.y` (with grid=, `aim.col`, `aim.row`), and a target of qg:beam |
 | `player` | integer | `1` |  |
 | `step` | number | `16.0` | pixels per tick while a direction is held |
 | `grid` | integer |  | cell size: the cursor snaps to cell centres |
+| `cells` | true / false | `false` | it snaps to the middles of the cells of the scene's qg:tilemap, whatever their shape (a hex map's); `cursor.col`, `cursor.row` are the cell |
 | `sheet` | a name |  |  |
 | `frame` | integer | `0` |  |
 
@@ -687,18 +710,20 @@ What the screen shows: it follows a character, or the middle of several, in the 
 | `smooth` | number | `0.0` | how fast it catches up, per second (0: at once) |
 | `fit` | true / false | `false` | several followed: it zooms out to keep them all on the screen, down to zoom-min, and back in as they come together |
 | `zoom-min` | number | `0.5` | fit: as far out as it goes |
+| `player` | integer |  | one view per player: this is that player's. On one machine the screen splits (side by side for two, quarters for three or four); over the network each machine shows its own player's. A camera that follows no one present has no view |
 
 Goes inside: `qg:scene`.
 
 ### `qg:hud`
 
-Text over the game.
+Text and pictures over the game.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `position` | `top-left` / `top-center` / `top-right` / `center` / `bottom-center` | `top-left` |  |
+| `position` | `top-left` / `top-center` / `top-right` / `center` / `bottom-left` / `bottom-center` / `bottom-right` | `top-left` |  |
 | `font` | text |  | a .ttf, relative to the .q or a folder above it |
 | `size` | integer | `8` | the font size of its items, unless an item says otherwise |
+| `if` | an expression |  | shown only while this is true |
 
 Goes inside: `qg:scene`.
 
@@ -712,6 +737,7 @@ A number from the scene state, or how many of an item the players hold, in the H
 | `item` | a name |  | a qg:item: how many are held (or bind=) |
 | `label` | text | `` | text before the number |
 | `size` | integer |  | font size |
+| `color` | `#rrggbb` |  | its colour (#rrggbb) |
 
 Goes inside: `qg:hud`.
 
@@ -724,6 +750,7 @@ A string from the scene state, in the HUD.
 | `bind` | a name |  | a q:set of the scene (or value=) |
 | `value` | an expression |  | an expression, read every frame (or bind=) |
 | `size` | integer |  | font size |
+| `color` | `#rrggbb` |  | its colour (#rrggbb) |
 
 Goes inside: `qg:hud`.
 
@@ -758,10 +785,14 @@ A list of buttons (and text fields) over the scene. A player moves through it wi
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `player` | integer | `1` | whose keys and pointer choose |
+| `local` | true / false | `false` | the menu of whoever plays at this machine (its seat, in a networked game); it holds only shared fields, whose texts reach the others |
 | `if` | an expression |  | shown, and choosable, only while this is true: paused(), a q:set... |
 | `position` | `top-left` / `top-center` / `top-right` / `center` / `bottom-center` | `center` |  |
 | `font` | text |  | a .ttf, relative to the .q or a folder above it |
 | `size` | integer | `16` | font size |
+| `box` | a name |  | a qg:spritesheet with slice=: the buttons are in a box drawn with it, stretched (a frame) |
+| `columns` | integer | `1` | its items in a grid of so many columns: left and right move along a row |
+| `rows` | integer | `0` | how many rows show at once; the others scroll into view with the focus (0: all of them) |
 
 Goes inside: `qg:scene`.
 
@@ -778,13 +809,14 @@ Goes inside: `qg:menu`.
 
 ### `qg:field`
 
-A text box of a qg:menu, bound to a string state: what is typed is the state. Typing is local to the machine (an address, a name) — a replay cannot type, and the lockstep does not carry it.
+A text box of a qg:menu, bound to a string state: what is typed is the state. Typing is local to the machine (an address) — the lockstep does not carry it. A shared field (shared="true") is a draft until Enter sends it: the text goes with the player's input for a tick, and on that tick, on every machine of a networked game, it becomes the bound state and what the field holds runs, with `sender` (the seat that sent it) and `text` — names, a short chat. While a field is typed in, the keys type and play nothing.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `bind` | a name | required | a q:set of the scene or the game |
 | `label` | text | `` | text before the box |
 | `max-length` | integer | `64` |  |
+| `shared` | true / false | `false` | sent to every machine with the inputs, on Enter |
 
 Goes inside: `qg:menu`.
 
@@ -800,6 +832,7 @@ The usual networked-game menu, ready made: play here (local=), host, an address 
 | `address` | text | `127.0.0.1:7777` | what the address field starts with, unless the web page's address has ?join=... |
 | `font` | text |  |  |
 | `size` | integer | `16` |  |
+| `options` | a name |  | a scene of the game's options (how loud, the full screen, the keys): an Options button goes there |
 
 Goes inside: `qg:scene`.
 
@@ -814,7 +847,7 @@ What happens when this character or prefab touches something. Holds actions and 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `with` | a name | required | the tag of what it touches |
-| `side` | `any` / `top` / `bottom` | `any` | top: landing on it; bottom: hitting it from below. A side handler runs before the "any" one, which then does not |
+| `side` | `any` / `top` / `bottom` / `left` / `right` | `any` | top: landing on it; bottom: hitting it from below; left: hitting it from its left (it is to the right); right: from its right. A side handler runs before the "any" one, which then does not |
 | `cooldown` | integer | `0` | ticks before this handler can fire again |
 
 Goes inside: `qg:character`, `qg:prefab`.
@@ -854,21 +887,26 @@ Goes inside: `qg:character`.
 
 ### `qg:on-input`
 
-What happens when the player presses an action in this scene. Holds actions and statements.
+What happens when the player presses an action in this scene, or lets it go (on="release"); or, with sequence=, when a player presses several in order in a short time — a special move: "down, forward, punch" holds on the tick punch is pressed, if down and then forward were pressed before it within within= ticks (other presses between them do not matter, and the presses it uses are used up). "forward" and "back" are right and left as that player's character faces. Holds actions and statements.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `action` | a name | required | a default action, or one a qg:input declares |
+| `action` | a name |  | a default action, or one a qg:input declares; or sequence= |
+| `on` | `press` / `release` | `press` | press: as it goes down; release: as it is let go |
+| `sequence` | text |  | actions in the order pressed, separated by commas; forward and back follow the way the player's character faces |
+| `within` | integer | `30` | sequence: how many ticks from its first press to its last (60 a second) |
+| `player` | integer | `1` | sequence: whose presses |
 
 Goes inside: `qg:scene`.
 
 ### `qg:on-select`
 
-What happens when a player presses select with their qg:cursor somewhere. Holds actions and statements; `cursor` is where (x, y, col, row, player), `other` the thing under it, or null.
+What happens when a player presses select with their qg:cursor somewhere (or another action: action= with a qg:input of the right mouse button, MouseRight, is a right click on a thing). Holds actions and statements; `cursor` is where (x, y, col, row, player), `other` the thing under it, or null. `hovered()` reads the thing under a cursor at any time.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `player` | integer |  | only this player's cursor (any, when not given) |
+| `action` | a name | `select` | the action that chooses: select (the left button, Enter), or one a qg:input declares (keys="MouseRight", "WheelUp", "WheelDown") |
 
 Goes inside: `qg:scene`.
 
@@ -931,14 +969,16 @@ Goes inside: a handler.
 
 ### `qg:play`
 
-Plays a qg:sound. Directly in a scene: as the scene is entered. With volume=, pitch= or vary=, it plays in a voice of its own, so the same sound can overlap itself. Only heard: the game's state records the sound's name, never how it was played.
+Plays a qg:sound. Directly in a scene: as the scene is entered. With volume=, pitch= or vary=, it plays in a voice of its own, so the same sound can overlap itself. With sounds=, one of several, drawn each time (footsteps, hits that do not all sound alike). Only heard: the game's state records the sound's name (sounds= as written), never how it was played nor which one.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `sound` | a name | required |  |
+| `sound` | a name |  | a qg:sound; or sounds= |
+| `sounds` | text |  | several qg:sounds, separated by commas: one of them each time |
 | `volume` | number | `0.0` | decibels added (-6: about half as loud) |
 | `pitch` | number | `1.0` | 2: an octave up, 0.5: an octave down |
 | `vary` | number | `0.0` | a random pitch between pitch - vary and pitch + vary, each time: twenty hits that do not sound the same |
+| `at` | a name |  | heard from where a thing is (me, other, a character id, or a parameter holding one): softer and to one side the farther it is from the middle of the screen, silent two screens away. A thing's own sounds (its fire-sound, a leap's or a shot's sound=) are heard where it is |
 
 Goes inside: a handler, `qg:scene`.
 
@@ -958,7 +998,7 @@ Changes a character or a thing to one of its qg:states.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `target` | `me` / `other` | `me` |  |
+| `target` | a name | `me` | other, me, or a parameter, loop variable or q:set holding a thing |
 | `state` | a name | required |  |
 
 Goes inside: a handler.
@@ -970,12 +1010,13 @@ Places a new prefab instance in the scene.
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `prefab` | a name | required |  |
-| `at` | `other` / `me` / `cursor` / `path` | `other` | whose position; cursor: where the qg:on-select cursor is; path: the start of path= |
+| `at` | a name | `other` | whose position: other, me, a character id, or a parameter, loop variable or q:set holding a thing; cursor: where the qg:on-select cursor is; path: the start of path= |
 | `path` | a name |  | at="path": a qg:path of the scene, which an ai="path" prefab follows |
 | `x` | an expression |  | a point of the scene instead of at= (with y=): an expression, in pixels |
 | `y` | an expression |  |  |
 | `dx` | number | `0.0` |  |
 | `dy` | number | `0.0` | offset in pixels |
+| `heading` | text |  | an ai="fly" prefab: the way it goes, as x,y, each an expression (`{aim.x - me.x},{aim.y - me.y}`: at the pointer), instead of its own |
 
 Goes inside: a handler.
 
@@ -1018,8 +1059,8 @@ Takes health from a thing; at 0 its qg:on-death runs and it goes.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `target` | `other` / `me` | `other` |  |
-| `amount` | integer | `1` |  |
+| `target` | a name | `other` | other, me, or a parameter, loop variable or q:set holding a thing |
+| `amount` | an expression | `1` |  |
 
 Goes inside: a handler.
 
@@ -1029,7 +1070,7 @@ A puff of particles where a thing is. Cosmetic.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `at` | `other` / `me` | `me` |  |
+| `at` | a name | `me` | other, me, or a parameter, loop variable or q:set holding a thing |
 | `color` | `#rrggbb` | `#ffffff` |  |
 | `count` | integer | `12` |  |
 
@@ -1041,7 +1082,7 @@ Shakes the scene a thing is in. Cosmetic.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `at` | `other` / `me` | `me` |  |
+| `at` | a name | `me` | other, me, or a parameter, loop variable or q:set holding a thing |
 | `frames` | integer | `10` |  |
 | `strength` | number | `3.0` | pixels |
 
@@ -1053,7 +1094,7 @@ Changes where a flying thing (ai="fly") goes: flips one axis of its heading, or 
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `target` | `other` / `me` | `other` |  |
+| `target` | a name | `other` | other, me, or a parameter, loop variable or q:set holding a thing |
 | `axis` | `x` / `y` |  | the axis to flip |
 | `dx` | an expression |  |  |
 | `dy` | an expression |  |  |
@@ -1132,17 +1173,22 @@ Goes inside: a handler.
 
 ### `qg:save`
 
-Saves the game to continue it later: the game state (every q:set of q:application) and a scene to come back to. One save per game, kept between runs (in a browser, by the browser); a new qg:save replaces it. `has_save()` says whether there is one. A networked game is not saved.
+Saves the game to continue it later: the game state (every q:set of q:application) and a scene to come back to. Kept between runs (in a browser, by the browser); a new qg:save replaces it. `has_save()` says whether there is one. A networked game is not saved.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `scene` | a name |  | the scene to continue in (none: this one); it starts over, what was in it is not saved |
+| `slot` | an expression |  | which of several saves (1, 2, 3...: a game each); the scenes with save="true" save into it from then on. None: the one save |
 
 Goes inside: a handler.
 
 ### `qg:continue`
 
 Continues the saved game (qg:save): its game state back, and on to its scene. Nothing when there is no save.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `slot` | an expression |  | which save (qg:save slot=); the scenes with save="true" save into it from then on. None: the one save |
 
 Goes inside: a handler.
 
@@ -1159,8 +1205,8 @@ Eases a property of a thing from what it is to a value, over some seconds: a coi
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `target` | a name | `me` | me, other, a character id, or a q:set holding a thing |
-| `property` | `x` / `y` / `rotation` / `scale` / `alpha` | required | x, y: where it is (collisions see it); rotation (degrees), scale, alpha: its picture |
-| `to` | an expression | required |  |
+| `property` | `x` / `y` / `rotation` / `scale` / `scale-x` / `scale-y` / `alpha` / `tint` | required | x, y: where it is (collisions see it); rotation (degrees), scale, scale-x and scale-y (across and up: a squash, a stretch), alpha, tint (a colour its picture is multiplied by: #ffffff is as drawn): its picture |
+| `to` | an expression | required | a number, or for tint a colour (#rrggbb) |
 | `from` | an expression |  | where it starts (what it is now when not given) |
 | `seconds` | number | `0.5` |  |
 | `trans` | `linear` / `sine` / `quad` / `cubic` / `back` / `bounce` / `elastic` | `sine` | the curve |
@@ -1184,11 +1230,14 @@ Goes inside: a handler.
 
 ### `qg:emit`
 
-Plays a qg:particles effect once where a thing is. Only seen: the game's state never depends on it.
+Plays a qg:particles effect once where a thing is, or a text that floats up from it and fades (a damage number, +10). Only seen: the game's state never depends on it.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `particles` | a name | required |  |
+| `particles` | a name |  | the effect (or text=) |
+| `text` | an expression |  | a text instead: "+10", or an expression (`{str(amount)}`) |
+| `color` | `#rrggbb` | `#ffffff` | the text's colour |
+| `size` | integer | `8` | the text's size |
 | `at` | a name | `me` | me, other, a character id, or a q:set holding a thing |
 | `dx` | number | `0.0` |  |
 | `dy` | number | `0.0` | offset in pixels |
@@ -1247,7 +1296,198 @@ A new game: every qg:item back to its start=, and the named things picked up or 
 
 Goes inside: a handler.
 
+### `qg:for-each`
+
+Runs what it holds once for every thing of a tag in the scene, in the scene's order, with var= naming the thing: freeze every enemy, break the bricks near a bomb. The things are those there as it starts; one destroyed meanwhile is skipped.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `tag` | a name | required | the things' tag |
+| `var` | a name | `it` | the name of each thing in turn (a target=, an expression) |
+
+Goes inside: a handler.
+
+### `qg:time-scale`
+
+Slow motion, or fast: the whole game runs at this speed — its ticks come further apart (or closer), each the same tick as ever, so a replay and every peer see the same game. The music is not slowed. A new scene starts at 1.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `scale` | number | required | 0.25: four times slower; 1: as usual; up to 4 |
+| `seconds` | number | `0.0` | seconds as the player sees them, then back to 1 (0: until another qg:time-scale) |
+
+Goes inside: a handler.
+
+### `qg:quit`
+
+Ends the game: the window closes. In a browser there is nothing to quit to and it does nothing; `can_quit()` says whether it would.
+
+Goes inside: a handler.
+
+### `qg:start-now`
+
+The host starts the networked game with the players who are there, once qg:multiplayer's min-players= are (before that, and on the other machines, it does nothing). The lobby has a Start now button that does this.
+
+Goes inside: a handler.
+
+### `qg:watch`
+
+Joins a networked game at an address with no seat, to watch it: the players' inputs reach this machine too, and it runs the same game, its keys doing nothing. One who comes after the game has begun catches up on it first. `net_status()` is then "watching" and `net_player()` 0. Not under rollback=.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `address` | an expression | required | host:port, or a relay's wss:// room |
+
+Goes inside: a handler.
+
+### `qg:after`
+
+Runs what it holds later, so many ticks (or seconds) after the handler reached it: a power-up that runs out, a bomb's fuse, a pause before the next serve. It counts the game's ticks, so a replay and every peer see the same; it waits while the scene is paused, and goes with the scene. The names it reads (me, other, a loop variable, a parameter) are what they were as it started; a thing gone by then is null, and an action on it does nothing.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `ticks` | an expression |  | how many ticks from now (60 a second) |
+| `seconds` | an expression |  | or how many seconds, rounded to ticks |
+| `name` | a name |  | one of this name still waiting is replaced: the count starts again (a second power-up before the first runs out) |
+
+Goes inside: a handler.
+
+### `qg:beam`
+
+A line between two things for a while, following them as they move: a laser, a zap, a rope, an aiming line. Only seen.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `from` | a name | `me` | me, other, a character or cursor id, or a parameter, loop variable or q:set holding a thing |
+| `to` | a name | required | the same |
+| `seconds` | number | `0.1` | how long it shows |
+| `color` | `#rrggbb` | `#ffffff` |  |
+| `width` | number | `2.0` | pixels |
+
+Goes inside: a handler.
+
+### `qg:camera-to`
+
+The camera goes to a thing or a point, stays a while, and comes back to what it follows: a cutscene, a boss's entrance, the gate a lever opened. The scene waits meanwhile (unless pause="false"). The scene needs a qg:camera (in a q:function of the game, a scene without one is not shown anything).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `target` | a name |  | me, other, a character or cursor id, or a parameter, loop variable or q:set holding a thing (or x= and y=) |
+| `x` | an expression |  |  |
+| `y` | an expression |  | a point of the scene instead |
+| `zoom` | number |  | how close it goes (the camera's own when not given) |
+| `seconds` | number | `0.6` | to go there, and as long to come back |
+| `hold` | number | `1.0` | seconds it stays |
+| `pause` | true / false | `true` | the scene waits while the camera is away |
+
+Goes inside: a handler.
+
+### `qg:attach`
+
+A thing is carried by another: it goes where its carrier goes, dx,dy from it (a key over a head, a torch in a hand, a turret on a tank). While carried it touches nothing and nothing touches it, and it stands in no cell; `carrying(me, 'key')` finds it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `target` | a name | `other` | what is carried: other, me, a character id, or a parameter, loop variable or q:set holding a thing |
+| `to` | a name | `me` | its carrier, the same |
+| `dx` | number | `0.0` |  |
+| `dy` | number | `-12.0` | from the carrier's middle |
+
+Goes inside: a handler.
+
+### `qg:detach`
+
+A carried thing is put down where it is (qg:attach): it touches again.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `target` | a name |  | what is put down (or from= and tag=) |
+| `from` | a name |  | the carrier: me, other, a character id... |
+| `tag` | a name |  | with from=: every thing of this tag it carries |
+
+Goes inside: a handler.
+
+### `qg:volume`
+
+How loud a bus of the game's sounds is, from 0 (silent) to 100; kept between runs. `volume('music')` reads it. Only heard.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `bus` | a name | required | a bus of the game's sounds (qg:sound bus=) |
+| `value` | an expression | required | 0 to 100 |
+
+Goes inside: a handler.
+
+### `qg:fullscreen`
+
+The game fills the screen, or goes back to a window; kept between runs. `fullscreen()` reads it. In a browser, the page goes full screen.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `on` | an expression |  | true or false; none: the other of what it is |
+
+Goes inside: a handler.
+
+### `qg:rumble`
+
+A player's joypad shakes (and a phone, in the hand): a hit felt. Felt only, like a shake: nothing in the game depends on it. Over the network only the machine of that player's seat feels it; on one machine, player N's is the Nth joypad connected.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `player` | an expression | `1` | whose joypad |
+| `strength` | number | `0.5` | 0 to 1 |
+| `seconds` | number | `0.2` |  |
+
+Goes inside: a handler.
+
+### `qg:music`
+
+The music of a scene: a looping qg:sound that plays while the scene is on. Going to a scene with other music crossfades from one to the other; a scene with the same music lets it play on; a scene with none fades it out. In a handler, it changes the music there and then, crossfading over fade= (a boss's theme as the fight starts, the scene's own back as it ends). Only heard, like a sound.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `sound` | a name | required | a qg:sound with loop="true" |
+| `fade` | number | `1.0` | seconds the crossfade takes |
+| `volume` | number | `0.0` | decibels (0: as recorded; -6: half as loud) |
+
+Goes inside: `qg:scene`, a handler.
+
+### `qg:travel`
+
+A thing travels to a place by the cheapest way over the scene's qg:tilemap (qg:tile cost=), round the things and characters on it and where other travels end, a cell at a time: a unit of a tactics game. Its qg:on-end runs as it arrives (`me` the traveller); with no way, at once, where it is. In the game's ticks, so a replay and every peer see the same; a new travel of the same thing replaces it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `target` | a name | `me` | me, other, a parameter, a loop variable or a q:set holding a thing |
+| `to` | an expression | required | a cursor (its cell), or a thing or character (up to it, beside it) |
+| `budget` | an expression |  | how much of the way's cost it may spend: it stops where the next step would cost more (all the way when not given) |
+| `step` | integer | `10` | ticks a cell |
+
+Goes inside: a handler.
+
 ## Other tags
+
+### `qg:asset`
+
+A picture or a sound of the game as it is in a qg:language: the banner with its words in the language, a voice. The scenes that start while the language is shown draw the picture; the sound plays from the moment it is chosen.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required | a qg:spritesheet, qg:tileset or qg:sound of the game |
+| `src` | text | required | its file in this language, relative to the .q or a folder above it; a picture has the same frame size |
+
+Goes inside: `qg:language`.
+
+### `qg:choice`
+
+One answer to a qg:line: what the player reads, and what happens when it is chosen (then the next line). Holds actions and statements: a qg:say opens another dialogue, a q:set remembers the answer.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `label` | text | required | what it says, or an expression ({...}) |
+| `if` | an expression |  | offered only when this is true as the line shows |
+
+Goes inside: `qg:line`.
 
 ### `qg:dialogue`
 
@@ -1258,48 +1498,120 @@ Lines someone says, shown one at a time in a box at the bottom of the screen (qg
 | `name` | a name | required |  |
 | `font` | text |  | a .ttf, relative to the .q or a folder above it |
 | `size` | integer | `24` | font size |
+| `speed` | number | `0.0` | letters a second, typed in as each line shows (select shows it whole at once); 0: the whole line at once |
+| `sheet` | a name |  | a qg:spritesheet of faces: a line's portrait= is a frame of it |
+| `box` | a name |  | a qg:spritesheet with slice=: the box is drawn with it, stretched (a frame) |
 
 Goes inside: `qg:scene`.
 
+### `qg:icon`
+
+A picture in the HUD: a frame of a sheet (a heart before the hearts, a logo on a title).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `sheet` | a name | required | a qg:spritesheet or qg:tileset |
+| `frame` | an expression | `0` | a frame of it, or an expression read every frame |
+| `scale` | number | `1.0` | how large: 2 is twice its size |
+
+Goes inside: `qg:hud`.
+
+### `qg:label`
+
+Text in the world, read every tick: over a character or a prefab, following it (a name over a player, what an enemy has left), or at a place of the scene (a sign). Only seen.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `value` | an expression | required | an expression; on a character or a prefab, `me` is it |
+| `x` | number |  | in a scene: where its middle is |
+| `y` | number |  |  |
+| `dx` | number | `0.0` | on a character or a prefab: how far from its middle |
+| `dy` | number | `-12.0` |  |
+| `size` | integer | `8` |  |
+| `color` | `#rrggbb` | `#ffffff` |  |
+| `if` | an expression |  | placed only when this is true as the scene is built |
+
+Goes inside: `qg:scene`, `qg:character`, `qg:prefab`.
+
 ### `qg:language`
 
-The game's texts in another language: each qg:phrase gives one text as written in the game, and what it is in this language. A text with no phrase stays as written. The language is ?lang= in a web page, --q-lang= on the command line, else the system's, when the game has it; `tr(text)` translates a text an expression puts together. In pt and es, a qg:lobby's own texts come translated.
+The game's texts in another language: each qg:phrase gives one text as written in the game, and what it is in this language. A text with no phrase stays as written. The language is ?lang= in a web page, --q-lang= on the command line, else the system's, when the game has it; `tr(text)` translates a text an expression puts together, and `tr_n(one, other, n)` a count's word (1 potion, 2 potions) by the language's plural rule. In pt and es, a qg:lobby's own texts come translated. A qg:asset gives a picture or a sound drawn or spoken in the language.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `lang` | text | required | a language code: pt, es, zh, pt_BR... |
 | `name` | text | `` | its own name for it (Português) |
+| `font` | text |  | a .ttf with the letters of its alphabet that the game's fonts lack (Cyrillic, Greek, Japanese): every text draws them from it |
 
 Goes inside: `q:application`.
 
+### `qg:light`
+
+A light: a torch on a wall, a lantern a character carries, the glow of a gem. In a scene with ambient= it is what can be seen; elsewhere it brightens what it reaches. Only seen: the game's state never reads it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `x` | number |  | in a scene: where it is |
+| `y` | number |  |  |
+| `dx` | number | `0.0` | on a character or a prefab: how far from its middle |
+| `dy` | number | `0.0` |  |
+| `radius` | number | `64.0` | how far it reaches, pixels |
+| `color` | `#rrggbb` | `#ffffff` |  |
+| `energy` | number | `1.0` | how bright: 1 as drawn, 2 twice |
+| `flicker` | number | `0.0` | 0 to 1: how much it flickers, as a flame does (the same in every replay) |
+| `shadows` | true / false | `false` | the solid tiles of a scene with ambient= stop it, and cast shadows |
+
+Goes inside: `qg:scene`, `qg:character`, `qg:prefab`.
+
 ### `qg:line`
 
-One line of a qg:dialogue: who says it, and what.
+One line of a qg:dialogue: who says it, and what. With qg:choice inside, the player chooses (up and down, select, or a click), and the choice's actions run before the next line.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `who` | text | `` | the name over the text, or an expression ({...}) |
 | `text` | text | required | the line, or an expression ({...}) read as it is shown |
+| `portrait` | integer |  | a frame of the dialogue's sheet=, beside the text |
 
 Goes inside: `qg:dialogue`.
-
-### `qg:music`
-
-The music of a scene: a looping qg:sound that plays while the scene is on. Going to a scene with other music crossfades from one to the other; a scene with the same music lets it play on; a scene with none fades it out.
-
-| Attribute | Type | Default | Meaning |
-|---|---|---|---|
-| `sound` | a name | required | a qg:sound with loop="true" |
-| `fade` | number | `1.0` | seconds the crossfade takes |
-| `volume` | number | `0.0` | decibels (0: as recorded; -6: half as loud) |
-
-Goes inside: `qg:scene`.
 
 ### `qg:on-end`
 
-What happens when a qg:dialogue has shown its last line. Holds actions and statements.
+What happens when a qg:dialogue has shown its last line, or when a qg:tween is done (the last of its repeats; `me` is the thing it moved, and another tween in it plays after: a sequence). Holds actions and statements.
 
-Goes inside: `qg:dialogue`.
+Goes inside: `qg:dialogue`, `qg:tween`, `qg:travel`.
+
+### `qg:on-screen-enter`
+
+What happens when this character or prefab comes onto the screen from outside it (one placed on the screen has not come onto it). In a scene, with of=, when any thing of that tag does.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `of` | a name |  | scene: the tag |
+| `side` | `any` / `top` / `bottom` / `left` / `right` | `any` | the edge it came in by |
+
+Goes inside: `qg:character`, `qg:prefab`, `qg:scene`.
+
+### `qg:on-screen-exit`
+
+What happens when this character or prefab leaves the screen: the camera's view, or the scene when it has no camera. In a scene, with of=, when any thing of that tag does (`other` is the thing). Holds actions and statements; it runs in the game's tick, the same on every peer.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `of` | a name |  | scene: the tag |
+| `side` | `any` / `top` / `bottom` / `left` / `right` | `any` | the edge it left by |
+
+Goes inside: `qg:character`, `qg:prefab`, `qg:scene`.
+
+### `qg:on-separate`
+
+What happens when this character or prefab stops touching something it touched: a plate stepped off, a door that closes behind. Holds actions and statements; `me` is the one that touched, `other` what it touched. Not when the other is destroyed: it left nothing.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `with` | a name | required | the tag of what it stops touching |
+
+Goes inside: `qg:character`, `qg:prefab`.
 
 ### `qg:parallax`
 
@@ -1317,14 +1629,60 @@ Goes inside: `qg:scene`.
 
 ### `qg:phrase`
 
-One text of the game, in a qg:language.
+One text of the game, in a qg:language. The plural word of a count (`tr_n('potion', 'potions', n)`) takes the forms its language has: in Russian, 1 зелье, 2 зелья, 5 зелий.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `text` | text | required | the text exactly as the game shows it (a button, a line, a HUD text) |
-| `as` | text | required | what it is in this language |
+| `as` | text | required | what it is in this language; for a plural word, the form of the counts the others are not (5 зелий) |
+| `one` | text |  | a plural word's form for one (1, 21, 31 in ru, uk, be; 1 elsewhere); when not given, the phrase of the word for one |
+| `few` | text |  | its form for a few: 2 to 4 (22 to 24...) in ru, uk, be and pl; 2 to 4 in cs and sk |
+| `many` | text |  | its form for many (5 to 20, 25...) in ru, uk, be and pl; as= when not given |
 
 Goes inside: `qg:language`.
+
+### `qg:rebind`
+
+A key of a qg:menu: it shows the action's key, and once chosen, the next key, mouse button or joypad button pressed becomes the action's (Escape keeps the old one). Kept between runs. Local to the machine, as a field is: the replay and the lockstep carry the actions, not the keys.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `action` | a name | required | an action of the game (qg:input, or a default one) |
+| `label` | text | `` | text before the key; the action's name when not given |
+| `player` | integer | `1` | whose action |
+| `if` | an expression |  | shown, and choosable, only while this is true |
+
+Goes inside: `qg:menu`.
+
+### `qg:slider`
+
+A value of a qg:menu that left and right change while it has the focus: how loud a bus is (bus=, from 0 to 100, kept between runs), or a number of the scene or the game (bind=).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `label` | text | `` | text before it |
+| `bus` | a name |  | a bus of the game's sounds (qg:sound bus=), or bind= |
+| `bind` | a name |  | a number q:set of the scene or the game, or bus= |
+| `min` | number | `0.0` |  |
+| `max` | number | `100.0` |  |
+| `step` | number | `10.0` | how much a press of left or right changes it |
+| `if` | an expression |  | shown, and choosable, only while this is true |
+
+Goes inside: `qg:menu`.
+
+### `qg:steer`
+
+A part: left and right turn the body, up pushes it the way it points and down holds it back; it drifts, and slows by drag= on its own. Its picture turns with it. An Asteroids ship, a car seen from above, a horse. It needs no qg:walk.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `turn` | number | `180.0` | degrees a second |
+| `thrust` | number | `200.0` | pixels per second, added every second up is held |
+| `drag` | number | `1.0` | the part of its speed it loses every second on its own (0: none, it drifts for ever) |
+| `max` | number | `160.0` | its top speed, pixels per second |
+| `heading` | number | `0.0` | where it points at first, degrees: 0 right, 90 down |
+
+Goes inside: `qg:behavior`.
 
 ### `qg:tile`
 
@@ -1336,6 +1694,9 @@ One tile of a qg:tileset that is not a full solid square, for the tilemap layers
 | `shape` | text |  | the solid part, as x,y points from the tile's top-left corner separated by semicolons (0,10; 64,10; 64,64; 0,64); none: not solid |
 | `one-way` | true / false | `false` | stood on from above, jumped through from below |
 | `kind` | `ladder` / `water` / `ice` / `hurt` |  | ladder: passed through, climbed with up and down, let go of with jump; water: passed through, slow to sink in, a jump is a stroke, slower to walk; ice: slid on (a solid tile to stand on in a platformer, a floor in a top-down game); hurt: a character's qg:on-tile kind="hurt" runs while it touches one. In a Tiled tileset: a tile's class, or its kind property |
+| `frames` | integer | `1` | an animated tile (water, lava, a torch): how many frames it shows in turn, itself and the ones after it in the sheet's row, which are then not tiles of their own. Only seen |
+| `fps` | number | `4.0` | frames a second, with frames= |
+| `cost` | integer | `1` | what a step onto it costs a walker finding its way (ai="pathfind", qg:seek, a pointer's click, qg:travel, cost()): a forest 2, a marsh 3. The way found is the cheapest |
 
 Goes inside: `qg:tileset`.
 
@@ -1352,9 +1713,49 @@ Runs its handler after so many ticks, or every so many ticks, in this scene.
 
 Goes inside: `qg:scene`.
 
+### `qg:touch-button`
+
+A button on a touch screen that presses one of the game's actions while it is touched, as a key would (a replay and the lockstep see the action). In the application, every scene has it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `action` | a name | required | an action of the game |
+| `x` | number | required |  |
+| `y` | number | required | its middle, on the screen |
+| `size` | number | `32.0` | its width across, in pixels |
+| `label` | text | `` | a letter or a word on it |
+| `player` | integer | `1` | whose action |
+| `show` | `touch` / `always` | `touch` | touch: only on a device with a touch screen |
+
+Goes inside: `q:application`, `qg:scene`.
+
+### `qg:touch-stick`
+
+A stick on a touch screen: dragged from its middle, it presses left, right, up and down as far as it is pushed (strength()). In the application, every scene has it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `x` | number | required |  |
+| `y` | number | required | its middle, on the screen |
+| `size` | number | `56.0` | its width across, in pixels |
+| `player` | integer | `1` | whose directions |
+| `show` | `touch` / `always` | `touch` | touch: only on a device with a touch screen |
+
+Goes inside: `q:application`, `qg:scene`.
+
+### `qg:when`
+
+Runs its handler when a condition turns true: a wave beaten (`count('enemy') == 0`), a room solved, a score reached. The condition is read at the start of every tick, from the scene's first, after the qg:afters due then (not while the scene is paused); the handler runs on the tick it is first true, and again only after it has been false. Holds actions and statements.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `condition` | an expression | required | an expression of the scene's state |
+
+Goes inside: `qg:scene`.
+
 ## Statements
 
-Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `language()`, `has_save()`, `distance()`, `nearest()`, `sees()`, `held()`.
+Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. A `q:function` directly in a scene is the scene's; in `q:application`, every scene's (and the prefabs' handlers'), reading the game's state, its parameters and its own variables. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `tr_n()`, `language()`, `hovered()`, `has_save()`, `volume()`, `fullscreen()`, `distance()`, `nearest()`, `sees()`, `cost()`, `held()`, `can_quit()`, `ticks()`, `sin()`, `cos()`, `atan2()`, `sort()`, `carrying()`; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take degrees and `atan2(y, x)` gives them (0 to the right, 90 down), and `sort()` is the Core's. `pressing()`, `pressed_for()`, `strength()` read an action of player 1, or of another (`pressing('run', 2)`): held now, the ticks it has been held (on the tick it is let go, how long it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: `col`, `doing`, `facing`, `health`, `name`, `on_ceiling`, `on_floor`, `on_wall`, `player`, `row`, `state`, `tag`, `vx`, `vy`, `x`, `y`, as its controller has them.
 
 ## `gd:` attributes
 
@@ -1449,13 +1850,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:tileset>
   <qg:spritesheet name="chars" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
 
-  <qg:sound name="jump" src="assets/kenney/audio/jump.ogg" />
-  <qg:sound name="coin" src="assets/kenney/audio/coin.ogg" />
-  <qg:sound name="stomp" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="block" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="powerup" src="assets/kenney/audio/powerup.ogg" />
-  <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="jump" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="effects" name="coin" src="assets/kenney/audio/coin.ogg" />
+  <qg:sound bus="effects" name="stomp" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="hurt" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="block" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="powerup" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="win" src="assets/kenney/audio/win.ogg" />
+  <!-- the bouncer's hop: heard from where it is, to one side, softer the farther off -->
+  <qg:sound bus="effects" name="hop" src="assets/kenney/audio/jump.ogg" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="sparkle" preset="stars" color="#ffe060" />
@@ -1476,13 +1879,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:prefab name="Lift" tag="lift" sheet="kenney" frame="43" hitbox="18x8" solid="true"
              ai="shuttle" dy="-80" period="240" />
 
-  <!-- an enemy made of parts: it hops to and fro on the snow, and over what it bumps -->
+  <!-- an enemy made of parts: it hops to and fro on the snow, and over what it bumps;
+       each hop is heard from where it is, so it is heard before it is seen -->
   <qg:prefab name="Bouncer" tag="enemy" sheet="chars" frame="11" hitbox="18x18" ai="behavior" speed="36"
              turns-at="edge">
     <qg:animation name="walk" frames="11,12" fps="4" />
     <qg:behavior>
       <qg:gravity />
-      <qg:leap height="20" every="45" when="{true}" />
+      <qg:leap height="20" every="45" when="{true}" sound="hop" />
       <qg:patrol heading="left" distance="18" />
     </qg:behavior>
   </qg:prefab>
@@ -1492,6 +1896,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:prefab>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="40" y="184" />
+  <qg:touch-button action="jump" label="A" x="220" y="184" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="SCORE" as="PONTOS" />
     <qg:phrase text="LIVES" as="VIDAS" />
@@ -1502,7 +1910,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="New game" as="Novo jogo" />
     <qg:phrase text="Continue" as="Continuar" />
     <qg:phrase text="Language" as="Idioma" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Jump" as="Pular" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="SCORE" as="PUNTOS" />
     <qg:phrase text="LIVES" as="VIDAS" />
@@ -1513,7 +1929,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="New game" as="Nueva partida" />
     <qg:phrase text="Continue" as="Continuar" />
     <qg:phrase text="Language" as="Idioma" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Jump" as="Saltar" />
+</qg:language>
 
   <!-- ===== The title: a new game, or the saved one (each level cleared saves it) ===== -->
 
@@ -1522,6 +1946,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:menu position="center">
       <qg:button label="New game"><qg:goto-scene name="map" /></qg:button>
       <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
     </qg:menu>
   </qg:scene>
@@ -1600,7 +2025,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
     <qg:character id="player" controller="platformer" sheet="chars" frame="0"
                   x="40" y="160" hitbox="18x22"
-                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6"
+                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6" buffer-frames="6"
                   jump-sound="jump">
       <qg:state name="small" hitbox="18x22" frame="0" initial="true">
         <qg:animation name="idle" frames="0" />
@@ -1726,7 +2151,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
     <qg:character id="player" controller="platformer" sheet="chars" frame="0"
                   x="40" y="160" hitbox="18x22"
-                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6"
+                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6" buffer-frames="6"
                   jump-sound="jump">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
@@ -1808,7 +2233,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
     <qg:character id="player" controller="platformer" sheet="chars" frame="0"
                   x="40" y="160" hitbox="18x22"
-                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6"
+                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6" buffer-frames="6"
                   jump-sound="jump">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
@@ -1899,7 +2324,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
     <qg:character id="player" controller="platformer" sheet="chars" frame="0"
                   x="40" y="160" hitbox="18x22"
-                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6"
+                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6" buffer-frames="6"
                   jump-sound="jump">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
@@ -1971,6 +2396,18 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:hud>
   </qg:scene>
 
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="256" height="224" background="#3b7d4f">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="12">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Jump" action="jump" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
 </q:application>
 ```
 
@@ -1996,6 +2433,36 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <q:set name="taken" value="[]" type="array" />      <!-- things picked up, by name -->
   <q:set name="opened" value="[]" type="array" />     <!-- doors and gates opened, by name -->
   <q:set name="message" value="" />
+  <!-- a new game: the state as the keep was found -->
+  <q:function name="anew">
+    <q:set name="hearts" value="3" />
+    <q:set name="keys" value="0" />
+    <q:set name="taken" value="[]" />
+    <q:set name="opened" value="[]" />
+    <q:set name="message" value="" />
+  </q:function>
+  <!-- three games, each kept apart (qg:save slot=): one goes on where it was, an empty one starts -->
+  <q:function name="game_label" params="n">
+    <q:return value="{tr('Game') + ' ' + str(n) + ': ' + (tr('go on') if has_save(n) else tr('new'))}" />
+  </q:function>
+  <q:function name="play" params="n">
+    <q:if condition="{has_save(n)}">
+      <qg:continue slot="{n}" />
+      <q:else>
+        <q:call function="anew" />
+        <qg:save slot="{n}" scene="room-1" />
+        <qg:goto-scene name="room-1" />
+      </q:else>
+    </q:if>
+  </q:function>
+  <!-- a hurt, the same in every room: a function of the game -->
+  <q:function name="hurt" params="me">
+    <qg:play sound="hurt" />
+    <q:set name="hearts" value="{hearts - 1}" />
+    <q:if condition="{hearts <= 0}">
+      <qg:goto-scene name="game-over" />
+    </q:if>
+  </q:function>
 
   <!-- 1 is the floor (walked on: no collision), 2 the wall. -->
   <qg:tileset name="dungeon" src="assets/dungeon.png" tile="18">
@@ -2003,11 +2470,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:tileset>
   <qg:spritesheet name="hero" src="assets/hero.png" tile="24" />
 
-  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="pick" src="assets/kenney/audio/coin.ogg" />
-  <qg:sound name="open" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound name="hit" bus="effects" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound name="hurt" bus="effects" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound name="pick" bus="effects" src="assets/kenney/audio/coin.ogg" />
+  <qg:sound name="open" bus="effects" src="assets/kenney/audio/block.ogg" />
+  <qg:sound name="win" bus="effects" src="assets/kenney/audio/win.ogg" />
+
+  <!-- on a phone: a stick to walk and a button for the sword, in every scene -->
+  <qg:touch-stick x="40" y="184" />
+  <qg:touch-button action="jump" label="A" x="220" y="184" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="sparkle" preset="stars" color="#fff0a0" />
@@ -2045,7 +2516,21 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="New game" as="Novo jogo" />
     <qg:phrase text="Continue" as="Continuar" />
     <qg:phrase text="Language" as="Idioma" />
-  </qg:language>
+    <qg:phrase text="The keep is quiet again." as="A fortaleza está quieta outra vez." />
+    <qg:phrase text="Once more" as="Mais uma vez" />
+    <qg:phrase text="To the title" as="Para o início" />
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Sword" as="Espada" />
+    <qg:phrase text="Game" as="Jogo" />
+    <qg:phrase text="go on" as="continuar" />
+    <qg:phrase text="new" as="novo" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="HEARTS" as="CORAZONES" />
     <qg:phrase text="KEYS" as="LLAVES" />
@@ -2058,30 +2543,50 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="New game" as="Nueva partida" />
     <qg:phrase text="Continue" as="Continuar" />
     <qg:phrase text="Language" as="Idioma" />
-  </qg:language>
+    <qg:phrase text="The keep is quiet again." as="La fortaleza vuelve a estar en calma." />
+    <qg:phrase text="Once more" as="Otra vez" />
+    <qg:phrase text="To the title" as="Al inicio" />
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Sword" as="Espada" />
+    <qg:phrase text="Game" as="Partida" />
+    <qg:phrase text="go on" as="seguir" />
+    <qg:phrase text="new" as="nueva" />
+</qg:language>
 
   <!-- ===== The title: a new game, or the saved one (each room entered saves it) ===== -->
 
   <qg:scene name="title" width="256" height="224" background="#2b2b3a">
     <qg:hud position="top-center" size="32"><qg:text value="{'KEEP'}" /></qg:hud>
-    <qg:menu position="center">
-      <qg:button label="New game"><qg:goto-scene name="room-1" /></qg:button>
-      <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+    <qg:menu position="center" size="14">
+      <qg:button label="{game_label(1)}"><q:call function="play" args="1" /></qg:button>
+      <qg:button label="{game_label(2)}"><q:call function="play" args="2" /></qg:button>
+      <qg:button label="{game_label(3)}"><q:call function="play" args="3" /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the sword's key; kept between runs ===== -->
+
+  <qg:scene name="options" width="256" height="224" background="#2b2b3a">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="12">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Sword" action="jump" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
     </qg:menu>
   </qg:scene>
 
   <!-- ===== Room 1: the entrance. East to room 2. ===== -->
 
   <qg:scene name="room-1" width="256" height="224" background="#2b2b3a" seed="1" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,2,2,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -2125,23 +2630,17 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:exit name="east" x="252" y="99" width="8" height="36" to="room-2" at="west" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== Room 2: the crossing. West to 1, north to 3, south to 4, east (locked) to 5. ===== -->
 
   <qg:scene name="room-2" width="256" height="224" background="#2b2b3a" seed="2" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,1,1,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -2196,23 +2695,17 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:exit name="east" x="252" y="99" width="8" height="36" to="room-5" at="west" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== Room 3: the key, guarded. South to 2. ===== -->
 
   <qg:scene name="room-3" width="256" height="224" background="#2b2b3a" seed="3" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,2,2,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -2273,23 +2766,17 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:exit name="south" x="117" y="220" width="36" height="8" to="room-2" at="north" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== Room 4: the switch. North to 2. ===== -->
 
   <qg:scene name="room-4" width="256" height="224" background="#2b2b3a" seed="4" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,1,1,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -2337,23 +2824,17 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:exit name="north" x="117" y="-4" width="36" height="8" to="room-2" at="south" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== Room 5: behind the locked door; the gate the switch opens. West to 2, east to 6. ===== -->
 
   <qg:scene name="room-5" width="256" height="224" background="#2b2b3a" seed="5" save="true">
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" />
-      <q:set name="hearts" value="{hearts - 1}" />
-      <q:if condition="{hearts <= 0}">
-        <qg:goto-scene name="game-over" />
-      </q:if>
-    </q:function>
-
     <qg:tilemap tileset="dungeon" collision="true">
 2,2,2,2,2,2,2,2,2,2,2,2,2,2
 2,1,1,1,1,1,1,1,1,1,1,1,1,2
@@ -2400,10 +2881,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:exit name="east" x="252" y="99" width="8" height="36" to="room-6" at="west" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== Room 6: the chest. ===== -->
@@ -2450,10 +2933,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:exit name="west" x="-4" y="99" width="8" height="36" to="room-5" at="east" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== The end, and the game over ===== -->
@@ -2462,16 +2947,20 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:hud position="top-center">
       <qg:text bind="message" />
     </qg:hud>
+    <!-- a moment later, what now: the keep again, or the title -->
+    <qg:dialogue name="end" size="12" speed="30">
+      <qg:line who="KEEP" text="The keep is quiet again.">
+        <qg:choice label="Once more"><q:call function="anew" /><qg:goto-scene name="room-1" /></qg:choice>
+        <qg:choice label="To the title"><qg:goto-scene name="title" /></qg:choice>
+      </qg:line>
+    </qg:dialogue>
+    <qg:timer after="90"><qg:say dialogue="end" /></qg:timer>
   </qg:scene>
 
   <qg:scene name="game-over" width="256" height="224" background="#000000">
     <q:set name="title" value="YOU FELL. PRESS JUMP." />
     <qg:on-input action="jump">
-      <q:set name="hearts" value="3" />
-      <q:set name="keys" value="0" />
-      <q:set name="taken" value="[]" />
-      <q:set name="opened" value="[]" />
-      <q:set name="message" value="" />
+      <q:call function="anew" />
       <qg:goto-scene name="room-1" />
     </qg:on-input>
     <qg:hud position="top-center">
@@ -2493,8 +2982,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
        Three crypts, down and down: a wall a lever opens (qg:set-tile), and
        the skeletons behind it that find their way through as soon as it does
        (ai="pathfind"); crushers that slide to and fro (qg:tween); a vault
-       two levers keep shut, and its treasure. Torches burn and gems sparkle
-       (qg:particles). A skeleton archer, made of parts, keeps its distance and
+       two levers keep shut, and its treasure, in the dark (ambient=): its
+       torches and the delvers' lanterns light it and its pillars cast shadows
+       (qg:light). Torches burn and gems sparkle (qg:particles). A skeleton archer, made of parts, keeps its distance and
        shoots. The hearts and the gems are what the delvers carry
        (qg:item), shown by the HUD's inventory. Each crypt entered is saved (Continue, alone); the
        game speaks English, Portuguese and Spanish. The art is drawn for it by
@@ -2503,6 +2993,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- The delve's state, kept from crypt to crypt; the first crypt starts it anew. -->
   <q:set name="message" value="" />
+  <!-- a hurt, the same in every crypt: a function of the game -->
+  <q:function name="hurt" params="me">
+    <qg:play sound="hurt" vary="0.1" />
+    <qg:shake at="me" frames="8" strength="2" />
+    <qg:take item="heart" />
+    <q:if condition="{held('heart') <= 0}">
+      <qg:goto-scene name="fallen" fade="0.6" />
+    </q:if>
+  </q:function>
 
   <!-- Two players, each on their own machine: the delve starts in crypt-1 once both are there. -->
   <qg:multiplayer players="2" start="crypt-1" />
@@ -2514,15 +3013,20 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:tileset>
   <qg:spritesheet name="delvers" src="assets/delvers.png" tile="24" />
 
-  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="pick" src="assets/kenney/audio/coin.ogg" />
-  <qg:sound name="heal" src="assets/kenney/audio/powerup.ogg" />
-  <qg:sound name="open" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
-  <qg:sound name="twang" src="assets/kenney/audio/jump.ogg" />
-  <qg:sound name="torchlight" src="assets/torchlight.ogg" loop="true" />
-  <qg:sound name="crypt" src="assets/crypt.ogg" loop="true" />
+  <qg:sound bus="effects" name="hit" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="hurt" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="pick" src="assets/kenney/audio/coin.ogg" />
+  <qg:sound bus="effects" name="heal" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="open" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="twang" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="music" name="torchlight" src="assets/torchlight.ogg" loop="true" />
+  <qg:sound bus="music" name="crypt" src="assets/crypt.ogg" loop="true" />
+  <qg:sound bus="music" name="warden" src="assets/warden.ogg" loop="true" />
+  <!-- a skeleton falling apart: one of three, so no two fall alike -->
+  <qg:sound bus="effects" name="bones1" src="assets/bones1.ogg" />
+  <qg:sound bus="effects" name="bones2" src="assets/bones2.ogg" />
+  <qg:sound bus="effects" name="bones3" src="assets/bones3.ogg" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="torch" preset="fire" amount="20" size="3" lifetime="0.7" speed="30" />
@@ -2582,6 +3086,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
              ai="fly" speed="100" walls="stop" rotate="true" lifetime="180" />
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="40" y="184" />
+  <qg:touch-button action="jump" label="A" x="220" y="184" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="HEARTS" as="CORAÇÕES" />
     <qg:phrase text="GEMS" as="GEMAS" />
@@ -2601,7 +3109,16 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="THE VAULT IS OPEN." as="O COFRE ESTÁ ABERTO." />
     <qg:phrase text="THE VAULT IS YOURS." as="O COFRE É SEU." />
     <qg:phrase text="THE CRYPT KEEPS YOU." as="A CRIPTA FICA COM VOCÊ." />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Sword" as="Espada" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="HEARTS" as="CORAZONES" />
     <qg:phrase text="GEMS" as="GEMAS" />
@@ -2621,7 +3138,16 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="THE VAULT IS OPEN." as="LA BÓVEDA ESTÁ ABIERTA." />
     <qg:phrase text="THE VAULT IS YOURS." as="LA BÓVEDA ES TUYA." />
     <qg:phrase text="THE CRYPT KEEPS YOU." as="LA CRIPTA SE QUEDA CONTIGO." />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Sword" as="Espada" />
+</qg:language>
 
   <!-- ===== The title: alone, together, or the saved delve ===== -->
 
@@ -2638,6 +3164,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:button label="Play alone"><qg:goto-scene name="crypt-1" fade="0.4" /></qg:button>
       <qg:button label="Play together"><qg:goto-scene name="together" /></qg:button>
       <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
     </qg:menu>
   </qg:scene>
@@ -2663,16 +3190,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="message" value="A SEALED WALL. A LEVER MUST OPEN IT." />
     <q:set name="leaving" value="false" type="boolean" />
 
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" vary="0.1" />
-      <qg:shake at="me" frames="8" strength="2" />
-      <qg:take item="heart" />
-      <q:if condition="{held('heart') <= 0}">
-        <qg:goto-scene name="fallen" fade="0.6" />
-      </q:if>
-    </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
+      <qg:play sounds="bones1, bones2, bones3" vary="0.1" />
       <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">
@@ -2681,6 +3201,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:set-tile col="8" row="5" tile="12" />
       <qg:set-tile col="8" row="6" tile="12" />
       <qg:emit particles="rumble" at="lever" dx="72" dy="-63" />
+      <!-- the camera goes to show the gap, and back; the dead do not wait for it -->
+      <qg:camera-to x="153" y="108" zoom="2" seconds="0.4" hold="0.6" pause="false" />
       <q:set name="message" value="THE WALL OPENS. THE DEAD WAKE." />
     </q:function>
     <q:function name="down" params="">
@@ -2741,6 +3263,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:on-hit with="enemy"><q:call function="slay" args="other" /></qg:on-hit>
     </qg:character>
 
+    <qg:camera follow="p1" bounds="tilemap" />
+
     <qg:instance prefab="Lever" name="lever" x="81" y="171" />
     <qg:instance prefab="Gem" name="gem-1" x="99" y="45" />
     <qg:instance prefab="Gem" name="gem-2" x="117" y="153" />
@@ -2762,16 +3286,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="message" value="THE CRUSHERS. MIND THEIR TIME." />
     <q:set name="leaving" value="false" type="boolean" />
 
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" vary="0.1" />
-      <qg:shake at="me" frames="8" strength="2" />
-      <qg:take item="heart" />
-      <q:if condition="{held('heart') <= 0}">
-        <qg:goto-scene name="fallen" fade="0.6" />
-      </q:if>
-    </q:function>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
+      <qg:play sounds="bones1, bones2, bones3" vary="0.1" />
       <qg:emit particles="slain" at="foe" />
       <qg:destroy target="foe" />
     </q:function>
@@ -2857,22 +3374,24 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- ===== Crypt 3: the vault, which two levers keep shut. ===== -->
 
-  <qg:scene name="crypt-3" width="256" height="224" background="#100e16" seed="3" save="true">
+  <!-- The vault is dark (ambient=): what the torches and the delvers' lanterns light, and the walls cast
+       their shadows. Only seen: the game is the same in the dark. -->
+  <qg:scene name="crypt-3" width="256" height="224" background="#100e16" seed="3" save="true" ambient="#1c1828">
     <qg:music sound="crypt" />
     <q:set name="message" value="THE VAULT. TWO LEVERS HOLD IT SHUT." />
     <q:set name="pulled" value="0" type="number" />
     <q:set name="won" value="false" type="boolean" />
 
-    <q:function name="hurt" params="me">
-      <qg:play sound="hurt" vary="0.1" />
-      <qg:shake at="me" frames="8" strength="2" />
-      <qg:take item="heart" />
-      <q:if condition="{held('heart') <= 0}">
-        <qg:goto-scene name="fallen" fade="0.6" />
-      </q:if>
-    </q:function>
+    <!-- The warden, the skeleton archer: its fight has a theme of its own, from
+         when it first sees a delver until it falls (the music changes in the
+         scene; what is heard only, so the game is the same). -->
+    <qg:when condition="{distance(archer, p1) &lt; 110 or distance(archer, p2) &lt; 110}">
+      <qg:music sound="warden" fade="0.5" />
+    </qg:when>
     <q:function name="slay" params="foe">
       <qg:play sound="hit" vary="0.15" />
+      <qg:play sounds="bones1, bones2, bones3" vary="0.1" />
+      <q:if condition="{foe.name == 'archer'}"><qg:music sound="crypt" fade="2" /></q:if>
       <qg:swap target="foe" prefab="Fallen" />
     </q:function>
     <q:function name="pull" params="lever">
@@ -2917,10 +3436,17 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:emitter particles="torch" x="243" y="57" />
     <qg:emitter particles="torch" x="99" y="147" />
     <qg:emitter particles="torch" x="153" y="147" />
+    <!-- each torch's light, just off its wall, flickering as a flame; and the treasure's glow in the vault -->
+    <qg:light x="24" y="63" radius="72" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="232" y="63" radius="72" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="99" y="138" radius="64" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="153" y="138" radius="64" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:light x="126" y="176" radius="40" color="#ffd860" energy="1.4" shadows="true" />
 
     <qg:character id="p1" controller="topdown" player="1" sheet="delvers" frame="0"
                   x="45" y="45" hitbox="12x14" speed="70"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
+      <qg:light radius="52" color="#fff0d8" shadows="true" />   <!-- a lantern -->
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
       <qg:animation name="walk-up" frames="3,4" fps="8" />
@@ -2937,6 +3463,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:character id="p2" controller="topdown" player="2" sheet="delvers" frame="10"
                   x="207" y="45" hitbox="12x14" speed="70" if="{net_status() != 'offline'}"
                   attack-action="jump" attack-reach="16" attack-frames="12" attack-sound="hit">
+      <qg:light radius="52" color="#fff0d8" shadows="true" />   <!-- a lantern -->
       <qg:animation name="idle" frames="10" />
       <qg:animation name="walk" frames="11,12" fps="8" />
       <qg:animation name="walk-up" frames="13,14" fps="8" />
@@ -3003,6 +3530,19 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:menu>
   </qg:scene>
 
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="256" height="224" background="#16141e">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="12">
+      <qg:slider label="Music" bus="music" />
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Sword" action="jump" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
 </q:application>
 ```
 
@@ -3029,11 +3569,11 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:spritesheet name="boss" src="assets/boss.png" tile="40" />
   <qg:spritesheet name="space" src="assets/space.png" tile="256x224" />
 
-  <qg:sound name="shoot" src="assets/kenney/audio/jump.ogg" />
-  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="boom" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="shoot" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="effects" name="hit" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="boom" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="hurt" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="win" src="assets/kenney/audio/win.ogg" />
 
   <!-- The ship's shot: flies up, gone after 80 ticks or when it leaves the screen. -->
   <qg:prefab name="Shot" tag="shot" sheet="ships" frame="8" hitbox="18x8"
@@ -3097,6 +3637,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:prefab>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="40" y="184" />
+  <qg:touch-button action="jump" label="A" x="220" y="184" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="SCORE" as="PONTOS" />
     <qg:phrase text="LIVES" as="VIDAS" />
@@ -3105,7 +3649,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="THE DRIFT IS CLEAR" as="O CAMPO ESTÁ LIMPO" />
     <qg:phrase text="THE DRIFT IS CLEAR. PRESS JUMP." as="O CAMPO ESTÁ LIMPO. APERTE PULAR." />
     <qg:phrase text="LOST IN THE DRIFT. PRESS JUMP." as="PERDIDO NO CAMPO. APERTE PULAR." />
-  </qg:language>
+      <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Fire" as="Atirar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="SCORE" as="PUNTOS" />
     <qg:phrase text="LIVES" as="VIDAS" />
@@ -3114,9 +3664,25 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="THE DRIFT IS CLEAR" as="EL CAMPO ESTÁ DESPEJADO" />
     <qg:phrase text="THE DRIFT IS CLEAR. PRESS JUMP." as="EL CAMPO ESTÁ DESPEJADO. PULSA SALTAR." />
     <qg:phrase text="LOST IN THE DRIFT. PRESS JUMP." as="PERDIDO EN EL CAMPO. PULSA SALTAR." />
-  </qg:language>
+      <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Fire" as="Disparar" />
+</qg:language>
   <qg:scene name="play" width="256" height="224" background="#0a0a1e" seed="3">
     <qg:sprite sheet="space" x="128" y="112" />
+    <!-- Escape (or the joypad's B) pauses, with the options; again, or Resume, goes on -->
+    <qg:on-input action="cancel">
+      <q:if condition="{paused()}"><qg:resume /><q:else><qg:pause /></q:else></q:if>
+    </qg:on-input>
+    <qg:menu if="{paused()}" size="12">
+      <qg:button label="Resume"><qg:resume /></qg:button>
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Fire" action="jump" />
+    </qg:menu>
     <q:set name="message" value="" />
     <q:set name="boss_down" value="false" type="boolean" />
 
@@ -3251,17 +3817,39 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- The title: two on one keyboard, or one on each machine — host, or join at
        an address. The court starts on both machines once both are there. -->
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-button action="up" label="^" x="48" y="300" size="64" />
+  <qg:touch-button action="down" label="v" x="48" y="360" size="64" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="PONG" as="PONG" />
     <qg:phrase text="Two players, one keyboard" as="Dois jogadores, um teclado" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="P1 up" as="J1 cima" />
+    <qg:phrase text="P2 up" as="J2 cima" />
+    <qg:phrase text="P1 down" as="J1 baixo" />
+    <qg:phrase text="P2 down" as="J2 baixo" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="PONG" as="PONG" />
     <qg:phrase text="Two players, one keyboard" as="Dos jugadores, un teclado" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="P1 up" as="J1 arriba" />
+    <qg:phrase text="P2 up" as="J2 arriba" />
+    <qg:phrase text="P1 down" as="J1 abajo" />
+    <qg:phrase text="P2 down" as="J2 abajo" />
+</qg:language>
   <qg:scene name="title" width="640" height="400" background="#24272a">
     <qg:hud position="top-center" size="48"><qg:text value="{'PONG'}" /></qg:hud>
-    <qg:lobby local="court" local-label="Two players, one keyboard" size="20" />
+    <qg:lobby local="court" local-label="Two players, one keyboard" size="20" options="options" />
   </qg:scene>
 
   <qg:scene name="court" width="640" height="400" background="#24272a" seed="1">
@@ -3290,6 +3878,20 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:zone name="right-wall" tag="wall" x="640" y="0" width="20" height="400" />
   </qg:scene>
 
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="640" height="400" background="#24272a">
+    <qg:hud position="top-center" size="36"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="18" columns="2">
+      <qg:rebind label="P1 up" action="up" />
+      <qg:rebind label="P2 up" action="up" player="2" />
+      <qg:rebind label="P1 down" action="down" />
+      <qg:rebind label="P2 down" action="down" player="2" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
 </q:application>
 ```
 
@@ -3311,8 +3913,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:spritesheet name="player" src="assets/player.png" tile="112x136" />
   <qg:spritesheet name="creeps" src="assets/creeps.png" tile="100x140" />
 
-  <qg:sound name="music" src="assets/music.ogg" loop="true" />
-  <qg:sound name="death" src="assets/gameover.wav" />
+  <qg:sound bus="music" name="music" src="assets/music.ogg" loop="true" />
+  <qg:sound bus="effects" name="death" src="assets/gameover.wav" />
 
   <qg:input action="jump" keys="Space, Enter, JoyA, JoyStart" />
 
@@ -3329,18 +3931,37 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:prefab>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="90" y="630" size="140" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="Start" as="Começar" />
     <qg:phrase text="Dodge the&#10;Creeps" as="Desvie das&#10;Criaturas" />
     <qg:phrase text="Get Ready" as="Prepare-se" />
     <qg:phrase text="Game Over" as="Fim de jogo" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="Start" as="Empezar" />
     <qg:phrase text="Dodge the&#10;Creeps" as="Esquiva a las&#10;Criaturas" />
     <qg:phrase text="Get Ready" as="Prepárate" />
     <qg:phrase text="Game Over" as="Fin del juego" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+</qg:language>
   <qg:scene name="title" width="480" height="720" background="#385f61">
     <q:set name="message" value="Dodge the&#10;Creeps" />
     <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
@@ -3349,6 +3970,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <!-- The demo's StartButton: clicked, or Enter, or the joypad's A. -->
     <qg:menu position="bottom-center" font="fonts/Xolonium-Regular.ttf" size="60">
       <qg:button label="Start"><qg:goto-scene name="play" /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
     </qg:menu>
     <qg:on-input action="jump">
       <qg:goto-scene name="play" />
@@ -3415,6 +4037,18 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:on-input>
   </qg:scene>
 
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="480" height="720" background="#385f61">
+    <qg:hud position="top-center" size="48"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" font="fonts/Xolonium-Regular.ttf" size="28">
+      <qg:slider label="Music" bus="music" />
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
 </q:application>
 ```
 
@@ -3446,6 +4080,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <qg:input action="buy-gatling" keys="1" />
   <qg:input action="buy-explosive" keys="2" />
+  <!-- the mouse's other buttons: the right one sells a tower, the wheel changes the one to build -->
+  <qg:input action="sell" keys="MouseRight, X" />
+  <qg:input action="other-tower" keys="WheelUp, WheelDown, Tab" />
   <qg:multiplayer players="2" delay="3" start="map" />
 
   <!-- The gatling shoots a bullet at the nearest dino in range every half
@@ -3493,6 +4130,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:prefab>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-button action="buy-gatling" label="1" x="1050" y="590" size="64" />
+  <qg:touch-button action="buy-explosive" label="2" x="1120" y="590" size="64" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="TOWERS" as="TORRES" />
     <qg:phrase text="Play alone" as="Jogar sozinho" />
@@ -3507,7 +4148,16 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="1: Gatling (50)   2: Explosive (70)   click a cell to build, click a tower to upgrade (50)" as="1: Metralhadora (50)   2: Explosiva (70)   clique numa casa para construir, numa torre para melhorar (50)" />
     <qg:phrase text="The base stands. Press space to play again." as="A base resistiu. Aperte espaço para jogar de novo." />
     <qg:phrase text="The base fell. Press space to try again." as="A base caiu. Aperte espaço para tentar de novo." />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Turret 1" as="Torre 1" />
+    <qg:phrase text="Turret 2" as="Torre 2" />
+    <qg:phrase text="Right click sells this tower for" as="Clique direito vende esta torre por" />
+    <qg:phrase text="Right click: sell a tower   Wheel or Tab: the other tower" as="Clique direito: vender uma torre   Roda ou Tab: a outra torre" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="TOWERS" as="TORRES" />
     <qg:phrase text="Play alone" as="Jugar solo" />
@@ -3522,13 +4172,22 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="1: Gatling (50)   2: Explosive (70)   click a cell to build, click a tower to upgrade (50)" as="1: Ametralladora (50)   2: Explosiva (70)   haz clic en una casilla para construir, en una torre para mejorarla (50)" />
     <qg:phrase text="The base stands. Press space to play again." as="La base resiste. Pulsa espacio para jugar otra vez." />
     <qg:phrase text="The base fell. Press space to try again." as="La base cayó. Pulsa espacio para intentarlo otra vez." />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Turret 1" as="Torre 1" />
+    <qg:phrase text="Turret 2" as="Torre 2" />
+    <qg:phrase text="Right click sells this tower for" as="Clic derecho vende esta torre por" />
+    <qg:phrase text="Right click: sell a tower   Wheel or Tab: the other tower" as="Clic derecho: vender una torre   Rueda o Tab: la otra torre" />
+</qg:language>
 
   <!-- The title: alone, or two builders on two machines. -->
   <qg:scene name="title" width="1152" height="648" background="#1a1a1a">
     <qg:sprite sheet="map" x="578" y="372" gd:modulate="#ffffff60" />
     <qg:hud position="top-center" size="48"><qg:text value="{'TOWERS'}" /></qg:hud>
-    <qg:lobby local="map" local-label="Play alone" size="22" />
+    <qg:lobby local="map" local-label="Play alone" size="22" options="options" />
   </qg:scene>
 
   <qg:scene name="map" width="1152" height="648" background="#1a1a1a" seed="11">
@@ -3563,6 +4222,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
     <qg:on-input action="buy-gatling"><q:set name="choice" value="Gatling" /></qg:on-input>
     <qg:on-input action="buy-explosive"><q:set name="choice" value="Explosive" /></qg:on-input>
+    <qg:on-input action="other-tower">
+      <q:set name="choice" value="{'Explosive' if choice == 'Gatling' else 'Gatling'}" />
+    </qg:on-input>
 
     <!-- A click: on a tower, its upgrade; on free ground, the chosen tower, if the gold is there. -->
     <qg:on-select>
@@ -3579,6 +4241,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
           <q:set name="gold" value="{gold - 70}" />
           <qg:spawn prefab="Explosive" at="cursor" />
         </q:if>
+      </q:if>
+    </qg:on-select>
+
+    <!-- A right click on a tower sells it: 25 gold, 50 upgraded. -->
+    <qg:on-select action="sell">
+      <q:if condition="{other != null and other.tag == 'tower'}">
+        <q:set name="gold" value="{gold + (50 if other.state == 'level2' else 25)}" />
+        <qg:destroy target="other" />
       </q:if>
     </qg:on-select>
 
@@ -3620,6 +4290,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:counter bind="enemies" label="Dinos" />
       <qg:text bind="choice" />
       <qg:text bind="status" />
+      <!-- the mouse over a tower: what it sells for (this machine's player's cursor) -->
+      <qg:text value="{(tr('Right click sells this tower for') + ' ' + str(50 if hovered(max(net_player(), 1)).state == 'level2' else 25)) if hovered(max(net_player(), 1)) != null and hovered(max(net_player(), 1)).tag == 'tower' else tr('Right click: sell a tower   Wheel or Tab: the other tower')}" />
     </qg:hud>
   </qg:scene>
 
@@ -3632,6 +4304,18 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="message" value="The base fell. Press space to try again." />
     <qg:hud position="center" size="40"><qg:text bind="message" /><qg:counter bind="wave" label="Reached wave" /></qg:hud>
     <qg:on-input action="jump"><qg:goto-scene name="map" /></qg:on-input>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="1152" height="648" background="#1a1a1a">
+    <qg:hud position="top-center" size="48"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="22">
+      <qg:rebind label="Turret 1" action="buy-gatling" />
+      <qg:rebind label="Turret 2" action="buy-explosive" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
   </qg:scene>
 
 </q:application>
@@ -3660,7 +4344,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- Player 1: A/D, W to jump, S to crouch, J punch, K kick. Player 2 on the
        same keyboard: the arrows, . punch, / kick. Over the network each peer
-       is one player on player 1's keys. -->
+       is one player on player 1's keys. Down, forward, punch: the blast. -->
   <qg:input action="jump" keys="W, Space, JoyA" />
   <qg:input action="punch" keys="J, JoyX" />
   <qg:input action="kick" keys="K, JoyB" />
@@ -3673,6 +4357,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:multiplayer players="2" delay="2" rollback="8" start="fight" />
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="70" y="290" size="96" />
+  <qg:touch-button action="punch" label="P" x="520" y="300" size="64" />
+  <qg:touch-button action="kick" label="K" x="595" y="250" size="64" />
+  <qg:touch-button action="jump" label="J" x="595" y="325" size="48" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="ARENA" as="ARENA" />
     <qg:phrase text="Two players, one keyboard" as="Dois jogadores, um teclado" />
@@ -3687,7 +4377,20 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="PLAYER 2 WINS - press jump" as="JOGADOR 2 VENCE - aperte pular" />
     <qg:phrase text="P1 rounds" as="Rounds J1" />
     <qg:phrase text="P2 rounds" as="Rounds J2" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="P1 punch" as="J1 soco" />
+    <qg:phrase text="P2 punch" as="J2 soco" />
+    <qg:phrase text="P1 kick" as="J1 chute" />
+    <qg:phrase text="P2 kick" as="J2 chute" />
+    <qg:phrase text="P1 jump" as="J1 pulo" />
+    <qg:phrase text="P2 jump" as="J2 pulo" />
+    <qg:phrase text="P1 crouch" as="J1 agachar" />
+    <qg:phrase text="P2 crouch" as="J2 agachar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="ARENA" as="ARENA" />
     <qg:phrase text="Two players, one keyboard" as="Dos jugadores, un teclado" />
@@ -3702,13 +4405,26 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="PLAYER 2 WINS - press jump" as="GANA EL JUGADOR 2 - pulsa saltar" />
     <qg:phrase text="P1 rounds" as="Asaltos J1" />
     <qg:phrase text="P2 rounds" as="Asaltos J2" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="P1 punch" as="J1 puñetazo" />
+    <qg:phrase text="P2 punch" as="J2 puñetazo" />
+    <qg:phrase text="P1 kick" as="J1 patada" />
+    <qg:phrase text="P2 kick" as="J2 patada" />
+    <qg:phrase text="P1 jump" as="J1 salto" />
+    <qg:phrase text="P2 jump" as="J2 salto" />
+    <qg:phrase text="P1 crouch" as="J1 agacharse" />
+    <qg:phrase text="P2 crouch" as="J2 agacharse" />
+</qg:language>
 
   <!-- The title: two on one keyboard, or one on each machine. -->
   <qg:scene name="title" width="640" height="360" background="#201820">
     <qg:sprite sheet="stage" x="320" y="180" />
     <qg:hud position="top-center" size="40"><qg:text value="{'ARENA'}" /></qg:hud>
-    <qg:lobby local="fight" local-label="Two players, one keyboard" size="18" />
+    <qg:lobby local="fight" local-label="Two players, one keyboard" size="18" options="options" />
   </qg:scene>
 
   <qg:scene name="fight" width="640" height="360" background="#201820" seed="1">
@@ -3736,6 +4452,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <q:set name="wins_2" value="{wins_2 + 1}" />
         <q:set name="message" value="PLAYER 2 WINS THE ROUND" />
         <q:set name="reset_in" value="120" />
+        <qg:rumble player="1" strength="1" seconds="0.6" />
       </qg:on-ko>
     </qg:character>
     <qg:character id="p2" controller="fighter" player="2" sheet="blue" frame="0" x="440" y="252" hitbox="40x90"
@@ -3753,8 +4470,28 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <q:set name="wins_1" value="{wins_1 + 1}" />
         <q:set name="message" value="PLAYER 1 WINS THE ROUND" />
         <q:set name="reset_in" value="120" />
+        <qg:rumble player="2" strength="1" seconds="0.6" />
       </qg:on-ko>
     </qg:character>
+
+    <!-- The special move: down, then forward (the way the fighter faces), then
+         punch, all within half a second, sends a blast at the other fighter
+         when they are near enough. It hits at once (the rollback takes no
+         flying prefab), is blocked by holding away like a move, and is felt
+         on the joypad of the one it hits. -->
+    <qg:on-input sequence="down, forward, punch" within="30" player="1">
+      <q:call function="blast" args="p1, p2, 2" />
+    </qg:on-input>
+    <qg:on-input sequence="down, forward, punch" within="30" player="2">
+      <q:call function="blast" args="p2, p1, 1" />
+    </qg:on-input>
+    <q:function name="blast" params="attacker, target, hurt">
+      <q:if condition="{abs(attacker.x - target.x) &lt; 180 and attacker.health > 0 and target.health > 0 and reset_in == 0}">
+        <qg:beam from="attacker" to="target" seconds="0.15" color="#ffe080" width="4" />
+        <qg:damage target="target" amount="12" />
+        <qg:rumble player="{hurt}" strength="0.7" seconds="0.3" />
+      </q:if>
+    </q:function>
 
     <!-- The clock: a second a second; at zero the healthier fighter takes the round. -->
     <qg:timer every="60">
@@ -3811,6 +4548,24 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="message" value="{'PLAYER ' + ('1' if wins_1 > wins_2 else '2') + ' WINS - press jump'}" />
     <qg:hud position="center" size="24"><qg:text bind="message" /></qg:hud>
     <qg:on-input action="jump"><qg:goto-scene name="fight" /></qg:on-input>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="640" height="360" background="#201820">
+    <qg:hud position="top-center" size="32"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="16" columns="2" rows="4">
+      <qg:rebind label="P1 punch" action="punch" />
+      <qg:rebind label="P2 punch" action="punch" player="2" />
+      <qg:rebind label="P1 kick" action="kick" />
+      <qg:rebind label="P2 kick" action="kick" player="2" />
+      <qg:rebind label="P1 jump" action="jump" />
+      <qg:rebind label="P2 jump" action="jump" player="2" />
+      <qg:rebind label="P1 crouch" action="down" />
+      <qg:rebind label="P2 crouch" action="down" player="2" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
   </qg:scene>
 
 </q:application>
@@ -3871,7 +4626,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Checkmate - White wins" as="Xeque-mate - as brancas vencem" />
     <qg:phrase text="Checkmate - Black wins" as="Xeque-mate - as pretas vencem" />
     <qg:phrase text="Stalemate" as="Afogamento - empate" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="CHESS" as="AJEDREZ" />
     <qg:phrase text="Two players, one board" as="Dos jugadores, un tablero" />
@@ -3887,12 +4647,17 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Checkmate - White wins" as="Jaque mate - ganan las blancas" />
     <qg:phrase text="Checkmate - Black wins" as="Jaque mate - ganan las negras" />
     <qg:phrase text="Stalemate" as="Rey ahogado - tablas" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+</qg:language>
 
   <!-- The title: both colours on one board, or white and black on two machines. -->
   <qg:scene name="title" width="496" height="540" background="#2a2520">
     <qg:hud position="top-center" size="40"><qg:text value="{'CHESS'}" /></qg:hud>
-    <qg:lobby local="game" local-label="Two players, one board" size="18" />
+    <qg:lobby local="game" local-label="Two players, one board" size="18" options="options" />
   </qg:scene>
 
   <qg:scene name="game" width="496" height="540" background="#2a2520">
@@ -4171,6 +4936,16 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:on-select>
   </qg:scene>
 
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="496" height="540" background="#2a2520">
+    <qg:hud position="top-center" size="36"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="18">
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
 </q:application>
 ```
 
@@ -4214,10 +4989,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:spritesheet name="sky" src="assets/sky.png" tile="2458x480" />
   <qg:spritesheet name="hills" src="assets/hills.png" tile="2048x480" />
 
-  <qg:sound name="jump" src="assets/jump.wav" />
-  <qg:sound name="shoot" src="assets/shoot.wav" />
-  <qg:sound name="coin" src="assets/coin_pickup.wav" />
-  <qg:sound name="explode" src="assets/explode.wav" />
+  <qg:sound bus="effects" name="jump" src="assets/jump.wav" />
+  <qg:sound bus="effects" name="shoot" src="assets/shoot.wav" />
+  <qg:sound bus="effects" name="coin" src="assets/coin_pickup.wav" />
+  <qg:sound bus="effects" name="explode" src="assets/explode.wav" />
 
   <qg:prefab name="Coin" tag="coin" sheet="coin" frame="0" hitbox="20x20" scale="0.65">
     <qg:animation name="walk" frames="0,1,2,3,2,1" fps="6" />
@@ -4250,16 +5025,34 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
              shape="-174.04,-0.43; -94.04,-23.61; 91.84,-28.64; 80.29,-5.16; -54.32,0.04; -179.99,26.44" />
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="80" y="400" size="110" />
+  <qg:touch-button action="jump" label="A" x="720" y="410" size="72" />
+  <qg:touch-button action="shoot" label="B" x="640" y="430" size="64" />
+  <qg:touch-button action="pause" label="II" x="770" y="30" size="40" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="COINS" as="MOEDAS" />
     <qg:phrase text="Resume" as="Continuar" />
     <qg:phrase text="Restart" as="Recomeçar" />
-  </qg:language>
+      <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Jump" as="Pular" />
+    <qg:phrase text="Shoot" as="Atirar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="COINS" as="MONEDAS" />
     <qg:phrase text="Resume" as="Continuar" />
     <qg:phrase text="Restart" as="Reiniciar" />
-  </qg:language>
+      <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Jump" as="Saltar" />
+    <qg:phrase text="Shoot" as="Disparar" />
+</qg:language>
   <qg:scene name="level" width="800" height="480" background="#52c9ff">
     <!-- level/background/parallax_background.tscn: a base scale of 0.1 times each layer's -->
     <qg:parallax sheet="sky" scroll="0.02" />
@@ -4370,9 +5163,1645 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:button label="Restart">
         <qg:goto-scene name="level" />
       </qg:button>
+      <!-- beyond the demo: the options, kept between runs -->
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Jump" action="jump" />
+      <qg:rebind label="Shoot" action="shoot" />
     </qg:menu>
   </qg:scene>
 
+</q:application>
+```
+
+### Bricks
+
+`projects/bricks/bricks.q` — a brick breaker for one, or two to four over the network: levels written as lines of letters and built by a q:loop, steel bricks of two hits, a bomb that breaks the bricks around it (qg:for-each), the serve as jump is let go (on="release"), a ball lost off the bottom (qg:on-screen-exit), the last brick in slow motion (qg:time-scale) and a sequence of tweens (qg:on-end).
+
+```xml
+<q:application id="bricks" type="game">
+
+  <!-- Bricks: a brick breaker, alone or for two to four over the network.
+       A paddle (one each, over the network) keeps a ball in play, and the
+       ball breaks the bricks it hits. Steel bricks take two hits, a bomb
+       brick breaks the bricks around it, and the last brick of a level
+       breaks in slow motion. Each level is a few lines of text, one letter
+       a brick. The art is drawn by scripts/art/bricks.py (CC0); the sounds
+       are Kenney's Pixel Platformer (CC0). -->
+
+  <q:set name="score" value="0" type="number" />
+  <q:set name="lives" value="3" type="number" />
+  <q:set name="level" value="1" type="number" />
+  <!-- what each player is called, over the network: the names they send -->
+  <q:set name="names" type="array" value='["", "", "", ""]' />
+  <!-- the levels, nine bricks to a row: R O Y G B the colours (one hit), S steel
+       (two), X a bomb, . none -->
+  <q:set name="levels" type="array" value='[
+    ["RRRRRRRRR", "OOOOOOOOO", "YYYYXYYYY", "GGGGGGGGG", "BBBBBBBBB"],
+    ["S.S.S.S.S", "RRRRRRRRR", "OOXOOOXOO", "YYYYYYYYY", ".GGGGGGG.", "..BBBBB.."],
+    ["SSSSSSSSS", "R.XRRRX.R", "OOOOOOOOO", "YSYYXYYSY", "GGGGGGGGG", "BBBXBXBBB", "S.......S"]
+  ]' />
+
+  <qg:spritesheet name="bricks" src="assets/bricks.png" tile="32x12" />
+  <qg:spritesheet name="paddles" src="assets/paddles.png" tile="48x8" />
+  <qg:spritesheet name="ball" src="assets/ball.png" tile="8" />
+
+  <qg:sound bus="effects" name="bounce" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="effects" name="break" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="clank" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="boom" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="lost" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="clear" src="assets/kenney/audio/win.ogg" />
+
+  <!-- The serve: Space, Up, W or the joypad's A, as it is let go. -->
+  <qg:input action="jump" keys="Space, Up, W, JoyA" />
+
+  <!-- Two to four players, each on their own machine. The game starts as the
+       fourth joins, or when the host chooses to start with two or three:
+       first who is who, then the first level. -->
+  <qg:multiplayer players="4" min-players="2" start="names" />
+
+  <!-- A player's name, or "Player 2" until they give one. -->
+  <q:function name="who" params="n">
+    <q:if condition="{names[n - 1] == ''}"><q:return value="{tr('Player') + ' ' + str(n)}" /></q:if>
+    <q:return value="{names[n - 1]}" />
+  </q:function>
+
+  <!-- The ball flies at 150 px/s, a little faster every second. It bounces
+       off the sides and the top, and off a brick by the side it hit, which
+       takes a hit; the ball flashes as it does. -->
+  <qg:prefab name="Ball" tag="ball" sheet="ball" hitbox="8x8" ai="fly" heading="0.4,-1" speed="150" accel="1">
+    <qg:on-collision with="side">
+      <qg:deflect target="me" axis="x" />
+      <qg:play sound="bounce" volume="-8" vary="0.1" />
+    </qg:on-collision>
+    <qg:on-collision with="top">
+      <qg:deflect target="me" axis="y" />
+      <qg:play sound="bounce" volume="-8" vary="0.1" />
+    </qg:on-collision>
+    <qg:on-collision with="brick">
+      <q:if condition="{abs(me.x - other.x) > 16}">
+        <qg:deflect target="me" axis="x" />
+        <q:else><qg:deflect target="me" axis="y" /></q:else>
+      </q:if>
+      <qg:tween target="me" property="tint" from="#ffd060" to="#ffffff" seconds="0.3" />
+      <qg:damage target="other" amount="1" />
+    </qg:on-collision>
+    <qg:on-collision with="bomb">
+      <qg:deflect target="me" axis="y" />
+      <qg:tween target="me" property="tint" from="#ff5040" to="#ffffff" seconds="0.5" />
+      <qg:damage target="other" amount="1" />
+    </qg:on-collision>
+  </qg:prefab>
+
+  <!-- The bricks: five colours of one hit, steel of two (cracked after the
+       first), and the bomb, which breaks the bricks around it (the level's
+       qg:on-death of="bomb"). -->
+  <qg:prefab name="Red" tag="brick" sheet="bricks" frame="0" hitbox="32x12">
+    <qg:on-death>
+      <qg:play sound="break" vary="0.2" />
+      <qg:burst at="me" color="#d64040" count="10" />
+      <q:set name="score" value="{score + 50}" />
+    </qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="Orange" tag="brick" sheet="bricks" frame="1" hitbox="32x12">
+    <qg:on-death>
+      <qg:play sound="break" vary="0.2" />
+      <qg:burst at="me" color="#e88030" count="10" />
+      <q:set name="score" value="{score + 40}" />
+    </qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="Yellow" tag="brick" sheet="bricks" frame="2" hitbox="32x12">
+    <qg:on-death>
+      <qg:play sound="break" vary="0.2" />
+      <qg:burst at="me" color="#ecc838" count="10" />
+      <q:set name="score" value="{score + 30}" />
+    </qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="Green" tag="brick" sheet="bricks" frame="3" hitbox="32x12">
+    <qg:on-death>
+      <qg:play sound="break" vary="0.2" />
+      <qg:burst at="me" color="#58b858" count="10" />
+      <q:set name="score" value="{score + 20}" />
+    </qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="Blue" tag="brick" sheet="bricks" frame="4" hitbox="32x12">
+    <qg:on-death>
+      <qg:play sound="break" vary="0.2" />
+      <qg:burst at="me" color="#4884dc" count="10" />
+      <q:set name="score" value="{score + 10}" />
+    </qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="Steel" tag="brick" sheet="bricks" frame="5" hitbox="32x12" health="2">
+    <qg:state name="whole" frame="5" initial="true" />
+    <qg:state name="cracked" frame="6" />
+    <qg:on-damage>
+      <qg:play sound="clank" />
+      <qg:become target="me" state="cracked" />
+    </qg:on-damage>
+    <qg:on-death>
+      <qg:play sound="break" pitch="0.8" />
+      <qg:burst at="me" color="#969cac" count="16" />
+      <q:set name="score" value="{score + 80}" />
+    </qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="Bomb" tag="bomb" sheet="bricks" frame="7" hitbox="32x12">
+    <qg:on-death>
+      <qg:play sound="boom" />
+      <qg:burst at="me" color="#ff7040" count="24" />
+      <q:set name="score" value="{score + 100}" />
+    </qg:on-death>
+  </qg:prefab>
+
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-button action="left" label="&lt;" x="34" y="206" size="48" />
+  <qg:touch-button action="right" label="&gt;" x="90" y="206" size="48" />
+  <qg:touch-button action="jump" label="A" x="286" y="206" size="48" />
+
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="BRICKS" as="TIJOLOS" />
+    <qg:phrase text="Play alone" as="Jogar sozinho" />
+    <qg:phrase text="Play together" as="Jogar junto" />
+    <qg:phrase text="Quit" as="Sair" />
+    <qg:phrase text="Language" as="Idioma" />
+    <qg:phrase text="To the title" as="Para o título" />
+    <qg:phrase text="SCORE" as="PONTOS" />
+    <qg:phrase text="LIVES" as="VIDAS" />
+    <qg:phrase text="LEVEL" as="FASE" />
+    <qg:phrase text="SPACE: SERVE" as="ESPAÇO: SACAR" />
+    <qg:phrase text="TWO TO FOUR PLAYERS, EACH ON THEIR OWN MACHINE" as="DE DOIS A QUATRO JOGADORES, CADA UM NA SUA MÁQUINA" />
+    <qg:phrase text="EVERY BRICK IS BROKEN" as="TODOS OS TIJOLOS QUEBRADOS" />
+    <qg:phrase text="THE BALLS ARE GONE" as="AS BOLAS ACABARAM" />
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Serve" as="Sacar" />
+    <qg:phrase text="Left" as="Esquerda" />
+    <qg:phrase text="Right" as="Direita" />
+    <qg:phrase text="WHO IS WHO" as="QUEM É QUEM" />
+    <qg:phrase text="Player" as="Jogador" />
+    <qg:phrase text="Your name" as="Seu nome" />
+    <qg:phrase text="PLAYER 1: SPACE TO START" as="JOGADOR 1: ESPAÇO PARA COMEÇAR" />
+</qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="BRICKS" as="LADRILLOS" />
+    <qg:phrase text="Play alone" as="Jugar solo" />
+    <qg:phrase text="Play together" as="Jugar juntos" />
+    <qg:phrase text="Quit" as="Salir" />
+    <qg:phrase text="Language" as="Idioma" />
+    <qg:phrase text="To the title" as="Al título" />
+    <qg:phrase text="SCORE" as="PUNTOS" />
+    <qg:phrase text="LIVES" as="VIDAS" />
+    <qg:phrase text="LEVEL" as="NIVEL" />
+    <qg:phrase text="SPACE: SERVE" as="ESPACIO: SACAR" />
+    <qg:phrase text="TWO TO FOUR PLAYERS, EACH ON THEIR OWN MACHINE" as="DE DOS A CUATRO JUGADORES, CADA UNO EN SU MÁQUINA" />
+    <qg:phrase text="EVERY BRICK IS BROKEN" as="TODOS LOS LADRILLOS ROTOS" />
+    <qg:phrase text="THE BALLS ARE GONE" as="SE ACABARON LAS PELOTAS" />
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Serve" as="Sacar" />
+    <qg:phrase text="Left" as="Izquierda" />
+    <qg:phrase text="Right" as="Derecha" />
+    <qg:phrase text="WHO IS WHO" as="QUIÉN ES QUIÉN" />
+    <qg:phrase text="Player" as="Jugador" />
+    <qg:phrase text="Your name" as="Tu nombre" />
+    <qg:phrase text="PLAYER 1: SPACE TO START" as="JUGADOR 1: ESPACIO PARA EMPEZAR" />
+</qg:language>
+
+  <qg:scene name="title" width="320" height="240" background="#1c1a2c">
+    <qg:sprite sheet="bricks" frame="0" x="64" y="56" />
+    <qg:sprite sheet="bricks" frame="1" x="112" y="56" />
+    <qg:sprite sheet="bricks" frame="2" x="160" y="56" />
+    <qg:sprite sheet="bricks" frame="3" x="208" y="56" />
+    <qg:sprite sheet="bricks" frame="4" x="256" y="56" />
+    <qg:hud position="top-center" size="32"><qg:text value="{tr('BRICKS')}" /></qg:hud>
+    <qg:menu position="center" size="14">
+      <qg:button label="Play alone"><q:call function="anew" /><qg:goto-scene name="level" fade="0.3" /></qg:button>
+      <qg:button label="Play together"><q:call function="anew" /><qg:goto-scene name="together" /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
+      <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
+      <!-- a desktop build quits; a page in a browser has nothing to quit to -->
+      <qg:button label="Quit" if="{can_quit()}"><qg:quit /></qg:button>
+    </qg:menu>
+    <q:function name="anew">
+      <q:set name="score" value="0" />
+      <q:set name="lives" value="3" />
+      <q:set name="level" value="1" />
+    </q:function>
+  </qg:scene>
+
+  <!-- Two to four machines: one hosts, the others join its address. The game
+       starts as the fourth joins, or when the host chooses to start sooner. -->
+  <qg:scene name="together" width="320" height="240" background="#1c1a2c">
+    <qg:hud position="top-center" size="10"><qg:text value="{tr('TWO TO FOUR PLAYERS, EACH ON THEIR OWN MACHINE')}" /></qg:hud>
+    <qg:lobby local="level" local-label="Play alone" size="12" />
+    <qg:on-input action="cancel">
+      <qg:leave />
+      <qg:goto-scene name="title" />
+    </qg:on-input>
+  </qg:scene>
+
+  <!-- Who is who: each player types a name at their own machine (Enter opens
+       the box, Enter sends it). The field is shared: what is sent reaches every
+       machine on the same tick, as the keys do, and each shows it beside that
+       player's paddle. Player 1 starts the first level with the serve. -->
+  <qg:scene name="names" width="320" height="240" background="#1c1a2c">
+    <q:set name="typed" value="" />
+    <qg:hud position="top-center" size="14"><qg:text value="{tr('WHO IS WHO')}" /></qg:hud>
+    <qg:hud position="center" size="12">
+      <qg:icon sheet="paddles" frame="0" />
+      <qg:text value="{who(1)}" color="#40dce6" />
+      <qg:icon sheet="paddles" frame="1" />
+      <qg:text value="{who(2)}" color="#e650c8" />
+      <qg:icon sheet="paddles" frame="2" />
+      <qg:text value="{who(3) if net_players() >= 3 else '-'}" color="#96e646" />
+      <qg:icon sheet="paddles" frame="3" />
+      <qg:text value="{who(4) if net_players() >= 4 else '-'}" color="#f0b030" />
+      <qg:text value="{tr('PLAYER 1: SPACE TO START')}" />
+    </qg:hud>
+    <qg:menu local="true" position="bottom-center" size="12">
+      <qg:field bind="typed" label="Your name" shared="true" max-length="10">
+        <q:set name="names" index="{sender - 1}" value="{text}" />
+      </qg:field>
+    </qg:menu>
+    <qg:on-input action="jump" on="release">
+      <qg:goto-scene name="level" fade="0.3" />
+    </qg:on-input>
+  </qg:scene>
+
+  <!-- A level: the bricks of levels[level - 1], a paddle for each player, the
+       ball served from the first paddle. -->
+  <qg:scene name="level" width="320" height="240" background="#1c1a2c" seed="1">
+    <q:set name="serving" value="true" type="boolean" />
+    <q:set name="done" value="false" type="boolean" />
+    <q:call function="build" args="{levels[int(level) - 1]}" />
+
+    <qg:hud position="top-left" size="10"><qg:text value="{tr('SCORE') + ' ' + str(score)}" /></qg:hud>
+    <qg:hud position="top-center" size="10"><qg:text value="{tr('LEVEL') + ' ' + str(int(level))}" /></qg:hud>
+    <qg:hud position="top-right" size="10"><qg:text value="{tr('LIVES') + ' ' + str(int(lives))}" /></qg:hud>
+    <qg:hud position="bottom-center" size="10"><qg:text value="{tr('SPACE: SERVE') if serving else ''}" /></qg:hud>
+
+    <!-- the walls: the sides and the top; the bottom is open -->
+    <qg:zone name="left-wall" tag="side" x="-20" y="0" width="20" height="240" />
+    <qg:zone name="right-wall" tag="side" x="320" y="0" width="20" height="240" />
+    <qg:zone name="ceiling" tag="top" x="0" y="0" width="320" height="16" />
+
+    <!-- A paddle runs along the bottom, kept on the screen. The ball leaves
+         it at a slant: straight up from its middle, more aslant towards its
+         ends. It squashes a little as it does. -->
+    <qg:character id="p1" controller="ship" player="1" axis="horizontal" speed="240"
+                  sheet="paddles" frame="0" x="160" y="226" hitbox="48x8">
+      <qg:on-collision with="ball"><q:call function="hit" args="me, other" /></qg:on-collision>
+    </qg:character>
+    <qg:character id="p2" controller="ship" player="2" axis="horizontal" speed="240" if="{net_players() >= 2}"
+                  sheet="paddles" frame="1" x="80" y="226" hitbox="48x8">
+      <qg:on-collision with="ball"><q:call function="hit" args="me, other" /></qg:on-collision>
+    </qg:character>
+    <qg:character id="p3" controller="ship" player="3" axis="horizontal" speed="240" if="{net_players() >= 3}"
+                  sheet="paddles" frame="2" x="240" y="226" hitbox="48x8">
+      <qg:on-collision with="ball"><q:call function="hit" args="me, other" /></qg:on-collision>
+    </qg:character>
+    <qg:character id="p4" controller="ship" player="4" axis="horizontal" speed="240" if="{net_players() >= 4}"
+                  sheet="paddles" frame="3" x="120" y="226" hitbox="48x8">
+      <qg:on-collision with="ball"><q:call function="hit" args="me, other" /></qg:on-collision>
+    </qg:character>
+    <q:function name="hit" params="paddle, ball">
+      <qg:deflect target="ball" dx="{(ball.x - paddle.x) / 24}" dy="-1" />
+      <qg:tween target="paddle" property="scale" from="1.2" to="1" seconds="0.2" trans="back" />
+      <qg:play sound="bounce" vary="0.1" />
+    </q:function>
+
+    <!-- The serve: as the action is let go, a ball leaves the first paddle. -->
+    <qg:on-input action="jump" on="release">
+      <q:if condition="{serving and not done}">
+        <q:set name="serving" value="false" />
+        <qg:spawn prefab="Ball" at="p1" dy="-10" />
+      </q:if>
+    </qg:on-input>
+
+    <!-- A ball out at the bottom is lost; with none left, a life. -->
+    <qg:on-screen-exit of="ball" side="bottom">
+      <qg:destroy target="other" />
+      <q:if condition="{count('ball') == 0 and not done}">
+        <qg:play sound="lost" />
+        <q:set name="lives" value="{lives - 1}" />
+        <q:if condition="{lives <= 0}">
+          <qg:goto-scene name="over" fade="0.5" />
+          <q:else><q:set name="serving" value="true" /></q:else>
+        </q:if>
+      </q:if>
+    </qg:on-screen-exit>
+
+    <!-- A bomb breaks every brick within a brick and a half of it. -->
+    <qg:on-death of="bomb">
+      <qg:shake at="other" frames="12" strength="3" />
+      <qg:for-each tag="brick" var="near">
+        <q:if condition="{distance(near, other) < 48}">
+          <qg:damage target="near" amount="2" />
+        </q:if>
+      </qg:for-each>
+    </qg:on-death>
+
+    <!-- The last brick: slow motion, the balls fade out, the paddle hops, the next level. -->
+    <qg:when condition="{count('brick') + count('bomb') == 0}">
+      <q:set name="done" value="true" />
+      <qg:play sound="clear" />
+      <qg:time-scale scale="0.25" seconds="1.5" />
+      <qg:for-each tag="ball" var="b">
+        <qg:tween target="b" property="alpha" to="0" seconds="0.3">
+          <qg:on-end><qg:destroy target="me" /></qg:on-end>
+        </qg:tween>
+      </qg:for-each>
+      <qg:tween target="p1" property="y" to="214" seconds="0.4" trans="quad" yoyo="true" repeat="1">
+        <qg:on-end><q:call function="next" /></qg:on-end>
+      </qg:tween>
+    </qg:when>
+    <q:function name="next">
+      <q:if condition="{level >= len(levels)}">
+        <qg:goto-scene name="won" fade="0.5" />
+        <q:else>
+          <q:set name="level" value="{level + 1}" />
+          <qg:goto-scene name="level" fade="0.3" />
+        </q:else>
+      </q:if>
+    </q:function>
+
+    <!-- the level: a letter a brick, nine to a row -->
+    <q:function name="build" params="lines">
+      <q:loop var="r" from="0" to="{len(lines) - 1}">
+        <q:loop var="c" from="0" to="{len(lines[r]) - 1}">
+          <q:call function="place" args="{lines[r][c]}, {32 + c * 32}, {40 + r * 12}" />
+        </q:loop>
+      </q:loop>
+    </q:function>
+    <q:function name="place" params="kind, x, y">
+      <q:if condition="{kind == 'R'}"><qg:spawn prefab="Red" x="{x}" y="{y}" />
+        <q:elseif condition="{kind == 'O'}"><qg:spawn prefab="Orange" x="{x}" y="{y}" /></q:elseif>
+        <q:elseif condition="{kind == 'Y'}"><qg:spawn prefab="Yellow" x="{x}" y="{y}" /></q:elseif>
+        <q:elseif condition="{kind == 'G'}"><qg:spawn prefab="Green" x="{x}" y="{y}" /></q:elseif>
+        <q:elseif condition="{kind == 'B'}"><qg:spawn prefab="Blue" x="{x}" y="{y}" /></q:elseif>
+        <q:elseif condition="{kind == 'S'}"><qg:spawn prefab="Steel" x="{x}" y="{y}" /></q:elseif>
+        <q:elseif condition="{kind == 'X'}"><qg:spawn prefab="Bomb" x="{x}" y="{y}" /></q:elseif>
+      </q:if>
+    </q:function>
+  </qg:scene>
+
+  <qg:scene name="won" width="320" height="240" background="#1c1a2c">
+    <qg:hud position="top-center" size="14"><qg:text value="{tr('EVERY BRICK IS BROKEN')}" /></qg:hud>
+    <qg:hud position="center" size="12"><qg:text value="{tr('SCORE') + ' ' + str(score)}" /></qg:hud>
+    <qg:menu position="bottom-center" size="12">
+      <qg:button label="To the title"><qg:leave /><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <qg:scene name="over" width="320" height="240" background="#1c1a2c">
+    <qg:hud position="top-center" size="14"><qg:text value="{tr('THE BALLS ARE GONE')}" /></qg:hud>
+    <qg:hud position="center" size="12"><qg:text value="{tr('SCORE') + ' ' + str(score)}" /></qg:hud>
+    <qg:menu position="bottom-center" size="12">
+      <qg:button label="To the title"><qg:leave /><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="320" height="240" background="#1c1a2c">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="14">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Serve" action="jump" />
+      <qg:rebind label="Left" action="left" />
+      <qg:rebind label="Right" action="right" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+</q:application>
+```
+
+### Siege
+
+`projects/siege/siege.q` — a keep under siege seen from above, for one or two over the network: raiders in waves (qg:when, qg:after) that keep apart (spacing=) and make for the tower, an archer who aims at the pointer (qg:spawn heading=, a qg:cursor's id) and charges a bolt (pressed_for()) that glances off the walls (walls="bounce") with a trail, numbers that float up (qg:emit text=), a tower that zaps (qg:beam), a brute made from a raider (extends=) with its health over it (qg:label), a ram shielded in front (side="left"), and a knight who steers a horse (qg:steer).
+
+```xml
+<q:application id="siege" type="game">
+
+  <!-- Siege: a keep under siege, seen from above, alone or for two over the
+       network. Raiders come in waves from the edges and make for the tower in
+       the keep's middle. The archer walks with WASD (or the left stick), aims
+       with the mouse (or the right stick) and shoots as fire is let go: held
+       for most of a second, the shot is a bolt that goes through raiders and
+       off the walls. With two, the second player is a knight on a horse who
+       turns and spurs it on, and rides the raiders down. The tower zaps the
+       nearest raider now and then. The art is drawn by scripts/art/siege.py
+       (CC0); the sounds are Kenney's Pixel Platformer (CC0). -->
+
+  <q:set name="score" value="0" type="number" />
+  <q:set name="hearts" value="5" type="number" />
+  <q:set name="wave" value="0" type="number" />
+  <!-- the five best scores, kept between runs -->
+  <q:set name="best" value="[]" type="array" saved="true" />
+
+  <!-- the tower is hurt, and the siege may be over (once: two raiders may reach it on one tick) -->
+  <q:function name="breach">
+    <q:if condition="{hearts > 0}">
+      <qg:play sound="hurt" />
+      <q:set name="hearts" value="{hearts - 1}" />
+      <q:if condition="{hearts <= 0}">
+        <q:set name="best" value="{sort(best + [score], true)[:5]}" />
+        <qg:goto-scene name="fallen" fade="0.6" />
+      </q:if>
+    </q:if>
+  </q:function>
+
+  <!-- 16-pixel tiles: 1 grass, 2 grass with flowers, 3 the keep's floor (walked on), 4 a wall -->
+  <qg:tileset name="ground" src="assets/ground.png" tile="16">
+    <qg:tile frame="0" shape="none" />
+    <qg:tile frame="1" shape="none" />
+    <qg:tile frame="2" shape="none" />
+  </qg:tileset>
+  <qg:spritesheet name="siege" src="assets/siege.png" tile="16" />
+
+  <qg:sound bus="effects" name="twang" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="effects" name="hit" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="clank" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="zap" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="hurt" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="horn" src="assets/kenney/audio/win.ogg" />
+
+  <!-- fire: the mouse's left button, J, or the right trigger; the right stick aims -->
+  <qg:input action="fire" keys="MouseLeft, J, JoyR2" />
+  <qg:input action="aim_left" keys="JoyRightStickLeft" />
+  <qg:input action="aim_right" keys="JoyRightStickRight" />
+  <qg:input action="aim_up" keys="JoyRightStickUp" />
+  <qg:input action="aim_down" keys="JoyRightStickDown" />
+
+  <qg:multiplayer players="2" start="keep" />
+
+  <qg:particles name="fire" preset="fire" color="#ff9030" amount="12" />
+  <qg:particles name="dust" preset="dust" color="#c8b080" amount="6" />
+  <qg:particles name="fallen" preset="smoke" color="#a09080" />
+
+  <!-- An arrow flies straight, over the walls; a bolt, the charged shot, is
+       faster, goes through what it hits and glances off the walls' stones (a
+       shot round a corner), leaving a trail. -->
+  <qg:prefab name="Arrow" tag="arrow" sheet="siege" frame="8" hitbox="6x6"
+             ai="fly" speed="240" rotate="true" lifetime="60" />
+  <qg:prefab name="Bolt" tag="bolt" sheet="siege" frame="9" hitbox="8x8"
+             ai="fly" speed="300" rotate="true" walls="bounce" lifetime="120" trail="#ffd070" />
+
+  <!-- Raiders make for the tower through the gates, knowing where it is
+       behind the walls, and keep a little apart so a wave comes as a crowd,
+       not a pile. A hit squashes one and shows what it took. -->
+  <qg:prefab name="Raider" tag="raider" sheet="siege" frame="4" hitbox="12x12" health="2"
+             ai="behavior" speed="34" sight="400" spacing="14">
+    <qg:animation name="walk" frames="4,5" fps="6" />
+    <qg:behavior><qg:seek target="tower" through-walls="true" /></qg:behavior>
+    <qg:on-collision with="arrow"><q:call function="struck" args="me, other, 1" /></qg:on-collision>
+    <qg:on-collision with="bolt"><q:call function="struck" args="me, null, 3" /></qg:on-collision>
+    <qg:on-collision with="tower"><q:call function="reached" args="me, other" /></qg:on-collision>
+    <qg:on-death>
+      <q:set name="score" value="{score + 10}" />
+      <qg:emit particles="fallen" at="me" />
+      <qg:emit text="+10" at="me" dy="-10" color="#ffe070" />
+    </qg:on-death>
+  </qg:prefab>
+  <!-- A brute is a raider (extends=: its way to the tower and what hits it), slow, that takes
+       eight hits; how many it has left is over its head. -->
+  <qg:prefab name="Brute" extends="Raider" frame="6" hitbox="14x14" health="8" scale="1.5" speed="20" spacing="20">
+    <qg:animation name="walk" frames="6,7" fps="4" />
+    <qg:label value="{me.health}" dy="-16" size="8" color="#ff8080" />
+    <qg:on-death>
+      <q:set name="score" value="{score + 50}" />
+      <qg:emit particles="fallen" at="me" />
+      <qg:emit text="+50" at="me" dy="-14" color="#ffe070" />
+    </qg:on-death>
+  </qg:prefab>
+  <!-- A ram comes from the left with its shield in front: an arrow that meets
+       the shield (the ram hits it from the left) glances off; one from behind
+       or the sides breaks it. It carries a torch. -->
+  <qg:prefab name="Ram" tag="raider" sheet="siege" frame="10" hitbox="16x12" health="4"
+             ai="behavior" speed="18" sight="400" particles="fire">
+    <qg:behavior><qg:seek target="tower" way="straight" through-walls="true" /></qg:behavior>
+    <qg:on-collision with="arrow" side="left">
+      <qg:play sound="clank" />
+      <qg:destroy target="other" />
+    </qg:on-collision>
+    <qg:on-collision with="arrow"><q:call function="struck" args="me, other, 1" /></qg:on-collision>
+    <qg:on-collision with="bolt"><q:call function="struck" args="me, null, 3" /></qg:on-collision>
+    <qg:on-collision with="tower"><q:call function="reached" args="me, other" /></qg:on-collision>
+    <qg:on-death>
+      <q:set name="score" value="{score + 30}" />
+      <qg:emit particles="fallen" at="me" />
+      <qg:emit text="+30" at="me" dy="-10" color="#ffe070" />
+    </qg:on-death>
+  </qg:prefab>
+  <!-- the tower in the keep's middle, with a fire on top; a raider that reaches it
+       is a breach: the raider is gone, and the tower loses a heart -->
+  <qg:prefab name="Tower" tag="tower" sheet="siege" frame="11" hitbox="16x16" solid="true" particles="fire" />
+  <q:function name="reached" params="raider, tower">
+    <qg:destroy target="raider" />
+    <qg:shake at="tower" frames="10" strength="3" />
+    <q:call function="breach" />
+  </q:function>
+
+  <!-- a hit: what it took floats up, the raider squashes and flashes; an arrow stops there -->
+  <q:function name="struck" params="raider, shot, amount">
+    <qg:play sound="hit" vary="0.15" />
+    <qg:damage target="raider" amount="{amount}" />
+    <qg:emit text="{str(amount)}" at="raider" dy="-8" color="#ffffff" />
+    <qg:tween target="raider" property="scale-x" from="1.4" to="1" seconds="0.2" trans="back" />
+    <qg:tween target="raider" property="scale-y" from="0.6" to="1" seconds="0.2" trans="back" />
+    <qg:tween target="raider" property="tint" from="#ff6060" to="#ffffff" seconds="0.25" />
+    <q:if condition="{shot != null}"><qg:destroy target="shot" /></q:if>
+  </q:function>
+
+  <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="40" y="200" />
+  <qg:touch-button action="fire" label="A" x="284" y="200" />
+
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="SIEGE" as="CERCO" />
+    <qg:phrase text="Play alone" as="Jogar sozinho" />
+    <qg:phrase text="Play together" as="Jogar juntos" />
+    <qg:phrase text="Language" as="Idioma" />
+    <qg:phrase text="Quit" as="Sair" />
+    <qg:phrase text="SCORE" as="PONTOS" />
+    <qg:phrase text="WAVE" as="ONDA" />
+    <qg:phrase text="TOWER" as="TORRE" />
+    <qg:phrase text="ARCHER" as="ARQUEIRO" />
+    <qg:phrase text="KNIGHT" as="CAVALEIRO" />
+    <qg:phrase text="HERE THEY COME" as="LÁ VÊM ELES" />
+    <qg:phrase text="THE KEEP HAS FALLEN" as="A FORTALEZA CAIU" />
+    <qg:phrase text="BEST" as="MELHORES" />
+    <qg:phrase text="To the title" as="Para o início" />
+    <qg:phrase text="TWO PLAYERS, EACH ON THEIR OWN MACHINE" as="DOIS JOGADORES, CADA UM NA SUA MÁQUINA" />
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Fire" as="Atirar" />
+</qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="SIEGE" as="ASEDIO" />
+    <qg:phrase text="Play alone" as="Jugar solo" />
+    <qg:phrase text="Play together" as="Jugar juntos" />
+    <qg:phrase text="Language" as="Idioma" />
+    <qg:phrase text="Quit" as="Salir" />
+    <qg:phrase text="SCORE" as="PUNTOS" />
+    <qg:phrase text="WAVE" as="OLEADA" />
+    <qg:phrase text="TOWER" as="TORRE" />
+    <qg:phrase text="ARCHER" as="ARQUERO" />
+    <qg:phrase text="KNIGHT" as="CABALLERO" />
+    <qg:phrase text="HERE THEY COME" as="AHÍ VIENEN" />
+    <qg:phrase text="THE KEEP HAS FALLEN" as="LA FORTALEZA HA CAÍDO" />
+    <qg:phrase text="BEST" as="MEJORES" />
+    <qg:phrase text="To the title" as="Al inicio" />
+    <qg:phrase text="TWO PLAYERS, EACH ON THEIR OWN MACHINE" as="DOS JUGADORES, CADA UNO EN SU MÁQUINA" />
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Fire" as="Disparar" />
+</qg:language>
+
+  <qg:scene name="title" width="320" height="240" background="#2e3b24">
+    <qg:hud position="top-center" size="32"><qg:text value="{tr('SIEGE')}" /></qg:hud>
+    <qg:menu position="center" size="14">
+      <qg:button label="Play alone"><q:call function="anew" /><qg:goto-scene name="keep" fade="0.3" /></qg:button>
+      <qg:button label="Play together"><q:call function="anew" /><qg:goto-scene name="together" /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
+      <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
+      <qg:button label="Quit" if="{can_quit()}"><qg:quit /></qg:button>
+    </qg:menu>
+    <q:function name="anew">
+      <q:set name="score" value="0" />
+      <q:set name="hearts" value="5" />
+      <q:set name="wave" value="0" />
+    </q:function>
+  </qg:scene>
+
+  <qg:scene name="together" width="320" height="240" background="#2e3b24">
+    <qg:hud position="top-center" size="10"><qg:text value="{tr('TWO PLAYERS, EACH ON THEIR OWN MACHINE')}" /></qg:hud>
+    <qg:lobby local="keep" local-label="Play alone" size="12" />
+    <qg:on-input action="cancel">
+      <qg:leave />
+      <qg:goto-scene name="title" />
+    </qg:on-input>
+  </qg:scene>
+
+  <!-- The keep: grass all round, the walls with a gate on each side, the tower
+       in the middle. Things are drawn by how low they stand (y-sort), so a
+       raider behind the tower is hidden by it. -->
+  <qg:scene name="keep" width="320" height="240" background="#3c5a2c" seed="5" y-sort="true">
+    <q:set name="message" value="" />
+    <qg:tilemap tileset="ground" collision="true">
+1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,1
+1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1
+1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,2
+1,1,2,1,1,4,4,4,4,4,3,4,4,4,4,4,1,1,1,1
+1,1,2,1,1,4,3,3,3,3,3,3,3,3,3,4,1,1,1,2
+1,1,1,1,1,4,3,3,3,3,3,3,3,3,3,4,1,1,1,1
+1,1,1,1,1,4,3,3,3,3,3,3,3,3,3,4,1,1,1,1
+1,1,1,1,1,3,3,3,3,3,3,3,3,3,3,3,1,1,1,1
+2,1,1,1,1,4,3,3,3,3,3,3,3,3,3,4,1,1,1,1
+1,1,1,1,1,4,3,3,3,3,3,3,3,3,3,4,2,1,1,1
+1,1,1,2,1,4,3,3,3,3,3,3,3,3,3,4,1,1,2,1
+1,1,1,1,1,4,4,4,4,4,3,4,4,4,4,4,1,1,1,1
+1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1
+1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+    </qg:tilemap>
+    <qg:instance prefab="Tower" name="tower" x="168" y="120" />
+
+    <!-- the archer: walks, aims at the pointer (or with the right stick) -->
+    <qg:character id="p1" controller="topdown" player="1" sheet="siege" frame="0"
+                  x="140" y="120" hitbox="12x12" speed="80" bounds="scene">
+      <qg:animation name="idle" frames="0" />
+      <qg:animation name="walk" frames="0,1" fps="8" />
+      <qg:label value="{tr('ARCHER')}" dy="-14" size="8" if="{net_status() != 'offline'}" />
+    </qg:character>
+    <qg:cursor id="aim" player="1" step="0" sheet="siege" frame="12" />
+
+    <!-- the knight, with two: left and right turn the horse, up spurs it on -->
+    <qg:character id="p2" controller="behavior" player="2" sheet="siege" frame="2"
+                  x="196" y="120" hitbox="14x14" if="{net_status() != 'offline'}">
+      <qg:behavior>
+        <qg:steer turn="200" thrust="260" drag="1.6" max="140" />
+        <qg:keep-inside />
+      </qg:behavior>
+      <qg:label value="{tr('KNIGHT')}" dy="-14" size="8" />
+      <qg:on-collision with="raider" cooldown="20">
+        <q:if condition="{abs(me.vx) + abs(me.vy) > 60}">
+          <q:call function="struck" args="other, null, 2" />
+        </q:if>
+      </qg:on-collision>
+    </qg:character>
+
+    <!-- A shot leaves as fire is let go, at the pointer or the way the right
+         stick points: held 40 ticks or more, a bolt. While it is charging, a
+         line shows where it will go. -->
+    <qg:on-input action="fire" on="release">
+      <q:set name="sx" value="{strength('aim_right') - strength('aim_left')}" />
+      <q:set name="sy" value="{strength('aim_down') - strength('aim_up')}" />
+      <q:set name="dx" value="{sx if sx != 0 or sy != 0 else aim.x - p1.x}" />
+      <q:set name="dy" value="{sy if sx != 0 or sy != 0 else aim.y - p1.y}" />
+      <qg:play sound="twang" vary="0.1" />
+      <q:if condition="{pressed_for('fire') >= 40}">
+        <qg:spawn prefab="Bolt" at="p1" heading="{dx},{dy}" />
+        <q:else><qg:spawn prefab="Arrow" at="p1" heading="{dx},{dy}" /></q:else>
+      </q:if>
+    </qg:on-input>
+    <qg:timer every="2">
+      <q:if condition="{pressing('fire') and pressed_for('fire') >= 40}">
+        <qg:beam from="p1" to="aim" seconds="0.05" color="#ffe080" width="1" />
+      </q:if>
+    </qg:timer>
+
+    <!-- every three seconds the tower zaps the raider nearest it, within 90 px -->
+    <qg:timer every="180" from="120">
+      <q:set name="near" value="{nearest(tower, 'raider')}" />
+      <q:if condition="{near != null and distance(tower, near) < 90}">
+        <qg:play sound="zap" />
+        <qg:beam from="tower" to="near" seconds="0.2" color="#80d0ff" width="2" />
+        <q:call function="struck" args="near, null, 2" />
+      </q:if>
+    </qg:timer>
+
+    <!-- The waves: none left, the next comes after a breath, bigger; each
+         third wave brings a brute, each fourth a ram from the left. -->
+    <qg:when condition="{count('raider') == 0}">
+      <q:set name="wave" value="{wave + 1}" />
+      <q:set name="message" value="{tr('HERE THEY COME')}" />
+      <qg:play sound="horn" />
+      <qg:after seconds="2">
+        <q:set name="message" value="" />
+        <!-- from the edges: by turns the sides and the top or bottom, the rest from the seed -->
+        <q:loop var="i" from="1" to="{3 + wave * 2}">
+          <q:if condition="{i % 2 == 0}">
+            <qg:spawn prefab="Raider" x="{8 if random(0, 1) < 0.5 else 312}" y="{random(16, 224)}" />
+            <q:else><qg:spawn prefab="Raider" x="{random(16, 304)}" y="{8 if random(0, 1) < 0.5 else 232}" /></q:else>
+          </q:if>
+        </q:loop>
+        <q:if condition="{wave % 3 == 0}"><qg:spawn prefab="Brute" x="168" y="10" /></q:if>
+        <q:if condition="{wave % 4 == 0}"><qg:spawn prefab="Ram" x="10" y="120" /></q:if>
+      </qg:after>
+    </qg:when>
+
+    <qg:hud position="top-left" size="10"><qg:text value="{tr('SCORE') + ' ' + str(score)}" /></qg:hud>
+    <qg:hud position="top-center" size="10"><qg:text value="{tr('WAVE') + ' ' + str(int(wave))}" /></qg:hud>
+    <qg:hud position="top-right" size="10"><qg:text value="{tr('TOWER') + ' ' + str(int(hearts))}" /></qg:hud>
+    <qg:hud position="center" size="14"><qg:text bind="message" /></qg:hud>
+  </qg:scene>
+
+  <qg:scene name="fallen" width="320" height="240" background="#1c1a14">
+    <qg:hud position="top-center" size="14"><qg:text value="{tr('THE KEEP HAS FALLEN')}" /></qg:hud>
+    <qg:hud position="center" size="12">
+      <qg:text value="{tr('SCORE') + ' ' + str(score)}" />
+      <qg:text value="{tr('BEST') + ' ' + (str(best[0]) if len(best) > 0 else '-')}" />
+    </qg:hud>
+    <qg:menu position="bottom-center" size="12">
+      <qg:button label="To the title"><qg:leave /><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="320" height="240" background="#2e3b24">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="14">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Fire" action="fire" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+</q:application>
+```
+
+### Crates
+
+`projects/crates/crates.q` — a box-pushing puzzle in three rooms drawn in Tiled (two tilesets, flipped tiles, animated water, the doors, a sign, a gull's path and each room's title from the maps): a worker that steps or walks where it is clicked (controller="pointer") and pushes crates (pushable=), barrels made from crates (extends=), a foreman whose words are typed in beside his face with a choice (qg:choice), a gate the camera goes to show open (qg:camera-to), and a key carried over the worker's head (qg:attach).
+
+```xml
+<q:application id="crates" type="game">
+
+  <!-- Crates: a box-pushing puzzle on a dockside, the game that drives Phase 3
+       of PLAN_GAMES_3.md. Three rooms drawn in Tiled (rooms/*.tmx): their
+       walls, the harbour's water, the pads and every crate, gate and key are
+       the maps', and so are the doors between them, the sign by each door, a
+       gull's way over the water and each room's title and hint. The worker
+       walks a cell at a time with the keys, or goes where it is clicked by
+       the shortest way, and pushes what it walks into. The art is drawn for
+       it by scripts/art/crates.py (CC0); the sounds are Kenney's Pixel
+       Platformer (CC0). -->
+
+  <q:set name="message" value="" />
+
+  <!-- the crates of the room standing on a pad: a pad is a tile of the map's pads layer -->
+  <q:function name="placed">
+    <q:set name="n" value="0" type="number" />
+    <qg:for-each tag="crate" var="c">
+      <q:if condition="{tile_at(c.col, c.row, 'pads') != 0}">
+        <q:set name="n" value="{n + 1}" />
+      </q:if>
+    </qg:for-each>
+    <q:return value="{n}" />
+  </q:function>
+  <!-- the gates that close a room open, and the camera goes to show it -->
+  <q:function name="open_gates">
+    <qg:for-each tag="gate" var="g">
+      <q:if condition="{g.state == 'shut'}">
+        <qg:camera-to target="g" zoom="2" seconds="0.5" hold="0.8" />
+        <qg:emit particles="dust" at="g" />
+        <qg:destroy target="g" />
+      </q:if>
+    </qg:for-each>
+    <qg:play sound="open" />
+  </q:function>
+
+  <qg:input action="restart" keys="R" />
+
+  <!-- warehouse.png: 1 concrete, 2 brick, 3 a corner, 4 an edge, 5 a pad, 6 planks, 7 an arrow, 8 stripes.
+       water.png: the harbour's four frames in turn, and a pier. -->
+  <qg:tileset name="warehouse" src="assets/warehouse.png" tile="16" />
+  <qg:tileset name="water" src="assets/water.png" tile="16">
+    <qg:tile frame="0" frames="4" fps="4" />
+  </qg:tileset>
+  <qg:spritesheet name="people" src="assets/people.png" tile="16" />
+  <qg:spritesheet name="faces" src="assets/faces.png" tile="32" />
+
+  <qg:sound bus="effects" name="push" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="open" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="pick" src="assets/kenney/audio/coin.ogg" />
+  <qg:sound bus="effects" name="done" src="assets/kenney/audio/win.ogg" />
+  <qg:particles name="dust" preset="smoke" color="#c8c0b0" />
+  <qg:particles name="cheer" preset="confetti" />
+
+  <!-- a crate; a barrel is one, drawn round -->
+  <qg:prefab name="Crate" tag="crate" sheet="people" frame="6" hitbox="14x14" solid="true" pushable="true" />
+  <qg:prefab name="Barrel" extends="Crate" frame="7" />
+  <qg:prefab name="Foreman" tag="foreman" sheet="people" frame="4" hitbox="14x14" solid="true">
+    <qg:state name="waiting" initial="true" />
+    <qg:state name="pleased" frame="5" />
+  </qg:prefab>
+  <!-- a gate is shut until the room's crates are in place; one with state locked in the map opens with the key -->
+  <qg:prefab name="Gate" tag="gate" sheet="people" frame="8" hitbox="16x16" solid="true">
+    <qg:state name="shut" initial="true" />
+    <qg:state name="locked" frame="9" />
+  </qg:prefab>
+  <qg:prefab name="Key" tag="key" sheet="people" frame="10" hitbox="12x12" />
+  <qg:prefab name="Gull" tag="gull" sheet="people" frame="11" hitbox="8x8" ai="path" speed="40" layer="2">
+    <qg:animation name="fly" frames="11,12" fps="4" />
+    <qg:on-screen-exit><qg:destroy /></qg:on-screen-exit>
+  </qg:prefab>
+
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-button action="restart" label="R" x="304" y="176" size="24" />
+
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="New game" as="Novo jogo" />
+    <qg:phrase text="Continue" as="Continuar" />
+    <qg:phrase text="Language" as="Idioma" />
+    <qg:phrase text="PADS" as="PLATAFORMAS" />
+    <qg:phrase text="THE DOCK" as="O CAIS" />
+    <qg:phrase text="THE YARD" as="O PÁTIO" />
+    <qg:phrase text="THE LOFT" as="O SÓTÃO" />
+    <qg:phrase text="PUSH THE CRATES ONTO THE PADS." as="EMPURRE AS CAIXAS PARA AS PLATAFORMAS." />
+    <qg:phrase text="THE KEY IS ON THE PIER." as="A CHAVE ESTÁ NO PÍER." />
+    <qg:phrase text="BARRELS PUSH LIKE CRATES." as="BARRIS SE EMPURRAM COMO CAIXAS." />
+    <qg:phrase text="THE GATE OPENS." as="O PORTÃO SE ABRE." />
+    <qg:phrase text="SHUT TILL THE CRATES ARE IN." as="FECHADO ATÉ AS CAIXAS ESTAREM NO LUGAR." />
+    <qg:phrase text="LOCKED. THE KEY IS ON THE PIER." as="TRANCADO. A CHAVE ESTÁ NO PÍER." />
+    <qg:phrase text="GOT THE KEY." as="PEGOU A CHAVE." />
+    <qg:phrase text="UNLOCKED." as="DESTRANCADO." />
+    <qg:phrase text="ALL STOWED. GOOD WORK." as="TUDO GUARDADO. BOM TRABALHO." />
+    <qg:phrase text="R: START THE ROOM OVER" as="R: RECOMEÇAR A SALA" />
+    <qg:phrase text="FOREMAN" as="CAPATAZ" />
+    <qg:phrase text="Morning. Two crates came in on the boat." as="Bom dia. Chegaram duas caixas no barco." />
+    <qg:phrase text="Push them onto the yellow pads. Need a hand?" as="Empurre-as para as plataformas amarelas. Precisa de ajuda?" />
+    <qg:phrase text="How do I push?" as="Como eu empurro?" />
+    <qg:phrase text="On it, boss." as="Deixa comigo, chefe." />
+    <qg:phrase text="Walk into a crate and it moves on, if nothing is behind it." as="Ande contra uma caixa e ela avança, se nada estiver atrás dela." />
+    <qg:phrase text="Or click a crate next to you." as="Ou clique numa caixa ao seu lado." />
+    <qg:phrase text="Stuck? R starts the room over." as="Travou? R recomeça a sala." />
+    <qg:phrase text="The gate opens when they are in place." as="O portão abre quando elas estiverem no lugar." />
+    <qg:phrase text="Last room. The barrels too." as="Última sala. Os barris também." />
+    <qg:phrase text="That's the lot. Good work!" as="É tudo. Bom trabalho!" />
+    <qg:phrase text="Another shift?" as="Mais um turno?" />
+    <qg:phrase text="Home time." as="Hora de ir para casa." />
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Restart" as="Recomeçar" />
+</qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="New game" as="Nueva partida" />
+    <qg:phrase text="Continue" as="Continuar" />
+    <qg:phrase text="Language" as="Idioma" />
+    <qg:phrase text="PADS" as="PLATAFORMAS" />
+    <qg:phrase text="THE DOCK" as="EL MUELLE" />
+    <qg:phrase text="THE YARD" as="EL PATIO" />
+    <qg:phrase text="THE LOFT" as="EL DESVÁN" />
+    <qg:phrase text="PUSH THE CRATES ONTO THE PADS." as="EMPUJA LAS CAJAS A LAS PLATAFORMAS." />
+    <qg:phrase text="THE KEY IS ON THE PIER." as="LA LLAVE ESTÁ EN EL MUELLE." />
+    <qg:phrase text="BARRELS PUSH LIKE CRATES." as="LOS BARRILES SE EMPUJAN COMO LAS CAJAS." />
+    <qg:phrase text="THE GATE OPENS." as="LA PUERTA SE ABRE." />
+    <qg:phrase text="SHUT TILL THE CRATES ARE IN." as="CERRADA HASTA QUE LAS CAJAS ESTÉN EN SU SITIO." />
+    <qg:phrase text="LOCKED. THE KEY IS ON THE PIER." as="CERRADA CON LLAVE. LA LLAVE ESTÁ EN EL MUELLE." />
+    <qg:phrase text="GOT THE KEY." as="TIENES LA LLAVE." />
+    <qg:phrase text="UNLOCKED." as="ABIERTA." />
+    <qg:phrase text="ALL STOWED. GOOD WORK." as="TODO GUARDADO. BUEN TRABAJO." />
+    <qg:phrase text="R: START THE ROOM OVER" as="R: EMPEZAR LA SALA DE NUEVO" />
+    <qg:phrase text="FOREMAN" as="CAPATAZ" />
+    <qg:phrase text="Morning. Two crates came in on the boat." as="Buenos días. Llegaron dos cajas en el barco." />
+    <qg:phrase text="Push them onto the yellow pads. Need a hand?" as="Empújalas a las plataformas amarillas. ¿Necesitas ayuda?" />
+    <qg:phrase text="How do I push?" as="¿Cómo empujo?" />
+    <qg:phrase text="On it, boss." as="Enseguida, jefe." />
+    <qg:phrase text="Walk into a crate and it moves on, if nothing is behind it." as="Camina contra una caja y avanza, si nada hay detrás." />
+    <qg:phrase text="Or click a crate next to you." as="O haz clic en una caja a tu lado." />
+    <qg:phrase text="Stuck? R starts the room over." as="¿Atascado? R empieza la sala de nuevo." />
+    <qg:phrase text="The gate opens when they are in place." as="La puerta se abre cuando estén en su sitio." />
+    <qg:phrase text="Last room. The barrels too." as="Última sala. Los barriles también." />
+    <qg:phrase text="That's the lot. Good work!" as="Eso es todo. ¡Buen trabajo!" />
+    <qg:phrase text="Another shift?" as="¿Otro turno?" />
+    <qg:phrase text="Home time." as="Hora de volver a casa." />
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Restart" as="Reiniciar" />
+</qg:language>
+
+  <!-- ===== The title ===== -->
+
+  <qg:scene name="title" width="320" height="192" background="#20283a">
+    <qg:hud position="top-center" size="32"><qg:text value="{'CRATES'}" /></qg:hud>
+    <qg:menu position="center">
+      <qg:button label="New game"><qg:goto-scene name="dock" fade="0.3" /></qg:button>
+      <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
+      <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <!-- ===== The dock: two crates, and the foreman to talk to ===== -->
+
+  <qg:scene name="dock" width="320" height="192" background="#20283a" save="true">
+    <qg:tilemap tileset="warehouse" src="rooms/dock.tmx" />
+    <qg:cursor player="1" grid="16" sheet="people" frame="13" />
+    <qg:character id="worker" controller="pointer" sheet="people" frame="0" x="8" y="88" hitbox="12x12"
+                  step-frames="10">
+      <qg:animation name="idle" frames="0" />
+      <qg:animation name="walk" frames="1,2" fps="12" />
+      <qg:animation name="bump" frames="3" />
+      <qg:on-collision with="crate"><qg:play sound="push" /></qg:on-collision>
+      <qg:on-collision with="sign"><q:set name="message" value="{tiled('hint')}" /></qg:on-collision>
+      <qg:on-collision with="foreman"><qg:say dialogue="foreman" /></qg:on-collision>
+      <qg:on-collision with="gate"><q:set name="message" value="SHUT TILL THE CRATES ARE IN." /></qg:on-collision>
+    </qg:character>
+    <qg:camera follow="worker" bounds="tilemap" />
+    <qg:dialogue name="foreman" size="9" speed="40" sheet="faces">
+      <qg:line who="FOREMAN" portrait="0" text="Morning. Two crates came in on the boat." />
+      <qg:line who="FOREMAN" portrait="0" text="Push them onto the yellow pads. Need a hand?">
+        <qg:choice label="How do I push?"><qg:say dialogue="how" /></qg:choice>
+        <qg:choice label="On it, boss." />
+      </qg:line>
+      <qg:line who="FOREMAN" portrait="0" text="The gate opens when they are in place." />
+    </qg:dialogue>
+    <qg:dialogue name="how" size="9" speed="40" sheet="faces">
+      <qg:line who="FOREMAN" portrait="0" text="Walk into a crate and it moves on, if nothing is behind it." />
+      <qg:line who="FOREMAN" portrait="0" text="Or click a crate next to you." />
+      <qg:line who="FOREMAN" portrait="0" text="Stuck? R starts the room over." />
+    </qg:dialogue>
+    <qg:when condition="{placed() == count('crate')}">
+      <q:set name="message" value="THE GATE OPENS." />
+      <q:call function="open_gates" />
+    </qg:when>
+    <qg:on-input action="restart"><qg:goto-scene name="dock" /></qg:on-input>
+    <qg:hud position="top-left" size="12">
+      <qg:text value="{tr(tiled('title')) + '   ' + tr('PADS') + ' ' + str(placed()) + '/' + str(count('crate'))}" />
+      <qg:text bind="message" />
+    </qg:hud>
+  </qg:scene>
+
+  <!-- ===== The yard: the harbour, a key on the pier, a locked gate ===== -->
+
+  <qg:scene name="yard" width="320" height="192" background="#20283a" save="true">
+    <qg:tilemap tileset="warehouse" src="rooms/yard.tmx" />
+    <qg:cursor player="1" grid="16" sheet="people" frame="13" />
+    <qg:character id="worker" controller="pointer" sheet="people" frame="0" x="8" y="88" hitbox="12x12"
+                  step-frames="10">
+      <qg:animation name="idle" frames="0" />
+      <qg:animation name="walk" frames="1,2" fps="12" />
+      <qg:animation name="bump" frames="3" />
+      <qg:on-collision with="crate"><qg:play sound="push" /></qg:on-collision>
+      <qg:on-collision with="sign"><q:set name="message" value="{tiled('hint')}" /></qg:on-collision>
+      <qg:on-collision with="key">
+        <qg:attach target="other" dy="-10" />
+        <qg:play sound="pick" />
+        <q:set name="message" value="GOT THE KEY." />
+      </qg:on-collision>
+      <qg:on-collision with="gate">
+        <q:if condition="{other.state == 'locked' and carrying(me, 'key') != null}">
+          <qg:for-each tag="key" var="k"><qg:destroy target="k" /></qg:for-each>
+          <qg:emit particles="dust" at="other" />
+          <qg:destroy target="other" />
+          <qg:play sound="open" />
+          <q:set name="message" value="UNLOCKED." />
+          <q:elseif condition="{other.state == 'locked'}">
+            <q:set name="message" value="LOCKED. THE KEY IS ON THE PIER." />
+          </q:elseif>
+          <q:else><q:set name="message" value="SHUT TILL THE CRATES ARE IN." /></q:else>
+        </q:if>
+      </qg:on-collision>
+    </qg:character>
+    <qg:camera follow="worker" bounds="tilemap" />
+    <qg:when condition="{placed() == count('crate')}">
+      <q:set name="message" value="THE GATE OPENS." />
+      <q:call function="open_gates" />
+    </qg:when>
+    <!-- now and then a gull, along the way drawn in the map -->
+    <qg:timer every="420" from="60"><qg:spawn prefab="Gull" at="path" path="gull" /></qg:timer>
+    <qg:on-input action="restart"><qg:goto-scene name="yard" /></qg:on-input>
+    <qg:hud position="top-left" size="12">
+      <qg:text value="{tr(tiled('title')) + '   ' + tr('PADS') + ' ' + str(placed()) + '/' + str(count('crate'))}" />
+      <qg:text bind="message" />
+    </qg:hud>
+  </qg:scene>
+
+  <!-- ===== The loft: crates and barrels, and the foreman waiting at the end ===== -->
+
+  <qg:scene name="loft" width="320" height="192" background="#20283a" save="true">
+    <qg:tilemap tileset="warehouse" src="rooms/loft.tmx" />
+    <qg:cursor player="1" grid="16" sheet="people" frame="13" />
+    <qg:character id="worker" controller="pointer" sheet="people" frame="0" x="8" y="88" hitbox="12x12"
+                  step-frames="10">
+      <qg:animation name="idle" frames="0" />
+      <qg:animation name="walk" frames="1,2" fps="12" />
+      <qg:animation name="bump" frames="3" />
+      <qg:on-collision with="crate"><qg:play sound="push" /></qg:on-collision>
+      <qg:on-collision with="sign"><q:set name="message" value="{tiled('hint')}" /></qg:on-collision>
+      <qg:on-collision with="foreman">
+        <q:if condition="{other.state == 'pleased'}">
+          <qg:say dialogue="done" />
+          <q:else><qg:say dialogue="last" /></q:else>
+        </q:if>
+      </qg:on-collision>
+    </qg:character>
+    <qg:camera follow="worker" bounds="tilemap" />
+    <qg:dialogue name="last" size="9" speed="40" sheet="faces">
+      <qg:line who="FOREMAN" portrait="0" text="Last room. The barrels too." />
+    </qg:dialogue>
+    <qg:dialogue name="done" size="9" speed="40" sheet="faces">
+      <qg:line who="FOREMAN" portrait="1" text="That's the lot. Good work!">
+        <qg:choice label="Another shift?"><qg:goto-scene name="dock" fade="0.5" /></qg:choice>
+        <qg:choice label="Home time."><qg:goto-scene name="title" fade="0.5" /></qg:choice>
+      </qg:line>
+    </qg:dialogue>
+    <qg:when condition="{placed() == count('crate')}">
+      <q:set name="message" value="ALL STOWED. GOOD WORK." />
+      <qg:play sound="done" />
+      <qg:for-each tag="foreman" var="f">
+        <qg:become target="f" state="pleased" />
+        <qg:camera-to target="f" zoom="2" seconds="0.5" hold="1" />
+        <qg:emit particles="cheer" at="f" />
+      </qg:for-each>
+    </qg:when>
+    <qg:on-input action="restart"><qg:goto-scene name="loft" /></qg:on-input>
+    <qg:hud position="top-left" size="12">
+      <qg:text value="{tr(tiled('title')) + '   ' + tr('PADS') + ' ' + str(placed()) + '/' + str(count('crate'))}" />
+      <qg:text bind="message" />
+    </qg:hud>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="320" height="192" background="#20283a">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="12">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Restart" action="restart" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+</q:application>
+```
+
+### Rally
+
+`projects/rally/rally.q` — two cars round a circuit drawn in Tiled, wider and taller than the screen: a camera for each (qg:camera player=), so on one keyboard the screen splits in two and over the network each machine follows its own car; a barrier that lifts at the green light (a solid prefab destroyed by a qg:timer), and laps counted at the line only after halfway round (the map's zones).
+
+```xml
+<q:application id="rally" type="game">
+
+  <!-- Rally: two cars round a circuit seen from above, on one keyboard or over
+       the network. The circuit is wider and taller than the screen, so each
+       car has a camera of its own (qg:camera player=): on one machine the
+       screen splits in two, red on the left, blue on the right; over the
+       network each machine shows its own car on the whole screen. The barrier
+       lifts at the green light; the first to finish three laps wins. A lap
+       counts at the line only after halfway round, at the top of the loop in
+       the infield. The art and the circuit (a Tiled map) are drawn by
+       scripts/art/rally.py (CC0); the sounds are Kenney's Pixel Platformer
+       (CC0). -->
+
+  <!-- how many laps win the race -->
+  <q:set name="race_laps" value="3" type="number" />
+  <!-- the last winner: 1 red, 2 blue -->
+  <q:set name="winner" value="0" type="number" />
+
+  <qg:tileset name="track" src="assets/track.png" tile="16" />
+  <qg:spritesheet name="cars" src="assets/cars.png" tile="16" />
+  <qg:spritesheet name="gate" src="assets/gate.png" tile="16x80" />
+
+  <qg:sound bus="effects" name="beep" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="go" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="lap" src="assets/kenney/audio/coin.ogg" />
+  <qg:sound bus="effects" name="flag" src="assets/kenney/audio/win.ogg" />
+
+  <!-- Red drives with W A S D, blue with the arrows; over the network, each with W A S D. -->
+  <qg:input action="up" keys="W, JoyUp" player="1" />
+  <qg:input action="down" keys="S, JoyDown" player="1" />
+  <qg:input action="left" keys="A, JoyLeft" player="1" />
+  <qg:input action="right" keys="D, JoyRight" player="1" />
+  <qg:input action="up" keys="Up" player="2" />
+  <qg:input action="down" keys="Down" player="2" />
+  <qg:input action="left" keys="Left" player="2" />
+  <qg:input action="right" keys="Right" player="2" />
+
+  <qg:multiplayer players="2" start="race" />
+
+  <!-- The barrier across the road at the start; it lifts at the green light. -->
+  <qg:prefab name="Gate" tag="gate" sheet="gate" hitbox="16x80" solid="true" />
+
+  <!-- on a phone: a stick for the car, under a finger, in every scene -->
+  <qg:touch-stick x="48" y="168" size="56" />
+
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="RALLY" as="RALI" />
+    <qg:phrase text="Two players, one keyboard" as="Dois jogadores, um teclado" />
+    <qg:phrase text="Over the network" as="Pela rede" />
+    <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="Language" as="Idioma" />
+    <qg:phrase text="Quit" as="Sair" />
+    <qg:phrase text="RED: W A S D    BLUE: THE ARROWS" as="VERMELHO: W A S D    AZUL: AS SETAS" />
+    <qg:phrase text="TWO CARS, TWO MACHINES. ESCAPE: BACK." as="DOIS CARROS, DUAS MÁQUINAS. ESC: VOLTAR." />
+    <qg:phrase text="RED" as="VERMELHO" />
+    <qg:phrase text="BLUE" as="AZUL" />
+    <qg:phrase text="LAP" as="VOLTA" />
+    <qg:phrase text="GO!" as="JÁ!" />
+    <qg:phrase text="WINS" as="VENCE" />
+    <qg:phrase text="Again" as="De novo" />
+    <qg:phrase text="To the title" as="Para o título" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Red up" as="Vermelho sobe" />
+    <qg:phrase text="Red down" as="Vermelho desce" />
+    <qg:phrase text="Red left" as="Vermelho esquerda" />
+    <qg:phrase text="Red right" as="Vermelho direita" />
+    <qg:phrase text="Blue up" as="Azul sobe" />
+    <qg:phrase text="Blue down" as="Azul desce" />
+    <qg:phrase text="Blue left" as="Azul esquerda" />
+    <qg:phrase text="Blue right" as="Azul direita" />
+    <qg:phrase text="Back" as="Voltar" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="RALLY" as="RALLY" />
+    <qg:phrase text="Two players, one keyboard" as="Dos jugadores, un teclado" />
+    <qg:phrase text="Over the network" as="Por la red" />
+    <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="Language" as="Idioma" />
+    <qg:phrase text="Quit" as="Salir" />
+    <qg:phrase text="RED: W A S D    BLUE: THE ARROWS" as="ROJO: W A S D    AZUL: LAS FLECHAS" />
+    <qg:phrase text="TWO CARS, TWO MACHINES. ESCAPE: BACK." as="DOS COCHES, DOS MÁQUINAS. ESC: VOLVER." />
+    <qg:phrase text="RED" as="ROJO" />
+    <qg:phrase text="BLUE" as="AZUL" />
+    <qg:phrase text="LAP" as="VUELTA" />
+    <qg:phrase text="GO!" as="¡YA!" />
+    <qg:phrase text="WINS" as="GANA" />
+    <qg:phrase text="Again" as="Otra vez" />
+    <qg:phrase text="To the title" as="Al título" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Red up" as="Rojo arriba" />
+    <qg:phrase text="Red down" as="Rojo abajo" />
+    <qg:phrase text="Red left" as="Rojo izquierda" />
+    <qg:phrase text="Red right" as="Rojo derecha" />
+    <qg:phrase text="Blue up" as="Azul arriba" />
+    <qg:phrase text="Blue down" as="Azul abajo" />
+    <qg:phrase text="Blue left" as="Azul izquierda" />
+    <qg:phrase text="Blue right" as="Azul derecha" />
+    <qg:phrase text="Back" as="Volver" />
+  </qg:language>
+
+  <qg:scene name="title" width="384" height="216" background="#2c5a2a">
+    <qg:sprite sheet="cars" frame="0" x="150" y="56" gd:scale="3,3" />
+    <qg:sprite sheet="cars" frame="3" x="234" y="56" gd:scale="3,3" />
+    <qg:hud position="top-center" size="28"><qg:text value="{tr('RALLY')}" /></qg:hud>
+    <qg:menu position="center" size="14">
+      <qg:button label="Two players, one keyboard"><qg:goto-scene name="race" fade="0.3" /></qg:button>
+      <qg:button label="Over the network"><qg:goto-scene name="together" /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
+      <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
+      <!-- a desktop build quits; a page in a browser has nothing to quit to -->
+      <qg:button label="Quit" if="{can_quit()}"><qg:quit /></qg:button>
+    </qg:menu>
+    <qg:hud position="bottom-center" size="10"><qg:text value="{tr('RED: W A S D    BLUE: THE ARROWS')}" /></qg:hud>
+  </qg:scene>
+
+  <!-- Two machines: one hosts, the other joins its address; the race starts as it does. -->
+  <qg:scene name="together" width="384" height="216" background="#2c5a2a">
+    <qg:hud position="top-center" size="10"><qg:text value="{tr('TWO CARS, TWO MACHINES. ESCAPE: BACK.')}" /></qg:hud>
+    <qg:lobby local="race" local-label="Two players, one keyboard" size="12" />
+    <qg:on-input action="cancel">
+      <qg:leave />
+      <qg:goto-scene name="title" />
+    </qg:on-input>
+  </qg:scene>
+
+  <!-- The race: the circuit, the two cars on the grid behind the barrier, a
+       camera for each, and the laps each has done. -->
+  <qg:scene name="race" width="384" height="216" background="#2c5a2a" seed="1">
+    <q:set name="laps" type="array" value="[0, 0]" />
+    <!-- halfway round on this lap: the line counts it only then -->
+    <q:set name="half" type="array" value="[false, false]" />
+    <qg:tilemap tileset="track" src="track/track.tmx" />
+
+    <qg:character id="red" controller="topdown" player="1" sheet="cars" frame="0" x="440" y="56"
+                  hitbox="12x12" speed="150">
+      <qg:animation name="walk" frames="0" />
+      <qg:animation name="walk-up" frames="1" />
+      <qg:animation name="walk-down" frames="2" />
+      <qg:on-collision with="half"><q:call function="halfway" args="1" /></qg:on-collision>
+      <qg:on-collision with="finish"><q:call function="across" args="1" /></qg:on-collision>
+    </qg:character>
+    <qg:character id="blue" controller="topdown" player="2" sheet="cars" frame="3" x="440" y="88"
+                  hitbox="12x12" speed="150">
+      <qg:animation name="walk" frames="3" />
+      <qg:animation name="walk-up" frames="4" />
+      <qg:animation name="walk-down" frames="5" />
+      <qg:on-collision with="half"><q:call function="halfway" args="2" /></qg:on-collision>
+      <qg:on-collision with="finish"><q:call function="across" args="2" /></qg:on-collision>
+    </qg:character>
+    <qg:instance prefab="Gate" name="gate" x="472" y="72" />
+
+    <!-- one view each: the screen splits on one machine -->
+    <qg:camera player="1" follow="red" smooth="8" lead="24" />
+    <qg:camera player="2" follow="blue" smooth="8" lead="24" />
+
+    <!-- the lights: three beeps, and the barrier lifts -->
+    <qg:timer after="30"><qg:play sound="beep" /></qg:timer>
+    <qg:timer after="90"><qg:play sound="beep" /></qg:timer>
+    <qg:timer after="150"><qg:play sound="beep" /></qg:timer>
+    <qg:timer after="210">
+      <qg:play sound="go" />
+      <qg:destroy target="gate" />
+    </qg:timer>
+
+    <q:function name="halfway" params="n">
+      <q:set name="half" index="{n - 1}" value="{true}" />
+    </q:function>
+    <!-- over the line: a lap, if it went halfway round first; the last one wins -->
+    <q:function name="across" params="n">
+      <q:if condition="{half[n - 1]}">
+        <q:set name="half" index="{n - 1}" value="{false}" />
+        <q:set name="laps" index="{n - 1}" value="{laps[n - 1] + 1}" />
+        <qg:play sound="lap" />
+        <q:if condition="{laps[n - 1] >= race_laps and winner == 0}">
+          <q:set name="winner" value="{n}" />
+          <qg:play sound="flag" />
+          <qg:goto-scene name="flag" fade="0.5" />
+        </q:if>
+      </q:if>
+    </q:function>
+
+    <qg:hud position="top-left" size="10">
+      <qg:text value="{tr('RED') + '  ' + tr('LAP') + ' ' + str(min(laps[0] + 1, race_laps)) + '/' + str(race_laps)}"
+               color="#ff8070" />
+    </qg:hud>
+    <qg:hud position="top-right" size="10">
+      <qg:text value="{tr('BLUE') + '  ' + tr('LAP') + ' ' + str(min(laps[1] + 1, race_laps)) + '/' + str(race_laps)}"
+               color="#88b0ff" />
+    </qg:hud>
+    <qg:hud position="center" size="24">
+      <qg:text value="{'3' if ticks() &lt; 90 else '2' if ticks() &lt; 150 else '1' if ticks() &lt; 210 else tr('GO!') if ticks() &lt; 270 else ''}" />
+    </qg:hud>
+  </qg:scene>
+
+  <qg:scene name="flag" width="384" height="216" background="#1c2a1c">
+    <qg:hud position="top-center" size="20" if="{winner == 1}">
+      <qg:text value="{tr('RED') + ' ' + tr('WINS')}" color="#ff8070" />
+    </qg:hud>
+    <qg:hud position="top-center" size="20" if="{winner == 2}">
+      <qg:text value="{tr('BLUE') + ' ' + tr('WINS')}" color="#88b0ff" />
+    </qg:hud>
+    <qg:hud position="center"><qg:icon sheet="cars" frame="{0 if winner == 1 else 3}" scale="4" /></qg:hud>
+    <qg:menu position="bottom-center" size="12">
+      <qg:button label="Again"><q:set name="winner" value="0" /><qg:goto-scene name="race" fade="0.3" /></qg:button>
+      <qg:button label="To the title"><q:set name="winner" value="0" /><qg:leave /><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="384" height="216" background="#2c5a2a">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="12" columns="2" rows="4">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Red up" action="up" />
+      <qg:rebind label="Blue up" action="up" player="2" />
+      <qg:rebind label="Red down" action="down" />
+      <qg:rebind label="Blue down" action="down" player="2" />
+      <qg:rebind label="Red left" action="left" />
+      <qg:rebind label="Blue left" action="left" player="2" />
+      <qg:rebind label="Red right" action="right" />
+      <qg:rebind label="Blue right" action="right" player="2" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+</q:application>
+```
+
+### Marches
+
+`projects/marches/marches.q` — a skirmish on a map of hexes (qg:tileset shape="hex"), turn by turn: riders that ride where they are clicked by the cheapest way (qg:travel budget=), forests, hills and marshes that cost more to cross (qg:tile cost=), a pointer that snaps to the hexes (qg:cursor cells=), what a ride there would cost (cost()), and raiders that ride at the nearest rider in their turn (qg:for-each, qg:travel).
+
+```xml
+<q:application id="marches" type="game">
+
+  <!-- Marches: a skirmish on a map of hexes, turn by turn. Three riders hold the
+       keep by the river against four raiders who come from the east by the
+       fords. Click a rider, then a hex: it rides there by the cheapest way, four
+       moves a turn, a forest or a ford costing two, the hills and the marsh three;
+       the river and the rocks stop it. A rider next to a raider strikes it with a
+       click on the raider, and is spent for the turn. End the turn (E, or the
+       button), and the raiders ride at the nearest rider, three moves each, and
+       strike. The raiders all fallen, the march is held; the riders all fallen, or
+       a raider in the keep, it is lost. Written for PLAN_GAMES_3.md's Phase 6: hex
+       maps, terrain costs, qg:travel and cost(). The art is drawn by
+       scripts/art/marches.py (CC0); the sounds are Kenney's (CC0). -->
+
+  <qg:input action="end-turn" keys="E" />
+  <!-- on a phone a tap is a click; and the end of the turn under a finger -->
+  <qg:touch-button action="end-turn" label="E" x="380" y="230" size="40" />
+
+  <!-- the land: hexes with their points up, and what a step onto each costs -->
+  <qg:tileset name="land" src="assets/land.png" tile="28x32" shape="hex">
+    <qg:tile frame="0" shape="none" />              <!-- grass -->
+    <qg:tile frame="1" shape="none" cost="2" />     <!-- forest -->
+    <qg:tile frame="2" shape="none" cost="3" />     <!-- hills -->
+    <qg:tile frame="3" shape="none" cost="3" />     <!-- marsh -->
+    <!-- 4, the river, and 5, the rocks: solid -->
+    <qg:tile frame="6" shape="none" cost="2" />     <!-- a ford -->
+    <qg:tile frame="7" shape="none" />              <!-- the keep -->
+  </qg:tileset>
+  <qg:spritesheet name="units" src="assets/units.png" tile="24" />
+  <qg:spritesheet name="marks" src="assets/marks.png" tile="28x32" />
+
+  <qg:sound bus="effects" name="ride" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="effects" name="blow" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="fall" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="won" src="assets/kenney/audio/win.ogg" />
+
+  <qg:prefab name="Rider" tag="rider" sheet="units" frame="0" hitbox="14x14" health="3">
+    <qg:state name="ready" frame="0" initial="true" />
+    <qg:state name="chosen" frame="4" />
+    <qg:state name="spent" frame="1" />
+    <qg:label value="{str(me.health)}" dy="-15" size="8" color="#c8d8ff" />
+    <qg:on-death><qg:play sound="fall" /></qg:on-death>
+  </qg:prefab>
+  <qg:prefab name="Raider" tag="raider" sheet="units" frame="2" hitbox="14x14" health="2">
+    <qg:state name="whole" frame="2" initial="true" />
+    <qg:state name="hurt" frame="3" />
+    <qg:label value="{str(me.health)}" dy="-15" size="8" color="#ffc8c0" />
+    <qg:on-damage><qg:become target="me" state="hurt" /></qg:on-damage>
+    <qg:on-death><qg:play sound="fall" /></qg:on-death>
+  </qg:prefab>
+
+  <qg:language lang="pt" name="Português">
+    <qg:phrase text="MARCHES" as="MARCAS" />
+    <qg:phrase text="Hold the ford: three riders, four raiders." as="Segure o vau: três cavaleiros, quatro saqueadores." />
+    <qg:phrase text="Play" as="Jogar" />
+    <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="Language" as="Idioma" />
+    <qg:phrase text="Click a rider." as="Clique num cavaleiro." />
+    <qg:phrase text="Your turn: click a rider." as="Sua vez: clique num cavaleiro." />
+    <qg:phrase text="The raiders ride." as="Os saqueadores avançam." />
+    <qg:phrase text="Wait for the raiders." as="Espere os saqueadores." />
+    <qg:phrase text="Where to? Four moves." as="Para onde? Quatro movimentos." />
+    <qg:phrase text="A blow!" as="Um golpe!" />
+    <qg:phrase text="Strike a raider next to it, or choose another rider." as="Golpeie um saqueador ao lado, ou escolha outro cavaleiro." />
+    <qg:phrase text="Choose another rider, or end the turn (E)." as="Escolha outro cavaleiro, ou encerre a vez (E)." />
+    <qg:phrase text="Too far, or no way there." as="Longe demais, ou sem caminho." />
+    <qg:phrase text="That rider is spent." as="Esse cavaleiro já agiu." />
+    <qg:phrase text="End turn" as="Encerrar a vez" />
+    <qg:phrase text="The march is held." as="A marca resiste." />
+    <qg:phrase text="The march is lost." as="A marca caiu." />
+    <qg:phrase text="Again" as="De novo" />
+    <qg:phrase text="Grass" as="Campo" />
+    <qg:phrase text="Forest" as="Floresta" />
+    <qg:phrase text="Hills" as="Colinas" />
+    <qg:phrase text="Marsh" as="Pântano" />
+    <qg:phrase text="River" as="Rio" />
+    <qg:phrase text="Rocks" as="Rochas" />
+    <qg:phrase text="Ford" as="Vau" />
+    <qg:phrase text="Keep" as="Torre" />
+    <qg:phrase text="move" as="movimento" />
+    <qg:phrase text="moves" as="movimentos" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+  </qg:language>
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="MARCHES" as="MARCAS" />
+    <qg:phrase text="Hold the ford: three riders, four raiders." as="Defiende el vado: tres jinetes, cuatro saqueadores." />
+    <qg:phrase text="Play" as="Jugar" />
+    <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="Language" as="Idioma" />
+    <qg:phrase text="Click a rider." as="Haz clic en un jinete." />
+    <qg:phrase text="Your turn: click a rider." as="Tu turno: haz clic en un jinete." />
+    <qg:phrase text="The raiders ride." as="Los saqueadores avanzan." />
+    <qg:phrase text="Wait for the raiders." as="Espera a los saqueadores." />
+    <qg:phrase text="Where to? Four moves." as="¿Adónde? Cuatro movimientos." />
+    <qg:phrase text="A blow!" as="¡Un golpe!" />
+    <qg:phrase text="Strike a raider next to it, or choose another rider." as="Golpea a un saqueador a su lado, o elige otro jinete." />
+    <qg:phrase text="Choose another rider, or end the turn (E)." as="Elige otro jinete, o termina el turno (E)." />
+    <qg:phrase text="Too far, or no way there." as="Demasiado lejos, o sin camino." />
+    <qg:phrase text="That rider is spent." as="Ese jinete ya actuó." />
+    <qg:phrase text="End turn" as="Terminar turno" />
+    <qg:phrase text="The march is held." as="La marca resiste." />
+    <qg:phrase text="The march is lost." as="La marca ha caído." />
+    <qg:phrase text="Again" as="Otra vez" />
+    <qg:phrase text="Grass" as="Pradera" />
+    <qg:phrase text="Forest" as="Bosque" />
+    <qg:phrase text="Hills" as="Colinas" />
+    <qg:phrase text="Marsh" as="Pantano" />
+    <qg:phrase text="River" as="Río" />
+    <qg:phrase text="Rocks" as="Rocas" />
+    <qg:phrase text="Ford" as="Vado" />
+    <qg:phrase text="Keep" as="Torre" />
+    <qg:phrase text="move" as="movimiento" />
+    <qg:phrase text="moves" as="movimientos" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+  </qg:language>
+
+  <qg:scene name="title" width="406" height="280" background="#1c2a1c">
+    <qg:hud position="top-center" size="32"><qg:text value="{'MARCHES'}" /></qg:hud>
+    <qg:menu position="center" size="14">
+      <qg:button label="Play"><qg:goto-scene name="field" fade="0.5" /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
+      <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
+    </qg:menu>
+    <qg:hud position="bottom-center" size="10"><qg:text value="{'Hold the ford: three riders, four raiders.'}" /></qg:hud>
+  </qg:scene>
+
+  <qg:scene name="field" width="406" height="280" background="#1c2a1c">
+    <q:set name="turn" value="riders" />
+    <q:set name="chosen" value="{null}" />
+    <q:set name="moved" value="[]" type="array" />     <!-- the riders that rode this turn, by name -->
+    <q:set name="spent" value="[]" type="array" />     <!-- the riders that struck this turn -->
+    <q:set name="message" value="Click a rider." />
+    <q:set name="terrain" value="{['', 'Grass', 'Forest', 'Hills', 'Marsh', 'River', 'Rocks', 'Ford', 'Keep']}" type="array" />
+
+    <!-- a rider of the player's chosen: it rides (once a turn, four moves at most) and strikes (once) -->
+    <q:function name="choose" params="rider">
+      <q:if condition="{chosen != null and not (chosen.name in spent)}">
+        <qg:become target="chosen" state="ready" />
+      </q:if>
+      <q:set name="chosen" value="{rider}" />
+      <qg:become target="rider" state="chosen" />
+    </q:function>
+    <q:function name="strike" params="foe">
+      <qg:play sound="blow" />
+      <qg:damage target="foe" amount="1" />
+    </q:function>
+
+    <!-- the raiders' turn: each rides at the nearest rider, three moves, and strikes it if it is next to it -->
+    <q:function name="raiders_ride">
+      <q:set name="turn" value="raiders" />
+      <q:set name="message" value="The raiders ride." />
+      <q:if condition="{chosen != null and not (chosen.name in spent)}">
+        <qg:become target="chosen" state="ready" />
+      </q:if>
+      <q:set name="chosen" value="{null}" />
+      <qg:for-each tag="raider" var="raider">
+        <qg:travel target="raider" to="{nearest(raider, 'rider')}" budget="3" step="10">
+          <qg:on-end>
+            <q:if condition="{tile_at(me.col, me.row) == 8}">
+              <qg:goto-scene name="lost" fade="1" />
+            </q:if>
+            <q:if condition="{count('rider') > 0 and distance(me, nearest(me, 'rider')) &lt; 30}">
+              <q:call function="strike" args="nearest(me, 'rider')" />
+            </q:if>
+          </qg:on-end>
+        </qg:travel>
+      </qg:for-each>
+      <qg:after seconds="1.5">
+        <q:set name="turn" value="riders" />
+        <q:set name="moved" value="[]" />
+        <q:set name="spent" value="[]" />
+        <q:set name="message" value="Your turn: click a rider." />
+        <qg:for-each tag="rider" var="rider"><qg:become target="rider" state="ready" /></qg:for-each>
+      </qg:after>
+    </q:function>
+
+    <qg:tilemap tileset="land" collision="true">
+1,1,2,2,1,4,5,5,4,1,2,2,1,1
+1,2,2,1,1,4,5,5,4,1,1,2,3,1
+1,1,1,1,3,4,5,5,4,4,1,1,3,1
+1,8,1,1,3,1,7,7,1,4,1,1,1,1
+1,1,1,2,1,1,5,5,1,1,2,2,1,1
+1,1,2,2,1,4,5,5,4,1,2,6,6,1
+1,1,1,1,1,4,5,5,1,1,1,6,1,1
+6,1,1,3,3,1,5,7,4,1,3,1,1,1
+6,6,1,1,1,1,5,5,4,1,3,3,1,1
+6,6,6,1,1,4,5,5,4,1,1,1,1,1
+    </qg:tilemap>
+
+    <!-- each at the middle of its hex: column 2 of row 2, column 3 of row 3 (an odd row, half a hex on)... -->
+    <qg:instance prefab="Rider" name="ash" x="70" y="64" />
+    <qg:instance prefab="Rider" name="birch" x="112" y="88" />
+    <qg:instance prefab="Rider" name="cedar" x="70" y="112" />
+    <qg:instance prefab="Raider" name="raider-1" x="364" y="40" />
+    <qg:instance prefab="Raider" name="raider-2" x="350" y="112" />
+    <qg:instance prefab="Raider" name="raider-3" x="336" y="184" />
+    <qg:instance prefab="Raider" name="raider-4" x="350" y="208" />
+
+    <!-- the pointer snaps to the hexes -->
+    <qg:cursor id="aim" player="1" cells="true" sheet="marks" frame="0" />
+
+    <qg:on-select>
+      <q:if condition="{turn != 'riders'}">
+        <q:set name="message" value="Wait for the raiders." />
+      </q:if>
+      <!-- a rider: chosen, unless it has struck -->
+      <q:elseif condition="{other != null and other.tag == 'rider' and other.name in spent}">
+        <q:set name="message" value="That rider is spent." />
+      </q:elseif>
+      <q:elseif condition="{other != null and other.tag == 'rider'}">
+        <q:call function="choose" args="other" />
+        <q:if condition="{other.name in moved}">
+          <q:set name="message" value="Strike a raider next to it, or choose another rider." />
+        <q:else>
+          <q:set name="message" value="Where to? Four moves." />
+        </q:else>
+        </q:if>
+      </q:elseif>
+      <!-- a raider next to the chosen rider: a blow, and the rider is spent -->
+      <q:elseif condition="{other != null and other.tag == 'raider' and chosen != null and distance(chosen, other) &lt; 30}">
+        <q:call function="strike" args="other" />
+        <qg:become target="chosen" state="spent" />
+        <q:set name="spent" value="{spent + [chosen.name]}" />
+        <q:set name="moved" value="{moved + [chosen.name]}" />
+        <q:set name="chosen" value="{null}" />
+        <q:set name="message" value="A blow!" />
+      </q:elseif>
+      <!-- a free hex in reach of a rider that has not ridden: it rides there -->
+      <q:elseif condition="{other == null and chosen != null and not (chosen.name in moved) and cost(chosen, aim) &lt;= 4}">
+        <qg:play sound="ride" />
+        <q:set name="moved" value="{moved + [chosen.name]}" />
+        <qg:travel target="chosen" to="aim" budget="4" step="8">
+          <qg:on-end>
+            <q:if condition="{count('raider') > 0 and distance(me, nearest(me, 'raider')) &lt; 30}">
+              <q:set name="message" value="Strike a raider next to it, or choose another rider." />
+            <q:else>
+              <q:set name="message" value="Choose another rider, or end the turn (E)." />
+            </q:else>
+            </q:if>
+          </qg:on-end>
+        </qg:travel>
+      </q:elseif>
+      <q:elseif condition="{chosen != null}">
+        <q:set name="message" value="Too far, or no way there." />
+      </q:elseif>
+    </qg:on-select>
+
+    <qg:on-input action="end-turn">
+      <q:if condition="{turn == 'riders'}"><q:call function="raiders_ride" /></q:if>
+    </qg:on-input>
+
+    <qg:when condition="{count('raider') == 0}">
+      <qg:play sound="won" />
+      <qg:goto-scene name="held" fade="1" />
+    </qg:when>
+    <qg:when condition="{count('rider') == 0}">
+      <qg:goto-scene name="lost" fade="1" />
+    </qg:when>
+
+    <!-- what the pointer is on, and what riding there costs the chosen rider -->
+    <qg:hud position="bottom-left" size="10">
+      <qg:text bind="message" />
+      <qg:text value="{tr(terrain[tile_at(aim.col, aim.row)]) + (': ' + str(cost(chosen, aim)) + ' ' + tr_n('move', 'moves', cost(chosen, aim)) if chosen != null and cost(chosen, aim) &lt; 99 else '')}" />
+    </qg:hud>
+    <qg:menu position="top-right" size="10">
+      <qg:button label="End turn" if="{turn == 'riders'}"><q:call function="raiders_ride" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <qg:scene name="held" width="406" height="280" background="#1c2a1c">
+    <qg:hud position="top-center" size="20"><qg:text value="{'The march is held.'}" /></qg:hud>
+    <qg:menu position="center" size="14"><qg:button label="Again"><qg:goto-scene name="field" /></qg:button></qg:menu>
+  </qg:scene>
+  <qg:scene name="lost" width="406" height="280" background="#2a1c1c">
+    <qg:hud position="top-center" size="20"><qg:text value="{'The march is lost.'}" /></qg:hud>
+    <qg:menu position="center" size="14"><qg:button label="Again"><qg:goto-scene name="field" /></qg:button></qg:menu>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the key; kept between runs ===== -->
+
+  <qg:scene name="options" width="406" height="280" background="#1c2a1c">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="14">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="End turn" action="end-turn" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
 </q:application>
 ```
 
@@ -4404,6 +6833,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- Every tile of the three layers is a picture of its own; the Grid
        layer's are the ones that stop a walker. -->
   <!-- beyond the demo: the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="140" y="580" size="200" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="Hey, it's a good time to have a JRPG fight, right?" as="Ei, é uma boa hora para uma luta de JRPG, não acha?" />
     <qg:phrase text="Let me introduce myself, I'm your OPPONENT." as="Deixa eu me apresentar: sou o seu OPONENTE." />
@@ -4416,15 +6848,24 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="UNKNOWN" as="DESCONHECIDO" />
     <qg:phrase text="OPPONENT" as="OPONENTE" />
     <qg:phrase text="PLAYER" as="JOGADOR" />
-    <qg:phrase text="Potions" as="Poções" />
-    <qg:phrase text="Keys" as="Chaves" />
     <qg:phrase text="Player" as="Jogador" />
     <qg:phrase text="Opponent" as="Oponente" />
     <qg:phrase text="Attack" as="Atacar" />
     <qg:phrase text="Defend" as="Defender" />
     <qg:phrase text="Potion" as="Poção" />
     <qg:phrase text="Flee" as="Fugir" />
-  </qg:language>
+      <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="potion" as="poção" />
+    <qg:phrase text="potions" as="poções" />
+    <qg:phrase text="key" as="chave" />
+    <qg:phrase text="keys" as="chaves" />
+    <!-- the fight's banner, drawn in Portuguese -->
+    <qg:asset name="banner" src="assets/banner-pt.png" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="Hey, it's a good time to have a JRPG fight, right?" as="Oye, es un buen momento para una pelea de JRPG, ¿no crees?" />
     <qg:phrase text="Let me introduce myself, I'm your OPPONENT." as="Déjame presentarme: soy tu OPONENTE." />
@@ -4437,23 +6878,67 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="UNKNOWN" as="DESCONOCIDO" />
     <qg:phrase text="OPPONENT" as="OPONENTE" />
     <qg:phrase text="PLAYER" as="JUGADOR" />
-    <qg:phrase text="Potions" as="Pociones" />
-    <qg:phrase text="Keys" as="Llaves" />
     <qg:phrase text="Player" as="Jugador" />
     <qg:phrase text="Opponent" as="Oponente" />
     <qg:phrase text="Attack" as="Atacar" />
     <qg:phrase text="Defend" as="Defender" />
     <qg:phrase text="Potion" as="Poción" />
     <qg:phrase text="Flee" as="Huir" />
-  </qg:language>
+      <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="potion" as="poción" />
+    <qg:phrase text="potions" as="pociones" />
+    <qg:phrase text="key" as="llave" />
+    <qg:phrase text="keys" as="llaves" />
+    <qg:asset name="banner" src="assets/banner-es.png" />
+</qg:language>
+  <!-- Russian: letters Montserrat has not, so a font that has them (Xolonium, assets/LICENSE.md),
+       and three plural forms: 1 зелье, 2 зелья, 5 зелий -->
+  <qg:language lang="ru" name="Русский" font="assets/Xolonium-Regular.ttf">
+    <qg:phrase text="Hey, it's a good time to have a JRPG fight, right?" as="Эй, самое время для JRPG-драки, правда?" />
+    <qg:phrase text="Let me introduce myself, I'm your OPPONENT." as="Позволь представиться: я твой ПРОТИВНИК." />
+    <qg:phrase text="Enough talking. Let's fight!" as="Хватит болтать. В бой!" />
+    <qg:phrase text="Just a key..." as="Просто ключ..." />
+    <qg:phrase text="I'll keep it anyway." as="Всё равно возьму." />
+    <qg:phrase text="A potion! In a fight, it gives back 5 life." as="Зелье! В бою оно возвращает 5 жизни." />
+    <qg:phrase text="Congratulations, you won!" as="Поздравляю, ты победил!" />
+    <qg:phrase text="Aha! I won, maybe you can try again next time." as="Ага! Я победил. Может, в следующий раз получится." />
+    <qg:phrase text="UNKNOWN" as="НЕЗНАКОМЕЦ" />
+    <qg:phrase text="OPPONENT" as="ПРОТИВНИК" />
+    <qg:phrase text="PLAYER" as="ИГРОК" />
+    <qg:phrase text="Player" as="Игрок" />
+    <qg:phrase text="Opponent" as="Противник" />
+    <qg:phrase text="Attack" as="Атака" />
+    <qg:phrase text="Defend" as="Защита" />
+    <qg:phrase text="Potion" as="Зелье" />
+    <qg:phrase text="Flee" as="Бежать" />
+    <qg:phrase text="Resume" as="Продолжить" />
+    <qg:phrase text="Music" as="Музыка" />
+    <qg:phrase text="Full screen" as="Полный экран" />
+    <qg:phrase text="on" as="вкл" />
+    <qg:phrase text="off" as="выкл" />
+    <qg:phrase text="potion" as="зелье" />
+    <qg:phrase text="potions" as="зелий" one="зелье" few="зелья" />
+    <qg:phrase text="key" as="ключ" />
+    <qg:phrase text="keys" as="ключей" one="ключ" few="ключа" />
+    <qg:asset name="banner" src="assets/banner-ru.png" />
+</qg:language>
 
   <qg:tileset name="world" src="assets/tiles.png" tile="64" />
   <qg:spritesheet name="pawns" src="assets/pawns.png" tile="64" />
   <qg:spritesheet name="fighters" src="assets/fighters.png" tile="128" />
   <qg:spritesheet name="arena" src="assets/arena.png" tile="1280x720" />
+  <!-- beyond the demo: a frame for the dialogue box that stretches to it (its 16-pixel edges stay as drawn),
+       and "FIGHT!" as the fight starts, drawn in each language (scripts/art/rpg_extra.py, CC0) -->
+  <qg:spritesheet name="frame" src="assets/frame.png" tile="48" slice="16" />
+  <qg:spritesheet name="banner" src="assets/banner-en.png" tile="480x120" />
+  <qg:prefab name="Banner" tag="banner" sheet="banner" hitbox="480x120" />
   <!-- beyond the demo: music of our own (scripts/art/rpg_music.py, CC0) -->
-  <qg:sound name="meadow" src="assets/meadow.ogg" loop="true" />
-  <qg:sound name="clash" src="assets/clash.ogg" loop="true" />
+  <qg:sound bus="music" name="meadow" src="assets/meadow.ogg" loop="true" />
+  <qg:sound bus="music" name="clash" src="assets/clash.ogg" loop="true" />
 
   <qg:prefab name="Opponent" tag="opponent" sheet="pawns" frame="2" hitbox="48x48" />
   <qg:prefab name="Key" tag="key" sheet="pawns" frame="3" hitbox="48x48" />
@@ -4533,7 +7018,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:character>
 
     <!-- dialogue/dialogue_data/*.json -->
-    <qg:dialogue name="npc" font="assets/montserrat_extra_bold.otf" size="28">
+    <qg:dialogue name="npc" font="assets/montserrat_extra_bold.otf" size="28" box="frame">
       <qg:line who="UNKNOWN" text="Hey, it's a good time to have a JRPG fight, right?" />
       <qg:line who="UNKNOWN" text="Let me introduce myself, I'm your OPPONENT." />
       <qg:line who="OPPONENT" text="Enough talking. Let's fight!" />
@@ -4541,27 +7026,40 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <qg:goto-scene name="combat" fade="0.4" />
       </qg:on-end>
     </qg:dialogue>
-    <qg:dialogue name="key" font="assets/montserrat_extra_bold.otf" size="28">
+    <qg:dialogue name="key" font="assets/montserrat_extra_bold.otf" size="28" box="frame">
       <qg:line who="PLAYER" text="Just a key..." />
       <qg:line who="PLAYER" text="I'll keep it anyway." />
     </qg:dialogue>
-    <qg:dialogue name="potion" font="assets/montserrat_extra_bold.otf" size="28">
+    <qg:dialogue name="potion" font="assets/montserrat_extra_bold.otf" size="28" box="frame">
       <qg:line who="PLAYER" text="A potion! In a fight, it gives back 5 life." />
     </qg:dialogue>
 
     <!-- What the player carries. -->
+    <!-- beyond the demo: "1 potion", "2 potions", in the player's language and its plural forms -->
     <qg:hud position="top-left" font="assets/montserrat_extra_bold.otf" size="24">
-      <qg:counter bind="potions" label="Potions" />
-      <qg:counter bind="keys" label="Keys" />
+      <qg:text value="{str(potions) + ' ' + tr_n('potion', 'potions', potions)}" />
+      <qg:text value="{str(keys) + ' ' + tr_n('key', 'keys', keys)}" />
     </qg:hud>
-    <qg:dialogue name="won" font="assets/montserrat_extra_bold.otf" size="28">
+    <qg:dialogue name="won" font="assets/montserrat_extra_bold.otf" size="28" box="frame">
       <qg:line who="OPPONENT" text="Congratulations, you won!" />
       <qg:on-end><q:set name="outcome" value="" /></qg:on-end>
     </qg:dialogue>
-    <qg:dialogue name="lost" font="assets/montserrat_extra_bold.otf" size="28">
+    <qg:dialogue name="lost" font="assets/montserrat_extra_bold.otf" size="28" box="frame">
       <qg:line who="OPPONENT" text="Aha! I won, maybe you can try again next time." />
       <qg:on-end><q:set name="outcome" value="" /></qg:on-end>
     </qg:dialogue>
+
+    <!-- beyond the demo: Escape (or the joypad's B) pauses, with the options; not while someone talks -->
+    <qg:on-input action="cancel">
+      <q:if condition="{not talking()}">
+        <q:if condition="{paused()}"><qg:resume /><q:else><qg:pause /></q:else></q:if>
+      </q:if>
+    </qg:on-input>
+    <qg:menu if="{paused() and not talking()}" size="32">
+      <qg:button label="Resume"><qg:resume /></qg:button>
+      <qg:slider label="Music" bus="music" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+    </qg:menu>
 
     <!-- Back from a fight: where it started, and what the opponent says of it. -->
     <q:if condition="{outcome != ''}">
@@ -4603,6 +7101,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:sprite sheet="fighters" frame="4" x="840" y="470" />
     <qg:sprite sheet="fighters" frame="{1 if hurt > 0 else 0}" x="440" y="420" />
     <qg:sprite sheet="fighters" frame="{3 if foe_hurt > 0 else 2}" x="840" y="420" />
+    <!-- beyond the demo: FIGHT! (in the player's language) as the scene fades in, and gone a second later -->
+    <qg:instance prefab="Banner" name="banner" x="640" y="250" />
+    <qg:timer after="60">
+      <qg:tween target="banner" property="alpha" to="0" seconds="0.5">
+        <qg:on-end><qg:destroy target="me" /></qg:on-end>
+      </qg:tween>
+    </qg:timer>
 
     <qg:hud position="top-left" font="assets/montserrat_extra_bold.otf" size="32">
       <qg:text value="{'Player'}" />
@@ -4613,8 +7118,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:bar bind="foe_life" max="7" width="320" height="20" color="#d81b60" />
     </qg:hud>
 
-    <!-- ui.gd: the buttons work on the player's turn. -->
-    <qg:menu position="bottom-center" font="assets/montserrat_extra_bold.otf" size="36"
+    <!-- ui.gd: the buttons work on the player's turn; beyond the demo, in the dialogues' frame. -->
+    <qg:menu position="bottom-center" font="assets/montserrat_extra_bold.otf" size="36" box="frame"
              if="{turn == 'player'}">
       <qg:button label="Attack">
         <q:set name="foe_life" value="{foe_life - 2 + foe_armor}" />

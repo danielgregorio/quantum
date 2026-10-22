@@ -76,6 +76,23 @@ def get_required_attributes(tag_name: str) -> List[str]:
     return []
 
 
+def get_missing_required_attributes(tag_name: str, present) -> List[str]:
+    """
+    The required attributes an element lacks. A qg:prefab with extends= takes
+    what it does not say from the prefab it extends (the compiler checks that).
+
+    Args:
+        tag_name: Full tag name
+        present: the names of the element's attributes
+
+    Returns:
+        List of required attribute names it does not have
+    """
+    if tag_name == "qg:prefab" and "extends" in present:
+        return []
+    return [name for name in get_required_attributes(tag_name) if name not in present]
+
+
 def get_enum_values(tag_name: str, attr_name: str) -> List[str]:
     """
     Get enum values for an attribute.

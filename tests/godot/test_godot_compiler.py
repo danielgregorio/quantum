@@ -387,8 +387,8 @@ class TestScenesMapAndGameState:
   </qg:scene>
 '''))
         script = (out / 'scripts' / 'scene_main.gd').read_text()
-        assert 'Q.tween(get_node("hero"), "y", (40 + 2), 0.5, "back", "in-out", -1, true)' in script
-        assert 'Q.tween(get_node("hero"), "alpha", 0, 0.5, "sine", "out", 0, false, 1)' in script
+        assert 'Q.tween(get_node_or_null("hero"), "y", (40 + 2), 0.5, "back", "in-out", -1, true)' in script
+        assert 'Q.tween(get_node_or_null("hero"), "alpha", 0, 0.5, "sine", "out", 0, false, 1)' in script
         e = refuse(tmp_path, game('  <qg:scene name="t"><qg:timer after="1"><qg:tween target="nobody" property="x" to="1" />'
                                   '</qg:timer></qg:scene>\n'))
         assert 'target="nobody"' in e.message
@@ -461,7 +461,7 @@ class TestScenesMapAndGameState:
         assert pop['on_animation_end'] == [{'name': 'walk', 'handler': '_Pop_on_animation_end_0'}]
         assert hero['on_animation_end'] == [{'name': 'wave', 'handler': '_on_hero_animation_end_0'}]
         script = (out / 'scripts' / 'scene_main.gd').read_text()
-        assert 'Q.play_animation(get_node("hero"), "wave")' in script and 'Q.play_animation(me, "")' in script
+        assert 'Q.play_animation(get_node_or_null("hero"), "wave")' in script and 'Q.play_animation(me, "")' in script
         e = refuse(tmp_path, game('  <qg:scene name="main"><qg:character id="h" controller="topdown" sheet="c" '
                                   'x="0" y="0" hitbox="8x8"><qg:animation name="idle" frames="0" />'
                                   '<qg:on-animation-end name="die" /></qg:character></qg:scene>\n'))
@@ -488,7 +488,7 @@ class TestScenesMapAndGameState:
         assert hero['behavior'][0] == {'part': 'gravity', 'strength': 700.0, 'max_fall': 300.0}
         assert hero['behavior'][2]['action'] == 'jump' and hero['behavior'][2]['cut'] == 0.5
         script = (out / 'scripts' / 'scene_main.gd').read_text()
-        assert 'Q.velocity(get_node("hero"), (get_node("hero").vx * 2), null)' in script
+        assert 'Q.velocity(get_node_or_null("hero"), (get_node_or_null("hero").vx * 2), null)' in script
 
     def test_what_a_behavior_refuses(self, tmp_path):
         def parts(inner, controller='behavior', after=''):
@@ -641,10 +641,11 @@ class TestScenesMapAndGameState:
                    '  <qg:scene name="main"><q:set name="lives" value="1" type="number" /></qg:scene>\n</q:application>\n')
         assert "'lives' is already the game's state" in e.message
 
-    def test_only_q_set_goes_in_the_application(self, tmp_path):
-        e = refuse(tmp_path, '<q:application id="t" type="game">\n  <q:function name="f" />\n'
+    def test_only_q_set_and_q_function_go_in_the_application(self, tmp_path):
+        e = refuse(tmp_path, '<q:application id="t" type="game">\n  <q:loop var="i" from="1" to="2" />\n'
                    '  <qg:scene name="main" />\n</q:application>\n')
-        assert '<q:function> goes inside a <qg:scene>; only q:set goes here, as game state' in e.message
+        assert ('<q:loop> goes inside a <qg:scene>; only q:set (game state) and q:function (one every scene has) '
+                'go here') in e.message
 
     def test_a_call_to_no_function(self, tmp_path):
         e = refuse(tmp_path, game('''  <qg:scene name="main">
@@ -709,20 +710,88 @@ class TestTiledMaps:
         e = refuse(tmp_path, self.scene(tmp_path, tmx))
         assert "level.tmx: object 'a' has class 'Gem', no qg:prefab of that name" in e.message
 
-    def test_a_flipped_tile(self, tmp_path):
-        tmx = TMX.replace('23,23,23', '23,2147483671,23')
+    def test_flipped_and_turned_tiles(self, tmp_path):
+        # left to right only: -n; upside down or across the diagonal: n with Tiled's bits
+        tmx = TMX.replace('23,23,23', f'{23 | 1 << 31},{23 | 1 << 30},{23 | 1 << 29 | 1 << 31}')
+        out = build(tmp_path, self.scene(tmp_path, tmx))
+        layers = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'][0]['layers']
+        assert layers[1]['rows'][1] == [-23, 23 | 1 << 30, 23 | 1 << 29 | 1 << 31]
+
+    def test_a_tile_turned_as_on_a_hexagonal_map(self, tmp_path):
+        tmx = TMX.replace('23,23,23', f'23,{23 | 1 << 28},23')
         e = refuse(tmp_path, self.scene(tmp_path, tmx))
-        assert "layer 'ground' has a flipped or rotated tile" in e.message
+        assert "layer 'ground' has a tile turned as on a hexagonal map" in e.message
 
     def test_a_layer_not_saved_as_csv(self, tmp_path):
         tmx = TMX.replace('<data encoding="csv">\n0,11,0,\n0,0,0\n</data>', '<data encoding="base64">AAAA</data>')
         e = refuse(tmp_path, self.scene(tmp_path, tmx))
         assert "layer 'decor' must be saved as CSV" in e.message
 
-    def test_two_tilesets(self, tmp_path):
+    TWO = TMX.replace('<image source="x.png"', '<image source="tilemap_packed.png"').replace(
+        '</tileset>', '</tileset>\n <tileset firstgid="181" name="b" tilewidth="18" tileheight="18" columns="9">\n'
+                      '  <image source="../art/tilemap-backgrounds_packed.png" width="162" height="54"/>\n </tileset>').replace(
+        '0,11,0,\n0,0,0', '0,183,0,\n0,0,0')
+
+    def test_two_tilesets_matched_by_image(self, tmp_path):
+        source = self.scene(tmp_path, self.TWO).replace(
+            '<qg:spritesheet', '<qg:tileset name="o" src="assets/kenney/tilemap-backgrounds_packed.png" tile="18" />\n  <qg:spritesheet')
+        out = build(tmp_path, source)
+        layers = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'][0]['layers']
+        assert layers[0] == {'name': 'decor', 'rows': [[0, 3, 0], [0, 0, 0]], 'collision': False, 'tileset': 'o'}
+        assert 'tileset' not in layers[1]          # the scene's own
+
+    def test_a_map_tileset_no_qg_tileset_has(self, tmp_path):
+        e = refuse(tmp_path, self.scene(tmp_path, self.TWO))
+        assert "level.tmx: its tileset 'tilemap-backgrounds_packed.png' is no qg:tileset of the game" in e.message
+
+    def test_a_layer_from_two_tilesets(self, tmp_path):
+        e = refuse(tmp_path, self.scene(tmp_path, self.TWO.replace('0,183,0,', '0,183,11,')))
+        assert "layer 'decor' draws from 2 tilesets" in e.message
+
+    def test_a_tileset_that_is_a_collection_of_images(self, tmp_path):
         tmx = TMX.replace('</tileset>', '</tileset><tileset firstgid="181" name="b" tilewidth="18" tileheight="18"/>')
         e = refuse(tmp_path, self.scene(tmp_path, tmx))
-        assert 'one tileset per map (2 found)' in e.message
+        assert "tileset 'b' is not one image" in e.message
+
+    def test_zones_exits_paths_and_properties(self, tmp_path):
+        tmx = TMX.replace('<map version="1.10"', '<map version="1.10"').replace(
+            ' <tileset', ' <properties><property name="par" type="int" value="12"/>'
+                         '<property name="title" value="Dock"/></properties>\n <tileset', 1).replace(
+            ' </objectgroup>',
+            '  <object id="4" name="pad" class="zone" x="0" y="0" width="18" height="18">'
+            '<properties><property name="tag" value="pad"/></properties></object>\n'
+            '  <object id="5" name="east" class="exit" x="36" y="0" width="18" height="36">'
+            '<properties><property name="to" value="main"/><property name="at" value="east"/></properties></object>\n'
+            '  <object id="6" name="round" class="path" x="10" y="10"><polyline points="0,0 20,0 20,10"/></object>\n'
+            '  <object id="7" name="b" class="Coin" x="5" y="5"><properties>'
+            '<property name="state" value="spinning"/></properties><point/></object>\n'
+            ' </objectgroup>')
+        source = self.scene(tmp_path, tmx).replace(
+            '<qg:prefab name="Coin" tag="coin" sheet="k" frame="151" hitbox="12x12" />',
+            '<qg:prefab name="Coin" tag="coin" sheet="k" frame="151" hitbox="12x12">\n'
+            '    <qg:state name="spinning" />\n  </qg:prefab>').replace(
+            '</qg:scene>', '  <qg:hud><qg:text value="{tiled(\'title\') + str(tiled(\'par\') + 1)}" /></qg:hud>\n'
+                           '  </qg:scene>')
+        out = build(tmp_path, source)
+        scene = json.loads((out / 'game.json').read_text())['scenes']['main']
+        kinds = [(n['kind'], n.get('name')) for n in scene['nodes']]
+        assert ('zone', 'pad') in kinds and ('exit', 'east') in kinds and ('path', 'round') in kinds
+        coin = next(n for n in scene['nodes'] if n.get('name') == 'b')
+        assert coin['state'] == 'spinning'
+        assert scene['tiled'] == {'par': 12, 'title': 'Dock'}
+
+    def test_a_map_property_the_map_has_not(self, tmp_path):
+        source = self.scene(tmp_path).replace(
+            '</qg:scene>', '  <qg:hud><qg:text value="{str(tiled(\'par\'))}" /></qg:hud>\n  </qg:scene>')
+        e = refuse(tmp_path, source)
+        assert "tiled('par')" in e.message
+
+    def test_an_object_property_other_than_state(self, tmp_path):
+        tmx = TMX.replace('class="Coin" x="30" y="10"><point/>',
+                          'class="Coin" x="30" y="10"><properties><property name="hp" type="int" value="3"/>'
+                          '</properties><point/>')
+        e = refuse(tmp_path, self.scene(tmp_path, tmx))
+        assert "object 'a' has properties hp" in e.message
 
     def test_tile_size_must_match_the_tileset(self, tmp_path):
         tmx = TMX.replace('tilewidth="18" tileheight="18">\n <tileset', 'tilewidth="16" tileheight="16">\n <tileset')
@@ -865,7 +934,7 @@ class TestArcadePrefabsAndSpawners:
         data = json.loads((out / 'game.json').read_text())
         shot, drone = data['prefabs']['Shot'], data['prefabs']['Drone']
         assert (shot['ai'], shot['heading'], shot['lifetime'], shot['health']) == ('fly', [0.0, -1.0], 80, 1)
-        assert shot['on_collision'] == [{'with': 'enemy', 'cooldown': 0, 'handler': '_Shot_on_collision_0'}]
+        assert shot['on_collision'] == [{'with': 'enemy', 'side': 'any', 'cooldown': 0, 'handler': '_Shot_on_collision_0'}]
         assert (drone['health'], drone['fire_prefab'], drone['fire_every']) == (3, 'Shot', 90)
         assert drone['on_damage'] == '_Drone_on_damage' and drone['on_death'] == '_Drone_on_death'
         assert drone['initial_state'] == 'calm'
@@ -1079,7 +1148,9 @@ class TestExpressions:
         ('1 < coins <= 3', '((1 < coins) and (coins <= 3))'),
         ('"a" in name', '("a" in name)'),
         ('coins if name else 0', '(coins if name else 0)'),
-        ('items[0].x', 'items[0].x'),
+        ('items[0].x', 'Q.pos_x(items[0])'),            # a thing's place, or a dictionary's x
+        ('items[0].name', 'items[0].name'),
+        ('items[0].on_wall', 'Q.touching(items[0], "wall")'),
         ('items[1:3]', 'Q.slice(items, 1, 3)'),
         ('name[:2]', 'Q.slice(name, null, 2)'),
         ('items[-2:]', 'Q.slice(items, (-2), null)'),
@@ -1429,7 +1500,7 @@ class TestWhatTowersAsked:
         assert data['scenes']['main']['on_select'] == {'0': '_on_select_0'}
         script = (out / 'scripts' / 'scene_main.gd').read_text()
         assert 'func _on_select_0(cursor, other) -> void:' in script
-        assert 'Q.thing_at(self, "road", cursor.x, cursor.y)' in script and 'Q.count(self, "tower")' in script
+        assert 'Q.thing_at(self, "road", Q.pos_x(cursor), Q.pos_y(cursor))' in script and 'Q.count(self, "tower")' in script
         assert 'Q.spawn_at(self, "Tower", Vector2(cursor.x + 0.0, cursor.y + 0.0))' in script
         err = refuse(tmp_path, game('  <qg:scene name="main"><q:set name="x" value="0" type="number" />'
                                     '<qg:on-select><q:set name="x" value="1" /></qg:on-select></qg:scene>\n'))
@@ -1481,8 +1552,8 @@ class TestWhatArenaAsked:
         hud = [n for n in data['scenes']['main']['nodes'] if n['kind'] == 'hud'][0]
         assert hud['items'] == [{'kind': 'bar', 'bind': 'p1.health', 'max': 80.0, 'width': 60, 'height': 10, 'color': '#e04040'}]
         script = (out / 'scripts' / 'scene_main.gd').read_text()
-        assert '\tQ.respawn(get_node("p2"))\n' in script
-        assert 'wins = (get_node("p1").health + get_node("p2").health)' in script
+        assert '\tQ.respawn(get_node_or_null("p2"))\n' in script
+        assert 'wins = (get_node_or_null("p1").health + get_node_or_null("p2").health)' in script
 
     @pytest.mark.parametrize('bad,message', [
         ('<qg:move name="m" action="fire" frames="1" reach="4x4" />', 'action="fire">: no such action'),
@@ -1555,7 +1626,7 @@ class TestWhatChessAsked:
   </qg:scene>
 '''))
         script = (out / 'scripts' / 'scene_main.gd').read_text()
-        assert '\t\tQ.destroy(hit)\n' in script and '\tQ.put(get_node("mark"), cursor.x, (cursor.y + 1))\n' in script
+        assert '\t\tQ.destroy(hit)\n' in script and '\tQ.put(get_node_or_null("mark"), Q.pos_x(cursor), (Q.pos_y(cursor) + 1))\n' in script
 
 
 class TestMenus:
@@ -1620,12 +1691,14 @@ class TestLobby:
 ''' + TAIL)
         title = json.loads((out / 'game.json').read_text())['scenes']['title']
         menu, hud = title['nodes']
-        assert [i.get('label') for i in menu['items']] == ['Play here', 'Host a game', 'Address', 'Join', 'Cancel']
+        assert [i.get('label') for i in menu['items']] == ['Play here', 'Host a game', 'Address', 'Join', 'Watch',
+                                                           'Cancel']
         assert menu['items'][2] == {'kind': 'field', 'bind': 'lobby_address', 'label': 'Address', 'max_length': 64, 'game': False}
         assert hud['position'] == 'bottom-center' and 'value_method' in hud['items'][0]
         script = (out / 'scripts' / 'scene_title.gd').read_text()
         assert 'var lobby_address: Variant = Q.url_param("join", "10.0.0.2:9000")' in script
         assert '\tQ.net_host(9000)\n' in script and '\tQ.net_join(lobby_address)\n' in script
+        assert '\tQ.net_watch(lobby_address)\n' in script                 # no seat: to watch
         assert 'Q.goto_scene(self, "play")' in script
 
     def test_a_lobby_speaks_the_languages_its_game_declares(self, tmp_path):
@@ -1647,7 +1720,7 @@ class TestLobby:
 
     @pytest.mark.parametrize('source,message', [
         ('<qg:scene name="t"><qg:menu><qg:button label="H"><qg:host /></qg:button></qg:menu></qg:scene>',
-         'qg:host, qg:join and qg:leave need a <qg:multiplayer>'),
+         'qg:host, qg:join, qg:watch, qg:leave and qg:start-now need a <qg:multiplayer>'),
         ('<qg:scene name="t"><qg:lobby /></qg:scene>', '<qg:lobby> needs a <qg:multiplayer>'),
         ('<qg:multiplayer players="2" start="nowhere" /><qg:scene name="t" />', 'start="nowhere">: no scene of that name'),
         ('<qg:scene name="t"><qg:hud><qg:text /></qg:hud></qg:scene>', '<qg:text> takes bind= or value=, one of them'),
@@ -1657,25 +1730,21 @@ class TestLobby:
 
 
 class TestRollback:
-    def test_a_set_tile_is_not_taken_under_rollback(self, tmp_path):
-        e = refuse(tmp_path, HEAD + '''  <qg:multiplayer players="2" rollback="6" start="fight" />
+    def test_a_set_tile_and_a_tween_are_taken_under_rollback(self, tmp_path):
+        # both are kept so the rollback can take them back: the tilemap's changed cells, the
+        # scene's tweens as records (tween.gd); a tilemap is a scene's to hold under rollback
+        out = build(tmp_path, HEAD + '''  <qg:multiplayer players="2" rollback="6" start="fight" />
   <qg:scene name="fight">
+    <qg:tilemap tileset="k">
+1,1,1
+    </qg:tilemap>
     <qg:character id="a" controller="fighter" sheet="c" x="10" y="10" hitbox="8x8" />
     <qg:character id="b" controller="fighter" player="2" sheet="c" x="40" y="10" hitbox="8x8" />
-    <qg:timer after="1"><qg:set-tile col="0" row="0" tile="0" /></qg:timer>
+    <qg:timer after="1"><qg:set-tile col="0" row="0" tile="0" /><qg:tween target="a" property="scale" to="2" /></qg:timer>
   </qg:scene>
 ''' + TAIL)
-        assert 'has a qg:set-tile, which rollback cannot take back yet' in e.message
-
-    def test_a_tween_is_not_taken_under_rollback(self, tmp_path):
-        e = refuse(tmp_path, HEAD + '''  <qg:multiplayer players="2" rollback="6" start="fight" />
-  <qg:scene name="fight">
-    <qg:character id="a" controller="fighter" sheet="c" x="10" y="10" hitbox="8x8" />
-    <qg:character id="b" controller="fighter" player="2" sheet="c" x="40" y="10" hitbox="8x8" />
-    <qg:timer after="1"><qg:tween target="a" property="scale" to="2" /></qg:timer>
-  </qg:scene>
-''' + TAIL)
-        assert 'has a qg:tween, which rollback cannot take back yet' in e.message
+        script = (out / 'scripts' / 'scene_fight.gd').read_text(encoding='utf-8')
+        assert 'Q.set_tile(self, 0, 0, 0)' in script and 'Q.tween(get_node_or_null("a"), "scale", 2' in script
 
     def test_rollback_on_a_scene_of_fighters(self, tmp_path):
         out = build(tmp_path, HEAD + '''  <qg:input action="punch" keys="J" />
@@ -1869,7 +1938,7 @@ class TestWhatTheRpgAsked:
         assert box['lines'][1] == {'who': '', 'text_method': '_q_dialogue_hello_1_text'}
         script = (out / 'scripts' / 'scene_main.gd').read_text()
         assert 'Q.say(self, "hello")' in script and 'Q.talking(self)' in script
-        assert 'me.col' in script
+        assert 'Q.cell_col(me)' in script
 
     def test_what_it_refuses(self, tmp_path):
         for old, new, message in (
@@ -2175,3 +2244,771 @@ class TestTiledTileKinds:
         (tmp_path / 'level.tmx').write_text(self.tmx(' <tileset firstgid="1" source="none.tsx"/>\n'), encoding='utf-8')
         err = refuse(tmp_path, game('  <qg:scene name="main"><qg:tilemap tileset="k" src="level.tmx" /></qg:scene>\n'))
         assert "cannot read the tileset 'none.tsx'" in str(err)
+
+
+class TestGameLogic:
+    """PLAN_GAMES_3.md, Phase 1: delays, conditions, the game's functions, held actions, fields."""
+
+    def test_a_delay_passes_on_the_names_of_its_handler(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="hits" value="0" type="number" />
+    <qg:instance prefab="Coin" x="10" y="10" />
+    <qg:on-input action="jump">
+      <qg:for-each tag="coin" var="c">
+        <qg:after seconds="0.5" name="fade"><qg:destroy target="c" /></qg:after>
+      </qg:for-each>
+      <qg:after ticks="{hits * 2}"><q:set name="hits" value="{hits + 1}" /></qg:after>
+    </qg:on-input>
+  </qg:scene>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\t\tQ.after(self, 0.5 * Q.TICK_RATE, "_after_1", [me, other, c], "fade")\n' in script
+        assert 'func _after_1(me, other, c) -> void:\n\tQ.destroy(c)\n' in script
+        assert '\tQ.after(self, (hits * 2), "_after_2", [me, other])\n' in script
+
+    def test_a_delay_needs_one_count_more_than_0(self, tmp_path):
+        for attrs, message in (('', 'takes ticks= or seconds=, one of them'),
+                               ('ticks="1" seconds="1"', 'takes ticks= or seconds=, one of them'),
+                               ('ticks="0"', 'ticks="0">: more than 0')):
+            err = refuse(tmp_path, game(f'''  <qg:scene name="main">
+    <qg:on-input action="jump"><qg:after {attrs}><qg:quit /></qg:after></qg:on-input>
+  </qg:scene>
+'''))
+            assert message in str(err)
+
+    def test_a_condition_is_a_method_the_clock_reads(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="won" value="false" type="boolean" />
+    <qg:when condition="{count('coin') == 0}"><q:set name="won" value="true" /></qg:when>
+  </qg:scene>
+'''))
+        data = json.loads((out / 'game.json').read_text())
+        assert data['scenes']['main']['when'] == [['_when_1', '_on_when_1']]
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'func _when_1() -> bool:\n\treturn bool((Q.count(self, "coin") == 0))' in script
+        assert 'func _on_when_1() -> void:\n\twon = true' in script
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:when condition="{true}"><qg:destroy target="me" /></qg:when>
+  </qg:scene>
+'''))
+        assert 'target="me"' in str(err)    # a condition of the scene has no me
+
+    def test_the_game_s_functions_are_every_scene_s_and_the_prefabs(self, tmp_path):
+        out = build(tmp_path, HEAD.replace('hitbox="12x12" />', 'hitbox="12x12" ai="wander">\n'
+                                           '    <qg:on-collision with="coin"><q:call function="hurt" /></qg:on-collision>\n'
+                                           '  </qg:prefab>') + '''  <q:set name="lives" value="3" type="number" />
+  <q:function name="hurt">
+    <q:set name="lives" value="{lives - 1}" />
+    <q:if condition="{lives <= 0}"><qg:goto-scene name="over" /></q:if>
+  </q:function>
+  <qg:scene name="main"><qg:on-input action="jump"><q:call function="hurt" /></qg:on-input></qg:scene>
+  <qg:scene name="over"><qg:timer after="1"><q:call function="hurt" /></qg:timer></qg:scene>
+''' + TAIL)
+        for script in ('scene_main.gd', 'scene_over.gd', 'prefabs.gd'):
+            text = (out / 'scripts' / script).read_text()
+            assert 'func hurt():\n\tG.lives = (G.lives - 1)\n' in text, script
+
+    def test_a_game_function_sees_the_game_not_a_scene(self, tmp_path):
+        err = refuse(tmp_path, game('''  <q:function name="win" params="n"><q:set name="n" value="{done}" /></q:function>
+  <qg:scene name="main"><q:set name="done" value="false" type="boolean" /></qg:scene>
+'''))
+        assert "'done' is not declared" in str(err)
+        err = refuse(tmp_path, game('''  <q:function name="win"><qg:quit /></q:function>
+  <qg:scene name="main"><q:function name="win"><qg:quit /></q:function></qg:scene>
+'''))
+        assert "'win' is a q:function of the game already" in str(err)
+
+    def test_held_actions(self):
+        scope = Scope(actions=['run', 'jump'])
+        assert compile_expression("pressing('run')", scope) == 'Q.held("run")'
+        assert compile_expression("pressed_for('run', 2)", scope) == 'Q.held_ticks("p2_run")'
+        assert compile_expression("strength('jump', 1)", scope) == 'Q.strength("jump")'
+        with pytest.raises(GameCompileError, match=re.escape("pressing('fly'): no such action (the game has jump, run)")):
+            compile_expression("pressing('fly')", scope)
+
+    def test_angles_sort_and_ticks(self):
+        scope = Scope(['xs'])
+        assert compile_expression('sin(90) + cos(0)', scope) == '(sin(deg_to_rad(90)) + cos(deg_to_rad(0)))'
+        assert compile_expression('atan2(1, 2)', scope) == 'Q.atan2_deg(1, 2)'
+        assert compile_expression('sort(xs)', scope) == 'Q.sort(xs)'
+        assert compile_expression('sort(xs, true)', scope) == 'Q.sort(xs, true)'
+        assert compile_expression('ticks()', scope) == 'Q.ticks(self)'
+        with pytest.raises(GameCompileError, match=r'sort\(\) takes 1 or 2 argument'):
+            compile_expression('sort()', scope)
+
+    def test_a_field_a_thing_does_not_have_is_an_error(self, tmp_path):
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="n" value="0" type="number" />
+    <qg:character id="hero" controller="platformer" sheet="c" x="10" y="10" hitbox="18x22" />
+    <qg:timer every="10"><q:set name="n" value="{hero.health}" /></qg:timer>
+  </qg:scene>
+'''))
+        assert ('hero.health: no such field; hero has facing, name, on_ceiling, on_floor, on_wall, player, '
+                'state, x, y') in str(err)
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <q:set name="n" value="0" type="number" />
+    <qg:on-input action="jump"><qg:for-each tag="coin"><q:set name="n" value="{it.colour}" /></qg:for-each></qg:on-input>
+  </qg:scene>
+'''))
+        assert 'it.colour: no such field; it has col, doing, facing, health, name' in str(err)
+        # a q:set may hold a dictionary: its keys are not checked
+        assert compile_expression('bag.a', Scope(['bag'])) == 'bag.a'
+
+    def test_a_call_s_arguments_split_only_between_them(self, tmp_path):
+        out = build(tmp_path, game('''  <q:set name="log" value="[]" type="array" />
+  <q:function name="note" params="what, n, xs"><q:set name="log" value="{log + [what, n, xs]}" /></q:function>
+  <qg:scene name="main">
+    <qg:on-input action="jump"><q:call function="note" args="{'a, b'}, {max(1, 2)}, {[1, 2]}" /></qg:on-input>
+  </qg:scene>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\tnote("a, b", max(1, 2), [1, 2])\n' in script
+
+
+class TestActionAndAiming:
+    """PLAN_GAMES_3.md, Phase 2 (what Siege asked for)."""
+
+    def test_a_spawn_heading_is_set_on_the_flying_thing(self, tmp_path):
+        out = build(tmp_path, HEAD.replace('hitbox="12x12" />', 'hitbox="12x12" />\n'
+                    '  <qg:prefab name="Shot" tag="shot" sheet="k" frame="1" hitbox="4x4" ai="fly" speed="200" />')
+                    + '''  <qg:scene name="main">
+    <qg:character id="p1" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12" />
+    <qg:cursor id="aim" step="0" />
+    <qg:on-input action="jump"><qg:spawn prefab="Shot" at="p1" heading="{aim.x - p1.x},{aim.y - p1.y}" /></qg:on-input>
+  </qg:scene>
+''' + TAIL)
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert ('Q.headed(Q.spawn(self, "Shot", get_node_or_null("p1"), 0.0, 0.0), '
+                'float((Q.pos_x(get_node_or_null("aim")) - Q.pos_x(get_node_or_null("p1")))), '
+                'float((Q.pos_y(get_node_or_null("aim")) - Q.pos_y(get_node_or_null("p1")))))') in script
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p1" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12" />
+    <qg:on-input action="jump"><qg:spawn prefab="Coin" at="p1" heading="1,0" /></qg:on-input>
+  </qg:scene>
+'''))
+        assert 'heading= is for a prefab with ai="fly"' in str(err)
+
+    def test_looks_on_things_and_characters(self, tmp_path):
+        out = build(tmp_path, HEAD.replace('<qg:prefab name="Coin" tag="coin" sheet="k" frame="151" hitbox="12x12" />', '''<qg:particles name="fire" preset="fire" />
+  <qg:prefab name="Coin" tag="coin" sheet="k" frame="151" hitbox="12x12" ai="wander" spacing="12" particles="fire"
+             flip-v="true" layer="3" visible="{me.health > 0}">
+    <qg:label value="{me.health}" dy="-10" color="#ff0000" />
+  </qg:prefab>''') + '''  <qg:scene name="main" y-sort="true">
+    <qg:character id="p1" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12" layer="1">
+      <qg:label value="{'P1'}" />
+    </qg:character>
+    <qg:label value="{'SIGN'}" x="100" y="20" size="10" />
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        coin = data['prefabs']['Coin']
+        assert coin['spacing'] == 12 and coin['particles'] == 'fire' and coin['flip_v'] and coin['layer'] == 3
+        assert coin['visible'] == '_Coin_visible'
+        assert coin['labels'] == [{'method': '_Coin_label_0', 'dx': 0.0, 'dy': -10.0, 'size': 8, 'color': '#ff0000'}]
+        prefabs = (out / 'scripts' / 'prefabs.gd').read_text()
+        assert 'func _Coin_visible(me) -> bool:\n\treturn bool((me.health > 0))' in prefabs
+        assert 'func _Coin_label_0(me) -> String:\n\treturn Q.to_str(me.health)' in prefabs
+        scene = data['scenes']['main']
+        assert scene['y_sort'] is True
+        p1 = next(n for n in scene['nodes'] if n['kind'] == 'character')
+        assert p1['layer'] == 1 and p1['labels'][0]['method'] == '_q_p1_label_0'
+        sign = next(n for n in scene['nodes'] if n['kind'] == 'label')
+        assert sign == {'kind': 'label', 'method': '_q_label_1', 'x': 100.0, 'y': 20.0, 'size': 10, 'color': '#ffffff',
+                        'if': None}
+
+    def test_what_the_looks_refuse(self, tmp_path):
+        for body, message in (
+                ('<qg:label value="{1}" /></qg:scene>', '<qg:label> in a scene needs x= and y='),
+                ('<qg:character id="p" controller="topdown" sheet="c" x="1" y="1" hitbox="8x8">'
+                 '<qg:label value="{1}" x="3" y="4" /></qg:character></qg:scene>', 'takes dx= and dy='),
+                ('<qg:character id="p" controller="topdown" sheet="c" x="1" y="1" hitbox="8x8" particles="smoke" />'
+                 '</qg:scene>', 'particles="smoke": no qg:particles of that name')):
+            err = refuse(tmp_path, game(f'  <qg:scene name="main">{body}\n'))
+            assert message in str(err), str(err)
+        err = refuse(tmp_path, HEAD.replace('hitbox="12x12" />', 'hitbox="12x12" spacing="10" />') +
+                     '  <qg:scene name="main" />\n' + TAIL)
+        assert 'spacing= is for a prefab that walks' in str(err)
+
+    def test_a_still_prefab_does_not_touch(self, tmp_path):
+        err = refuse(tmp_path, HEAD.replace('hitbox="12x12" />', 'hitbox="12x12" solid="true">'
+                                            '<qg:on-collision with="coin"><qg:quit /></qg:on-collision></qg:prefab>')
+                     + '  <qg:scene name="main" />\n' + TAIL)
+        assert "a prefab that does not move: it would never run" in str(err)
+
+    def test_emit_text_and_a_beam(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p1" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12" />
+    <qg:instance prefab="Coin" name="gold" x="50" y="50" />
+    <qg:on-input action="jump">
+      <qg:emit text="+10" at="p1" color="#ffe070" dy="-8" />
+      <qg:emit text="{str(1 + 1)}" at="p1" />
+      <qg:beam from="p1" to="gold" seconds="0.5" color="#80d0ff" width="3" />
+    </qg:on-input>
+  </qg:scene>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert '\tQ.emit_text(get_node_or_null("p1"), Q.to_str("+10"), "#ffe070", 8, 0.0, -8.0)\n' in script
+        assert '\tQ.emit_text(get_node_or_null("p1"), Q.to_str(Q.to_str((1 + 1))), "#ffffff", 8, 0.0, 0.0)\n' in script
+        assert '\tQ.beam(self, get_node_or_null("p1"), get_node_or_null("gold"), 0.5, "#80d0ff", 3.0)\n' in script
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p1" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12" />
+    <qg:on-input action="jump"><qg:emit at="p1" /></qg:on-input>
+  </qg:scene>
+'''))
+        assert 'plays particles= or shows text=, one of them' in str(err)
+
+    def test_steer_alone_and_a_buffered_jump(self, tmp_path):
+        out = build(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="ship" controller="behavior" sheet="c" x="10" y="10" hitbox="12x12">
+      <qg:behavior><qg:steer turn="120" thrust="300" drag="0.5" max="150" heading="-90" /></qg:behavior>
+    </qg:character>
+    <qg:character id="hop" controller="platformer" sheet="c" x="40" y="10" hitbox="12x12" buffer-frames="5" />
+  </qg:scene>
+'''))
+        nodes = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes']
+        ship, hop = (n for n in nodes if n['kind'] == 'character')
+        assert ship['behavior'] == [{'part': 'steer', 'turn': 120.0, 'thrust': 300.0, 'drag': 0.5, 'max': 150.0,
+                                     'heading': -90.0}]
+        assert hop['buffer_frames'] == 5
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="ship" controller="behavior" sheet="c" x="10" y="10" hitbox="12x12">
+      <qg:behavior><qg:steer /><qg:walk /></qg:behavior>
+    </qg:character>
+  </qg:scene>
+'''))
+        assert '<qg:steer> and <qg:walk> in one qg:behavior' in str(err)
+        err = refuse(tmp_path, game('''  <qg:scene name="main">
+    <qg:character id="p" controller="topdown" sheet="c" x="10" y="10" hitbox="12x12" buffer-frames="4" />
+  </qg:scene>
+'''))
+        assert 'buffer-frames= is for controller="platformer"' in str(err)
+
+    def test_a_cursor_by_its_id(self):
+        from quantum.runtime.godot.expressions import CURSOR_FIELDS
+        scope = Scope(node_ids=['aim'], node_fields={'aim': CURSOR_FIELDS})
+        assert compile_expression('aim.x', scope) == 'Q.pos_x(get_node_or_null("aim"))'
+        with pytest.raises(GameCompileError, match='aim.health: no such field; aim has col, player, row, x, y'):
+            compile_expression('aim.health', scope)
+
+
+class TestPuzzleAndAdventure:
+    """PLAN_GAMES_3.md, Phase 3 (what Crates asked for)."""
+
+    CRATE = '<qg:prefab name="Crate" tag="crate" sheet="k" frame="6" hitbox="16x16" solid="true" pushable="true" />'
+    GRID = ('    <qg:tilemap tileset="k" collision="true">\n23,23,23\n23,0,23\n23,23,23\n    </qg:tilemap>\n'
+            '    <qg:character id="w" controller="grid" sheet="c" x="27" y="27" hitbox="14x14" />\n')
+
+    def scene(self, body, prefabs=''):
+        return HEAD.replace('hitbox="12x12" />', 'hitbox="12x12" />\n  ' + self.CRATE + prefabs, 1) + \
+            f'  <qg:scene name="main">\n{body}  </qg:scene>\n' + TAIL
+
+    def test_pushable_is_for_a_solid_prefab(self, tmp_path):
+        out = build(tmp_path, self.scene(self.GRID))
+        assert json.loads((out / 'game.json').read_text())['prefabs']['Crate']['pushable'] is True
+        e = refuse(tmp_path, self.scene(self.GRID).replace('solid="true" pushable', 'pushable'))
+        assert 'pushable="true" is for a solid prefab' in e.message
+
+    def test_a_prefab_extends_another(self, tmp_path):
+        prefabs = '''
+  <qg:prefab name="Heavy" extends="Crate" frame="7" pushable="false">
+    <qg:animation name="idle" frames="7,8" fps="2" />
+  </qg:prefab>
+  <qg:prefab name="Huge" extends="Heavy" hitbox="18x18" />'''
+        out = build(tmp_path, self.scene(self.GRID, prefabs))
+        made = json.loads((out / 'game.json').read_text())['prefabs']
+        assert (made['Heavy']['tag'], made['Heavy']['frame'], made['Heavy'].get('pushable', False)) == ('crate', 7, False)
+        assert made['Huge']['tag'] == 'crate' and made['Huge']['hitbox'] == [18, 18] and made['Huge']['frame'] == 7
+        assert made['Huge']['animations']['idle']['frames'] == [7, 8]
+        e = refuse(tmp_path, self.scene(self.GRID, '\n  <qg:prefab name="Odd" extends="Box" frame="1" />'))
+        assert '<qg:prefab name="Odd" extends="Box">: no qg:prefab of that name' in e.message
+        e = refuse(tmp_path, self.scene(self.GRID, '\n  <qg:prefab name="A" extends="B" />\n  <qg:prefab name="B" extends="A" />'))
+        assert 'the prefabs extend each other in a circle' in e.message
+
+    def test_a_pointer_walker_needs_its_players_cursor(self, tmp_path):
+        body = self.GRID.replace('controller="grid"', 'controller="pointer"')
+        build(tmp_path, self.scene(body + '    <qg:cursor player="1" />\n'))
+        e = refuse(tmp_path, self.scene(body))
+        assert 'the scene needs <qg:cursor player="1" />' in e.message
+
+    def test_camera_to(self, tmp_path):
+        body = self.GRID + '    <qg:camera follow="w" />\n'
+        out = build(tmp_path, self.scene(body + '    <qg:on-input action="jump"><qg:camera-to target="w" zoom="2" '
+                                                'seconds="0.5" hold="1" pause="false" /></qg:on-input>\n'))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.camera_to(self, get_node_or_null("w"), 2.0, 0.5, 1.0, false)' in script
+        e = refuse(tmp_path, self.scene(self.GRID + '    <qg:on-input action="jump"><qg:camera-to x="1" y="2" />'
+                                                    '</qg:on-input>\n'))
+        assert "<qg:camera-to> moves the scene's qg:camera, which it has not" in e.message
+        e = refuse(tmp_path, self.scene(body + '    <qg:on-input action="jump"><qg:camera-to target="w" x="1" y="2" />'
+                                               '</qg:on-input>\n'))
+        assert '<qg:camera-to> goes to target=, or to x= and y=, one of them' in e.message
+        # in a q:function of the game it is fine where there is no camera: there is nothing to move
+        build(tmp_path, self.scene(self.GRID).replace(
+            '  <qg:scene name="main">', '  <q:function name="look"><qg:camera-to x="1" y="2" /></q:function>\n'
+                                        '  <qg:scene name="main">'))
+
+    def test_a_dialogue_with_a_face_typed_in_and_choices(self, tmp_path):
+        body = '''    <q:set name="said" value="" />
+    <qg:dialogue name="ask" speed="20" sheet="c">
+      <qg:line who="Owl" portrait="2" text="Which?">
+        <qg:choice label="Left"><q:set name="said" value="left" /></qg:choice>
+        <qg:choice label="{'Right ' + said}" if="{said != ''}" />
+      </qg:line>
+    </qg:dialogue>
+'''
+        out = build(tmp_path, self.scene(body))
+        box = next(n for n in json.loads((out / 'game.json').read_text())['scenes']['main']['nodes']
+                   if n['kind'] == 'dialogue')
+        assert (box['speed'], box['sheet'], box['lines'][0]['portrait']) == (20.0, 'c', 2)
+        first, second = box['lines'][0]['choices']
+        assert first['label'] == 'Left' and 'if' not in first
+        assert second['label_method'].endswith('_label') and second['if'].endswith('_if')
+        e = refuse(tmp_path, self.scene(body.replace(' sheet="c"', '')))
+        assert "<qg:line portrait=>: a frame of the dialogue's sheet=" in e.message
+        e = refuse(tmp_path, self.scene(body.replace('<qg:choice label="Left">', '<qg:choice label="Left"><qg:line text="x" />')))
+        assert '<qg:line>' in e.message
+
+    def test_attach_and_detach(self, tmp_path):
+        body = self.GRID + '''    <qg:on-input action="jump">
+      <qg:for-each tag="coin" var="c"><qg:attach target="c" to="w" dy="-8" /></qg:for-each>
+      <q:if condition="{carrying(w, 'coin') != null}"><qg:detach from="w" tag="coin" /></q:if>
+    </qg:on-input>
+'''
+        out = build(tmp_path, self.scene(body))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.attach(c, get_node_or_null("w"), 0.0, -8.0)' in script
+        assert 'Q.carrying(get_node_or_null("w"), "coin")' in script and 'Q.detach_all(get_node_or_null("w"), "coin")' in script
+        e = refuse(tmp_path, self.scene(body.replace('target="c" to="w"', 'target="nobody" to="w"')))
+        assert '<qg:attach target="nobody">' in e.message
+        e = refuse(tmp_path, self.scene(body.replace('<qg:detach from="w" tag="coin" />', '<qg:detach from="w" />')))
+        assert '<qg:detach> puts down target=, or from= and tag=' in e.message
+
+    def test_a_things_cell(self, tmp_path):
+        body = self.GRID + '''    <q:set name="at" value="0" type="number" />
+    <qg:on-input action="jump">
+      <qg:for-each tag="crate" var="c"><q:set name="at" value="{c.col + c.row * 10 + tile_at(c.col, c.row, 'tiles')}" /></qg:for-each>
+    </qg:on-input>
+'''
+        out = build(tmp_path, self.scene(body))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.cell_col(c)' in script and 'Q.cell_row(c)' in script
+        assert 'Q.tile_at(self, Q.cell_col(c), Q.cell_row(c), "tiles")' in script
+
+    def test_an_animated_tile(self, tmp_path):
+        out = build(tmp_path, HEAD.replace('tile="18" />', 'tile="18">\n    <qg:tile frame="10" frames="3" fps="6" />\n'
+                                                          '  </qg:tileset>', 1) + '  <qg:scene name="main" />\n' + TAIL)
+        tile = json.loads((out / 'game.json').read_text())['sheets']['k']['tiles']['10']
+        assert (tile['frames'], tile['fps']) == (3, 6.0)
+        e = refuse(tmp_path, HEAD.replace('tile="18" />', 'tile="18">\n    <qg:tile frame="10" frames="0" />\n'
+                                                         '  </qg:tileset>', 1) + '  <qg:scene name="main" />\n' + TAIL)
+        assert '<qg:tile frames=>: 1 or more' in e.message
+
+
+class TestShipping:
+    """PLAN_GAMES_3.md, Phase 4 (what every game needs to be shipped)."""
+
+    SOUNDS = ('  <qg:sound name="song" src="assets/kenney/audio/win.ogg" loop="true" bus="music" />\n'
+              '  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />\n')
+
+    def scene(self, body, head=''):
+        return HEAD + self.SOUNDS + head + f'  <qg:scene name="main">\n{body}  </qg:scene>\n' + TAIL
+
+    def test_buses_sliders_keys_and_a_grid(self, tmp_path):
+        out = build(tmp_path, self.scene('''    <q:set name="pace" value="1" type="number" />
+    <qg:menu columns="2" rows="3">
+      <qg:slider label="Music" bus="music" />
+      <qg:slider label="Pace" bind="pace" min="1" max="5" step="1" if="{pace > 0}" />
+      <qg:rebind action="jump" player="2" />
+      <qg:button label="Loud"><qg:volume bus="music" value="{volume('music') + 10}" /><qg:fullscreen on="{not fullscreen()}" /></qg:button>
+    </qg:menu>
+''', head='  <qg:input action="jump" keys="Up" player="2" />\n'))
+        data = json.loads((out / 'game.json').read_text())
+        assert data['buses'] == ['music'] and data['sounds']['song']['bus'] == 'music' and 'bus' not in data['sounds']['hit']
+        menu = next(n for n in data['scenes']['main']['nodes'] if n['kind'] == 'menu')
+        assert (menu['columns'], menu['rows']) == (2, 3)
+        assert [i['kind'] for i in menu['items']] == ['slider', 'slider', 'rebind', 'button']
+        assert menu['items'][0] == {'kind': 'slider', 'label': 'Music', 'min': 0.0, 'max': 100.0, 'step': 10.0, 'bus': 'music'}
+        assert menu['items'][1]['bind'] == 'pace' and menu['items'][1]['if_method']
+        assert menu['items'][2] == {'kind': 'rebind', 'action': 'p2_jump', 'label': 'jump'}
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.set_volume("music", float((Q.volume("music") + 10)))' in script
+        assert 'Q.set_fullscreen(bool((not Q.fullscreen())))' in script
+
+    def test_what_menus_refuse(self, tmp_path):
+        e = refuse(tmp_path, self.scene('    <qg:menu><qg:slider label="X" bus="voices" /></qg:menu>\n'))
+        assert '<qg:slider bus="voices">: no qg:sound is heard on that bus (buses: music)' in e.message
+        e = refuse(tmp_path, self.scene('    <q:set name="n" value="1" type="number" />\n'
+                                        '    <qg:menu><qg:slider bus="music" bind="n" /></qg:menu>\n'))
+        assert '<qg:slider> takes bus= or bind=, one of them' in e.message
+        e = refuse(tmp_path, self.scene('    <q:set name="t" value="a" type="string" />\n    <qg:menu><qg:slider bind="t" /></qg:menu>\n'))
+        assert "a slider holds a number; 't' is a string" in e.message
+        e = refuse(tmp_path, self.scene('    <qg:menu><qg:slider bus="music" min="5" max="5" /></qg:menu>\n'))
+        assert 'min= below max=' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:menu><qg:rebind action="dash" /></qg:menu>\n'))
+        assert '<qg:rebind action="dash">: no such action' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:menu columns="0"><qg:button label="a" /></qg:menu>\n'))
+        assert 'columns= 1 or more' in e.message
+
+    def test_volume_needs_a_bus_a_sound_is_on(self, tmp_path):
+        e = refuse(tmp_path, self.scene('    <qg:on-input action="jump"><qg:volume bus="effects" value="0" /></qg:on-input>\n'))
+        assert '<qg:volume bus="effects">: no qg:sound is heard on that bus' in e.message
+        e = refuse(tmp_path, self.scene('', head='  <qg:sound name="x" src="assets/kenney/audio/win.ogg" bus="Master" />\n'))
+        assert 'Master is every bus together' in e.message
+
+    def test_save_slots(self, tmp_path):
+        out = build(tmp_path, self.scene('''    <qg:on-input action="jump">
+      <q:if condition="{has_save(2)}"><qg:continue slot="2" />
+        <q:else><qg:save slot="{1 + 1}" scene="main" /></q:else></q:if>
+    </qg:on-input>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.has_save(2)' in script and 'Q.continue_game(self, 2)' in script
+        assert 'Q.save_game(self, "main", (1 + 1))' in script
+
+    def test_a_hud_with_pictures(self, tmp_path):
+        out = build(tmp_path, self.scene('''    <q:set name="n" value="0" type="number" />
+    <qg:hud position="bottom-right" if="{n > 0}">
+      <qg:icon sheet="k" frame="9" scale="2" />
+      <qg:counter bind="n" label="N" color="#ff0000" />
+      <qg:icon sheet="c" frame="{n % 2}" />
+      <qg:text value="{'x'}" color="#00ff00" />
+    </qg:hud>
+'''))
+        hud = next(n for n in json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'] if n['kind'] == 'hud')
+        assert hud['position'] == 'bottom-right' and hud['if_method']
+        assert hud['items'][0] == {'kind': 'icon', 'sheet': 'k', 'scale': 2.0, 'frame': 9}
+        assert hud['items'][1]['color'] == '#ff0000' and hud['items'][2]['frame_method']
+        e = refuse(tmp_path, self.scene('    <qg:hud><qg:icon sheet="nope" /></qg:hud>\n'))
+        assert "no qg:spritesheet or qg:tileset named 'nope'" in e.message
+        e = refuse(tmp_path, self.scene('    <qg:hud><qg:icon sheet="k" frame="nine" /></qg:hud>\n'))
+        assert '<qg:icon frame="nine">: a frame number, or an expression' in e.message
+
+    def test_touch_controls(self, tmp_path):
+        out = build(tmp_path, self.scene('    <qg:touch-button action="jump" label="A" x="200" y="100" />\n',
+                                         head='  <qg:touch-stick x="40" y="100" show="always" />\n'))
+        data = json.loads((out / 'game.json').read_text())
+        assert data['touch'] == [{'kind': 'stick', 'x': 40.0, 'y': 100.0, 'size': 56.0, 'player': 1, 'show': 'always'}]
+        assert data['scenes']['main']['touch'] == [{'kind': 'button', 'x': 200.0, 'y': 100.0, 'size': 32.0, 'player': 1,
+                                                    'show': 'touch', 'action': 'jump', 'label': 'A'}]
+        e = refuse(tmp_path, self.scene('    <qg:touch-button action="dash" x="1" y="1" />\n'))
+        assert '<qg:touch-button action="dash">: no such action' in e.message
+        e = refuse(tmp_path, self.scene('', head='  <qg:touch-stick x="1" y="1" size="0" />\n'))
+        assert '<qg:touch-stick size=>: more than 0' in e.message
+
+    def test_a_lobby_with_options(self, tmp_path):
+        out = build(tmp_path, HEAD + '  <qg:multiplayer players="2" />\n  <qg:scene name="title">\n'
+                    '    <qg:lobby local="main" options="options" />\n  </qg:scene>\n  <qg:scene name="main" />\n'
+                    '  <qg:scene name="options" />\n' + TAIL)
+        menu = next(n for n in json.loads((out / 'game.json').read_text())['scenes']['title']['nodes'] if n['kind'] == 'menu')
+        assert 'Options' in [i.get('label') for i in menu['items']]
+
+
+class TestSharedFields:
+    """PLAN_GAMES_3.md, Phase 5: a field whose text reaches every machine, and the menu of this machine's seat."""
+
+    def scene(self, body):
+        return HEAD + f'  <qg:scene name="main">\n    <q:set name="said" value="" />\n{body}  </qg:scene>\n' + TAIL
+
+    def test_a_shared_field_and_what_it_runs(self, tmp_path):
+        out = build(tmp_path, self.scene('''    <q:set name="who" value="0" type="number" />
+    <qg:menu local="true">
+      <qg:field bind="said" label="Say" shared="true"><q:set name="who" value="{sender}" /></qg:field>
+    </qg:menu>
+'''))
+        menu = next(n for n in json.loads((out / 'game.json').read_text())['scenes']['main']['nodes']
+                    if n['kind'] == 'menu')
+        assert menu['local'] is True
+        assert menu['items'] == [{'kind': 'field', 'bind': 'said', 'label': 'Say', 'max_length': 64, 'game': False,
+                                  'shared': True, 'key': 'main:1:0', 'handler': '_on_menu_1_field_0'}]
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'func _on_menu_1_field_0(sender, text) -> void:' in script and 'who = sender' in script
+
+    def test_what_shared_fields_refuse(self, tmp_path):
+        e = refuse(tmp_path, self.scene('    <qg:menu><qg:field bind="said"><q:set name="said" value="x" /></qg:field>'
+                                        '</qg:menu>\n'))
+        assert 'only a shared field (shared="true") runs what it holds' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:menu local="true"><qg:field bind="said" />'
+                                        '<qg:button label="Go"><qg:quit /></qg:button></qg:menu>\n'))
+        assert '<qg:menu local="true"> holds only shared fields' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:menu local="true" player="2"><qg:field bind="said" shared="true" />'
+                                        '</qg:menu>\n'))
+        assert 'the seat of the machine it is on; no player=' in e.message
+
+
+class TestSequencesAndRumble:
+    """PLAN_GAMES_3.md, Phase 5: presses in order, in time (a special move), and a joypad that shakes."""
+
+    def scene(self, body):
+        return HEAD + f'  <qg:scene name="main">\n    <q:set name="n" value="0" type="number" />\n{body}  </qg:scene>\n' + TAIL
+
+    def test_a_sequence_and_a_rumble(self, tmp_path):
+        out = build(tmp_path, self.scene('''    <qg:on-input sequence="down, forward, jump" within="20" player="2">
+      <q:set name="n" value="{n + 1}" />
+      <qg:rumble player="{n}" strength="0.4" seconds="0.5" />
+      <qg:rumble />
+    </qg:on-input>
+'''))
+        spec = json.loads((out / 'game.json').read_text())['scenes']['main']
+        assert spec['sequences'] == [{'steps': ['down', 'forward', 'jump'], 'within': 20, 'player': 2,
+                                      'handler': '_on_sequence_0'}]
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.rumble(int(n), 0.4, 0.5)' in script and 'Q.rumble(1, 0.5, 0.2)' in script
+
+    def test_what_sequences_and_rumbles_refuse(self, tmp_path):
+        e = refuse(tmp_path, self.scene('    <qg:on-input sequence="down, dash" />\n'))
+        assert "no such action 'dash'" in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input sequence="down" />\n'))
+        assert 'two actions or more' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input action="jump" sequence="down, jump" />\n'))
+        assert 'no action= or on=' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input sequence="down, right, jump" within="1" />\n'))
+        assert 'within= at least a tick a step' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input />\n'))
+        assert '<qg:on-input> takes action= (or sequence=)' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input action="jump"><qg:rumble strength="2" /></qg:on-input>\n'))
+        assert 'strength= 0 to 1' in e.message
+
+
+class TestMouseButtons:
+    """PLAN_GAMES_3.md, Phase 6: the right button, the wheel and hover (Towers' sell)."""
+
+    def test_an_on_select_of_another_action_and_the_wheel(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:input action="sell" keys="MouseRight" />
+  <qg:input action="turn" keys="WheelUp, WheelDown" />
+  <qg:scene name="main">
+    <q:set name="n" value="0" type="number" />
+    <qg:cursor player="1" />
+    <qg:on-select><q:set name="n" value="1" /></qg:on-select>
+    <qg:on-select action="sell"><q:set name="n" value="2" /></qg:on-select>
+    <qg:hud><qg:text value="{'over' if hovered() != null else ''}" /></qg:hud>
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['scenes']['main']['on_select'] == {'0': '_on_select_0', '0:sell': '_on_select_0_sell'}
+        assert {'mouse_button': 4} in data['inputs']['turn'] and {'mouse_button': 5} in data['inputs']['turn']
+        assert 'Q.hovered(self, 1)' in (out / 'scripts' / 'scene_main.gd').read_text()
+
+    def test_what_on_select_refuses(self, tmp_path):
+        e = refuse(tmp_path, HEAD + '  <qg:scene name="main"><qg:on-select action="sell" /></qg:scene>\n' + TAIL)
+        assert '<qg:on-select action="sell">: no such action' in e.message
+        e = refuse(tmp_path, HEAD + '  <qg:input action="sell" keys="MouseRight" />\n  <qg:scene name="main">'
+                   '<qg:on-select action="sell" /><qg:on-select action="sell" /></qg:scene>\n' + TAIL)
+        assert 'two <qg:on-select> for the same player and action' in e.message
+
+
+class TestMusicWithinAScene:
+    """PLAN_GAMES_3.md, Phase 6: qg:music in a handler, and qg:play sounds= (Delve's warden)."""
+
+    SOUNDS = ('  <qg:sound name="calm" src="assets/kenney/audio/win.ogg" loop="true" />\n'
+              '  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />\n'
+              '  <qg:sound name="clank" src="assets/kenney/audio/block.ogg" />\n')
+
+    def scene(self, body):
+        return HEAD + self.SOUNDS + f'  <qg:scene name="main">\n{body}  </qg:scene>\n' + TAIL
+
+    def test_music_in_a_handler_and_one_of_several_sounds(self, tmp_path):
+        out = build(tmp_path, self.scene('    <qg:on-input action="jump"><qg:music sound="calm" fade="0.5" />'
+                                         '<qg:play sounds="hit, clank" vary="0.1" /></qg:on-input>\n'))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.music({"sound": "calm", "fade": 0.5, "volume": 0.0})' in script
+        assert 'Q.play_one(["hit", "clank"], 0.0, 1.0, 0.1)' in script
+
+    def test_what_they_refuse(self, tmp_path):
+        e = refuse(tmp_path, self.scene('    <qg:on-input action="jump"><qg:music sound="hit" /></qg:on-input>\n'))
+        assert '<qg:music sound="hit">: music loops' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input action="jump"><qg:play sounds="hit" /></qg:on-input>\n'))
+        assert 'two sounds or more' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input action="jump"><qg:play sound="hit" sounds="hit, clank" />'
+                                        '</qg:on-input>\n'))
+        assert '<qg:play> takes sound= or sounds=, one of them' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:on-input action="jump"><qg:play sounds="hit, boom" /></qg:on-input>\n'))
+        assert '<qg:play sound="boom">: no qg:sound of that name' in e.message
+
+
+class TestPositionalSound:
+    """PLAN_GAMES_3.md, Phase 6: at= on qg:play, a sound heard from where a thing is (Hopper's bouncer)."""
+
+    def test_a_sound_from_a_thing(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound name="clank" src="assets/kenney/audio/block.ogg" />
+  <qg:scene name="main">
+    <qg:character id="hero" controller="platformer" sheet="c" x="10" y="10" hitbox="10x10">
+      <qg:on-collision with="coin"><qg:play sound="hit" at="other" /><qg:play sounds="hit, clank" at="hero" /></qg:on-collision>
+    </qg:character>
+  </qg:scene>
+''' + TAIL)
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.play("hit", 0.0, 1.0, 0.0, other)' in script
+        assert 'Q.play_one(["hit", "clank"], 0.0, 1.0, 0.0, get_node_or_null("hero"))' in script
+
+    def test_a_sound_from_nothing_there(self, tmp_path):
+        e = refuse(tmp_path, HEAD + '  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />\n'
+                   '  <qg:scene name="main"><qg:on-input action="jump"><qg:play sound="hit" at="foe" /></qg:on-input>'
+                   '</qg:scene>\n' + TAIL)
+        assert '<qg:play at="foe"> outside a handler that has' in e.message
+
+
+class TestWhatTheTranslatedRpgAsked:
+    """PLAN_GAMES_3.md, Phase 6: a frame that stretches (slice=, box=), and in a qg:language a count's plural
+    forms (one= few= many=, tr_n), its own pictures and sounds (qg:asset) and a font for its alphabet (font=)."""
+
+    FRAME = '  <qg:spritesheet name="frame" src="projects/rpg/assets/frame.png" tile="48" slice="16" />\n'
+
+    def test_a_frame_for_a_dialogue_and_a_menu(self, tmp_path):
+        out = build(tmp_path, HEAD + self.FRAME + '''  <qg:spritesheet name="thin" src="projects/rpg/assets/frame.png" tile="48" slice="4, 8, 4, 8" />
+  <qg:scene name="main">
+    <qg:dialogue name="hi" box="frame"><qg:line text="Hi" /></qg:dialogue>
+    <qg:menu box="thin"><qg:button label="Go"><qg:say dialogue="hi" /></qg:button></qg:menu>
+  </qg:scene>
+''' + TAIL)
+        spec = json.loads((out / 'game.json').read_text())
+        assert spec['sheets']['frame']['slice'] == [16, 16, 16, 16] and spec['sheets']['thin']['slice'] == [4, 8, 4, 8]
+        nodes = spec['scenes']['main']['nodes']
+        assert [n.get('box') for n in nodes if n['kind'] in ('dialogue', 'menu')] == ['frame', 'thin']
+
+    def test_a_frame_that_is_not_one(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:dialogue name="hi" box="c"><qg:line text="Hi" />'
+                                  '</qg:dialogue></qg:scene>\n'))
+        assert '<qg:dialogue name="hi" box="c">: a qg:spritesheet with slice=' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:menu box="none"><qg:button label="Go" /></qg:menu>'
+                                  '</qg:scene>\n'))
+        assert "no qg:spritesheet or qg:tileset named 'none'" in e.message
+        e = refuse(tmp_path, game('  <qg:spritesheet name="f" src="projects/rpg/assets/frame.png" tile="48" '
+                                  'slice="24" />\n  <qg:scene name="main" />\n'))
+        assert 'edges of 24, 24, 24, 24 leave nothing to stretch in a 48x48 frame' in e.message
+        e = refuse(tmp_path, game('  <qg:spritesheet name="f" src="projects/rpg/assets/frame.png" tile="48" '
+                                  'slice="8, 8" />\n  <qg:scene name="main" />\n'))
+        assert 'its edges in pixels, 16, or left, top, right, bottom' in e.message
+
+    def test_plurals_pictures_sounds_and_a_font_in_a_language(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:sound name="hello" src="assets/kenney/audio/coin.ogg" />
+  <qg:language lang="ru" name="Русский" font="projects/rpg/assets/Xolonium-Regular.ttf">
+    <qg:phrase text="potion" as="зелье" />
+    <qg:phrase text="potions" as="зелий" one="зелье" few="зелья" />
+    <qg:asset name="c" src="projects/rpg/assets/banner-ru.png" />
+    <qg:asset name="hello" src="assets/kenney/audio/jump.ogg" />
+  </qg:language>
+  <qg:language lang="pt"><qg:phrase text="potions" as="poções" one="poção" /></qg:language>
+  <qg:scene name="main">
+    <q:set name="n" value="2" type="number" />
+    <qg:hud><qg:text value="{str(n) + ' ' + tr_n('potion', 'potions', n)}" /></qg:hud>
+  </qg:scene>
+''' + TAIL)
+        spec = json.loads((out / 'game.json').read_text())
+        ru = spec['languages']['ru']
+        assert ru['plurals'] == {'potions': {'one': 'зелье', 'few': 'зелья'}} and ru['phrases']['potions'] == 'зелий'
+        assert ru['font'] == 'projects/rpg/assets/Xolonium-Regular.ttf' and 'font' not in spec['languages']['pt']
+        assert spec['sheets']['c']['srcs'] == {'ru': 'projects/rpg/assets/banner-ru.png'}
+        assert spec['sounds']['hello']['srcs'] == {'ru': 'assets/kenney/audio/jump.ogg'}
+        for f in ('projects/rpg/assets/Xolonium-Regular.ttf', 'projects/rpg/assets/banner-ru.png',
+                  'assets/kenney/audio/jump.ogg'):
+            assert (out / f).is_file()                                    # copied into the build
+        assert "Q.translate_n('potion', 'potions', " in (out / 'scripts' / 'scene_main.gd').read_text().replace('"', "'")
+
+    def test_what_a_language_has_not(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:language lang="pt"><qg:phrase text="keys" as="chaves" few="chavinhas" />'
+                                  '</qg:language>\n  <qg:scene name="main" />\n'))
+        assert "<qg:phrase few=>: a count's word in pt has no such form (its forms besides as=: one=)" in e.message
+        e = refuse(tmp_path, game('  <qg:language lang="ja"><qg:phrase text="keys" as="鍵" one="鍵" />'
+                                  '</qg:language>\n  <qg:scene name="main" />\n'))
+        assert "the same for any number" in e.message
+        e = refuse(tmp_path, game('  <qg:language lang="pt"><qg:asset name="banner" src="x.png" /></qg:language>\n'
+                                  '  <qg:scene name="main" />\n'))
+        assert '<qg:asset name="banner">: no qg:spritesheet, qg:tileset or qg:sound of that name' in e.message
+        e = refuse(tmp_path, game('  <qg:language lang="pt"><qg:asset name="c" src="projects/rpg/assets/banner-pt.png" />'
+                                  '<qg:asset name="c" src="projects/rpg/assets/banner-pt.png" /></qg:language>\n'
+                                  '  <qg:scene name="main" />\n'))
+        assert '<qg:asset name="c">: twice in lang="pt"' in e.message
+
+
+class TestLights:
+    """PLAN_GAMES_3.md, Phase 6: a dark scene (ambient=) and its qg:lights, in it or carried (Delve's vault)."""
+
+    def test_a_dark_scene_its_lights_and_a_lantern(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:prefab name="Glow" tag="glow" sheet="k" frame="151" hitbox="12x12">
+    <qg:light radius="20" color="#80ffff" />
+  </qg:prefab>
+  <qg:scene name="main" ambient="#101018">
+    <qg:tilemap tileset="k" collision="true">
+0,23
+    </qg:tilemap>
+    <qg:light x="40" y="30" radius="90" color="#ffa850" energy="1.4" flicker="0.25" shadows="true" />
+    <qg:character id="hero" controller="topdown" sheet="c" x="10" y="10" hitbox="10x10">
+      <qg:light dy="-4" radius="48" shadows="true" />
+    </qg:character>
+  </qg:scene>
+''' + TAIL)
+        spec = json.loads((out / 'game.json').read_text())
+        scene = spec['scenes']['main']
+        assert scene['ambient'] == '#101018'
+        nodes = {n['kind']: n for n in scene['nodes']}
+        assert nodes['tilemap']['shadows'] is True                         # its solid tiles cast shadows
+        assert nodes['light'] == {'kind': 'light', 'x': 40.0, 'y': 30.0, 'radius': 90.0, 'color': '#ffa850',
+                                  'energy': 1.4, 'flicker': 0.25, 'shadows': True}
+        assert nodes['character']['lights'] == [{'dx': 0.0, 'dy': -4.0, 'radius': 48.0, 'color': '#ffffff',
+                                                 'energy': 1.0, 'shadows': True}]
+        assert spec['prefabs']['Glow']['lights'][0]['color'] == '#80ffff'
+
+    def test_a_scene_with_daylight_casts_no_shadows(self, tmp_path):
+        out = build(tmp_path, game(SCENE))
+        scene = json.loads((out / 'game.json').read_text())['scenes']['main']
+        assert 'ambient' not in scene and 'shadows' not in [n for n in scene['nodes'] if n['kind'] == 'tilemap'][0]
+
+    def test_lights_out_of_place(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:light radius="40" /></qg:scene>\n'))
+        assert '<qg:light> in a scene needs x= and y=' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:character id="h" controller="topdown" sheet="c" '
+                                  'x="0" y="0" hitbox="10x10"><qg:light x="4" y="4" /></qg:character></qg:scene>\n'))
+        assert '<qg:light> on a character or a prefab takes dx= and dy=' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:light x="1" y="1" flicker="2" /></qg:scene>\n'))
+        assert 'flicker= from 0 to 1' in e.message
+
+
+class TestHexesAndCosts:
+    """PLAN_GAMES_3.md, Phase 6: maps of hexes and diamonds, terrain costs, qg:travel and cost() (Marches)."""
+
+    LAND = ('  <qg:tileset name="land" src="projects/marches/assets/land.png" tile="28x32" shape="hex">\n'
+            '    <qg:tile frame="1" shape="none" cost="2" />\n    <qg:tile frame="4" />\n  </qg:tileset>\n')
+
+    def test_a_hex_map_its_costs_a_walk_and_a_cursor_on_its_cells(self, tmp_path):
+        out = build(tmp_path, HEAD + self.LAND + '''  <qg:scene name="main">
+    <q:set name="spent" value="0" type="number" />
+    <qg:tilemap tileset="land" collision="true">
+1,2,5
+    </qg:tilemap>
+    <qg:cursor id="aim" cells="true" />
+    <qg:instance prefab="Coin" name="coin" x="14" y="16" />
+    <qg:on-select>
+      <q:set name="spent" value="{cost(coin, aim)}" />
+      <qg:travel target="coin" to="aim" budget="{spent}" step="6"><qg:on-end><qg:destroy target="me" /></qg:on-end></qg:travel>
+    </qg:on-select>
+  </qg:scene>
+''' + TAIL)
+        spec = json.loads((out / 'game.json').read_text())
+        land = spec['sheets']['land']
+        assert (land['shape'], land['tile']) == ('hex', [28, 32])
+        assert land['tiles']['1'] == {'shape': None, 'one_way': False, 'cost': 2}
+        assert land['tiles']['4']['shape'] == 'cell'                       # solid: the whole hex
+        cursor = [n for n in spec['scenes']['main']['nodes'] if n['kind'] == 'cursor'][0]
+        assert cursor['cells'] is True
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'spent = Q.cost(self, get_node_or_null("coin"), get_node_or_null("aim"))' in script
+        assert 'Q.travel(get_node_or_null("coin"), get_node_or_null("aim"), spent, 6, self, "_on_travel_end_1")' in script
+
+    def test_what_a_hex_map_refuses(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:tileset name="t" src="assets/kenney/tilemap_packed.png" tile="18x20" />\n'
+                                  '  <qg:scene name="main" />\n'))
+        assert 'square tiles are square (tile="18"); WxH is for shape="hex" or "iso"' in e.message
+        e = refuse(tmp_path, game('  <qg:tileset name="t" src="assets/kenney/tilemap_packed.png" tile="18">'
+                                  '<qg:tile frame="1" cost="0" /></qg:tileset>\n  <qg:scene name="main" />\n'))
+        assert '<qg:tile cost=>: what a step onto it costs, 1 or more' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:instance prefab="Coin" name="c" x="1" y="1" />'
+                                  '<qg:on-input action="jump"><qg:travel target="c" to="c" /></qg:on-input></qg:scene>\n'))
+        assert "<qg:travel> goes over the scene's qg:tilemap, which it has not" in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:cursor cells="true" /></qg:scene>\n'))
+        assert 'the cells of the scene\'s qg:tilemap, which it has not' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:cursor cells="true" grid="18" /></qg:scene>\n'))
+        assert 'snaps to grid= or to the cells of the tilemap' in e.message
+        e = refuse(tmp_path, HEAD + self.LAND + '  <qg:scene name="main"><qg:tilemap tileset="land" src="projects/crates/rooms/dock.tmx" />'
+                   '</qg:scene>\n' + TAIL)
+        assert 'a Tiled map of hexes or diamonds is not read yet' in e.message

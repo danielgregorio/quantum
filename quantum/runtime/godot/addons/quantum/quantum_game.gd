@@ -21,6 +21,7 @@ func _ready() -> void:
 		return
 	spec = JSON.parse_string(f.get_as_text())
 	_register_inputs(spec.get("inputs", {}))
+	Q.apply_keys()   # the keys chosen on an options screen in an earlier run (qg:rebind)
 	if OS.has_feature("web"):
 		add_child(WebPlay.new())   # window.quantumPlay: an agent plays the exported game (web_play.py)
 	_languages(spec.get("languages", {}))
@@ -31,8 +32,9 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--q-host="):
 			port = int(a.substr(9))
-		elif a.begins_with("--q-join="):
-			var address := a.substr(9)
+		elif a.begins_with("--q-join=") or a.begins_with("--q-watch="):
+			watch_override = a.begins_with("--q-watch=")
+			var address := a.substr(a.find("=") + 1)
 			if address.contains("://"):   # a relay's URL: wss://host/game/room
 				host = address
 				port = 0
@@ -49,6 +51,10 @@ func _ready() -> void:
 			transport_override = a.substr(14)
 		elif a.begins_with("--q-latency="):
 			latency_override = int(a.substr(12))
+		elif a.begins_with("--q-players="):
+			players_override = int(a.substr(12))
+		elif a.begins_with("--q-seat="):
+			seat_override = int(a.substr(9))
 	if spec.has("multiplayer") and (port > 0 or (port == 0 and host != "")):
 		_start_network(host, port).from_command_line = true
 		return
@@ -81,6 +87,14 @@ func _languages(langs: Dictionary) -> void:
 	Q.languages = langs.keys()
 	for code in langs.keys():
 		Q.language_names[code] = str(langs[code].get("name", code))
+		if langs[code].has("plurals"):
+			Q.plurals[code] = langs[code]["plurals"]
+		if langs[code].has("font"):
+			var font := Q.load_font(str(langs[code]["font"]))
+			if font != null:
+				Q.language_fonts[code] = font
+	if not Q.language_fonts.is_empty():
+		Q._fonts.append(ThemeDB.fallback_font)   # the texts with no font= of their own too
 	if langs.has(wanted):
 		Q.lang = wanted
 	elif langs.has(wanted.split("_")[0]):
@@ -88,6 +102,7 @@ func _languages(langs: Dictionary) -> void:
 	else:
 		Q.lang = ""
 	TranslationServer.set_locale(Q.lang if Q.lang != "" else "en")
+	Q.language_assets()
 
 
 # Overrides for tests (several games on one machine): --q-port=N, --q-transport=websocket.
@@ -95,6 +110,9 @@ var port_override: int = -1
 var transport_override: String = ""
 var latency_override: int = 0
 var relay_override: bool = false   # --q-relay=PORT: quantum relay's seatless host
+var players_override: int = 0      # --q-players=N: the host plays with N, from min-players= up to players=
+var watch_override: bool = false   # --q-watch=HOST:PORT (or qg:watch): join with no seat, to watch
+var seat_override: int = 0         # --q-seat=N: the seat a joiner asks for (else the lowest free one)
 
 
 func _start_network(host: String, port: int) -> Node:
@@ -103,11 +121,15 @@ func _start_network(host: String, port: int) -> Node:
 		remove_child(lockstep)
 		lockstep.queue_free()
 	var mp: Dictionary = spec["multiplayer"].duplicate()
+	if players_override > 0 and mp.get("min_players") != null:
+		mp["players"] = clampi(players_override, int(mp["min_players"]), int(mp["players"]))
 	if transport_override != "":
 		mp["transport"] = transport_override
 	lockstep = Rollback.new() if int(mp.get("rollback", 0)) > 0 else Lockstep.new()
 	lockstep.latency_ms = latency_override
 	lockstep.relay = relay_override
+	lockstep.watching = watch_override and host != ""
+	lockstep.seat = seat_override if host != "" else 0
 	if relay_override:
 		mp["transport"] = "websocket"   # browsers reach a relay
 	add_child(lockstep)
@@ -115,19 +137,31 @@ func _start_network(host: String, port: int) -> Node:
 	return lockstep
 
 
+# qg:start-now, from a scene: the host starts with the players who are there.
+func net_start_now() -> void:
+	if lockstep != null:
+		lockstep.start_now()
+
+
 # qg:host / qg:join / qg:leave, from a scene (Q.net_host...).
 func net_host(port: int) -> void:
 	_start_network("", port)
 
 
-func net_join(address: String) -> void:
+func net_join(address: String, watch: bool = false) -> void:
 	address = address.strip_edges()
+	watch_override = watch
 	if address.contains("://"):   # a relay's URL: wss://host/game/room
 		_start_network(address, 0)
 		return
 	var parts := address.split(":")
 	var port := int(parts[1]) if parts.size() > 1 else 7777
 	_start_network(parts[0], port)
+
+
+# qg:watch: join with no seat, to watch the game the players play.
+func net_watch(address: String) -> void:
+	net_join(address, true)
 
 
 func net_leave() -> void:

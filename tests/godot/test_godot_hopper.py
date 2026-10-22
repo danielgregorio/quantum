@@ -366,3 +366,16 @@ def test_the_bouncer_hops_on_the_snow(godot, tmp_path_factory):
         xs.add(enemy[1])
     assert heights == {True, False}                                         # now up, now down: it hops
     assert all(205 <= x <= 227 for x in xs)                                 # to and fro on its bit of snow
+
+
+def test_the_bouncer_is_heard_from_where_it_is(godot, tmp_path_factory):
+    # PLAN_GAMES_3.md, Phase 6: a thing's own sounds (a leap's sound=) come from where it is, to one side
+    project = level_four(tmp_path_factory, 'falls-heard')
+    from quantum.runtime.godot_play import PlaySession
+    with PlaySession(project, binary=godot) as game:
+        game.act(tap=['select'], ticks=10)                                   # New game: the map
+        assert game.act(tap=['jump'], ticks=10)['scene'] == 'level-4'
+        seen = game.until("event:sound", max_ticks=120)
+        hop = [e for e in seen['events'] if e['kind'] == 'sound'][0]
+        assert hop['name'] == 'hop' and 205 <= hop['x'] <= 227                # from the bouncer, right of the player
+    assert 'hop' in replay(project, 120, level([]), binary=godot)['level-4']['sounds']

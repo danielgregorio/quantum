@@ -31,13 +31,15 @@
   </qg:tileset>
   <qg:spritesheet name="chars" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
 
-  <qg:sound name="jump" src="assets/kenney/audio/jump.ogg" />
-  <qg:sound name="coin" src="assets/kenney/audio/coin.ogg" />
-  <qg:sound name="stomp" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="block" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="powerup" src="assets/kenney/audio/powerup.ogg" />
-  <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="jump" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="effects" name="coin" src="assets/kenney/audio/coin.ogg" />
+  <qg:sound bus="effects" name="stomp" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="hurt" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="block" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="powerup" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="win" src="assets/kenney/audio/win.ogg" />
+  <!-- the bouncer's hop: heard from where it is, to one side, softer the farther off -->
+  <qg:sound bus="effects" name="hop" src="assets/kenney/audio/jump.ogg" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="sparkle" preset="stars" color="#ffe060" />
@@ -58,13 +60,14 @@
   <qg:prefab name="Lift" tag="lift" sheet="kenney" frame="43" hitbox="18x8" solid="true"
              ai="shuttle" dy="-80" period="240" />
 
-  <!-- an enemy made of parts: it hops to and fro on the snow, and over what it bumps -->
+  <!-- an enemy made of parts: it hops to and fro on the snow, and over what it bumps;
+       each hop is heard from where it is, so it is heard before it is seen -->
   <qg:prefab name="Bouncer" tag="enemy" sheet="chars" frame="11" hitbox="18x18" ai="behavior" speed="36"
              turns-at="edge">
     <qg:animation name="walk" frames="11,12" fps="4" />
     <qg:behavior>
       <qg:gravity />
-      <qg:leap height="20" every="45" when="{true}" />
+      <qg:leap height="20" every="45" when="{true}" sound="hop" />
       <qg:patrol heading="left" distance="18" />
     </qg:behavior>
   </qg:prefab>
@@ -74,6 +77,10 @@
   </qg:prefab>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="40" y="184" />
+  <qg:touch-button action="jump" label="A" x="220" y="184" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="SCORE" as="PONTOS" />
     <qg:phrase text="LIVES" as="VIDAS" />
@@ -84,7 +91,15 @@
     <qg:phrase text="New game" as="Novo jogo" />
     <qg:phrase text="Continue" as="Continuar" />
     <qg:phrase text="Language" as="Idioma" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Jump" as="Pular" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="SCORE" as="PUNTOS" />
     <qg:phrase text="LIVES" as="VIDAS" />
@@ -95,7 +110,15 @@
     <qg:phrase text="New game" as="Nueva partida" />
     <qg:phrase text="Continue" as="Continuar" />
     <qg:phrase text="Language" as="Idioma" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Jump" as="Saltar" />
+</qg:language>
 
   <!-- ===== The title: a new game, or the saved one (each level cleared saves it) ===== -->
 
@@ -104,6 +127,7 @@
     <qg:menu position="center">
       <qg:button label="New game"><qg:goto-scene name="map" /></qg:button>
       <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
     </qg:menu>
   </qg:scene>
@@ -182,7 +206,7 @@
 
     <qg:character id="player" controller="platformer" sheet="chars" frame="0"
                   x="40" y="160" hitbox="18x22"
-                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6"
+                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6" buffer-frames="6"
                   jump-sound="jump">
       <qg:state name="small" hitbox="18x22" frame="0" initial="true">
         <qg:animation name="idle" frames="0" />
@@ -308,7 +332,7 @@
 
     <qg:character id="player" controller="platformer" sheet="chars" frame="0"
                   x="40" y="160" hitbox="18x22"
-                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6"
+                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6" buffer-frames="6"
                   jump-sound="jump">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
@@ -390,7 +414,7 @@
 
     <qg:character id="player" controller="platformer" sheet="chars" frame="0"
                   x="40" y="160" hitbox="18x22"
-                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6"
+                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6" buffer-frames="6"
                   jump-sound="jump">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
@@ -481,7 +505,7 @@
 
     <qg:character id="player" controller="platformer" sheet="chars" frame="0"
                   x="40" y="160" hitbox="18x22"
-                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6"
+                  run-speed="90" jump-height="64" variable-jump="true" coyote-frames="6" buffer-frames="6"
                   jump-sound="jump">
       <qg:animation name="idle" frames="0" />
       <qg:animation name="walk" frames="1,2" fps="8" />
@@ -551,6 +575,18 @@
     <qg:hud position="top-center">
       <qg:text bind="message" />
     </qg:hud>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="256" height="224" background="#3b7d4f">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="12">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Jump" action="jump" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
   </qg:scene>
 
 </q:application>

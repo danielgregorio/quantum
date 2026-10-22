@@ -54,15 +54,15 @@ func net_report() -> Dictionary:
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func _frame(p: int, t: int, mask: int, cx: float, cy: float) -> void:
+func _frame(p: int, t: int, mask: int, cx: float, cy: float, said: Dictionary) -> void:
 	if relay:
 		return
 	if not _frames.has(t):
 		_frames[t] = {}
-	var entry := [mask, cx, cy]
-	_frames[t][p] = entry
-	# a tick already run with a guess for this player that was wrong: back to it
-	if t < tick and _used.has(t) and _used[t].get(p) != entry:
+	var known := entry(mask, cx, cy, said)
+	_frames[t][p] = known
+	# a tick already run with a guess for this player that was wrong (a text sent is never guessed): back to it
+	if t < tick and _used.has(t) and _used[t].get(p) != known:
 		if _rollback_from < 0 or t < _rollback_from:
 			_rollback_from = t
 
@@ -75,20 +75,22 @@ func _physics_process(_delta: float) -> void:
 		return
 	if scene != _scene:
 		_index(scene)
-	# 1. this player's input, `delay` ticks ahead, to everyone
-	var mask := 0
-	var local: Dictionary = Q.sample_local()   # held, and tapped since the last tick
-	for i in ACTIONS.size():
-		if local.has(ACTIONS[i]):
-			mask |= 1 << i
+	# 1. this player's input, `delay` ticks ahead, to everyone. The keys are taken once a tick, as its
+	# input is recorded: a key tapped while the game waits goes with the next tick's, and is not lost.
 	var ahead := tick + delay
 	if not _frames.has(ahead):
 		_frames[ahead] = {}
 	if not _frames[ahead].has(player):
+		var mask := 0
+		var local: Dictionary = Q.sample_local()   # held, and tapped since the keys were last taken
+		for i in ACTIONS.size():
+			if local.has(ACTIONS[i]):
+				mask |= 1 << i
 		var raw: Vector2 = Q.raw_cursor
-		_frames[ahead][player] = [mask, raw.x, raw.y]
+		var said: Dictionary = Q.take_said()
+		_frames[ahead][player] = entry(mask, raw.x, raw.y, said)
 		if not ended:
-			_send_frame(player, ahead, mask, raw.x, raw.y)
+			_send_frame(player, ahead, mask, raw.x, raw.y, said)
 	# 2. a guess was wrong: back to that tick, and run the ticks since again
 	if _rollback_from >= 0 and _rollback_from < tick and _snapshots.has(_rollback_from):
 		_resimulate(_rollback_from)
@@ -162,13 +164,16 @@ func _apply_input(t: int) -> void:
 				input[ACTIONS[i] if p == 1 else "p%d_%s" % [p, ACTIONS[i]]] = 1.0
 	_used[t] = used
 	Q.set_input(input)
+	for p in range(1, players + 1):
+		if used[p].size() > 3:
+			Q.deliver_said(p, used[p][3], p == player and not Q.resimulating)
 
 
 func _guess(p: int, t: int) -> Array:
 	var k := t - 1
 	while k >= 0 and k >= t - window - delay - 4:
 		if _frames.has(k) and _frames[k].has(p):
-			return _frames[k][p]
+			return _frames[k][p].slice(0, 3)   # the keys go on; a text sent once is not sent again
 		k -= 1
 	return [0, 0.0, 0.0]
 

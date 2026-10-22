@@ -42,6 +42,8 @@ dev = [
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.11.1",
     "pytest-xdist>=3.5",
+    # tests/godot read the pictures of rendered frames (lights, frames, fonts); scripts/art draws with it
+    "pillow>=10",
     # Pinned to a minor version: `ruff check` blocks CI, and a new release
     # that adds checks must not turn main red with no change to the code.
     "ruff>=0.16,<0.18",

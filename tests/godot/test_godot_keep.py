@@ -17,8 +17,8 @@ from quantum.runtime.godot_replay import tape_from_holds
 
 KEEP = Path(__file__).resolve().parents[2] / 'projects' / 'keep' / 'keep.q'
 
-# Before room 1, the title: New game is its first button. The tapes below are
-# written from room 1's first tick; replay() presses New game and runs them
+# Before room 1, the title: Game 1 is its first button (new in a fresh run). The
+# tapes below are written from room 1's first tick; replay() chooses it and runs them
 # TITLE ticks later.
 TITLE = 2
 
@@ -94,13 +94,18 @@ def test_walking_into_an_exit_changes_room_and_arrives_at_the_matching_exit(godo
 
 def test_each_room_entered_saves_the_game_and_the_title_continues_there(godot, keep, tmp_path):
     replay(keep, 200, tape_from_holds(TO_ROOM_2), binary=godot, persist_dir=tmp_path)
-    saved = json.loads((tmp_path / 'quantum-save.json').read_text())
+    saved = json.loads((tmp_path / 'quantum-save-1.json').read_text())     # Game 1: the first of three
     assert saved['scene'] == 'room-2' and saved['game']['hearts'] == 3
-    # the next run: down to Continue, select; room 2 starts over (a bat, the player where the room puts it)
-    back = godot_replay.replay(keep, 10, tape_from_holds([('down', 1, 2), ('select', 3, 4)]),
-                               binary=godot, persist_dir=tmp_path)
+    # the next run: Game 1 goes on; room 2 starts over (a bat, the player where the room puts it)
+    back = godot_replay.replay(keep, 10, tape_from_holds([('select', 3, 4)]), binary=godot, persist_dir=tmp_path)
     assert scene(back) == 'room-2'
     assert game(back)['hearts'] == 3
+    # Game 2 is a game of its own: new, in room 1, and saved apart
+    other = godot_replay.replay(keep, 10, tape_from_holds([('down', 1, 2), ('select', 3, 4)]), binary=godot,
+                                persist_dir=tmp_path)
+    assert scene(other) == 'room-1'
+    assert json.loads((tmp_path / 'quantum-save-2.json').read_text())['scene'] == 'room-1'
+    assert json.loads((tmp_path / 'quantum-save-1.json').read_text())['scene'] == 'room-2'
 
 
 def test_the_bat_chases_within_sight_and_hurts_once_per_cooldown(godot, keep):
@@ -158,6 +163,14 @@ def test_the_chest_ends_the_game(godot, keep):
     assert game(state)['message'] == 'THE TREASURE OF THE KEEP IS YOURS.'
     assert game(state)['hearts'] == 2
     assert state['the-end']['sounds'][-1] == 'win'
+
+
+def test_the_end_asks_what_now(godot, keep):
+    asking = replay(keep, 2300, tape_from_holds(THE_WHOLE_KEEP), binary=godot)
+    assert scene(asking) == 'the-end' and asking['the-end']['talking'] == 'end'
+    back = replay(keep, 2340, tape_from_holds(THE_WHOLE_KEEP + [('down', 2300, 2302), ('select', 2310, 2312)]),
+                  binary=godot)
+    assert scene(back) == 'title'                                   # To the title, the second choice
 
 
 def test_three_hurts_are_game_over_and_jump_starts_again(godot, keep):

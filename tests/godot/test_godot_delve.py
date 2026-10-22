@@ -63,6 +63,21 @@ def test_the_lever_opens_the_wall_and_the_dead_come_through(delve, godot):
     assert all(s['x'] < 144 for s in skeletons(opened)), skeletons(opened)   # through the gap, after the delver
 
 
+def test_the_camera_goes_to_show_the_gap_and_the_dead_do_not_wait(delve, godot):
+    game = PlaySession(delve, binary=godot)
+    try:
+        game.until("scene == 'crypt-1'", tap=['select'], max_ticks=60)
+        game.act(hold=['down'], ticks=62)
+        obs = game.until('event:camera', hold=['right'], max_ticks=40)       # into the lever
+        obs = game.act(ticks=30)
+        assert PlaySession.screen(obs, 'camera') == {'kind': 'camera', 'x': 153.0, 'y': 108.0, 'zoom': 2.0}
+        assert not obs['state'].get('paused')                               # pause="false": the skeletons come on
+        obs = game.act(ticks=60)                                             # held 0.6 s, back in 0.4
+        assert PlaySession.screen(obs, 'camera')['zoom'] == 1.0
+    finally:
+        game.close()
+
+
 def test_two_delvers_over_the_network(delve, godot):
     # the networked delve starts in crypt 1 on both machines; the second delver walks into the lever
     peers = replay_peers(delve, 120, [None, tape_from_holds([('down', 0, 30), ('right', 30, 60)])], binary=godot)
@@ -117,3 +132,15 @@ def test_the_archer_keeps_its_distance_and_shoots(delve, godot):
     assert crypt['named']['archer']['doing'] == 'keep-distance'
     assert crypt['sounds'].count('twang') == 1
     assert crypt['game']['q_items']['heart'] == 3
+
+
+def test_the_warden_has_a_theme_of_its_own(delve, godot):
+    # PLAN_GAMES_3.md, Phase 6: the music changes within crypt 3 as the archer first sees a delver (qg:when,
+    # qg:music in a handler); the stored run comes near it a little after tick 3140
+    tape = stored_tape(3377)
+    with PlaySession(delve, binary=godot) as game:
+        snap = game.snapshot()
+        before = game.restore(dict(snap, ticks=3100, tape={k: v for k, v in tape.items() if k < 3100}))
+        after = game.restore(dict(snap, ticks=3240, tape={k: v for k, v in tape.items() if k < 3240}))
+    assert (before['scene'], before['music']) == ('crypt-3', 'crypt')
+    assert (after['scene'], after['music']) == ('crypt-3', 'warden')

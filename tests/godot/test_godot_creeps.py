@@ -46,7 +46,7 @@ def test_the_start_button_is_clicked_like_the_demos(godot, project):
     from quantum.runtime.godot_replay import cursor_at
     click = [('select', 8, 10), ('click', 8, 10)]
     tape = tape_from_holds(click)
-    cursor_at(tape, 3, 240, 680)       # the Start button, at the bottom of the screen
+    cursor_at(tape, 3, 240, 585)       # the Start button, near the bottom of the screen (Options under it)
     assert list(replay(project, 14, tape=tape)) == ['play']
     tape = tape_from_holds(click)
     cursor_at(tape, 3, 240, 100)       # the title text: no button there

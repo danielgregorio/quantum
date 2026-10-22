@@ -67,12 +67,13 @@ class PlayTools:
     # --- sessions ---
 
     def start(self, game: str, frames: bool = False, live: bool = False, host: Optional[int] = None,
-              join: Optional[str] = None, transport: Optional[str] = None, lang: Optional[str] = None) -> dict:
+              join: Optional[str] = None, transport: Optional[str] = None, lang: Optional[str] = None,
+              seat: Optional[int] = None) -> dict:
         """Opens a game (a name from ``games()``, or a .q) and answers its first observation,
-        with the game's actions and its first scene's map. ``live``, ``host``, ``join``:
+        with the game's actions and its first scene's map. ``live``, ``host``, ``join``, ``seat``:
         as ``PlaySession``'s (a networked game is live). ``lang``: the language of its texts."""
         session = PlaySession.open(self._source(game), binary=self.binary, frames=frames, live=live,
-                                   host=host, join=join, transport=transport, lang=lang)
+                                   host=host, join=join, transport=transport, lang=lang, seat=seat)
         self._count += 1
         sid = f's{self._count}'
         self.sessions[sid] = session
@@ -91,15 +92,18 @@ class PlayTools:
 
     def act(self, sid: str, hold: List[str] = (), tap: List[str] = (), press: List[str] = (),
             release: List[str] = (), cursor: Optional[List[float]] = None, ticks: int = 1,
-            reflex: Optional[List[dict]] = None) -> dict:
+            reflex: Optional[List[dict]] = None, player: Optional[int] = None, text: Optional[str] = None) -> dict:
         return self.compact(self._session(sid).act(hold=hold, tap=tap, press=press, release=release,
-                                                   cursor=cursor, ticks=ticks, reflex=reflex))
+                                                   cursor=cursor, ticks=ticks, reflex=reflex, player=player,
+                                                   text=text))
 
     def until(self, sid: str, condition: Union[str, List[str], dict], hold: List[str] = (), tap: List[str] = (),
               press: List[str] = (), release: List[str] = (), cursor: Optional[List[float]] = None,
-              max_ticks: int = 600, reflex: Optional[List[dict]] = None) -> dict:
+              max_ticks: int = 600, reflex: Optional[List[dict]] = None, player: Optional[int] = None,
+              text: Optional[str] = None) -> dict:
         return self.compact(self._session(sid).until(condition, hold=hold, tap=tap, press=press, release=release,
-                                                     cursor=cursor, max_ticks=max_ticks, reflex=reflex))
+                                                     cursor=cursor, max_ticks=max_ticks, reflex=reflex,
+                                                     player=player, text=text))
 
     def view(self, sid: str) -> dict:
         return self._session(sid).view()

@@ -1,7 +1,9 @@
 """scripts/export-games.py without Godot's templates: what it would export, and how."""
 
+import html
 import importlib.util
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -17,8 +19,8 @@ def load():
 
 def test_every_project_is_a_game_to_export():
     eg = load()
-    assert sorted(eg.games()) == ['arena', 'chess', 'creeps', 'delve', 'drift', 'hopper', 'keep', 'pong', 'robot', 'rpg',
-                                  'towers']
+    assert sorted(eg.games()) == ['arena', 'bricks', 'chess', 'crates', 'creeps', 'delve', 'drift', 'hopper', 'keep',
+                                  'marches', 'pong', 'rally', 'robot', 'rpg', 'siege', 'towers']
     assert eg.games()['pong'] == REPO / 'projects' / 'pong' / 'pong.q'
 
 
@@ -37,7 +39,7 @@ def test_the_play_page_links_every_game(tmp_path):
     for name in load().games():
         assert f'https://quantumframework.net/games/{name}/' in page
         assert f'{name}-linux.zip' in page and f'{name}-windows.zip' in page
-        assert f'projects/{name}/{name}.q' in page
+        assert f'https://quantumframework.net/games/{name}/source/' in page
 
 
 def test_the_games_page_shows_every_game_with_its_screenshot_and_links(tmp_path):
@@ -66,6 +68,54 @@ def test_the_games_page_shows_every_game_with_its_screenshot_and_links(tmp_path)
     shutil.rmtree(tmp_path / 'pong')
     assert 'id="pong"' not in eg.write_index(tmp_path).read_text(encoding='utf-8')
 
+
+def test_each_game_has_a_page_of_its_source(tmp_path):
+    eg = load()
+    for name in eg.games():
+        (tmp_path / name).mkdir()
+        (tmp_path / name / 'index.html').write_text('x')
+    index = eg.write_index(tmp_path).read_text(encoding='utf-8')
+    reference = (REPO / 'docs' / 'targets' / 'games.md').read_text(encoding='utf-8')
+    anchors = {'statements', 'gd-attributes'} | {f'qg-{t}' for t in re.findall(r'^### `qg:([a-z-]+)`', reference, re.M)}
+    for name, q in eg.games().items():
+        assert f'href="{name}/source/">View the source' in index
+        page = (tmp_path / name / 'source' / 'index.html').read_text(encoding='utf-8')
+        text = q.read_text(encoding='utf-8')
+        assert (tmp_path / name / 'source' / f'{name}.q').read_text(encoding='utf-8') == text   # to download
+        lines = text.count('\n') + (not text.endswith('\n'))
+        assert f'id="L{lines}"' in page and f'id="L{lines + 1}"' not in page                    # every line
+        assert '<qg:' not in page and '<q:' not in page                                        # escaped
+        assert 'href="../">Play in the browser' in page
+        # every tag links to an entry of the reference, and every tooltip has its text
+        links = set(re.findall(r'href="\.\./\.\./\.\./targets/games\.html#([\w-]+)"', page))
+        assert links and links <= anchors, links - anchors
+        docs = json.loads(re.search(r'const DOCS = (\{.*?\});\n', page).group(1))
+        assert set(re.findall(r'data-t="([^"]+)"', page)) == set(docs) and all(docs.values())
+    # a game's other sources (a level drawn in Tiled) are on its page too, a tab each
+    hopper = (tmp_path / 'hopper' / 'source' / 'index.html').read_text(encoding='utf-8')
+    assert [p.name for p in eg.source_files('hopper')] == ['hopper.q', 'level-2.tmx']
+    assert 'id="levels-level-2-tmx-L1"' in hopper and '<button type="button">levels/level-2.tmx</button>' in hopper
+    assert (tmp_path / 'hopper' / 'source' / 'levels' / 'level-2.tmx').is_file()
+    assert '<button type="button">' not in (tmp_path / 'pong' / 'source' / 'index.html').read_text(encoding='utf-8')
+
+
+def test_the_highlighted_source_is_the_source():
+    eg = load()
+    for name in eg.games():
+        for path in eg.source_files(name):
+            text = path.read_text(encoding='utf-8')
+            lines = [html.unescape(re.sub(r'<[^>]+>', '', line)) for line in eg.highlight(text, {})]
+            assert '\n'.join(lines) + '\n' * text.endswith('\n') == text, path
+    docs = {}
+    line, statement = eg.highlight('<qg:character id="p" controller="platformer" x="{w / 2}"/> <!-- a < b -->\n'
+                                   '<q:set name="a" value="1" />\n', docs)
+    assert line.startswith('<span class="b">&lt;</span><a class="t" href="../../../targets/games.html#qg-character" '
+                           'data-t="character">qg:character</a>')
+    assert '<span class="a" data-t="character controller">controller</span>=<span class="v">"platformer"</span>' in line
+    assert '<span class="v">"</span><span class="e">{w / 2}</span><span class="v">"</span>' in line
+    assert '<span class="c">&lt;!-- a &lt; b --&gt;</span>' in line
+    assert '<a class="k" href="../../../targets/games.html#statements">q:set</a>' in statement
+    assert set(docs) == {'character', 'character controller'} and docs['character'].startswith('A body the player')
 
 def test_what_the_browser_check_expects_is_in_each_game(tmp_path):
     # scripts/check-games-in-browser.py waits for these scenes and actions in
@@ -96,4 +146,4 @@ def test_with_a_relay_each_networked_game_can_be_played_online(tmp_path, monkeyp
     monkeypatch.setenv('QUANTUM_RELAY_URL', 'wss://relay.example/')
     page = eg.write_index(tmp_path).read_text(encoding='utf-8')
     online = {name for name in eg.games() if f'data-game="{name}" data-relay="wss://relay.example"' in page}
-    assert online == {'arena', 'chess', 'delve', 'pong', 'towers'}         # the games with qg:multiplayer
+    assert online == {'arena', 'bricks', 'chess', 'delve', 'pong', 'rally', 'siege', 'towers'}   # with qg:multiplayer

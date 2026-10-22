@@ -180,17 +180,17 @@
     },
     {
       "id": "game-bad-011",
-      "intent": "A q:function outside a scene",
+      "intent": "A function of the game setting a state no one declared",
       "input": {
-        "natural_language": "A function the whole game can call",
+        "natural_language": "A function the whole game can call, that resets the score",
         "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"chars\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <q:function name=\"reset\"><q:set name=\"score\" value=\"0\" /></q:function>\n  <qg:scene name=\"main\" />\n</q:application>\n"
       },
       "expected_error": {
         "type": "GameCompileError",
-        "message": "goes inside a <qg:scene>"
+        "message": "'score' is set and never read: a state of the game is declared with <q:set name=\"score\" .../> in <q:application>"
       },
-      "why_invalid": "Only q:set (game state) goes directly in q:application; functions belong to a scene.",
-      "correction": "Put the q:function directly inside the qg:scene that calls it.",
+      "why_invalid": "No q:set declares score: in a function, a name no q:set of the game declares is a variable of the function, and one set and never read is a misspelt state.",
+      "correction": "Declare it in <q:application>: <q:set name=\"score\" value=\"0\" type=\"number\" />.",
       "tags": [
         "q:function"
       ]
@@ -422,6 +422,740 @@
       "tags": [
         "multiplayer",
         "rollback"
+      ]
+    },
+    {
+      "id": "game-bad-025",
+      "intent": "A loop name that is taken",
+      "input": {
+        "natural_language": "Damage every coin, naming each one other",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:timer after=\"1\">\n      <qg:for-each tag=\"coin\" var=\"paused\"><qg:damage target=\"paused\" amount=\"1\" /></qg:for-each>\n    </qg:timer>\n    <q:set name=\"paused\" value=\"false\" type=\"boolean\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "the name is taken here"
+      },
+      "why_invalid": "The name of each thing must not hide a state, a parameter or another loop variable.",
+      "correction": "Choose another name: var=\"coin\".",
+      "tags": [
+        "for-each"
+      ]
+    },
+    {
+      "id": "game-bad-026",
+      "intent": "Time stopped",
+      "input": {
+        "natural_language": "Freeze time with a time scale of zero",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:timer after=\"1\"><qg:time-scale scale=\"0\" /></qg:timer>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "scale= more than 0 and up to 4"
+      },
+      "why_invalid": "A game whose ticks never come stops for good; qg:pause is the way to stop a scene.",
+      "correction": "Use <qg:pause /> and <qg:resume />, or a small scale such as 0.1.",
+      "tags": [
+        "time-scale"
+      ]
+    },
+    {
+      "id": "game-bad-027",
+      "intent": "A screen handler of a scene without a tag",
+      "input": {
+        "natural_language": "Do something when anything leaves the screen",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:sound name=\"out\" src=\"assets/kenney/audio/hurt.ogg\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:on-screen-exit><qg:play sound=\"out\" /></qg:on-screen-exit>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "needs of= (a tag)"
+      },
+      "why_invalid": "In a scene the handler is about the things of one tag; in a character or prefab it is about that one.",
+      "correction": "Write of=\"coin\" (a prefab's tag), or put the handler in the prefab.",
+      "tags": [
+        "on-screen-exit"
+      ]
+    },
+    {
+      "id": "game-bad-028",
+      "intent": "Fewer players than players",
+      "input": {
+        "natural_language": "A game for two that may start with two",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:multiplayer players=\"2\" min-players=\"2\" />\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "2 or more, and fewer than players="
+      },
+      "why_invalid": "min-players= says how many fewer may start; the same number is players= itself.",
+      "correction": "Leave min-players= out, or raise players=.",
+      "tags": [
+        "multiplayer"
+      ]
+    },
+    {
+      "id": "game-bad-029",
+      "intent": "Statements straight inside a tween",
+      "input": {
+        "natural_language": "When the tween ends, add a point",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"points\" value=\"0\" type=\"number\" />\n    <qg:instance prefab=\"Coin\" name=\"c\" x=\"40\" y=\"40\" />\n    <qg:timer after=\"1\">\n      <qg:tween target=\"c\" property=\"y\" to=\"20\" seconds=\"0.5\"><q:set name=\"points\" value=\"{points + 1}\" /></qg:tween>\n    </qg:timer>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "holds one <qg:on-end> at most, and nothing else"
+      },
+      "why_invalid": "A tween runs over many ticks; what follows it runs when it is done, in its qg:on-end.",
+      "correction": "Wrap it: <qg:tween ...><qg:on-end><q:set .../></qg:on-end></qg:tween>.",
+      "tags": [
+        "tween",
+        "on-end"
+      ]
+    },
+    {
+      "id": "game-bad-030",
+      "intent": "A field the character does not have",
+      "input": {
+        "natural_language": "Show the hero's health",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"shown\" value=\"0\" type=\"number\" />\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"18x22\" />\n    <qg:timer every=\"10\"><q:set name=\"shown\" value=\"{hero.health}\" /></qg:timer>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "hero.health: no such field; hero has facing, name, on_ceiling, on_floor, on_wall, player, state, x, y"
+      },
+      "why_invalid": "A platformer's character keeps no health (a fighter does): read before, hero.health stopped the game in Godot.",
+      "correction": "Keep the hearts in a q:set of the game, or use controller=\"fighter\".",
+      "tags": [
+        "fields"
+      ]
+    },
+    {
+      "id": "game-bad-031",
+      "intent": "A delay with no count",
+      "input": {
+        "natural_language": "Later, end the level",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:on-input action=\"jump\"><qg:after><qg:goto-scene name=\"main\" /></qg:after></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:after> takes ticks= or seconds=, one of them"
+      },
+      "why_invalid": "A delay needs to know how long it waits.",
+      "correction": "Write <qg:after seconds=\"2\"> or <qg:after ticks=\"120\">.",
+      "tags": [
+        "after"
+      ]
+    },
+    {
+      "id": "game-bad-032",
+      "intent": "A function of the game reading a scene's state",
+      "input": {
+        "natural_language": "A function every room uses that reads the score of one room",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:function name=\"win\" params=\"n\"><q:set name=\"n\" value=\"{points}\" /></q:function>\n  <qg:scene name=\"main\"><q:set name=\"points\" value=\"0\" type=\"number\" /></qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "'points' is not declared"
+      },
+      "why_invalid": "A q:function of the game runs in every scene: it reads the game's state (q:set in q:application), its parameters and its own variables, not one scene's.",
+      "correction": "Declare points in <q:application>, or pass it: <q:call function=\"win\" args=\"{points}\" />.",
+      "tags": [
+        "q:function"
+      ]
+    },
+    {
+      "id": "game-bad-033",
+      "intent": "A scene function named like one of the game",
+      "input": {
+        "natural_language": "Each room has its own hurt",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:function name=\"hurt\"><qg:quit /></q:function>\n  <qg:scene name=\"main\"><q:function name=\"hurt\"><qg:quit /></q:function></qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "'hurt' is a q:function of the game already"
+      },
+      "why_invalid": "Two functions of the same name in one scene: which runs would depend on nothing written.",
+      "correction": "Give the scene's another name.",
+      "tags": [
+        "q:function"
+      ]
+    },
+    {
+      "id": "game-bad-034",
+      "intent": "Reading an action the game does not have",
+      "input": {
+        "natural_language": "Charge while dash is held",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"charge\" value=\"0\" type=\"number\" />\n    <qg:timer every=\"1\"><q:if condition=\"{pressing('dash')}\"><q:set name=\"charge\" value=\"{charge + 1}\" /></q:if></qg:timer>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "pressing('dash'): no such action"
+      },
+      "why_invalid": "An action is a name the game declares (qg:input) or a default one: a misspelt one would read as never pressed.",
+      "correction": "Declare it: <qg:input action=\"dash\" keys=\"Shift\" />.",
+      "tags": [
+        "pressing"
+      ]
+    },
+    {
+      "id": "game-bad-035",
+      "intent": "A heading for a thing that does not fly",
+      "input": {
+        "natural_language": "Throw the coin at the pointer",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Coin\" tag=\"coin\" sheet=\"tiles\" frame=\"151\" hitbox=\"12x12\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"14x14\" />\n    <qg:cursor id=\"aim\" />\n    <qg:on-input action=\"jump\"><qg:spawn prefab=\"Coin\" at=\"hero\" heading=\"{aim.x - hero.x},{aim.y - hero.y}\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "heading= is for a prefab with ai=\"fly\""
+      },
+      "why_invalid": "Only a flying prefab goes along a heading; a coin stays where it is placed.",
+      "correction": "Give the prefab ai=\"fly\" and a speed=, or spawn it without heading=.",
+      "tags": [
+        "spawn",
+        "heading"
+      ]
+    },
+    {
+      "id": "game-bad-036",
+      "intent": "A wall that would notice what touches it",
+      "input": {
+        "natural_language": "The wall says ouch when something touches it",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"said\" value=\"''\" />\n  <qg:prefab name=\"Wall\" tag=\"wall\" sheet=\"tiles\" frame=\"0\" hitbox=\"18x18\" solid=\"true\">\n    <qg:on-collision with=\"ball\"><q:set name=\"said\" value=\"ouch\" /></qg:on-collision>\n  </qg:prefab>\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "a prefab that does not move: it would never run"
+      },
+      "why_invalid": "A prefab that does not move never touches anything itself; what moves into it does the touching.",
+      "correction": "Put it on what moves: <qg:on-collision with=\"wall\"> in the ball's prefab.",
+      "tags": [
+        "on-collision"
+      ]
+    },
+    {
+      "id": "game-bad-037",
+      "intent": "A label in the scene with no place",
+      "input": {
+        "natural_language": "A sign that says WELCOME",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\"><qg:label value=\"{'WELCOME'}\" /></qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:label> in a scene needs x= and y="
+      },
+      "why_invalid": "A label in a scene stands at a place; over a character or a prefab it follows it.",
+      "correction": "Give it x= and y=, or put it inside the character it is over.",
+      "tags": [
+        "label"
+      ]
+    },
+    {
+      "id": "game-bad-038",
+      "intent": "An emit with nothing to show",
+      "input": {
+        "natural_language": "Show something where the hero is",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"14x14\" />\n    <qg:on-input action=\"jump\"><qg:emit at=\"hero\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "plays particles= or shows text=, one of them"
+      },
+      "why_invalid": "qg:emit plays an effect or floats a text: one of them must be said.",
+      "correction": "Write particles=\"sparkle\" (a qg:particles) or text=\"+10\".",
+      "tags": [
+        "emit"
+      ]
+    },
+    {
+      "id": "game-bad-039",
+      "intent": "Steering and walking at once",
+      "input": {
+        "natural_language": "A car that steers and also walks with the arrows",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"car\" controller=\"behavior\" sheet=\"tiles\" frame=\"0\" x=\"40\" y=\"40\" hitbox=\"14x14\">\n      <qg:behavior><qg:steer /><qg:walk axis=\"both\" /></qg:behavior>\n    </qg:character>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:steer> and <qg:walk> in one qg:behavior"
+      },
+      "why_invalid": "Steering turns and pushes the body itself; walking would set its speed from the same keys.",
+      "correction": "Keep one of them: qg:steer for a car or a ship, qg:walk for a walker.",
+      "tags": [
+        "steer",
+        "walk"
+      ]
+    },
+    {
+      "id": "game-bad-040",
+      "intent": "A crate that is not solid pushed",
+      "input": {
+        "natural_language": "A crate the worker pushes, that is not solid",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Crate\" tag=\"crate\" sheet=\"tiles\" frame=\"6\" hitbox=\"16x16\" pushable=\"true\" />\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "pushable=\"true\" is for a solid prefab"
+      },
+      "why_invalid": "A step pushes what it bumps into; a thing that is not solid is walked through, not bumped.",
+      "correction": "Add solid=\"true\" to the prefab.",
+      "tags": [
+        "pushable",
+        "solid"
+      ]
+    },
+    {
+      "id": "game-bad-041",
+      "intent": "Click to walk with no pointer",
+      "input": {
+        "natural_language": "A hero that walks where it is clicked, in a scene with no cursor",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"pointer\" sheet=\"people\" frame=\"0\" x=\"27\" y=\"27\" hitbox=\"14x14\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "the scene needs <qg:cursor player=\"1\" />"
+      },
+      "why_invalid": "The click walks the character to where its player's qg:cursor is; without one there is nowhere to go.",
+      "correction": "Add <qg:cursor player=\"1\" /> to the scene.",
+      "tags": [
+        "pointer",
+        "cursor"
+      ]
+    },
+    {
+      "id": "game-bad-042",
+      "intent": "A cutscene with no camera",
+      "input": {
+        "natural_language": "The camera goes to the door when the lever is pulled, in a scene with no camera",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"27\" y=\"27\" hitbox=\"14x14\" />\n    <qg:on-input action=\"jump\"><qg:camera-to x=\"100\" y=\"50\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:camera-to> moves the scene's qg:camera, which it has not"
+      },
+      "why_invalid": "qg:camera-to moves the camera away from what it follows and back; a scene without a qg:camera shows itself whole.",
+      "correction": "Add <qg:camera follow=\"hero\" /> to the scene.",
+      "tags": [
+        "camera-to",
+        "camera"
+      ]
+    },
+    {
+      "id": "game-bad-043",
+      "intent": "Prefabs made from each other",
+      "input": {
+        "natural_language": "A slime made from a bat, and the bat from the slime",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Slime\" extends=\"Bat\" tag=\"enemy\" sheet=\"people\" frame=\"18\" hitbox=\"14x14\" />\n  <qg:prefab name=\"Bat\" extends=\"Slime\" tag=\"enemy\" sheet=\"people\" frame=\"20\" hitbox=\"14x14\" />\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "the prefabs extend each other in a circle"
+      },
+      "why_invalid": "A prefab is made from another that is already whole; two made from each other are never whole.",
+      "correction": "Make one of them from the other only, or both from a third.",
+      "tags": [
+        "extends"
+      ]
+    },
+    {
+      "id": "game-bad-044",
+      "intent": "A face without faces",
+      "input": {
+        "natural_language": "A dialogue line with a portrait, in a dialogue with no sheet of faces",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:dialogue name=\"hello\">\n      <qg:line who=\"Owl\" portrait=\"2\" text=\"Hoo.\" />\n    </qg:dialogue>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:line portrait=>: a frame of the dialogue's sheet= (a qg:spritesheet of faces), which it has not"
+      },
+      "why_invalid": "portrait= is a frame number; the dialogue's sheet= says of which sheet.",
+      "correction": "Add sheet=\"people\" to the qg:dialogue.",
+      "tags": [
+        "portrait",
+        "dialogue"
+      ]
+    },
+    {
+      "id": "game-bad-045",
+      "intent": "Putting down nothing in particular",
+      "input": {
+        "natural_language": "The drop key puts down what the hero carries",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"27\" y=\"27\" hitbox=\"14x14\" />\n    <qg:on-input action=\"jump\"><qg:detach from=\"hero\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:detach> puts down target=, or from= and tag="
+      },
+      "why_invalid": "From a carrier, detach puts down the things of one tag it carries; which tag is not said.",
+      "correction": "Say tag= (from=\"hero\" tag=\"torch\"), or name the thing with target=.",
+      "tags": [
+        "detach"
+      ]
+    },
+    {
+      "id": "game-bad-046",
+      "intent": "A choice outside a line",
+      "input": {
+        "natural_language": "Two answers to a dialogue, put in the dialogue itself",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:dialogue name=\"ask\">\n      <qg:line text=\"Left or right?\" />\n      <qg:choice label=\"Left\" />\n    </qg:dialogue>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:choice> cannot go inside <dialogue>; it goes inside <qg:line>"
+      },
+      "why_invalid": "A choice answers one line: the line it is in, shown with the choices under it.",
+      "correction": "Put the qg:choice elements inside the qg:line they answer.",
+      "tags": [
+        "choice",
+        "line"
+      ]
+    },
+    {
+      "id": "game-bad-047",
+      "intent": "A slider of a bus no sound is on",
+      "input": {
+        "natural_language": "A slider for the voices, in a game whose sounds have no voices bus",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"song\" src=\"assets/kenney/audio/win.ogg\" loop=\"true\" bus=\"music\" />\n  <qg:scene name=\"options\">\n    <qg:menu><qg:slider label=\"Voices\" bus=\"voices\" /></qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:slider bus=\"voices\">: no qg:sound is heard on that bus (buses: music)"
+      },
+      "why_invalid": "A bus is made by the sounds heard on it; one no sound names does not exist, and its slider would move nothing.",
+      "correction": "Put the voices on it: bus=\"voices\" on their qg:sound.",
+      "tags": [
+        "slider",
+        "bus"
+      ]
+    },
+    {
+      "id": "game-bad-048",
+      "intent": "A key for an action the game has not",
+      "input": {
+        "natural_language": "A menu to choose the key for dashing, in a game with no dash",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"options\">\n    <qg:menu><qg:rebind label=\"Dash\" action=\"dash\" /></qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:rebind action=\"dash\">: no such action"
+      },
+      "why_invalid": "A key is chosen for one of the game's actions; dash is not one.",
+      "correction": "Declare it: <qg:input action=\"dash\" keys=\"Shift\" />.",
+      "tags": [
+        "rebind"
+      ]
+    },
+    {
+      "id": "game-bad-049",
+      "intent": "A slider for two things",
+      "input": {
+        "natural_language": "A slider for the music that also sets the volume number",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"song\" src=\"assets/kenney/audio/win.ogg\" loop=\"true\" bus=\"music\" />\n  <q:set name=\"loud\" value=\"5\" type=\"number\" />\n  <qg:scene name=\"options\">\n    <qg:menu><qg:slider label=\"Music\" bus=\"music\" bind=\"loud\" /></qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:slider> takes bus= or bind=, one of them"
+      },
+      "why_invalid": "A slider sets one value: a bus's volume, or a number of the state.",
+      "correction": "Keep bus=\"music\"; read it with volume('music') where the number was used.",
+      "tags": [
+        "slider"
+      ]
+    },
+    {
+      "id": "game-bad-050",
+      "intent": "The Master bus",
+      "input": {
+        "natural_language": "The music on the Master bus",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"song\" src=\"assets/kenney/audio/win.ogg\" loop=\"true\" bus=\"Master\" />\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "Master is every bus together"
+      },
+      "why_invalid": "Master is the bus every other one goes into; a slider of it would set everything at once.",
+      "correction": "Name a bus of the game's own: bus=\"music\".",
+      "tags": [
+        "sound",
+        "bus"
+      ]
+    },
+    {
+      "id": "game-bad-051",
+      "intent": "A touch button for no action",
+      "input": {
+        "natural_language": "A phone button that dashes, in a game with no dash",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:touch-button action=\"dash\" label=\"D\" x=\"280\" y=\"200\" />\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:touch-button action=\"dash\">: no such action"
+      },
+      "why_invalid": "A touch button presses one of the game's actions, as a key would; dash is not one.",
+      "correction": "Use an action the game has (jump), or declare dash with qg:input.",
+      "tags": [
+        "touch-button"
+      ]
+    },
+    {
+      "id": "game-bad-052",
+      "intent": "A picture whose frame is a word",
+      "input": {
+        "natural_language": "A heart picture in the HUD with frame=\"heart\"",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:hud><qg:icon sheet=\"tiles\" frame=\"heart\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:icon frame=\"heart\">: a frame number, or an expression"
+      },
+      "why_invalid": "A frame is a number of the sheet, counted from 0, left to right and down.",
+      "correction": "Give its number: frame=\"44\".",
+      "tags": [
+        "icon"
+      ]
+    },
+    {
+      "id": "game-bad-053",
+      "intent": "A field that runs something without being shared",
+      "input": {
+        "natural_language": "A name box that also greets, on one machine only",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"who\" value=\"\" />\n    <q:set name=\"hello\" value=\"\" />\n    <qg:menu>\n      <qg:field bind=\"who\" label=\"Name\"><q:set name=\"hello\" value=\"{'Hi ' + who}\" /></qg:field>\n    </qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "only a shared field (shared=\"true\") runs what it holds"
+      },
+      "why_invalid": "What a field holds runs as its text arrives, on every machine; a field that is not shared sends nothing, so nothing arrives.",
+      "correction": "Share it: shared=\"true\", and its text is sent on Enter.",
+      "tags": [
+        "field",
+        "shared"
+      ]
+    },
+    {
+      "id": "game-bad-054",
+      "intent": "A button in a local menu",
+      "input": {
+        "natural_language": "A menu of this machine with a name box and a Start button",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:multiplayer players=\"2\" />\n  <qg:scene name=\"main\">\n    <q:set name=\"who\" value=\"\" />\n    <qg:menu local=\"true\">\n      <qg:field bind=\"who\" shared=\"true\" />\n      <qg:button label=\"Start\"><qg:goto-scene name=\"main\" /></qg:button>\n    </qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:menu local=\"true\"> holds only shared fields"
+      },
+      "why_invalid": "A local menu is chosen on one machine only; a button in it would change one machine's game and not the other's.",
+      "correction": "Put the button in a menu of a player (player=\"1\"), which every machine runs the same.",
+      "tags": [
+        "menu",
+        "local"
+      ]
+    },
+    {
+      "id": "game-bad-055",
+      "intent": "One camera for everyone and one for a player",
+      "input": {
+        "natural_language": "A camera on the hero and another for player 2",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:input action=\"left\" keys=\"Left\" player=\"2\" />\n  <qg:input action=\"right\" keys=\"Right\" player=\"2\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"p1\" controller=\"topdown\" player=\"1\" sheet=\"people\" x=\"40\" y=\"40\" hitbox=\"14x14\" />\n    <qg:character id=\"p2\" controller=\"topdown\" player=\"2\" sheet=\"people\" x=\"80\" y=\"40\" hitbox=\"14x14\" />\n    <qg:camera follow=\"p1\" />\n    <qg:camera player=\"2\" follow=\"p2\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "one camera for everyone, or one a player"
+      },
+      "why_invalid": "With player= the screen splits, a view a player; a camera for no one in particular has no place among them.",
+      "correction": "Give the first one player=\"1\".",
+      "tags": [
+        "camera",
+        "player"
+      ]
+    },
+    {
+      "id": "game-bad-056",
+      "intent": "A sequence with an action the game has not",
+      "input": {
+        "natural_language": "A special move of down, forward and fireball",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:on-input sequence=\"down, forward, fireball\"><q:set name=\"x\" value=\"1\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "no such action 'fireball'"
+      },
+      "why_invalid": "A sequence is presses of the game's actions; fireball is not one (forward and back are the way the character faces).",
+      "correction": "Declare it with qg:input, or end the sequence with an action the game has (punch).",
+      "tags": [
+        "on-input",
+        "sequence"
+      ]
+    },
+    {
+      "id": "game-bad-057",
+      "intent": "A sequence of one",
+      "input": {
+        "natural_language": "A special move that is just punch",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:on-input sequence=\"punch\"><q:set name=\"x\" value=\"1\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "two actions or more"
+      },
+      "why_invalid": "One press is not a sequence: action= says it.",
+      "correction": "<qg:on-input action=\"punch\">, or name the presses before it: sequence=\"down, forward, punch\".",
+      "tags": [
+        "on-input",
+        "sequence"
+      ]
+    },
+    {
+      "id": "game-bad-058",
+      "intent": "A rumble stronger than a joypad",
+      "input": {
+        "natural_language": "The joypad shakes at strength 5 on a hit",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:on-input action=\"jump\"><qg:rumble strength=\"5\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "strength= 0 to 1"
+      },
+      "why_invalid": "A joypad shakes from nothing (0) to as hard as it can (1).",
+      "correction": "strength=\"1\".",
+      "tags": [
+        "rumble"
+      ]
+    },
+    {
+      "id": "game-bad-059",
+      "intent": "A right click with no action for it",
+      "input": {
+        "natural_language": "A right click on a tower sells it, with no action declared for the right button",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:cursor player=\"1\" />\n    <qg:on-select action=\"sell\"><q:set name=\"x\" value=\"1\" /></qg:on-select>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:on-select action=\"sell\">: no such action"
+      },
+      "why_invalid": "A cursor chooses with one of the game's actions; sell is not one until a qg:input gives it a key or a button.",
+      "correction": "Declare it: <qg:input action=\"sell\" keys=\"MouseRight\" />.",
+      "tags": [
+        "on-select",
+        "action"
+      ]
+    },
+    {
+      "id": "game-bad-060",
+      "intent": "Music that does not loop",
+      "input": {
+        "natural_language": "A boss theme from a sound that plays once",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"sting\" src=\"assets/kenney/audio/powerup.ogg\" />\n  <qg:scene name=\"main\">\n    <qg:on-input action=\"jump\"><qg:music sound=\"sting\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:music sound=\"sting\">: music loops"
+      },
+      "why_invalid": "Music plays on until another comes; a sound that plays once would leave silence after it.",
+      "correction": "Give the qg:sound loop=\"true\", or play it once with qg:play.",
+      "tags": [
+        "music"
+      ]
+    },
+    {
+      "id": "game-bad-061",
+      "intent": "A sound from a thing the handler does not have",
+      "input": {
+        "natural_language": "A pickup sound played from the coin, in a key handler",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"ping\" src=\"assets/kenney/audio/coin.ogg\" />\n  <qg:scene name=\"main\">\n    <qg:on-input action=\"jump\"><qg:play sound=\"ping\" at=\"coin\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:play at=\"coin\"> outside a handler that has"
+      },
+      "why_invalid": "at= names a thing the handler can reach: me, other, a character id, or a parameter holding one; a key handler has none called coin.",
+      "correction": "Play it where the coin is touched: in qg:on-collision with=\"coin\", at=\"other\".",
+      "tags": [
+        "play",
+        "at"
+      ]
+    },
+    {
+      "id": "game-bad-062",
+      "intent": "A plural form a language does not have",
+      "input": {
+        "natural_language": "A Portuguese count with a form for a few",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:language lang=\"pt\">\n    <qg:phrase text=\"keys\" as=\"chaves\" one=\"chave\" few=\"chavinhas\" />\n  </qg:language>\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:phrase few=>: a count's word in pt has no such form"
+      },
+      "why_invalid": "Portuguese says 1 chave and 2 chaves, nothing else: few= is a form of Russian, Ukrainian, Belarusian, Polish, Czech and Slovak.",
+      "correction": "Keep one= and as= (the rest) for Portuguese.",
+      "tags": [
+        "phrase",
+        "tr_n"
+      ]
+    },
+    {
+      "id": "game-bad-063",
+      "intent": "A box framed with a picture that does not stretch",
+      "input": {
+        "natural_language": "A dialogue box drawn with a sheet without slice=",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:spritesheet name=\"frame\" src=\"projects/rpg/assets/frame.png\" tile=\"48\" />\n  <qg:scene name=\"main\">\n    <qg:dialogue name=\"hi\" box=\"frame\"><qg:line text=\"Hello\" /></qg:dialogue>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:dialogue name=\"hi\" box=\"frame\">: a qg:spritesheet with slice="
+      },
+      "why_invalid": "A box stretches its frame to any size; without slice= nothing says which edges stay as drawn.",
+      "correction": "Say how wide the edges are: <qg:spritesheet name=\"frame\" ... slice=\"16\" />.",
+      "tags": [
+        "box",
+        "slice"
+      ]
+    },
+    {
+      "id": "game-bad-064",
+      "intent": "A torch with no place",
+      "input": {
+        "natural_language": "A torch light in a scene, without saying where",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\" ambient=\"#101018\">\n    <qg:light radius=\"80\" color=\"#ffa850\" flicker=\"0.25\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:light> in a scene needs x= and y="
+      },
+      "why_invalid": "A light in a scene is at a place; only one on a character or a prefab goes with it, from its middle (dx=, dy=).",
+      "correction": "Say where it is: <qg:light x=\"26\" y=\"36\" ... />, or put it in the character that carries it.",
+      "tags": [
+        "light"
+      ]
+    },
+    {
+      "id": "game-bad-065",
+      "intent": "A travel with no map",
+      "input": {
+        "natural_language": "A unit travels to the pointer in a scene without a tilemap",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Unit\" tag=\"unit\" sheet=\"people\" frame=\"0\" hitbox=\"14x14\" />\n  <qg:scene name=\"main\">\n    <qg:cursor id=\"aim\" />\n    <qg:instance prefab=\"Unit\" name=\"unit\" x=\"40\" y=\"40\" />\n    <qg:on-select><qg:travel target=\"unit\" to=\"aim\" budget=\"4\" /></qg:on-select>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:travel> goes over the scene's qg:tilemap, which it has not"
+      },
+      "why_invalid": "A travel finds its way over the cells of the scene's map, by what each costs; without a map there are no cells.",
+      "correction": "Give the scene a qg:tilemap, or move the unit with qg:tween.",
+      "tags": [
+        "travel"
+      ]
+    },
+    {
+      "id": "game-bad-066",
+      "intent": "Square tiles that are not square",
+      "input": {
+        "natural_language": "A hex tileset whose shape was left out",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:tileset name=\"land\" src=\"projects/marches/assets/land.png\" tile=\"28x32\" />\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "square tiles are square"
+      },
+      "why_invalid": "A tileset is of square tiles unless shape= says otherwise; WxH sizes are for hexes and diamonds.",
+      "correction": "Say the shape: <qg:tileset ... tile=\"28x32\" shape=\"hex\" />.",
+      "tags": [
+        "tileset",
+        "shape"
       ]
     }
   ]

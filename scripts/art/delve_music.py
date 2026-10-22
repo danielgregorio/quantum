@@ -7,6 +7,12 @@
 - `crypt.ogg`: the three crypts. D minor, 66 beats a minute, a dark drone
   that swells, a slow heartbeat, a high bell now and then and a breath of
   wind; 16 bars.
+- `warden.ogg`: the fight with the vault's warden, the skeleton archer.
+  D minor, 132 beats a minute: a beat on every beat, a plucked ostinato on
+  the low D and its fifth, the drone of the crypt a fifth higher and bell
+  stabs; 8 bars.
+- `bones1.ogg`, `bones2.ogg`, `bones3.ogg`: a skeleton falling apart, a
+  few dry clicks each, so that no two fall alike (qg:play sounds=).
 
 The voices, the loop (what rings past the end comes back at the start, so it
 loops without a seam) and the .ogg writer are scripts/art/rpg_music.py's.
@@ -97,9 +103,42 @@ def crypt() -> np.ndarray:
     return song.finish(echo=0.45)
 
 
+def warden() -> np.ndarray:
+    song = Loop(bpm=132, bars=8)
+    roots = ['D2', 'D2', 'Bb1', 'A1', 'D2', 'D2', 'G1', 'A1']
+    for bar, root in enumerate(roots):
+        fifth = {'D2': 'A2', 'Bb1': 'F2', 'G1': 'D2', 'A1': 'E2'}[root]
+        song.put(pad(freq(fifth), 4 * song.beat), bar * 4, 0.35)
+        for beat in range(4):                                             # a beat on every beat
+            song.put(thump(0.25), bar * 4 + beat, 0.6 if beat % 2 == 0 else 0.4)
+        for i, beat in enumerate((0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5)):       # the ostinato: the root and its fifth
+            n = (root, fifth)[i % 2]
+            up = n[:-1] + str(int(n[-1]) + 1)
+            song.put(pluck(freq(up), 0.4), bar * 4 + beat, 0.12)
+    stabs = 'D5:1 r:3  D5:1 r:1 F5:1 r:1  Bb4:1 r:3  A4:2 C#5:2  D5:1 r:3  D5:1 r:1 F5:1 r:1  G5:2 F5:2  E5:2 C#5:2'
+    song.line(bell, stabs, 0.12, length=0.6)
+    return song.finish(echo=0.2)
+
+
+def bones(seed: int) -> np.ndarray:
+    """A skeleton falling apart: a few dry clicks, each a short burst of bright noise, a little apart."""
+    rng = np.random.default_rng(seed)
+    out = np.zeros(int(0.45 * RATE))
+    at = 0.0
+    for _ in range(int(rng.integers(4, 7))):
+        click = noise(0.04, 120.0, int(rng.integers(0, 1 << 30))) * rng.uniform(0.5, 1.0)
+        start = int(at * RATE)
+        end = min(len(out), start + len(click))
+        out[start:end] += click[:end - start]
+        at += rng.uniform(0.03, 0.09)
+    return out / (np.max(np.abs(out)) or 1.0) * 0.8
+
+
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
-    for name, piece in (('torchlight', torchlight), ('crypt', crypt)):
+    for k in (1, 2, 3):
+        write_ogg(bones(40 + k), OUT / f'bones{k}.ogg')
+    for name, piece in (('torchlight', torchlight), ('crypt', crypt), ('warden', warden)):
         samples = piece()
         write_ogg(samples, OUT / f'{name}.ogg')
         print(f'{name}.ogg: {len(samples) / RATE:.1f} s')

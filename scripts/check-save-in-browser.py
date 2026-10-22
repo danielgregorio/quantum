@@ -7,10 +7,10 @@
 A web build keeps a qg:save in the browser (Godot's user://, which is the
 page's IndexedDB). Through the browser bridge (``WebPlaySession``), the check:
 
-- presses New game on the title and walks east into room 2, which saves
-  the game (``<qg:scene save="true">``);
-- reloads the page: the title has Continue now;
-- continues, and is in room 2 again, with the hearts it had.
+- chooses Game 1 (new) on the title and walks east into room 2, which saves
+  the game in its slot (``<qg:scene save="true">``, ``qg:save slot=``);
+- reloads the page: the title says Game 1 goes on now;
+- goes on, and is in room 2 again, with the hearts it had.
 
 A screenshot of the continued game is left next to the build (save.png).
 """
@@ -24,6 +24,8 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
+
+NEW, GO_ON = 'Game 1: new', 'Game 1: go on'   # the title's first button, before and after a save
 
 
 class _Quiet(http.server.SimpleHTTPRequestHandler):
@@ -58,11 +60,11 @@ def main(argv) -> int:
             game = WebPlaySession(page)
             if game.ready()['scene'] != 'title':
                 return _report([f'the game opened on {game.last["scene"]!r}, not the title'])
-            if _shown(game.last, 'Continue'):
-                problems.append('a fresh page offers Continue')
-            seen = _choose(page, game, 'New game', 'room-1')
+            if not _shown(game.last, NEW):
+                problems.append(f'a fresh page does not offer {NEW}: {game.last["screen"]}')
+            seen = _choose(page, game, NEW, 'room-1')
             if seen['scene'] != 'room-1':
-                return _report([f'New game did not start it: {seen["scene"]}, {seen["screen"]}'] + _errors(logs))
+                return _report([f'{NEW} did not start it: {seen["scene"]}, {seen["screen"]}'] + _errors(logs))
             seen = game.until("scene == 'room-2'", hold=['right'], max_ticks=900)
             if seen['scene'] != 'room-2':
                 return _report([f'never reached room 2: {seen["scene"]}, {seen["state"].get("nodes", {})}'] + _errors(logs))
@@ -72,13 +74,13 @@ def main(argv) -> int:
             game = WebPlaySession(page)
             if game.ready()['scene'] != 'title':
                 problems.append(f'after the reload the game opened on {game.last["scene"]!r}')
-            if not _shown(game.last, 'Continue'):
-                problems.append(f'after the reload the title has no Continue: {game.last["screen"]}')
-            back = _choose(page, game, 'Continue', 'room-2')
+            if not _shown(game.last, GO_ON):
+                problems.append(f'after the reload the title has no {GO_ON}: {game.last["screen"]}')
+            back = _choose(page, game, GO_ON, 'room-2')
             if back['scene'] != 'room-2':
-                problems.append(f'Continue went to {back["scene"]!r}, not room 2: {back["screen"]}')
+                problems.append(f'{GO_ON} went to {back["scene"]!r}, not room 2: {back["screen"]}')
             elif back['state']['game']['hearts'] != hearts:
-                problems.append(f'hearts {back["state"]["game"]["hearts"]} after Continue, {hearts} saved')
+                problems.append(f'hearts {back["state"]["game"]["hearts"]} after going on, {hearts} saved')
             page.screenshot(path=str(root / 'keep' / 'save.png'))
             problems += _errors(logs)
         finally:
