@@ -14,7 +14,7 @@ from lsprotocol import types
 from .symbols import SymbolTable, Symbol, SymbolKind
 from ..schema import (get_tag_info, get_attributes_for_tag, QUANTUM_TAGS,
                       is_known_tag)
-from ..schema.attributes import get_required_attributes, validate_attribute_value
+from ..schema.attributes import get_missing_required_attributes, validate_attribute_value
 from ..utils.position import offset_to_position, position_to_offset
 
 logger = logging.getLogger("quantum-lsp")
@@ -460,18 +460,16 @@ class QuantumDocument:
 
         if tag_info:
             # Check required attributes
-            required = get_required_attributes(tag)
-            for attr_name in required:
-                if attr_name not in elem.attributes:
-                    diagnostics.append(types.Diagnostic(
-                        range=types.Range(
-                            start=types.Position(line=elem.start_line, character=elem.start_col),
-                            end=types.Position(line=elem.start_line, character=elem.end_col)
-                        ),
-                        message=f"Missing required attribute '{attr_name}' on <{tag}>",
-                        severity=types.DiagnosticSeverity.Error,
-                        source="quantum-lsp"
-                    ))
+            for attr_name in get_missing_required_attributes(tag, elem.attributes):
+                diagnostics.append(types.Diagnostic(
+                    range=types.Range(
+                        start=types.Position(line=elem.start_line, character=elem.start_col),
+                        end=types.Position(line=elem.start_line, character=elem.end_col)
+                    ),
+                    message=f"Missing required attribute '{attr_name}' on <{tag}>",
+                    severity=types.DiagnosticSeverity.Error,
+                    source="quantum-lsp"
+                ))
 
             # Validate attribute values
             for attr_name, attr_value in elem.attributes.items():

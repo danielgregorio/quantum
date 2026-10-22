@@ -25,6 +25,7 @@ const Looks := preload("res://addons/quantum/looks.gd")
 const FighterBody := preload("res://addons/quantum/fighter_body.gd")
 const Menu := preload("res://addons/quantum/menu.gd")
 const GridBody := preload("res://addons/quantum/grid_body.gd")
+const PointerBody := preload("res://addons/quantum/pointer_body.gd")
 const Dialogue := preload("res://addons/quantum/dialogue.gd")
 const BehaviorBody := preload("res://addons/quantum/behavior_body.gd")
 const Camera := preload("res://addons/quantum/camera.gd")
@@ -89,7 +90,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				Q.apply_gd(marker, node_spec.get("gd"))
 				scene.add_child(marker)
 			"tilemap":
-				tilemap = Tilemap.build(node_spec, game["sheets"][node_spec["tileset"]], _texture)
+				tilemap = Tilemap.build(node_spec, game["sheets"][node_spec["tileset"]], _texture, game["sheets"])
 				if scene.y_sort_enabled:
 					tilemap.z_index = -10
 				for layer in tilemap.get_children():
@@ -131,6 +132,8 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				if node_spec.get("name") != null:
 					made.name = node_spec["name"]
 					made.set_meta("q_named", true)
+				if node_spec.get("state") != null and made.has_method("become"):
+					made.become(str(node_spec["state"]))   # a Tiled object's state property
 				Q.apply_gd(made, node_spec.get("gd"))
 			"timer":
 				var timer := Timer_.new()
@@ -242,6 +245,10 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				c.position = exits[arrive_at].position
 		exits[arrive_at].disarm()
 	G.set("_q_arrive_at", "")
+	for e in exits.values():   # nor does starting in one (a door the room starts at)
+		for c in characters.values():
+			if c is CharacterBody2D and e.holds(c.position):
+				e.disarm()
 	for node_spec in cameras:
 		var cam := Camera.new()
 		cam.setup(node_spec, characters)
@@ -301,6 +308,8 @@ static func _character(node_spec: Dictionary, game: Dictionary, scene: Node) -> 
 		body = FighterBody.new()
 	elif node_spec["controller"] == "grid":
 		body = GridBody.new()
+	elif node_spec["controller"] == "pointer":
+		body = PointerBody.new()
 	elif node_spec["controller"] == "behavior":
 		body = BehaviorBody.new()
 	else:

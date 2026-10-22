@@ -681,6 +681,130 @@
         "steer",
         "walk"
       ]
+    },
+    {
+      "id": "game-bad-040",
+      "intent": "A crate that is not solid pushed",
+      "input": {
+        "natural_language": "A crate the worker pushes, that is not solid",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Crate\" tag=\"crate\" sheet=\"tiles\" frame=\"6\" hitbox=\"16x16\" pushable=\"true\" />\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "pushable=\"true\" is for a solid prefab"
+      },
+      "why_invalid": "A step pushes what it bumps into; a thing that is not solid is walked through, not bumped.",
+      "correction": "Add solid=\"true\" to the prefab.",
+      "tags": [
+        "pushable",
+        "solid"
+      ]
+    },
+    {
+      "id": "game-bad-041",
+      "intent": "Click to walk with no pointer",
+      "input": {
+        "natural_language": "A hero that walks where it is clicked, in a scene with no cursor",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"pointer\" sheet=\"people\" frame=\"0\" x=\"27\" y=\"27\" hitbox=\"14x14\" />\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "the scene needs <qg:cursor player=\"1\" />"
+      },
+      "why_invalid": "The click walks the character to where its player's qg:cursor is; without one there is nowhere to go.",
+      "correction": "Add <qg:cursor player=\"1\" /> to the scene.",
+      "tags": [
+        "pointer",
+        "cursor"
+      ]
+    },
+    {
+      "id": "game-bad-042",
+      "intent": "A cutscene with no camera",
+      "input": {
+        "natural_language": "The camera goes to the door when the lever is pulled, in a scene with no camera",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"27\" y=\"27\" hitbox=\"14x14\" />\n    <qg:on-input action=\"jump\"><qg:camera-to x=\"100\" y=\"50\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:camera-to> moves the scene's qg:camera, which it has not"
+      },
+      "why_invalid": "qg:camera-to moves the camera away from what it follows and back; a scene without a qg:camera shows itself whole.",
+      "correction": "Add <qg:camera follow=\"hero\" /> to the scene.",
+      "tags": [
+        "camera-to",
+        "camera"
+      ]
+    },
+    {
+      "id": "game-bad-043",
+      "intent": "Prefabs made from each other",
+      "input": {
+        "natural_language": "A slime made from a bat, and the bat from the slime",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:prefab name=\"Slime\" extends=\"Bat\" tag=\"enemy\" sheet=\"people\" frame=\"18\" hitbox=\"14x14\" />\n  <qg:prefab name=\"Bat\" extends=\"Slime\" tag=\"enemy\" sheet=\"people\" frame=\"20\" hitbox=\"14x14\" />\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "the prefabs extend each other in a circle"
+      },
+      "why_invalid": "A prefab is made from another that is already whole; two made from each other are never whole.",
+      "correction": "Make one of them from the other only, or both from a third.",
+      "tags": [
+        "extends"
+      ]
+    },
+    {
+      "id": "game-bad-044",
+      "intent": "A face without faces",
+      "input": {
+        "natural_language": "A dialogue line with a portrait, in a dialogue with no sheet of faces",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:dialogue name=\"hello\">\n      <qg:line who=\"Owl\" portrait=\"2\" text=\"Hoo.\" />\n    </qg:dialogue>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:line portrait=>: a frame of the dialogue's sheet= (a qg:spritesheet of faces), which it has not"
+      },
+      "why_invalid": "portrait= is a frame number; the dialogue's sheet= says of which sheet.",
+      "correction": "Add sheet=\"people\" to the qg:dialogue.",
+      "tags": [
+        "portrait",
+        "dialogue"
+      ]
+    },
+    {
+      "id": "game-bad-045",
+      "intent": "Putting down nothing in particular",
+      "input": {
+        "natural_language": "The drop key puts down what the hero carries",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"27\" y=\"27\" hitbox=\"14x14\" />\n    <qg:on-input action=\"jump\"><qg:detach from=\"hero\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:detach> puts down target=, or from= and tag="
+      },
+      "why_invalid": "From a carrier, detach puts down the things of one tag it carries; which tag is not said.",
+      "correction": "Say tag= (from=\"hero\" tag=\"torch\"), or name the thing with target=.",
+      "tags": [
+        "detach"
+      ]
+    },
+    {
+      "id": "game-bad-046",
+      "intent": "A choice outside a line",
+      "input": {
+        "natural_language": "Two answers to a dialogue, put in the dialogue itself",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:dialogue name=\"ask\">\n      <qg:line text=\"Left or right?\" />\n      <qg:choice label=\"Left\" />\n    </qg:dialogue>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:choice> cannot go inside <dialogue>; it goes inside <qg:line>"
+      },
+      "why_invalid": "A choice answers one line: the line it is in, shown with the choices under it.",
+      "correction": "Put the qg:choice elements inside the qg:line they answer.",
+      "tags": [
+        "choice",
+        "line"
+      ]
     }
   ]
 }

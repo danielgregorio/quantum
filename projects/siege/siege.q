@@ -80,15 +80,11 @@
       <qg:emit text="+10" at="me" dy="-10" color="#ffe070" />
     </qg:on-death>
   </qg:prefab>
-  <!-- A brute is slow and takes eight hits; how many it has left is over its head. -->
-  <qg:prefab name="Brute" tag="raider" sheet="siege" frame="6" hitbox="14x14" health="8" scale="1.5"
-             ai="behavior" speed="20" sight="400" spacing="20">
+  <!-- A brute is a raider (extends=: its way to the tower and what hits it), slow, that takes
+       eight hits; how many it has left is over its head. -->
+  <qg:prefab name="Brute" extends="Raider" frame="6" hitbox="14x14" health="8" scale="1.5" speed="20" spacing="20">
     <qg:animation name="walk" frames="6,7" fps="4" />
-    <qg:behavior><qg:seek target="tower" through-walls="true" /></qg:behavior>
     <qg:label value="{me.health}" dy="-16" size="8" color="#ff8080" />
-    <qg:on-collision with="arrow"><q:call function="struck" args="me, other, 1" /></qg:on-collision>
-    <qg:on-collision with="bolt"><q:call function="struck" args="me, null, 3" /></qg:on-collision>
-    <qg:on-collision with="tower"><q:call function="reached" args="me, other" /></qg:on-collision>
     <qg:on-death>
       <q:set name="score" value="{score + 50}" />
       <qg:emit particles="fallen" at="me" />

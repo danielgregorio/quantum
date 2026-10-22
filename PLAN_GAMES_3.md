@@ -1,8 +1,9 @@
 # Games 3 — what the game language takes from Godot and Unity next
 
 > Status: approved 2026-10-21, whole, the ten "later" items included (each
-> comes in with the game that asks for it: Phase 6). Phases 1 and 2 done
-> (2026-10-21, Siege the game of the second); Phase 3 next.
+> comes in with the game that asks for it: Phase 6). Phases 1, 2 and 3 done
+> (2026-10-21 and 22: Siege the game of the second, Crates of the third);
+> Phase 4 next.
 > Laboratory tier: no tag here carries a stability promise until it ships.
 > The proposal it comes from is the Claude Docs page "Proposta: próximos
 > recursos da linguagem de jogos"; the map it was chosen from is
@@ -191,14 +192,59 @@ cutscene (the gate the lever opened).
 | Things made of things | `<qg:attach>` and `qg:detach`; `extends=` on `qg:prefab` | a carried item, a turret on a tank, enemy families that change a number | L |
 | More of Tiled | zones, exits and paths as objects; custom properties; several tilesets; flipped tiles | big levels drawn whole in Tiled (Crates, Hopper) | L |
 
-- [ ] Crates, written first
-- [ ] `pushable="true"`
-- [ ] animated tiles
-- [ ] `qg:choice`, `portrait=`, `speed=`
-- [ ] `qg:camera-to`
-- [ ] `controller="pointer"`
-- [ ] `qg:attach`, `qg:detach`, `extends=`
-- [ ] more of Tiled
+- [x] Crates, written first
+- [x] `pushable="true"`
+- [x] animated tiles
+- [x] `qg:choice`, `portrait=`, `speed=`
+- [x] `qg:camera-to`
+- [x] `controller="pointer"`
+- [x] `qg:attach`, `qg:detach`, `extends=`
+- [x] more of Tiled
+
+What was built (2026-10-22):
+
+- Crates (`projects/crates/crates.q`, art by `scripts/art/crates.py`, rooms
+  in `projects/crates/rooms/*.tmx`), written first: three rooms of crates and
+  pads, a foreman, two kinds of gate, a key. Each room was checked solvable
+  by a small solver before it was drawn, and its moves are the CI's tape.
+- `grid_body.gd`: a step into a pushable thing with a free cell beyond moves
+  both (a `push` event) and runs the walker's touch; arriving in a cell
+  touches the zones there, a Tiled zone too. `pointer_body.gd`: the pointer
+  controller, a grid walker whose `_wanted()` follows a route found breadth
+  first (right, down, left, up on a tie) to the clicked cell; a click on a
+  thing ends in stepping into it, a crate only from beside it.
+- `carried.gd` and `Q.attach`/`Q.detach`/`Q.carrying`: a carrier's
+  `Carried` node moves what it carries after everything has moved; a carried
+  thing's areas and body are quiet (deferred), and it stands in no cell.
+- `model.py`: `extends=` is resolved on the XML before the game is read, so
+  everything downstream sees whole prefabs: the attributes and children of
+  the prefab extended, a child of the same kind and name (an animation, a
+  state, a handler of the same `with=` and `side=`, the one `qg:behavior`)
+  replaced.
+- `camera.gd`: a shot (there, hold, back), saved and loaded with the
+  rollback; `Q.camera_to` pauses the scene unless asked not to, and the
+  camera goes on while the scene is paused. `dialogue.gd`: typing by the
+  game's ticks, a face from the dialogue's sheet, choices with a focus, and
+  a choice that opens another dialogue hands over to it; the box grows
+  upwards with its choices.
+- `tiled.py`, `tilemap.gd`: several tilesets (each layer one, matched by its
+  image's name to the game's `qg:tileset`), Tiled's flip bits as Godot's
+  transform flags, objects of class `zone`, `exit` and `path`, an object's
+  `state`, the map's properties (`tiled()` is a constant as it compiles);
+  `qg:tile frames= fps=` as the atlas's own animation.
+- `a.col`, `a.row` for any thing (`Q.cell_col`, `Q.cell_row`), and
+  `tile_at(col, row, layer)`. Keep's end asks what now with `qg:choice`,
+  Delve's lever sends the camera to the wall (`pause="false"`: the
+  playtest's ticks stay the same), Siege's brute `extends` its raider.
+
+What was learned: a `qg:state` with no `frame=` drew frame 0 (the schema's
+default), which no game had shown because every state so far named one; a
+shut gate drawn as a worker made it plain. A game function that holds
+`qg:camera-to` is compiled into every scene, the title too, which has no
+camera: the check belongs to the scene's own handlers. `count()` read by a
+HUD as the scene was built ran outside the tree. Clicks on a far crate
+pushed it whichever way the walk came from; ending beside it, and pushing
+on the next click, says what will happen.
 
 ## Phase 4 — To ship a game
 

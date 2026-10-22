@@ -15,6 +15,14 @@
   <q:set name="taken" value="[]" type="array" />      <!-- things picked up, by name -->
   <q:set name="opened" value="[]" type="array" />     <!-- doors and gates opened, by name -->
   <q:set name="message" value="" />
+  <!-- a new game: the state as the keep was found -->
+  <q:function name="anew">
+    <q:set name="hearts" value="3" />
+    <q:set name="keys" value="0" />
+    <q:set name="taken" value="[]" />
+    <q:set name="opened" value="[]" />
+    <q:set name="message" value="" />
+  </q:function>
   <!-- a hurt, the same in every room: a function of the game -->
   <q:function name="hurt" params="me">
     <qg:play sound="hurt" />
@@ -72,6 +80,9 @@
     <qg:phrase text="New game" as="Novo jogo" />
     <qg:phrase text="Continue" as="Continuar" />
     <qg:phrase text="Language" as="Idioma" />
+    <qg:phrase text="The keep is quiet again." as="A fortaleza está quieta outra vez." />
+    <qg:phrase text="Once more" as="Mais uma vez" />
+    <qg:phrase text="To the title" as="Para o início" />
   </qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="HEARTS" as="CORAZONES" />
@@ -85,6 +96,9 @@
     <qg:phrase text="New game" as="Nueva partida" />
     <qg:phrase text="Continue" as="Continuar" />
     <qg:phrase text="Language" as="Idioma" />
+    <qg:phrase text="The keep is quiet again." as="La fortaleza vuelve a estar en calma." />
+    <qg:phrase text="Once more" as="Otra vez" />
+    <qg:phrase text="To the title" as="Al inicio" />
   </qg:language>
 
   <!-- ===== The title: a new game, or the saved one (each room entered saves it) ===== -->
@@ -92,7 +106,7 @@
   <qg:scene name="title" width="256" height="224" background="#2b2b3a">
     <qg:hud position="top-center" size="32"><qg:text value="{'KEEP'}" /></qg:hud>
     <qg:menu position="center">
-      <qg:button label="New game"><qg:goto-scene name="room-1" /></qg:button>
+      <qg:button label="New game"><q:call function="anew" /><qg:goto-scene name="room-1" /></qg:button>
       <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
     </qg:menu>
@@ -449,16 +463,20 @@
     <qg:hud position="top-center">
       <qg:text bind="message" />
     </qg:hud>
+    <!-- a moment later, what now: the keep again, or the title -->
+    <qg:dialogue name="end" size="12" speed="30">
+      <qg:line who="KEEP" text="The keep is quiet again.">
+        <qg:choice label="Once more"><q:call function="anew" /><qg:goto-scene name="room-1" /></qg:choice>
+        <qg:choice label="To the title"><qg:goto-scene name="title" /></qg:choice>
+      </qg:line>
+    </qg:dialogue>
+    <qg:timer after="90"><qg:say dialogue="end" /></qg:timer>
   </qg:scene>
 
   <qg:scene name="game-over" width="256" height="224" background="#000000">
     <q:set name="title" value="YOU FELL. PRESS JUMP." />
     <qg:on-input action="jump">
-      <q:set name="hearts" value="3" />
-      <q:set name="keys" value="0" />
-      <q:set name="taken" value="[]" />
-      <q:set name="opened" value="[]" />
-      <q:set name="message" value="" />
+      <q:call function="anew" />
       <qg:goto-scene name="room-1" />
     </qg:on-input>
     <qg:hud position="top-center">

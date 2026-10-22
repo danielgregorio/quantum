@@ -8,6 +8,7 @@ const Life := preload("res://addons/quantum/life.gd")
 var prefab_name: String = ""
 var tag: String = ""
 var opens_with: String = ""   # a qg:item that opens it, a door (Q.touched)
+var pushable: bool = false    # a grid character's step pushes it a cell on (grid_body.gd)
 var keeps: bool = false
 var on_locked: String = ""
 
@@ -27,6 +28,7 @@ func setup(name_: String, prefab: Dictionary, texture: Texture2D, tile: Array) -
 	name = name_
 	add_to_group("q_thing")
 	opens_with = str(prefab.get("opens_with", "")) if prefab.get("opens_with") != null else ""
+	pushable = bool(prefab.get("pushable", false))
 	keeps = bool(prefab.get("keeps", false))
 	on_locked = str(prefab.get("on_locked", "")) if prefab.get("on_locked") != null else ""
 	collision_layer = 1

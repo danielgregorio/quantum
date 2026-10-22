@@ -43,7 +43,66 @@ func setup(spec: Dictionary, characters: Dictionary) -> void:
 		_focus = at
 
 
+# qg:camera-to: a shot away from what it follows — there in `go` ticks, `hold`
+# ticks there, and back in `go` — the scene waiting meanwhile when asked.
+var _shot: Dictionary = {}
+
+
+func show_point(scene: Node, at: Vector2, zoom_to: float, go: int, hold: int, pause_: bool) -> void:
+	_shot = {"from": position, "to": at, "zoom_from": zoom.x, "zoom_to": zoom_to if zoom_to > 0.0 else zoom.x,
+		"go": maxi(1, go), "hold": hold, "t": 0, "phase": "go", "pause": pause_}
+	if pause_ and not scene.q_paused:
+		Q.pause(scene, true)
+	else:
+		_shot["pause"] = false   # it did not pause the scene: it does not resume it
+
+
+func _step_shot() -> void:
+	_shot["t"] += 1
+	var k := float(_shot["t"]) / float(_shot["go"])
+	match _shot["phase"]:
+		"go":
+			var e := ease(minf(k, 1.0), -2.0)   # in and out
+			position = (_shot["from"] as Vector2).lerp(_shot["to"], e)
+			zoom = Vector2.ONE * lerpf(_shot["zoom_from"], _shot["zoom_to"], e)
+			if _shot["t"] >= _shot["go"]:
+				_shot["phase"] = "hold"
+				_shot["t"] = 0
+		"hold":
+			if _shot["t"] >= _shot["hold"]:
+				_shot["phase"] = "back"
+				_shot["t"] = 0
+		"back":
+			var middle = _middle()
+			var home: Vector2 = middle if middle != null else _shot["from"]
+			var e := ease(minf(k, 1.0), -2.0)
+			position = (_shot["to"] as Vector2).lerp(home, e)
+			zoom = Vector2.ONE * lerpf(_shot["zoom_to"], zoom_base, e)
+			if _shot["t"] >= _shot["go"]:
+				_focus = position
+				var resume: bool = _shot["pause"]
+				_shot = {}
+				var scene := get_parent()
+				if resume and scene != null and scene.q_paused:
+					Q.pause(scene, false)
+
+
+# For the rollback: a shot as far as it has got (it pauses the scene, which is the game's state).
+func q_save() -> Dictionary:
+	return {"shot": _shot.duplicate(true), "position": position, "zoom": zoom.x, "focus": _focus}
+
+
+func q_load(d: Dictionary) -> void:
+	_shot = d["shot"].duplicate(true)
+	position = d["position"]
+	zoom = Vector2.ONE * float(d["zoom"])
+	_focus = d["focus"]
+
+
 func _physics_process(delta: float) -> void:
+	if not _shot.is_empty():
+		_step_shot()
+		return
 	var middle = _middle()
 	if middle == null:
 		return

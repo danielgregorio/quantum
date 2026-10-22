@@ -213,7 +213,7 @@ def test_every_game_the_repo_ships_is_clean_in_the_editor(path):
         handler = parent in GAME_TAGS and tag in GAME_TAGS[parent].children
         if parent not in info.parent_tags and not ('handler' in info.parent_tags and (handler or parent.startswith('q:'))):
             complaints.append(f'<{tag}> inside <{parent}>')
-        complaints += [f'<{tag}> without {a}=' for a in attributes.get_required_attributes(tag) if a not in attrs]
+        complaints += [f'<{tag}> without {a}=' for a in attributes.get_missing_required_attributes(tag, attrs)]
         for attr, value in attrs.items():
             if attr.startswith('gd:'):
                 continue

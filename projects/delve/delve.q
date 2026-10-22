@@ -193,6 +193,8 @@
       <qg:set-tile col="8" row="5" tile="12" />
       <qg:set-tile col="8" row="6" tile="12" />
       <qg:emit particles="rumble" at="lever" dx="72" dy="-63" />
+      <!-- the camera goes to show the gap, and back; the dead do not wait for it -->
+      <qg:camera-to x="153" y="108" zoom="2" seconds="0.4" hold="0.6" pause="false" />
       <q:set name="message" value="THE WALL OPENS. THE DEAD WAKE." />
     </q:function>
     <q:function name="down" params="">
@@ -252,6 +254,8 @@
       <qg:on-collision with="stairs"><q:call function="down" /></qg:on-collision>
       <qg:on-hit with="enemy"><q:call function="slay" args="other" /></qg:on-hit>
     </qg:character>
+
+    <qg:camera follow="p1" bounds="tilemap" />
 
     <qg:instance prefab="Lever" name="lever" x="81" y="171" />
     <qg:instance prefab="Gem" name="gem-1" x="99" y="45" />

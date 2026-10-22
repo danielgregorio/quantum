@@ -303,6 +303,107 @@ static func beam(ctx, a, b, seconds: float, color: String, width: float) -> void
 	event("beam", {"from": who(a), "to": who(b)})
 
 
+# qg:camera-to: the scene's camera goes to a thing or a point, stays, and comes
+# back to what it follows (camera.gd); the scene waits meanwhile, when asked.
+static func camera_to(ctx, to, zoom: float, seconds: float, hold: float, pause_: bool) -> void:
+	var scene := _current_scene(ctx)
+	var cam = scene.get_node_or_null("Camera") if scene != null else null
+	if cam == null or not cam.has_method("show_point"):
+		return
+	var at: Vector2
+	if to is Vector2:
+		at = to
+	else:
+		to = _thing(to)
+		if to == null or not (to is Node2D):
+			return
+		at = (to as Node2D).position
+	cam.show_point(scene, at, zoom, int(round(seconds * TICK_RATE)), int(round(hold * TICK_RATE)), pause_)
+	event("camera", {"x": snappedf(at.x, 0.1), "y": snappedf(at.y, 0.1)})
+
+
+# qg:attach: `thing` is carried by `carrier`, dx,dy from it (carried.gd). While
+# carried it touches nothing and nothing touches it, and it stands in no cell.
+static func attach(thing, carrier, dx: float, dy: float) -> void:
+	thing = _thing(thing)
+	carrier = _thing(carrier)
+	if not alive(thing) or not alive(carrier) or thing == carrier or not (thing is Node2D) or not (carrier is Node2D):
+		return
+	if thing.has_meta("q_carrier"):
+		detach(thing)
+	var link = carrier.get_node_or_null("Carried")
+	if link == null:
+		link = load("res://addons/quantum/carried.gd").new()
+		carrier.add_child(link)
+	link.carried.append([thing, Vector2(dx, dy)])
+	thing.set_meta("q_carrier", carrier)
+	_quiet(thing, true)
+	(thing as Node2D).position = (carrier as Node2D).position + Vector2(dx, dy)
+	event("attach", {"what": who(thing), "to": who(carrier)})
+
+
+# qg:detach: a carried thing is put down where it is, and touches again.
+static func detach(thing) -> void:
+	thing = _thing(thing)
+	if thing == null or not thing.has_meta("q_carrier"):
+		return
+	var carrier = thing.get_meta("q_carrier")
+	if is_instance_valid(carrier):
+		var link = carrier.get_node_or_null("Carried")
+		if link != null:
+			link.carried = link.carried.filter(func(e): return e[0] != thing)
+	thing.remove_meta("q_carrier")
+	_quiet(thing, false)
+	event("detach", {"what": who(thing)})
+
+
+static func detach_all(carrier, tag: String) -> void:
+	carrier = _thing(carrier)
+	var link = carrier.get_node_or_null("Carried") if carrier != null else null
+	if link == null:
+		return
+	for entry in link.carried.duplicate():
+		if is_instance_valid(entry[0]) and entry[0].has_method("quantum_tag") and entry[0].quantum_tag() == tag:
+			detach(entry[0])
+
+
+# carrying(me, 'key'): the first thing of that tag it carries, or null.
+static func carrying(carrier, tag: String):
+	carrier = _thing(carrier)
+	var link = carrier.get_node_or_null("Carried") if carrier != null and carrier is Node else null
+	if link == null:
+		return null
+	for entry in link.carried:
+		if alive(entry[0]) and entry[0].has_method("quantum_tag") and entry[0].quantum_tag() == tag:
+			return entry[0]
+	return null
+
+
+# A carried thing's areas and body touch nothing (and back): deferred, as a touch may be carrying it.
+static func _quiet(thing: Node, on: bool) -> void:
+	var areas := []
+	if thing is Area2D:
+		areas.append(thing)
+	var hitbox = thing.get_node_or_null("Hitbox")
+	if hitbox is Area2D:
+		areas.append(hitbox)
+	for area in areas:
+		area.set_deferred("monitoring", not on and area.get_meta("q_monitoring", area.monitoring))
+		area.set_deferred("monitorable", not on and area.get_meta("q_monitorable", area.monitorable))
+		if on:
+			area.set_meta("q_monitoring", area.monitoring)
+			area.set_meta("q_monitorable", area.monitorable)
+	if thing is CollisionObject2D and not (thing is Area2D):
+		if on:
+			thing.set_meta("q_layers", [thing.collision_layer, thing.collision_mask])
+			thing.set_deferred("collision_layer", 0)
+			thing.set_deferred("collision_mask", 0)
+		elif thing.has_meta("q_layers"):
+			var layers: Array = thing.get_meta("q_layers")
+			thing.set_deferred("collision_layer", layers[0])
+			thing.set_deferred("collision_mask", layers[1])
+
+
 # qg:spawn heading=: the way a flying thing just placed goes (and faces).
 static func headed(node, x: float, y: float):
 	if node != null and is_instance_valid(node) and node.has_method("deflect_to"):
@@ -473,7 +574,7 @@ static func touched(body: Node, other) -> void:
 static func count(ctx: Node, tag: String) -> int:
 	var scene := _current_scene(ctx)   # a prefab's handler (in P), or a function of the game there, asks too
 	var n := 0
-	if scene == null:
+	if scene == null or not scene.is_inside_tree():   # a HUD read as the scene is built: nothing is in it yet
 		return 0
 	for t in scene.get_tree().get_nodes_in_group("q_thing"):
 		if t.get_parent() == scene and t.quantum_tag() == tag and alive(t):
@@ -549,6 +650,32 @@ static func pos_y(v):
 		return v.get("y")
 	v = _thing(v)
 	return (v as Node2D).position.y if v is Node2D else null
+
+
+# `a.col` and `a.row`: the cell of the scene's tilemap a thing or a character stands in (a grid walker's, the
+# one it steps to), or a cursor's.
+static func cell_col(v):
+	if v is Dictionary:
+		return v.get("col")
+	var c = _cell_of(_thing(v))
+	return c.x if c != null else null
+
+
+static func cell_row(v):
+	if v is Dictionary:
+		return v.get("row")
+	var c = _cell_of(_thing(v))
+	return c.y if c != null else null
+
+
+static func _cell_of(n):
+	if not (n is Node2D):
+		return null
+	if n.has_method("cell"):
+		return n.cell()
+	var map = n.get_parent().get_node_or_null("Tilemap") if n.get_parent() != null else null
+	var tile := float(map.tile) if map != null and "tile" in map else 1.0
+	return Vector2i(floori(n.position.x / tile), floori(n.position.y / tile))
 
 
 # --- the game's clock: qg:time-scale, and the lockstep's catching up ---
@@ -662,15 +789,21 @@ static func set_tile(ctx: Node, col, row, n, layer: String = "") -> void:
 		event("tile", {"col": int(col), "row": int(row), "tile": int(n)})
 
 
-static func tile_at(ctx: Node, col, row) -> int:
+static func tile_at(ctx: Node, col, row, layer: String = "") -> int:
 	var scene := _current_scene(ctx)
 	var map = scene.get_node_or_null("Tilemap") if scene != null else null
-	return map.tile_at(int(col), int(row)) if map != null and map.has_method("tile_at") else 0
+	return map.tile_at(int(col), int(row), layer) if map != null and map.has_method("tile_at") else 0
+
+
+# tiled('par'): a property of the scene's Tiled map (null when it has none of that name).
+static func tiled(ctx, key: String):
+	var scene := _current_scene(ctx)
+	return scene.q_spec.get("tiled", {}).get(key) if scene != null else null
 
 
 static func thing_at(ctx: Node, tag: String, x: float, y: float):
 	var scene := _current_scene(ctx)
-	if scene == null:
+	if scene == null or not scene.is_inside_tree():
 		return null
 	var point := Vector2(x, y)
 	for t in scene.get_tree().get_nodes_in_group("q_thing"):
@@ -774,6 +907,8 @@ static func _current_scene(node) -> Node:
 
 static func pause(node, on: bool) -> void:
 	var scene := _current_scene(node)
+	if scene != null and scene.q_paused == on:
+		return   # a dialogue opened from another's choice: still paused, nothing happened
 	event("pause" if on else "resume")
 	if scene != null:
 		scene.q_pause(on)

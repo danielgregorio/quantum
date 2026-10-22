@@ -228,6 +228,10 @@ class _Compiler:
                 tiles[str(t.get('frame'))] = {'shape': points, 'one_way': t.get('one-way')}
                 if t.get('kind'):
                     tiles[str(t.get('frame'))]['kind'] = t.get('kind')
+                if t.get('frames') != 1:
+                    if t.get('frames') < 1 or t.get('fps') <= 0:
+                        raise GameCompileError('<qg:tile frames=>: 1 or more, and fps= more than 0', t.line)
+                    tiles[str(t.get('frame'))].update({'frames': t.get('frames'), 'fps': t.get('fps')})
             if tiles:
                 sheets[name]['tiles'] = tiles
         sounds = {}
@@ -281,6 +285,9 @@ class _Compiler:
                     raise GameCompileError('<qg:prefab shape=>: at least three points', el.line)
             if el.get('walls') != 'pass' and el.get('ai') != 'fly':
                 raise GameCompileError('walls= is for ai="fly"', el.line)
+            if el.get('pushable') and not el.get('solid'):
+                raise GameCompileError('pushable="true" is for a solid prefab (solid="true"): what a step pushes '
+                                       'is what a step is stopped by', el.line)
             if el.get('spacing') < 0:
                 raise GameCompileError('<qg:prefab spacing=>: 0 or more (pixels)', el.line)
             if el.get('spacing') and (el.get('solid') or el.get('ai') in (None, 'fly', 'shuttle', 'turret', 'path')):
@@ -342,6 +349,8 @@ class _Compiler:
                 prefabs[name]['trail'] = el.get('trail')
             if el.get('spacing'):
                 prefabs[name]['spacing'] = el.get('spacing')
+            if el.get('pushable'):
+                prefabs[name]['pushable'] = True
             if parts:
                 prefabs[name]['parts'] = parts
             prefabs[name].update(carry)
@@ -436,6 +445,13 @@ class _Compiler:
         rel = rel.replace('\\', '/').lstrip('/')
         self.assets[rel] = self._find(rel, line)
         return rel
+
+    def _tmx(self, src: str, line: Optional[int]):
+        """A Tiled map, read once."""
+        cache = self.__dict__.setdefault('_tmx_read', {})
+        if src not in cache:
+            cache[src] = read_tmx(self._find(src, line), line)
+        return cache[src]
 
     @staticmethod
     def _tiled_kinds(sheet: dict, name: str, kinds: dict, line: Optional[int]) -> None:
@@ -681,6 +697,10 @@ class _Compiler:
                               for c in scene.find_all('character')}
         script.node_fields.update({c.get('id'): CURSOR_FIELDS for c in scene.find_all('cursor') if c.get('id')})
         script.actions = self.actions
+        script.tiled_props = {}
+        for tm in scene.find_all('tilemap'):
+            if tm.get('src'):
+                script.tiled_props.update(self._tmx(tm.get('src'), tm.line).properties)
         # 1. state and functions first: handlers refer to them
         for node in scene.children:
             if isinstance(node, Statement) and node.kind == 'set':
@@ -726,6 +746,9 @@ class _Compiler:
         conditions = 0
         on_death: Dict[str, str] = {}
         whens: List[list] = []
+        tiled: dict = {}
+        pointers: List[tuple] = []   # (player, line) of the characters controller="pointer": they need a cursor
+        cameras_here = any(isinstance(n, Element) and n.tag == 'camera' for n in scene.children)
         dialogues: Dict[str, dict] = {}
         self._node_elements: List[Optional[Element]] = []
         for node in scene.children:
@@ -908,23 +931,68 @@ class _Compiler:
                         f'{tilemap["tileset"]!r}', el.line)
                 self._sheet_exists(el.get('tileset'), sheets, el.line)
                 if el.get('src'):
-                    tmx = read_tmx(self._find(el.get('src'), el.line), el.line)
+                    tmx = self._tmx(el.get('src'), el.line)
                     tile = sheets[el.get('tileset')]['tile'][0]
                     if (tmx.tile_width, tmx.tile_height) != (tile, tile):
                         raise GameCompileError(
                             f'{el.get("src")}: tiles are {tmx.tile_width}x{tmx.tile_height}, the tileset '
                             f'{el.get("tileset")!r} has {tile}x{tile}', el.line)
-                    layers = [{'name': ly.name, 'rows': ly.rows, 'collision': ly.collision or el.get('collision')}
+                    # each tileset of the map is a qg:tileset of the game with the same image (a map of
+                    # one tileset draws with the scene's, whatever its image)
+                    used = []
+                    for ts in tmx.tilesets:
+                        same = [n for n, sh in sheets.items() if sh['kind'] == 'tileset' and Path(sh['src']).name == ts.image]
+                        if len(tmx.tilesets) == 1:
+                            same = [el.get('tileset')]
+                        if not same:
+                            raise GameCompileError(f'{el.get("src")}: its tileset {ts.image!r} is no qg:tileset of the '
+                                                   f'game (a qg:tileset with src= that image)', el.line)
+                        tname = el.get('tileset') if el.get('tileset') in same else same[0]
+                        if sheets[tname]['tile'][0] != tile:
+                            raise GameCompileError(f'{el.get("src")}: the tilesets of a map have one tile size; '
+                                                   f'{tname!r} has {sheets[tname]["tile"][0]}', el.line)
+                        self._tiled_kinds(sheets[tname], tname, ts.kinds, el.line)
+                        used.append(tname)
+                    layers = [{'name': ly.name, 'rows': ly.rows, 'collision': ly.collision or el.get('collision'),
+                               **({'tileset': used[ly.tileset]} if used[ly.tileset] != el.get('tileset') else {})}
                               for ly in tmx.layers]
-                    self._tiled_kinds(sheets[el.get('tileset')], el.get('tileset'), tmx.kinds, el.line)
                     for obj in tmx.objects:
                         if obj.prefab not in prefabs:
                             raise GameCompileError(
                                 f'{el.get("src")}: object {obj.name or obj.prefab!r} has class {obj.prefab!r}, '
                                 f'no qg:prefab of that name (declared: {", ".join(sorted(prefabs)) or "none"})',
                                 el.line)
-                        nodes.append({'kind': 'instance', 'prefab': obj.prefab, 'x': obj.x, 'y': obj.y})
+                        if obj.state is not None and obj.state not in (prefabs[obj.prefab].get('states') or {}):
+                            raise GameCompileError(f'{el.get("src")}: object {obj.name or obj.prefab!r} starts in '
+                                                   f'state {obj.state!r}, which {obj.prefab!r} has not', el.line)
+                        nodes.append({'kind': 'instance', 'prefab': obj.prefab, 'x': obj.x, 'y': obj.y,
+                                      'name': obj.name or None, 'if': None,
+                                      **({'state': obj.state} if obj.state else {})})
                         self._node_elements.append(None)
+                    for z in tmx.zones:
+                        if z.name in zones:
+                            raise GameCompileError(f'{el.get("src")}: two zones named {z.name!r}', el.line)
+                        zones.add(z.name)
+                        self._zone_tags.add(z.tag)
+                        nodes.append({'kind': 'zone', 'name': z.name, 'tag': z.tag, 'x': z.x, 'y': z.y,
+                                      'width': z.width, 'height': z.height})
+                        self._node_elements.append(None)
+                    for x in tmx.exits:
+                        if x.name in exits:
+                            raise GameCompileError(f'{el.get("src")}: two exits named {x.name!r}', el.line)
+                        self._scenes_used.append((x.to, el.line))
+                        self._exits_used.append((name, x.to, x.at, el.line))
+                        exits[x.name] = {'kind': 'exit', 'name': x.name, 'x': x.x, 'y': x.y, 'width': x.width,
+                                         'height': x.height, 'to': x.to, 'at': x.at}
+                        nodes.append(exits[x.name])
+                        self._node_elements.append(None)
+                    for pth in tmx.paths:
+                        if pth.name in paths:
+                            raise GameCompileError(f'{el.get("src")}: two paths named {pth.name!r}', el.line)
+                        paths[pth.name] = pth.points
+                        nodes.append({'kind': 'path', 'name': pth.name, 'points': pth.points})
+                        self._node_elements.append(None)
+                    tiled = dict(tmx.properties)
                 else:
                     layers = [{'name': 'tiles', 'rows': _csv_rows(el), 'collision': el.get('collision')}]
                 if tilemap is not None:
@@ -1053,8 +1121,10 @@ class _Compiler:
                 if el.get('axis') != 'both' and el.get('controller') != 'ship':
                     raise GameCompileError('axis= is for controller="ship"', el.line)
                 for attr, default in (('step-frames', 15), ('diagonal', False)):
-                    if el.get(attr) != default and controller != 'grid':
-                        raise GameCompileError(f'{attr}= is for controller="grid"', el.line)
+                    if el.get(attr) != default and controller not in ('grid', 'pointer'):
+                        raise GameCompileError(f'{attr}= is for controller="grid" or "pointer"', el.line)
+                if controller == 'pointer':
+                    pointers.append((player, el.line))
                 if el.get('step-frames') < 1:
                     raise GameCompileError('step-frames=: 1 or more', el.line)
                 if el.get('bounds') is not None and el.get('controller') not in ('ship', 'topdown'):
@@ -1247,6 +1317,31 @@ class _Compiler:
                                 line_spec[f'{attr}_method'] = method
                             else:
                                 line_spec[attr] = value
+                        if c.get('portrait') is not None:
+                            if el.get('sheet') is None:
+                                raise GameCompileError('<qg:line portrait=>: a frame of the dialogue\'s sheet= (a '
+                                                       'qg:spritesheet of faces), which it has not', c.line)
+                            line_spec['portrait'] = c.get('portrait')
+                        choices = []
+                        for k, ch in enumerate(c.children):
+                            if not (isinstance(ch, Element) and ch.tag == 'choice'):
+                                raise GameCompileError('<qg:line> holds qg:choice, nothing else', getattr(ch, 'line', c.line))
+                            prefix = f'_q_dialogue_{_ident(dname)}_{len(lines)}_choice_{k}'
+                            choice = {'handler': compile_handler(script, prefix, ch.children, ch.line)}
+                            label = str(ch.get('label'))
+                            if is_expression(label):
+                                script.functions.append(f'func {prefix}_label():\n\treturn Q.to_str('
+                                                        f'{compile_expression(label, script.scope(), ch.line)})\n')
+                                choice['label_method'] = f'{prefix}_label'
+                            else:
+                                choice['label'] = label
+                            if ch.get('if') is not None:
+                                script.functions.append(f'func {prefix}_if() -> bool:\n\treturn bool('
+                                                        f'{compile_expression(ch.get("if"), script.scope(), ch.line)})\n')
+                                choice['if'] = f'{prefix}_if'
+                            choices.append(choice)
+                        if choices:
+                            line_spec['choices'] = choices
                         lines.append(line_spec)
                     elif isinstance(c, Element) and c.tag == 'on-end':
                         if on_end is not None:
@@ -1258,8 +1353,14 @@ class _Compiler:
                 if not lines:
                     raise GameCompileError(f'<qg:dialogue name="{dname}"> needs at least one qg:line', el.line)
                 font = self._asset(el.get('font'), el.line) if el.get('font') else None
+                if el.get('sheet') is not None:
+                    self._sheet_exists(el.get('sheet'), sheets, el.line)
+                if el.get('speed') < 0:
+                    raise GameCompileError('<qg:dialogue speed=>: letters a second, 0 or more', el.line)
                 dialogues[dname] = {'kind': 'dialogue', 'name': dname, 'lines': lines, 'on_end': on_end,
-                                    'font': font, 'size': el.get('size')}
+                                    'font': font, 'size': el.get('size'),
+                                    **({'speed': el.get('speed')} if el.get('speed') else {}),
+                                    **({'sheet': el.get('sheet')} if el.get('sheet') else {})}
                 nodes.append(dialogues[dname])
                 self._node_elements.append(el)
             elif el.tag in ('play', 'stop'):
@@ -1367,8 +1468,17 @@ class _Compiler:
             'on_screen': on_screen, 'on_death': on_death,
             'on_select': on_select, 'music': music,
         }
+        if script.cameras_moved and not cameras_here:
+            raise GameCompileError('<qg:camera-to> moves the scene\'s qg:camera, which it has not', script.cameras_moved[0])
+        for player, line in pointers:
+            if player not in cursors:
+                raise GameCompileError(f'<qg:character controller="pointer" player="{player}">: a click walks it to '
+                                       f'where its player\'s qg:cursor is; the scene needs <qg:cursor player='
+                                       f'"{player}" />', line)
         if whens:
             spec['when'] = whens
+        if tiled:
+            spec['tiled'] = tiled   # the Tiled map's own properties: tiled('par')
         if scene.get('y-sort'):
             spec['y_sort'] = True
         if scene.get('save'):

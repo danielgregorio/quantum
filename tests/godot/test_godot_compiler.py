@@ -710,20 +710,88 @@ class TestTiledMaps:
         e = refuse(tmp_path, self.scene(tmp_path, tmx))
         assert "level.tmx: object 'a' has class 'Gem', no qg:prefab of that name" in e.message
 
-    def test_a_flipped_tile(self, tmp_path):
-        tmx = TMX.replace('23,23,23', '23,2147483671,23')
+    def test_flipped_and_turned_tiles(self, tmp_path):
+        # left to right only: -n; upside down or across the diagonal: n with Tiled's bits
+        tmx = TMX.replace('23,23,23', f'{23 | 1 << 31},{23 | 1 << 30},{23 | 1 << 29 | 1 << 31}')
+        out = build(tmp_path, self.scene(tmp_path, tmx))
+        layers = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'][0]['layers']
+        assert layers[1]['rows'][1] == [-23, 23 | 1 << 30, 23 | 1 << 29 | 1 << 31]
+
+    def test_a_tile_turned_as_on_a_hexagonal_map(self, tmp_path):
+        tmx = TMX.replace('23,23,23', f'23,{23 | 1 << 28},23')
         e = refuse(tmp_path, self.scene(tmp_path, tmx))
-        assert "layer 'ground' has a flipped or rotated tile" in e.message
+        assert "layer 'ground' has a tile turned as on a hexagonal map" in e.message
 
     def test_a_layer_not_saved_as_csv(self, tmp_path):
         tmx = TMX.replace('<data encoding="csv">\n0,11,0,\n0,0,0\n</data>', '<data encoding="base64">AAAA</data>')
         e = refuse(tmp_path, self.scene(tmp_path, tmx))
         assert "layer 'decor' must be saved as CSV" in e.message
 
-    def test_two_tilesets(self, tmp_path):
+    TWO = TMX.replace('<image source="x.png"', '<image source="tilemap_packed.png"').replace(
+        '</tileset>', '</tileset>\n <tileset firstgid="181" name="b" tilewidth="18" tileheight="18" columns="9">\n'
+                      '  <image source="../art/tilemap-backgrounds_packed.png" width="162" height="54"/>\n </tileset>').replace(
+        '0,11,0,\n0,0,0', '0,183,0,\n0,0,0')
+
+    def test_two_tilesets_matched_by_image(self, tmp_path):
+        source = self.scene(tmp_path, self.TWO).replace(
+            '<qg:spritesheet', '<qg:tileset name="o" src="assets/kenney/tilemap-backgrounds_packed.png" tile="18" />\n  <qg:spritesheet')
+        out = build(tmp_path, source)
+        layers = json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'][0]['layers']
+        assert layers[0] == {'name': 'decor', 'rows': [[0, 3, 0], [0, 0, 0]], 'collision': False, 'tileset': 'o'}
+        assert 'tileset' not in layers[1]          # the scene's own
+
+    def test_a_map_tileset_no_qg_tileset_has(self, tmp_path):
+        e = refuse(tmp_path, self.scene(tmp_path, self.TWO))
+        assert "level.tmx: its tileset 'tilemap-backgrounds_packed.png' is no qg:tileset of the game" in e.message
+
+    def test_a_layer_from_two_tilesets(self, tmp_path):
+        e = refuse(tmp_path, self.scene(tmp_path, self.TWO.replace('0,183,0,', '0,183,11,')))
+        assert "layer 'decor' draws from 2 tilesets" in e.message
+
+    def test_a_tileset_that_is_a_collection_of_images(self, tmp_path):
         tmx = TMX.replace('</tileset>', '</tileset><tileset firstgid="181" name="b" tilewidth="18" tileheight="18"/>')
         e = refuse(tmp_path, self.scene(tmp_path, tmx))
-        assert 'one tileset per map (2 found)' in e.message
+        assert "tileset 'b' is not one image" in e.message
+
+    def test_zones_exits_paths_and_properties(self, tmp_path):
+        tmx = TMX.replace('<map version="1.10"', '<map version="1.10"').replace(
+            ' <tileset', ' <properties><property name="par" type="int" value="12"/>'
+                         '<property name="title" value="Dock"/></properties>\n <tileset', 1).replace(
+            ' </objectgroup>',
+            '  <object id="4" name="pad" class="zone" x="0" y="0" width="18" height="18">'
+            '<properties><property name="tag" value="pad"/></properties></object>\n'
+            '  <object id="5" name="east" class="exit" x="36" y="0" width="18" height="36">'
+            '<properties><property name="to" value="main"/><property name="at" value="east"/></properties></object>\n'
+            '  <object id="6" name="round" class="path" x="10" y="10"><polyline points="0,0 20,0 20,10"/></object>\n'
+            '  <object id="7" name="b" class="Coin" x="5" y="5"><properties>'
+            '<property name="state" value="spinning"/></properties><point/></object>\n'
+            ' </objectgroup>')
+        source = self.scene(tmp_path, tmx).replace(
+            '<qg:prefab name="Coin" tag="coin" sheet="k" frame="151" hitbox="12x12" />',
+            '<qg:prefab name="Coin" tag="coin" sheet="k" frame="151" hitbox="12x12">\n'
+            '    <qg:state name="spinning" />\n  </qg:prefab>').replace(
+            '</qg:scene>', '  <qg:hud><qg:text value="{tiled(\'title\') + str(tiled(\'par\') + 1)}" /></qg:hud>\n'
+                           '  </qg:scene>')
+        out = build(tmp_path, source)
+        scene = json.loads((out / 'game.json').read_text())['scenes']['main']
+        kinds = [(n['kind'], n.get('name')) for n in scene['nodes']]
+        assert ('zone', 'pad') in kinds and ('exit', 'east') in kinds and ('path', 'round') in kinds
+        coin = next(n for n in scene['nodes'] if n.get('name') == 'b')
+        assert coin['state'] == 'spinning'
+        assert scene['tiled'] == {'par': 12, 'title': 'Dock'}
+
+    def test_a_map_property_the_map_has_not(self, tmp_path):
+        source = self.scene(tmp_path).replace(
+            '</qg:scene>', '  <qg:hud><qg:text value="{str(tiled(\'par\'))}" /></qg:hud>\n  </qg:scene>')
+        e = refuse(tmp_path, source)
+        assert "tiled('par')" in e.message
+
+    def test_an_object_property_other_than_state(self, tmp_path):
+        tmx = TMX.replace('class="Coin" x="30" y="10"><point/>',
+                          'class="Coin" x="30" y="10"><properties><property name="hp" type="int" value="3"/>'
+                          '</properties><point/>')
+        e = refuse(tmp_path, self.scene(tmp_path, tmx))
+        assert "object 'a' has properties hp" in e.message
 
     def test_tile_size_must_match_the_tileset(self, tmp_path):
         tmx = TMX.replace('tilewidth="18" tileheight="18">\n <tileset', 'tilewidth="16" tileheight="16">\n <tileset')
@@ -1870,7 +1938,7 @@ class TestWhatTheRpgAsked:
         assert box['lines'][1] == {'who': '', 'text_method': '_q_dialogue_hello_1_text'}
         script = (out / 'scripts' / 'scene_main.gd').read_text()
         assert 'Q.say(self, "hello")' in script and 'Q.talking(self)' in script
-        assert 'me.col' in script
+        assert 'Q.cell_col(me)' in script
 
     def test_what_it_refuses(self, tmp_path):
         for old, new, message in (
@@ -2421,3 +2489,116 @@ class TestActionAndAiming:
         assert compile_expression('aim.x', scope) == 'Q.pos_x(get_node("aim"))'
         with pytest.raises(GameCompileError, match='aim.health: no such field; aim has col, player, row, x, y'):
             compile_expression('aim.health', scope)
+
+
+class TestPuzzleAndAdventure:
+    """PLAN_GAMES_3.md, Phase 3 (what Crates asked for)."""
+
+    CRATE = '<qg:prefab name="Crate" tag="crate" sheet="k" frame="6" hitbox="16x16" solid="true" pushable="true" />'
+    GRID = ('    <qg:tilemap tileset="k" collision="true">\n23,23,23\n23,0,23\n23,23,23\n    </qg:tilemap>\n'
+            '    <qg:character id="w" controller="grid" sheet="c" x="27" y="27" hitbox="14x14" />\n')
+
+    def scene(self, body, prefabs=''):
+        return HEAD.replace('hitbox="12x12" />', 'hitbox="12x12" />\n  ' + self.CRATE + prefabs, 1) + \
+            f'  <qg:scene name="main">\n{body}  </qg:scene>\n' + TAIL
+
+    def test_pushable_is_for_a_solid_prefab(self, tmp_path):
+        out = build(tmp_path, self.scene(self.GRID))
+        assert json.loads((out / 'game.json').read_text())['prefabs']['Crate']['pushable'] is True
+        e = refuse(tmp_path, self.scene(self.GRID).replace('solid="true" pushable', 'pushable'))
+        assert 'pushable="true" is for a solid prefab' in e.message
+
+    def test_a_prefab_extends_another(self, tmp_path):
+        prefabs = '''
+  <qg:prefab name="Heavy" extends="Crate" frame="7" pushable="false">
+    <qg:animation name="idle" frames="7,8" fps="2" />
+  </qg:prefab>
+  <qg:prefab name="Huge" extends="Heavy" hitbox="18x18" />'''
+        out = build(tmp_path, self.scene(self.GRID, prefabs))
+        made = json.loads((out / 'game.json').read_text())['prefabs']
+        assert (made['Heavy']['tag'], made['Heavy']['frame'], made['Heavy'].get('pushable', False)) == ('crate', 7, False)
+        assert made['Huge']['tag'] == 'crate' and made['Huge']['hitbox'] == [18, 18] and made['Huge']['frame'] == 7
+        assert made['Huge']['animations']['idle']['frames'] == [7, 8]
+        e = refuse(tmp_path, self.scene(self.GRID, '\n  <qg:prefab name="Odd" extends="Box" frame="1" />'))
+        assert '<qg:prefab name="Odd" extends="Box">: no qg:prefab of that name' in e.message
+        e = refuse(tmp_path, self.scene(self.GRID, '\n  <qg:prefab name="A" extends="B" />\n  <qg:prefab name="B" extends="A" />'))
+        assert 'the prefabs extend each other in a circle' in e.message
+
+    def test_a_pointer_walker_needs_its_players_cursor(self, tmp_path):
+        body = self.GRID.replace('controller="grid"', 'controller="pointer"')
+        build(tmp_path, self.scene(body + '    <qg:cursor player="1" />\n'))
+        e = refuse(tmp_path, self.scene(body))
+        assert 'the scene needs <qg:cursor player="1" />' in e.message
+
+    def test_camera_to(self, tmp_path):
+        body = self.GRID + '    <qg:camera follow="w" />\n'
+        out = build(tmp_path, self.scene(body + '    <qg:on-input action="jump"><qg:camera-to target="w" zoom="2" '
+                                                'seconds="0.5" hold="1" pause="false" /></qg:on-input>\n'))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.camera_to(self, get_node("w"), 2.0, 0.5, 1.0, false)' in script
+        e = refuse(tmp_path, self.scene(self.GRID + '    <qg:on-input action="jump"><qg:camera-to x="1" y="2" />'
+                                                    '</qg:on-input>\n'))
+        assert "<qg:camera-to> moves the scene's qg:camera, which it has not" in e.message
+        e = refuse(tmp_path, self.scene(body + '    <qg:on-input action="jump"><qg:camera-to target="w" x="1" y="2" />'
+                                               '</qg:on-input>\n'))
+        assert '<qg:camera-to> goes to target=, or to x= and y=, one of them' in e.message
+        # in a q:function of the game it is fine where there is no camera: there is nothing to move
+        build(tmp_path, self.scene(self.GRID).replace(
+            '  <qg:scene name="main">', '  <q:function name="look"><qg:camera-to x="1" y="2" /></q:function>\n'
+                                        '  <qg:scene name="main">'))
+
+    def test_a_dialogue_with_a_face_typed_in_and_choices(self, tmp_path):
+        body = '''    <q:set name="said" value="" />
+    <qg:dialogue name="ask" speed="20" sheet="c">
+      <qg:line who="Owl" portrait="2" text="Which?">
+        <qg:choice label="Left"><q:set name="said" value="left" /></qg:choice>
+        <qg:choice label="{'Right ' + said}" if="{said != ''}" />
+      </qg:line>
+    </qg:dialogue>
+'''
+        out = build(tmp_path, self.scene(body))
+        box = next(n for n in json.loads((out / 'game.json').read_text())['scenes']['main']['nodes']
+                   if n['kind'] == 'dialogue')
+        assert (box['speed'], box['sheet'], box['lines'][0]['portrait']) == (20.0, 'c', 2)
+        first, second = box['lines'][0]['choices']
+        assert first['label'] == 'Left' and 'if' not in first
+        assert second['label_method'].endswith('_label') and second['if'].endswith('_if')
+        e = refuse(tmp_path, self.scene(body.replace(' sheet="c"', '')))
+        assert "<qg:line portrait=>: a frame of the dialogue's sheet=" in e.message
+        e = refuse(tmp_path, self.scene(body.replace('<qg:choice label="Left">', '<qg:choice label="Left"><qg:line text="x" />')))
+        assert '<qg:line>' in e.message
+
+    def test_attach_and_detach(self, tmp_path):
+        body = self.GRID + '''    <qg:on-input action="jump">
+      <qg:for-each tag="coin" var="c"><qg:attach target="c" to="w" dy="-8" /></qg:for-each>
+      <q:if condition="{carrying(w, 'coin') != null}"><qg:detach from="w" tag="coin" /></q:if>
+    </qg:on-input>
+'''
+        out = build(tmp_path, self.scene(body))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.attach(c, get_node("w"), 0.0, -8.0)' in script
+        assert 'Q.carrying(get_node("w"), "coin")' in script and 'Q.detach_all(get_node("w"), "coin")' in script
+        e = refuse(tmp_path, self.scene(body.replace('target="c" to="w"', 'target="nobody" to="w"')))
+        assert '<qg:attach target="nobody">' in e.message
+        e = refuse(tmp_path, self.scene(body.replace('<qg:detach from="w" tag="coin" />', '<qg:detach from="w" />')))
+        assert '<qg:detach> puts down target=, or from= and tag=' in e.message
+
+    def test_a_things_cell(self, tmp_path):
+        body = self.GRID + '''    <q:set name="at" value="0" type="number" />
+    <qg:on-input action="jump">
+      <qg:for-each tag="crate" var="c"><q:set name="at" value="{c.col + c.row * 10 + tile_at(c.col, c.row, 'tiles')}" /></qg:for-each>
+    </qg:on-input>
+'''
+        out = build(tmp_path, self.scene(body))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.cell_col(c)' in script and 'Q.cell_row(c)' in script
+        assert 'Q.tile_at(self, Q.cell_col(c), Q.cell_row(c), "tiles")' in script
+
+    def test_an_animated_tile(self, tmp_path):
+        out = build(tmp_path, HEAD.replace('tile="18" />', 'tile="18">\n    <qg:tile frame="10" frames="3" fps="6" />\n'
+                                                          '  </qg:tileset>', 1) + '  <qg:scene name="main" />\n' + TAIL)
+        tile = json.loads((out / 'game.json').read_text())['sheets']['k']['tiles']['10']
+        assert (tile['frames'], tile['fps']) == (3, 6.0)
+        e = refuse(tmp_path, HEAD.replace('tile="18" />', 'tile="18">\n    <qg:tile frame="10" frames="0" />\n'
+                                                         '  </qg:tileset>', 1) + '  <qg:scene name="main" />\n' + TAIL)
+        assert '<qg:tile frames=>: 1 or more' in e.message

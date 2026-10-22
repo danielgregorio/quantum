@@ -63,8 +63,13 @@ GAMES = [
      'raiders in waves (qg:when, qg:after) that keep apart (spacing=) and make for the tower, an archer who aims at '
      'the pointer (qg:spawn heading=, a qg:cursor\'s id) and charges a bolt (pressed_for()) that glances off the '
      'walls (walls="bounce") with a trail, numbers that float up (qg:emit text=), a tower that zaps (qg:beam), a '
-     'brute with its health over it (qg:label), a ram shielded in front (side="left"), and a knight who steers a '
-     'horse (qg:steer)'),
+     'brute made from a raider (extends=) with its health over it (qg:label), a ram shielded in front '
+     '(side="left"), and a knight who steers a horse (qg:steer)'),
+    ('Crates', 'projects/crates/crates.q', 'a box-pushing puzzle in three rooms drawn in Tiled (two tilesets, flipped '
+     'tiles, animated water, the doors, a sign, a gull\'s path and each room\'s title from the maps): a worker that '
+     'steps or walks where it is clicked (controller="pointer") and pushes crates (pushable=), barrels made from '
+     'crates (extends=), a foreman whose words are typed in beside his face with a choice (qg:choice), a gate the '
+     'camera goes to show open (qg:camera-to), and a key carried over the worker\'s head (qg:attach)'),
     ('RPG', 'projects/rpg/rpg.q', 'Godot\'s "JRPG" demo transcribed: its map in three tile layers, a slime that '
      'walks it cell by cell, a key and another slime that talk in a dialogue box, and a turn-based fight '
      '(projects/rpg/README.md)'),

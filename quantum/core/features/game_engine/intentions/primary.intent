@@ -49,7 +49,7 @@ intention:
   semantics:
     # --- the game's resources, directly in q:application ---
     - "qg:tileset names a sheet of square tiles that tilemaps, sprites and prefabs draw from"
-    - "qg:tile (in a qg:tileset) gives one tile a shape (x,y points or none), makes it one-way, or gives it a kind: ladder, water, ice or hurt"
+    - "qg:tile (in a qg:tileset) gives one tile a shape (x,y points or none), makes it one-way, or gives it a kind: ladder, water, ice or hurt; frames= and fps= animate it (water, lava, a torch: it and the frames after it in the row, in turn)"
     - "qg:spritesheet names a sheet of equal frames (24, or WxH) for characters and things"
     - "qg:input replaces the keys of an action (or declares a new one) for a player: keyboard, joypad and mouse names"
     - "qg:multiplayer makes the game networked for players= people in lockstep (delay=, check-every=), or with rollback=; start= is the scene play begins in; transport= is enet or websocket; min-players= lets the host start sooner with fewer (qg:start-now)"
@@ -58,7 +58,7 @@ intention:
     - "qg:language holds the game's texts in another language, one qg:phrase per text (text= as written, as= translated)"
     - "qg:phrase is one translated text of a qg:language"
     - "qg:item declares something the players carry (a key, a gem, a heart): its picture, max=, start=, and the sound and particles of picking one up; held('name') reads how many"
-    - "qg:prefab declares a kind of thing: sheet, frame, hitbox, tag (what collisions see), and how it moves with ai= (patrol, wander, chase, pathfind, fly, sway, shuttle, path, turret, behavior); solid=, one-way=, shape= make it a platform; gives= makes it a pickup; opens-with= makes it a lock; a fly prefab's walls=bounce turns off the tiles, trail= leaves a streak; spacing= keeps things of its tag apart; particles=, visible=, flip-v= and layer= are how it looks (a character has them too)"
+    - "qg:prefab declares a kind of thing: sheet, frame, hitbox, tag (what collisions see), and how it moves with ai= (patrol, wander, chase, pathfind, fly, sway, shuttle, path, turret, behavior); solid=, one-way=, shape= make it a platform; gives= makes it a pickup; opens-with= makes it a lock; a fly prefab's walls=bounce turns off the tiles, trail= leaves a streak; spacing= keeps things of its tag apart; pushable= lets a grid walker's step push a solid one on (a crate); extends= makes it from another prefab, all of it but what it says itself; particles=, visible=, flip-v= and layer= are how it looks (a character has them too)"
 
     # --- what characters and prefabs are made of ---
     - "qg:state is a form of a character or prefab (small/big, calm/angry) with its own hitbox, frame, animations, speed and fire-every; qg:become switches to it; me.state reads it"
@@ -83,8 +83,8 @@ intention:
 
     # --- what a scene holds ---
     - "qg:scene is a screen of the game: width, height, background, seed=, save=true to save on entering it as a room, and y-sort=true to draw what stands lower in front"
-    - "qg:tilemap is the level: CSV rows of tile numbers (0 empty, n is tile n-1, -n flipped) or a Tiled map (src=); collision=true makes its tiles solid; several are layers"
-    - "qg:character is a body a player moves: controller= platformer, topdown, map, ship, fighter, grid or behavior, with sheet, frame, x, y, hitbox and the controller's own settings"
+    - "qg:tilemap is the level: CSV rows of tile numbers (0 empty, n is tile n-1, -n flipped) or a Tiled map (src=): its layers from one or more tilesets (each a qg:tileset with the same image), flipped and turned tiles, its objects placing prefabs (a state property), zones, exits and paths, and its own properties read by tiled('name'); collision=true makes its tiles solid; several are layers"
+    - "qg:character is a body a player moves: controller= platformer, topdown, map, ship, fighter, grid, pointer (a grid walker its player's click walks by the shortest way) or behavior, with sheet, frame, x, y, hitbox and the controller's own settings"
     - "qg:instance places a prefab at x,y, with an optional name= and if="
     - "qg:cursor is a player's pointer (the mouse, or the direction keys by step=), snapped with grid=; qg:on-select reads it, and with id= it is read anywhere by its id (aim.x)"
     - "qg:path is a route of x,y points that ai=path prefabs spawned on it follow"
@@ -107,8 +107,8 @@ intention:
     - "qg:button (in qg:menu) runs what it holds when chosen; its label= may be an expression"
     - "qg:field (in qg:menu) is a text box bound to a string q:set; typing is local to the machine"
     - "qg:lobby is the ready-made networked-game menu: play here, host, an address, join, cancel"
-    - "qg:dialogue is lines shown one at a time in a box; qg:say opens it and pauses the scene"
-    - "qg:line is one line of a qg:dialogue: who= and text=, either may be an expression"
+    - "qg:dialogue is lines shown one at a time in a box; qg:say opens it and pauses the scene; speed= types each line in, sheet= is a qg:spritesheet of faces"
+    - "qg:line is one line of a qg:dialogue: who= and text=, either may be an expression; portrait= a face beside it; qg:choice inside offers answers"
 
     # --- handlers: when something happens ---
     - "qg:on-collision (in a character or prefab) runs when it touches something of tag with=; side=top or bottom tells a stomp from a bump, left or right a side of the other; cooldown= spaces it out; me is the toucher, other what it touched"
@@ -156,6 +156,9 @@ intention:
     - "qg:beam draws a line between two things for seconds=, following them (a laser, a zap, an aiming line)"
     - "qg:label is text in the world, read every tick: over a character or a prefab (dx=, dy=), or at x,y of a scene"
     - "qg:steer is a part of a character's qg:behavior: left and right turn it, up pushes it the way it points (thrust=), it drifts and slows by drag=, up to max= (a ship, a car, a horse)"
+    - "qg:camera-to sends the scene's qg:camera to a thing (target=) or a point (x=, y=), closer with zoom=, there in seconds=, for hold= seconds, and back to what it follows; the scene waits meanwhile unless pause=false (a lever shows the gate it opened)"
+    - "qg:attach makes a thing carried by another (to=, me by default), dx,dy from it: it goes where the carrier goes and touches nothing (a key over a head, a torch in a hand); carrying(me, 'key') finds it"
+    - "qg:detach puts a carried thing down where it is (target=, or from= and tag=): it touches again"
     - "qg:burst is a quick puff of particles where a thing is"
     - "qg:shake shakes the scene for frames= ticks"
     - "qg:give gives the players amount= of an item, up to its max"
@@ -163,6 +166,7 @@ intention:
     - "qg:reset-items starts the items over: every one back to its start=, the things picked up or opened back in place"
     - "qg:goto-scene leaves for another scene at the end of the tick (fade= from black); scene state is lost, game state stays"
     - "qg:say opens a qg:dialogue of the scene"
+    - "qg:choice in a qg:line is an answer the player chooses (up, down, select): its label= (if= offers it only when true), and what it does, before the next line; a qg:say in it goes on in another dialogue"
     - "qg:pause stops the scene's characters, things, timers and spawners; menus, HUD and on-input go on"
     - "qg:resume goes on with a paused scene"
     - "qg:save saves the game state and a scene to come back to; has_save() tells whether there is one"
@@ -177,8 +181,8 @@ intention:
     - "q:if, q:elseif and q:else choose between actions and statements in a handler"
     - "q:loop repeats a body over items= or from=/to=, with var="
     - "q:function (directly in a qg:scene, or in q:application for every scene and the prefabs) names a body of actions and statements; q:call runs it; q:return leaves it"
-    - "expressions are written in braces and read state, me, other, cursor, the scene's characters by id (p1.health, hero.x), where a thing is (other.x, me.y), what a body touched as it last moved (me.on_floor, me.on_wall, me.on_ceiling), and built-in functions; a field a thing does not have (hero.foo) is a compile error that lists the ones it has"
-    - "functions: len, str, int, float, abs, min, max, round, floor, ceil, sqrt, random (from the scene seed), count, thing_at, tile_at, distance, nearest, sees, held, paused, talking, tr, language, has_save, net_status, net_players, net_player, url_param, can_quit, ticks (the scene's), sin, cos, atan2 (degrees), sort; pressing, pressed_for (ticks) and strength of an action, for player 1 or another"
+    - "expressions are written in braces and read state, me, other, cursor, the scene's characters by id (p1.health, hero.x), where a thing is (other.x, me.y) and the cell of the tilemap it stands in (other.col, me.row), what a body touched as it last moved (me.on_floor, me.on_wall, me.on_ceiling), and built-in functions; a field a thing does not have (hero.foo) is a compile error that lists the ones it has"
+    - "functions: len, str, int, float, abs, min, max, round, floor, ceil, sqrt, random (from the scene seed), count, thing_at, tile_at (of a layer by name too), tiled (a property of the scene's Tiled map), carrying (what of a tag a thing carries), distance, nearest, sees, held, paused, talking, tr, language, has_save, net_status, net_players, net_player, url_param, can_quit, ticks (the scene's), sin, cos, atan2 (degrees), sort; pressing, pressed_for (ticks) and strength of an action, for player 1 or another"
 
   compilation:
     input: "<q:application type=\"game\"> with qg: tags and q: statements"

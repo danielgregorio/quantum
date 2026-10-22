@@ -73,6 +73,43 @@ alter the behaviour of an existing app is listed under **Breaking**.
   `qg:become` and `qg:deflect`, `at=` of `qg:burst`, `qg:shake` and
   `qg:spawn` take a parameter, a loop variable or a q:set holding a thing, and
   `qg:spawn at=` a character's id, as `qg:destroy` and `qg:tween` already did.
+- Laboratory: Crates (`projects/crates/crates.q`), a box-pushing puzzle on a
+  dockside, written for Phase 3 of `PLAN_GAMES_3.md`: three rooms drawn in
+  Tiled (`projects/crates/rooms/`: two tilesets, flipped walls, animated
+  water, the doors, a sign by each, a gull's way over the harbour and each
+  room's title and hint), a worker who steps or walks where it is clicked and
+  pushes crates and barrels onto the pads, a foreman who talks and offers a
+  choice, a gate the camera goes to show open, and a key carried over the
+  worker's head to a locked gate. Its art is drawn by `scripts/art/crates.py`
+  (CC0). On the games page, and played through in CI with a solver's moves
+  (`tests/godot/test_godot_crates.py`).
+- Laboratory: puzzle and adventure, Phase 3 of `PLAN_GAMES_3.md`.
+  `pushable="true"` on a solid prefab: a grid walker's step pushes it a cell
+  on when the cell beyond is free (a `push` event), and runs the walker's
+  `qg:on-collision` with it. `controller="pointer"`: a grid walker that its
+  player's click also walks, by the shortest way round the walls and things
+  (a `route` event); a click on a thing walks up to it and steps into it, a
+  crate only when it is beside the walker (further off, the walk ends beside
+  it); the click and the cursor travel in the lockstep. `extends=` on
+  `qg:prefab` makes one prefab from another: all of it (attributes,
+  animations, states, handlers, behavior) but what it says itself. `<qg:attach
+  target= to= dx= dy=>` makes a thing carried by another, following it and
+  touching nothing; `<qg:detach target=>` (or `from= tag=`) puts it down;
+  `carrying(me, 'key')` finds it. `<qg:camera-to target= | x= y= zoom=
+  seconds= hold= pause=>` sends the camera to a thing or a point and back to
+  what it follows, the scene waiting meanwhile unless `pause="false"`.
+  `<qg:choice label= if=>` in a `qg:line` offers answers (up, down, select);
+  `speed=` on `qg:dialogue` types each line in, `sheet=` and a line's
+  `portrait=` put a face beside it. `frames=` and `fps=` on `qg:tile` animate
+  a tile. A Tiled map may use several tilesets (each the game's `qg:tileset`
+  with the same image), flipped and turned tiles, objects of class `zone`,
+  `exit` and `path`, an object's `state` property, and properties of its own
+  that `tiled('name')` reads. `tile_at(col, row, 'layer')` reads a layer by
+  name, and `a.col`, `a.row` the cell of any thing or character. Keep's end
+  asks what now (a dialogue with choices), Delve's lever sends the camera to
+  the wall it opened, and Siege's brute is made from its raider. Tested in
+  Godot (`tests/godot/test_godot_puzzle.py`, over the network too); the
+  feature's dataset has seven games and seven refusals more.
 - Laboratory: Siege (`projects/siege/siege.q`), a keep under siege seen from
   above, for one, or two over the network, written for Phase 2 of
   `PLAN_GAMES_3.md`: raiders in waves from the edges make for the tower, the
@@ -566,6 +603,17 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- Laboratory: a `qg:state` without `frame=` showed frame 0 of the sheet; it
+  keeps the prefab's (or the character's) own frame.
+- Laboratory: a character placed in a `qg:exit` as its scene starts (a door
+  the room starts at) left by it at once; it is disarmed until the character
+  has stepped out, as one arrived at is.
+- Laboratory: `count()` and `thing_at()` read as a scene was being built (a
+  HUD's first value) stopped the game.
+- Laboratory: the tile kinds of a Tiled map's layer were read from the
+  scene's tileset, not from the layer's own.
+- Laboratory: a scene's `q:set` whose first value read `tiled('name')` was
+  null; a property the map has is known as the game compiles.
 - Laboratory: `qg:become target="me"` in a prefab's handler was checked
   against the states of every prefab declared after it, so a second prefab
   without that state failed to compile.

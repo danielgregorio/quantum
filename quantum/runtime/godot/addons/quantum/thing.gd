@@ -244,7 +244,7 @@ func become(name_: String) -> void:
 	var st: Dictionary = _states[name_]
 	var sprite: Sprite2D = get_node_or_null("Sprite")
 	if sprite != null:
-		sprite.frame = int(st.get("frame", _base["frame"]))
+		sprite.frame = int(st["frame"]) if st.get("frame") != null else int(_base["frame"])   # a state without frame= keeps its own
 	speed = float(st["speed"]) if st.get("speed") != null else float(_base["speed"])
 	fire_every = int(st["fire_every"]) if st.get("fire_every") != null else int(_base["fire_every"])
 	fire_prefab = str(st["fire_prefab"]) if st.get("fire_prefab") != null else str(_base["fire_prefab"])

@@ -39,7 +39,8 @@ _FUNCTIONS = {
     'random': 'Q.random(self, {0}, {1})',   # a float in [a, b] from the scene's seeded source
     'count': 'Q.count(self, {0})',           # how many things of a tag are in the scene
     'thing_at': 'Q.thing_at(self, {0}, {1}, {2})',   # the thing of a tag at (x, y), or null
-    'tile_at': 'Q.tile_at(self, {0}, {1})',  # the tile in a cell of the tilemap (0: none)
+    'tile_at': {2: 'Q.tile_at(self, {0}, {1})',   # the tile in a cell of the tilemap (0: none)
+                3: 'Q.tile_at(self, {0}, {1}, {2})'},   # ...of a layer, by its name
     'net_status': 'Q.net_status()',          # offline, hosting, joining, connected, playing, waiting, catching up, failed, ended
     'net_players': 'Q.net_players()',        # how many are connected
     'net_player': 'Q.net_player()',          # this machine's player number (0: none yet)
@@ -59,6 +60,7 @@ _FUNCTIONS = {
     'cos': 'cos(deg_to_rad({0}))',
     'atan2': 'Q.atan2_deg({0}, {1})',        # the angle of (x, y) in degrees: 0 right, 90 down
     'sort': {1: 'Q.sort({0})', 2: 'Q.sort({0}, {1})'},   # a sorted copy (descending with true), the Core's sort
+    'carrying': 'Q.carrying({0}, {1})',      # what of a tag a thing carries (qg:attach), or null
 }
 
 # The built-ins that read a player's action: the action's name, and the player (1 when not given).
@@ -78,6 +80,7 @@ CONTROLLER_FIELDS: Dict[str, frozenset] = {
     'ship': frozenset(_BODY),
     'fighter': frozenset(_BODY + ('facing', 'health')),
     'grid': frozenset(_BODY + ('facing', 'col', 'row')),
+    'pointer': frozenset(_BODY + ('facing', 'col', 'row')),
     'behavior': frozenset(_BODY + ('facing', 'vx', 'vy')),
     'map': frozenset(('x', 'y', 'name')),
 }
@@ -100,7 +103,7 @@ class Scope:
     def __init__(self, names: Iterable[str] = (), parent: Optional['Scope'] = None,
                  functions: Iterable[str] = (), game_names: Iterable[str] = (), node_ids: Iterable[str] = (),
                  things: Iterable[str] = (), node_fields: Optional[Dict[str, frozenset]] = None,
-                 actions: Optional[Iterable[str]] = None):
+                 actions: Optional[Iterable[str]] = None, tiled: Optional[dict] = None):
         self.names: Set[str] = set(names)
         self.functions: Set[str] = set(functions)
         self.game_names: Set[str] = set(game_names)
@@ -108,6 +111,7 @@ class Scope:
         self.things: Set[str] = set(things)       # names that always hold a thing: me, other, a qg:for-each's
         self.node_fields = node_fields or {}      # a character id -> what its controller has
         self.actions = set(actions) if actions is not None else None   # the game's actions (None: unchecked)
+        self.tiled = tiled   # the scene's Tiled map's properties (None: no map)
         self.parent = parent
 
     def has(self, name: str) -> bool:
@@ -144,6 +148,11 @@ class Scope:
         if name in self.node_ids:
             return self.node_fields.get(name, THING_FIELDS)
         return self.parent.fields_of(name) if self.parent is not None else None
+
+    def tiled_properties(self) -> Optional[dict]:
+        if self.tiled is not None:
+            return self.tiled
+        return self.parent.tiled_properties() if self.parent is not None else None
 
     def game_actions(self) -> Optional[Set[str]]:
         if self.actions is not None:
@@ -271,6 +280,8 @@ class _Emitter:
                                 + ', '.join(sorted(fields)))
         if node.attr in ('x', 'y'):   # where a thing or a character is (or a cursor's point)
             return f'Q.pos_{node.attr}({self.emit(node.value)})'
+        if node.attr in ('col', 'row'):   # the cell of the tilemap a thing or a character stands in (a cursor's)
+            return f'Q.cell_{node.attr}({self.emit(node.value)})'
         if node.attr in ('on_floor', 'on_wall', 'on_ceiling'):   # what a body touched as it last moved
             return f'Q.touching({self.emit(node.value)}, "{node.attr[3:]}")'
         return f'{self.emit(node.value)}.{node.attr}'
@@ -315,6 +326,8 @@ class _Emitter:
                 return templates[len(args)].format(*args)
             if name in _ACTION_FUNCTIONS:
                 return _ACTION_FUNCTIONS[name].format(self._action(name, node.args, args))
+            if name == 'tiled':
+                return self._tiled(node.args, args)
             if self.scope.has_function(name):
                 return f'{name}({", ".join(args)})'
             raise self.fail(f'{name}() is not a built-in nor a q:function of this scene')
@@ -322,6 +335,21 @@ class _Emitter:
             raise self.fail('method calls are not part of the game language yet')
         raise self.fail('call is not part of the language')
 
+
+    def _tiled(self, nodes: list, args: list) -> str:
+        """tiled('par'): a property of the scene's Tiled map."""
+        if len(args) != 1:
+            raise self.fail('tiled() takes the name of a property of the scene\'s Tiled map')
+        props = self.scope.tiled_properties()
+        if props is not None and isinstance(nodes[0], ast.Constant):
+            if not props:
+                raise self.fail('tiled(): the scene has no Tiled map with properties (qg:tilemap src=)')
+            if nodes[0].value not in props:
+                raise self.fail(f'tiled({nodes[0].value!r}): the scene\'s Tiled map has no such property (it has: '
+                                f'{", ".join(sorted(props))})')
+            # known as it compiles: a q:set's first value may read it (the map's properties are bool, int, float or text)
+            return self._Constant(ast.Constant(props[nodes[0].value]))
+        return f'Q.tiled(self, {args[0]})'
 
     def _action(self, name: str, nodes: list, args: list) -> str:
         """pressing('run'), pressing('run', 2): the Godot action of that player's action (p2_run)."""

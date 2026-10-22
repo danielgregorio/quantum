@@ -157,7 +157,7 @@ func become(name_: String) -> void:
 		position.y -= (hitbox_size.y - old_h) / 2.0   # the feet stay where they were
 	var sprite: Sprite2D = get_node_or_null("Sprite")
 	if sprite != null:
-		sprite.frame = int(st.get("frame", _base_frame))
+		sprite.frame = int(st["frame"]) if st.get("frame") != null else _base_frame   # a state without frame= keeps its own
 	if animator != null:
 		var anims: Dictionary = _base_animations.duplicate()
 		for k in st.get("animations", {}).keys():

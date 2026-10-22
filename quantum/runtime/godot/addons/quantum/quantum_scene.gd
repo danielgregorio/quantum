@@ -66,8 +66,8 @@ func q_pause(on: bool) -> void:
 		return
 	q_paused = on
 	for c in get_children():
-		if c is CanvasLayer or c.is_in_group("q_cursor"):
-			continue
+		if c is CanvasLayer or c.is_in_group("q_cursor") or c is Camera2D:
+			continue   # a camera goes on: a qg:camera-to may be what paused the scene
 		c.process_mode = Node.PROCESS_MODE_DISABLED if on else Node.PROCESS_MODE_INHERIT
 
 

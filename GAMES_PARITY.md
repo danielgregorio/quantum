@@ -10,7 +10,8 @@
 > covered. What comes next is PLAN_GAMES_3.md, approved the same day; the
 > rows its phases cover are updated as each lands (Phase 1: nine rows, and
 > gaps 1, 2, 4, 7, 27 and 28 below, and the maths of 3; Phase 2, with Siege:
-> twelve rows more, and gaps 3, 5, 8, 14, 16, 23, 24, 25, 30 and 31).
+> twelve rows more, and gaps 3, 5, 8, 14, 16, 23, 24, 25, 30 and 31; Phase 3,
+> with Crates: nine rows more, and gaps 6, 13, 15, 18, 21, 22 and 26).
 
 Each row is one feature a 2D game is made of, as Godot 4.4 and Unity 6 (URP
 2D with its packages: 2D Tilemap, Physics 2D, Input System, Cinemachine 3,
@@ -42,8 +43,8 @@ declarative shape for it.
 | Placing things in a level | the 2D scene editor | the Scene view | `qg:instance prefab= x= y=`; a Tiled object layer places prefabs by class | covered |
 | Placing a thing only when a condition holds | script (`queue_free()` in `_ready`) | script (`SetActive(false)`) | `if=` on `qg:instance` and `qg:character` | covered |
 | Naming an instance for the rules | node names, `%UniqueName` | serialized references, `GameObject.Find` | `qg:instance name=` (`other.name`, and a name in its scene's expressions) | covered |
-| Variants of one kind | inherited scenes | Prefab Variants | `qg:state` gives one prefab several forms (frame, hitbox, speed, fire) | partial: no prefab that extends another |
-| Things made of things, things attached at run time | instanced child scenes, `reparent()`, `RemoteTransform2D` | nested prefabs, `Transform.SetParent` | — (a `shuttle` carries what stands on it) | gap |
+| Variants of one kind | inherited scenes | Prefab Variants | `extends=` on `qg:prefab`: all of another but what it says itself (Siege's brute, Crates' barrel); `qg:state` gives one prefab several forms (frame, hitbox, speed, fire) | covered |
+| Things made of things, things attached at run time | instanced child scenes, `reparent()`, `RemoteTransform2D` | nested prefabs, `Transform.SetParent` | `qg:attach target= to= dx= dy=` (carried, touching nothing), `qg:detach`, `carrying()` (Crates' key); a `shuttle` carries what stands on it | covered |
 | Spawning and removing at run time | `instantiate()` + `add_child()`, `queue_free()` | `Instantiate`, `Destroy` | `qg:spawn prefab= at= x= y= dx= dy=`, `qg:swap`, `qg:destroy target=` | covered |
 | Object pooling | script | `UnityEngine.Pool.ObjectPool<T>` | — | by design: an optimisation of the runtime, not a rule of the game |
 | Assets declared once | import + `preload()` | the Project window | `qg:tileset`, `qg:spritesheet`, `qg:sound`, `qg:particles`, `qg:item` | covered |
@@ -118,13 +119,13 @@ declarative shape for it.
 | Tile shapes and one-way tiles | per-tile polygons, `one_way` | per-sprite physics shape, `PlatformEffector2D` | `qg:tile frame= shape=`, `one-way="true"` | covered |
 | Tile kinds | custom data layers + script | custom `TileBase` + script | `qg:tile kind="ladder"`, `"water"`, `"ice"`, `"hurt"`; `qg:on-tile kind= cooldown=` | covered |
 | Data of one's own per tile | custom data layers | custom tile classes | the four kinds; `tile_at()` gives the number | partial: no property of the game's own |
-| Flipped tiles | alternative tiles | tile transform (flip, rotate) | a negative number in the rows; `tile="-n"` in `qg:set-tile` | covered |
+| Flipped tiles | alternative tiles | tile transform (flip, rotate) | a negative number in the rows; `tile="-n"` in `qg:set-tile`; a Tiled map's flipped and turned tiles (Crates' walls) | covered |
 | Auto-tiling | terrains, `set_cells_terrain_connect()` | Rule Tile (2D Tilemap Extras) | — (Tiled's terrain brush draws; the compiler reads the result) | by design: authoring belongs to Tiled |
-| Animated tiles | TileSet atlas animation | Animated Tile (2D Tilemap Extras) | — | gap |
+| Animated tiles | TileSet atlas animation | Animated Tile (2D Tilemap Extras) | `frames=` and `fps=` on `qg:tile`: it and the frames after it in turn (Crates' water) | covered |
 | Editing and reading tiles at run time | `set_cell()`, `erase_cell()`, `get_cell_source_id()` | `Tilemap.SetTile`, `GetTile` | `qg:set-tile col= row= tile= layer=` (collision and pathfinding follow; the cells are in the state), `tile_at()` | covered |
 | Procedural levels, random tiles | script | Random Tile, script | `q:loop`, `random()` and `qg:set-tile`, `qg:spawn` directly in a scene, as it is entered (run in Godot for this map; no game does it yet) | covered |
 | Tiled maps | importers (third party) | SuperTiled2Unity (third party) | `qg:tilemap src="level.tmx"`: CSV layers, an external `.tsx`, kinds from a tile's class, object layers placing prefabs by class | covered |
-| More of Tiled | importers | importers | refused with a message: one tileset per map, no flipped or rotated tile, CSV layers only; objects place prefabs and nothing else | partial: no zones, exits or paths drawn in Tiled, no object properties |
+| More of Tiled | importers | importers | several tilesets per map (each a `qg:tileset` with the same image), flipped and turned tiles, objects of class `zone`, `exit` and `path`, an object's `state`, the map's own properties (`tiled('name')`); CSV layers only (Crates' three rooms) | covered |
 | Isometric, hexagonal and non-square grids | `TileSet.tile_shape` | `Grid` cell layout (Hexagon, Isometric) | square tiles only | gap |
 
 ## 7. Physics and collision
@@ -140,7 +141,7 @@ declarative shape for it.
 | When a contact ends | `body_exited`, `area_exited` | `OnTriggerExit2D`, `OnCollisionExit2D` | `qg:on-separate with=` on a character or a prefab (not when the other is destroyed, nor on a pause) | covered |
 | The side of a contact | `KinematicCollision2D.get_normal()` | `ContactPoint2D.normal` | `side=` `top` (a stomp), `bottom` (a bump), `left`, `right` (a shield in front: Siege's ram) | covered |
 | Layers and masks | `collision_layer`, `collision_mask` (32 layers) | Layer Collision Matrix, `ContactFilter2D` | fixed: tiles and solids stop bodies; things and characters overlap and are told apart by `tag=` | partial: two characters pass through each other |
-| Pushing things | `move_and_slide()` + script | script, or Dynamic bodies | — | gap |
+| Pushing things | `move_and_slide()` + script | script, or Dynamic bodies | `pushable="true"` on a solid prefab: a grid walker's step pushes it a cell on, when the cell beyond is free (Crates) | covered |
 | Slopes | `floor_max_angle`, `floor_snap_length` | `Rigidbody2D.Slide` and its slide-movement settings | `qg:tile shape=` slopes (Robot); `gd:floor_max_angle` | covered |
 | Collision shapes | rectangle, circle, capsule, polygon, segment | box, circle, capsule, polygon, edge, composite | `hitbox="WxH"` for bodies and things; polygons for solids and tiles | partial: no circle or capsule (Creeps' capsule is a rectangle) |
 | On the floor | `is_on_floor()` | contact checks, `IsTouching` | `me.on_floor` | covered |
@@ -165,7 +166,7 @@ declarative shape for it.
 | Fighting-game fighter | script | script | `controller="fighter"` (`health=`, `facing=`), `qg:move`, `qg:on-ko` | covered |
 | World-map walker | script | script | `controller="map"` (`at=`), `qg:map-node`, `qg:map-path` | covered |
 | Rotate and thrust (asteroids, cars) | script | script; `WheelJoint2D` for physical cars | `qg:steer turn= thrust= drag= max=`, a part of `qg:behavior` (Siege's knight) | covered |
-| Click to move | `NavigationAgent2D` + script | `NavMeshAgent` + script | — (`qg:cursor` points; nothing walks there) | gap |
+| Click to move | `NavigationAgent2D` + script | `NavMeshAgent` + script | `controller="pointer"`: a click walks it by the shortest way round the walls and things, into a thing clicked (Crates' worker) | covered |
 | A body made of parts | nodes and scripts | components | `controller="behavior"`: a `qg:behavior` of `qg:gravity`, `qg:walk`, `qg:jump`, `qg:keep-inside`, `qg:wrap`, `qg:face` | covered |
 
 ## 9. Game rules: health, shots, pickups
@@ -209,7 +210,7 @@ declarative shape for it.
 | Zoom | `zoom` | orthographic size | `zoom=` | covered |
 | Several targets | script | `CinemachineTargetGroup` + `CinemachineGroupFraming` | `follow="p1, p2"`, `fit="true"`, `zoom-min=` | covered |
 | Shake | script on `offset` | `CinemachineImpulseSource` + `CinemachineImpulseListener` | `qg:shake frames= strength=` | covered |
-| Changing what it follows, moving it in a cutscene | script, `AnimationPlayer` | priorities and blends (`CinemachineBrain`), a Timeline Cinemachine track | — | gap |
+| Changing what it follows, moving it in a cutscene | script, `AnimationPlayer` | priorities and blends (`CinemachineBrain`), a Timeline Cinemachine track | `qg:camera-to target= x= y= zoom= seconds= hold= pause=`: there, a while, and back to what it follows (Crates' gates, Delve's wall) | covered |
 | A camera per room | script | a confiner per room, script | each room a `qg:scene` with `qg:exit`s (Keep); no camera in a room the size of the screen | partial: no snapping between rooms of one scene |
 | Split screen | a `SubViewport` per player | cameras with viewport rects | — | gap |
 | A thing entering or leaving the screen | `VisibleOnScreenNotifier2D` | `OnBecameVisible`, `OnBecameInvisible` | `qg:on-screen-exit` and `qg:on-screen-enter` (`side=`; in a scene with `of=` a tag), worked out in the game's ticks from the camera's view | covered |
@@ -288,8 +289,8 @@ declarative shape for it.
 | Sliders, toggles, dropdowns (an options screen) | `HSlider`, `CheckBox`, `OptionButton` | `Slider`, `Toggle`, `TMP_Dropdown` | a toggle is a `qg:button` whose label reads the state | partial: no slider or dropdown |
 | Grids and scrolling lists | `GridContainer`, `ScrollContainer`, `ItemList` | `GridLayoutGroup`, `ScrollRect`, `ListView` | — (a menu is one column) | gap |
 | Dialogue boxes | Dialogic, Dialogue Manager (third party) | Yarn Spinner, Ink (third party) | `qg:dialogue`, `qg:line who= text=`, `qg:say`, `qg:on-end`, `talking()` | covered |
-| Dialogue choices | add-ons | Yarn Spinner options | a `qg:menu` shown after `qg:on-end` | partial: no choice inside a dialogue |
-| Portraits and typewriter text | `visible_ratio`, add-ons | `maxVisibleCharacters`, add-ons | — | gap |
+| Dialogue choices | add-ons | Yarn Spinner options | `qg:choice label= if=` in a `qg:line`, with what it does (Crates' foreman, Keep's end) | covered |
+| Portraits and typewriter text | `visible_ratio`, add-ons | `maxVisibleCharacters`, add-ons | `speed=` and `sheet=` on `qg:dialogue`, `portrait=` on `qg:line` | covered |
 
 ## 17. Time
 
@@ -408,22 +409,22 @@ declarative shape for it.
 
 | Area | covered | partial | gap | by design | rows |
 |---|---|---|---|---|---|
-| Scene structure and prefabs | 7 | 1 | 1 | 2 | 11 |
+| Scene structure and prefabs | 9 | 0 | 0 | 2 | 11 |
 | Logic and state | 9 | 0 | 0 | 2 | 11 |
 | Transform and drawing | 11 | 2 | 1 | 2 | 16 |
 | Sprite animation and animation state machines | 6 | 2 | 0 | 0 | 8 |
 | Tweening, timelines and cutscenes | 4 | 1 | 0 | 0 | 5 |
-| Tilemaps | 8 | 2 | 2 | 1 | 13 |
-| Physics and collision | 9 | 5 | 1 | 2 | 17 |
-| Character controllers | 13 | 0 | 1 | 0 | 14 |
+| Tilemaps | 10 | 1 | 1 | 1 | 13 |
+| Physics and collision | 10 | 5 | 0 | 2 | 17 |
+| Character controllers | 14 | 0 | 0 | 0 | 14 |
 | Game rules: health, shots, pickups | 10 | 0 | 0 | 0 | 10 |
 | AI and navigation | 9 | 0 | 1 | 1 | 11 |
-| Camera | 7 | 1 | 2 | 0 | 10 |
+| Camera | 8 | 1 | 1 | 0 | 10 |
 | Input | 8 | 1 | 5 | 0 | 14 |
 | Audio | 4 | 2 | 3 | 1 | 10 |
 | Particles and visual effects | 5 | 0 | 0 | 1 | 6 |
 | Lighting, shaders and post-processing | 0 | 1 | 2 | 3 | 6 |
-| UI | 7 | 7 | 2 | 0 | 16 |
+| UI | 9 | 6 | 1 | 0 | 16 |
 | Time | 6 | 0 | 1 | 1 | 8 |
 | Scene flow | 7 | 1 | 1 | 1 | 10 |
 | Persistence | 4 | 1 | 1 | 1 | 7 |
@@ -432,13 +433,13 @@ declarative shape for it.
 | Testing and determinism | 9 | 1 | 0 | 0 | 10 |
 | Export and platforms | 3 | 0 | 2 | 1 | 6 |
 | Tooling | 4 | 1 | 1 | 2 | 8 |
-| **Total** | **166** | **32** | **30** | **23** | **251** |
+| **Total** | **175** | **29** | **24** | **23** | **251** |
 
-Of 251 rows, 166 are covered and 32 partial; 30 are gaps, and 23 are left
-out by design: two thirds covered (146, 42 and 40 when the map was made;
-Phase 1 of PLAN_GAMES_3.md covered nine rows, Phase 2 twelve more). The gaps
-gather in input (five: rebinding, touch controls, sequences, the second mouse
-button, vibration), then audio and the UI (three each). The rows
+Of 251 rows, 175 are covered and 29 partial; 24 are gaps, and 23 are left
+out by design: seven in ten covered (146, 42 and 40 when the map was made;
+Phase 1 of PLAN_GAMES_3.md covered nine rows, Phase 2 twelve more, Phase 3
+nine more). The gaps gather in input (five: rebinding, touch controls,
+sequences, the second mouse button, vibration), then audio (three). The rows
 left out by design are mostly the rigid-body solver, shaders and post-
 processing, what belongs to an editor, and the networking machinery that
 lockstep makes unnecessary.
@@ -455,27 +456,27 @@ above is in this list, and so are many **partial** ones.
 3. **Aiming.** *Done: PLAN_GAMES_3.md, Phases 1 and 2.* `heading="{dx},{dy}"` on `qg:spawn` for an `ai="fly"` prefab (as `qg:deflect dx= dy=` sets it later), and `sin()`, `cos()`, `atan2()` in expressions. Twin-stick and bullet-pattern shooters, a bow aimed with the mouse.
 4. **Fields checked at compile time.** *Done: PLAN_GAMES_3.md, Phase 1.* A field after a dot that the thing does not have (`hero.foo`) is a compile error naming the fields it has. Every game: it is the language's own promise.
 5. **Text and bars in the world.** *Done: PLAN_GAMES_3.md, Phase 2.* `<qg:label x= y= value=>` in a scene (on a prefab, following it), and `text=` on `qg:emit` for a number that floats up. RPGs and brawlers (damage numbers), adventures (signs), networked games (names over the players).
-6. **Pushable things.** `pushable="true"` on a solid prefab: a character walking into it moves it, a cell on a grid, unless something stops it. Box puzzles, puzzle rooms in an adventure.
+6. **Pushable things.** *Done: PLAN_GAMES_3.md, Phase 3.* `pushable="true"` on a solid prefab: a character walking into it moves it, a cell on a grid, unless something stops it. Box puzzles, puzzle rooms in an adventure.
 7. **Held actions, and how far.** *Done: PLAN_GAMES_3.md, Phase 1.* `pressing('run')`, `pressed_for('fire')` (ticks) and `strength('right')` in expressions (`held()` is taken by items). Charge shots, a run button, hold-to-confirm, analog speed in a rule.
 8. **Rotate and thrust.** *Done: PLAN_GAMES_3.md, Phase 2.* `<qg:steer turn= thrust= drag=>`, a part of `qg:behavior`: left and right turn the body, up pushes it the way it points. Asteroids-likes, top-down racing.
 9. **An options screen.** `bus=` on `qg:sound` with `<qg:volume bus= value=>` (kept between runs), `<qg:slider bind= min= max=>` in a `qg:menu`, and `<qg:fullscreen>`. Every game that ships.
 10. **Touch controls and phones.** `<qg:touch-button action= x= y=>` and a touch stick that press the game's own actions (so replays and peers see them); Android and iOS presets in `scripts/export-games.py`. Mobile browsers and phones.
 11. **Save slots.** `slot=` on `qg:save`, `qg:continue` and `has_save()`; later, a save in the middle of a scene kept as the scene's input tape and replayed. RPGs and long adventures.
 12. **2D lights and shadows.** `<qg:light radius= color=>` on a character or a prefab, `darkness=` on `qg:scene`, shadows from solid tiles; only seen, like the camera. Caves, horror, stealth.
-13. **Camera direction.** `<qg:camera-to target= x= y= zoom= seconds=>`, then back to `follow=`. Cutscenes, a boss's entrance, showing the door a lever opened.
+13. **Camera direction.** *Done: PLAN_GAMES_3.md, Phase 3.* `<qg:camera-to target= x= y= zoom= seconds=>`, then back to `follow=`. Cutscenes, a boss's entrance, showing the door a lever opened.
 14. **Lines, beams and trails.** *Done: PLAN_GAMES_3.md, Phase 2.* `<qg:beam from= to= color= width=>` between two things, `trail=` on a prefab. Laser turrets (Towers' ray turret), grappling hooks, a fast ship's wake.
-15. **Click to move.** `controller="pointer"`: the character walks, by the shortest way over the free cells, to where its `qg:cursor` selects. Point-and-click adventures, tactics.
+15. **Click to move.** *Done: PLAN_GAMES_3.md, Phase 3.* `controller="pointer"`: the character walks, by the shortest way over the free cells, to where its `qg:cursor` selects. Point-and-click adventures, tactics.
 16. **Jump buffering.** *Done: PLAN_GAMES_3.md, Phase 2.* `buffer-frames=` on `controller="platformer"` and on `qg:jump`: a press just before landing still jumps. Every platformer.
 17. **The other mouse button, the wheel, hover.** `action=` on `qg:on-select` (`cancel` for a right-click), `MouseWheelUp` and `MouseWheelDown` in `keys=`, `qg:on-select on="hover"`. Strategy (selling a tower, as Towers' README asks), point-and-click (look or use).
-18. **Dialogue choices, portraits, typewriter text.** `<qg:choice label=>` holding actions inside a `qg:line`, `portrait=` on `qg:line`, `speed=` on `qg:dialogue`. RPGs, visual novels.
+18. **Dialogue choices, portraits, typewriter text.** *Done: PLAN_GAMES_3.md, Phase 3.* `<qg:choice label=>` holding actions inside a `qg:line`, `portrait=` on `qg:line`, `speed=` on `qg:dialogue`. RPGs, visual novels.
 19. **HUD layout and pictures.** `bottom-left` and `bottom-right`, `color=` on HUD items, `if=` on `qg:hud`, and `<qg:icon sheet= frame=>` in a HUD. Every game's HUD; a title with a logo.
 20. **Characters that block each other.** `blocks="characters"` on `qg:character`. Co-op platformers (standing on a partner), sports.
-21. **Things made of things.** `<qg:attach target= to= dx= dy=>` (and `qg:detach`), and `extends=` on `qg:prefab`. A carried item, a turret on a tank, a family of enemies that differ in one number.
-22. **Animated tiles.** `frames=` and `fps=` on `qg:tile`. Water, lava and torches in any tile game.
+21. **Things made of things.** *Done: PLAN_GAMES_3.md, Phase 3.* `<qg:attach target= to= dx= dy=>` (and `qg:detach`), and `extends=` on `qg:prefab`. A carried item, a turret on a tank, a family of enemies that differ in one number.
+22. **Animated tiles.** *Done: PLAN_GAMES_3.md, Phase 3.* `frames=` and `fps=` on `qg:tile`. Water, lava and torches in any tile game.
 23. **Emitters on things.** *Done: PLAN_GAMES_3.md, Phase 2.* `particles=` on a prefab or a character, kept going where it is. An engine's flame, a burning enemy, a carried torch.
 24. **Keeping apart.** *Done: PLAN_GAMES_3.md, Phase 2.* `spacing=` on a prefab: things of one tag keep that far from each other as they move. Swarms, crowds of enemies, strategy units.
 25. **Squash and stretch, visibility, depth.** *Done: PLAN_GAMES_3.md, Phase 2.* `scale-x` and `scale-y` for `qg:tween`, `visible="{...}"` and `flip-v=` on prefabs and characters, `layer=` for draw order, and `y-sort="true"` on `qg:scene` (the `gd:` attribute promoted). Every game's juice; depth in top-down games.
-26. **More of Tiled.** Zones, exits and paths drawn as Tiled objects (a rectangle of class `zone`, a polyline as a `qg:path`), object and tile properties of the game's own, several tilesets per map, flipped tiles. Large levels drawn wholly in Tiled.
+26. **More of Tiled.** *Done: PLAN_GAMES_3.md, Phase 3.* Zones, exits and paths drawn as Tiled objects (a rectangle of class `zone`, a polyline as a `qg:path`), object and tile properties of the game's own, several tilesets per map, flipped tiles. Large levels drawn wholly in Tiled.
 27. **Functions for every scene.** *Done: PLAN_GAMES_3.md, Phase 1.* `q:function` directly in `q:application`. Games with several levels that share rules.
 28. **Sorting.** *Done: PLAN_GAMES_3.md, Phase 1, as the Core's `sort(list)`.* `sorted(list)` in expressions. High-score tables, turn order in tactics.
 29. **Rebinding keys.** `<qg:rebind action=>` in a menu: the next key pressed becomes the action's, kept between runs. Desktop releases, accessibility.

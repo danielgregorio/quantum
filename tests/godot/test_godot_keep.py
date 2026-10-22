@@ -160,6 +160,14 @@ def test_the_chest_ends_the_game(godot, keep):
     assert state['the-end']['sounds'][-1] == 'win'
 
 
+def test_the_end_asks_what_now(godot, keep):
+    asking = replay(keep, 2300, tape_from_holds(THE_WHOLE_KEEP), binary=godot)
+    assert scene(asking) == 'the-end' and asking['the-end']['talking'] == 'end'
+    back = replay(keep, 2340, tape_from_holds(THE_WHOLE_KEEP + [('down', 2300, 2302), ('select', 2310, 2312)]),
+                  binary=godot)
+    assert scene(back) == 'title'                                   # To the title, the second choice
+
+
 def test_three_hurts_are_game_over_and_jump_starts_again(godot, keep):
     over = replay(keep, 520, tape_from_holds(TO_ROOM_2), binary=godot)
     assert scene(over) == 'game-over'

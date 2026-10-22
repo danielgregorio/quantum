@@ -67,19 +67,22 @@ class SceneScript:
     tween_ends: int = 0   # the qg:on-end handlers of tweens so far: each its own method, nested ones too
     afters: int = 0       # the qg:afters so far: what each puts off is its own method
     headed: List[tuple] = field(default_factory=list)   # (prefab, line) of a qg:spawn heading=: an ai="fly" one
+    cameras_moved: List[Optional[int]] = field(default_factory=list)   # lines of qg:camera-to: the scene needs a camera
 
     node_ids: List[str] = field(default_factory=list)   # the scene's characters, by id
     game_functions: List[str] = field(default_factory=list)   # the q:functions of <q:application>, every scene's
     game_wide: bool = False   # compiling one of those: it sees the game's state and functions, not the scene's
     node_fields: Dict[str, frozenset] = field(default_factory=dict)   # a character id -> its controller's fields
     actions: Optional[List[str]] = None   # the game's actions, for pressing('run') and the like
+    tiled_props: Optional[dict] = None   # the scene's Tiled map's properties, for tiled('par')
 
     def scope(self) -> Scope:
         if self.game_wide:
             return Scope((), functions=self.game_functions, game_names=self.game_state.keys(),
                          actions=self.actions)
         return Scope(self.state.keys(), functions=self.function_names, game_names=self.game_state.keys(),
-                     node_ids=self.node_ids, node_fields=self.node_fields, actions=self.actions)
+                     node_ids=self.node_ids, node_fields=self.node_fields, actions=self.actions,
+                     tiled=self.tiled_props)
 
     enter: List[Node] = field(default_factory=list)   # statements directly in the scene: run on enter
 
@@ -615,6 +618,45 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         if el.get('name'):
             args.append(json.dumps(el.get('name')))
         return f'Q.after({", ".join(args)})'
+    if el.tag == 'camera-to':
+        if not script.game_wide:   # in a q:function of the game, a scene without a camera has none to move
+            script.cameras_moved.append(el.line)
+        if (el.get('target') is None) == (el.get('x') is None or el.get('y') is None):
+            raise GameCompileError('<qg:camera-to> goes to target=, or to x= and y=, one of them', el.line)
+        if el.get('target') is not None:
+            if not scope.has(el.get('target')):
+                raise GameCompileError(f'<qg:camera-to target="{el.get("target")}">: not me/other of this handler, a '
+                                       f'character or cursor of the scene, nor a parameter, loop variable or q:set',
+                                       el.line)
+            to = scope.reference(el.get('target'))
+        else:
+            to = (f'Vector2(float({compile_expression(el.get("x"), scope, el.line)}), '
+                  f'float({compile_expression(el.get("y"), scope, el.line)}))')
+        if el.get('seconds') < 0 or el.get('hold') < 0 or (el.get('zoom') is not None and el.get('zoom') <= 0):
+            raise GameCompileError('<qg:camera-to>: seconds= and hold= 0 or more, zoom= more than 0', el.line)
+        zoom = repr(float(el.get('zoom'))) if el.get('zoom') is not None else '0.0'
+        return (f'Q.camera_to(self, {to}, {zoom}, {float(el.get("seconds"))!r}, {float(el.get("hold"))!r}, '
+                f'{"true" if el.get("pause") else "false"})')
+    if el.tag == 'attach':
+        ends = []
+        for attr in ('target', 'to'):
+            name = el.get(attr)
+            if not scope.has(name):
+                raise GameCompileError(f'<qg:attach {attr}="{name}">: not me/other of this handler, a character of '
+                                       f'the scene, nor a parameter, loop variable or q:set', el.line)
+            ends.append(scope.reference(name))
+        return f'Q.attach({ends[0]}, {ends[1]}, {float(el.get("dx"))!r}, {float(el.get("dy"))!r})'
+    if el.tag == 'detach':
+        if (el.get('target') is None) == (el.get('from') is None or el.get('tag') is None):
+            raise GameCompileError('<qg:detach> puts down target=, or from= and tag= (what of a tag it carries), '
+                                   'one of them', el.line)
+        name = el.get('target') or el.get('from')
+        if not scope.has(name):
+            raise GameCompileError(f'<qg:detach>: {name!r} is not me/other of this handler, a character of the '
+                                   f'scene, nor a parameter, loop variable or q:set', el.line)
+        if el.get('target') is not None:
+            return f'Q.detach({scope.reference(name)})'
+        return f'Q.detach_all({scope.reference(name)}, {json.dumps(el.get("tag"))})'
     if el.tag == 'beam':
         ends = []
         for attr in ('from', 'to'):

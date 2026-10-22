@@ -299,7 +299,9 @@ def read_game(app) -> Game:
     items: Dict[str, Element] = {}
     functions: List[Statement] = []
     try:
+        made = _extended_prefabs(root)
         for child in root:
+            child = made.get(id(child), child)
             ns, name = _local(child)
             if ns == 'game':
                 el = _read_element(child, 'application')
@@ -353,6 +355,63 @@ def read_game(app) -> Game:
         raise GameCompileError('a game needs at least one <qg:scene>', file=source_path)
     return Game(getattr(app, 'app_id', 'game'), tilesets, sheets, prefabs, scenes, source_path, sounds,
                 game_state, inputs, multiplayer, languages, particles, items, functions)
+
+
+def _child_key(child: ET.Element) -> tuple:
+    """What a child of a prefab replaces in the one it extends: the same animation or state (by name), the
+    same touch (with= and side=), or the one of its kind (qg:behavior, qg:on-death...)."""
+    _, tag = _local(child)
+    if child.get('name') is not None:
+        return tag, child.get('name')
+    if child.get('with') is not None:
+        return tag, child.get('with'), child.get('side', 'any')
+    return (tag,)
+
+
+def _keep_line(out: ET.Element, el: ET.Element) -> None:
+    try:
+        out.sourceline = _line(el)
+    except AttributeError:
+        pass
+
+
+def _extended_prefabs(root: ET.Element) -> Dict[int, ET.Element]:
+    """The qg:prefabs with extends=, each made into one whole element: the attributes and children of the
+    prefab it extends (itself perhaps extending another), with its own over them. Keyed by the element's id."""
+    raw = {}
+    for child in root:
+        ns, name = _local(child)
+        if ns == 'game' and name == 'prefab' and child.get('name'):
+            raw[child.get('name')] = child
+    made: Dict[str, ET.Element] = {}
+
+    def make(name: str, seen: tuple) -> ET.Element:
+        if name in made:
+            return made[name]
+        el = raw[name]
+        base_name = el.get('extends')
+        if base_name is None:
+            return el
+        if base_name not in raw:
+            raise GameCompileError(f'<qg:prefab name="{name}" extends="{base_name}">: no qg:prefab of that name '
+                                   f'(declared: {", ".join(sorted(raw))})', _line(el))
+        if base_name in seen:
+            raise GameCompileError(f'<qg:prefab name="{name}" extends="{base_name}">: the prefabs extend each other '
+                                   f'in a circle ({" > ".join(seen + (base_name,))})', _line(el))
+        base = make(base_name, seen + (base_name,))
+        out = el.makeelement(el.tag, {k: v for k, v in base.attrib.items() if k != 'extends'})
+        out.attrib.update({k: v for k, v in el.attrib.items() if k != 'extends'})
+        out.text = el.text
+        mine = {_child_key(c) for c in el if isinstance(c.tag, str) and not c.tag.startswith('<')}
+        for c in list(base) + list(el):
+            if c in list(base) and isinstance(c.tag, str) and _child_key(c) in mine:
+                continue
+            out.append(c)
+        _keep_line(out, el)   # errors name the derived prefab's line
+        made[name] = out
+        return out
+
+    return {id(raw[name]): make(name, (name,)) for name in raw if raw[name].get('extends') is not None}
 
 
 def _unique(table: Dict[str, Element], el: Element, what: str) -> None:

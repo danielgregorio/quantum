@@ -17,7 +17,7 @@ import pytest
 PROJECTS = Path(__file__).resolve().parents[2] / 'projects'
 
 # the same in every language: a name
-SAME = {'HOPPER', 'KEEP', 'DELVE'}
+SAME = {'HOPPER', 'KEEP', 'DELVE', 'CRATES'}
 
 
 def _unescape(text: str) -> str:

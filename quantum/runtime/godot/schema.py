@@ -40,14 +40,14 @@ class Tag:
 # The tags that hold a handler: actions (and q: statements), run when it fires.
 HANDLERS = ('on-collision', 'on-fall', 'on-input', 'on-select', 'on-hit', 'on-ko', 'on-death', 'on-tile',
             'on-animation-end', 'on-locked', 'on-damage', 'timer', 'button', 'on-end', 'on-separate',
-            'on-screen-exit', 'on-screen-enter', 'for-each', 'after', 'when')
+            'on-screen-exit', 'on-screen-enter', 'for-each', 'after', 'when', 'choice')
 
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
            'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
            'play-animation', 'give', 'take', 'reset-items', 'for-each', 'time-scale', 'quit', 'start-now', 'watch',
-           'after', 'beam')
+           'after', 'beam', 'camera-to', 'attach', 'detach')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -69,7 +69,11 @@ TAGS: Dict[str, Tag] = {
                           'through, slow to sink in, a jump is a stroke, slower to walk; ice: slid on (a solid '
                           'tile to stand on in a platformer, a floor in a top-down game); hurt: a '
                           'character\'s qg:on-tile kind="hurt" runs while it touches one. In a Tiled tileset: a '
-                          'tile\'s class, or its kind property')},
+                          'tile\'s class, or its kind property'),
+         'frames': Attr('int', 1, doc='an animated tile (water, lava, a torch): how many frames it shows in turn, '
+                                      'itself and the ones after it in the sheet\'s row, which are then not tiles of '
+                                      'their own. Only seen'),
+         'fps': Attr('float', 4.0, doc='frames a second, with frames=')},
         parents=('tileset',)),
     'spritesheet': Tag(
         'A sheet of equal frames for characters and items.',
@@ -193,6 +197,12 @@ TAGS: Dict[str, Tag] = {
                                                            'wall (the way across it reverses)'),
          'trail': Attr('color', None, doc='a line it leaves behind it as it moves, fading (a shot\'s streak, a '
                                           'ship\'s wake): only seen'),
+         'pushable': Attr('bool', False, doc='solid: a character controller="grid" or "pointer" that steps into it '
+                                             'pushes it a cell on, if that cell is free (no wall, no thing): a crate'),
+         'extends': Attr('ident', None, doc='another prefab it is made from: it has all of it (attributes, '
+                                            'animations, states, handlers) but what it says itself; a qg:animation '
+                                            'or qg:state of the same name, a handler with the same with= and side=, '
+                                            'a qg:behavior, replace the other\'s'),
          'spacing': Attr('float', 0.0, doc='things of its tag keep at least this many pixels apart as they move: a '
                                            'crowd, not a pile (0: they may overlap)'),
          'sight': Attr('float', 80.0, doc='chase, pathfind, and the parts of a behavior: pixels'),
@@ -231,7 +241,7 @@ TAGS: Dict[str, Tag] = {
         'and for a prefab its speed and fire-every. `me.state` reads it; qg:become changes it.',
         {'name': Attr('ident', required=True),
          'hitbox': Attr('size', None, doc='a character needs one; a prefab keeps its own'),
-         'frame': Attr('int', 0),
+         'frame': Attr('int', None, doc='its picture in this state (its own frame when not given)'),
          'speed': Attr('float', None, doc='prefab: overrides its speed'),
          'fire-every': Attr('int', None, doc='prefab: overrides its fire-every'),
          'fire-prefab': Attr('ident', None, doc='prefab: overrides its fire-prefab'),
@@ -263,7 +273,11 @@ TAGS: Dict[str, Tag] = {
     'tilemap': Tag(
         'The level: CSV rows of tile numbers (0 is empty, n is tile n-1 of the tileset), '
         'or a Tiled map (src=) whose tile layers draw it and whose object layers place prefabs by class. '
-        'Several in a scene are layers of one map, drawn in order (a floor, a path, the walls), on one tileset.',
+        'Several in a scene are layers of one map, drawn in order (a floor, a path, the walls), on one tileset. '
+        'A Tiled map may use several tilesets (each layer draws from one, which is the qg:tileset of the game with '
+        'the same image) and flipped or turned tiles; an object\'s state property is the qg:state it starts in; '
+        'objects of class zone (a tag property), exit (to and at properties) and path (a polyline) are the '
+        'scene\'s qg:zone, qg:exit and qg:path; the map\'s own properties are read with tiled(\'name\').',
         {'tileset': Attr('ident', required=True),
          'collision': Attr('bool', False, doc='every tile is solid (a Tiled layer says so with a collision property)'),
          'src': Attr('str', None, doc='a .tmx, relative to the .q or a folder above it')},
@@ -271,11 +285,12 @@ TAGS: Dict[str, Tag] = {
     'character': Tag(
         'A body the player moves: a platformer, or a walker on a world map.',
         {'id': Attr('ident', required=True),
-         'controller': Attr('enum:platformer|map|topdown|ship|fighter|grid|behavior', required=True,
+         'controller': Attr('enum:platformer|map|topdown|ship|fighter|grid|pointer|behavior', required=True,
                             doc='grid: steps from cell to cell of the tilemap; the tiles of a layer with collision, '
                                 'and the things, stop it, and stepping into a thing runs its qg:on-collision '
-                                'with the thing\'s tag; `me.col` and `me.row` are its cell. behavior: made of the '
-                                'parts its qg:behavior lists'),
+                                'with the thing\'s tag; `me.col` and `me.row` are its cell. pointer: as grid, and '
+                                'a click (its player\'s qg:cursor) walks it to that cell by the shortest way '
+                                'around the walls and things. behavior: made of the parts its qg:behavior lists'),
          'step-frames': Attr('int', 15, doc='grid: ticks to walk one cell (a bump takes as long)'),
          'diagonal': Attr('bool', False, doc='grid: two directions held at once step diagonally'),
          'player': Attr('int', 1, doc='whose keys move it (qg:input player=); 1 has the defaults'),
@@ -385,13 +400,24 @@ TAGS: Dict[str, Tag] = {
         'Lines someone says, shown one at a time in a box at the bottom of the screen (qg:say opens it).',
         {'name': Attr('ident', required=True),
          'font': Attr('str', None, doc='a .ttf, relative to the .q or a folder above it'),
-         'size': Attr('int', 24, doc='font size')},
+         'size': Attr('int', 24, doc='font size'),
+         'speed': Attr('float', 0.0, doc='letters a second, typed in as each line shows (select shows it whole '
+                                         'at once); 0: the whole line at once'),
+         'sheet': Attr('ident', None, doc='a qg:spritesheet of faces: a line\'s portrait= is a frame of it')},
         parents=('scene',)),
     'line': Tag(
-        'One line of a qg:dialogue: who says it, and what.',
+        'One line of a qg:dialogue: who says it, and what. With qg:choice inside, the player chooses (up and '
+        'down, select, or a click), and the choice\'s actions run before the next line.',
         {'who': Attr('str', '', doc='the name over the text, or an expression ({...})'),
-         'text': Attr('str', required=True, doc='the line, or an expression ({...}) read as it is shown')},
+         'text': Attr('str', required=True, doc='the line, or an expression ({...}) read as it is shown'),
+         'portrait': Attr('int', None, doc='a frame of the dialogue\'s sheet=, beside the text')},
         parents=('dialogue',)),
+    'choice': Tag(
+        'One answer to a qg:line: what the player reads, and what happens when it is chosen (then the next line). '
+        'Holds actions and statements: a qg:say opens another dialogue, a q:set remembers the answer.',
+        {'label': Attr('str', required=True, doc='what it says, or an expression ({...})'),
+         'if': Attr('expr', None, doc='offered only when this is true as the line shows')},
+        parents=('line',)),
     'on-end': Tag(
         'What happens when a qg:dialogue has shown its last line, or when a qg:tween is done (the last of its '
         'repeats; `me` is the thing it moved, and another tween in it plays after: a sequence). Holds actions and '
@@ -765,6 +791,33 @@ TAGS: Dict[str, Tag] = {
         'one destroyed meanwhile is skipped.',
         {'tag': Attr('ident', required=True, doc='the things\' tag'),
          'var': Attr('ident', 'it', doc='the name of each thing in turn (a target=, an expression)')},
+        parents=('handler',)),
+    'camera-to': Tag(
+        'The camera goes to a thing or a point, stays a while, and comes back to what it follows: a cutscene, a '
+        'boss\'s entrance, the gate a lever opened. The scene waits meanwhile (unless pause="false"). The scene '
+        'needs a qg:camera (in a q:function of the game, a scene without one is not shown anything).',
+        {'target': Attr('ident', None, doc='me, other, a character or cursor id, or a parameter, loop variable or '
+                                           'q:set holding a thing (or x= and y=)'),
+         'x': Attr('expr', None), 'y': Attr('expr', None, doc='a point of the scene instead'),
+         'zoom': Attr('float', None, doc='how close it goes (the camera\'s own when not given)'),
+         'seconds': Attr('float', 0.6, doc='to go there, and as long to come back'),
+         'hold': Attr('float', 1.0, doc='seconds it stays'),
+         'pause': Attr('bool', True, doc='the scene waits while the camera is away')},
+        parents=('handler',)),
+    'attach': Tag(
+        'A thing is carried by another: it goes where its carrier goes, dx,dy from it (a key over a head, a '
+        'torch in a hand, a turret on a tank). While carried it touches nothing and nothing touches it, and it '
+        'stands in no cell; `carrying(me, \'key\')` finds it.',
+        {'target': Attr('ident', 'other', doc='what is carried: other, me, a character id, or a parameter, loop '
+                                              'variable or q:set holding a thing'),
+         'to': Attr('ident', 'me', doc='its carrier, the same'),
+         'dx': Attr('float', 0.0), 'dy': Attr('float', -12.0, doc='from the carrier\'s middle')},
+        parents=('handler',)),
+    'detach': Tag(
+        'A carried thing is put down where it is (qg:attach): it touches again.',
+        {'target': Attr('ident', None, doc='what is put down (or from= and tag=)'),
+         'from': Attr('ident', None, doc='the carrier: me, other, a character id...'),
+         'tag': Attr('ident', None, doc='with from=: every thing of this tag it carries')},
         parents=('handler',)),
     'beam': Tag(
         'A line between two things for a while, following them as they move: a laser, a zap, a rope, an aiming '

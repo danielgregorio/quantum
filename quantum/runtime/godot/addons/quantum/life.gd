@@ -39,4 +39,5 @@ static func become(node: Node, name_: String) -> void:
 	node.state = name_
 	var sprite: Node = node.get_node_or_null("Sprite")
 	if sprite is Sprite2D:
-		sprite.frame = int(node.states[name_].get("frame", node.base_frame))
+		var f = node.states[name_].get("frame")
+		sprite.frame = int(f) if f != null else node.base_frame   # a state without frame= keeps its own
